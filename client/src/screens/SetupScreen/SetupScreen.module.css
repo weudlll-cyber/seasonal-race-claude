@@ -64,7 +64,9 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 .tab:hover {
@@ -122,7 +124,10 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   cursor: pointer;
-  transition: background var(--transition), opacity var(--transition), transform var(--transition);
+  transition:
+    background var(--transition),
+    opacity var(--transition),
+    transform var(--transition);
   white-space: nowrap;
 }
 
@@ -251,7 +256,9 @@
   color: var(--color-muted);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: border-color var(--transition), color var(--transition);
+  transition:
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .reassignBtn:hover {
@@ -283,7 +290,10 @@
   border: 2px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: border-color var(--transition), transform var(--transition), background var(--transition);
+  transition:
+    border-color var(--transition),
+    transform var(--transition),
+    background var(--transition);
   text-align: center;
 }
 
@@ -358,7 +368,10 @@
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color var(--transition), color var(--transition), background var(--transition);
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background var(--transition);
 }
 
 .optionBtn:hover {

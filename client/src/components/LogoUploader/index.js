@@ -6,7 +6,7 @@
 // Description: Drag-and-drop logo uploader for team/racer branding
 // ============================================================
 
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 
 function LogoUploader({ value, onChange }) {
   const inputRef = useRef(null);
@@ -21,13 +21,17 @@ function LogoUploader({ value, onChange }) {
     <div
       className="logo-uploader"
       onClick={() => inputRef.current?.click()}
-      onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        handleFile(e.dataTransfer.files[0]);
+      }}
       onDragOver={(e) => e.preventDefault()}
     >
-      {value?.url
-        ? <img src={value.url} alt="Logo preview" className="logo-uploader__preview" />
-        : <span className="logo-uploader__placeholder">Drop logo here or click to upload</span>
-      }
+      {value?.url ? (
+        <img src={value.url} alt="Logo preview" className="logo-uploader__preview" />
+      ) : (
+        <span className="logo-uploader__placeholder">Drop logo here or click to upload</span>
+      )}
       <input
         ref={inputRef}
         type="file"

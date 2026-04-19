@@ -8,13 +8,19 @@
 //              included automatically via the parent's storage read
 // ============================================================
 
-import React from 'react';
 import styles from './SetupScreen.module.css';
 
 function TrackSelector({ tracks, selectedTrackId, onChange }) {
   if (!tracks || tracks.length === 0) {
     return (
-      <p style={{ color: 'var(--color-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
+      <p
+        style={{
+          color: 'var(--color-muted)',
+          fontSize: '0.85rem',
+          textAlign: 'center',
+          padding: '1.5rem 0',
+        }}
+      >
         No tracks configured. Add tracks in the ⚙️ Dev Panel.
       </p>
     );

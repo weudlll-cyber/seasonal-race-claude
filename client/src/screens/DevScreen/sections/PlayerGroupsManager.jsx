@@ -7,7 +7,7 @@
 //              quick-import via comma-separated name paste
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId, storageSet } from '../../../modules/storage/storage.js';
@@ -38,15 +38,10 @@ function PlayerGroupsManager() {
 
     if (editId) {
       setGroups((prev) =>
-        prev.map((g) =>
-          g.id === editId ? { ...g, name: form.name.trim(), players: names } : g
-        )
+        prev.map((g) => (g.id === editId ? { ...g, name: form.name.trim(), players: names } : g))
       );
     } else {
-      setGroups((prev) => [
-        ...prev,
-        { id: newId(), name: form.name.trim(), players: names },
-      ]);
+      setGroups((prev) => [...prev, { id: newId(), name: form.name.trim(), players: names }]);
     }
     setForm(BLANK_FORM);
     setEditId(null);
@@ -82,8 +77,7 @@ function PlayerGroupsManager() {
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-            Saved Groups{' '}
-            <span className={s.badge}>{groups.length}</span>
+            Saved Groups <span className={s.badge}>{groups.length}</span>
           </span>
           <span className={s.spacer} />
           {!showForm && (
@@ -110,7 +104,11 @@ function PlayerGroupsManager() {
                 >
                   ▶ Load to Setup
                 </button>
-                <button className={`${s.btnIconOnly}`} onClick={() => handleEdit(group)} title="Edit">
+                <button
+                  className={`${s.btnIconOnly}`}
+                  onClick={() => handleEdit(group)}
+                  title="Edit"
+                >
                   ✏️
                 </button>
                 <button
@@ -146,7 +144,9 @@ function PlayerGroupsManager() {
             <div className={s.formGroup}>
               <label className={s.label}>
                 Player Names{' '}
-                <span style={{ textTransform: 'none', fontWeight: 400, color: 'var(--color-muted)' }}>
+                <span
+                  style={{ textTransform: 'none', fontWeight: 400, color: 'var(--color-muted)' }}
+                >
                   — comma-separated, max 20
                 </span>
               </label>

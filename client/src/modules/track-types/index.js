@@ -8,21 +8,21 @@
 
 export const TRACK_TYPES = {
   OVAL: {
-    id:         'OVAL',
-    label:      'Oval Circuit',
-    laps:       3,
+    id: 'OVAL',
+    label: 'Oval Circuit',
+    laps: 3,
     difficulty: 'easy',
   },
   STREET: {
-    id:         'STREET',
-    label:      'Street Circuit',
-    laps:       2,
+    id: 'STREET',
+    label: 'Street Circuit',
+    laps: 2,
     difficulty: 'medium',
   },
   MOUNTAIN: {
-    id:         'MOUNTAIN',
-    label:      'Mountain Pass',
-    laps:       1,
+    id: 'MOUNTAIN',
+    label: 'Mountain Pass',
+    laps: 1,
     difficulty: 'hard',
   },
 };

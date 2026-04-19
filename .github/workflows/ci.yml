@@ -3,42 +3,71 @@
 # Path:        .github/workflows/ci.yml
 # Project:     RaceArena
 # Created:     2026-04-19
-# Description: Runs lint and tests on every pull request
+# Description: Full QA pipeline — lint, format-check, tests, security audit
+#              Runs on every push and pull request to main / master
 # ============================================================
 
 name: CI
 
 on:
+  push:
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
+  # ── Server ──────────────────────────────────────────────────
   server:
+    name: Server checks
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: server/package-lock.json
-      - run: npm ci
-      - run: npm test --if-present
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Security audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+  # ── Client ──────────────────────────────────────────────────
   client:
+    name: Client checks
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: client
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: client/package-lock.json
-      - run: npm ci
-      - run: npm test --if-present -- --watchAll=false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier format check
+        run: npm run format:check
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Security audit (fail on high/critical)
+        run: npm audit --audit-level=high

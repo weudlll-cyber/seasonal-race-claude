@@ -59,7 +59,9 @@
   cursor: pointer;
   width: 100%;
   text-align: left;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
   border-left: 3px solid transparent;
 }
 
@@ -259,7 +261,9 @@
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: opacity var(--transition), background var(--transition);
+  transition:
+    opacity var(--transition),
+    background var(--transition);
 }
 
 .btn:disabled {
@@ -357,7 +361,9 @@
   top: 3px;
   background: var(--color-muted);
   border-radius: 50%;
-  transition: transform var(--transition), background var(--transition);
+  transition:
+    transform var(--transition),
+    background var(--transition);
 }
 
 .toggle input:checked + .toggleSlider {
@@ -385,7 +391,10 @@
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color var(--transition), color var(--transition), background var(--transition);
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background var(--transition);
 }
 
 .optionPill:hover {

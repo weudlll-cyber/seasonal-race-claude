@@ -7,17 +7,19 @@
    ============================================================ */
 
 :root {
-  --color-bg:       #0d0d0f;
-  --color-surface:  #1a1a22;
-  --color-primary:  #e63946;
-  --color-accent:   #f4a261;
-  --color-text:     #eaeaea;
-  --color-muted:    #888;
-  --radius:         6px;
-  --transition:     0.2s ease;
+  --color-bg: #0d0d0f;
+  --color-surface: #1a1a22;
+  --color-primary: #e63946;
+  --color-accent: #f4a261;
+  --color-text: #eaeaea;
+  --color-muted: #888;
+  --radius: 6px;
+  --transition: 0.2s ease;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;

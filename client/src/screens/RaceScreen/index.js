@@ -6,8 +6,6 @@
 // Description: Live race screen — track renderer, HUD, and real-time updates
 // ============================================================
 
-import React from 'react';
-
 function RaceScreen() {
   return <div className="screen screen--race" />;
 }

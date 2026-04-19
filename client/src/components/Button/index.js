@@ -6,15 +6,9 @@
 // Description: Reusable button component with variant and size props
 // ============================================================
 
-import React from 'react';
-
 function Button({ children, variant = 'primary', size = 'md', onClick, disabled }) {
   return (
-    <button
-      className={`btn btn--${variant} btn--${size}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
+    <button className={`btn btn--${variant} btn--${size}`} onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );

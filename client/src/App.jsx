@@ -6,10 +6,9 @@
 // Description: Root application component — wires up client-side routing
 // ============================================================
 
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
-import DevScreen   from './screens/DevScreen/DevScreen.jsx';
+import DevScreen from './screens/DevScreen/DevScreen.jsx';
 
 function App() {
   return (
@@ -17,7 +16,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/setup" replace />} />
         <Route path="/setup" element={<SetupScreen />} />
-        <Route path="/dev"   element={<DevScreen />} />
+        <Route path="/dev" element={<DevScreen />} />
         {/* Future routes: /race, /results */}
       </Routes>
     </BrowserRouter>

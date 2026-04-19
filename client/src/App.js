@@ -6,14 +6,8 @@
 // Description: Root application component with routing setup
 // ============================================================
 
-import React from 'react';
-
 function App() {
-  return (
-    <div className="app">
-      {/* Router and top-level layout go here */}
-    </div>
-  );
+  return <div className="app">{/* Router and top-level layout go here */}</div>;
 }
 
 export default App;

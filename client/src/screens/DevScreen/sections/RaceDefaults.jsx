@@ -7,15 +7,17 @@
 //              auto-advance, sound effects, and language
 // ============================================================
 
-import React from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
 import s from '../DevScreen.module.css';
 
-const DURATIONS   = [30, 60, 90, 120];
-const COUNTDOWNS  = [3, 5, 10];
-const LANGUAGES   = [{ value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }];
+const DURATIONS = [30, 60, 90, 120];
+const COUNTDOWNS = [3, 5, 10];
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'Deutsch' },
+];
 
 function RaceDefaults() {
   const [defaults, setDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
@@ -27,7 +29,6 @@ function RaceDefaults() {
   return (
     <div className={s.card}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
         {/* Duration */}
         <div className={s.formGroup}>
           <label className={s.label}>Default Race Duration</label>
@@ -95,13 +96,15 @@ function RaceDefaults() {
               />
               <span className={s.toggleSlider} />
             </label>
-            <span style={{ fontSize: '0.875rem' }}>
-              Auto-advance to Result Screen after race
-            </span>
+            <span style={{ fontSize: '0.875rem' }}>Auto-advance to Result Screen after race</span>
           </div>
           {defaults.autoAdvance && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>Delay (seconds):</span>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
+            >
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
+                Delay (seconds):
+              </span>
               <div className={s.stepper}>
                 <button
                   className={s.stepperBtn}
@@ -156,7 +159,6 @@ function RaceDefaults() {
             Note: full translations are applied in a later phase.
           </span>
         </div>
-
       </div>
     </div>
   );

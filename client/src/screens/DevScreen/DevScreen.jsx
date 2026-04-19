@@ -7,15 +7,15 @@
 //              are UI-driven, nothing requires touching the code
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlayerGroupsManager from './sections/PlayerGroupsManager.jsx';
-import RacerManager        from './sections/RacerManager.jsx';
-import TrackManager        from './sections/TrackManager.jsx';
-import BrandingProfiles    from './sections/BrandingProfiles.jsx';
-import RaceDefaults        from './sections/RaceDefaults.jsx';
-import RaceHistory         from './sections/RaceHistory.jsx';
-import SystemSettings      from './sections/SystemSettings.jsx';
+import RacerManager from './sections/RacerManager.jsx';
+import TrackManager from './sections/TrackManager.jsx';
+import BrandingProfiles from './sections/BrandingProfiles.jsx';
+import RaceDefaults from './sections/RaceDefaults.jsx';
+import RaceHistory from './sections/RaceHistory.jsx';
+import SystemSettings from './sections/SystemSettings.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [

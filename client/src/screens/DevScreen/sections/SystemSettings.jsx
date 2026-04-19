@@ -7,7 +7,7 @@
 //              to factory defaults, and app version info
 // ============================================================
 
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import {
   exportAllStorage,
   importAllStorage,
@@ -60,15 +60,20 @@ function SystemSettings() {
   }
 
   function handleReset() {
-    if (!window.confirm('Reset ALL settings to factory defaults? This deletes all custom tracks, racers, groups, and branding. This cannot be undone.')) return;
+    if (
+      !window.confirm(
+        'Reset ALL settings to factory defaults? This deletes all custom tracks, racers, groups, and branding. This cannot be undone.'
+      )
+    )
+      return;
     clearAllStorage();
     // Re-seed defaults so the app is usable immediately after reset
-    storageSet(KEYS.RACERS,        DEFAULT_RACERS);
-    storageSet(KEYS.TRACKS,        DEFAULT_TRACKS);
+    storageSet(KEYS.RACERS, DEFAULT_RACERS);
+    storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
     storageSet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
     storageSet(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
-    storageSet(KEYS.BRANDING,      DEFAULT_BRANDING);
-    storageSet(KEYS.RACE_HISTORY,  DEFAULT_RACE_HISTORY);
+    storageSet(KEYS.BRANDING, DEFAULT_BRANDING);
+    storageSet(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
     window.alert('All settings reset to defaults. The page will reload.');
     window.location.reload();
   }
@@ -79,8 +84,8 @@ function SystemSettings() {
       <div className={s.card}>
         <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Backup &amp; Restore</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Export all settings (tracks, racers, groups, branding, history) to a JSON file,
-          or restore from a previous backup.
+          Export all settings (tracks, racers, groups, branding, history) to a JSON file, or restore
+          from a previous backup.
         </p>
         <div className={s.btnRow}>
           <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleExport}>
@@ -106,8 +111,8 @@ function SystemSettings() {
       <div className={s.card}>
         <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Factory Reset</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Wipes all saved settings and restores the 5 built-in tracks, 5 built-in racers,
-          and all default values. Use with caution.
+          Wipes all saved settings and restores the 5 built-in tracks, 5 built-in racers, and all
+          default values. Use with caution.
         </p>
         <button className={`${s.btn} ${s.btnDanger}`} onClick={handleReset}>
           Reset All Settings to Defaults
@@ -126,7 +131,15 @@ function SystemSettings() {
               ['Storage', 'localStorage'],
             ].map(([k, v]) => (
               <tr key={k}>
-                <td style={{ color: 'var(--color-muted)', paddingRight: '1.5rem', paddingBottom: '0.3rem' }}>{k}</td>
+                <td
+                  style={{
+                    color: 'var(--color-muted)',
+                    paddingRight: '1.5rem',
+                    paddingBottom: '0.3rem',
+                  }}
+                >
+                  {k}
+                </td>
                 <td style={{ fontWeight: 500 }}>{v}</td>
               </tr>
             ))}

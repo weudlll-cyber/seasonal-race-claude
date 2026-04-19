@@ -6,12 +6,14 @@
 // Description: Labeled text input with validation message support
 // ============================================================
 
-import React from 'react';
-
 function InputField({ label, name, value, onChange, error, type = 'text' }) {
   return (
     <div className="input-field">
-      {label && <label className="input-field__label" htmlFor={name}>{label}</label>}
+      {label && (
+        <label className="input-field__label" htmlFor={name}>
+          {label}
+        </label>
+      )}
       <input
         id={name}
         name={name}

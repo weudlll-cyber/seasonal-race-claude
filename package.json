@@ -1,0 +1,12 @@
+{
+  "name": "racearena",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo root — manages git hooks via Husky",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0"
+  }
+}

@@ -6,7 +6,6 @@
 // Description: Race configuration controls — duration, winner count, event name
 // ============================================================
 
-import React from 'react';
 import styles from './SetupScreen.module.css';
 
 const DURATION_OPTIONS = [

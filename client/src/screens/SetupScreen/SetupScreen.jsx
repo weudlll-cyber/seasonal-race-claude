@@ -8,12 +8,12 @@
 //              changes are reflected immediately
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import PlayerSetup  from './PlayerSetup.jsx';
+import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
-import { useStorage }         from '../../modules/storage/useStorage.js';
+import { useStorage } from '../../modules/storage/useStorage.js';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import styles from './SetupScreen.module.css';
@@ -22,43 +22,36 @@ const TABS = ['Players', 'Track', 'Settings'];
 
 function SetupScreen() {
   const [activeTab, setActiveTab] = useState(0);
-  const [players, setPlayers]     = useState([]);
 
-  // Read tracks and race defaults from storage so Dev Panel changes propagate
-  const [tracks]       = useStorage(KEYS.TRACKS,        DEFAULT_TRACKS);
+  // Read tracks and defaults from storage so Dev Panel changes propagate
+  const [tracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
 
-  const [selectedTrackId, setSelectedTrackId] = useState(null);
-  const [raceSettings, setRaceSettings] = useState({
-    duration:  raceDefaults.duration,
-    winners:   raceDefaults.winners,
-    eventName: '',
-  });
-
-  // If the Dev Panel sent a group via activeGroup key, load it on mount
-  useEffect(() => {
+  // Lazily consume any group loaded from the Dev Panel (one-shot read + clear)
+  const [players, setPlayers] = useState(() => {
     const active = storageGet(KEYS.ACTIVE_GROUP);
     if (active && active.length > 0) {
-      setPlayers(active);
-      storageSet(KEYS.ACTIVE_GROUP, null); // consume once
-      setActiveTab(0); // jump to Players tab to show the loaded group
+      storageSet(KEYS.ACTIVE_GROUP, null); // consume so it doesn't re-apply on remount
+      return active;
     }
-  }, []);
+    return [];
+  });
 
-  // When defaults change in Dev Panel, apply to local settings if user hasn't overridden
-  useEffect(() => {
-    setRaceSettings((prev) => ({
-      ...prev,
-      duration: raceDefaults.duration,
-      winners:  raceDefaults.winners,
-    }));
-  }, [raceDefaults.duration, raceDefaults.winners]);
+  const [selectedTrackId, setSelectedTrackId] = useState(null);
+
+  // Initialise race settings from stored defaults; user may override during the session
+  const [raceSettings, setRaceSettings] = useState({
+    duration: raceDefaults.duration,
+    winners: raceDefaults.winners,
+    eventName: '',
+  });
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null;
 
   function handleStartRace() {
     // Placeholder: dispatches to server via Socket.IO in Phase 2
+    // eslint-disable-next-line no-console
     console.log('Starting race', { players, selectedTrackId, raceSettings });
   }
 
@@ -105,12 +98,24 @@ function SetupScreen() {
             >
               {tab}
               {tab === 'Players' && players.length > 0 && (
-                <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', color: 'var(--color-accent)' }}>
+                <span
+                  style={{
+                    marginLeft: '0.4rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-accent)',
+                  }}
+                >
                   {players.length}
                 </span>
               )}
               {tab === 'Track' && selectedTrack && (
-                <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', color: 'var(--color-accent)' }}>
+                <span
+                  style={{
+                    marginLeft: '0.4rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-accent)',
+                  }}
+                >
                   {selectedTrack.icon}
                 </span>
               )}
@@ -149,7 +154,9 @@ function SetupScreen() {
           <div className={styles.startSummary}>
             <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
             {selectedTrack ? (
-              <strong>{selectedTrack.icon} {selectedTrack.name}</strong>
+              <strong>
+                {selectedTrack.icon} {selectedTrack.name}
+              </strong>
             ) : (
               'No track selected'
             )}{' '}
@@ -161,9 +168,7 @@ function SetupScreen() {
             disabled={!canStart}
             onClick={handleStartRace}
             title={
-              !canStart
-                ? 'Add at least one player and select a track to start'
-                : 'Start the race!'
+              !canStart ? 'Add at least one player and select a track to start' : 'Start the race!'
             }
           >
             Start Race →

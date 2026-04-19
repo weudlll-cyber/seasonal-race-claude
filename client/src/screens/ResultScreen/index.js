@@ -6,8 +6,6 @@
 // Description: Post-race results screen — rankings, times, and season points
 // ============================================================
 
-import React from 'react';
-
 function ResultScreen() {
   return <div className="screen screen--result" />;
 }

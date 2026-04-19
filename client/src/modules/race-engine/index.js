@@ -19,9 +19,18 @@ export function createRaceEngine({ onTick } = {}) {
   }
 
   return {
-    start() { rafId = requestAnimationFrame(tick); },
-    stop()  { cancelAnimationFrame(rafId); lastTime = null; },
-    applyServerState(serverState) { Object.assign(state, serverState); },
-    getState() { return state; },
+    start() {
+      rafId = requestAnimationFrame(tick);
+    },
+    stop() {
+      cancelAnimationFrame(rafId);
+      lastTime = null;
+    },
+    applyServerState(serverState) {
+      Object.assign(state, serverState);
+    },
+    getState() {
+      return state;
+    },
   };
 }

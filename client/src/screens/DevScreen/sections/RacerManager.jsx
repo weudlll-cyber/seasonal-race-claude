@@ -6,7 +6,7 @@
 // Description: Manage racer types — add, edit, delete, enable/disable per track
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACERS, DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
@@ -26,9 +26,7 @@ function RacerManager() {
     const racer = { ...form, name: form.name.trim(), icon: form.icon.trim(), enabled: true };
 
     if (editId) {
-      setRacers((prev) =>
-        prev.map((r) => (r.id === editId ? { ...r, ...racer } : r))
-      );
+      setRacers((prev) => prev.map((r) => (r.id === editId ? { ...r, ...racer } : r)));
     } else {
       setRacers((prev) => [...prev, { id: newId(), ...racer }]);
     }
@@ -54,9 +52,7 @@ function RacerManager() {
   }
 
   function toggleEnabled(id) {
-    setRacers((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r))
-    );
+    setRacers((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
   }
 
   function handleCancel() {
@@ -100,9 +96,7 @@ function RacerManager() {
                   />
                   <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{racer.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{racer.name}</span>
-                  {track && (
-                    <span className={s.badge}>{track.name}</span>
-                  )}
+                  {track && <span className={s.badge}>{track.name}</span>}
                   <span className={s.spacer} />
                   {/* Enable/disable toggle */}
                   <label className={s.toggle} title={racer.enabled ? 'Disable' : 'Enable'}>
@@ -163,7 +157,13 @@ function RacerManager() {
                   type="color"
                   value={form.color}
                   onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                  style={{ width: '2rem', height: '2rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{
+                    width: '2rem',
+                    height: '2rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
                 />
                 <input
                   className={s.input}

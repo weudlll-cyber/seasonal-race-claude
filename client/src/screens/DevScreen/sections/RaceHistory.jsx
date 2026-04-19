@@ -6,7 +6,7 @@
 // Description: View, filter, export, and clear the race history log
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_HISTORY, DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
@@ -14,9 +14,9 @@ import s from '../DevScreen.module.css';
 
 function RaceHistory() {
   const [history, setHistory] = useStorage(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
-  const [tracks]              = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [tracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [filterTrack, setFilterTrack] = useState('');
-  const [filterDate, setFilterDate]   = useState('');
+  const [filterDate, setFilterDate] = useState('');
 
   const filtered = useMemo(() => {
     return history.filter((entry) => {
@@ -58,7 +58,10 @@ function RaceHistory() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Filter bar */}
-      <div className={s.card} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div
+        className={s.card}
+        style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}
+      >
         <div className={s.formGroup} style={{ minWidth: '160px' }}>
           <label className={s.label}>Filter by Track</label>
           <select
@@ -86,7 +89,10 @@ function RaceHistory() {
         <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
           <button
             className={`${s.btn} ${s.btnGhost}`}
-            onClick={() => { setFilterTrack(''); setFilterDate(''); }}
+            onClick={() => {
+              setFilterTrack('');
+              setFilterDate('');
+            }}
           >
             Clear Filters
           </button>
@@ -132,9 +138,7 @@ function RaceHistory() {
                 return (
                   <tr key={entry.id}>
                     <td>{new Date(entry.date).toLocaleString()}</td>
-                    <td>
-                      {track ? `${track.icon} ${track.name}` : entry.trackId}
-                    </td>
+                    <td>{track ? `${track.icon} ${track.name}` : entry.trackId}</td>
                     <td>{entry.duration}s</td>
                     <td>{entry.playerCount}</td>
                     <td>{entry.winners.join(', ')}</td>

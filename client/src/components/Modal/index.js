@@ -6,8 +6,6 @@
 // Description: Overlay modal component with title, body slot, and close handler
 // ============================================================
 
-import React from 'react';
-
 function Modal({ isOpen, title, onClose, children }) {
   if (!isOpen) return null;
   return (
@@ -15,7 +13,9 @@ function Modal({ isOpen, title, onClose, children }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal__header">
           <span>{title}</span>
-          <button className="modal__close" onClick={onClose}>×</button>
+          <button className="modal__close" onClick={onClose}>
+            ×
+          </button>
         </header>
         <div className="modal__body">{children}</div>
       </div>

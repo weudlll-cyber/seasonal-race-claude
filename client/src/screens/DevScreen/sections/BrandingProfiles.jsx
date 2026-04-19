@@ -7,7 +7,7 @@
 //              sponsor text); preview rendered before saving
 // ============================================================
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_BRANDING } from '../../../modules/storage/defaults.js';
@@ -20,7 +20,7 @@ const BLANK = {
   primaryColor: '#e63946',
   secondaryColor: '#f4a261',
   sponsorText: '',
-  logo: '',       // base64 data URL
+  logo: '', // base64 data URL
   isDefault: false,
 };
 
@@ -80,9 +80,7 @@ function BrandingProfiles() {
   }
 
   function handleSetDefault(id) {
-    setProfiles((prev) =>
-      prev.map((p) => ({ ...p, isDefault: p.id === id }))
-    );
+    setProfiles((prev) => prev.map((p) => ({ ...p, isDefault: p.id === id })));
   }
 
   function handleCancel() {
@@ -126,9 +124,7 @@ function BrandingProfiles() {
                 <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{profile.name}</span>
                 <span className={s.badge}>{profile.eventName}</span>
                 {profile.isDefault && (
-                  <span
-                    style={{ fontSize: '0.7rem', color: '#f4a261', fontWeight: 600 }}
-                  >
+                  <span style={{ fontSize: '0.7rem', color: '#f4a261', fontWeight: 600 }}>
                     ★ Default
                   </span>
                 )}
@@ -172,16 +168,9 @@ function BrandingProfiles() {
           style={{ background: previewProfile.primaryColor + '18' }}
         >
           {previewProfile.logo && (
-            <img
-              src={previewProfile.logo}
-              alt="Logo"
-              className={s.brandingPreviewLogo}
-            />
+            <img src={previewProfile.logo} alt="Logo" className={s.brandingPreviewLogo} />
           )}
-          <div
-            className={s.brandingPreviewTitle}
-            style={{ color: previewProfile.primaryColor }}
-          >
+          <div className={s.brandingPreviewTitle} style={{ color: previewProfile.primaryColor }}>
             {previewProfile.eventName}
           </div>
           {previewProfile.subtitle && (
@@ -236,7 +225,13 @@ function BrandingProfiles() {
                   type="color"
                   value={form.primaryColor}
                   onChange={(e) => f('primaryColor', e.target.value)}
-                  style={{ width: '2rem', height: '2rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{
+                    width: '2rem',
+                    height: '2rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
                 />
                 <input
                   className={s.input}
@@ -253,7 +248,13 @@ function BrandingProfiles() {
                   type="color"
                   value={form.secondaryColor}
                   onChange={(e) => f('secondaryColor', e.target.value)}
-                  style={{ width: '2rem', height: '2rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{
+                    width: '2rem',
+                    height: '2rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
                 />
                 <input
                   className={s.input}

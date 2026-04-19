@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Run lint-staged on the client package before every commit.
+# lint-staged auto-fixes ESLint errors and Prettier formatting on staged files.
+cd client && npx lint-staged

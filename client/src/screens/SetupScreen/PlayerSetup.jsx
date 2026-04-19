@@ -7,7 +7,7 @@
 //              randomly assigned racer number
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { assignRacers } from '../../modules/utils/RandomHelper.js';
 import styles from './SetupScreen.module.css';
 
@@ -31,9 +31,7 @@ function PlayerSetup({ players, onChange }) {
   }
 
   function handleRemove(index) {
-    const newNames = players
-      .filter((_, i) => i !== index)
-      .map((p) => p.name);
+    const newNames = players.filter((_, i) => i !== index).map((p) => p.name);
     onChange(newNames.length > 0 ? assignRacers(newNames) : []);
   }
 
@@ -83,9 +81,7 @@ function PlayerSetup({ players, onChange }) {
                   <span className={styles.playerName}>{player.name}</span>
                   <button
                     className={styles.removeBtn}
-                    onClick={() =>
-                      handleRemove(players.findIndex((p) => p.name === player.name))
-                    }
+                    onClick={() => handleRemove(players.findIndex((p) => p.name === player.name))}
                     title="Remove player"
                   >
                     ✕

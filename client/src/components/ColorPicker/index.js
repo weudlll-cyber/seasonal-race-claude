@@ -6,11 +6,15 @@
 // Description: Swatch-based color picker for racer livery customisation
 // ============================================================
 
-import React from 'react';
-
 const DEFAULT_SWATCHES = [
-  '#e63946', '#f4a261', '#2a9d8f', '#264653',
-  '#e9c46a', '#ffffff', '#aaaaaa', '#000000',
+  '#e63946',
+  '#f4a261',
+  '#2a9d8f',
+  '#264653',
+  '#e9c46a',
+  '#ffffff',
+  '#aaaaaa',
+  '#000000',
 ];
 
 function ColorPicker({ value, onChange, swatches = DEFAULT_SWATCHES }) {

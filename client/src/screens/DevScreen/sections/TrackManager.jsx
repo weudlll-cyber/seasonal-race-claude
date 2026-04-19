@@ -6,7 +6,7 @@
 // Description: Full track configuration — add, edit, delete, set default
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
@@ -72,9 +72,7 @@ function TrackManager() {
 
   // Only one track can be the default; toggling clears all others
   function handleSetDefault(id) {
-    setTracks((prev) =>
-      prev.map((t) => ({ ...t, isDefault: t.id === id }))
-    );
+    setTracks((prev) => prev.map((t) => ({ ...t, isDefault: t.id === id })));
   }
 
   function handleCancel() {
@@ -116,7 +114,11 @@ function TrackManager() {
                 >
                   <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{track.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
-                  {racer && <span className={s.badge}>{racer.icon} {racer.name}</span>}
+                  {racer && (
+                    <span className={s.badge}>
+                      {racer.icon} {racer.name}
+                    </span>
+                  )}
                   <span className={s.badge}>{track.difficulty}</span>
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
@@ -217,7 +219,13 @@ function TrackManager() {
                   type="color"
                   value={form.color}
                   onChange={(e) => f('color', e.target.value)}
-                  style={{ width: '2rem', height: '2rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{
+                    width: '2rem',
+                    height: '2rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
                 />
                 <input
                   className={s.input}

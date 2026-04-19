@@ -6,8 +6,6 @@
 // Description: Pre-race setup screen — racer config, track selection, lobby
 // ============================================================
 
-import React from 'react';
-
 function SetupScreen() {
   return <div className="screen screen--setup" />;
 }

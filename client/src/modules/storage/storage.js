@@ -7,14 +7,14 @@
 // ============================================================
 
 export const KEYS = {
-  PLAYER_GROUPS:  'racearena:playerGroups',
-  RACERS:         'racearena:racers',
-  TRACKS:         'racearena:tracks',
-  BRANDING:       'racearena:branding',
-  RACE_DEFAULTS:  'racearena:raceDefaults',
-  RACE_HISTORY:   'racearena:raceHistory',
-  SETTINGS:       'racearena:settings',
-  ACTIVE_GROUP:   'racearena:activeGroup',
+  PLAYER_GROUPS: 'racearena:playerGroups',
+  RACERS: 'racearena:racers',
+  TRACKS: 'racearena:tracks',
+  BRANDING: 'racearena:branding',
+  RACE_DEFAULTS: 'racearena:raceDefaults',
+  RACE_HISTORY: 'racearena:raceHistory',
+  SETTINGS: 'racearena:settings',
+  ACTIVE_GROUP: 'racearena:activeGroup',
 };
 
 export function storageGet(key, fallback = null) {

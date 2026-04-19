@@ -7,11 +7,25 @@
 // ============================================================
 
 export const DEFAULT_RACERS = [
-  { id: 'horse',  name: 'Horse',  icon: '🐴', color: '#a0522d', trackId: 'dirt-oval',    enabled: true },
-  { id: 'duck',   name: 'Duck',   icon: '🦆', color: '#2196f3', trackId: 'river-run',   enabled: true },
-  { id: 'rocket', name: 'Rocket', icon: '🚀', color: '#7c3aed', trackId: 'space-sprint', enabled: true },
-  { id: 'snail',  name: 'Snail',  icon: '🐌', color: '#16a34a', trackId: 'garden-path', enabled: true },
-  { id: 'car',    name: 'Car',    icon: '🚗', color: '#64748b', trackId: 'city-circuit', enabled: true },
+  { id: 'horse', name: 'Horse', icon: '🐴', color: '#a0522d', trackId: 'dirt-oval', enabled: true },
+  { id: 'duck', name: 'Duck', icon: '🦆', color: '#2196f3', trackId: 'river-run', enabled: true },
+  {
+    id: 'rocket',
+    name: 'Rocket',
+    icon: '🚀',
+    color: '#7c3aed',
+    trackId: 'space-sprint',
+    enabled: true,
+  },
+  {
+    id: 'snail',
+    name: 'Snail',
+    icon: '🐌',
+    color: '#16a34a',
+    trackId: 'garden-path',
+    enabled: true,
+  },
+  { id: 'car', name: 'Car', icon: '🚗', color: '#64748b', trackId: 'city-circuit', enabled: true },
 ];
 
 export const DEFAULT_TRACKS = [

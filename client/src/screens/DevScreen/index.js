@@ -6,8 +6,6 @@
 // Description: Developer sandbox screen for testing components and modules
 // ============================================================
 
-import React from 'react';
-
 function DevScreen() {
   return <div className="screen screen--dev" />;
 }
