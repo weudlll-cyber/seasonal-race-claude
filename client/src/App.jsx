@@ -9,14 +9,15 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
+import DevScreen   from './screens/DevScreen/DevScreen.jsx';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Setup is the default entry point before a race starts */}
         <Route path="/" element={<Navigate to="/setup" replace />} />
         <Route path="/setup" element={<SetupScreen />} />
+        <Route path="/dev"   element={<DevScreen />} />
         {/* Future routes: /race, /results */}
       </Routes>
     </BrowserRouter>
