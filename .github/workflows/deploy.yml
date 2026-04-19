@@ -1,0 +1,29 @@
+# ============================================================
+# File:        deploy.yml
+# Path:        .github/workflows/deploy.yml
+# Project:     RaceArena
+# Created:     2026-04-19
+# Description: Deploys to production when a commit is merged to main
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /srv/racearena
+            git pull origin main
+            bash scripts/deploy.sh

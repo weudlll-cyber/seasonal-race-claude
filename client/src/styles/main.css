@@ -1,0 +1,31 @@
+/* ============================================================
+   File:        main.css
+   Path:        client/src/styles/main.css
+   Project:     RaceArena
+   Created:     2026-04-19
+   Description: Global styles, CSS variables, and base resets
+   ============================================================ */
+
+:root {
+  --color-bg:       #0d0d0f;
+  --color-surface:  #1a1a22;
+  --color-primary:  #e63946;
+  --color-accent:   #f4a261;
+  --color-text:     #eaeaea;
+  --color-muted:    #888;
+  --radius:         6px;
+  --transition:     0.2s ease;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.5;
+}
