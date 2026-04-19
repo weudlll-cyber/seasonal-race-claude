@@ -7,12 +7,12 @@
 // ============================================================
 
 const router = require('express').Router();
-const ctrl   = require('../controllers/raceController');
+const ctrl   = require('../modules/race');
 const auth   = require('../middleware/auth');
 
-router.get('/',         ctrl.listRaces);
-router.post('/',  auth, ctrl.createRace);
-router.get('/:id',      ctrl.getRace);
+router.get('/',                ctrl.listRaces);
+router.post('/',          auth, ctrl.createRace);
+router.get('/:id',             ctrl.getRace);
 router.post('/:id/finish', auth, ctrl.finishRace);
 
 module.exports = router;

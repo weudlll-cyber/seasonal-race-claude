@@ -10,78 +10,77 @@ RaceArena is a client-server application. The React frontend communicates with t
 seasonal-race-claude/
 ├── client/
 │   ├── public/
-│   │   └── index.html          # HTML shell
+│   │   └── index.html              # HTML shell
 │   └── src/
-│       ├── components/         # Reusable UI pieces
-│       │   ├── RaceTrack.js
-│       │   ├── Leaderboard.js
-│       │   ├── PlayerCard.js
-│       │   └── SeasonTimer.js
-│       ├── pages/              # Route-level views
-│       │   ├── Home.js
-│       │   ├── Race.js
-│       │   └── Profile.js
-│       ├── services/           # Network layer
-│       │   ├── api.js          # REST client
-│       │   └── socket.js       # Socket.IO client
-│       ├── store/              # Global state
-│       │   └── index.js
+│       ├── screens/                # Route-level full-page views
+│       │   ├── SetupScreen/        # Pre-race config and lobby
+│       │   ├── RaceScreen/         # Live race view
+│       │   ├── ResultScreen/       # Post-race results
+│       │   └── DevScreen/          # Developer sandbox
+│       ├── components/             # Reusable UI building blocks
+│       │   ├── Button/
+│       │   ├── Modal/
+│       │   ├── InputField/
+│       │   ├── ColorPicker/
+│       │   └── LogoUploader/
+│       ├── modules/                # Domain logic, independent of React
+│       │   ├── race-engine/        # Client-side physics tick & prediction
+│       │   ├── track-renderer/     # Canvas draw calls
+│       │   ├── racer-types/        # Racer stat definitions
+│       │   ├── track-types/        # Track geometry definitions
+│       │   ├── socket/             # Socket.IO client singleton
+│       │   └── utils/              # Shared helpers (time, math)
+│       ├── services/               # REST API client
+│       │   └── api.js
 │       ├── styles/
 │       │   └── main.css
-│       ├── utils/
-│       │   └── helpers.js
 │       ├── App.js
 │       └── index.js
 │
 ├── server/
 │   └── src/
-│       ├── config/
-│       │   └── database.js     # MongoDB connection
-│       ├── controllers/        # Request handlers
-│       │   ├── raceController.js
-│       │   ├── userController.js
-│       │   └── seasonController.js
-│       ├── middleware/
-│       │   ├── auth.js         # JWT guard
-│       │   └── errorHandler.js
-│       ├── models/             # Mongoose schemas
-│       │   ├── Race.js
-│       │   ├── User.js
-│       │   └── Season.js
-│       ├── routes/             # Express routers
+│       ├── modules/                # Domain modules (handlers + logic)
+│       │   ├── race/               # Race CRUD handlers
+│       │   ├── socket/             # Socket.IO event registration
+│       │   ├── db/                 # SQLite connection & schema bootstrap
+│       │   └── utils/              # Shared server utilities
+│       ├── routes/                 # Express routers
 │       │   ├── race.js
 │       │   ├── user.js
 │       │   └── season.js
-│       ├── services/
-│       │   ├── raceEngine.js   # Physics & simulation
-│       │   └── socketHandler.js
+│       ├── middleware/
+│       │   ├── auth.js             # JWT guard
+│       │   └── errorHandler.js
 │       └── index.js
 │
 ├── docs/
-│   ├── ARCHITECTURE.md         # This file
+│   ├── ARCHITECTURE.md             # This file
 │   ├── API.md
 │   └── SETUP.md
 │
 ├── scripts/
-│   ├── seed.js                 # DB seed data
-│   └── deploy.sh               # Production deploy helper
+│   ├── seed.js                     # DB seed data
+│   └── deploy.sh                   # Production deploy helper
 │
 └── .github/
     └── workflows/
-        ├── ci.yml              # Lint + test on PR
-        └── deploy.yml          # Deploy on merge to main
+        ├── ci.yml                  # Lint + test on PR
+        └── deploy.yml              # Deploy on merge to main
 ```
 
 ## Data Flow
 
 ```
-Browser → React (pages/components)
-            ↓ REST (api.js)        → Express routes → Controllers → MongoDB
-            ↓ Socket.IO (socket.js) → socketHandler  → RaceEngine
+Browser → React (screens/)
+            ↓ REST (services/api.js)           → Express routes → modules/race  → SQLite
+            ↓ Socket.IO (modules/socket/)       → modules/socket → broadcast state
+            ↓ Canvas (modules/track-renderer/)  ← modules/race-engine (rAF tick)
 ```
 
 ## Key Design Decisions
 
+- **SQLite via better-sqlite3** — synchronous, zero-config, ideal for single-server deployment; swap for Postgres when horizontal scaling is needed.
+- **modules/ on both sides** — client `modules/` are framework-agnostic (no React imports); server `modules/` own their DB queries directly, no separate model layer.
 - **Socket.IO rooms** map 1-to-1 with race IDs for isolation.
-- **JWT** is short-lived (1h) and validated on every socket connection.
-- **Seasons** are a first-class model so the leaderboard can be cleanly reset between them.
+- **JWT** is short-lived (1h) and validated on every protected route and socket connection.
+- **Seasons** are a first-class DB table so the leaderboard can be cleanly reset between them.
