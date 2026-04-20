@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom';
 import { createCanvasRenderer } from '../../modules/track-canvas';
 import { createParticleEffects, PARTICLE_TYPES } from '../../modules/particle-effects';
 import { createRaceSimulation } from '../../modules/race-simulation';
-import { storageGet } from '../../modules/storage/storage';
 import './RaceScreen.css';
 
 function RaceScreen() {
@@ -23,6 +22,7 @@ function RaceScreen() {
   const [racers, setRacers] = useState([]);
   const [finishOrder, setFinishOrder] = useState([]);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [error, setError] = useState(null);
 
   const simulationRef = useRef(null);
   const rendererRef = useRef(null);
@@ -30,32 +30,45 @@ function RaceScreen() {
   const rafRef = useRef(null);
   const lastUpdateRef = useRef(0);
 
-  // Initialize race
+  // Load race data from session storage
   useEffect(() => {
-    // Get race data from session storage
-    const activeRace = sessionStorage.getItem('activeRace');
-    if (!activeRace) {
-      navigate('/setup');
-      return;
+    try {
+      const activeRace = sessionStorage.getItem('activeRace');
+      if (!activeRace) {
+        console.warn('[RaceScreen] No activeRace in sessionStorage, navigating to setup');
+        navigate('/setup');
+        return;
+      }
+
+      const race = JSON.parse(activeRace);
+      setRaceData(race);
+      setRacers(race.racers);
+    } catch (err) {
+      console.error('[RaceScreen] Failed to load race data:', err);
+      setError('Failed to load race data');
+      setTimeout(() => navigate('/setup'), 1000);
     }
-
-    const race = JSON.parse(activeRace);
-    setRaceData(race);
-    setRacers(race.racers);
-
-    // Create renderer
-    if (canvasRef.current) {
-      rendererRef.current = createCanvasRenderer(canvasRef.current);
-      rendererRef.current.initTrack(race.trackId, 800, 500);
-    }
-
-    // Create particle effects
-    particlesRef.current = createParticleEffects();
-
-    // Create simulation
-    const raceDefaults = storageGet('racearena:raceDefaults', { duration: 60 });
-    simulationRef.current = createRaceSimulation(race.racers, 1);
   }, [navigate]);
+
+  // Initialize canvas and modules after canvas is mounted
+  useEffect(() => {
+    if (!raceData || !canvasRef.current) return;
+
+    try {
+      // Create renderer with actual canvas element
+      rendererRef.current = createCanvasRenderer(canvasRef.current);
+      rendererRef.current.initTrack(raceData.trackId, 800, 500);
+
+      // Create particle effects
+      particlesRef.current = createParticleEffects();
+
+      // Create simulation
+      simulationRef.current = createRaceSimulation(raceData.racers, 1);
+    } catch (err) {
+      console.error('[RaceScreen] Failed to initialize race:', err);
+      setError('Failed to initialize race');
+    }
+  }, [raceData]);
 
   // Countdown phase
   useEffect(() => {
@@ -152,10 +165,46 @@ function RaceScreen() {
 
   return (
     <div className="screen screen--race">
+      {error && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+            color: '#fff',
+            fontSize: '18px',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {!raceData && !error && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1000,
+            color: '#fff',
+            fontSize: '18px',
+          }}
+        >
+          Loading race...
+        </div>
+      )}
+
       <div className="race-container">
         {/* Canvas */}
         <div className="race-canvas-wrapper">
-          <canvas ref={canvasRef} className="race-canvas" />
+          <canvas ref={canvasRef} className="race-canvas" width={800} height={500} />
 
           {/* Countdown overlay */}
           {gameState === 'countdown' && (

@@ -72,15 +72,41 @@ function SetupScreen() {
   function handleQuickTest() {
     // Create 6 test players with different racer types
     const testPlayers = [
-      { name: 'Player 1', racerId: DEFAULT_RACERS[0].id, color: DEFAULT_RACERS[0].color },
-      { name: 'Player 2', racerId: DEFAULT_RACERS[1].id, color: DEFAULT_RACERS[1].color },
-      { name: 'Player 3', racerId: DEFAULT_RACERS[2].id, color: DEFAULT_RACERS[2].color },
-      { name: 'Player 4', racerId: DEFAULT_RACERS[3].id, color: DEFAULT_RACERS[3].color },
-      { name: 'Player 5', racerId: DEFAULT_RACERS[4].id, color: DEFAULT_RACERS[4].color },
+      {
+        name: 'Player 1',
+        racerId: DEFAULT_RACERS[0].id,
+        color: DEFAULT_RACERS[0].color,
+        icon: DEFAULT_RACERS[0].icon,
+      },
+      {
+        name: 'Player 2',
+        racerId: DEFAULT_RACERS[1].id,
+        color: DEFAULT_RACERS[1].color,
+        icon: DEFAULT_RACERS[1].icon,
+      },
+      {
+        name: 'Player 3',
+        racerId: DEFAULT_RACERS[2].id,
+        color: DEFAULT_RACERS[2].color,
+        icon: DEFAULT_RACERS[2].icon,
+      },
+      {
+        name: 'Player 4',
+        racerId: DEFAULT_RACERS[3].id,
+        color: DEFAULT_RACERS[3].color,
+        icon: DEFAULT_RACERS[3].icon,
+      },
+      {
+        name: 'Player 5',
+        racerId: DEFAULT_RACERS[4].id,
+        color: DEFAULT_RACERS[4].color,
+        icon: DEFAULT_RACERS[4].icon,
+      },
       {
         name: 'Player 6',
         racerId: DEFAULT_RACERS[0].id,
         color: DEFAULT_RACERS[0].color,
+        icon: DEFAULT_RACERS[0].icon,
       },
     ];
 
