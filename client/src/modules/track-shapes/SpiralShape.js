@@ -2,46 +2,48 @@
 // File:        SpiralShape.js
 // Path:        client/src/modules/track-shapes/SpiralShape.js
 // Project:     RaceArena
-// Created:     2026-04-20
-// Description: Asymmetric spiral-loop shape — the radius expands on one half
-//              of the lap and contracts on the other, producing a teardrop
-//              orbit that looks like a space gravity slingshot.
-//              r_mod = 1 + AMP·sin(2πt)  →  one bulge per lap.
+// Description: Space Sprint — open slalom course flowing LEFT → RIGHT.
+//              t=0 is the start (left), t=1 is the finish (right).
+//              x increases linearly; y weaves up and down with N_SLALOMS
+//              half-periods, creating a tight slalom feel.
 // ============================================================
 
 import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 
-const CY_FRAC = 0.57;
-const RX_FRAC = 0.3;
-const RY_FRAC = 0.2;
-const SPIRAL_AMP = 0.5; // radius modulation — 0.5 gives 3:1 right/left asymmetry (teardrop)
+const MARGIN_X_FRAC = 0.05; // left/right margin as fraction of canvas width
+const CY_FRAC = 0.55; // vertical centre
+const AMP_FRAC = 0.22; // y-amplitude (slightly tighter than River)
+const N_SLALOMS = 5; // number of slalom bends (half-periods of sine)
 
 function _bandWidth(totalLanes) {
   return Math.min(Math.max(120, totalLanes * 24), 200);
 }
 
 export class SpiralShape {
+  /** True — this is a one-way open course (start ≠ finish). */
+  isOpen = true;
+
   constructor(cw, ch) {
     this.cw = cw;
     this.ch = ch;
     this.cx = cw / 2;
     this.cy = ch * CY_FRAC;
-    this.rx = cw * RX_FRAC;
-    this.ry = ch * RY_FRAC;
+    this.startX = cw * MARGIN_X_FRAC;
+    this.spanX = cw * (1 - 2 * MARGIN_X_FRAC);
+    this.amp = ch * AMP_FRAC;
   }
 
+  // Centre path: x linear, y sinusoidal — N_SLALOMS half-periods left→right
   _center(t) {
-    const a = 2 * Math.PI * t - Math.PI / 2;
-    const mod = 1 + SPIRAL_AMP * Math.sin(2 * Math.PI * t);
     return {
-      x: this.cx + this.rx * mod * Math.cos(a),
-      y: this.cy + this.ry * mod * Math.sin(a),
+      x: this.startX + this.spanX * t,
+      y: this.cy + this.amp * Math.sin(N_SLALOMS * Math.PI * t),
     };
   }
 
   getPosition(t, laneIndex, totalLanes) {
     const TW = _bandWidth(totalLanes);
-    return perpendicularLane(this._center.bind(this), t, laneIndex, totalLanes, TW);
+    return perpendicularLane(this._center.bind(this), t, laneIndex, totalLanes, TW, true);
   }
 
   getCenterPoint() {
@@ -54,7 +56,7 @@ export class SpiralShape {
 
   getTotalLength() {
     let len = 0;
-    const N = 100;
+    const N = 200;
     let prev = this._center(0);
     for (let i = 1; i <= N; i++) {
       const cur = this._center(i / N);
@@ -68,6 +70,6 @@ export class SpiralShape {
 
   getEdgePoints(totalLanes, nSamples = 120) {
     const TW = _bandWidth(totalLanes);
-    return buildEdgePoints(this._center.bind(this), TW / 2, nSamples);
+    return buildEdgePoints(this._center.bind(this), TW / 2, nSamples, true);
   }
 }

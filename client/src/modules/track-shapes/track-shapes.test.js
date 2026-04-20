@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-20
 // Description: Tests for all track shape modules — verifies path math,
-//              lane separation, closed-loop property, and edge points.
+//              lane separation, open vs closed course property, and edge points.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
@@ -69,12 +69,18 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
       expect(dist).toBeGreaterThan(5);
     });
 
-    it('t=0 and t=1 land at the same position (closed loop)', () => {
+    it('closed loops: t=0 and t=1 are the same; open courses: t=0 and t=1 are far apart', () => {
       for (let lane = 0; lane < N_LANES; lane++) {
         const p0 = shape.getPosition(0, lane, N_LANES);
         const p1 = shape.getPosition(1, lane, N_LANES);
         const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
-        expect(dist).toBeLessThan(10); // within 10px tolerance
+        if (shape.isOpen) {
+          // Open course: start (t=0) and finish (t=1) must be well separated
+          expect(dist).toBeGreaterThan(50);
+        } else {
+          // Closed loop: t=1 wraps back to t=0 within tolerance
+          expect(dist).toBeLessThan(10);
+        }
       }
     });
 
@@ -134,8 +140,6 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
 
     it('outer and inner edges are meaningfully separated', () => {
-      // The two edges must be on opposite sides of the centre path
-      // (don't assume which is geometrically "outer" — path direction varies).
       const { outer, inner } = shape.getEdgePoints(N_LANES, 40);
       let totalSep = 0;
       for (let i = 0; i < outer.length; i++) {
@@ -143,7 +147,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
           dy = outer[i].y - inner[i].y;
         totalSep += Math.sqrt(dx * dx + dy * dy);
       }
-      expect(totalSep / outer.length).toBeGreaterThan(10); // meaningful separation
+      expect(totalSep / outer.length).toBeGreaterThan(10);
     });
   });
 

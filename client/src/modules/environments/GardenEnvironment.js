@@ -2,10 +2,10 @@
 // File:        GardenEnvironment.js
 // Path:        client/src/modules/environments/GardenEnvironment.js
 // Project:     RaceArena
-// Created:     2026-04-20
-// Description: Garden environment — layered grass background, flower dots
-//              along track edges, drifting falling leaves, and occasional
-//              butterfly particles crossing the screen.
+// Description: Garden Path environment — open zigzag course flowing TOP → BOTTOM.
+//              Layered grass background, flower dots along track edges, falling
+//              leaves, butterflies.  Start line at top, finish at bottom.
+//              No enclosed infield — the grass background fills the outside.
 // ============================================================
 
 // Pre-seeded flower positions (relative to outer edge samples)
@@ -19,7 +19,7 @@ const FLOWERS = Array.from({ length: 30 }, (_, i) => ({
 
 // Falling leaves
 const LEAVES = Array.from({ length: 16 }, (_, i) => ({
-  x: (i * 0.0625) % 1, // fraction of cw
+  x: (i * 0.0625) % 1,
   y: (i * 0.09) % 1,
   vx: 0.3 + (i % 3) * 0.2,
   vy: 0.5 + (i % 4) * 0.15,
@@ -47,7 +47,7 @@ export class GardenEnvironment {
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
 
-    // Sky gradient
+    // Sky / grass background — full canvas
     ctx.fillStyle = '#0a1f0a';
     ctx.fillRect(0, 0, cw, ch);
 
@@ -89,7 +89,6 @@ export class GardenEnvironment {
       ctx.translate(bx, by);
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = `hsl(${bf.hue},70%,60%)`;
-      // Two wing ellipses
       ctx.beginPath();
       ctx.ellipse(-5, 0, 8, 5, flutter, 0, Math.PI * 2);
       ctx.fill();
@@ -112,22 +111,9 @@ export class GardenEnvironment {
   }
 
   drawTrackSurface(ctx, shape, totalLanes, frame) {
-    const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
+    const { outer, inner } = shape.getEdgePoints(totalLanes, 200);
 
-    // Soft green grass infield (fills inner area matching the track shape)
-    const cp = shape.getCenterPoint();
-    const innerGrad = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, 280);
-    innerGrad.addColorStop(0, 'hsl(115,42%,21%)');
-    innerGrad.addColorStop(0.6, 'hsl(115,38%,16%)');
-    innerGrad.addColorStop(1, 'hsl(115,35%,13%)');
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = innerGrad;
-    ctx.fill();
-
-    // Dirt path fill (track band only)
+    // Dirt path corridor — top to bottom (no enclosed infield for open course)
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -137,7 +123,6 @@ export class GardenEnvironment {
     ctx.fill();
 
     // Dirt texture (speckles)
-    const pulse = 0.5 + 0.5 * Math.sin(frame * 0.001);
     ctx.globalAlpha = 0.15;
     for (let i = 0; i < outer.length; i += 5) {
       const po = outer[i],
@@ -153,7 +138,7 @@ export class GardenEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // Flower dots along edges
+    // Flower dots along both edges of the corridor
     for (const fl of FLOWERS) {
       const idx = Math.round(fl.t * (outer.length - 1));
       if (idx >= outer.length) continue;
@@ -164,7 +149,6 @@ export class GardenEnvironment {
       ctx.beginPath();
       ctx.arc(edgePt.x, edgePt.y, fl.size * bloom, 0, Math.PI * 2);
       ctx.fill();
-      // Small white centre
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.beginPath();
       ctx.arc(edgePt.x, edgePt.y, fl.size * 0.3, 0, Math.PI * 2);
@@ -172,7 +156,7 @@ export class GardenEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // Grassy border
+    // Grassy borders along both banks
     ctx.strokeStyle = 'rgba(60,180,70,0.6)';
     ctx.lineWidth = 3;
     ctx.shadowBlur = 8;
@@ -187,12 +171,39 @@ export class GardenEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
+    this._drawStartLine(ctx, shape, totalLanes);
     this._drawFinishLine(ctx, shape, totalLanes);
   }
 
-  _drawFinishLine(ctx, shape, totalLanes) {
+  // Start line at t=0 (top of path) — green/white
+  _drawStartLine(ctx, shape, totalLanes) {
     const pO = shape.getPosition(0, totalLanes - 1, totalLanes);
     const pI = shape.getPosition(0, 0, totalLanes);
+    const dx = pO.x - pI.x,
+      dy = pO.y - pI.y;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#00ff88';
+    const perp = Math.atan2(dy, dx) + Math.PI / 2;
+    const hw = 6;
+    for (let i = 0; i < 8; i++) {
+      const f0 = i / 8,
+        f1 = (i + 1) / 8;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(0,255,136,0.9)' : 'rgba(0,60,30,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(pI.x + dx * f0, pI.y + dy * f0);
+      ctx.lineTo(pI.x + dx * f1, pI.y + dy * f1);
+      ctx.lineTo(pI.x + dx * f1 + Math.cos(perp) * hw, pI.y + dy * f1 + Math.sin(perp) * hw);
+      ctx.lineTo(pI.x + dx * f0 + Math.cos(perp) * hw, pI.y + dy * f0 + Math.sin(perp) * hw);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // Finish line at t=1 (bottom of path) — gold/white checkerboard
+  _drawFinishLine(ctx, shape, totalLanes) {
+    const pO = shape.getPosition(1, totalLanes - 1, totalLanes);
+    const pI = shape.getPosition(1, 0, totalLanes);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 8;

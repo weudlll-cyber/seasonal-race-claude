@@ -2,11 +2,11 @@
 // File:        SpaceEnvironment.js
 // Path:        client/src/modules/environments/SpaceEnvironment.js
 // Project:     RaceArena
-// Created:     2026-04-20
-// Description: Deep-space environment — three-layer parallax star field,
-//              slowly drifting nebula blobs, occasional shooting star,
-//              and a planet/moon in the corner.  Track surface is a
-//              glowing energy grid with tron-style lane lines.
+// Description: Space Sprint environment — open slalom course flowing left→right.
+//              Three-layer parallax star field (scrolling right→left for speed),
+//              drifting nebula blobs, shooting star, planet in corner.
+//              Track is a glowing energy corridor — no enclosed infield.
+//              Stars scroll right-to-left to give a forward-momentum feel.
 // ============================================================
 
 function _seeded(seed, max) {
@@ -62,11 +62,12 @@ export class SpaceEnvironment {
       ctx.fill();
     }
 
-    // Three-layer parallax stars
+    // Three-layer parallax stars — scroll RIGHT→LEFT for speed feel
     for (const layer of STAR_LAYERS) {
       for (const s of layer) {
+        // Negative scroll direction: stars move left as racers travel right
         const scrollX = (frame * s.speed * 0.005) % 1;
-        const sx = ((s.x + scrollX) % 1) * cw;
+        const sx = ((s.x - scrollX + 2) % 1) * cw;
         const sy = s.y * ch;
         const twinkle = s.brightness + 0.3 * Math.sin(frame * 0.003 + s.phase);
         ctx.globalAlpha = Math.max(0, Math.min(1, twinkle));
@@ -117,7 +118,6 @@ export class SpaceEnvironment {
     ctx.beginPath();
     ctx.arc(px, py, pr, 0, Math.PI * 2);
     ctx.fill();
-    // Planet ring
     ctx.strokeStyle = 'rgba(200,170,255,0.4)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -139,19 +139,7 @@ export class SpaceEnvironment {
     const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0018);
 
-    // Void infield — deepest black contrasts with the glowing track band
-    const cp = shape.getCenterPoint();
-    const vg = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, 220);
-    vg.addColorStop(0, 'hsl(240,50%,5%)');
-    vg.addColorStop(1, 'hsl(240,30%,2%)');
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = vg;
-    ctx.fill();
-
-    // Dark energy track surface
+    // Dark energy track corridor (no enclosed infield for open course)
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -160,7 +148,7 @@ export class SpaceEnvironment {
     ctx.fillStyle = `hsl(245,30%,${9 + pulse * 4}%)`;
     ctx.fill();
 
-    // Tron-style grid lines along the track
+    // Tron-style grid lines along the track corridor
     const nGridLines = 5;
     for (let li = 0; li < nGridLines; li++) {
       const frac = (li + 1) / (nGridLines + 1);
@@ -203,12 +191,39 @@ export class SpaceEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
+    this._drawStartLine(ctx, shape, totalLanes);
     this._drawFinishLine(ctx, shape, totalLanes);
   }
 
-  _drawFinishLine(ctx, shape, totalLanes) {
+  // Start line at t=0 (left side) — green glow
+  _drawStartLine(ctx, shape, totalLanes) {
     const pO = shape.getPosition(0, totalLanes - 1, totalLanes);
     const pI = shape.getPosition(0, 0, totalLanes);
+    const dx = pO.x - pI.x,
+      dy = pO.y - pI.y;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#00ff88';
+    const perp = Math.atan2(dy, dx) + Math.PI / 2;
+    const hw = 6;
+    for (let i = 0; i < 8; i++) {
+      const f0 = i / 8,
+        f1 = (i + 1) / 8;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(0,255,136,0.9)' : 'rgba(0,60,30,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(pI.x + dx * f0, pI.y + dy * f0);
+      ctx.lineTo(pI.x + dx * f1, pI.y + dy * f1);
+      ctx.lineTo(pI.x + dx * f1 + Math.cos(perp) * hw, pI.y + dy * f1 + Math.sin(perp) * hw);
+      ctx.lineTo(pI.x + dx * f0 + Math.cos(perp) * hw, pI.y + dy * f0 + Math.sin(perp) * hw);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // Finish line at t=1 (right side) — cyan glow
+  _drawFinishLine(ctx, shape, totalLanes) {
+    const pO = shape.getPosition(1, totalLanes - 1, totalLanes);
+    const pI = shape.getPosition(1, 0, totalLanes);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 12;

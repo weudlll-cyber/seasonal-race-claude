@@ -82,6 +82,7 @@ export default function RaceScreen() {
     shapeRef.current = getShape(shapeId, CW, CH);
     envRef.current = getEnvironment(envId, CW, CH);
     racerTypeRef.current = getRacerType(typeId);
+    const isOpenTrack = shapeRef.current.isOpen === true;
 
     // Determine the emoji to use for all racers on this track
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
@@ -178,7 +179,11 @@ export default function RaceScreen() {
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
 
       for (const r of st.racers) {
-        const pos = shape.getPosition(tPos(r.t), r.laneIndex, nRacers);
+        const pos = shape.getPosition(
+          isOpenTrack ? Math.min(r.t, 1) : tPos(r.t),
+          r.laneIndex,
+          nRacers
+        );
 
         // Speed trail dots
         for (let i = 0; i < r.trail.length; i++) {
@@ -302,7 +307,7 @@ export default function RaceScreen() {
           if (r.t >= 1.0) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
-            const finishPos = shape.getPosition(0, r.laneIndex, nRacers);
+            const finishPos = shape.getPosition(isOpenTrack ? 1 : 0, r.laneIndex, nRacers);
             emitBurst(finishPos.x, finishPos.y);
           }
         }
@@ -311,7 +316,11 @@ export default function RaceScreen() {
         const rt = racerTypeRef.current;
         for (const r of st.racers) {
           if (r.finished) continue;
-          const pos = shape.getPosition(tPos(r.t), r.laneIndex, nRacers);
+          const pos = shape.getPosition(
+            isOpenTrack ? Math.min(r.t, 1) : tPos(r.t),
+            r.laneIndex,
+            nRacers
+          );
           const newParts = rt.getTrailParticles(pos.x, pos.y, r.baseSpeed, pos.angle, ts);
           st.dustParticles.push(...newParts);
         }
