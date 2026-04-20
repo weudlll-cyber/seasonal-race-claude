@@ -10,10 +10,12 @@ import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
+import { SHAPE_IDS, SHAPE_LABELS } from '../../../modules/track-shapes/index.js';
+import { ENV_IDS, ENV_LABELS } from '../../../modules/environments/index.js';
+import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
 import s from '../DevScreen.module.css';
 
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
-const CURVE_STYLES = ['oval', 's-curve', 'spiral', 'zigzag', 'rectangle'];
 const DURATIONS = [30, 60, 90, 120];
 
 const BLANK = {
@@ -21,6 +23,9 @@ const BLANK = {
   icon: '',
   description: '',
   racerId: '',
+  racerTypeId: 'horse',
+  shapeId: 'oval',
+  environmentId: 'dirt',
   color: '#e63946',
   defaultDuration: 60,
   defaultWinners: 3,
@@ -37,7 +42,14 @@ function TrackManager() {
 
   function handleSave() {
     if (!form.name.trim() || !form.icon.trim()) return;
-    const track = { ...form, name: form.name.trim(), icon: form.icon.trim(), isDefault: false };
+    const track = {
+      ...form,
+      name: form.name.trim(),
+      icon: form.icon.trim(),
+      isDefault: false,
+      // Keep curveStyle in sync with shapeId for backward compat
+      curveStyle: form.shapeId,
+    };
 
     if (editId) {
       setTracks((prev) => prev.map((t) => (t.id === editId ? { ...t, ...track } : t)));
@@ -55,11 +67,14 @@ function TrackManager() {
       icon: track.icon,
       description: track.description,
       racerId: track.racerId,
+      racerTypeId: track.racerTypeId || track.racerId || 'horse',
+      shapeId: track.shapeId || track.curveStyle || 'oval',
+      environmentId: track.environmentId || 'dirt',
       color: track.color,
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
       difficulty: track.difficulty,
-      curveStyle: track.curveStyle,
+      curveStyle: track.shapeId || track.curveStyle || 'oval',
     });
     setEditId(track.id);
     setShowForm(true);
@@ -284,15 +299,43 @@ function TrackManager() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Curve Style</label>
+              <label className={s.label}>Track Shape</label>
               <select
                 className={s.select}
-                value={form.curveStyle}
-                onChange={(e) => f('curveStyle', e.target.value)}
+                value={form.shapeId}
+                onChange={(e) => f('shapeId', e.target.value)}
               >
-                {CURVE_STYLES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {SHAPE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {SHAPE_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Environment</label>
+              <select
+                className={s.select}
+                value={form.environmentId}
+                onChange={(e) => f('environmentId', e.target.value)}
+              >
+                {ENV_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {ENV_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Racer Type</label>
+              <select
+                className={s.select}
+                value={form.racerTypeId}
+                onChange={(e) => f('racerTypeId', e.target.value)}
+              >
+                {RACER_TYPE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {RACER_TYPE_LABELS[id]}
                   </option>
                 ))}
               </select>

@@ -54,12 +54,18 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null;
 
+  // Track selected for Quick Test (defaults to first track)
+  const [quickTrackId, setQuickTrackId] = useState(null);
+  const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
+
   function handleStartRace() {
-    // Save race data to session storage for RaceScreen to pick up
     const race = {
       racers: players,
       trackId: selectedTrackId,
       trackName: selectedTrack?.name,
+      shapeId: selectedTrack?.shapeId || selectedTrack?.curveStyle || 'oval',
+      environmentId: selectedTrack?.environmentId || 'dirt',
+      racerTypeId: selectedTrack?.racerTypeId || selectedTrack?.racerId || 'horse',
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
@@ -70,71 +76,35 @@ function SetupScreen() {
   }
 
   function handleQuickTest() {
-    // Create 6 test players with different racer types
-    const testPlayers = [
-      {
-        name: 'Player 1',
-        racerId: DEFAULT_RACERS[0].id,
-        color: DEFAULT_RACERS[0].color,
-        icon: DEFAULT_RACERS[0].icon,
-      },
-      {
-        name: 'Player 2',
-        racerId: DEFAULT_RACERS[1].id,
-        color: DEFAULT_RACERS[1].color,
-        icon: DEFAULT_RACERS[1].icon,
-      },
-      {
-        name: 'Player 3',
-        racerId: DEFAULT_RACERS[2].id,
-        color: DEFAULT_RACERS[2].color,
-        icon: DEFAULT_RACERS[2].icon,
-      },
-      {
-        name: 'Player 4',
-        racerId: DEFAULT_RACERS[3].id,
-        color: DEFAULT_RACERS[3].color,
-        icon: DEFAULT_RACERS[3].icon,
-      },
-      {
-        name: 'Player 5',
-        racerId: DEFAULT_RACERS[4].id,
-        color: DEFAULT_RACERS[4].color,
-        icon: DEFAULT_RACERS[4].icon,
-      },
-      {
-        name: 'Player 6',
-        racerId: DEFAULT_RACERS[0].id,
-        color: DEFAULT_RACERS[0].color,
-        icon: DEFAULT_RACERS[0].icon,
-      },
-    ];
+    const track = quickTrack;
+    if (!track) return;
 
-    // Use first available track
-    const firstTrack = tracks[0];
-    const firstTrackId = firstTrack?.id;
+    // 6 test players — icon matches the track's racer type
+    const trackIcon = track.racerTypeId
+      ? ({ horse: '🐴', duck: '🦆', rocket: '🚀', snail: '🐌', car: '🚗' }[track.racerTypeId] ??
+        DEFAULT_RACERS[0].icon)
+      : DEFAULT_RACERS[0].icon;
+    const testPlayers = Array.from({ length: 6 }, (_, i) => ({
+      name: `Player ${i + 1}`,
+      racerId: track.racerTypeId ?? DEFAULT_RACERS[i % DEFAULT_RACERS.length].id,
+      color: DEFAULT_RACERS[i % DEFAULT_RACERS.length].color,
+      icon: trackIcon,
+    }));
 
-    if (!firstTrackId) {
-      console.error('[QuickTest] No tracks available');
-      return;
-    }
-
-    // Save race data with test players
     const race = {
       racers: testPlayers,
-      trackId: firstTrackId,
-      trackName: firstTrack.name,
+      trackId: track.id,
+      trackName: track.name,
+      shapeId: track.shapeId || track.curveStyle || 'oval',
+      environmentId: track.environmentId || 'dirt',
+      racerTypeId: track.racerTypeId || 'horse',
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,
       timestamp: new Date().toISOString(),
     };
 
-    console.log('[QuickTest] Saving race data:', race);
     sessionStorage.setItem('activeRace', JSON.stringify(race));
-    console.log('[QuickTest] Saved to sessionStorage, navigating to /race');
-    console.log('[QuickTest] Verify saved:', sessionStorage.getItem('activeRace'));
-
     navigate('/race');
   }
 
@@ -247,13 +217,45 @@ function SetupScreen() {
             <strong>{raceSettings.winners}</strong>
           </div>
           <div className={styles.startButtons}>
-            <button
-              className={styles.quickTestBtn}
-              onClick={handleQuickTest}
-              title="Auto-fill 6 test players and start race"
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                alignItems: 'flex-start',
+              }}
             >
-              ⚡ Quick Test
-            </button>
+              {/* Track switcher for Quick Test */}
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {tracks.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setQuickTrackId(t.id)}
+                    title={`${t.name} · ${t.shapeId || t.curveStyle || 'oval'} / ${t.environmentId || 'dirt'}`}
+                    style={{
+                      padding: '2px 7px',
+                      fontSize: '11px',
+                      border: `1px solid ${(quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : 'rgba(255,255,255,0.15)'}`,
+                      borderRadius: '4px',
+                      background:
+                        (quickTrack?.id ?? tracks[0]?.id) === t.id ? `${t.color}33` : 'transparent',
+                      color: (quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : '#aaa',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t.icon} {t.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                className={styles.quickTestBtn}
+                onClick={handleQuickTest}
+                title="Auto-fill 6 test players and start race"
+              >
+                ⚡ Quick Test
+              </button>
+            </div>
             <button
               className={styles.startBtn}
               disabled={!canStart}
