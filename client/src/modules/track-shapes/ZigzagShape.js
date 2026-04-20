@@ -2,75 +2,68 @@
 // File:        ZigzagShape.js
 // Path:        client/src/modules/track-shapes/ZigzagShape.js
 // Project:     RaceArena
-// Description: Garden Path — open zigzag course flowing TOP → BOTTOM.
-//              t=0 is the start (top), t=1 is the finish (bottom).
-//              y increases linearly; x zigzags left-right with N_ZIGS
-//              half-periods of sine, creating a garden-path weave.
+// Description: Garden Path — open zigzag course, TOP → BOTTOM.
+//              Four lateral control points create a left-right weave
+//              as the path descends.  t=0 = start (top), t=1 = finish.
 // ============================================================
 
-import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
+import { PathInterpolator } from './PathInterpolator.js';
 
-const CX_FRAC = 0.5; // horizontal centre
-const MARGIN_Y_TOP_FRAC = 0.14; // top margin (below title strip)
-const MARGIN_Y_BOT_FRAC = 0.05; // bottom margin
-const AMP_FRAC = 0.25; // x-amplitude as fraction of canvas width
-const N_ZIGS = 4; // number of zigzag bends (half-periods of sine)
+// Control points on 1000×600 design grid
+const CONTROL_POINTS = [
+  { x: 500, y: 115 }, // start — top centre
+  { x: 195, y: 215 }, // bend left
+  { x: 805, y: 345 }, // bend right
+  { x: 195, y: 460 }, // bend left
+  { x: 500, y: 540 }, // finish — bottom centre
+];
 
-function _bandWidth(totalLanes) {
-  return Math.min(Math.max(120, totalLanes * 24), 200);
+function _bw(n) {
+  return Math.min(Math.max(120, n * 24), 200);
 }
 
 export class ZigzagShape {
-  /** True — this is a one-way open course (start ≠ finish). */
+  /** Open one-way course — racers travel from t=0 to t=1. */
   isOpen = true;
 
   constructor(cw, ch) {
     this.cw = cw;
     this.ch = ch;
-    this.cx = cw * CX_FRAC;
-    this.cy = ch / 2;
-    this.startY = ch * MARGIN_Y_TOP_FRAC;
-    this.spanY = ch * (1 - MARGIN_Y_TOP_FRAC - MARGIN_Y_BOT_FRAC);
-    this.amp = cw * AMP_FRAC;
-  }
-
-  // Centre path: y linear top→bottom, x sinusoidal zigzag
-  _center(t) {
-    return {
-      x: this.cx + this.amp * Math.sin(N_ZIGS * Math.PI * t),
-      y: this.startY + this.spanY * t,
-    };
+    this._p = new PathInterpolator(CONTROL_POINTS, { closed: false, cw, ch });
   }
 
   getPosition(t, laneIndex, totalLanes) {
-    const TW = _bandWidth(totalLanes);
-    return perpendicularLane(this._center.bind(this), t, laneIndex, totalLanes, TW, true);
+    const TW = _bw(totalLanes);
+    const delta = -TW / 2 + (laneIndex + 0.5) * (TW / Math.max(totalLanes, 1));
+    const angle = this._p.getTangentAngle(t);
+    const c = this._p.getPoint(t);
+    const perp = angle + Math.PI / 2;
+    return { x: c.x + Math.cos(perp) * delta, y: c.y + Math.sin(perp) * delta, angle };
   }
 
+  // Return geometric centre of the bounding box, not arc midpoint
   getCenterPoint() {
-    return { x: this.cx, y: this.cy };
+    return { x: this.cw * 0.5, y: this.ch * 0.5 };
   }
-
-  getBandWidth(totalLanes) {
-    return _bandWidth(totalLanes);
+  getBandWidth(n) {
+    return _bw(n);
   }
-
   getTotalLength() {
-    let len = 0;
-    const N = 200;
-    let prev = this._center(0);
-    for (let i = 1; i <= N; i++) {
-      const cur = this._center(i / N);
-      const dx = cur.x - prev.x,
-        dy = cur.y - prev.y;
-      len += Math.sqrt(dx * dx + dy * dy);
-      prev = cur;
-    }
-    return len;
+    return this._p.getTotalLength();
   }
 
   getEdgePoints(totalLanes, nSamples = 200) {
-    const TW = _bandWidth(totalLanes);
-    return buildEdgePoints(this._center.bind(this), TW / 2, nSamples, true);
+    const hw = _bw(totalLanes) / 2;
+    const outer = [],
+      inner = [];
+    for (let i = 0; i <= nSamples; i++) {
+      const t = i / nSamples;
+      const angle = this._p.getTangentAngle(t);
+      const c = this._p.getPoint(t);
+      const perp = angle + Math.PI / 2;
+      outer.push({ x: c.x + Math.cos(perp) * hw, y: c.y + Math.sin(perp) * hw });
+      inner.push({ x: c.x - Math.cos(perp) * hw, y: c.y - Math.sin(perp) * hw });
+    }
+    return { outer, inner };
   }
 }

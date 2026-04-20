@@ -13,6 +13,7 @@ export { SCurveShape } from './SCurveShape.js';
 export { SpiralShape } from './SpiralShape.js';
 export { ZigzagShape } from './ZigzagShape.js';
 export { RectangleShape } from './RectangleShape.js';
+export { PathInterpolator } from './PathInterpolator.js';
 export { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 
 import { OvalShape } from './OvalShape.js';

@@ -2,78 +2,76 @@
 // File:        RectangleShape.js
 // Path:        client/src/modules/track-shapes/RectangleShape.js
 // Project:     RaceArena
-// Created:     2026-04-20
-// Description: Superellipse (Lamé curve) circuit — looks like a rounded
-//              rectangle.  Exponent exp < 1 makes the corners sharper,
-//              producing a city-circuit feel.
-//              x = cx + rx · sgn(cos θ) · |cos θ|^exp
-//              y = cy + ry · sgn(sin θ) · |sin θ|^exp
+// Description: City Circuit — closed rectangular loop with rounded corners.
+//              12 control points (2 per corner + 1 midpoint per straight)
+//              keep the Catmull-Rom curve close to a true rectangle while
+//              giving naturally smooth ~60px corner radii.
+//              t=0 = t=1 at the start/finish straight.
 // ============================================================
 
-import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
+import { PathInterpolator } from './PathInterpolator.js';
 
-const CY_FRAC = 0.57;
-const RX_FRAC = 0.38;
-const RY_FRAC = 0.24;
-const RECT_EXP = 0.22; // lower = sharper corners; 0.22 gives a very rectangular outline
+// 12 control points on 1000×600 design grid.
+// Outer rectangle: TL(100,120) → TR(900,120) → BR(900,500) → BL(100,500)
+// Two points bracket each corner; one point sits mid-straight.
+const CONTROL_POINTS = [
+  { x: 155, y: 120 }, // post-TL → going right (top straight start)
+  { x: 500, y: 120 }, // top straight mid
+  { x: 845, y: 120 }, // pre-TR
+  { x: 900, y: 175 }, // post-TR → going down (right straight start)
+  { x: 900, y: 310 }, // right straight mid
+  { x: 900, y: 445 }, // pre-BR
+  { x: 845, y: 500 }, // post-BR → going left (bottom straight start)
+  { x: 500, y: 500 }, // bottom straight mid
+  { x: 155, y: 500 }, // pre-BL
+  { x: 100, y: 445 }, // post-BL → going up (left straight start)
+  { x: 100, y: 310 }, // left straight mid
+  { x: 100, y: 175 }, // pre-TL
+];
 
-function _bandWidth(totalLanes) {
-  return Math.min(Math.max(120, totalLanes * 24), 200);
-}
-
-function _sgn(v) {
-  return v >= 0 ? 1 : -1;
+function _bw(n) {
+  return Math.min(Math.max(120, n * 24), 200);
 }
 
 export class RectangleShape {
   constructor(cw, ch) {
     this.cw = cw;
     this.ch = ch;
-    this.cx = cw / 2;
-    this.cy = ch * CY_FRAC;
-    this.rx = cw * RX_FRAC;
-    this.ry = ch * RY_FRAC;
-  }
-
-  _center(t) {
-    const theta = 2 * Math.PI * t - Math.PI / 2;
-    const ct = Math.cos(theta),
-      st = Math.sin(theta);
-    return {
-      x: this.cx + this.rx * _sgn(ct) * Math.pow(Math.abs(ct), RECT_EXP),
-      y: this.cy + this.ry * _sgn(st) * Math.pow(Math.abs(st), RECT_EXP),
-    };
+    this._p = new PathInterpolator(CONTROL_POINTS, { closed: true, cw, ch });
   }
 
   getPosition(t, laneIndex, totalLanes) {
-    const TW = _bandWidth(totalLanes);
-    return perpendicularLane(this._center.bind(this), t, laneIndex, totalLanes, TW);
+    const TW = _bw(totalLanes);
+    const delta = -TW / 2 + (laneIndex + 0.5) * (TW / Math.max(totalLanes, 1));
+    const angle = this._p.getTangentAngle(t);
+    const c = this._p.getPoint(t);
+    const perp = angle + Math.PI / 2;
+    return { x: c.x + Math.cos(perp) * delta, y: c.y + Math.sin(perp) * delta, angle };
   }
 
+  // Return the visual centre of the rectangle, not the arc midpoint
   getCenterPoint() {
-    return { x: this.cx, y: this.cy };
+    return { x: this.cw * 0.5, y: this.ch * 0.517 };
   }
-
-  getBandWidth(totalLanes) {
-    return _bandWidth(totalLanes);
+  getBandWidth(n) {
+    return _bw(n);
   }
-
   getTotalLength() {
-    let len = 0;
-    const N = 200;
-    let prev = this._center(0);
-    for (let i = 1; i <= N; i++) {
-      const cur = this._center(i / N);
-      const dx = cur.x - prev.x,
-        dy = cur.y - prev.y;
-      len += Math.sqrt(dx * dx + dy * dy);
-      prev = cur;
-    }
-    return len;
+    return this._p.getTotalLength();
   }
 
   getEdgePoints(totalLanes, nSamples = 200) {
-    const TW = _bandWidth(totalLanes);
-    return buildEdgePoints(this._center.bind(this), TW / 2, nSamples);
+    const hw = _bw(totalLanes) / 2;
+    const outer = [],
+      inner = [];
+    for (let i = 0; i <= nSamples; i++) {
+      const t = i / nSamples;
+      const angle = this._p.getTangentAngle(t);
+      const c = this._p.getPoint(t);
+      const perp = angle + Math.PI / 2;
+      outer.push({ x: c.x + Math.cos(perp) * hw, y: c.y + Math.sin(perp) * hw });
+      inner.push({ x: c.x - Math.cos(perp) * hw, y: c.y - Math.sin(perp) * hw });
+    }
+    return { outer, inner };
   }
 }
