@@ -214,7 +214,7 @@
 
 .ranking-row {
   display: grid;
-  grid-template-columns: 50px 40px 1fr 80px 80px;
+  grid-template-columns: 50px 40px 1fr 80px;
   gap: 15px;
   align-items: center;
   padding: 12px 15px;

@@ -1,400 +1,391 @@
-// ============================================================
-// File:        index.js
-// Path:        client/src/screens/RaceScreen/index.js
-// Project:     RaceArena
-// Created:     2026-04-20
-// Description: Live race screen — animated track, racers, HUD, countdown, results
-// ============================================================
-
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createCanvasRenderer } from '../../modules/track-canvas';
-import { createParticleEffects, PARTICLE_TYPES } from '../../modules/particle-effects';
-import { createRaceSimulation } from '../../modules/race-simulation';
 import './RaceScreen.css';
 
-function RaceScreen() {
+// ── Canvas / track constants ────────────────────────────────────────────────
+const CW = 760;
+const CH = 460;
+const TX = CW / 2;
+const TY = CH / 2;
+const TRX = 295; // track centerline x-radius
+const TRY = 145; // track centerline y-radius
+const TW = 68; // track band width
+
+// Returns the {x,y} position on the track centerline at t ∈ [0,1),
+// offset laterally by `lane` pixels.
+function trackPoint(t, lane = 0) {
+  const a = 2 * Math.PI * t - Math.PI / 2;
+  const bx = TX + TRX * Math.cos(a);
+  const by = TY + TRY * Math.sin(a);
+  if (!lane) return { x: bx, y: by };
+  const dx = -TRX * Math.sin(a);
+  const dy = TRY * Math.cos(a);
+  const len = Math.hypot(dx, dy);
+  return { x: bx + (-dy / len) * lane, y: by + (dx / len) * lane };
+}
+
+const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
+
+export default function RaceScreen() {
   const navigate = useNavigate();
   const canvasRef = useRef(null);
-  const [gameState, setGameState] = useState('countdown'); // countdown, racing, finished
-  const [countdown, setCountdown] = useState(3);
-  const [raceData, setRaceData] = useState(null);
-  const [racers, setRacers] = useState([]);
-  const [finishOrder, setFinishOrder] = useState([]);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [error, setError] = useState(null);
-
-  const simulationRef = useRef(null);
-  const rendererRef = useRef(null);
-  const particlesRef = useRef(null);
   const rafRef = useRef(null);
-  const lastUpdateRef = useRef(0);
+  const g = useRef(null); // mutable game state — never triggers re-renders
 
-  // Load race data from session storage
+  const [raceData, setRaceData] = useState(null);
+  const [error, setError] = useState(null);
+  const [phase, setPhase] = useState(PHASE.COUNTDOWN);
+  const [countdown, setCountdown] = useState(3);
+  const [scoreboard, setScoreboard] = useState([]);
+
+  // ── Load race data ─────────────────────────────────────────────────────────
   useEffect(() => {
     try {
-      const activeRace = sessionStorage.getItem('activeRace');
-      if (!activeRace) {
-        console.warn('[RaceScreen] No activeRace in sessionStorage, navigating to setup');
-        navigate('/setup');
-        return;
-      }
-
-      const race = JSON.parse(activeRace);
-      setRaceData(race);
-      setRacers(race.racers);
-    } catch (err) {
-      console.error('[RaceScreen] Failed to load race data:', err);
-      setError('Failed to load race data');
-      setTimeout(() => navigate('/setup'), 1000);
+      const raw = sessionStorage.getItem('activeRace');
+      if (!raw) throw new Error('No race data. Please start a race from Setup.');
+      setRaceData(JSON.parse(raw));
+    } catch (e) {
+      setError(e.message);
     }
-  }, [navigate]);
+  }, []);
 
-  // Initialize canvas and modules after canvas is mounted
+  // ── Animation loop ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!raceData || !canvasRef.current) return;
 
-    try {
-      // Create renderer with actual canvas element
-      rendererRef.current = createCanvasRenderer(canvasRef.current);
-      rendererRef.current.initTrack(raceData.trackId, 800, 500);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const nRacers = raceData.racers.length;
 
-      // Create particle effects
-      particlesRef.current = createParticleEffects();
-
-      // Create simulation
-      simulationRef.current = createRaceSimulation(raceData.racers, 1);
-    } catch (err) {
-      console.error('[RaceScreen] Failed to initialize race:', err);
-      setError('Failed to initialize race');
-    }
-  }, [raceData]);
-
-  // Countdown phase
-  useEffect(() => {
-    if (gameState !== 'countdown' || !raceData) return;
-
-    const countdownInterval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          setGameState('racing');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(countdownInterval);
-  }, [gameState, raceData]);
-
-  // Main animation loop
-  useEffect(() => {
-    if (gameState !== 'racing' || !rendererRef.current || !simulationRef.current) return;
-
-    const animate = (now) => {
-      const delta = lastUpdateRef.current ? now - lastUpdateRef.current : 16;
-      lastUpdateRef.current = now;
-
-      // Update simulation
-      simulationRef.current.update(delta);
-      const currentRacers = simulationRef.current.getRacers();
-      const currentState = simulationRef.current.getState();
-
-      // Emit particles for leading racer
-      if (currentRacers.length > 0) {
-        const leader = currentRacers.reduce((a, b) => (a.progress > b.progress ? a : b));
-        if (leader.progress > 0 && leader.progress % 5 < 1) {
-          const pos = rendererRef.current.getRacerPosition(leader.progress);
-          particlesRef.current.emit(pos.x, pos.y, PARTICLE_TYPES.DUST, 3, 1);
-        }
-      }
-
-      // Update particles
-      particlesRef.current.update(delta);
-
-      // Clear and draw
-      rendererRef.current.clear();
-      const scrollOffset = (currentState.time / 50) % 500;
-      rendererRef.current.drawTrack(scrollOffset);
-      particlesRef.current.draw(rendererRef.current.ctx);
-      rendererRef.current.drawRacers(currentRacers);
-
-      setRacers([...currentRacers]);
-      setElapsedTime(simulationRef.current.getElapsedTime());
-
-      // Check if finished
-      if (simulationRef.current.isFinished()) {
-        setGameState('finished');
-        setFinishOrder(simulationRef.current.getFinishOrder());
-        return;
-      }
-
-      rafRef.current = requestAnimationFrame(animate);
+    g.current = {
+      phase: PHASE.COUNTDOWN,
+      countdownStart: null,
+      raceStart: null,
+      lastTs: null,
+      finishedCount: 0,
+      winnersNeeded: Math.min(raceData.winners ?? 3, nRacers),
+      particles: [],
+      racers: raceData.racers.map((r, i) => ({
+        ...r,
+        index: i,
+        t: 0,
+        lane: (i - (nRacers - 1) / 2) * ((TW * 0.72) / Math.max(nRacers - 1, 1)),
+        baseSpeed: 0.00085 + Math.random() * 0.00035,
+        finished: false,
+        finishRank: null,
+      })),
     };
 
-    rafRef.current = requestAnimationFrame(animate);
+    setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
+    // ── Drawing helpers ─────────────────────────────────────────────────────
+    function drawBg() {
+      for (let i = 0; i < 10; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#1c3d1c' : '#1f431f';
+        ctx.fillRect(0, (i * CH) / 10, CW, CH / 10);
+      }
+      // Grandstand strip
+      ctx.fillStyle = 'rgba(50,35,20,0.55)';
+      ctx.fillRect(0, 0, CW, 48);
+      // Crowd dots
+      for (let x = 14; x < CW; x += 16) {
+        ctx.fillStyle = `hsl(${(x * 11) % 360},65%,52%)`;
+        ctx.beginPath();
+        ctx.arc(x, 12 + Math.abs(Math.sin(x * 0.5)) * 10, 4, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    function drawTrack() {
+      // Sand fill
+      ctx.beginPath();
+      ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
+      ctx.fillStyle = '#c9a870';
+      ctx.fill();
+      // Inner grass
+      ctx.beginPath();
+      ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
+      ctx.fillStyle = '#2a5a2a';
+      ctx.fill();
+      // Inner rings for depth
+      for (let r = 30; r < TRY - TW / 2 - 5; r += 28) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(TX, TY, (r * TRX) / TRY, r, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+      // Track borders
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+      // Finish line — t=0 is at the top of the oval; tangent is horizontal
+      // there, so the line is vertical across the track band.
+      const finishX = TX;
+      const finishY = TY - TRY;
+      const checkers = 6;
+      const segH = TW / checkers;
+      for (let i = 0; i < checkers; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#111';
+        ctx.fillRect(finishX - 5, finishY - TW / 2 + i * segH, 10, segH);
+      }
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center';
+      ctx.fillText('FINISH', finishX, finishY - TW / 2 - 5);
+    }
+
+    function drawParticles() {
+      for (const p of g.current.particles) {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = '#d4b880';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawRacers() {
+      ctx.font = '24px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const r of g.current.racers) {
+        const { x, y } = trackPoint(r.t % 1, r.lane);
+        ctx.fillText(r.icon, x, y);
+      }
+    }
+
+    function drawCountdownOverlay(n) {
+      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (n > 0) {
+        ctx.font = 'bold 130px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = '#fff';
+        ctx.fillText(String(n), CW / 2, CH / 2);
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.font = 'bold 90px sans-serif';
+        ctx.fillStyle = '#0ffa50';
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#0ffa50';
+        ctx.fillText('GO!', CW / 2, CH / 2);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawFinishedOverlay() {
+      ctx.fillStyle = 'rgba(0,0,0,0.48)';
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 60px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = '#ffd700';
+      ctx.fillText('RACE FINISHED!', CW / 2, CH / 2 - 18);
+      ctx.shadowBlur = 0;
+      ctx.font = '20px sans-serif';
+      ctx.fillStyle = '#ccc';
+      ctx.fillText('Loading results…', CW / 2, CH / 2 + 44);
+    }
+
+    // ── Main rAF loop ───────────────────────────────────────────────────────
+    function loop(ts) {
+      const st = g.current;
+      const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
+      st.lastTs = ts;
+
+      ctx.clearRect(0, 0, CW, CH);
+      drawBg();
+      drawTrack();
+
+      if (st.phase === PHASE.COUNTDOWN) {
+        if (!st.countdownStart) st.countdownStart = ts;
+        const elapsed = ts - st.countdownStart;
+        drawParticles();
+        drawRacers();
+        const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
+        drawCountdownOverlay(n);
+        setCountdown(n);
+        if (elapsed >= 4000) {
+          st.phase = PHASE.RACING;
+          st.raceStart = ts;
+          setPhase(PHASE.RACING);
+        }
+      } else if (st.phase === PHASE.RACING) {
+        // Advance racers
+        for (const r of st.racers) {
+          if (r.finished) continue;
+          r.t += (r.baseSpeed + (Math.random() - 0.5) * 0.00035) * (dt / 16);
+          if (r.t >= 1.0) {
+            r.finished = true;
+            r.finishRank = ++st.finishedCount;
+          }
+        }
+
+        // Dust behind leader
+        const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+        const lp = trackPoint(leader.t % 1, leader.lane);
+        if (Math.random() < 0.38) {
+          st.particles.push({
+            x: lp.x + (Math.random() - 0.5) * 8,
+            y: lp.y + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 1.8,
+            vy: (Math.random() - 0.5) * 1.8,
+            alpha: 0.55,
+            r: 3 + Math.random() * 3.5,
+          });
+        }
+        st.particles = st.particles
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            alpha: p.alpha - 0.024,
+            r: p.r * 0.96,
+          }))
+          .filter((p) => p.alpha > 0);
+
+        drawParticles();
+        drawRacers();
+
+        // Scoreboard update ~10 fps
+        if (Math.round(ts / 100) !== Math.round((ts - dt) / 100)) {
+          setScoreboard(
+            [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
+          );
+        }
+
+        // Race over?
+        if (st.finishedCount >= st.winnersNeeded) {
+          st.phase = PHASE.FINISHED;
+          setPhase(PHASE.FINISHED);
+
+          const byRank = st.racers
+            .filter((r) => r.finished)
+            .sort((a, b) => a.finishRank - b.finishRank);
+          const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+
+          sessionStorage.setItem(
+            'raceResults',
+            JSON.stringify({
+              finishOrder: [...byRank, ...rest].map((r) => ({
+                name: r.name,
+                icon: r.icon,
+                color: r.color,
+                index: r.index,
+                lap: 1,
+                progress: Math.min(r.t * 100, 100),
+              })),
+              elapsedTime: Math.round((ts - st.raceStart) / 1000),
+              race: raceData,
+            })
+          );
+
+          setTimeout(() => navigate('/results'), 3000);
+        }
+      } else {
+        drawParticles();
+        drawRacers();
+        drawFinishedOverlay();
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    }
+
+    rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [gameState]);
+  }, [raceData, navigate]);
 
-  // Advance to results
-  useEffect(() => {
-    if (gameState === 'finished' && finishOrder.length > 0) {
-      const timer = setTimeout(() => {
-        sessionStorage.setItem(
-          'raceResults',
-          JSON.stringify({
-            race: raceData,
-            finishOrder,
-            elapsedTime,
-          })
-        );
-        navigate('/results');
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState, finishOrder, raceData, elapsedTime, navigate]);
-
-  const handleReturnToSetup = () => {
-    sessionStorage.removeItem('activeRace');
-    sessionStorage.removeItem('raceResults');
-    navigate('/setup');
-  };
-
-  const handleManualStart = () => {
-    // Fallback: manually create and start a test race
-    const DEFAULT_RACERS = [
-      { id: 'horse', name: 'Horse', icon: '🐴', color: '#a0522d' },
-      { id: 'duck', name: 'Duck', icon: '🦆', color: '#2196f3' },
-      { id: 'rocket', name: 'Rocket', icon: '🚀', color: '#7c3aed' },
-      { id: 'snail', name: 'Snail', icon: '🐌', color: '#16a34a' },
-      { id: 'car', name: 'Car', icon: '🚗', color: '#64748b' },
-    ];
-
-    const testRace = {
-      racers: [
-        { name: 'Test 1', icon: DEFAULT_RACERS[0].icon, racerId: DEFAULT_RACERS[0].id },
-        { name: 'Test 2', icon: DEFAULT_RACERS[1].icon, racerId: DEFAULT_RACERS[1].id },
-        { name: 'Test 3', icon: DEFAULT_RACERS[2].icon, racerId: DEFAULT_RACERS[2].id },
-        { name: 'Test 4', icon: DEFAULT_RACERS[3].icon, racerId: DEFAULT_RACERS[3].id },
-        { name: 'Test 5', icon: DEFAULT_RACERS[4].icon, racerId: DEFAULT_RACERS[4].id },
-      ],
-      trackId: 'dirt-oval',
-      trackName: 'Dirt Oval',
-      duration: 60,
-      eventName: 'Manual Test',
-      winners: 3,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log('[RaceScreen] Starting manual test race:', testRace);
-    sessionStorage.setItem('activeRace', JSON.stringify(testRace));
-    setRaceData(testRace);
-    setRacers(testRace.racers);
-  };
-
-  return (
-    <div className="screen screen--race">
-      {/* Debug Info - Visible on screen */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          background: 'rgba(0, 0, 0, 0.9)',
-          color: '#0f0',
-          padding: '20px',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          zIndex: 999,
-          maxWidth: '400px',
-          maxHeight: '500px',
-          overflow: 'auto',
-          border: '2px solid #0f0',
-        }}
-      >
-        <div>
-          <strong>DEBUG INFO</strong>
-        </div>
-        <div>raceData: {raceData ? 'LOADED' : 'MISSING'}</div>
-        <div>error: {error || 'none'}</div>
-        <div>gameState: {gameState}</div>
-        <div>racers count: {racers.length}</div>
-        {raceData && (
-          <>
-            <div>trackId: {raceData.trackId}</div>
-            <div>event: {raceData.eventName}</div>
-            <div>
-              racers:
-              {raceData.racers.map((r) => (
-                <div key={r.name}>
-                  - {r.name} ({r.icon})
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-        <div style={{ marginTop: '10px', fontSize: '10px', color: '#0a0' }}>
-          sessionStorage.activeRace: {sessionStorage.getItem('activeRace') ? 'EXISTS' : 'MISSING'}
-        </div>
-        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #0f0' }}>
+  // ── Error / loading states ──────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="screen screen--race race-error-screen">
+        <div className="race-error-box">
+          <div className="race-error-title">Error</div>
+          <div className="race-error-msg">{error}</div>
           <button
-            onClick={handleManualStart}
-            style={{
-              background: '#0f0',
-              color: '#000',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              marginBottom: '5px',
-              width: '100%',
+            className="race-back-btn"
+            onClick={() => {
+              sessionStorage.removeItem('activeRace');
+              navigate('/setup');
             }}
           >
-            START TEST RACE
-          </button>
-          <button
-            onClick={() => navigate('/setup')}
-            style={{
-              background: '#f00',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              width: '100%',
-            }}
-          >
-            BACK TO SETUP
+            ← Back to Setup
           </button>
         </div>
       </div>
+    );
+  }
 
-      {error && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.95)',
-            zIndex: 1000,
-            color: '#f00',
-            fontSize: '20px',
-            flexDirection: 'column',
-            gap: '20px',
-            padding: '20px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>❌ ERROR</div>
-          <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{error}</div>
+  if (!raceData) {
+    return (
+      <div className="screen screen--race race-loading-screen">
+        <span>Loading…</span>
+      </div>
+    );
+  }
+
+  // ── Main render ─────────────────────────────────────────────────────────────
+  return (
+    <div className="screen screen--race">
+      <div className="race-layout">
+        <div className="race-canvas-wrapper">
+          <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+        </div>
+
+        <aside className="race-hud">
+          <div className="race-hud-header">
+            <div className="race-event-name">{raceData.eventName || 'Race'}</div>
+            <div className="race-track-name">{raceData.trackName}</div>
+            {phase === PHASE.COUNTDOWN && (
+              <div className="race-phase-badge race-phase-badge--countdown">
+                {countdown > 0 ? countdown : 'GO!'}
+              </div>
+            )}
+            {phase === PHASE.FINISHED && (
+              <div className="race-phase-badge race-phase-badge--finished">Finished</div>
+            )}
+          </div>
+
+          <div className="scoreboard">
+            <div className="scoreboard-header">Live Standings</div>
+            {scoreboard.map((r, i) => (
+              <div
+                key={r.index}
+                className={`scoreboard-row${r.finished ? ' scoreboard-row--finished' : ''}`}
+              >
+                <span className="sb-rank">{i + 1}</span>
+                <span className="sb-icon">{r.icon}</span>
+                <span className="sb-name">{r.name}</span>
+                {r.finished && <span className="sb-check">✓</span>}
+              </div>
+            ))}
+          </div>
+
           <button
-            onClick={() => navigate('/setup')}
-            style={{
-              padding: '10px 20px',
-              background: '#f00',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '16px',
+            className="race-back-btn"
+            onClick={() => {
+              sessionStorage.removeItem('activeRace');
+              navigate('/setup');
             }}
           >
-            Back to Setup
+            ← Setup
           </button>
-        </div>
-      )}
-
-      {!raceData && !error && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.95)',
-            zIndex: 1000,
-            color: '#fff',
-            fontSize: '20px',
-            flexDirection: 'column',
-            gap: '20px',
-          }}
-        >
-          <div>⏳ Loading race data...</div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>
-            sessionStorage keys: {Object.keys(sessionStorage).join(', ') || 'none'}
-          </div>
-        </div>
-      )}
-
-      <div className="race-container">
-        {/* Canvas */}
-        <div className="race-canvas-wrapper">
-          <canvas ref={canvasRef} className="race-canvas" width={800} height={500} />
-
-          {/* Countdown overlay */}
-          {gameState === 'countdown' && (
-            <div className="countdown-overlay">
-              <div className="countdown-number">{countdown}</div>
-            </div>
-          )}
-
-          {/* Finish announcement */}
-          {gameState === 'finished' && finishOrder.length > 0 && (
-            <div className="finish-overlay">
-              <h2>🏁 {finishOrder[0].name} Wins!</h2>
-            </div>
-          )}
-        </div>
-
-        {/* HUD */}
-        <div className="race-hud">
-          {/* Scoreboard */}
-          <div className="scoreboard">
-            <div className="scoreboard-header">POSITIONS</div>
-            {racers
-              .sort((a, b) => b.progress - a.progress)
-              .slice(0, 5)
-              .map((racer, i) => (
-                <div key={racer.index} className="scoreboard-row">
-                  <span className="position">{i + 1}</span>
-                  <span className="racer-name">
-                    {racer.icon} {racer.name}
-                  </span>
-                  <span className="progress">{Math.floor(racer.progress)}%</span>
-                </div>
-              ))}
-          </div>
-
-          {/* Timer */}
-          <div className="timer">
-            <span className="timer-label">TIME</span>
-            <span className="timer-value">{elapsedTime}s</span>
-          </div>
-
-          {/* Buttons */}
-          <div className="race-controls">
-            <button
-              className="btn btn--secondary"
-              onClick={handleReturnToSetup}
-              disabled={gameState !== 'finished'}
-            >
-              Exit
-            </button>
-          </div>
-        </div>
+        </aside>
       </div>
     </div>
   );
 }
-
-export default RaceScreen;

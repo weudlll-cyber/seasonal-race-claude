@@ -13,39 +13,36 @@ import './ResultScreen.css';
 
 function ResultScreen() {
   const navigate = useNavigate();
-  const [results, setResults] = useState(null);
   const [finishOrder, setFinishOrder] = useState([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [race, setRace] = useState(null);
 
   useEffect(() => {
-    // Get results from session storage
-    const raceResults = sessionStorage.getItem('raceResults');
-    if (!raceResults) {
+    const raw = sessionStorage.getItem('raceResults');
+    if (!raw) {
       navigate('/setup');
       return;
     }
 
-    const parsed = JSON.parse(raceResults);
-    setResults(parsed);
-    setFinishOrder(parsed.finishOrder || []);
+    const parsed = JSON.parse(raw);
+    const order = parsed.finishOrder || [];
+    setFinishOrder(order);
     setElapsedTime(parsed.elapsedTime || 0);
     setRace(parsed.race || {});
 
-    // Save to race history
+    // Persist to race history
     const history = storageGet(KEYS.RACE_HISTORY, []);
-    const historyEntry = {
+    history.unshift({
       id: newId(),
       timestamp: new Date().toISOString(),
       trackId: parsed.race?.trackId,
       trackName: parsed.race?.trackName,
-      players: parsed.race?.racers?.length || 0,
-      winner: parsed.finishOrder?.[0]?.name,
+      players: order.length,
+      winner: order[0]?.name,
       elapsedTime: parsed.elapsedTime,
-      finishOrder: parsed.finishOrder,
-    };
-    history.unshift(historyEntry);
-    storageSet(KEYS.RACE_HISTORY, history.slice(0, 100)); // Keep last 100
+      finishOrder: order,
+    });
+    storageSet(KEYS.RACE_HISTORY, history.slice(0, 100));
   }, [navigate]);
 
   const handleReturnToSetup = () => {
@@ -55,7 +52,7 @@ function ResultScreen() {
   };
 
   if (!finishOrder.length) {
-    return <div className="screen screen--result loading">Loading...</div>;
+    return <div className="screen screen--result loading">Loading results…</div>;
   }
 
   const [first, second, third] = finishOrder;
@@ -118,12 +115,11 @@ function ResultScreen() {
           <h2 className="rankings-title">Final Rankings</h2>
           <div className="rankings-table">
             {finishOrder.map((racer, index) => (
-              <div key={racer.index} className="ranking-row">
+              <div key={racer.index ?? index} className="ranking-row">
                 <span className="rank-number">#{index + 1}</span>
                 <span className="rank-icon">{racer.icon}</span>
                 <span className="rank-name">{racer.name}</span>
-                <span className="rank-laps">{racer.lap} laps</span>
-                <span className="rank-progress">{Math.round(racer.progress)}%</span>
+                <span className="rank-progress">{Math.round(racer.progress ?? 100)}%</span>
               </div>
             ))}
           </div>
