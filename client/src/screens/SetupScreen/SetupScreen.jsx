@@ -114,7 +114,10 @@ function SetupScreen() {
     const firstTrack = tracks[0];
     const firstTrackId = firstTrack?.id;
 
-    if (!firstTrackId) return; // No tracks available
+    if (!firstTrackId) {
+      console.error('[QuickTest] No tracks available');
+      return;
+    }
 
     // Save race data with test players
     const race = {
@@ -126,7 +129,12 @@ function SetupScreen() {
       winners: raceDefaults.winners,
       timestamp: new Date().toISOString(),
     };
+
+    console.log('[QuickTest] Saving race data:', race);
     sessionStorage.setItem('activeRace', JSON.stringify(race));
+    console.log('[QuickTest] Saved to sessionStorage, navigating to /race');
+    console.log('[QuickTest] Verify saved:', sessionStorage.getItem('activeRace'));
+
     navigate('/race');
   }
 

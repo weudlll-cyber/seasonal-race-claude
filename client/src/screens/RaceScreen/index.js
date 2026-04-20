@@ -163,8 +163,119 @@ function RaceScreen() {
     navigate('/setup');
   };
 
+  const handleManualStart = () => {
+    // Fallback: manually create and start a test race
+    const DEFAULT_RACERS = [
+      { id: 'horse', name: 'Horse', icon: '🐴', color: '#a0522d' },
+      { id: 'duck', name: 'Duck', icon: '🦆', color: '#2196f3' },
+      { id: 'rocket', name: 'Rocket', icon: '🚀', color: '#7c3aed' },
+      { id: 'snail', name: 'Snail', icon: '🐌', color: '#16a34a' },
+      { id: 'car', name: 'Car', icon: '🚗', color: '#64748b' },
+    ];
+
+    const testRace = {
+      racers: [
+        { name: 'Test 1', icon: DEFAULT_RACERS[0].icon, racerId: DEFAULT_RACERS[0].id },
+        { name: 'Test 2', icon: DEFAULT_RACERS[1].icon, racerId: DEFAULT_RACERS[1].id },
+        { name: 'Test 3', icon: DEFAULT_RACERS[2].icon, racerId: DEFAULT_RACERS[2].id },
+        { name: 'Test 4', icon: DEFAULT_RACERS[3].icon, racerId: DEFAULT_RACERS[3].id },
+        { name: 'Test 5', icon: DEFAULT_RACERS[4].icon, racerId: DEFAULT_RACERS[4].id },
+      ],
+      trackId: 'dirt-oval',
+      trackName: 'Dirt Oval',
+      duration: 60,
+      eventName: 'Manual Test',
+      winners: 3,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log('[RaceScreen] Starting manual test race:', testRace);
+    sessionStorage.setItem('activeRace', JSON.stringify(testRace));
+    setRaceData(testRace);
+    setRacers(testRace.racers);
+  };
+
   return (
     <div className="screen screen--race">
+      {/* Debug Info - Visible on screen */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          background: 'rgba(0, 0, 0, 0.9)',
+          color: '#0f0',
+          padding: '20px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          zIndex: 999,
+          maxWidth: '400px',
+          maxHeight: '500px',
+          overflow: 'auto',
+          border: '2px solid #0f0',
+        }}
+      >
+        <div>
+          <strong>DEBUG INFO</strong>
+        </div>
+        <div>raceData: {raceData ? 'LOADED' : 'MISSING'}</div>
+        <div>error: {error || 'none'}</div>
+        <div>gameState: {gameState}</div>
+        <div>racers count: {racers.length}</div>
+        {raceData && (
+          <>
+            <div>trackId: {raceData.trackId}</div>
+            <div>event: {raceData.eventName}</div>
+            <div>
+              racers:
+              {raceData.racers.map((r) => (
+                <div key={r.name}>
+                  - {r.name} ({r.icon})
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <div style={{ marginTop: '10px', fontSize: '10px', color: '#0a0' }}>
+          sessionStorage.activeRace: {sessionStorage.getItem('activeRace') ? 'EXISTS' : 'MISSING'}
+        </div>
+        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #0f0' }}>
+          <button
+            onClick={handleManualStart}
+            style={{
+              background: '#0f0',
+              color: '#000',
+              border: 'none',
+              padding: '8px 12px',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              marginBottom: '5px',
+              width: '100%',
+            }}
+          >
+            START TEST RACE
+          </button>
+          <button
+            onClick={() => navigate('/setup')}
+            style={{
+              background: '#f00',
+              color: '#fff',
+              border: 'none',
+              padding: '8px 12px',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              width: '100%',
+            }}
+          >
+            BACK TO SETUP
+          </button>
+        </div>
+      </div>
+
       {error && (
         <div
           style={{
@@ -173,13 +284,32 @@ function RaceScreen() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'rgba(0, 0, 0, 0.95)',
             zIndex: 1000,
-            color: '#fff',
-            fontSize: '18px',
+            color: '#f00',
+            fontSize: '20px',
+            flexDirection: 'column',
+            gap: '20px',
+            padding: '20px',
+            textAlign: 'center',
           }}
         >
-          {error}
+          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>❌ ERROR</div>
+          <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{error}</div>
+          <button
+            onClick={() => navigate('/setup')}
+            style={{
+              padding: '10px 20px',
+              background: '#f00',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '16px',
+            }}
+          >
+            Back to Setup
+          </button>
         </div>
       )}
 
@@ -191,13 +321,18 @@ function RaceScreen() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'rgba(0, 0, 0, 0.95)',
             zIndex: 1000,
             color: '#fff',
-            fontSize: '18px',
+            fontSize: '20px',
+            flexDirection: 'column',
+            gap: '20px',
           }}
         >
-          Loading race...
+          <div>⏳ Loading race data...</div>
+          <div style={{ fontSize: '12px', color: '#aaa' }}>
+            sessionStorage keys: {Object.keys(sessionStorage).join(', ') || 'none'}
+          </div>
         </div>
       )}
 
