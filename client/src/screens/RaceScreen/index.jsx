@@ -60,11 +60,16 @@ export default function RaceScreen() {
     const ctx = canvas.getContext('2d');
     const nRacers = raceData.racers.length;
 
-    // Track geometry — calculated once, closed over by all draw functions
-    const TRX = 500; // centerline x-radius
-    const TRY = 195; // centerline y-radius
-    const TW = Math.max(80, nRacers * 28); // total track band width
+    // Track geometry — calculated once, closed over by all draw functions.
+    // TW uses a uniform ±TW/2 offset in BOTH rx and ry directions so the
+    // visible band height at the top of the oval equals TW (not TW*0.39).
+    const TRX = 455; // centerline x-radius (slightly smaller than before)
+    const TRY = 175; // centerline y-radius
+    const TW = Math.min(Math.max(180, nRacers * 32), 260); // at least 30px/lane
     const LANE_W = TW / Math.max(nRacers, 1); // pixels per lane
+
+    // Proper modulo for negative starting offsets (racers begin with t < 0)
+    const tPos = (t) => ((t % 1) + 1) % 1;
 
     // Each racer travels on their own concentric ellipse (laneRx × laneRy).
     // Inner lanes = smaller ellipse, outer lanes = larger ellipse — exactly
@@ -105,9 +110,13 @@ export default function RaceScreen() {
         return {
           ...r,
           index: i,
-          t: 0,
+          // Stagger behind the start line: racer 0 is at t=0, others are
+          // slightly behind (negative t = before the finish line).
+          t: -i * 0.02,
           laneRx: TRX + delta,
-          laneRy: TRY + delta * (TRY / TRX), // maintain aspect ratio
+          // Uniform ±delta in ry (same magnitude as rx) so the visible band
+          // height at the top of the oval equals LANE_W, not LANE_W*(TRY/TRX).
+          laneRy: TRY + delta,
           icon: trackIcon ?? r.icon,
           baseSpeed: 0.00085 + Math.random() * 0.00035,
           color: LANE_COLORS[i % LANE_COLORS.length],
@@ -176,23 +185,9 @@ export default function RaceScreen() {
       }
       ctx.globalAlpha = 1;
 
-      // Grandstand strip (top 58px)
+      // Grandstand strip — plain dark bar, no floating dots outside the track
       ctx.fillStyle = 'rgba(18,10,4,0.88)';
       ctx.fillRect(0, 0, CW, 58);
-
-      // Crowd heads inside grandstand
-      for (let x = 16; x < CW; x += 18) {
-        const hue = (x * 9) % 360;
-        const bob = Math.abs(Math.sin(ts * 0.0015 + x * 0.12)) * 10;
-        ctx.globalAlpha = 0.55 + 0.35 * Math.abs(Math.sin(ts * 0.002 + x * 0.08));
-        ctx.fillStyle = `hsl(${hue},70%,55%)`;
-        ctx.beginPath();
-        ctx.arc(x, 16 + bob, 6, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      // Grandstand bottom edge line
       ctx.strokeStyle = 'rgba(255,160,50,0.25)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -222,13 +217,13 @@ export default function RaceScreen() {
       const pulse = 0.5 + 0.5 * Math.sin(ts * 0.0022);
       const glowAmt = 14 + 12 * pulse;
 
-      // Proportional inner/outer radii — same aspect ratio as the centerline.
-      // This ensures all lane ellipses stay strictly within the track band.
-      const halfBand = (TW / 2) * (TRY / TRX); // proportional ry half-width
+      // Uniform ±TW/2 in both directions. outerRy - innerRy = TW, so the
+      // visible band at the top of the oval is exactly TW pixels tall —
+      // matching what the lane ellipses actually use.
       const outerRx = TRX + TW / 2;
-      const outerRy = TRY + halfBand;
+      const outerRy = TRY + TW / 2;
       const innerRx = TRX - TW / 2;
-      const innerRy = TRY - halfBand;
+      const innerRy = TRY - TW / 2;
 
       // Sand fill
       ctx.beginPath();
@@ -259,7 +254,7 @@ export default function RaceScreen() {
       for (let i = 1; i < nRacers; i++) {
         const delta = -TW / 2 + i * LANE_W; // boundary between lane i-1 and i
         const rxi = TRX + delta;
-        const ryi = TRY + delta * (TRY / TRX);
+        const ryi = TRY + delta; // uniform, matches laneRy formula
         if (rxi > 0 && ryi > 0) {
           ctx.beginPath();
           ctx.ellipse(TX, TY, rxi, ryi, 0, 0, 2 * Math.PI);
@@ -338,7 +333,7 @@ export default function RaceScreen() {
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
 
       for (const r of st.racers) {
-        const pos = tp(r.t % 1, r.laneRx, r.laneRy);
+        const pos = tp(tPos(r.t), r.laneRx, r.laneRy);
 
         // Speed trail — oldest point first (most transparent/small)
         for (let i = 0; i < r.trail.length; i++) {
@@ -465,7 +460,7 @@ export default function RaceScreen() {
 
         // Dust behind leader
         const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-        const lp = tp(leader.t % 1, leader.laneRx, leader.laneRy);
+        const lp = tp(tPos(leader.t), leader.laneRx, leader.laneRy);
         if (Math.random() < 0.4) {
           st.dustParticles.push({
             x: lp.x + (Math.random() - 0.5) * 10,
