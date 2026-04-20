@@ -15,6 +15,7 @@ export const KEYS = {
   RACE_HISTORY: 'racearena:raceHistory',
   SETTINGS: 'racearena:settings',
   ACTIVE_GROUP: 'racearena:activeGroup',
+  DATA_VERSION: 'racearena:dataVersion',
 };
 
 export function storageGet(key, fallback = null) {

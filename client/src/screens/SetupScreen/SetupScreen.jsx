@@ -34,7 +34,8 @@ function SetupScreen() {
   // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale
   // localStorage from sessions before shapeId/environmentId/racerTypeId existed).
   const tracks = (() => {
-    const byId = new Map(storedTracks.map((t) => [t.id, t]));
+    const base = Array.isArray(storedTracks) ? storedTracks : DEFAULT_TRACKS;
+    const byId = new Map(base.map((t) => [t.id, t]));
     for (const d of DEFAULT_TRACKS) {
       if (!byId.has(d.id)) {
         byId.set(d.id, d);

@@ -11,6 +11,19 @@ import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
 import DevScreen from './screens/DevScreen/DevScreen.jsx';
 import RaceScreen from './screens/RaceScreen/index.jsx';
 import ResultScreen from './screens/ResultScreen/index.jsx';
+import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
+import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
+
+// Bump this when DEFAULT_TRACKS schema changes to force a one-time reset of stale localStorage data.
+const CURRENT_DATA_VERSION = 1;
+
+(function migrateStorage() {
+  if (storageGet(KEYS.DATA_VERSION, 0) < CURRENT_DATA_VERSION) {
+    storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
+    storageSet(KEYS.DATA_VERSION, CURRENT_DATA_VERSION);
+    console.log('[RaceArena] Storage migrated to v' + CURRENT_DATA_VERSION);
+  }
+})();
 
 function App() {
   return (
