@@ -1,0 +1,360 @@
+/* ============================================================
+   File:        ResultScreen.css
+   Path:        client/src/screens/ResultScreen/ResultScreen.css
+   Project:     RaceArena
+   Created:     2026-04-20
+   Description: Styles for post-race results screen with podium
+   ============================================================ */
+
+.screen--result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px;
+}
+
+.screen--result.loading {
+  color: #fff;
+  font-size: 24px;
+}
+
+.results-container {
+  width: 100%;
+  max-width: 900px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.results-title {
+  text-align: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.race-info {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 40px;
+  font-size: 14px;
+  color: #aaa;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 20px;
+}
+
+.race-track {
+  font-weight: bold;
+  color: #fff;
+}
+
+.race-time {
+  font-family: monospace;
+}
+
+/* Podium Section */
+.podium-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.podium {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  height: 250px;
+  perspective: 1000px;
+}
+
+.podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 20px;
+  border-radius: 8px 8px 0 0;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  gap: 12px;
+  animation: podiumAppear 0.6s ease-out;
+}
+
+@keyframes podiumAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* First place - tallest, centered, gold highlight */
+.podium-slot--1st {
+  height: 200px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  transform: scale(1.05);
+  order: 2;
+}
+
+.podium-slot--1st .podium-medal {
+  font-size: 40px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Second place */
+.podium-slot--2nd {
+  height: 150px;
+  background: rgba(192, 192, 192, 0.1);
+  border-color: rgba(192, 192, 192, 0.3);
+  order: 1;
+}
+
+.podium-slot--2nd .podium-medal {
+  font-size: 32px;
+}
+
+/* Third place */
+.podium-slot--3rd {
+  height: 120px;
+  background: rgba(205, 127, 50, 0.1);
+  border-color: rgba(205, 127, 50, 0.3);
+  order: 3;
+}
+
+.podium-slot--3rd .podium-medal {
+  font-size: 28px;
+}
+
+.podium-medal {
+  margin-bottom: 5px;
+}
+
+.podium-racer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.podium-icon {
+  font-size: 48px;
+}
+
+.podium-name {
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  word-wrap: break-word;
+  max-width: 100px;
+  font-size: 14px;
+}
+
+.podium-rank {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffd700;
+  text-transform: uppercase;
+  margin-top: auto;
+}
+
+/* Rankings Section */
+.rankings-section {
+  margin-bottom: 30px;
+}
+
+.rankings-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.rankings-table {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 50px 40px 1fr 80px 80px;
+  gap: 15px;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 14px;
+  animation: slideIn 0.3s ease-out backwards;
+}
+
+.ranking-row:last-child {
+  border-bottom: none;
+}
+
+.ranking-row:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.ranking-row:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.ranking-row:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.ranking-row:nth-child(n + 4) {
+  animation-delay: 0.2s;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.rank-number {
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.rank-icon {
+  font-size: 20px;
+}
+
+.rank-name {
+  font-weight: 500;
+}
+
+.rank-laps,
+.rank-progress {
+  text-align: right;
+  color: #aaa;
+  font-size: 12px;
+}
+
+/* Actions */
+.results-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #000;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+}
+
+.btn--primary:active {
+  transform: translateY(0);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .results-container {
+    padding: 20px;
+  }
+
+  .results-title {
+    font-size: 32px;
+  }
+
+  .podium {
+    gap: 10px;
+    height: 180px;
+  }
+
+  .podium-slot {
+    min-width: 90px;
+    padding: 15px;
+  }
+
+  .podium-slot--1st {
+    height: 150px;
+  }
+
+  .podium-slot--2nd {
+    height: 110px;
+  }
+
+  .podium-slot--3rd {
+    height: 80px;
+  }
+
+  .podium-icon {
+    font-size: 36px;
+  }
+
+  .podium-name {
+    font-size: 12px;
+    max-width: 80px;
+  }
+
+  .ranking-row {
+    grid-template-columns: 40px 30px 1fr 70px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .rank-laps {
+    display: none;
+  }
+}

@@ -9,7 +9,7 @@
 // ============================================================
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
@@ -21,6 +21,7 @@ import styles from './SetupScreen.module.css';
 const TABS = ['Players', 'Track', 'Settings'];
 
 function SetupScreen() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   // Read tracks and defaults from storage so Dev Panel changes propagate
@@ -50,9 +51,18 @@ function SetupScreen() {
   const canStart = players.length > 0 && selectedTrackId !== null;
 
   function handleStartRace() {
-    // Placeholder: dispatches to server via Socket.IO in Phase 2
-    // eslint-disable-next-line no-console
-    console.log('Starting race', { players, selectedTrackId, raceSettings });
+    // Save race data to session storage for RaceScreen to pick up
+    const race = {
+      racers: players,
+      trackId: selectedTrackId,
+      trackName: selectedTrack?.name,
+      duration: raceSettings.duration,
+      eventName: raceSettings.eventName,
+      winners: raceSettings.winners,
+      timestamp: new Date().toISOString(),
+    };
+    sessionStorage.setItem('activeRace', JSON.stringify(race));
+    navigate('/race');
   }
 
   return (

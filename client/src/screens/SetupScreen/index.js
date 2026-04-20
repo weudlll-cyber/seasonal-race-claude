@@ -6,8 +6,4 @@
 // Description: Pre-race setup screen — racer config, track selection, lobby
 // ============================================================
 
-function SetupScreen() {
-  return <div className="screen screen--setup" />;
-}
-
-export default SetupScreen;
+export { default } from './SetupScreen.jsx';
