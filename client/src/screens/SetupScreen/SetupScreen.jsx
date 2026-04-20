@@ -41,10 +41,11 @@ function SetupScreen() {
       } else {
         const existing = byId.get(d.id);
         byId.set(d.id, {
+          ...existing,
+          // Canonical values come last so they always win over stale localStorage data
           shapeId: d.shapeId,
           environmentId: d.environmentId,
           racerTypeId: d.racerTypeId,
-          ...existing,
         });
       }
     }

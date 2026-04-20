@@ -114,7 +114,20 @@ export class GardenEnvironment {
   drawTrackSurface(ctx, shape, totalLanes, frame) {
     const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
 
-    // Dirt path fill
+    // Soft green grass infield (fills inner area matching the track shape)
+    const cp = shape.getCenterPoint();
+    const innerGrad = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, 280);
+    innerGrad.addColorStop(0, 'hsl(115,42%,21%)');
+    innerGrad.addColorStop(0.6, 'hsl(115,38%,16%)');
+    innerGrad.addColorStop(1, 'hsl(115,35%,13%)');
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = innerGrad;
+    ctx.fill();
+
+    // Dirt path fill (track band only)
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);

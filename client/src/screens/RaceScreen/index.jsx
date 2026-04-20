@@ -77,6 +77,8 @@ export default function RaceScreen() {
     const envId = raceData.environmentId || 'dirt';
     const typeId = raceData.racerTypeId || 'horse';
 
+    console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId, '| typeId:', typeId);
+
     shapeRef.current = getShape(shapeId, CW, CH);
     envRef.current = getEnvironment(envId, CW, CH);
     racerTypeRef.current = getRacerType(typeId);
