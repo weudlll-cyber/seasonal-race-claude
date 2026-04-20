@@ -14,7 +14,7 @@ const CY_FRAC = 0.57;
 const HW_FRAC = 0.4; // half-width of straights as fraction of cw
 const HH_FRAC = 0.2; // half-height
 const CORNER_R = 80; // corner arc radius (px)
-const ZIG_AMP = 28; // zigzag amplitude (px)
+const ZIG_AMP = 0; // 0 = smooth stadium (non-zero causes C1 discontinuities at arc junctions)
 const N_ZIGS = 3; // sine periods per straight
 
 function _bandWidth(totalLanes) {

@@ -18,8 +18,8 @@ export class CarRacerType {
   drawRacer(ctx, x, y, angle, racer, isLeader, frame) {
     ctx.save();
     ctx.translate(x, y);
-    // 🚗 emoji faces right by default; rotate to match travel direction.
-    ctx.rotate(angle);
+    // 🚗 on Windows Segoe UI faces left; add π to flip it to face the travel direction.
+    ctx.rotate(angle + Math.PI);
     ctx.font = '24px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

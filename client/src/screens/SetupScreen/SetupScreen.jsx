@@ -29,7 +29,27 @@ function SetupScreen() {
   const [activeTab, setActiveTab] = useState(0);
 
   // Read tracks and defaults from storage so Dev Panel changes propagate
-  const [tracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+
+  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale
+  // localStorage from sessions before shapeId/environmentId/racerTypeId existed).
+  const tracks = (() => {
+    const byId = new Map(storedTracks.map((t) => [t.id, t]));
+    for (const d of DEFAULT_TRACKS) {
+      if (!byId.has(d.id)) {
+        byId.set(d.id, d);
+      } else {
+        const existing = byId.get(d.id);
+        byId.set(d.id, {
+          shapeId: d.shapeId,
+          environmentId: d.environmentId,
+          racerTypeId: d.racerTypeId,
+          ...existing,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  })();
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
 
   // Lazily consume any group loaded from the Dev Panel (one-shot read + clear)
