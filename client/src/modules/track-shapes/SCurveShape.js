@@ -9,13 +9,15 @@
 
 import { PathInterpolator } from './PathInterpolator.js';
 
-// Control points on 1000×600 design grid
+// Control points on 1000×600 design grid — plateau S-curve
 const CONTROL_POINTS = [
-  { x: 50, y: 300 }, // start — left centre
-  { x: 200, y: 130 }, // bend up
-  { x: 500, y: 300 }, // mid centre
-  { x: 800, y: 470 }, // bend down
-  { x: 950, y: 300 }, // finish — right centre
+  { x: 30, y: 300 }, // start — left centre
+  { x: 200, y: 150 }, // rise to upper plateau
+  { x: 400, y: 150 }, // upper plateau
+  { x: 500, y: 300 }, // mid crossing
+  { x: 600, y: 450 }, // lower plateau
+  { x: 800, y: 450 }, // lower plateau hold
+  { x: 970, y: 300 }, // finish — right centre
 ];
 
 function _bw(n) {

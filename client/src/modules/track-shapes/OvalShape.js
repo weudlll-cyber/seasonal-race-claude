@@ -7,12 +7,12 @@
 //              so the visible band height equals laneWidth at every point.
 // ============================================================
 
-const CY_FRAC = 0.577; // vertical center (leaves room for title above)
-const RX_FRAC = 0.355; // x-radius as fraction of canvas width
-const RY_FRAC = 0.243; // y-radius as fraction of canvas height
+const CY_FRAC = 0.52; // vertical center
+const RX_FRAC = 0.38; // x-radius as fraction of canvas width
+const RY_FRAC = 0.28; // y-radius as fraction of canvas height
 
 function _bandWidth(totalLanes) {
-  return Math.min(Math.max(180, totalLanes * 32), 260);
+  return Math.min(Math.max(160, totalLanes * 28), 260);
 }
 
 export class OvalShape {

@@ -9,13 +9,13 @@
 
 import { PathInterpolator } from './PathInterpolator.js';
 
-// Control points on 1000×600 design grid
+// Control points on 1000×600 design grid — reduced amplitude for gentler turns
 const CONTROL_POINTS = [
-  { x: 500, y: 115 }, // start — top centre
-  { x: 195, y: 215 }, // bend left
-  { x: 805, y: 345 }, // bend right
-  { x: 195, y: 460 }, // bend left
-  { x: 500, y: 540 }, // finish — bottom centre
+  { x: 500, y: 120 }, // start — top centre
+  { x: 300, y: 240 }, // bend left
+  { x: 700, y: 360 }, // bend right
+  { x: 300, y: 462 }, // bend left
+  { x: 500, y: 545 }, // finish — bottom centre
 ];
 
 function _bw(n) {

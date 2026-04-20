@@ -11,22 +11,27 @@
 
 import { PathInterpolator } from './PathInterpolator.js';
 
-// 12 control points on 1000×600 design grid.
-// Outer rectangle: TL(100,120) → TR(900,120) → BR(900,500) → BL(100,500)
-// Two points bracket each corner; one point sits mid-straight.
+// 16 control points on 1000×600 design grid.
+// Rectangle: TL(100,120) → TR(900,120) → BR(900,500) → BL(100,500)
+// Three points per corner (enter, arc-mid at 45°, exit); one mid per straight.
+// Arc-mid formula: corner_center + r*(cos θ, sin θ) at 45° through the corner, r=55.
 const CONTROL_POINTS = [
-  { x: 155, y: 120 }, // post-TL → going right (top straight start)
+  { x: 155, y: 120 }, // TL exit → going right
   { x: 500, y: 120 }, // top straight mid
-  { x: 845, y: 120 }, // pre-TR
-  { x: 900, y: 175 }, // post-TR → going down (right straight start)
+  { x: 845, y: 120 }, // TR enter
+  { x: 884, y: 136 }, // TR arc-mid  (center 845,175  angle 315°)
+  { x: 900, y: 175 }, // TR exit → going down
   { x: 900, y: 310 }, // right straight mid
-  { x: 900, y: 445 }, // pre-BR
-  { x: 845, y: 500 }, // post-BR → going left (bottom straight start)
+  { x: 900, y: 445 }, // BR enter
+  { x: 884, y: 484 }, // BR arc-mid  (center 845,445  angle  45°)
+  { x: 845, y: 500 }, // BR exit → going left
   { x: 500, y: 500 }, // bottom straight mid
-  { x: 155, y: 500 }, // pre-BL
-  { x: 100, y: 445 }, // post-BL → going up (left straight start)
+  { x: 155, y: 500 }, // BL enter
+  { x: 116, y: 484 }, // BL arc-mid  (center 155,445  angle 135°)
+  { x: 100, y: 445 }, // BL exit → going up
   { x: 100, y: 310 }, // left straight mid
-  { x: 100, y: 175 }, // pre-TL
+  { x: 100, y: 175 }, // TL enter
+  { x: 116, y: 136 }, // TL arc-mid  (center 155,175  angle 225°)
 ];
 
 function _bw(n) {

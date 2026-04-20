@@ -9,14 +9,15 @@
 
 import { PathInterpolator } from './PathInterpolator.js';
 
-// Control points on 1000×600 design grid — more bends than River Run
+// Control points on 1000×600 design grid — tight S-shape, fully within canvas
 const CONTROL_POINTS = [
-  { x: 50, y: 300 }, // start — left centre
-  { x: 200, y: 130 }, // first bend up
-  { x: 400, y: 440 }, // second bend down
-  { x: 600, y: 140 }, // third bend up
-  { x: 800, y: 450 }, // fourth bend down
-  { x: 950, y: 300 }, // finish — right centre
+  { x: 30, y: 300 }, // start — left centre
+  { x: 200, y: 110 }, // rise to upper plateau
+  { x: 400, y: 110 }, // upper plateau
+  { x: 500, y: 300 }, // mid crossing
+  { x: 600, y: 490 }, // lower plateau
+  { x: 800, y: 490 }, // lower plateau hold
+  { x: 970, y: 300 }, // finish — right centre
 ];
 
 function _bw(n) {
