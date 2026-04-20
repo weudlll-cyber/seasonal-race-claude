@@ -9,6 +9,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
 import DevScreen from './screens/DevScreen/DevScreen.jsx';
+import RaceScreen from './screens/RaceScreen/index.jsx';
+import ResultScreen from './screens/ResultScreen/index.jsx';
 
 function App() {
   return (
@@ -16,8 +18,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/setup" replace />} />
         <Route path="/setup" element={<SetupScreen />} />
+        <Route path="/race" element={<RaceScreen />} />
+        <Route path="/results" element={<ResultScreen />} />
         <Route path="/dev" element={<DevScreen />} />
-        {/* Future routes: /race, /results */}
       </Routes>
     </BrowserRouter>
   );
