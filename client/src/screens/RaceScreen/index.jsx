@@ -110,9 +110,7 @@ export default function RaceScreen() {
         return {
           ...r,
           index: i,
-          // Stagger behind the start line: racer 0 is at t=0, others are
-          // slightly behind (negative t = before the finish line).
-          t: -i * 0.02,
+          t: 0,
           laneRx: TRX + delta,
           // Uniform ±delta in ry (same magnitude as rx) so the visible band
           // height at the top of the oval equals LANE_W, not LANE_W*(TRY/TRX).
