@@ -66,17 +66,27 @@ export default function RaceScreen() {
     const TW = Math.max(80, nRacers * 28); // total track band width
     const LANE_W = TW / Math.max(nRacers, 1); // pixels per lane
 
-    // Returns canvas {x,y} for track parameter t ∈ [0,1), offset by `lane` px
-    function tp(t, lane = 0) {
+    // Each racer travels on their own concentric ellipse (laneRx × laneRy).
+    // Inner lanes = smaller ellipse, outer lanes = larger ellipse — exactly
+    // how real oval tracks work. No perpendicular offset needed.
+    function tp(t, laneRx, laneRy) {
       const a = 2 * Math.PI * t - Math.PI / 2;
-      const bx = TX + TRX * Math.cos(a);
-      const by = TY + TRY * Math.sin(a);
-      if (!lane) return { x: bx, y: by };
-      const dx = -TRX * Math.sin(a);
-      const dy = TRY * Math.cos(a);
-      const len = Math.hypot(dx, dy);
-      return { x: bx + (-dy / len) * lane, y: by + (dx / len) * lane };
+      return {
+        x: TX + laneRx * Math.cos(a),
+        y: TY + laneRy * Math.sin(a),
+      };
     }
+
+    // Force correct emoji per track type (racer-type-per-track will be
+    // handled properly later; for now override at the race screen level).
+    const TRACK_ICON = {
+      'dirt-oval': '🐴',
+      'river-run': '🦆',
+      'space-sprint': '🚀',
+      'garden-path': '🐌',
+      'city-circuit': '🚗',
+    };
+    const trackIcon = TRACK_ICON[raceData.trackId] ?? null;
 
     // Build initial game state
     g.current = {
@@ -88,18 +98,24 @@ export default function RaceScreen() {
       winnersNeeded: Math.min(raceData.winners ?? 3, nRacers),
       dustParticles: [],
       burstParticles: [],
-      racers: raceData.racers.map((r, i) => ({
-        ...r,
-        index: i,
-        t: 0,
-        // Spread each racer evenly across track width, inside the band
-        lane: (i - (nRacers - 1) / 2) * LANE_W,
-        baseSpeed: 0.00085 + Math.random() * 0.00035,
-        color: LANE_COLORS[i % LANE_COLORS.length],
-        finished: false,
-        finishRank: null,
-        trail: [], // [{x,y}] — last N canvas positions
-      })),
+      racers: raceData.racers.map((r, i) => {
+        // delta ranges from -(TW/2 - half_lane) to +(TW/2 - half_lane),
+        // keeping every racer's ellipse strictly inside the track band.
+        const delta = -TW / 2 + (i + 0.5) * LANE_W;
+        return {
+          ...r,
+          index: i,
+          t: 0,
+          laneRx: TRX + delta,
+          laneRy: TRY + delta * (TRY / TRX), // maintain aspect ratio
+          icon: trackIcon ?? r.icon,
+          baseSpeed: 0.00085 + Math.random() * 0.00035,
+          color: LANE_COLORS[i % LANE_COLORS.length],
+          finished: false,
+          finishRank: null,
+          trail: [],
+        };
+      }),
     };
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
@@ -206,24 +222,32 @@ export default function RaceScreen() {
       const pulse = 0.5 + 0.5 * Math.sin(ts * 0.0022);
       const glowAmt = 14 + 12 * pulse;
 
-      // Sand fill (outer - inner)
+      // Proportional inner/outer radii — same aspect ratio as the centerline.
+      // This ensures all lane ellipses stay strictly within the track band.
+      const halfBand = (TW / 2) * (TRY / TRX); // proportional ry half-width
+      const outerRx = TRX + TW / 2;
+      const outerRy = TRY + halfBand;
+      const innerRx = TRX - TW / 2;
+      const innerRy = TRY - halfBand;
+
+      // Sand fill
       ctx.beginPath();
-      ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
+      ctx.ellipse(TX, TY, outerRx, outerRy, 0, 0, 2 * Math.PI);
       ctx.fillStyle = '#c8a46a';
       ctx.fill();
 
-      // Inner area
+      // Inner area (dark space)
       ctx.beginPath();
-      ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
-      const innerGrad = ctx.createRadialGradient(TX, TY, 0, TX, TY, TRX - TW / 2);
+      ctx.ellipse(TX, TY, innerRx, innerRy, 0, 0, 2 * Math.PI);
+      const innerGrad = ctx.createRadialGradient(TX, TY, 0, TX, TY, innerRx);
       innerGrad.addColorStop(0, '#04091a');
       innerGrad.addColorStop(0.6, '#060d28');
       innerGrad.addColorStop(1, '#0a1535');
       ctx.fillStyle = innerGrad;
       ctx.fill();
 
-      // Subtle inner rings
-      for (let r = 40; r < TRY - TW / 2 - 8; r += 35) {
+      // Subtle inner-area rings
+      for (let r = 40; r < innerRy - 8; r += 35) {
         ctx.strokeStyle = 'rgba(80,120,200,0.06)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -231,11 +255,11 @@ export default function RaceScreen() {
         ctx.stroke();
       }
 
-      // Lane dividers (one between each lane)
+      // Lane dividers — one concentric ellipse at each lane boundary
       for (let i = 1; i < nRacers; i++) {
-        const lOff = (i - nRacers / 2) * LANE_W;
-        const rxi = TRX + lOff;
-        const ryi = TRY + lOff * (TRY / TRX);
+        const delta = -TW / 2 + i * LANE_W; // boundary between lane i-1 and i
+        const rxi = TRX + delta;
+        const ryi = TRY + delta * (TRY / TRX);
         if (rxi > 0 && ryi > 0) {
           ctx.beginPath();
           ctx.ellipse(TX, TY, rxi, ryi, 0, 0, 2 * Math.PI);
@@ -251,7 +275,7 @@ export default function RaceScreen() {
       ctx.strokeStyle = `rgba(0,${180 + Math.round(70 * pulse)},255,0.92)`;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
+      ctx.ellipse(TX, TY, outerRx, outerRy, 0, 0, 2 * Math.PI);
       ctx.stroke();
 
       // Inner neon border
@@ -260,28 +284,29 @@ export default function RaceScreen() {
       ctx.strokeStyle = `rgba(0,${160 + Math.round(70 * pulse)},230,0.75)`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
+      ctx.ellipse(TX, TY, innerRx, innerRy, 0, 0, 2 * Math.PI);
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Finish line — at t=0 (top of oval). Tangent is horizontal there so
-      // the line runs vertically across the full track band.
+      // Finish line — t=0 is the top of the oval (tangent is horizontal there).
+      // The line spans from inner to outer edge of the track band, vertically.
       const finishX = TX;
-      const finishY = TY - TRY;
+      const finishTop = TY - outerRy;
+      const finishHeight = outerRy - innerRy;
       const checkers = 8;
-      const segH = TW / checkers;
+      const segH = finishHeight / checkers;
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ffd700';
       for (let i = 0; i < checkers; i++) {
         ctx.fillStyle = i % 2 === 0 ? '#fff' : '#1a1a1a';
-        ctx.fillRect(finishX - 7, finishY - TW / 2 + i * segH, 14, segH);
+        ctx.fillRect(finishX - 7, finishTop + i * segH, 14, segH);
       }
       ctx.shadowBlur = 0;
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#ffd700';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText('FINISH', finishX, finishY - TW / 2 - 5);
+      ctx.fillText('FINISH', finishX, finishTop - 5);
     }
 
     // ── Draw: particles (dust + burst) ───────────────────────────────────────
@@ -313,7 +338,7 @@ export default function RaceScreen() {
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
 
       for (const r of st.racers) {
-        const pos = tp(r.t % 1, r.lane);
+        const pos = tp(r.t % 1, r.laneRx, r.laneRy);
 
         // Speed trail — oldest point first (most transparent/small)
         for (let i = 0; i < r.trail.length; i++) {
@@ -432,15 +457,15 @@ export default function RaceScreen() {
           if (r.t >= 1.0) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
-            // Burst explosion at finish line position for this lane
-            const finishPos = tp(0, r.lane);
+            // Burst at the racer's finish-line position on their lane ellipse
+            const finishPos = tp(0, r.laneRx, r.laneRy);
             emitBurst(finishPos.x, finishPos.y);
           }
         }
 
         // Dust behind leader
         const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-        const lp = tp(leader.t % 1, leader.lane);
+        const lp = tp(leader.t % 1, leader.laneRx, leader.laneRy);
         if (Math.random() < 0.4) {
           st.dustParticles.push({
             x: lp.x + (Math.random() - 0.5) * 10,
