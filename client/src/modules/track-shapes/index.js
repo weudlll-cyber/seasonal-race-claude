@@ -1,26 +1,39 @@
-// ============================================================
-// File:        index.js
-// Path:        client/src/modules/track-shapes/index.js
-// Project:     RaceArena
-// Created:     2026-04-20
-// Description: Factory + registry for all track shape modules.
-//              getShape(shapeId, cw, ch) returns the correct shape
-//              instance for a given track configuration.
-// ============================================================
+export { SvgPathShape } from './SvgPathShape.js';
+export { TRACK_PATHS } from './track-path-configs.js';
 
-export { OvalShape } from './OvalShape.js';
-export { SCurveShape } from './SCurveShape.js';
-export { SpiralShape } from './SpiralShape.js';
-export { ZigzagShape } from './ZigzagShape.js';
-export { RectangleShape } from './RectangleShape.js';
-export { PathInterpolator } from './PathInterpolator.js';
-export { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
+import { SvgPathShape } from './SvgPathShape.js';
+import { TRACK_PATHS } from './track-path-configs.js';
 
-import { OvalShape } from './OvalShape.js';
-import { SCurveShape } from './SCurveShape.js';
-import { SpiralShape } from './SpiralShape.js';
-import { ZigzagShape } from './ZigzagShape.js';
-import { RectangleShape } from './RectangleShape.js';
+// Named shape classes — thin wrappers that give each shape a distinct identity
+export class OvalShape extends SvgPathShape {
+  constructor(cw, ch) {
+    super(TRACK_PATHS.oval.d, { ...TRACK_PATHS.oval, cw, ch });
+  }
+}
+
+export class SCurveShape extends SvgPathShape {
+  constructor(cw, ch) {
+    super(TRACK_PATHS['s-curve'].d, { ...TRACK_PATHS['s-curve'], cw, ch });
+  }
+}
+
+export class SpiralShape extends SvgPathShape {
+  constructor(cw, ch) {
+    super(TRACK_PATHS.spiral.d, { ...TRACK_PATHS.spiral, cw, ch });
+  }
+}
+
+export class ZigzagShape extends SvgPathShape {
+  constructor(cw, ch) {
+    super(TRACK_PATHS.zigzag.d, { ...TRACK_PATHS.zigzag, cw, ch });
+  }
+}
+
+export class RectangleShape extends SvgPathShape {
+  constructor(cw, ch) {
+    super(TRACK_PATHS.rectangle.d, { ...TRACK_PATHS.rectangle, cw, ch });
+  }
+}
 
 const SHAPE_MAP = {
   oval: OvalShape,
@@ -40,10 +53,6 @@ export const SHAPE_LABELS = {
   rectangle: 'Rectangle',
 };
 
-/**
- * Returns a shape instance for the given shapeId.
- * Falls back to OvalShape for unknown ids.
- */
 export function getShape(shapeId, cw, ch) {
   const Cls = SHAPE_MAP[shapeId] ?? OvalShape;
   return new Cls(cw, ch);

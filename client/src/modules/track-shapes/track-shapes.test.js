@@ -1,20 +1,13 @@
-// ============================================================
-// File:        track-shapes.test.js
-// Path:        client/src/modules/track-shapes/track-shapes.test.js
-// Project:     RaceArena
-// Description: Tests for all track shape modules and PathInterpolator.
-// ============================================================
-
 import { describe, it, expect } from 'vitest';
 import {
   getShape,
   SHAPE_IDS,
+  SvgPathShape,
   OvalShape,
   SCurveShape,
   SpiralShape,
   ZigzagShape,
   RectangleShape,
-  PathInterpolator,
 } from './index.js';
 
 const CW = 1280,
@@ -27,68 +20,68 @@ const ALL_SHAPES = [
   ['rectangle', RectangleShape],
 ];
 
-// ── PathInterpolator unit tests ────────────────────────────────────────────
+// ── SvgPathShape unit tests ───────────────────────────────────────────────────
 
-describe('PathInterpolator', () => {
-  const openPts = [
-    { x: 0, y: 300 },
-    { x: 500, y: 100 },
-    { x: 1000, y: 300 },
-  ];
-  const closedPts = [
-    { x: 200, y: 200 },
-    { x: 800, y: 200 },
-    { x: 800, y: 400 },
-    { x: 200, y: 400 },
-  ];
-
-  it('open: getPoint(0) is near first control point', () => {
-    const p = new PathInterpolator(openPts, { closed: false, cw: 1000, ch: 600 });
-    const pt = p.getPoint(0);
-    expect(Math.abs(pt.x - 0)).toBeLessThan(5);
-    expect(Math.abs(pt.y - 300)).toBeLessThan(5);
-  });
-
-  it('open: getPoint(1) is near last control point', () => {
-    const p = new PathInterpolator(openPts, { closed: false, cw: 1000, ch: 600 });
-    const pt = p.getPoint(1);
-    expect(Math.abs(pt.x - 1000)).toBeLessThan(5);
-    expect(Math.abs(pt.y - 300)).toBeLessThan(5);
-  });
-
-  it('closed: getPoint(0) === getPoint(1)', () => {
-    const p = new PathInterpolator(closedPts, { closed: true, cw: 1000, ch: 600 });
-    const p0 = p.getPoint(0),
-      p1 = p.getPoint(1);
-    const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
-    expect(dist).toBeLessThan(5);
-  });
+describe('SvgPathShape', () => {
+  const openShape = new SCurveShape(CW, CH); // open path: M 30,300 … 970,300
+  const closedShape = new OvalShape(CW, CH); // closed loop
 
   it('getTotalLength returns a positive finite number', () => {
-    const p = new PathInterpolator(openPts, { closed: false, cw: 1000, ch: 600 });
-    expect(p.getTotalLength()).toBeGreaterThan(100);
-    expect(isFinite(p.getTotalLength())).toBe(true);
+    expect(openShape.getTotalLength()).toBeGreaterThan(100);
+    expect(isFinite(openShape.getTotalLength())).toBe(true);
+  });
+
+  it('open: getPosition(0) band-centre is near path start', () => {
+    // Average lane 0 and last lane to recover the centre-path position
+    const p0 = openShape.getPosition(0, 0, 6);
+    const p5 = openShape.getPosition(0, 5, 6);
+    const cx = (p0.x + p5.x) / 2;
+    const cy = (p0.y + p5.y) / 2;
+    // s-curve start: grid (30, 300) → canvas (~38, 360)
+    expect(cx).toBeGreaterThan(0);
+    expect(cx).toBeLessThan(CW * 0.2);
+    expect(cy).toBeGreaterThan(CH * 0.3);
+    expect(cy).toBeLessThan(CH * 0.7);
+  });
+
+  it('open: getPosition(1) band-centre is near path end', () => {
+    const p0 = openShape.getPosition(1, 0, 6);
+    const p5 = openShape.getPosition(1, 5, 6);
+    const cx = (p0.x + p5.x) / 2;
+    // s-curve end: grid (970, 300) → canvas (~1242, 360)
+    expect(cx).toBeGreaterThan(CW * 0.8);
+  });
+
+  it('closed: getPosition(0) ≈ getPosition(1)', () => {
+    for (let lane = 0; lane < 6; lane++) {
+      const p0 = closedShape.getPosition(0, lane, 6);
+      const p1 = closedShape.getPosition(1, lane, 6);
+      const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
+      expect(dist).toBeLessThan(1);
+    }
+  });
+
+  it('lane offsets are symmetric around the centre path', () => {
+    const inner = openShape.getPosition(0.4, 0, 6);
+    const outer = openShape.getPosition(0.4, 5, 6);
+    const cx = (inner.x + outer.x) / 2;
+    const cy = (inner.y + outer.y) / 2;
+    const dInner = Math.sqrt((inner.x - cx) ** 2 + (inner.y - cy) ** 2);
+    const dOuter = Math.sqrt((outer.x - cx) ** 2 + (outer.y - cy) ** 2);
+    expect(Math.abs(dInner - dOuter)).toBeLessThan(0.1);
+    expect(dInner).toBeGreaterThan(20); // non-degenerate spread
   });
 
   it('getTangentAngle returns angle in [-PI, PI]', () => {
-    const p = new PathInterpolator(openPts, { closed: false, cw: 1000, ch: 600 });
     for (let i = 0; i <= 10; i++) {
-      const a = p.getTangentAngle(i / 10);
+      const a = openShape.getTangentAngle(i / 10);
       expect(a).toBeGreaterThanOrEqual(-Math.PI);
       expect(a).toBeLessThanOrEqual(Math.PI);
     }
   });
-
-  it('arc-length spacing: intermediate t values spread across the path', () => {
-    const p = new PathInterpolator(openPts, { closed: false, cw: 1000, ch: 600 });
-    const p25 = p.getPoint(0.25);
-    const p75 = p.getPoint(0.75);
-    // Both should be distinct from endpoints and from each other
-    expect(Math.abs(p25.x - p75.x) + Math.abs(p25.y - p75.y)).toBeGreaterThan(50);
-  });
 });
 
-// ── Shape factory tests ────────────────────────────────────────────────────
+// ── Shape factory tests ────────────────────────────────────────────────────────
 
 describe('getShape factory', () => {
   it('returns an instance for every registered shapeId', () => {
@@ -107,9 +100,15 @@ describe('getShape factory', () => {
   it('SHAPE_IDS contains all 5 shapes', () => {
     expect(SHAPE_IDS).toHaveLength(5);
   });
+
+  it('all named shape classes extend SvgPathShape', () => {
+    for (const [, Cls] of ALL_SHAPES) {
+      expect(new Cls(CW, CH)).toBeInstanceOf(SvgPathShape);
+    }
+  });
 });
 
-// ── Per-shape tests ────────────────────────────────────────────────────────
+// ── Per-shape tests ────────────────────────────────────────────────────────────
 
 describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
   const shape = new Cls(CW, CH);
@@ -205,8 +204,8 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
       const { outer, inner } = shape.getEdgePoints(N_LANES, 40);
       let totalSep = 0;
       for (let i = 0; i < outer.length; i++) {
-        const dx = outer[i].x - inner[i].x,
-          dy = outer[i].y - inner[i].y;
+        const dx = outer[i].x - inner[i].x;
+        const dy = outer[i].y - inner[i].y;
         totalSep += Math.sqrt(dx * dx + dy * dy);
       }
       expect(totalSep / outer.length).toBeGreaterThan(10);

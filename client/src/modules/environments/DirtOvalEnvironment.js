@@ -15,13 +15,6 @@ const CROWD = Array.from({ length: 60 }, (_, i) => ({
   size: 6 + (i % 4),
 }));
 
-// Static sand speckle positions
-const SPECKLES = Array.from({ length: 120 }, (_, i) => ({
-  x: (i * 83.7) % 1,
-  y: (i * 61.3) % 1,
-  r: 1 + (i % 3) * 0.5,
-}));
-
 export class DirtOvalEnvironment {
   constructor(cw, ch) {
     this.cw = cw;
@@ -108,93 +101,9 @@ export class DirtOvalEnvironment {
   // Draw the sand track surface and neon borders using shape geometry
   drawTrackSurface(ctx, shape, totalLanes, frame) {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
-
-    // Use oval-specific efficient drawing when available
-    if (typeof shape.getBandParams === 'function') {
-      this._drawOvalTrack(ctx, shape, totalLanes, frame, pulse);
-    } else {
-      this._drawGenericTrack(ctx, shape, totalLanes, frame, pulse);
-    }
-
+    this._drawGenericTrack(ctx, shape, totalLanes, frame, pulse);
     this._drawFinishLine(ctx, shape, totalLanes, frame);
     this._drawTitle(ctx, shape, frame);
-  }
-
-  _drawOvalTrack(ctx, shape, totalLanes, frame, pulse) {
-    const bp = shape.getBandParams(totalLanes);
-    const { cx, cy, outerRx, outerRy, innerRx, innerRy, laneWidth, TW } = bp;
-
-    // Sand fill
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, outerRx, outerRy, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#c8a46a';
-    ctx.fill();
-
-    // Sand speckles (decorative)
-    for (const sp of SPECKLES) {
-      const theta = sp.x * Math.PI * 2;
-      const rOff = innerRx + (outerRx - innerRx) * sp.y;
-      const sx = cx + rOff * Math.cos(theta);
-      const sy = cy + (innerRy + (outerRy - innerRy) * sp.y) * Math.sin(theta);
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = sp.r > 2 ? '#a07040' : '#e8c888';
-      ctx.beginPath();
-      ctx.arc(sx, sy, sp.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    // Inner dark area
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, innerRx, innerRy, 0, 0, Math.PI * 2);
-    const ig = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerRx);
-    ig.addColorStop(0, '#04091a');
-    ig.addColorStop(0.6, '#060d28');
-    ig.addColorStop(1, '#0a1535');
-    ctx.fillStyle = ig;
-    ctx.fill();
-
-    // Inner rings
-    for (let r = 40; r < innerRy - 8; r += 35) {
-      ctx.strokeStyle = 'rgba(80,120,200,0.06)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, (r * bp.rx) / bp.ry, r, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Lane dividers
-    for (let i = 1; i < totalLanes; i++) {
-      const delta = -TW / 2 + i * laneWidth;
-      const rxi = bp.rx + delta,
-        ryi = bp.ry + delta;
-      if (rxi > 0 && ryi > 0) {
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, rxi, ryi, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    // Outer neon border
-    const glow = 14 + 12 * pulse;
-    ctx.shadowBlur = glow * 2;
-    ctx.shadowColor = '#00eeff';
-    ctx.strokeStyle = `rgba(0,${180 + Math.round(70 * pulse)},255,0.92)`;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, outerRx, outerRy, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner neon border
-    ctx.shadowBlur = glow;
-    ctx.strokeStyle = `rgba(0,${160 + Math.round(70 * pulse)},230,0.75)`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, innerRx, innerRy, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
   }
 
   _drawGenericTrack(ctx, shape, totalLanes, frame, pulse) {
