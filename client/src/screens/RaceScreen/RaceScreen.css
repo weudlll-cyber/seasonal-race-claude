@@ -1,32 +1,49 @@
 /* RaceScreen.css */
 
+/* ── Animated background ─────────────────────────────────────────────────── */
+@keyframes bgPulse {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 .screen--race {
   display: flex;
   align-items: flex-start;
-  justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(160deg, #0d1b2a 0%, #1b2a3b 100%);
-  padding: 16px;
+  padding: 10px;
+  background: linear-gradient(135deg, #03030f, #08052a, #03030f);
+  background-size: 300% 300%;
+  animation: bgPulse 6s ease infinite;
 }
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 .race-layout {
   display: grid;
+  /* no max-width — fills the full viewport */
   grid-template-columns: 1fr 210px;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
-  max-width: 990px;
   align-items: start;
 }
 
+/* ── Canvas ──────────────────────────────────────────────────────────────── */
 .race-canvas-wrapper {
+  width: 100%;
   background: #000;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 40px rgba(0, 220, 255, 0.18),
+    0 8px 32px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(0, 200, 255, 0.15);
 }
 
+/* width 100% + height auto preserves the 16:9 internal buffer */
 .race-canvas {
   display: block;
   width: 100%;
@@ -37,52 +54,12 @@
 .race-hud {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 10px;
+  background: rgba(3, 8, 25, 0.82);
+  border: 1px solid rgba(0, 200, 255, 0.15);
   border-radius: 8px;
   padding: 12px;
-}
-
-.race-hud-header {
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.race-event-name {
-  font-size: 13px;
-  font-weight: bold;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.race-track-name {
-  font-size: 11px;
-  color: #888;
-  margin-top: 2px;
-}
-
-.race-phase-badge {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: bold;
-}
-
-.race-phase-badge--countdown {
-  background: rgba(255, 200, 0, 0.2);
-  color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.race-phase-badge--finished {
-  background: rgba(0, 255, 100, 0.15);
-  color: #0f9;
-  border: 1px solid rgba(0, 255, 100, 0.25);
+  box-shadow: 0 0 20px rgba(0, 150, 255, 0.1);
 }
 
 /* ── Scoreboard ─────────────────────────────────────────────────────────── */
@@ -93,75 +70,127 @@
 .scoreboard-header {
   font-size: 10px;
   font-weight: bold;
-  color: #777;
+  color: rgba(0, 200, 255, 0.7);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 200, 255, 0.15);
 }
 
 .scoreboard-row {
   display: grid;
-  grid-template-columns: 22px 24px 1fr auto;
+  grid-template-columns: 28px 22px 1fr auto;
   gap: 5px;
   align-items: center;
-  padding: 5px 4px;
+  padding: 5px 3px;
   border-radius: 4px;
-  margin-bottom: 2px;
-  transition: background 0.25s;
+  margin-bottom: 4px;
+  transition: background 0.3s;
 }
 
 .scoreboard-row--finished {
-  background: rgba(0, 220, 80, 0.08);
+  background: rgba(0, 220, 80, 0.07);
 }
 
 .sb-rank {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
-  color: #ffd700;
   text-align: center;
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid;
   border-radius: 3px;
   padding: 1px 3px;
+  min-width: 24px;
 }
 
 .sb-icon {
-  font-size: 15px;
+  font-size: 14px;
   text-align: center;
+}
+
+.sb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .sb-name {
   font-size: 11px;
-  color: #ddd;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Progress bar */
+.sb-bar-bg {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sb-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.12s linear;
+  box-shadow: 0 0 4px currentColor;
 }
 
 .sb-check {
   font-size: 10px;
   font-weight: bold;
   color: #0f9;
+  padding-left: 2px;
+}
+
+/* ── Phase badges ────────────────────────────────────────────────────────── */
+.race-phase-badge {
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.race-phase-badge--countdown {
+  background: rgba(255, 200, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  font-size: 20px;
+}
+
+.race-phase-badge--finished {
+  background: rgba(0, 255, 100, 0.12);
+  color: #0f9;
+  border: 1px solid rgba(0, 255, 100, 0.22);
 }
 
 /* ── Back button ─────────────────────────────────────────────────────────── */
 .race-back-btn {
-  background: rgba(255, 255, 255, 0.07);
-  color: #bbb;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
   padding: 8px 10px;
   font-size: 11px;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   text-align: center;
+  width: 100%;
 }
 
 .race-back-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.13);
+  color: #ddd;
 }
 
-/* ── Error / loading screens ─────────────────────────────────────────────── */
+/* ── Error / loading ─────────────────────────────────────────────────────── */
 .race-error-screen,
 .race-loading-screen {
   display: flex !important;
@@ -170,7 +199,7 @@
   flex-direction: column;
   gap: 20px;
   min-height: 100vh;
-  background: #0d1b2a;
+  background: #030310;
   color: #fff;
   font-size: 20px;
 }
@@ -180,11 +209,11 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px;
-  background: rgba(255, 50, 50, 0.08);
-  border: 1px solid rgba(255, 50, 50, 0.25);
+  padding: 32px 40px;
+  background: rgba(255, 50, 50, 0.07);
+  border: 1px solid rgba(255, 50, 50, 0.22);
   border-radius: 10px;
-  max-width: 440px;
+  max-width: 460px;
   text-align: center;
 }
 
@@ -196,22 +225,12 @@
 
 .race-error-msg {
   font-size: 14px;
-  color: #ddd;
+  color: #ccc;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .race-layout {
     grid-template-columns: 1fr;
-  }
-
-  .race-hud {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .scoreboard {
-    flex: 1;
-    min-width: 160px;
   }
 }

@@ -2,27 +2,30 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RaceScreen.css';
 
-// ── Canvas / track constants ────────────────────────────────────────────────
-const CW = 760;
-const CH = 460;
-const TX = CW / 2;
-const TY = CH / 2;
-const TRX = 295; // track centerline x-radius
-const TRY = 145; // track centerline y-radius
-const TW = 68; // track band width
+// ── Canvas size ─────────────────────────────────────────────────────────────
+const CW = 1280;
+const CH = 720;
 
-// Returns the {x,y} position on the track centerline at t ∈ [0,1),
-// offset laterally by `lane` pixels.
-function trackPoint(t, lane = 0) {
-  const a = 2 * Math.PI * t - Math.PI / 2;
-  const bx = TX + TRX * Math.cos(a);
-  const by = TY + TRY * Math.sin(a);
-  if (!lane) return { x: bx, y: by };
-  const dx = -TRX * Math.sin(a);
-  const dy = TRY * Math.cos(a);
-  const len = Math.hypot(dx, dy);
-  return { x: bx + (-dy / len) * lane, y: by + (dx / len) * lane };
-}
+// Track center (shifted down so title text fits above)
+const TX = CW / 2; // 640
+const TY = 415; // vertical center of oval
+
+// Lane accent colours (one per racer slot)
+const LANE_COLORS = [
+  '#ff6b35',
+  '#4fc3f7',
+  '#a5d6a7',
+  '#ffcc02',
+  '#ce93d8',
+  '#f48fb1',
+  '#80cbc4',
+  '#ffab40',
+  '#90caf9',
+  '#ef9a9a',
+];
+
+// Countdown text colours: index = seconds remaining (3→red, 2→yellow, 1→green, 0→GO)
+const CD_COLORS = ['#00ff55', '#33ff88', '#ffcc00', '#ff3333'];
 
 const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 
@@ -30,7 +33,7 @@ export default function RaceScreen() {
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
-  const g = useRef(null); // mutable game state — never triggers re-renders
+  const g = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -57,6 +60,25 @@ export default function RaceScreen() {
     const ctx = canvas.getContext('2d');
     const nRacers = raceData.racers.length;
 
+    // Track geometry — calculated once, closed over by all draw functions
+    const TRX = 500; // centerline x-radius
+    const TRY = 195; // centerline y-radius
+    const TW = Math.max(80, nRacers * 28); // total track band width
+    const LANE_W = TW / Math.max(nRacers, 1); // pixels per lane
+
+    // Returns canvas {x,y} for track parameter t ∈ [0,1), offset by `lane` px
+    function tp(t, lane = 0) {
+      const a = 2 * Math.PI * t - Math.PI / 2;
+      const bx = TX + TRX * Math.cos(a);
+      const by = TY + TRY * Math.sin(a);
+      if (!lane) return { x: bx, y: by };
+      const dx = -TRX * Math.sin(a);
+      const dy = TRY * Math.cos(a);
+      const len = Math.hypot(dx, dy);
+      return { x: bx + (-dy / len) * lane, y: by + (dx / len) * lane };
+    }
+
+    // Build initial game state
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -64,164 +86,344 @@ export default function RaceScreen() {
       lastTs: null,
       finishedCount: 0,
       winnersNeeded: Math.min(raceData.winners ?? 3, nRacers),
-      particles: [],
+      dustParticles: [],
+      burstParticles: [],
       racers: raceData.racers.map((r, i) => ({
         ...r,
         index: i,
         t: 0,
-        lane: (i - (nRacers - 1) / 2) * ((TW * 0.72) / Math.max(nRacers - 1, 1)),
+        // Spread each racer evenly across track width, inside the band
+        lane: (i - (nRacers - 1) / 2) * LANE_W,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
+        color: LANE_COLORS[i % LANE_COLORS.length],
         finished: false,
         finishRank: null,
+        trail: [], // [{x,y}] — last N canvas positions
       })),
     };
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
-    // ── Drawing helpers ─────────────────────────────────────────────────────
-    function drawBg() {
-      for (let i = 0; i < 10; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#1c3d1c' : '#1f431f';
-        ctx.fillRect(0, (i * CH) / 10, CW, CH / 10);
-      }
-      // Grandstand strip
-      ctx.fillStyle = 'rgba(50,35,20,0.55)';
-      ctx.fillRect(0, 0, CW, 48);
-      // Crowd dots
-      for (let x = 14; x < CW; x += 16) {
-        ctx.fillStyle = `hsl(${(x * 11) % 360},65%,52%)`;
-        ctx.beginPath();
-        ctx.arc(x, 12 + Math.abs(Math.sin(x * 0.5)) * 10, 4, 0, 2 * Math.PI);
-        ctx.fill();
+    // ── Helpers ─────────────────────────────────────────────────────────────
+
+    function emitBurst(x, y) {
+      const colors = ['#ffd700', '#ff6b35', '#ff3388', '#00ffcc', '#fff', '#ff0', '#0ff'];
+      for (let i = 0; i < 45; i++) {
+        const angle = (i / 45) * Math.PI * 2 + Math.random() * 0.4;
+        const spd = 2 + Math.random() * 7;
+        g.current.burstParticles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          alpha: 1,
+          r: 2 + Math.random() * 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+        });
       }
     }
 
-    function drawTrack() {
-      // Sand fill
+    // ── Draw: background + grandstand ────────────────────────────────────────
+    function drawBg(ts) {
+      // Animated dark gradient
+      const pulse = 0.5 + 0.5 * Math.sin(ts * 0.0007);
+      const grad = ctx.createLinearGradient(0, 0, CW, CH);
+      grad.addColorStop(0, '#030310');
+      grad.addColorStop(0.5, `hsl(250,${25 + pulse * 12}%,${7 + pulse * 4}%)`);
+      grad.addColorStop(1, '#030310');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, CW, CH);
+
+      // Subtle star field
+      const STARS = [
+        [80, 35],
+        [180, 18],
+        [310, 48],
+        [470, 12],
+        [620, 42],
+        [770, 22],
+        [920, 55],
+        [1060, 15],
+        [1190, 38],
+        [1240, 60],
+        [40, 62],
+        [390, 68],
+        [730, 70],
+        [1100, 50],
+      ];
+      for (const [sx, sy] of STARS) {
+        ctx.globalAlpha = 0.35 + 0.45 * Math.abs(Math.sin(ts * 0.001 + sx * 0.05));
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.4, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Grandstand strip (top 58px)
+      ctx.fillStyle = 'rgba(18,10,4,0.88)';
+      ctx.fillRect(0, 0, CW, 58);
+
+      // Crowd heads inside grandstand
+      for (let x = 16; x < CW; x += 18) {
+        const hue = (x * 9) % 360;
+        const bob = Math.abs(Math.sin(ts * 0.0015 + x * 0.12)) * 10;
+        ctx.globalAlpha = 0.55 + 0.35 * Math.abs(Math.sin(ts * 0.002 + x * 0.08));
+        ctx.fillStyle = `hsl(${hue},70%,55%)`;
+        ctx.beginPath();
+        ctx.arc(x, 16 + bob, 6, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Grandstand bottom edge line
+      ctx.strokeStyle = 'rgba(255,160,50,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 58);
+      ctx.lineTo(CW, 58);
+      ctx.stroke();
+
+      // Race title inside canvas (below grandstand, above track)
+      const topOfTrack = TY - TRY - TW / 2;
+      const titleY = 58 + (topOfTrack - 58) / 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#ffd700';
+      ctx.fillText(
+        `🏆  ${raceData.eventName || 'Race'}  ·  ${raceData.trackName || ''}`,
+        CW / 2,
+        titleY
+      );
+      ctx.shadowBlur = 0;
+    }
+
+    // ── Draw: oval track ─────────────────────────────────────────────────────
+    function drawTrack(ts) {
+      const pulse = 0.5 + 0.5 * Math.sin(ts * 0.0022);
+      const glowAmt = 14 + 12 * pulse;
+
+      // Sand fill (outer - inner)
       ctx.beginPath();
       ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = '#c9a870';
+      ctx.fillStyle = '#c8a46a';
       ctx.fill();
-      // Inner grass
+
+      // Inner area
       ctx.beginPath();
       ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = '#2a5a2a';
+      const innerGrad = ctx.createRadialGradient(TX, TY, 0, TX, TY, TRX - TW / 2);
+      innerGrad.addColorStop(0, '#04091a');
+      innerGrad.addColorStop(0.6, '#060d28');
+      innerGrad.addColorStop(1, '#0a1535');
+      ctx.fillStyle = innerGrad;
       ctx.fill();
-      // Inner rings for depth
-      for (let r = 30; r < TRY - TW / 2 - 5; r += 28) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+
+      // Subtle inner rings
+      for (let r = 40; r < TRY - TW / 2 - 8; r += 35) {
+        ctx.strokeStyle = 'rgba(80,120,200,0.06)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(TX, TY, (r * TRX) / TRY, r, 0, 0, 2 * Math.PI);
         ctx.stroke();
       }
-      // Track borders
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 2;
+
+      // Lane dividers (one between each lane)
+      for (let i = 1; i < nRacers; i++) {
+        const lOff = (i - nRacers / 2) * LANE_W;
+        const rxi = TRX + lOff;
+        const ryi = TRY + lOff * (TRY / TRX);
+        if (rxi > 0 && ryi > 0) {
+          ctx.beginPath();
+          ctx.ellipse(TX, TY, rxi, ryi, 0, 0, 2 * Math.PI);
+          ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // Outer neon border
+      ctx.shadowBlur = glowAmt * 2;
+      ctx.shadowColor = '#00eeff';
+      ctx.strokeStyle = `rgba(0,${180 + Math.round(70 * pulse)},255,0.92)`;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.ellipse(TX, TY, TRX + TW / 2, TRY + TW / 2, 0, 0, 2 * Math.PI);
       ctx.stroke();
+
+      // Inner neon border
+      ctx.shadowBlur = glowAmt;
+      ctx.shadowColor = '#00eeff';
+      ctx.strokeStyle = `rgba(0,${160 + Math.round(70 * pulse)},230,0.75)`;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.ellipse(TX, TY, TRX - TW / 2, TRY - TW / 2, 0, 0, 2 * Math.PI);
       ctx.stroke();
-      // Finish line — t=0 is at the top of the oval; tangent is horizontal
-      // there, so the line is vertical across the track band.
+      ctx.shadowBlur = 0;
+
+      // Finish line — at t=0 (top of oval). Tangent is horizontal there so
+      // the line runs vertically across the full track band.
       const finishX = TX;
       const finishY = TY - TRY;
-      const checkers = 6;
+      const checkers = 8;
       const segH = TW / checkers;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd700';
       for (let i = 0; i < checkers; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#111';
-        ctx.fillRect(finishX - 5, finishY - TW / 2 + i * segH, 10, segH);
+        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#1a1a1a';
+        ctx.fillRect(finishX - 7, finishY - TW / 2 + i * segH, 14, segH);
       }
-      ctx.font = 'bold 9px sans-serif';
+      ctx.shadowBlur = 0;
+      ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = '#ffd700';
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
       ctx.fillText('FINISH', finishX, finishY - TW / 2 - 5);
     }
 
+    // ── Draw: particles (dust + burst) ───────────────────────────────────────
     function drawParticles() {
-      for (const p of g.current.particles) {
+      for (const p of g.current.dustParticles) {
         ctx.globalAlpha = p.alpha;
         ctx.fillStyle = '#d4b880';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
         ctx.fill();
       }
+      for (const p of g.current.burstParticles) {
+        ctx.globalAlpha = p.alpha;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = p.color;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
       ctx.globalAlpha = 1;
     }
 
+    // ── Draw: racers with trails, name tags, crown ───────────────────────────
     function drawRacers() {
-      ctx.font = '24px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      for (const r of g.current.racers) {
-        const { x, y } = trackPoint(r.t % 1, r.lane);
-        ctx.fillText(r.icon, x, y);
+      const st = g.current;
+      // Find current leader (highest t)
+      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+
+      for (const r of st.racers) {
+        const pos = tp(r.t % 1, r.lane);
+
+        // Speed trail — oldest point first (most transparent/small)
+        for (let i = 0; i < r.trail.length; i++) {
+          const frac = (i + 1) / r.trail.length;
+          ctx.globalAlpha = frac * 0.4;
+          ctx.fillStyle = r.color;
+          ctx.beginPath();
+          ctx.arc(r.trail[i].x, r.trail[i].y, frac * 5 + 1, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Emoji racer
+        ctx.font = '26px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(r.icon, pos.x, pos.y);
+
+        // Name tag background + text (above emoji)
+        const nameY = pos.y - 20;
+        ctx.font = 'bold 11px sans-serif';
+        const nameW = ctx.measureText(r.name).width + 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(pos.x - nameW / 2, nameY - 13, nameW, 13);
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = r === leader ? '#ffd700' : '#eee';
+        ctx.fillText(r.name, pos.x, nameY);
+
+        // Crown above leader's name tag
+        if (r === leader && st.phase === PHASE.RACING) {
+          ctx.font = '14px serif';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText('👑', pos.x, nameY - 13);
+        }
+
+        // Record trail position
+        r.trail.push({ x: pos.x, y: pos.y });
+        if (r.trail.length > 10) r.trail.shift();
       }
     }
 
-    function drawCountdownOverlay(n) {
-      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    // ── Draw: countdown overlay ──────────────────────────────────────────────
+    function drawCountdownOverlay(elapsed) {
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(0, 0, CW, CH);
+
+      const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
+      const color = CD_COLORS[n] ?? '#fff';
+      const text = n > 0 ? String(n) : 'GO!';
+      const fontSize = n > 0 ? 220 : 160;
+      // Scale shrinks slightly through each second for a punchy feel
+      const shrink = 1 - ((elapsed % 1000) / 1000) * 0.12;
+
+      ctx.save();
+      ctx.translate(CW / 2, CH / 2);
+      ctx.scale(shrink, shrink);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (n > 0) {
-        ctx.font = 'bold 130px sans-serif';
-        ctx.fillStyle = '#fff';
-        ctx.shadowBlur = 24;
-        ctx.shadowColor = '#fff';
-        ctx.fillText(String(n), CW / 2, CH / 2);
-        ctx.shadowBlur = 0;
-      } else {
-        ctx.font = 'bold 90px sans-serif';
-        ctx.fillStyle = '#0ffa50';
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = '#0ffa50';
-        ctx.fillText('GO!', CW / 2, CH / 2);
-        ctx.shadowBlur = 0;
-      }
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.shadowBlur = 70;
+      ctx.shadowColor = color;
+      ctx.fillStyle = color;
+      ctx.fillText(text, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
+      setCountdown(n);
     }
 
+    // ── Draw: finished overlay ───────────────────────────────────────────────
     function drawFinishedOverlay() {
       ctx.fillStyle = 'rgba(0,0,0,0.48)';
       ctx.fillRect(0, 0, CW, CH);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold 60px sans-serif';
+      ctx.font = 'bold 80px sans-serif';
       ctx.fillStyle = '#ffd700';
-      ctx.shadowBlur = 25;
+      ctx.shadowBlur = 45;
       ctx.shadowColor = '#ffd700';
-      ctx.fillText('RACE FINISHED!', CW / 2, CH / 2 - 18);
+      ctx.fillText('RACE FINISHED!', CW / 2, CH / 2 - 20);
       ctx.shadowBlur = 0;
-      ctx.font = '20px sans-serif';
-      ctx.fillStyle = '#ccc';
-      ctx.fillText('Loading results…', CW / 2, CH / 2 + 44);
+      ctx.font = '26px sans-serif';
+      ctx.fillStyle = '#bbb';
+      ctx.fillText('Loading results…', CW / 2, CH / 2 + 58);
     }
 
-    // ── Main rAF loop ───────────────────────────────────────────────────────
+    // ── rAF main loop ────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
       const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
 
       ctx.clearRect(0, 0, CW, CH);
-      drawBg();
-      drawTrack();
+      drawBg(ts);
+      drawTrack(ts);
 
+      // ── COUNTDOWN ──
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
         const elapsed = ts - st.countdownStart;
         drawParticles();
         drawRacers();
-        const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
-        drawCountdownOverlay(n);
-        setCountdown(n);
+        drawCountdownOverlay(elapsed);
         if (elapsed >= 4000) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
           setPhase(PHASE.RACING);
         }
+
+        // ── RACING ──
       } else if (st.phase === PHASE.RACING) {
         // Advance racers
         for (const r of st.racers) {
@@ -230,23 +432,28 @@ export default function RaceScreen() {
           if (r.t >= 1.0) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
+            // Burst explosion at finish line position for this lane
+            const finishPos = tp(0, r.lane);
+            emitBurst(finishPos.x, finishPos.y);
           }
         }
 
         // Dust behind leader
         const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-        const lp = trackPoint(leader.t % 1, leader.lane);
-        if (Math.random() < 0.38) {
-          st.particles.push({
-            x: lp.x + (Math.random() - 0.5) * 8,
-            y: lp.y + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 1.8,
-            vy: (Math.random() - 0.5) * 1.8,
-            alpha: 0.55,
-            r: 3 + Math.random() * 3.5,
+        const lp = tp(leader.t % 1, leader.lane);
+        if (Math.random() < 0.4) {
+          st.dustParticles.push({
+            x: lp.x + (Math.random() - 0.5) * 10,
+            y: lp.y + (Math.random() - 0.5) * 10,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            alpha: 0.5,
+            r: 3 + Math.random() * 3,
           });
         }
-        st.particles = st.particles
+
+        // Age particles
+        st.dustParticles = st.dustParticles
           .map((p) => ({
             ...p,
             x: p.x + p.vx,
@@ -255,18 +462,28 @@ export default function RaceScreen() {
             r: p.r * 0.96,
           }))
           .filter((p) => p.alpha > 0);
+        st.burstParticles = st.burstParticles
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vy: p.vy + 0.18,
+            alpha: p.alpha - 0.014,
+            r: p.r * 0.97,
+          }))
+          .filter((p) => p.alpha > 0);
 
         drawParticles();
         drawRacers();
 
-        // Scoreboard update ~10 fps
+        // Scoreboard ~10 fps
         if (Math.round(ts / 100) !== Math.round((ts - dt) / 100)) {
           setScoreboard(
             [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
           );
         }
 
-        // Race over?
+        // Check race end
         if (st.finishedCount >= st.winnersNeeded) {
           st.phase = PHASE.FINISHED;
           setPhase(PHASE.FINISHED);
@@ -294,7 +511,18 @@ export default function RaceScreen() {
 
           setTimeout(() => navigate('/results'), 3000);
         }
+
+        // ── FINISHED ──
       } else {
+        st.burstParticles = st.burstParticles
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vy: p.vy + 0.18,
+            alpha: p.alpha - 0.014,
+          }))
+          .filter((p) => p.alpha > 0);
         drawParticles();
         drawRacers();
         drawFinishedOverlay();
@@ -309,7 +537,7 @@ export default function RaceScreen() {
     };
   }, [raceData, navigate]);
 
-  // ── Error / loading states ──────────────────────────────────────────────────
+  // ── Error / loading ─────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="screen screen--race race-error-screen">
@@ -338,28 +566,20 @@ export default function RaceScreen() {
     );
   }
 
+  // Rank colours for scoreboard (gold / silver / bronze / rest)
+  const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
+
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
     <div className="screen screen--race">
       <div className="race-layout">
+        {/* Canvas fills the 1fr column */}
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
         </div>
 
+        {/* HUD sidebar */}
         <aside className="race-hud">
-          <div className="race-hud-header">
-            <div className="race-event-name">{raceData.eventName || 'Race'}</div>
-            <div className="race-track-name">{raceData.trackName}</div>
-            {phase === PHASE.COUNTDOWN && (
-              <div className="race-phase-badge race-phase-badge--countdown">
-                {countdown > 0 ? countdown : 'GO!'}
-              </div>
-            )}
-            {phase === PHASE.FINISHED && (
-              <div className="race-phase-badge race-phase-badge--finished">Finished</div>
-            )}
-          </div>
-
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
             {scoreboard.map((r, i) => (
@@ -367,13 +587,43 @@ export default function RaceScreen() {
                 key={r.index}
                 className={`scoreboard-row${r.finished ? ' scoreboard-row--finished' : ''}`}
               >
-                <span className="sb-rank">{i + 1}</span>
+                <span
+                  className="sb-rank"
+                  style={{
+                    color: RANK_PALETTE[i] ?? '#888',
+                    borderColor: RANK_PALETTE[i] ?? '#444',
+                  }}
+                >
+                  {i === 0 ? '👑' : `#${i + 1}`}
+                </span>
                 <span className="sb-icon">{r.icon}</span>
-                <span className="sb-name">{r.name}</span>
+                <div className="sb-info">
+                  <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
+                    {r.name}
+                  </span>
+                  <div className="sb-bar-bg">
+                    <div
+                      className="sb-bar-fill"
+                      style={{
+                        width: `${Math.min(r.t ?? 0, 1) * 100}%`,
+                        background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
+                      }}
+                    />
+                  </div>
+                </div>
                 {r.finished && <span className="sb-check">✓</span>}
               </div>
             ))}
           </div>
+
+          {phase === PHASE.COUNTDOWN && (
+            <div className="race-phase-badge race-phase-badge--countdown">
+              {countdown > 0 ? countdown : 'GO!'}
+            </div>
+          )}
+          {phase === PHASE.FINISHED && (
+            <div className="race-phase-badge race-phase-badge--finished">Finished ✓</div>
+          )}
 
           <button
             className="race-back-btn"
