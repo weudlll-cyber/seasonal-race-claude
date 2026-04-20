@@ -77,6 +77,14 @@ export class RiverEnvironment {
   drawTrackSurface(ctx, shape, totalLanes, frame) {
     const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
 
+    // === Riverbank infield (dark land contrasts with the water track band) ===
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = '#0d2e0a';
+    ctx.fill();
+
     // === Water fill ===
     const waterHue = 195 + 15 * Math.sin(frame * 0.0005);
     ctx.beginPath();

@@ -14,7 +14,7 @@ import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 const CY_FRAC = 0.57;
 const RX_FRAC = 0.3;
 const RY_FRAC = 0.2;
-const SPIRAL_AMP = 0.38; // radius modulation amplitude
+const SPIRAL_AMP = 0.5; // radius modulation — 0.5 gives 3:1 right/left asymmetry (teardrop)
 
 function _bandWidth(totalLanes) {
   return Math.min(Math.max(120, totalLanes * 24), 200);

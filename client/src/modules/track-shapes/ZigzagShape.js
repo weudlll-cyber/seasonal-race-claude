@@ -12,8 +12,8 @@ import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 
 const CY_FRAC = 0.57;
 const HW_FRAC = 0.4; // half-width of straights as fraction of cw
-const HH_FRAC = 0.2; // half-height
-const CORNER_R = 80; // corner arc radius (px)
+const HH_FRAC = 0.28; // half-height — larger = longer visible vertical straights
+const CORNER_R = 55; // tighter corners emphasise the flat straight sections
 const ZIG_AMP = 0; // 0 = smooth stadium (non-zero causes C1 discontinuities at arc junctions)
 const N_ZIGS = 3; // sine periods per straight
 

@@ -118,6 +118,14 @@ export class CityEnvironment {
     const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.002);
 
+    // City block infield — slightly warmer than the asphalt track band
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = '#0b0b14';
+    ctx.fill();
+
     // Asphalt fill
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);

@@ -15,7 +15,7 @@ import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 const CY_FRAC = 0.57;
 const RX_FRAC = 0.38;
 const RY_FRAC = 0.24;
-const RECT_EXP = 0.45; // <1 = more rectangular; 1.0 = ellipse
+const RECT_EXP = 0.22; // lower = sharper corners; 0.22 gives a very rectangular outline
 
 function _bandWidth(totalLanes) {
   return Math.min(Math.max(120, totalLanes * 24), 200);

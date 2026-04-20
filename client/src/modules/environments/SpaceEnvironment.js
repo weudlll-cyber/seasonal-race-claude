@@ -139,6 +139,18 @@ export class SpaceEnvironment {
     const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0018);
 
+    // Void infield — deepest black contrasts with the glowing track band
+    const cp = shape.getCenterPoint();
+    const vg = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, 220);
+    vg.addColorStop(0, 'hsl(240,50%,5%)');
+    vg.addColorStop(1, 'hsl(240,30%,2%)');
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = vg;
+    ctx.fill();
+
     // Dark energy track surface
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);

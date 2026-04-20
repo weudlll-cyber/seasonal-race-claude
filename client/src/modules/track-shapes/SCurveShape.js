@@ -14,7 +14,7 @@ import { perpendicularLane, buildEdgePoints } from './shapeHelpers.js';
 const CY_FRAC = 0.57;
 const RX_FRAC = 0.34;
 const RY_FRAC = 0.23;
-const WAVE_FRAC = 0.12; // horizontal S-wave amplitude as fraction of rx
+const WAVE_FRAC = 0.45; // horizontal S-wave amplitude — larger = more dramatic S-curve
 
 function _bandWidth(totalLanes) {
   return Math.min(Math.max(120, totalLanes * 24), 200);
