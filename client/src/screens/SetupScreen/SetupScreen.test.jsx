@@ -9,6 +9,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom
@@ -24,6 +25,7 @@ describe('SetupScreen', () => {
   beforeEach(() => {
     // Start each test with clean localStorage so storage defaults apply
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('renders the RaceArena brand in the header', () => {
@@ -62,5 +64,22 @@ describe('SetupScreen', () => {
     renderSetupScreen();
     const gearLink = screen.getByTitle('Open Dev Panel');
     expect(gearLink).toBeInTheDocument();
+  });
+
+  it('Quick Test button creates 6 test players and saves race data', () => {
+    renderSetupScreen();
+    const quickTestBtn = screen.getByTitle('Auto-fill 6 test players and start race');
+    fireEvent.click(quickTestBtn);
+
+    // Check that activeRace was saved to sessionStorage
+    const savedRace = sessionStorage.getItem('activeRace');
+    expect(savedRace).toBeTruthy();
+
+    const race = JSON.parse(savedRace);
+    expect(race.racers.length).toBe(6);
+    expect(race.racers[0].name).toBe('Player 1');
+    expect(race.racers[5].name).toBe('Player 6');
+    expect(race.eventName).toBe('Quick Test');
+    expect(race.trackId).toBeTruthy();
   });
 });

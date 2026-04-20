@@ -15,7 +15,11 @@ import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
-import { DEFAULT_TRACKS, DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import {
+  DEFAULT_TRACKS,
+  DEFAULT_RACE_DEFAULTS,
+  DEFAULT_RACERS,
+} from '../../modules/storage/defaults.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -59,6 +63,41 @@ function SetupScreen() {
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
+      timestamp: new Date().toISOString(),
+    };
+    sessionStorage.setItem('activeRace', JSON.stringify(race));
+    navigate('/race');
+  }
+
+  function handleQuickTest() {
+    // Create 6 test players with different racer types
+    const testPlayers = [
+      { name: 'Player 1', racerId: DEFAULT_RACERS[0].id, color: DEFAULT_RACERS[0].color },
+      { name: 'Player 2', racerId: DEFAULT_RACERS[1].id, color: DEFAULT_RACERS[1].color },
+      { name: 'Player 3', racerId: DEFAULT_RACERS[2].id, color: DEFAULT_RACERS[2].color },
+      { name: 'Player 4', racerId: DEFAULT_RACERS[3].id, color: DEFAULT_RACERS[3].color },
+      { name: 'Player 5', racerId: DEFAULT_RACERS[4].id, color: DEFAULT_RACERS[4].color },
+      {
+        name: 'Player 6',
+        racerId: DEFAULT_RACERS[0].id,
+        color: DEFAULT_RACERS[0].color,
+      },
+    ];
+
+    // Use first available track
+    const firstTrack = tracks[0];
+    const firstTrackId = firstTrack?.id;
+
+    if (!firstTrackId) return; // No tracks available
+
+    // Save race data with test players
+    const race = {
+      racers: testPlayers,
+      trackId: firstTrackId,
+      trackName: firstTrack.name,
+      duration: raceDefaults.duration,
+      eventName: 'Quick Test',
+      winners: raceDefaults.winners,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -173,16 +212,27 @@ function SetupScreen() {
             · <strong>{raceSettings.duration}s</strong> · Top{' '}
             <strong>{raceSettings.winners}</strong>
           </div>
-          <button
-            className={styles.startBtn}
-            disabled={!canStart}
-            onClick={handleStartRace}
-            title={
-              !canStart ? 'Add at least one player and select a track to start' : 'Start the race!'
-            }
-          >
-            Start Race →
-          </button>
+          <div className={styles.startButtons}>
+            <button
+              className={styles.quickTestBtn}
+              onClick={handleQuickTest}
+              title="Auto-fill 6 test players and start race"
+            >
+              ⚡ Quick Test
+            </button>
+            <button
+              className={styles.startBtn}
+              disabled={!canStart}
+              onClick={handleStartRace}
+              title={
+                !canStart
+                  ? 'Add at least one player and select a track to start'
+                  : 'Start the race!'
+              }
+            >
+              Start Race →
+            </button>
+          </div>
         </div>
       </main>
     </div>
