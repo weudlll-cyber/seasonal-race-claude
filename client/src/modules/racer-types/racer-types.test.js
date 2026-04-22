@@ -39,6 +39,7 @@ function makeCtx() {
     shadowColor: '',
     lineWidth: 0,
     globalAlpha: 1,
+    scale: vi.fn(),
   };
 }
 

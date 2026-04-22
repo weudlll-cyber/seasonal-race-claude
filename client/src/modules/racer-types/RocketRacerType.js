@@ -18,9 +18,16 @@ export class RocketRacerType {
   drawRacer(ctx, x, y, angle, racer, isLeader, frame) {
     ctx.save();
     ctx.translate(x, y);
-    // Rocket emoji naturally points up, travel angle 0 = right.
-    // Rotate so the tip faces the direction of travel.
-    ctx.rotate(angle + Math.PI / 2);
+    // 🚀 points up; +π/2 offset aligns nose with travel direction.
+    // Keep right-side-up: flip when effective angle would cause upside-down rendering.
+    let a = angle + Math.PI / 2;
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    if (Math.abs(a) > Math.PI / 2) {
+      ctx.scale(-1, 1);
+      a = a > 0 ? a - Math.PI : a + Math.PI;
+    }
+    ctx.rotate(a);
     ctx.font = '26px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

@@ -18,8 +18,16 @@ export class CarRacerType {
   drawRacer(ctx, x, y, angle, racer, isLeader, frame) {
     ctx.save();
     ctx.translate(x, y);
-    // 🚗 on Windows Segoe UI faces left; add π to flip it to face the travel direction.
-    ctx.rotate(angle + Math.PI);
+    // 🚗 faces left on Segoe UI; +π offset aligns it with travel direction.
+    // Keep right-side-up: flip when effective angle would cause upside-down rendering.
+    let a = angle + Math.PI;
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    if (Math.abs(a) > Math.PI / 2) {
+      ctx.scale(-1, 1);
+      a = a > 0 ? a - Math.PI : a + Math.PI;
+    }
+    ctx.rotate(a);
     ctx.font = '24px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

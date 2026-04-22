@@ -111,10 +111,7 @@ export default function RaceScreen() {
     const duration = raceData.duration ?? 60;
     const maxLaps = isOpenTrack ? 1 : lapsFromDuration(duration);
 
-    // Camera director for closed tracks
-    if (!isOpenTrack) {
-      camDirRef.current = new CameraDirector();
-    }
+    camDirRef.current = new CameraDirector();
     setMaxLapsState(maxLaps);
 
     // Camera bounds for open tracks — clamp so track is never off-screen
@@ -533,7 +530,6 @@ export default function RaceScreen() {
       }
 
       // ── Camera update ──
-      let cam;
       if (isOpenTrack) {
         const sorted = [...st.racers].sort((a, b) => b.t - a.t);
         const top3 = sorted.slice(0, Math.min(3, sorted.length));
@@ -543,18 +539,22 @@ export default function RaceScreen() {
           Math.min(st.camXMax ?? VIRTUAL_W - CW, avgX - CW / 2)
         );
         st.camX = isFinite(st.camX) ? st.camX + (targetCamX - st.camX) * 0.05 : targetCamX;
-      } else {
-        cam =
-          st.phase === PHASE.RACING
-            ? camDirRef.current.update(st.racers, ts, CW, CH)
-            : { zoom: 1, offsetX: 0, offsetY: 0 };
       }
+      const cam =
+        st.phase === PHASE.RACING
+          ? camDirRef.current.update(st.racers, ts, CW, CH)
+          : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // ── Draw world ──
       if (isOpenTrack) {
         env.drawBackground(ctx, ts);
         ctx.save();
-        ctx.translate(-(st.camX || 0), 0);
+        // Combined pan + zoom centred at screen midpoint.
+        // At zoom=1 this degrades to pure pan: translate(-camX, 0).
+        const cx = CW / 2;
+        const cy = CH / 2;
+        ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
+        ctx.scale(cam.zoom, cam.zoom);
         env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
         drawParticles();
         drawRacers();
