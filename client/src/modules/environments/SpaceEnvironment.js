@@ -1,3 +1,13 @@
+let _bgImg = null;
+function _loadBg() {
+  if (_bgImg !== null) return;
+  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
+  _bgImg.onerror = () => {
+    _bgImg = null;
+  };
+  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/space-sprint.jpg';
+}
+
 function _seeded(seed, max) {
   return (((seed * 9301 + 49297) % 233280) / 233280) * max;
 }
@@ -31,9 +41,17 @@ export class SpaceEnvironment {
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
+    _loadBg();
 
-    ctx.fillStyle = '#02020d';
-    ctx.fillRect(0, 0, cw, ch);
+    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    if (imgReady) {
+      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      ctx.fillStyle = '#02020d';
+      ctx.fillRect(0, 0, cw, ch);
+    }
 
     // Nebula blobs
     for (const nb of NEBULAE) {

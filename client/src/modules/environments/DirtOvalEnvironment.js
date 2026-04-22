@@ -1,3 +1,13 @@
+let _bgImg = null;
+function _loadBg() {
+  if (_bgImg !== null) return;
+  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
+  _bgImg.onerror = () => {
+    _bgImg = null;
+  };
+  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/dirt-oval.jpg';
+}
+
 // Pre-seeded crowd positions (avoids layout thrash each frame)
 const CROWD = Array.from({ length: 60 }, (_, i) => ({
   x: (i * 137.5) % 1280,
@@ -14,15 +24,23 @@ export class DirtOvalEnvironment {
   // Full canvas background: sky gradient + grandstand bar + crowd
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
+    _loadBg();
 
-    // Animated sky gradient
-    const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
-    const grad = ctx.createLinearGradient(0, 0, cw, ch);
-    grad.addColorStop(0, '#0a0414');
-    grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
-    grad.addColorStop(1, '#0a0414');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, cw, ch);
+    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    if (imgReady) {
+      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      // Animated sky gradient fallback
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
+      const grad = ctx.createLinearGradient(0, 0, cw, ch);
+      grad.addColorStop(0, '#0a0414');
+      grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
+      grad.addColorStop(1, '#0a0414');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cw, ch);
+    }
 
     // Faint star field
     const stars = [

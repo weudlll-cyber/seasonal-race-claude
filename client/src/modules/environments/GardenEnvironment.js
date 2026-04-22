@@ -1,3 +1,13 @@
+let _bgImg = null;
+function _loadBg() {
+  if (_bgImg !== null) return;
+  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
+  _bgImg.onerror = () => {
+    _bgImg = null;
+  };
+  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/garden-path.jpg';
+}
+
 // Pre-seeded flower positions (relative to outer edge samples)
 const FLOWERS = Array.from({ length: 30 }, (_, i) => ({
   t: (i * 0.0333) % 1,
@@ -36,10 +46,18 @@ export class GardenEnvironment {
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
+    _loadBg();
 
-    // Dark green grass background
-    ctx.fillStyle = '#0a1f0a';
-    ctx.fillRect(0, 0, cw, ch);
+    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    if (imgReady) {
+      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      // Dark green grass background fallback
+      ctx.fillStyle = '#0a1f0a';
+      ctx.fillRect(0, 0, cw, ch);
+    }
 
     // Layered grass texture
     for (let layer = 0; layer < 3; layer++) {

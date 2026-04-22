@@ -1,3 +1,13 @@
+let _bgImg = null;
+function _loadBg() {
+  if (_bgImg !== null) return;
+  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
+  _bgImg.onerror = () => {
+    _bgImg = null;
+  };
+  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/city-circuit.jpg';
+}
+
 // Building silhouettes
 const BUILDINGS = [
   { x: 0.02, w: 0.06, h: 0.28 },
@@ -40,14 +50,22 @@ export class CityEnvironment {
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
+    _loadBg();
 
-    // Night sky
-    const grad = ctx.createLinearGradient(0, 0, 0, ch);
-    grad.addColorStop(0, '#080810');
-    grad.addColorStop(0.6, '#0c0c18');
-    grad.addColorStop(1, '#111118');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, cw, ch);
+    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    if (imgReady) {
+      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      // Night sky fallback
+      const grad = ctx.createLinearGradient(0, 0, 0, ch);
+      grad.addColorStop(0, '#080810');
+      grad.addColorStop(0.6, '#0c0c18');
+      grad.addColorStop(1, '#111118');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cw, ch);
+    }
 
     // Building silhouettes
     const groundY = ch * 0.72;

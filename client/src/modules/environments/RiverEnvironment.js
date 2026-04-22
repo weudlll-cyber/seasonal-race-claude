@@ -1,3 +1,13 @@
+let _bgImg = null;
+function _loadBg() {
+  if (_bgImg !== null) return;
+  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
+  _bgImg.onerror = () => {
+    _bgImg = null;
+  };
+  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/river-run.jpg';
+}
+
 const N_BUBBLES = 18;
 const N_REFLECTIONS = 12;
 
@@ -21,15 +31,23 @@ export class RiverEnvironment {
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
+    _loadBg();
 
-    // Deep river background
-    const grad = ctx.createLinearGradient(0, 0, 0, ch);
-    const hue = 180 + 20 * Math.sin(frame * 0.0004);
-    grad.addColorStop(0, `hsl(${hue},40%,6%)`);
-    grad.addColorStop(0.5, `hsl(${hue + 15},35%,10%)`);
-    grad.addColorStop(1, `hsl(${hue},40%,6%)`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, cw, ch);
+    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    if (imgReady) {
+      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      // Deep river background fallback
+      const grad = ctx.createLinearGradient(0, 0, 0, ch);
+      const hue = 180 + 20 * Math.sin(frame * 0.0004);
+      grad.addColorStop(0, `hsl(${hue},40%,6%)`);
+      grad.addColorStop(0.5, `hsl(${hue + 15},35%,10%)`);
+      grad.addColorStop(1, `hsl(${hue},40%,6%)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cw, ch);
+    }
 
     // Lily pads in background
     const pads = [
