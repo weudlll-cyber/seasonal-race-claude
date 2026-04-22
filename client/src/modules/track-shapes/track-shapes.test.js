@@ -48,11 +48,11 @@ describe('SvgPathShape', () => {
 
   it('open: getPosition(0, 0, width) is near path start', () => {
     const pos = openShape.getPosition(0, 0, DEFAULT_WIDTH);
-    // s-curve start: grid (30, 300) → canvas near left side
+    // s-curve start: grid (40, 480) → canvas lower-left
     expect(pos.x).toBeGreaterThan(0);
     expect(pos.x).toBeLessThan(CW * 0.2);
-    expect(pos.y).toBeGreaterThan(CH * 0.3);
-    expect(pos.y).toBeLessThan(CH * 0.7);
+    expect(pos.y).toBeGreaterThan(CH * 0.6);
+    expect(pos.y).toBeLessThan(CH);
   });
 
   it('open: getPosition(1, 0, width) is near path end', () => {

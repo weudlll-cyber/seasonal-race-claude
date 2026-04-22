@@ -147,10 +147,18 @@ export class SvgPathShape {
       const angle = this.getTangentAngle(t);
       let perpX = -Math.sin(angle);
       let perpY = Math.cos(angle);
-      // Flip if perpendicular reversed vs previous sample — prevents polygon self-intersection at inflection points
-      if (prevPerpX !== null && perpX * prevPerpX + perpY * prevPerpY < 0) {
-        perpX = -perpX;
-        perpY = -perpY;
+      if (prevPerpX !== null) {
+        const dot = perpX * prevPerpX + perpY * prevPerpY;
+        if (dot < -0.5) {
+          // Strong flip — interpolate from previous direction, keep prevPerp unchanged
+          outer.push({ x: c.x + prevPerpX * hw, y: c.y + prevPerpY * hw });
+          inner.push({ x: c.x - prevPerpX * hw, y: c.y - prevPerpY * hw });
+          continue;
+        } else if (dot < 0) {
+          // Moderate flip — invert to maintain continuity
+          perpX = -perpX;
+          perpY = -perpY;
+        }
       }
       prevPerpX = perpX;
       prevPerpY = perpY;

@@ -29,7 +29,7 @@ export class SpiralShape extends SvgPathShape {
 export class ZigzagShape extends SvgPathShape {
   constructor(cw, ch) {
     const cfg = TRACK_PATHS.zigzag;
-    super(cfg.path, { isOpen: !cfg.closed, cw, ch });
+    super(cfg.path, { isOpen: !cfg.closed, centerFrac: cfg.centerFrac, cw, ch });
   }
 }
 
