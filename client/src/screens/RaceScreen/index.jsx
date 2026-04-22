@@ -1,13 +1,27 @@
+// ============================================================
+// File:        index.jsx
+// Path:        client/src/screens/RaceScreen/index.jsx
+// Project:     RaceArena
+// Created:     2026-04-20
+// Description: Live race canvas with scrolling camera (open tracks),
+//              TV camera director (closed tracks), multi-lap support,
+//              fullscreen toggle, and fade-to-black navigation.
+// ============================================================
+
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getShape } from '../../modules/track-shapes/index.js';
 import { getTrackWidth } from '../../modules/track-shapes/SvgPathShape.js';
 import { getEnvironment } from '../../modules/environments/index.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
+import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
+import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import './RaceScreen.css';
 
 const CW = 1280;
 const CH = 720;
+// Virtual canvas width for open-track scrolling camera (2.5× wider than viewport)
+const VIRTUAL_W = CW * 2.5;
 
 const LANE_COLORS = [
   '#ff6b35',
@@ -30,19 +44,30 @@ const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 const tPos = (t) => ((t % 1) + 1) % 1;
 
 export default function RaceScreen() {
-  const navigate = useNavigate();
+  const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
+  const screenRef = useRef(null);
   const rafRef = useRef(null);
   const g = useRef(null);
   const envRef = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
+  const camDirRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [maxLapsState, setMaxLapsState] = useState(1);
+
+  // ── Fullscreen listener ──────────────────────────────────────────────────
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   // ── Load race session data ───────────────────────────────────────────────
   useEffect(() => {
@@ -69,50 +94,56 @@ export default function RaceScreen() {
 
     console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId, '| typeId:', typeId);
 
-    shapeRef.current = getShape(shapeId, CW, CH);
+    // Open tracks (s-curve, spiral) get a 2.5× virtual canvas for scrolling camera.
+    // Build shape first with default CW to check isOpen, then rebuild with virtual width.
+    const probeShape = getShape(shapeId, CW, CH);
+    const isOpenTrack = probeShape.isOpen === true;
+    const virtualW = isOpenTrack ? VIRTUAL_W : CW;
+
+    shapeRef.current = getShape(shapeId, virtualW, CH);
     envRef.current = getEnvironment(envId, CW, CH);
     racerTypeRef.current = getRacerType(typeId);
-    const isOpenTrack = shapeRef.current.isOpen === true;
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
-
-    // Use track-configured width if set, otherwise compute from player count
     const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
 
-    // Assign perpendicular offsets using max-min-distance placement so racers
-    // are spread across the full track width with at least 0.15 between any two.
+    // Duration-based lap count (closed tracks only)
+    const duration = raceData.duration ?? 60;
+    const maxLaps = isOpenTrack ? 1 : lapsFromDuration(duration);
+
+    // Camera director for closed tracks
+    if (!isOpenTrack) {
+      camDirRef.current = new CameraDirector();
+    }
+    setMaxLapsState(maxLaps);
+
+    // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
     function buildOffsets(n) {
       if (n === 1) return [0];
       const RANGE_MIN = -0.45,
         RANGE_MAX = 0.45;
-      const offsets = [];
-      for (let i = 0; i < n; i++) {
-        let best = RANGE_MIN + Math.random() * (RANGE_MAX - RANGE_MIN);
-        let bestScore = -1;
-        // Pick whichever of 20 candidates is furthest from existing offsets
-        for (let attempt = 0; attempt < 20; attempt++) {
-          const c = RANGE_MIN + Math.random() * (RANGE_MAX - RANGE_MIN);
-          const score =
-            offsets.length === 0
-              ? Math.abs(c) // prefer near-centre first
-              : Math.min(...offsets.map((o) => Math.abs(o - c)));
-          if (score > bestScore) {
-            bestScore = score;
-            best = c;
-          }
-        }
-        offsets.push(best);
+      const slots = Array.from(
+        { length: n },
+        (_, i) => RANGE_MIN + (i / (n - 1)) * (RANGE_MAX - RANGE_MIN)
+      );
+      const slotWidth = (RANGE_MAX - RANGE_MIN) / (n - 1);
+      const jitter = slotWidth * 0.45;
+      const jittered = slots.map((s) =>
+        Math.max(RANGE_MIN, Math.min(RANGE_MAX, s + (Math.random() - 0.5) * jitter * 2))
+      );
+      for (let i = jittered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [jittered[i], jittered[j]] = [jittered[j], jittered[i]];
       }
       console.log(
-        '[RaceScreen] racer trackOffsets:',
-        offsets.map((o) => o.toFixed(3))
+        '[RaceArena] trackOffsets:',
+        jittered.map((o) => o.toFixed(3))
       );
-      return offsets;
+      return jittered;
     }
 
     const racerOffsets = buildOffsets(nRacers);
 
-    // Build initial racer state — all start at t=0, stable perpendicular offset
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -123,10 +154,14 @@ export default function RaceScreen() {
       dustParticles: [],
       burstParticles: [],
       trackWidth,
+      maxLaps,
+      camX: 0, // scrolling camera x-offset for open tracks
+      finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => ({
         ...r,
         index: i,
         t: 0,
+        lap: 1,
         trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
@@ -142,7 +177,7 @@ export default function RaceScreen() {
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
-    // ── Compute canvas positions for all racers ─────────────────────────────
+    // ── Canvas positions ────────────────────────────────────────────────────
     function computePositions() {
       const st = g.current;
       const shape = shapeRef.current;
@@ -156,10 +191,9 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Collision avoidance — nudge overlapping racers apart (perpendicular) ─
+    // ── Collision avoidance ─────────────────────────────────────────────────
     function applyCollisionAvoidance() {
-      const st = g.current;
-      const active = st.racers.filter((r) => !r.finished);
+      const active = g.current.racers.filter((r) => !r.finished);
       for (let i = 0; i < active.length; i++) {
         for (let j = i + 1; j < active.length; j++) {
           const r1 = active[i],
@@ -169,9 +203,8 @@ export default function RaceScreen() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 25 && dist > 0) {
             const nudge = (25 - dist) / 2;
-            const angle = r1.angle;
-            const perpX = -Math.sin(angle);
-            const perpY = Math.cos(angle);
+            const perpX = -Math.sin(r1.angle);
+            const perpY = Math.cos(r1.angle);
             r1.x += perpX * nudge * 0.5;
             r1.y += perpY * nudge * 0.5;
             r2.x -= perpX * nudge * 0.5;
@@ -181,7 +214,7 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Burst emitter ───────────────────────────────────────────────────────
+    // ── Burst particles ─────────────────────────────────────────────────────
     function emitBurst(x, y) {
       const colors = ['#ffd700', '#ff6b35', '#ff3388', '#00ffcc', '#fff', '#ff0', '#0ff'];
       for (let i = 0; i < 45; i++) {
@@ -199,7 +232,7 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Draw: all particles ─────────────────────────────────────────────────
+    // ── Draw helpers ────────────────────────────────────────────────────────
     function drawParticles() {
       for (const p of g.current.dustParticles) {
         ctx.globalAlpha = p.alpha;
@@ -221,7 +254,6 @@ export default function RaceScreen() {
       ctx.globalAlpha = 1;
     }
 
-    // ── Draw: name tag above a racer ────────────────────────────────────────
     function drawNameTag(px, py, name, isLeader) {
       const nameY = py - 22;
       ctx.font = 'bold 11px sans-serif';
@@ -239,18 +271,11 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Draw: all racers using precomputed positions ─────────────────────────
     function drawRacers() {
       const st = g.current;
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-
       for (const r of st.racers) {
-        const px = r.x,
-          py = r.y,
-          angle = r.angle;
-
-        // Speed trail dots
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
           ctx.globalAlpha = frac * 0.4;
@@ -260,16 +285,14 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-
-        rt.drawRacer(ctx, px, py, angle, r, r === leader, st.lastTs ?? 0);
-        drawNameTag(px, py, r.name, r === leader);
-
-        r.trail.push({ x: px, y: py });
+        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0);
+        drawNameTag(r.x, r.y, r.name, r === leader);
+        r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
       }
     }
 
-    // ── Draw: race title ─────────────────────────────────────────────────────
+    // Title for closed tracks — positioned above the track using getEdgePoints
     function drawTitle() {
       const tw = g.current.trackWidth;
       const topY = Math.min(...shapeRef.current.getEdgePoints(tw, 30).outer.map((p) => p.y));
@@ -288,17 +311,64 @@ export default function RaceScreen() {
       ctx.shadowBlur = 0;
     }
 
-    // ── Draw: countdown overlay ───────────────────────────────────────────
+    // Title for open tracks — fixed at top of screen (no getEdgePoints needed)
+    function drawTitleOpen() {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd700';
+      ctx.fillText(
+        `🏆  ${raceData.eventName || 'Race'}  ·  ${raceData.trackName || ''}`,
+        CW / 2,
+        38
+      );
+      ctx.shadowBlur = 0;
+    }
+
+    function drawLapInfo(st) {
+      if (st.maxLaps <= 1) return;
+      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+      const lapNum = currentLap(leader.t, st.maxLaps);
+      const text = `LAP ${lapNum} / ${st.maxLaps}`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#0088ff';
+      ctx.fillText(text, CW - 14, 66);
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFinalLapOverlay(ts) {
+      const st = g.current;
+      if (!st.finalLapStartTs) return;
+      const age = ts - st.finalLapStartTs;
+      if (age > 3000) return;
+      const alpha = age < 500 ? age / 500 : age > 2500 ? 1 - (age - 2500) / 500 : 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 52px sans-serif';
+      ctx.fillStyle = '#ff4400';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#ff6600';
+      ctx.fillText('FINAL LAP!', CW / 2, CH / 2 - 80);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
     function drawCountdownOverlay(elapsed) {
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(0, 0, CW, CH);
-
       const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
       const color = CD_COLORS[n] ?? '#fff';
       const text = n > 0 ? String(n) : 'GO!';
       const fSize = n > 0 ? 220 : 160;
       const shrink = 1 - ((elapsed % 1000) / 1000) * 0.12;
-
       ctx.save();
       ctx.translate(CW / 2, CH / 2);
       ctx.scale(shrink, shrink);
@@ -314,7 +384,6 @@ export default function RaceScreen() {
       setCountdown(n);
     }
 
-    // ── Draw: finished overlay ────────────────────────────────────────────
     function drawFinishedOverlay() {
       ctx.fillStyle = 'rgba(0,0,0,0.48)';
       ctx.fillRect(0, 0, CW, CH);
@@ -331,7 +400,7 @@ export default function RaceScreen() {
       ctx.fillText('Loading results…', CW / 2, CH / 2 + 58);
     }
 
-    // ── Main rAF loop ─────────────────────────────────────────────────────
+    // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
       const env = envRef.current;
@@ -341,61 +410,38 @@ export default function RaceScreen() {
 
       ctx.clearRect(0, 0, CW, CH);
 
-      // Draw environment layers
-      env.drawBackground(ctx, ts);
-      env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
-
-      drawTitle();
-
-      // Always compute positions so all phases have valid x/y/angle
-      computePositions();
-
-      // ── COUNTDOWN ──
+      // ── Phase advancement ──
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
-        const elapsed = ts - st.countdownStart;
-        drawParticles();
-        drawRacers();
-        drawCountdownOverlay(elapsed);
-        if (elapsed >= 4000) {
+        computePositions();
+        if (ts - st.countdownStart >= 4000) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
           setPhase(PHASE.RACING);
         }
-
-        // ── RACING ──
       } else if (st.phase === PHASE.RACING) {
-        // Advance t values
         for (const r of st.racers) {
-          if (r.finished) continue;
-          r.t += (r.baseSpeed + (Math.random() - 0.5) * 0.00035) * (dt / 16);
+          if (!r.finished) r.t += (r.baseSpeed + (Math.random() - 0.5) * 0.00035) * (dt / 16);
         }
-
-        // Recompute positions after t update
         computePositions();
-
-        // Collision avoidance
         applyCollisionAvoidance();
 
-        // Finish detection
         for (const r of st.racers) {
           if (r.finished) continue;
-          if (r.t >= 1.0) {
+          if (r.t >= st.maxLaps) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
             emitBurst(r.x, r.y);
           }
+          r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
         }
 
-        // Trail particles from racer-type module
         const rt = racerTypeRef.current;
         for (const r of st.racers) {
-          if (r.finished) continue;
-          const newParts = rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts);
-          st.dustParticles.push(...newParts);
+          if (!r.finished) {
+            st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+          }
         }
-
-        // Age particles
         st.dustParticles = st.dustParticles
           .map((p) => ({
             ...p,
@@ -416,26 +462,19 @@ export default function RaceScreen() {
           }))
           .filter((p) => p.alpha > 0);
 
-        drawParticles();
-        drawRacers();
-
-        // Throttled scoreboard update (~10 fps)
         if (Math.round(ts / 100) !== Math.round((ts - dt) / 100)) {
           setScoreboard(
             [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
           );
         }
 
-        // Race end check
         if (st.finishedCount >= st.winnersNeeded) {
           st.phase = PHASE.FINISHED;
           setPhase(PHASE.FINISHED);
-
           const byRank = st.racers
             .filter((r) => r.finished)
             .sort((a, b) => a.finishRank - b.finishRank);
           const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
-
           sessionStorage.setItem(
             'raceResults',
             JSON.stringify({
@@ -444,18 +483,24 @@ export default function RaceScreen() {
                 icon: r.icon,
                 color: r.color,
                 index: r.index,
-                lap: 1,
-                progress: Math.min(r.t * 100, 100),
+                lap: r.lap ?? 1,
+                progress: Math.min(lapProgress(r.t, st.maxLaps) * 100, 100),
               })),
               elapsedTime: Math.round((ts - st.raceStart) / 1000),
               race: raceData,
             })
           );
-          setTimeout(() => navigate('/results'), 3000);
+          setTimeout(() => fadeNavigate('/results'), 2500);
         }
 
-        // ── FINISHED ──
+        // Final lap detection (announce when leader enters last lap)
+        if (!isOpenTrack && st.maxLaps > 1 && !st.finalLapStartTs) {
+          const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+          if (Math.floor(leader.t) >= st.maxLaps - 1) st.finalLapStartTs = ts;
+        }
       } else {
+        // FINISHED — keep burst particles alive
+        computePositions();
         st.burstParticles = st.burstParticles
           .map((p) => ({
             ...p,
@@ -465,8 +510,51 @@ export default function RaceScreen() {
             alpha: p.alpha - 0.014,
           }))
           .filter((p) => p.alpha > 0);
+      }
+
+      // ── Camera update ──
+      let cam;
+      if (isOpenTrack) {
+        const sorted = [...st.racers].sort((a, b) => b.t - a.t);
+        const top3 = sorted.slice(0, Math.min(3, sorted.length));
+        const avgX = top3.reduce((s, r) => s + r.x, 0) / top3.length;
+        const targetCamX = Math.max(0, Math.min(VIRTUAL_W - CW, avgX - CW / 2));
+        st.camX = isFinite(st.camX) ? st.camX + (targetCamX - st.camX) * 0.05 : 0;
+      } else {
+        cam =
+          st.phase === PHASE.RACING
+            ? camDirRef.current.update(st.racers, ts, CW, CH)
+            : { zoom: 1, offsetX: 0, offsetY: 0 };
+      }
+
+      // ── Draw world ──
+      if (isOpenTrack) {
+        env.drawBackground(ctx, ts);
+        ctx.save();
+        ctx.translate(-(st.camX || 0), 0);
+        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
         drawParticles();
         drawRacers();
+        ctx.restore();
+        drawTitleOpen();
+      } else {
+        ctx.save();
+        ctx.translate(cam.offsetX, cam.offsetY);
+        ctx.scale(cam.zoom, cam.zoom);
+        env.drawBackground(ctx, ts);
+        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
+        drawParticles();
+        drawRacers();
+        ctx.restore();
+        drawTitle();
+        drawLapInfo(st);
+        drawFinalLapOverlay(ts);
+      }
+
+      // ── Phase overlays ──
+      if (st.phase === PHASE.COUNTDOWN) {
+        drawCountdownOverlay(ts - st.countdownStart);
+      } else if (st.phase === PHASE.FINISHED) {
         drawFinishedOverlay();
       }
 
@@ -477,7 +565,16 @@ export default function RaceScreen() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [raceData, navigate]);
+  }, [raceData, fadeNavigate]);
+
+  // ── Fullscreen toggle ───────────────────────────────────────────────────
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      screenRef.current?.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }
 
   // ── Error / loading states ───────────────────────────────────────────────
   if (error) {
@@ -490,7 +587,7 @@ export default function RaceScreen() {
             className="race-back-btn"
             onClick={() => {
               sessionStorage.removeItem('activeRace');
-              navigate('/setup');
+              fadeNavigate('/setup');
             }}
           >
             ← Back to Setup
@@ -509,7 +606,7 @@ export default function RaceScreen() {
   }
 
   return (
-    <div className="screen screen--race">
+    <div ref={screenRef} className="screen screen--race">
       <div className="race-layout">
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
@@ -541,7 +638,7 @@ export default function RaceScreen() {
                     <div
                       className="sb-bar-fill"
                       style={{
-                        width: `${Math.min(r.t ?? 0, 1) * 100}%`,
+                        width: `${Math.min(lapProgress(r.t ?? 0, maxLapsState), 1) * 100}%`,
                         background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
                       }}
                     />
@@ -562,10 +659,18 @@ export default function RaceScreen() {
           )}
 
           <button
+            className="race-fullscreen-btn"
+            onClick={toggleFullscreen}
+            title="Toggle fullscreen"
+          >
+            {isFullscreen ? '⊡' : '⛶'}
+          </button>
+
+          <button
             className="race-back-btn"
             onClick={() => {
               sessionStorage.removeItem('activeRace');
-              navigate('/setup');
+              fadeNavigate('/setup');
             }}
           >
             ← Setup

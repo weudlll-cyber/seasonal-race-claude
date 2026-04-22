@@ -7,12 +7,12 @@
 // ============================================================
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
 import './ResultScreen.css';
 
 function ResultScreen() {
-  const navigate = useNavigate();
+  const navigate = useFadeNavigate();
   const [finishOrder, setFinishOrder] = useState([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [race, setRace] = useState(null);
