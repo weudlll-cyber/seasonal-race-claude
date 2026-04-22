@@ -139,12 +139,21 @@ export class SvgPathShape {
     const hw = trackWidth / 2;
     const outer = [];
     const inner = [];
+    let prevPerpX = null;
+    let prevPerpY = null;
     for (let i = 0; i <= nSamples; i++) {
       const t = i / nSamples;
       const c = this._sample(t);
       const angle = this.getTangentAngle(t);
-      const perpX = -Math.sin(angle);
-      const perpY = Math.cos(angle);
+      let perpX = -Math.sin(angle);
+      let perpY = Math.cos(angle);
+      // Flip if perpendicular reversed vs previous sample — prevents polygon self-intersection at inflection points
+      if (prevPerpX !== null && perpX * prevPerpX + perpY * prevPerpY < 0) {
+        perpX = -perpX;
+        perpY = -perpY;
+      }
+      prevPerpX = perpX;
+      prevPerpY = perpY;
       outer.push({ x: c.x + perpX * hw, y: c.y + perpY * hw });
       inner.push({ x: c.x - perpX * hw, y: c.y - perpY * hw });
     }
