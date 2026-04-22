@@ -3,10 +3,11 @@
 
 export const TRACK_PATHS = {
   oval: {
-    d: 'M 500,40 C 820,40 960,160 960,300 C 960,440 820,560 500,560 C 180,560 40,440 40,300 C 40,160 180,40 500,40 Z',
+    // Top moved to y=100 so the full track band clears the grandstand strip
+    d: 'M 500,100 C 820,100 920,190 920,300 C 920,410 820,500 500,500 C 180,500 80,410 80,300 C 80,190 180,100 500,100 Z',
     isOpen: false,
     bw: { min: 160, max: 260, perLane: 28 },
-    centerFrac: { x: 0.5, y: 0.52 },
+    centerFrac: { x: 0.5, y: 0.5 },
   },
   's-curve': {
     d: 'M 30,300 C 150,300 200,120 350,120 C 500,120 500,480 650,480 C 800,480 850,300 970,300',
@@ -19,7 +20,8 @@ export const TRACK_PATHS = {
     bw: { min: 120, max: 200, perLane: 24 },
   },
   zigzag: {
-    d: 'M 500,30 C 500,100 200,150 200,250 C 200,350 800,400 800,480 C 800,530 500,570 500,570',
+    // Wide bottom-right turn replaces the sharp corner that caused lane crossings
+    d: 'M 500,30 C 500,100 200,150 200,250 C 200,350 800,400 800,480 C 1100,570 1100,630 900,630 C 700,630 500,570 500,570',
     isOpen: true,
     bw: { min: 120, max: 200, perLane: 24 },
     centerFrac: { x: 0.5, y: 0.5 },

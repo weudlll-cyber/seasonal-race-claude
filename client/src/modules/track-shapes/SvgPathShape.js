@@ -2,6 +2,9 @@
 const GRID_W = 1000;
 const GRID_H = 600;
 
+// Canvas margin — tracks are scaled to fit within this inset on all sides
+const MARGIN = 40;
+
 // Arc-length samples pre-cached at construction time
 const CACHE_N = 600;
 
@@ -19,8 +22,9 @@ export class SvgPathShape {
     this.isOpen = opts.isOpen ?? false;
     this.cw = opts.cw ?? 1280;
     this.ch = opts.ch ?? 720;
-    this._sx = this.cw / GRID_W;
-    this._sy = this.ch / GRID_H;
+    // Scale grid into the inset area [MARGIN, cw-MARGIN] × [MARGIN, ch-MARGIN]
+    this._sx = (this.cw - 2 * MARGIN) / GRID_W;
+    this._sy = (this.ch - 2 * MARGIN) / GRID_H;
     this._bw = opts.bw ?? { min: 120, max: 200, perLane: 24 };
     this._centerFrac = opts.centerFrac ?? null;
 
@@ -62,8 +66,8 @@ export class SvgPathShape {
     const a = this._pts[lo];
     const b = this._pts[hi];
     return {
-      x: (a.x + (b.x - a.x) * frac) * this._sx,
-      y: (a.y + (b.y - a.y) * frac) * this._sy,
+      x: MARGIN + (a.x + (b.x - a.x) * frac) * this._sx,
+      y: MARGIN + (a.y + (b.y - a.y) * frac) * this._sy,
     };
   }
 

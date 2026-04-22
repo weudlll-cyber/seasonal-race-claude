@@ -101,7 +101,9 @@ export default function RaceScreen() {
         ...r,
         index: i,
         laneIndex: i,
-        t: 0,
+        // Spread racers along the path so names don't stack at the start.
+        // For open tracks t<0 clamps to 0; for closed loops it wraps correctly.
+        t: isOpenTrack ? 0 : -(i / Math.max(nRacers - 1, 1)) * 0.03,
         icon: trackEmoji ?? r.icon,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
         color: LANE_COLORS[i % LANE_COLORS.length],
