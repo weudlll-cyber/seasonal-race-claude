@@ -90,27 +90,48 @@ export class DirtOvalEnvironment {
 
   drawTrackSurface(ctx, shape, trackWidth, frame) {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
-    const path2D = shape.getPath2D();
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 120);
 
-    // Cyan neon boundary — drawn first, slightly wider
-    ctx.save();
-    ctx.shadowBlur = 14 + 12 * pulse;
-    ctx.shadowColor = '#00ffff';
+    // Sandy brown fill
+    ctx.beginPath();
+    ctx.moveTo(outer[0].x, outer[0].y);
+    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+    for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = '#c8a46a';
+    ctx.fill();
+
+    // Subtle speckle texture
+    ctx.globalAlpha = 0.12;
+    for (let i = 0; i < outer.length; i += 4) {
+      const po = outer[i],
+        pi_ = inner[i];
+      for (let f = 0.15; f < 1; f += 0.25) {
+        const sx = po.x + (pi_.x - po.x) * f + (Math.random() - 0.5) * 3;
+        const sy = po.y + (pi_.y - po.y) * f + (Math.random() - 0.5) * 3;
+        ctx.fillStyle = i % 3 === 0 ? '#b08840' : '#dbbf7a';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Neon cyan boundary lines
+    const glow = 14 + 12 * pulse;
+    ctx.shadowBlur = glow;
+    ctx.shadowColor = '#00eeff';
     ctx.strokeStyle = `rgba(0,${200 + Math.round(55 * pulse)},255,0.9)`;
-    ctx.lineWidth = trackWidth + 6;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke(path2D);
-    ctx.restore();
-
-    // Sandy brown track surface
-    ctx.save();
-    ctx.strokeStyle = '#c4a35a';
-    ctx.lineWidth = trackWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke(path2D);
-    ctx.restore();
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(outer[0].x, outer[0].y);
+    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 
     this._drawFinishLine(ctx, shape, trackWidth);
   }

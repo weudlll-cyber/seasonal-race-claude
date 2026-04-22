@@ -254,6 +254,34 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
   });
 
+  describe('getEdgePoints', () => {
+    it('returns outer and inner arrays of nSamples+1 points', () => {
+      const { outer, inner } = shape.getEdgePoints(TW, 60);
+      expect(Array.isArray(outer)).toBe(true);
+      expect(Array.isArray(inner)).toBe(true);
+      expect(outer.length).toBe(61);
+    });
+
+    it('each edge point has finite x and y', () => {
+      const { outer, inner } = shape.getEdgePoints(TW, 20);
+      for (const p of [...outer, ...inner]) {
+        expect(isFinite(p.x)).toBe(true);
+        expect(isFinite(p.y)).toBe(true);
+      }
+    });
+
+    it('outer and inner edges are meaningfully separated', () => {
+      const { outer, inner } = shape.getEdgePoints(TW, 40);
+      let totalSep = 0;
+      for (let i = 0; i < outer.length; i++) {
+        const dx = outer[i].x - inner[i].x;
+        const dy = outer[i].y - inner[i].y;
+        totalSep += Math.sqrt(dx * dx + dy * dy);
+      }
+      expect(totalSep / outer.length).toBeGreaterThan(10);
+    });
+  });
+
   describe('getCenterPoint', () => {
     it('returns {x, y} near the canvas centre', () => {
       const cp = shape.getCenterPoint();

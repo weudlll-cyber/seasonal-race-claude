@@ -30,7 +30,6 @@ export class SvgPathShape {
    * @param {{x,y}}   opts.centerFrac  optional fixed centre as canvas fractions
    */
   constructor(pathStr, opts = {}) {
-    this._pathStr = pathStr;
     // Support both isOpen and closed flags
     if (opts.isOpen !== undefined) {
       this.isOpen = opts.isOpen;
@@ -124,18 +123,40 @@ export class SvgPathShape {
     return this._totalLen;
   }
 
-  /** Returns a Path2D for the center path scaled to canvas coordinates. */
-  getPath2D() {
-    const raw = new Path2D(this._pathStr);
-    const scaled = new Path2D();
-    scaled.addPath(raw, new DOMMatrix([this._sx, 0, 0, this._sy, MARGIN, MARGIN]));
-    return scaled;
-  }
-
   getCenterPoint() {
     if (this._centerFrac) {
       return { x: this.cw * this._centerFrac.x, y: this.ch * this._centerFrac.y };
     }
     return this._sample(0.5);
+  }
+
+  /**
+   * Samples outer and inner edge points around the center path.
+   * @param {number} trackWidth  Total band width in canvas pixels
+   * @param {number} nSamples    Number of segments (returns nSamples+1 points)
+   */
+  getEdgePoints(trackWidth, nSamples = 300) {
+    const hw = trackWidth / 2;
+    const outer = [];
+    const inner = [];
+    let prevPerpX = null;
+    let prevPerpY = null;
+    for (let i = 0; i <= nSamples; i++) {
+      const t = i / nSamples;
+      const c = this._sample(t);
+      const angle = this.getTangentAngle(t);
+      let perpX = -Math.sin(angle);
+      let perpY = Math.cos(angle);
+      // Flip if perpendicular reversed vs previous sample — prevents polygon self-intersection at inflection points
+      if (prevPerpX !== null && perpX * prevPerpX + perpY * prevPerpY < 0) {
+        perpX = -perpX;
+        perpY = -perpY;
+      }
+      prevPerpX = perpX;
+      prevPerpY = perpY;
+      outer.push({ x: c.x + perpX * hw, y: c.y + perpY * hw });
+      inner.push({ x: c.x - perpX * hw, y: c.y - perpY * hw });
+    }
+    return { outer, inner };
   }
 }

@@ -103,51 +103,69 @@ export class CityEnvironment {
   }
 
   drawTrackSurface(ctx, shape, trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.002);
-    const path2D = shape.getPath2D();
 
-    // Blue neon boundary with glow — drawn first, slightly wider
-    ctx.save();
-    ctx.shadowBlur = 14 + 6 * pulse;
-    ctx.shadowColor = '#4488ff';
-    ctx.strokeStyle = `rgba(80,110,255,${0.75 + 0.2 * pulse})`;
-    ctx.lineWidth = trackWidth + 6;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke(path2D);
-    ctx.restore();
-
-    // Dark asphalt track surface
-    ctx.save();
-    ctx.strokeStyle = '#2a2a2a';
-    ctx.lineWidth = trackWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke(path2D);
-    ctx.restore();
+    // Dark asphalt fill
+    ctx.beginPath();
+    ctx.moveTo(outer[0].x, outer[0].y);
+    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+    for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.fillStyle = '#1c1c24';
+    ctx.fill();
 
     // White dashed center line along the path
-    ctx.save();
     ctx.setLineDash([12, 10]);
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 2;
-    ctx.stroke(path2D);
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < outer.length; i++) {
+      const po = outer[i],
+        pi_ = inner[i];
+      const x = (po.x + pi_.x) / 2;
+      const y = (po.y + pi_.y) / 2;
+      if (first) {
+        ctx.moveTo(x, y);
+        first = false;
+      } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
     ctx.setLineDash([]);
-    ctx.restore();
 
     // Streetlights along the inner edge
-    const nLights = 10;
-    for (let i = 0; i < nLights; i++) {
-      const pos = shape.getPosition(i / nLights, -1.0, trackWidth);
+    for (let i = 0; i < inner.length; i += 15) {
+      const p = inner[i];
       ctx.globalAlpha = 0.5 + 0.2 * Math.sin(frame * 0.002 + i * 0.4);
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ffee88';
       ctx.fillStyle = '#ffee88';
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // Bright blue neon boundary lines
+    ctx.shadowBlur = 14 + 6 * pulse;
+    ctx.shadowColor = '#4466ff';
+    ctx.strokeStyle = `rgba(80,110,255,${0.75 + 0.2 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(outer[0].x, outer[0].y);
+    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+
+    ctx.shadowBlur = 14 + 6 * pulse;
+    ctx.shadowColor = '#4466ff';
+    ctx.strokeStyle = `rgba(80,110,255,${0.75 + 0.2 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
     ctx.shadowBlur = 0;
 
     this._drawFinishLine(ctx, shape, trackWidth);
