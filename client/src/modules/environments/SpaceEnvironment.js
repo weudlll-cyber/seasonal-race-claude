@@ -1,14 +1,3 @@
-// ============================================================
-// File:        SpaceEnvironment.js
-// Path:        client/src/modules/environments/SpaceEnvironment.js
-// Project:     RaceArena
-// Description: Space Sprint environment — open slalom course flowing left→right.
-//              Three-layer parallax star field (scrolling right→left for speed),
-//              drifting nebula blobs, shooting star, planet in corner.
-//              Track is a glowing energy corridor — no enclosed infield.
-//              Stars scroll right-to-left to give a forward-momentum feel.
-// ============================================================
-
 function _seeded(seed, max) {
   return (((seed * 9301 + 49297) % 233280) / 233280) * max;
 }
@@ -43,7 +32,6 @@ export class SpaceEnvironment {
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
 
-    // Deep space fill
     ctx.fillStyle = '#02020d';
     ctx.fillRect(0, 0, cw, ch);
 
@@ -62,10 +50,9 @@ export class SpaceEnvironment {
       ctx.fill();
     }
 
-    // Three-layer parallax stars — scroll RIGHT→LEFT for speed feel
+    // Three-layer parallax stars
     for (const layer of STAR_LAYERS) {
       for (const s of layer) {
-        // Negative scroll direction: stars move left as racers travel right
         const scrollX = (frame * s.speed * 0.005) % 1;
         const sx = ((s.x - scrollX + 2) % 1) * cw;
         const sy = s.y * ch;
@@ -135,11 +122,11 @@ export class SpaceEnvironment {
     ctx.stroke();
   }
 
-  drawTrackSurface(ctx, shape, totalLanes, frame) {
-    const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
+  drawTrackSurface(ctx, shape, trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0018);
 
-    // Dark energy track corridor (no enclosed infield for open course)
+    // Dark blue/purple energy corridor fill
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -171,7 +158,7 @@ export class SpaceEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // Glowing outer border
+    // Purple neon glowing boundary lines
     ctx.shadowBlur = 20 + 10 * pulse;
     ctx.shadowColor = '#8844ff';
     ctx.strokeStyle = `rgba(140,80,255,${0.7 + 0.2 * pulse})`;
@@ -181,24 +168,23 @@ export class SpaceEnvironment {
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
 
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#6622ff';
-    ctx.strokeStyle = `rgba(100,50,220,${0.6 + 0.2 * pulse})`;
-    ctx.lineWidth = 2;
+    ctx.shadowBlur = 20 + 10 * pulse;
+    ctx.shadowColor = '#8844ff';
+    ctx.strokeStyle = `rgba(140,80,255,${0.7 + 0.2 * pulse})`;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(inner[0].x, inner[0].y);
     for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawStartLine(ctx, shape, totalLanes);
-    this._drawFinishLine(ctx, shape, totalLanes);
+    this._drawStartLine(ctx, shape, trackWidth);
+    this._drawFinishLine(ctx, shape, trackWidth);
   }
 
-  // Start line at t=0 (left side) — green glow
-  _drawStartLine(ctx, shape, totalLanes) {
-    const pO = shape.getPosition(0, totalLanes - 1, totalLanes);
-    const pI = shape.getPosition(0, 0, totalLanes);
+  _drawStartLine(ctx, shape, trackWidth) {
+    const pO = shape.getPosition(0, 1.0, trackWidth);
+    const pI = shape.getPosition(0, -1.0, trackWidth);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 12;
@@ -220,10 +206,9 @@ export class SpaceEnvironment {
     ctx.shadowBlur = 0;
   }
 
-  // Finish line at t=1 (right side) — cyan glow
-  _drawFinishLine(ctx, shape, totalLanes) {
-    const pO = shape.getPosition(1, totalLanes - 1, totalLanes);
-    const pI = shape.getPosition(1, 0, totalLanes);
+  _drawFinishLine(ctx, shape, trackWidth) {
+    const pO = shape.getPosition(1, 1.0, trackWidth);
+    const pI = shape.getPosition(1, -1.0, trackWidth);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 12;

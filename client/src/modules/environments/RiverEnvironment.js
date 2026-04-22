@@ -1,13 +1,3 @@
-// ============================================================
-// File:        RiverEnvironment.js
-// Path:        client/src/modules/environments/RiverEnvironment.js
-// Project:     RaceArena
-// Description: River Run environment — open S-curve course flowing left→right.
-//              Animated flowing water, sine-wave surface lines, rising bubbles,
-//              shimmer reflections, and foam borders.  Start line on the left,
-//              finish line on the right (no enclosed infield).
-// ============================================================
-
 const N_BUBBLES = 18;
 const N_REFLECTIONS = 12;
 
@@ -32,7 +22,7 @@ export class RiverEnvironment {
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
 
-    // Deep river gradient — full canvas
+    // Deep river background
     const grad = ctx.createLinearGradient(0, 0, 0, ch);
     const hue = 180 + 20 * Math.sin(frame * 0.0004);
     grad.addColorStop(0, `hsl(${hue},40%,6%)`);
@@ -41,7 +31,7 @@ export class RiverEnvironment {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, cw, ch);
 
-    // Lily pad dots scattered in background
+    // Lily pads in background
     const pads = [
       [60, 90],
       [200, 130],
@@ -73,11 +63,11 @@ export class RiverEnvironment {
     ctx.stroke();
   }
 
-  drawTrackSurface(ctx, shape, totalLanes, frame) {
-    const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
+  drawTrackSurface(ctx, shape, trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const waterHue = 195 + 15 * Math.sin(frame * 0.0005);
 
-    // === Water fill — open corridor from left to right ===
+    // Blue/teal water fill
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -86,7 +76,7 @@ export class RiverEnvironment {
     ctx.fillStyle = `hsl(${waterHue},55%,22%)`;
     ctx.fill();
 
-    // === Animated sine-wave surface lines (water flows left→right) ===
+    // Animated sine-wave surface lines (water flows left→right)
     const nLines = 6;
     for (let li = 0; li < nLines; li++) {
       const frac = (li + 0.5) / nLines;
@@ -122,7 +112,7 @@ export class RiverEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // === Bubbles rising inside the track ===
+    // Bubbles rising inside the track
     for (const b of this.bubbles) {
       const tPos = (b.y + frame * b.speed * 0.0001) % 1;
       const tLat = b.x;
@@ -142,7 +132,7 @@ export class RiverEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // === Light reflections ===
+    // Light reflections
     for (const rf of this.reflections) {
       const tPos = rf.x;
       const tLat = rf.y;
@@ -160,25 +150,11 @@ export class RiverEnvironment {
     }
     ctx.globalAlpha = 1;
 
-    // === Foam edge (both banks of the river corridor) ===
-    ctx.strokeStyle = 'rgba(180,240,255,0.22)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 8]);
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // === Neon water borders ===
+    // Bright cyan glowing boundary lines (river banks)
     ctx.shadowBlur = 16;
     ctx.shadowColor = '#00e8ff';
     ctx.strokeStyle = 'rgba(0,220,255,0.85)';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -189,14 +165,13 @@ export class RiverEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawStartLine(ctx, shape, totalLanes);
-    this._drawFinishLine(ctx, shape, totalLanes);
+    this._drawStartLine(ctx, shape, trackWidth);
+    this._drawFinishLine(ctx, shape, trackWidth);
   }
 
-  // Start line at t=0 (left side) — green/white chevron
-  _drawStartLine(ctx, shape, totalLanes) {
-    const pO = shape.getPosition(0, totalLanes - 1, totalLanes);
-    const pI = shape.getPosition(0, 0, totalLanes);
+  _drawStartLine(ctx, shape, trackWidth) {
+    const pO = shape.getPosition(0, 1.0, trackWidth);
+    const pI = shape.getPosition(0, -1.0, trackWidth);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 8;
@@ -218,10 +193,9 @@ export class RiverEnvironment {
     ctx.shadowBlur = 0;
   }
 
-  // Finish line at t=1 (right side) — gold/white checkerboard
-  _drawFinishLine(ctx, shape, totalLanes) {
-    const pO = shape.getPosition(1, totalLanes - 1, totalLanes);
-    const pI = shape.getPosition(1, 0, totalLanes);
+  _drawFinishLine(ctx, shape, trackWidth) {
+    const pO = shape.getPosition(1, 1.0, trackWidth);
+    const pI = shape.getPosition(1, -1.0, trackWidth);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 8;

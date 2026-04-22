@@ -1,14 +1,4 @@
-// ============================================================
-// File:        CityEnvironment.js
-// Path:        client/src/modules/environments/CityEnvironment.js
-// Project:     RaceArena
-// Created:     2026-04-20
-// Description: City environment — building silhouettes with flickering
-//              windows outside the track, streetlights inside, dashed
-//              lane centre lines, and optional rain particles.
-// ============================================================
-
-// Building silhouettes (x fraction, y fraction from bottom, width, height fractions)
+// Building silhouettes
 const BUILDINGS = [
   { x: 0.02, w: 0.06, h: 0.28 },
   { x: 0.09, w: 0.04, h: 0.35 },
@@ -27,7 +17,6 @@ const BUILDINGS = [
   { x: 0.91, w: 0.08, h: 0.42 },
 ];
 
-// Window grid seeds
 const WINDOWS = Array.from({ length: 80 }, (_, i) => ({
   bldgIdx: i % BUILDINGS.length,
   col: (i * 3) % 5,
@@ -36,7 +25,6 @@ const WINDOWS = Array.from({ length: 80 }, (_, i) => ({
   offRate: 0.003 + (i % 5) * 0.002,
 }));
 
-// Rain drops
 const RAIN = Array.from({ length: 60 }, (_, i) => ({
   x: (i * 0.0167) % 1,
   y: (i * 0.023) % 1,
@@ -65,20 +53,20 @@ export class CityEnvironment {
     const groundY = ch * 0.72;
     for (const b of BUILDINGS) {
       const bx = b.x * cw,
-        bw = b.w * cw;
-      const bh = b.h * ch;
-      const by = groundY - bh;
+        bw = b.w * cw,
+        bh = b.h * ch,
+        by = groundY - bh;
       ctx.fillStyle = '#0f0f18';
       ctx.fillRect(bx, by, bw, bh + 10);
     }
 
-    // Flickering windows on buildings
+    // Flickering windows
     for (const w of WINDOWS) {
       const b = BUILDINGS[w.bldgIdx];
       const bx = b.x * cw,
-        bw = b.w * cw;
-      const bh = b.h * ch;
-      const by = ch * 0.72 - bh;
+        bw = b.w * cw,
+        bh = b.h * ch,
+        by = ch * 0.72 - bh;
       const cols = Math.max(1, Math.floor(bw / 10));
       const rows = Math.max(1, Math.floor(bh / 14));
       if (w.col >= cols || w.row >= rows) continue;
@@ -114,19 +102,11 @@ export class CityEnvironment {
     ctx.stroke();
   }
 
-  drawTrackSurface(ctx, shape, totalLanes, frame) {
-    const { outer, inner } = shape.getEdgePoints(totalLanes, 150);
+  drawTrackSurface(ctx, shape, trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.002);
 
-    // City block infield — slightly warmer than the asphalt track band
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = '#0b0b14';
-    ctx.fill();
-
-    // Asphalt fill
+    // Dark asphalt fill
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -135,30 +115,26 @@ export class CityEnvironment {
     ctx.fillStyle = '#1c1c24';
     ctx.fill();
 
-    // Dashed centre line per lane
-    const nLines = totalLanes - 1;
+    // White dashed center line along the path
     ctx.setLineDash([12, 10]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1.5;
-    for (let li = 1; li <= nLines; li++) {
-      const frac = li / (nLines + 1);
-      ctx.beginPath();
-      let first = true;
-      for (let i = 0; i < outer.length; i++) {
-        const po = outer[i],
-          pi_ = inner[i];
-        const x = po.x + (pi_.x - po.x) * frac;
-        const y = po.y + (pi_.y - po.y) * frac;
-        if (first) {
-          ctx.moveTo(x, y);
-          first = false;
-        } else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < outer.length; i++) {
+      const po = outer[i],
+        pi_ = inner[i];
+      const x = (po.x + pi_.x) / 2;
+      const y = (po.y + pi_.y) / 2;
+      if (first) {
+        ctx.moveTo(x, y);
+        first = false;
+      } else ctx.lineTo(x, y);
     }
+    ctx.stroke();
     ctx.setLineDash([]);
 
-    // Streetlights along the inner edge (dots with glow)
+    // Streetlights along the inner edge
     for (let i = 0; i < inner.length; i += 15) {
       const p = inner[i];
       ctx.globalAlpha = 0.5 + 0.2 * Math.sin(frame * 0.002 + i * 0.4);
@@ -172,32 +148,32 @@ export class CityEnvironment {
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
 
-    // Glowing road edge borders
+    // Bright blue neon boundary lines
     ctx.shadowBlur = 14 + 6 * pulse;
     ctx.shadowColor = '#4466ff';
     ctx.strokeStyle = `rgba(80,110,255,${0.75 + 0.2 * pulse})`;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
 
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = '#2244cc';
-    ctx.strokeStyle = `rgba(60,90,200,0.65)`;
-    ctx.lineWidth = 2;
+    ctx.shadowBlur = 14 + 6 * pulse;
+    ctx.shadowColor = '#4466ff';
+    ctx.strokeStyle = `rgba(80,110,255,${0.75 + 0.2 * pulse})`;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(inner[0].x, inner[0].y);
     for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawFinishLine(ctx, shape, totalLanes);
+    this._drawFinishLine(ctx, shape, trackWidth);
   }
 
-  _drawFinishLine(ctx, shape, totalLanes) {
-    const pO = shape.getPosition(0, totalLanes - 1, totalLanes);
-    const pI = shape.getPosition(0, 0, totalLanes);
+  _drawFinishLine(ctx, shape, trackWidth) {
+    const pO = shape.getPosition(0, 1.0, trackWidth);
+    const pI = shape.getPosition(0, -1.0, trackWidth);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 10;

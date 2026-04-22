@@ -43,6 +43,7 @@ export const DEFAULT_TRACKS = [
     defaultWinners: 3,
     difficulty: 'medium',
     curveStyle: 'oval',
+    trackWidth: 140,
     isDefault: true,
   },
   {
@@ -59,6 +60,7 @@ export const DEFAULT_TRACKS = [
     defaultWinners: 3,
     difficulty: 'easy',
     curveStyle: 's-curve',
+    trackWidth: 140,
     isDefault: false,
   },
   {
@@ -75,6 +77,7 @@ export const DEFAULT_TRACKS = [
     defaultWinners: 3,
     difficulty: 'hard',
     curveStyle: 'spiral',
+    trackWidth: 140,
     isDefault: false,
   },
   {
@@ -91,6 +94,7 @@ export const DEFAULT_TRACKS = [
     defaultWinners: 3,
     difficulty: 'easy',
     curveStyle: 'zigzag',
+    trackWidth: 140,
     isDefault: false,
   },
   {
@@ -107,6 +111,7 @@ export const DEFAULT_TRACKS = [
     defaultWinners: 3,
     difficulty: 'hard',
     curveStyle: 'rectangle',
+    trackWidth: 140,
     isDefault: false,
   },
 ];

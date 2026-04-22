@@ -18,6 +18,8 @@ import s from '../DevScreen.module.css';
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const DURATIONS = [30, 60, 90, 120];
 
+const TRACK_WIDTHS = [100, 140, 200, 280, 360];
+
 const BLANK = {
   name: '',
   icon: '',
@@ -31,6 +33,7 @@ const BLANK = {
   defaultWinners: 3,
   difficulty: 'medium',
   curveStyle: 'oval',
+  trackWidth: 140,
 };
 
 function TrackManager() {
@@ -75,6 +78,7 @@ function TrackManager() {
       defaultWinners: track.defaultWinners,
       difficulty: track.difficulty,
       curveStyle: track.shapeId || track.curveStyle || 'oval',
+      trackWidth: track.trackWidth ?? 140,
     });
     setEditId(track.id);
     setShowForm(true);
@@ -339,6 +343,20 @@ function TrackManager() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Track Width (px)</label>
+              <div className={s.optionPills}>
+                {TRACK_WIDTHS.map((w) => (
+                  <button
+                    key={w}
+                    className={`${s.optionPill} ${form.trackWidth === w ? s.optionPillActive : ''}`}
+                    onClick={() => f('trackWidth', w)}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>

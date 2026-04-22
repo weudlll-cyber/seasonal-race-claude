@@ -1,13 +1,3 @@
-// ============================================================
-// File:        DirtOvalEnvironment.js
-// Path:        client/src/modules/environments/DirtOvalEnvironment.js
-// Project:     RaceArena
-// Created:     2026-04-20
-// Description: Dirt-oval environment — sand surface, grandstands with
-//              bobbing crowd silhouettes, dust clouds at corners, and
-//              a lens-flare sun in the upper corner.
-// ============================================================
-
 // Pre-seeded crowd positions (avoids layout thrash each frame)
 const CROWD = Array.from({ length: 60 }, (_, i) => ({
   x: (i * 137.5) % 1280,
@@ -82,8 +72,8 @@ export class DirtOvalEnvironment {
 
     // Sun / lens flare in corner
     const sunX = cw * 0.9,
-      sunY = 28;
-    const sunR = 18;
+      sunY = 28,
+      sunR = 18;
     const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 3);
     sg.addColorStop(0, 'rgba(255,220,80,0.55)');
     sg.addColorStop(0.4, 'rgba(255,160,30,0.2)');
@@ -98,18 +88,11 @@ export class DirtOvalEnvironment {
     ctx.fill();
   }
 
-  // Draw the sand track surface and neon borders using shape geometry
-  drawTrackSurface(ctx, shape, totalLanes, frame) {
+  drawTrackSurface(ctx, shape, trackWidth, frame) {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
-    this._drawGenericTrack(ctx, shape, totalLanes, frame, pulse);
-    this._drawFinishLine(ctx, shape, totalLanes, frame);
-    this._drawTitle(ctx, shape, frame);
-  }
+    const { outer, inner } = shape.getEdgePoints(trackWidth, 120);
 
-  _drawGenericTrack(ctx, shape, totalLanes, frame, pulse) {
-    const { outer, inner } = shape.getEdgePoints(totalLanes, 120);
-
-    // Sand fill path
+    // Sandy brown fill
     ctx.beginPath();
     ctx.moveTo(outer[0].x, outer[0].y);
     for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
@@ -118,7 +101,23 @@ export class DirtOvalEnvironment {
     ctx.fillStyle = '#c8a46a';
     ctx.fill();
 
-    // Neon border
+    // Subtle speckle texture
+    ctx.globalAlpha = 0.12;
+    for (let i = 0; i < outer.length; i += 4) {
+      const po = outer[i],
+        pi_ = inner[i];
+      for (let f = 0.15; f < 1; f += 0.25) {
+        const sx = po.x + (pi_.x - po.x) * f + (Math.random() - 0.5) * 3;
+        const sy = po.y + (pi_.y - po.y) * f + (Math.random() - 0.5) * 3;
+        ctx.fillStyle = i % 3 === 0 ? '#b08840' : '#dbbf7a';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Neon cyan boundary lines
     const glow = 14 + 12 * pulse;
     ctx.shadowBlur = glow;
     ctx.shadowColor = '#00eeff';
@@ -133,14 +132,15 @@ export class DirtOvalEnvironment {
     for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
     ctx.stroke();
     ctx.shadowBlur = 0;
+
+    this._drawFinishLine(ctx, shape, trackWidth);
   }
 
-  _drawFinishLine(ctx, shape, totalLanes) {
-    const pOuter = shape.getPosition(0, totalLanes - 1, totalLanes);
-    const pInner = shape.getPosition(0, 0, totalLanes);
+  _drawFinishLine(ctx, shape, trackWidth) {
+    const pOuter = shape.getPosition(0, 1.0, trackWidth);
+    const pInner = shape.getPosition(0, -1.0, trackWidth);
     const dx = pOuter.x - pInner.x,
       dy = pOuter.y - pInner.y;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
     const segments = 8;
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#ffd700';
@@ -165,7 +165,6 @@ export class DirtOvalEnvironment {
       ctx.fill();
     }
     ctx.shadowBlur = 0;
-    // FINISH label
     const midX = (pOuter.x + pInner.x) / 2;
     const midY = (pOuter.y + pInner.y) / 2;
     ctx.font = 'bold 11px sans-serif';
@@ -173,9 +172,5 @@ export class DirtOvalEnvironment {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText('FINISH', midX, midY - 8);
-  }
-
-  _drawTitle(ctx, shape, frame) {
-    // Title is drawn by RaceScreen so environments skip it
   }
 }

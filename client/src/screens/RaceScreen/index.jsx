@@ -1,15 +1,7 @@
-// ============================================================
-// File:        index.jsx
-// Path:        client/src/screens/RaceScreen/index.jsx
-// Project:     RaceArena
-// Created:     2026-04-20
-// Description: Main race canvas screen — orchestrates shape, environment
-//              and racer-type modules to render the animated race.
-// ============================================================
-
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getShape } from '../../modules/track-shapes/index.js';
+import { getTrackWidth } from '../../modules/track-shapes/SvgPathShape.js';
 import { getEnvironment } from '../../modules/environments/index.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import './RaceScreen.css';
@@ -35,17 +27,16 @@ const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
 const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 
-// Proper modulo for t values that may be negative or > 1
 const tPos = (t) => ((t % 1) + 1) % 1;
 
 export default function RaceScreen() {
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
-  const g = useRef(null); // mutable game state
-  const envRef = useRef(null); // environment instance
-  const shapeRef = useRef(null); // shape instance
-  const racerTypeRef = useRef(null); // racer-type instance (shared for all racers)
+  const g = useRef(null);
+  const envRef = useRef(null);
+  const shapeRef = useRef(null);
+  const racerTypeRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -72,7 +63,6 @@ export default function RaceScreen() {
     const ctx = canvas.getContext('2d');
     const nRacers = raceData.racers.length;
 
-    // Resolve shape, environment and racer-type from race data
     const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
     const envId = raceData.environmentId || 'dirt';
     const typeId = raceData.racerTypeId || 'horse';
@@ -84,10 +74,12 @@ export default function RaceScreen() {
     racerTypeRef.current = getRacerType(typeId);
     const isOpenTrack = shapeRef.current.isOpen === true;
 
-    // Determine the emoji to use for all racers on this track
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
 
-    // Build initial racer state
+    // Use track-configured width if set, otherwise compute from player count
+    const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
+
+    // Build initial racer state — all start at t=0, random perpendicular offset
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -97,23 +89,65 @@ export default function RaceScreen() {
       winnersNeeded: Math.min(raceData.winners ?? 3, nRacers),
       dustParticles: [],
       burstParticles: [],
+      trackWidth,
       racers: raceData.racers.map((r, i) => ({
         ...r,
         index: i,
-        laneIndex: i,
-        // Spread racers along the path so names don't stack at the start.
-        // For open tracks t<0 clamps to 0; for closed loops it wraps correctly.
-        t: isOpenTrack ? 0 : -(i / Math.max(nRacers - 1, 1)) * 0.03,
+        t: 0,
+        // Stable random offset assigned once — spreads racers across track width
+        trackOffset: (Math.random() - 0.5) * 0.7,
         icon: trackEmoji ?? r.icon,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
         color: LANE_COLORS[i % LANE_COLORS.length],
         finished: false,
         finishRank: null,
         trail: [],
+        x: 0,
+        y: 0,
+        angle: 0,
       })),
     };
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
+
+    // ── Compute canvas positions for all racers ─────────────────────────────
+    function computePositions() {
+      const st = g.current;
+      const shape = shapeRef.current;
+      const tw = st.trackWidth;
+      for (const r of st.racers) {
+        const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
+        const pos = shape.getPosition(t, r.trackOffset, tw);
+        r.x = pos.x;
+        r.y = pos.y;
+        r.angle = pos.angle;
+      }
+    }
+
+    // ── Collision avoidance — nudge overlapping racers apart (perpendicular) ─
+    function applyCollisionAvoidance() {
+      const st = g.current;
+      const active = st.racers.filter((r) => !r.finished);
+      for (let i = 0; i < active.length; i++) {
+        for (let j = i + 1; j < active.length; j++) {
+          const r1 = active[i],
+            r2 = active[j];
+          const dx = r2.x - r1.x,
+            dy = r2.y - r1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 25 && dist > 0) {
+            const nudge = (25 - dist) / 2;
+            const angle = r1.angle;
+            const perpX = -Math.sin(angle);
+            const perpY = Math.cos(angle);
+            r1.x += perpX * nudge * 0.5;
+            r1.y += perpY * nudge * 0.5;
+            r2.x -= perpX * nudge * 0.5;
+            r2.y -= perpY * nudge * 0.5;
+          }
+        }
+      }
+    }
 
     // ── Burst emitter ───────────────────────────────────────────────────────
     function emitBurst(x, y) {
@@ -133,7 +167,7 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Draw: all particles (trail dust + burst) ────────────────────────────
+    // ── Draw: all particles ─────────────────────────────────────────────────
     function drawParticles() {
       for (const p of g.current.dustParticles) {
         ctx.globalAlpha = p.alpha;
@@ -155,7 +189,7 @@ export default function RaceScreen() {
       ctx.globalAlpha = 1;
     }
 
-    // ── Draw: name tag above a racer position ──────────────────────────────
+    // ── Draw: name tag above a racer ────────────────────────────────────────
     function drawNameTag(px, py, name, isLeader) {
       const nameY = py - 22;
       ctx.font = 'bold 11px sans-serif';
@@ -173,19 +207,16 @@ export default function RaceScreen() {
       }
     }
 
-    // ── Draw: all racers ───────────────────────────────────────────────────
+    // ── Draw: all racers using precomputed positions ─────────────────────────
     function drawRacers() {
       const st = g.current;
-      const shape = shapeRef.current;
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
 
       for (const r of st.racers) {
-        const pos = shape.getPosition(
-          isOpenTrack ? Math.min(r.t, 1) : tPos(r.t),
-          r.laneIndex,
-          nRacers
-        );
+        const px = r.x,
+          py = r.y,
+          angle = r.angle;
 
         // Speed trail dots
         for (let i = 0; i < r.trail.length; i++) {
@@ -198,22 +229,18 @@ export default function RaceScreen() {
         }
         ctx.globalAlpha = 1;
 
-        // Racer visual (emoji + type-specific animation)
-        rt.drawRacer(ctx, pos.x, pos.y, pos.angle, r, r === leader, st.lastTs ?? 0);
+        rt.drawRacer(ctx, px, py, angle, r, r === leader, st.lastTs ?? 0);
+        drawNameTag(px, py, r.name, r === leader);
 
-        // Name tag
-        drawNameTag(pos.x, pos.y, r.name, r === leader);
-
-        // Record trail point
-        r.trail.push({ x: pos.x, y: pos.y });
+        r.trail.push({ x: px, y: py });
         if (r.trail.length > 10) r.trail.shift();
       }
     }
 
-    // ── Draw: race title inside canvas ────────────────────────────────────
+    // ── Draw: race title ─────────────────────────────────────────────────────
     function drawTitle() {
-      const cp = shapeRef.current.getCenterPoint();
-      const topY = Math.min(...shapeRef.current.getEdgePoints(nRacers, 30).outer.map((p) => p.y));
+      const tw = g.current.trackWidth;
+      const topY = Math.min(...shapeRef.current.getEdgePoints(tw, 30).outer.map((p) => p.y));
       const titleY = 58 + (topY - 58) / 2;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -284,9 +311,12 @@ export default function RaceScreen() {
 
       // Draw environment layers
       env.drawBackground(ctx, ts);
-      env.drawTrackSurface(ctx, shape, nRacers, ts);
+      env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
 
       drawTitle();
+
+      // Always compute positions so all phases have valid x/y/angle
+      computePositions();
 
       // ── COUNTDOWN ──
       if (st.phase === PHASE.COUNTDOWN) {
@@ -303,27 +333,33 @@ export default function RaceScreen() {
 
         // ── RACING ──
       } else if (st.phase === PHASE.RACING) {
+        // Advance t values
         for (const r of st.racers) {
           if (r.finished) continue;
           r.t += (r.baseSpeed + (Math.random() - 0.5) * 0.00035) * (dt / 16);
+        }
+
+        // Recompute positions after t update
+        computePositions();
+
+        // Collision avoidance
+        applyCollisionAvoidance();
+
+        // Finish detection
+        for (const r of st.racers) {
+          if (r.finished) continue;
           if (r.t >= 1.0) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
-            const finishPos = shape.getPosition(isOpenTrack ? 1 : 0, r.laneIndex, nRacers);
-            emitBurst(finishPos.x, finishPos.y);
+            emitBurst(r.x, r.y);
           }
         }
 
-        // Emit trail particles from racer-type module
+        // Trail particles from racer-type module
         const rt = racerTypeRef.current;
         for (const r of st.racers) {
           if (r.finished) continue;
-          const pos = shape.getPosition(
-            isOpenTrack ? Math.min(r.t, 1) : tPos(r.t),
-            r.laneIndex,
-            nRacers
-          );
-          const newParts = rt.getTrailParticles(pos.x, pos.y, r.baseSpeed, pos.angle, ts);
+          const newParts = rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts);
           st.dustParticles.push(...newParts);
         }
 

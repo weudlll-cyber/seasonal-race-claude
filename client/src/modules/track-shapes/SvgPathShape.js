@@ -8,24 +8,41 @@ const MARGIN = 40;
 // Arc-length samples pre-cached at construction time
 const CACHE_N = 600;
 
+/**
+ * Returns the track band width in pixels for a given player count.
+ * Used by RaceScreen to compute dynamic width; also exported for tests.
+ */
+export function getTrackWidth(playerCount) {
+  if (playerCount <= 8) return 140;
+  if (playerCount <= 20) return 200;
+  if (playerCount <= 50) return 280;
+  return 360; // 51-100 players
+}
+
 export class SvgPathShape {
   /**
    * @param {string} pathStr  SVG path d-attribute authored on a 1000×600 grid
    * @param {object} opts
    * @param {boolean}  opts.isOpen      true for open one-way courses (t=0→1)
+   * @param {boolean}  opts.closed      if set, isOpen = !closed (alternative to isOpen)
    * @param {number}   opts.cw          canvas width  (default 1280)
    * @param {number}   opts.ch          canvas height (default 720)
-   * @param {{min,max,perLane}} opts.bw band-width config
    * @param {{x,y}}   opts.centerFrac  optional fixed centre as canvas fractions
    */
   constructor(pathStr, opts = {}) {
-    this.isOpen = opts.isOpen ?? false;
+    // Support both isOpen and closed flags
+    if (opts.isOpen !== undefined) {
+      this.isOpen = opts.isOpen;
+    } else if (opts.closed !== undefined) {
+      this.isOpen = !opts.closed;
+    } else {
+      this.isOpen = false;
+    }
     this.cw = opts.cw ?? 1280;
     this.ch = opts.ch ?? 720;
     // Scale grid into the inset area [MARGIN, cw-MARGIN] × [MARGIN, ch-MARGIN]
     this._sx = (this.cw - 2 * MARGIN) / GRID_W;
     this._sy = (this.ch - 2 * MARGIN) / GRID_H;
-    this._bw = opts.bw ?? { min: 120, max: 200, perLane: 24 };
     this._centerFrac = opts.centerFrac ?? null;
 
     // Sample the path using the browser's native SVG geometry engine
@@ -80,23 +97,25 @@ export class SvgPathShape {
     return Math.atan2(pa.y - pb.y, pa.x - pb.x);
   }
 
-  getPosition(t, laneIndex, totalLanes) {
-    const TW = this.getBandWidth(totalLanes);
-    const laneW = TW / Math.max(totalLanes, 1);
-    const delta = -TW / 2 + (laneIndex + 0.5) * laneW;
+  /**
+   * Returns canvas-space position for a racer with the given perpendicular offset.
+   * @param {number} t           Arc-length fraction 0..1
+   * @param {number} trackOffset Perpendicular offset as fraction of half-width (-1 to +1).
+   *                             Use racer.trackOffset (range -0.35..0.35) for racers,
+   *                             ±1.0 for track edge positions.
+   * @param {number} trackWidth  Total track width in canvas pixels
+   */
+  getPosition(t, trackOffset, trackWidth) {
     const c = this._sample(t);
     const angle = this.getTangentAngle(t);
-    const perp = angle + Math.PI / 2;
+    const perpX = -Math.sin(angle);
+    const perpY = Math.cos(angle);
+    const halfWidth = trackWidth / 2;
     return {
-      x: c.x + Math.cos(perp) * delta,
-      y: c.y + Math.sin(perp) * delta,
+      x: c.x + perpX * trackOffset * halfWidth,
+      y: c.y + perpY * trackOffset * halfWidth,
       angle,
     };
-  }
-
-  getBandWidth(totalLanes) {
-    const { min, max, perLane } = this._bw;
-    return Math.min(Math.max(min, totalLanes * perLane), max);
   }
 
   getTotalLength() {
@@ -110,17 +129,23 @@ export class SvgPathShape {
     return this._sample(0.5);
   }
 
-  getEdgePoints(totalLanes, nSamples = 120) {
-    const hw = this.getBandWidth(totalLanes) / 2;
+  /**
+   * Samples outer and inner edge points around the center path.
+   * @param {number} trackWidth  Total band width in canvas pixels
+   * @param {number} nSamples    Number of segments (returns nSamples+1 points)
+   */
+  getEdgePoints(trackWidth, nSamples = 300) {
+    const hw = trackWidth / 2;
     const outer = [];
     const inner = [];
     for (let i = 0; i <= nSamples; i++) {
       const t = i / nSamples;
       const c = this._sample(t);
       const angle = this.getTangentAngle(t);
-      const perp = angle + Math.PI / 2;
-      outer.push({ x: c.x + Math.cos(perp) * hw, y: c.y + Math.sin(perp) * hw });
-      inner.push({ x: c.x - Math.cos(perp) * hw, y: c.y - Math.sin(perp) * hw });
+      const perpX = -Math.sin(angle);
+      const perpY = Math.cos(angle);
+      outer.push({ x: c.x + perpX * hw, y: c.y + perpY * hw });
+      inner.push({ x: c.x - perpX * hw, y: c.y - perpY * hw });
     }
     return { outer, inner };
   }

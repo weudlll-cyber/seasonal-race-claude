@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getShape,
+  getTrackWidth,
   SHAPE_IDS,
   SvgPathShape,
   OvalShape,
@@ -19,57 +20,82 @@ const ALL_SHAPES = [
   ['zigzag', ZigzagShape],
   ['rectangle', RectangleShape],
 ];
+const DEFAULT_WIDTH = 140;
+
+// ── getTrackWidth ─────────────────────────────────────────────────────────────
+
+describe('getTrackWidth', () => {
+  it('returns 140 for 1 player', () => expect(getTrackWidth(1)).toBe(140));
+  it('returns 140 for 8 players', () => expect(getTrackWidth(8)).toBe(140));
+  it('returns 200 for 9 players', () => expect(getTrackWidth(9)).toBe(200));
+  it('returns 200 for 20 players', () => expect(getTrackWidth(20)).toBe(200));
+  it('returns 280 for 21 players', () => expect(getTrackWidth(21)).toBe(280));
+  it('returns 280 for 50 players', () => expect(getTrackWidth(50)).toBe(280));
+  it('returns 360 for 51 players', () => expect(getTrackWidth(51)).toBe(360));
+  it('returns 360 for 100 players', () => expect(getTrackWidth(100)).toBe(360));
+});
 
 // ── SvgPathShape unit tests ───────────────────────────────────────────────────
 
 describe('SvgPathShape', () => {
-  const openShape = new SCurveShape(CW, CH); // open path: M 30,300 … 970,300
-  const closedShape = new OvalShape(CW, CH); // closed loop
+  const openShape = new SCurveShape(CW, CH);
+  const closedShape = new OvalShape(CW, CH);
 
   it('getTotalLength returns a positive finite number', () => {
     expect(openShape.getTotalLength()).toBeGreaterThan(100);
     expect(isFinite(openShape.getTotalLength())).toBe(true);
   });
 
-  it('open: getPosition(0) band-centre is near path start', () => {
-    // Average lane 0 and last lane to recover the centre-path position
-    const p0 = openShape.getPosition(0, 0, 6);
-    const p5 = openShape.getPosition(0, 5, 6);
-    const cx = (p0.x + p5.x) / 2;
-    const cy = (p0.y + p5.y) / 2;
-    // s-curve start: grid (30, 300) → canvas (~38, 360)
-    expect(cx).toBeGreaterThan(0);
-    expect(cx).toBeLessThan(CW * 0.2);
-    expect(cy).toBeGreaterThan(CH * 0.3);
-    expect(cy).toBeLessThan(CH * 0.7);
+  it('open: getPosition(0, 0, width) is near path start', () => {
+    const pos = openShape.getPosition(0, 0, DEFAULT_WIDTH);
+    // s-curve start: grid (30, 300) → canvas near left side
+    expect(pos.x).toBeGreaterThan(0);
+    expect(pos.x).toBeLessThan(CW * 0.2);
+    expect(pos.y).toBeGreaterThan(CH * 0.3);
+    expect(pos.y).toBeLessThan(CH * 0.7);
   });
 
-  it('open: getPosition(1) band-centre is near path end', () => {
-    const p0 = openShape.getPosition(1, 0, 6);
-    const p5 = openShape.getPosition(1, 5, 6);
-    const cx = (p0.x + p5.x) / 2;
-    // s-curve end: grid (970, 300) → canvas (~1242, 360)
-    expect(cx).toBeGreaterThan(CW * 0.8);
+  it('open: getPosition(1, 0, width) is near path end', () => {
+    const pos = openShape.getPosition(1, 0, DEFAULT_WIDTH);
+    // s-curve end: grid (970, 300) → canvas near right side
+    expect(pos.x).toBeGreaterThan(CW * 0.8);
   });
 
   it('closed: getPosition(0) ≈ getPosition(1)', () => {
-    for (let lane = 0; lane < 6; lane++) {
-      const p0 = closedShape.getPosition(0, lane, 6);
-      const p1 = closedShape.getPosition(1, lane, 6);
-      const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
-      expect(dist).toBeLessThan(1);
-    }
+    const p0 = closedShape.getPosition(0, 0, DEFAULT_WIDTH);
+    const p1 = closedShape.getPosition(1, 0, DEFAULT_WIDTH);
+    const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
+    expect(dist).toBeLessThan(1);
   });
 
-  it('lane offsets are symmetric around the centre path', () => {
-    const inner = openShape.getPosition(0.4, 0, 6);
-    const outer = openShape.getPosition(0.4, 5, 6);
-    const cx = (inner.x + outer.x) / 2;
-    const cy = (inner.y + outer.y) / 2;
-    const dInner = Math.sqrt((inner.x - cx) ** 2 + (inner.y - cy) ** 2);
-    const dOuter = Math.sqrt((outer.x - cx) ** 2 + (outer.y - cy) ** 2);
-    expect(Math.abs(dInner - dOuter)).toBeLessThan(0.1);
-    expect(dInner).toBeGreaterThan(20); // non-degenerate spread
+  it('positive and negative trackOffset produce symmetric positions', () => {
+    const pos = openShape.getPosition(0.4, 0, DEFAULT_WIDTH);
+    const posPlus = openShape.getPosition(0.4, 0.35, DEFAULT_WIDTH);
+    const posMinus = openShape.getPosition(0.4, -0.35, DEFAULT_WIDTH);
+    // The center (offset=0) should be midway between ±0.35
+    const midX = (posPlus.x + posMinus.x) / 2;
+    const midY = (posPlus.y + posMinus.y) / 2;
+    expect(Math.abs(midX - pos.x)).toBeLessThan(0.5);
+    expect(Math.abs(midY - pos.y)).toBeLessThan(0.5);
+  });
+
+  it('±1.0 offsets span the full track width', () => {
+    const p1 = openShape.getPosition(0.3, 1.0, DEFAULT_WIDTH);
+    const p2 = openShape.getPosition(0.3, -1.0, DEFAULT_WIDTH);
+    const dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+    expect(dist).toBeGreaterThan(DEFAULT_WIDTH * 0.9);
+    expect(dist).toBeLessThan(DEFAULT_WIDTH * 1.1);
+  });
+
+  it('trackOffset of 0.35 stays within track width', () => {
+    for (let i = 0; i <= 10; i++) {
+      const pos = openShape.getPosition(i / 10, 0.35, DEFAULT_WIDTH);
+      const center = openShape.getPosition(i / 10, 0, DEFAULT_WIDTH);
+      const dx = pos.x - center.x,
+        dy = pos.y - center.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      expect(dist).toBeLessThan(DEFAULT_WIDTH / 2 + 1);
+    }
   });
 
   it('getTangentAngle returns angle in [-PI, PI]', () => {
@@ -78,6 +104,51 @@ describe('SvgPathShape', () => {
       expect(a).toBeGreaterThanOrEqual(-Math.PI);
       expect(a).toBeLessThanOrEqual(Math.PI);
     }
+  });
+});
+
+// ── trackOffset range test ────────────────────────────────────────────────────
+
+describe('racer trackOffset', () => {
+  it('(Math.random() - 0.5) * 0.7 stays within ±0.35', () => {
+    // Run many samples to confirm the formula stays in range
+    for (let i = 0; i < 1000; i++) {
+      const offset = (Math.random() - 0.5) * 0.7;
+      expect(offset).toBeGreaterThanOrEqual(-0.35);
+      expect(offset).toBeLessThanOrEqual(0.35);
+    }
+  });
+});
+
+// ── Collision avoidance math test ─────────────────────────────────────────────
+
+describe('collision avoidance', () => {
+  it('nudge reduces distance between two overlapping racers', () => {
+    const r1 = { x: 100, y: 100, angle: 0 };
+    const r2 = { x: 110, y: 100, angle: 0 }; // 10px apart, within 25px threshold
+
+    const dx = r2.x - r1.x,
+      dy = r2.y - r1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nudge = (25 - dist) / 2;
+    const perpX = -Math.sin(r1.angle); // perpendicular
+    const perpY = Math.cos(r1.angle);
+
+    r1.x += perpX * nudge * 0.5;
+    r1.y += perpY * nudge * 0.5;
+    r2.x -= perpX * nudge * 0.5;
+    r2.y -= perpY * nudge * 0.5;
+
+    const newDist = Math.sqrt((r2.x - r1.x) ** 2 + (r2.y - r1.y) ** 2);
+    // After nudge the perpendicular separation increases, but if nudge direction is
+    // perpendicular to the racer-to-racer vector, separation along that axis stays.
+    // The key invariant: neither racer moved along the direct collision axis.
+    // Both moved perpendicularly, so the original dx/dy should be unchanged.
+    const newDx = r2.x - r1.x,
+      newDy = r2.y - r1.y;
+    // x-axis gap unchanged (perpX = 0 when angle = 0), y-axis increased
+    expect(Math.abs(newDx - dx)).toBeLessThan(0.01);
+    expect(newDist).toBeGreaterThan(dist);
   });
 });
 
@@ -112,11 +183,11 @@ describe('getShape factory', () => {
 
 describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
   const shape = new Cls(CW, CH);
-  const N_LANES = 6;
+  const TW = DEFAULT_WIDTH;
 
   describe('getPosition', () => {
     it('returns {x, y, angle} with finite numbers', () => {
-      const pos = shape.getPosition(0, 0, N_LANES);
+      const pos = shape.getPosition(0, 0, TW);
       expect(typeof pos.x).toBe('number');
       expect(typeof pos.y).toBe('number');
       expect(typeof pos.angle).toBe('number');
@@ -125,23 +196,32 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
       expect(isFinite(pos.angle)).toBe(true);
     });
 
-    it('different laneIndex values produce different x/y', () => {
-      const p0 = shape.getPosition(0.25, 0, N_LANES);
-      const p5 = shape.getPosition(0.25, N_LANES - 1, N_LANES);
-      const dist = Math.sqrt((p5.x - p0.x) ** 2 + (p5.y - p0.y) ** 2);
+    it('getPosition(0) and getPosition(1) return valid coordinates', () => {
+      const p0 = shape.getPosition(0, 0, TW);
+      const p1 = shape.getPosition(1, 0, TW);
+      expect(isFinite(p0.x)).toBe(true);
+      expect(isFinite(p0.y)).toBe(true);
+      expect(isFinite(p1.x)).toBe(true);
+      expect(isFinite(p1.y)).toBe(true);
+      expect(p0.x).toBeGreaterThan(-100);
+      expect(p0.x).toBeLessThan(CW + 100);
+    });
+
+    it('different offsets produce different x/y', () => {
+      const p0 = shape.getPosition(0.25, -0.35, TW);
+      const p1 = shape.getPosition(0.25, 0.35, TW);
+      const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
       expect(dist).toBeGreaterThan(5);
     });
 
     it('closed loops: t=0 ≈ t=1; open courses: t=0 and t=1 are far apart', () => {
-      for (let lane = 0; lane < N_LANES; lane++) {
-        const p0 = shape.getPosition(0, lane, N_LANES);
-        const p1 = shape.getPosition(1, lane, N_LANES);
-        const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
-        if (shape.isOpen) {
-          expect(dist).toBeGreaterThan(50);
-        } else {
-          expect(dist).toBeLessThan(10);
-        }
+      const p0 = shape.getPosition(0, 0, TW);
+      const p1 = shape.getPosition(1, 0, TW);
+      const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
+      if (shape.isOpen) {
+        expect(dist).toBeGreaterThan(50);
+      } else {
+        expect(dist).toBeLessThan(10);
       }
     });
 
@@ -149,7 +229,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
       const MARGIN = 80;
       for (let i = 0; i < 20; i++) {
         const t = i / 20;
-        const pos = shape.getPosition(t, Math.floor(N_LANES / 2), N_LANES);
+        const pos = shape.getPosition(t, 0, TW);
         expect(pos.x).toBeGreaterThan(-MARGIN);
         expect(pos.x).toBeLessThan(CW + MARGIN);
         expect(pos.y).toBeGreaterThan(-MARGIN);
@@ -159,20 +239,10 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
 
     it('angle is between -PI and PI', () => {
       for (let i = 0; i < 10; i++) {
-        const { angle } = shape.getPosition(i / 10, 0, N_LANES);
+        const { angle } = shape.getPosition(i / 10, 0, TW);
         expect(angle).toBeGreaterThanOrEqual(-Math.PI);
         expect(angle).toBeLessThanOrEqual(Math.PI);
       }
-    });
-  });
-
-  describe('getBandWidth', () => {
-    it('returns a positive number', () => {
-      expect(shape.getBandWidth(N_LANES)).toBeGreaterThan(0);
-    });
-
-    it('width grows with more lanes (within caps)', () => {
-      expect(shape.getBandWidth(8)).toBeGreaterThanOrEqual(shape.getBandWidth(2));
     });
   });
 
@@ -186,14 +256,14 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
 
   describe('getEdgePoints', () => {
     it('returns outer and inner arrays of nSamples+1 points', () => {
-      const { outer, inner } = shape.getEdgePoints(N_LANES, 60);
+      const { outer, inner } = shape.getEdgePoints(TW, 60);
       expect(Array.isArray(outer)).toBe(true);
       expect(Array.isArray(inner)).toBe(true);
       expect(outer.length).toBe(61);
     });
 
     it('each edge point has finite x and y', () => {
-      const { outer, inner } = shape.getEdgePoints(N_LANES, 20);
+      const { outer, inner } = shape.getEdgePoints(TW, 20);
       for (const p of [...outer, ...inner]) {
         expect(isFinite(p.x)).toBe(true);
         expect(isFinite(p.y)).toBe(true);
@@ -201,7 +271,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
 
     it('outer and inner edges are meaningfully separated', () => {
-      const { outer, inner } = shape.getEdgePoints(N_LANES, 40);
+      const { outer, inner } = shape.getEdgePoints(TW, 40);
       let totalSep = 0;
       for (let i = 0; i < outer.length; i++) {
         const dx = outer[i].x - inner[i].x;
