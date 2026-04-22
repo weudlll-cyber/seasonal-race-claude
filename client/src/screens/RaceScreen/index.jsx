@@ -79,7 +79,40 @@ export default function RaceScreen() {
     // Use track-configured width if set, otherwise compute from player count
     const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
 
-    // Build initial racer state — all start at t=0, random perpendicular offset
+    // Assign perpendicular offsets using max-min-distance placement so racers
+    // are spread across the full track width with at least 0.15 between any two.
+    function buildOffsets(n) {
+      if (n === 1) return [0];
+      const RANGE_MIN = -0.45,
+        RANGE_MAX = 0.45;
+      const offsets = [];
+      for (let i = 0; i < n; i++) {
+        let best = RANGE_MIN + Math.random() * (RANGE_MAX - RANGE_MIN);
+        let bestScore = -1;
+        // Pick whichever of 20 candidates is furthest from existing offsets
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const c = RANGE_MIN + Math.random() * (RANGE_MAX - RANGE_MIN);
+          const score =
+            offsets.length === 0
+              ? Math.abs(c) // prefer near-centre first
+              : Math.min(...offsets.map((o) => Math.abs(o - c)));
+          if (score > bestScore) {
+            bestScore = score;
+            best = c;
+          }
+        }
+        offsets.push(best);
+      }
+      console.log(
+        '[RaceScreen] racer trackOffsets:',
+        offsets.map((o) => o.toFixed(3))
+      );
+      return offsets;
+    }
+
+    const racerOffsets = buildOffsets(nRacers);
+
+    // Build initial racer state — all start at t=0, stable perpendicular offset
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -94,8 +127,7 @@ export default function RaceScreen() {
         ...r,
         index: i,
         t: 0,
-        // Stable random offset assigned once — spreads racers across track width
-        trackOffset: (Math.random() - 0.5) * 0.7,
+        trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
         color: LANE_COLORS[i % LANE_COLORS.length],

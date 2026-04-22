@@ -89,7 +89,8 @@ export class SvgPathShape {
   }
 
   getTangentAngle(t) {
-    const H = 1 / CACHE_N;
+    // ±0.01 window smooths inflection-point artifacts (was ±1/CACHE_N ≈ ±0.0017)
+    const H = 0.01;
     const ta = this.isOpen ? Math.min(1, t + H) : (((t + H) % 1) + 1) % 1;
     const tb = this.isOpen ? Math.max(0, t - H) : (((t - H) % 1) + 1) % 1;
     const pa = this._sample(ta);
