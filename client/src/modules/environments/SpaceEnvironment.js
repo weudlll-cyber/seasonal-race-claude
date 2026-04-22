@@ -123,60 +123,28 @@ export class SpaceEnvironment {
   }
 
   drawTrackSurface(ctx, shape, trackWidth, frame) {
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0018);
+    const path2D = shape.getPath2D();
 
-    // Dark blue/purple energy corridor fill
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = `hsl(245,30%,${9 + pulse * 4}%)`;
-    ctx.fill();
-
-    // Tron-style grid lines along the track corridor
-    const nGridLines = 5;
-    for (let li = 0; li < nGridLines; li++) {
-      const frac = (li + 1) / (nGridLines + 1);
-      ctx.beginPath();
-      ctx.globalAlpha = 0.12 + 0.08 * Math.sin(frame * 0.003 + li * 1.2);
-      ctx.strokeStyle = '#4488ff';
-      ctx.lineWidth = 1;
-      let first = true;
-      for (let i = 0; i < outer.length; i++) {
-        const po = outer[i],
-          pi_ = inner[i];
-        const x = po.x + (pi_.x - po.x) * frac;
-        const y = po.y + (pi_.y - po.y) * frac;
-        if (first) {
-          ctx.moveTo(x, y);
-          first = false;
-        } else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // Purple neon glowing boundary lines
+    // Purple neon boundary with glow — drawn first, slightly wider
+    ctx.save();
     ctx.shadowBlur = 20 + 10 * pulse;
-    ctx.shadowColor = '#8844ff';
+    ctx.shadowColor = '#8855ff';
     ctx.strokeStyle = `rgba(140,80,255,${0.7 + 0.2 * pulse})`;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
+    ctx.lineWidth = trackWidth + 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
-    ctx.shadowBlur = 20 + 10 * pulse;
-    ctx.shadowColor = '#8844ff';
-    ctx.strokeStyle = `rgba(140,80,255,${0.7 + 0.2 * pulse})`;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    // Dark blue/purple energy corridor
+    ctx.save();
+    ctx.strokeStyle = `hsl(245,30%,${9 + pulse * 4}%)`;
+    ctx.lineWidth = trackWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
     this._drawStartLine(ctx, shape, trackWidth);
     this._drawFinishLine(ctx, shape, trackWidth);

@@ -64,106 +64,54 @@ export class RiverEnvironment {
   }
 
   drawTrackSurface(ctx, shape, trackWidth, frame) {
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
     const waterHue = 195 + 15 * Math.sin(frame * 0.0005);
+    const path2D = shape.getPath2D();
 
-    // Blue/teal water fill
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = `hsl(${waterHue},55%,22%)`;
-    ctx.fill();
+    // Cyan glowing river banks — drawn first, slightly wider
+    ctx.save();
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = '#00ffff';
+    ctx.strokeStyle = 'rgba(0,220,255,0.85)';
+    ctx.lineWidth = trackWidth + 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
-    // Animated sine-wave surface lines (water flows left→right)
-    const nLines = 6;
-    for (let li = 0; li < nLines; li++) {
-      const frac = (li + 0.5) / nLines;
-      ctx.beginPath();
-      ctx.globalAlpha = 0.18 + 0.1 * Math.sin(frame * 0.002 + li);
-      ctx.strokeStyle = `hsl(${waterHue + 10},70%,72%)`;
-      ctx.lineWidth = 1;
-      let first = true;
-      const nPts = 80;
-      for (let pi = 0; pi <= nPts; pi++) {
-        const t = pi / nPts;
-        const po = outer[Math.round(t * (outer.length - 1))];
-        const pi_ = inner[Math.round(t * (inner.length - 1))];
-        const px = po.x + (pi_.x - po.x) * frac;
-        const py = po.y + (pi_.y - po.y) * frac;
-        const waveOff = 4 * Math.sin(t * Math.PI * 8 + frame * 0.004);
-        const idx = Math.round(t * (outer.length - 1));
-        const ang = outer[idx]
-          ? Math.atan2(
-              outer[Math.min(idx + 1, outer.length - 1)].y - outer[Math.max(idx - 1, 0)].y,
-              outer[Math.min(idx + 1, outer.length - 1)].x - outer[Math.max(idx - 1, 0)].x
-            ) +
-            Math.PI / 2
-          : 0;
-        const wx = px + Math.cos(ang) * waveOff;
-        const wy = py + Math.sin(ang) * waveOff;
-        if (first) {
-          ctx.moveTo(wx, wy);
-          first = false;
-        } else ctx.lineTo(wx, wy);
-      }
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
+    // Blue/teal water surface
+    ctx.save();
+    ctx.strokeStyle = `hsl(${waterHue},55%,22%)`;
+    ctx.lineWidth = trackWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
     // Bubbles rising inside the track
     for (const b of this.bubbles) {
-      const tPos = (b.y + frame * b.speed * 0.0001) % 1;
-      const tLat = b.x;
-      const idx = Math.round(tPos * (outer.length - 1));
-      if (idx >= outer.length) continue;
-      const po = outer[idx],
-        pi_ = inner[idx];
-      const bx = po.x + (pi_.x - po.x) * tLat;
-      const by = po.y + (pi_.y - po.y) * tLat;
+      const t = (b.y + frame * b.speed * 0.0001) % 1;
+      const offset = (b.x - 0.5) * 0.9;
+      const pos = shape.getPosition(t, offset, trackWidth);
       const alpha = 0.4 + 0.3 * Math.sin(frame * 0.005 + b.phase);
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = `hsl(${waterHue + 20},80%,85%)`;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(bx, by, b.r, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, b.r, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
 
     // Light reflections
     for (const rf of this.reflections) {
-      const tPos = rf.x;
-      const tLat = rf.y;
-      const idx = Math.round(tPos * (outer.length - 1));
-      if (idx >= outer.length) continue;
-      const po = outer[idx],
-        pi_ = inner[idx];
-      const rx = po.x + (pi_.x - po.x) * tLat;
-      const ry = po.y + (pi_.y - po.y) * tLat;
+      const pos = shape.getPosition(rf.x, (rf.y - 0.5) * 0.9, trackWidth);
       ctx.globalAlpha = 0.25 + 0.25 * Math.sin(frame * 0.006 + rf.phase);
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.ellipse(rx, ry, 5, 2, rf.phase, 0, Math.PI * 2);
+      ctx.ellipse(pos.x, pos.y, 5, 2, rf.phase, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-
-    // Bright cyan glowing boundary lines (river banks)
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = '#00e8ff';
-    ctx.strokeStyle = 'rgba(0,220,255,0.85)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
 
     this._drawStartLine(ctx, shape, trackWidth);
     this._drawFinishLine(ctx, shape, trackWidth);

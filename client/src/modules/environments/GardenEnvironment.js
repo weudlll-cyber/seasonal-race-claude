@@ -101,65 +101,44 @@ export class GardenEnvironment {
   }
 
   drawTrackSurface(ctx, shape, trackWidth, frame) {
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 200);
+    const path2D = shape.getPath2D();
 
-    // Brown dirt fill
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
-    ctx.fillStyle = '#6b4c2a';
-    ctx.fill();
+    // Green grass boundary with glow — drawn first, slightly wider
+    ctx.save();
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#44ff44';
+    ctx.strokeStyle = 'rgba(60,180,70,0.85)';
+    ctx.lineWidth = trackWidth + 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
-    // Dirt texture speckles
-    ctx.globalAlpha = 0.15;
-    for (let i = 0; i < outer.length; i += 5) {
-      const po = outer[i],
-        pi_ = inner[i];
-      for (let f = 0.1; f < 1; f += 0.2) {
-        const sx = po.x + (pi_.x - po.x) * f;
-        const sy = po.y + (pi_.y - po.y) * f;
-        ctx.fillStyle = i % 2 === 0 ? '#8b6340' : '#543d20';
-        ctx.beginPath();
-        ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
+    // Brown dirt track surface
+    ctx.save();
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = trackWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke(path2D);
+    ctx.restore();
 
     // Flower dots along both edges
     for (const fl of FLOWERS) {
-      const idx = Math.round(fl.t * (outer.length - 1));
-      if (idx >= outer.length) continue;
-      const edgePt = fl.side === 0 ? outer[idx] : inner[idx];
+      const edgeOffset = fl.side === 0 ? 1.0 : -1.0;
+      const pos = shape.getPosition(fl.t, edgeOffset, trackWidth);
       const bloom = 0.7 + 0.3 * Math.sin(frame * 0.004 + fl.t * Math.PI * 4);
       ctx.globalAlpha = 0.8 * bloom;
       ctx.fillStyle = `hsl(${fl.hue},80%,65%)`;
       ctx.beginPath();
-      ctx.arc(edgePt.x, edgePt.y, fl.size * bloom, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, fl.size * bloom, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.beginPath();
-      ctx.arc(edgePt.x, edgePt.y, fl.size * 0.3, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, fl.size * 0.3, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-
-    // Bright green grass edge boundary lines
-    ctx.strokeStyle = 'rgba(60,180,70,0.85)';
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = 'rgba(40,200,60,0.6)';
-    ctx.beginPath();
-    ctx.moveTo(outer[0].x, outer[0].y);
-    for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(inner[0].x, inner[0].y);
-    for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
 
     this._drawStartLine(ctx, shape, trackWidth);
     this._drawFinishLine(ctx, shape, trackWidth);
