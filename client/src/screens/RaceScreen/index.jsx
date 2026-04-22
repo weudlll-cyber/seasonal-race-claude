@@ -117,6 +117,17 @@ export default function RaceScreen() {
     }
     setMaxLapsState(maxLaps);
 
+    // Camera bounds for open tracks — clamp so track is never off-screen
+    let camXMin = 0;
+    let camXMax = VIRTUAL_W - CW;
+    if (isOpenTrack) {
+      const startX = shapeRef.current.getPosition(0, 0, trackWidth).x;
+      const endX = shapeRef.current.getPosition(1, 0, trackWidth).x;
+      const pad = CW * 0.08; // 8% of viewport as margin
+      camXMin = Math.max(0, startX - pad);
+      camXMax = Math.min(VIRTUAL_W - CW, Math.max(camXMin + 1, endX - CW + pad));
+    }
+
     // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
     function buildOffsets(n) {
       if (n === 1) return [0];
@@ -155,7 +166,9 @@ export default function RaceScreen() {
       burstParticles: [],
       trackWidth,
       maxLaps,
-      camX: 0, // scrolling camera x-offset for open tracks
+      camX: camXMin, // start at track start, not virtual canvas edge
+      camXMin,
+      camXMax,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => ({
         ...r,
@@ -165,6 +178,8 @@ export default function RaceScreen() {
         trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
         baseSpeed: 0.00085 + Math.random() * 0.00035,
+        jitterFreq: 0.0006 + Math.random() * 0.0014, // independent sine period per racer
+        jitterPhase: Math.random() * Math.PI * 2,
         color: LANE_COLORS[i % LANE_COLORS.length],
         finished: false,
         finishRank: null,
@@ -421,7 +436,12 @@ export default function RaceScreen() {
         }
       } else if (st.phase === PHASE.RACING) {
         for (const r of st.racers) {
-          if (!r.finished) r.t += (r.baseSpeed + (Math.random() - 0.5) * 0.00035) * (dt / 16);
+          if (!r.finished) {
+            // Per-racer sine jitter — each racer has its own frequency and phase,
+            // so speeds fluctuate independently instead of all spiking together.
+            const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
+            r.t += (r.baseSpeed + jitter) * (dt / 16);
+          }
         }
         computePositions();
         applyCollisionAvoidance();
@@ -518,8 +538,11 @@ export default function RaceScreen() {
         const sorted = [...st.racers].sort((a, b) => b.t - a.t);
         const top3 = sorted.slice(0, Math.min(3, sorted.length));
         const avgX = top3.reduce((s, r) => s + r.x, 0) / top3.length;
-        const targetCamX = Math.max(0, Math.min(VIRTUAL_W - CW, avgX - CW / 2));
-        st.camX = isFinite(st.camX) ? st.camX + (targetCamX - st.camX) * 0.05 : 0;
+        const targetCamX = Math.max(
+          st.camXMin ?? 0,
+          Math.min(st.camXMax ?? VIRTUAL_W - CW, avgX - CW / 2)
+        );
+        st.camX = isFinite(st.camX) ? st.camX + (targetCamX - st.camX) * 0.05 : targetCamX;
       } else {
         cam =
           st.phase === PHASE.RACING

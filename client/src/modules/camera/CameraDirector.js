@@ -36,6 +36,14 @@ export class CameraDirector {
     if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
       this._transition(racers, ts);
     }
+    // Debug: log current state every 5 s so camera activity is visible in console
+    if (!this._logTs || ts - this._logTs >= 5000) {
+      this._logTs = ts;
+      console.log(
+        `[CameraDirector] state=${this.state} zoom=${this.zoom.toFixed(2)}` +
+          ` offsetX=${this.offsetX.toFixed(0)} offsetY=${this.offsetY.toFixed(0)}`
+      );
+    }
     this._setTargets(racers, canvasW, canvasH);
     this.zoom += (this.targetZoom - this.zoom) * LERP;
     this.offsetX += (this.targetOffsetX - this.offsetX) * LERP;
@@ -45,13 +53,19 @@ export class CameraDirector {
 
   _transition(racers, ts) {
     const ordered = [...racers].sort((a, b) => b.t - a.t);
-    const hasBattle = ordered.length >= 2 && Math.abs(ordered[0].t - ordered[1].t) < 0.05;
-    const hasComeback = ordered.length >= 2 && ordered[0].t - ordered[ordered.length - 1].t > 0.2;
+    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
+    const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
+
+    const hasBattle = gap01 < 0.05; // top-2 within 5% of track
+    const hasLeaderGap = gap01 >= 0.15; // leader ≥ 15% ahead of 2nd (was 20%)
+    const hasComeback = gapLeadLast > 0.15; // last > 15% behind leader (was 20%)
 
     const roll = Math.random();
-    if (hasBattle && roll < 0.5) {
+    if (hasBattle && roll < 0.7) {
       this.state = CAM_STATE.BATTLE_ZOOM;
-    } else if (hasComeback && roll < 0.3) {
+    } else if (hasLeaderGap && roll < 0.7) {
+      this.state = CAM_STATE.LEADER_ZOOM;
+    } else if (hasComeback && roll < 0.5) {
       this.state = CAM_STATE.COMEBACK_ZOOM;
     } else if (roll < 0.6) {
       this.state = CAM_STATE.LEADER_ZOOM;
