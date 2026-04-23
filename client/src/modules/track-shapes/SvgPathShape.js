@@ -28,6 +28,7 @@ export class SvgPathShape {
    * @param {number}   opts.cw          canvas width  (default 1280)
    * @param {number}   opts.ch          canvas height (default 720)
    * @param {{x,y}}   opts.centerFrac  optional fixed centre as canvas fractions
+   * @param {number}   opts.trackWidth  track band width in canvas pixels (default 140)
    */
   constructor(pathStr, opts = {}) {
     // Support both isOpen and closed flags
@@ -40,6 +41,7 @@ export class SvgPathShape {
     }
     this.cw = opts.cw ?? 1280;
     this.ch = opts.ch ?? 720;
+    this.trackWidth = opts.trackWidth ?? 140;
     // Scale grid into the inset area [MARGIN, cw-MARGIN] × [MARGIN, ch-MARGIN]
     this._sx = (this.cw - 2 * MARGIN) / GRID_W;
     this._sy = (this.ch - 2 * MARGIN) / GRID_H;
@@ -104,14 +106,13 @@ export class SvgPathShape {
    * @param {number} trackOffset Perpendicular offset as fraction of half-width (-1 to +1).
    *                             Use racer.trackOffset (range -0.35..0.35) for racers,
    *                             ±1.0 for track edge positions.
-   * @param {number} trackWidth  Total track width in canvas pixels
    */
-  getPosition(t, trackOffset, trackWidth) {
+  getPosition(t, trackOffset) {
     const c = this._sample(t);
     const angle = this.getTangentAngle(t);
     const perpX = -Math.sin(angle);
     const perpY = Math.cos(angle);
-    const halfWidth = trackWidth / 2;
+    const halfWidth = this.trackWidth / 2;
     return {
       x: c.x + perpX * trackOffset * halfWidth,
       y: c.y + perpY * trackOffset * halfWidth,
@@ -132,11 +133,10 @@ export class SvgPathShape {
 
   /**
    * Samples outer and inner edge points around the center path.
-   * @param {number} trackWidth  Total band width in canvas pixels
    * @param {number} nSamples    Number of segments (returns nSamples+1 points)
    */
-  getEdgePoints(trackWidth, nSamples = 300) {
-    const hw = trackWidth / 2;
+  getEdgePoints(nSamples = 300) {
+    const hw = this.trackWidth / 2;
     const outer = [];
     const inner = [];
     let prevPerpX = null;

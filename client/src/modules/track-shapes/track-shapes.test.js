@@ -38,16 +38,16 @@ describe('getTrackWidth', () => {
 // ── SvgPathShape unit tests ───────────────────────────────────────────────────
 
 describe('SvgPathShape', () => {
-  const openShape = new SCurveShape(CW, CH);
-  const closedShape = new OvalShape(CW, CH);
+  const openShape = new SCurveShape(CW, CH, DEFAULT_WIDTH);
+  const closedShape = new OvalShape(CW, CH, DEFAULT_WIDTH);
 
   it('getTotalLength returns a positive finite number', () => {
     expect(openShape.getTotalLength()).toBeGreaterThan(100);
     expect(isFinite(openShape.getTotalLength())).toBe(true);
   });
 
-  it('open: getPosition(0, 0, width) is near path start', () => {
-    const pos = openShape.getPosition(0, 0, DEFAULT_WIDTH);
+  it('open: getPosition(0, 0) is near path start', () => {
+    const pos = openShape.getPosition(0, 0);
     // s-curve start: grid (40, 480) → canvas lower-left
     expect(pos.x).toBeGreaterThan(0);
     expect(pos.x).toBeLessThan(CW * 0.2);
@@ -55,23 +55,23 @@ describe('SvgPathShape', () => {
     expect(pos.y).toBeLessThan(CH);
   });
 
-  it('open: getPosition(1, 0, width) is near path end', () => {
-    const pos = openShape.getPosition(1, 0, DEFAULT_WIDTH);
+  it('open: getPosition(1, 0) is near path end', () => {
+    const pos = openShape.getPosition(1, 0);
     // s-curve end: grid (970, 300) → canvas near right side
     expect(pos.x).toBeGreaterThan(CW * 0.8);
   });
 
   it('closed: getPosition(0) ≈ getPosition(1)', () => {
-    const p0 = closedShape.getPosition(0, 0, DEFAULT_WIDTH);
-    const p1 = closedShape.getPosition(1, 0, DEFAULT_WIDTH);
+    const p0 = closedShape.getPosition(0, 0);
+    const p1 = closedShape.getPosition(1, 0);
     const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
     expect(dist).toBeLessThan(1);
   });
 
   it('positive and negative trackOffset produce symmetric positions', () => {
-    const pos = openShape.getPosition(0.4, 0, DEFAULT_WIDTH);
-    const posPlus = openShape.getPosition(0.4, 0.35, DEFAULT_WIDTH);
-    const posMinus = openShape.getPosition(0.4, -0.35, DEFAULT_WIDTH);
+    const pos = openShape.getPosition(0.4, 0);
+    const posPlus = openShape.getPosition(0.4, 0.35);
+    const posMinus = openShape.getPosition(0.4, -0.35);
     // The center (offset=0) should be midway between ±0.35
     const midX = (posPlus.x + posMinus.x) / 2;
     const midY = (posPlus.y + posMinus.y) / 2;
@@ -80,8 +80,8 @@ describe('SvgPathShape', () => {
   });
 
   it('±1.0 offsets span the full track width', () => {
-    const p1 = openShape.getPosition(0.3, 1.0, DEFAULT_WIDTH);
-    const p2 = openShape.getPosition(0.3, -1.0, DEFAULT_WIDTH);
+    const p1 = openShape.getPosition(0.3, 1.0);
+    const p2 = openShape.getPosition(0.3, -1.0);
     const dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
     expect(dist).toBeGreaterThan(DEFAULT_WIDTH * 0.9);
     expect(dist).toBeLessThan(DEFAULT_WIDTH * 1.1);
@@ -89,8 +89,8 @@ describe('SvgPathShape', () => {
 
   it('trackOffset of 0.35 stays within track width', () => {
     for (let i = 0; i <= 10; i++) {
-      const pos = openShape.getPosition(i / 10, 0.35, DEFAULT_WIDTH);
-      const center = openShape.getPosition(i / 10, 0, DEFAULT_WIDTH);
+      const pos = openShape.getPosition(i / 10, 0.35);
+      const center = openShape.getPosition(i / 10, 0);
       const dx = pos.x - center.x,
         dy = pos.y - center.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -157,14 +157,14 @@ describe('collision avoidance', () => {
 describe('getShape factory', () => {
   it('returns an instance for every registered shapeId', () => {
     for (const id of SHAPE_IDS) {
-      const s = getShape(id, CW, CH);
+      const s = getShape(id, CW, CH, DEFAULT_WIDTH);
       expect(s).toBeTruthy();
       expect(typeof s.getPosition).toBe('function');
     }
   });
 
   it('falls back to OvalShape for unknown id', () => {
-    const s = getShape('totally-unknown', CW, CH);
+    const s = getShape('totally-unknown', CW, CH, DEFAULT_WIDTH);
     expect(s).toBeInstanceOf(OvalShape);
   });
 
@@ -174,7 +174,7 @@ describe('getShape factory', () => {
 
   it('all named shape classes extend SvgPathShape', () => {
     for (const [, Cls] of ALL_SHAPES) {
-      expect(new Cls(CW, CH)).toBeInstanceOf(SvgPathShape);
+      expect(new Cls(CW, CH, DEFAULT_WIDTH)).toBeInstanceOf(SvgPathShape);
     }
   });
 });
@@ -182,12 +182,11 @@ describe('getShape factory', () => {
 // ── Per-shape tests ────────────────────────────────────────────────────────────
 
 describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
-  const shape = new Cls(CW, CH);
-  const TW = DEFAULT_WIDTH;
+  const shape = new Cls(CW, CH, DEFAULT_WIDTH);
 
   describe('getPosition', () => {
     it('returns {x, y, angle} with finite numbers', () => {
-      const pos = shape.getPosition(0, 0, TW);
+      const pos = shape.getPosition(0, 0);
       expect(typeof pos.x).toBe('number');
       expect(typeof pos.y).toBe('number');
       expect(typeof pos.angle).toBe('number');
@@ -197,8 +196,8 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
 
     it('getPosition(0) and getPosition(1) return valid coordinates', () => {
-      const p0 = shape.getPosition(0, 0, TW);
-      const p1 = shape.getPosition(1, 0, TW);
+      const p0 = shape.getPosition(0, 0);
+      const p1 = shape.getPosition(1, 0);
       expect(isFinite(p0.x)).toBe(true);
       expect(isFinite(p0.y)).toBe(true);
       expect(isFinite(p1.x)).toBe(true);
@@ -208,15 +207,15 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
 
     it('different offsets produce different x/y', () => {
-      const p0 = shape.getPosition(0.25, -0.35, TW);
-      const p1 = shape.getPosition(0.25, 0.35, TW);
+      const p0 = shape.getPosition(0.25, -0.35);
+      const p1 = shape.getPosition(0.25, 0.35);
       const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
       expect(dist).toBeGreaterThan(5);
     });
 
     it('closed loops: t=0 ≈ t=1; open courses: t=0 and t=1 are far apart', () => {
-      const p0 = shape.getPosition(0, 0, TW);
-      const p1 = shape.getPosition(1, 0, TW);
+      const p0 = shape.getPosition(0, 0);
+      const p1 = shape.getPosition(1, 0);
       const dist = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
       if (shape.isOpen) {
         expect(dist).toBeGreaterThan(50);
@@ -229,7 +228,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
       const MARGIN = 80;
       for (let i = 0; i < 20; i++) {
         const t = i / 20;
-        const pos = shape.getPosition(t, 0, TW);
+        const pos = shape.getPosition(t, 0);
         expect(pos.x).toBeGreaterThan(-MARGIN);
         expect(pos.x).toBeLessThan(CW + MARGIN);
         expect(pos.y).toBeGreaterThan(-MARGIN);
@@ -239,7 +238,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
 
     it('angle is between -PI and PI', () => {
       for (let i = 0; i < 10; i++) {
-        const { angle } = shape.getPosition(i / 10, 0, TW);
+        const { angle } = shape.getPosition(i / 10, 0);
         expect(angle).toBeGreaterThanOrEqual(-Math.PI);
         expect(angle).toBeLessThanOrEqual(Math.PI);
       }
@@ -256,14 +255,14 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
 
   describe('getEdgePoints', () => {
     it('returns outer and inner arrays of nSamples+1 points', () => {
-      const { outer, inner } = shape.getEdgePoints(TW, 60);
+      const { outer, inner } = shape.getEdgePoints(60);
       expect(Array.isArray(outer)).toBe(true);
       expect(Array.isArray(inner)).toBe(true);
       expect(outer.length).toBe(61);
     });
 
     it('each edge point has finite x and y', () => {
-      const { outer, inner } = shape.getEdgePoints(TW, 20);
+      const { outer, inner } = shape.getEdgePoints(20);
       for (const p of [...outer, ...inner]) {
         expect(isFinite(p.x)).toBe(true);
         expect(isFinite(p.y)).toBe(true);
@@ -271,7 +270,7 @@ describe.each(ALL_SHAPES)('%s shape', (id, Cls) => {
     });
 
     it('outer and inner edges are meaningfully separated', () => {
-      const { outer, inner } = shape.getEdgePoints(TW, 40);
+      const { outer, inner } = shape.getEdgePoints(40);
       let totalSep = 0;
       for (let i = 0; i < outer.length; i++) {
         const dx = outer[i].x - inner[i].x;

@@ -95,19 +95,20 @@ export default function RaceScreen() {
 
     console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId, '| typeId:', typeId);
 
+    const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
+
     // Open tracks (s-curve, spiral) get a 2.5× virtual canvas for scrolling camera.
     // Build shape first with default CW to check isOpen, then rebuild with virtual width.
-    const probeShape = getShape(shapeId, CW, CH);
+    const probeShape = getShape(shapeId, CW, CH, trackWidth);
     const isOpenTrack = probeShape.isOpen === true;
     const virtualW = isOpenTrack ? VIRTUAL_W : CW;
 
-    shapeRef.current = getShape(shapeId, virtualW, CH);
+    shapeRef.current = getShape(shapeId, virtualW, CH, trackWidth);
     const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
     envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
-    const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
 
     // Duration-based lap count (closed tracks only)
     const duration = raceData.duration ?? 60;
@@ -120,8 +121,8 @@ export default function RaceScreen() {
     let camXMin = 0;
     let camXMax = VIRTUAL_W - CW;
     if (isOpenTrack) {
-      const startX = shapeRef.current.getPosition(0, 0, trackWidth).x;
-      const endX = shapeRef.current.getPosition(1, 0, trackWidth).x;
+      const startX = shapeRef.current.getPosition(0, 0).x;
+      const endX = shapeRef.current.getPosition(1, 0).x;
       const pad = CW * 0.08; // 8% of viewport as margin
       camXMin = Math.max(0, startX - pad);
       camXMax = Math.min(VIRTUAL_W - CW, Math.max(camXMin + 1, endX - CW + pad));
@@ -195,10 +196,9 @@ export default function RaceScreen() {
     function computePositions() {
       const st = g.current;
       const shape = shapeRef.current;
-      const tw = st.trackWidth;
       for (const r of st.racers) {
         const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        const pos = shape.getPosition(t, r.trackOffset, tw);
+        const pos = shape.getPosition(t, r.trackOffset);
         r.x = pos.x;
         r.y = pos.y;
         r.angle = pos.angle;
@@ -308,8 +308,7 @@ export default function RaceScreen() {
 
     // Title for closed tracks — positioned above the track using getEdgePoints
     function drawTitle() {
-      const tw = g.current.trackWidth;
-      const topY = Math.min(...shapeRef.current.getEdgePoints(tw, 30).outer.map((p) => p.y));
+      const topY = Math.min(...shapeRef.current.getEdgePoints(30).outer.map((p) => p.y));
       const titleY = 58 + (topY - 58) / 2;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

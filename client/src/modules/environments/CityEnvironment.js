@@ -112,8 +112,8 @@ export class CityEnvironment {
     ctx.stroke();
   }
 
-  drawTrackSurface(ctx, shape, trackWidth, frame) {
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 150);
+  drawTrackSurface(ctx, shape, _trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(150);
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.002);
 
     // Dark asphalt fill
@@ -178,12 +178,12 @@ export class CityEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawFinishLine(ctx, shape, trackWidth);
+    this._drawFinishLine(ctx, shape);
   }
 
-  _drawFinishLine(ctx, shape, trackWidth) {
-    const pO = shape.getPosition(0, 1.0, trackWidth);
-    const pI = shape.getPosition(0, -1.0, trackWidth);
+  _drawFinishLine(ctx, shape) {
+    const pO = shape.getPosition(0, 1.0);
+    const pI = shape.getPosition(0, -1.0);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 10;

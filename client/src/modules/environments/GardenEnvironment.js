@@ -110,8 +110,8 @@ export class GardenEnvironment {
     ctx.stroke();
   }
 
-  drawTrackSurface(ctx, shape, trackWidth, frame) {
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 200);
+  drawTrackSurface(ctx, shape, _trackWidth, frame) {
+    const { outer, inner } = shape.getEdgePoints(200);
 
     // Brown dirt fill
     ctx.beginPath();
@@ -171,13 +171,13 @@ export class GardenEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawStartLine(ctx, shape, trackWidth);
-    this._drawFinishLine(ctx, shape, trackWidth);
+    this._drawStartLine(ctx, shape);
+    this._drawFinishLine(ctx, shape);
   }
 
-  _drawStartLine(ctx, shape, trackWidth) {
-    const pO = shape.getPosition(0, 1.0, trackWidth);
-    const pI = shape.getPosition(0, -1.0, trackWidth);
+  _drawStartLine(ctx, shape) {
+    const pO = shape.getPosition(0, 1.0);
+    const pI = shape.getPosition(0, -1.0);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 8;
@@ -199,9 +199,9 @@ export class GardenEnvironment {
     ctx.shadowBlur = 0;
   }
 
-  _drawFinishLine(ctx, shape, trackWidth) {
-    const pO = shape.getPosition(1, 1.0, trackWidth);
-    const pI = shape.getPosition(1, -1.0, trackWidth);
+  _drawFinishLine(ctx, shape) {
+    const pO = shape.getPosition(1, 1.0);
+    const pI = shape.getPosition(1, -1.0);
     const dx = pO.x - pI.x,
       dy = pO.y - pI.y;
     ctx.shadowBlur = 8;

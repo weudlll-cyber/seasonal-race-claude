@@ -98,9 +98,9 @@ export class DirtOvalEnvironment {
     ctx.fill();
   }
 
-  drawTrackSurface(ctx, shape, trackWidth, frame) {
+  drawTrackSurface(ctx, shape, _trackWidth, frame) {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
-    const { outer, inner } = shape.getEdgePoints(trackWidth, 120);
+    const { outer, inner } = shape.getEdgePoints(120);
 
     // Sandy brown fill
     ctx.beginPath();
@@ -143,12 +143,12 @@ export class DirtOvalEnvironment {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    this._drawFinishLine(ctx, shape, trackWidth);
+    this._drawFinishLine(ctx, shape);
   }
 
-  _drawFinishLine(ctx, shape, trackWidth) {
-    const pOuter = shape.getPosition(0, 1.0, trackWidth);
-    const pInner = shape.getPosition(0, -1.0, trackWidth);
+  _drawFinishLine(ctx, shape) {
+    const pOuter = shape.getPosition(0, 1.0);
+    const pInner = shape.getPosition(0, -1.0);
     const dx = pOuter.x - pInner.x,
       dy = pOuter.y - pInner.y;
     const segments = 8;
