@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { catmullRomSpline } from '../../modules/track-editor/catmullRom.js';
-import { findPointAtPosition } from './trackEditorHelpers.js';
+import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
+import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
 const CH = 720;
 const BG_SRC = '/assets/tracks/backgrounds/dirt-oval.jpg';
 const HIT_RADIUS = 10;
+const INSERT_TOLERANCE = 8;
 const CURVE_SAMPLES = 200;
 
 export default function TrackEditor() {
@@ -20,10 +21,12 @@ export default function TrackEditor() {
   const [innerPoints, setInnerPoints] = useState([]);
   const [outerPoints, setOuterPoints] = useState([]);
   const [bgReady, setBgReady] = useState(false);
-  const [mode, setMode] = useState('center'); // 'center' | 'boundary'
-  const [activeBoundary, setActiveBoundary] = useState('inner'); // 'inner' | 'outer'
+  const [mode, setMode] = useState('center');
+  const [activeBoundary, setActiveBoundary] = useState('inner');
   const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
+  const [centerWidth, setCenterWidth] = useState(120);
+  const [closed, setClosed] = useState(false);
 
   const dragIndexRef = useRef(-1);
 
@@ -50,6 +53,8 @@ export default function TrackEditor() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, CW, CH);
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
 
     if (bgRef.current) {
       ctx.drawImage(bgRef.current, 0, 0, CW, CH);
@@ -61,10 +66,30 @@ export default function TrackEditor() {
     const activeList =
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
     const inactiveLists = [centerPoints, innerPoints, outerPoints].filter((l) => l !== activeList);
+    const minPts = closed ? 3 : 2;
 
-    // Draw inactive points (dim)
+    const tryDrawCurve = (pts, strokeStyle, lineWidth, dashed) => {
+      if (pts.length < minPts) return;
+      try {
+        const curve = catmullRomSpline(pts, { closed, tension: 0.5, samples: CURVE_SAMPLES });
+        ctx.beginPath();
+        if (dashed) ctx.setLineDash([6, 4]);
+        ctx.moveTo(curve[0].x, curve[0].y);
+        for (let i = 1; i < curve.length; i++) ctx.lineTo(curve[i].x, curve[i].y);
+        if (closed) ctx.closePath();
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+        if (dashed) ctx.setLineDash([]);
+      } catch {
+        // not enough points — skip
+      }
+    };
+
+    // Inactive curves and points at 30% opacity
     ctx.globalAlpha = 0.3;
     for (const list of inactiveLists) {
+      tryDrawCurve(list, '#4fc3f7', 1.5, false);
       for (const pt of list) {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
@@ -74,26 +99,36 @@ export default function TrackEditor() {
     }
     ctx.globalAlpha = 1;
 
-    // Draw active curve
-    if (activeList.length >= 2) {
+    // Center Mode: derived inner/outer boundary preview (dashed, 40% opacity)
+    if (mode === 'center' && centerPoints.length >= minPts) {
       try {
-        const curve = catmullRomSpline(activeList, {
-          closed: false,
+        const centerCurve = catmullRomSpline(centerPoints, {
+          closed,
           tension: 0.5,
           samples: CURVE_SAMPLES,
         });
-        ctx.beginPath();
-        ctx.moveTo(curve[0].x, curve[0].y);
-        for (let i = 1; i < curve.length; i++) ctx.lineTo(curve[i].x, curve[i].y);
+        ctx.globalAlpha = 0.4;
+        ctx.setLineDash([6, 4]);
         ctx.strokeStyle = '#4fc3f7';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.lineWidth = 1;
+        for (const amount of [centerWidth / 2, -(centerWidth / 2)]) {
+          const bc = offsetCurve(centerCurve, amount);
+          ctx.beginPath();
+          ctx.moveTo(bc[0].x, bc[0].y);
+          for (let i = 1; i < bc.length; i++) ctx.lineTo(bc[i].x, bc[i].y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
       } catch {
-        // not enough points for closed curve — skip
+        // skip
       }
     }
 
-    // Draw active points
+    // Active curve (full opacity, solid)
+    tryDrawCurve(activeList, '#4fc3f7', 2, false);
+
+    // Active points
     for (let i = 0; i < activeList.length; i++) {
       const pt = activeList[i];
       ctx.beginPath();
@@ -105,7 +140,7 @@ export default function TrackEditor() {
       ctx.stroke();
     }
 
-    // Draw selected ring
+    // Selected ring
     if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
       const pt = activeList[selectedPointIndex];
       ctx.beginPath();
@@ -114,7 +149,17 @@ export default function TrackEditor() {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [centerPoints, innerPoints, outerPoints, mode, activeBoundary, selectedPointIndex, bgReady]);
+  }, [
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    mode,
+    activeBoundary,
+    selectedPointIndex,
+    bgReady,
+    centerWidth,
+    closed,
+  ]);
 
   function getCanvasCoords(e) {
     const canvas = canvasRef.current;
@@ -156,7 +201,6 @@ export default function TrackEditor() {
       return;
     }
 
-    // Hover cursor feedback
     const activeList =
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
     const hit = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
@@ -175,33 +219,47 @@ export default function TrackEditor() {
   }
 
   function handleCanvasClick(e) {
-    // Ignore if we just finished dragging
     if (dragIndexRef.current !== -1) return;
     const coords = getCanvasCoords(e);
     if (!coords) return;
     const activeList =
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
+
     const hit = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
     if (hit !== -1) {
       setSelectedPointIndex(hit);
       return;
     }
+
+    const segment = findSegmentNearPoint(activeList, coords.x, coords.y, INSERT_TOLERANCE, closed);
+    if (segment !== null) {
+      const { insertAtIndex } = segment;
+      setActiveList((prev) => {
+        const next = [...prev];
+        next.splice(insertAtIndex, 0, { x: coords.x, y: coords.y });
+        return next;
+      });
+      setSelectedPointIndex(insertAtIndex);
+      return;
+    }
+
     setActiveList((prev) => [...prev, { x: coords.x, y: coords.y }]);
-    setSelectedPointIndex(
-      (mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints)
-        .length
-    );
+    setSelectedPointIndex(activeList.length);
   }
 
   function handleKeyDown(e) {
     if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPointIndex !== -1) {
       e.preventDefault();
-      setActiveList((prev) => {
-        const next = prev.filter((_, i) => i !== selectedPointIndex);
-        return next;
-      });
+      setActiveList((prev) => prev.filter((_, i) => i !== selectedPointIndex));
       setSelectedPointIndex(-1);
     }
+  }
+
+  function handleReverse() {
+    const activeList =
+      mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
+    setActiveList([...activeList].reverse());
+    setSelectedPointIndex(-1);
   }
 
   const counterLabel =
@@ -222,47 +280,85 @@ export default function TrackEditor() {
       </div>
 
       <div className={s.toolbar}>
-        <div className={s.modeGroup}>
-          <button
-            className={`${s.modeBtn} ${mode === 'center' ? s.modeBtnActive : ''}`}
-            onClick={() => {
-              setMode('center');
-              setSelectedPointIndex(-1);
-            }}
-          >
-            Center
-          </button>
-          <button
-            className={`${s.modeBtn} ${mode === 'boundary' ? s.modeBtnActive : ''}`}
-            onClick={() => {
-              setMode('boundary');
-              setSelectedPointIndex(-1);
-            }}
-          >
-            Boundary
+        <div className={s.toolbarRow}>
+          <div className={s.modeGroup}>
+            <button
+              className={`${s.modeBtn} ${mode === 'center' ? s.modeBtnActive : ''}`}
+              onClick={() => {
+                setMode('center');
+                setSelectedPointIndex(-1);
+              }}
+            >
+              Center
+            </button>
+            <button
+              className={`${s.modeBtn} ${mode === 'boundary' ? s.modeBtnActive : ''}`}
+              onClick={() => {
+                setMode('boundary');
+                setSelectedPointIndex(-1);
+              }}
+            >
+              Boundary
+            </button>
+          </div>
+
+          {mode === 'boundary' && (
+            <div className={s.modeGroup}>
+              <button
+                className={`${s.modeBtn} ${activeBoundary === 'inner' ? s.modeBtnActive : ''}`}
+                onClick={() => {
+                  setActiveBoundary('inner');
+                  setSelectedPointIndex(-1);
+                }}
+              >
+                Inner
+              </button>
+              <button
+                className={`${s.modeBtn} ${activeBoundary === 'outer' ? s.modeBtnActive : ''}`}
+                onClick={() => {
+                  setActiveBoundary('outer');
+                  setSelectedPointIndex(-1);
+                }}
+              >
+                Outer
+              </button>
+            </div>
+          )}
+
+          <div className={s.modeGroup}>
+            <button
+              className={`${s.modeBtn} ${closed ? s.modeBtnActive : ''}`}
+              onClick={() => setClosed(true)}
+            >
+              Closed Loop
+            </button>
+            <button
+              className={`${s.modeBtn} ${!closed ? s.modeBtnActive : ''}`}
+              onClick={() => setClosed(false)}
+            >
+              Open Course
+            </button>
+          </div>
+
+          <button className={s.reverseBtn} disabled={closed} onClick={handleReverse}>
+            Reverse Direction
           </button>
         </div>
 
-        {mode === 'boundary' && (
-          <div className={s.modeGroup}>
-            <button
-              className={`${s.modeBtn} ${activeBoundary === 'inner' ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                setActiveBoundary('inner');
-                setSelectedPointIndex(-1);
-              }}
-            >
-              Inner
-            </button>
-            <button
-              className={`${s.modeBtn} ${activeBoundary === 'outer' ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                setActiveBoundary('outer');
-                setSelectedPointIndex(-1);
-              }}
-            >
-              Outer
-            </button>
+        {mode === 'center' && (
+          <div className={s.toolbarRow}>
+            <label className={s.sliderLabel}>
+              Lane Width: {centerWidth} px
+              <input
+                type="range"
+                min={20}
+                max={300}
+                step={1}
+                value={centerWidth}
+                onChange={(e) => setCenterWidth(Number(e.target.value))}
+                className={s.slider}
+              />
+            </label>
           </div>
         )}
       </div>
