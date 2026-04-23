@@ -63,9 +63,6 @@ export default function TrackEditor() {
       ctx.fillRect(0, 0, CW, CH);
     }
 
-    const activeList =
-      mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
-    const inactiveLists = [centerPoints, innerPoints, outerPoints].filter((l) => l !== activeList);
     const minPts = closed ? 3 : 2;
 
     const tryDrawCurve = (pts, strokeStyle, lineWidth, dashed) => {
@@ -86,68 +83,90 @@ export default function TrackEditor() {
       }
     };
 
-    // Inactive curves and points at 30% opacity
-    ctx.globalAlpha = 0.3;
-    for (const list of inactiveLists) {
-      tryDrawCurve(list, '#4fc3f7', 1.5, false);
-      for (const pt of list) {
+    if (mode === 'center') {
+      // Derived inner/outer boundary preview — drawn under center line (dashed, 70% opacity)
+      if (centerPoints.length >= minPts) {
+        try {
+          const centerCurve = catmullRomSpline(centerPoints, {
+            closed,
+            tension: 0.5,
+            samples: CURVE_SAMPLES,
+          });
+          ctx.globalAlpha = 0.7;
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = '#4fc3f7';
+          ctx.lineWidth = 1;
+          for (const amount of [centerWidth / 2, -(centerWidth / 2)]) {
+            const bc = offsetCurve(centerCurve, amount);
+            ctx.beginPath();
+            ctx.moveTo(bc[0].x, bc[0].y);
+            for (let i = 1; i < bc.length; i++) ctx.lineTo(bc[i].x, bc[i].y);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1;
+        } catch {
+          // skip
+        }
+      }
+      // Center curve (solid, full opacity)
+      tryDrawCurve(centerPoints, '#4fc3f7', 2, false);
+      // Center points
+      for (let i = 0; i < centerPoints.length; i++) {
+        const pt = centerPoints[i];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      // Selected ring
+      if (selectedPointIndex >= 0 && selectedPointIndex < centerPoints.length) {
+        const pt = centerPoints[selectedPointIndex];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    } else {
+      // Boundary Mode: only inner and outer — Center list hidden entirely
+      const activeList = activeBoundary === 'inner' ? innerPoints : outerPoints;
+      const inactiveList = activeBoundary === 'inner' ? outerPoints : innerPoints;
+      // Inactive boundary at 30% opacity, 2px stroke
+      ctx.globalAlpha = 0.3;
+      tryDrawCurve(inactiveList, '#4fc3f7', 2, false);
+      for (const pt of inactiveList) {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
         ctx.fillStyle = '#4fc3f7';
         ctx.fill();
       }
-    }
-    ctx.globalAlpha = 1;
-
-    // Center Mode: derived inner/outer boundary preview (dashed, 40% opacity)
-    if (mode === 'center' && centerPoints.length >= minPts) {
-      try {
-        const centerCurve = catmullRomSpline(centerPoints, {
-          closed,
-          tension: 0.5,
-          samples: CURVE_SAMPLES,
-        });
-        ctx.globalAlpha = 0.4;
-        ctx.setLineDash([6, 4]);
-        ctx.strokeStyle = '#4fc3f7';
-        ctx.lineWidth = 1;
-        for (const amount of [centerWidth / 2, -(centerWidth / 2)]) {
-          const bc = offsetCurve(centerCurve, amount);
-          ctx.beginPath();
-          ctx.moveTo(bc[0].x, bc[0].y);
-          for (let i = 1; i < bc.length; i++) ctx.lineTo(bc[i].x, bc[i].y);
-          ctx.stroke();
-        }
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
-      } catch {
-        // skip
+      ctx.globalAlpha = 1;
+      // Active boundary (solid, full opacity)
+      tryDrawCurve(activeList, '#4fc3f7', 2, false);
+      // Active points
+      for (let i = 0; i < activeList.length; i++) {
+        const pt = activeList[i];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
-    }
-
-    // Active curve (full opacity, solid)
-    tryDrawCurve(activeList, '#4fc3f7', 2, false);
-
-    // Active points
-    for (let i = 0; i < activeList.length; i++) {
-      const pt = activeList[i];
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
-      ctx.fillStyle = '#4fc3f7';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-
-    // Selected ring
-    if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
-      const pt = activeList[selectedPointIndex];
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // Selected ring
+      if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
+        const pt = activeList[selectedPointIndex];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
   }, [
     centerPoints,
