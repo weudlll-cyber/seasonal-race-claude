@@ -1,5 +1,27 @@
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
 
+export function validateEditorState({
+  mode,
+  centerPoints,
+  innerPoints,
+  outerPoints,
+  closed,
+  name,
+}) {
+  if (!name.trim()) return { message: 'Track name is required' };
+  const minPts = closed ? 3 : 2;
+  if (mode === 'center') {
+    if (centerPoints.length < minPts) {
+      return { message: `At least ${minPts} centerline points needed to save` };
+    }
+  } else {
+    if (innerPoints.length < minPts || outerPoints.length < minPts) {
+      return { message: `Each boundary needs at least ${minPts} points` };
+    }
+  }
+  return null;
+}
+
 const SAMPLES = 200;
 
 /**

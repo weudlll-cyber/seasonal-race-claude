@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTrackFromEditorState } from './trackEditorSave.js';
+import { buildTrackFromEditorState, validateEditorState } from './trackEditorSave.js';
 
 const two = [
   { x: 0, y: 0 },
@@ -121,5 +121,83 @@ describe('buildTrackFromEditorState', () => {
         backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
       })
     ).toThrow();
+  });
+});
+
+describe('validateEditorState', () => {
+  it('empty name returns an error with "name" in message', () => {
+    const result = validateEditorState({
+      mode: 'center',
+      centerPoints: two,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: '',
+    });
+    expect(result).not.toBeNull();
+    expect(result.message).toMatch(/name/i);
+  });
+
+  it('center open mode with 1 point (< 2) returns error referencing 2', () => {
+    const result = validateEditorState({
+      mode: 'center',
+      centerPoints: [{ x: 0, y: 0 }],
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Test',
+    });
+    expect(result).not.toBeNull();
+    expect(result.message).toMatch(/2/);
+  });
+
+  it('center closed mode with 2 points (< 3) returns error referencing 3', () => {
+    const result = validateEditorState({
+      mode: 'center',
+      centerPoints: two,
+      innerPoints: [],
+      outerPoints: [],
+      closed: true,
+      name: 'Test',
+    });
+    expect(result).not.toBeNull();
+    expect(result.message).toMatch(/3/);
+  });
+
+  it('boundary open mode with empty inner returns error', () => {
+    const result = validateEditorState({
+      mode: 'boundary',
+      centerPoints: [],
+      innerPoints: [],
+      outerPoints: two,
+      closed: false,
+      name: 'Test',
+    });
+    expect(result).not.toBeNull();
+  });
+
+  it('boundary closed mode with 2 inner and 2 outer points (< 3) returns error referencing 3', () => {
+    const result = validateEditorState({
+      mode: 'boundary',
+      centerPoints: [],
+      innerPoints: two,
+      outerPoints: two,
+      closed: true,
+      name: 'Test',
+    });
+    expect(result).not.toBeNull();
+    expect(result.message).toMatch(/3/);
+  });
+
+  it('valid open center state with 2 points and a name returns null', () => {
+    const result = validateEditorState({
+      mode: 'center',
+      centerPoints: two,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Valid Track',
+    });
+    expect(result).toBeNull();
   });
 });

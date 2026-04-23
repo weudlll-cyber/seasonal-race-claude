@@ -1,4 +1,6 @@
 .screen {
+  --color-danger: #ef5350;
+  --color-border: #2a2a35;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -88,6 +90,7 @@
 
 .modeBtn:hover {
   color: var(--color-text);
+  filter: brightness(1.08);
 }
 
 .modeBtnActive {
@@ -115,7 +118,7 @@
 }
 
 .reverseBtn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -137,23 +140,31 @@
 
 .saveBar {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.4rem;
   padding: 0.6rem 1.5rem;
   background: #08080c;
   border-bottom: 1px solid #2a2a35;
   flex-shrink: 0;
 }
 
+.saveBarRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .nameInput {
   width: 200px;
+  height: 2rem;
   background: #0d0d0f;
   border: 1px solid #2a2a35;
   border-radius: var(--radius);
   color: var(--color-text);
   font-size: 0.8rem;
   padding: 0.35rem 0.6rem;
+  box-sizing: border-box;
 }
 
 .nameInput::placeholder {
@@ -165,8 +176,13 @@
   border-color: var(--color-primary);
 }
 
+.nameInputError {
+  border-color: var(--color-danger) !important;
+}
+
 .bgSelect,
 .loadSelect {
+  height: 2rem;
   background: #0d0d0f;
   border: 1px solid #2a2a35;
   border-radius: var(--radius);
@@ -174,6 +190,7 @@
   font-size: 0.8rem;
   padding: 0.35rem 0.6rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .saveBtn {
@@ -190,7 +207,7 @@
 }
 
 .saveBtn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -211,8 +228,14 @@
 }
 
 .deleteBtn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.saveError {
+  font-size: 0.85rem;
+  color: var(--color-danger);
+  margin: 0;
 }
 
 .main {
@@ -238,4 +261,21 @@
   cursor: crosshair;
   border: 1px solid #2a2a35;
   border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.backBtn:focus-visible,
+.modeBtn:focus-visible,
+.reverseBtn:focus-visible,
+.saveBtn:focus-visible,
+.deleteBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.nameInput:focus-visible,
+.bgSelect:focus-visible,
+.loadSelect:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

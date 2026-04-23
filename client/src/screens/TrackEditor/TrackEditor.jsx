@@ -8,7 +8,7 @@ import {
   deleteTrack,
 } from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
-import { buildTrackFromEditorState } from './trackEditorSave.js';
+import { buildTrackFromEditorState, validateEditorState } from './trackEditorSave.js';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
@@ -52,7 +52,13 @@ export default function TrackEditor() {
   const [saveLabel, setSaveLabel] = useState('Save');
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
 
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+
   const dragIndexRef = useRef(-1);
+
+  const markDirty = useCallback(() => setIsDirty(true), []);
 
   const setActiveList = useCallback(
     (updater) => {
@@ -270,6 +276,7 @@ export default function TrackEditor() {
       setIsDragging(false);
       dragIndexRef.current = -1;
       if (canvasRef.current) canvasRef.current.style.cursor = 'crosshair';
+      markDirty();
     }
   }
 
@@ -295,11 +302,13 @@ export default function TrackEditor() {
         return next;
       });
       setSelectedPointIndex(insertAtIndex);
+      markDirty();
       return;
     }
 
     setActiveList((prev) => [...prev, { x: coords.x, y: coords.y }]);
     setSelectedPointIndex(activeList.length);
+    markDirty();
   }
 
   function handleKeyDown(e) {
@@ -307,6 +316,7 @@ export default function TrackEditor() {
       e.preventDefault();
       setActiveList((prev) => prev.filter((_, i) => i !== selectedPointIndex));
       setSelectedPointIndex(-1);
+      markDirty();
     }
   }
 
@@ -315,6 +325,7 @@ export default function TrackEditor() {
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
     setActiveList([...activeList].reverse());
     setSelectedPointIndex(-1);
+    markDirty();
   }
 
   function handleSwitchToBoundary() {
@@ -342,9 +353,24 @@ export default function TrackEditor() {
     }
     setMode('boundary');
     setSelectedPointIndex(-1);
+    markDirty();
   }
 
   function handleSave() {
+    setSaveAttempted(true);
+    const error = validateEditorState({
+      mode,
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      closed,
+      name: trackName.trim(),
+    });
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
+    setSaveError(null);
     try {
       const track = buildTrackFromEditorState({
         mode,
@@ -360,10 +386,12 @@ export default function TrackEditor() {
       const saved = saveTrack(track);
       setLoadedTrackId(saved.id);
       setSavedTracks(listTracks());
+      setIsDirty(false);
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveLabel('Saved ✓');
       saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
     } catch (err) {
+      setSaveError(err.message);
       console.warn('Save failed:', err.message);
     }
   }
@@ -382,6 +410,9 @@ export default function TrackEditor() {
     setSelectedPointIndex(-1);
     dragIndexRef.current = -1;
     setIsDragging(false);
+    setIsDirty(false);
+    setSaveAttempted(false);
+    setSaveError(null);
 
     if (track.sourceMode === 'center') {
       setMode('center');
@@ -412,14 +443,10 @@ export default function TrackEditor() {
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
     setSavedTracks(listTracks());
+    setIsDirty(false);
+    setSaveAttempted(false);
+    setSaveError(null);
   }
-
-  const minPts = closed ? 3 : 2;
-  const canSave =
-    trackName.trim().length > 0 &&
-    (mode === 'center'
-      ? centerPoints.length >= minPts
-      : innerPoints.length >= minPts && outerPoints.length >= minPts);
 
   const counterLabel =
     mode === 'center'
@@ -431,7 +458,13 @@ export default function TrackEditor() {
   return (
     <div className={s.screen}>
       <div className={s.topBar}>
-        <button className={s.backBtn} onClick={() => navigate('/dev')}>
+        <button
+          className={s.backBtn}
+          onClick={() => {
+            if (isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) return;
+            navigate('/dev');
+          }}
+        >
           ← Back to Dev Panel
         </button>
         <h1 className={s.title}>Track Geometry Editor</h1>
@@ -446,6 +479,7 @@ export default function TrackEditor() {
               onClick={() => {
                 setMode('center');
                 setSelectedPointIndex(-1);
+                markDirty();
               }}
             >
               Center
@@ -484,13 +518,19 @@ export default function TrackEditor() {
           <div className={s.modeGroup}>
             <button
               className={`${s.modeBtn} ${closed ? s.modeBtnActive : ''}`}
-              onClick={() => setClosed(true)}
+              onClick={() => {
+                setClosed(true);
+                markDirty();
+              }}
             >
               Closed Loop
             </button>
             <button
               className={`${s.modeBtn} ${!closed ? s.modeBtnActive : ''}`}
-              onClick={() => setClosed(false)}
+              onClick={() => {
+                setClosed(false);
+                markDirty();
+              }}
             >
               Open Course
             </button>
@@ -511,7 +551,10 @@ export default function TrackEditor() {
                 max={300}
                 step={1}
                 value={centerWidth}
-                onChange={(e) => setCenterWidth(Number(e.target.value))}
+                onChange={(e) => {
+                  setCenterWidth(Number(e.target.value));
+                  markDirty();
+                }}
                 className={s.slider}
               />
             </label>
@@ -520,40 +563,49 @@ export default function TrackEditor() {
       </div>
 
       <div className={s.saveBar}>
-        <input
-          type="text"
-          className={s.nameInput}
-          placeholder="Track name…"
-          value={trackName}
-          onChange={(e) => setTrackName(e.target.value)}
-        />
-        <select
-          className={s.bgSelect}
-          value={backgroundImage}
-          onChange={(e) => setBackgroundImage(e.target.value)}
-        >
-          {BG_IMAGES.map((bg) => (
-            <option key={bg.value} value={bg.value}>
-              {bg.label}
+        <div className={s.saveBarRow}>
+          <input
+            type="text"
+            className={`${s.nameInput}${saveAttempted && !trackName.trim() ? ` ${s.nameInputError}` : ''}`}
+            placeholder="Track name…"
+            value={trackName}
+            onChange={(e) => {
+              setTrackName(e.target.value);
+              markDirty();
+            }}
+          />
+          <select
+            className={s.bgSelect}
+            value={backgroundImage}
+            onChange={(e) => {
+              setBackgroundImage(e.target.value);
+              markDirty();
+            }}
+          >
+            {BG_IMAGES.map((bg) => (
+              <option key={bg.value} value={bg.value}>
+                {bg.label}
+              </option>
+            ))}
+          </select>
+          <button className={s.saveBtn} disabled={saveLabel !== 'Save'} onClick={handleSave}>
+            {saveLabel}
+          </button>
+          <select className={s.loadSelect} value="" onChange={handleLoad}>
+            <option value="" disabled>
+              Load track…
             </option>
-          ))}
-        </select>
-        <button className={s.saveBtn} disabled={!canSave} onClick={handleSave}>
-          {saveLabel}
-        </button>
-        <select className={s.loadSelect} value="" onChange={handleLoad}>
-          <option value="" disabled>
-            Load track…
-          </option>
-          {savedTracks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <button className={s.deleteBtn} disabled={!loadedTrackId} onClick={handleDelete}>
-          Delete
-        </button>
+            {savedTracks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button className={s.deleteBtn} disabled={!loadedTrackId} onClick={handleDelete}>
+            Delete
+          </button>
+        </div>
+        {saveError && <p className={s.saveError}>{saveError}</p>}
       </div>
 
       <div className={s.main}>
