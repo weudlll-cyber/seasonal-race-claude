@@ -67,6 +67,7 @@ export default function TrackEditor() {
           ← Back to Dev Panel
         </button>
         <h1 className={s.title}>Track Geometry Editor</h1>
+        <div className={s.headerCounter}>Points: {points.length}</div>
       </div>
       <div className={s.main}>
         <div className={s.canvasWrapper}>
@@ -80,7 +81,6 @@ export default function TrackEditor() {
             onClick={handleCanvasClick}
           />
         </div>
-        <div className={s.statusLine}>Points: {points.length}</div>
       </div>
     </div>
   );

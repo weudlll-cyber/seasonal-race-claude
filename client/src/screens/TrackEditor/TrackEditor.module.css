@@ -9,6 +9,7 @@
 .topBar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1.5rem;
   background: var(--color-surface);
@@ -62,8 +63,8 @@
   border-radius: var(--radius);
 }
 
-.statusLine {
-  font-size: 0.8rem;
-  color: var(--color-muted);
+.headerCounter {
+  font-size: 1rem;
+  color: var(--color-text);
   font-weight: 500;
 }
