@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Node.js 20+
-- MongoDB 7+ (local or Atlas)
 - npm 10+
+- SQLite is bundled via `better-sqlite3` — no separate database server needed
 
 ## 1. Clone & install
 
@@ -20,7 +20,7 @@ cd ../client && npm install
 
 ```bash
 cp server/.env.example server/.env
-# Edit server/.env and set MONGO_URI and JWT_SECRET
+# Edit server/.env and set JWT_SECRET (SQLite uses a local file — no URI needed)
 ```
 
 ## 3. Seed the database (optional)
