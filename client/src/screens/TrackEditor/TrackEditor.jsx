@@ -27,11 +27,6 @@ export default function TrackEditor() {
 
   const dragIndexRef = useRef(-1);
 
-  const getActiveList = useCallback(() => {
-    if (mode === 'center') return centerPoints;
-    return activeBoundary === 'inner' ? innerPoints : outerPoints;
-  }, [mode, activeBoundary, centerPoints, innerPoints, outerPoints]);
-
   const setActiveList = useCallback(
     (updater) => {
       if (mode === 'center') return setCenterPoints(updater);
