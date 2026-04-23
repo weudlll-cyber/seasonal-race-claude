@@ -1,26 +1,11 @@
-let _bgImg = null;
-let _bgTried = false;
-function _loadBg() {
-  if (_bgTried || typeof Image === 'undefined') return;
-  _bgTried = true;
-  function tryLoad(src, fallback) {
-    const img = new Image();
-    img.onload = () => {
-      _bgImg = img;
-    };
-    img.onerror = () => {
-      if (fallback) tryLoad(fallback, null);
-    };
-    img.src = src;
-  }
-  tryLoad('/assets/tracks/backgrounds/river-run.png', '/assets/tracks/backgrounds/river-run.jpg');
-}
+import { getBackgroundImage } from './bgImageCache.js';
 
 const N_BUBBLES = 18;
 const N_REFLECTIONS = 12;
 
 export class RiverEnvironment {
-  constructor(cw, ch) {
+  constructor(cw, ch, bgImagePath = null) {
+    this.bgImagePath = bgImagePath;
     this.cw = cw;
     this.ch = ch;
     this.bubbles = Array.from({ length: N_BUBBLES }, (_, i) => ({
@@ -39,11 +24,10 @@ export class RiverEnvironment {
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
-    _loadBg();
-
-    const imgReady = !!_bgImg;
+    const bgImg = getBackgroundImage(this.bgImagePath);
+    const imgReady = !!bgImg;
     if (imgReady) {
-      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.drawImage(bgImg, 0, 0, cw, ch);
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.fillRect(0, 0, cw, ch);
     } else {
