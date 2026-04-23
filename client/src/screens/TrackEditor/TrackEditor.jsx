@@ -92,7 +92,7 @@ export default function TrackEditor() {
             tension: 0.5,
             samples: CURVE_SAMPLES,
           });
-          ctx.globalAlpha = 0.7;
+          ctx.globalAlpha = 0.9;
           ctx.setLineDash([6, 4]);
           ctx.strokeStyle = '#4fc3f7';
           ctx.lineWidth = 1;
