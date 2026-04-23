@@ -122,6 +122,28 @@
   cursor: not-allowed;
 }
 
+.historyBtn {
+  background: #0d0d0f;
+  border: 1px solid #2a2a35;
+  color: var(--color-muted);
+  font-size: 1rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-width: 2rem;
+  transition: color var(--transition);
+}
+
+.historyBtn:hover:not(:disabled) {
+  color: var(--color-text);
+  filter: brightness(1.08);
+}
+
+.historyBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .sliderLabel {
   display: flex;
   align-items: center;
@@ -267,6 +289,7 @@
 .backBtn:focus-visible,
 .modeBtn:focus-visible,
 .reverseBtn:focus-visible,
+.historyBtn:focus-visible,
 .saveBtn:focus-visible,
 .deleteBtn:focus-visible {
   outline: 2px solid var(--color-primary);

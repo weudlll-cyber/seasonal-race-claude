@@ -9,6 +9,7 @@ import {
 } from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
 import { buildTrackFromEditorState, validateEditorState } from './trackEditorSave.js';
+import { useHistory } from './useHistory.js';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
@@ -16,6 +17,8 @@ const CH = 720;
 const HIT_RADIUS = 10;
 const INSERT_TOLERANCE = 8;
 const CURVE_SAMPLES = 200;
+const SLIDER_DEBOUNCE_MS = 400;
+const NAME_DEBOUNCE_MS = 600;
 
 const DEFAULT_BG = '/assets/tracks/backgrounds/dirt-oval.jpg';
 
@@ -29,34 +32,78 @@ const BG_IMAGES = [
 
 export default function TrackEditor() {
   const navigate = useNavigate();
+
+  // ── canvas / UI refs ──────────────────────────────────────────────────────
   const canvasRef = useRef(null);
   const bgRef = useRef(null);
   const wrapperRef = useRef(null);
   const saveTimerRef = useRef(null);
 
+  // ── drag tracking refs ────────────────────────────────────────────────────
+  const dragIndexRef = useRef(-1);
+  const hasDraggedRef = useRef(false);
+  const preDragSnapshotRef = useRef(null);
+
+  // ── debounce refs for history ─────────────────────────────────────────────
+  const sliderHistoryTimerRef = useRef(null);
+  const preSliderSnapshotRef = useRef(null);
+  const nameHistoryTimerRef = useRef(null);
+  const preNameSnapshotRef = useRef(null);
+
+  // ── history hook ──────────────────────────────────────────────────────────
+  const { pushHistory, undo, redo, canUndo, canRedo, resetHistory } = useHistory();
+
+  // ── versioned state (tracked by history) ─────────────────────────────────
   const [centerPoints, setCenterPoints] = useState([]);
   const [innerPoints, setInnerPoints] = useState([]);
   const [outerPoints, setOuterPoints] = useState([]);
-  const [bgReady, setBgReady] = useState(false);
   const [mode, setMode] = useState('center');
   const [activeBoundary, setActiveBoundary] = useState('inner');
-  const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
-  const [isDragging, setIsDragging] = useState(false);
   const [centerWidth, setCenterWidth] = useState(120);
   const [closed, setClosed] = useState(false);
-
   const [trackName, setTrackName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
+
+  // ── non-versioned state ───────────────────────────────────────────────────
+  const [bgReady, setBgReady] = useState(false);
+  const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
+  const [isDragging, setIsDragging] = useState(false);
   const [loadedTrackId, setLoadedTrackId] = useState(null);
   const [savedTracks, setSavedTracks] = useState([]);
   const [saveLabel, setSaveLabel] = useState('Save');
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
-
   const [isDirty, setIsDirty] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  const dragIndexRef = useRef(-1);
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  function getSnapshot() {
+    return {
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      centerWidth,
+      mode,
+      activeBoundary,
+      closed,
+      name: trackName,
+      backgroundImage,
+    };
+  }
+
+  const applySnapshot = useCallback((snapshot) => {
+    setCenterPoints(snapshot.centerPoints);
+    setInnerPoints(snapshot.innerPoints);
+    setOuterPoints(snapshot.outerPoints);
+    setCenterWidth(snapshot.centerWidth);
+    setMode(snapshot.mode);
+    setActiveBoundary(snapshot.activeBoundary);
+    setClosed(snapshot.closed);
+    setTrackName(snapshot.name);
+    setBackgroundImage(snapshot.backgroundImage);
+    setSelectedPointIndex(-1);
+  }, []);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
 
@@ -68,6 +115,70 @@ export default function TrackEditor() {
     },
     [mode, activeBoundary]
   );
+
+  const handleUndo = useCallback(() => {
+    const snapshot = undo({
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      centerWidth,
+      mode,
+      activeBoundary,
+      closed,
+      name: trackName,
+      backgroundImage,
+    });
+    if (snapshot) {
+      applySnapshot(snapshot);
+      markDirty();
+    }
+  }, [
+    undo,
+    applySnapshot,
+    markDirty,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    centerWidth,
+    mode,
+    activeBoundary,
+    closed,
+    trackName,
+    backgroundImage,
+  ]);
+
+  const handleRedo = useCallback(() => {
+    const snapshot = redo({
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      centerWidth,
+      mode,
+      activeBoundary,
+      closed,
+      name: trackName,
+      backgroundImage,
+    });
+    if (snapshot) {
+      applySnapshot(snapshot);
+      markDirty();
+    }
+  }, [
+    redo,
+    applySnapshot,
+    markDirty,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    centerWidth,
+    mode,
+    activeBoundary,
+    closed,
+    trackName,
+    backgroundImage,
+  ]);
+
+  // ── effects ───────────────────────────────────────────────────────────────
 
   // Load background image whenever backgroundImage state changes
   useEffect(() => {
@@ -90,6 +201,34 @@ export default function TrackEditor() {
     setSavedTracks(listTracks());
   }, []);
 
+  // Global keyboard shortcuts for undo/redo
+  useEffect(() => {
+    function onKeyDown(e) {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (!isCtrl) return;
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleUndo, handleRedo]);
+
+  // Flush debounce timers on unmount to avoid calling setState after unmount
+  useEffect(() => {
+    return () => {
+      if (sliderHistoryTimerRef.current) clearTimeout(sliderHistoryTimerRef.current);
+      if (nameHistoryTimerRef.current) clearTimeout(nameHistoryTimerRef.current);
+    };
+  }, []);
+
+  // Canvas render effect
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -151,9 +290,7 @@ export default function TrackEditor() {
           // skip
         }
       }
-      // Center curve (solid, full opacity)
       tryDrawCurve(centerPoints, '#4fc3f7', 2, false);
-      // Center points
       for (let i = 0; i < centerPoints.length; i++) {
         const pt = centerPoints[i];
         ctx.beginPath();
@@ -164,7 +301,6 @@ export default function TrackEditor() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      // Selected ring
       if (selectedPointIndex >= 0 && selectedPointIndex < centerPoints.length) {
         const pt = centerPoints[selectedPointIndex];
         ctx.beginPath();
@@ -177,7 +313,6 @@ export default function TrackEditor() {
       // Boundary Mode: only inner and outer — Center list hidden entirely
       const activeList = activeBoundary === 'inner' ? innerPoints : outerPoints;
       const inactiveList = activeBoundary === 'inner' ? outerPoints : innerPoints;
-      // Inactive boundary at 30% opacity, 2px stroke
       ctx.globalAlpha = 0.3;
       tryDrawCurve(inactiveList, '#4fc3f7', 2, false);
       for (const pt of inactiveList) {
@@ -187,9 +322,7 @@ export default function TrackEditor() {
         ctx.fill();
       }
       ctx.globalAlpha = 1;
-      // Active boundary (solid, full opacity)
       tryDrawCurve(activeList, '#4fc3f7', 2, false);
-      // Active points
       for (let i = 0; i < activeList.length; i++) {
         const pt = activeList[i];
         ctx.beginPath();
@@ -200,7 +333,6 @@ export default function TrackEditor() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      // Selected ring
       if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
         const pt = activeList[selectedPointIndex];
         ctx.beginPath();
@@ -222,6 +354,8 @@ export default function TrackEditor() {
     closed,
   ]);
 
+  // ── canvas coordinate helpers ─────────────────────────────────────────────
+
   function getCanvasCoords(e) {
     const canvas = canvasRef.current;
     if (!canvas) return null;
@@ -234,6 +368,8 @@ export default function TrackEditor() {
     };
   }
 
+  // ── pointer handlers ──────────────────────────────────────────────────────
+
   function handlePointerDown(e) {
     const coords = getCanvasCoords(e);
     if (!coords) return;
@@ -241,6 +377,8 @@ export default function TrackEditor() {
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
     const idx = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
     if (idx !== -1) {
+      preDragSnapshotRef.current = getSnapshot();
+      hasDraggedRef.current = false;
       dragIndexRef.current = idx;
       setSelectedPointIndex(idx);
       setIsDragging(true);
@@ -254,6 +392,7 @@ export default function TrackEditor() {
     if (!coords) return;
 
     if (isDragging && dragIndexRef.current !== -1) {
+      hasDraggedRef.current = true;
       setActiveList((prev) => {
         const next = [...prev];
         next[dragIndexRef.current] = { x: coords.x, y: coords.y };
@@ -276,7 +415,12 @@ export default function TrackEditor() {
       setIsDragging(false);
       dragIndexRef.current = -1;
       if (canvasRef.current) canvasRef.current.style.cursor = 'crosshair';
-      markDirty();
+      if (hasDraggedRef.current && preDragSnapshotRef.current) {
+        pushHistory(preDragSnapshotRef.current);
+        markDirty();
+      }
+      hasDraggedRef.current = false;
+      preDragSnapshotRef.current = null;
     }
   }
 
@@ -296,6 +440,7 @@ export default function TrackEditor() {
     const segment = findSegmentNearPoint(activeList, coords.x, coords.y, INSERT_TOLERANCE, closed);
     if (segment !== null) {
       const { insertAtIndex } = segment;
+      pushHistory(getSnapshot());
       setActiveList((prev) => {
         const next = [...prev];
         next.splice(insertAtIndex, 0, { x: coords.x, y: coords.y });
@@ -306,6 +451,7 @@ export default function TrackEditor() {
       return;
     }
 
+    pushHistory(getSnapshot());
     setActiveList((prev) => [...prev, { x: coords.x, y: coords.y }]);
     setSelectedPointIndex(activeList.length);
     markDirty();
@@ -314,6 +460,7 @@ export default function TrackEditor() {
   function handleKeyDown(e) {
     if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPointIndex !== -1) {
       e.preventDefault();
+      pushHistory(getSnapshot());
       setActiveList((prev) => prev.filter((_, i) => i !== selectedPointIndex));
       setSelectedPointIndex(-1);
       markDirty();
@@ -323,17 +470,20 @@ export default function TrackEditor() {
   function handleReverse() {
     const activeList =
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
+    pushHistory(getSnapshot());
     setActiveList([...activeList].reverse());
     setSelectedPointIndex(-1);
     markDirty();
   }
 
   function handleSwitchToBoundary() {
+    if (mode === 'boundary') return;
     if (mode === 'center' && centerPoints.length >= 2 && !boundarySwitchConfirmed) {
       const ok = window.confirm(
         'Switching to Boundary Mode will use the derived inner and outer lines as your new starting point and disconnect them from the centerline. You can continue editing the boundaries freely, but the centerline will no longer drive them. Continue?'
       );
       if (!ok) return;
+      pushHistory(getSnapshot());
       const minPtsForTransfer = closed ? 3 : 2;
       if (centerPoints.length >= minPtsForTransfer) {
         try {
@@ -350,11 +500,15 @@ export default function TrackEditor() {
       }
       setCenterPoints([]);
       setBoundarySwitchConfirmed(true);
+    } else {
+      pushHistory(getSnapshot());
     }
     setMode('boundary');
     setSelectedPointIndex(-1);
     markDirty();
   }
+
+  // ── save / load / delete ──────────────────────────────────────────────────
 
   function handleSave() {
     setSaveAttempted(true);
@@ -387,6 +541,7 @@ export default function TrackEditor() {
       setLoadedTrackId(saved.id);
       setSavedTracks(listTracks());
       setIsDirty(false);
+      resetHistory();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveLabel('Saved ✓');
       saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
@@ -413,6 +568,7 @@ export default function TrackEditor() {
     setIsDirty(false);
     setSaveAttempted(false);
     setSaveError(null);
+    resetHistory();
 
     if (track.sourceMode === 'center') {
       setMode('center');
@@ -446,7 +602,10 @@ export default function TrackEditor() {
     setIsDirty(false);
     setSaveAttempted(false);
     setSaveError(null);
+    resetHistory();
   }
+
+  // ── derived labels ────────────────────────────────────────────────────────
 
   const counterLabel =
     mode === 'center'
@@ -454,6 +613,8 @@ export default function TrackEditor() {
       : activeBoundary === 'inner'
         ? `Inner: ${innerPoints.length}`
         : `Outer: ${outerPoints.length}`;
+
+  // ── JSX ───────────────────────────────────────────────────────────────────
 
   return (
     <div className={s.screen}>
@@ -477,6 +638,8 @@ export default function TrackEditor() {
             <button
               className={`${s.modeBtn} ${mode === 'center' ? s.modeBtnActive : ''}`}
               onClick={() => {
+                if (mode === 'center') return;
+                pushHistory(getSnapshot());
                 setMode('center');
                 setSelectedPointIndex(-1);
                 markDirty();
@@ -497,6 +660,8 @@ export default function TrackEditor() {
               <button
                 className={`${s.modeBtn} ${activeBoundary === 'inner' ? s.modeBtnActive : ''}`}
                 onClick={() => {
+                  if (activeBoundary === 'inner') return;
+                  pushHistory(getSnapshot());
                   setActiveBoundary('inner');
                   setSelectedPointIndex(-1);
                 }}
@@ -506,6 +671,8 @@ export default function TrackEditor() {
               <button
                 className={`${s.modeBtn} ${activeBoundary === 'outer' ? s.modeBtnActive : ''}`}
                 onClick={() => {
+                  if (activeBoundary === 'outer') return;
+                  pushHistory(getSnapshot());
                   setActiveBoundary('outer');
                   setSelectedPointIndex(-1);
                 }}
@@ -519,6 +686,8 @@ export default function TrackEditor() {
             <button
               className={`${s.modeBtn} ${closed ? s.modeBtnActive : ''}`}
               onClick={() => {
+                if (closed) return;
+                pushHistory(getSnapshot());
                 setClosed(true);
                 markDirty();
               }}
@@ -528,6 +697,8 @@ export default function TrackEditor() {
             <button
               className={`${s.modeBtn} ${!closed ? s.modeBtnActive : ''}`}
               onClick={() => {
+                if (!closed) return;
+                pushHistory(getSnapshot());
                 setClosed(false);
                 markDirty();
               }}
@@ -538,6 +709,23 @@ export default function TrackEditor() {
 
           <button className={s.reverseBtn} disabled={closed} onClick={handleReverse}>
             Reverse Direction
+          </button>
+
+          <button
+            className={s.historyBtn}
+            disabled={!canUndo}
+            onClick={handleUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            ↶
+          </button>
+          <button
+            className={s.historyBtn}
+            disabled={!canRedo}
+            onClick={handleRedo}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            ↷
           </button>
         </div>
 
@@ -551,11 +739,33 @@ export default function TrackEditor() {
                 max={300}
                 step={1}
                 value={centerWidth}
+                className={s.slider}
                 onChange={(e) => {
+                  if (!sliderHistoryTimerRef.current) {
+                    preSliderSnapshotRef.current = getSnapshot();
+                  } else {
+                    clearTimeout(sliderHistoryTimerRef.current);
+                  }
                   setCenterWidth(Number(e.target.value));
                   markDirty();
+                  sliderHistoryTimerRef.current = setTimeout(() => {
+                    if (preSliderSnapshotRef.current) {
+                      pushHistory(preSliderSnapshotRef.current);
+                      preSliderSnapshotRef.current = null;
+                    }
+                    sliderHistoryTimerRef.current = null;
+                  }, SLIDER_DEBOUNCE_MS);
                 }}
-                className={s.slider}
+                onBlur={() => {
+                  if (sliderHistoryTimerRef.current) {
+                    clearTimeout(sliderHistoryTimerRef.current);
+                    sliderHistoryTimerRef.current = null;
+                    if (preSliderSnapshotRef.current) {
+                      pushHistory(preSliderSnapshotRef.current);
+                      preSliderSnapshotRef.current = null;
+                    }
+                  }
+                }}
               />
             </label>
           </div>
@@ -570,14 +780,37 @@ export default function TrackEditor() {
             placeholder="Track name…"
             value={trackName}
             onChange={(e) => {
+              if (!nameHistoryTimerRef.current) {
+                preNameSnapshotRef.current = getSnapshot();
+              } else {
+                clearTimeout(nameHistoryTimerRef.current);
+              }
               setTrackName(e.target.value);
               markDirty();
+              nameHistoryTimerRef.current = setTimeout(() => {
+                if (preNameSnapshotRef.current) {
+                  pushHistory(preNameSnapshotRef.current);
+                  preNameSnapshotRef.current = null;
+                }
+                nameHistoryTimerRef.current = null;
+              }, NAME_DEBOUNCE_MS);
+            }}
+            onBlur={() => {
+              if (nameHistoryTimerRef.current) {
+                clearTimeout(nameHistoryTimerRef.current);
+                nameHistoryTimerRef.current = null;
+                if (preNameSnapshotRef.current) {
+                  pushHistory(preNameSnapshotRef.current);
+                  preNameSnapshotRef.current = null;
+                }
+              }
             }}
           />
           <select
             className={s.bgSelect}
             value={backgroundImage}
             onChange={(e) => {
+              pushHistory(getSnapshot());
               setBackgroundImage(e.target.value);
               markDirty();
             }}

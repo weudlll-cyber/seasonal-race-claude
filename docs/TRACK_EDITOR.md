@@ -124,16 +124,16 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 - Image dropdown (lists files in backgrounds folder)
 - Save, Load, Delete track from localStorage
 - Visual overlay: inner curve in green, outer curve in red, center line as blue dashed, lane fill as 20% gray, clicked points as filled circles colored by role
+- Undo and Redo buttons in the toolbar (↶ / ↷), with Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y shortcuts; tracks the full editor state including name and background image; 50-entry cap; history resets on track load/save/delete.
 
 **Deliberately not in v1** (tracked in Future Extensions):
 
-- Undo/Redo
 - Track duplication as template
 - JSON import/export
 - Variable width along a boundary track
 - Visible lane-marker rendering at race time
 - Grid snap / raster
-- Keyboard shortcuts beyond Delete
+- Keyboard shortcuts beyond Delete, Ctrl+Z (Undo), and Ctrl+Shift+Z / Ctrl+Y (Redo). Undo/Redo shortcuts added in sub-step E2 as an exception to keep the Undo feature fully usable.
 
 ---
 
@@ -188,7 +188,6 @@ These are explicitly out of scope for v1 but on the known-follow-up list. Priori
 
 **Editor UX:**
 
-- Undo / Redo stack
 - Track duplication as a starting template for a variant
 - JSON export / import for sharing tracks between installations or for external editing
 - Variable width along a boundary-mode track (via per-segment width markers)
