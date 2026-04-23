@@ -1,21 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
+import {
+  listTracks,
+  getTrack,
+  saveTrack,
+  deleteTrack,
+} from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
+import { buildTrackFromEditorState } from './trackEditorSave.js';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
 const CH = 720;
-const BG_SRC = '/assets/tracks/backgrounds/dirt-oval.jpg';
 const HIT_RADIUS = 10;
 const INSERT_TOLERANCE = 8;
 const CURVE_SAMPLES = 200;
+
+const DEFAULT_BG = '/assets/tracks/backgrounds/dirt-oval.jpg';
+
+const BG_IMAGES = [
+  { value: '/assets/tracks/backgrounds/city-circuit.png', label: 'City Circuit' },
+  { value: '/assets/tracks/backgrounds/dirt-oval.jpg', label: 'Dirt Oval' },
+  { value: '/assets/tracks/backgrounds/garden-path.png', label: 'Garden Path' },
+  { value: '/assets/tracks/backgrounds/river-run.png', label: 'River Run' },
+  { value: '/assets/tracks/backgrounds/space-sprint.jpg', label: 'Space Sprint' },
+];
 
 export default function TrackEditor() {
   const navigate = useNavigate();
   const canvasRef = useRef(null);
   const bgRef = useRef(null);
   const wrapperRef = useRef(null);
+  const saveTimerRef = useRef(null);
 
   const [centerPoints, setCenterPoints] = useState([]);
   const [innerPoints, setInnerPoints] = useState([]);
@@ -28,6 +45,13 @@ export default function TrackEditor() {
   const [centerWidth, setCenterWidth] = useState(120);
   const [closed, setClosed] = useState(false);
 
+  const [trackName, setTrackName] = useState('');
+  const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
+  const [loadedTrackId, setLoadedTrackId] = useState(null);
+  const [savedTracks, setSavedTracks] = useState([]);
+  const [saveLabel, setSaveLabel] = useState('Save');
+  const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
+
   const dragIndexRef = useRef(-1);
 
   const setActiveList = useCallback(
@@ -39,13 +63,25 @@ export default function TrackEditor() {
     [mode, activeBoundary]
   );
 
+  // Load background image whenever backgroundImage state changes
   useEffect(() => {
+    setBgReady(false);
+    bgRef.current = null;
     const img = new Image();
-    img.src = BG_SRC;
+    img.src = backgroundImage;
     img.onload = () => {
       bgRef.current = img;
       setBgReady(true);
     };
+    img.onerror = () => {
+      bgRef.current = null;
+      setBgReady(true);
+    };
+  }, [backgroundImage]);
+
+  // Populate Load dropdown on mount
+  useEffect(() => {
+    setSavedTracks(listTracks());
   }, []);
 
   useEffect(() => {
@@ -84,7 +120,7 @@ export default function TrackEditor() {
     };
 
     if (mode === 'center') {
-      // Derived inner/outer boundary preview — drawn under center line (dashed, 70% opacity)
+      // Derived inner/outer boundary preview — drawn under center line (dashed, 90% opacity)
       if (centerPoints.length >= minPts) {
         try {
           const centerCurve = catmullRomSpline(centerPoints, {
@@ -281,6 +317,110 @@ export default function TrackEditor() {
     setSelectedPointIndex(-1);
   }
 
+  function handleSwitchToBoundary() {
+    if (mode === 'center' && centerPoints.length >= 2 && !boundarySwitchConfirmed) {
+      const ok = window.confirm(
+        'Switching to Boundary Mode will use the derived inner and outer lines as your new starting point and disconnect them from the centerline. You can continue editing the boundaries freely, but the centerline will no longer drive them. Continue?'
+      );
+      if (!ok) return;
+      const minPtsForTransfer = closed ? 3 : 2;
+      if (centerPoints.length >= minPtsForTransfer) {
+        try {
+          const cc = catmullRomSpline(centerPoints, {
+            closed,
+            tension: 0.5,
+            samples: CURVE_SAMPLES,
+          });
+          setInnerPoints(offsetCurve(cc, centerWidth / 2));
+          setOuterPoints(offsetCurve(cc, -(centerWidth / 2)));
+        } catch {
+          // can't derive — proceed with whatever boundaries already exist
+        }
+      }
+      setCenterPoints([]);
+      setBoundarySwitchConfirmed(true);
+    }
+    setMode('boundary');
+    setSelectedPointIndex(-1);
+  }
+
+  function handleSave() {
+    try {
+      const track = buildTrackFromEditorState({
+        mode,
+        centerPoints,
+        centerWidth,
+        innerPoints,
+        outerPoints,
+        closed,
+        name: trackName.trim(),
+        backgroundImage,
+      });
+      if (loadedTrackId) track.id = loadedTrackId;
+      const saved = saveTrack(track);
+      setLoadedTrackId(saved.id);
+      setSavedTracks(listTracks());
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      setSaveLabel('Saved ✓');
+      saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
+    } catch (err) {
+      console.warn('Save failed:', err.message);
+    }
+  }
+
+  function handleLoad(e) {
+    const id = e.target.value;
+    if (!id) return;
+    const track = getTrack(id);
+    if (!track) return;
+
+    setTrackName(track.name);
+    setBackgroundImage(track.backgroundImage);
+    setClosed(track.closed);
+    setLoadedTrackId(track.id);
+    setBoundarySwitchConfirmed(false);
+    setSelectedPointIndex(-1);
+    dragIndexRef.current = -1;
+    setIsDragging(false);
+
+    if (track.sourceMode === 'center') {
+      setMode('center');
+      setCenterPoints(track.centerPoints || []);
+      setCenterWidth(track.width ?? 120);
+      setInnerPoints(track.innerPoints || []);
+      setOuterPoints(track.outerPoints || []);
+    } else {
+      setMode('boundary');
+      setActiveBoundary('inner');
+      setInnerPoints(track.innerPoints || []);
+      setOuterPoints(track.outerPoints || []);
+      setCenterPoints([]);
+      setCenterWidth(120);
+    }
+  }
+
+  function handleDelete() {
+    if (!loadedTrackId) return;
+    if (!window.confirm(`Delete track "${trackName}"? This cannot be undone.`)) return;
+    deleteTrack(loadedTrackId);
+    setCenterPoints([]);
+    setInnerPoints([]);
+    setOuterPoints([]);
+    setTrackName('');
+    setBackgroundImage(DEFAULT_BG);
+    setLoadedTrackId(null);
+    setBoundarySwitchConfirmed(false);
+    setSelectedPointIndex(-1);
+    setSavedTracks(listTracks());
+  }
+
+  const minPts = closed ? 3 : 2;
+  const canSave =
+    trackName.trim().length > 0 &&
+    (mode === 'center'
+      ? centerPoints.length >= minPts
+      : innerPoints.length >= minPts && outerPoints.length >= minPts);
+
   const counterLabel =
     mode === 'center'
       ? `Center: ${centerPoints.length}`
@@ -312,10 +452,7 @@ export default function TrackEditor() {
             </button>
             <button
               className={`${s.modeBtn} ${mode === 'boundary' ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                setMode('boundary');
-                setSelectedPointIndex(-1);
-              }}
+              onClick={handleSwitchToBoundary}
             >
               Boundary
             </button>
@@ -380,6 +517,43 @@ export default function TrackEditor() {
             </label>
           </div>
         )}
+      </div>
+
+      <div className={s.saveBar}>
+        <input
+          type="text"
+          className={s.nameInput}
+          placeholder="Track name…"
+          value={trackName}
+          onChange={(e) => setTrackName(e.target.value)}
+        />
+        <select
+          className={s.bgSelect}
+          value={backgroundImage}
+          onChange={(e) => setBackgroundImage(e.target.value)}
+        >
+          {BG_IMAGES.map((bg) => (
+            <option key={bg.value} value={bg.value}>
+              {bg.label}
+            </option>
+          ))}
+        </select>
+        <button className={s.saveBtn} disabled={!canSave} onClick={handleSave}>
+          {saveLabel}
+        </button>
+        <select className={s.loadSelect} value="" onChange={handleLoad}>
+          <option value="" disabled>
+            Load track…
+          </option>
+          {savedTracks.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        <button className={s.deleteBtn} disabled={!loadedTrackId} onClick={handleDelete}>
+          Delete
+        </button>
       </div>
 
       <div className={s.main}>
