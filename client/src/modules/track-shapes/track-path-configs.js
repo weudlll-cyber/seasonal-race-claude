@@ -18,19 +18,19 @@ export const TRACK_PATHS = {
     // River Run: smooth S with gentle endpoint, no sharp kinks
     path: 'M 30,300 C 150,300 200,120 350,120 C 500,120 500,480 650,480 C 800,480 880,380 970,340',
     closed: false,
-    backgroundImage: 'river-run.jpg',
+    backgroundImage: 'river-run.png',
   },
   zigzag: {
     // Garden Path: wide closed loop, clockwise, no sharp turns (Z closes like oval/rectangle; no degenerate CP1)
     path: 'M 850,80 C 950,80 950,400 850,520 C 750,600 350,600 250,520 C 150,440 150,160 250,80 C 350,0 750,0 850,80 Z',
     closed: true,
     centerFrac: { x: 0.5, y: 0.5 },
-    backgroundImage: 'garden-path.jpg',
+    backgroundImage: 'garden-path.png',
   },
   rectangle: {
     path: 'M 200,80 L 800,80 C 900,80 940,120 940,200 L 940,400 C 940,480 900,520 800,520 L 200,520 C 100,520 60,480 60,400 L 60,200 C 60,120 100,80 200,80 Z',
     closed: true,
     centerFrac: { x: 0.5, y: 0.5 },
-    backgroundImage: 'city-circuit.jpg',
+    backgroundImage: 'city-circuit.png',
   },
 };

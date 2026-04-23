@@ -1,11 +1,22 @@
 let _bgImg = null;
+let _bgTried = false;
 function _loadBg() {
-  if (_bgImg !== null) return;
-  _bgImg = typeof Image !== 'undefined' ? new Image() : {};
-  _bgImg.onerror = () => {
-    _bgImg = null;
-  };
-  if ('src' in _bgImg) _bgImg.src = '/assets/tracks/backgrounds/garden-path.jpg';
+  if (_bgTried || typeof Image === 'undefined') return;
+  _bgTried = true;
+  function tryLoad(src, fallback) {
+    const img = new Image();
+    img.onload = () => {
+      _bgImg = img;
+    };
+    img.onerror = () => {
+      if (fallback) tryLoad(fallback, null);
+    };
+    img.src = src;
+  }
+  tryLoad(
+    '/assets/tracks/backgrounds/garden-path.png',
+    '/assets/tracks/backgrounds/garden-path.jpg'
+  );
 }
 
 // Pre-seeded flower positions (relative to outer edge samples)
@@ -48,7 +59,7 @@ export class GardenEnvironment {
     const { cw, ch } = this;
     _loadBg();
 
-    const imgReady = _bgImg?.complete && _bgImg.naturalWidth > 0;
+    const imgReady = !!_bgImg;
     if (imgReady) {
       ctx.drawImage(_bgImg, 0, 0, cw, ch);
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
