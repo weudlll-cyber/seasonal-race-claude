@@ -208,10 +208,11 @@ export default function TrackEditor() {
       if (tag === 'input' || tag === 'textarea') return;
       const isCtrl = e.ctrlKey || e.metaKey;
       if (!isCtrl) return;
-      if (e.key === 'z' && !e.shiftKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
-      } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+      } else if ((key === 'z' && e.shiftKey) || key === 'y') {
         e.preventDefault();
         handleRedo();
       }
