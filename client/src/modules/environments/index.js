@@ -42,7 +42,7 @@ export const ENV_LABELS = {
  * Returns an environment instance for the given envId.
  * Falls back to DirtOvalEnvironment for unknown ids.
  */
-export function getEnvironment(envId, cw, ch) {
+export function getEnvironment(envId, cw, ch, bgImagePath = null) {
   const Cls = ENV_MAP[envId] ?? DirtOvalEnvironment;
-  return new Cls(cw, ch);
+  return new Cls(cw, ch, bgImagePath);
 }

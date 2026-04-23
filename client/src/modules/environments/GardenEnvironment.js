@@ -1,23 +1,4 @@
-let _bgImg = null;
-let _bgTried = false;
-function _loadBg() {
-  if (_bgTried || typeof Image === 'undefined') return;
-  _bgTried = true;
-  function tryLoad(src, fallback) {
-    const img = new Image();
-    img.onload = () => {
-      _bgImg = img;
-    };
-    img.onerror = () => {
-      if (fallback) tryLoad(fallback, null);
-    };
-    img.src = src;
-  }
-  tryLoad(
-    '/assets/tracks/backgrounds/garden-path.png',
-    '/assets/tracks/backgrounds/garden-path.jpg'
-  );
-}
+import { getBackgroundImage } from './bgImageCache.js';
 
 // Pre-seeded flower positions (relative to outer edge samples)
 const FLOWERS = Array.from({ length: 30 }, (_, i) => ({
@@ -50,18 +31,18 @@ const BUTTERFLIES = Array.from({ length: 3 }, (_, i) => ({
 }));
 
 export class GardenEnvironment {
-  constructor(cw, ch) {
+  constructor(cw, ch, bgImagePath = null) {
+    this.bgImagePath = bgImagePath;
     this.cw = cw;
     this.ch = ch;
   }
 
   drawBackground(ctx, frame) {
     const { cw, ch } = this;
-    _loadBg();
-
-    const imgReady = !!_bgImg;
+    const bgImg = getBackgroundImage(this.bgImagePath);
+    const imgReady = !!bgImg;
     if (imgReady) {
-      ctx.drawImage(_bgImg, 0, 0, cw, ch);
+      ctx.drawImage(bgImg, 0, 0, cw, ch);
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.fillRect(0, 0, cw, ch);
     } else {

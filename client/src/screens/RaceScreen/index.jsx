@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getShape } from '../../modules/track-shapes/index.js';
 import { getTrackWidth } from '../../modules/track-shapes/SvgPathShape.js';
+import { TRACK_PATHS } from '../../modules/track-shapes/track-path-configs.js';
 import { getEnvironment } from '../../modules/environments/index.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
@@ -101,7 +102,8 @@ export default function RaceScreen() {
     const virtualW = isOpenTrack ? VIRTUAL_W : CW;
 
     shapeRef.current = getShape(shapeId, virtualW, CH);
-    envRef.current = getEnvironment(envId, CW, CH);
+    const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
+    envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
