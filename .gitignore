@@ -4,3 +4,4 @@ dist
 build
 .claude/projects/
 .claude/settings.local.json
+client/coverage/
