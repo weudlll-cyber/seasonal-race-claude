@@ -12,13 +12,28 @@
 - [x] App routing (React Router v6) — `/` → `/setup`
 - [x] Start Race button guard (requires ≥1 player + track selected)
 
-## Phase 2 — Race Engine (planned)
+## Phase 2 — Race Engine ✅ Complete
 
 - [ ] Server-side race tick loop (Socket.IO)
 - [ ] Client-side physics prediction
 - [ ] Canvas track renderer
 - [ ] Live race screen with racer positions
 - [ ] Countdown and finish detection
+
+## Phase 2.5 — Track Editor (planned)
+
+- [ ] Track data structure and localStorage CRUD
+- [ ] Catmull-Rom spline math module
+- [ ] `EditorShape` adapter implementing the race-engine shape API
+- [ ] Editor canvas: background image + point clicks
+- [ ] Center Mode and Boundary Mode with edit operations
+- [ ] Closed/Open toggle, Reverse button, track naming
+- [ ] Integration: custom tracks appear in Setup Screen
+- [ ] Environment → track-effects refactor (old environment module removed)
+- [ ] User redraws the five existing tracks in the new editor
+- [ ] Old SVG-path code and `SvgPathShape` removed (follow-up PR)
+
+See `docs/TRACK_EDITOR.md` for the full specification, decisions, and future extensions.
 
 ## Phase 3 — Result Screen (planned)
 
@@ -77,3 +92,4 @@
 |------|-------|
 | 2026-04-19 | Setup Screen built, Dev Screen with 7 sections built, full QA pipeline installed (ESLint, Prettier, Vitest 29 tests, GitHub Actions, Husky pre-commit hooks), AUDIT.md created. |
 | 2026-04-22 | Race Engine phase complete: SVG-path track system (5 shapes), 5 environments, racer types, race loop with collision avoidance, multi-lap closed tracks (lapsFromDuration 1–4), scrolling camera for open tracks (2.5× virtual canvas), TV camera director (OVERVIEW/LEADER_ZOOM/BATTLE_ZOOM/COMEBACK_ZOOM), fullscreen toggle (⛶), fade-to-black screen transitions (TransitionContext), result screen + race history. 228 Vitest tests. |
+| 2026-04-23 | CI restored (vite 5→8 upgrade via PR #1), environments refactored to consume background image paths from track config via module-level image cache (PR #2), project hygiene pass for line endings, coverage ignore, and SETUP.md stack correction (PR #3). Documentation for Phase 2.5 Track Editor feature established. 232 Vitest tests still green. |

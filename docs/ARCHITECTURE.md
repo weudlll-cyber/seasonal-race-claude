@@ -84,3 +84,5 @@ Browser → React (screens/)
 - **Socket.IO rooms** map 1-to-1 with race IDs for isolation.
 - **JWT** is short-lived (1h) and validated on every protected route and socket connection.
 - **Seasons** are a first-class DB table so the leaderboard can be cleanly reset between them.
+- **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images via an editor in the Dev Panel. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
+- **Track Effects replace Environments** — The current `client/src/modules/environments/` concept will be retired. Track backgrounds are the authored image. Animated overlays (stars, bubbles, etc.) become opt-in per-track effect layers under `client/src/modules/track-effects/`.
