@@ -1,10 +1,10 @@
-// localStorage CRUD for editor-created tracks.
+// localStorage CRUD for editor-created track geometries.
 // Key scheme:
-//   racearena:tracks:index           — JSON array of track IDs
-//   racearena:tracks:<id>            — full track JSON
+//   racearena:trackGeometries:index  — JSON array of geometry IDs
+//   racearena:trackGeometries:<id>   — full geometry JSON
 
-const INDEX_KEY = 'racearena:tracks:index';
-const trackKey = (id) => `racearena:tracks:${id}`;
+const GEOMETRIES_INDEX_KEY = 'racearena:trackGeometries:index';
+const trackGeometryKey = (id) => `racearena:trackGeometries:${id}`;
 
 const genId = () => {
   if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
@@ -39,12 +39,12 @@ function lsRemove(key) {
 }
 
 function readIndex() {
-  const raw = lsGet(INDEX_KEY);
+  const raw = lsGet(GEOMETRIES_INDEX_KEY);
   return raw ? JSON.parse(raw) : [];
 }
 
 function writeIndex(ids) {
-  lsSet(INDEX_KEY, JSON.stringify(ids));
+  lsSet(GEOMETRIES_INDEX_KEY, JSON.stringify(ids));
 }
 
 function validatePoints(pts, label) {
@@ -84,7 +84,7 @@ export function listTracks() {
   const ids = readIndex();
   const tracks = ids
     .map((id) => {
-      const raw = lsGet(trackKey(id));
+      const raw = lsGet(trackGeometryKey(id));
       if (!raw) return null;
       const t = JSON.parse(raw);
       return {
@@ -105,7 +105,7 @@ export function listTracks() {
  * @returns {object|null}
  */
 export function getTrack(id) {
-  const raw = lsGet(trackKey(id));
+  const raw = lsGet(trackGeometryKey(id));
   return raw ? JSON.parse(raw) : null;
 }
 
@@ -124,14 +124,14 @@ export function saveTrack(track) {
 
   let createdAt = now;
   if (!isNew) {
-    const existing = lsGet(trackKey(id));
+    const existing = lsGet(trackGeometryKey(id));
     if (existing) {
       createdAt = JSON.parse(existing).createdAt ?? now;
     }
   }
 
   const saved = { ...track, id, createdAt, updatedAt: now };
-  lsSet(trackKey(id), JSON.stringify(saved));
+  lsSet(trackGeometryKey(id), JSON.stringify(saved));
 
   const ids = readIndex();
   if (!ids.includes(id)) {
@@ -148,9 +148,9 @@ export function saveTrack(track) {
  * @returns {boolean}
  */
 export function deleteTrack(id) {
-  const existing = lsGet(trackKey(id));
+  const existing = lsGet(trackGeometryKey(id));
   if (existing === null) return false;
-  lsRemove(trackKey(id));
+  lsRemove(trackGeometryKey(id));
   writeIndex(readIndex().filter((i) => i !== id));
   return true;
 }

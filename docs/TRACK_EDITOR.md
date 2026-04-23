@@ -67,13 +67,27 @@ The race canvas is 1280×720. Background images are stretched with `ctx.drawImag
 
 ---
 
+## Two Track Concepts — Preset vs Geometry
+
+Tracks have two orthogonal aspects that are managed separately:
+
+- **Preset** — configuration of a race: name, icon, duration, winners, which geometry to use, which effects layer. Managed in the existing Dev Panel `Tracks` section (`TrackManager.jsx`). Persisted via `modules/storage/useStorage` under `KEYS.tracks`.
+
+- **Geometry** — the actual spatial path of the race: background image, inner and outer boundary points, closed/open flag. Managed by the Track Editor (this spec). Persisted under `localStorage` keys `racearena:trackGeometries:<id>`.
+
+A preset references a geometry by geometry id. Multiple presets may reference the same geometry (e.g. "Sunset Derby" and "Midnight Derby" both run on the same oval, with different durations and effects).
+
+The two are edited in different places: presets in the DevScreen Track Manager, geometries in the standalone Track Editor route.
+
+---
+
 ## Track Data Structure
 
-Stored as JSON in `localStorage` under key `racearena:tracks:<trackId>`.
+Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`.
 
 ```json
 {
-  "id": "custom-",
+  "id": "custom-<uuid>",  // stored under racearena:trackGeometries:<id>
   "name": "City Circuit Night",
   "backgroundImage": "/assets/tracks/backgrounds/city-circuit.png",
   "closed": true,

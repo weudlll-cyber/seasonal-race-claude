@@ -85,6 +85,18 @@ function DevScreen() {
           <div>
             <div className={s.sidebarTitle}>⚙️ Dev Panel</div>
             <div className={s.sidebarSubtitle}>Configuration</div>
+            <button
+              className={`${s.btn} ${s.btnPrimary}`}
+              style={{
+                marginTop: '0.75rem',
+                fontSize: '0.72rem',
+                padding: '0.35rem 0.7rem',
+                width: '100%',
+              }}
+              onClick={() => navigate('/track-editor')}
+            >
+              Track Geometry Editor →
+            </button>
           </div>
         </div>
 

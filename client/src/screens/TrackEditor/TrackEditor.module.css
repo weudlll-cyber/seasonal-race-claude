@@ -1,0 +1,69 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid #2a2a35;
+  flex-shrink: 0;
+}
+
+.backBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius);
+  transition: color var(--transition);
+}
+
+.backBtn:hover {
+  color: var(--color-text);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  gap: 0.75rem;
+  overflow-y: auto;
+}
+
+.canvasWrapper {
+  max-width: 1280px;
+  width: 100%;
+}
+
+.canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  cursor: crosshair;
+  border: 1px solid #2a2a35;
+  border-radius: var(--radius);
+}
+
+.statusLine {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
