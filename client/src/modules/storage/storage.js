@@ -67,3 +67,21 @@ export function clearAllStorage() {
 export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
+
+// One-time migration: flush old-format track presets (shapeId/environmentId → geometryId model).
+// Runs at module-load time; safe to call multiple times — exits immediately if no old data exists.
+(function migrateTracksIfNeeded() {
+  try {
+    const raw = localStorage.getItem('racearena:tracks');
+    if (!raw) return;
+    const tracks = JSON.parse(raw);
+    if (Array.isArray(tracks) && tracks.length > 0 && 'shapeId' in tracks[0]) {
+      localStorage.removeItem('racearena:tracks');
+      console.warn(
+        '[RaceArena] Flushed racearena:tracks: migrated from shapeId/environmentId to geometryId-based preset model.'
+      );
+    }
+  } catch {
+    // ignore parse errors — key will be re-seeded from defaults on next read
+  }
+})();

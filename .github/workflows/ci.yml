@@ -16,31 +16,6 @@ on:
     branches: [main, master]
 
 jobs:
-  # ── Server ──────────────────────────────────────────────────
-  server:
-    name: Server checks
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test --if-present
-
-      - name: Security audit (fail on high/critical)
-        run: npm audit --audit-level=high
-
   # ── Client ──────────────────────────────────────────────────
   client:
     name: Client checks

@@ -19,7 +19,12 @@ const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 
 export class CameraDirector {
-  constructor() {
+  /**
+   * @param {{ minX: number, minY: number, maxX: number, maxY: number }} [bbox]
+   *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas.
+   */
+  constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }) {
+    this._bbox = bbox;
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = 1;
@@ -35,14 +40,6 @@ export class CameraDirector {
   update(racers, ts, canvasW, canvasH) {
     if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
       this._transition(racers, ts);
-    }
-    // Debug: log current state every 5 s so camera activity is visible in console
-    if (!this._logTs || ts - this._logTs >= 5000) {
-      this._logTs = ts;
-      console.log(
-        `[CameraDirector] state=${this.state} zoom=${this.zoom.toFixed(2)}` +
-          ` offsetX=${this.offsetX.toFixed(0)} offsetY=${this.offsetY.toFixed(0)}`
-      );
     }
     this._setTargets(racers, canvasW, canvasH);
     this.zoom += (this.targetZoom - this.zoom) * LERP;
@@ -117,5 +114,50 @@ export class CameraDirector {
         break;
       }
     }
+
+    // Clamp so the track bounding box never drifts entirely off-screen
+    const b = this._bbox;
+    this.targetOffsetX = this._clampOffset(
+      this.targetOffsetX,
+      b.minX,
+      b.maxX,
+      canvasW,
+      this.targetZoom
+    );
+    this.targetOffsetY = this._clampOffset(
+      this.targetOffsetY,
+      b.minY,
+      b.maxY,
+      canvasH,
+      this.targetZoom
+    );
+  }
+
+  // Clamps a camera offset so the viewport never exposes the canvas edge (black strips),
+  // and, when the track bbox fits on-screen at the current zoom, further restricts so the
+  // track stays visible.
+  //
+  // Canvas-edge (hard outer limit):
+  //   offsetX >= canvasSize * (1 - zoom)  →  world right edge covers screen right
+  //   offsetX <= 0                        →  world left edge covers screen left
+  //
+  // Bbox (inner tightening, only when track fits at this zoom):
+  //   lo = -bboxMin * zoom  (left edge ≥ 0)
+  //   hi = canvasSize - bboxMax * zoom  (right edge ≤ canvasSize)
+  _clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
+    // Hard canvas-edge constraint
+    let lo = canvasSize * (1 - zoom);
+    let hi = 0;
+
+    // Optional bbox tightening (only when track fits in the viewport)
+    const bboxLo = -bboxMin * zoom;
+    const bboxHi = canvasSize - bboxMax * zoom;
+    if (bboxLo <= bboxHi) {
+      lo = Math.max(lo, bboxLo);
+      hi = Math.min(hi, bboxHi);
+    }
+
+    if (lo > hi) return 0; // should not happen for zoom ≥ 1; safe fallback
+    return Math.max(lo, Math.min(hi, val));
   }
 }

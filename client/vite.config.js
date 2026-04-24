@@ -13,13 +13,5 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    // Proxy API calls to the Express server during development
-    proxy: {
-      '/api': 'http://localhost:5000',
-      '/socket.io': {
-        target: 'http://localhost:5000',
-        ws: true,
-      },
-    },
   },
 });
