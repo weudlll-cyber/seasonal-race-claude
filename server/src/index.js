@@ -19,11 +19,13 @@ const seasonRoutes         = require('./routes/season');
 const registerSocketHandlers = require('./modules/socket');
 const errorHandler         = require('./middleware/errorHandler');
 
+const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*' } });
+const io     = new Server(server, { cors: { origin: allowedOrigin } });
 
-app.use(cors());
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.json());
 
 getDb();
