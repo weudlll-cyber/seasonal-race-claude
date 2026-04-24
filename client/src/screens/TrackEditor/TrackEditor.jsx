@@ -718,7 +718,7 @@ export default function TrackEditor() {
             onClick={handleUndo}
             title="Undo (Ctrl+Z)"
           >
-            ↶
+            ↶ Undo
           </button>
           <button
             className={s.historyBtn}
@@ -726,7 +726,7 @@ export default function TrackEditor() {
             onClick={handleRedo}
             title="Redo (Ctrl+Shift+Z)"
           >
-            ↷
+            ↷ Redo
           </button>
         </div>
 
