@@ -31,6 +31,7 @@ vi.mock('../../modules/track-effects/bgImageCache.js', () => ({
 }));
 
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 
 // ── Canvas mock (jsdom lacks full 2-D context) ────────────────────────────────
 function mockCanvas() {
@@ -116,5 +117,62 @@ describe('PresetThumbnail', () => {
   it('does not crash when getTrack returns undefined', () => {
     getTrack.mockReturnValue(undefined);
     expect(() => render(<PresetThumbnail geometryId="whatever" />)).not.toThrow();
+  });
+
+  it('renders track line after image loads asynchronously', () => {
+    const GEOM_WITH_BG = { ...TEST_GEOM, backgroundImage: '/test-bg.jpg' };
+    getTrack.mockReturnValue(GEOM_WITH_BG);
+    getBackgroundImage.mockReturnValue(null); // not yet cached
+
+    const mockImg = { onload: null, onerror: null, src: '' };
+    const OrigImage = globalThis.Image;
+    globalThis.Image = function MockImage() {
+      return mockImg;
+    };
+
+    render(<PresetThumbnail geometryId="test-geom" />);
+
+    // Initial render: track line on dark background, no bg image yet
+    expect(ctx.stroke).toHaveBeenCalled();
+    expect(ctx.drawImage).not.toHaveBeenCalled();
+
+    // Simulate async image load completing
+    act(() => {
+      mockImg.onload();
+    });
+
+    // After load: background image drawn, then track line redrawn
+    expect(ctx.drawImage).toHaveBeenCalledWith(mockImg, 0, 0, 120, 68);
+    expect(ctx.stroke).toHaveBeenCalledTimes(2);
+
+    globalThis.Image = OrigImage;
+  });
+
+  it('falls back gracefully when background image fails to load', () => {
+    const GEOM_WITH_BG = { ...TEST_GEOM, backgroundImage: '/missing.jpg' };
+    getTrack.mockReturnValue(GEOM_WITH_BG);
+    getBackgroundImage.mockReturnValue(null);
+
+    const mockImg = { onload: null, onerror: null, src: '' };
+    const OrigImage = globalThis.Image;
+    globalThis.Image = function MockImage() {
+      return mockImg;
+    };
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(() => render(<PresetThumbnail geometryId="test-geom" />)).not.toThrow();
+
+    act(() => {
+      mockImg.onerror();
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('/missing.jpg'));
+    // Track line still drawn on dark placeholder; no background image
+    expect(ctx.stroke).toHaveBeenCalled();
+    expect(ctx.drawImage).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    globalThis.Image = OrigImage;
   });
 });
