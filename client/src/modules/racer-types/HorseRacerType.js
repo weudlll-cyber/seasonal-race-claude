@@ -45,16 +45,21 @@ export class HorseRacerType {
   }
 
   drawRacer(ctx, x, y, angle, racer, isLeader, frame) {
-    const bob = Math.sin(frame * 0.012 + (racer.index ?? 0) * 1.2) * 3;
-    ctx.font = '26px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
     if (isLeader) {
-      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 12;
       ctx.shadowColor = '#ffd700';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     }
-    ctx.fillText('🐴', x, y + bob);
-    ctx.shadowBlur = 0;
+    this.render.drawBody(ctx, racer, frame);
+    ctx.restore();
   }
 
   getTrailParticles(x, y, speed, angle, frame) {
@@ -84,13 +89,13 @@ export class HorseRacerType {
    */
   _getAnimationOffset(frame, speed) {
     const clampedSpeed = Math.max(0, Math.min(speed, 5));
-    // Rate scales from 0.04/frame (idle) to 0.16/frame (full speed)
-    const rate = 0.04 + 0.12 * (clampedSpeed / 5);
+    // Rate in radians/ms — idle: ~2 s cycle, full speed: ~480 ms cycle
+    const rate = 0.003 + 0.01 * (clampedSpeed / 5);
     const legCycle = frame * rate;
     const legPhaseA = Math.sin(legCycle); // front-left, rear-right
     const legPhaseB = Math.sin(legCycle + Math.PI); // front-right, rear-left (opposite)
-    const manePhase = Math.sin(frame * 0.08) * 0.3; // subtle wave, bounded ±0.3
-    const tailPhase = Math.sin(frame * 0.05 + 0.5) * 0.4; // lags body, bounded ±0.4
+    const manePhase = Math.sin(frame * 0.004) * 0.3; // ~1.6 s sway, bounded ±0.3
+    const tailPhase = Math.sin(frame * 0.003 + 0.5) * 0.4; // ~2 s lag, bounded ±0.4
     return { legPhaseA, legPhaseB, manePhase, tailPhase };
   }
 

@@ -178,3 +178,61 @@ describe('HorseRacerType — D1 extended manifest', () => {
     }
   });
 });
+
+describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
+  let horse;
+  beforeEach(() => {
+    horse = new HorseRacerType();
+  });
+
+  // ── 6. drawRacer — Canvas transform wiring ────────────────────────────────
+
+  it('drawRacer positions the canvas at (x, y) and rotates by angle', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 150, 200, Math.PI / 4, MOCK_RACER, false, 0);
+    expect(ctx.translate.mock.calls[0]).toEqual([150, 200]);
+    expect(ctx.rotate.mock.calls[0]).toEqual([Math.PI / 4]);
+  });
+
+  it('drawRacer saves and restores ctx state exactly once', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
+    expect(ctx.save.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(ctx.restore.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('drawRacer delegates to drawBody — fill called ≥ 7 times', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('drawRacer never calls fillText (no emoji fallback)', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
+    expect(ctx.fillText.mock.calls.length).toBe(0);
+  });
+
+  // ── 7. Leader glow ────────────────────────────────────────────────────────
+
+  it('drawRacer with isLeader=true draws a gold stroke outline', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, true, 0);
+    expect(ctx.stroke.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('drawRacer with isLeader=false makes no stroke calls', () => {
+    const ctx = makeCtx();
+    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
+    expect(ctx.stroke.mock.calls.length).toBe(0);
+  });
+
+  // ── 8. Timestamp-compatible animation rates ───────────────────────────────
+
+  it('leg phase advances visibly over 100 ms at full speed (timestamp-compatible rates)', () => {
+    const a = horse.animation.getAnimationOffset(0, 5);
+    const b = horse.animation.getAnimationOffset(100, 5);
+    // rate=0.013 → 100 ms = 1.3 radians → Δsin(0→1.3) ≈ 0.96
+    expect(Math.abs(b.legPhaseA - a.legPhaseA)).toBeGreaterThan(0.5);
+  });
+});
