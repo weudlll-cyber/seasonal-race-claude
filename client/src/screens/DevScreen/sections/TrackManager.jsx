@@ -14,7 +14,6 @@ import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import s from '../DevScreen.module.css';
 
-const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const DURATIONS = [30, 60, 90, 120];
 
 const TRACK_WIDTHS = [100, 140, 200, 280, 360];
@@ -29,7 +28,6 @@ const BLANK = {
   color: '#e63946',
   defaultDuration: 60,
   defaultWinners: 3,
-  difficulty: 'medium',
   trackWidth: 140,
 };
 
@@ -71,7 +69,6 @@ function TrackManager() {
       color: track.color,
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
-      difficulty: track.difficulty,
       trackWidth: track.trackWidth ?? 140,
     });
     setEditId(track.id);
@@ -132,7 +129,6 @@ function TrackManager() {
                       {racer.icon} {racer.name}
                     </span>
                   )}
-                  <span className={s.badge}>{track.difficulty}</span>
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
                   {track.isDefault ? (
@@ -280,20 +276,6 @@ function TrackManager() {
                 >
                   +
                 </button>
-              </div>
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Difficulty</label>
-              <div className={s.optionPills}>
-                {DIFFICULTIES.map((d) => (
-                  <button
-                    key={d}
-                    className={`${s.optionPill} ${form.difficulty === d ? s.optionPillActive : ''}`}
-                    onClick={() => f('difficulty', d)}
-                  >
-                    {d}
-                  </button>
-                ))}
               </div>
             </div>
             <div className={s.formGroup}>
