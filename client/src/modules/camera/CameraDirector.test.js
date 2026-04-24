@@ -163,3 +163,64 @@ describe('CameraDirector', () => {
     expect(CAM_STATE.COMEBACK_ZOOM).toBe('COMEBACK_ZOOM');
   });
 });
+
+// ── CameraDirector — bbox clamping ────────────────────────────────────────────
+
+describe('CameraDirector — bbox clamping', () => {
+  it('with full-canvas bbox and extreme racer position, track right edge remains on screen (no over-clamp)', () => {
+    // Full-canvas bbox: 1280*1.6=2048 > canvas width — track is wider than screen at this zoom.
+    // Clamp does NOT fire; camera follows racers freely. The observed offsetX=-1089 is correct
+    // behaviour: it centers the right-side racers, left portion of track goes off-screen.
+    const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
+    const cd = new CameraDirector(bbox);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    const extremeRacers = [
+      { t: 0.9, x: 1081, y: 360, finished: false },
+      { t: 0.8, x: 1081, y: 360, finished: false },
+    ];
+    for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, 1280, 720);
+    // Track right edge (x=1280) must remain on screen from the left: 1280*zoom + offsetX >= 0
+    expect(bbox.maxX * cd.zoom + cd.offsetX).toBeGreaterThan(0);
+  });
+
+  it('with editor-scale bbox (fits at zoom=1.6), BATTLE_ZOOM clamps so full track stays visible', () => {
+    // Editor track spans x=400..1100: width=700, 700*1.6=1120 < 1280 — fits on screen.
+    // Clamp fires: keeps left edge (x=400) at screen-left and right edge (x=1100) at screen-right.
+    const bbox = { minX: 400, minY: 50, maxX: 1100, maxY: 600 };
+    const cd = new CameraDirector(bbox);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    const racers = [
+      { t: 0.9, x: 1090, y: 300, finished: false },
+      { t: 0.8, x: 1080, y: 300, finished: false },
+    ];
+    for (let i = 0; i < 300; i++) cd.update(racers, 1000, 1280, 720);
+    // left edge must be at or right of screen left
+    expect(bbox.minX * cd.zoom + cd.offsetX).toBeGreaterThanOrEqual(-1);
+    // right edge must be at or left of screen right
+    expect(bbox.maxX * cd.zoom + cd.offsetX).toBeLessThanOrEqual(1281);
+  });
+
+  it('LEADER_ZOOM with racers near canvas center: existing behaviour preserved (no unwanted clamping)', () => {
+    const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
+    const cd = new CameraDirector(bbox);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
+    for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, 1280, 720);
+    // targetOffsetX = 640 - 640*1.4 = -256, within [-512, 0] — no clamping
+    expect(cd.offsetX).toBeCloseTo(-256, 0);
+  });
+
+  it('default bbox (no arg) behaves identically to explicit full-canvas bbox', () => {
+    const cdDefault = new CameraDirector();
+    const cdExplicit = new CameraDirector({ minX: 0, minY: 0, maxX: 1280, maxY: 720 });
+    const racers = mockRacers(4);
+    cdDefault.state = CAM_STATE.BATTLE_ZOOM;
+    cdExplicit.state = CAM_STATE.BATTLE_ZOOM;
+    for (let i = 0; i < 100; i++) {
+      cdDefault.update(racers, 1000 + i * 10, 1280, 720);
+      cdExplicit.update(racers, 1000 + i * 10, 1280, 720);
+    }
+    expect(cdDefault.offsetX).toBeCloseTo(cdExplicit.offsetX, 3);
+    expect(cdDefault.offsetY).toBeCloseTo(cdExplicit.offsetY, 3);
+  });
+});

@@ -118,6 +118,34 @@ describe('EditorShape — getEdgePoints', () => {
   });
 });
 
+describe('EditorShape — getBoundingBox', () => {
+  it('returns a box that contains all inner and outer points', () => {
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 120 });
+    const bbox = shape.getBoundingBox();
+    const allPts = [...TRIANGLE_CLOSED.innerPoints, ...TRIANGLE_CLOSED.outerPoints];
+    for (const p of allPts) {
+      expect(p.x).toBeGreaterThanOrEqual(bbox.minX);
+      expect(p.x).toBeLessThanOrEqual(bbox.maxX);
+      expect(p.y).toBeGreaterThanOrEqual(bbox.minY);
+      expect(p.y).toBeLessThanOrEqual(bbox.maxY);
+    }
+  });
+
+  it('is cached — second call returns the same object', () => {
+    const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
+    const first = shape.getBoundingBox();
+    const second = shape.getBoundingBox();
+    expect(second).toBe(first);
+  });
+
+  it('minX < maxX and minY < maxY', () => {
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 120 });
+    const { minX, maxX, minY, maxY } = shape.getBoundingBox();
+    expect(maxX).toBeGreaterThan(minX);
+    expect(maxY).toBeGreaterThan(minY);
+  });
+});
+
 describe('EditorShape — offset clamping in getPosition', () => {
   const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
 

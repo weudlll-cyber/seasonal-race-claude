@@ -124,6 +124,25 @@ export class SvgPathShape {
     return this._totalLen;
   }
 
+  getBoundingBox() {
+    if (this._bboxCache !== undefined) return this._bboxCache;
+    const hw = this.trackWidth / 2;
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
+    for (const p of this._pts) {
+      const cx = MARGIN + p.x * this._sx;
+      const cy = MARGIN + p.y * this._sy;
+      if (cx - hw < minX) minX = cx - hw;
+      if (cx + hw > maxX) maxX = cx + hw;
+      if (cy - hw < minY) minY = cy - hw;
+      if (cy + hw > maxY) maxY = cy + hw;
+    }
+    this._bboxCache = { minX, maxX, minY, maxY };
+    return this._bboxCache;
+  }
+
   getCenterPoint() {
     if (this._centerFrac) {
       return { x: this.cw * this._centerFrac.x, y: this.ch * this._centerFrac.y };

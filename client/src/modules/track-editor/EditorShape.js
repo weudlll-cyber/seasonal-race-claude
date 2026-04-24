@@ -99,8 +99,8 @@ export class EditorShape {
     return { outer, inner };
   }
 
-  getCenterPoint() {
-    // Bounding-box centre of all sampled points
+  getBoundingBox() {
+    if (this._bboxCache !== undefined) return this._bboxCache;
     const all = [...this._inner, ...this._outer];
     let minX = Infinity,
       maxX = -Infinity,
@@ -112,6 +112,12 @@ export class EditorShape {
       if (p.y < minY) minY = p.y;
       if (p.y > maxY) maxY = p.y;
     }
+    this._bboxCache = { minX, maxX, minY, maxY };
+    return this._bboxCache;
+  }
+
+  getCenterPoint() {
+    const { minX, maxX, minY, maxY } = this.getBoundingBox();
     return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
   }
 }

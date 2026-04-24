@@ -132,7 +132,7 @@ export default function RaceScreen() {
     const duration = raceData.duration ?? 60;
     const maxLaps = isOpenTrack ? 1 : lapsFromDuration(duration);
 
-    camDirRef.current = new CameraDirector();
+    camDirRef.current = new CameraDirector(shapeRef.current.getBoundingBox());
     setMaxLapsState(maxLaps);
 
     // Camera bounds for open tracks — clamp so track is never off-screen

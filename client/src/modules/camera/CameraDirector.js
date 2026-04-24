@@ -19,7 +19,13 @@ const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 
 export class CameraDirector {
-  constructor() {
+  /**
+   * @param {{ minX: number, minY: number, maxX: number, maxY: number }} [bbox]
+   *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas,
+   *   which preserves existing behaviour for legacy SvgPathShape tracks.
+   */
+  constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }) {
+    this._bbox = bbox;
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = 1;
@@ -117,5 +123,34 @@ export class CameraDirector {
         break;
       }
     }
+
+    // Clamp so the track bounding box never drifts entirely off-screen
+    const b = this._bbox;
+    this.targetOffsetX = this._clampOffset(
+      this.targetOffsetX,
+      b.minX,
+      b.maxX,
+      canvasW,
+      this.targetZoom
+    );
+    this.targetOffsetY = this._clampOffset(
+      this.targetOffsetY,
+      b.minY,
+      b.maxY,
+      canvasH,
+      this.targetZoom
+    );
+  }
+
+  // Clamps a camera offset so the track bbox defined by [bboxMin, bboxMax] stays on-screen.
+  // lo = lower bound: ensures bboxMin * zoom + offsetX >= 0 (left edge stays visible)
+  // hi = upper bound: ensures bboxMax * zoom + offsetX <= canvasSize (right edge stays visible)
+  // When lo > hi the track is wider than the screen at this zoom — skip clamping and let
+  // the racer-follow formula run freely (same behaviour as old SvgPathShape tracks).
+  _clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
+    const lo = -bboxMin * zoom; // left edge ≥ screen left
+    const hi = canvasSize - bboxMax * zoom; // right edge ≤ screen right
+    if (lo > hi) return val; // track wider than screen — no constraint
+    return Math.max(lo, Math.min(hi, val));
   }
 }
