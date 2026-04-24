@@ -9,6 +9,7 @@
 // ============================================================
 
 import styles from './SetupScreen.module.css';
+import PresetThumbnail from '../../components/PresetThumbnail/PresetThumbnail.jsx';
 
 function TrackSelector({ tracks, selectedTrackId, onChange }) {
   if (!tracks || tracks.length === 0) {
@@ -46,7 +47,11 @@ function TrackSelector({ tracks, selectedTrackId, onChange }) {
               hasGeometry ? track.name : `${track.name} — draw a track in the Track Editor first`
             }
           >
-            <span className={styles.trackIcon}>{track.icon}</span>
+            {hasGeometry ? (
+              <PresetThumbnail geometryId={track.geometryId} width={120} height={68} />
+            ) : (
+              <span className={styles.trackIcon}>{track.icon}</span>
+            )}
             <span className={styles.trackName}>{track.name}</span>
             <span className={styles.trackDescription}>
               {hasGeometry ? track.description : 'No track drawn yet'}
