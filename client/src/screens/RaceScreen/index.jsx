@@ -15,6 +15,7 @@ import { TRACK_PATHS } from '../../modules/track-shapes/track-path-configs.js';
 import { getEnvironment } from '../../modules/environments/index.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -116,7 +117,6 @@ export default function RaceScreen() {
     } else {
       const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
       const envId = raceData.environmentId || 'dirt';
-      console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId);
       const probeShape = getShape(shapeId, CW, CH, trackWidth);
       isOpenTrack = probeShape.isOpen === true;
       const virtualW = isOpenTrack ? VIRTUAL_W : CW;
@@ -164,10 +164,6 @@ export default function RaceScreen() {
         const j = Math.floor(Math.random() * (i + 1));
         [jittered[i], jittered[j]] = [jittered[j], jittered[i]];
       }
-      console.log(
-        '[RaceArena] trackOffsets:',
-        jittered.map((o) => o.toFixed(3))
-      );
       return jittered;
     }
 
@@ -605,6 +601,12 @@ export default function RaceScreen() {
         drawCountdownOverlay(ts - st.countdownStart);
       } else if (st.phase === PHASE.FINISHED) {
         drawFinishedOverlay();
+      }
+
+      // ── PiP minimap (RACING and FINISHED only) ──
+      if (st.phase !== PHASE.COUNTDOWN) {
+        const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
+        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH);
       }
 
       rafRef.current = requestAnimationFrame(loop);
