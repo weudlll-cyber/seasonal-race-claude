@@ -2,7 +2,7 @@
 
 ## Overview
 
-RaceArena is a client-server application. The React frontend communicates with the Node/Express backend over both REST (game data) and Socket.IO (real-time race state).
+RaceArena is currently a self-contained React client. All race logic runs in the browser; all persistence uses `localStorage`. A backend server is planned for Phase 5 (see below).
 
 ## Folder Structure
 
@@ -22,43 +22,27 @@ seasonal-race-claude/
 │       │   ├── Modal/
 │       │   ├── InputField/
 │       │   ├── ColorPicker/
+│       │   ├── EffectConfig/
 │       │   └── LogoUploader/
 │       ├── modules/                # Domain logic, independent of React
-│       │   ├── race-engine/        # Client-side physics tick & prediction
+│       │   ├── race-engine/        # Client-side physics tick
+│       │   ├── track-editor/       # Track geometry storage & shapes
+│       │   ├── track-effects/      # Animated effect layers (rain, stars, …)
 │       │   ├── track-renderer/     # Canvas draw calls
+│       │   ├── track-canvas/       # Camera, minimap, lap utilities
 │       │   ├── racer-types/        # Racer stat definitions
-│       │   ├── track-types/        # Track geometry definitions
-│       │   ├── socket/             # Socket.IO client singleton
+│       │   ├── storage/            # localStorage helpers
 │       │   └── utils/              # Shared helpers (time, math)
 │       ├── styles/
 │       │   └── main.css
-│       ├── App.js
-│       └── index.js
-│
-├── server/
-│   └── src/
-│       ├── modules/                # Domain modules (handlers + logic)
-│       │   ├── race/               # Race CRUD handlers
-│       │   ├── socket/             # Socket.IO event registration
-│       │   ├── db/                 # SQLite connection & schema bootstrap
-│       │   └── utils/              # Shared server utilities
-│       ├── routes/                 # Express routers
-│       │   ├── race.js
-│       │   ├── user.js
-│       │   └── season.js
-│       ├── middleware/
-│       │   ├── auth.js             # JWT guard
-│       │   └── errorHandler.js
-│       └── index.js
+│       ├── App.jsx
+│       └── main.jsx
 │
 ├── docs/
 │   ├── ARCHITECTURE.md             # This file
 │   ├── API.md
-│   └── SETUP.md
-│
-├── scripts/
-│   ├── seed.js                     # DB seed data
-│   └── deploy.sh                   # Production deploy helper
+│   ├── SETUP.md
+│   └── TRACK_EDITOR.md
 │
 └── .github/
     └── workflows/
@@ -66,21 +50,28 @@ seasonal-race-claude/
         └── deploy.yml              # Deploy on merge to main
 ```
 
-## Data Flow
+## Data Flow (current)
 
 ```
 Browser → React (screens/)
-            ↓ REST (fetch)                     → Express routes → modules/race  → SQLite
-            ↓ Socket.IO (modules/socket/)       → modules/socket → broadcast state
             ↓ Canvas (modules/track-renderer/)  ← modules/race-engine (rAF tick)
+            ↓ localStorage (modules/storage/)   ← all settings, tracks, results
 ```
 
 ## Key Design Decisions
 
-- **SQLite via better-sqlite3** — synchronous, zero-config, ideal for single-server deployment; swap for Postgres when horizontal scaling is needed.
-- **modules/ on both sides** — client `modules/` are framework-agnostic (no React imports); server `modules/` own their DB queries directly, no separate model layer.
-- **Socket.IO rooms** map 1-to-1 with race IDs for isolation.
-- **JWT** is short-lived (1h) and validated on every protected route and socket connection.
-- **Seasons** are a first-class DB table so the leaderboard can be cleanly reset between them.
-- **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images via an editor in the Dev Panel. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
-- **Track Effects replace Environments** — The current `client/src/modules/environments/` concept will be retired. Track backgrounds are the authored image. Animated overlays (stars, bubbles, etc.) become opt-in per-track effect layers under `client/src/modules/track-effects/`.
+- **Pure client for Phases 1–4** — no server dependency. All race state, track geometry, player settings, and results persist in `localStorage` under `racearena:*` keys.
+- **modules/ are framework-agnostic** — no React imports in `modules/`; screens own the component tree, modules own the logic.
+- **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
+- **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. The old `environments/` concept is retired.
+
+## Future: Phase 5 Server
+
+A backend will be built in Phase 5 with the following responsibilities:
+
+- **Race-outcome authority** — server finalises and signs race results; client is display-only
+- **Leaderboard & seasons** — race outcomes written to a persistent DB; season standings computed server-side
+- **Socket.IO event streaming** — server broadcasts authoritative race-tick state; replaces the current client-only physics loop for multiplayer
+- **Tech stack (planned):** Node.js / Express, Socket.IO, SQLite (single-server) or Postgres (scaled), JWT session tokens
+
+The Phase 5 server will be a fresh implementation designed around race integrity, not a continuation of the deleted scaffold (which assumed a user-auth REST API incompatible with this model).

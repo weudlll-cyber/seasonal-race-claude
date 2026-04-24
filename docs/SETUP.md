@@ -4,7 +4,6 @@
 
 - Node.js 20+
 - npm 10+
-- SQLite is bundled via `better-sqlite3` — no separate database server needed
 
 ## 1. Clone & install
 
@@ -12,39 +11,23 @@
 git clone https://github.com/weudlll-cyber/seasonal-race-claude.git
 cd seasonal-race-claude
 
-cd server && npm install
-cd ../client && npm install
+cd client && npm install
 ```
 
-## 2. Configure environment
+## 2. Start development server
 
 ```bash
-cp server/.env.example server/.env
-# Edit server/.env and set JWT_SECRET (SQLite uses a local file — no URI needed)
-```
-
-## 3. Seed the database (optional)
-
-```bash
-cd server
-node ../scripts/seed.js
-```
-
-## 4. Start development servers
-
-```bash
-# Terminal 1 — backend
-cd server && npm run dev
-
-# Terminal 2 — frontend
 cd client && npm run dev
 ```
 
 The app will be at `http://localhost:3000`.
 
-## 5. Running CI locally
+## 3. Running CI locally
 
 ```bash
-cd server && npm test
-cd ../client && npm test
+cd client && npm test
 ```
+
+---
+
+*Note: A backend server (race-integrity, leaderboard, Socket.IO) is planned for Phase 5. When that is built, server setup instructions will be added here.*

@@ -58,12 +58,12 @@ See `docs/TRACK_EDITOR.md` for the full specification, decisions, and future ext
 - [ ] Branding profile applied to race / result screens
 - [ ] Race history auto-populated when races finish (Phase 2 integration)
 
-## Phase 5 — Seasons & Leaderboard (planned)
+## Phase 5 — Race-Integrity Server & Leaderboard (planned)
 
-- [ ] Season model (server)
-- [ ] Standing calculation after each race
+- [ ] Race-outcome server (Node/Express + Socket.IO) — server-authoritative results
+- [ ] Race outcomes persisted to DB; season standings computed server-side
 - [ ] Leaderboard screen
-- [ ] Season archive
+- [ ] Season archive + reset
 
 ## Phase 6 — Polish & Production (planned)
 
