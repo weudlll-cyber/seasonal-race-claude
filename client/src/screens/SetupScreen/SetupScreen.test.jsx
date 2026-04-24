@@ -66,20 +66,10 @@ describe('SetupScreen', () => {
     expect(gearLink).toBeInTheDocument();
   });
 
-  it('Quick Test button creates 6 test players and saves race data', () => {
+  it('Quick Test button is disabled when no tracks have a drawn geometry', () => {
     renderSetupScreen();
-    const quickTestBtn = screen.getByTitle('Auto-fill 6 test players and start race');
-    fireEvent.click(quickTestBtn);
-
-    // Check that activeRace was saved to sessionStorage
-    const savedRace = sessionStorage.getItem('activeRace');
-    expect(savedRace).toBeTruthy();
-
-    const race = JSON.parse(savedRace);
-    expect(race.racers.length).toBe(6);
-    expect(race.racers[0].name).toBe('Player 1');
-    expect(race.racers[5].name).toBe('Player 6');
-    expect(race.eventName).toBe('Quick Test');
-    expect(race.trackId).toBeTruthy();
+    // Default tracks all have geometryId: null — button is disabled until a track is drawn.
+    const quickTestBtn = screen.getByTitle('Draw a track in the Track Editor first');
+    expect(quickTestBtn).toBeDisabled();
   });
 });

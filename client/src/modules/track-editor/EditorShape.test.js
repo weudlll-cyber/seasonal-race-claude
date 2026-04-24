@@ -100,3 +100,38 @@ describe('EditorShape — closed triangular track', () => {
     }
   });
 });
+
+describe('EditorShape — getEdgePoints', () => {
+  const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
+
+  it('returns outer and inner arrays with nSamples+1 entries', () => {
+    const { outer, inner } = shape.getEdgePoints(30);
+    expect(outer).toHaveLength(31);
+    expect(inner).toHaveLength(31);
+  });
+
+  it('outer y is greater than inner y for a horizontal straight track (outer is at y=50, inner at y=10)', () => {
+    const { outer, inner } = shape.getEdgePoints(10);
+    for (let i = 0; i < outer.length; i++) {
+      expect(outer[i].y).toBeGreaterThan(inner[i].y);
+    }
+  });
+});
+
+describe('EditorShape — offset clamping in getPosition', () => {
+  const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
+
+  it('offset 1.0 clamps to the outer edge (same as offset 0.5)', () => {
+    const p1 = shape.getPosition(0.5, 1.0);
+    const p05 = shape.getPosition(0.5, 0.5);
+    expect(p1.x).toBeCloseTo(p05.x, 1);
+    expect(p1.y).toBeCloseTo(p05.y, 1);
+  });
+
+  it('offset -1.0 clamps to the inner edge (same as offset -0.5)', () => {
+    const pN1 = shape.getPosition(0.5, -1.0);
+    const pN05 = shape.getPosition(0.5, -0.5);
+    expect(pN1.x).toBeCloseTo(pN05.x, 1);
+    expect(pN1.y).toBeCloseTo(pN05.y, 1);
+  });
+});

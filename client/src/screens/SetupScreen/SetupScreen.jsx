@@ -70,7 +70,7 @@ function SetupScreen() {
   });
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
-  const canStart = players.length > 0 && selectedTrackId !== null;
+  const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
@@ -81,6 +81,7 @@ function SetupScreen() {
       racers: players,
       trackId: selectedTrackId,
       trackName: selectedTrack?.name,
+      geometryId: selectedTrack?.geometryId ?? null,
       shapeId: selectedTrack?.shapeId || selectedTrack?.curveStyle || 'oval',
       environmentId: selectedTrack?.environmentId || 'dirt',
       racerTypeId: selectedTrack?.racerTypeId || selectedTrack?.racerId || 'horse',
@@ -95,7 +96,7 @@ function SetupScreen() {
 
   function handleQuickTest() {
     const track = quickTrack;
-    if (!track) return;
+    if (!track || !track.geometryId) return;
 
     // 6 test players — icon matches the track's racer type
     const trackIcon = track.racerTypeId
@@ -113,6 +114,7 @@ function SetupScreen() {
       racers: testPlayers,
       trackId: track.id,
       trackName: track.name,
+      geometryId: track.geometryId ?? null,
       shapeId: track.shapeId || track.curveStyle || 'oval',
       environmentId: track.environmentId || 'dirt',
       racerTypeId: track.racerTypeId || 'horse',
@@ -269,7 +271,12 @@ function SetupScreen() {
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                title="Auto-fill 6 test players and start race"
+                disabled={!quickTrack?.geometryId}
+                title={
+                  quickTrack?.geometryId
+                    ? 'Auto-fill 6 test players and start race'
+                    : 'Draw a track in the Track Editor first'
+                }
               >
                 ⚡ Quick Test
               </button>

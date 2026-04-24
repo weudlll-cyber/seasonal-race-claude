@@ -17,6 +17,10 @@ import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
+import { EditorShape } from '../../modules/track-editor/EditorShape.js';
+import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import { getEffect } from '../../modules/track-effects/index.js';
+import { extractEffectConfig } from '../TrackEditor/trackEditorSave.js';
 import './RaceScreen.css';
 
 const CW = 1280;
@@ -54,6 +58,7 @@ export default function RaceScreen() {
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
+  const effectRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -89,23 +94,34 @@ export default function RaceScreen() {
     const ctx = canvas.getContext('2d');
     const nRacers = raceData.racers.length;
 
-    const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
-    const envId = raceData.environmentId || 'dirt';
     const typeId = raceData.racerTypeId || 'horse';
-
-    console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId, '| typeId:', typeId);
-
     const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
 
-    // Open tracks (s-curve, spiral) get a 2.5× virtual canvas for scrolling camera.
-    // Build shape first with default CW to check isOpen, then rebuild with virtual width.
-    const probeShape = getShape(shapeId, CW, CH, trackWidth);
-    const isOpenTrack = probeShape.isOpen === true;
-    const virtualW = isOpenTrack ? VIRTUAL_W : CW;
-
-    shapeRef.current = getShape(shapeId, virtualW, CH, trackWidth);
-    const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
-    envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
+    let isOpenTrack = false;
+    if (raceData.geometryId) {
+      const geometry = getTrack(raceData.geometryId);
+      if (!geometry) {
+        setError('Track geometry not found. Open the Track Editor and save the track again.');
+        return;
+      }
+      shapeRef.current = new EditorShape(geometry);
+      envRef.current = getEnvironment('dirt', CW, CH, geometry.backgroundImage ?? null);
+      const { effectId, effectConfig } = extractEffectConfig(geometry);
+      if (effectId) {
+        const manifest = getEffect(effectId);
+        if (manifest) effectRef.current = manifest.create(canvas, effectConfig);
+      }
+    } else {
+      const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
+      const envId = raceData.environmentId || 'dirt';
+      console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId);
+      const probeShape = getShape(shapeId, CW, CH, trackWidth);
+      isOpenTrack = probeShape.isOpen === true;
+      const virtualW = isOpenTrack ? VIRTUAL_W : CW;
+      shapeRef.current = getShape(shapeId, virtualW, CH, trackWidth);
+      const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
+      envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
+    }
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
@@ -420,6 +436,7 @@ export default function RaceScreen() {
       const shape = shapeRef.current;
       const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
+      if (effectRef.current) effectRef.current.update(dt);
 
       ctx.clearRect(0, 0, CW, CH);
 
@@ -549,6 +566,7 @@ export default function RaceScreen() {
       // ── Draw world ──
       if (isOpenTrack) {
         env.drawBackground(ctx, ts);
+        if (effectRef.current) effectRef.current.render(ctx);
         ctx.save();
         // Combined pan + zoom centred at screen midpoint.
         // At zoom=1 this degrades to pure pan: translate(-camX, 0).
@@ -562,10 +580,11 @@ export default function RaceScreen() {
         ctx.restore();
         drawTitleOpen();
       } else {
+        env.drawBackground(ctx, ts);
+        if (effectRef.current) effectRef.current.render(ctx);
         ctx.save();
         ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(cam.zoom, cam.zoom);
-        env.drawBackground(ctx, ts);
         env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
         drawParticles();
         drawRacers();
@@ -588,6 +607,7 @@ export default function RaceScreen() {
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      effectRef.current = null;
     };
   }, [raceData, fadeNavigate]);
 

@@ -42,8 +42,9 @@ export class EditorShape {
     const inner = this._inner[idx];
     const outer = this._outer[idx];
 
-    // Linear interpolation: offset=-0.5 → inner, offset=+0.5 → outer
-    const frac = offset + 0.5;
+    // Clamp so environments passing ±1.0 (SvgPathShape convention) land on the edges.
+    const clamped = Math.max(-0.5, Math.min(0.5, offset));
+    const frac = clamped + 0.5; // 0 = inner edge, 1 = outer edge
     const x = inner.x + (outer.x - inner.x) * frac;
     const y = inner.y + (outer.y - inner.y) * frac;
 
@@ -64,7 +65,7 @@ export class EditorShape {
   }
 
   getTotalLength() {
-    // Approximate arc length of the centre path
+    if (this._cachedLength !== undefined) return this._cachedLength;
     let len = 0;
     const n = this._inner.length;
     for (let i = 1; i < n; i++) {
@@ -76,7 +77,26 @@ export class EditorShape {
       const dy = cy1 - cy0;
       len += Math.sqrt(dx * dx + dy * dy);
     }
+    this._cachedLength = len;
     return len;
+  }
+
+  /**
+   * Returns sampled outer and inner boundary points for track surface rendering.
+   * Compatible with the SvgPathShape.getEdgePoints() API used by environment modules.
+   * @param {number} nSamples  Number of segments (returns nSamples+1 point pairs)
+   * @returns {{ outer: {x,y}[], inner: {x,y}[] }}
+   */
+  getEdgePoints(nSamples = 120) {
+    const outer = [];
+    const inner = [];
+    for (let i = 0; i <= nSamples; i++) {
+      const t = i / nSamples;
+      const idx = this._idx(t);
+      outer.push({ x: this._outer[idx].x, y: this._outer[idx].y });
+      inner.push({ x: this._inner[idx].x, y: this._inner[idx].y });
+    }
+    return { outer, inner };
   }
 
   getCenterPoint() {

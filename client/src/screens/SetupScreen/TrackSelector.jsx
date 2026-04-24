@@ -28,22 +28,33 @@ function TrackSelector({ tracks, selectedTrackId, onChange }) {
 
   return (
     <div className={styles.trackGrid}>
-      {tracks.map((track) => (
-        <button
-          key={track.id}
-          className={`${styles.trackCard} ${
-            selectedTrackId === track.id ? styles.trackCardSelected : ''
-          }`}
-          style={{ '--track-color': track.color }}
-          onClick={() => onChange(track.id)}
-          title={track.name}
-        >
-          <span className={styles.trackIcon}>{track.icon}</span>
-          <span className={styles.trackName}>{track.name}</span>
-          <span className={styles.trackDescription}>{track.description}</span>
-          <div className={styles.trackColorBar} />
-        </button>
-      ))}
+      {tracks.map((track) => {
+        const hasGeometry = !!track.geometryId;
+        return (
+          <button
+            key={track.id}
+            className={`${styles.trackCard} ${
+              selectedTrackId === track.id ? styles.trackCardSelected : ''
+            }`}
+            style={{
+              '--track-color': track.color,
+              ...(hasGeometry ? {} : { opacity: 0.42, cursor: 'not-allowed' }),
+            }}
+            disabled={!hasGeometry}
+            onClick={() => onChange(track.id)}
+            title={
+              hasGeometry ? track.name : `${track.name} — draw a track in the Track Editor first`
+            }
+          >
+            <span className={styles.trackIcon}>{track.icon}</span>
+            <span className={styles.trackName}>{track.name}</span>
+            <span className={styles.trackDescription}>
+              {hasGeometry ? track.description : 'No track drawn yet'}
+            </span>
+            <div className={styles.trackColorBar} />
+          </button>
+        );
+      })}
     </div>
   );
 }
