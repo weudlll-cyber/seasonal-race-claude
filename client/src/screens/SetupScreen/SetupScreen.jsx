@@ -31,8 +31,7 @@ function SetupScreen() {
   // Read tracks and defaults from storage so Dev Panel changes propagate
   const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
 
-  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale
-  // localStorage from sessions before shapeId/environmentId/racerTypeId existed).
+  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
   const tracks = (() => {
     const base = Array.isArray(storedTracks) ? storedTracks : DEFAULT_TRACKS;
     const byId = new Map(base.map((t) => [t.id, t]));
@@ -43,9 +42,6 @@ function SetupScreen() {
         const existing = byId.get(d.id);
         byId.set(d.id, {
           ...existing,
-          // Canonical values come last so they always win over stale localStorage data
-          shapeId: d.shapeId,
-          environmentId: d.environmentId,
           racerTypeId: d.racerTypeId,
         });
       }
@@ -253,7 +249,7 @@ function SetupScreen() {
                   <button
                     key={t.id}
                     onClick={() => setQuickTrackId(t.id)}
-                    title={`${t.name} · ${t.shapeId || t.curveStyle || 'oval'} / ${t.environmentId || 'dirt'}`}
+                    title={t.name}
                     style={{
                       padding: '2px 7px',
                       fontSize: '11px',
