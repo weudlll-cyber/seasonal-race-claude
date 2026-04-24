@@ -31,8 +31,7 @@ function SetupScreen() {
   // Read tracks and defaults from storage so Dev Panel changes propagate
   const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
 
-  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale
-  // localStorage from sessions before shapeId/environmentId/racerTypeId existed).
+  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
   const tracks = (() => {
     const base = Array.isArray(storedTracks) ? storedTracks : DEFAULT_TRACKS;
     const byId = new Map(base.map((t) => [t.id, t]));
@@ -43,9 +42,6 @@ function SetupScreen() {
         const existing = byId.get(d.id);
         byId.set(d.id, {
           ...existing,
-          // Canonical values come last so they always win over stale localStorage data
-          shapeId: d.shapeId,
-          environmentId: d.environmentId,
           racerTypeId: d.racerTypeId,
         });
       }
@@ -74,7 +70,7 @@ function SetupScreen() {
   });
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
-  const canStart = players.length > 0 && selectedTrackId !== null;
+  const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
@@ -85,8 +81,7 @@ function SetupScreen() {
       racers: players,
       trackId: selectedTrackId,
       trackName: selectedTrack?.name,
-      shapeId: selectedTrack?.shapeId || selectedTrack?.curveStyle || 'oval',
-      environmentId: selectedTrack?.environmentId || 'dirt',
+      geometryId: selectedTrack?.geometryId ?? null,
       racerTypeId: selectedTrack?.racerTypeId || selectedTrack?.racerId || 'horse',
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
@@ -99,7 +94,7 @@ function SetupScreen() {
 
   function handleQuickTest() {
     const track = quickTrack;
-    if (!track) return;
+    if (!track || !track.geometryId) return;
 
     // 6 test players — icon matches the track's racer type
     const trackIcon = track.racerTypeId
@@ -117,8 +112,7 @@ function SetupScreen() {
       racers: testPlayers,
       trackId: track.id,
       trackName: track.name,
-      shapeId: track.shapeId || track.curveStyle || 'oval',
-      environmentId: track.environmentId || 'dirt',
+      geometryId: track.geometryId ?? null,
       racerTypeId: track.racerTypeId || 'horse',
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
@@ -253,7 +247,7 @@ function SetupScreen() {
                   <button
                     key={t.id}
                     onClick={() => setQuickTrackId(t.id)}
-                    title={`${t.name} · ${t.shapeId || t.curveStyle || 'oval'} / ${t.environmentId || 'dirt'}`}
+                    title={t.name}
                     style={{
                       padding: '2px 7px',
                       fontSize: '11px',
@@ -273,7 +267,12 @@ function SetupScreen() {
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                title="Auto-fill 6 test players and start race"
+                disabled={!quickTrack?.geometryId}
+                title={
+                  quickTrack?.geometryId
+                    ? 'Auto-fill 6 test players and start race'
+                    : 'Draw a track in the Track Editor first'
+                }
               >
                 ⚡ Quick Test
               </button>

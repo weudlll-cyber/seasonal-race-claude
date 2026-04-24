@@ -9,14 +9,16 @@
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { getShape } from '../../modules/track-shapes/index.js';
-import { getTrackWidth } from '../../modules/track-shapes/SvgPathShape.js';
-import { TRACK_PATHS } from '../../modules/track-shapes/track-path-configs.js';
-import { getEnvironment } from '../../modules/environments/index.js';
+import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
+import { EditorShape } from '../../modules/track-editor/EditorShape.js';
+import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import { getEffect } from '../../modules/track-effects/index.js';
+import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import './RaceScreen.css';
 
 const CW = 1280;
@@ -50,10 +52,10 @@ export default function RaceScreen() {
   const screenRef = useRef(null);
   const rafRef = useRef(null);
   const g = useRef(null);
-  const envRef = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
+  const effectsRef = useRef([]);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -89,39 +91,51 @@ export default function RaceScreen() {
     const ctx = canvas.getContext('2d');
     const nRacers = raceData.racers.length;
 
-    const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
-    const envId = raceData.environmentId || 'dirt';
     const typeId = raceData.racerTypeId || 'horse';
+    const trackWidth = raceData.trackWidth ?? 140;
 
-    console.log('[RaceScreen] shapeId:', shapeId, '| envId:', envId, '| typeId:', typeId);
+    if (!raceData.geometryId) {
+      console.error('[RaceArena] No geometryId in raceData — cannot start race.');
+      setError(
+        'No track geometry selected. Please choose a track with a saved geometry from Setup.'
+      );
+      return;
+    }
 
-    // Open tracks (s-curve, spiral) get a 2.5× virtual canvas for scrolling camera.
-    // Build shape first with default CW to check isOpen, then rebuild with virtual width.
-    const probeShape = getShape(shapeId, CW, CH);
-    const isOpenTrack = probeShape.isOpen === true;
-    const virtualW = isOpenTrack ? VIRTUAL_W : CW;
+    const geometry = getTrack(raceData.geometryId);
+    if (!geometry) {
+      setError('Track geometry not found. Open the Track Editor and save the track again.');
+      return;
+    }
 
-    shapeRef.current = getShape(shapeId, virtualW, CH);
-    const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
-    envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
+    shapeRef.current = new EditorShape(geometry);
+    // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
+    const isOpenTrack = shapeRef.current.isOpen;
+    const bgImagePath = geometry.backgroundImage ?? null;
+    effectsRef.current = extractEffects(geometry)
+      .map(({ id, config }) => {
+        const manifest = getEffect(id);
+        return manifest ? manifest.create(canvas, config) : null;
+      })
+      .filter(Boolean);
+
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
-    const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
 
     // Duration-based lap count (closed tracks only)
     const duration = raceData.duration ?? 60;
     const maxLaps = isOpenTrack ? 1 : lapsFromDuration(duration);
 
-    camDirRef.current = new CameraDirector();
+    camDirRef.current = new CameraDirector(shapeRef.current.getBoundingBox());
     setMaxLapsState(maxLaps);
 
     // Camera bounds for open tracks — clamp so track is never off-screen
     let camXMin = 0;
     let camXMax = VIRTUAL_W - CW;
     if (isOpenTrack) {
-      const startX = shapeRef.current.getPosition(0, 0, trackWidth).x;
-      const endX = shapeRef.current.getPosition(1, 0, trackWidth).x;
+      const startX = shapeRef.current.getPosition(0, 0).x;
+      const endX = shapeRef.current.getPosition(1, 0).x;
       const pad = CW * 0.08; // 8% of viewport as margin
       camXMin = Math.max(0, startX - pad);
       camXMax = Math.min(VIRTUAL_W - CW, Math.max(camXMin + 1, endX - CW + pad));
@@ -145,10 +159,6 @@ export default function RaceScreen() {
         const j = Math.floor(Math.random() * (i + 1));
         [jittered[i], jittered[j]] = [jittered[j], jittered[i]];
       }
-      console.log(
-        '[RaceArena] trackOffsets:',
-        jittered.map((o) => o.toFixed(3))
-      );
       return jittered;
     }
 
@@ -195,10 +205,9 @@ export default function RaceScreen() {
     function computePositions() {
       const st = g.current;
       const shape = shapeRef.current;
-      const tw = st.trackWidth;
       for (const r of st.racers) {
         const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        const pos = shape.getPosition(t, r.trackOffset, tw);
+        const pos = shape.getPosition(t, r.trackOffset);
         r.x = pos.x;
         r.y = pos.y;
         r.angle = pos.angle;
@@ -308,8 +317,7 @@ export default function RaceScreen() {
 
     // Title for closed tracks — positioned above the track using getEdgePoints
     function drawTitle() {
-      const tw = g.current.trackWidth;
-      const topY = Math.min(...shapeRef.current.getEdgePoints(tw, 30).outer.map((p) => p.y));
+      const topY = Math.min(...shapeRef.current.getEdgePoints(30).outer.map((p) => p.y));
       const titleY = 58 + (topY - 58) / 2;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -414,13 +422,166 @@ export default function RaceScreen() {
       ctx.fillText('Loading results…', CW / 2, CH / 2 + 58);
     }
 
+    // ── Editor track rendering (replaces environment classes) ────────────────
+    const CROWD = Array.from({ length: 60 }, (_, i) => ({
+      x: (i * 137.5) % CW,
+      phase: i * 0.41,
+      size: 6 + (i % 4),
+    }));
+
+    function drawEditorBackground(ctx, frame, bgPath) {
+      const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
+      if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, CW, CH);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, CW, CH);
+      } else {
+        const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
+        const grad = ctx.createLinearGradient(0, 0, CW, CH);
+        grad.addColorStop(0, '#0a0414');
+        grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
+        grad.addColorStop(1, '#0a0414');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CW, CH);
+      }
+      const stars = [
+        [80, 35],
+        [180, 18],
+        [310, 48],
+        [470, 12],
+        [620, 42],
+        [770, 22],
+        [920, 55],
+        [1060, 15],
+        [1190, 38],
+        [40, 62],
+        [390, 68],
+        [730, 70],
+        [1100, 50],
+      ];
+      for (const [sx, sy] of stars) {
+        ctx.globalAlpha = 0.3 + 0.4 * Math.abs(Math.sin(frame * 0.001 + sx * 0.05));
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(14,7,2,0.92)';
+      ctx.fillRect(0, 0, CW, 58);
+      for (const p of CROWD) {
+        const bob = Math.sin(frame * 0.003 + p.phase) * 2;
+        ctx.fillStyle = `hsl(${20 + ((p.size * 7) % 30)},30%,${18 + (p.size % 4) * 3}%)`;
+        ctx.beginPath();
+        ctx.ellipse(p.x, 50 + bob, p.size * 0.6, p.size, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(200,130,40,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 58);
+      ctx.lineTo(CW, 58);
+      ctx.stroke();
+      const sunX = CW * 0.9,
+        sunY = 28,
+        sunR = 18;
+      const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 3);
+      sg.addColorStop(0, 'rgba(255,220,80,0.55)');
+      sg.addColorStop(0.4, 'rgba(255,160,30,0.2)');
+      sg.addColorStop(1, 'rgba(255,100,0,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,140,0.9)';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawEditorTrackSurface(ctx, shape, frame) {
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
+      const { outer, inner } = shape.getEdgePoints(120);
+      ctx.beginPath();
+      ctx.moveTo(outer[0].x, outer[0].y);
+      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+      for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
+      ctx.closePath();
+      ctx.fillStyle = '#c8a46a';
+      ctx.fill();
+      ctx.globalAlpha = 0.12;
+      for (let i = 0; i < outer.length; i += 4) {
+        const po = outer[i],
+          pi_ = inner[i];
+        for (let f = 0.15; f < 1; f += 0.25) {
+          const sx = po.x + (pi_.x - po.x) * f + (Math.random() - 0.5) * 3;
+          const sy = po.y + (pi_.y - po.y) * f + (Math.random() - 0.5) * 3;
+          ctx.fillStyle = i % 3 === 0 ? '#b08840' : '#dbbf7a';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      const glow = 14 + 12 * pulse;
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = '#00eeff';
+      ctx.strokeStyle = `rgba(0,${200 + Math.round(55 * pulse)},255,0.9)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(outer[0].x, outer[0].y);
+      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(inner[0].x, inner[0].y);
+      for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Finish line
+      const pOuter = shape.getPosition(0, 1.0);
+      const pInner = shape.getPosition(0, -1.0);
+      const dx = pOuter.x - pInner.x,
+        dy = pOuter.y - pInner.y;
+      const segments = 8;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd700';
+      for (let i = 0; i < segments; i++) {
+        const f0 = i / segments,
+          f1 = (i + 1) / segments;
+        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
+        ctx.beginPath();
+        ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
+        ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
+        const perp = pInner.angle + Math.PI / 2;
+        const hw = 7;
+        ctx.lineTo(
+          pInner.x + dx * f1 + Math.cos(perp) * hw,
+          pInner.y + dy * f1 + Math.sin(perp) * hw
+        );
+        ctx.lineTo(
+          pInner.x + dx * f0 + Math.cos(perp) * hw,
+          pInner.y + dy * f0 + Math.sin(perp) * hw
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      const midX = (pOuter.x + pInner.x) / 2,
+        midY = (pOuter.y + pInner.y) / 2;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('FINISH', midX, midY - 8);
+    }
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
-      const env = envRef.current;
       const shape = shapeRef.current;
       const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
+      for (const inst of effectsRef.current) inst.update(dt);
 
       ctx.clearRect(0, 0, CW, CH);
 
@@ -548,8 +709,11 @@ export default function RaceScreen() {
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // ── Draw world ──
+      // Background, effects, track, and racers are all in world space (1280×720).
+      // A single save/transform/restore wraps every world-space layer so they all
+      // move together when the camera pans or zooms. HUD draws after ctx.restore()
+      // so it stays in fixed screen space.
       if (isOpenTrack) {
-        env.drawBackground(ctx, ts);
         ctx.save();
         // Combined pan + zoom centred at screen midpoint.
         // At zoom=1 this degrades to pure pan: translate(-camX, 0).
@@ -557,7 +721,13 @@ export default function RaceScreen() {
         const cy = CH / 2;
         ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
         ctx.scale(cam.zoom, cam.zoom);
-        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
+        drawEditorBackground(ctx, ts, bgImagePath);
+        for (const inst of effectsRef.current) {
+          ctx.save();
+          inst.render(ctx);
+          ctx.restore();
+        }
+        drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
         ctx.restore();
@@ -566,8 +736,13 @@ export default function RaceScreen() {
         ctx.save();
         ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(cam.zoom, cam.zoom);
-        env.drawBackground(ctx, ts);
-        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
+        drawEditorBackground(ctx, ts, bgImagePath);
+        for (const inst of effectsRef.current) {
+          ctx.save();
+          inst.render(ctx);
+          ctx.restore();
+        }
+        drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
         ctx.restore();
@@ -583,12 +758,19 @@ export default function RaceScreen() {
         drawFinishedOverlay();
       }
 
+      // ── PiP minimap (RACING and FINISHED only) ──
+      if (st.phase !== PHASE.COUNTDOWN) {
+        const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
+        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH);
+      }
+
       rafRef.current = requestAnimationFrame(loop);
     }
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      effectsRef.current = [];
     };
   }, [raceData, fadeNavigate]);
 

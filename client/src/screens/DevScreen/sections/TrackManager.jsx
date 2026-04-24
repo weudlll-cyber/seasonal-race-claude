@@ -10,12 +10,13 @@ import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
-import { SHAPE_IDS, SHAPE_LABELS } from '../../../modules/track-shapes/index.js';
-import { ENV_IDS, ENV_LABELS } from '../../../modules/environments/index.js';
 import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
+import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
+import { listEffects } from '../../../modules/track-effects/index.js';
 import s from '../DevScreen.module.css';
 
-const DIFFICULTIES = ['easy', 'medium', 'hard'];
+const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
+
 const DURATIONS = [30, 60, 90, 120];
 
 const TRACK_WIDTHS = [100, 140, 200, 280, 360];
@@ -26,19 +27,19 @@ const BLANK = {
   description: '',
   racerId: '',
   racerTypeId: 'horse',
-  shapeId: 'oval',
-  environmentId: 'dirt',
+  geometryId: null,
   color: '#e63946',
   defaultDuration: 60,
   defaultWinners: 3,
-  difficulty: 'medium',
-  curveStyle: 'oval',
   trackWidth: 140,
 };
 
 function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [racers] = useStorage(KEYS.RACERS, DEFAULT_RACERS);
+  const [geometries] = useState(() =>
+    listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
+  );
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -50,8 +51,6 @@ function TrackManager() {
       name: form.name.trim(),
       icon: form.icon.trim(),
       isDefault: false,
-      // Keep curveStyle in sync with shapeId for backward compat
-      curveStyle: form.shapeId,
     };
 
     if (editId) {
@@ -71,13 +70,10 @@ function TrackManager() {
       description: track.description,
       racerId: track.racerId,
       racerTypeId: track.racerTypeId || track.racerId || 'horse',
-      shapeId: track.shapeId || track.curveStyle || 'oval',
-      environmentId: track.environmentId || 'dirt',
+      geometryId: track.geometryId ?? null,
       color: track.color,
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
-      difficulty: track.difficulty,
-      curveStyle: track.shapeId || track.curveStyle || 'oval',
       trackWidth: track.trackWidth ?? 140,
     });
     setEditId(track.id);
@@ -138,7 +134,6 @@ function TrackManager() {
                       {racer.icon} {racer.name}
                     </span>
                   )}
-                  <span className={s.badge}>{track.difficulty}</span>
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
                   {track.isDefault ? (
@@ -289,46 +284,41 @@ function TrackManager() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Difficulty</label>
-              <div className={s.optionPills}>
-                {DIFFICULTIES.map((d) => (
-                  <button
-                    key={d}
-                    className={`${s.optionPill} ${form.difficulty === d ? s.optionPillActive : ''}`}
-                    onClick={() => f('difficulty', d)}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Track Shape</label>
+              <label className={s.label}>Track Geometry</label>
               <select
                 className={s.select}
-                value={form.shapeId}
-                onChange={(e) => f('shapeId', e.target.value)}
+                value={form.geometryId ?? ''}
+                onChange={(e) => f('geometryId', e.target.value || null)}
+                disabled={geometries.length === 0}
               >
-                {SHAPE_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {SHAPE_LABELS[id]}
+                <option value="">
+                  {geometries.length === 0
+                    ? 'No tracks drawn yet — use Track Editor to create one'
+                    : '— none —'}
+                </option>
+                {geometries.map((geom) => (
+                  <option key={geom.id} value={geom.id}>
+                    {geom.name}
                   </option>
                 ))}
               </select>
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Environment</label>
-              <select
-                className={s.select}
-                value={form.environmentId}
-                onChange={(e) => f('environmentId', e.target.value)}
-              >
-                {ENV_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {ENV_LABELS[id]}
-                  </option>
-                ))}
-              </select>
+              {form.geometryId &&
+                (() => {
+                  const geom = geometries.find((g) => g.id === form.geometryId);
+                  const labels = (geom?.effects ?? []).map((e) => EFFECT_LABELS[e.id] ?? e.id);
+                  return (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#888',
+                        marginTop: '0.25rem',
+                        display: 'block',
+                      }}
+                    >
+                      Effects: {labels.length > 0 ? labels.join(', ') : 'none'}
+                    </span>
+                  );
+                })()}
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Racer Type</label>
