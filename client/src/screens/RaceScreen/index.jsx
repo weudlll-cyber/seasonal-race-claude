@@ -9,10 +9,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { getShape } from '../../modules/track-shapes/index.js';
-import { getTrackWidth } from '../../modules/track-shapes/SvgPathShape.js';
-import { TRACK_PATHS } from '../../modules/track-shapes/track-path-configs.js';
-import { getEnvironment } from '../../modules/environments/index.js';
+import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
@@ -55,7 +52,6 @@ export default function RaceScreen() {
   const screenRef = useRef(null);
   const rafRef = useRef(null);
   const g = useRef(null);
-  const envRef = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
@@ -96,34 +92,32 @@ export default function RaceScreen() {
     const nRacers = raceData.racers.length;
 
     const typeId = raceData.racerTypeId || 'horse';
-    const trackWidth = raceData.trackWidth ?? getTrackWidth(nRacers);
+    const trackWidth = raceData.trackWidth ?? 140;
 
-    let isOpenTrack = false;
-    if (raceData.geometryId) {
-      const geometry = getTrack(raceData.geometryId);
-      if (!geometry) {
-        setError('Track geometry not found. Open the Track Editor and save the track again.');
-        return;
-      }
-      shapeRef.current = new EditorShape(geometry);
-      // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
-      isOpenTrack = shapeRef.current.isOpen;
-      envRef.current = getEnvironment('dirt', CW, CH, geometry.backgroundImage ?? null);
-      const { effectId, effectConfig } = extractEffectConfig(geometry);
-      if (effectId) {
-        const manifest = getEffect(effectId);
-        if (manifest) effectRef.current = manifest.create(canvas, effectConfig);
-      }
-    } else {
-      const shapeId = raceData.shapeId || raceData.curveStyle || 'oval';
-      const envId = raceData.environmentId || 'dirt';
-      const probeShape = getShape(shapeId, CW, CH, trackWidth);
-      isOpenTrack = probeShape.isOpen === true;
-      const virtualW = isOpenTrack ? VIRTUAL_W : CW;
-      shapeRef.current = getShape(shapeId, virtualW, CH, trackWidth);
-      const bgImagePath = TRACK_PATHS[shapeId]?.backgroundImage ?? null;
-      envRef.current = getEnvironment(envId, CW, CH, bgImagePath);
+    if (!raceData.geometryId) {
+      console.error('[RaceArena] No geometryId in raceData — cannot start race.');
+      setError(
+        'No track geometry selected. Please choose a track with a saved geometry from Setup.'
+      );
+      return;
     }
+
+    const geometry = getTrack(raceData.geometryId);
+    if (!geometry) {
+      setError('Track geometry not found. Open the Track Editor and save the track again.');
+      return;
+    }
+
+    shapeRef.current = new EditorShape(geometry);
+    // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
+    const isOpenTrack = shapeRef.current.isOpen;
+    const bgImagePath = geometry.backgroundImage ?? null;
+    const { effectId, effectConfig } = extractEffectConfig(geometry);
+    if (effectId) {
+      const manifest = getEffect(effectId);
+      if (manifest) effectRef.current = manifest.create(canvas, effectConfig);
+    }
+
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
@@ -427,10 +421,162 @@ export default function RaceScreen() {
       ctx.fillText('Loading results…', CW / 2, CH / 2 + 58);
     }
 
+    // ── Editor track rendering (replaces environment classes) ────────────────
+    const CROWD = Array.from({ length: 60 }, (_, i) => ({
+      x: (i * 137.5) % CW,
+      phase: i * 0.41,
+      size: 6 + (i % 4),
+    }));
+
+    function drawEditorBackground(ctx, frame, bgPath) {
+      const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
+      if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, CW, CH);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, CW, CH);
+      } else {
+        const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
+        const grad = ctx.createLinearGradient(0, 0, CW, CH);
+        grad.addColorStop(0, '#0a0414');
+        grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
+        grad.addColorStop(1, '#0a0414');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CW, CH);
+      }
+      const stars = [
+        [80, 35],
+        [180, 18],
+        [310, 48],
+        [470, 12],
+        [620, 42],
+        [770, 22],
+        [920, 55],
+        [1060, 15],
+        [1190, 38],
+        [40, 62],
+        [390, 68],
+        [730, 70],
+        [1100, 50],
+      ];
+      for (const [sx, sy] of stars) {
+        ctx.globalAlpha = 0.3 + 0.4 * Math.abs(Math.sin(frame * 0.001 + sx * 0.05));
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(14,7,2,0.92)';
+      ctx.fillRect(0, 0, CW, 58);
+      for (const p of CROWD) {
+        const bob = Math.sin(frame * 0.003 + p.phase) * 2;
+        ctx.fillStyle = `hsl(${20 + ((p.size * 7) % 30)},30%,${18 + (p.size % 4) * 3}%)`;
+        ctx.beginPath();
+        ctx.ellipse(p.x, 50 + bob, p.size * 0.6, p.size, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(200,130,40,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, 58);
+      ctx.lineTo(CW, 58);
+      ctx.stroke();
+      const sunX = CW * 0.9,
+        sunY = 28,
+        sunR = 18;
+      const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 3);
+      sg.addColorStop(0, 'rgba(255,220,80,0.55)');
+      sg.addColorStop(0.4, 'rgba(255,160,30,0.2)');
+      sg.addColorStop(1, 'rgba(255,100,0,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,140,0.9)';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawEditorTrackSurface(ctx, shape, frame) {
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
+      const { outer, inner } = shape.getEdgePoints(120);
+      ctx.beginPath();
+      ctx.moveTo(outer[0].x, outer[0].y);
+      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+      for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
+      ctx.closePath();
+      ctx.fillStyle = '#c8a46a';
+      ctx.fill();
+      ctx.globalAlpha = 0.12;
+      for (let i = 0; i < outer.length; i += 4) {
+        const po = outer[i],
+          pi_ = inner[i];
+        for (let f = 0.15; f < 1; f += 0.25) {
+          const sx = po.x + (pi_.x - po.x) * f + (Math.random() - 0.5) * 3;
+          const sy = po.y + (pi_.y - po.y) * f + (Math.random() - 0.5) * 3;
+          ctx.fillStyle = i % 3 === 0 ? '#b08840' : '#dbbf7a';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      const glow = 14 + 12 * pulse;
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = '#00eeff';
+      ctx.strokeStyle = `rgba(0,${200 + Math.round(55 * pulse)},255,0.9)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(outer[0].x, outer[0].y);
+      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(inner[0].x, inner[0].y);
+      for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Finish line
+      const pOuter = shape.getPosition(0, 1.0);
+      const pInner = shape.getPosition(0, -1.0);
+      const dx = pOuter.x - pInner.x,
+        dy = pOuter.y - pInner.y;
+      const segments = 8;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd700';
+      for (let i = 0; i < segments; i++) {
+        const f0 = i / segments,
+          f1 = (i + 1) / segments;
+        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
+        ctx.beginPath();
+        ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
+        ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
+        const perp = pInner.angle + Math.PI / 2;
+        const hw = 7;
+        ctx.lineTo(
+          pInner.x + dx * f1 + Math.cos(perp) * hw,
+          pInner.y + dy * f1 + Math.sin(perp) * hw
+        );
+        ctx.lineTo(
+          pInner.x + dx * f0 + Math.cos(perp) * hw,
+          pInner.y + dy * f0 + Math.sin(perp) * hw
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      const midX = (pOuter.x + pInner.x) / 2,
+        midY = (pOuter.y + pInner.y) / 2;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('FINISH', midX, midY - 8);
+    }
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
-      const env = envRef.current;
       const shape = shapeRef.current;
       const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
@@ -574,9 +720,9 @@ export default function RaceScreen() {
         const cy = CH / 2;
         ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
         ctx.scale(cam.zoom, cam.zoom);
-        env.drawBackground(ctx, ts);
+        drawEditorBackground(ctx, ts, bgImagePath);
         if (effectRef.current) effectRef.current.render(ctx);
-        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
+        drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
         ctx.restore();
@@ -585,9 +731,9 @@ export default function RaceScreen() {
         ctx.save();
         ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(cam.zoom, cam.zoom);
-        env.drawBackground(ctx, ts);
+        drawEditorBackground(ctx, ts, bgImagePath);
         if (effectRef.current) effectRef.current.render(ctx);
-        env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
+        drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
         ctx.restore();
