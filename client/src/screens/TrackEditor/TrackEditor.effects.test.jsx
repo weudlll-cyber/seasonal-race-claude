@@ -89,14 +89,27 @@ function renderEditor() {
   );
 }
 
-// Finds the effect <select> — it is the one whose first option is "None" (value="")
+// Finds the effect <select> — it is the one with a non-disabled "None" option.
+// The Load select has option[value=""] but it is disabled; this helper rejects that.
 function findEffectSelect(container) {
-  return Array.from(container.querySelectorAll('select')).find(
-    (s) => s.querySelector('option[value=""]') && !s.disabled
-  );
+  return Array.from(container.querySelectorAll('select')).find((s) => {
+    const noneOpt = s.querySelector('option[value=""]');
+    return noneOpt && !noneOpt.disabled && !s.disabled;
+  });
 }
 
-describe('TrackEditor effect preview (F12)', () => {
+// Clicks the "+ Add Effect" button to open a new effect slot.
+async function clickAddEffect(container) {
+  const btns = Array.from(container.querySelectorAll('button'));
+  const addBtn = btns.find((b) => b.textContent.includes('Add Effect'));
+  if (addBtn) {
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
+  }
+}
+
+describe('TrackEditor effect preview (F12/F13)', () => {
   it('does not start requestAnimationFrame when no effect is selected', () => {
     renderEditor();
     expect(rafSpy).not.toHaveBeenCalled();
@@ -110,6 +123,9 @@ describe('TrackEditor effect preview (F12)', () => {
     getDefaultConfig.mockReturnValue({});
 
     const { container } = renderEditor();
+
+    // Add an effect slot first, then select rain
+    await clickAddEffect(container);
     const effectSelect = findEffectSelect(container);
     expect(effectSelect).not.toBeNull();
 
@@ -138,6 +154,8 @@ describe('TrackEditor effect preview (F12)', () => {
     getDefaultConfig.mockReturnValue({});
 
     const { container } = renderEditor();
+
+    await clickAddEffect(container);
     const effectSelect = findEffectSelect(container);
 
     await act(async () => {
@@ -162,6 +180,8 @@ describe('TrackEditor effect preview (F12)', () => {
     getEffect.mockReturnValue({ create: mockCreate, configSchema: [], defaultConfig: {} });
 
     const { container, unmount } = renderEditor();
+
+    await clickAddEffect(container);
     const effectSelect = findEffectSelect(container);
 
     await act(async () => {
@@ -175,7 +195,6 @@ describe('TrackEditor effect preview (F12)', () => {
       unmount();
     });
 
-    // cancelAnimationFrame should have been called at least once after unmount
     expect(cafSpy.mock.calls.length).toBeGreaterThan(callCountBefore);
   });
 });

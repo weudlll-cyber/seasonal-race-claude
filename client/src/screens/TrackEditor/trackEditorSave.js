@@ -44,10 +44,10 @@ export function buildTrackFromEditorState({
   closed,
   name,
   backgroundImage,
-  effectId,
-  effectConfig,
+  effects,
 }) {
   const minPts = closed ? 3 : 2;
+  const effectsArray = Array.isArray(effects) ? effects.slice(0, 3) : [];
 
   if (mode === 'center') {
     if (centerPoints.length < minPts) {
@@ -67,8 +67,7 @@ export function buildTrackFromEditorState({
       width: centerWidth,
       innerPoints: derivedInner,
       outerPoints: derivedOuter,
-      effectId: effectId ?? null,
-      effectConfig: effectConfig ?? {},
+      effects: effectsArray,
     };
   }
 
@@ -90,19 +89,17 @@ export function buildTrackFromEditorState({
     sourceMode: 'boundary',
     innerPoints,
     outerPoints,
-    effectId: effectId ?? null,
-    effectConfig: effectConfig ?? {},
+    effects: effectsArray,
   };
 }
 
-export function extractEffectConfig(geometry) {
-  const id = geometry.effectId ?? null;
-  if (id !== null && !getEffect(id)) {
-    console.warn(`[track-effects] Unknown effect "${id}" on load — clearing.`);
-    return { effectId: null, effectConfig: {} };
-  }
-  return {
-    effectId: id,
-    effectConfig: geometry.effectConfig ?? {},
-  };
+export function extractEffects(geometry) {
+  const raw = Array.isArray(geometry.effects) ? geometry.effects : [];
+  return raw.filter(({ id }) => {
+    if (!getEffect(id)) {
+      console.warn(`[track-effects] Unknown effect "${id}" on load — skipping.`);
+      return false;
+    }
+    return true;
+  });
 }

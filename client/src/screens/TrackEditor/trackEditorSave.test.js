@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   buildTrackFromEditorState,
   validateEditorState,
-  extractEffectConfig,
+  extractEffects,
 } from './trackEditorSave.js';
 
 const two = [
@@ -128,8 +128,9 @@ describe('buildTrackFromEditorState', () => {
   });
 });
 
-describe('buildTrackFromEditorState — effect fields', () => {
-  it('includes effectId and effectConfig in the payload when provided', () => {
+describe('buildTrackFromEditorState — effects field', () => {
+  it('includes effects array in the payload when provided', () => {
+    const effects = [{ id: 'stars', config: { count: 200 } }];
     const result = buildTrackFromEditorState({
       mode: 'center',
       centerPoints: two,
@@ -139,14 +140,12 @@ describe('buildTrackFromEditorState — effect fields', () => {
       closed: false,
       name: 'Effect Track',
       backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
-      effectId: 'stars',
-      effectConfig: { count: 200, color: '#ff0000', twinkleSpeed: 1, opacity: 0.8, size: 1.5 },
+      effects,
     });
-    expect(result.effectId).toBe('stars');
-    expect(result.effectConfig.count).toBe(200);
+    expect(result.effects).toEqual(effects);
   });
 
-  it('defaults effectId to null and effectConfig to {} when not provided', () => {
+  it('defaults effects to [] when not provided', () => {
     const result = buildTrackFromEditorState({
       mode: 'center',
       centerPoints: two,
@@ -157,30 +156,61 @@ describe('buildTrackFromEditorState — effect fields', () => {
       name: 'No Effect',
       backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
     });
-    expect(result.effectId).toBeNull();
-    expect(result.effectConfig).toEqual({});
+    expect(result.effects).toEqual([]);
+  });
+
+  it('caps effects at 3 entries', () => {
+    const effects = [
+      { id: 'stars', config: {} },
+      { id: 'rain', config: {} },
+      { id: 'mud', config: {} },
+      { id: 'wave', config: {} },
+    ];
+    const result = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Many Effects',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+      effects,
+    });
+    expect(result.effects).toHaveLength(3);
   });
 });
 
-describe('extractEffectConfig', () => {
-  it('returns effectId: null and effectConfig: {} for an old geometry with no effect fields', () => {
-    const result = extractEffectConfig({ name: 'Old Track' });
-    expect(result.effectId).toBeNull();
-    expect(result.effectConfig).toEqual({});
+describe('extractEffects', () => {
+  it('returns empty array for geometry with no effects', () => {
+    const result = extractEffects({ name: 'Old Track' });
+    expect(result).toEqual([]);
   });
 
-  it('returns the stored effectId and effectConfig for a valid known effect', () => {
-    const result = extractEffectConfig({ effectId: 'stars', effectConfig: { count: 100 } });
-    expect(result.effectId).toBe('stars');
-    expect(result.effectConfig.count).toBe(100);
+  it('returns valid effects unchanged', () => {
+    const effects = [{ id: 'stars', config: { count: 100 } }];
+    const result = extractEffects({ effects });
+    expect(result).toEqual(effects);
   });
 
-  it('clears effectId and logs a warning for an unknown effect id', () => {
+  it('filters out unknown effect ids and logs a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = extractEffectConfig({ effectId: 'nonexistent-effect', effectConfig: {} });
-    expect(result.effectId).toBeNull();
-    expect(result.effectConfig).toEqual({});
+    const result = extractEffects({ effects: [{ id: 'nonexistent-effect', config: {} }] });
+    expect(result).toEqual([]);
     expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('keeps valid entries and drops unknown ones from a mixed array', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const result = extractEffects({
+      effects: [
+        { id: 'stars', config: {} },
+        { id: 'nonexistent', config: {} },
+      ],
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('stars');
     warnSpy.mockRestore();
   });
 });
@@ -264,8 +294,6 @@ describe('validateEditorState', () => {
 });
 
 // Regression guard: loading a saved track and immediately re-saving must be a data no-op.
-// Historical bug: tracks saved before the `closed` field existed stored undefined (dropped by
-// JSON.stringify), which silently carried through every subsequent save cycle.
 describe('buildTrackFromEditorState — load/save round-trip fidelity', () => {
   it('closed: true survives a build → re-build cycle', () => {
     const geometry = buildTrackFromEditorState({
@@ -280,8 +308,6 @@ describe('buildTrackFromEditorState — load/save round-trip fidelity', () => {
     });
     expect(geometry.closed).toBe(true);
 
-    // Simulate handleLoad populating editor state, then handleSave calling build again.
-    // The fixed handleLoad uses: setClosed(track.closed === true)
     const resaved = buildTrackFromEditorState({
       mode: geometry.sourceMode,
       centerPoints: geometry.centerPoints,
@@ -322,9 +348,8 @@ describe('buildTrackFromEditorState — load/save round-trip fidelity', () => {
   });
 
   it('closed: undefined (pre-history save) normalizes to false and is stored as false', () => {
-    // Old saves may not have the closed field at all; === true coercion gives false.
-    const legacyTrack = { name: 'Legacy', backgroundImage: '/x.jpg' }; // no closed field
-    const normalizedClosed = legacyTrack.closed === true; // fixed handleLoad pattern
+    const legacyTrack = { name: 'Legacy', backgroundImage: '/x.jpg' };
+    const normalizedClosed = legacyTrack.closed === true;
     const resaved = buildTrackFromEditorState({
       mode: 'center',
       centerPoints: two,

@@ -18,7 +18,7 @@ import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
-import { extractEffectConfig } from '../TrackEditor/trackEditorSave.js';
+import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import './RaceScreen.css';
 
 const CW = 1280;
@@ -55,7 +55,7 @@ export default function RaceScreen() {
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
-  const effectRef = useRef(null);
+  const effectsRef = useRef([]);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -112,11 +112,12 @@ export default function RaceScreen() {
     // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const bgImagePath = geometry.backgroundImage ?? null;
-    const { effectId, effectConfig } = extractEffectConfig(geometry);
-    if (effectId) {
-      const manifest = getEffect(effectId);
-      if (manifest) effectRef.current = manifest.create(canvas, effectConfig);
-    }
+    effectsRef.current = extractEffects(geometry)
+      .map(({ id, config }) => {
+        const manifest = getEffect(id);
+        return manifest ? manifest.create(canvas, config) : null;
+      })
+      .filter(Boolean);
 
     racerTypeRef.current = getRacerType(typeId);
 
@@ -580,7 +581,7 @@ export default function RaceScreen() {
       const shape = shapeRef.current;
       const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
-      if (effectRef.current) effectRef.current.update(dt);
+      for (const inst of effectsRef.current) inst.update(dt);
 
       ctx.clearRect(0, 0, CW, CH);
 
@@ -721,7 +722,11 @@ export default function RaceScreen() {
         ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
         ctx.scale(cam.zoom, cam.zoom);
         drawEditorBackground(ctx, ts, bgImagePath);
-        if (effectRef.current) effectRef.current.render(ctx);
+        for (const inst of effectsRef.current) {
+          ctx.save();
+          inst.render(ctx);
+          ctx.restore();
+        }
         drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
@@ -732,7 +737,11 @@ export default function RaceScreen() {
         ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(cam.zoom, cam.zoom);
         drawEditorBackground(ctx, ts, bgImagePath);
-        if (effectRef.current) effectRef.current.render(ctx);
+        for (const inst of effectsRef.current) {
+          ctx.save();
+          inst.render(ctx);
+          ctx.restore();
+        }
         drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
         drawRacers();
@@ -761,7 +770,7 @@ export default function RaceScreen() {
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      effectRef.current = null;
+      effectsRef.current = [];
     };
   }, [raceData, fadeNavigate]);
 

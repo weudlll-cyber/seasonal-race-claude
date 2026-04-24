@@ -11,7 +11,7 @@ import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.
 import {
   buildTrackFromEditorState,
   validateEditorState,
-  extractEffectConfig,
+  extractEffects,
 } from './trackEditorSave.js';
 import { useHistory } from './useHistory.js';
 import { getEffect } from '../../modules/track-effects/index.js';
@@ -199,8 +199,7 @@ export default function TrackEditor() {
   const [closed, setClosed] = useState(false);
   const [trackName, setTrackName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
-  const [effectId, setEffectId] = useState(null);
-  const [effectConfig, setEffectConfig] = useState({});
+  const [effects, setEffects] = useState([]);
 
   // ── non-versioned state ───────────────────────────────────────────────────
   const [bgReady, setBgReady] = useState(false);
@@ -227,8 +226,7 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
-      effectId,
-      effectConfig,
+      effects,
     };
   }
 
@@ -242,8 +240,7 @@ export default function TrackEditor() {
     setClosed(snapshot.closed);
     setTrackName(snapshot.name);
     setBackgroundImage(snapshot.backgroundImage);
-    setEffectId(snapshot.effectId);
-    setEffectConfig(snapshot.effectConfig);
+    setEffects(snapshot.effects ?? []);
     setSelectedPointIndex(-1);
   }, []);
 
@@ -269,8 +266,7 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
-      effectId,
-      effectConfig,
+      effects,
     });
     if (snapshot) {
       applySnapshot(snapshot);
@@ -289,8 +285,7 @@ export default function TrackEditor() {
     closed,
     trackName,
     backgroundImage,
-    effectId,
-    effectConfig,
+    effects,
   ]);
 
   const handleRedo = useCallback(() => {
@@ -304,8 +299,7 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
-      effectId,
-      effectConfig,
+      effects,
     });
     if (snapshot) {
       applySnapshot(snapshot);
@@ -324,8 +318,7 @@ export default function TrackEditor() {
     closed,
     trackName,
     backgroundImage,
-    effectId,
-    effectConfig,
+    effects,
   ]);
 
   // ── effects ───────────────────────────────────────────────────────────────
@@ -413,7 +406,9 @@ export default function TrackEditor() {
     closed,
   ]);
 
-  // Effect preview — starts/stops the rAF animation loop based on effectId/config.
+  // Effect preview — starts/stops the rAF animation loop based on the effects array.
+  // Uses JSON.stringify to detect deep changes and avoid re-running on reference churn.
+  const effectsJson = JSON.stringify(effects);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -425,12 +420,19 @@ export default function TrackEditor() {
     effectInstanceRef.current = null;
     lastTimeRef.current = null;
 
-    if (!effectId) return;
+    const activeEffects = effects.filter((e) => e.id);
+    if (activeEffects.length === 0) return;
 
-    const effectModule = getEffect(effectId);
-    if (!effectModule) return;
+    const instances = activeEffects
+      .map((e) => {
+        const mod = getEffect(e.id);
+        return mod ? mod.create(canvas, e.config) : null;
+      })
+      .filter(Boolean);
 
-    effectInstanceRef.current = effectModule.create(canvas, effectConfig);
+    if (instances.length === 0) return;
+
+    effectInstanceRef.current = instances;
 
     const loop = (timestamp) => {
       const dt = lastTimeRef.current != null ? timestamp - lastTimeRef.current : 16;
@@ -440,10 +442,10 @@ export default function TrackEditor() {
       if (!ctx) return;
       drawStaticScene(ctx, renderStateRef.current);
 
-      if (effectInstanceRef.current) {
-        effectInstanceRef.current.update(dt);
+      for (const inst of effectInstanceRef.current) {
+        inst.update(dt);
         ctx.save();
-        effectInstanceRef.current.render(ctx);
+        inst.render(ctx);
         ctx.restore();
       }
 
@@ -458,7 +460,7 @@ export default function TrackEditor() {
       effectInstanceRef.current = null;
       lastTimeRef.current = null;
     };
-  }, [effectId, effectConfig]);
+  }, [effectsJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── canvas coordinate helpers ─────────────────────────────────────────────
 
@@ -616,21 +618,22 @@ export default function TrackEditor() {
 
   // ── effect config ─────────────────────────────────────────────────────────
 
-  function handleEffectChange(nextEffectId, nextConfig) {
-    if (nextEffectId !== effectId) {
-      // Coarse event (effect switch) — single history step
+  function handleEffectsChange(nextEffects) {
+    const prevIds = effects.map((e) => e.id).join(',');
+    const nextIds = nextEffects.map((e) => e.id).join(',');
+    if (prevIds !== nextIds || effects.length !== nextEffects.length) {
+      // Structural change (add / remove / switch effect id) — single history step
       pushHistory(getSnapshot());
-      setEffectId(nextEffectId);
-      setEffectConfig(nextConfig);
+      setEffects(nextEffects);
       markDirty();
     } else {
-      // Fine event (config field change) — debounced, same pattern as centerWidth slider
+      // Config-only change — debounced, same pattern as centerWidth slider
       if (!effectHistoryTimerRef.current) {
         preEffectSnapshotRef.current = getSnapshot();
       } else {
         clearTimeout(effectHistoryTimerRef.current);
       }
-      setEffectConfig(nextConfig);
+      setEffects(nextEffects);
       markDirty();
       effectHistoryTimerRef.current = setTimeout(() => {
         if (preEffectSnapshotRef.current) {
@@ -669,8 +672,7 @@ export default function TrackEditor() {
         closed,
         name: trackName.trim(),
         backgroundImage,
-        effectId,
-        effectConfig,
+        effects,
       });
       if (loadedTrackId) track.id = loadedTrackId;
       const saved = saveTrack(track);
@@ -697,10 +699,7 @@ export default function TrackEditor() {
     setBackgroundImage(track.backgroundImage);
     setClosed(track.closed === true);
     setLoadedTrackId(track.id);
-    const { effectId: loadedEffectId, effectConfig: loadedEffectConfig } =
-      extractEffectConfig(track);
-    setEffectId(loadedEffectId);
-    setEffectConfig(loadedEffectConfig);
+    setEffects(extractEffects(track));
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
     dragIndexRef.current = -1;
@@ -735,8 +734,7 @@ export default function TrackEditor() {
     setOuterPoints([]);
     setTrackName('');
     setBackgroundImage(DEFAULT_BG);
-    setEffectId(null);
-    setEffectConfig({});
+    setEffects([]);
     setLoadedTrackId(null);
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
@@ -913,8 +911,8 @@ export default function TrackEditor() {
           </div>
         )}
         <div className={s.toolbarRow}>
-          <span className={s.sliderLabel}>Effect:</span>
-          <EffectConfig effectId={effectId} config={effectConfig} onChange={handleEffectChange} />
+          <span className={s.sliderLabel}>Effects:</span>
+          <EffectConfig effects={effects} onChange={handleEffectsChange} max={3} />
         </div>
       </div>
 

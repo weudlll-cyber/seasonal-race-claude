@@ -4,124 +4,120 @@ import EffectConfig from './EffectConfig.jsx';
 import { getDefaultConfig } from '../../modules/track-effects/index.js';
 import * as trackEffects from '../../modules/track-effects/index.js';
 
-describe('EffectConfig', () => {
-  it('renders "None" selected and no config inputs when effectId is null', () => {
-    const { container } = render(<EffectConfig effectId={null} config={{}} onChange={vi.fn()} />);
-    expect(screen.getByRole('combobox')).toHaveValue('');
-    expect(container.querySelectorAll('input')).toHaveLength(0);
+describe('EffectConfig — 0 effects', () => {
+  it('renders only Add Effect button and no blocks when effects is empty', () => {
+    const { container } = render(<EffectConfig effects={[]} onChange={vi.fn()} max={3} />);
+    expect(screen.getByRole('button', { name: /Add Effect/i })).toBeInTheDocument();
+    expect(container.querySelectorAll('select')).toHaveLength(0);
   });
 
-  it('dropdown contains a "Stars" option', () => {
-    render(<EffectConfig effectId={null} config={{}} onChange={vi.fn()} />);
-    expect(screen.getByRole('option', { name: 'Stars' })).toBeInTheDocument();
-  });
-
-  it('selects stars in the dropdown and renders 5 config controls (4 range + 1 color)', () => {
-    const config = getDefaultConfig('stars');
-    const { container } = render(
-      <EffectConfig effectId="stars" config={config} onChange={vi.fn()} />
-    );
-    expect(screen.getByRole('combobox')).toHaveValue('stars');
-    const rangeInputs = container.querySelectorAll('input[type="range"]');
-    const colorInputs = container.querySelectorAll('input[type="color"]');
-    expect(rangeInputs.length + colorInputs.length).toBe(5);
-  });
-
-  it('range slider change fires onChange with updated key parsed as a number', () => {
-    const config = getDefaultConfig('stars');
+  it('clicking Add Effect calls onChange with one null-id entry', () => {
     const onChange = vi.fn();
-    const { container } = render(
-      <EffectConfig effectId="stars" config={config} onChange={onChange} />
-    );
-    const countSlider = container.querySelector('input[type="range"]'); // count is first
+    render(<EffectConfig effects={[]} onChange={onChange} max={3} />);
+    fireEvent.click(screen.getByRole('button', { name: /Add Effect/i }));
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0][0]).toEqual([{ id: null, config: {} }]);
+  });
+});
+
+describe('EffectConfig — 1 effect', () => {
+  it('renders one block with a dropdown and Add Effect button (below max)', () => {
+    const effects = [{ id: null, config: {} }];
+    const { container } = render(<EffectConfig effects={effects} onChange={vi.fn()} max={3} />);
+    expect(container.querySelectorAll('select')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Add Effect/i })).toBeInTheDocument();
+  });
+
+  it('selecting an effect in the dropdown calls onChange with updated id and defaultConfig', () => {
+    const onChange = vi.fn();
+    const effects = [{ id: null, config: {} }];
+    render(<EffectConfig effects={effects} onChange={onChange} max={3} />);
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'stars' } });
+    expect(onChange).toHaveBeenCalledOnce();
+    const next = onChange.mock.calls[0][0];
+    expect(next[0].id).toBe('stars');
+    expect(next[0].config).toEqual(getDefaultConfig('stars'));
+  });
+
+  it('remove button calls onChange with empty array', () => {
+    const onChange = vi.fn();
+    const effects = [{ id: 'stars', config: getDefaultConfig('stars') }];
+    render(<EffectConfig effects={effects} onChange={onChange} max={3} />);
+    fireEvent.click(screen.getByTitle('Remove'));
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0][0]).toEqual([]);
+  });
+
+  it('range slider fires onChange with updated config value (parsed as number)', () => {
+    const onChange = vi.fn();
+    const config = getDefaultConfig('stars');
+    const effects = [{ id: 'stars', config }];
+    const { container } = render(<EffectConfig effects={effects} onChange={onChange} max={3} />);
+    const countSlider = container.querySelector('input[type="range"]');
     fireEvent.change(countSlider, { target: { value: '200' } });
     expect(onChange).toHaveBeenCalledOnce();
-    const [calledId, calledConfig] = onChange.mock.calls[0];
-    expect(calledId).toBe('stars');
-    expect(calledConfig.count).toBe(200);
+    const next = onChange.mock.calls[0][0];
+    expect(next[0].config.count).toBe(200);
+  });
+});
+
+describe('EffectConfig — 3 effects (max reached)', () => {
+  it('renders three blocks and hides Add Effect button when effects.length === max', () => {
+    const effects = [
+      { id: 'stars', config: {} },
+      { id: 'rain', config: {} },
+      { id: 'mud', config: {} },
+    ];
+    render(<EffectConfig effects={effects} onChange={vi.fn()} max={3} />);
+    expect(screen.queryByRole('button', { name: /Add Effect/i })).toBeNull();
+    expect(screen.getAllByRole('combobox')).toHaveLength(3);
   });
 
-  it('color picker change fires onChange with the hex string for the color key', () => {
-    const config = getDefaultConfig('stars');
+  it('remove button in middle slot removes only that entry', () => {
     const onChange = vi.fn();
-    const { container } = render(
-      <EffectConfig effectId="stars" config={config} onChange={onChange} />
-    );
-    const colorInput = container.querySelector('input[type="color"]');
-    fireEvent.change(colorInput, { target: { value: '#ff0000' } });
+    const effects = [
+      { id: 'stars', config: {} },
+      { id: 'rain', config: {} },
+      { id: 'mud', config: {} },
+    ];
+    render(<EffectConfig effects={effects} onChange={onChange} max={3} />);
+    const removeBtns = screen.getAllByTitle('Remove');
+    fireEvent.click(removeBtns[1]); // remove middle (rain)
     expect(onChange).toHaveBeenCalledOnce();
-    const [calledId, calledConfig] = onChange.mock.calls[0];
-    expect(calledId).toBe('stars');
-    expect(calledConfig.color).toBe('#ff0000');
+    const next = onChange.mock.calls[0][0];
+    expect(next).toHaveLength(2);
+    expect(next[0].id).toBe('stars');
+    expect(next[1].id).toBe('mud');
   });
+});
 
-  it('switching dropdown from stars to None fires onChange(null, {})', () => {
-    const config = getDefaultConfig('stars');
-    const onChange = vi.fn();
-    render(<EffectConfig effectId="stars" config={config} onChange={onChange} />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } });
-    expect(onChange).toHaveBeenCalledWith(null, {});
+describe('EffectConfig — duplicate prevention', () => {
+  it('dropdown in block 2 does not show id already used in block 1', () => {
+    const effects = [
+      { id: 'stars', config: {} },
+      { id: null, config: {} },
+    ];
+    render(<EffectConfig effects={effects} onChange={vi.fn()} max={3} />);
+    const selects = screen.getAllByRole('combobox');
+    const block2Select = selects[1];
+    const optionValues = Array.from(block2Select.querySelectorAll('option')).map((o) => o.value);
+    expect(optionValues).not.toContain('stars');
   });
+});
 
-  it('switching dropdown from None to stars fires onChange("stars", defaultConfig)', () => {
-    const onChange = vi.fn();
-    render(<EffectConfig effectId={null} config={{}} onChange={onChange} />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'stars' } });
-    expect(onChange).toHaveBeenCalledOnce();
-    const [calledId, calledConfig] = onChange.mock.calls[0];
-    expect(calledId).toBe('stars');
-    expect(calledConfig).toEqual(getDefaultConfig('stars'));
-  });
-
-  it('select control renders options and fires onChange with the selected string', () => {
-    const getEffectSpy = vi.spyOn(trackEffects, 'getEffect').mockReturnValue({
-      id: '__sel__',
-      configSchema: [
-        {
-          key: 'direction',
-          type: 'select',
-          options: ['down', 'random'],
-          default: 'down',
-          label: 'Direction',
-        },
-      ],
-      defaultConfig: { direction: 'down' },
-    });
-
-    const onChange = vi.fn();
-    const { container } = render(
-      <EffectConfig effectId="__sel__" config={{ direction: 'down' }} onChange={onChange} />
-    );
-
-    // The field-level <select> is the second select in the component
-    const selects = container.querySelectorAll('select');
-    expect(selects.length).toBe(2);
-    const fieldSelect = selects[1];
-    expect(fieldSelect).toHaveValue('down');
-
-    fireEvent.change(fieldSelect, { target: { value: 'random' } });
-    expect(onChange).toHaveBeenCalledOnce();
-    const [calledId, calledConfig] = onChange.mock.calls[0];
-    expect(calledId).toBe('__sel__');
-    expect(calledConfig.direction).toBe('random');
-
-    getEffectSpy.mockRestore();
-  });
-
-  it('unknown field type does not crash and logs a warning', () => {
+describe('EffectConfig — unknown field type', () => {
+  it('does not crash and logs a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const getEffectSpy = vi.spyOn(trackEffects, 'getEffect').mockReturnValue({
       id: '__test__',
-      configSchema: [{ key: 'badField', type: 'unknown_xyz', default: 42, label: 'Bad' }],
-      defaultConfig: { badField: 42 },
+      configSchema: [{ key: 'bad', type: 'unknown_xyz', default: 1, label: 'Bad' }],
     });
-
+    const effects = [{ id: '__test__', config: { bad: 1 } }];
     expect(() =>
-      render(<EffectConfig effectId="__test__" config={{ badField: 42 }} onChange={vi.fn()} />)
+      render(<EffectConfig effects={effects} onChange={vi.fn()} max={3} />)
     ).not.toThrow();
-
     expect(warnSpy).toHaveBeenCalled();
-
     warnSpy.mockRestore();
     getEffectSpy.mockRestore();
   });

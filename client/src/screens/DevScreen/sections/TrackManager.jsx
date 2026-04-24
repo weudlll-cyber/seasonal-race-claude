@@ -38,7 +38,7 @@ function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [racers] = useStorage(KEYS.RACERS, DEFAULT_RACERS);
   const [geometries] = useState(() =>
-    listTracks().map((g) => ({ ...g, effectId: getTrack(g.id)?.effectId ?? null }))
+    listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
   );
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
@@ -305,10 +305,8 @@ function TrackManager() {
               {form.geometryId &&
                 (() => {
                   const geom = geometries.find((g) => g.id === form.geometryId);
-                  const effectLabel = geom?.effectId
-                    ? (EFFECT_LABELS[geom.effectId] ?? geom.effectId)
-                    : null;
-                  return effectLabel ? (
+                  const labels = (geom?.effects ?? []).map((e) => EFFECT_LABELS[e.id] ?? e.id);
+                  return (
                     <span
                       style={{
                         fontSize: '0.75rem',
@@ -317,9 +315,9 @@ function TrackManager() {
                         display: 'block',
                       }}
                     >
-                      Effect: {effectLabel}
+                      Effects: {labels.length > 0 ? labels.join(', ') : 'none'}
                     </span>
-                  ) : null;
+                  );
                 })()}
             </div>
             <div className={s.formGroup}>

@@ -125,18 +125,30 @@ describe('getTrack', () => {
     expect(getTrack('does-not-exist')).toBeNull();
   });
 
-  it('normalizes missing effectId and effectConfig to null/{} (old geometry format)', () => {
+  it('old geometry with no effects fields normalizes to effects: []', () => {
     const saved = saveTrack(makeTrack());
     const track = getTrack(saved.id);
-    expect(track.effectId).toBeNull();
-    expect(track.effectConfig).toEqual({});
+    expect(Array.isArray(track.effects)).toBe(true);
+    expect(track.effects).toHaveLength(0);
   });
 
-  it('preserves effectId and effectConfig when present', () => {
+  it('old geometry with effectId/effectConfig migrates to effects array on load', () => {
     const saved = saveTrack(makeTrack({ effectId: 'stars', effectConfig: { count: 200 } }));
     const track = getTrack(saved.id);
-    expect(track.effectId).toBe('stars');
-    expect(track.effectConfig).toEqual({ count: 200 });
+    expect(Array.isArray(track.effects)).toBe(true);
+    expect(track.effects).toHaveLength(1);
+    expect(track.effects[0].id).toBe('stars');
+    expect(track.effects[0].config).toEqual({ count: 200 });
+  });
+
+  it('new geometry with effects array is returned as-is', () => {
+    const effects = [
+      { id: 'rain', config: { count: 10 } },
+      { id: 'stars', config: {} },
+    ];
+    const saved = saveTrack(makeTrack({ effects }));
+    const track = getTrack(saved.id);
+    expect(track.effects).toEqual(effects);
   });
 });
 

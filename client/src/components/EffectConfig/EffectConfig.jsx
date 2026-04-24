@@ -1,11 +1,35 @@
 import { listEffects, getEffect, getDefaultConfig } from '../../modules/track-effects/index.js';
 import s from './EffectConfig.module.css';
 
-export default function EffectConfig({ effectId, config, onChange }) {
-  const effects = listEffects();
+export default function EffectConfig({ effects, onChange, max = 3 }) {
+  const allEffects = listEffects();
+  const usedIds = effects.map((e) => e.id).filter(Boolean);
 
-  function renderControl(field) {
-    const value = config[field.key] ?? field.default;
+  function handleIdChange(idx, newId) {
+    onChange(
+      effects.map((e, i) =>
+        i === idx ? { id: newId || null, config: newId ? (getDefaultConfig(newId) ?? {}) : {} } : e
+      )
+    );
+  }
+
+  function handleFieldChange(idx, key, value) {
+    onChange(
+      effects.map((e, i) => (i === idx ? { ...e, config: { ...e.config, [key]: value } } : e))
+    );
+  }
+
+  function handleRemove(idx) {
+    onChange(effects.filter((_, i) => i !== idx));
+  }
+
+  function handleAdd() {
+    if (effects.length >= max) return;
+    onChange([...effects, { id: null, config: {} }]);
+  }
+
+  function renderField(entry, idx, field) {
+    const value = entry.config[field.key] ?? field.default;
     switch (field.type) {
       case 'range':
         return (
@@ -20,9 +44,7 @@ export default function EffectConfig({ effectId, config, onChange }) {
               step={field.step}
               value={value}
               className={s.range}
-              onChange={(e) =>
-                onChange(effectId, { ...config, [field.key]: parseFloat(e.target.value) })
-              }
+              onChange={(e) => handleFieldChange(idx, field.key, parseFloat(e.target.value))}
             />
           </div>
         );
@@ -34,7 +56,7 @@ export default function EffectConfig({ effectId, config, onChange }) {
               type="color"
               value={value}
               className={s.color}
-              onChange={(e) => onChange(effectId, { ...config, [field.key]: e.target.value })}
+              onChange={(e) => handleFieldChange(idx, field.key, e.target.value)}
             />
           </div>
         );
@@ -45,7 +67,7 @@ export default function EffectConfig({ effectId, config, onChange }) {
             <select
               className={s.select}
               value={value}
-              onChange={(e) => onChange(effectId, { ...config, [field.key]: e.target.value })}
+              onChange={(e) => handleFieldChange(idx, field.key, e.target.value)}
             >
               {field.options.map((opt) => (
                 <option key={opt} value={opt}>
@@ -61,26 +83,42 @@ export default function EffectConfig({ effectId, config, onChange }) {
     }
   }
 
-  const schema = effectId ? (getEffect(effectId)?.configSchema ?? []) : [];
-
   return (
     <div className={s.root}>
-      <select
-        className={s.select}
-        value={effectId ?? ''}
-        onChange={(e) => {
-          const newId = e.target.value || null;
-          onChange(newId, getDefaultConfig(newId) ?? {});
-        }}
-      >
-        <option value="">None</option>
-        {effects.map((effect) => (
-          <option key={effect.id} value={effect.id}>
-            {effect.label}
-          </option>
-        ))}
-      </select>
-      {effectId && schema.map(renderControl)}
+      {effects.map((entry, idx) => {
+        const schema = entry.id ? (getEffect(entry.id)?.configSchema ?? []) : [];
+        const available = allEffects.filter((e) => !usedIds.includes(e.id) || e.id === entry.id);
+        return (
+          <div key={idx} className={s.block}>
+            <div className={s.blockHeader}>
+              <span className={s.blockLabel}>Effect {idx + 1}</span>
+              <select
+                className={s.select}
+                value={entry.id ?? ''}
+                onChange={(e) => handleIdChange(idx, e.target.value)}
+              >
+                <option value="">None</option>
+                {available.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.label}
+                  </option>
+                ))}
+              </select>
+              <button className={s.removeBtn} onClick={() => handleRemove(idx)} title="Remove">
+                ×
+              </button>
+            </div>
+            {entry.id && (
+              <div className={s.fields}>{schema.map((f) => renderField(entry, idx, f))}</div>
+            )}
+          </div>
+        );
+      })}
+      {effects.length < max && (
+        <button className={s.addBtn} onClick={handleAdd}>
+          + Add Effect
+        </button>
+      )}
     </div>
   );
 }

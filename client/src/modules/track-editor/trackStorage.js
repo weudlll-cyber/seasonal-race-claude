@@ -108,11 +108,11 @@ export function getTrack(id) {
   const raw = lsGet(trackGeometryKey(id));
   if (!raw) return null;
   const t = JSON.parse(raw);
-  return {
-    ...t,
-    effectId: t.effectId ?? null,
-    effectConfig: t.effectConfig ?? {},
-  };
+  if (!Array.isArray(t.effects)) {
+    const effects = t.effectId ? [{ id: t.effectId, config: t.effectConfig ?? {} }] : [];
+    return { ...t, effects };
+  }
+  return { ...t };
 }
 
 /**
