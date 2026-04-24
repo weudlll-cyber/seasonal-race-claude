@@ -38,6 +38,23 @@ export default function EffectConfig({ effectId, config, onChange }) {
             />
           </div>
         );
+      case 'select':
+        return (
+          <div key={field.key} className={s.field}>
+            <label className={s.label}>{field.label}</label>
+            <select
+              className={s.select}
+              value={value}
+              onChange={(e) => onChange(effectId, { ...config, [field.key]: e.target.value })}
+            >
+              {field.options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
       default:
         console.warn(`[EffectConfig] Unknown field type: ${field.type}`);
         return null;

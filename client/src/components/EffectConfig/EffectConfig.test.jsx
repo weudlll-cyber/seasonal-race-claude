@@ -73,6 +73,41 @@ describe('EffectConfig', () => {
     expect(calledConfig).toEqual(getDefaultConfig('stars'));
   });
 
+  it('select control renders options and fires onChange with the selected string', () => {
+    const getEffectSpy = vi.spyOn(trackEffects, 'getEffect').mockReturnValue({
+      id: '__sel__',
+      configSchema: [
+        {
+          key: 'direction',
+          type: 'select',
+          options: ['down', 'random'],
+          default: 'down',
+          label: 'Direction',
+        },
+      ],
+      defaultConfig: { direction: 'down' },
+    });
+
+    const onChange = vi.fn();
+    const { container } = render(
+      <EffectConfig effectId="__sel__" config={{ direction: 'down' }} onChange={onChange} />
+    );
+
+    // The field-level <select> is the second select in the component
+    const selects = container.querySelectorAll('select');
+    expect(selects.length).toBe(2);
+    const fieldSelect = selects[1];
+    expect(fieldSelect).toHaveValue('down');
+
+    fireEvent.change(fieldSelect, { target: { value: 'random' } });
+    expect(onChange).toHaveBeenCalledOnce();
+    const [calledId, calledConfig] = onChange.mock.calls[0];
+    expect(calledId).toBe('__sel__');
+    expect(calledConfig.direction).toBe('random');
+
+    getEffectSpy.mockRestore();
+  });
+
   it('unknown field type does not crash and logs a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const getEffectSpy = vi.spyOn(trackEffects, 'getEffect').mockReturnValue({

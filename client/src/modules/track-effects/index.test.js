@@ -46,14 +46,22 @@ describe('track-effects registry', () => {
     expect(getDefaultConfig('nonexistent')).toBeNull();
   });
 
-  it('registry contains exactly 1 effect — regression guard against test files being discovered', () => {
-    // If *.test.js files are matched by the glob, stars.test.js has no default export
-    // and would crash the app. This assertion catches that regression immediately.
-    expect(listEffects()).toHaveLength(1);
+  it('registry contains exactly 7 effects (stars + 6 F7 additions) — regression guard against test-file discovery', () => {
+    // If *.test.js files are matched by the glob, any test file without a default export
+    // would crash the app. This assertion catches that regression immediately.
+    expect(listEffects()).toHaveLength(7);
   });
 
-  // TODO(F7): verify sort order by id across multiple effects.
-  // import.meta.glob is resolved by Vite at build/transform time and cannot be
-  // intercepted with vi.mock() in the current setup. Re-enable once a second
-  // effect file exists and alphabetical ordering can be confirmed from real files.
+  it('listEffects() is sorted alphabetically by id', () => {
+    const ids = listEffects().map((e) => e.id);
+    const sorted = [...ids].sort((a, b) => a.localeCompare(b));
+    expect(ids).toEqual(sorted);
+  });
+
+  it('auto-discovery finds all six F7 effects', () => {
+    const ids = listEffects().map((e) => e.id);
+    for (const id of ['bubbles', 'dust', 'fireflies', 'mud', 'rain', 'wave']) {
+      expect(ids).toContain(id);
+    }
+  });
 });
