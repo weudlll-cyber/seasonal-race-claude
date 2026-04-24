@@ -93,14 +93,14 @@ describe('HorseRacerType — D1 extended manifest', () => {
           tailPhase,
           bodyBob,
         } = horse.animation.getAnimationOffset(frame, speed);
-        expect(legFrontLeft).toBeGreaterThanOrEqual(-1.5);
-        expect(legFrontLeft).toBeLessThanOrEqual(1.5);
-        expect(legFrontRight).toBeGreaterThanOrEqual(-1.5);
-        expect(legFrontRight).toBeLessThanOrEqual(1.5);
-        expect(legBackLeft).toBeGreaterThanOrEqual(-1.5);
-        expect(legBackLeft).toBeLessThanOrEqual(1.5);
-        expect(legBackRight).toBeGreaterThanOrEqual(-1.5);
-        expect(legBackRight).toBeLessThanOrEqual(1.5);
+        expect(legFrontLeft).toBeGreaterThanOrEqual(-2.5);
+        expect(legFrontLeft).toBeLessThanOrEqual(2.5);
+        expect(legFrontRight).toBeGreaterThanOrEqual(-2.5);
+        expect(legFrontRight).toBeLessThanOrEqual(2.5);
+        expect(legBackLeft).toBeGreaterThanOrEqual(-2.5);
+        expect(legBackLeft).toBeLessThanOrEqual(2.5);
+        expect(legBackRight).toBeGreaterThanOrEqual(-2.5);
+        expect(legBackRight).toBeLessThanOrEqual(2.5);
         expect(Math.abs(manePhase)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(tailPhase)).toBeLessThanOrEqual(1.0);
         expect(bodyBob).toBeGreaterThanOrEqual(0);
@@ -296,7 +296,7 @@ describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
     // speed=2: period=250ms → at 125ms = half cycle  → legFrontLeft = sin(π)*1.5 ≈ 0 (back near 0)
     const s1 = horse.animation.getAnimationOffset(125, 1);
     const s2 = horse.animation.getAnimationOffset(125, 2);
-    expect(s1.legFrontLeft).toBeCloseTo(1.5, 1);
+    expect(s1.legFrontLeft).toBeCloseTo(2.5, 1);
     expect(Math.abs(s2.legFrontLeft)).toBeLessThan(0.1);
   });
 
@@ -316,14 +316,14 @@ describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
       for (let speed = 0.5; speed <= 5.0; speed += 0.5) {
         const { legFrontLeft, legFrontRight, legBackLeft, legBackRight, bodyBob } =
           horse.animation.getAnimationOffset(frame, speed);
-        expect(legFrontLeft).toBeGreaterThanOrEqual(-1.5);
-        expect(legFrontLeft).toBeLessThanOrEqual(1.5);
-        expect(legFrontRight).toBeGreaterThanOrEqual(-1.5);
-        expect(legFrontRight).toBeLessThanOrEqual(1.5);
-        expect(legBackLeft).toBeGreaterThanOrEqual(-1.5);
-        expect(legBackLeft).toBeLessThanOrEqual(1.5);
-        expect(legBackRight).toBeGreaterThanOrEqual(-1.5);
-        expect(legBackRight).toBeLessThanOrEqual(1.5);
+        expect(legFrontLeft).toBeGreaterThanOrEqual(-2.5);
+        expect(legFrontLeft).toBeLessThanOrEqual(2.5);
+        expect(legFrontRight).toBeGreaterThanOrEqual(-2.5);
+        expect(legFrontRight).toBeLessThanOrEqual(2.5);
+        expect(legBackLeft).toBeGreaterThanOrEqual(-2.5);
+        expect(legBackLeft).toBeLessThanOrEqual(2.5);
+        expect(legBackRight).toBeGreaterThanOrEqual(-2.5);
+        expect(legBackRight).toBeLessThanOrEqual(2.5);
         expect(bodyBob).toBeGreaterThanOrEqual(0);
         expect(bodyBob).toBeLessThanOrEqual(0.5);
       }
@@ -359,7 +359,7 @@ describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
   });
 
   it('leg X-positions change between frame=0 and frame=125 at speed=1', () => {
-    // speed=1: period=500ms; at frame=125 = quarter cycle → legFrontLeft shifts from 0 to 1.5
+    // speed=1: period=500ms; at frame=125 = quarter cycle → legFrontLeft shifts from 0 to 2.5
     const ctx0 = makeCtx();
     const ctx125 = makeCtx();
     horse.render.drawBody(ctx0, { ...MOCK_RACER, baseSpeed: 1 }, 0);
@@ -367,5 +367,15 @@ describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
     const xAt0 = ctx0.fillRect.mock.calls[0][0]; // front-left leg X at frame=0
     const xAt125 = ctx125.fillRect.mock.calls[0][0]; // front-left leg X at frame=125
     expect(Math.abs(xAt125 - xAt0)).toBeGreaterThan(0.5);
+  });
+
+  it('leg fillRects are positioned outside the body silhouette (Y ≤ –4 or Y ≥ +4)', () => {
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    expect(ctx.fillRect.mock.calls.length).toBe(4);
+    for (const call of ctx.fillRect.mock.calls) {
+      const y = call[1]; // fillRect(x, y, w, h)
+      expect(y <= -4 || y >= 4).toBe(true);
+    }
   });
 });

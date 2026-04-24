@@ -98,10 +98,10 @@ export class HorseRacerType {
     const phaseA = ((frame % period) / period) * 2 * Math.PI;
     const phaseB = phaseA + Math.PI;
     return {
-      legFrontLeft: Math.sin(phaseA) * 1.5,
-      legBackRight: Math.sin(phaseA) * 1.5,
-      legFrontRight: Math.sin(phaseB) * 1.5,
-      legBackLeft: Math.sin(phaseB) * 1.5,
+      legFrontLeft: Math.sin(phaseA) * 2.5,
+      legBackRight: Math.sin(phaseA) * 2.5,
+      legFrontRight: Math.sin(phaseB) * 2.5,
+      legBackLeft: Math.sin(phaseB) * 2.5,
       manePhase: Math.sin(phaseA + Math.PI / 4) * 0.5,
       tailPhase: Math.sin(phaseA + Math.PI / 2) * 1.0,
       bodyBob: Math.abs(Math.sin(phaseA * 2)) * 0.5,
@@ -138,70 +138,69 @@ export class HorseRacerType {
 
     ctx.save();
 
-    // ── Tail — dark teardrop polygon, no bodyBob ──────────────────────────
+    // ── Tail — tapered triangle, anchor at body rear edge ────────────────
     ctx.beginPath();
-    ctx.moveTo(-11, 0);
-    ctx.lineTo(-14 + tailPhase * 0.5, -1.5);
-    ctx.lineTo(-17 + tailPhase * 0.5, tailPhase);
-    ctx.lineTo(-14 + tailPhase * 0.5, 1.5);
+    ctx.moveTo(-13, -1.5);
+    ctx.lineTo(-19 + tailPhase * 0.5, tailPhase);
+    ctx.lineTo(-13, 1.5);
     ctx.closePath();
     ctx.fillStyle = accent;
     ctx.fill();
 
-    // ── Body — ellipse 22 × 14, follows bodyBob ──────────────────────────
+    // ── Body — narrow ellipse 26 × 8 (radii 13, 4), follows bodyBob ──────
     ctx.beginPath();
-    ctx.ellipse(0, bodyBob, 11, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, bodyBob, 13, 4, 0, 0, Math.PI * 2);
     ctx.fillStyle = primary;
     ctx.strokeStyle = accent;
     ctx.lineWidth = 0.5;
     ctx.fill();
     ctx.stroke();
 
-    // ── Legs — 4 rectangles 2 × 4, X-offset by trot phase, no bodyBob ───
+    // ── Legs — 2 × 5 rects, outside body Y-range [–4, +4], no bodyBob ───
     ctx.fillStyle = accent;
-    ctx.fillRect(6 + legFrontLeft - 1, -4 - 2, 2, 4); // front-left
-    ctx.fillRect(6 + legFrontRight - 1, 4 - 2, 2, 4); // front-right
-    ctx.fillRect(-6 + legBackLeft - 1, -4 - 2, 2, 4); // back-left
-    ctx.fillRect(-6 + legBackRight - 1, 4 - 2, 2, 4); // back-right
+    ctx.fillRect(7 + legFrontLeft - 1, -9, 2, 5); // front-left  (Y –9 → –4)
+    ctx.fillRect(7 + legFrontRight - 1, 4, 2, 5); // front-right (Y +4 → +9)
+    ctx.fillRect(-6 + legBackLeft - 1, -9, 2, 5); // back-left   (Y –9 → –4)
+    ctx.fillRect(-6 + legBackRight - 1, 4, 2, 5); // back-right  (Y +4 → +9)
 
-    // ── Neck — trapezoid bridging body and head ───────────────────────────
+    // ── Neck — narrow trapezoid bridging body front and head ──────────────
     ctx.beginPath();
-    ctx.moveTo(10, bodyBob - 4);
-    ctx.lineTo(10, bodyBob + 4);
+    ctx.moveTo(13, bodyBob - 3);
     ctx.lineTo(13, bodyBob + 3);
-    ctx.lineTo(13, bodyBob - 3);
+    ctx.lineTo(15, bodyBob + 2);
+    ctx.lineTo(15, bodyBob - 2);
     ctx.closePath();
     ctx.fillStyle = primary;
     ctx.fill();
 
-    // ── Mane — dark polygon along neck/head spine ─────────────────────────
+    // ── Mane — dark polygon along neck top and head rear ─────────────────
     const mY = manePhase * 0.3;
     ctx.beginPath();
-    ctx.moveTo(9, bodyBob - 4 + mY);
-    ctx.lineTo(13, bodyBob - 3 + mY);
-    ctx.lineTo(18, bodyBob - 4 + mY);
-    ctx.lineTo(19, bodyBob - 2);
+    ctx.moveTo(12, bodyBob - 3 + mY);
+    ctx.lineTo(15, bodyBob - 3 + mY);
+    ctx.lineTo(19, bodyBob - 4 + mY);
+    ctx.lineTo(20, bodyBob - 2.5);
     ctx.lineTo(15, bodyBob - 2);
-    ctx.lineTo(10, bodyBob - 3);
+    ctx.lineTo(12, bodyBob - 2);
     ctx.closePath();
     ctx.fillStyle = accent;
     ctx.fill();
 
-    // ── Head — ellipse 10 × 8, follows bodyBob ───────────────────────────
+    // ── Head — ellipse 8 × 6 (radii 4, 3), follows bodyBob ──────────────
     ctx.beginPath();
-    ctx.ellipse(18, bodyBob, 5, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(18, bodyBob, 4, 3, 0, 0, Math.PI * 2);
     ctx.fillStyle = primary;
     ctx.strokeStyle = accent;
     ctx.lineWidth = 0.5;
     ctx.fill();
     ctx.stroke();
 
-    // ── Snout — trapezoid at head front, lightened primary ────────────────
+    // ── Snout — small trapezoid at head front ─────────────────────────────
     ctx.beginPath();
-    ctx.moveTo(22, bodyBob - 2);
-    ctx.lineTo(22, bodyBob + 2);
-    ctx.lineTo(24, bodyBob + 1.5);
-    ctx.lineTo(24, bodyBob - 1.5);
+    ctx.moveTo(22, bodyBob - 1.5);
+    ctx.lineTo(22, bodyBob + 1.5);
+    ctx.lineTo(24, bodyBob + 1);
+    ctx.lineTo(24, bodyBob - 1);
     ctx.closePath();
     ctx.fillStyle = snout;
     ctx.fill();
