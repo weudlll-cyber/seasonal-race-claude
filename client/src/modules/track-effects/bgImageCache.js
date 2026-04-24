@@ -1,6 +1,6 @@
 // ============================================================
 // File:        bgImageCache.js
-// Path:        client/src/modules/environments/bgImageCache.js
+// Path:        client/src/modules/track-effects/bgImageCache.js
 // Project:     RaceArena
 // Description: Module-level cache for background images, keyed by path.
 //              Ensures each image is loaded at most once across all

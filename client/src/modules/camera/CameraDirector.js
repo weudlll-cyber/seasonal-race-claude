@@ -21,8 +21,7 @@ const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 export class CameraDirector {
   /**
    * @param {{ minX: number, minY: number, maxX: number, maxY: number }} [bbox]
-   *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas,
-   *   which preserves existing behaviour for legacy SvgPathShape tracks.
+   *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas.
    */
   constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }) {
     this._bbox = bbox;

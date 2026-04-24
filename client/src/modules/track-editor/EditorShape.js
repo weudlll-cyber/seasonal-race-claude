@@ -42,7 +42,7 @@ export class EditorShape {
     const inner = this._inner[idx];
     const outer = this._outer[idx];
 
-    // Clamp so environments passing ±1.0 (SvgPathShape convention) land on the edges.
+    // Clamp offset so callers passing ±1.0 land on the boundary edges.
     const clamped = Math.max(-0.5, Math.min(0.5, offset));
     const frac = clamped + 0.5; // 0 = inner edge, 1 = outer edge
     const x = inner.x + (outer.x - inner.x) * frac;
@@ -83,7 +83,7 @@ export class EditorShape {
 
   /**
    * Returns sampled outer and inner boundary points for track surface rendering.
-   * Compatible with the SvgPathShape.getEdgePoints() API used by environment modules.
+   * Returns sampled boundary points for track surface rendering.
    * @param {number} nSamples  Number of segments (returns nSamples+1 point pairs)
    * @returns {{ outer: {x,y}[], inner: {x,y}[] }}
    */
