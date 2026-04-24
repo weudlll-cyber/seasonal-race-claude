@@ -105,6 +105,8 @@ export default function RaceScreen() {
         return;
       }
       shapeRef.current = new EditorShape(geometry);
+      // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
+      isOpenTrack = shapeRef.current.isOpen;
       envRef.current = getEnvironment('dirt', CW, CH, geometry.backgroundImage ?? null);
       const { effectId, effectConfig } = extractEffectConfig(geometry);
       if (effectId) {
