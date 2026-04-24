@@ -566,9 +566,11 @@ export default function RaceScreen() {
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // ── Draw world ──
+      // Background, effects, track, and racers are all in world space (1280×720).
+      // A single save/transform/restore wraps every world-space layer so they all
+      // move together when the camera pans or zooms. HUD draws after ctx.restore()
+      // so it stays in fixed screen space.
       if (isOpenTrack) {
-        env.drawBackground(ctx, ts);
-        if (effectRef.current) effectRef.current.render(ctx);
         ctx.save();
         // Combined pan + zoom centred at screen midpoint.
         // At zoom=1 this degrades to pure pan: translate(-camX, 0).
@@ -576,17 +578,19 @@ export default function RaceScreen() {
         const cy = CH / 2;
         ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
         ctx.scale(cam.zoom, cam.zoom);
+        env.drawBackground(ctx, ts);
+        if (effectRef.current) effectRef.current.render(ctx);
         env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
         drawParticles();
         drawRacers();
         ctx.restore();
         drawTitleOpen();
       } else {
-        env.drawBackground(ctx, ts);
-        if (effectRef.current) effectRef.current.render(ctx);
         ctx.save();
         ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(cam.zoom, cam.zoom);
+        env.drawBackground(ctx, ts);
+        if (effectRef.current) effectRef.current.render(ctx);
         env.drawTrackSurface(ctx, shape, st.trackWidth, ts);
         drawParticles();
         drawRacers();
