@@ -30,8 +30,6 @@ seasonal-race-claude/
 │       │   ├── track-types/        # Track geometry definitions
 │       │   ├── socket/             # Socket.IO client singleton
 │       │   └── utils/              # Shared helpers (time, math)
-│       ├── services/               # REST API client
-│       │   └── api.js
 │       ├── styles/
 │       │   └── main.css
 │       ├── App.js
@@ -72,7 +70,7 @@ seasonal-race-claude/
 
 ```
 Browser → React (screens/)
-            ↓ REST (services/api.js)           → Express routes → modules/race  → SQLite
+            ↓ REST (fetch)                     → Express routes → modules/race  → SQLite
             ↓ Socket.IO (modules/socket/)       → modules/socket → broadcast state
             ↓ Canvas (modules/track-renderer/)  ← modules/race-engine (rAF tick)
 ```
