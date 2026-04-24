@@ -4,7 +4,7 @@ import rainEffect from './rain.js';
 const MOCK_CANVAS = { width: 800, height: 600 };
 
 function makeMockCtx() {
-  const calls = { beginPath: 0, moveTo: 0, lineTo: 0, stroke: 0 };
+  const calls = { beginPath: 0, arc: 0, stroke: 0 };
   return {
     calls,
     globalAlpha: 1,
@@ -13,11 +13,8 @@ function makeMockCtx() {
     beginPath() {
       calls.beginPath++;
     },
-    moveTo() {
-      calls.moveTo++;
-    },
-    lineTo() {
-      calls.lineTo++;
+    arc() {
+      calls.arc++;
     },
     stroke() {
       calls.stroke++;
@@ -42,12 +39,10 @@ describe('rain effect — manifest shape', () => {
     expect(configKeys).toEqual(schemaKeys);
   });
 
-  it('direction field has select type with options', () => {
-    const dirField = rainEffect.configSchema.find((f) => f.key === 'direction');
-    expect(dirField).toBeDefined();
-    expect(dirField.type).toBe('select');
-    expect(Array.isArray(dirField.options)).toBe(true);
-    expect(dirField.options).toContain('down');
+  it('schema does not include deprecated side-view fields', () => {
+    const keys = rainEffect.configSchema.map((f) => f.key);
+    expect(keys).not.toContain('speed');
+    expect(keys).not.toContain('direction');
   });
 });
 
@@ -58,34 +53,37 @@ describe('rain effect — create() contract', () => {
     expect(typeof instance.render).toBe('function');
   });
 
-  it('render() draws one moveTo per raindrop', () => {
-    const config = { ...rainEffect.defaultConfig, count: 12 };
+  it('render() draws one arc per active drop after spawning', () => {
+    // count=10 drops/sec, interval=0.1s → update(1000ms) spawns exactly 10 drops
+    const config = { ...rainEffect.defaultConfig, count: 10 };
     const instance = rainEffect.create(MOCK_CANVAS, config);
-    instance.update(16);
+    instance.update(1000);
     const ctx = makeMockCtx();
     instance.render(ctx);
-    expect(ctx.calls.moveTo).toBe(12);
-    expect(ctx.calls.lineTo).toBe(12);
+    expect(ctx.calls.arc).toBe(10);
+    expect(ctx.calls.stroke).toBe(10);
   });
 
   it('render() with count = 0 makes no draw calls', () => {
     const config = { ...rainEffect.defaultConfig, count: 0 };
     const instance = rainEffect.create(MOCK_CANVAS, config);
+    instance.update(1000);
     const ctx = makeMockCtx();
     instance.render(ctx);
-    expect(ctx.calls.moveTo).toBe(0);
+    expect(ctx.calls.arc).toBe(0);
     expect(ctx.calls.stroke).toBe(0);
   });
 
-  it('update() moves drops without throwing', () => {
+  it('update() advances drops without throwing', () => {
     const instance = rainEffect.create(MOCK_CANVAS, rainEffect.defaultConfig);
     instance.update(200);
     expect(() => instance.render(makeMockCtx())).not.toThrow();
   });
 
   it('render() resets globalAlpha to 1 after drawing', () => {
-    const config = { ...rainEffect.defaultConfig, count: 5 };
+    const config = { ...rainEffect.defaultConfig, count: 10 };
     const instance = rainEffect.create(MOCK_CANVAS, config);
+    instance.update(1000);
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.globalAlpha).toBe(1);

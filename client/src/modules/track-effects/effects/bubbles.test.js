@@ -37,6 +37,12 @@ describe('bubbles effect — manifest shape', () => {
     const configKeys = Object.keys(bubblesEffect.defaultConfig).sort();
     expect(configKeys).toEqual(schemaKeys);
   });
+
+  it('schema does not include deprecated side-view fields', () => {
+    const keys = bubblesEffect.configSchema.map((f) => f.key);
+    expect(keys).not.toContain('speed');
+    expect(keys).not.toContain('drift');
+  });
 });
 
 describe('bubbles effect — create() contract', () => {
@@ -46,34 +52,37 @@ describe('bubbles effect — create() contract', () => {
     expect(typeof instance.render).toBe('function');
   });
 
-  it('render() draws 2 arcs per bubble (bubble + highlight)', () => {
-    const config = { ...bubblesEffect.defaultConfig, count: 5 };
+  it('render() draws one arc per rising bubble after spawning', () => {
+    // count=60/min, interval=1s (exact) → update(5000ms) spawns exactly 5 bubbles (all age=0, rise phase)
+    const config = { ...bubblesEffect.defaultConfig, count: 60 };
     const instance = bubblesEffect.create(MOCK_CANVAS, config);
-    instance.update(16);
+    instance.update(5000);
     const ctx = makeMockCtx();
     instance.render(ctx);
-    expect(ctx.calls.arc).toBe(10);
-    expect(ctx.calls.fill).toBe(10);
+    expect(ctx.calls.arc).toBe(5);
+    expect(ctx.calls.fill).toBe(5);
   });
 
   it('render() with count = 0 makes no draw calls', () => {
     const config = { ...bubblesEffect.defaultConfig, count: 0 };
     const instance = bubblesEffect.create(MOCK_CANVAS, config);
+    instance.update(5000);
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.calls.arc).toBe(0);
     expect(ctx.calls.fill).toBe(0);
   });
 
-  it('update() advances elapsed without throwing', () => {
+  it('update() advances state without throwing', () => {
     const instance = bubblesEffect.create(MOCK_CANVAS, bubblesEffect.defaultConfig);
-    instance.update(100);
+    instance.update(1000);
     expect(() => instance.render(makeMockCtx())).not.toThrow();
   });
 
   it('render() resets globalAlpha to 1 after drawing', () => {
-    const config = { ...bubblesEffect.defaultConfig, count: 3 };
+    const config = { ...bubblesEffect.defaultConfig, count: 60 };
     const instance = bubblesEffect.create(MOCK_CANVAS, config);
+    instance.update(5000);
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.globalAlpha).toBe(1);

@@ -4,7 +4,7 @@ import waveEffect from './wave.js';
 const MOCK_CANVAS = { width: 800, height: 600 };
 
 function makeMockCtx() {
-  const calls = { beginPath: 0, moveTo: 0, lineTo: 0, stroke: 0 };
+  const calls = { beginPath: 0, arc: 0, stroke: 0 };
   return {
     calls,
     globalAlpha: 1,
@@ -13,11 +13,8 @@ function makeMockCtx() {
     beginPath() {
       calls.beginPath++;
     },
-    moveTo() {
-      calls.moveTo++;
-    },
-    lineTo() {
-      calls.lineTo++;
+    arc() {
+      calls.arc++;
     },
     stroke() {
       calls.stroke++;
@@ -41,6 +38,11 @@ describe('wave effect — manifest shape', () => {
     const configKeys = Object.keys(waveEffect.defaultConfig).sort();
     expect(configKeys).toEqual(schemaKeys);
   });
+
+  it('schema does not include deprecated pulseSpeed field', () => {
+    const keys = waveEffect.configSchema.map((f) => f.key);
+    expect(keys).not.toContain('pulseSpeed');
+  });
 });
 
 describe('wave effect — create() contract', () => {
@@ -50,26 +52,28 @@ describe('wave effect — create() contract', () => {
     expect(typeof instance.render).toBe('function');
   });
 
-  it('render() draws one beginPath and one stroke per wave line', () => {
-    const config = { ...waveEffect.defaultConfig, count: 4 };
+  it('render() draws one ring per active ripple', () => {
+    // count=5 → 5 ripples pre-allocated at create time
+    const config = { ...waveEffect.defaultConfig, count: 5 };
     const instance = waveEffect.create(MOCK_CANVAS, config);
     instance.update(16);
     const ctx = makeMockCtx();
     instance.render(ctx);
-    expect(ctx.calls.beginPath).toBe(4);
-    expect(ctx.calls.stroke).toBe(4);
+    expect(ctx.calls.arc).toBe(5);
+    expect(ctx.calls.stroke).toBe(5);
   });
 
   it('render() with count = 0 makes no draw calls', () => {
     const config = { ...waveEffect.defaultConfig, count: 0 };
     const instance = waveEffect.create(MOCK_CANVAS, config);
+    instance.update(16);
     const ctx = makeMockCtx();
     instance.render(ctx);
-    expect(ctx.calls.beginPath).toBe(0);
+    expect(ctx.calls.arc).toBe(0);
     expect(ctx.calls.stroke).toBe(0);
   });
 
-  it('update() advances elapsed without throwing', () => {
+  it('update() advances ripple age without throwing', () => {
     const instance = waveEffect.create(MOCK_CANVAS, waveEffect.defaultConfig);
     instance.update(300);
     expect(() => instance.render(makeMockCtx())).not.toThrow();
@@ -78,6 +82,7 @@ describe('wave effect — create() contract', () => {
   it('render() resets globalAlpha to 1 after drawing', () => {
     const config = { ...waveEffect.defaultConfig, count: 3 };
     const instance = waveEffect.create(MOCK_CANVAS, config);
+    instance.update(16);
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.globalAlpha).toBe(1);
