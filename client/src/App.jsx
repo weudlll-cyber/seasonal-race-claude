@@ -21,7 +21,13 @@ const CURRENT_DATA_VERSION = 1;
 
 (function migrateStorage() {
   if (storageGet(KEYS.DATA_VERSION, 0) < CURRENT_DATA_VERSION) {
-    storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
+    // Seed defaults only when no tracks exist yet — never overwrite user data.
+    // Old-format tracks (shapeId) are removed by storage.js IIFE before this runs,
+    // so after that flush the key is absent and seeding is safe.
+    const existing = storageGet(KEYS.TRACKS, null);
+    if (!Array.isArray(existing) || existing.length === 0) {
+      storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
+    }
     storageSet(KEYS.DATA_VERSION, CURRENT_DATA_VERSION);
     console.log('[RaceArena] Storage migrated to v' + CURRENT_DATA_VERSION);
   }
