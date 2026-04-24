@@ -28,20 +28,14 @@ seasonal-race-claude/
 │       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
 │       ├── modules/                # Domain logic, independent of React
-│       │   ├── race-engine/        # Client-side physics tick
-│       │   ├── race-simulation/    # Race state machine
+│       │   ├── camera/             # CameraDirector, Minimap, lapUtils
+│       │   ├── racer-types/        # Racer stat definitions
+│       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 │       │   ├── track-editor/       # Geometry CRUD, Catmull-Rom, EditorShape
 │       │   ├── track-effects/      # Animated effect layers
 │       │   │   ├── bgImageCache.js # Async image loader with module-level cache
 │       │   │   ├── index.js        # listEffects / getEffect / getDefaultConfig
 │       │   │   └── effects/        # rain, stars, bubbles, fireflies, dust, mud, wave
-│       │   ├── track-renderer/     # Canvas draw calls (background, racers, HUD)
-│       │   ├── track-canvas/       # Camera, minimap, lap utilities
-│       │   ├── track-shapes/       # (legacy — still present, transitioning out)
-│       │   ├── camera/             # CameraDirector, Minimap, lapUtils
-│       │   ├── racer-types/        # Racer stat definitions
-│       │   ├── particle-effects/   # Low-level particle helpers
-│       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 │       │   └── utils/              # Shared helpers (time, math)
 │       ├── contexts/               # React contexts (TransitionContext)
 │       ├── styles/
@@ -66,7 +60,7 @@ seasonal-race-claude/
 
 ```
 Browser → React (screens/)
-            ↓ Canvas (RaceScreen / TrackEditor)  ← modules/race-engine (rAF tick)
+            ↓ Canvas (RaceScreen / TrackEditor)  ← rAF loop (inline in RaceScreen)
             ↓ localStorage (modules/storage/)    ← all settings, tracks, results
 ```
 
@@ -76,7 +70,7 @@ Browser → React (screens/)
 - **modules/ are framework-agnostic** — no React imports in `modules/`; screens own the component tree, modules own the logic.
 - **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
-- **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are currently inlined in `RaceScreen/index.jsx`. Candidate for extraction into `modules/track-renderer/` in a future cleanup PR.
+- **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are currently inlined in `RaceScreen/index.jsx`. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
 
 ## Future: Phase 5 Server
 
