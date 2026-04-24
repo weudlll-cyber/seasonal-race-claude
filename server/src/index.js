@@ -12,7 +12,9 @@ const { Server }           = require('socket.io');
 const cors                 = require('cors');
 const { getDb }            = require('./modules/db');
 const raceRoutes           = require('./routes/race');
-const userRoutes           = require('./routes/user');
+// TODO(phase-6): auth scaffold disabled until proper auth is built.
+// See AUDIT.md CRIT-3.1 — login endpoint has no password check.
+// const userRoutes           = require('./routes/user');
 const seasonRoutes         = require('./routes/season');
 const registerSocketHandlers = require('./modules/socket');
 const errorHandler         = require('./middleware/errorHandler');
@@ -27,7 +29,9 @@ app.use(express.json());
 getDb();
 
 app.use('/api/races',   raceRoutes);
-app.use('/api/users',   userRoutes);
+// TODO(phase-6): auth scaffold disabled until proper auth is built.
+// See AUDIT.md CRIT-3.1 — login endpoint has no password check.
+// app.use('/api/users',   userRoutes);
 app.use('/api/seasons', seasonRoutes);
 app.use(errorHandler);
 
