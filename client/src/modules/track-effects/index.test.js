@@ -46,6 +46,12 @@ describe('track-effects registry', () => {
     expect(getDefaultConfig('nonexistent')).toBeNull();
   });
 
+  it('registry contains exactly 1 effect — regression guard against test files being discovered', () => {
+    // If *.test.js files are matched by the glob, stars.test.js has no default export
+    // and would crash the app. This assertion catches that regression immediately.
+    expect(listEffects()).toHaveLength(1);
+  });
+
   // TODO(F7): verify sort order by id across multiple effects.
   // import.meta.glob is resolved by Vite at build/transform time and cannot be
   // intercepted with vi.mock() in the current setup. Re-enable once a second

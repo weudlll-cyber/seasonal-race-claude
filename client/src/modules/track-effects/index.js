@@ -1,4 +1,6 @@
-const modules = import.meta.glob('./effects/*.js', { eager: true });
+// Exclude *.test.js — without the negation glob matched test files too, causing
+// stars.test.js to run at app load and crash with "Cannot read properties of undefined".
+const modules = import.meta.glob(['./effects/*.js', '!./effects/*.test.js'], { eager: true });
 
 const effects = [];
 for (const [path, mod] of Object.entries(modules)) {
