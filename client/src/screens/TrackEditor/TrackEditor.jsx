@@ -14,6 +14,7 @@ import {
   extractEffectConfig,
 } from './trackEditorSave.js';
 import { useHistory } from './useHistory.js';
+import { getEffect } from '../../modules/track-effects/index.js';
 import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
 import s from './TrackEditor.module.css';
 
@@ -35,6 +36,128 @@ const BG_IMAGES = [
   { value: '/assets/tracks/backgrounds/space-sprint.jpg', label: 'Space Sprint' },
 ];
 
+function drawStaticScene(ctx, state) {
+  const {
+    bgImage = null,
+    mode = 'center',
+    centerPoints = [],
+    innerPoints = [],
+    outerPoints = [],
+    activeBoundary = 'inner',
+    selectedPointIndex = -1,
+    centerWidth = 120,
+    closed = false,
+  } = state ?? {};
+
+  ctx.clearRect(0, 0, CW, CH);
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
+
+  if (bgImage) {
+    ctx.drawImage(bgImage, 0, 0, CW, CH);
+  } else {
+    ctx.fillStyle = '#1a1a24';
+    ctx.fillRect(0, 0, CW, CH);
+  }
+
+  const minPts = closed ? 3 : 2;
+
+  const tryDrawCurve = (pts, strokeStyle, lineWidth, dashed) => {
+    if (pts.length < minPts) return;
+    try {
+      const curve = catmullRomSpline(pts, { closed, tension: 0.5, samples: CURVE_SAMPLES });
+      ctx.beginPath();
+      if (dashed) ctx.setLineDash([6, 4]);
+      ctx.moveTo(curve[0].x, curve[0].y);
+      for (let i = 1; i < curve.length; i++) ctx.lineTo(curve[i].x, curve[i].y);
+      if (closed) ctx.closePath();
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+      if (dashed) ctx.setLineDash([]);
+    } catch {
+      // not enough points — skip
+    }
+  };
+
+  if (mode === 'center') {
+    if (centerPoints.length >= minPts) {
+      try {
+        const centerCurve = catmullRomSpline(centerPoints, {
+          closed,
+          tension: 0.5,
+          samples: CURVE_SAMPLES,
+        });
+        ctx.globalAlpha = 0.9;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 1;
+        for (const amount of [centerWidth / 2, -(centerWidth / 2)]) {
+          const bc = offsetCurve(centerCurve, amount);
+          ctx.beginPath();
+          ctx.moveTo(bc[0].x, bc[0].y);
+          for (let i = 1; i < bc.length; i++) ctx.lineTo(bc[i].x, bc[i].y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      } catch {
+        // skip
+      }
+    }
+    tryDrawCurve(centerPoints, '#4fc3f7', 2, false);
+    for (let i = 0; i < centerPoints.length; i++) {
+      const pt = centerPoints[i];
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    if (selectedPointIndex >= 0 && selectedPointIndex < centerPoints.length) {
+      const pt = centerPoints[selectedPointIndex];
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  } else {
+    const activeList = activeBoundary === 'inner' ? innerPoints : outerPoints;
+    const inactiveList = activeBoundary === 'inner' ? outerPoints : innerPoints;
+    ctx.globalAlpha = 0.3;
+    tryDrawCurve(inactiveList, '#4fc3f7', 2, false);
+    for (const pt of inactiveList) {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    tryDrawCurve(activeList, '#4fc3f7', 2, false);
+    for (let i = 0; i < activeList.length; i++) {
+      const pt = activeList[i];
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
+      const pt = activeList[selectedPointIndex];
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+}
+
 export default function TrackEditor() {
   const navigate = useNavigate();
 
@@ -48,6 +171,12 @@ export default function TrackEditor() {
   const dragIndexRef = useRef(-1);
   const hasDraggedRef = useRef(false);
   const preDragSnapshotRef = useRef(null);
+
+  // ── effect preview refs ────────────────────────────────────────────────────
+  const effectInstanceRef = useRef(null);
+  const rafRef = useRef(null);
+  const lastTimeRef = useRef(null);
+  const renderStateRef = useRef({});
 
   // ── debounce refs for history ─────────────────────────────────────────────
   const sliderHistoryTimerRef = useRef(null);
@@ -248,123 +377,30 @@ export default function TrackEditor() {
       if (sliderHistoryTimerRef.current) clearTimeout(sliderHistoryTimerRef.current);
       if (nameHistoryTimerRef.current) clearTimeout(nameHistoryTimerRef.current);
       if (effectHistoryTimerRef.current) clearTimeout(effectHistoryTimerRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
-  // Canvas render effect
+  // Canvas render effect — mirrors state into renderStateRef and draws immediately
+  // when the rAF loop is idle (no effect active).
   useEffect(() => {
+    renderStateRef.current = {
+      bgImage: bgRef.current,
+      mode,
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      activeBoundary,
+      selectedPointIndex,
+      centerWidth,
+      closed,
+    };
+    if (rafRef.current) return; // rAF loop redraws every frame; skip immediate draw
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, CW, CH);
-    ctx.globalAlpha = 1;
-    ctx.setLineDash([]);
-
-    if (bgRef.current) {
-      ctx.drawImage(bgRef.current, 0, 0, CW, CH);
-    } else {
-      ctx.fillStyle = '#1a1a24';
-      ctx.fillRect(0, 0, CW, CH);
-    }
-
-    const minPts = closed ? 3 : 2;
-
-    const tryDrawCurve = (pts, strokeStyle, lineWidth, dashed) => {
-      if (pts.length < minPts) return;
-      try {
-        const curve = catmullRomSpline(pts, { closed, tension: 0.5, samples: CURVE_SAMPLES });
-        ctx.beginPath();
-        if (dashed) ctx.setLineDash([6, 4]);
-        ctx.moveTo(curve[0].x, curve[0].y);
-        for (let i = 1; i < curve.length; i++) ctx.lineTo(curve[i].x, curve[i].y);
-        if (closed) ctx.closePath();
-        ctx.strokeStyle = strokeStyle;
-        ctx.lineWidth = lineWidth;
-        ctx.stroke();
-        if (dashed) ctx.setLineDash([]);
-      } catch {
-        // not enough points — skip
-      }
-    };
-
-    if (mode === 'center') {
-      // Derived inner/outer boundary preview — drawn under center line (dashed, 90% opacity)
-      if (centerPoints.length >= minPts) {
-        try {
-          const centerCurve = catmullRomSpline(centerPoints, {
-            closed,
-            tension: 0.5,
-            samples: CURVE_SAMPLES,
-          });
-          ctx.globalAlpha = 0.9;
-          ctx.setLineDash([6, 4]);
-          ctx.strokeStyle = '#4fc3f7';
-          ctx.lineWidth = 1;
-          for (const amount of [centerWidth / 2, -(centerWidth / 2)]) {
-            const bc = offsetCurve(centerCurve, amount);
-            ctx.beginPath();
-            ctx.moveTo(bc[0].x, bc[0].y);
-            for (let i = 1; i < bc.length; i++) ctx.lineTo(bc[i].x, bc[i].y);
-            ctx.stroke();
-          }
-          ctx.setLineDash([]);
-          ctx.globalAlpha = 1;
-        } catch {
-          // skip
-        }
-      }
-      tryDrawCurve(centerPoints, '#4fc3f7', 2, false);
-      for (let i = 0; i < centerPoints.length; i++) {
-        const pt = centerPoints[i];
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#4fc3f7';
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      if (selectedPointIndex >= 0 && selectedPointIndex < centerPoints.length) {
-        const pt = centerPoints[selectedPointIndex];
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    } else {
-      // Boundary Mode: only inner and outer — Center list hidden entirely
-      const activeList = activeBoundary === 'inner' ? innerPoints : outerPoints;
-      const inactiveList = activeBoundary === 'inner' ? outerPoints : innerPoints;
-      ctx.globalAlpha = 0.3;
-      tryDrawCurve(inactiveList, '#4fc3f7', 2, false);
-      for (const pt of inactiveList) {
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#4fc3f7';
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      tryDrawCurve(activeList, '#4fc3f7', 2, false);
-      for (let i = 0; i < activeList.length; i++) {
-        const pt = activeList[i];
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#4fc3f7';
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      if (selectedPointIndex >= 0 && selectedPointIndex < activeList.length) {
-        const pt = activeList[selectedPointIndex];
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 10, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
+    if (!ctx) return;
+    drawStaticScene(ctx, renderStateRef.current);
   }, [
     centerPoints,
     innerPoints,
@@ -376,6 +412,53 @@ export default function TrackEditor() {
     centerWidth,
     closed,
   ]);
+
+  // Effect preview — starts/stops the rAF animation loop based on effectId/config.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    effectInstanceRef.current = null;
+    lastTimeRef.current = null;
+
+    if (!effectId) return;
+
+    const effectModule = getEffect(effectId);
+    if (!effectModule) return;
+
+    effectInstanceRef.current = effectModule.create(canvas, effectConfig);
+
+    const loop = (timestamp) => {
+      const dt = lastTimeRef.current != null ? timestamp - lastTimeRef.current : 16;
+      lastTimeRef.current = timestamp;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      drawStaticScene(ctx, renderStateRef.current);
+
+      if (effectInstanceRef.current) {
+        effectInstanceRef.current.update(dt);
+        ctx.save();
+        effectInstanceRef.current.render(ctx);
+        ctx.restore();
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      effectInstanceRef.current = null;
+      lastTimeRef.current = null;
+    };
+  }, [effectId, effectConfig]);
 
   // ── canvas coordinate helpers ─────────────────────────────────────────────
 
