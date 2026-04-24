@@ -106,7 +106,13 @@ export function listTracks() {
  */
 export function getTrack(id) {
   const raw = lsGet(trackGeometryKey(id));
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+  const t = JSON.parse(raw);
+  return {
+    ...t,
+    effectId: t.effectId ?? null,
+    effectConfig: t.effectConfig ?? {},
+  };
 }
 
 /**

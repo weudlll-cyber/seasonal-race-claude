@@ -1,4 +1,5 @@
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
+import { getEffect } from '../../modules/track-effects/index.js';
 
 export function validateEditorState({
   mode,
@@ -43,6 +44,8 @@ export function buildTrackFromEditorState({
   closed,
   name,
   backgroundImage,
+  effectId,
+  effectConfig,
 }) {
   const minPts = closed ? 3 : 2;
 
@@ -64,6 +67,8 @@ export function buildTrackFromEditorState({
       width: centerWidth,
       innerPoints: derivedInner,
       outerPoints: derivedOuter,
+      effectId: effectId ?? null,
+      effectConfig: effectConfig ?? {},
     };
   }
 
@@ -85,5 +90,19 @@ export function buildTrackFromEditorState({
     sourceMode: 'boundary',
     innerPoints,
     outerPoints,
+    effectId: effectId ?? null,
+    effectConfig: effectConfig ?? {},
+  };
+}
+
+export function extractEffectConfig(geometry) {
+  const id = geometry.effectId ?? null;
+  if (id !== null && !getEffect(id)) {
+    console.warn(`[track-effects] Unknown effect "${id}" on load — clearing.`);
+    return { effectId: null, effectConfig: {} };
+  }
+  return {
+    effectId: id,
+    effectConfig: geometry.effectConfig ?? {},
   };
 }

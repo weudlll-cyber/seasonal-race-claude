@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { buildTrackFromEditorState, validateEditorState } from './trackEditorSave.js';
+import { describe, it, expect, vi } from 'vitest';
+import {
+  buildTrackFromEditorState,
+  validateEditorState,
+  extractEffectConfig,
+} from './trackEditorSave.js';
 
 const two = [
   { x: 0, y: 0 },
@@ -121,6 +125,63 @@ describe('buildTrackFromEditorState', () => {
         backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
       })
     ).toThrow();
+  });
+});
+
+describe('buildTrackFromEditorState — effect fields', () => {
+  it('includes effectId and effectConfig in the payload when provided', () => {
+    const result = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Effect Track',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+      effectId: 'stars',
+      effectConfig: { count: 200, color: '#ff0000', twinkleSpeed: 1, opacity: 0.8, size: 1.5 },
+    });
+    expect(result.effectId).toBe('stars');
+    expect(result.effectConfig.count).toBe(200);
+  });
+
+  it('defaults effectId to null and effectConfig to {} when not provided', () => {
+    const result = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'No Effect',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+    });
+    expect(result.effectId).toBeNull();
+    expect(result.effectConfig).toEqual({});
+  });
+});
+
+describe('extractEffectConfig', () => {
+  it('returns effectId: null and effectConfig: {} for an old geometry with no effect fields', () => {
+    const result = extractEffectConfig({ name: 'Old Track' });
+    expect(result.effectId).toBeNull();
+    expect(result.effectConfig).toEqual({});
+  });
+
+  it('returns the stored effectId and effectConfig for a valid known effect', () => {
+    const result = extractEffectConfig({ effectId: 'stars', effectConfig: { count: 100 } });
+    expect(result.effectId).toBe('stars');
+    expect(result.effectConfig.count).toBe(100);
+  });
+
+  it('clears effectId and logs a warning for an unknown effect id', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const result = extractEffectConfig({ effectId: 'nonexistent-effect', effectConfig: {} });
+    expect(result.effectId).toBeNull();
+    expect(result.effectConfig).toEqual({});
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });
 

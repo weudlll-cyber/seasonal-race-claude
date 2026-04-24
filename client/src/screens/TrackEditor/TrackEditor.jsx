@@ -8,8 +8,13 @@ import {
   deleteTrack,
 } from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
-import { buildTrackFromEditorState, validateEditorState } from './trackEditorSave.js';
+import {
+  buildTrackFromEditorState,
+  validateEditorState,
+  extractEffectConfig,
+} from './trackEditorSave.js';
 import { useHistory } from './useHistory.js';
+import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
@@ -49,6 +54,8 @@ export default function TrackEditor() {
   const preSliderSnapshotRef = useRef(null);
   const nameHistoryTimerRef = useRef(null);
   const preNameSnapshotRef = useRef(null);
+  const effectHistoryTimerRef = useRef(null);
+  const preEffectSnapshotRef = useRef(null);
 
   // ── history hook ──────────────────────────────────────────────────────────
   const { pushHistory, undo, redo, canUndo, canRedo, resetHistory } = useHistory();
@@ -63,6 +70,8 @@ export default function TrackEditor() {
   const [closed, setClosed] = useState(false);
   const [trackName, setTrackName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
+  const [effectId, setEffectId] = useState(null);
+  const [effectConfig, setEffectConfig] = useState({});
 
   // ── non-versioned state ───────────────────────────────────────────────────
   const [bgReady, setBgReady] = useState(false);
@@ -89,6 +98,8 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
+      effectId,
+      effectConfig,
     };
   }
 
@@ -102,6 +113,8 @@ export default function TrackEditor() {
     setClosed(snapshot.closed);
     setTrackName(snapshot.name);
     setBackgroundImage(snapshot.backgroundImage);
+    setEffectId(snapshot.effectId);
+    setEffectConfig(snapshot.effectConfig);
     setSelectedPointIndex(-1);
   }, []);
 
@@ -127,6 +140,8 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
+      effectId,
+      effectConfig,
     });
     if (snapshot) {
       applySnapshot(snapshot);
@@ -145,6 +160,8 @@ export default function TrackEditor() {
     closed,
     trackName,
     backgroundImage,
+    effectId,
+    effectConfig,
   ]);
 
   const handleRedo = useCallback(() => {
@@ -158,6 +175,8 @@ export default function TrackEditor() {
       closed,
       name: trackName,
       backgroundImage,
+      effectId,
+      effectConfig,
     });
     if (snapshot) {
       applySnapshot(snapshot);
@@ -176,6 +195,8 @@ export default function TrackEditor() {
     closed,
     trackName,
     backgroundImage,
+    effectId,
+    effectConfig,
   ]);
 
   // ── effects ───────────────────────────────────────────────────────────────
@@ -226,6 +247,7 @@ export default function TrackEditor() {
     return () => {
       if (sliderHistoryTimerRef.current) clearTimeout(sliderHistoryTimerRef.current);
       if (nameHistoryTimerRef.current) clearTimeout(nameHistoryTimerRef.current);
+      if (effectHistoryTimerRef.current) clearTimeout(effectHistoryTimerRef.current);
     };
   }, []);
 
@@ -509,6 +531,34 @@ export default function TrackEditor() {
     markDirty();
   }
 
+  // ── effect config ─────────────────────────────────────────────────────────
+
+  function handleEffectChange(nextEffectId, nextConfig) {
+    if (nextEffectId !== effectId) {
+      // Coarse event (effect switch) — single history step
+      pushHistory(getSnapshot());
+      setEffectId(nextEffectId);
+      setEffectConfig(nextConfig);
+      markDirty();
+    } else {
+      // Fine event (config field change) — debounced, same pattern as centerWidth slider
+      if (!effectHistoryTimerRef.current) {
+        preEffectSnapshotRef.current = getSnapshot();
+      } else {
+        clearTimeout(effectHistoryTimerRef.current);
+      }
+      setEffectConfig(nextConfig);
+      markDirty();
+      effectHistoryTimerRef.current = setTimeout(() => {
+        if (preEffectSnapshotRef.current) {
+          pushHistory(preEffectSnapshotRef.current);
+          preEffectSnapshotRef.current = null;
+        }
+        effectHistoryTimerRef.current = null;
+      }, SLIDER_DEBOUNCE_MS);
+    }
+  }
+
   // ── save / load / delete ──────────────────────────────────────────────────
 
   function handleSave() {
@@ -536,6 +586,8 @@ export default function TrackEditor() {
         closed,
         name: trackName.trim(),
         backgroundImage,
+        effectId,
+        effectConfig,
       });
       if (loadedTrackId) track.id = loadedTrackId;
       const saved = saveTrack(track);
@@ -562,6 +614,10 @@ export default function TrackEditor() {
     setBackgroundImage(track.backgroundImage);
     setClosed(track.closed);
     setLoadedTrackId(track.id);
+    const { effectId: loadedEffectId, effectConfig: loadedEffectConfig } =
+      extractEffectConfig(track);
+    setEffectId(loadedEffectId);
+    setEffectConfig(loadedEffectConfig);
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
     dragIndexRef.current = -1;
@@ -596,6 +652,8 @@ export default function TrackEditor() {
     setOuterPoints([]);
     setTrackName('');
     setBackgroundImage(DEFAULT_BG);
+    setEffectId(null);
+    setEffectConfig({});
     setLoadedTrackId(null);
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
@@ -771,6 +829,10 @@ export default function TrackEditor() {
             </label>
           </div>
         )}
+        <div className={s.toolbarRow}>
+          <span className={s.sliderLabel}>Effect:</span>
+          <EffectConfig effectId={effectId} config={effectConfig} onChange={handleEffectChange} />
+        </div>
       </div>
 
       <div className={s.saveBar}>

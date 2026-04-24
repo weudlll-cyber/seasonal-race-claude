@@ -124,6 +124,20 @@ describe('getTrack', () => {
   it('returns null for an unknown id', () => {
     expect(getTrack('does-not-exist')).toBeNull();
   });
+
+  it('normalizes missing effectId and effectConfig to null/{} (old geometry format)', () => {
+    const saved = saveTrack(makeTrack());
+    const track = getTrack(saved.id);
+    expect(track.effectId).toBeNull();
+    expect(track.effectConfig).toEqual({});
+  });
+
+  it('preserves effectId and effectConfig when present', () => {
+    const saved = saveTrack(makeTrack({ effectId: 'stars', effectConfig: { count: 200 } }));
+    const track = getTrack(saved.id);
+    expect(track.effectId).toBe('stars');
+    expect(track.effectConfig).toEqual({ count: 200 });
+  });
 });
 
 // ── deleteTrack ───────────────────────────────────────────────────────────────
