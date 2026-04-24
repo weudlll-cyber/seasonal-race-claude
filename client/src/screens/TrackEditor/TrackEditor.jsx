@@ -612,7 +612,7 @@ export default function TrackEditor() {
 
     setTrackName(track.name);
     setBackgroundImage(track.backgroundImage);
-    setClosed(track.closed);
+    setClosed(track.closed === true);
     setLoadedTrackId(track.id);
     const { effectId: loadedEffectId, effectConfig: loadedEffectConfig } =
       extractEffectConfig(track);

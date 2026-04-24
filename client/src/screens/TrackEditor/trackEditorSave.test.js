@@ -262,3 +262,79 @@ describe('validateEditorState', () => {
     expect(result).toBeNull();
   });
 });
+
+// Regression guard: loading a saved track and immediately re-saving must be a data no-op.
+// Historical bug: tracks saved before the `closed` field existed stored undefined (dropped by
+// JSON.stringify), which silently carried through every subsequent save cycle.
+describe('buildTrackFromEditorState — load/save round-trip fidelity', () => {
+  it('closed: true survives a build → re-build cycle', () => {
+    const geometry = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: three,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: true,
+      name: 'Horse Race',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+    });
+    expect(geometry.closed).toBe(true);
+
+    // Simulate handleLoad populating editor state, then handleSave calling build again.
+    // The fixed handleLoad uses: setClosed(track.closed === true)
+    const resaved = buildTrackFromEditorState({
+      mode: geometry.sourceMode,
+      centerPoints: geometry.centerPoints,
+      centerWidth: geometry.width,
+      innerPoints: [],
+      outerPoints: [],
+      closed: geometry.closed === true,
+      name: geometry.name,
+      backgroundImage: geometry.backgroundImage,
+    });
+    expect(resaved.closed).toBe(true);
+  });
+
+  it('closed: false survives a build → re-build cycle (no accidental flip)', () => {
+    const geometry = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Open Track',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+    });
+    expect(geometry.closed).toBe(false);
+
+    const resaved = buildTrackFromEditorState({
+      mode: geometry.sourceMode,
+      centerPoints: geometry.centerPoints,
+      centerWidth: geometry.width,
+      innerPoints: [],
+      outerPoints: [],
+      closed: geometry.closed === true,
+      name: geometry.name,
+      backgroundImage: geometry.backgroundImage,
+    });
+    expect(resaved.closed).toBe(false);
+  });
+
+  it('closed: undefined (pre-history save) normalizes to false and is stored as false', () => {
+    // Old saves may not have the closed field at all; === true coercion gives false.
+    const legacyTrack = { name: 'Legacy', backgroundImage: '/x.jpg' }; // no closed field
+    const normalizedClosed = legacyTrack.closed === true; // fixed handleLoad pattern
+    const resaved = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: normalizedClosed,
+      name: 'Legacy Track',
+      backgroundImage: '/assets/tracks/backgrounds/dirt-oval.jpg',
+    });
+    expect(resaved.closed).toBe(false);
+  });
+});
