@@ -12,7 +12,7 @@ RaceArena lets players join live race lobbies, compete on dynamic tracks, and cl
 |----------|-----------------------------------|
 | Client   | React, CSS Modules, Socket.IO     |
 | Server   | Node.js, Express, Socket.IO       |
-| Database | MongoDB (Mongoose)                |
+| Database | SQLite (better-sqlite3)           |
 | Auth     | JWT                               |
 | CI/CD    | GitHub Actions                    |
 
@@ -39,7 +39,7 @@ cp server/.env.example server/.env
 
 # Start development servers
 cd server && npm run dev
-cd client && npm start
+cd client && npm run dev
 ```
 
 ## Documentation

@@ -37,7 +37,7 @@ node ../scripts/seed.js
 cd server && npm run dev
 
 # Terminal 2 — frontend
-cd client && npm start
+cd client && npm run dev
 ```
 
 The app will be at `http://localhost:3000`.
