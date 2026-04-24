@@ -33,6 +33,7 @@ function makeCtx() {
     lineTo: vi.fn(),
     closePath: vi.fn(),
     fill: vi.fn(),
+    fillRect: vi.fn(),
     stroke: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
@@ -81,36 +82,49 @@ describe('HorseRacerType — D1 extended manifest', () => {
   });
 
   it('phase values stay within expected bounds for all frame/speed combinations', () => {
-    for (let frame = 0; frame <= 1000; frame += 50) {
-      for (const speed of [0, 1, 2.5, 5]) {
-        const { legPhaseA, legPhaseB, manePhase, tailPhase } = horse.animation.getAnimationOffset(
-          frame,
-          speed
-        );
-        expect(legPhaseA).toBeGreaterThanOrEqual(-1);
-        expect(legPhaseA).toBeLessThanOrEqual(1);
-        expect(legPhaseB).toBeGreaterThanOrEqual(-1);
-        expect(legPhaseB).toBeLessThanOrEqual(1);
-        expect(Math.abs(manePhase)).toBeLessThanOrEqual(0.35);
-        expect(Math.abs(tailPhase)).toBeLessThanOrEqual(0.45);
+    for (let frame = 0; frame <= 5000; frame += 250) {
+      for (const speed of [0.5, 1, 2.5, 5]) {
+        const {
+          legFrontLeft,
+          legFrontRight,
+          legBackLeft,
+          legBackRight,
+          manePhase,
+          tailPhase,
+          bodyBob,
+        } = horse.animation.getAnimationOffset(frame, speed);
+        expect(legFrontLeft).toBeGreaterThanOrEqual(-1.5);
+        expect(legFrontLeft).toBeLessThanOrEqual(1.5);
+        expect(legFrontRight).toBeGreaterThanOrEqual(-1.5);
+        expect(legFrontRight).toBeLessThanOrEqual(1.5);
+        expect(legBackLeft).toBeGreaterThanOrEqual(-1.5);
+        expect(legBackLeft).toBeLessThanOrEqual(1.5);
+        expect(legBackRight).toBeGreaterThanOrEqual(-1.5);
+        expect(legBackRight).toBeLessThanOrEqual(1.5);
+        expect(Math.abs(manePhase)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(tailPhase)).toBeLessThanOrEqual(1.0);
+        expect(bodyBob).toBeGreaterThanOrEqual(0);
+        expect(bodyBob).toBeLessThanOrEqual(0.5);
       }
     }
   });
 
-  it('legPhaseA and legPhaseB are always in opposite phases (sum ≈ 0)', () => {
-    for (let frame = 0; frame <= 1000; frame += 100) {
-      const { legPhaseA, legPhaseB } = horse.animation.getAnimationOffset(frame, 3);
-      expect(legPhaseA + legPhaseB).toBeCloseTo(0, 10);
+  it('diagonal pairs always move together — legFrontLeft equals legBackRight', () => {
+    for (let frame = 0; frame <= 5000; frame += 250) {
+      const o = horse.animation.getAnimationOffset(frame, 3);
+      expect(o.legFrontLeft).toBeCloseTo(o.legBackRight, 10);
+      expect(o.legFrontRight).toBeCloseTo(o.legBackLeft, 10);
     }
   });
 
   // ── 3. drawBody — canvas primitive calls ──────────────────────────────────
 
-  it('drawBody calls beginPath and fill at least 7 times (tail, legs, body, head, muzzle, mane)', () => {
+  it('drawBody emits 2 ellipses (body, head), 4 fillRects (legs), and ≥ 4 fill calls', () => {
     const ctx = makeCtx();
     horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(ctx.beginPath.mock.calls.length).toBeGreaterThanOrEqual(7);
-    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(7);
+    expect(ctx.ellipse.mock.calls.length).toBe(2);
+    expect(ctx.fillRect.mock.calls.length).toBe(4);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
   it('drawBody sets fillStyle to both primaryColor and accentColor', () => {
@@ -201,10 +215,10 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
     expect(ctx.restore.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('drawRacer delegates to drawBody — fill called ≥ 7 times', () => {
+  it('drawRacer delegates to drawBody — fill called ≥ 4 times', () => {
     const ctx = makeCtx();
     horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
-    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(7);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
   it('drawRacer never calls fillText (no emoji fallback)', () => {
@@ -215,24 +229,143 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
 
   // ── 7. Leader glow ────────────────────────────────────────────────────────
 
-  it('drawRacer with isLeader=true draws a gold stroke outline', () => {
+  it('drawRacer with isLeader=true sets gold strokeStyle (#ffd700)', () => {
+    const strokeColors = [];
     const ctx = makeCtx();
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get() {
+        return this._strokeStyle ?? '';
+      },
+      set(v) {
+        this._strokeStyle = v;
+        strokeColors.push(v);
+      },
+      configurable: true,
+    });
     horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, true, 0);
-    expect(ctx.stroke.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(strokeColors).toContain('#ffd700');
   });
 
-  it('drawRacer with isLeader=false makes no stroke calls', () => {
+  it('drawRacer with isLeader=false does not set gold strokeStyle', () => {
+    const strokeColors = [];
     const ctx = makeCtx();
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get() {
+        return this._strokeStyle ?? '';
+      },
+      set(v) {
+        this._strokeStyle = v;
+        strokeColors.push(v);
+      },
+      configurable: true,
+    });
     horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
-    expect(ctx.stroke.mock.calls.length).toBe(0);
+    expect(strokeColors).not.toContain('#ffd700');
   });
 
   // ── 8. Timestamp-compatible animation rates ───────────────────────────────
 
-  it('leg phase advances visibly over 100 ms at full speed (timestamp-compatible rates)', () => {
+  it('leg phase advances visibly over one period at full speed (timestamp-compatible rates)', () => {
+    // speed=5: period = min(1500, max(200, 500/5)) = 200ms; quarter-cycle = 50ms
+    // At frame=0: phaseA=0, legFrontLeft=0
+    // At frame=50: phaseA=π/2, legFrontLeft=sin(π/2)*1.5=1.5 → Δ = 1.5 > 0.5
     const a = horse.animation.getAnimationOffset(0, 5);
-    const b = horse.animation.getAnimationOffset(100, 5);
-    // rate=0.013 → 100 ms = 1.3 radians → Δsin(0→1.3) ≈ 0.96
-    expect(Math.abs(b.legPhaseA - a.legPhaseA)).toBeGreaterThan(0.5);
+    const b = horse.animation.getAnimationOffset(50, 5);
+    expect(Math.abs(b.legFrontLeft - a.legFrontLeft)).toBeGreaterThan(0.5);
+  });
+});
+
+describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
+  let horse;
+  beforeEach(() => {
+    horse = new HorseRacerType();
+  });
+
+  // ── 9. Trot pattern ───────────────────────────────────────────────────────
+
+  it('diagonal pairs always move together: legFrontLeft === legBackRight at any frame', () => {
+    for (let frame = 0; frame <= 5000; frame += 250) {
+      const o = horse.animation.getAnimationOffset(frame, 2);
+      expect(o.legFrontLeft).toBeCloseTo(o.legBackRight, 10);
+      expect(o.legFrontRight).toBeCloseTo(o.legBackLeft, 10);
+    }
+  });
+
+  it('cycle period halves as speed doubles — at t=125ms speed-2 has advanced more than speed-1', () => {
+    // speed=1: period=500ms → at 125ms = quarter cycle → legFrontLeft = sin(π/2)*1.5 = 1.5 (peak)
+    // speed=2: period=250ms → at 125ms = half cycle  → legFrontLeft = sin(π)*1.5 ≈ 0 (back near 0)
+    const s1 = horse.animation.getAnimationOffset(125, 1);
+    const s2 = horse.animation.getAnimationOffset(125, 2);
+    expect(s1.legFrontLeft).toBeCloseTo(1.5, 1);
+    expect(Math.abs(s2.legFrontLeft)).toBeLessThan(0.1);
+  });
+
+  it('period clamps: speed=10 gives period exactly 200ms, speed=0.01 gives period 1500ms', () => {
+    // Verify by checking full-cycle return-to-origin at each clamped period
+    const at0_fast = horse.animation.getAnimationOffset(0, 10);
+    const at200_fast = horse.animation.getAnimationOffset(200, 10);
+    expect(at200_fast.legFrontLeft).toBeCloseTo(at0_fast.legFrontLeft, 5);
+
+    const at0_slow = horse.animation.getAnimationOffset(0, 0.01);
+    const at1500_slow = horse.animation.getAnimationOffset(1500, 0.01);
+    expect(at1500_slow.legFrontLeft).toBeCloseTo(at0_slow.legFrontLeft, 5);
+  });
+
+  it('all animation values stay within declared bounds for large frame + speed range', () => {
+    for (let frame = 0; frame <= 5000; frame += 50) {
+      for (let speed = 0.5; speed <= 5.0; speed += 0.5) {
+        const { legFrontLeft, legFrontRight, legBackLeft, legBackRight, bodyBob } =
+          horse.animation.getAnimationOffset(frame, speed);
+        expect(legFrontLeft).toBeGreaterThanOrEqual(-1.5);
+        expect(legFrontLeft).toBeLessThanOrEqual(1.5);
+        expect(legFrontRight).toBeGreaterThanOrEqual(-1.5);
+        expect(legFrontRight).toBeLessThanOrEqual(1.5);
+        expect(legBackLeft).toBeGreaterThanOrEqual(-1.5);
+        expect(legBackLeft).toBeLessThanOrEqual(1.5);
+        expect(legBackRight).toBeGreaterThanOrEqual(-1.5);
+        expect(legBackRight).toBeLessThanOrEqual(1.5);
+        expect(bodyBob).toBeGreaterThanOrEqual(0);
+        expect(bodyBob).toBeLessThanOrEqual(0.5);
+      }
+    }
+  });
+
+  // ── 10. drawBody v2 primitive counts ─────────────────────────────────────
+
+  it('drawBody emits exactly 2 ellipses, 4 fillRects, and ≥ 4 fill polygon calls', () => {
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    expect(ctx.ellipse.mock.calls.length).toBe(2);
+    expect(ctx.fillRect.mock.calls.length).toBe(4);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('drawBody sets fillStyle to cream primary and near-black accent', () => {
+    const colors = [];
+    const ctx = makeCtx();
+    Object.defineProperty(ctx, 'fillStyle', {
+      get() {
+        return this._fillStyle ?? '';
+      },
+      set(v) {
+        this._fillStyle = v;
+        colors.push(v);
+      },
+      configurable: true,
+    });
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    expect(colors).toContain('#E8DCC4'); // cream primary
+    expect(colors).toContain('#2A1F18'); // near-black accent
+  });
+
+  it('leg X-positions change between frame=0 and frame=125 at speed=1', () => {
+    // speed=1: period=500ms; at frame=125 = quarter cycle → legFrontLeft shifts from 0 to 1.5
+    const ctx0 = makeCtx();
+    const ctx125 = makeCtx();
+    horse.render.drawBody(ctx0, { ...MOCK_RACER, baseSpeed: 1 }, 0);
+    horse.render.drawBody(ctx125, { ...MOCK_RACER, baseSpeed: 1 }, 125);
+    const xAt0 = ctx0.fillRect.mock.calls[0][0]; // front-left leg X at frame=0
+    const xAt125 = ctx125.fillRect.mock.calls[0][0]; // front-left leg X at frame=125
+    expect(Math.abs(xAt125 - xAt0)).toBeGreaterThan(0.5);
   });
 });

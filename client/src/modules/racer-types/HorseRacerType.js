@@ -12,14 +12,17 @@ export class HorseRacerType {
   constructor() {
     /** @type {import('./index.js').RacerStyle} */
     this.style = {
-      primaryColor: '#8B4513',
-      accentColor: '#3E2723',
+      primaryColor: '#E8DCC4',
+      accentColor: '#2A1F18',
       silhouetteScale: 1.0,
     };
 
     /** @type {import('./index.js').RacerRender} */
     this.render = {
-      drawBody: (ctx, racer, frame) => this._drawBody(ctx, racer, frame),
+      drawBody: (ctx, racer, frame) => {
+        const offset = this._getAnimationOffset(frame, racer.baseSpeed ?? 2);
+        this._drawBody(ctx, racer, frame, offset);
+      },
       getDimensions: () => ({ width: 32, height: 18 }),
     };
 
@@ -80,101 +83,142 @@ export class HorseRacerType {
   // ── Extended manifest — private implementations ───────────────────────────
 
   /**
-   * Pure function: deterministic for any (frame, speed) pair.
-   * All output values are bounded; no unbounded accumulation.
+   * Pure deterministic function of (frame, speed).
+   * frame is a ms timestamp. period scales from 200ms (fast) to 1500ms (slow).
+   * Diagonal trot: legFrontLeft === legBackRight, legFrontRight === legBackLeft.
    *
-   * @param {number} frame  - Current animation frame counter
-   * @param {number} speed  - Racer speed (clamped internally to [0, 5])
-   * @returns {{ legPhaseA: number, legPhaseB: number, manePhase: number, tailPhase: number }}
+   * @param {number} frame  - rAF timestamp in ms
+   * @param {number} speed  - Racer speed (0..∞, clamped to safe range internally)
+   * @returns {{ legFrontLeft, legFrontRight, legBackLeft, legBackRight,
+   *             manePhase, tailPhase, bodyBob }}
    */
   _getAnimationOffset(frame, speed) {
-    const clampedSpeed = Math.max(0, Math.min(speed, 5));
-    // Rate in radians/ms — idle: ~2 s cycle, full speed: ~480 ms cycle
-    const rate = 0.003 + 0.01 * (clampedSpeed / 5);
-    const legCycle = frame * rate;
-    const legPhaseA = Math.sin(legCycle); // front-left, rear-right
-    const legPhaseB = Math.sin(legCycle + Math.PI); // front-right, rear-left (opposite)
-    const manePhase = Math.sin(frame * 0.004) * 0.3; // ~1.6 s sway, bounded ±0.3
-    const tailPhase = Math.sin(frame * 0.003 + 0.5) * 0.4; // ~2 s lag, bounded ±0.4
-    return { legPhaseA, legPhaseB, manePhase, tailPhase };
+    const safeSpeed = Math.max(speed, 0.1);
+    const period = Math.min(1500, Math.max(200, 500 / safeSpeed));
+    const phaseA = ((frame % period) / period) * 2 * Math.PI;
+    const phaseB = phaseA + Math.PI;
+    return {
+      legFrontLeft: Math.sin(phaseA) * 1.5,
+      legBackRight: Math.sin(phaseA) * 1.5,
+      legFrontRight: Math.sin(phaseB) * 1.5,
+      legBackLeft: Math.sin(phaseB) * 1.5,
+      manePhase: Math.sin(phaseA + Math.PI / 4) * 0.5,
+      tailPhase: Math.sin(phaseA + Math.PI / 2) * 1.0,
+      bodyBob: Math.abs(Math.sin(phaseA * 2)) * 0.5,
+    };
   }
 
   /**
-   * Top-down flat horse silhouette.
-   * Drawn relative to (0, 0); caller is responsible for translate + rotate.
-   * Uses 2 colours from this.style.  Body is ~24×14 px at silhouetteScale 1.0.
+   * Top-down horse silhouette.
+   * Drawn relative to (0, 0); caller handles translate + rotate.
+   * All color values read from this.style at the top — D2.2 can swap
+   * those sources for a coat-palette lookup without touching drawing code.
    *
-   * Draw order (back to front): tail → legs → body → head → muzzle → mane
+   * Draw order (back to front): tail → body → legs → neck → mane → head → snout
    *
    * @param {CanvasRenderingContext2D} ctx
-   * @param {{ baseSpeed?: number, index?: number }} racer
-   * @param {number} frame
+   * @param {object} _racer - unused; kept for API symmetry
+   * @param {number} _frame - unused; animation comes from offset
+   * @param {{ legFrontLeft, legFrontRight, legBackLeft, legBackRight,
+   *           manePhase, tailPhase, bodyBob }} offset
    */
-  _drawBody(ctx, racer, frame) {
-    const { primaryColor, accentColor } = this.style;
-    const speed = racer.baseSpeed ?? 2;
-    const { legPhaseA, legPhaseB, manePhase, tailPhase } = this._getAnimationOffset(frame, speed);
+  _drawBody(ctx, _racer, _frame, offset) {
+    const primary = this.style.primaryColor;
+    const accent = this.style.accentColor;
+    const snout = HorseRacerType._lighten(primary, 0.15);
+    const {
+      legFrontLeft,
+      legFrontRight,
+      legBackLeft,
+      legBackRight,
+      manePhase,
+      tailPhase,
+      bodyBob,
+    } = offset;
 
     ctx.save();
 
-    // ── Tail — swept polygon behind the body ──────────────────────────────
-    const tSway = tailPhase * 3;
+    // ── Tail — dark teardrop polygon, no bodyBob ──────────────────────────
     ctx.beginPath();
-    ctx.moveTo(-12, 0);
-    ctx.lineTo(-16 + tSway, -3);
-    ctx.lineTo(-19 + tSway * 0.6, tailPhase * 1.5);
-    ctx.lineTo(-16 + tSway, 3);
+    ctx.moveTo(-11, 0);
+    ctx.lineTo(-14 + tailPhase * 0.5, -1.5);
+    ctx.lineTo(-17 + tailPhase * 0.5, tailPhase);
+    ctx.lineTo(-14 + tailPhase * 0.5, 1.5);
     ctx.closePath();
-    ctx.fillStyle = accentColor;
+    ctx.fillStyle = accent;
     ctx.fill();
 
-    // ── Legs — 4 small ovals, animated along x-axis ───────────────────────
-    // Pairs: (front-left + rear-right) share legPhaseA;
-    //        (front-right + rear-left) share legPhaseB (opposite phase)
-    ctx.fillStyle = accentColor;
-    const drawLeg = (cx, cy, phase) => {
-      ctx.beginPath();
-      ctx.ellipse(cx + phase * 2, cy, 2.5, 3.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    drawLeg(7, -8, legPhaseA); // front-left
-    drawLeg(7, 8, legPhaseB); // front-right
-    drawLeg(-5, -8, legPhaseB); // rear-left
-    drawLeg(-5, 8, legPhaseA); // rear-right
-
-    // ── Body — main ellipse ─────────────────────────────────���─────────────
+    // ── Body — ellipse 22 × 14, follows bodyBob ──────────────────────────
     ctx.beginPath();
-    ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
-    ctx.fillStyle = primaryColor;
+    ctx.ellipse(0, bodyBob, 11, 7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = primary;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 0.5;
     ctx.fill();
+    ctx.stroke();
 
-    // ── Head — smaller ellipse, overlapping body front ────────────────────
-    ctx.beginPath();
-    ctx.ellipse(15, 0, 6, 4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = primaryColor;
-    ctx.fill();
+    // ── Legs — 4 rectangles 2 × 4, X-offset by trot phase, no bodyBob ───
+    ctx.fillStyle = accent;
+    ctx.fillRect(6 + legFrontLeft - 1, -4 - 2, 2, 4); // front-left
+    ctx.fillRect(6 + legFrontRight - 1, 4 - 2, 2, 4); // front-right
+    ctx.fillRect(-6 + legBackLeft - 1, -4 - 2, 2, 4); // back-left
+    ctx.fillRect(-6 + legBackRight - 1, 4 - 2, 2, 4); // back-right
 
-    // ── Muzzle — triangle pointing forward ──────────────────────────────���
+    // ── Neck — trapezoid bridging body and head ───────────────────────────
     ctx.beginPath();
-    ctx.moveTo(21, 0);
-    ctx.lineTo(18, -2);
-    ctx.lineTo(18, 2);
+    ctx.moveTo(10, bodyBob - 4);
+    ctx.lineTo(10, bodyBob + 4);
+    ctx.lineTo(13, bodyBob + 3);
+    ctx.lineTo(13, bodyBob - 3);
     ctx.closePath();
-    ctx.fillStyle = accentColor;
+    ctx.fillStyle = primary;
     ctx.fill();
 
-    // ── Mane — dark strip along spine from head to mid-body ──────────────
-    const mY = manePhase * 2;
+    // ── Mane — dark polygon along neck/head spine ─────────────────────────
+    const mY = manePhase * 0.3;
     ctx.beginPath();
-    ctx.moveTo(16, mY - 1);
-    ctx.lineTo(-3, mY - 0.5);
-    ctx.lineTo(-3, mY - 3.5);
-    ctx.lineTo(16, mY - 3);
+    ctx.moveTo(9, bodyBob - 4 + mY);
+    ctx.lineTo(13, bodyBob - 3 + mY);
+    ctx.lineTo(18, bodyBob - 4 + mY);
+    ctx.lineTo(19, bodyBob - 2);
+    ctx.lineTo(15, bodyBob - 2);
+    ctx.lineTo(10, bodyBob - 3);
     ctx.closePath();
-    ctx.fillStyle = accentColor;
+    ctx.fillStyle = accent;
+    ctx.fill();
+
+    // ── Head — ellipse 10 × 8, follows bodyBob ───────────────────────────
+    ctx.beginPath();
+    ctx.ellipse(18, bodyBob, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = primary;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 0.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // ── Snout — trapezoid at head front, lightened primary ────────────────
+    ctx.beginPath();
+    ctx.moveTo(22, bodyBob - 2);
+    ctx.lineTo(22, bodyBob + 2);
+    ctx.lineTo(24, bodyBob + 1.5);
+    ctx.lineTo(24, bodyBob - 1.5);
+    ctx.closePath();
+    ctx.fillStyle = snout;
     ctx.fill();
 
     ctx.restore();
+  }
+
+  /**
+   * Shifts a 6-digit hex color toward white by `amount` ∈ [0, 1].
+   * Returns a valid lowercase 6-char hex string.
+   */
+  static _lighten(hex, amount) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const lerp = (v) => Math.round(v + (255 - v) * amount);
+    return `#${[lerp(r), lerp(g), lerp(b)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
   }
 
   /**

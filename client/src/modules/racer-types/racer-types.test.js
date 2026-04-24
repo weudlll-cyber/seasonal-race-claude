@@ -33,6 +33,7 @@ function makeCtx() {
     lineTo: vi.fn(),
     closePath: vi.fn(),
     fill: vi.fn(),
+    fillRect: vi.fn(),
     stroke: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
