@@ -42,14 +42,6 @@ export class CameraDirector {
     if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
       this._transition(racers, ts);
     }
-    // Debug: log current state every 5 s so camera activity is visible in console
-    if (!this._logTs || ts - this._logTs >= 5000) {
-      this._logTs = ts;
-      console.log(
-        `[CameraDirector] state=${this.state} zoom=${this.zoom.toFixed(2)}` +
-          ` offsetX=${this.offsetX.toFixed(0)} offsetY=${this.offsetY.toFixed(0)}`
-      );
-    }
     this._setTargets(racers, canvasW, canvasH);
     this.zoom += (this.targetZoom - this.zoom) * LERP;
     this.offsetX += (this.targetOffsetX - this.offsetX) * LERP;
@@ -142,15 +134,31 @@ export class CameraDirector {
     );
   }
 
-  // Clamps a camera offset so the track bbox defined by [bboxMin, bboxMax] stays on-screen.
-  // lo = lower bound: ensures bboxMin * zoom + offsetX >= 0 (left edge stays visible)
-  // hi = upper bound: ensures bboxMax * zoom + offsetX <= canvasSize (right edge stays visible)
-  // When lo > hi the track is wider than the screen at this zoom — skip clamping and let
-  // the racer-follow formula run freely (same behaviour as old SvgPathShape tracks).
+  // Clamps a camera offset so the viewport never exposes the canvas edge (black strips),
+  // and, when the track bbox fits on-screen at the current zoom, further restricts so the
+  // track stays visible.
+  //
+  // Canvas-edge (hard outer limit):
+  //   offsetX >= canvasSize * (1 - zoom)  →  world right edge covers screen right
+  //   offsetX <= 0                        →  world left edge covers screen left
+  //
+  // Bbox (inner tightening, only when track fits at this zoom):
+  //   lo = -bboxMin * zoom  (left edge ≥ 0)
+  //   hi = canvasSize - bboxMax * zoom  (right edge ≤ canvasSize)
   _clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
-    const lo = -bboxMin * zoom; // left edge ≥ screen left
-    const hi = canvasSize - bboxMax * zoom; // right edge ≤ screen right
-    if (lo > hi) return val; // track wider than screen — no constraint
+    // Hard canvas-edge constraint
+    let lo = canvasSize * (1 - zoom);
+    let hi = 0;
+
+    // Optional bbox tightening (only when track fits in the viewport)
+    const bboxLo = -bboxMin * zoom;
+    const bboxHi = canvasSize - bboxMax * zoom;
+    if (bboxLo <= bboxHi) {
+      lo = Math.max(lo, bboxLo);
+      hi = Math.min(hi, bboxHi);
+    }
+
+    if (lo > hi) return 0; // should not happen for zoom ≥ 1; safe fallback
     return Math.max(lo, Math.min(hi, val));
   }
 }

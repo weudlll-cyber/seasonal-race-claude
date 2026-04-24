@@ -167,10 +167,10 @@ describe('CameraDirector', () => {
 // ── CameraDirector — bbox clamping ────────────────────────────────────────────
 
 describe('CameraDirector — bbox clamping', () => {
-  it('with full-canvas bbox and extreme racer position, track right edge remains on screen (no over-clamp)', () => {
-    // Full-canvas bbox: 1280*1.6=2048 > canvas width — track is wider than screen at this zoom.
-    // Clamp does NOT fire; camera follows racers freely. The observed offsetX=-1089 is correct
-    // behaviour: it centers the right-side racers, left portion of track goes off-screen.
+  it('with full-canvas bbox and extreme racer position, canvas-edge clamp fires and keeps track right edge on screen', () => {
+    // Full-canvas bbox: 1280*1.6=2048 > canvas width — bbox tightening does NOT fire.
+    // Canvas-edge clamp (F6a) DOES fire: lo = 1280*(1-1.6) = -768, so offsetX ≥ -768.
+    // Raw target would be hw - 1081*1.6 = -1089, but it gets clamped to ≈ -768.
     const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
     const cd = new CameraDirector(bbox);
     cd.state = CAM_STATE.BATTLE_ZOOM;
@@ -181,6 +181,8 @@ describe('CameraDirector — bbox clamping', () => {
     for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, 1280, 720);
     // Track right edge (x=1280) must remain on screen from the left: 1280*zoom + offsetX >= 0
     expect(bbox.maxX * cd.zoom + cd.offsetX).toBeGreaterThan(0);
+    // Canvas-edge clamp means offsetX never goes below ≈ -768
+    expect(cd.offsetX).toBeGreaterThan(-800);
   });
 
   it('with editor-scale bbox (fits at zoom=1.6), BATTLE_ZOOM clamps so full track stays visible', () => {
@@ -222,5 +224,28 @@ describe('CameraDirector — bbox clamping', () => {
     }
     expect(cdDefault.offsetX).toBeCloseTo(cdExplicit.offsetX, 3);
     expect(cdDefault.offsetY).toBeCloseTo(cdExplicit.offsetY, 3);
+  });
+});
+
+// ── CameraDirector — canvas-edge clamping (F6a) ───────────────────────────────
+
+describe('CameraDirector — canvas-edge clamping (F6a)', () => {
+  it('zoom=1: _clampOffset always returns 0 (canvas equals world, no room to pan)', () => {
+    const cd = new CameraDirector();
+    expect(cd._clampOffset(0, 0, 1280, 1280, 1.0)).toBe(0);
+    expect(cd._clampOffset(100, 0, 1280, 1280, 1.0)).toBe(0);
+    expect(cd._clampOffset(-500, 0, 1280, 1280, 1.0)).toBe(0);
+  });
+
+  it('zoom=1.5: excessively negative val clamps to canvasW*(1-zoom) = -640', () => {
+    const cd = new CameraDirector();
+    const clamped = cd._clampOffset(-900, 0, 1280, 1280, 1.5);
+    expect(clamped).toBeCloseTo(-640, 0);
+  });
+
+  it('zoom=1.5: excessively positive val clamps to 0', () => {
+    const cd = new CameraDirector();
+    const clamped = cd._clampOffset(100, 0, 1280, 1280, 1.5);
+    expect(clamped).toBe(0);
   });
 });
