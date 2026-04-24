@@ -1,52 +1,55 @@
 # RaceArena
 
-A seasonal multiplayer racing game platform where players compete in time-limited race events across rotating seasons.
+A seasonal racing event platform where players compete in time-limited races across custom tracks.
 
 ## Overview
 
-RaceArena lets players join live race lobbies, compete on dynamic tracks, and climb seasonal leaderboards. Each season introduces new tracks, car upgrades, and ranking resets to keep competition fresh.
+RaceArena lets an event organiser configure racers, draw tracks, set effects, and run live races. Everything runs in the browser — no server needed for Phases 1–4. A race-integrity server is planned for Phase 5.
 
 ## Tech Stack
 
-| Layer    | Technology                        |
-|----------|-----------------------------------|
-| Client   | React, CSS Modules, Socket.IO     |
-| Server   | Node.js, Express, Socket.IO       |
-| Database | SQLite (better-sqlite3)           |
-| Auth     | JWT                               |
-| CI/CD    | GitHub Actions                    |
+| Layer    | Technology                                         |
+|----------|----------------------------------------------------|
+| Client   | React 18, CSS Modules, Vite, React Router v6       |
+| Physics  | Client-side rAF race engine (Canvas 2D)            |
+| Storage  | `localStorage` (`racearena:*` keys)                |
+| CI/CD    | GitHub Actions (lint → test → audit on every PR)   |
+| Server   | Planned for Phase 5 (SQLite, Socket.IO, JWT)       |
+
+## Features
+
+- **Track Editor** — draw inner/outer boundary curves on a background image (Center Mode and Boundary Mode), save to localStorage
+- **Track Effects** — up to 3 simultaneous animated effects per track (rain, stars, bubbles, fireflies, dust, mud, wave); live preview in editor
+- **Race Engine** — client-side physics, multi-lap + open-course support, collision avoidance
+- **Camera Director** — auto-switching between OVERVIEW, LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM modes; picture-in-picture minimap
+- **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, race history, system backup/restore
+- **Preset Thumbnails** — rendered preview cards in SetupScreen track selector
 
 ## Project Structure
 
 ```
 seasonal-race-claude/
-├── client/          # React frontend
-├── server/          # Node/Express backend
-├── docs/            # Architecture & API docs
-├── scripts/         # Dev & deployment utilities
+├── client/          # React frontend (self-contained)
+├── docs/            # Architecture, API, setup, track editor spec
 └── .github/         # CI/CD workflows
 ```
 
 ## Getting Started
 
 ```bash
-# Install dependencies
-cd server && npm install
-cd ../client && npm install
-
-# Configure environment
-cp server/.env.example server/.env
-
-# Start development servers
-cd server && npm run dev
+cd client && npm install
 cd client && npm run dev
 ```
+
+App runs at `http://localhost:3000`.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [API Reference](docs/API.md)
+- [Track Editor Spec](docs/TRACK_EDITOR.md)
+- [API Reference](docs/API.md) *(Phase 5 placeholder)*
 - [Setup Guide](docs/SETUP.md)
+- [Roadmap](docs/ROADMAP.md)
 
 ## License
 

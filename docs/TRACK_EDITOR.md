@@ -1,7 +1,7 @@
 # RaceArena — Track Editor Specification
 
-**Status:** Planned (as of 2026-04-23)
-**Target phase:** Phase 2.5 (between Race Engine and Result Screen polish)
+**Status:** Implemented — Phase 2.5 complete (2026-04-24)
+**Branch:** `feat/track-editor` (open PR, CI green)
 **Lead document:** This file is the single source of truth for the Track Editor feature.
 
 ---
@@ -53,9 +53,9 @@ Background images are served from `client/public/assets/tracks/backgrounds/` and
 
 ### 5. Migration of Existing Tracks
 
-The five existing tracks (oval, s-curve, spiral, zigzag, rectangle with hardcoded SVG paths) will be **removed**. The admin (user) will redraw them in the new editor once it is functional. The application will be unplayable during the transition between old-code-removed and new-tracks-drawn; this is accepted.
+The five hardcoded SVG-path tracks were removed. Custom tracks drawn in the Track Editor replace them. The admin (user) redraws tracks using the editor.
 
-**Rationale:** Avoids maintaining two track systems in parallel. The user's original complaint was that old tracks did not align with images; redrawing them in the editor solves that directly.
+**Rationale:** Avoids maintaining two track systems in parallel.
 
 ---
 
@@ -71,9 +71,9 @@ The race canvas is 1280×720. Background images are stretched with `ctx.drawImag
 
 Tracks have two orthogonal aspects that are managed separately:
 
-- **Preset** — configuration of a race: name, icon, duration, winners, which geometry to use, which effects layer. Managed in the existing Dev Panel `Tracks` section (`TrackManager.jsx`). Persisted via `modules/storage/useStorage` under `KEYS.tracks`.
+- **Preset** — configuration of a race: name, icon, duration, winners, which geometry to use, which effects to apply. Managed in the existing Dev Panel `Tracks` section (`TrackManager.jsx`). Persisted via `modules/storage/useStorage` under `KEYS.tracks`.
 
-- **Geometry** — the actual spatial path of the race: background image, inner and outer boundary points, closed/open flag. Managed by the Track Editor (this spec). Persisted under `localStorage` keys `racearena:trackGeometries:<id>`.
+- **Geometry** — the actual spatial path of the race: background image, inner and outer boundary points, closed/open flag, effects array. Managed by the Track Editor. Persisted under `localStorage` keys `racearena:trackGeometries:<id>`.
 
 A preset references a geometry by geometry id. Multiple presets may reference the same geometry (e.g. "Sunset Derby" and "Midnight Derby" both run on the same oval, with different durations and effects).
 
@@ -87,15 +87,19 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 
 ```json
 {
-  "id": "custom-<uuid>",  // stored under racearena:trackGeometries:<id>
+  "id": "custom-<uuid>",
   "name": "City Circuit Night",
   "backgroundImage": "/assets/tracks/backgrounds/city-circuit.png",
   "closed": true,
   "sourceMode": "center",
-  "centerPoints": [{ "x": 640, "y": 360 }, ...],
+  "centerPoints": [{ "x": 640, "y": 360 }],
   "width": 120,
-  "innerPoints": [{ "x": 500, "y": 360 }, ...],
-  "outerPoints": [{ "x": 780, "y": 360 }, ...],
+  "innerPoints": [{ "x": 500, "y": 360 }],
+  "outerPoints": [{ "x": 780, "y": 360 }],
+  "effects": [
+    { "id": "rain", "config": { "count": 80, "speed": 6 } },
+    { "id": "stars", "config": { "count": 120, "twinkleSpeed": 1.5 } }
+  ],
   "createdAt": "2026-04-23T21:00:00Z",
   "updatedAt": "2026-04-23T21:30:00Z"
 }
@@ -103,28 +107,61 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 
 - `sourceMode` and the optional `centerPoints` + `width` are only present for center-mode tracks. For boundary-mode tracks, they are omitted.
 - `innerPoints` and `outerPoints` are always present and authoritative for the race engine.
+- `effects` is an array of up to 3 `{id, config}` entries. Empty array = no effects. See [Track Effects](#track-effects) below.
 - Minimum 3 points per boundary for a closed track, minimum 2 for an open course.
+
+### Migration
+
+`getTrack()` normalises legacy geometries on load (no stored data is mutated):
+- If `effects` array is missing and `effectId` is present → migrated to `[{id, config}]`
+- If `effects` array is missing and no `effectId` → migrated to `[]`
+
+---
+
+## Track Effects
+
+Each geometry stores an `effects` array (0–3 entries). Each entry:
+
+```json
+{ "id": "rain", "config": { "count": 80, "speed": 6 } }
+```
+
+Available effect IDs: `rain`, `stars`, `bubbles`, `fireflies`, `dust`, `mud`, `wave`.
+
+Each effect module under `client/src/modules/track-effects/effects/` exports:
+
+```js
+{
+  id: string,
+  label: string,
+  configSchema: Array<{ key, label, type, min, max, step, default }>,
+  defaultConfig: object,
+  create(canvas, config): { update(dt), render(ctx) }
+}
+```
+
+The `EffectConfig` component (`client/src/components/EffectConfig/`) provides the editor UI: add/remove effects, select IDs from a dropdown (duplicates prevented), configure parameters per schema. The editor canvas shows a live preview of the selected effects.
 
 ---
 
 ## Editor UI Scope — Version 1
 
-**Included:**
+**Included (all implemented):**
 
 - Canvas overlay on selected background image
 - Mode toggle: Center / Boundary
-- Click to add points (to the appropriate list based on mode and, in boundary mode, an active-boundary toggle)
-- Drag existing points to move them
-- Click a point to select it; Delete key to remove
-- Click a line segment to insert a new point on it
+- Click to add points; drag to move; click to select + Delete to remove; click segment to insert
 - Width slider (Center Mode only)
-- Closed / Open toggle (set before drawing, changeable)
-- Reverse Direction button (Open tracks only)
-- Track name input
-- Image dropdown (lists files in backgrounds folder)
+- Closed / Open toggle; Reverse Direction button (Open tracks only)
+- Track name input; image dropdown (lists files in backgrounds folder)
 - Save, Load, Delete track from localStorage
-- Visual overlay: inner curve in green, outer curve in red, center line as blue dashed, lane fill as 20% gray, clicked points as filled circles colored by role
-- Undo and Redo buttons in the toolbar (↶ / ↷), with Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y shortcuts; tracks the full editor state including name and background image; 50-entry cap; history resets on track load/save/delete.
+- Visual overlay: inner curve green, outer curve red, center line blue dashed, lane fill 20% gray
+- Undo / Redo (↶/↷ buttons + Ctrl+Z / Ctrl+Shift+Z), 50-entry cap, resets on load/save/delete
+- Effect configuration panel (EffectConfig component, up to 3 simultaneous effects)
+- Live effect preview on editor canvas (rAF loop, cancelable on unmount or effect change)
+- Picture-in-picture minimap with leader indicator
+- Camera director (OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM)
+- Preset thumbnail cards in SetupScreen
 
 **Deliberately not in v1** (tracked in Future Extensions):
 
@@ -133,98 +170,109 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 - Variable width along a boundary track
 - Visible lane-marker rendering at race time
 - Grid snap / raster
-- Keyboard shortcuts beyond Delete, Ctrl+Z (Undo), and Ctrl+Shift+Z / Ctrl+Y (Redo). Undo/Redo shortcuts added in sub-step E2 as an exception to keep the Undo feature fully usable.
+- Extended keyboard shortcuts (arrow nudge, +/- width)
 
 ---
 
 ## Race Engine Integration
 
-A new shape implementation `EditorShape` replaces `SvgPathShape` as the default. It implements the existing shape API:
+`EditorShape` replaces `SvgPathShape` as the default shape implementation. It implements the existing shape API:
 
-- `getPosition(t, offset, trackWidth)` — returns `{x, y, angle}` at parameter `t ∈ [0, 1]` along the lane, offset perpendicularly by `offset ∈ [-0.5, 0.5]`
+- `getPosition(t, offset, trackWidth)` — returns `{x, y, angle}` at parameter `t ∈ [0, 1]` along the lane
 - `isOpen` — boolean, matches the track's `closed` field inverted
 - `getCenterFrac` — computed from track extents
 
-Internally, `EditorShape` caches the sampled center line and the perpendicular-offset calculation so that per-frame calls remain cheap.
+Internally, `EditorShape` caches the sampled center line and perpendicular-offset calculation so per-frame calls remain cheap.
 
 ---
 
 ## Environments → Track Effects Refactor
 
-As part of the Track Editor rollout, the current environment concept is replaced:
+**Before:** `environmentId` selected a class that drew (a) a fallback background, (b) the track surface, and (c) animated effects.
 
-**Before:** `environmentId` selects a class that draws (a) a fallback background, (b) the track surface, and (c) animated effects (shooting stars, bubbles, etc.).
-
-**After:**
+**After (implemented):**
 
 - The background is always the track's `backgroundImage` (no procedural fallback; missing image = black).
-- The track surface is no longer drawn as a separate layer — it is implicit in the background image itself.
-- Animated effects become a separate, opt-in layer. A track stores an `effectsLayer: 'none' | 'stars' | 'bubbles' | 'fireflies' | ...` field. Each effect is a small, independent module under `client/src/modules/track-effects/`.
+- The track surface is implicit in the background image.
+- Animated effects are a separate opt-in layer: `effects: Array<{id, config}>`, up to 3 per geometry. Each effect is an independent module under `client/src/modules/track-effects/effects/`.
 
-The old `client/src/modules/environments/` folder is deleted. The `getEnvironment` function is replaced with `getTrackEffects(effectsLayer)`.
-
-**Rationale:** The old Environment class coupled three unrelated responsibilities. Decoupling them makes each simpler and lets the admin compose a track freely.
+The old `client/src/modules/environments/` folder was deleted. `getEnvironment` is replaced by `getEffect(id)` + `listEffects()`.
 
 ---
 
 ## Implementation Plan
 
-Implementation proceeds on a single feature branch `feat/track-editor`, one commit per sub-step, merged as a single PR when functionally complete.
+All sub-steps are complete. Branch `feat/track-editor` is open as a PR (CI green).
 
-- **A — Data structure & storage:** Track CRUD in localStorage, Catmull-Rom math module, tests. No UI.
-- **B — Shape adapter:** `EditorShape` implementing the race-engine shape API, fully tested against existing engine behavior.
-- **C — Editor canvas base:** Background image display, point click, point render. No save, no modes.
-- **D — Editor modes & editing:** Center Mode, Boundary Mode, point move/delete/insert, mode-preserving re-edit.
-- **E — Editor polish:** Closed/Open toggle, Reverse button, name input, track list, image dropdown.
-- **F — Race engine integration & environment refactor:** Custom tracks appear in Setup Screen; old environment module removed; track-effects module introduced.
+**Original spec (A–F) — all done:**
+- A — Track CRUD, Catmull-Rom math, tests
+- B — EditorShape adapter, race-engine integration
+- C — Editor canvas base (background, points, render)
+- D — Center Mode, Boundary Mode, edit operations
+- E — Closed/Open toggle, Reverse, name input, image dropdown, track list
+- F — Race engine integration, environment refactor, track-effects module
 
-After F, user redraws the five existing tracks in the editor. Then old SVG-path code is removed in a follow-up PR.
+**Post-spec features built on branch:**
+- F1–F5: Camera director, minimap, world-space transforms, camera clamping
+- F6: Picture-in-picture minimap
+- F7: Six new track-effects (bubbles, dust, fireflies, mud, rain, wave) with universal parameter pool
+- F8: Preset thumbnail cards
+- F9–F10: Legacy identifier cleanup
+- F11: Documentation alignment (this update)
+- F12: Live effect preview on editor canvas
+- F13: Multi-effect array (up to 3 per geometry), EffectConfig component rewrite
+- F14: Top-down perspective redesign for rain, bubbles, wave, mud
+- F15: Audit fixes (auth scaffold disabled, CORS scoped, dead code removed)
+- F16: Server scaffold deleted
 
 ---
 
-## Future Extensions (Not in V1)
+## localStorage Keys
 
-These are explicitly out of scope for v1 but on the known-follow-up list. Priorities to be decided when revisited.
+| Key | Type | Description |
+|-----|------|-------------|
+| `racearena:trackGeometries:<uuid>` | JSON object | Full geometry record (points, effects, timestamps) |
+| `racearena:trackGeometries:index` | JSON array of strings | Index of all geometry UUIDs, sorted by updatedAt desc |
+| `racearena:tracks` | JSON array | Preset definitions (name, icon, geometryId, color, duration, etc.) |
+| `racearena:racers` | JSON array | Custom racer definitions |
+| `racearena:dataVersion` | string | Storage schema version marker |
+
+All keys follow the `racearena:*` convention. The `trackGeometries:index` is updated atomically with every save/delete via `trackStorage.js`.
+
+---
+
+## Future Extensions
 
 **Editor UX:**
-
 - Track duplication as a starting template for a variant
-- JSON export / import for sharing tracks between installations or for external editing
-- Variable width along a boundary-mode track (via per-segment width markers)
+- JSON export / import for sharing tracks between installations
+- Variable width along a boundary-mode track (per-segment width markers)
 - Grid / raster snap
-- Keyboard shortcuts (arrow keys for nudge, `+`/`-` for width, etc.)
 - Multi-select + bulk operations on points
-- Catmull-Rom tension slider for tighter or looser curves
+- Catmull-Rom tension slider
 
 **Race-Time Rendering:**
-
 - Visible lane markers (dashed center line, lane dividers) drawn over the image
 - Per-track choice of racer-trail style
-- Weather-effect overlay on top of the track (rain, snow, fog)
+- `drawEditorBackground` / `drawEditorTrackSurface` inline functions in `RaceScreen` are candidates for extraction into `modules/track-renderer/` (deferred refactor)
 
 **Asset Pipeline:**
-
-- Image upload via editor (file chooser), with server-side storage
+- Image upload via editor (file chooser), with server-side storage (Phase 5)
 - Automatic image resizing to 1280×720 on upload
 - Image library management (list, rename, delete uploaded images)
-- Team sharing of track sets via server-side track storage
 
 **Track Effects:**
-
-- More effect layers (fireflies, raindrops, snow, confetti on finish, etc.)
-- Per-effect configuration (density, speed, color)
 - Effect trigger conditions (e.g. fireworks on final lap)
+- Performance optimisation for high particle counts with multiple stacked effects
+- Additional effect types (snow, confetti, heat shimmer)
 
 **Integration:**
-
 - Track metadata: difficulty rating, recommended racer types, recommended race length
-- Track thumbnails in Setup Screen (rendered preview)
 - Track ratings / usage statistics
 
 ---
 
-## Open Questions (To Be Revisited)
+## Open Questions
 
-- Will image upload (see Future Extensions) require backend work, or can it stay client-side via localStorage blob URLs with a size cap? To be decided when the feature is scoped.
-- Should the editor support sub-paths (e.g. a pit lane branching off the main track)? Not in v1; revisit if racing rules ever require it.
 - Background images at non-1280×720 aspect ratios are stretched. Is automatic letterbox preferred? Currently stretched is the project convention.
+- Should the editor support sub-paths (e.g. a pit lane branching off the main track)? Not in v1; revisit if racing rules ever require it.
