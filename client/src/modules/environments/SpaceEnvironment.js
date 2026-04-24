@@ -1,4 +1,4 @@
-import { getBackgroundImage } from './bgImageCache.js';
+import { getBackgroundImage } from '../track-effects/bgImageCache.js';
 
 function _seeded(seed, max) {
   return (((seed * 9301 + 49297) % 233280) / 233280) * max;

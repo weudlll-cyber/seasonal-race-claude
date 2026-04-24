@@ -1,4 +1,4 @@
-import { getBackgroundImage } from './bgImageCache.js';
+import { getBackgroundImage } from '../track-effects/bgImageCache.js';
 
 const N_BUBBLES = 18;
 const N_REFLECTIONS = 12;

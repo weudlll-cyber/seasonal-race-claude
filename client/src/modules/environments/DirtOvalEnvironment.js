@@ -1,4 +1,4 @@
-import { getBackgroundImage } from './bgImageCache.js';
+import { getBackgroundImage } from '../track-effects/bgImageCache.js';
 
 // Pre-seeded crowd positions (avoids layout thrash each frame)
 const CROWD = Array.from({ length: 60 }, (_, i) => ({

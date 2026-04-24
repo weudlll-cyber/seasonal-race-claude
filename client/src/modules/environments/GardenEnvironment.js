@@ -1,4 +1,4 @@
-import { getBackgroundImage } from './bgImageCache.js';
+import { getBackgroundImage } from '../track-effects/bgImageCache.js';
 
 // Pre-seeded flower positions (relative to outer edge samples)
 const FLOWERS = Array.from({ length: 30 }, (_, i) => ({

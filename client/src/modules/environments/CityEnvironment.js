@@ -1,4 +1,4 @@
-import { getBackgroundImage } from './bgImageCache.js';
+import { getBackgroundImage } from '../track-effects/bgImageCache.js';
 
 // Building silhouettes
 const BUILDINGS = [
