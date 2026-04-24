@@ -11,8 +11,11 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
 import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
-import { listTracks } from '../../../modules/track-editor/trackStorage.js';
+import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
+import { listEffects } from '../../../modules/track-effects/index.js';
 import s from '../DevScreen.module.css';
+
+const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
 
 const DURATIONS = [30, 60, 90, 120];
 
@@ -34,7 +37,9 @@ const BLANK = {
 function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [racers] = useStorage(KEYS.RACERS, DEFAULT_RACERS);
-  const [geometries] = useState(() => listTracks());
+  const [geometries] = useState(() =>
+    listTracks().map((g) => ({ ...g, effectId: getTrack(g.id)?.effectId ?? null }))
+  );
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -297,6 +302,25 @@ function TrackManager() {
                   </option>
                 ))}
               </select>
+              {form.geometryId &&
+                (() => {
+                  const geom = geometries.find((g) => g.id === form.geometryId);
+                  const effectLabel = geom?.effectId
+                    ? (EFFECT_LABELS[geom.effectId] ?? geom.effectId)
+                    : null;
+                  return effectLabel ? (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#888',
+                        marginTop: '0.25rem',
+                        display: 'block',
+                      }}
+                    >
+                      Effect: {effectLabel}
+                    </span>
+                  ) : null;
+                })()}
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Racer Type</label>
