@@ -21,7 +21,18 @@
       "Bash(del *)",
       "Read",
       "Write",
-      "Edit"
+      "Edit",
+      "Bash(wc *)",
+      "Bash(echo *)",
+      "Bash(for *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(sort *)",
+      "Bash(netstat *)",
+      "Bash(tasklist)",
+      "Bash(taskkill *)"
     ],
     "deny": [
       "Bash(curl *)",
