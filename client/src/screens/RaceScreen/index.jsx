@@ -13,6 +13,11 @@ import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js'
 import { getRacerType, RACER_TYPE_EMOJIS, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import {
+  effectiveZoom,
+  openTrackPanBounds,
+  openTrackPanTarget,
+} from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
@@ -24,8 +29,6 @@ import './RaceScreen.css';
 
 const CW = 1280;
 const CH = 720;
-// Virtual canvas width for open-track scrolling camera (2.5× wider than viewport)
-const VIRTUAL_W = CW * 2.5;
 
 const LANE_COLORS = [
   '#ff6b35',
@@ -112,6 +115,7 @@ export default function RaceScreen() {
     shapeRef.current = new EditorShape(geometry);
     // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
+    const worldWidth = raceData.worldWidth ?? 1280;
     const bgImagePath = geometry.backgroundImage ?? null;
     effectsRef.current = extractEffects(geometry)
       .map(({ id, config }) => {
@@ -130,17 +134,6 @@ export default function RaceScreen() {
 
     camDirRef.current = new CameraDirector(shapeRef.current.getBoundingBox());
     setMaxLapsState(maxLaps);
-
-    // Camera bounds for open tracks — clamp so track is never off-screen
-    let camXMin = 0;
-    let camXMax = VIRTUAL_W - CW;
-    if (isOpenTrack) {
-      const startX = shapeRef.current.getPosition(0, 0).x;
-      const endX = shapeRef.current.getPosition(1, 0).x;
-      const pad = CW * 0.08; // 8% of viewport as margin
-      camXMin = Math.max(0, startX - pad);
-      camXMax = Math.min(VIRTUAL_W - CW, Math.max(camXMin + 1, endX - CW + pad));
-    }
 
     // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
     function buildOffsets(n) {
@@ -176,9 +169,8 @@ export default function RaceScreen() {
       burstParticles: [],
       trackWidth,
       maxLaps,
-      camX: camXMin, // start at track start, not virtual canvas edge
-      camXMin,
-      camXMax,
+      camX: 0,
+      camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => ({
         ...r,
@@ -431,10 +423,10 @@ export default function RaceScreen() {
       size: 6 + (i % 4),
     }));
 
-    function drawEditorBackground(ctx, frame, bgPath) {
+    function drawEditorBackground(ctx, frame, bgPath, ww = CW) {
       const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
       if (bgImg) {
-        ctx.drawImage(bgImg, 0, 0, CW, CH);
+        ctx.drawImage(bgImg, 0, 0, ww, CH);
         ctx.fillStyle = 'rgba(0,0,0,0.25)';
         ctx.fillRect(0, 0, CW, CH);
       } else {
@@ -695,20 +687,25 @@ export default function RaceScreen() {
       }
 
       // ── Camera update ──
-      if (isOpenTrack) {
-        const sorted = [...st.racers].sort((a, b) => b.t - a.t);
-        const top3 = sorted.slice(0, Math.min(3, sorted.length));
-        const avgX = top3.reduce((s, r) => s + r.x, 0) / top3.length;
-        const targetCamX = Math.max(
-          st.camXMin ?? 0,
-          Math.min(st.camXMax ?? VIRTUAL_W - CW, avgX - CW / 2)
-        );
-        st.camX = isFinite(st.camX) ? st.camX + (targetCamX - st.camX) * 0.05 : targetCamX;
-      }
       const cam =
         st.phase === PHASE.RACING
           ? camDirRef.current.update(st.racers, ts, CW, CH)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
+
+      if (isOpenTrack) {
+        const effZoom = effectiveZoom(cam.zoom);
+        const { camXMax, camYMax } = openTrackPanBounds(worldWidth, CH, CW, CH, effZoom);
+        const { targetX, targetY } = openTrackPanTarget(
+          st.racers,
+          CW,
+          CH,
+          effZoom,
+          camXMax,
+          camYMax
+        );
+        st.camX = isFinite(st.camX) ? st.camX + (targetX - st.camX) * 0.05 : targetX;
+        st.camY = isFinite(st.camY) ? st.camY + (targetY - st.camY) * 0.05 : targetY;
+      }
 
       // ── Draw world ──
       // Background, effects, track, and racers are all in world space (1280×720).
@@ -717,13 +714,11 @@ export default function RaceScreen() {
       // so it stays in fixed screen space.
       if (isOpenTrack) {
         ctx.save();
-        // Combined pan + zoom centred at screen midpoint.
-        // At zoom=1 this degrades to pure pan: translate(-camX, 0).
-        const cx = CW / 2;
-        const cy = CH / 2;
-        ctx.translate(cx - cam.zoom * (cx + (st.camX || 0)), cy * (1 - cam.zoom));
-        ctx.scale(cam.zoom, cam.zoom);
-        drawEditorBackground(ctx, ts, bgImagePath);
+        const effZoom = effectiveZoom(cam.zoom);
+        // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
+        ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
+        ctx.scale(effZoom, effZoom);
+        drawEditorBackground(ctx, ts, bgImagePath, worldWidth);
         for (const inst of effectsRef.current) {
           ctx.save();
           inst.render(ctx);
