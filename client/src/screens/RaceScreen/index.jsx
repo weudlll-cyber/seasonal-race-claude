@@ -12,7 +12,14 @@ import { useEffect, useRef, useState } from 'react';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, RACER_TYPE_EMOJIS } from '../../modules/racer-types/index.js';
 import { HORSE_COATS } from '../../modules/racer-types/HorseRacerType.js';
+import { DUCK_COATS } from '../../modules/racer-types/DuckRacerType.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
+
+const COATS_BY_TYPE = { horse: HORSE_COATS, duck: DUCK_COATS };
+const coatForRacer = (typeId, name) => {
+  const coats = COATS_BY_TYPE[typeId];
+  return coats ? assignCoat(name, coats) : undefined;
+};
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
@@ -192,7 +199,7 @@ export default function RaceScreen() {
         jitterFreq: 0.0006 + Math.random() * 0.0014, // independent sine period per racer
         jitterPhase: Math.random() * Math.PI * 2,
         color: LANE_COLORS[i % LANE_COLORS.length],
-        coatId: typeId === 'horse' ? assignCoat(r.name, HORSE_COATS) : undefined,
+        coatId: coatForRacer(typeId, r.name),
         finished: false,
         finishRank: null,
         trail: [],
