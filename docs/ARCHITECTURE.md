@@ -11,7 +11,8 @@ seasonal-race-claude/
 ├── client/
 │   ├── public/
 │   │   ├── index.html
-│   │   └── assets/tracks/backgrounds/   # Track background images (1280×720)
+│   │   ├── assets/tracks/backgrounds/   # Track background images (1280×720)
+│   │   └── assets/racers/               # Racer sprite sheets + CREDITS.md
 │   └── src/
 │       ├── screens/                # Route-level full-page views
 │       │   ├── SetupScreen/        # Pre-race config (players, track, settings)
@@ -29,7 +30,12 @@ seasonal-race-claude/
 │       │   └── PresetThumbnail/    # Rendered track preview card
 │       ├── modules/                # Domain logic, independent of React
 │       │   ├── camera/             # CameraDirector, Minimap, lapUtils
-│       │   ├── racer-types/        # Racer stat definitions
+│       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
+│       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats
+│       │   │   ├── spriteLoader.js     # Async image loader with module cache
+│       │   │   ├── spriteTinter.js     # Offscreen-canvas tinting per coat
+│       │   │   ├── coatAssignment.js   # Hash-based coat selection
+│       │   │   └── (DuckRacerType.js, RocketRacerType.js, SnailRacerType.js, CarRacerType.js — emoji-based, D3 will migrate to sprites)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 │       │   ├── track-editor/       # Geometry CRUD, Catmull-Rom, EditorShape
 │       │   ├── track-effects/      # Animated effect layers
@@ -71,6 +77,7 @@ Browser → React (screens/)
 - **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
 - **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are currently inlined in `RaceScreen/index.jsx`. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
+- **Sprite-based racers, not procedural primitives** — Issue D started with procedural Canvas drawing for racer bodies. Three iterations confirmed that anatomical detail (horse vs duck vs snail) at 22-26 px scale cannot be made readable with primitives. Racer types now use PNG sprite sheets with frame-based animation and offscreen-canvas tinting for color variants. Per-racer assets live under `client/public/assets/racers/` with credits in `CREDITS.md`.
 
 ## Future: Phase 5 Server
 
