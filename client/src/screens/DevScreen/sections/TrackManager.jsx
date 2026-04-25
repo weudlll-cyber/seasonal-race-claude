@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
-import { DEFAULT_TRACKS, DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
+import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
 import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
 import { listEffects } from '../../../modules/track-effects/index.js';
@@ -25,8 +25,7 @@ const BLANK = {
   name: '',
   icon: '',
   description: '',
-  racerId: '',
-  racerTypeId: 'horse',
+  defaultRacerTypeId: 'horse',
   geometryId: null,
   color: '#e63946',
   defaultDuration: 60,
@@ -36,7 +35,6 @@ const BLANK = {
 
 function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
-  const [racers] = useStorage(KEYS.RACERS, DEFAULT_RACERS);
   const [geometries] = useState(() =>
     listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
   );
@@ -68,8 +66,7 @@ function TrackManager() {
       name: track.name,
       icon: track.icon,
       description: track.description,
-      racerId: track.racerId,
-      racerTypeId: track.racerTypeId || track.racerId || 'horse',
+      defaultRacerTypeId: track.defaultRacerTypeId ?? track.racerTypeId ?? track.racerId ?? 'horse',
       geometryId: track.geometryId ?? null,
       color: track.color,
       defaultDuration: track.defaultDuration,
@@ -120,7 +117,6 @@ function TrackManager() {
         ) : (
           <div className={s.rowList}>
             {tracks.map((track) => {
-              const racer = racers.find((r) => r.id === track.racerId);
               return (
                 <div
                   key={track.id}
@@ -129,11 +125,6 @@ function TrackManager() {
                 >
                   <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{track.icon}</span>
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
-                  {racer && (
-                    <span className={s.badge}>
-                      {racer.icon} {racer.name}
-                    </span>
-                  )}
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
                   {track.isDefault ? (
@@ -210,21 +201,6 @@ function TrackManager() {
                 value={form.description}
                 onChange={(e) => f('description', e.target.value)}
               />
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Associated Racer</label>
-              <select
-                className={s.select}
-                value={form.racerId}
-                onChange={(e) => f('racerId', e.target.value)}
-              >
-                <option value="">— none —</option>
-                {racers.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.icon} {r.name}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Color</label>
@@ -321,11 +297,11 @@ function TrackManager() {
                 })()}
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Racer Type</label>
+              <label className={s.label}>Default Racer Type</label>
               <select
                 className={s.select}
-                value={form.racerTypeId}
-                onChange={(e) => f('racerTypeId', e.target.value)}
+                value={form.defaultRacerTypeId}
+                onChange={(e) => f('defaultRacerTypeId', e.target.value)}
               >
                 {RACER_TYPE_IDS.map((id) => (
                   <option key={id} value={id}>
