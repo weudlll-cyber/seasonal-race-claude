@@ -41,8 +41,14 @@ function SetupScreen() {
       } else {
         const existing = byId.get(d.id);
         byId.set(d.id, {
+          ...d,
           ...existing,
-          racerTypeId: d.racerTypeId,
+          // Prefer stored new field, fall back through legacy field names for old localStorage data
+          defaultRacerTypeId:
+            existing.defaultRacerTypeId ??
+            existing.racerTypeId ??
+            existing.racerId ??
+            d.defaultRacerTypeId,
         });
       }
     }
@@ -82,7 +88,7 @@ function SetupScreen() {
       trackId: selectedTrackId,
       trackName: selectedTrack?.name,
       geometryId: selectedTrack?.geometryId ?? null,
-      racerTypeId: selectedTrack?.racerTypeId || selectedTrack?.racerId || 'horse',
+      racerTypeId: selectedTrack?.defaultRacerTypeId || 'horse',
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
@@ -97,13 +103,12 @@ function SetupScreen() {
     if (!track || !track.geometryId) return;
 
     // 6 test players — icon matches the track's racer type
-    const trackIcon = track.racerTypeId
-      ? ({ horse: '🐴', duck: '🦆', rocket: '🚀', snail: '🐌', car: '🚗' }[track.racerTypeId] ??
-        DEFAULT_RACERS[0].icon)
-      : DEFAULT_RACERS[0].icon;
+    const typeId = track.defaultRacerTypeId || 'horse';
+    const trackIcon =
+      { horse: '🐴', duck: '🦆', rocket: '🚀', snail: '🐌', car: '🚗' }[typeId] ??
+      DEFAULT_RACERS[0].emoji;
     const testPlayers = Array.from({ length: 6 }, (_, i) => ({
       name: `Player ${i + 1}`,
-      racerId: track.racerTypeId ?? DEFAULT_RACERS[i % DEFAULT_RACERS.length].id,
       color: DEFAULT_RACERS[i % DEFAULT_RACERS.length].color,
       icon: trackIcon,
     }));
@@ -113,7 +118,7 @@ function SetupScreen() {
       trackId: track.id,
       trackName: track.name,
       geometryId: track.geometryId ?? null,
-      racerTypeId: track.racerTypeId || 'horse',
+      racerTypeId: typeId,
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,
