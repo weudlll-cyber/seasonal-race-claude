@@ -6,11 +6,27 @@
 // Description: Horse racer — extended manifest with sprite-based render.
 //              D2.3: pivot from procedural Canvas geometry to sprite blit
 //              using a 4-frame top-down trot animation sheet.
+//              D2.4: per-racer coat tinting via pre-rendered offscreen canvases.
 // ============================================================
 
-import { loadSprite, getCachedSprite } from './spriteLoader.js';
+import { getCachedSprite } from './spriteLoader.js';
+import { getCoatVariants } from './spriteTinter.js';
 
 const SPRITE_URL = '/assets/racers/horse-trot.png';
+
+export const HORSE_COATS = [
+  { id: 'cream', name: 'Cream', tint: null },
+  { id: 'bay', name: 'Bay', tint: '#8B4513' },
+  { id: 'chestnut', name: 'Chestnut', tint: '#A0522D' },
+  { id: 'palomino', name: 'Palomino', tint: '#D4A86A' },
+  { id: 'gray', name: 'Gray', tint: '#9A9A92' },
+  { id: 'black', name: 'Black', tint: '#1A1A1A' },
+  { id: 'dark-bay', name: 'Dark Bay', tint: '#4A2C18' },
+  { id: 'buckskin', name: 'Buckskin', tint: '#C19A6B' },
+  { id: 'sorrel', name: 'Sorrel', tint: '#C04020' },
+  { id: 'roan', name: 'Blue Roan', tint: '#7C8893' },
+  { id: 'dun', name: 'Dun', tint: '#B89968' },
+];
 
 export class HorseRacerType {
   constructor() {
@@ -30,6 +46,8 @@ export class HorseRacerType {
         baseRotationOffset: Math.PI / 2,
         displaySize: 40,
       },
+      coats: HORSE_COATS,
+      defaultCoatId: 'cream',
     };
 
     /** @type {import('./index.js').RacerRender} */
@@ -110,20 +128,31 @@ export class HorseRacerType {
   }
 
   /**
-   * Blit the current animation frame onto the canvas.
-   * Falls back to a filled circle (primaryColor) while the sprite loads.
+   * Blit the current animation frame onto the canvas using the racer's coat variant.
+   * Falls back through: coat variant → base sprite → filled circle (while loading).
+   * Unknown coatId falls back to defaultCoatId variant.
    * Caller (drawRacer) has already applied translate(x,y) + rotate(angle).
    * The inner ctx.rotate(baseRotationOffset) corrects for sprite orientation.
    *
    * @param {CanvasRenderingContext2D} ctx
-   * @param {{ speed?: number }} racer
+   * @param {{ speed?: number, coatId?: string }} racer
    * @param {number} frame - rAF timestamp in ms
    */
   _drawBody(ctx, racer, frame) {
     const sprite = this.style.sprite;
-    const img = getCachedSprite(sprite.url);
 
-    if (!img) {
+    // Resolve drawable: coat variant → base sprite → nothing (fallback circle)
+    const variants = getCoatVariants.cached(sprite.url);
+    const coatId = racer.coatId ?? this.style.defaultCoatId;
+    let drawable;
+    if (variants) {
+      drawable = variants.get(coatId) ?? variants.get(this.style.defaultCoatId);
+    }
+    if (!drawable) {
+      drawable = getCachedSprite(sprite.url);
+    }
+
+    if (!drawable) {
       ctx.fillStyle = this.style.primaryColor;
       ctx.beginPath();
       ctx.arc(0, 0, sprite.displaySize / 2, 0, Math.PI * 2);
@@ -139,7 +168,7 @@ export class HorseRacerType {
 
     ctx.save();
     ctx.rotate(sprite.baseRotationOffset);
-    ctx.drawImage(img, sx, 0, sprite.frameWidth, sprite.frameHeight, -dw / 2, -dh / 2, dw, dh);
+    ctx.drawImage(drawable, sx, 0, sprite.frameWidth, sprite.frameHeight, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
   }
 
@@ -213,5 +242,5 @@ export class HorseRacerType {
   }
 }
 
-// Preload sprite at module load so it's cached before the first race frame.
-loadSprite(SPRITE_URL).catch(() => {});
+// Prime the coat variant cache at module load so tinting is done before the first race frame.
+getCoatVariants(SPRITE_URL, HORSE_COATS).catch(() => {});

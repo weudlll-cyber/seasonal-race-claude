@@ -19,12 +19,23 @@ import {
   CarRacerType,
 } from './index.js';
 import { getCachedSprite } from './spriteLoader.js';
+import { getCoatVariants } from './spriteTinter.js';
 
 vi.mock('./spriteLoader.js', () => ({
   getCachedSprite: vi.fn(),
   loadSprite: vi.fn().mockResolvedValue({}),
   _clearSpriteCache: vi.fn(),
 }));
+
+vi.mock('./spriteTinter.js', () => {
+  const getCoatVariants = vi.fn().mockResolvedValue(new Map());
+  getCoatVariants.cached = vi.fn();
+  return {
+    getCoatVariants,
+    tintSprite: vi.fn().mockReturnValue({}),
+    _clearTintCache: vi.fn(),
+  };
+});
 
 function makeCtx() {
   return {
@@ -294,7 +305,49 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     expect(hasOffset).toBe(true);
   });
 
-  // ── 10. Other racers untouched ─────────────────────────────────────────────
+  // ── 10. Coat variants (D2.4) ──────────────────────────────────────────────
+
+  it('manifest has 11 coats each with id, name, and tint (string or null)', () => {
+    expect(horse.style.coats).toHaveLength(11);
+    for (const coat of horse.style.coats) {
+      expect(typeof coat.id).toBe('string');
+      expect(typeof coat.name).toBe('string');
+      expect(coat.tint === null || typeof coat.tint === 'string').toBe(true);
+    }
+    expect(horse.style.defaultCoatId).toBe('cream');
+  });
+
+  it('_drawBody with variants cache empty falls back to base sprite', () => {
+    getCoatVariants.cached.mockReturnValue(undefined);
+    const mockImg = {};
+    getCachedSprite.mockReturnValue(mockImg);
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'bay' }, 0);
+    expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
+  });
+
+  it('_drawBody with valid coatId uses the coat variant canvas', () => {
+    const tintedCanvas = { _isTinted: true };
+    getCoatVariants.cached.mockReturnValue(
+      new Map([
+        ['bay', tintedCanvas],
+        ['cream', {}],
+      ])
+    );
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'bay' }, 0);
+    expect(ctx.drawImage.mock.calls[0][0]).toBe(tintedCanvas);
+  });
+
+  it('_drawBody with unknown coatId falls back to defaultCoatId variant', () => {
+    const creamDrawable = { _isCream: true };
+    getCoatVariants.cached.mockReturnValue(new Map([['cream', creamDrawable]]));
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
+    expect(ctx.drawImage.mock.calls[0][0]).toBe(creamDrawable);
+  });
+
+  // ── 11. Other racers untouched ─────────────────────────────────────────────
 
   it('other racers do not have style.sprite defined', () => {
     const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
