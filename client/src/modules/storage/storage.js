@@ -8,7 +8,7 @@
 
 export const KEYS = {
   PLAYER_GROUPS: 'racearena:playerGroups',
-  RACERS: 'racearena:racers',
+  RACER_TYPES: 'racearena:racerTypes',
   TRACKS: 'racearena:tracks',
   BRANDING: 'racearena:branding',
   RACE_DEFAULTS: 'racearena:raceDefaults',
@@ -81,6 +81,27 @@ export function newId() {
         '[RaceArena] Flushed racearena:tracks: migrated from shapeId/environmentId to geometryId-based preset model.'
       );
     }
+  } catch {
+    // ignore parse errors — key will be re-seeded from defaults on next read
+  }
+})();
+
+// One-time migration: racearena:racers → racearena:racerTypes (W2 field renames).
+// Renames icon→emoji, enabled→isActive, drops trackId. Safe to call multiple times.
+(function migrateRacersIfNeeded() {
+  try {
+    const raw = localStorage.getItem('racearena:racers');
+    if (!raw) return;
+    const old = JSON.parse(raw);
+    if (!Array.isArray(old)) return;
+    const migrated = old.map(({ icon, enabled, trackId: _trackId, ...rest }) => ({
+      ...rest,
+      emoji: icon ?? '',
+      isActive: enabled ?? true,
+    }));
+    localStorage.setItem('racearena:racerTypes', JSON.stringify(migrated));
+    localStorage.removeItem('racearena:racers');
+    console.warn('[RaceArena] Migrated racearena:racers → racearena:racerTypes (W2 rename).');
   } catch {
     // ignore parse errors — key will be re-seeded from defaults on next read
   }

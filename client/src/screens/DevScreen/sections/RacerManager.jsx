@@ -9,21 +9,20 @@
 import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
-import { DEFAULT_RACERS, DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
+import { DEFAULT_RACERS } from '../../../modules/storage/defaults.js';
 import s from '../DevScreen.module.css';
 
-const BLANK = { name: '', icon: '', color: '#e63946', trackId: '' };
+const BLANK = { name: '', emoji: '', color: '#e63946' };
 
 function RacerManager() {
-  const [racers, setRacers] = useStorage(KEYS.RACERS, DEFAULT_RACERS);
-  const [tracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [racers, setRacers] = useStorage(KEYS.RACER_TYPES, DEFAULT_RACERS);
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
   function handleSave() {
-    if (!form.name.trim() || !form.icon.trim()) return;
-    const racer = { ...form, name: form.name.trim(), icon: form.icon.trim(), enabled: true };
+    if (!form.name.trim() || !form.emoji.trim()) return;
+    const racer = { ...form, name: form.name.trim(), emoji: form.emoji.trim(), isActive: true };
 
     if (editId) {
       setRacers((prev) => prev.map((r) => (r.id === editId ? { ...r, ...racer } : r)));
@@ -38,9 +37,8 @@ function RacerManager() {
   function handleEdit(racer) {
     setForm({
       name: racer.name,
-      icon: racer.icon,
+      emoji: racer.emoji ?? racer.icon ?? '',
       color: racer.color,
-      trackId: racer.trackId,
     });
     setEditId(racer.id);
     setShowForm(true);
@@ -51,8 +49,8 @@ function RacerManager() {
     setRacers((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function toggleEnabled(id) {
-    setRacers((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
+  function toggleIsActive(id) {
+    setRacers((prev) => prev.map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r)));
   }
 
   function handleCancel() {
@@ -81,9 +79,12 @@ function RacerManager() {
         ) : (
           <div className={s.rowList}>
             {racers.map((racer) => {
-              const track = tracks.find((t) => t.id === racer.trackId);
               return (
-                <div key={racer.id} className={s.row} style={{ opacity: racer.enabled ? 1 : 0.45 }}>
+                <div
+                  key={racer.id}
+                  className={s.row}
+                  style={{ opacity: racer.isActive ? 1 : 0.45 }}
+                >
                   {/* Color swatch */}
                   <span
                     style={{
@@ -94,16 +95,17 @@ function RacerManager() {
                       flexShrink: 0,
                     }}
                   />
-                  <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{racer.icon}</span>
+                  <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>
+                    {racer.emoji ?? racer.icon}
+                  </span>
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{racer.name}</span>
-                  {track && <span className={s.badge}>{track.name}</span>}
                   <span className={s.spacer} />
                   {/* Enable/disable toggle */}
-                  <label className={s.toggle} title={racer.enabled ? 'Disable' : 'Enable'}>
+                  <label className={s.toggle} title={racer.isActive ? 'Disable' : 'Enable'}>
                     <input
                       type="checkbox"
-                      checked={racer.enabled}
-                      onChange={() => toggleEnabled(racer.id)}
+                      checked={racer.isActive ?? racer.enabled ?? true}
+                      onChange={() => toggleIsActive(racer.id)}
                     />
                     <span className={s.toggleSlider} />
                   </label>
@@ -146,8 +148,8 @@ function RacerManager() {
                 className={s.input}
                 placeholder="🐧"
                 maxLength={4}
-                value={form.icon}
-                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+                value={form.emoji}
+                onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
               />
             </div>
             <div className={s.formGroup}>
@@ -173,27 +175,12 @@ function RacerManager() {
                 />
               </div>
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Associated Track</label>
-              <select
-                className={s.select}
-                value={form.trackId}
-                onChange={(e) => setForm((f) => ({ ...f, trackId: e.target.value }))}
-              >
-                <option value="">— none —</option>
-                {tracks.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.icon} {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>
             <button
               className={`${s.btn} ${s.btnPrimary}`}
               onClick={handleSave}
-              disabled={!form.name.trim() || !form.icon.trim()}
+              disabled={!form.name.trim() || !form.emoji.trim()}
             >
               {editId ? 'Save Changes' : 'Add Racer'}
             </button>
