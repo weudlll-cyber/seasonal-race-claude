@@ -115,10 +115,6 @@ export class HorseRacerType {
    * Caller (drawRacer) has already applied translate(x,y) + rotate(angle).
    * The inner ctx.rotate(baseRotationOffset) corrects for sprite orientation.
    *
-   * @debug Set window.__racerDebug = { displaySize: 120 } in browser console
-   *        to override sprite size for visual inspection. Remove this hook
-   *        before merging to master.
-   *
    * @param {CanvasRenderingContext2D} ctx
    * @param {{ speed?: number }} racer
    * @param {number} frame - rAF timestamp in ms
@@ -137,10 +133,7 @@ export class HorseRacerType {
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * sprite.frameWidth;
-    // Temporary debug hook — set window.__racerDebug = { displaySize: N } in console to override
-    const debugSize = typeof window !== 'undefined' && window.__racerDebug?.displaySize;
-    const effectiveSize = debugSize || sprite.displaySize;
-    const scale = (effectiveSize / sprite.frameHeight) * (this.style.silhouetteScale ?? 1);
+    const scale = (sprite.displaySize / sprite.frameHeight) * (this.style.silhouetteScale ?? 1);
     const dw = sprite.frameWidth * scale;
     const dh = sprite.frameHeight * scale;
 
