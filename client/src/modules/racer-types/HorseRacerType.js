@@ -3,10 +3,14 @@
 // Path:        client/src/modules/racer-types/HorseRacerType.js
 // Project:     RaceArena
 // Created:     2026-04-20
-// Description: Horse racer — extended manifest pilot for D1.
-//              Implements render/animation/trail/style in addition to
-//              the existing emoji fallback and getTrailParticles API.
+// Description: Horse racer — extended manifest with sprite-based render.
+//              D2.3: pivot from procedural Canvas geometry to sprite blit
+//              using a 4-frame top-down trot animation sheet.
 // ============================================================
+
+import { loadSprite, getCachedSprite } from './spriteLoader.js';
+
+const SPRITE_URL = '/assets/racers/horse-trot.png';
 
 export class HorseRacerType {
   constructor() {
@@ -15,20 +19,28 @@ export class HorseRacerType {
       primaryColor: '#E8DCC4',
       accentColor: '#2A1F18',
       silhouetteScale: 1.0,
+      sprite: {
+        url: SPRITE_URL,
+        frameWidth: 128,
+        frameHeight: 128,
+        frameCount: 4,
+        basePeriodMs: 500,
+        // Sprite faces up (+Y). Race engine forward = +X (east).
+        // Rotate by −π/2 so sprite visual forward aligns with engine forward.
+        baseRotationOffset: -Math.PI / 2,
+        displaySize: 40,
+      },
     };
 
     /** @type {import('./index.js').RacerRender} */
     this.render = {
-      drawBody: (ctx, racer, frame) => {
-        const offset = this._getAnimationOffset(frame, racer.baseSpeed ?? 2);
-        this._drawBody(ctx, racer, frame, offset);
-      },
-      getDimensions: () => ({ width: 32, height: 18 }),
+      drawBody: (ctx, racer, frame) => this._drawBody(ctx, racer, frame),
+      getDimensions: () => ({ width: 40, height: 40 }),
     };
 
     /** @type {import('./index.js').RacerAnimation} */
     this.animation = {
-      getAnimationOffset: (frame, speed) => this._getAnimationOffset(frame, speed),
+      getFrameIndex: (frame, speed) => this._getFrameIndex(frame, speed),
     };
 
     /** @type {import('./index.js').RacerTrail} */
@@ -37,7 +49,7 @@ export class HorseRacerType {
     };
   }
 
-  // ── Existing interface (unchanged) ─────────────────────────────��──────────
+  // ── Existing interface ─────────────────────────────────────────────────────
 
   getEmoji() {
     return '🐴';
@@ -65,7 +77,7 @@ export class HorseRacerType {
     ctx.restore();
   }
 
-  getTrailParticles(x, y, speed, angle, frame) {
+  getTrailParticles(x, y, speed, angle, _frame) {
     if (Math.random() > 0.45) return [];
     return [
       {
@@ -83,141 +95,52 @@ export class HorseRacerType {
   // ── Extended manifest — private implementations ───────────────────────────
 
   /**
-   * Pure deterministic function of (frame, speed).
-   * frame is a ms timestamp. period scales from 200ms (fast) to 1500ms (slow).
-   * Diagonal trot: legFrontLeft === legBackRight, legFrontRight === legBackLeft.
+   * Pure deterministic function. Returns sprite frame index 0..(frameCount-1).
+   * Period scales from 200ms (fast) to 1500ms (slow) with racer speed.
    *
    * @param {number} frame  - rAF timestamp in ms
-   * @param {number} speed  - Racer speed (0..∞, clamped to safe range internally)
-   * @returns {{ legFrontLeft, legFrontRight, legBackLeft, legBackRight,
-   *             manePhase, tailPhase, bodyBob }}
+   * @param {number} speed  - Racer speed
+   * @returns {number} integer frame index
    */
-  _getAnimationOffset(frame, speed) {
+  _getFrameIndex(frame, speed) {
     const safeSpeed = Math.max(speed, 0.1);
-    const period = Math.min(1500, Math.max(200, 500 / safeSpeed));
-    const phaseA = ((frame % period) / period) * 2 * Math.PI;
-    const phaseB = phaseA + Math.PI;
-    return {
-      legFrontLeft: Math.sin(phaseA) * 2.5,
-      legBackRight: Math.sin(phaseA) * 2.5,
-      legFrontRight: Math.sin(phaseB) * 2.5,
-      legBackLeft: Math.sin(phaseB) * 2.5,
-      manePhase: Math.sin(phaseA + Math.PI / 4) * 0.5,
-      tailPhase: Math.sin(phaseA + Math.PI / 2) * 1.0,
-      bodyBob: Math.abs(Math.sin(phaseA * 2)) * 0.5,
-    };
+    const period = Math.min(1500, Math.max(200, this.style.sprite.basePeriodMs / safeSpeed));
+    const t = (frame % period) / period;
+    return Math.floor(t * this.style.sprite.frameCount) % this.style.sprite.frameCount;
   }
 
   /**
-   * Top-down horse silhouette.
-   * Drawn relative to (0, 0); caller handles translate + rotate.
-   * All color values read from this.style at the top — D2.2 can swap
-   * those sources for a coat-palette lookup without touching drawing code.
-   *
-   * Draw order (back to front): tail → body → legs → neck → mane → head → snout
+   * Blit the current animation frame onto the canvas.
+   * Falls back to a filled circle (primaryColor) while the sprite loads.
+   * Caller (drawRacer) has already applied translate(x,y) + rotate(angle).
+   * The inner ctx.rotate(baseRotationOffset) corrects for sprite orientation.
    *
    * @param {CanvasRenderingContext2D} ctx
-   * @param {object} _racer - unused; kept for API symmetry
-   * @param {number} _frame - unused; animation comes from offset
-   * @param {{ legFrontLeft, legFrontRight, legBackLeft, legBackRight,
-   *           manePhase, tailPhase, bodyBob }} offset
+   * @param {{ speed?: number }} racer
+   * @param {number} frame - rAF timestamp in ms
    */
-  _drawBody(ctx, _racer, _frame, offset) {
-    const primary = this.style.primaryColor;
-    const accent = this.style.accentColor;
-    const snout = HorseRacerType._lighten(primary, 0.15);
-    const {
-      legFrontLeft,
-      legFrontRight,
-      legBackLeft,
-      legBackRight,
-      manePhase,
-      tailPhase,
-      bodyBob,
-    } = offset;
+  _drawBody(ctx, racer, frame) {
+    const sprite = this.style.sprite;
+    const img = getCachedSprite(sprite.url);
+
+    if (!img) {
+      ctx.fillStyle = this.style.primaryColor;
+      ctx.beginPath();
+      ctx.arc(0, 0, sprite.displaySize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    const idx = this._getFrameIndex(frame, racer.speed ?? 1);
+    const sx = idx * sprite.frameWidth;
+    const scale = (sprite.displaySize / sprite.frameHeight) * (this.style.silhouetteScale ?? 1);
+    const dw = sprite.frameWidth * scale;
+    const dh = sprite.frameHeight * scale;
 
     ctx.save();
-
-    // ── Tail — tapered triangle, anchor at body rear edge ────────────────
-    ctx.beginPath();
-    ctx.moveTo(-13, -1.5);
-    ctx.lineTo(-19 + tailPhase * 0.5, tailPhase);
-    ctx.lineTo(-13, 1.5);
-    ctx.closePath();
-    ctx.fillStyle = accent;
-    ctx.fill();
-
-    // ── Body — narrow ellipse 26 × 8 (radii 13, 4), follows bodyBob ──────
-    ctx.beginPath();
-    ctx.ellipse(0, bodyBob, 13, 4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = primary;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 0.5;
-    ctx.fill();
-    ctx.stroke();
-
-    // ── Legs — 2 × 5 rects, outside body Y-range [–4, +4], no bodyBob ───
-    ctx.fillStyle = accent;
-    ctx.fillRect(7 + legFrontLeft - 1, -9, 2, 5); // front-left  (Y –9 → –4)
-    ctx.fillRect(7 + legFrontRight - 1, 4, 2, 5); // front-right (Y +4 → +9)
-    ctx.fillRect(-6 + legBackLeft - 1, -9, 2, 5); // back-left   (Y –9 → –4)
-    ctx.fillRect(-6 + legBackRight - 1, 4, 2, 5); // back-right  (Y +4 → +9)
-
-    // ── Neck — narrow trapezoid bridging body front and head ──────────────
-    ctx.beginPath();
-    ctx.moveTo(13, bodyBob - 3);
-    ctx.lineTo(13, bodyBob + 3);
-    ctx.lineTo(15, bodyBob + 2);
-    ctx.lineTo(15, bodyBob - 2);
-    ctx.closePath();
-    ctx.fillStyle = primary;
-    ctx.fill();
-
-    // ── Mane — dark polygon along neck top and head rear ─────────────────
-    const mY = manePhase * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(12, bodyBob - 3 + mY);
-    ctx.lineTo(15, bodyBob - 3 + mY);
-    ctx.lineTo(19, bodyBob - 4 + mY);
-    ctx.lineTo(20, bodyBob - 2.5);
-    ctx.lineTo(15, bodyBob - 2);
-    ctx.lineTo(12, bodyBob - 2);
-    ctx.closePath();
-    ctx.fillStyle = accent;
-    ctx.fill();
-
-    // ── Head — ellipse 8 × 6 (radii 4, 3), follows bodyBob ──────────────
-    ctx.beginPath();
-    ctx.ellipse(18, bodyBob, 4, 3, 0, 0, Math.PI * 2);
-    ctx.fillStyle = primary;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 0.5;
-    ctx.fill();
-    ctx.stroke();
-
-    // ── Snout — small trapezoid at head front ─────────────────────────────
-    ctx.beginPath();
-    ctx.moveTo(22, bodyBob - 1.5);
-    ctx.lineTo(22, bodyBob + 1.5);
-    ctx.lineTo(24, bodyBob + 1);
-    ctx.lineTo(24, bodyBob - 1);
-    ctx.closePath();
-    ctx.fillStyle = snout;
-    ctx.fill();
-
+    ctx.rotate(sprite.baseRotationOffset);
+    ctx.drawImage(img, sx, 0, sprite.frameWidth, sprite.frameHeight, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
-  }
-
-  /**
-   * Shifts a 6-digit hex color toward white by `amount` ∈ [0, 1].
-   * Returns a valid lowercase 6-char hex string.
-   */
-  static _lighten(hex, amount) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const lerp = (v) => Math.round(v + (255 - v) * amount);
-    return `#${[lerp(r), lerp(g), lerp(b)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
   }
 
   /**
@@ -289,3 +212,6 @@ export class HorseRacerType {
     };
   }
 }
+
+// Preload sprite at module load so it's cached before the first race frame.
+loadSprite(SPRITE_URL).catch(() => {});

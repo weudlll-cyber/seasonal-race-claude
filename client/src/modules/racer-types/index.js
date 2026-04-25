@@ -26,13 +26,9 @@
 
 /**
  * @typedef {Object} RacerAnimation
- * @property {(frame: number, speed: number) => {
- *   legPhaseA: number, legPhaseB: number,
- *   manePhase: number, tailPhase: number
- * }} getAnimationOffset
- *   Pure function returning phase values for body-part animation.
- *   All output values are bounded; deterministic for any (frame, speed) pair.
- *   legPhaseA and legPhaseB are always in opposite phases.
+ * @property {(frame: number, speed: number) => number} getFrameIndex
+ *   Pure function returning the sprite animation frame index (0..frameCount-1).
+ *   Deterministic for any (frame, speed) pair; period scales with speed.
  */
 
 /**

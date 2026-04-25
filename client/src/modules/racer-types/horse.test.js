@@ -3,13 +3,14 @@
 // Path:        client/src/modules/racer-types/horse.test.js
 // Project:     RaceArena
 // Created:     2026-04-25
-// Description: Tests for the D1 extended manifest on HorseRacerType.
-//              Covers manifest shape, animation determinism + bounds,
-//              drawBody canvas calls, trail factory lifecycle, and
-//              confirms the other four racers are untouched.
+// Description: Tests for HorseRacerType extended manifest.
+//              D1: manifest shape, animation determinism, trail lifecycle.
+//              D2: drawRacer Canvas transform wiring, leader glow.
+//              D2.3: sprite-based render — sprite manifest, getFrameIndex,
+//                    drawImage blit, fallback circle, rotation correction.
 // ============================================================
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   HorseRacerType,
   DuckRacerType,
@@ -17,6 +18,13 @@ import {
   SnailRacerType,
   CarRacerType,
 } from './index.js';
+import { getCachedSprite } from './spriteLoader.js';
+
+vi.mock('./spriteLoader.js', () => ({
+  getCachedSprite: vi.fn(),
+  loadSprite: vi.fn().mockResolvedValue({}),
+  _clearSpriteCache: vi.fn(),
+}));
 
 function makeCtx() {
   return {
@@ -35,6 +43,7 @@ function makeCtx() {
     fill: vi.fn(),
     fillRect: vi.fn(),
     stroke: vi.fn(),
+    drawImage: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
     font: '',
@@ -53,6 +62,10 @@ describe('HorseRacerType — D1 extended manifest', () => {
   let horse;
   beforeEach(() => {
     horse = new HorseRacerType();
+    getCachedSprite.mockReturnValue(undefined); // sprite not yet loaded
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   // ── 1. Manifest shape ─────────────────────────────────────────────────────
@@ -60,11 +73,13 @@ describe('HorseRacerType — D1 extended manifest', () => {
   it('has render, animation, trail, and style sections with correct member types', () => {
     expect(typeof horse.render.drawBody).toBe('function');
     expect(typeof horse.render.getDimensions).toBe('function');
-    expect(typeof horse.animation.getAnimationOffset).toBe('function');
+    expect(typeof horse.animation.getFrameIndex).toBe('function');
     expect(typeof horse.trail.createTrail).toBe('function');
     expect(horse.style.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
     expect(horse.style.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
     expect(typeof horse.style.silhouetteScale).toBe('number');
+    expect(horse.style.sprite).toBeDefined();
+    expect(typeof horse.style.sprite.frameCount).toBe('number');
   });
 
   it('getDimensions returns positive width and height', () => {
@@ -73,79 +88,15 @@ describe('HorseRacerType — D1 extended manifest', () => {
     expect(height).toBeGreaterThan(0);
   });
 
-  // ── 2. getAnimationOffset — determinism and bounds ────────────────────────
+  // ── 2. getFrameIndex — determinism ────────────────────────────────────────
 
-  it('getAnimationOffset is deterministic for the same (frame, speed) pair', () => {
-    const a = horse.animation.getAnimationOffset(137, 2.5);
-    const b = horse.animation.getAnimationOffset(137, 2.5);
-    expect(a).toEqual(b);
+  it('getFrameIndex is deterministic for the same (frame, speed) pair', () => {
+    const a = horse.animation.getFrameIndex(137, 2.5);
+    const b = horse.animation.getFrameIndex(137, 2.5);
+    expect(a).toBe(b);
   });
 
-  it('phase values stay within expected bounds for all frame/speed combinations', () => {
-    for (let frame = 0; frame <= 5000; frame += 250) {
-      for (const speed of [0.5, 1, 2.5, 5]) {
-        const {
-          legFrontLeft,
-          legFrontRight,
-          legBackLeft,
-          legBackRight,
-          manePhase,
-          tailPhase,
-          bodyBob,
-        } = horse.animation.getAnimationOffset(frame, speed);
-        expect(legFrontLeft).toBeGreaterThanOrEqual(-2.5);
-        expect(legFrontLeft).toBeLessThanOrEqual(2.5);
-        expect(legFrontRight).toBeGreaterThanOrEqual(-2.5);
-        expect(legFrontRight).toBeLessThanOrEqual(2.5);
-        expect(legBackLeft).toBeGreaterThanOrEqual(-2.5);
-        expect(legBackLeft).toBeLessThanOrEqual(2.5);
-        expect(legBackRight).toBeGreaterThanOrEqual(-2.5);
-        expect(legBackRight).toBeLessThanOrEqual(2.5);
-        expect(Math.abs(manePhase)).toBeLessThanOrEqual(0.5);
-        expect(Math.abs(tailPhase)).toBeLessThanOrEqual(1.0);
-        expect(bodyBob).toBeGreaterThanOrEqual(0);
-        expect(bodyBob).toBeLessThanOrEqual(0.5);
-      }
-    }
-  });
-
-  it('diagonal pairs always move together — legFrontLeft equals legBackRight', () => {
-    for (let frame = 0; frame <= 5000; frame += 250) {
-      const o = horse.animation.getAnimationOffset(frame, 3);
-      expect(o.legFrontLeft).toBeCloseTo(o.legBackRight, 10);
-      expect(o.legFrontRight).toBeCloseTo(o.legBackLeft, 10);
-    }
-  });
-
-  // ── 3. drawBody — canvas primitive calls ──────────────────────────────────
-
-  it('drawBody emits 2 ellipses (body, head), 4 fillRects (legs), and ≥ 4 fill calls', () => {
-    const ctx = makeCtx();
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(ctx.ellipse.mock.calls.length).toBe(2);
-    expect(ctx.fillRect.mock.calls.length).toBe(4);
-    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
-  });
-
-  it('drawBody sets fillStyle to both primaryColor and accentColor', () => {
-    const colors = [];
-    const ctx = makeCtx();
-    Object.defineProperty(ctx, 'fillStyle', {
-      get() {
-        return this._fillStyle ?? '';
-      },
-      set(v) {
-        this._fillStyle = v;
-        colors.push(v);
-      },
-      configurable: true,
-    });
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(colors).toContain(horse.style.primaryColor);
-    expect(colors).toContain(horse.style.accentColor);
-  });
-
-  // ── 4. createTrail — factory lifecycle ───────────────────────────────────
+  // ── 3. createTrail — factory lifecycle ───────────────────────────────────
 
   it('createTrail returns an object with spawn, update, and render methods', () => {
     const trail = horse.trail.createTrail(MOCK_RACER);
@@ -157,7 +108,6 @@ describe('HorseRacerType — D1 extended manifest', () => {
   it('spawns ~2 particles per frame at full speed — 30 frames yields 50–70 alive', () => {
     const trail = horse.trail.createTrail(MOCK_RACER);
     const fullSpeed = { ...MOCK_RACER, baseSpeed: 5 };
-    // At baseSpeed=5: spawnRate=2.0, frac=0, count=2 deterministically
     for (let i = 0; i < 30; i++) {
       trail.spawn(fullSpeed, 1);
       trail.update(1);
@@ -179,7 +129,7 @@ describe('HorseRacerType — D1 extended manifest', () => {
     expect(ctx.arc.mock.calls.length).toBe(0);
   });
 
-  // ── 5. Other racers untouched ─────────────────────────────────────────────
+  // ── 4. Other racers untouched ─────────────────────────────────────────────
 
   it('duck, rocket, snail, car have no render/animation/trail/style sections', () => {
     const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
@@ -197,9 +147,13 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
   let horse;
   beforeEach(() => {
     horse = new HorseRacerType();
+    getCachedSprite.mockReturnValue(undefined); // fallback path by default
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
-  // ── 6. drawRacer — Canvas transform wiring ────────────────────────────────
+  // ── 5. drawRacer — Canvas transform wiring ────────────────────────────────
 
   it('drawRacer positions the canvas at (x, y) and rotates by angle', () => {
     const ctx = makeCtx();
@@ -208,17 +162,11 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
     expect(ctx.rotate.mock.calls[0]).toEqual([Math.PI / 4]);
   });
 
-  it('drawRacer saves and restores ctx state exactly once', () => {
+  it('drawRacer saves and restores ctx state', () => {
     const ctx = makeCtx();
     horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
     expect(ctx.save.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(ctx.restore.mock.calls.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('drawRacer delegates to drawBody — fill called ≥ 4 times', () => {
-    const ctx = makeCtx();
-    horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
-    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 
   it('drawRacer never calls fillText (no emoji fallback)', () => {
@@ -227,7 +175,7 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
     expect(ctx.fillText.mock.calls.length).toBe(0);
   });
 
-  // ── 7. Leader glow ────────────────────────────────────────────────────────
+  // ── 6. Leader glow ────────────────────────────────────────────────────────
 
   it('drawRacer with isLeader=true sets gold strokeStyle (#ffd700)', () => {
     const strokeColors = [];
@@ -262,120 +210,97 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
     horse.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
     expect(strokeColors).not.toContain('#ffd700');
   });
-
-  // ── 8. Timestamp-compatible animation rates ───────────────────────────────
-
-  it('leg phase advances visibly over one period at full speed (timestamp-compatible rates)', () => {
-    // speed=5: period = min(1500, max(200, 500/5)) = 200ms; quarter-cycle = 50ms
-    // At frame=0: phaseA=0, legFrontLeft=0
-    // At frame=50: phaseA=π/2, legFrontLeft=sin(π/2)*1.5=1.5 → Δ = 1.5 > 0.5
-    const a = horse.animation.getAnimationOffset(0, 5);
-    const b = horse.animation.getAnimationOffset(50, 5);
-    expect(Math.abs(b.legFrontLeft - a.legFrontLeft)).toBeGreaterThan(0.5);
-  });
 });
 
-describe('HorseRacerType — D2.1 v2 silhouette + trot animation', () => {
+describe('HorseRacerType — D2.3 sprite-based render', () => {
   let horse;
   beforeEach(() => {
     horse = new HorseRacerType();
+    vi.clearAllMocks();
   });
 
-  // ── 9. Trot pattern ───────────────────────────────────────────────────────
+  // ── 7. Sprite manifest shape ──────────────────────────────────────────────
 
-  it('diagonal pairs always move together: legFrontLeft === legBackRight at any frame', () => {
-    for (let frame = 0; frame <= 5000; frame += 250) {
-      const o = horse.animation.getAnimationOffset(frame, 2);
-      expect(o.legFrontLeft).toBeCloseTo(o.legBackRight, 10);
-      expect(o.legFrontRight).toBeCloseTo(o.legBackLeft, 10);
-    }
+  it('style.sprite has required fields with correct types', () => {
+    const { sprite } = horse.style;
+    expect(typeof sprite.url).toBe('string');
+    expect(typeof sprite.frameWidth).toBe('number');
+    expect(typeof sprite.frameHeight).toBe('number');
+    expect(typeof sprite.frameCount).toBe('number');
+    expect(typeof sprite.basePeriodMs).toBe('number');
+    expect(typeof sprite.displaySize).toBe('number');
+    expect(typeof sprite.baseRotationOffset).toBe('number');
   });
 
-  it('cycle period halves as speed doubles — at t=125ms speed-2 has advanced more than speed-1', () => {
-    // speed=1: period=500ms → at 125ms = quarter cycle → legFrontLeft = sin(π/2)*1.5 = 1.5 (peak)
-    // speed=2: period=250ms → at 125ms = half cycle  → legFrontLeft = sin(π)*1.5 ≈ 0 (back near 0)
-    const s1 = horse.animation.getAnimationOffset(125, 1);
-    const s2 = horse.animation.getAnimationOffset(125, 2);
-    expect(s1.legFrontLeft).toBeCloseTo(2.5, 1);
-    expect(Math.abs(s2.legFrontLeft)).toBeLessThan(0.1);
-  });
+  // ── 8. getFrameIndex ──────────────────────────────────────────────────────
 
-  it('period clamps: speed=10 gives period exactly 200ms, speed=0.01 gives period 1500ms', () => {
-    // Verify by checking full-cycle return-to-origin at each clamped period
-    const at0_fast = horse.animation.getAnimationOffset(0, 10);
-    const at200_fast = horse.animation.getAnimationOffset(200, 10);
-    expect(at200_fast.legFrontLeft).toBeCloseTo(at0_fast.legFrontLeft, 5);
-
-    const at0_slow = horse.animation.getAnimationOffset(0, 0.01);
-    const at1500_slow = horse.animation.getAnimationOffset(1500, 0.01);
-    expect(at1500_slow.legFrontLeft).toBeCloseTo(at0_slow.legFrontLeft, 5);
-  });
-
-  it('all animation values stay within declared bounds for large frame + speed range', () => {
+  it('getFrameIndex returns an integer in range [0, frameCount-1]', () => {
     for (let frame = 0; frame <= 5000; frame += 50) {
-      for (let speed = 0.5; speed <= 5.0; speed += 0.5) {
-        const { legFrontLeft, legFrontRight, legBackLeft, legBackRight, bodyBob } =
-          horse.animation.getAnimationOffset(frame, speed);
-        expect(legFrontLeft).toBeGreaterThanOrEqual(-2.5);
-        expect(legFrontLeft).toBeLessThanOrEqual(2.5);
-        expect(legFrontRight).toBeGreaterThanOrEqual(-2.5);
-        expect(legFrontRight).toBeLessThanOrEqual(2.5);
-        expect(legBackLeft).toBeGreaterThanOrEqual(-2.5);
-        expect(legBackLeft).toBeLessThanOrEqual(2.5);
-        expect(legBackRight).toBeGreaterThanOrEqual(-2.5);
-        expect(legBackRight).toBeLessThanOrEqual(2.5);
-        expect(bodyBob).toBeGreaterThanOrEqual(0);
-        expect(bodyBob).toBeLessThanOrEqual(0.5);
+      for (const speed of [0.5, 1, 2, 5]) {
+        const idx = horse.animation.getFrameIndex(frame, speed);
+        expect(Number.isInteger(idx)).toBe(true);
+        expect(idx).toBeGreaterThanOrEqual(0);
+        expect(idx).toBeLessThanOrEqual(horse.style.sprite.frameCount - 1);
       }
     }
   });
 
-  // ── 10. drawBody v2 primitive counts ─────────────────────────────────────
-
-  it('drawBody emits exactly 2 ellipses, 4 fillRects, and ≥ 4 fill polygon calls', () => {
-    const ctx = makeCtx();
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(ctx.ellipse.mock.calls.length).toBe(2);
-    expect(ctx.fillRect.mock.calls.length).toBe(4);
-    expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(4);
+  it('getFrameIndex cycles through all 4 frames over one period at speed=1', () => {
+    const frameCount = horse.style.sprite.frameCount;
+    const period = horse.style.sprite.basePeriodMs; // 500ms at speed=1
+    const seen = new Set();
+    for (let i = 0; i < frameCount; i++) {
+      seen.add(horse.animation.getFrameIndex(Math.floor((i * period) / frameCount), 1));
+    }
+    expect(seen.size).toBe(frameCount);
   });
 
-  it('drawBody sets fillStyle to cream primary and near-black accent', () => {
-    const colors = [];
-    const ctx = makeCtx();
-    Object.defineProperty(ctx, 'fillStyle', {
-      get() {
-        return this._fillStyle ?? '';
-      },
-      set(v) {
-        this._fillStyle = v;
-        colors.push(v);
-      },
-      configurable: true,
-    });
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(colors).toContain('#E8DCC4'); // cream primary
-    expect(colors).toContain('#2A1F18'); // near-black accent
+  it('getFrameIndex advances faster at higher speed — period is inversely proportional to speed', () => {
+    // speed=1: period=500ms; at 125ms → t=0.25 → idx=1
+    // speed=2: period=250ms; at 125ms → t=0.5  → idx=2
+    const idx_speed1 = horse.animation.getFrameIndex(125, 1);
+    const idx_speed2 = horse.animation.getFrameIndex(125, 2);
+    expect(idx_speed2).toBeGreaterThan(idx_speed1);
   });
 
-  it('leg X-positions change between frame=0 and frame=125 at speed=1', () => {
-    // speed=1: period=500ms; at frame=125 = quarter cycle → legFrontLeft shifts from 0 to 2.5
-    const ctx0 = makeCtx();
-    const ctx125 = makeCtx();
-    horse.render.drawBody(ctx0, { ...MOCK_RACER, baseSpeed: 1 }, 0);
-    horse.render.drawBody(ctx125, { ...MOCK_RACER, baseSpeed: 1 }, 125);
-    const xAt0 = ctx0.fillRect.mock.calls[0][0]; // front-left leg X at frame=0
-    const xAt125 = ctx125.fillRect.mock.calls[0][0]; // front-left leg X at frame=125
-    expect(Math.abs(xAt125 - xAt0)).toBeGreaterThan(0.5);
-  });
+  // ── 9. _drawBody — sprite blit ────────────────────────────────────────────
 
-  it('leg fillRects are positioned outside the body silhouette (Y ≤ –4 or Y ≥ +4)', () => {
+  it('_drawBody calls drawImage with the sprite image when sprite is loaded', () => {
+    const mockImg = {};
+    getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
     horse.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(ctx.fillRect.mock.calls.length).toBe(4);
-    for (const call of ctx.fillRect.mock.calls) {
-      const y = call[1]; // fillRect(x, y, w, h)
-      expect(y <= -4 || y >= 4).toBe(true);
+    expect(ctx.drawImage.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
+  });
+
+  it('_drawBody falls back to an arc circle when sprite is not loaded', () => {
+    getCachedSprite.mockReturnValue(undefined);
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    expect(ctx.arc.mock.calls.length).toBe(1);
+    expect(ctx.drawImage.mock.calls.length).toBe(0);
+  });
+
+  it('_drawBody applies baseRotationOffset correction when sprite is loaded', () => {
+    const mockImg = {};
+    getCachedSprite.mockReturnValue(mockImg);
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    const rotationCalls = ctx.rotate.mock.calls;
+    const hasOffset = rotationCalls.some(
+      (call) => Math.abs(call[0] - horse.style.sprite.baseRotationOffset) < 0.0001
+    );
+    expect(hasOffset).toBe(true);
+  });
+
+  // ── 10. Other racers untouched ─────────────────────────────────────────────
+
+  it('other racers do not have style.sprite defined', () => {
+    const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
+    for (const Cls of others) {
+      const rt = new Cls();
+      expect(rt.style?.sprite).toBeUndefined();
     }
   });
 });

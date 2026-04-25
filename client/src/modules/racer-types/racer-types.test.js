@@ -35,6 +35,7 @@ function makeCtx() {
     fill: vi.fn(),
     fillRect: vi.fn(),
     stroke: vi.fn(),
+    drawImage: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
     font: '',
