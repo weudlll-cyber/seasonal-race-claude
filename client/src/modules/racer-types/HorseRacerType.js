@@ -25,9 +25,9 @@ export class HorseRacerType {
         frameHeight: 128,
         frameCount: 4,
         basePeriodMs: 500,
-        // Sprite faces up (+Y). Race engine forward = +X (east).
-        // Rotate by −π/2 so sprite visual forward aligns with engine forward.
-        baseRotationOffset: -Math.PI / 2,
+        // Sprite faces up (−Y in canvas). Race engine forward = +X (east).
+        // Rotate by +π/2 so sprite visual forward aligns with engine forward.
+        baseRotationOffset: Math.PI / 2,
         displaySize: 40,
       },
     };
