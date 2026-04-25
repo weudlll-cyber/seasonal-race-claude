@@ -14,6 +14,9 @@
  * @property {string} primaryColor     - Hex colour for the racer body
  * @property {string} accentColor      - Hex colour for mane, tail, details
  * @property {number} silhouetteScale  - Multiplier applied to getDimensions()
+ * @property {object} [sprite]         - Sprite sheet config (url, frame dims, animation period, rotation offset)
+ * @property {Array<{id:string,name:string,tint:string|null}>} [coats] - Available coat colour variants
+ * @property {string} [defaultCoatId]  - Coat id to use when racer.coatId is unset
  */
 
 /**
