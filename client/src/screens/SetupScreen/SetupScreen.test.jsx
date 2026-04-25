@@ -9,8 +9,10 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
+import { KEYS } from '../../modules/storage/storage.js';
+import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom
 function renderSetupScreen() {
@@ -71,5 +73,75 @@ describe('SetupScreen', () => {
     // Default tracks all have geometryId: null — button is disabled until a track is drawn.
     const quickTestBtn = screen.getByTitle('Draw a track in the Track Editor first');
     expect(quickTestBtn).toBeDisabled();
+  });
+});
+
+// ── W1 regression — track merge order ──────────────────────────────────────
+// SetupScreen merges DEFAULT_TRACKS into stored tracks to back-fill new
+// fields. The merge must be {defaults, ...stored} so user edits always win.
+// Previously it was reversed: {stored, racerTypeId: default}, which silently
+// discarded any racerTypeId the user set in the Dev Panel.
+
+describe('SetupScreen — W1 track merge regression', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('stored racerTypeId wins over DEFAULT_TRACKS default', () => {
+    // User changed dirt-oval → duck in the Dev Panel
+    const stored = DEFAULT_TRACKS.map((t) =>
+      t.id === 'dirt-oval' ? { ...t, racerTypeId: 'duck', geometryId: 'test-geom' } : t
+    );
+    localStorage.setItem(KEYS.TRACKS, JSON.stringify(stored));
+    renderSetupScreen();
+
+    // dirt-oval is tracks[0] → the default quickTrack; geometryId set → button enabled
+    fireEvent.click(screen.getByTitle('Auto-fill 6 test players and start race'));
+
+    const race = JSON.parse(sessionStorage.getItem('activeRace'));
+    expect(race.racerTypeId).toBe('duck');
+  });
+
+  it('missing racerTypeId in stored track is filled from DEFAULT_TRACKS', () => {
+    // Stale stored entry for space-sprint has no racerTypeId field
+    const defaultSprint = DEFAULT_TRACKS.find((t) => t.id === 'space-sprint');
+    const staleSprint = { ...defaultSprint, racerTypeId: undefined, geometryId: 'test-geom' };
+    const stored = DEFAULT_TRACKS.map((t) => (t.id === 'space-sprint' ? staleSprint : t));
+    localStorage.setItem(KEYS.TRACKS, JSON.stringify(stored));
+    renderSetupScreen();
+
+    // Switch quickTrack to space-sprint via pill button
+    fireEvent.click(screen.getByTitle('Space Sprint'));
+    fireEvent.click(screen.getByTitle('Auto-fill 6 test players and start race'));
+
+    const race = JSON.parse(sessionStorage.getItem('activeRace'));
+    // Default fills in 'rocket'; the old || 'horse' fallback would give 'horse'
+    expect(race.racerTypeId).toBe('rocket');
+  });
+
+  it('custom track not in DEFAULT_TRACKS passes through the merge unchanged', () => {
+    const customTrack = {
+      id: 'my-custom',
+      name: 'My Custom',
+      icon: '⭐',
+      description: 'Custom track',
+      racerId: 'snail',
+      racerTypeId: 'snail',
+      geometryId: 'test-geom',
+      color: '#ff0000',
+      defaultDuration: 60,
+      defaultWinners: 3,
+      trackWidth: 140,
+      isDefault: false,
+    };
+    // Custom track first → becomes tracks[0] → default quickTrack
+    localStorage.setItem(KEYS.TRACKS, JSON.stringify([customTrack, ...DEFAULT_TRACKS]));
+    renderSetupScreen();
+
+    fireEvent.click(screen.getByTitle('Auto-fill 6 test players and start race'));
+
+    const race = JSON.parse(sessionStorage.getItem('activeRace'));
+    expect(race.racerTypeId).toBe('snail');
   });
 });
