@@ -294,7 +294,40 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     expect(hasOffset).toBe(true);
   });
 
-  // ── 10. Other racers untouched ─────────────────────────────────────────────
+  // ── 10. Debug hook ────────────────────────────────────────────────────────
+
+  it('debug hook: window.__racerDebug.displaySize overrides sprite displaySize', () => {
+    const mockImg = {};
+    getCachedSprite.mockReturnValue(mockImg);
+    const ctx = makeCtx();
+    // Override window with a debug size of 100
+    const original = globalThis.window;
+    globalThis.window = { __racerDebug: { displaySize: 100 } };
+    try {
+      horse.render.drawBody(ctx, MOCK_RACER, 0);
+    } finally {
+      globalThis.window = original;
+    }
+    // dw = frameWidth * (100 / frameHeight) * silhouetteScale
+    const { frameWidth, frameHeight } = horse.style.sprite;
+    const expectedDw = frameWidth * (100 / frameHeight) * (horse.style.silhouetteScale ?? 1);
+    const drawImageCall = ctx.drawImage.mock.calls[0];
+    expect(drawImageCall[7]).toBeCloseTo(expectedDw, 5); // dw arg (index 7)
+  });
+
+  it('debug hook: absent window.__racerDebug falls back to sprite.displaySize', () => {
+    const mockImg = {};
+    getCachedSprite.mockReturnValue(mockImg);
+    const ctx = makeCtx();
+    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    const { frameWidth, frameHeight, displaySize } = horse.style.sprite;
+    const expectedDw =
+      frameWidth * (displaySize / frameHeight) * (horse.style.silhouetteScale ?? 1);
+    const drawImageCall = ctx.drawImage.mock.calls[0];
+    expect(drawImageCall[7]).toBeCloseTo(expectedDw, 5); // dw arg (index 7)
+  });
+
+  // ── 11. Other racers untouched ─────────────────────────────────────────────
 
   it('other racers do not have style.sprite defined', () => {
     const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
