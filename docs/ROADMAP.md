@@ -46,6 +46,18 @@
 
 See `docs/TRACK_EDITOR.md` for the full specification, architectural decisions, and future extensions.
 
+## Issue D — Racer Redesign (in progress)
+
+Replaces emoji racers with sprite-based renderable types. Each racer type can have render, animation, trail, and color variation.
+
+- [x] D1 — Extended racer manifest (render, animation, trail, style fields)
+- [x] D2 — drawRacer wiring + trail integration for horse
+- [x] D2.3 — Sprite-based horse render (4-frame trot animation, 128×128 tile sheet)
+- [x] D2.4 — 11 horse coats with hash-based per-player assignment
+- [ ] D3 — Sprite migration for duck, rocket, snail, car
+- [ ] D4 — Performance pass for 100 racers @ 60 FPS
+- [ ] D5 — Lint cleanup, docs, max-warnings: 0 in CI
+
 ## Phase 3 — Result Screen (planned)
 
 - [ ] Podium display (top N winners)
@@ -102,7 +114,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (307 tests, 25 test files)
+- [x] Vitest + React Testing Library (350 tests, 29 test files)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -118,3 +130,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-23 | CI restored (vite 5→8 upgrade via PR #1), environments refactored to consume background image paths from track config via module-level image cache (PR #2), project hygiene pass for line endings, coverage ignore, and SETUP.md stack correction (PR #3). Documentation for Phase 2.5 Track Editor feature established. 232 Vitest tests still green. |
 | 2026-04-24 | Phase 2.5 Track Editor complete on branch `feat/track-editor`. Track geometry CRUD, EditorShape, Center/Boundary mode, full edit ops, undo/redo, 6 track effects with multi-effect array (up to 3 per geometry), live editor preview, minimap, camera director, preset thumbnails. Pre-merge audit (AUDIT.md) identified critical auth issue in scaffolded server code. F15 audit fixes applied. F16 deleted unused server scaffold entirely (architecture incompatible with Phase 5 plan). F17 source hygiene audit. F18 removed day-one/phase-2 dead-code scaffold (track-canvas, race-engine, race-simulation, particle-effects, track-renderer stub, dead entry files). PR #6 squash-merged. 307 Vitest tests across 25 files. |
 | 2026-04-25 | Pre-D cleanup: removed empty module dirs left behind by F10/F18 (particle-effects, race-engine, race-simulation, track-canvas, track-shapes, environments, socket), ARCHITECTURE.md folder structure aligned with reality, ROADMAP.md test count corrected (365→307 / 28→25), .gitignore tightened. CI workflow fixed (server job removed, was blocking merge). |
+| 2026-04-25 | Issue D horse track complete. Started procedural Canvas-primitives (3 attempts: brown blob, hidden-leg cream, narrow stick-leg) — none was readable as a horse at 22-26px scale. Pivoted to sprite-based render with a real top-down trot sheet. Lesson: complex anatomical sprites at small scale need PNG assets, not procedural geometry. Added spriteLoader, spriteTinter (offscreen canvas multiply), coatAssignment (djb2 hash). 11 horse coats. RaceScreen attaches racer.coatId at race init. 350 tests. |
