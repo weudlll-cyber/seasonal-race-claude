@@ -32,6 +32,10 @@ function SetupScreen() {
   const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
 
   // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
+  // Defaults provide a base shape so any new DEFAULT_TRACKS fields appear
+  // for older stored tracks. Stored values override defaults — user edits
+  // in Dev-Panel always win. (Earlier code had this reversed; default
+  // racerTypeId was clobbering stored 'duck' choices. Fixed in W1.)
   const tracks = (() => {
     const base = Array.isArray(storedTracks) ? storedTracks : DEFAULT_TRACKS;
     const byId = new Map(base.map((t) => [t.id, t]));
@@ -41,8 +45,8 @@ function SetupScreen() {
       } else {
         const existing = byId.get(d.id);
         byId.set(d.id, {
-          ...existing,
-          racerTypeId: d.racerTypeId,
+          ...d, // defaults provide a base (covers any new fields added later)
+          ...existing, // stored values override defaults
         });
       }
     }

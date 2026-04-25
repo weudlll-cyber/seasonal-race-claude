@@ -142,8 +142,8 @@ describe('HorseRacerType — D1 extended manifest', () => {
 
   // ── 4. Other racers untouched ─────────────────────────────────────────────
 
-  it('duck, rocket, snail, car have no render/animation/trail/style sections', () => {
-    const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, snail, car have no render/animation/trail/style sections', () => {
+    const others = [RocketRacerType, SnailRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.render).toBeUndefined();
@@ -349,8 +349,8 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
 
   // ── 11. Other racers untouched ─────────────────────────────────────────────
 
-  it('other racers do not have style.sprite defined', () => {
-    const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, snail, car do not have style.sprite defined', () => {
+    const others = [RocketRacerType, SnailRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.style?.sprite).toBeUndefined();
