@@ -70,13 +70,13 @@ export { RocketRacerType } from './RocketRacerType.js';
 export { SnailRacerType } from './SnailRacerType.js';
 export { CarRacerType } from './CarRacerType.js';
 
-import { HorseRacerType } from './HorseRacerType.js';
+import { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
 import { DuckRacerType } from './DuckRacerType.js';
 import { RocketRacerType } from './RocketRacerType.js';
 import { SnailRacerType } from './SnailRacerType.js';
 import { CarRacerType } from './CarRacerType.js';
 
-const TYPE_MAP = {
+export const RACER_TYPES = {
   horse: HorseRacerType,
   duck: DuckRacerType,
   rocket: RocketRacerType,
@@ -84,7 +84,9 @@ const TYPE_MAP = {
   car: CarRacerType,
 };
 
-export const RACER_TYPE_IDS = Object.keys(TYPE_MAP);
+export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
+
+export const COATS_BY_TYPE = { horse: HORSE_COATS };
 
 export const RACER_TYPE_LABELS = {
   horse: 'Horse 🐴',
@@ -102,18 +104,13 @@ export const RACER_TYPE_EMOJIS = {
   car: '🚗',
 };
 
-/**
- * Returns a racer-type instance for the given typeId.
- * Falls back to HorseRacerType for unknown ids.
- */
+/** Returns a racer-type instance for the given typeId. Falls back to horse for unknown ids. */
 export function getRacerType(typeId) {
-  const Cls = TYPE_MAP[typeId] ?? HorseRacerType;
+  const Cls = RACER_TYPES[typeId] ?? HorseRacerType;
   return new Cls();
 }
 
-// ── Legacy exports (kept so existing imports don't break) ──────────────────
-export const RACER_TYPES = {
-  SPEED_DEMON: { id: 'SPEED_DEMON', label: 'Speed Demon', topSpeed: 10, handling: 5, accel: 8 },
-  TANK: { id: 'TANK', label: 'Tank', topSpeed: 6, handling: 7, accel: 5 },
-  ALL_ROUNDER: { id: 'ALL_ROUNDER', label: 'All-Rounder', topSpeed: 7, handling: 7, accel: 7 },
-};
+/** Returns all registered racer type IDs. */
+export function listRacerTypes() {
+  return Object.keys(RACER_TYPES);
+}
