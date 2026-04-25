@@ -68,7 +68,7 @@ function SystemSettings() {
       return;
     clearAllStorage();
     // Re-seed defaults so the app is usable immediately after reset
-    storageSet(KEYS.RACERS, DEFAULT_RACERS);
+    storageSet(KEYS.RACER_TYPES, DEFAULT_RACERS);
     storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
     storageSet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
     storageSet(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
