@@ -11,13 +11,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  HorseRacerType,
-  DuckRacerType,
-  RocketRacerType,
-  SnailRacerType,
-  CarRacerType,
-} from './index.js';
+import { HorseRacerType, RocketRacerType, SnailRacerType, CarRacerType } from './index.js';
 import { getCachedSprite } from './spriteLoader.js';
 import { getCoatVariants } from './spriteTinter.js';
 
@@ -142,8 +136,9 @@ describe('HorseRacerType — D1 extended manifest', () => {
 
   // ── 4. Other racers untouched ─────────────────────────────────────────────
 
-  it('duck, rocket, snail, car have no render/animation/trail/style sections', () => {
-    const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, snail, car have no render/animation/trail/style sections', () => {
+    // Duck is upgraded in D3.1 — only the remaining three are still emoji-only
+    const others = [RocketRacerType, SnailRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.render).toBeUndefined();
@@ -349,8 +344,9 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
 
   // ── 11. Other racers untouched ─────────────────────────────────────────────
 
-  it('other racers do not have style.sprite defined', () => {
-    const others = [DuckRacerType, RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, snail, car do not have style.sprite defined', () => {
+    // Duck is upgraded in D3.1 — only the remaining three are still emoji-only
+    const others = [RocketRacerType, SnailRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.style?.sprite).toBeUndefined();
