@@ -31,11 +31,12 @@ seasonal-race-claude/
 │       ├── modules/                # Domain logic, independent of React
 │       │   ├── camera/             # CameraDirector, Minimap, lapUtils
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
-│       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats
+│       │   │   ├── SpriteRacerType.js  # Config-driven base class for all sprite-based racer types (D3.5)
+│       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
 │       │   │   ├── spriteLoader.js     # Async image loader with module cache
-│       │   │   ├── spriteTinter.js     # Offscreen-canvas tinting per coat
+│       │   │   ├── spriteTinter.js     # Offscreen-canvas tinting; tintSpriteWithMask for mask-restricted mode
 │       │   │   ├── coatAssignment.js   # Hash-based coat selection
-│       │   │   └── (DuckRacerType.js, RocketRacerType.js, SnailRacerType.js, CarRacerType.js — emoji-based, D3 will migrate to sprites)
+│       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 │       │   ├── track-editor/       # Geometry CRUD, Catmull-Rom, EditorShape
 │       │   ├── track-effects/      # Animated effect layers
@@ -79,6 +80,21 @@ Browser → React (screens/)
 - **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are currently inlined in `RaceScreen/index.jsx`. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
 - **Sprite-based racers, not procedural primitives** — Issue D started with procedural Canvas drawing for racer bodies. Three iterations confirmed that anatomical detail (horse vs duck vs snail) at 22-26 px scale cannot be made readable with primitives. Racer types now use PNG sprite sheets with frame-based animation and offscreen-canvas tinting for color variants. Per-racer assets live under `client/public/assets/racers/` with credits in `CREDITS.md`.
 
+## Camera System
+
+The race camera lives in `modules/camera/` and supports four director modes:
+
+- **OVERVIEW** — wide shot showing the full track
+- **LEADER_ZOOM** — follows the leading racer at 2× zoom
+- **BATTLE_ZOOM** — centres on the closest racing pair
+- **COMEBACK_ZOOM** — tracks the furthest-behind racer
+
+All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
+
+## Racer-Track-Effects (D6 — reserved)
+
+`SpriteRacerType` accepts an optional `rteDefinitions` array in its config. This array is stored and exposed via `getRteDefinitions()` but is not processed in the current codebase. Phase D6 will introduce an `RteManager` in `RaceScreen` that consumes these definitions to spawn per-racer particle effects triggered by track state (e.g., mud spray on muddy sectors, splash on water crossings). Schema TBD in the D6 spec.
+
 ## Future: Phase 5 Server
 
 A backend will be built in Phase 5 with the following responsibilities:
@@ -89,3 +105,13 @@ A backend will be built in Phase 5 with the following responsibilities:
 - **Tech stack (planned):** Node.js / Express, Socket.IO, SQLite (single-server) or Postgres (scaled), JWT session tokens with bcrypt
 
 The Phase 5 server will be a fresh implementation designed around race integrity. The original server scaffold (user-auth REST) was deleted in F16 as architecturally incompatible with this model.
+
+## Development Workflow
+
+RaceArena uses a three-party model for significant features:
+
+1. **Strategic Claude (chat)** — drafts design specs and architecture documents.
+2. **User (orchestrator)** — reviews specs, triggers Claude Code execution, resolves conflicts.
+3. **Claude Code CLI (executor)** — executes self-contained specs: writes code, tests, docs, commits, opens PRs.
+
+Specs delivered to Claude Code must be self-contained (no follow-up clarification during execution). PR bodies contain the authoritative spec reference. See `docs/PROJECT-PRINCIPLES.md` for the full list of project principles.
