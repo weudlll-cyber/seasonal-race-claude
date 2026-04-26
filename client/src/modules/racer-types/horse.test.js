@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { HorseRacerType, RocketRacerType, SnailRacerType, CarRacerType } from './index.js';
+import { HorseRacerType, RocketRacerType, CarRacerType } from './index.js';
 import { getCachedSprite } from './spriteLoader.js';
 import { getCoatVariants } from './spriteTinter.js';
 
@@ -136,9 +136,9 @@ describe('HorseRacerType — D1 extended manifest', () => {
 
   // ── 4. Other racers untouched ─────────────────────────────────────────────
 
-  it('rocket, snail, car have no render/animation/trail/style sections', () => {
-    // Duck is upgraded in D3.1 — only the remaining three are still emoji-only
-    const others = [RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, car have no render/animation/trail/style sections', () => {
+    // Duck upgraded D3.1, Snail upgraded D3.2 — only rocket and car remain emoji-only
+    const others = [RocketRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.render).toBeUndefined();
@@ -251,19 +251,21 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     }
   });
 
-  it('getFrameIndex cycles through all 4 frames over one period at speed=1', () => {
+  it('getFrameIndex cycles through all 8 frames over one period at speed=1', () => {
     const frameCount = horse.style.sprite.frameCount;
-    const period = horse.style.sprite.basePeriodMs; // 500ms at speed=1
+    const period = horse.style.sprite.basePeriodMs; // 700ms at speed=1
+    const binWidth = period / frameCount;
     const seen = new Set();
     for (let i = 0; i < frameCount; i++) {
-      seen.add(horse.animation.getFrameIndex(Math.floor((i * period) / frameCount), 1));
+      // Sample at bin midpoint to avoid floor-collision on non-integer bin widths
+      seen.add(horse.animation.getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
     }
     expect(seen.size).toBe(frameCount);
   });
 
   it('getFrameIndex advances faster at higher speed — period is inversely proportional to speed', () => {
-    // speed=1: period=500ms; at 125ms → t=0.25 → idx=1
-    // speed=2: period=250ms; at 125ms → t=0.5  → idx=2
+    // speed=1: period=700ms; at 125ms → t≈0.179 → idx=1
+    // speed=2: period=350ms; at 125ms → t≈0.357 → idx=2
     const idx_speed1 = horse.animation.getFrameIndex(125, 1);
     const idx_speed2 = horse.animation.getFrameIndex(125, 2);
     expect(idx_speed2).toBeGreaterThan(idx_speed1);
@@ -344,9 +346,9 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
 
   // ── 11. Other racers untouched ─────────────────────────────────────────────
 
-  it('rocket, snail, car do not have style.sprite defined', () => {
-    // Duck is upgraded in D3.1 — only the remaining three are still emoji-only
-    const others = [RocketRacerType, SnailRacerType, CarRacerType];
+  it('rocket, car do not have style.sprite defined', () => {
+    // Duck upgraded D3.1, Snail upgraded D3.2 — only rocket and car remain emoji-only
+    const others = [RocketRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
       expect(rt.style?.sprite).toBeUndefined();
