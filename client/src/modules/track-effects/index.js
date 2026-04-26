@@ -1,3 +1,11 @@
+// ============================================================
+// File:        index.js
+// Path:        client/src/modules/track-effects/index.js
+// Project:     RaceArena
+// Description: Track-effects registry — auto-loads all effect modules and
+//              exposes listEffects / getEffect / getDefaultConfig
+// ============================================================
+
 // Exclude *.test.js — without the negation glob matched test files too, causing
 // stars.test.js to run at app load and crash with "Cannot read properties of undefined".
 const modules = import.meta.glob(['./effects/*.js', '!./effects/*.test.js'], { eager: true });

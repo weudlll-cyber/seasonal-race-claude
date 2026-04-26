@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { storageGet, storageSet, storageRemove, KEYS } from './storage.js';
+import { storageGet, storageSet, KEYS } from './storage.js';
 import { DEFAULT_TRACKS } from './defaults.js';
 
 // Re-implements the App.jsx migration logic so we can test its invariants in isolation.

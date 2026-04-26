@@ -1,3 +1,10 @@
+// ============================================================
+// File:        PresetThumbnail.jsx
+// Path:        client/src/components/PresetThumbnail/PresetThumbnail.jsx
+// Project:     RaceArena
+// Description: Canvas-rendered thumbnail for a track preset card
+// ============================================================
+
 import { useEffect, useRef, useState } from 'react';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';

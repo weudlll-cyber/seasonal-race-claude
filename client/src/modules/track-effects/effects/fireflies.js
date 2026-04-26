@@ -1,3 +1,10 @@
+// ============================================================
+// File:        fireflies.js
+// Path:        client/src/modules/track-effects/effects/fireflies.js
+// Project:     RaceArena
+// Description: Track effect — blinking firefly particles around the track
+// ============================================================
+
 const configSchema = [
   { key: 'count', type: 'range', min: 10, max: 500, step: 10, default: 30, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 5, step: 0.1, default: 1.5, label: 'Size' },

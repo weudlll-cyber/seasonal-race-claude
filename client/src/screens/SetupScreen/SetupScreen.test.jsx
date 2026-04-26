@@ -11,6 +11,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
+import { storageSet, KEYS } from '../../modules/storage/storage.js';
+import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom
 function renderSetupScreen() {
@@ -71,5 +73,43 @@ describe('SetupScreen', () => {
     // Default tracks all have geometryId: null — button is disabled until a track is drawn.
     const quickTestBtn = screen.getByTitle('Draw a track in the Track Editor first');
     expect(quickTestBtn).toBeDisabled();
+  });
+});
+
+describe('SetupScreen — override selector filters inactive racer types', () => {
+  function renderWithTrackSelected() {
+    // Seed a track with a real geometryId so the card is enabled and can be selected
+    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-test-001' } : t
+    );
+    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    renderSetupScreen();
+    // Navigate to Track tab and select the first track
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('override selector shows all 12 types when no overrides are set', () => {
+    renderWithTrackSelected();
+    const select = screen.getByRole('combobox');
+    expect(select.options).toHaveLength(12);
+  });
+
+  it('override selector omits a type that has been disabled via override map', () => {
+    storageSet(KEYS.RACER_TYPE_OVERRIDES, { snail: false });
+    renderWithTrackSelected();
+    const select = screen.getByRole('combobox');
+    const optionValues = Array.from(select.options).map((o) => o.value);
+    expect(optionValues).not.toContain('snail');
+    expect(select.options).toHaveLength(11);
   });
 });

@@ -24,7 +24,13 @@ function ResultScreen() {
       return;
     }
 
-    const parsed = JSON.parse(raw);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      navigate('/setup');
+      return;
+    }
     const order = parsed.finishOrder || [];
     setFinishOrder(order);
     setElapsedTime(parsed.elapsedTime || 0);

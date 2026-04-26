@@ -1,3 +1,10 @@
+// ============================================================
+// File:        dust.js
+// Path:        client/src/modules/track-effects/effects/dust.js
+// Project:     RaceArena
+// Description: Track effect — drifting dust particles along the track path
+// ============================================================
+
 const configSchema = [
   { key: 'count', type: 'range', min: 10, max: 500, step: 10, default: 80, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 5, step: 0.1, default: 0.8, label: 'Size' },

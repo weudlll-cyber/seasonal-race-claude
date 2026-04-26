@@ -1,3 +1,10 @@
+// ============================================================
+// File:        wave.js
+// Path:        client/src/modules/track-effects/effects/wave.js
+// Project:     RaceArena
+// Description: Track effect — sinusoidal wave bands scrolling across the track
+// ============================================================
+
 const configSchema = [
   { key: 'count', type: 'range', min: 2, max: 20, step: 1, default: 6, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 3, step: 0.1, default: 2, label: 'Size' },

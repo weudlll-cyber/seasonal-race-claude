@@ -1,3 +1,10 @@
+// ============================================================
+// File:        stars.js
+// Path:        client/src/modules/track-effects/effects/stars.js
+// Project:     RaceArena
+// Description: Track effect — twinkling star particles as a background overlay
+// ============================================================
+
 const configSchema = [
   { key: 'count', type: 'range', min: 50, max: 500, step: 10, default: 150, label: 'Count' },
   {

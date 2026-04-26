@@ -9,6 +9,7 @@
 export const KEYS = {
   PLAYER_GROUPS: 'racearena:playerGroups',
   RACER_TYPES: 'racearena:racerTypes',
+  RACER_TYPE_OVERRIDES: 'racearena:racerTypeOverrides',
   TRACKS: 'racearena:tracks',
   BRANDING: 'racearena:branding',
   RACE_DEFAULTS: 'racearena:raceDefaults',
@@ -86,8 +87,9 @@ export function newId() {
   }
 })();
 
-// One-time migration: 'car' → 'buggy' in track defaultRacerTypeId (D3.5.3).
+// One-time migration: 'car' → 'buggy' in all racer-type fields on tracks (D3.5.3 / B8).
 // CarRacerType was removed; BuggyRacerType is its successor.
+// Handles the full legacy field chain: defaultRacerTypeId, racerTypeId, racerId, and icon.
 (function migrateCarToBuggy() {
   try {
     const raw = localStorage.getItem('racearena:tracks');
@@ -100,12 +102,56 @@ export function newId() {
         track.defaultRacerTypeId = 'buggy';
         changed = true;
       }
+      if (track.racerTypeId === 'car') {
+        track.racerTypeId = 'buggy';
+        changed = true;
+      }
+      if (track.racerId === 'car') {
+        track.racerId = 'buggy';
+        changed = true;
+      }
+      if (track.icon === '🚗') {
+        track.icon = '🚙';
+        changed = true;
+      }
     }
     if (changed) {
       localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
-      console.warn('[RaceArena] Migrated defaultRacerTypeId: car → buggy (D3.5.3 rename).');
+      console.warn('[RaceArena] Migrated car → buggy in track racer-type fields (D3.5.3/B8).');
     }
   } catch {
+    // Best-effort — migration failure must not break the app.
+  }
+})();
+
+// One-time migration: racearena:racerTypes array → racearena:racerTypeOverrides map (B7).
+// The old array stored user-added racer types. The code registry now owns all 12 types;
+// only isActive overrides are persisted. Preserves any explicit isActive:false entries.
+(function migrateRacerTypesToOverrideMap() {
+  try {
+    const raw = localStorage.getItem('racearena:racerTypes');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const overrides = {};
+    for (const r of parsed) {
+      if (r.id && r.isActive === false) overrides[r.id] = false;
+    }
+    if (Object.keys(overrides).length > 0) {
+      try {
+        const existing =
+          JSON.parse(localStorage.getItem('racearena:racerTypeOverrides') ?? 'null') ?? {};
+        localStorage.setItem(
+          'racearena:racerTypeOverrides',
+          JSON.stringify({ ...existing, ...overrides })
+        );
+      } catch (_e) {
+        // Best-effort — merge failure must not break the outer migration.
+      }
+    }
+    localStorage.removeItem('racearena:racerTypes');
+    console.warn('[RaceArena] Migrated racearena:racerTypes array → racerTypeOverrides map (B7).');
+  } catch (_e) {
     // Best-effort — migration failure must not break the app.
   }
 })();

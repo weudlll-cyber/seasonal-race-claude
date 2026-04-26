@@ -1,3 +1,10 @@
+// ============================================================
+// File:        setup.js
+// Path:        client/src/test/setup.js
+// Project:     RaceArena
+// Description: Vitest global test setup — jest-dom matchers and jsdom polyfills
+// ============================================================
+
 import '@testing-library/jest-dom';
 
 // Mock SVGPathElement geometry for jsdom — getTotalLength and getPointAtLength

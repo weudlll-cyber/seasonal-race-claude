@@ -10,7 +10,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MotorbikeRacerType } from './index.js';
 import { getCachedSprite } from './spriteLoader.js';
-import { getCoatVariants } from './spriteTinter.js';
 
 vi.mock('./spriteLoader.js', () => ({
   getCachedSprite: vi.fn(),

@@ -14,7 +14,6 @@ import {
   clearAllStorage,
 } from '../../../modules/storage/storage.js';
 import {
-  DEFAULT_RACERS,
   DEFAULT_TRACKS,
   DEFAULT_RACE_DEFAULTS,
   DEFAULT_PLAYER_GROUPS,
@@ -67,8 +66,9 @@ function SystemSettings() {
     )
       return;
     clearAllStorage();
-    // Re-seed defaults so the app is usable immediately after reset
-    storageSet(KEYS.RACER_TYPES, DEFAULT_RACERS);
+    // Re-seed defaults so the app is usable immediately after reset.
+    // Racer type overrides are intentionally not re-seeded — all 12 types
+    // are active by default when no override map is present.
     storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
     storageSet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
     storageSet(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
