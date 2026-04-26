@@ -20,8 +20,6 @@ const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label
 const DURATIONS = [30, 60, 90, 120];
 
 const TRACK_WIDTHS = [100, 140, 200, 280, 360];
-const WORLD_WIDTHS = [1280, 1920, 2560, 3840];
-const WORLD_HEIGHTS = [720, 1080, 1440];
 
 const BLANK = {
   name: '',
@@ -100,6 +98,18 @@ function TrackManager() {
   }
 
   function f(key, val) {
+    if (key === 'geometryId' && val) {
+      const geom = geometries.find((g) => g.id === val);
+      if (geom?.worldWidth && geom?.worldHeight) {
+        setForm((prev) => ({
+          ...prev,
+          geometryId: val,
+          worldWidth: geom.worldWidth,
+          worldHeight: geom.worldHeight,
+        }));
+        return;
+      }
+    }
     setForm((prev) => ({ ...prev, [key]: val }));
   }
 
@@ -331,32 +341,12 @@ function TrackManager() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>World Width (px)</label>
-              <div className={s.optionPills}>
-                {WORLD_WIDTHS.map((w) => (
-                  <button
-                    key={w}
-                    className={`${s.optionPill} ${form.worldWidth === w ? s.optionPillActive : ''}`}
-                    onClick={() => f('worldWidth', w)}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>World Height (px)</label>
-              <div className={s.optionPills}>
-                {WORLD_HEIGHTS.map((h) => (
-                  <button
-                    key={h}
-                    className={`${s.optionPill} ${form.worldHeight === h ? s.optionPillActive : ''}`}
-                    onClick={() => f('worldHeight', h)}
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
+              <label className={s.label}>World Dimensions</label>
+              <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                {form.geometryId
+                  ? `${form.worldWidth}×${form.worldHeight} px (aus Geometrie)`
+                  : '— (Geometrie wählen)'}
+              </span>
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>

@@ -26,22 +26,8 @@ const CURVE_SAMPLES = 200;
 const SLIDER_DEBOUNCE_MS = 400;
 const NAME_DEBOUNCE_MS = 600;
 
-const DEFAULT_BG = '/assets/tracks/backgrounds/dirt-oval.jpg';
-
-const BG_IMAGES = [
-  { value: '/assets/tracks/backgrounds/city-circuit.png', label: 'City Circuit' },
-  { value: '/assets/tracks/backgrounds/dirt-oval.jpg', label: 'Dirt Oval' },
-  { value: '/assets/tracks/backgrounds/garden-path.png', label: 'Garden Path' },
-  { value: '/assets/tracks/backgrounds/river-run.png', label: 'River Run' },
-  { value: '/assets/tracks/backgrounds/space-sprint.jpg', label: 'Space Sprint' },
-];
-
-const WORLD_SIZES = [
-  { label: '1280×720 (HD)', w: 1280, h: 720 },
-  { label: '1920×1080 (FHD)', w: 1920, h: 1080 },
-  { label: '2560×1440 (QHD)', w: 2560, h: 1440 },
-  { label: '3840×2160 (4K)', w: 3840, h: 2160 },
-];
+const MAX_BG_W = 8000;
+const MAX_BG_H = 4096;
 
 // drawStaticScene does NOT clear the canvas — callers apply the viewport
 // transform first, then call this, then restore. clearRect must happen
@@ -175,6 +161,7 @@ export default function TrackEditor() {
   // ── canvas / UI refs ──────────────────────────────────────────────────────
   const canvasRef = useRef(null);
   const bgRef = useRef(null);
+  const fileInputRef = useRef(null);
   const wrapperRef = useRef(null);
   const saveTimerRef = useRef(null);
 
@@ -217,7 +204,8 @@ export default function TrackEditor() {
   const [centerWidth, setCenterWidth] = useState(120);
   const [closed, setClosed] = useState(false);
   const [trackName, setTrackName] = useState('');
-  const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
+  const [backgroundImage, setBackgroundImage] = useState(null);
+  const [bgUploadError, setBgUploadError] = useState(null);
   const [effects, setEffects] = useState([]);
 
   // ── viewport state ────────────────────────────────────────────────────────
@@ -821,10 +809,62 @@ export default function TrackEditor() {
     }
   }
 
+  // ── background image upload ───────────────────────────────────────────────
+
+  function handleBgUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        if (w > MAX_BG_W || h > MAX_BG_H) {
+          setBgUploadError(`Bild zu groß. Maximum: ${MAX_BG_W}×${MAX_BG_H} Pixel.`);
+          return;
+        }
+        setBgUploadError(null);
+        const hasPoints =
+          centerPoints.length > 0 || innerPoints.length > 0 || outerPoints.length > 0;
+        const dimChanged = w !== editorWorldW || h !== editorWorldH;
+        if (dimChanged && hasPoints) {
+          if (
+            !window.confirm(
+              `Das neue Bild hat andere Abmessungen (${w}×${h} statt ${editorWorldW}×${editorWorldH}). Der Pfad wird zurückgesetzt und muss neu gezeichnet werden. Fortfahren?`
+            )
+          )
+            return;
+          pushHistory(getSnapshot());
+          setCenterPoints([]);
+          setInnerPoints([]);
+          setOuterPoints([]);
+        } else {
+          pushHistory(getSnapshot());
+        }
+        setBackgroundImage(dataUrl);
+        setEditorWorldW(w);
+        setEditorWorldH(h);
+        viewTransformRef.current.worldW = w;
+        viewTransformRef.current.worldH = h;
+        markDirty();
+      };
+      img.onerror = () => setBgUploadError('Bild konnte nicht geladen werden.');
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
   // ── save / load / delete ──────────────────────────────────────────────────
 
   function handleSave() {
     setSaveAttempted(true);
+    if (!backgroundImage) {
+      setSaveError('Hintergrundbild ist erforderlich. Bitte zuerst ein Bild hochladen.');
+      return;
+    }
     const error = validateEditorState({
       mode,
       centerPoints,
@@ -875,6 +915,7 @@ export default function TrackEditor() {
 
     setTrackName(track.name);
     setBackgroundImage(track.backgroundImage);
+    setBgUploadError(null);
     setClosed(track.closed === true);
     setLoadedTrackId(track.id);
     setEffects(extractEffects(track));
@@ -925,7 +966,8 @@ export default function TrackEditor() {
     setInnerPoints([]);
     setOuterPoints([]);
     setTrackName('');
-    setBackgroundImage(DEFAULT_BG);
+    setBackgroundImage(null);
+    setBgUploadError(null);
     setEffects([]);
     setLoadedTrackId(null);
     setBoundarySwitchConfirmed(false);
@@ -945,8 +987,6 @@ export default function TrackEditor() {
       : activeBoundary === 'inner'
         ? `Inner: ${innerPoints.length}`
         : `Outer: ${outerPoints.length}`;
-
-  const currentWorldSize = WORLD_SIZES.find((s) => s.w === editorWorldW && s.h === editorWorldH);
 
   // ── JSX ───────────────────────────────────────────────────────────────────
 
@@ -1109,35 +1149,11 @@ export default function TrackEditor() {
           <EffectConfig effects={effects} onChange={handleEffectsChange} max={3} />
         </div>
 
-        {/* World size + viewport controls */}
+        {/* Viewport controls */}
         <div className={s.toolbarRow}>
-          <span className={s.sliderLabel}>World size:</span>
-          <select
-            value={currentWorldSize ? `${editorWorldW}x${editorWorldH}` : 'custom'}
-            onChange={(e) => {
-              const [w, h] = e.target.value.split('x').map(Number);
-              if (w && h) handleWorldSizeChange(w, h);
-            }}
-            style={{
-              background: 'var(--color-surface)',
-              color: 'var(--color-text)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '4px',
-              padding: '0.2rem 0.4rem',
-              fontSize: '0.8rem',
-            }}
-          >
-            {WORLD_SIZES.map((ws) => (
-              <option key={`${ws.w}x${ws.h}`} value={`${ws.w}x${ws.h}`}>
-                {ws.label}
-              </option>
-            ))}
-            {!currentWorldSize && (
-              <option value="custom">
-                {editorWorldW}×{editorWorldH} (custom)
-              </option>
-            )}
-          </select>
+          <span className={s.sliderLabel}>
+            Track-Größe: {editorWorldW}×{editorWorldH} px
+          </span>
           <button
             className={s.historyBtn}
             onClick={handleFitToScreen}
@@ -1185,22 +1201,32 @@ export default function TrackEditor() {
               }
             }}
           />
-          <select
-            className={s.bgSelect}
-            value={backgroundImage}
-            onChange={(e) => {
-              pushHistory(getSnapshot());
-              setBackgroundImage(e.target.value);
-              markDirty();
-            }}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleBgUpload}
+          />
+          <button
+            type="button"
+            className={`${s.bgUploadBtn}${!backgroundImage ? ` ${s.bgUploadBtnRequired}` : ''}`}
+            onClick={() => fileInputRef.current?.click()}
+            title={
+              backgroundImage
+                ? 'Hintergrundbild ändern'
+                : 'Hintergrundbild hochladen (erforderlich)'
+            }
           >
-            {BG_IMAGES.map((bg) => (
-              <option key={bg.value} value={bg.value}>
-                {bg.label}
-              </option>
-            ))}
-          </select>
-          <button className={s.saveBtn} disabled={saveLabel !== 'Save'} onClick={handleSave}>
+            {backgroundImage
+              ? `🖼 ${backgroundImage.startsWith('data:') ? 'Bild hochgeladen' : backgroundImage.split('/').pop()}`
+              : '📷 Kein Bild · erforderlich'}
+          </button>
+          <button
+            className={s.saveBtn}
+            disabled={!backgroundImage || saveLabel !== 'Save'}
+            onClick={handleSave}
+          >
             {saveLabel}
           </button>
           <select className={s.loadSelect} value="" onChange={handleLoad}>
@@ -1217,6 +1243,7 @@ export default function TrackEditor() {
             Delete
           </button>
         </div>
+        {bgUploadError && <p className={s.saveError}>{bgUploadError}</p>}
         {saveError && <p className={s.saveError}>{saveError}</p>}
       </div>
 
