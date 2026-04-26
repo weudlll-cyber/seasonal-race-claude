@@ -16,6 +16,8 @@ import {
   RocketRacerType,
   SnailRacerType,
   CarRacerType,
+  warmUpAllRacerTypes,
+  _resetWarmUpForTesting,
 } from './index.js';
 
 // Minimal canvas 2D context mock
@@ -70,7 +72,7 @@ describe('getRacerType factory', () => {
 
   it('falls back to HorseRacerType for unknown id', () => {
     const rt = getRacerType('totally-unknown');
-    expect(rt).toBeInstanceOf(HorseRacerType);
+    expect(rt).toBe(HorseRacerType);
   });
 
   it('RACER_TYPE_IDS contains all 5 types', () => {
@@ -79,7 +81,7 @@ describe('getRacerType factory', () => {
 });
 
 describe.each(ALL_TYPES)('%s racer type', (id, Cls) => {
-  const rt = new Cls();
+  const rt = typeof Cls === 'function' ? new Cls() : Cls;
 
   describe('getEmoji', () => {
     it('returns a non-empty string', () => {
@@ -144,14 +146,26 @@ describe.each(ALL_TYPES)('%s racer type', (id, Cls) => {
 
 describe('speed ordering', () => {
   it('snail is slower than horse', () => {
-    expect(new SnailRacerType().getSpeedMultiplier()).toBeLessThan(
-      new HorseRacerType().getSpeedMultiplier()
-    );
+    expect(SnailRacerType.getSpeedMultiplier()).toBeLessThan(HorseRacerType.getSpeedMultiplier());
   });
 
   it('rocket is faster than horse', () => {
     expect(new RocketRacerType().getSpeedMultiplier()).toBeGreaterThan(
-      new HorseRacerType().getSpeedMultiplier()
+      HorseRacerType.getSpeedMultiplier()
     );
+  });
+});
+
+describe('warmUpAllRacerTypes', () => {
+  it('is idempotent — calling twice does not throw', () => {
+    expect(() => {
+      warmUpAllRacerTypes();
+      warmUpAllRacerTypes();
+    }).not.toThrow();
+  });
+
+  it('re-warms after reset', () => {
+    _resetWarmUpForTesting();
+    expect(() => warmUpAllRacerTypes()).not.toThrow();
   });
 });

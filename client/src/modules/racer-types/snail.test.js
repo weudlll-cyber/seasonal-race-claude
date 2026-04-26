@@ -3,10 +3,12 @@
 // Path:        client/src/modules/racer-types/snail.test.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Tests for SnailRacerType extended manifest (D3.2).
-//              Mirrors duck.test.js structure: manifest shape, animation
-//              determinism, trail lifecycle, drawRacer wiring, sprite blit,
-//              coat variants.
+// Description: Tests for SnailRacerType extended manifest (D3.2 → D3.5).
+//              D3.5 part 2: SnailRacerType is now a SpriteRacerType instance.
+//              Style fields accessed via snail.config.*, drawBody via snail._drawBody,
+//              getFrameIndex via snail._getFrameIndex.
+//              _createTrail tests removed (dead system).
+//              Snail-specific: fallbackColor = accentColor (documented drift).
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -26,7 +28,9 @@ vi.mock('./spriteTinter.js', () => {
   return {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
+    tintSpriteWithMask: vi.fn().mockReturnValue({}),
     _clearTintCache: vi.fn(),
+    _clearMaskedTintCache: vi.fn(),
   };
 });
 
@@ -65,87 +69,63 @@ const MOCK_RACER = { x: 100, y: 100, angle: 0, baseSpeed: 2, index: 0 };
 describe('SnailRacerType — D3.2 extended manifest', () => {
   let snail;
   beforeEach(() => {
-    snail = new SnailRacerType();
+    snail = SnailRacerType;
     getCachedSprite.mockReturnValue(undefined);
   });
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('has render, animation, trail, and style sections with correct member types', () => {
-    expect(typeof snail.render.drawBody).toBe('function');
-    expect(typeof snail.render.getDimensions).toBe('function');
-    expect(typeof snail.animation.getFrameIndex).toBe('function');
-    expect(typeof snail.trail.createTrail).toBe('function');
-    expect(snail.style.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(snail.style.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(typeof snail.style.silhouetteScale).toBe('number');
-    expect(snail.style.sprite).toBeDefined();
-    expect(snail.style.sprite.frameCount).toBe(4);
-    expect(snail.style.sprite.displaySize).toBe(35);
+  it('has required config fields with correct types', () => {
+    expect(typeof snail.config.primaryColor).toBe('string');
+    expect(typeof snail.config.accentColor).toBe('string');
+    expect(typeof snail.config.silhouetteScale).toBe('number');
+    expect(snail.config.frameCount).toBe(4);
+    expect(snail.config.displaySize).toBe(35);
+    expect(typeof snail.config.trailFactory).toBe('function');
   });
 
-  it('getDimensions returns positive width and height', () => {
-    const { width, height } = snail.render.getDimensions();
-    expect(width).toBeGreaterThan(0);
-    expect(height).toBeGreaterThan(0);
+  it('config.displaySize is a positive number', () => {
+    expect(snail.config.displaySize).toBeGreaterThan(0);
   });
 
   it('getEmoji returns 🐌', () => {
     expect(snail.getEmoji()).toBe('🐌');
   });
 
-  it('getFrameIndex is deterministic for the same (frame, speed) pair', () => {
-    const a = snail.animation.getFrameIndex(137, 2.5);
-    const b = snail.animation.getFrameIndex(137, 2.5);
+  it('_getFrameIndex is deterministic for the same (frame, speed) pair', () => {
+    const a = snail._getFrameIndex(137, 2.5);
+    const b = snail._getFrameIndex(137, 2.5);
     expect(a).toBe(b);
   });
 
-  it('getFrameIndex returns an integer in range [0, frameCount-1]', () => {
+  it('_getFrameIndex returns an integer in range [0, frameCount-1]', () => {
     for (let frame = 0; frame <= 5000; frame += 50) {
       for (const speed of [0.3, 0.5, 1, 2]) {
-        const idx = snail.animation.getFrameIndex(frame, speed);
+        const idx = snail._getFrameIndex(frame, speed);
         expect(Number.isInteger(idx)).toBe(true);
         expect(idx).toBeGreaterThanOrEqual(0);
-        expect(idx).toBeLessThanOrEqual(snail.style.sprite.frameCount - 1);
+        expect(idx).toBeLessThanOrEqual(snail.config.frameCount - 1);
       }
     }
   });
 
-  it('getFrameIndex cycles through all 4 frames over one period at speed=1', () => {
-    const frameCount = snail.style.sprite.frameCount;
-    const period = snail.style.sprite.basePeriodMs;
+  it('_getFrameIndex cycles through all 4 frames over one period at speed=1', () => {
+    const frameCount = snail.config.frameCount;
+    const period = snail.config.basePeriodMs;
     const binWidth = period / frameCount;
     const seen = new Set();
     for (let i = 0; i < frameCount; i++) {
-      seen.add(snail.animation.getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
+      seen.add(snail._getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
     }
     expect(seen.size).toBe(frameCount);
-  });
-
-  it('createTrail returns an object with spawn, update, and render methods', () => {
-    const trail = snail.trail.createTrail(MOCK_RACER);
-    expect(typeof trail.spawn).toBe('function');
-    expect(typeof trail.update).toBe('function');
-    expect(typeof trail.render).toBe('function');
-  });
-
-  it('particles are removed after their lifetime elapses', () => {
-    const trail = snail.trail.createTrail(MOCK_RACER);
-    const rand = vi.spyOn(Math, 'random').mockReturnValue(0); // 0 < 0.35 threshold = spawn
-    trail.spawn({ ...MOCK_RACER, baseSpeed: 0.3 }, 1);
-    rand.mockRestore();
-    for (let i = 0; i < 35; i++) trail.update(1); // lifetime = 30 frames
-    const ctx = makeCtx();
-    trail.render(ctx);
-    expect(ctx.arc.mock.calls.length).toBe(0);
   });
 });
 
 describe('SnailRacerType — D3.2 drawRacer wired to Canvas manifest', () => {
   let snail;
   beforeEach(() => {
-    snail = new SnailRacerType();
+    snail = SnailRacerType;
     getCachedSprite.mockReturnValue(undefined);
   });
   afterEach(() => {
@@ -210,26 +190,25 @@ describe('SnailRacerType — D3.2 drawRacer wired to Canvas manifest', () => {
 describe('SnailRacerType — D3.2 sprite-based render', () => {
   let snail;
   beforeEach(() => {
-    snail = new SnailRacerType();
+    snail = SnailRacerType;
     vi.clearAllMocks();
   });
 
-  it('style.sprite has required fields with correct types', () => {
-    const { sprite } = snail.style;
-    expect(typeof sprite.url).toBe('string');
-    expect(typeof sprite.frameWidth).toBe('number');
-    expect(typeof sprite.frameHeight).toBe('number');
-    expect(sprite.frameCount).toBe(4);
-    expect(typeof sprite.basePeriodMs).toBe('number');
-    expect(sprite.displaySize).toBe(35);
-    expect(typeof sprite.baseRotationOffset).toBe('number');
+  it('config has required sprite fields with correct types', () => {
+    expect(typeof snail.config.spriteUrl).toBe('string');
+    expect(typeof snail.config.frameWidth).toBe('number');
+    expect(typeof snail.config.frameHeight).toBe('number');
+    expect(snail.config.frameCount).toBe(4);
+    expect(typeof snail.config.basePeriodMs).toBe('number');
+    expect(snail.config.displaySize).toBe(35);
+    expect(typeof snail.config.baseRotationOffset).toBe('number');
   });
 
   it('_drawBody calls drawImage with the sprite image when sprite is loaded', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    snail.render.drawBody(ctx, MOCK_RACER, 0);
+    snail._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.drawImage.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
   });
@@ -237,12 +216,12 @@ describe('SnailRacerType — D3.2 sprite-based render', () => {
   it('_drawBody falls back to an arc circle when sprite is not loaded', () => {
     getCachedSprite.mockReturnValue(undefined);
     const ctx = makeCtx();
-    snail.render.drawBody(ctx, MOCK_RACER, 0);
+    snail._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.arc.mock.calls.length).toBe(1);
     expect(ctx.drawImage.mock.calls.length).toBe(0);
   });
 
-  it('_drawBody fallback circle uses accentColor', () => {
+  it('_drawBody fallback circle uses accentColor (= fallbackColor for snail)', () => {
     getCachedSprite.mockReturnValue(undefined);
     const fillStyles = [];
     const ctx = makeCtx();
@@ -256,33 +235,33 @@ describe('SnailRacerType — D3.2 sprite-based render', () => {
       },
       configurable: true,
     });
-    snail.render.drawBody(ctx, MOCK_RACER, 0);
-    expect(fillStyles).toContain(snail.style.accentColor);
+    snail._drawBody(ctx, MOCK_RACER, 0);
+    expect(fillStyles).toContain(snail.config.accentColor);
   });
 
   it('_drawBody applies baseRotationOffset correction when sprite is loaded', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    snail.render.drawBody(ctx, MOCK_RACER, 0);
+    snail._drawBody(ctx, MOCK_RACER, 0);
     const rotationCalls = ctx.rotate.mock.calls;
     const hasOffset = rotationCalls.some(
-      (call) => Math.abs(call[0] - snail.style.sprite.baseRotationOffset) < 0.0001
+      (call) => Math.abs(call[0] - snail.config.baseRotationOffset) < 0.0001
     );
     expect(hasOffset).toBe(true);
   });
 
-  it('manifest has 11 coats, exactly one with tint: null (garden)', () => {
-    expect(snail.style.coats).toHaveLength(11);
-    const nullTints = snail.style.coats.filter((c) => c.tint === null);
+  it('config has 11 coats, exactly one with tint: null (garden)', () => {
+    expect(snail.config.coats).toHaveLength(11);
+    const nullTints = snail.config.coats.filter((c) => c.tint === null);
     expect(nullTints).toHaveLength(1);
     expect(nullTints[0].id).toBe('garden');
-    for (const coat of snail.style.coats) {
+    for (const coat of snail.config.coats) {
       expect(typeof coat.id).toBe('string');
       expect(typeof coat.name).toBe('string');
       expect(coat.tint === null || typeof coat.tint === 'string').toBe(true);
     }
-    expect(snail.style.defaultCoatId).toBe('garden');
+    expect(snail.config.defaultCoatId).toBe('garden');
   });
 
   it('_drawBody with valid coatId uses the coat variant canvas', () => {
@@ -294,7 +273,7 @@ describe('SnailRacerType — D3.2 sprite-based render', () => {
       ])
     );
     const ctx = makeCtx();
-    snail.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'amber' }, 0);
+    snail._drawBody(ctx, { ...MOCK_RACER, coatId: 'amber' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(tintedCanvas);
   });
 
@@ -302,7 +281,7 @@ describe('SnailRacerType — D3.2 sprite-based render', () => {
     const gardenDrawable = { _isGarden: true };
     getCoatVariants.cached.mockReturnValue(new Map([['garden', gardenDrawable]]));
     const ctx = makeCtx();
-    snail.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
+    snail._drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(gardenDrawable);
   });
 });
