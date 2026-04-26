@@ -1,6 +1,6 @@
 # RaceArena — Racer Data Model
 
-**Status:** Source-of-truth for W2 refactor. Established 2026-04-25 after the W1 fix attempt revealed inconsistencies in the existing model.
+**Status:** Source-of-truth for W2 refactor. Established 2026-04-25. Updated 2026-04-26: D3.5.1 SpriteRacerType base class merged; D6 rteDefinitions field reserved on SpriteRacerType.
 
 ---
 
@@ -63,6 +63,24 @@ Im gesamten Code wird das Feld `racerTypeId` verwendet. **Nicht** `racerId`, **n
 
 Werte: `'horse' | 'duck' | 'rocket' | 'snail' | 'car'` (Phase 7: dynamisch erweiterbar).
 
+### SpriteRacerType (D3.5)
+
+`SpriteRacerType` is a config-driven base class. Consumers call `new SpriteRacerType(config)` — no subclassing. Required config fields:
+
+| Field | Typ | Beschreibung |
+|---|---|---|
+| `id` | string | Unique racer type identifier |
+| `spriteUrl` | string | Path to sprite sheet PNG |
+| `frameCount` | number | Animation frame count |
+| `basePeriodMs` | number | Base animation period at speed 1.0 |
+| `displaySize` | number | Bounding box size in px |
+| `coats` | `{id, name, tint}[]` | Color variant definitions |
+| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` |
+
+Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier`, `baseRotationOffset`, `tintMode` (`'multiply'` or `'mask'`), `maskUrl` (required when `tintMode='mask'`), `fallbackColor`, `rteDefinitions`.
+
+Horse, Duck, and Snail will migrate from handwritten classes to `SpriteRacerType` config objects in D3.5.2.
+
 ### Racer Type Registry
 
 `client/src/modules/racer-types/index.js` exportiert:
@@ -85,6 +103,10 @@ RaceScreen liest aus `sessionStorage['activeRace']`:
 - `players[]` → bekommen alle denselben Type, jeweils einen Coat per Hash
 
 ---
+
+## Racer-Track-Effects (D6 — reserviert)
+
+`SpriteRacerType` speichert ein optionales `rteDefinitions`-Array (Default: `[]`). Es wird akzeptiert, gespeichert und über `getRteDefinitions()` exposiert — aber in der aktuellen Codebase nicht ausgewertet. Phase D6 führt einen `RteManager` in RaceScreen ein, der diese Definitionen ausliest und pro Racer Partikel-Effekte spawnt (z.B. Schlamm-Spray, Wasser-Splash). Schema wird im D6-Spec definiert.
 
 ## Phase-7-Vorausschau
 

@@ -66,6 +66,47 @@ Coverage report: stored in `client/coverage/` (gitignored).
 
 ---
 
+## 2026-04-26 — D3.5.1 (SpriteRacerType + tintSpriteWithMask)
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (racer-types module)
+**Branch:** feat/d35-sprite-racer-type → master (PR #13, squash-merged `cf256d8`)
+
+### npm audit
+
+No new dependencies introduced. Existing findings unchanged (esbuild moderate, tracked in the 2026-04-19 entry).
+
+### ESLint
+
+- **Errors:** 0
+- **Warnings:** 2 (unchanged — existing stub warnings in `modules/track-renderer/index.js`)
+
+### Prettier
+
+All new files auto-formatted via Husky pre-commit hook. `npm run format:check` passes.
+
+### Tests
+
+| Metric | Count |
+|--------|-------|
+| Tests before D3.5.1 | 401 |
+| Tests after D3.5.1 | **453** |
+| New test file | `SpriteRacerType.test.js` — 52 tests across 8 describe blocks |
+| Expanded file | `spriteTinter.test.js` — +5 tests for `tintSpriteWithMask` |
+| Total test files | 31 |
+
+### OWASP items reviewed
+
+No user-facing or server-side changes. Tinting operates entirely on offscreen canvases in the browser; no new input surfaces or data flows introduced.
+
+### Action Items
+
+- [ ] Verify Branding Profiles and System Backup claims in ROADMAP.md against running app (Phase V)
+- [ ] Winner-count wiring: SetupScreen → ResultScreen podium (Phase B / Phase 3)
+- [ ] Remove dead `_createTrail` system from Horse / Duck / Snail in D3.5.2
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |
