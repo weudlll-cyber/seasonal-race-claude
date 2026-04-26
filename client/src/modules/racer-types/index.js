@@ -69,6 +69,7 @@ export { DuckRacerType } from './DuckRacerType.js';
 export { RocketRacerType } from './RocketRacerType.js';
 export { SnailRacerType } from './SnailRacerType.js';
 export { CarRacerType } from './CarRacerType.js';
+export { SpriteRacerType } from './SpriteRacerType.js';
 
 import { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
 import { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';

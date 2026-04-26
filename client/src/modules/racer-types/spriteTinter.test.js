@@ -8,7 +8,13 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { tintSprite, getCoatVariants, _clearTintCache } from './spriteTinter.js';
+import {
+  tintSprite,
+  getCoatVariants,
+  tintSpriteWithMask,
+  _clearTintCache,
+  _clearMaskedTintCache,
+} from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
 
 vi.mock('./spriteLoader.js', () => ({
@@ -141,5 +147,62 @@ describe('getCoatVariants', () => {
     const result = map.get('bay');
     expect(result).not.toBe(mockImg);
     expect(result instanceof HTMLCanvasElement).toBe(true);
+  });
+});
+
+describe('tintSpriteWithMask', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    _clearMaskedTintCache();
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _clearMaskedTintCache();
+  });
+
+  it('returns a canvas with the same dimensions as the source image', () => {
+    const src = { naturalWidth: 512, naturalHeight: 128, src: '/mask-test-src.png' };
+    const mask = { naturalWidth: 512, naturalHeight: 128, src: '/mask-test-mask.png' };
+    const canvas = tintSpriteWithMask(src, mask, '#ff0000');
+    expect(canvas.width).toBe(512);
+    expect(canvas.height).toBe(128);
+  });
+
+  it('returns the same canvas object for the same (source, mask, color) triple', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-src-a.png' };
+    const mask = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-mask-a.png' };
+    const c1 = tintSpriteWithMask(src, mask, '#ff0000');
+    const c2 = tintSpriteWithMask(src, mask, '#ff0000');
+    expect(c1).toBe(c2);
+  });
+
+  it('returns a different canvas for a different tint color with the same mask', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-src-b.png' };
+    const mask = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-mask-b.png' };
+    const c1 = tintSpriteWithMask(src, mask, '#ff0000');
+    const c2 = tintSpriteWithMask(src, mask, '#00ff00');
+    expect(c1).not.toBe(c2);
+  });
+
+  it('returns a different canvas for a different mask with the same color', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-src-c.png' };
+    const maskA = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-mask-c1.png' };
+    const maskB = { naturalWidth: 64, naturalHeight: 64, src: '/mwm-mask-c2.png' };
+    const c1 = tintSpriteWithMask(src, maskA, '#ff0000');
+    const c2 = tintSpriteWithMask(src, maskB, '#ff0000');
+    expect(c1).not.toBe(c2);
+  });
+
+  it('does not pollute the getCoatVariants cache (_variantCache)', async () => {
+    _clearTintCache();
+    const mockImg = { naturalWidth: 32, naturalHeight: 32, src: '/mwm-src-d.png' };
+    loadSprite.mockResolvedValue(mockImg);
+    const mask = { naturalWidth: 32, naturalHeight: 32, src: '/mwm-mask-d.png' };
+    tintSpriteWithMask(mockImg, mask, '#ff0000');
+    expect(getCoatVariants.cached('/mwm-src-d.png')).toBeUndefined();
   });
 });
