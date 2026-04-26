@@ -19,7 +19,12 @@ import {
   openTrackPanTarget,
 } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
+import {
+  lapsFromDuration,
+  lapProgress,
+  currentLap,
+  openTrackFinishT,
+} from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -67,7 +72,7 @@ export default function RaceScreen() {
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [maxLapsState, setMaxLapsState] = useState(1);
+  const [finishTState, setFinishTState] = useState(1);
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -127,13 +132,17 @@ export default function RaceScreen() {
     racerTypeRef.current = getRacerType(typeId);
 
     const trackEmoji = getRacerType(typeId).getEmoji() ?? null;
+    const speedMultiplier = getRacerType(typeId).getSpeedMultiplier();
 
-    // Duration-based lap count (closed tracks only)
+    // Determine finish position in t-space
     const duration = raceData.duration ?? 60;
-    const maxLaps = isOpenTrack ? 1 : lapsFromDuration(duration);
+    const finishT = isOpenTrack
+      ? openTrackFinishT(raceData.targetDuration ?? duration, speedMultiplier)
+      : (raceData.targetLaps ?? lapsFromDuration(duration));
+    const maxLaps = isOpenTrack ? 1 : finishT;
 
     camDirRef.current = new CameraDirector(shapeRef.current.getBoundingBox());
-    setMaxLapsState(maxLaps);
+    setFinishTState(finishT);
 
     // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
     function buildOffsets(n) {
@@ -164,11 +173,11 @@ export default function RaceScreen() {
       raceStart: null,
       lastTs: null,
       finishedCount: 0,
-      winnersNeeded: Math.min(raceData.winners ?? 3, nRacers),
       dustParticles: [],
       burstParticles: [],
       trackWidth,
       maxLaps,
+      finishT,
       camX: 0,
       camY: 0,
       finalLapStartTs: null,
@@ -179,13 +188,14 @@ export default function RaceScreen() {
         lap: 1,
         trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
-        baseSpeed: 0.00085 + Math.random() * 0.00035,
-        jitterFreq: 0.0006 + Math.random() * 0.0014, // independent sine period per racer
+        baseSpeed: (0.00085 + Math.random() * 0.00035) * speedMultiplier,
+        jitterFreq: 0.0006 + Math.random() * 0.0014,
         jitterPhase: Math.random() * Math.PI * 2,
         color: LANE_COLORS[i % LANE_COLORS.length],
         coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
         finished: false,
         finishRank: null,
+        runoutDecay: 1,
         trail: [],
         x: 0,
         y: 0,
@@ -569,6 +579,45 @@ export default function RaceScreen() {
       ctx.fillText('FINISH', midX, midY - 8);
     }
 
+    // Finish-line marker for open tracks at finishT position
+    function drawOpenTrackFinishLine(shape, ft) {
+      const pOuter = shape.getPosition(ft, 1.0);
+      const pInner = shape.getPosition(ft, -1.0);
+      const dx = pOuter.x - pInner.x,
+        dy = pOuter.y - pInner.y;
+      const segments = 8;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffd700';
+      for (let i = 0; i < segments; i++) {
+        const f0 = i / segments,
+          f1 = (i + 1) / segments;
+        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
+        ctx.beginPath();
+        ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
+        ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
+        const perp = pInner.angle + Math.PI / 2;
+        const hw = 7;
+        ctx.lineTo(
+          pInner.x + dx * f1 + Math.cos(perp) * hw,
+          pInner.y + dy * f1 + Math.sin(perp) * hw
+        );
+        ctx.lineTo(
+          pInner.x + dx * f0 + Math.cos(perp) * hw,
+          pInner.y + dy * f0 + Math.sin(perp) * hw
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+      const midX = (pOuter.x + pInner.x) / 2,
+        midY = (pOuter.y + pInner.y) / 2;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('FINISH', midX, midY - 8);
+    }
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
@@ -590,11 +639,15 @@ export default function RaceScreen() {
         }
       } else if (st.phase === PHASE.RACING) {
         for (const r of st.racers) {
+          // Per-racer sine jitter — each racer has its own frequency and phase,
+          // so speeds fluctuate independently instead of all spiking together.
+          const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
           if (!r.finished) {
-            // Per-racer sine jitter — each racer has its own frequency and phase,
-            // so speeds fluctuate independently instead of all spiking together.
-            const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
             r.t += (r.baseSpeed + jitter) * (dt / 16);
+          } else {
+            // Run-out: finished racers keep moving but decay to a stop
+            r.runoutDecay *= 0.97;
+            r.t += (r.baseSpeed * r.runoutDecay + jitter * r.runoutDecay) * (dt / 16);
           }
         }
         computePositions();
@@ -602,7 +655,7 @@ export default function RaceScreen() {
 
         for (const r of st.racers) {
           if (r.finished) continue;
-          if (r.t >= st.maxLaps) {
+          if (r.t >= st.finishT) {
             r.finished = true;
             r.finishRank = ++st.finishedCount;
             emitBurst(r.x, r.y);
@@ -642,7 +695,7 @@ export default function RaceScreen() {
           );
         }
 
-        if (st.finishedCount >= st.winnersNeeded) {
+        if (st.finishedCount >= nRacers) {
           st.phase = PHASE.FINISHED;
           setPhase(PHASE.FINISHED);
           const byRank = st.racers
@@ -658,13 +711,13 @@ export default function RaceScreen() {
                 color: r.color,
                 index: r.index,
                 lap: r.lap ?? 1,
-                progress: Math.min(lapProgress(r.t, st.maxLaps) * 100, 100),
+                progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
               })),
               elapsedTime: Math.round((ts - st.raceStart) / 1000),
               race: raceData,
             })
           );
-          setTimeout(() => fadeNavigate('/results'), 2500);
+          setTimeout(() => fadeNavigate('/results'), 2000);
         }
 
         // Final lap detection (announce when leader enters last lap)
@@ -725,6 +778,7 @@ export default function RaceScreen() {
           ctx.restore();
         }
         drawEditorTrackSurface(ctx, shape, ts);
+        if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
         drawParticles();
         drawRacers();
         ctx.restore();
@@ -842,7 +896,7 @@ export default function RaceScreen() {
                     <div
                       className="sb-bar-fill"
                       style={{
-                        width: `${Math.min(lapProgress(r.t ?? 0, maxLapsState), 1) * 100}%`,
+                        width: `${Math.min(lapProgress(r.t ?? 0, finishTState), 1) * 100}%`,
                         background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
                       }}
                     />
