@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
-import { getRacerType, RACER_TYPE_EMOJIS, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
+import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import {
@@ -126,7 +126,7 @@ export default function RaceScreen() {
 
     racerTypeRef.current = getRacerType(typeId);
 
-    const trackEmoji = RACER_TYPE_EMOJIS[typeId] ?? null;
+    const trackEmoji = getRacerType(typeId).getEmoji() ?? null;
 
     // Duration-based lap count (closed tracks only)
     const duration = raceData.duration ?? 60;
