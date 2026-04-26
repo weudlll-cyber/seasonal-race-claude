@@ -1,7 +1,8 @@
 # RaceArena — Racer Data Model
 
-**Status:** Updated 2026-04-26 post D3.5.3 + B-7+B-8+W3 merges.
+**Status:** Updated 2026-04-26 post D9 merge (PR #19).
 All 12 racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
+`speedMultiplier` wirkt seit D9 effektiv auf die Race-Speed.
 
 ---
 
@@ -69,8 +70,9 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 | `motorbike` | 🏍️ | 8 | 500 | 36 | 1.05 | **mask** |
 | `plane` | ✈️ | 8 | 600 | 42 | 1.15 | **mask** |
 
-> **speedMultiplier:** Wirkt erst nach D9. Aktuell in Configs gesetzt aber inert in der
-> Race-Engine. Nach D9: linearer Multiplikator auf `baseSpeed` pro Racer-Frame.
+> **speedMultiplier:** Wirkt seit D9 (PR #19) als linearer Multiplikator auf `baseSpeed`.
+> Formel: `baseSpeed = (BASE_SPEED_MIN + random * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier`.
+> Konstanten aus `lapUtils.js`: `BASE_SPEED_MIN = 0.00085`, `BASE_SPEED_MAX = 0.0012`.
 >
 > **tintMode `mask`:** Buggy, Motorbike, Plane verwenden Mask-Tinting via `<sprite>-mask.png`.
 > Nur die Maske wird eingefärbt; der Rest des Sprites bleibt unverändert. Alle anderen Types
@@ -87,8 +89,44 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 | `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |
 | `racearena:trackGeometries:<id>` | Track-Geometry-Records (Catmull-Rom Spline-Punkte) | Aktiv |
 | `racearena:trackGeometries:index` | Geometry-Index | Aktiv |
-| `sessionStorage['activeRace']` | Race-Setup-Daten für Setup → Race-Screen Übergang. Felder: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp` | Aktiv |
+| `sessionStorage['activeRace']` | Race-Setup-Daten für Setup → Race-Screen Übergang. Felder: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration` | Aktiv |
 | `sessionStorage['activeRace'].racerTypeId` | **W3 Race-Override:** session-only, zurückgesetzt bei Track-Wechsel. Kein Persist. | Aktiv (post W3) |
+| `sessionStorage['activeRace'].raceMode` | `'laps'` (Closed-Track) oder `'time'` (Open-Track). Steuert Race-End-Logik in RaceScreen. | Aktiv (post D9) |
+| `sessionStorage['activeRace'].targetLaps` | Gewählte Lap-Anzahl (integer, 1–4). Nur gesetzt wenn `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`. | Aktiv (post D9) |
+| `sessionStorage['activeRace'].targetDuration` | Gewählte Race-Dauer in Sekunden. Nur gesetzt wenn `raceMode='time'`. Fallback: `duration`. | Aktiv (post D9) |
+
+---
+
+## Race-End-Logik (seit D9, PR #19)
+
+### Closed-Track (geschlossene Oval/Rennstrecke)
+
+- **Modus:** `raceMode = 'laps'`
+- **Ziellinie:** `finishT = targetLaps` (integer in t-space, z.B. `2` = 2 volle Runden)
+- **Spielleiter-Wahl:** explizite Lap-Auswahl (1–4) im SetupScreen mit Live-Schätzung in
+  Sekunden pro Racer-Type. Default: `lapsFromDuration(duration)` (Auto aus Dauer).
+- **Race endet wenn:** alle Spieler `r.t >= finishT` erreicht haben + Auslauf abgeschlossen
+- **Lap-Counter:** angezeigt während des Rennens (LAP X / N)
+
+### Open-Track (Sprint-Strecke)
+
+- **Modus:** `raceMode = 'time'`
+- **Ziellinie:** dynamische Position `finishT = openTrackFinishT(targetDuration, speedMultiplier)`
+  — basiert auf theoretisch schnellstem Racer: `min(1.0, BASE_SPEED_MAX × sm × REFERENCE_FPS × seconds)`
+- **Constraint:** maximale finishT = 1.0 (Ende der Strecke). D10 hebt die 1280px-Beschränkung auf.
+- **Race endet wenn:** alle Spieler die dynamische Ziellinie passiert haben + Auslauf abgeschlossen
+
+### Auslauf-Verhalten (beide Track-Typen)
+
+Nach dem Überqueren der Ziellinie bewegen sich alle Spieler weiter mit abklingendem Speed:
+- `r.runoutDecay *= 0.97` pro Frame (ca. 62.5 FPS)
+- Effektive Geschwindigkeit: `baseSpeed × runoutDecay` — klingt über mehrere Sekunden aus
+- Prevents abruptes Einfrieren an der Ziellinie
+
+### Result-Delay
+
+2 Sekunden nach der letzten Ziellinien-Passage → fade zu `/results`.
+Gibt dem Publikum Zeit die Endposition zu sehen.
 
 ---
 

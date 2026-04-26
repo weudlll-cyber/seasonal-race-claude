@@ -118,3 +118,57 @@ auf Pattern-Ebene kann den Kontext (umgebender try/catch-Block) übersehen.
 **Konsequenz:** Findings beim Fixen immer im Kontext prüfen. Korrektur ehrlich melden
 wenn Finding sich als falsch-positiv herausstellt. Das erhöht Vertrauen in zukünftige
 Reports.
+
+---
+
+## Lesson 8 — Test-Framework-Integration braucht Exclude-Patterns (PR #19)
+
+**Kontext:** Bei der Einführung von Playwright in PR #19 wurde das `e2e/`-Pattern nicht in
+`vitest.config.js` ausgeschlossen. Vitest versuchte den Playwright-Spec zu
+importieren — `npm test` schlug rot fehl, obwohl 628 Unit-Tests und 22
+e2e-Tests einzeln grün waren. Erst Quality-Gate hat das aufgedeckt.
+
+**Erkenntnis:** Vitest matcht standardmäßig alle `*.spec.*`-Dateien — inkl. Playwright-Specs
+die vollkommen andere Globals (`test.describe`, `page`) erwarten. Die Fehler erscheinen
+erst beim Versuch den Spec zu importieren, nicht beim Schreiben.
+
+**Konsequenz:** Bei Integration eines neuen Test-Frameworks: explizit
+`exclude`-Patterns in den anderen Test-Configs ergänzen. Beim Hinzufügen
+einer neuen Test-Verzeichnis-Struktur (`e2e/`, `integration/`, etc.):
+Code-Sweep über alle Test-Configs, sicherstellen dass keiner versucht den
+falschen Verzeichnis-Inhalt zu laden.
+
+---
+
+## Lesson 9 — Konstanten-Extraktion ist nur halb-fertig wenn nicht alle Konsumenten umgestellt werden (PR #19)
+
+**Kontext:** D9 hat Konstanten in `lapUtils.js` exportiert (`BASE_SPEED_MIN`, `BASE_SPEED_MAX`,
+`REFERENCE_FPS`) damit UI-Estimates und Race-Engine dieselben Werte verwenden.
+RaceScreen importierte sie aber nicht und duplizierte die Werte direkt im Code.
+Numerisch identisch zum Zeitpunkt — aber wenn die Konstanten getunt würden,
+wäre stilles Drift entstanden.
+
+**Erkenntnis:** Konstanten-Extraktion in eine Shared-Datei ist erst vollständig wenn alle
+Konsumenten — bestehende und neue — tatsächlich importieren. Numerische Gleichheit im
+Moment der Extraktion schützt nicht vor künftigem Drift.
+
+**Konsequenz:** Wenn Konstanten in eine Shared-Datei extrahiert werden:
+Code-Sweep über alle Stellen wo der gleiche Wert vorkommt, alle Konsumenten
+auf den Import umstellen. Nicht nur die "neuen" Konsumenten — auch die
+bestehenden. Tests sollten die Symmetrie absichern.
+
+---
+
+## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
+
+**Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
+Standard-Projekt-File-Header geschrieben. Test-Infrastruktur ist auch Repo-Code
+und sollte denselben Konventionen folgen wie Source-Files.
+
+**Erkenntnis:** Der Reflex "das ist nur eine Config / ein Test" führt dazu dass neue
+Infrastruktur-Files die im Rest des Repos etablierten Konventionen nicht erben. Das
+fällt erst beim Quality-Gate auf, nicht beim Schreiben.
+
+**Konsequenz:** Bei Erstellung neuer Files (egal ob Source, Config, oder Test):
+Standard-Header anwenden. Quality-Gate-Check für File-Headers gilt für alle
+`.js`/`.jsx`/`.config.*` Files, nicht nur Source.
