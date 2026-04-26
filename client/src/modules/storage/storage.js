@@ -87,8 +87,9 @@ export function newId() {
   }
 })();
 
-// One-time migration: 'car' → 'buggy' in track defaultRacerTypeId (D3.5.3).
+// One-time migration: 'car' → 'buggy' in all racer-type fields on tracks (D3.5.3 / B8).
 // CarRacerType was removed; BuggyRacerType is its successor.
+// Handles the full legacy field chain: defaultRacerTypeId, racerTypeId, racerId, and icon.
 (function migrateCarToBuggy() {
   try {
     const raw = localStorage.getItem('racearena:tracks');
@@ -101,10 +102,22 @@ export function newId() {
         track.defaultRacerTypeId = 'buggy';
         changed = true;
       }
+      if (track.racerTypeId === 'car') {
+        track.racerTypeId = 'buggy';
+        changed = true;
+      }
+      if (track.racerId === 'car') {
+        track.racerId = 'buggy';
+        changed = true;
+      }
+      if (track.icon === '🚗') {
+        track.icon = '🚙';
+        changed = true;
+      }
     }
     if (changed) {
       localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
-      console.warn('[RaceArena] Migrated defaultRacerTypeId: car → buggy (D3.5.3 rename).');
+      console.warn('[RaceArena] Migrated car → buggy in track racer-type fields (D3.5.3/B8).');
     }
   } catch {
     // Best-effort — migration failure must not break the app.

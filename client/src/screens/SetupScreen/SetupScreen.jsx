@@ -35,6 +35,7 @@ function SetupScreen() {
 
   // Read tracks and defaults from storage so Dev Panel changes propagate
   const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [racerTypeOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
 
   // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
   const tracks = (() => {
@@ -78,6 +79,13 @@ function SetupScreen() {
   useEffect(() => {
     setRacerTypeOverride(null);
   }, [selectedTrackId]);
+
+  // Clear override if the chosen type gets disabled while it's selected.
+  useEffect(() => {
+    if (racerTypeOverride && racerTypeOverrides[racerTypeOverride] === false) {
+      setRacerTypeOverride(null);
+    }
+  }, [racerTypeOverrides, racerTypeOverride]);
 
   // Initialise race settings from stored defaults; user may override during the session
   const [raceSettings, setRaceSettings] = useState({
@@ -257,7 +265,7 @@ function SetupScreen() {
                       cursor: 'pointer',
                     }}
                   >
-                    {RACER_TYPE_IDS.map((id) => (
+                    {RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false).map((id) => (
                       <option key={id} value={id}>
                         {RACER_TYPE_LABELS[id]}
                         {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
