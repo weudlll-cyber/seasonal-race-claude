@@ -28,9 +28,9 @@ export { MotorbikeRacerType } from './MotorbikeRacerType.js';
 export { PlaneRacerType } from './PlaneRacerType.js';
 export { SpriteRacerType } from './SpriteRacerType.js';
 
-import { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
-import { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
-import { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
+import { HorseRacerType } from './HorseRacerType.js';
+import { DuckRacerType } from './DuckRacerType.js';
+import { SnailRacerType } from './SnailRacerType.js';
 import { ElephantRacerType } from './ElephantRacerType.js';
 import { GiraffeRacerType } from './GiraffeRacerType.js';
 import { SnakeRacerType } from './SnakeRacerType.js';
@@ -42,6 +42,7 @@ import { MotorbikeRacerType } from './MotorbikeRacerType.js';
 import { PlaneRacerType } from './PlaneRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
+import { storageGet, storageSet, KEYS } from '../storage/storage.js';
 
 // All 12 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
@@ -81,21 +82,6 @@ export const RACER_TYPE_LABELS = {
   plane: 'Plane ✈️',
 };
 
-export const RACER_TYPE_EMOJIS = {
-  horse: '🐴',
-  duck: '🦆',
-  snail: '🐌',
-  elephant: '🐘',
-  giraffe: '🦒',
-  snake: '🐍',
-  dragon: '🐉',
-  f1: '🏎️',
-  rocket: '🚀',
-  buggy: '🚙',
-  motorbike: '🏍️',
-  plane: '✈️',
-};
-
 /**
  * Returns a racer-type instance for the given typeId.
  * All types are SpriteRacerType instances — returns the shared singleton.
@@ -105,9 +91,51 @@ export function getRacerType(typeId) {
   return RACER_TYPES[typeId] ?? HorseRacerType;
 }
 
+/** Alias for getRacerType — preferred in contexts where the id semantics matter. */
+export function getRacerTypeById(id) {
+  return RACER_TYPES[id] ?? HorseRacerType;
+}
+
 /** Returns all registered racer type IDs. */
 export function listRacerTypes() {
   return Object.keys(RACER_TYPES);
+}
+
+/**
+ * Returns an array of all 12 racer types with isActive resolved from the override map.
+ * All types are active by default; an operator can disable individual types via
+ * setRacerTypeOverride(). The code registry (RACER_TYPES) is always the source of truth.
+ */
+export function listAllRacerTypes() {
+  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
+  return RACER_TYPE_IDS.map((id) => ({
+    id,
+    name: RACER_TYPE_LABELS[id] ?? id,
+    emoji: RACER_TYPES[id].getEmoji(),
+    speedMultiplier: RACER_TYPES[id].getSpeedMultiplier(),
+    isActive: overrides[id] !== false,
+  }));
+}
+
+/**
+ * Persist an isActive override for a racer type.
+ * Pass isActive=true to restore the default (removes the override entry).
+ */
+export function setRacerTypeOverride(id, isActive) {
+  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
+  if (isActive) {
+    delete overrides[id];
+  } else {
+    overrides[id] = false;
+  }
+  storageSet(KEYS.RACER_TYPE_OVERRIDES, overrides);
+}
+
+/** Remove any stored override for id — restores the type to active (default). */
+export function resetRacerTypeOverride(id) {
+  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
+  delete overrides[id];
+  storageSet(KEYS.RACER_TYPE_OVERRIDES, overrides);
 }
 
 let _warmedUp = false;

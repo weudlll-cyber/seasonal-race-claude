@@ -8,7 +8,7 @@
 //              changes are reflected immediately
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
@@ -20,6 +20,11 @@ import {
   DEFAULT_RACE_DEFAULTS,
   DEFAULT_RACERS,
 } from '../../modules/storage/defaults.js';
+import {
+  getRacerType,
+  RACER_TYPE_IDS,
+  RACER_TYPE_LABELS,
+} from '../../modules/racer-types/index.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -30,6 +35,7 @@ function SetupScreen() {
 
   // Read tracks and defaults from storage so Dev Panel changes propagate
   const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [racerTypeOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
 
   // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
   const tracks = (() => {
@@ -68,6 +74,18 @@ function SetupScreen() {
   });
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  const [racerTypeOverride, setRacerTypeOverride] = useState(null);
+
+  useEffect(() => {
+    setRacerTypeOverride(null);
+  }, [selectedTrackId]);
+
+  // Clear override if the chosen type gets disabled while it's selected.
+  useEffect(() => {
+    if (racerTypeOverride && racerTypeOverrides[racerTypeOverride] === false) {
+      setRacerTypeOverride(null);
+    }
+  }, [racerTypeOverrides, racerTypeOverride]);
 
   // Initialise race settings from stored defaults; user may override during the session
   const [raceSettings, setRaceSettings] = useState({
@@ -84,12 +102,13 @@ function SetupScreen() {
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
 
   function handleStartRace() {
+    const effectiveTypeId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
     const race = {
       racers: players,
       trackId: selectedTrackId,
       trackName: selectedTrack?.name,
       geometryId: selectedTrack?.geometryId ?? null,
-      racerTypeId: selectedTrack?.defaultRacerTypeId || 'horse',
+      racerTypeId: effectiveTypeId,
       worldWidth: selectedTrack?.worldWidth ?? 1280,
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
@@ -104,11 +123,9 @@ function SetupScreen() {
     const track = quickTrack;
     if (!track || !track.geometryId) return;
 
-    // 6 test players — icon matches the track's racer type
-    const typeId = track.defaultRacerTypeId || 'horse';
-    const trackIcon =
-      { horse: '🐴', duck: '🦆', rocket: '🚀', snail: '🐌', car: '🚗' }[typeId] ??
-      DEFAULT_RACERS[0].emoji;
+    const defaultTypeId = track.defaultRacerTypeId || 'horse';
+    const effectiveTypeId = racerTypeOverride ?? defaultTypeId;
+    const trackIcon = getRacerType(effectiveTypeId).getEmoji();
     const testPlayers = Array.from({ length: 6 }, (_, i) => ({
       name: `Player ${i + 1}`,
       color: DEFAULT_RACERS[i % DEFAULT_RACERS.length].color,
@@ -120,7 +137,7 @@ function SetupScreen() {
       trackId: track.id,
       trackName: track.name,
       geometryId: track.geometryId ?? null,
-      racerTypeId: typeId,
+      racerTypeId: effectiveTypeId,
       worldWidth: track.worldWidth ?? 1280,
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
@@ -193,7 +210,9 @@ function SetupScreen() {
                     color: 'var(--color-accent)',
                   }}
                 >
-                  {selectedTrack.icon}
+                  {getRacerType(
+                    racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                  ).getEmoji()}
                 </span>
               )}
             </button>
@@ -216,6 +235,45 @@ function SetupScreen() {
                 selectedTrackId={selectedTrackId}
                 onChange={setSelectedTrackId}
               />
+              {selectedTrack && (
+                <div style={{ marginTop: '1rem' }}>
+                  <label
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--color-muted)',
+                      display: 'block',
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Racer type for this race
+                  </label>
+                  <select
+                    value={racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setRacerTypeOverride(
+                        val === (selectedTrack.defaultRacerTypeId ?? 'horse') ? null : val
+                      );
+                    }}
+                    style={{
+                      background: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '4px',
+                      padding: '0.35rem 0.6rem',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false).map((id) => (
+                      <option key={id} value={id}>
+                        {RACER_TYPE_LABELS[id]}
+                        {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
           {activeTab === 2 && (
@@ -232,7 +290,10 @@ function SetupScreen() {
             <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
             {selectedTrack ? (
               <strong>
-                {selectedTrack.icon} {selectedTrack.name}
+                {getRacerType(
+                  racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                ).getEmoji()}{' '}
+                {selectedTrack.name}
               </strong>
             ) : (
               'No track selected'
@@ -268,7 +329,7 @@ function SetupScreen() {
                       transition: 'all 0.15s',
                     }}
                   >
-                    {t.icon} {t.name}
+                    {getRacerType(t.defaultRacerTypeId ?? 'horse').getEmoji()} {t.name}
                   </button>
                 ))}
               </div>

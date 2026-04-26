@@ -1,3 +1,10 @@
+// ============================================================
+// File:        bubbles.js
+// Path:        client/src/modules/track-effects/effects/bubbles.js
+// Project:     RaceArena
+// Description: Track effect — floating bubble particles along the track path
+// ============================================================
+
 const configSchema = [
   { key: 'count', type: 'range', min: 10, max: 100, step: 5, default: 40, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 3, step: 0.1, default: 1.2, label: 'Size' },
