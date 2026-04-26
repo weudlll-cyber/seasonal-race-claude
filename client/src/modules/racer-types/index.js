@@ -82,21 +82,6 @@ export const RACER_TYPE_LABELS = {
   plane: 'Plane ✈️',
 };
 
-export const RACER_TYPE_EMOJIS = {
-  horse: '🐴',
-  duck: '🦆',
-  snail: '🐌',
-  elephant: '🐘',
-  giraffe: '🦒',
-  snake: '🐍',
-  dragon: '🐉',
-  f1: '🏎️',
-  rocket: '🚀',
-  buggy: '🚙',
-  motorbike: '🏍️',
-  plane: '✈️',
-};
-
 /**
  * Returns a racer-type instance for the given typeId.
  * All types are SpriteRacerType instances — returns the shared singleton.

@@ -1,3 +1,10 @@
+// ============================================================
+// File:        EffectConfig.jsx
+// Path:        client/src/components/EffectConfig/EffectConfig.jsx
+// Project:     RaceArena
+// Description: UI component for configuring per-track particle effects
+// ============================================================
+
 import { listEffects, getEffect, getDefaultConfig } from '../../modules/track-effects/index.js';
 import s from './EffectConfig.module.css';
 

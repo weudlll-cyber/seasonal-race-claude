@@ -1,3 +1,10 @@
+// ============================================================
+// File:        useHistory.js
+// Path:        client/src/screens/TrackEditor/useHistory.js
+// Project:     RaceArena
+// Description: Undo/redo history hook for the Track Editor
+// ============================================================
+
 import { useState, useRef, useCallback } from 'react';
 
 const MAX_HISTORY = 50;

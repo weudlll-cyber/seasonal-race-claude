@@ -113,7 +113,7 @@ export default function RaceScreen() {
     }
 
     shapeRef.current = new EditorShape(geometry);
-    // TODO: add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
+    // TODO(Phase Q): add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
     const bgImagePath = geometry.backgroundImage ?? null;
