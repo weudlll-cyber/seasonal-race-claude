@@ -1,0 +1,73 @@
+/* ============================================================
+   File:        InfoTooltip.module.css
+   Path:        client/src/components/InfoTooltip/InfoTooltip.module.css
+   Project:     RaceArena
+   Created:     2026-04-26
+   Description: Styles for the InfoTooltip component.
+                Phase T will apply this component to existing Dev-Screen fields.
+   ============================================================ */
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3a3a4a;
+  color: var(--color-muted);
+  font-size: 9px;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+  transition: background var(--transition, 150ms ease);
+}
+
+.icon:hover,
+.icon:focus {
+  background: var(--color-primary, #7c3aed);
+  color: #fff;
+  outline: none;
+}
+
+.tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  padding: 0.55rem 0.7rem;
+  background: #1e1e2a;
+  border: 1px solid #3a3a4a;
+  border-radius: 6px;
+  color: var(--color-text, #e8e8f0);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: normal;
+  text-align: left;
+}
+
+/* Keep tooltip inside viewport on right-edge icons */
+.tipRight {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.wrapper:hover .tip,
+.icon:focus + .tip {
+  display: block;
+}

@@ -12,6 +12,12 @@
 //              No class-based RacerTypes remain. CarRacerType removed,
 //              replaced by BuggyRacerType. COATS_BY_TYPE auto-derived
 //              from type configs. warmUpAllRacerTypes handles mask types.
+//
+//              D3.5.5: Override-API extended to support 6 tunable fields
+//              (speedMultiplier, displaySize, basePeriodMs, leaderRingColor,
+//              leaderEllipseRx, leaderEllipseRy). Storage schema migrated
+//              from { id: false } → { id: { isActive: false } }.
+//              CONFIG_SNAPSHOT captures code defaults before any override.
 // ============================================================
 
 export { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
@@ -101,41 +107,150 @@ export function listRacerTypes() {
   return Object.keys(RACER_TYPES);
 }
 
+// ── D3.5.5 tunable override infrastructure ────────────────────────────────
+
+/** Fields that can be overridden via the Dev-Screen tuning UI. */
+export const TUNABLE_FIELDS = [
+  'speedMultiplier',
+  'displaySize',
+  'basePeriodMs',
+  'leaderRingColor',
+  'leaderEllipseRx',
+  'leaderEllipseRy',
+];
+
+/**
+ * Snapshot of original code-default values for all tunable fields, captured
+ * before any boot-time override is applied. Used by reset-to-default logic.
+ */
+export const CONFIG_SNAPSHOT = Object.freeze(
+  Object.fromEntries(
+    RACER_TYPE_IDS.map((id) => [
+      id,
+      Object.freeze(Object.fromEntries(TUNABLE_FIELDS.map((f) => [f, RACER_TYPES[id].config[f]]))),
+    ])
+  )
+);
+
+/**
+ * Migrate legacy storage format { id: false } → { id: { isActive: false } }.
+ * New entries (already objects) are passed through unchanged.
+ */
+export function normalizeOverrideMap(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  for (const [id, val] of Object.entries(raw)) {
+    if (val === false) out[id] = { isActive: false };
+    else if (val && typeof val === 'object') out[id] = val;
+  }
+  return out;
+}
+
+/** Apply a single tunable field directly to the live config (no storage write). */
+export function applyTunableOverride(id, fieldName, value) {
+  if (RACER_TYPES[id] && TUNABLE_FIELDS.includes(fieldName)) {
+    RACER_TYPES[id].config[fieldName] = value;
+  }
+}
+
+/** Restore a tunable field to its code default (no storage write). */
+export function restoreTunableDefault(id, fieldName) {
+  const snap = CONFIG_SNAPSHOT[id];
+  if (RACER_TYPES[id] && snap && fieldName in snap) {
+    RACER_TYPES[id].config[fieldName] = snap[fieldName];
+  }
+}
+
+/** Apply all stored tunable overrides to live configs. Called once at boot. */
+function _applyStoredTunableOverrides() {
+  const raw = storageGet(KEYS.RACER_TYPE_OVERRIDES);
+  if (!raw) return;
+  const overrides = normalizeOverrideMap(raw);
+  for (const [id, fields] of Object.entries(overrides)) {
+    if (!RACER_TYPES[id]) continue;
+    for (const field of TUNABLE_FIELDS) {
+      if (field in fields) RACER_TYPES[id].config[field] = fields[field];
+    }
+  }
+}
+
+// ── Public API ────────────────────────────────────────────────────────────
+
 /**
  * Returns an array of all 12 racer types with isActive resolved from the override map.
  * All types are active by default; an operator can disable individual types via
  * setRacerTypeOverride(). The code registry (RACER_TYPES) is always the source of truth.
  */
 export function listAllRacerTypes() {
-  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
+  const raw = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
+  const overrides = normalizeOverrideMap(raw);
   return RACER_TYPE_IDS.map((id) => ({
     id,
     name: RACER_TYPE_LABELS[id] ?? id,
     emoji: RACER_TYPES[id].getEmoji(),
     speedMultiplier: RACER_TYPES[id].getSpeedMultiplier(),
-    isActive: overrides[id] !== false,
+    isActive: (overrides[id]?.isActive ?? true) !== false,
   }));
 }
 
 /**
- * Persist an isActive override for a racer type.
- * Pass isActive=true to restore the default (removes the override entry).
+ * Set a field override for a racer type.
+ *
+ * setRacerTypeOverride(id, 'isActive', false)       — disable type
+ * setRacerTypeOverride(id, 'isActive', true)        — re-enable type
+ * setRacerTypeOverride(id, 'speedMultiplier', 1.2)  — tune a config field
+ *
+ * For tunable (non-isActive) fields the live config is also mutated so the
+ * next race picks up the new value without a page reload.
  */
-export function setRacerTypeOverride(id, isActive) {
-  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
-  if (isActive) {
-    delete overrides[id];
+export function setRacerTypeOverride(id, fieldName, value) {
+  const all = normalizeOverrideMap(storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {});
+  const typeOverrides = { ...(all[id] ?? {}) };
+
+  if (fieldName === 'isActive' && value === true) {
+    delete typeOverrides.isActive;
   } else {
-    overrides[id] = false;
+    typeOverrides[fieldName] = value;
   }
-  storageSet(KEYS.RACER_TYPE_OVERRIDES, overrides);
+
+  if (Object.keys(typeOverrides).length === 0) {
+    delete all[id];
+  } else {
+    all[id] = typeOverrides;
+  }
+  storageSet(KEYS.RACER_TYPE_OVERRIDES, all);
+
+  if (TUNABLE_FIELDS.includes(fieldName)) {
+    applyTunableOverride(id, fieldName, value);
+  }
 }
 
-/** Remove any stored override for id — restores the type to active (default). */
-export function resetRacerTypeOverride(id) {
-  const overrides = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
-  delete overrides[id];
-  storageSet(KEYS.RACER_TYPE_OVERRIDES, overrides);
+/**
+ * Reset overrides for a type.
+ *
+ * resetRacerTypeOverride(id)             — remove all overrides for id
+ * resetRacerTypeOverride(id, fieldName)  — remove one field override
+ *
+ * Tunable fields are also restored to code defaults in the live config.
+ */
+export function resetRacerTypeOverride(id, fieldName) {
+  const all = normalizeOverrideMap(storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {});
+
+  if (fieldName === undefined) {
+    if (all[id]) {
+      for (const f of TUNABLE_FIELDS) {
+        if (f in all[id]) restoreTunableDefault(id, f);
+      }
+      delete all[id];
+    }
+  } else {
+    const typeOverrides = { ...(all[id] ?? {}) };
+    if (TUNABLE_FIELDS.includes(fieldName)) restoreTunableDefault(id, fieldName);
+    delete typeOverrides[fieldName];
+    if (Object.keys(typeOverrides).length === 0) delete all[id];
+    else all[id] = typeOverrides;
+  }
+  storageSet(KEYS.RACER_TYPE_OVERRIDES, all);
 }
 
 let _warmedUp = false;
@@ -166,5 +281,6 @@ export function _resetWarmUpForTesting() {
   _warmedUp = false;
 }
 
-// Warm up on module import.
+// Apply stored tunable overrides and warm up sprites on module import.
+_applyStoredTunableOverrides();
 warmUpAllRacerTypes();
