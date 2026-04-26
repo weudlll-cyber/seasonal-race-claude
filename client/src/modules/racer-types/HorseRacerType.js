@@ -39,8 +39,8 @@ export class HorseRacerType {
         url: SPRITE_URL,
         frameWidth: 128,
         frameHeight: 128,
-        frameCount: 4,
-        basePeriodMs: 500,
+        frameCount: 8,
+        basePeriodMs: 700,
         // Sprite faces up (−Y in canvas). Race engine forward = +X (east).
         // Rotate by +π/2 so sprite visual forward aligns with engine forward.
         baseRotationOffset: Math.PI / 2,
