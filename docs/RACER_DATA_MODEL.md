@@ -1,8 +1,9 @@
 # RaceArena — Racer Data Model
 
-**Status:** Updated 2026-04-26 post D9 merge (PR #19).
+**Status:** Updated 2026-04-26 post D3.5.5 merge (PR #21).
 All 12 racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
 `speedMultiplier` wirkt seit D9 effektiv auf die Race-Speed.
+6 Felder sind seit D3.5.5 live-tunbar via Dev-Screen Edit-Modal.
 
 ---
 
@@ -19,6 +20,16 @@ Spielleiter nichts überschreibt.
 **Race** — ein konkretes laufendes Rennen mit einem Track und einem (genau einem) Racer Type.
 Alle Spieler im Race nutzen denselben Racer Type — keine Mischung. Spieler unterscheiden sich
 durch Coat (Farbvariante) und Name.
+
+> **Ein Race verwendet immer einen einzigen Racer-Type für alle Spieler.** Der W3
+> Race-Type-Override im Setup-Screen ist ein **Race-Setting** (welcher Type wird gefahren),
+> NICHT per-Spieler unterschiedlich. Alle Racer in einem Race haben denselben
+> `speedMultiplier` und alle anderen Type-Werte. Speed-Streuung kommt ausschließlich aus
+> dem Random-`baseSpeed` pro Racer (innerhalb desselben Types).
+>
+> Doku-Stellen die "schnellster Racer im Race" o.ä. erwähnen (z.B. die Open-Track-
+> Ziellinien-Logik aus D9) beziehen sich auf den theoretischen Mittelwert des gewählten
+> Types, nicht auf einen Vergleich zwischen verschiedenen Types innerhalb eines Races.
 
 **Player** — eine Person die mitspielt. Hat einen Namen. Bekommt im Race einen Coat zugewiesen.
 Hat **keinen** eigenen Racer Type — der kommt vom Race.
@@ -85,7 +96,7 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 | Storage Key | Inhalt | Status |
 |---|---|---|
 | `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, trackWidth, worldWidth, ...` | Aktiv |
-| `racearena:racerTypeOverrides` | Override-Map `{[typeId]: false}` für deaktivierte Types (post B-7). Abwesenheit = aktiv (default). | Aktiv (post B-7) |
+| `racearena:racerTypeOverrides` | Override-Map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` für deaktivierte Types und Tuning-Overrides (post D3.5.5). Legacy-Format `{[typeId]: false}` wird on-read via `normalizeOverrideMap()` migriert. | Aktiv (post D3.5.5) |
 | `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |
 | `racearena:trackGeometries:<id>` | Track-Geometry-Records (Catmull-Rom Spline-Punkte) | Aktiv |
 | `racearena:trackGeometries:index` | Geometry-Index | Aktiv |
@@ -151,8 +162,13 @@ listAllRacerTypes()                   →  Code-Registry + Overrides zusammengef
 | `getRacerType(id)` | Einzelner Type-Instance, Fallback auf Horse für unbekannte IDs |
 | `getRacerTypeById(id)` | Alias für `getRacerType` — bevorzugt wo ID-Semantik wichtig |
 | `listRacerTypes()` | Array aller registrierten Type-IDs |
-| `setRacerTypeOverride(id, isActive)` | Override setzen: `false` = deaktiviert, `true` = entfernt Override (zurück zu default aktiv) |
-| `resetRacerTypeOverride(id)` | Override entfernen, revertiert zu Code-Default (aktiv) |
+| `setRacerTypeOverride(id, fieldName, value)` | Override setzen: `fieldName='isActive', value=false` deaktiviert; tunable Felder (TUNABLE_FIELDS) mutieren auch Live-Config |
+| `resetRacerTypeOverride(id, fieldName?)` | Ohne fieldName: alle Overrides für id entfernen. Mit fieldName: nur das eine Feld. Stellt Live-Config aus CONFIG_SNAPSHOT wieder her. |
+| `normalizeOverrideMap(raw)` | Migriert Legacy-Format `{id: false}` → `{id: {isActive: false}}`; gibt bei null/undefined `{}` zurück |
+| `applyTunableOverride(id, fieldName, value)` | Mutiert `RACER_TYPES[id].config[fieldName]` direkt ohne Storage-Write |
+| `restoreTunableDefault(id, fieldName)` | Setzt `RACER_TYPES[id].config[fieldName]` aus CONFIG_SNAPSHOT zurück |
+| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy']` |
+| `CONFIG_SNAPSHOT` | Eingefrorene Kopie der Code-Defaults aller 6 TUNABLE_FIELDS, captured vor Boot-Override-Application |
 | `RACER_TYPE_IDS` | Sortiertes Array aller 12 Type-IDs |
 | `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` für UI-Anzeige |
 | `COATS_BY_TYPE` | Map `{id → coats[]}` für RaceScreen-Coat-Assignment; auto-derived aus Type-Configs |

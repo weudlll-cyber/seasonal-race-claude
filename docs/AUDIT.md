@@ -125,10 +125,12 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-26 | **618** | Quality-Cleanup-Commit (unverändert) |
 | 2026-04-26 | **628** | D9 Race-Engine-Speed-Refactor (PR #19) — +10 Unit-Tests (estimatedSecondsPerLap ×5, openTrackFinishT ×5) |
 | 2026-04-26 | **628 unit + 22 e2e** | Quality-Gate-Cleanup-Commit (PR #19) — Playwright-Infrastruktur fertig |
+| 2026-04-26 | **678 unit + 36 e2e** | D3.5.5 Per-Type-Tuning-UI (PR #21) — +50 unit (normalizeOverrideMap, CONFIG_SNAPSHOT, applyTunableOverride, restoreTunableDefault, RacerEditModal.test.jsx, InfoTooltip.test.jsx), +14 e2e (d355-smoke.spec.js) |
+| 2026-04-26 | **678 unit + 57 e2e** | UX-Verifikations-Spec permanent hinzugefügt (d3-5-5-ux-verification.spec.js, 21 Tests), Quality-Gate-Fix (Doppelimport, PR #21) |
 
-**Aktueller Master-HEAD:** `dad3300`
-**ESLint-Warnings:** 3 (unverändert seit PR #17 Quality-Cleanup)
-**Playwright e2e:** 22 Tests (neue Test-Kategorie, seit D9 / PR #19)
+**Aktueller Master-HEAD:** `2d76bc3`
+**ESLint-Warnings:** 3 (unverändert seit PR #17 Quality-Cleanup — pre-existing)
+**Playwright e2e:** 57 Tests (2 Spec-Files D9 + 3 Spec-Files D3.5.5)
 
 ---
 
@@ -150,6 +152,12 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #21 (D3.5.5):** 0 Show-Stopper, 2 W-D3.5.5, 3 pre-existing
+- ⚠️ W-D3.5.5 #1 (vor Merge gefixt): Doppelter Import von `normalizeOverrideMap` in RacerEditModal.jsx (zwei Import-Statements aus demselben Modul) — 1-Zeilen-Fix im selben Branch
+- ⚠️ W-D3.5.5 #2 (PR-Body, nicht blockierend): e2e-Count-Angabe "7→21" falsch (korrekt: 22→36). Nur PR-Beschreibung betroffen, kein Code-Bug.
+- ⚠️ Pre-existing (unverändert): 3 ESLint-Warnings (TransitionContext.jsx:44, storage.js:148/154)
+- ✅ UX-Verifikation: 21/21 Tests (d3-5-5-ux-verification.spec.js) grün, permanent als Regressions-Schutz behalten
 
 **Quality-Gate auf PR #19 (D9):** alle Findings vor Merge gefixt
 - ❌ S-1 (vor Merge gefixt): vitest.config.js ohne `exclude: ['e2e/**']` — `npm test` schlug rot weil Playwright-Spec importiert wurde
