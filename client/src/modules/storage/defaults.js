@@ -11,7 +11,7 @@ export const DEFAULT_RACERS = [
   { id: 'duck', name: 'Duck', emoji: '🦆', color: '#2196f3', isActive: true },
   { id: 'rocket', name: 'Rocket', emoji: '🚀', color: '#7c3aed', isActive: true },
   { id: 'snail', name: 'Snail', emoji: '🐌', color: '#16a34a', isActive: true },
-  { id: 'car', name: 'Car', emoji: '🚗', color: '#64748b', isActive: true },
+  { id: 'buggy', name: 'Buggy', emoji: '🚙', color: '#64748b', isActive: true },
 ];
 
 export const DEFAULT_TRACKS = [
@@ -78,9 +78,9 @@ export const DEFAULT_TRACKS = [
   {
     id: 'city-circuit',
     name: 'City Circuit',
-    icon: '🚗',
+    icon: '🚙',
     description: 'High-speed urban track with hairpin corners and tunnel sections.',
-    defaultRacerTypeId: 'car',
+    defaultRacerTypeId: 'buggy',
     geometryId: null,
     color: '#64748b',
     defaultDuration: 60,
