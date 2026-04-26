@@ -5,6 +5,7 @@
 // Created:     2026-04-20
 // Description: Tests for all racer-type modules — verifies emoji,
 //              speed multiplier, trail particle output, and draw safety.
+//              D3.5.3: Updated for 12 racer types, no class-based types.
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest';
@@ -13,9 +14,16 @@ import {
   RACER_TYPE_IDS,
   HorseRacerType,
   DuckRacerType,
-  RocketRacerType,
   SnailRacerType,
-  CarRacerType,
+  ElephantRacerType,
+  GiraffeRacerType,
+  SnakeRacerType,
+  DragonRacerType,
+  F1RacerType,
+  RocketRacerType,
+  BuggyRacerType,
+  MotorbikeRacerType,
+  PlaneRacerType,
   warmUpAllRacerTypes,
   _resetWarmUpForTesting,
 } from './index.js';
@@ -54,9 +62,16 @@ function makeCtx() {
 const ALL_TYPES = [
   ['horse', HorseRacerType],
   ['duck', DuckRacerType],
-  ['rocket', RocketRacerType],
   ['snail', SnailRacerType],
-  ['car', CarRacerType],
+  ['elephant', ElephantRacerType],
+  ['giraffe', GiraffeRacerType],
+  ['snake', SnakeRacerType],
+  ['dragon', DragonRacerType],
+  ['f1', F1RacerType],
+  ['rocket', RocketRacerType],
+  ['buggy', BuggyRacerType],
+  ['motorbike', MotorbikeRacerType],
+  ['plane', PlaneRacerType],
 ];
 
 const MOCK_RACER = { index: 0, name: 'Tester', color: '#ff0000' };
@@ -75,14 +90,12 @@ describe('getRacerType factory', () => {
     expect(rt).toBe(HorseRacerType);
   });
 
-  it('RACER_TYPE_IDS contains all 5 types', () => {
-    expect(RACER_TYPE_IDS).toHaveLength(5);
+  it('RACER_TYPE_IDS contains all 12 types', () => {
+    expect(RACER_TYPE_IDS).toHaveLength(12);
   });
 });
 
-describe.each(ALL_TYPES)('%s racer type', (id, Cls) => {
-  const rt = typeof Cls === 'function' ? new Cls() : Cls;
-
+describe.each(ALL_TYPES)('%s racer type', (id, rt) => {
   describe('getEmoji', () => {
     it('returns a non-empty string', () => {
       expect(typeof rt.getEmoji()).toBe('string');
@@ -150,7 +163,19 @@ describe('speed ordering', () => {
   });
 
   it('rocket is faster than horse', () => {
-    expect(new RocketRacerType().getSpeedMultiplier()).toBeGreaterThan(
+    expect(RocketRacerType.getSpeedMultiplier()).toBeGreaterThan(
+      HorseRacerType.getSpeedMultiplier()
+    );
+  });
+
+  it('elephant is slower than horse', () => {
+    expect(ElephantRacerType.getSpeedMultiplier()).toBeLessThan(
+      HorseRacerType.getSpeedMultiplier()
+    );
+  });
+
+  it('dragon is faster than horse', () => {
+    expect(DragonRacerType.getSpeedMultiplier()).toBeGreaterThan(
       HorseRacerType.getSpeedMultiplier()
     );
   });

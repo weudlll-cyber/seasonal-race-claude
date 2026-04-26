@@ -86,6 +86,30 @@ export function newId() {
   }
 })();
 
+// One-time migration: 'car' → 'buggy' in track defaultRacerTypeId (D3.5.3).
+// CarRacerType was removed; BuggyRacerType is its successor.
+(function migrateCarToBuggy() {
+  try {
+    const raw = localStorage.getItem('racearena:tracks');
+    if (!raw) return;
+    const tracks = JSON.parse(raw);
+    if (!Array.isArray(tracks)) return;
+    let changed = false;
+    for (const track of tracks) {
+      if (track.defaultRacerTypeId === 'car') {
+        track.defaultRacerTypeId = 'buggy';
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
+      console.warn('[RaceArena] Migrated defaultRacerTypeId: car → buggy (D3.5.3 rename).');
+    }
+  } catch {
+    // Best-effort — migration failure must not break the app.
+  }
+})();
+
 // One-time migration: racearena:racers → racearena:racerTypes (W2 field renames).
 // Renames icon→emoji, enabled→isActive, drops trackId. Safe to call multiple times.
 (function migrateRacersIfNeeded() {
