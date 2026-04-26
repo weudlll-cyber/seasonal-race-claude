@@ -10,21 +10,9 @@
 //              AutoScaleSection in Dev Panel, upload validation
 // ============================================================
 
+/* global Buffer */
 import { test, expect } from '@playwright/test';
 import { deflateSync } from 'zlib';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const BG_CITY_CIRCUIT = join(
-  __dirname,
-  '..',
-  'public',
-  'assets',
-  'tracks',
-  'backgrounds',
-  'city-circuit.png'
-);
 
 // ── synthetic PNG generator (grayscale, all-zero pixels) ──────────────────
 function makePng(w, h) {

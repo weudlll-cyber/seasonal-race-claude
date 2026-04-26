@@ -766,20 +766,6 @@ export default function TrackEditor() {
     setViewPanY(0);
   }
 
-  function handleWorldSizeChange(w, h) {
-    setEditorWorldW(w);
-    setEditorWorldH(h);
-    viewTransformRef.current.worldW = w;
-    viewTransformRef.current.worldH = h;
-    viewTransformRef.current.zoom = 1.0;
-    viewTransformRef.current.panX = 0;
-    viewTransformRef.current.panY = 0;
-    setViewZoom(1.0);
-    setViewPanX(0);
-    setViewPanY(0);
-    markDirty();
-  }
-
   // ── effect config ─────────────────────────────────────────────────────────
 
   function handleEffectsChange(nextEffects) {
