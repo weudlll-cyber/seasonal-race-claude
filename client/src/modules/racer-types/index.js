@@ -8,121 +8,101 @@
 //              Also preserves the legacy RACER_TYPES export so
 //              existing code that imports it keeps working.
 //
-//              D3.5 part 2: Horse/Duck/Snail are now SpriteRacerType
-//              instances (not classes). Rocket/Car remain classes.
-//              getRacerType handles both. warmUpAllRacerTypes() centralises
-//              sprite cache warm-up; called once at module load.
+//              D3.5.3: All 12 racer types are SpriteRacerType instances.
+//              No class-based RacerTypes remain. CarRacerType removed,
+//              replaced by BuggyRacerType. COATS_BY_TYPE auto-derived
+//              from type configs. warmUpAllRacerTypes handles mask types.
 // ============================================================
-
-/**
- * @typedef {Object} RacerStyle
- * @property {string} primaryColor     - Hex colour for the racer body
- * @property {string} accentColor      - Hex colour for mane, tail, details
- * @property {number} silhouetteScale  - Multiplier applied to getDimensions()
- * @property {object} [sprite]         - Sprite sheet config (url, frame dims, animation period, rotation offset)
- * @property {Array<{id:string,name:string,tint:string|null}>} [coats] - Available coat colour variants
- * @property {string} [defaultCoatId]  - Coat id to use when racer.coatId is unset
- */
-
-/**
- * @typedef {Object} RacerRender
- * @property {(ctx: CanvasRenderingContext2D, racer: object, frame: number) => void} drawBody
- *   Draw the racer body centred on (0,0). Caller handles translate + rotate.
- * @property {() => { width: number, height: number }} getDimensions
- *   Bounding box at silhouetteScale 1.0 — used for camera zoom + collision bounds.
- */
-
-/**
- * @typedef {Object} RacerAnimation
- * @property {(frame: number, speed: number) => number} getFrameIndex
- *   Pure function returning the sprite animation frame index (0..frameCount-1).
- *   Deterministic for any (frame, speed) pair; period scales with speed.
- */
-
-/**
- * @typedef {Object} RacerTrail
- * @property {(racer: object) => {
- *   spawn(racer: object, dt: number): void,
- *   update(dt: number): void,
- *   render(ctx: CanvasRenderingContext2D): void
- * }} createTrail
- *   Factory that returns a per-racer particle system. All state is encapsulated
- *   inside the returned object's closure — no shared global pool.
- */
-
-/**
- * Extended racer-type manifest shape.
- *
- * All four sections (render / animation / trail / style) are OPTIONAL.
- * Racers that omit them fall back to the legacy emoji rendering via drawRacer()
- * and getTrailParticles().  The horse (HorseRacerType) implements all four
- * as the D1 pilot; the remaining four racers will be upgraded in D3.
- *
- * @typedef {Object} RacerManifest
- * @property {() => string}  getEmoji           - Emoji fallback (always present)
- * @property {() => number}  getSpeedMultiplier - Physics speed factor (always present)
- * @property {Function}      drawRacer          - Legacy draw call (always present)
- * @property {Function}      getTrailParticles  - Legacy particle API (always present)
- * @property {RacerStyle}    [style]            - Colour palette + scale
- * @property {RacerRender}   [render]           - Canvas draw body + dimensions
- * @property {RacerAnimation}[animation]        - Deterministic phase offsets
- * @property {RacerTrail}    [trail]            - Per-racer particle factory
- */
 
 export { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
 export { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
-export { RocketRacerType } from './RocketRacerType.js';
 export { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
-export { CarRacerType } from './CarRacerType.js';
+export { ElephantRacerType } from './ElephantRacerType.js';
+export { GiraffeRacerType } from './GiraffeRacerType.js';
+export { SnakeRacerType } from './SnakeRacerType.js';
+export { DragonRacerType } from './DragonRacerType.js';
+export { F1RacerType } from './F1RacerType.js';
+export { RocketRacerType } from './RocketRacerType.js';
+export { BuggyRacerType } from './BuggyRacerType.js';
+export { MotorbikeRacerType } from './MotorbikeRacerType.js';
+export { PlaneRacerType } from './PlaneRacerType.js';
 export { SpriteRacerType } from './SpriteRacerType.js';
 
 import { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
 import { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
-import { RocketRacerType } from './RocketRacerType.js';
 import { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
-import { CarRacerType } from './CarRacerType.js';
+import { ElephantRacerType } from './ElephantRacerType.js';
+import { GiraffeRacerType } from './GiraffeRacerType.js';
+import { SnakeRacerType } from './SnakeRacerType.js';
+import { DragonRacerType } from './DragonRacerType.js';
+import { F1RacerType } from './F1RacerType.js';
+import { RocketRacerType } from './RocketRacerType.js';
+import { BuggyRacerType } from './BuggyRacerType.js';
+import { MotorbikeRacerType } from './MotorbikeRacerType.js';
+import { PlaneRacerType } from './PlaneRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
+import { loadSprite } from './spriteLoader.js';
 
-// Horse / Duck / Snail are SpriteRacerType instances.
-// Rocket / Car remain class constructors.
+// All 12 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
   horse: HorseRacerType,
   duck: DuckRacerType,
-  rocket: RocketRacerType,
   snail: SnailRacerType,
-  car: CarRacerType,
+  elephant: ElephantRacerType,
+  giraffe: GiraffeRacerType,
+  snake: SnakeRacerType,
+  dragon: DragonRacerType,
+  f1: F1RacerType,
+  rocket: RocketRacerType,
+  buggy: BuggyRacerType,
+  motorbike: MotorbikeRacerType,
+  plane: PlaneRacerType,
 };
 
 export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
 
-export const COATS_BY_TYPE = { horse: HORSE_COATS, duck: DUCK_COATS, snail: SNAIL_COATS };
+// Auto-derived from type configs — no manual maintenance needed.
+export const COATS_BY_TYPE = Object.fromEntries(
+  Object.entries(RACER_TYPES).map(([id, type]) => [id, type.config.coats])
+);
 
 export const RACER_TYPE_LABELS = {
   horse: 'Horse 🐴',
   duck: 'Duck 🦆',
-  rocket: 'Rocket 🚀',
   snail: 'Snail 🐌',
-  car: 'Car 🚗',
+  elephant: 'Elephant 🐘',
+  giraffe: 'Giraffe 🦒',
+  snake: 'Snake 🐍',
+  dragon: 'Dragon 🐉',
+  f1: 'F1 🏎️',
+  rocket: 'Rocket 🚀',
+  buggy: 'Buggy 🚙',
+  motorbike: 'Motorbike 🏍️',
+  plane: 'Plane ✈️',
 };
 
 export const RACER_TYPE_EMOJIS = {
   horse: '🐴',
   duck: '🦆',
-  rocket: '🚀',
   snail: '🐌',
-  car: '🚗',
+  elephant: '🐘',
+  giraffe: '🦒',
+  snake: '🐍',
+  dragon: '🐉',
+  f1: '🏎️',
+  rocket: '🚀',
+  buggy: '🚙',
+  motorbike: '🏍️',
+  plane: '✈️',
 };
 
 /**
  * Returns a racer-type instance for the given typeId.
- * For SpriteRacerType-based types (horse, duck, snail) returns the shared
- * singleton instance. For class-based types (rocket, car) returns a new instance.
+ * All types are SpriteRacerType instances — returns the shared singleton.
  * Falls back to the horse instance for unknown ids.
  */
 export function getRacerType(typeId) {
-  const rt = RACER_TYPES[typeId] ?? HorseRacerType;
-  if (typeof rt === 'function') return new rt();
-  return rt;
+  return RACER_TYPES[typeId] ?? HorseRacerType;
 }
 
 /** Returns all registered racer type IDs. */
@@ -133,16 +113,23 @@ export function listRacerTypes() {
 let _warmedUp = false;
 
 /**
- * Warm up sprite caches for all SpriteRacerType-based racer types.
+ * Warm up sprite caches for all racer types.
+ * - multiply-mode types: pre-tint all coat variants via getCoatVariants.
+ * - mask-mode types: preload base sprite + mask sprite; tinting is on-demand.
  * Idempotent — safe to call multiple times.
- * Called automatically at module load; can also be called manually for testing.
  */
 export function warmUpAllRacerTypes() {
   if (_warmedUp) return;
   _warmedUp = true;
-  for (const rt of Object.values(RACER_TYPES)) {
-    if (typeof rt === 'function') continue; // skip class-based types (rocket, car)
-    getCoatVariants(rt.config.spriteUrl, rt.config.coats).catch(() => {});
+  for (const racerType of Object.values(RACER_TYPES)) {
+    const cfg = racerType.config;
+    if (!cfg) continue;
+    if (cfg.tintMode === 'mask' && cfg.maskUrl) {
+      loadSprite(cfg.spriteUrl).catch(() => {});
+      loadSprite(cfg.maskUrl).catch(() => {});
+    } else {
+      getCoatVariants(cfg.spriteUrl, cfg.coats).catch(() => {});
+    }
   }
 }
 
@@ -151,5 +138,5 @@ export function _resetWarmUpForTesting() {
   _warmedUp = false;
 }
 
-// Warm up on module import — same behaviour as the previous per-type top-level calls.
+// Warm up on module import.
 warmUpAllRacerTypes();

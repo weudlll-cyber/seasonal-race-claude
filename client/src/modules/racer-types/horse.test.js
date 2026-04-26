@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { HorseRacerType, RocketRacerType, CarRacerType } from './index.js';
+import { HorseRacerType } from './index.js';
 import { getCachedSprite } from './spriteLoader.js';
 import { getCoatVariants } from './spriteTinter.js';
 
@@ -95,21 +95,6 @@ describe('HorseRacerType — D1 extended manifest', () => {
     const a = horse._getFrameIndex(137, 2.5);
     const b = horse._getFrameIndex(137, 2.5);
     expect(a).toBe(b);
-  });
-
-  // ── 3. Other racers untouched ─────────────────────────────────────────────
-
-  it('rocket, car have no render/animation/trail/style/config sections', () => {
-    // Duck upgraded D3.1→D3.5, Snail upgraded D3.2→D3.5 — only rocket and car remain emoji-only
-    const others = [RocketRacerType, CarRacerType];
-    for (const Cls of others) {
-      const rt = new Cls();
-      expect(rt.render).toBeUndefined();
-      expect(rt.animation).toBeUndefined();
-      expect(rt.trail).toBeUndefined();
-      expect(rt.style).toBeUndefined();
-      expect(rt.config).toBeUndefined();
-    }
   });
 });
 
@@ -305,16 +290,5 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     const ctx = makeCtx();
     horse._drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(creamDrawable);
-  });
-
-  // ── 11. Other racers untouched ─────────────────────────────────────────────
-
-  it('rocket, car do not have config.spriteUrl defined', () => {
-    // Duck upgraded D3.1→D3.5, Snail upgraded D3.2→D3.5 — only rocket and car remain emoji-only
-    const others = [RocketRacerType, CarRacerType];
-    for (const Cls of others) {
-      const rt = new Cls();
-      expect(rt.config?.spriteUrl).toBeUndefined();
-    }
   });
 });
