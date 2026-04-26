@@ -19,6 +19,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.js'],
     // Let Vite's CSS pipeline process .module.css files in tests
     css: true,
+    // Exclude Playwright e2e specs — they use @playwright/test, not Vitest
+    exclude: ['e2e/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

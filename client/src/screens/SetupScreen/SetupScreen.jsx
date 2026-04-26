@@ -8,7 +8,7 @@
 //              changes are reflected immediately
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
@@ -25,6 +25,12 @@ import {
   RACER_TYPE_IDS,
   RACER_TYPE_LABELS,
 } from '../../modules/racer-types/index.js';
+import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import {
+  estimatedSecondsPerLap,
+  openTrackFinishT,
+  lapsFromDuration,
+} from '../../modules/camera/lapUtils.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -75,9 +81,11 @@ function SetupScreen() {
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
+  const [selectedLaps, setSelectedLaps] = useState(null); // null = auto (from duration)
 
   useEffect(() => {
     setRacerTypeOverride(null);
+    setSelectedLaps(null);
   }, [selectedTrackId]);
 
   // Clear override if the chosen type gets disabled while it's selected.
@@ -97,12 +105,20 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
+  // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
+  const trackIsOpen = useMemo(() => {
+    if (!selectedTrack?.geometryId) return false;
+    const geom = getTrack(selectedTrack.geometryId);
+    return geom ? !geom.closed : false;
+  }, [selectedTrack]);
+
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
 
   function handleStartRace() {
     const effectiveTypeId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
+    const effectiveLaps = selectedLaps ?? lapsFromDuration(raceSettings.duration);
     const race = {
       racers: players,
       trackId: selectedTrackId,
@@ -113,6 +129,9 @@ function SetupScreen() {
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
+      raceMode: trackIsOpen ? 'time' : 'laps',
+      targetLaps: trackIsOpen ? undefined : effectiveLaps,
+      targetDuration: trackIsOpen ? raceSettings.duration : undefined,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -123,6 +142,10 @@ function SetupScreen() {
     const track = quickTrack;
     if (!track || !track.geometryId) return;
 
+    const quickIsOpen = (() => {
+      const geom = getTrack(track.geometryId);
+      return geom ? !geom.closed : false;
+    })();
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     const effectiveTypeId = racerTypeOverride ?? defaultTypeId;
     const trackIcon = getRacerType(effectiveTypeId).getEmoji();
@@ -132,6 +155,7 @@ function SetupScreen() {
       icon: trackIcon,
     }));
 
+    const quickLaps = lapsFromDuration(raceDefaults.duration);
     const race = {
       racers: testPlayers,
       trackId: track.id,
@@ -142,6 +166,9 @@ function SetupScreen() {
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,
+      raceMode: quickIsOpen ? 'time' : 'laps',
+      targetLaps: quickIsOpen ? undefined : quickLaps,
+      targetDuration: quickIsOpen ? raceDefaults.duration : undefined,
       timestamp: new Date().toISOString(),
     };
 
@@ -236,42 +263,145 @@ function SetupScreen() {
                 onChange={setSelectedTrackId}
               />
               {selectedTrack && (
-                <div style={{ marginTop: '1rem' }}>
-                  <label
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--color-muted)',
-                      display: 'block',
-                      marginBottom: '0.35rem',
-                    }}
-                  >
-                    Racer type for this race
-                  </label>
-                  <select
-                    value={racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setRacerTypeOverride(
-                        val === (selectedTrack.defaultRacerTypeId ?? 'horse') ? null : val
-                      );
-                    }}
-                    style={{
-                      background: 'var(--color-surface)',
-                      color: 'var(--color-text)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '4px',
-                      padding: '0.35rem 0.6rem',
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false).map((id) => (
-                      <option key={id} value={id}>
-                        {RACER_TYPE_LABELS[id]}
-                        {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                <div
+                  style={{
+                    marginTop: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--color-muted)',
+                        display: 'block',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      Racer type for this race
+                    </label>
+                    <select
+                      value={racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRacerTypeOverride(
+                          val === (selectedTrack.defaultRacerTypeId ?? 'horse') ? null : val
+                        );
+                      }}
+                      style={{
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '4px',
+                        padding: '0.35rem 0.6rem',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false).map((id) => (
+                        <option key={id} value={id}>
+                          {RACER_TYPE_LABELS[id]}
+                          {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {trackIsOpen ? (
+                    <div>
+                      <label
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--color-muted)',
+                          display: 'block',
+                          marginBottom: '0.35rem',
+                        }}
+                      >
+                        Race duration (set in Settings tab)
+                      </label>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>
+                        {raceSettings.duration}s — open track, finish line placed at{' '}
+                        {Math.round(
+                          openTrackFinishT(
+                            raceSettings.duration,
+                            getRacerType(
+                              racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                            ).getSpeedMultiplier()
+                          ) * 100
+                        )}
+                        % of track
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <label
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--color-muted)',
+                          display: 'block',
+                          marginBottom: '0.35rem',
+                        }}
+                      >
+                        Laps
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        {[1, 2, 3, 4].map((n) => {
+                          const auto = lapsFromDuration(raceSettings.duration);
+                          const isSelected = (selectedLaps ?? auto) === n;
+                          const secs = Math.round(
+                            estimatedSecondsPerLap(
+                              getRacerType(
+                                racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                              ).getSpeedMultiplier()
+                            ) * n
+                          );
+                          return (
+                            <button
+                              key={n}
+                              onClick={() =>
+                                setSelectedLaps(n === auto && selectedLaps === null ? null : n)
+                              }
+                              title={`~${secs}s estimated`}
+                              style={{
+                                padding: '0.25rem 0.55rem',
+                                fontSize: '0.85rem',
+                                border: `1px solid ${isSelected ? 'var(--color-accent)' : 'rgba(255,255,255,0.15)'}`,
+                                borderRadius: '4px',
+                                background: isSelected
+                                  ? 'rgba(var(--color-accent-rgb, 68,136,255),0.18)'
+                                  : 'transparent',
+                                color: isSelected ? 'var(--color-accent)' : 'var(--color-muted)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {n}
+                              {n === auto ? '*' : ''}
+                            </button>
+                          );
+                        })}
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--color-muted)',
+                            marginLeft: '0.25rem',
+                          }}
+                        >
+                          * auto from duration · ~
+                          {Math.round(
+                            estimatedSecondsPerLap(
+                              getRacerType(
+                                racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                              ).getSpeedMultiplier()
+                            ) * (selectedLaps ?? lapsFromDuration(raceSettings.duration))
+                          )}
+                          s est.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -298,8 +428,22 @@ function SetupScreen() {
             ) : (
               'No track selected'
             )}{' '}
-            · <strong>{raceSettings.duration}s</strong> · Top{' '}
-            <strong>{raceSettings.winners}</strong>
+            {selectedTrack && !trackIsOpen ? (
+              <>
+                {' '}
+                ·{' '}
+                <strong>
+                  {selectedLaps ?? lapsFromDuration(raceSettings.duration)} lap
+                  {(selectedLaps ?? lapsFromDuration(raceSettings.duration)) !== 1 ? 's' : ''}
+                </strong>
+              </>
+            ) : (
+              <>
+                {' '}
+                · <strong>{raceSettings.duration}s</strong>
+              </>
+            )}{' '}
+            · Top <strong>{raceSettings.winners}</strong>
           </div>
           <div className={styles.startButtons}>
             <div

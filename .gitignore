@@ -5,6 +5,8 @@ build
 .claude/projects/
 .claude/settings.local.json
 client/coverage/
+client/playwright-report/
+client/test-results/
 .playwright-mcp/
 /tmp/
 AUDIT.md
