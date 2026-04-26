@@ -16,8 +16,8 @@ import {
   CONFIG_SNAPSHOT,
   applyTunableOverride,
   restoreTunableDefault,
+  normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
-import { normalizeOverrideMap } from '../../../modules/racer-types/index.js';
 import s from './RacerEditModal.module.css';
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
