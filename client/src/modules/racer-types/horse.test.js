@@ -4,10 +4,10 @@
 // Project:     RaceArena
 // Created:     2026-04-25
 // Description: Tests for HorseRacerType extended manifest.
-//              D1: manifest shape, animation determinism, trail lifecycle.
-//              D2: drawRacer Canvas transform wiring, leader glow.
-//              D2.3: sprite-based render — sprite manifest, getFrameIndex,
-//                    drawImage blit, fallback circle, rotation correction.
+//              D3.5 part 2: HorseRacerType is now a SpriteRacerType instance.
+//              Style fields accessed via horse.config.*, drawBody via horse._drawBody,
+//              getFrameIndex via horse._getFrameIndex.
+//              _createTrail tests removed (dead system, never called by RaceScreen).
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -27,7 +27,9 @@ vi.mock('./spriteTinter.js', () => {
   return {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
+    tintSpriteWithMask: vi.fn().mockReturnValue({}),
     _clearTintCache: vi.fn(),
+    _clearMaskedTintCache: vi.fn(),
   };
 });
 
@@ -66,78 +68,39 @@ const MOCK_RACER = { x: 100, y: 100, angle: 0, baseSpeed: 2, index: 0 };
 describe('HorseRacerType — D1 extended manifest', () => {
   let horse;
   beforeEach(() => {
-    horse = new HorseRacerType();
+    horse = HorseRacerType;
     getCachedSprite.mockReturnValue(undefined); // sprite not yet loaded
   });
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  // ── 1. Manifest shape ─────────────────────────────────────────────────────
+  // ── 1. Config shape ───────────────────────────────────────────────────────
 
-  it('has render, animation, trail, and style sections with correct member types', () => {
-    expect(typeof horse.render.drawBody).toBe('function');
-    expect(typeof horse.render.getDimensions).toBe('function');
-    expect(typeof horse.animation.getFrameIndex).toBe('function');
-    expect(typeof horse.trail.createTrail).toBe('function');
-    expect(horse.style.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(horse.style.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(typeof horse.style.silhouetteScale).toBe('number');
-    expect(horse.style.sprite).toBeDefined();
-    expect(typeof horse.style.sprite.frameCount).toBe('number');
+  it('has required config fields with correct types', () => {
+    expect(horse.config.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(horse.config.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(typeof horse.config.silhouetteScale).toBe('number');
+    expect(typeof horse.config.frameCount).toBe('number');
+    expect(typeof horse.config.trailFactory).toBe('function');
   });
 
-  it('getDimensions returns positive width and height', () => {
-    const { width, height } = horse.render.getDimensions();
-    expect(width).toBeGreaterThan(0);
-    expect(height).toBeGreaterThan(0);
+  it('config.displaySize is a positive number', () => {
+    expect(horse.config.displaySize).toBeGreaterThan(0);
   });
 
   // ── 2. getFrameIndex — determinism ────────────────────────────────────────
 
-  it('getFrameIndex is deterministic for the same (frame, speed) pair', () => {
-    const a = horse.animation.getFrameIndex(137, 2.5);
-    const b = horse.animation.getFrameIndex(137, 2.5);
+  it('_getFrameIndex is deterministic for the same (frame, speed) pair', () => {
+    const a = horse._getFrameIndex(137, 2.5);
+    const b = horse._getFrameIndex(137, 2.5);
     expect(a).toBe(b);
   });
 
-  // ── 3. createTrail — factory lifecycle ───────────────────────────────────
+  // ── 3. Other racers untouched ─────────────────────────────────────────────
 
-  it('createTrail returns an object with spawn, update, and render methods', () => {
-    const trail = horse.trail.createTrail(MOCK_RACER);
-    expect(typeof trail.spawn).toBe('function');
-    expect(typeof trail.update).toBe('function');
-    expect(typeof trail.render).toBe('function');
-  });
-
-  it('spawns ~2 particles per frame at full speed — 30 frames yields 50–70 alive', () => {
-    const trail = horse.trail.createTrail(MOCK_RACER);
-    const fullSpeed = { ...MOCK_RACER, baseSpeed: 5 };
-    for (let i = 0; i < 30; i++) {
-      trail.spawn(fullSpeed, 1);
-      trail.update(1);
-    }
-    // After 30 iterations: batch from frame 1 (ttl=30-30=0) is removed,
-    // frames 2–30 alive = 29×2 = 58 particles
-    const ctx = makeCtx();
-    trail.render(ctx);
-    expect(ctx.arc.mock.calls.length).toBeGreaterThanOrEqual(50);
-    expect(ctx.arc.mock.calls.length).toBeLessThanOrEqual(70);
-  });
-
-  it('particles are removed after their lifetime (ttl=30) elapses', () => {
-    const trail = horse.trail.createTrail(MOCK_RACER);
-    trail.spawn({ ...MOCK_RACER, baseSpeed: 5 }, 1); // 2 particles, ttl=30
-    for (let i = 0; i < 35; i++) trail.update(1); // 35 updates — all dead at update 30
-    const ctx = makeCtx();
-    trail.render(ctx);
-    expect(ctx.arc.mock.calls.length).toBe(0);
-  });
-
-  // ── 4. Other racers untouched ─────────────────────────────────────────────
-
-  it('rocket, car have no render/animation/trail/style sections', () => {
-    // Duck upgraded D3.1, Snail upgraded D3.2 — only rocket and car remain emoji-only
+  it('rocket, car have no render/animation/trail/style/config sections', () => {
+    // Duck upgraded D3.1→D3.5, Snail upgraded D3.2→D3.5 — only rocket and car remain emoji-only
     const others = [RocketRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
@@ -145,6 +108,7 @@ describe('HorseRacerType — D1 extended manifest', () => {
       expect(rt.animation).toBeUndefined();
       expect(rt.trail).toBeUndefined();
       expect(rt.style).toBeUndefined();
+      expect(rt.config).toBeUndefined();
     }
   });
 });
@@ -152,7 +116,7 @@ describe('HorseRacerType — D1 extended manifest', () => {
 describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
   let horse;
   beforeEach(() => {
-    horse = new HorseRacerType();
+    horse = HorseRacerType;
     getCachedSprite.mockReturnValue(undefined); // fallback path by default
   });
   afterEach(() => {
@@ -221,53 +185,52 @@ describe('HorseRacerType — D2 drawRacer wired to Canvas manifest', () => {
 describe('HorseRacerType — D2.3 sprite-based render', () => {
   let horse;
   beforeEach(() => {
-    horse = new HorseRacerType();
+    horse = HorseRacerType;
     vi.clearAllMocks();
   });
 
-  // ── 7. Sprite manifest shape ──────────────────────────────────────────────
+  // ── 7. Config sprite fields ───────────────────────────────────────────────
 
-  it('style.sprite has required fields with correct types', () => {
-    const { sprite } = horse.style;
-    expect(typeof sprite.url).toBe('string');
-    expect(typeof sprite.frameWidth).toBe('number');
-    expect(typeof sprite.frameHeight).toBe('number');
-    expect(typeof sprite.frameCount).toBe('number');
-    expect(typeof sprite.basePeriodMs).toBe('number');
-    expect(typeof sprite.displaySize).toBe('number');
-    expect(typeof sprite.baseRotationOffset).toBe('number');
+  it('config has required sprite fields with correct types', () => {
+    expect(typeof horse.config.spriteUrl).toBe('string');
+    expect(typeof horse.config.frameWidth).toBe('number');
+    expect(typeof horse.config.frameHeight).toBe('number');
+    expect(typeof horse.config.frameCount).toBe('number');
+    expect(typeof horse.config.basePeriodMs).toBe('number');
+    expect(typeof horse.config.displaySize).toBe('number');
+    expect(typeof horse.config.baseRotationOffset).toBe('number');
   });
 
-  // ── 8. getFrameIndex ──────────────────────────────────────────────────────
+  // ── 8. _getFrameIndex ────────────────────────────────────────────────────
 
-  it('getFrameIndex returns an integer in range [0, frameCount-1]', () => {
+  it('_getFrameIndex returns an integer in range [0, frameCount-1]', () => {
     for (let frame = 0; frame <= 5000; frame += 50) {
       for (const speed of [0.5, 1, 2, 5]) {
-        const idx = horse.animation.getFrameIndex(frame, speed);
+        const idx = horse._getFrameIndex(frame, speed);
         expect(Number.isInteger(idx)).toBe(true);
         expect(idx).toBeGreaterThanOrEqual(0);
-        expect(idx).toBeLessThanOrEqual(horse.style.sprite.frameCount - 1);
+        expect(idx).toBeLessThanOrEqual(horse.config.frameCount - 1);
       }
     }
   });
 
-  it('getFrameIndex cycles through all 8 frames over one period at speed=1', () => {
-    const frameCount = horse.style.sprite.frameCount;
-    const period = horse.style.sprite.basePeriodMs; // 700ms at speed=1
+  it('_getFrameIndex cycles through all 8 frames over one period at speed=1', () => {
+    const frameCount = horse.config.frameCount;
+    const period = horse.config.basePeriodMs; // 700ms at speed=1
     const binWidth = period / frameCount;
     const seen = new Set();
     for (let i = 0; i < frameCount; i++) {
       // Sample at bin midpoint to avoid floor-collision on non-integer bin widths
-      seen.add(horse.animation.getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
+      seen.add(horse._getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
     }
     expect(seen.size).toBe(frameCount);
   });
 
-  it('getFrameIndex advances faster at higher speed — period is inversely proportional to speed', () => {
+  it('_getFrameIndex advances faster at higher speed — period is inversely proportional to speed', () => {
     // speed=1: period=700ms; at 125ms → t≈0.179 → idx=1
     // speed=2: period=350ms; at 125ms → t≈0.357 → idx=2
-    const idx_speed1 = horse.animation.getFrameIndex(125, 1);
-    const idx_speed2 = horse.animation.getFrameIndex(125, 2);
+    const idx_speed1 = horse._getFrameIndex(125, 1);
+    const idx_speed2 = horse._getFrameIndex(125, 2);
     expect(idx_speed2).toBeGreaterThan(idx_speed1);
   });
 
@@ -277,7 +240,7 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    horse._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.drawImage.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
   });
@@ -285,7 +248,7 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
   it('_drawBody falls back to an arc circle when sprite is not loaded', () => {
     getCachedSprite.mockReturnValue(undefined);
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    horse._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.arc.mock.calls.length).toBe(1);
     expect(ctx.drawImage.mock.calls.length).toBe(0);
   });
@@ -294,24 +257,24 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, MOCK_RACER, 0);
+    horse._drawBody(ctx, MOCK_RACER, 0);
     const rotationCalls = ctx.rotate.mock.calls;
     const hasOffset = rotationCalls.some(
-      (call) => Math.abs(call[0] - horse.style.sprite.baseRotationOffset) < 0.0001
+      (call) => Math.abs(call[0] - horse.config.baseRotationOffset) < 0.0001
     );
     expect(hasOffset).toBe(true);
   });
 
   // ── 10. Coat variants (D2.4) ──────────────────────────────────────────────
 
-  it('manifest has 11 coats each with id, name, and tint (string or null)', () => {
-    expect(horse.style.coats).toHaveLength(11);
-    for (const coat of horse.style.coats) {
+  it('config has 11 coats each with id, name, and tint (string or null)', () => {
+    expect(horse.config.coats).toHaveLength(11);
+    for (const coat of horse.config.coats) {
       expect(typeof coat.id).toBe('string');
       expect(typeof coat.name).toBe('string');
       expect(coat.tint === null || typeof coat.tint === 'string').toBe(true);
     }
-    expect(horse.style.defaultCoatId).toBe('cream');
+    expect(horse.config.defaultCoatId).toBe('cream');
   });
 
   it('_drawBody with variants cache empty falls back to base sprite', () => {
@@ -319,7 +282,7 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'bay' }, 0);
+    horse._drawBody(ctx, { ...MOCK_RACER, coatId: 'cream' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
   });
 
@@ -332,7 +295,7 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
       ])
     );
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'bay' }, 0);
+    horse._drawBody(ctx, { ...MOCK_RACER, coatId: 'bay' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(tintedCanvas);
   });
 
@@ -340,18 +303,18 @@ describe('HorseRacerType — D2.3 sprite-based render', () => {
     const creamDrawable = { _isCream: true };
     getCoatVariants.cached.mockReturnValue(new Map([['cream', creamDrawable]]));
     const ctx = makeCtx();
-    horse.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
+    horse._drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(creamDrawable);
   });
 
   // ── 11. Other racers untouched ─────────────────────────────────────────────
 
-  it('rocket, car do not have style.sprite defined', () => {
-    // Duck upgraded D3.1, Snail upgraded D3.2 — only rocket and car remain emoji-only
+  it('rocket, car do not have config.spriteUrl defined', () => {
+    // Duck upgraded D3.1→D3.5, Snail upgraded D3.2→D3.5 — only rocket and car remain emoji-only
     const others = [RocketRacerType, CarRacerType];
     for (const Cls of others) {
       const rt = new Cls();
-      expect(rt.style?.sprite).toBeUndefined();
+      expect(rt.config?.spriteUrl).toBeUndefined();
     }
   });
 });

@@ -7,6 +7,11 @@
 //              getRacerType(typeId) returns the correct instance.
 //              Also preserves the legacy RACER_TYPES export so
 //              existing code that imports it keeps working.
+//
+//              D3.5 part 2: Horse/Duck/Snail are now SpriteRacerType
+//              instances (not classes). Rocket/Car remain classes.
+//              getRacerType handles both. warmUpAllRacerTypes() centralises
+//              sprite cache warm-up; called once at module load.
 // ============================================================
 
 /**
@@ -64,10 +69,10 @@
  * @property {RacerTrail}    [trail]            - Per-racer particle factory
  */
 
-export { HorseRacerType } from './HorseRacerType.js';
-export { DuckRacerType } from './DuckRacerType.js';
+export { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
+export { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
 export { RocketRacerType } from './RocketRacerType.js';
-export { SnailRacerType } from './SnailRacerType.js';
+export { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
 export { CarRacerType } from './CarRacerType.js';
 export { SpriteRacerType } from './SpriteRacerType.js';
 
@@ -76,7 +81,10 @@ import { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
 import { RocketRacerType } from './RocketRacerType.js';
 import { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
 import { CarRacerType } from './CarRacerType.js';
+import { getCoatVariants } from './spriteTinter.js';
 
+// Horse / Duck / Snail are SpriteRacerType instances.
+// Rocket / Car remain class constructors.
 export const RACER_TYPES = {
   horse: HorseRacerType,
   duck: DuckRacerType,
@@ -105,13 +113,43 @@ export const RACER_TYPE_EMOJIS = {
   car: '🚗',
 };
 
-/** Returns a racer-type instance for the given typeId. Falls back to horse for unknown ids. */
+/**
+ * Returns a racer-type instance for the given typeId.
+ * For SpriteRacerType-based types (horse, duck, snail) returns the shared
+ * singleton instance. For class-based types (rocket, car) returns a new instance.
+ * Falls back to the horse instance for unknown ids.
+ */
 export function getRacerType(typeId) {
-  const Cls = RACER_TYPES[typeId] ?? HorseRacerType;
-  return new Cls();
+  const rt = RACER_TYPES[typeId] ?? HorseRacerType;
+  if (typeof rt === 'function') return new rt();
+  return rt;
 }
 
 /** Returns all registered racer type IDs. */
 export function listRacerTypes() {
   return Object.keys(RACER_TYPES);
 }
+
+let _warmedUp = false;
+
+/**
+ * Warm up sprite caches for all SpriteRacerType-based racer types.
+ * Idempotent — safe to call multiple times.
+ * Called automatically at module load; can also be called manually for testing.
+ */
+export function warmUpAllRacerTypes() {
+  if (_warmedUp) return;
+  _warmedUp = true;
+  for (const rt of Object.values(RACER_TYPES)) {
+    if (typeof rt === 'function') continue; // skip class-based types (rocket, car)
+    getCoatVariants(rt.config.spriteUrl, rt.config.coats).catch(() => {});
+  }
+}
+
+/** Reset warm-up flag. Only use in tests. */
+export function _resetWarmUpForTesting() {
+  _warmedUp = false;
+}
+
+// Warm up on module import — same behaviour as the previous per-type top-level calls.
+warmUpAllRacerTypes();

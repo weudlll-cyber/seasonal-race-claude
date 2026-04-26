@@ -3,10 +3,11 @@
 // Path:        client/src/modules/racer-types/duck.test.js
 // Project:     RaceArena
 // Created:     2026-04-25
-// Description: Tests for DuckRacerType extended manifest (D3.1).
-//              Mirrors horse.test.js structure: manifest shape, animation
-//              determinism, trail lifecycle, drawRacer wiring, sprite blit,
-//              coat variants.
+// Description: Tests for DuckRacerType extended manifest (D3.1 → D3.5).
+//              D3.5 part 2: DuckRacerType is now a SpriteRacerType instance.
+//              Style fields accessed via duck.config.*, drawBody via duck._drawBody,
+//              getFrameIndex via duck._getFrameIndex.
+//              _createTrail tests removed (dead system).
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -26,7 +27,9 @@ vi.mock('./spriteTinter.js', () => {
   return {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
+    tintSpriteWithMask: vi.fn().mockReturnValue({}),
     _clearTintCache: vi.fn(),
+    _clearMaskedTintCache: vi.fn(),
   };
 });
 
@@ -65,84 +68,59 @@ const MOCK_RACER = { x: 100, y: 100, angle: 0, baseSpeed: 2, index: 0 };
 describe('DuckRacerType — D3.1 extended manifest', () => {
   let duck;
   beforeEach(() => {
-    duck = new DuckRacerType();
+    duck = DuckRacerType;
     getCachedSprite.mockReturnValue(undefined);
   });
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('has render, animation, trail, and style sections with correct member types', () => {
-    expect(typeof duck.render.drawBody).toBe('function');
-    expect(typeof duck.render.getDimensions).toBe('function');
-    expect(typeof duck.animation.getFrameIndex).toBe('function');
-    expect(typeof duck.trail.createTrail).toBe('function');
-    expect(duck.style.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(duck.style.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
-    expect(typeof duck.style.silhouetteScale).toBe('number');
-    expect(duck.style.sprite).toBeDefined();
-    expect(typeof duck.style.sprite.frameCount).toBe('number');
+  it('has required config fields with correct types', () => {
+    expect(duck.config.primaryColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(duck.config.accentColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(typeof duck.config.silhouetteScale).toBe('number');
+    expect(duck.config.frameCount).toBe(8);
+    expect(typeof duck.config.trailFactory).toBe('function');
   });
 
-  it('getDimensions returns positive width and height', () => {
-    const { width, height } = duck.render.getDimensions();
-    expect(width).toBeGreaterThan(0);
-    expect(height).toBeGreaterThan(0);
+  it('config.displaySize is a positive number', () => {
+    expect(duck.config.displaySize).toBeGreaterThan(0);
   });
 
-  it('getFrameIndex is deterministic for the same (frame, speed) pair', () => {
-    const a = duck.animation.getFrameIndex(137, 2.5);
-    const b = duck.animation.getFrameIndex(137, 2.5);
+  it('_getFrameIndex is deterministic for the same (frame, speed) pair', () => {
+    const a = duck._getFrameIndex(137, 2.5);
+    const b = duck._getFrameIndex(137, 2.5);
     expect(a).toBe(b);
   });
 
-  it('getFrameIndex returns an integer in range [0, frameCount-1]', () => {
+  it('_getFrameIndex returns an integer in range [0, frameCount-1]', () => {
     for (let frame = 0; frame <= 5000; frame += 50) {
       for (const speed of [0.5, 1, 2, 5]) {
-        const idx = duck.animation.getFrameIndex(frame, speed);
+        const idx = duck._getFrameIndex(frame, speed);
         expect(Number.isInteger(idx)).toBe(true);
         expect(idx).toBeGreaterThanOrEqual(0);
-        expect(idx).toBeLessThanOrEqual(duck.style.sprite.frameCount - 1);
+        expect(idx).toBeLessThanOrEqual(duck.config.frameCount - 1);
       }
     }
   });
 
-  it('getFrameIndex cycles through all 8 frames over one period at speed=1', () => {
-    const frameCount = duck.style.sprite.frameCount;
-    const period = duck.style.sprite.basePeriodMs;
+  it('_getFrameIndex cycles through all 8 frames over one period at speed=1', () => {
+    const frameCount = duck.config.frameCount;
+    const period = duck.config.basePeriodMs;
     const binWidth = period / frameCount;
     const seen = new Set();
     for (let i = 0; i < frameCount; i++) {
       // Sample at the midpoint of each bin to avoid floor-collision on non-integer bin widths
-      seen.add(duck.animation.getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
+      seen.add(duck._getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
     }
     expect(seen.size).toBe(frameCount);
-  });
-
-  it('createTrail returns an object with spawn, update, and render methods', () => {
-    const trail = duck.trail.createTrail(MOCK_RACER);
-    expect(typeof trail.spawn).toBe('function');
-    expect(typeof trail.update).toBe('function');
-    expect(typeof trail.render).toBe('function');
-  });
-
-  it('particles are removed after their lifetime elapses', () => {
-    const trail = duck.trail.createTrail(MOCK_RACER);
-    // Force-spawn by overriding Math.random temporarily
-    const rand = vi.spyOn(Math, 'random').mockReturnValue(0); // 0 < 0.4 threshold = spawn
-    trail.spawn({ ...MOCK_RACER, baseSpeed: 5 }, 1);
-    rand.mockRestore();
-    for (let i = 0; i < 25; i++) trail.update(1); // lifetime = 20 frames
-    const ctx = makeCtx();
-    trail.render(ctx);
-    expect(ctx.arc.mock.calls.length).toBe(0);
   });
 });
 
 describe('DuckRacerType — D3.1 drawRacer wired to Canvas manifest', () => {
   let duck;
   beforeEach(() => {
-    duck = new DuckRacerType();
+    duck = DuckRacerType;
     getCachedSprite.mockReturnValue(undefined);
   });
   afterEach(() => {
@@ -207,26 +185,25 @@ describe('DuckRacerType — D3.1 drawRacer wired to Canvas manifest', () => {
 describe('DuckRacerType — D3.1 sprite-based render', () => {
   let duck;
   beforeEach(() => {
-    duck = new DuckRacerType();
+    duck = DuckRacerType;
     vi.clearAllMocks();
   });
 
-  it('style.sprite has required fields with correct types', () => {
-    const { sprite } = duck.style;
-    expect(typeof sprite.url).toBe('string');
-    expect(typeof sprite.frameWidth).toBe('number');
-    expect(typeof sprite.frameHeight).toBe('number');
-    expect(sprite.frameCount).toBe(8);
-    expect(typeof sprite.basePeriodMs).toBe('number');
-    expect(typeof sprite.displaySize).toBe('number');
-    expect(typeof sprite.baseRotationOffset).toBe('number');
+  it('config has required sprite fields with correct types', () => {
+    expect(typeof duck.config.spriteUrl).toBe('string');
+    expect(typeof duck.config.frameWidth).toBe('number');
+    expect(typeof duck.config.frameHeight).toBe('number');
+    expect(duck.config.frameCount).toBe(8);
+    expect(typeof duck.config.basePeriodMs).toBe('number');
+    expect(typeof duck.config.displaySize).toBe('number');
+    expect(typeof duck.config.baseRotationOffset).toBe('number');
   });
 
   it('_drawBody calls drawImage with the sprite image when sprite is loaded', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    duck.render.drawBody(ctx, MOCK_RACER, 0);
+    duck._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.drawImage.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(mockImg);
   });
@@ -234,7 +211,7 @@ describe('DuckRacerType — D3.1 sprite-based render', () => {
   it('_drawBody falls back to an arc circle when sprite is not loaded', () => {
     getCachedSprite.mockReturnValue(undefined);
     const ctx = makeCtx();
-    duck.render.drawBody(ctx, MOCK_RACER, 0);
+    duck._drawBody(ctx, MOCK_RACER, 0);
     expect(ctx.arc.mock.calls.length).toBe(1);
     expect(ctx.drawImage.mock.calls.length).toBe(0);
   });
@@ -243,22 +220,22 @@ describe('DuckRacerType — D3.1 sprite-based render', () => {
     const mockImg = {};
     getCachedSprite.mockReturnValue(mockImg);
     const ctx = makeCtx();
-    duck.render.drawBody(ctx, MOCK_RACER, 0);
+    duck._drawBody(ctx, MOCK_RACER, 0);
     const rotationCalls = ctx.rotate.mock.calls;
     const hasOffset = rotationCalls.some(
-      (call) => Math.abs(call[0] - duck.style.sprite.baseRotationOffset) < 0.0001
+      (call) => Math.abs(call[0] - duck.config.baseRotationOffset) < 0.0001
     );
     expect(hasOffset).toBe(true);
   });
 
-  it('manifest has 11 coats each with id, name, and tint (string or null)', () => {
-    expect(duck.style.coats).toHaveLength(11);
-    for (const coat of duck.style.coats) {
+  it('config has 11 coats each with id, name, and tint (string or null)', () => {
+    expect(duck.config.coats).toHaveLength(11);
+    for (const coat of duck.config.coats) {
       expect(typeof coat.id).toBe('string');
       expect(typeof coat.name).toBe('string');
       expect(coat.tint === null || typeof coat.tint === 'string').toBe(true);
     }
-    expect(duck.style.defaultCoatId).toBe('yellow');
+    expect(duck.config.defaultCoatId).toBe('yellow');
   });
 
   it('_drawBody with valid coatId uses the coat variant canvas', () => {
@@ -270,7 +247,7 @@ describe('DuckRacerType — D3.1 sprite-based render', () => {
       ])
     );
     const ctx = makeCtx();
-    duck.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'mallard' }, 0);
+    duck._drawBody(ctx, { ...MOCK_RACER, coatId: 'mallard' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(tintedCanvas);
   });
 
@@ -278,7 +255,7 @@ describe('DuckRacerType — D3.1 sprite-based render', () => {
     const yellowDrawable = { _isYellow: true };
     getCoatVariants.cached.mockReturnValue(new Map([['yellow', yellowDrawable]]));
     const ctx = makeCtx();
-    duck.render.drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
+    duck._drawBody(ctx, { ...MOCK_RACER, coatId: 'mystery-coat' }, 0);
     expect(ctx.drawImage.mock.calls[0][0]).toBe(yellowDrawable);
   });
 });
