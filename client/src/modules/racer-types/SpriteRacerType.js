@@ -95,7 +95,7 @@ export class SpriteRacerType {
    *
    * Caller (drawRacer) has already applied translate(x,y) + rotate(angle).
    */
-  _drawBody(ctx, racer, frame) {
+  _drawBody(ctx, racer, frame, displaySizeScale = 1) {
     const cfg = this.config;
     const rawCoatId = racer.coatId ?? cfg.defaultCoatId;
 
@@ -129,14 +129,14 @@ export class SpriteRacerType {
     if (!drawable) {
       ctx.fillStyle = cfg.fallbackColor;
       ctx.beginPath();
-      ctx.arc(0, 0, cfg.displaySize / 2, 0, Math.PI * 2);
+      ctx.arc(0, 0, (cfg.displaySize * displaySizeScale) / 2, 0, Math.PI * 2);
       ctx.fill();
       return;
     }
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * cfg.frameWidth;
-    const scale = (cfg.displaySize / cfg.frameHeight) * cfg.silhouetteScale;
+    const scale = ((cfg.displaySize * displaySizeScale) / cfg.frameHeight) * cfg.silhouetteScale;
     const dw = cfg.frameWidth * scale;
     const dh = cfg.frameHeight * scale;
 
@@ -146,7 +146,7 @@ export class SpriteRacerType {
     ctx.restore();
   }
 
-  drawRacer(ctx, x, y, angle, racer, isLeader, frame) {
+  drawRacer(ctx, x, y, angle, racer, isLeader, frame, displaySizeScale = 1) {
     const cfg = this.config;
     ctx.save();
     ctx.translate(x, y);
@@ -161,7 +161,7 @@ export class SpriteRacerType {
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
-    this._drawBody(ctx, racer, frame);
+    this._drawBody(ctx, racer, frame, displaySizeScale);
     ctx.restore();
   }
 

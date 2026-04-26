@@ -11,16 +11,16 @@ import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js'
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import s from './PresetThumbnail.module.css';
 
-const WORLD_W = 1280;
-const WORLD_H = 720;
 const SAMPLE_COUNT = 64;
 
 function drawThumbnail(canvas, geometry, bgImage, width, height) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const scaleX = width / WORLD_W;
-  const scaleY = height / WORLD_H;
+  const worldW = geometry.worldWidth ?? 1280;
+  const worldH = geometry.worldHeight ?? 720;
+  const scaleX = width / worldW;
+  const scaleY = height / worldH;
 
   ctx.clearRect(0, 0, width, height);
   if (bgImage) {

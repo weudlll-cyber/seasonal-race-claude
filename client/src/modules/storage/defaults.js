@@ -28,6 +28,7 @@ export const DEFAULT_TRACKS = [
     difficulty: 'medium',
     trackWidth: 140,
     worldWidth: 1280,
+    worldHeight: 720,
     isDefault: true,
   },
   {
@@ -43,6 +44,7 @@ export const DEFAULT_TRACKS = [
     difficulty: 'easy',
     trackWidth: 140,
     worldWidth: 1280,
+    worldHeight: 720,
     isDefault: false,
   },
   {
@@ -58,6 +60,7 @@ export const DEFAULT_TRACKS = [
     difficulty: 'hard',
     trackWidth: 140,
     worldWidth: 1280,
+    worldHeight: 720,
     isDefault: false,
   },
   {
@@ -73,6 +76,7 @@ export const DEFAULT_TRACKS = [
     difficulty: 'easy',
     trackWidth: 140,
     worldWidth: 1280,
+    worldHeight: 720,
     isDefault: false,
   },
   {
@@ -88,6 +92,7 @@ export const DEFAULT_TRACKS = [
     difficulty: 'hard',
     trackWidth: 140,
     worldWidth: 1280,
+    worldHeight: 720,
     isDefault: false,
   },
 ];

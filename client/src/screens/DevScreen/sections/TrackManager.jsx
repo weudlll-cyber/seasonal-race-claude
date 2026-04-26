@@ -20,6 +20,8 @@ const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label
 const DURATIONS = [30, 60, 90, 120];
 
 const TRACK_WIDTHS = [100, 140, 200, 280, 360];
+const WORLD_WIDTHS = [1280, 1920, 2560, 3840];
+const WORLD_HEIGHTS = [720, 1080, 1440];
 
 const BLANK = {
   name: '',
@@ -31,6 +33,8 @@ const BLANK = {
   defaultDuration: 60,
   defaultWinners: 3,
   trackWidth: 140,
+  worldWidth: 1280,
+  worldHeight: 720,
 };
 
 function TrackManager() {
@@ -72,6 +76,8 @@ function TrackManager() {
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
       trackWidth: track.trackWidth ?? 140,
+      worldWidth: track.worldWidth ?? 1280,
+      worldHeight: track.worldHeight ?? 720,
     });
     setEditId(track.id);
     setShowForm(true);
@@ -320,6 +326,34 @@ function TrackManager() {
                     onClick={() => f('trackWidth', w)}
                   >
                     {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>World Width (px)</label>
+              <div className={s.optionPills}>
+                {WORLD_WIDTHS.map((w) => (
+                  <button
+                    key={w}
+                    className={`${s.optionPill} ${form.worldWidth === w ? s.optionPillActive : ''}`}
+                    onClick={() => f('worldWidth', w)}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>World Height (px)</label>
+              <div className={s.optionPills}>
+                {WORLD_HEIGHTS.map((h) => (
+                  <button
+                    key={h}
+                    className={`${s.optionPill} ${form.worldHeight === h ? s.optionPillActive : ''}`}
+                    onClick={() => f('worldHeight', h)}
+                  >
+                    {h}
                   </button>
                 ))}
               </div>

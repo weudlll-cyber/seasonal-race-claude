@@ -36,6 +36,16 @@ const BG_IMAGES = [
   { value: '/assets/tracks/backgrounds/space-sprint.jpg', label: 'Space Sprint' },
 ];
 
+const WORLD_SIZES = [
+  { label: '1280×720 (HD)', w: 1280, h: 720 },
+  { label: '1920×1080 (FHD)', w: 1920, h: 1080 },
+  { label: '2560×1440 (QHD)', w: 2560, h: 1440 },
+  { label: '3840×2160 (4K)', w: 3840, h: 2160 },
+];
+
+// drawStaticScene does NOT clear the canvas — callers apply the viewport
+// transform first, then call this, then restore. clearRect must happen
+// before the transform is applied so it uses raw canvas coordinates.
 function drawStaticScene(ctx, state) {
   const {
     bgImage = null,
@@ -47,17 +57,18 @@ function drawStaticScene(ctx, state) {
     selectedPointIndex = -1,
     centerWidth = 120,
     closed = false,
+    worldW = CW,
+    worldH = CH,
   } = state ?? {};
 
-  ctx.clearRect(0, 0, CW, CH);
   ctx.globalAlpha = 1;
   ctx.setLineDash([]);
 
   if (bgImage) {
-    ctx.drawImage(bgImage, 0, 0, CW, CH);
+    ctx.drawImage(bgImage, 0, 0, worldW, worldH);
   } else {
     ctx.fillStyle = '#1a1a24';
-    ctx.fillRect(0, 0, CW, CH);
+    ctx.fillRect(0, 0, worldW, worldH);
   }
 
   const minPts = closed ? 3 : 2;
@@ -172,6 +183,14 @@ export default function TrackEditor() {
   const hasDraggedRef = useRef(false);
   const preDragSnapshotRef = useRef(null);
 
+  // ── pan tracking refs ─────────────────────────────────────────────────────
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ screenX: 0, screenY: 0, panX: 0, panY: 0 });
+  const didPanRef = useRef(false);
+
+  // ── viewport transform ref (always-current, used in wheel + rAF) ─────────
+  const viewTransformRef = useRef({ zoom: 1.0, panX: 0, panY: 0, worldW: 1280, worldH: 720 });
+
   // ── effect preview refs ────────────────────────────────────────────────────
   const effectInstanceRef = useRef(null);
   const rafRef = useRef(null);
@@ -201,6 +220,13 @@ export default function TrackEditor() {
   const [backgroundImage, setBackgroundImage] = useState(DEFAULT_BG);
   const [effects, setEffects] = useState([]);
 
+  // ── viewport state ────────────────────────────────────────────────────────
+  const [viewZoom, setViewZoom] = useState(1.0);
+  const [viewPanX, setViewPanX] = useState(0);
+  const [viewPanY, setViewPanY] = useState(0);
+  const [editorWorldW, setEditorWorldW] = useState(1280);
+  const [editorWorldH, setEditorWorldH] = useState(720);
+
   // ── non-versioned state ───────────────────────────────────────────────────
   const [bgReady, setBgReady] = useState(false);
   const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
@@ -212,6 +238,17 @@ export default function TrackEditor() {
   const [isDirty, setIsDirty] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
+
+  // ── keep viewTransformRef in sync with state ──────────────────────────────
+  useEffect(() => {
+    viewTransformRef.current = {
+      zoom: viewZoom,
+      panX: viewPanX,
+      panY: viewPanY,
+      worldW: editorWorldW,
+      worldH: editorWorldH,
+    };
+  }, [viewZoom, viewPanX, viewPanY, editorWorldW, editorWorldH]);
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -374,8 +411,48 @@ export default function TrackEditor() {
     };
   }, []);
 
-  // Canvas render effect — mirrors state into renderStateRef and draws immediately
-  // when the rAF loop is idle (no effect active).
+  // Wheel zoom-to-cursor — uses { passive: false } so we can preventDefault
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = (e.clientX - rect.left) * (CW / rect.width);
+    const canvasY = (e.clientY - rect.top) * (CH / rect.height);
+
+    const { zoom, panX, panY, worldW, worldH } = viewTransformRef.current;
+    const bsX = CW / worldW;
+    const bsY = CH / worldH;
+
+    // World coordinate currently under the cursor
+    const worldX = canvasX / (zoom * bsX) + panX;
+    const worldY = canvasY / (zoom * bsY) + panY;
+
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
+
+    // Reposition pan so the world point under cursor stays fixed
+    const newPanX = worldX - canvasX / (newZoom * bsX);
+    const newPanY = worldY - canvasY / (newZoom * bsY);
+
+    // Update ref immediately (rAF loop reads this)
+    viewTransformRef.current.zoom = newZoom;
+    viewTransformRef.current.panX = newPanX;
+    viewTransformRef.current.panY = newPanY;
+
+    setViewZoom(newZoom);
+    setViewPanX(newPanX);
+    setViewPanY(newPanY);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  // Canvas render effect — mirrors state into renderStateRef and draws with viewport transform.
   useEffect(() => {
     renderStateRef.current = {
       bgImage: bgRef.current,
@@ -387,13 +464,23 @@ export default function TrackEditor() {
       selectedPointIndex,
       centerWidth,
       closed,
+      worldW: editorWorldW,
+      worldH: editorWorldH,
     };
     if (rafRef.current) return; // rAF loop redraws every frame; skip immediate draw
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    ctx.clearRect(0, 0, CW, CH);
+    ctx.save();
+    const bsX = CW / editorWorldW;
+    const bsY = CH / editorWorldH;
+    ctx.scale(viewZoom * bsX, viewZoom * bsY);
+    ctx.translate(-viewPanX, -viewPanY);
     drawStaticScene(ctx, renderStateRef.current);
+    ctx.restore();
   }, [
     centerPoints,
     innerPoints,
@@ -404,6 +491,11 @@ export default function TrackEditor() {
     bgReady,
     centerWidth,
     closed,
+    editorWorldW,
+    editorWorldH,
+    viewZoom,
+    viewPanX,
+    viewPanY,
   ]);
 
   // Effect preview — starts/stops the rAF animation loop based on the effects array.
@@ -440,7 +532,16 @@ export default function TrackEditor() {
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      ctx.clearRect(0, 0, CW, CH);
+      ctx.save();
+      const { zoom, panX, panY, worldW, worldH } = viewTransformRef.current;
+      const bsX = CW / worldW;
+      const bsY = CH / worldH;
+      ctx.scale(zoom * bsX, zoom * bsY);
+      ctx.translate(-panX, -panY);
       drawStaticScene(ctx, renderStateRef.current);
+      ctx.restore();
 
       for (const inst of effectInstanceRef.current) {
         inst.update(dt);
@@ -468,11 +569,14 @@ export default function TrackEditor() {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = CW / rect.width;
-    const scaleY = CH / rect.height;
+    const canvasX = (e.clientX - rect.left) * (CW / rect.width);
+    const canvasY = (e.clientY - rect.top) * (CH / rect.height);
+    const { zoom, panX, panY, worldW, worldH } = viewTransformRef.current;
+    const bsX = CW / worldW;
+    const bsY = CH / worldH;
     return {
-      x: Math.round((e.clientX - rect.left) * scaleX),
-      y: Math.round((e.clientY - rect.top) * scaleY),
+      x: Math.round(canvasX / (zoom * bsX) + panX),
+      y: Math.round(canvasY / (zoom * bsY) + panY),
     };
   }
 
@@ -492,14 +596,25 @@ export default function TrackEditor() {
       setIsDragging(true);
       canvasRef.current.setPointerCapture(e.pointerId);
       e.preventDefault();
+    } else {
+      // Background drag — start pan
+      isPanningRef.current = true;
+      didPanRef.current = false;
+      panStartRef.current = {
+        screenX: e.clientX,
+        screenY: e.clientY,
+        panX: viewTransformRef.current.panX,
+        panY: viewTransformRef.current.panY,
+      };
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      e.preventDefault();
     }
   }
 
   function handlePointerMove(e) {
-    const coords = getCanvasCoords(e);
-    if (!coords) return;
-
     if (isDragging && dragIndexRef.current !== -1) {
+      const coords = getCanvasCoords(e);
+      if (!coords) return;
       hasDraggedRef.current = true;
       setActiveList((prev) => {
         const next = [...prev];
@@ -509,6 +624,33 @@ export default function TrackEditor() {
       return;
     }
 
+    if (isPanningRef.current) {
+      const dx = e.clientX - panStartRef.current.screenX;
+      const dy = e.clientY - panStartRef.current.screenY;
+      if (!didPanRef.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        didPanRef.current = true;
+      }
+      if (didPanRef.current) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const { zoom, worldW, worldH } = viewTransformRef.current;
+        const bsX = CW / worldW;
+        const bsY = CH / worldH;
+        const cssScaleX = CW / rect.width;
+        const cssScaleY = CH / rect.height;
+        const newPanX = panStartRef.current.panX - (dx * cssScaleX) / (zoom * bsX);
+        const newPanY = panStartRef.current.panY - (dy * cssScaleY) / (zoom * bsY);
+        viewTransformRef.current.panX = newPanX;
+        viewTransformRef.current.panY = newPanY;
+        setViewPanX(newPanX);
+        setViewPanY(newPanY);
+      }
+      return;
+    }
+
+    const coords = getCanvasCoords(e);
+    if (!coords) return;
     const activeList =
       mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
     const hit = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
@@ -529,11 +671,20 @@ export default function TrackEditor() {
       }
       hasDraggedRef.current = false;
       preDragSnapshotRef.current = null;
+      return;
+    }
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      canvasRef.current?.releasePointerCapture(e.pointerId);
     }
   }
 
   function handleCanvasClick(e) {
     if (dragIndexRef.current !== -1) return;
+    if (didPanRef.current) {
+      didPanRef.current = false;
+      return;
+    }
     const coords = getCanvasCoords(e);
     if (!coords) return;
     const activeList =
@@ -616,6 +767,31 @@ export default function TrackEditor() {
     markDirty();
   }
 
+  // ── viewport helpers ──────────────────────────────────────────────────────
+
+  function handleFitToScreen() {
+    viewTransformRef.current.zoom = 1.0;
+    viewTransformRef.current.panX = 0;
+    viewTransformRef.current.panY = 0;
+    setViewZoom(1.0);
+    setViewPanX(0);
+    setViewPanY(0);
+  }
+
+  function handleWorldSizeChange(w, h) {
+    setEditorWorldW(w);
+    setEditorWorldH(h);
+    viewTransformRef.current.worldW = w;
+    viewTransformRef.current.worldH = h;
+    viewTransformRef.current.zoom = 1.0;
+    viewTransformRef.current.panX = 0;
+    viewTransformRef.current.panY = 0;
+    setViewZoom(1.0);
+    setViewPanX(0);
+    setViewPanY(0);
+    markDirty();
+  }
+
   // ── effect config ─────────────────────────────────────────────────────────
 
   function handleEffectsChange(nextEffects) {
@@ -673,6 +849,8 @@ export default function TrackEditor() {
         name: trackName.trim(),
         backgroundImage,
         effects,
+        worldWidth: editorWorldW,
+        worldHeight: editorWorldH,
       });
       if (loadedTrackId) track.id = loadedTrackId;
       const saved = saveTrack(track);
@@ -708,6 +886,20 @@ export default function TrackEditor() {
     setSaveAttempted(false);
     setSaveError(null);
     resetHistory();
+
+    // Restore world dimensions and reset viewport
+    const ww = track.worldWidth ?? 1280;
+    const wh = track.worldHeight ?? 720;
+    setEditorWorldW(ww);
+    setEditorWorldH(wh);
+    viewTransformRef.current.worldW = ww;
+    viewTransformRef.current.worldH = wh;
+    viewTransformRef.current.zoom = 1.0;
+    viewTransformRef.current.panX = 0;
+    viewTransformRef.current.panY = 0;
+    setViewZoom(1.0);
+    setViewPanX(0);
+    setViewPanY(0);
 
     if (track.sourceMode === 'center') {
       setMode('center');
@@ -753,6 +945,8 @@ export default function TrackEditor() {
       : activeBoundary === 'inner'
         ? `Inner: ${innerPoints.length}`
         : `Outer: ${outerPoints.length}`;
+
+  const currentWorldSize = WORLD_SIZES.find((s) => s.w === editorWorldW && s.h === editorWorldH);
 
   // ── JSX ───────────────────────────────────────────────────────────────────
 
@@ -914,6 +1108,47 @@ export default function TrackEditor() {
           <span className={s.sliderLabel}>Effects:</span>
           <EffectConfig effects={effects} onChange={handleEffectsChange} max={3} />
         </div>
+
+        {/* World size + viewport controls */}
+        <div className={s.toolbarRow}>
+          <span className={s.sliderLabel}>World size:</span>
+          <select
+            value={currentWorldSize ? `${editorWorldW}x${editorWorldH}` : 'custom'}
+            onChange={(e) => {
+              const [w, h] = e.target.value.split('x').map(Number);
+              if (w && h) handleWorldSizeChange(w, h);
+            }}
+            style={{
+              background: 'var(--color-surface)',
+              color: 'var(--color-text)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '4px',
+              padding: '0.2rem 0.4rem',
+              fontSize: '0.8rem',
+            }}
+          >
+            {WORLD_SIZES.map((ws) => (
+              <option key={`${ws.w}x${ws.h}`} value={`${ws.w}x${ws.h}`}>
+                {ws.label}
+              </option>
+            ))}
+            {!currentWorldSize && (
+              <option value="custom">
+                {editorWorldW}×{editorWorldH} (custom)
+              </option>
+            )}
+          </select>
+          <button
+            className={s.historyBtn}
+            onClick={handleFitToScreen}
+            title="Reset zoom and pan to fit the full world"
+          >
+            ⊡ Fit
+          </button>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.25rem' }}>
+            {Math.round(viewZoom * 100)}%
+          </span>
+        </div>
       </div>
 
       <div className={s.saveBar}>
@@ -993,7 +1228,7 @@ export default function TrackEditor() {
             height={CH}
             className={s.canvas}
             role="img"
-            aria-label="Track editor canvas — click to place points"
+            aria-label="Track editor canvas — click to place points, scroll to zoom, drag background to pan"
             onClick={handleCanvasClick}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
