@@ -123,9 +123,12 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-26 | 616 | B-7+B-8+W3 (PR #17 Basis-Commit) |
 | 2026-04-26 | **618** | PR #17 Test-3.1-Filter-Fix |
 | 2026-04-26 | **618** | Quality-Cleanup-Commit (unverändert) |
+| 2026-04-26 | **628** | D9 Race-Engine-Speed-Refactor (PR #19) — +10 Unit-Tests (estimatedSecondsPerLap ×5, openTrackFinishT ×5) |
+| 2026-04-26 | **628 unit + 22 e2e** | Quality-Gate-Cleanup-Commit (PR #19) — Playwright-Infrastruktur fertig |
 
-**Aktueller Master-HEAD:** `c828fd6`
-**ESLint-Warnings:** 13 → 3 (nach Quality-Cleanup-Commit in PR #17)
+**Aktueller Master-HEAD:** `dad3300`
+**ESLint-Warnings:** 3 (unverändert seit PR #17 Quality-Cleanup)
+**Playwright e2e:** 22 Tests (neue Test-Kategorie, seit D9 / PR #19)
 
 ---
 
@@ -138,13 +141,22 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | D3.5.3 | ✅ Tests erweitert | — (neue Types) | ✅ grün |
 | B-7+B-8+W3 | ✅ 618 Tests | ✅ 9/9 PASS (nach Filter-Fix) | ausstehend |
 | Quality-Cleanup (PR #17) | ✅ 618 unverändert | — (keine UI-Änderung) | — |
+| D9 (PR #19) | ✅ 628 Tests (+10) | ✅ 22/22 PASS (neue e2e-Infrastruktur) | ausstehend |
+| Quality-Gate-Cleanup (PR #19) | ✅ 628 unverändert | ✅ 22/22 unverändert | — |
 
 **Quality-Gate auf PR #17:** 11 PASS, 8 WARN, 1 FAIL (pre-existing)
 - ❌ FAIL: TrackEditor.jsx (1006 LOC) + RaceScreen/index.jsx (886 LOC) — pre-existing, deferred to Phase Q-6/Q-7
 - ⚠️ WARN: 8 Items inkl. dead export, ungenutzte Imports, fehlendes JSON.parse-try/catch, fehlende File-Header
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
-**Quality-Gate-Cleanup:** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+**Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #19 (D9):** alle Findings vor Merge gefixt
+- ❌ S-1 (vor Merge gefixt): vitest.config.js ohne `exclude: ['e2e/**']` — `npm test` schlug rot weil Playwright-Spec importiert wurde
+- ⚠️ W-D1 (vor Merge gefixt): RaceScreen duplizierte `BASE_SPEED_MIN`/`BASE_SPEED_MAX` statt lapUtils-Import
+- ⚠️ W-D2 (vor Merge gefixt): `getRacerType(typeId)` dreimal aufgerufen, jetzt gecacht
+- ⚠️ W-D3+W-D4 (vor Merge gefixt): fehlende Standard-File-Header in `playwright.config.js` und `e2e/d9-smoke.spec.js`
+- ⚠️ Pre-existing (unverändert): 3 ESLint-Warnings (TransitionContext.jsx:44, storage.js:148/154); RaceScreen 940 LOC → Phase Q-7 Priorität erhöht
 
 ---
 

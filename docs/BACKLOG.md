@@ -7,20 +7,16 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **D9** — Race-Engine-Speed-Refactor. speedMultiplier wirkt linear auf Race-Speed.
-  Explicit Lap/Time-Wahl für Spielleiter. Dynamische Ziellinie für Open-Tracks.
-  Auslauf-Verhalten + 2s Result-Delay. Spec im PR-Body.
+- 🔜 **D3.5.5** — Speed-UI im Dev-Screen. Zeigt speedMultiplier aller 12 Types im
+  RacerManager. Slider + Preview. D9 ist gemergt — Abhängigkeit erfüllt.
 
 ---
 
 ## Ready — spec existiert oder trivial
-
-- ⏳ **D3.5.5** — Speed-UI im Dev-Screen (wartet auf D9-Merge). Zeigt speedMultiplier
-  aller 12 Types im RacerManager. Slider + Preview.
 - **D3.5.4** — Trail-Tuning: visuelle Nachzieh-Qualität pro Type verfeinern. Unabhängig
   von D9.
 - **D10** — Track-Größen-Variabilität + lange Sprint-Tracks. Ermöglicht längere
-  Open-Track-Races nach D9. Hebt die 1280px-Beschränkung.
+  Open-Track-Races nach D9. Hebt die 1280px-Beschränkung auf.
 
 ---
 
@@ -36,9 +32,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **W3** | #17 | Session-only Racer-Override-Selector im Setup-Track-Tab, filtert deaktivierte Types |
 | ✅ **B-9** | #17 | Test-3.1-Filter: Override-Selector zeigt nur aktive Types |
 | ✅ **Q-1 bis Q-5** | #17 | Dead-Exports, ungenutzte Imports, TODO-Tags, JSON.parse-Hygiene, File-Headers |
+| ✅ **D9** | #19 | Race-Engine-Speed-Refactor: speedMultiplier wirkt auf Race-Speed, explizite Lap/Time-Wahl, dynamische Ziellinie für Open-Tracks, Auslauf-Verhalten, 2s Result-Delay, 22 Playwright e2e Tests. Master `dad3300`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
-  wird vollständig durch D9-Refactor behoben.
+  vollständig durch D9-Refactor behoben (PR #19).
 
 ---
 
@@ -67,7 +64,8 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 ### Phase Q (Quality-Hygiene)
 
 - **Q-6** — TrackEditor.jsx (1006 LOC) Split-Refactor. Pre-existing, eigene PR.
-- **Q-7** — RaceScreen/index.jsx (886 LOC) Split-Refactor. Pre-existing, eigene PR.
+- **Q-7** — RaceScreen/index.jsx Split-Refactor. Nach D9 auf **940 LOC** gewachsen —
+  Priorität für Refactor gestiegen. Pre-existing, eigene PR.
 - **Q-8** — Watch-List: TrackManager.jsx (346 LOC) und BrandingProfiles.jsx (330 LOC).
   Bei nächster Erweiterung Refactor erwägen.
 
@@ -98,9 +96,8 @@ Alle bestehenden Dev-Screen-Felder die ohne Label unklar sind:
 
 ## Reihenfolge nächste Schritte
 
-1. 🔜 **D9** Race-Engine-Speed-Refactor (NÄCHSTER SCHRITT)
-2. **D3.5.5** Speed-UI im Dev-Screen (wartet auf D9-Merge)
-3. **D10** Track-Längen-Variabilität (wenn User lange Sprint-Tracks designen möchte)
+1. 🔜 **D3.5.5** Speed-UI im Dev-Screen (NÄCHSTER SCHRITT — D9 gemergt)
+2. **D10** Track-Längen-Variabilität (wenn User lange Sprint-Tracks designen möchte)
 4. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
 5. **D3.5.4** Trail-Tuning
 6. **D6**, **D7**, **D8**
