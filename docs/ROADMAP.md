@@ -46,61 +46,73 @@
 
 See `docs/TRACK_EDITOR.md` for the full specification, architectural decisions, and future extensions.
 
-## Issue D — Racer Redesign (in progress)
+## Issue D — Racer Redesign ✅ Parts 1–3 merged, Parts 4–5 pending
 
-Replaces emoji racers with sprite-based renderable types. Each racer type can have render, animation, trail, and color variation.
+Replaces emoji racers with sprite-based renderable types.
 
 - [x] D1 — Extended racer manifest (render, animation, trail, style fields)
 - [x] D2 — drawRacer wiring + trail integration for horse
 - [x] D2.3 — Sprite-based horse render (4-frame trot animation, 128×128 tile sheet)
 - [x] D2.4 — 11 horse coats with hash-based per-player assignment
 - [x] D3.5.1 — SpriteRacerType config-driven base class; tintSpriteWithMask for mask-restricted tinting
-- [ ] D3.5.2 — Migrate Horse / Duck / Snail → SpriteRacerType; remove dead _createTrail system
-- [ ] D3.5.3 — 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, RocketSprite) using SpriteRacerType
+- [x] D3.5.2 — Horse/Duck/Snail → SpriteRacerType; `_createTrail` system removed
+- [x] D3.5.3 — 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket)
+- [ ] D3.5.4 — Trail-Tuning: visual trail quality refinement per type
+- [ ] D3.5.5 — Speed-UI in Dev-Screen (waiting on D9 merge)
+- [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
-- [ ] D5 — Lint cleanup, docs, max-warnings: 0 in CI
-- [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry (rteDefinitions, schema TBD in D6 spec)
-- [ ] D7 — Camera polish: smooth zoom transitions, configurable director mode preferences per track
+- [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
+- [ ] D7 — Camera polish: smooth zoom transitions, configurable director preferences per track
+- [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
-## Phase 3 — Result Screen (planned)
+## Phase B — Bug Fixes & Wiring
 
-- [ ] Podium display (top N winners)
-- [ ] Winner count from SetupScreen wired to result podium (currently hardcoded fallback)
-- [ ] Full results table
-- [ ] Auto-advance from race → results
-- [ ] Share / export result card
+- [x] B-6 — speedMultiplier-Bug — subsumed by D9
+- [x] B-7 — Dev-Screen UI-Drift: Code-Registry as Single Source of Truth (PR #17)
+- [x] B-8 — SetupScreen Footer/Pills Emoji-Mapping fixed (PR #17)
+- [x] B-9 — Override Selector filters inactive types (PR #17 cleanup)
+- [ ] B-1 — PlayerSetup: loading saved groups (button exists, behavior unclear)
+- [ ] B-2 — TrackSelector: custom-track behavior on missing geometry
+- [ ] B-3 — Result-Screen winner count configurable (currently hardcoded)
+- [ ] B-4 — Branding profile applied to race/result screens (UI exists, wiring missing)
+- [ ] B-5 — System Backup/Restore/Reset end-to-end verified (UI-only so far)
 
-## Phase 4 — Dev Panel & Configuration ⬜ In progress
+## D9 — Race Engine Speed Refactor 🔜 NEXT
 
-- [x] Dev Screen shell (sidebar nav, 7 sections)
-- [x] Player Groups Manager — save/load/quick-import named rosters
-- [x] Racer Manager — add/edit/delete custom racer types
-- [x] Track Manager — full CRUD, geometry link, effects preview, set default
-- [x] Branding Profiles — event name, colors, logo upload, live preview ⚠️ not yet applied to race/result screens (Phase B)
-- [x] Race Defaults — duration, winners, countdown, auto-advance, sound, language
-- [x] Race History — filterable table, CSV export, clear ⚠️ auto-population on race finish not yet wired (Phase B)
-- [x] System — JSON backup/restore, factory reset, version info ⚠️ backup/restore verified UI only; end-to-end not tested (Phase V)
-- [x] Gear icon (⚙️) in SetupScreen header → Dev Panel
-- [x] localStorage persistence (`racearena:*` keys) for all settings
-- [x] Custom tracks and racers flow into SetupScreen automatically
-- [ ] Branding profile applied to race / result screens
-- [ ] Race history auto-populated when races finish
+Makes `speedMultiplier` effective on race speed. Replaces `lapsFromDuration` auto-calculation
+with explicit operator choice (lap count for closed tracks, race duration for open tracks).
+Adds dynamic finish-line positioning for open tracks, run-out behavior, 2-second result delay,
+and estimated-duration display in SetupScreen.
 
-## Phase B — Bug Fixes & Wiring (planned)
+See D9 PR body for full spec.
 
-- [ ] Branding profile applied to race / result screens
-- [ ] Race history auto-populated when races finish
-- [ ] Winner count from setup wired to result screen podium
+## D10 — Track Size Variability (planned, after D9)
 
-## Phase Q — Quality Gate (planned)
+Lifts the 1280px track-width constraint. Enables longer open-track races. Unlocks longer
+sprint-style tracks designed specifically for Rocket/F1 speed types.
 
-- [ ] ESLint max-warnings: 0 in CI (currently 2 tolerated)
-- [ ] Playwright E2E tests: setup → race → results critical path
+## W3 — Race-Type Override ✅ Done (PR #17)
+
+Session-only racer-type override selector in the Setup Track tab. Filters disabled types.
+Resets on track change. Not persisted.
+
+## Phase Q — Quality Hygiene
+
+- [x] Q-1 through Q-5 — Dead exports, unused imports, TODO tags, JSON.parse hygiene, file
+  headers (PR #17 cleanup commit)
+- [ ] Q-6 — TrackEditor.jsx split-refactor (1006 LOC, pre-existing)
+- [ ] Q-7 — RaceScreen/index.jsx split-refactor (886 LOC, pre-existing)
+- [ ] Q-8 — Watch-list: TrackManager.jsx (346 LOC), BrandingProfiles.jsx (330 LOC)
 
 ## Phase V — Verification Sprint (planned)
 
-- [ ] Audit all ROADMAP.md [x] items against the running app
-- [ ] Confirm Branding Profiles, System Backup, Race History end-to-end
+Systematic verification of all unconfirmed ROADMAP.md `[x]` items against the running app.
+See BACKLOG.md V-1 through V-9 for full item list.
+
+## Phase T — Tooltip Retrofit (planned)
+
+Tooltip-convention applied to all existing Dev-Screen fields that lack self-evident labels.
+See BACKLOG.md T-1 through T-4.
 
 ## Phase 5 — Race-Integrity Server & Leaderboard (planned)
 
@@ -118,7 +130,6 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 - [ ] VPS deployment (nginx reverse proxy, HTTPS via Let's Encrypt)
 - [ ] Environment config (CLIENT_ORIGIN, JWT_SECRET, DB_PATH)
 - [ ] Admin auth hardened for public-facing use
-- [ ] Branding applied to race / result screens
 - [ ] Stats pages (top racers, busiest tracks, season history)
 - [ ] Mobile / tablet responsive tuning
 
@@ -135,7 +146,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (453 tests, 31 test files)
+- [x] Vitest + React Testing Library (618 tests, 45 test files)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -148,8 +159,11 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 |------|-------|
 | 2026-04-19 | Setup Screen built, Dev Screen with 7 sections built, full QA pipeline installed (ESLint, Prettier, Vitest 29 tests, GitHub Actions, Husky pre-commit hooks), AUDIT.md created. |
 | 2026-04-22 | Race Engine phase complete: SVG-path track system (5 shapes), 5 environments, racer types, race loop with collision avoidance, multi-lap closed tracks (lapsFromDuration 1–4), scrolling camera for open tracks (2.5× virtual canvas), TV camera director (OVERVIEW/LEADER_ZOOM/BATTLE_ZOOM/COMEBACK_ZOOM), fullscreen toggle (⛶), fade-to-black screen transitions (TransitionContext), result screen + race history. 228 Vitest tests. |
-| 2026-04-23 | CI restored (vite 5→8 upgrade via PR #1), environments refactored to consume background image paths from track config via module-level image cache (PR #2), project hygiene pass for line endings, coverage ignore, and SETUP.md stack correction (PR #3). Documentation for Phase 2.5 Track Editor feature established. 232 Vitest tests still green. |
-| 2026-04-24 | Phase 2.5 Track Editor complete on branch `feat/track-editor`. Track geometry CRUD, EditorShape, Center/Boundary mode, full edit ops, undo/redo, 6 track effects with multi-effect array (up to 3 per geometry), live editor preview, minimap, camera director, preset thumbnails. Pre-merge audit (AUDIT.md) identified critical auth issue in scaffolded server code. F15 audit fixes applied. F16 deleted unused server scaffold entirely (architecture incompatible with Phase 5 plan). F17 source hygiene audit. F18 removed day-one/phase-2 dead-code scaffold (track-canvas, race-engine, race-simulation, particle-effects, track-renderer stub, dead entry files). PR #6 squash-merged. 307 Vitest tests across 25 files. |
-| 2026-04-25 | Pre-D cleanup: removed empty module dirs left behind by F10/F18 (particle-effects, race-engine, race-simulation, track-canvas, track-shapes, environments, socket), ARCHITECTURE.md folder structure aligned with reality, ROADMAP.md test count corrected (365→307 / 28→25), .gitignore tightened. CI workflow fixed (server job removed, was blocking merge). |
-| 2026-04-25 | Issue D horse track complete. Started procedural Canvas-primitives (3 attempts: brown blob, hidden-leg cream, narrow stick-leg) — none was readable as a horse at 22-26px scale. Pivoted to sprite-based render with a real top-down trot sheet. Lesson: complex anatomical sprites at small scale need PNG assets, not procedural geometry. Added spriteLoader, spriteTinter (offscreen canvas multiply), coatAssignment (djb2 hash). 11 horse coats. RaceScreen attaches racer.coatId at race init. 350 tests. |
+| 2026-04-23 | CI restored (vite 5→8 upgrade via PR #1), environments refactored to consume background image paths from track config via module-level image cache (PR #2), project hygiene pass for line endings, coverage ignore, and SETUP.md stack correction (PR #3). 232 Vitest tests still green. |
+| 2026-04-24 | Phase 2.5 Track Editor complete on branch `feat/track-editor`. Track geometry CRUD, EditorShape, Center/Boundary mode, full edit ops, undo/redo, 6 track effects with multi-effect array (up to 3 per geometry), live editor preview, minimap, camera director, preset thumbnails. Pre-merge audit (AUDIT.md) identified critical auth issue in scaffolded server code. F15–F18 audit fixes applied including server scaffold deletion. PR #6 squash-merged. 307 Vitest tests across 25 files. |
+| 2026-04-25 | Pre-D cleanup: removed empty module dirs left behind by F10/F18, ARCHITECTURE.md folder structure aligned with reality, ROADMAP.md test count corrected (365→307 / 28→25), .gitignore tightened. CI workflow fixed (server job removed). |
+| 2026-04-25 | Issue D horse track complete. Three procedural Canvas-primitives attempts failed — pivoted to sprite-based render with PNG trot sheet. Added spriteLoader, spriteTinter (offscreen canvas multiply), coatAssignment (djb2 hash). 11 horse coats. 350 tests. |
 | 2026-04-26 | D3.5.1 complete: SpriteRacerType config-driven base class (52 tests); tintSpriteWithMask two-canvas algorithm added to spriteTinter (5 new tests); SpriteRacerType re-exported from index.js. PR #13 squash-merged to master (cf256d8). 453 tests, 31 test files. DOC-SPRINT: PROJECT-PRINCIPLES.md, BACKLOG.md, HANDOFF.md created; ROADMAP.md, ARCHITECTURE.md, RACER_DATA_MODEL.md, AUDIT.md updated. |
+| 2026-04-26 | D3.5.2 complete: Horse/Duck/Snail migrated to SpriteRacerType config objects; dead `_createTrail` system removed. 603 tests. |
+| 2026-04-26 | D3.5.3 complete: 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket) using SpriteRacerType. Mask-tinting for Buggy/Motorbike/Plane. 603 tests, PR #16. |
+| 2026-04-26 | B-7+B-8+W3 complete (PR #17): code registry as Single Source of Truth for racer types; racerTypeOverrides override map; emoji from registry; session-only race-type override selector; filter for inactive types (Test-3.1 fix). Quality-gate cleanup: dead RACER_TYPE_EMOJIS export removed, 11 unused imports removed, JSON.parse defensive hygiene, 13 file headers added. 618 tests, 3 ESLint warnings (down from 13). |

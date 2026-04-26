@@ -43,3 +43,37 @@ Claude Code CLI executes self-contained specs: writes code, tests, docs, commits
 
 Specs delivered to Claude Code must be fully self-contained. No follow-up clarification
 during execution. The PR body is the authoritative spec reference.
+
+---
+
+## Application Conventions
+
+### Tooltip Convention
+
+All new fields in the Dev-Screen whose meaning is not self-evident from the label get an
+info-icon with a tooltip. Content: plain-language explanation of what the value controls,
+sensible range / example values, and a note on extremes where relevant. Existing fields are
+retrofitted in Phase T.
+
+### CC Smoke-Test Convention
+
+For merges with UI impact, Claude Code runs a Playwright-based visual smoke-test before push
+and documents the result in the PR body. UI impact = new sprites/assets, UI refactor,
+data-flow changes, race-engine changes. Pure code refactors without UI impact, doc sprints,
+and storage-only migrations do not require a smoke-test. User final review remains mandatory
+before every merge.
+
+### Quality-Gate Convention
+
+At phase completions, Claude Code runs a quality gate. Strategic Claude asks the user per PR
+whether to apply the gate. Five sections: Source-Code Hygiene, File Hygiene, Security,
+Architecture Consistency, Test-Coverage Plausibility. Severity: ✅ PASS / ⚠️ WARN (backlog) /
+❌ FAIL (show-stopper). Strategic Claude reviews findings and presents a summary; user decides.
+Pre-existing findings are separated from PR-introduced findings.
+
+### Spec Writing Style Convention
+
+Strategic Claude describes What + Why (requirements, API signatures, storage schemas, data
+decisions, test expectations). Implementation (the How) is left to Claude Code. Code examples
+in specs only when interfaces or APIs are being defined, not as implementation prescriptions
+for internal function logic.
