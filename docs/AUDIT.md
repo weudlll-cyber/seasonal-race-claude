@@ -107,6 +107,54 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 ---
 
+---
+
+## Test-Count-Historie
+
+| Zeitpunkt | Tests | Kontext |
+|---|---|---|
+| 2026-04-19 | 29 | Initial QA Pipeline Setup |
+| 2026-04-22 | 228 | Race Engine complete |
+| 2026-04-23 | 232 | CI-Fix + Environments-Refactor |
+| 2026-04-24 | 307 | Phase 2.5 Track Editor (PR #6) |
+| 2026-04-25 | 350 | Issue D Horse Sprites |
+| 2026-04-26 | 453 | D3.5.1 SpriteRacerType (PR #13) |
+| 2026-04-26 | 603 | D3.5.2 + D3.5.3 |
+| 2026-04-26 | 616 | B-7+B-8+W3 (PR #17 Basis-Commit) |
+| 2026-04-26 | **618** | PR #17 Test-3.1-Filter-Fix |
+| 2026-04-26 | **618** | Quality-Cleanup-Commit (unverändert) |
+
+**Aktueller Master-HEAD:** `c828fd6`
+**ESLint-Warnings:** 13 → 3 (nach Quality-Cleanup-Commit in PR #17)
+
+---
+
+## Verifikations-Status pro Phase
+
+| Phase | Code-Tests | Playwright-Smoke-Test | Browser-Verifikation User |
+|---|---|---|---|
+| D3.5.1 | ✅ 52 neue Tests | — (kein UI-Impact) | ✅ grün |
+| D3.5.2 | ✅ Tests migriert | — (interne Refactor) | ✅ grün |
+| D3.5.3 | ✅ Tests erweitert | — (neue Types) | ✅ grün |
+| B-7+B-8+W3 | ✅ 618 Tests | ✅ 9/9 PASS (nach Filter-Fix) | ausstehend |
+| Quality-Cleanup (PR #17) | ✅ 618 unverändert | — (keine UI-Änderung) | — |
+
+**Quality-Gate auf PR #17:** 11 PASS, 8 WARN, 1 FAIL (pre-existing)
+- ❌ FAIL: TrackEditor.jsx (1006 LOC) + RaceScreen/index.jsx (886 LOC) — pre-existing, deferred to Phase Q-6/Q-7
+- ⚠️ WARN: 8 Items inkl. dead export, ungenutzte Imports, fehlendes JSON.parse-try/catch, fehlende File-Header
+- ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
+
+**Quality-Gate-Cleanup:** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+---
+
+## Reality-Check-Items
+
+Keine neuen systemweiten Drift-Probleme in dieser Session entdeckt.
+Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-Items aus ROADMAP.md.
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |
