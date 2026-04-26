@@ -63,6 +63,19 @@ data-flow changes, race-engine changes. Pure code refactors without UI impact, d
 and storage-only migrations do not require a smoke-test. User final review remains mandatory
 before every merge.
 
+### UX-Verifikations-Convention (Erweiterung der CC-Smoke-Test-Convention)
+
+Bei UI-schweren Phasen kann zusätzlich zur normalen Smoke-Test-Spec eine separate
+UX-Verifikations-Spec (`*-ux-verification.spec.js`) erstellt werden. Diese deckt
+Verhaltens-Aspekte ab die funktionale Smoke-Tests nicht prüfen: Tooltip-Inhalte,
+Indikator-Sichtbarkeit, Validation-Recovery, disabled-State von Buttons, Modal-Layout-
+Konsistenz auf verschiedenen Viewports, State-Isolation zwischen aufeinanderfolgenden
+Modal-Aufrufen. Die Spec wird permanent behalten als Regressions-Schutz.
+
+Wann angebracht: neue Modals, komplexe Validierungsflüsse, Indikator-Systeme (Badges,
+Markierungen), Formular-Felder mit Recovery-Verhalten, viewport-abhängige Layouts.
+Einfache List-Views oder reine Daten-Anzeigen brauchen keine separate UX-Spec.
+
 ### Quality-Gate Convention
 
 At phase completions, Claude Code runs a quality gate. Strategic Claude asks the user per PR

@@ -58,7 +58,7 @@ Replaces emoji racers with sprite-based renderable types.
 - [x] D3.5.2 — Horse/Duck/Snail → SpriteRacerType; `_createTrail` system removed
 - [x] D3.5.3 — 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket)
 - [ ] D3.5.4 — Trail-Tuning: visual trail quality refinement per type
-- [ ] D3.5.5 — Speed-UI in Dev-Screen 🔜 (D9 merged — ready)
+- [x] D3.5.5 — Per-Type-Tuning-UI in Dev-Screen: 6 Felder live-tunbar via Edit-Modal, InfoTooltip-Komponente, CONFIG_SNAPSHOT, normalizeOverrideMap. 678 unit + 36 e2e Tests. PR #21, master `2d76bc3`.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
 - [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
@@ -85,15 +85,29 @@ Adds dynamic finish-line positioning for open tracks, run-out behavior, 2-second
 and estimated-duration display in SetupScreen. New Playwright e2e infrastructure with 22
 smoke tests. 628 unit tests + 22 e2e tests.
 
-## D3.5.5 — Speed-UI in Dev-Screen 🔜 NEXT
+## D3.5.5 — Per-Type-Tuning-UI ✅ Done (PR #21, master `2d76bc3`)
 
-speedMultiplier display for all 12 types in RacerManager. Slider + preview.
-D9 dependency met — ready to implement.
+Edit-Modal in RacerManager for all 12 racer types. 6 live-tuneable fields: speedMultiplier,
+displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy. Live-apply on
+each valid change, per-field reset, reset-all-defaults (preserves isActive). InfoTooltip as
+reusable component. Override-API extended generically (setRacerTypeOverride 3-arg,
+resetRacerTypeOverride with optional fieldName, CONFIG_SNAPSHOT, normalizeOverrideMap).
+678 unit tests + 36 e2e + 21 UX-verification tests.
 
-## D10 — Track Size Variability (planned, after D9)
+## D10 — Track-Größen-Variabilität + Auto-Sprite-Skalierung 🔜 NEXT
 
-Lifts the 1280px track-width constraint. Enables longer open-track races. Unlocks longer
-sprint-style tracks designed specifically for Rocket/F1 speed types.
+Lifts the 1280px track-width constraint. Variable worldWidth + worldHeight per track (hard
+limit 16000×8192). trackWidth becomes truly variable (currently hardcoded to 140 everywhere).
+TrackEditor with robust zoom + pan for designing large tracks. Auto-sprite-scaling formula:
+factor = clamp(trackWidth / racerCount / referenceValue, minScale, maxScale). Operator
+overrides from D3.5.5 win over auto-factor. Tunable globals via Dev-Screen (D3.5.5 pattern).
+
+## D11 — Racer Behavior: Soft Avoidance + Drafting (planned, after D10)
+
+Racers currently overlap without interaction. Soft avoidance: nearby racers shift smoothly.
+Drafting: follower in slipstream gets slight speed boost. Both increase race drama. All
+racers share one type per race, so avoidance/drafting creates visible dynamic within the
+random baseSpeed spread. Requires dynamic lane system; tunable values.
 
 ## W3 — Race-Type Override ✅ Done (PR #17)
 
@@ -150,7 +164,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (628 unit tests, 45 test files) + Playwright e2e (22 tests)
+- [x] Vitest + React Testing Library (678 unit tests, 47 test files) + Playwright e2e (57 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -172,3 +186,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-26 | D3.5.3 complete: 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket) using SpriteRacerType. Mask-tinting for Buggy/Motorbike/Plane. 603 tests, PR #16. |
 | 2026-04-26 | B-7+B-8+W3 complete (PR #17): code registry as Single Source of Truth for racer types; racerTypeOverrides override map; emoji from registry; session-only race-type override selector; filter for inactive types (Test-3.1 fix). Quality-gate cleanup: dead RACER_TYPE_EMOJIS export removed, 11 unused imports removed, JSON.parse defensive hygiene, 13 file headers added. 618 tests, 3 ESLint warnings (down from 13). |
 | 2026-04-26 | D9 Race-Engine-Speed-Refactor complete (PR #19, master `dad3300`): speedMultiplier wired to baseSpeed; explicit lap/time selection with live duration estimates; dynamic finish-line for open tracks; run-out behavior; 2s result delay; sessionStorage extended with raceMode/targetLaps/targetDuration. New Playwright e2e infrastructure (playwright.config.js + 22 smoke tests). Quality-gate cleanup: vitest excludes e2e/, BASE_SPEED constants imported in RaceScreen, getRacerType cached, file headers added. 628 unit tests + 22 e2e tests. |
+| 2026-04-26 | D3.5.5 Per-Type-Tuning-UI complete (PR #21, master `2d76bc3`): Edit-Modal for all 12 racer types with 6 live-tuneable fields; InfoTooltip reusable component; CONFIG_SNAPSHOT + normalizeOverrideMap (legacy migration); override-API extended to 3-arg form. UX-verification spec (21 tests, permanent). Quality-gate: 0 show-stoppers, duplicate import fix before merge. 678 unit tests + 57 e2e tests. Doc sprint: BACKLOG (D10/D11 concepts), RACER_DATA_MODEL (single-type-per-race clarification, updated API), LESSONS 11+12, AUDIT, ROADMAP, PROJECT-PRINCIPLES (UX-verification convention). |

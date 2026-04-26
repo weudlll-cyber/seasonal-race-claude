@@ -159,6 +159,43 @@ bestehenden. Tests sollten die Symmetrie absichern.
 
 ---
 
+## Lesson 11 — UX-Verifikation als zusätzliche Smoke-Test-Schicht (PR #21)
+
+**Kontext:** D3.5.5 hatte umfangreichen UI-Impact (Edit-Modal, 6 Felder, Tooltips, Override-
+Indikatoren, Validation). Neben dem normalen Smoke-Test (`d355-smoke.spec.js`, 14 Tests) wurde
+eine separate UX-Verifikations-Spec (`d3-5-5-ux-verification.spec.js`, 21 Tests) erstellt.
+Sie deckte Verhaltens-Aspekte ab die normale Smoke-Tests nicht prüfen: Tooltip-Inhalte,
+Override-Indikator-Sichtbarkeit, Validation-Recovery, Modal-Layout-Konsistenz auf verschiedenen
+Viewports, State-Isolation zwischen Modal-Aufrufen. Alle 21/21 grün.
+
+**Erkenntnis:** Funktionale Smoke-Tests (öffnet Modal? schreibt localStorage?) decken nicht ab,
+ob die UX korrekt ist: ob Badges erscheinen/verschwinden, ob Fehler-Messages nach Korrektur
+weggeräumt werden, ob Buttons korrekt disabled sind. Diese Schicht braucht eigene Tests.
+
+**Konsequenz:** Bei UI-schweren Phasen separate UX-Verifikations-Spec erwägen
+(`*-ux-verification.spec.js`). Spec wird permanent behalten als Regressions-Schutz.
+Convention-Erweiterung der CC-Smoke-Test-Convention (→ PROJECT-PRINCIPLES.md).
+
+---
+
+## Lesson 12 — CI-Wartezeit beim Auto-Merge-Workflow (PR #21)
+
+**Kontext:** Beim Merge von PR #21 zeigte `gh pr merge` zunächst Fehler
+`Pull Request is not mergeable (mergePullRequest)`. Status via `gh pr view` war
+`mergeStateStatus: UNSTABLE` weil GitHub Actions CI-Run für den letzten Commit noch
+nicht abgeschlossen war. Korrektur: `gh run watch` für Wartezeit, dann erneuter
+`gh pr merge` — erfolgreich.
+
+**Erkenntnis:** GitHub betrachtet eine PR als "not mergeable" wenn CI noch pending ist,
+auch wenn kein Branch-Protection-Requirement auf grünen CI besteht. `UNSTABLE` ≠ `BLOCKED`.
+Kurzes Warten auf CI-Completion löst das Problem.
+
+**Konsequenz:** Auto-Merge-Prompts sollten `gh pr checks` oder kurze CI-Wartezeit einplanen.
+Workflow: nach Push warten bis CI grün, dann `gh pr merge`. Bei `UNSTABLE`:
+`gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')`.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
