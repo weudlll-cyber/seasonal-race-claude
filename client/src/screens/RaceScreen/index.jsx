@@ -24,6 +24,8 @@ import {
   lapProgress,
   currentLap,
   openTrackFinishT,
+  BASE_SPEED_MIN,
+  BASE_SPEED_MAX,
 } from '../../modules/camera/lapUtils.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -129,10 +131,11 @@ export default function RaceScreen() {
       })
       .filter(Boolean);
 
-    racerTypeRef.current = getRacerType(typeId);
+    const racerType = getRacerType(typeId);
+    racerTypeRef.current = racerType;
 
-    const trackEmoji = getRacerType(typeId).getEmoji() ?? null;
-    const speedMultiplier = getRacerType(typeId).getSpeedMultiplier();
+    const trackEmoji = racerType.getEmoji() ?? null;
+    const speedMultiplier = racerType.getSpeedMultiplier();
 
     // Determine finish position in t-space
     const duration = raceData.duration ?? 60;
@@ -188,7 +191,8 @@ export default function RaceScreen() {
         lap: 1,
         trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
-        baseSpeed: (0.00085 + Math.random() * 0.00035) * speedMultiplier,
+        baseSpeed:
+          (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier,
         jitterFreq: 0.0006 + Math.random() * 0.0014,
         jitterPhase: Math.random() * Math.PI * 2,
         color: LANE_COLORS[i % LANE_COLORS.length],

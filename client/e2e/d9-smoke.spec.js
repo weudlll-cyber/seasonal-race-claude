@@ -1,6 +1,12 @@
-// e2e/d9-smoke.spec.js
-// Smoke tests for D9 — Race Engine Speed Refactor
-// Covers: lap selector UI, duration estimates, session data, race screen startup
+// ============================================================
+// File:        d9-smoke.spec.js
+// Path:        client/e2e/d9-smoke.spec.js
+// Project:     RaceArena
+// Created:     2026-04-26
+// Description: Playwright smoke tests for D9 — Race Engine Speed Refactor.
+//              Covers: lap selector UI, duration estimates, session data,
+//              race screen startup across horse / snail / rocket racer types
+// ============================================================
 
 import { test, expect } from '@playwright/test';
 

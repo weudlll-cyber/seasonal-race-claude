@@ -1,3 +1,12 @@
+// ============================================================
+// File:        playwright.config.js
+// Path:        client/playwright.config.js
+// Project:     RaceArena
+// Created:     2026-04-26
+// Description: Playwright e2e test configuration — headless Chromium,
+//              dev-server auto-start, screenshot/video on failure
+// ============================================================
+
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
