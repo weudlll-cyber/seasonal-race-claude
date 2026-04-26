@@ -73,7 +73,7 @@ export { CarRacerType } from './CarRacerType.js';
 import { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
 import { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
 import { RocketRacerType } from './RocketRacerType.js';
-import { SnailRacerType } from './SnailRacerType.js';
+import { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
 import { CarRacerType } from './CarRacerType.js';
 
 export const RACER_TYPES = {
@@ -86,7 +86,7 @@ export const RACER_TYPES = {
 
 export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
 
-export const COATS_BY_TYPE = { horse: HORSE_COATS, duck: DUCK_COATS };
+export const COATS_BY_TYPE = { horse: HORSE_COATS, duck: DUCK_COATS, snail: SNAIL_COATS };
 
 export const RACER_TYPE_LABELS = {
   horse: 'Horse 🐴',
