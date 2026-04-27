@@ -23,7 +23,7 @@ const TRACK_WIDTHS = [100, 140, 200, 280, 360];
 
 const BLANK = {
   name: '',
-  icon: '',
+  icon: '🏁',
   description: '',
   defaultRacerTypeId: 'horse',
   geometryId: null,
