@@ -217,8 +217,8 @@ describe('CameraDirector — bbox clamping', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, 1280, 720);
-    // Adaptive leaderZoom = CANVAS_W²/(LEADER_VIEW_W*worldW) = 1280/910 ≈ 1.407 at worldW=1280
-    const leaderZoom = (1280 * 1280) / (910 * worldW);
+    // New formula: overviewZoom(1.0) × 1.4 = 1.4 exactly at worldW=1280
+    const leaderZoom = (1280 / worldW) * 1.4;
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
@@ -263,17 +263,18 @@ describe('CameraDirector — canvas-edge clamping (F6a)', () => {
 // ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
 
 describe('CameraDirector — adaptive zoom (B-16)', () => {
-  it('default 1280-wide world gives leaderZoom ≈ 1.4 (same as old hardcoded value)', () => {
+  it('default 1280-wide world gives leaderZoom = 1.4 (relative-ratio formula)', () => {
     const cd = new CameraDirector(undefined, 1280, 720);
-    expect(cd._leaderZoom).toBeCloseTo(1280 / 910, 3);
-    // Verify it's ≈ the old hardcoded 1.4
+    // New formula: overviewZoom(1.0) × LEADER_ZOOM_RATIO(1.4) = 1.4 exactly
+    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
     expect(cd._leaderZoom).toBeGreaterThan(1.38);
     expect(cd._leaderZoom).toBeLessThan(1.45);
   });
 
-  it('4000-wide world gives leaderZoom ≈ 0.45 (zoom-out for large tracks)', () => {
+  it('4000-wide world gives leaderZoom ≈ 0.448 (zoom-out for large tracks)', () => {
     const cd = new CameraDirector(undefined, 4000, 720);
-    expect(cd._leaderZoom).toBeCloseTo((1280 * 1280) / (910 * 4000), 3);
+    // New formula: (1280/4000) × 1.4 = 0.448
+    expect(cd._leaderZoom).toBeCloseTo((1280 / 4000) * 1.4, 3);
     expect(cd._leaderZoom).toBeLessThan(1); // large track → zoom-out
   });
 
@@ -367,12 +368,47 @@ describe('CameraDirector — top-3 focus', () => {
   });
 });
 
+// ── CameraDirector — relative zoom ratios (D7a) ───────────────────────────────
+
+describe('CameraDirector — relative zoom ratios (D7a)', () => {
+  it('1280-track: leaderZoom = 1.4, battleZoom = 1.6, comebackZoom = 1.3 (backward-compat)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
+    expect(cd._battleZoom).toBeCloseTo(1.6, 3);
+    expect(cd._comebackZoom).toBeCloseTo(1.3, 3);
+  });
+
+  it('6000-track: states are clearly distinct (battle 1.6× closer than overview)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    const overviewZoom = 1280 / 6000;
+    expect(cd._leaderZoom).toBeCloseTo(overviewZoom * 1.4, 4);
+    expect(cd._battleZoom).toBeCloseTo(overviewZoom * 1.6, 4);
+    expect(cd._comebackZoom).toBeCloseTo(overviewZoom * 1.3, 4);
+  });
+
+  it('zoom-state ratios are constant regardless of worldW', () => {
+    for (const worldW of [1280, 2560, 6000, 640]) {
+      const cd = new CameraDirector(undefined, worldW, 720);
+      // Battle should always be 1.6/1.4 ≈ 1.143× leaderZoom (before clamping)
+      if (cd._battleZoom < 2.5 && cd._leaderZoom < 2.5) {
+        expect(cd._battleZoom / cd._leaderZoom).toBeCloseTo(1.6 / 1.4, 2);
+      }
+    }
+  });
+
+  it('battleZoom / leaderZoom ratio is preserved on large world', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    expect(cd._battleZoom).toBeCloseTo(cd._leaderZoom * (1.6 / 1.4), 4);
+  });
+});
+
 // ── CameraDirector — adaptive zoom: corrected formula ────────────────────────
 
 describe('CameraDirector — adaptive zoom (corrected formula)', () => {
-  it('6000-wide world gives leaderZoom ≈ 0.30 (deep zoom-out)', () => {
+  it('6000-wide world gives leaderZoom ≈ 0.299 (deep zoom-out)', () => {
     const cd = new CameraDirector(undefined, 6000, 720);
-    expect(cd._leaderZoom).toBeCloseTo((1280 * 1280) / (910 * 6000), 3);
+    // New formula: (1280/6000) × 1.4 ≈ 0.2987
+    expect(cd._leaderZoom).toBeCloseTo((1280 / 6000) * 1.4, 3);
     expect(cd._leaderZoom).toBeCloseTo(0.3, 1);
   });
 

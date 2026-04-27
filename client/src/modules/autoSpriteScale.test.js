@@ -136,16 +136,16 @@ describe('saveAutoScaleConfig', () => {
 });
 
 describe('computeCameraZoomFactor', () => {
-  it('returns 1.0 at the reference zoom (1280-track LEADER state)', () => {
+  it('returns 1.0 at the reference zoom (1280-track LEADER state, bsX=1)', () => {
     expect(computeCameraZoomFactor(REFERENCE_CAMERA_ZOOM)).toBeCloseTo(1.0);
   });
 
-  it('returns ≈ 4.67 at zoom=0.3 (6000px track)', () => {
+  it('returns ≈ 4.67 at zoom=0.3, bsX=1 (backward-compat)', () => {
     expect(computeCameraZoomFactor(0.3)).toBeCloseTo(1.4 / 0.3, 3);
     expect(computeCameraZoomFactor(0.3)).toBeCloseTo(4.667, 2);
   });
 
-  it('returns ≈ 3.11 at zoom=0.45 (4000px track)', () => {
+  it('returns ≈ 3.11 at zoom=0.45, bsX=1 (backward-compat)', () => {
     expect(computeCameraZoomFactor(0.45)).toBeCloseTo(1.4 / 0.45, 3);
     expect(computeCameraZoomFactor(0.45)).toBeCloseTo(3.111, 2);
   });
@@ -159,11 +159,45 @@ describe('computeCameraZoomFactor', () => {
     expect(computeCameraZoomFactor(null)).toBe(1);
   });
 
-  it('on-screen sprite size is invariant: displaySize × factor × zoom = displaySize × REFERENCE_CAMERA_ZOOM', () => {
-    // The whole point: sprite in world-space × cameraZoomFactor × zoom = constant on screen
+  it('on-screen sprite size invariant with bsX=1: factor × zoom = REFERENCE_CAMERA_ZOOM', () => {
     for (const zoom of [0.3, 0.45, 0.9, 1.4, 2.0]) {
       const onScreen = computeCameraZoomFactor(zoom) * zoom;
       expect(onScreen).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
+    }
+  });
+
+  it('bsX=1 default is backward-compatible: same result as old single-arg call', () => {
+    expect(computeCameraZoomFactor(0.3, 1)).toBeCloseTo(computeCameraZoomFactor(0.3), 10);
+    expect(computeCameraZoomFactor(1.4, 1)).toBeCloseTo(computeCameraZoomFactor(1.4), 10);
+  });
+
+  it('6000-track: factor × zoom × bsX = REFERENCE_CAMERA_ZOOM (bsX-fix invariant)', () => {
+    // bsX = 1280/6000 ≈ 0.2133, zoom ≈ 0.298 (1.4 × 1280/6000)
+    const bsX = 1280 / 6000;
+    const zoom = (1280 / 6000) * 1.4; // new leaderZoom formula
+    const factor = computeCameraZoomFactor(zoom, bsX);
+    expect(factor * zoom * bsX).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
+  });
+
+  it('6000-track: on-screen sprite size = displaySize × REFERENCE_CAMERA_ZOOM (same as 1280-track)', () => {
+    const bsX = 1280 / 6000;
+    const zoom = (1280 / 6000) * 1.4;
+    const factor = computeCameraZoomFactor(zoom, bsX);
+    const onScreen1280 = computeCameraZoomFactor(1.4, 1) * 1.4 * 1; // bsX=1
+    const onScreen6000 = factor * zoom * bsX;
+    expect(onScreen6000).toBeCloseTo(onScreen1280, 5);
+  });
+
+  it('invariant holds for a range of (zoom, bsX) pairs', () => {
+    const pairs = [
+      [1.4, 1], // 1280 reference
+      [0.298, 1280 / 6000], // 6000-track
+      [0.45, 1280 / 4000], // 4000-track
+      [2.5, 1280 / 512], // very small track (clamped)
+    ];
+    for (const [zoom, bsX] of pairs) {
+      const factor = computeCameraZoomFactor(zoom, bsX);
+      expect(factor * zoom * bsX).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 4);
     }
   });
 });

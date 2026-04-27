@@ -324,39 +324,47 @@ export default function RaceScreen() {
       ctx.globalAlpha = 1;
     }
 
-    function drawNameTag(px, py, name, isLeader) {
-      const nameY = py - 22;
-      ctx.font = 'bold 11px sans-serif';
-      const nameW = ctx.measureText(name).width + 8;
+    // ezoom: total canvas effective zoom (cam.zoom×bsX for closed, BASE×cam.zoom for open).
+    // Labels and trail are drawn in world coordinates under the ctx transform, so they must
+    // be sized as worldPx = targetScreenPx / ezoom to appear constant on screen.
+    function drawNameTag(px, py, name, isLeader, ezoom) {
+      const inv = 1 / ezoom;
+      const fontPx = Math.max(8, Math.round(11 * inv));
+      const bgH = Math.max(6, Math.round(13 * inv));
+      const offsetY = Math.max(12, Math.round(22 * inv));
+      const nameY = py - offsetY;
+      ctx.font = `bold ${fontPx}px sans-serif`;
+      const nameW = ctx.measureText(name).width + Math.round(8 * inv);
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(px - nameW / 2, nameY - 13, nameW, 13);
+      ctx.fillRect(px - nameW / 2, nameY - bgH, nameW, bgH);
       ctx.textBaseline = 'bottom';
       ctx.textAlign = 'center';
       ctx.fillStyle = isLeader ? '#ffd700' : '#eee';
       ctx.fillText(name, px, nameY);
       if (isLeader && g.current.phase === PHASE.RACING) {
-        ctx.font = '14px serif';
+        ctx.font = `${Math.max(10, Math.round(14 * inv))}px serif`;
         ctx.textBaseline = 'bottom';
-        ctx.fillText('👑', px, nameY - 13);
+        ctx.fillText('👑', px, nameY - bgH);
       }
     }
 
-    function drawRacers(effectiveScale) {
+    function drawRacers(effectiveScale, ezoom) {
       const st = g.current;
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+      const inv = 1 / ezoom;
       for (const r of st.racers) {
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
           ctx.globalAlpha = frac * 0.4;
           ctx.fillStyle = r.color;
           ctx.beginPath();
-          ctx.arc(r.trail[i].x, r.trail[i].y, frac * 5 + 1, 0, Math.PI * 2);
+          ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.globalAlpha = 1;
         rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
-        drawNameTag(r.x, r.y, r.name, r === leader);
+        drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
       }
@@ -822,14 +830,23 @@ export default function RaceScreen() {
       // so it stays in fixed screen space.
       //
       // Camera-aware sprite scale: the canvas transform applies a zoom factor, so
-      // sprites must grow inversely to stay visually consistent across zoom states.
-      // Closed tracks: effectiveZoom = cam.zoom × bsX → factor = REFERENCE / cam.zoom
-      // Open tracks:  effectiveZoom = OPEN_TRACK_BASE_ZOOM × cam.zoom → factor accounts
-      //               for both terms so on-screen size equals the closed-track reference.
+      // sprites must grow inversely to stay visually consistent across zoom states
+      // and world sizes.
+      //
+      // Closed tracks: total transform = cam.zoom × bsX (where bsX = canvasW/worldW).
+      //   cameraZoomFactor = REFERENCE_CAMERA_ZOOM / (cam.zoom × bsX)
+      //   → displaySize × factor × cam.zoom × bsX = displaySize × REFERENCE_CAMERA_ZOOM (constant)
+      //
+      // Open tracks: total transform = OPEN_TRACK_BASE_ZOOM × cam.zoom (bsX ≡ 1).
+      //   cameraZoomFactor accounts for both terms via computeOpenTrackCameraZoomFactor.
+      //
+      // frameEffZoom is the raw canvas scale used to keep labels/trail at constant
+      // screen sizes: worldPx × frameEffZoom = screenPx.
       const cameraZoomFactor = isOpenTrack
         ? computeOpenTrackCameraZoomFactor(cam.zoom)
-        : computeCameraZoomFactor(cam.zoom);
+        : computeCameraZoomFactor(cam.zoom, bsX);
       const frameDisplayScale = displaySizeScale * cameraZoomFactor;
+      const frameEffZoom = isOpenTrack ? effectiveZoom(cam.zoom) : cam.zoom * bsX;
 
       if (isOpenTrack) {
         ctx.save();
@@ -846,7 +863,7 @@ export default function RaceScreen() {
         drawEditorTrackSurface(ctx, shape, ts);
         if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
         drawParticles();
-        drawRacers(frameDisplayScale);
+        drawRacers(frameDisplayScale, frameEffZoom);
         ctx.restore();
         drawTitleOpen();
       } else {
@@ -861,7 +878,7 @@ export default function RaceScreen() {
         }
         drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
-        drawRacers(frameDisplayScale);
+        drawRacers(frameDisplayScale, frameEffZoom);
         ctx.restore();
         drawTitle();
         drawLapInfo(st);

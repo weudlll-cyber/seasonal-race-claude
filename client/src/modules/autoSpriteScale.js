@@ -18,19 +18,27 @@ export const REFERENCE_CAMERA_ZOOM = 1.4;
 
 /**
  * Returns the inverse-zoom factor so sprites appear at the same screen size
- * regardless of camera zoom level.
+ * regardless of camera zoom level and world size.
  *
- * factor = REFERENCE_CAMERA_ZOOM / currentZoom
- *   - At zoom 1.4 (1280 reference track): factor = 1.0 → no change
- *   - At zoom 0.3 (6000px track): factor ≈ 4.67 → world sprites 4.67× larger,
- *     but rendered at 0.3× scale → same on-screen size as reference
+ * The full canvas transform for closed tracks is: cam.zoom × bsX
+ * (bsX = canvasW / worldW). Both factors shrink the on-screen sprite, so
+ * both must be compensated.
  *
- * @param {number} currentZoom  Current camera zoom (from CameraDirector)
- * @returns {number}            Scale factor to multiply into displaySizeScale
+ *   factor = REFERENCE_CAMERA_ZOOM / (camZoom × bsX)
+ *
+ * Verification: displaySize × factor × camZoom × bsX
+ *   = displaySize × REFERENCE_CAMERA_ZOOM — constant for any camZoom, worldW.
+ *
+ * bsX defaults to 1 for backward-compatibility (open tracks, old call-sites).
+ * Open tracks use computeOpenTrackCameraZoomFactor instead.
+ *
+ * @param {number} camZoom   Current camera zoom (from CameraDirector)
+ * @param {number} [bsX=1]  Canvas-to-world X scale (canvasW / worldW)
+ * @returns {number}         Scale factor to multiply into displaySizeScale
  */
-export function computeCameraZoomFactor(currentZoom) {
-  if (!currentZoom || currentZoom <= 0) return 1;
-  return REFERENCE_CAMERA_ZOOM / currentZoom;
+export function computeCameraZoomFactor(camZoom, bsX = 1) {
+  if (!camZoom || camZoom <= 0) return 1;
+  return REFERENCE_CAMERA_ZOOM / (camZoom * bsX);
 }
 
 /**
