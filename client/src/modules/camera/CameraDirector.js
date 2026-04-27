@@ -19,14 +19,17 @@ const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
 const MAX_ZOOM = 2.5; // ceiling for very small tracks
-const CANVAS_W = 1280; // reference canvas width used in the adaptive-zoom formula
+const CANVAS_W = 1280; // reference canvas width
 const TOP_N = 3; // camera focuses on the top-N racers by position
 
-// How many world-pixels each camera state keeps in view horizontally.
-// On the 1280px reference world these give zoom ≈ 1.4 / 1.6 / 1.3.
-const LEADER_VIEW_W = 910;
-const BATTLE_VIEW_W = 800;
-const COMEBACK_VIEW_W = 985;
+// Relative zoom ratios applied on top of the overview zoom (CANVAS_W / worldW).
+// On the 1280px reference world: overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
+// identical to the old absolute-VIEW_W formula to within ~0.5%.
+// On large worlds (e.g. 6000px): zoom states remain visually distinct (e.g.
+// 0.213 / 0.298 / 0.341) instead of collapsing to near-identical values.
+const LEADER_ZOOM_RATIO = 1.4;
+const BATTLE_ZOOM_RATIO = 1.6;
+const COMEBACK_ZOOM_RATIO = 1.3;
 
 export class CameraDirector {
   /**
@@ -37,22 +40,15 @@ export class CameraDirector {
    */
   constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }, worldW = 1280, _worldH = 720) {
     this._bbox = bbox;
-    // Adaptive zoom: keeps a constant ~71 % of the world visible regardless of
-    // track size.  Formula: (CANVAS_W / VIEW_W) * (CANVAS_W / worldW).
-    // At worldW = CANVAS_W this reduces to CANVAS_W / VIEW_W (≈ 1.41 / 1.60 / 1.30).
-    // For larger worlds the second factor < 1, producing zoom-out.
-    this._leaderZoom = Math.max(
-      MIN_ZOOM,
-      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * worldW))
-    );
-    this._battleZoom = Math.max(
-      MIN_ZOOM,
-      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (BATTLE_VIEW_W * worldW))
-    );
-    this._comebackZoom = Math.max(
-      MIN_ZOOM,
-      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (COMEBACK_VIEW_W * worldW))
-    );
+    // Adaptive zoom: overviewZoom shows the entire world, state zooms scale up
+    // from there by a fixed ratio. States remain visually distinct at any worldW:
+    // leader is always 1.4× closer than overview, battle 1.6×, comeback 1.3×.
+    // On the 1280px reference world overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
+    // backward-compatible with the previous absolute-VIEW_W formula (< 0.5% diff).
+    const overviewZoom = CANVAS_W / worldW;
+    this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * LEADER_ZOOM_RATIO));
+    this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * BATTLE_ZOOM_RATIO));
+    this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * COMEBACK_ZOOM_RATIO));
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = 1;
