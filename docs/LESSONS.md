@@ -280,6 +280,65 @@ gespeicherten Objekt im Return-Objekt verifizieren — nicht nur die offensichtl
 
 ---
 
+## Lesson 17 — Browser-Test als Ground-Truth, auch wenn Unit + E2E grün sind (D11)
+
+**Kontext:** Vor dem Merge von PR #30 waren 809 Unit-Tests und 183 e2e-Tests grün.
+Browser-Test durch User fand dennoch 4 visuelle Bugs: (1) schwarze Ränder auf kleinen
+Tracks bei hohem Zoom (Camera world-edge clamp fehlte), (2) Sprite minScale 0.4 zu klein
+(Racers wurden fast unsichtbar), (3) symmetrische Avoidance-Kräfte cancelten sich in
+gleichmäßig verteilten Packs (mittlere Racer bewegten sich nicht), (4) Auto-Sprite-Scale
+auf Open-Tracks ignorierte Camera-Zoom → falsche Sprite-Größe.
+
+**Erkenntnis:** Unit- und E2E-Tests prüfen, was der Code berechnet — nicht, was der
+Nutzer sieht. Es gibt mindestens 4 Test-Lücken die systemisch immer wieder visuelle
+Bugs durchlassen:
+
+1. **Visual-Outcome-Tests** fehlen: kein Test prüft "sieht der Racer im Canvas
+   sichtbar aus", "gibt es schwarze Ränder"
+2. **Boundary-Geometry-Tests** fehlen: Tests mit kleinen Tracks, extremen Racer-Counts,
+   hohen Zoom-Levels
+3. **Realistic-Configuration-Tests** fehlen: echte Track-Racer-Kombos (6000px Track,
+   20+ Racers) als Test-Input statt Unit-Minimal-Values
+4. **Effect-Verification** fehlt: Tests prüfen ob Avoidance-Code läuft — nicht ob
+   Racers sich tatsächlich merkbar bewegen
+
+**Konsequenz:** Bei jedem Feature mit visuellem Output: nach automatisierten Tests
+Browser-Test einplanen. Grüne Tests sind notwendig aber nicht hinreichend für visuell
+korrekte Ergebnisse. Bei Rendering, Kamera, Skalierung: explizit Boundary-Configs
+und Realistic-Configs als Test-Input verwenden.
+
+---
+
+## Lesson 18 — Accumulated Complexity erkennen und Stop-and-Refactor entscheiden (D11)
+
+**Kontext:** Nach D11 waren 4 multiplikative Skalierungsfaktoren aktiv:
+`speedScale` (Track-Länge), `displaySizeScale` (lane-basiert + pixelFloor),
+`cameraZoomFactor` (Closed-Track-Invariante oder Open-Track-Formel),
+`behaviorSpeedFactor` (Drafting-Boost). Jeder Faktor wurde korrekt und isoliert
+eingeführt, aber ihr Zusammenspiel ist durch Browser-Tests als visuell opak identifiziert
+worden. Das Tuning von einem Faktor hat unerwartete Wechselwirkungen auf andere.
+
+Das Ergebnis (D11 + Visual-Fixes) wurde trotzdem gemergt — als "funktional gut genug"
+für den aktuellen Use-Case — statt weiter zu tunen. Gleichzeitig wurde D7 als nächste
+Phase priorisiert mit dem expliziten Auftrag: Vision-Diskussion zuerst, dann
+strukturiertes Refactor der Skalierungs-Pipeline.
+
+**Erkenntnis:** Wenn mehrere Features unabhängig korrekt entwickelt werden aber ihre
+Kombinationen schwer vorhersagbar werden, ist "noch ein Feature drauf" oft der falsche
+Weg. Das Muster: Bugs tauchen verstärkt in Kombinations-Szenarien auf, Fixes für A
+brechen B. Das ist das Signal für Accumulated Complexity — die Architektur hat die
+Feature-Dichte überholt.
+
+Die richtige Reaktion: Merge was funktioniert, dann Stop-and-Refactor als eigene Phase
+planen (D7). Nicht: weiteres Tuning auf fragiler Basis.
+
+**Konsequenz:** Wenn Feature-Korrekturen zunehmend in Kombinations-Szenarien auftreten
+statt isoliert: Architektur-Review priorisieren. Merge "funktional gut genug" ist eine
+valide Entscheidung wenn ein strukturierter Follow-up-Plan existiert. Vision-Diskussion
+vor Code schreiben: klärt was "gut" heißt bevor die Implementierung festlegt wie.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

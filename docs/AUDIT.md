@@ -133,10 +133,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-27 | **723 unit + 103 e2e** | fix(tracks): listTracks() worldWidth/worldHeight + migration (PR #27). +4 unit (trackStorage.test.js), +3 e2e (fix-list-tracks-world-dimensions.spec.js). Root cause fix for large-track render bug (bsX=1.0). |
 | 2026-04-27 | **723 unit + 118 e2e** | test(e2e): fix 7 selector issues in b-wave-smoke + b1617-smoke (PR #27, selber Squash). 7 pre-existing Selector-Fehler behoben: B-3×2 (div-ancestor), B-14 (option-text), B-12 (substring), B-10/B-11 (falsches Label + Edit-Regex-Anker), B-17 (tooltip-collision). 118/118 grün. |
 | 2026-04-27 | **759 unit + 157 e2e** | fix/camera-polish + Q-14 (PR #28, squash `750d826`). +36 unit (baseSpeedConfig.test.js ×16, CameraDirector adaptive-zoom ×16, lapUtils SoT ×4), +39 e2e (camera-polish-smoke.spec.js ×8, camera-polish-ux-verification.spec.js ×31 permanent). d10-ux-verification stale V8 assertion gefixt (auto-scale default changed). |
+| 2026-04-27 | **809 unit + 183 e2e** | D11 Racer Behavior + Visual-Fixes (PR #30, squash `d46cab2`). +50 unit (raceBehavior.test.js ×6 neu/rewritten, autoSpriteScale.test.js ×14 erweitert, CameraDirector world-edge-clamp ×2), +26 e2e (d11-smoke.spec.js ×14, d11-ux-verification.spec.js ×12 permanent). |
 
-**Aktueller Master-HEAD:** `750d826` (PR #28, squash-merged)
+**Aktueller Master-HEAD:** `d46cab2` (PR #30, squash-merged)
 **ESLint-Warnings:** 3 pre-existing (unverändert)
-**Playwright e2e:** 157 Tests (10 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1, camera-polish-smoke ×1, camera-polish-ux-verification ×1) — 157/157 grün
+**Playwright e2e:** 183 Tests (12 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1, camera-polish-smoke ×1, camera-polish-ux-verification ×1, D11-smoke ×1, D11-ux-verification ×1) — 183/183 grün
 
 ---
 
@@ -144,6 +145,7 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | Phase | Code-Tests | Playwright-Smoke-Test | Browser-Verifikation User |
 |---|---|---|---|
+| D11 (PR #30) | ✅ 809 Tests (+50 unit, +26 e2e) | ✅ 183/183 PASS | ✅ grün (4 Befunde gefunden + gefixt vor Merge) |
 | D3.5.1 | ✅ 52 neue Tests | — (kein UI-Impact) | ✅ grün |
 | D3.5.2 | ✅ Tests migriert | — (interne Refactor) | ✅ grün |
 | D3.5.3 | ✅ Tests erweitert | — (neue Types) | ✅ grün |
@@ -158,6 +160,29 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #30 (D11 Racer Behavior + Visual-Fixes):** 23 PASS, 1 WARN-PR, 2 WARN-pre-existing, 0 FAIL
+- ✅ Asymmetric avoidance: trailer (lower t, tie-break index) yields, leader holds — verified in raceBehavior.test.js
+- ✅ Proximity-scaled force + avoidanceReturnSpeed smooth return
+- ✅ Drafting boost: follower in same lane behind leader gets draftingBoostFactor
+- ✅ World-edge camera clamp (Befund 2): offsetX/Y ≤ 0 at zoom > 1, centered when bbox < viewport
+- ✅ Auto-sprite minScale 0.4 → 0.65 (Befund 3)
+- ✅ Open-track cameraZoomFactor: `REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM × camZoom)` — invariant holds for any zoom
+- ✅ Pixel-floor: `minVisiblePixels / (displaySize × REFERENCE_CAMERA_ZOOM)` — camera terms cancel out
+- ✅ All 5 behavior params tunable in Dev-Screen (RaceBehaviorSection)
+- ✅ minVisiblePixels tunable in AutoScaleSection (min 8, max 120, step 4)
+- ✅ 809 Unit-Tests grün (+50 neue Tests)
+- ✅ 183 e2e-Tests grün (+26 neue Tests)
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ⚠️ WARN-PR: `computeAutoScaleFactor` NaN-edge if `displaySize=0` passed — bounded by `displaySize > 0` guard; cosmetic, not production path
+- ⚠️ 2 pre-existing ESLint-Warnings unverändert (storage.js:148/154 unused params)
+
+**Browser-Test-Befunde vor Merge (4 Bugs, alle gefixt):**
+- **Befund 1 (Q-13):** Sprite-Frame-Animation ruckelt bei großen Sprites — erkannt, deferred (kein Fix in D11, tracked als Q-13/D7)
+- **Befund 2 (gefixt):** Schwarze Ränder auf kleinen Tracks bei hohem Zoom — fehlende world-edge-Clamp in CameraDirector `_setTargets()`
+- **Befund 3 (gefixt):** minScale 0.4 zu klein, Racers wurden fast unsichtbar auf breiten Tracks → 0.65
+- **Befund 4 (gefixt):** Symmetrische Avoidance-Kräfte cancelten sich in gleich-verteilten Packs → asymmetrisch (Option A: nur Trailer yieldt)
+- **Befund 5 (gefixt, discovery during fix):** Open-Track cameraZoomFactor fehlte → Sprites klein auf Open-Tracks bei gezoomter Kamera
 
 **Quality-Gate auf PR #28 (fix/camera-polish + Q-14):** 13 PASS, 2 WARN-PR, 3 WARN-pre-existing, 0 FAIL
 - ✅ 13 funktionale Anforderungen verifiziert: adaptive zoom, clampOffset 2-anchor, top-3-focus, cameraZoomFactor-Invariante, BaseSpeedSection CRUD + live-apply, lapUtils SoT, openTrackFinishT baseSpeedMax-Param
