@@ -394,9 +394,9 @@ test.describe('V8 — Auto-Scale-Section funktional', () => {
     // Formula preview reacts
     await expect(page.getByText(/Formula Preview|Formel/)).toBeVisible();
 
-    // Reset defaults
+    // Reset defaults — enabled is true by default (changed in camera-polish PR)
     await page.getByRole('button', { name: /Reset Defaults/ }).click();
-    await expect(toggle).not.toBeChecked();
+    await expect(toggle).toBeChecked();
   });
 });
 

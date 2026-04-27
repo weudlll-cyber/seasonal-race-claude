@@ -24,9 +24,8 @@ import {
   lapProgress,
   currentLap,
   openTrackFinishT,
-  BASE_SPEED_MIN,
-  BASE_SPEED_MAX,
 } from '../../modules/camera/lapUtils.js';
+import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -154,6 +153,10 @@ export default function RaceScreen() {
     // feel visually similar in pace to the 1280px reference track.
     const speedScaleConfig = loadSpeedScaleConfig();
     const speedScaleFactor = computeSpeedScaleFactor(geometry.pathLengthPx, speedScaleConfig);
+
+    const baseSpeedConfig = loadBaseSpeedConfig();
+    const BASE_SPEED_MIN = baseSpeedConfig.min;
+    const BASE_SPEED_MAX = baseSpeedConfig.max;
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
