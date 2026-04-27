@@ -17,14 +17,28 @@ export const CAM_STATE = {
 
 const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
+const MAX_ZOOM = 6;
+
+// How many world-pixels each camera state keeps in view horizontally.
+// On the 1280px reference world these give zoom ≈ 1.4 / 1.6 / 1.3.
+const LEADER_VIEW_W = 910;
+const BATTLE_VIEW_W = 800;
+const COMEBACK_VIEW_W = 985;
 
 export class CameraDirector {
   /**
    * @param {{ minX: number, minY: number, maxX: number, maxY: number }} [bbox]
    *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas.
+   * @param {number} [worldW=1280]  World width in pixels — used to compute adaptive zoom.
+   * @param {number} [_worldH=720]  World height in pixels (reserved for future vertical scaling).
    */
-  constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }) {
+  constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }, worldW = 1280, _worldH = 720) {
     this._bbox = bbox;
+    // Adaptive zoom: larger worlds get proportionally higher zoom so the same
+    // number of world-pixels stays in view regardless of track size.
+    this._leaderZoom = Math.min(MAX_ZOOM, worldW / LEADER_VIEW_W);
+    this._battleZoom = Math.min(MAX_ZOOM, worldW / BATTLE_VIEW_W);
+    this._comebackZoom = Math.min(MAX_ZOOM, worldW / COMEBACK_VIEW_W);
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = 1;
@@ -87,9 +101,9 @@ export class CameraDirector {
       case CAM_STATE.LEADER_ZOOM: {
         const r = ordered[0];
         if (r) {
-          this.targetZoom = 1.4;
-          this.targetOffsetX = hw - r.x * 1.4;
-          this.targetOffsetY = hh - r.y * 1.4;
+          this.targetZoom = this._leaderZoom;
+          this.targetOffsetX = hw - r.x * this._leaderZoom;
+          this.targetOffsetY = hh - r.y * this._leaderZoom;
         }
         break;
       }
@@ -98,18 +112,18 @@ export class CameraDirector {
         const top2 = ordered.slice(0, 2);
         const cx = top2.reduce((s, r) => s + r.x, 0) / top2.length;
         const cy = top2.reduce((s, r) => s + r.y, 0) / top2.length;
-        this.targetZoom = 1.6;
-        this.targetOffsetX = hw - cx * 1.6;
-        this.targetOffsetY = hh - cy * 1.6;
+        this.targetZoom = this._battleZoom;
+        this.targetOffsetX = hw - cx * this._battleZoom;
+        this.targetOffsetY = hh - cy * this._battleZoom;
         break;
       }
 
       case CAM_STATE.COMEBACK_ZOOM: {
         const last = ordered[ordered.length - 1];
         if (last) {
-          this.targetZoom = 1.3;
-          this.targetOffsetX = hw - last.x * 1.3;
-          this.targetOffsetY = hh - last.y * 1.3;
+          this.targetZoom = this._comebackZoom;
+          this.targetOffsetX = hw - last.x * this._comebackZoom;
+          this.targetOffsetY = hh - last.y * this._comebackZoom;
         }
         break;
       }

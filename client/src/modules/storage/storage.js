@@ -18,6 +18,7 @@ export const KEYS = {
   ACTIVE_GROUP: 'racearena:activeGroup',
   DATA_VERSION: 'racearena:dataVersion',
   AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
+  SPEED_SCALE_CONFIG: 'racearena:speedScaleConfig',
 };
 
 export function storageGet(key, fallback = null) {

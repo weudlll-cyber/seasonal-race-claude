@@ -17,6 +17,7 @@ import RaceDefaults from './sections/RaceDefaults.jsx';
 import RaceHistory from './sections/RaceHistory.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
+import SpeedScaleSection from './sections/SpeedScaleSection.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [
@@ -75,6 +76,13 @@ const SECTIONS = [
     label: 'Auto-Scale',
     desc: 'Auto-adjust sprite sizes based on track width and racer count',
     component: AutoScaleSection,
+  },
+  {
+    id: 'speedscale',
+    icon: '⏱️',
+    label: 'Speed Scale',
+    desc: 'Adjust race pace so large tracks feel similar in speed to small ones',
+    component: SpeedScaleSection,
   },
 ];
 
