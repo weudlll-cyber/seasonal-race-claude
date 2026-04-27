@@ -7,7 +7,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **B-Wave** — UX-Polish: B-1, B-3, B-10..B-15 (kleine PR). Danach B-16/B-17 als Priority-Fix.
+- 🔜 **B-16 + B-17** — Priority-Fix: Camera-Director auf großen Tracks (B-16) + Race-Speed-Perception (B-17). Quasi vorgezogenes D7.
 
 ---
 
@@ -32,6 +32,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **D9** | #19 | Race-Engine-Speed-Refactor: speedMultiplier wirkt auf Race-Speed, explizite Lap/Time-Wahl, dynamische Ziellinie für Open-Tracks, Auslauf-Verhalten, 2s Result-Delay, 22 Playwright e2e Tests. Master `dad3300`. |
 | ✅ **D3.5.5** | #21 | Per-Type-Tuning-UI im Dev-Screen: 6 Felder (speedMultiplier, displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy) live-apply via Edit-Modal. CONFIG_SNAPSHOT, normalizeOverrideMap (Legacy-Migration), InfoTooltip-Komponente. 678 Unit + 36 e2e Tests. Master `2d76bc3`. |
 | ✅ **D10** | #23 | Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow. worldWidth/worldHeight automatisch aus Bild-Dimensionen (naturalWidth/naturalHeight). Hart-Limit 8000×4096. Image required to save. Dimension-Mismatch-Dialog. TrackEditor Zoom+Pan. trackWidth variabel. Auto-Sprite-Scaling Formel. Alle 8 Anforderungen (A1-A8) erfüllt. Hotfix `13a2dd2` (🏁 Default-Icon). 694 Unit + 75 e2e Tests. Master `13a2dd2`. |
+| ✅ **B-Wave** | #25 | UX-Polish-Sweep: B-1 (player-group load StrictMode-Fix), B-3 (winners max 5→20), B-10 (InfoTooltip auto-boundary), B-11 (display-size tooltip), B-12 (maxPlayers konfigurierbar), B-13 (Language-Selector entfernt), B-14 (TrackManager-Hint), B-15 (alle deutschen UI-Strings → Englisch). 694 Unit + 88 e2e Tests. Master `697e081`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -160,8 +161,8 @@ aus D3.5.5.
 
 ## Reihenfolge nächste Schritte
 
-1. 🔜 **B-Wave** (B-1, B-3, B-10..B-15) — kleine UX-Polish-PR
-2. **B-16 + B-17** als Priority-Fix (Camera-Director auf großen Tracks + Race-Speed-Perception)
+1. ✅ **B-Wave** (B-1, B-3, B-10..B-15) — PR #25, master `697e081`
+2. 🔜 **B-16 + B-17** als Priority-Fix (Camera-Director auf großen Tracks + Race-Speed-Perception)
    → quasi vorgezogenes D7 (Camera-Director Polish)
 3. **D11** Racer Behavior (Soft Avoidance + Drafting)
 4. **D3.5.4** Trail-Tuning

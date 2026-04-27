@@ -65,19 +65,23 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] D7 — Camera polish: smooth zoom transitions, configurable director preferences per track
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
-## Phase B — Bug Fixes & Wiring 🔜 NEXT (B-Wave)
+## Phase B — Bug Fixes & Wiring ✅ B-Wave done (PR #25)
 
 - [x] B-6 — speedMultiplier-Bug — subsumed by D9
 - [x] B-7 — Dev-Screen UI-Drift: Code-Registry as Single Source of Truth (PR #17)
 - [x] B-8 — SetupScreen Footer/Pills Emoji-Mapping fixed (PR #17)
 - [x] B-9 — Override Selector filters inactive types (PR #17 cleanup)
-- [ ] B-1 — PlayerSetup: loading saved groups (button exists, behavior unclear)
+- [x] B-1 — PlayerSetup: loading saved groups — useEffect fix for React StrictMode (PR #25)
 - [ ] B-2 — TrackSelector: custom-track behavior on missing geometry
-- [ ] B-3 — Result-Screen winner count configurable (currently hardcoded)
+- [x] B-3 — Winners max raised 5 → 20 in RaceDefaults + RaceSettings (PR #25)
 - [ ] B-4 — Branding profile applied to race/result screens (UI exists, wiring missing)
 - [ ] B-5 — System Backup/Restore/Reset end-to-end verified (UI-only so far)
-- [ ] **B-14** — TrackManager workflow friction: no visible path to Track Editor from "New Track" dialog
-- [ ] **B-15** — i18n leak: German strings in English UI (Geometrie wählen, Track-Größe, confirm dialogs)
+- [x] B-10 — InfoTooltip auto-boundary detection (getBoundingClientRect flip) (PR #25)
+- [x] B-11 — Display-size tooltip simplified in RacerEditModal (PR #25)
+- [x] B-12 — maxPlayers configurable in RaceDefaults; wired to PlayerSetup + PlayerGroupsManager (PR #25)
+- [x] B-13 — Language selector removed from RaceDefaults (PR #25)
+- [x] **B-14** — TrackManager: hint text + link to Track Editor when no geometry selected (PR #25)
+- [x] **B-15** — i18n leak fixed: all German strings in TrackEditor + TrackManager → English (PR #25)
 - [ ] **B-16** — **HOCH-PRIO:** Camera-Director still on large tracks (D10 bsX/bsY breaks coordinate space)
 - [ ] **B-17** — **HOCH-PRIO:** Race speed visually too fast on large tracks (t-space → pixel mismatch)
 
@@ -175,7 +179,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (694 unit tests, 48 test files) + Playwright e2e (75 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification)
+- [x] Vitest + React Testing Library (694 unit tests, 48 test files) + Playwright e2e (88 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -199,3 +203,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-26 | D9 Race-Engine-Speed-Refactor complete (PR #19, master `dad3300`): speedMultiplier wired to baseSpeed; explicit lap/time selection with live duration estimates; dynamic finish-line for open tracks; run-out behavior; 2s result delay; sessionStorage extended with raceMode/targetLaps/targetDuration. New Playwright e2e infrastructure (playwright.config.js + 22 smoke tests). Quality-gate cleanup: vitest excludes e2e/, BASE_SPEED constants imported in RaceScreen, getRacerType cached, file headers added. 628 unit tests + 22 e2e tests. |
 | 2026-04-26 | D3.5.5 Per-Type-Tuning-UI complete (PR #21, master `2d76bc3`): Edit-Modal for all 12 racer types with 6 live-tuneable fields; InfoTooltip reusable component; CONFIG_SNAPSHOT + normalizeOverrideMap (legacy migration); override-API extended to 3-arg form. UX-verification spec (21 tests, permanent). Quality-gate: 0 show-stoppers, duplicate import fix before merge. 678 unit tests + 57 e2e tests. Doc sprint: BACKLOG (D10/D11 concepts), RACER_DATA_MODEL (single-type-per-race clarification, updated API), LESSONS 11+12, AUDIT, ROADMAP, PROJECT-PRINCIPLES (UX-verification convention). |
 | 2026-04-27 | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow complete (PR #23, squash `c700ef4`, hotfix `13a2dd2`): worldWidth/worldHeight from image naturalWidth/naturalHeight; hard limit 8000×4096; image required to save; mismatch dialog + path reset; zoom+pan (viewTransformRef); trackWidth variable; autoSpriteScale formula; AutoScaleSection; Bild-First replaces WORLD_SIZES pre-sets; backward-compat for path-based BG. Quality-gate: 0 show-stoppers, all warnings fixed before merge. 694 unit + 75 e2e tests. User browser-test exposed B-16 (camera still on large tracks) + B-17 (speed too fast on large tracks) as priority post-D10 bugs. Doc sprint: BACKLOG (D10 ✅, B-14..B-17, Q-11/Q-12, reihenfolge), LESSONS 13+14, AUDIT, ROADMAP (D10 ✅, B-Wave 🔜), PROJECT-PRINCIPLES (English-only UI). |
+| 2026-04-27 | B-Wave UX-Polish sweep complete (PR #25, master `697e081`): B-1 player-group load fix (StrictMode useEffect), B-3 winners max 5→20, B-10 InfoTooltip auto-boundary detection, B-11 display-size tooltip simplified, B-12 maxPlayers configurable in Dev Panel, B-13 language selector removed, B-14 TrackManager hint to Track Editor, B-15 all German UI strings → English (TrackEditor + TrackManager) + d10-smoke/d10-ux-verification updated. 694 unit + 88 e2e tests (13 new b-wave-smoke). |
