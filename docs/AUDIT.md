@@ -130,10 +130,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-27 | **694 unit + 75 e2e** | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Beide Specs permanent als Regressions-Schutz. |
 | 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX-Polish-Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification angepasst (dt. Strings → englisch). Keine neuen Unit-Tests. |
 | 2026-04-27 | **719 unit + 100 e2e** | B-16+B-17 Große-Tracks Fix (PR #26, master `7cdde15`). +25 unit (speedScale.test.js ×16, trackEditorSave pathLengthPx ×4, CameraDirector B-16 ×8, updated ×1), +12 e2e (b1617-smoke.spec.js). |
+| 2026-04-27 | **723 unit + 103 e2e** | fix(tracks): listTracks() worldWidth/worldHeight + migration (PR #27). +4 unit (trackStorage.test.js), +3 e2e (fix-list-tracks-world-dimensions.spec.js). Root cause fix for large-track render bug (bsX=1.0). |
 
-**Aktueller Master-HEAD:** `7cdde15` (post B-16+B-17, PR #26)
+**Aktueller Master-HEAD:** `09b634a` (post B-16+B-17 docs sprint, PR #27 pending merge)
 **ESLint-Warnings:** 3 pre-existing (unverändert)
-**Playwright e2e:** 100 Tests (7 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1)
+**Playwright e2e:** 103 Tests (8 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1)
 
 ---
 
@@ -155,6 +156,15 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #27 (fix/list-tracks-world-dimensions):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings (2 pre-existing `_e` in old IIFEs, unchanged)
+- ✅ 723 Unit-Tests grün (+4 neue Tests)
+- ✅ 3 neue e2e-Tests grün (fix-list-tracks-world-dimensions.spec.js)
+- ✅ Root cause: `listTracks()` omitted worldWidth/worldHeight → bsX=1.0 → only ~549px visible on 6000px world
+- ✅ A1: 2-line fix in `trackStorage.js listTracks()` — `worldWidth ?? 1280, worldHeight ?? 720`
+- ✅ A2: migration IIFE in `storage.js` — syncs existing track configs from linked geometry on load
+- ⚠️ 7 pre-existing e2e failures in b-wave-smoke + b1617-smoke (pre-existing, confirmed by isolating specs)
 
 **Quality-Gate auf PR #26 (B-16+B-17):** 0 Show-Stopper, 0 Errors, 0 new Warnings
 - ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unchanged; `worldH` → `_worldH` prefix fix applied)
