@@ -97,6 +97,28 @@ describe('listTracks', () => {
     expect(meta.outerPoints).toBeUndefined();
   });
 
+  it('returns worldWidth and worldHeight from stored geometry', () => {
+    saveTrack(makeTrack({ worldWidth: 4000, worldHeight: 2000 }));
+    const [meta] = listTracks();
+    expect(meta.worldWidth).toBe(4000);
+    expect(meta.worldHeight).toBe(2000);
+  });
+
+  it('defaults worldWidth to 1280 and worldHeight to 720 when geometry predates D10', () => {
+    // Simulate a pre-D10 geometry that has no worldWidth/worldHeight stored
+    saveTrack(makeTrack({ name: 'Old' }));
+    const [meta] = listTracks();
+    // Manually strip the fields from localStorage to mimic a pre-D10 record
+    const raw = JSON.parse(localStorage.getItem(`racearena:trackGeometries:${meta.id}`));
+    delete raw.worldWidth;
+    delete raw.worldHeight;
+    localStorage.setItem(`racearena:trackGeometries:${meta.id}`, JSON.stringify(raw));
+
+    const [updated] = listTracks();
+    expect(updated.worldWidth).toBe(1280);
+    expect(updated.worldHeight).toBe(720);
+  });
+
   it('sorts by updatedAt descending (most recently updated first)', async () => {
     const a = saveTrack(makeTrack({ name: 'First' }));
     await new Promise((r) => setTimeout(r, 2));
@@ -206,6 +228,29 @@ describe('saveTrack validation', () => {
     expect(() =>
       saveTrack(makeTrack({ innerPoints: [{ x: 10 }, { x: 20, y: 0 }, { x: 30, y: 0 }] }))
     ).toThrow(/innerPoints/i);
+  });
+});
+
+// ── worldWidth / worldHeight in listTracks (A1 fix) ──────────────────────────
+
+describe('listTracks worldWidth/worldHeight', () => {
+  it('large-track geometry dimensions are preserved in listTracks metadata', () => {
+    saveTrack(makeTrack({ worldWidth: 6000, worldHeight: 4000 }));
+    const [meta] = listTracks();
+    expect(meta.worldWidth).toBe(6000);
+    expect(meta.worldHeight).toBe(4000);
+  });
+
+  it('multiple tracks each return their own dimensions', () => {
+    saveTrack(makeTrack({ name: 'Big', worldWidth: 4000, worldHeight: 2000 }));
+    saveTrack(makeTrack({ name: 'Small', worldWidth: 1280, worldHeight: 720 }));
+    const list = listTracks();
+    const big = list.find((t) => t.name === 'Big');
+    const small = list.find((t) => t.name === 'Small');
+    expect(big.worldWidth).toBe(4000);
+    expect(big.worldHeight).toBe(2000);
+    expect(small.worldWidth).toBe(1280);
+    expect(small.worldHeight).toBe(720);
   });
 });
 

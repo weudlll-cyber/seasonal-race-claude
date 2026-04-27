@@ -51,8 +51,8 @@ test.describe('B-17 — Speed Scale section in Dev Screen', () => {
     const refInput = page.locator('input[type="number"]').first();
     await refInput.fill('4000');
     await refInput.press('Tab');
-    // preview should now show "4000" in the formula
-    await expect(page.getByText(/4000/)).toBeVisible();
+    // preview should now show "4000" in the formula paragraph
+    await expect(page.locator('p').filter({ hasText: /4000/ })).toBeVisible();
   });
 
   test('disabling speed scale grays out reference input', async ({ page }) => {

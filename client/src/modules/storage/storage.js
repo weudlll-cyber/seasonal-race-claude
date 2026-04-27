@@ -158,6 +158,40 @@ export function newId() {
   }
 })();
 
+// One-time migration: copy worldWidth/worldHeight from the linked geometry into each
+// track preset that has a geometryId but stale 1280×720 defaults (pre-fix/list-tracks bug).
+// Safe to call multiple times — only writes when a mismatch is found.
+(function migrateTracksWorldDimensionsFromGeometry() {
+  try {
+    const raw = localStorage.getItem('racearena:tracks');
+    if (!raw) return;
+    const tracks = JSON.parse(raw);
+    if (!Array.isArray(tracks)) return;
+    let changed = false;
+    for (const track of tracks) {
+      if (!track.geometryId) continue;
+      const geoRaw = localStorage.getItem(`racearena:trackGeometries:${track.geometryId}`);
+      if (!geoRaw) continue;
+      const geo = JSON.parse(geoRaw);
+      const geoW = geo.worldWidth ?? 1280;
+      const geoH = geo.worldHeight ?? 720;
+      if (track.worldWidth !== geoW || track.worldHeight !== geoH) {
+        track.worldWidth = geoW;
+        track.worldHeight = geoH;
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
+      console.warn(
+        '[RaceArena] Synced worldWidth/worldHeight on track presets from linked geometry.'
+      );
+    }
+  } catch {
+    // Best-effort — migration failure must not break the app.
+  }
+})();
+
 // One-time migration: backfill worldHeight: 720 on track presets that predate D10.
 // Safe to call multiple times — exits immediately if all tracks already have the field.
 (function migrateTracksAddWorldHeight() {
