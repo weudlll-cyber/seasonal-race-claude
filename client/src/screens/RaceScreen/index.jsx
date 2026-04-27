@@ -175,7 +175,11 @@ export default function RaceScreen() {
     // finish line matches the scaled pace)
     const duration = raceData.duration ?? 60;
     const finishT = isOpenTrack
-      ? openTrackFinishT(raceData.targetDuration ?? duration, speedMultiplier / speedScaleFactor)
+      ? openTrackFinishT(
+          raceData.targetDuration ?? duration,
+          speedMultiplier / speedScaleFactor,
+          BASE_SPEED_MAX
+        )
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 

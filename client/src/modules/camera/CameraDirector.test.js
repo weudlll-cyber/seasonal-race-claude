@@ -6,10 +6,9 @@ import {
   currentLap,
   estimatedSecondsPerLap,
   openTrackFinishT,
-  BASE_SPEED_MEAN,
-  BASE_SPEED_MAX,
   REFERENCE_FPS,
 } from './lapUtils.js';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 
 // ── lapsFromDuration ──────────────────────────────────────────────────────────
 
@@ -432,9 +431,10 @@ describe('CameraDirector — _clampOffset for zoom < 1', () => {
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {
-  it('returns exactly 1 / (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS)', () => {
+  it('returns exactly 1 / (baseSpeedMean * speedMultiplier * REFERENCE_FPS)', () => {
     const sm = 1.0;
-    expect(estimatedSecondsPerLap(sm)).toBeCloseTo(1 / (BASE_SPEED_MEAN * sm * REFERENCE_FPS));
+    const mean = (DEFAULT_BASE_SPEED_CONFIG.min + DEFAULT_BASE_SPEED_CONFIG.max) / 2;
+    expect(estimatedSecondsPerLap(sm)).toBeCloseTo(1 / (mean * sm * REFERENCE_FPS));
   });
 
   it('horse (1.0) is approx 15-16 seconds', () => {
@@ -477,8 +477,8 @@ describe('openTrackFinishT', () => {
   });
 
   it('gives a fractional value for a short target race', () => {
-    // 10s at horse (1.0): fastest racer advances BASE_SPEED_MAX * 1.0 * REFERENCE_FPS * 10
-    const expected = Math.min(1, BASE_SPEED_MAX * 1.0 * REFERENCE_FPS * 10);
+    // 10s at horse (1.0): fastest racer advances DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10
+    const expected = Math.min(1, DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10);
     expect(openTrackFinishT(10, 1.0)).toBeCloseTo(expected);
     expect(openTrackFinishT(10, 1.0)).toBeLessThan(1);
   });
