@@ -62,7 +62,7 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
 - [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
-- [ ] D7 — Camera polish: smooth zoom transitions, configurable director preferences per track
+- [ ] D7 — Visual Experience Architecture: refactor 4-factor scaling pipeline, smooth zoom transitions, label scaling, force-stacking fix — 🔜 next (Vision-Diskussion zuerst)
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
 ## Phase B — Bug Fixes & Wiring ✅ B-Wave done (PR #25)
@@ -129,12 +129,18 @@ single-source-of-truth: DEFAULT_BASE_SPEED_CONFIG from defaults.js, private cons
 optional params on openTrackFinishT and estimatedSecondsPerLap. 759 unit + 157 e2e tests.
 UX-verification spec (31 tests, V1-V12) permanent.
 
-## D11 — Racer Behavior: Soft Avoidance + Drafting (planned, after D10)
+## D11 — Racer Behavior: Soft Avoidance + Drafting ✅ Done (PR #30, master `d46cab2`)
 
-Racers currently overlap without interaction. Soft avoidance: nearby racers shift smoothly.
-Drafting: follower in slipstream gets slight speed boost. Both increase race drama. All
-racers share one type per race, so avoidance/drafting creates visible dynamic within the
-random baseSpeed spread. Requires dynamic lane system; tunable values.
+Asymmetric soft avoidance: trailer (lower t, tie-break by index) yields fully, leader holds
+lane — prevents symmetric force cancellation in evenly-spaced packs. Proximity-scaled lateral
+force, configurable avoidanceDistance/lateralForce/maxLateral/returnSpeed. Speed brake for
+both racers in proximity. Drafting boost for close followers in same lane
+(`draftingBoostFactor`). All params tunable in Dev-Screen RaceBehaviorSection (D3.5.5
+live-apply pattern). Camera world-edge clamp fixes black-strip bug at high zoom. Open-track
+camera-zoom-aware sprite scaling: `computeOpenTrackCameraZoomFactor()` produces identical
+on-screen sprite size to closed-track reference at any zoom. Pixel-floor logic:
+`minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks.
+809 unit tests + 183 e2e tests. 4 browser bugs found and fixed before merge.
 
 ## W3 — Race-Type Override ✅ Done (PR #17)
 
@@ -191,7 +197,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (759 unit tests, 48 test files) + Playwright e2e (157 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification)
+- [x] Vitest + React Testing Library (809 unit tests, 50 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -217,3 +223,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-27 | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow complete (PR #23, squash `c700ef4`, hotfix `13a2dd2`): worldWidth/worldHeight from image naturalWidth/naturalHeight; hard limit 8000×4096; image required to save; mismatch dialog + path reset; zoom+pan (viewTransformRef); trackWidth variable; autoSpriteScale formula; AutoScaleSection; Bild-First replaces WORLD_SIZES pre-sets; backward-compat for path-based BG. Quality-gate: 0 show-stoppers, all warnings fixed before merge. 694 unit + 75 e2e tests. User browser-test exposed B-16 (camera still on large tracks) + B-17 (speed too fast on large tracks) as priority post-D10 bugs. Doc sprint: BACKLOG (D10 ✅, B-14..B-17, Q-11/Q-12, reihenfolge), LESSONS 13+14, AUDIT, ROADMAP (D10 ✅, B-Wave 🔜), PROJECT-PRINCIPLES (English-only UI). |
 | 2026-04-27 | B-Wave UX-Polish sweep complete (PR #25, master `697e081`): B-1 player-group load fix (StrictMode useEffect), B-3 winners max 5→20, B-10 InfoTooltip auto-boundary detection, B-11 display-size tooltip simplified, B-12 maxPlayers configurable in Dev Panel, B-13 language selector removed, B-14 TrackManager hint to Track Editor, B-15 all German UI strings → English (TrackEditor + TrackManager) + d10-smoke/d10-ux-verification updated. 694 unit + 88 e2e tests (13 new b-wave-smoke). |
 | 2026-04-27 | fix/camera-polish + Q-14 complete (PR #28, master `750d826`): CameraDirector adaptive zoom + clampOffset 2-anchor + top-3 focus; cameraZoomFactor invariant (closed tracks). BaseSpeedSection in Dev-Screen (tunable min/max, spread preview, 2-lap gap). Q-14 lapUtils SoT (DEFAULT_BASE_SPEED_CONFIG from defaults.js, private consts, optional params). camera-polish-ux-verification.spec.js (31 tests, V1-V12, permanent). d10-ux-verification V8 stale assertion fixed. 759 unit + 157 e2e tests. |
+| 2026-04-27 | D11 Racer Behavior + Visual-Fixes complete (PR #30, master `d46cab2`): asymmetric avoidance (trailer yields/leader holds), proximity-scaled force, speed brake, drafting boost, RaceBehaviorSection in Dev-Screen. Camera world-edge clamp (Befund 2). Open-track camera-zoom-aware sprite scaling: `computeOpenTrackCameraZoomFactor()` + pixel-floor `minVisiblePixels`. 4 browser bugs found during review and fixed before merge. 809 unit + 183 e2e tests. Decision: accumulated complexity in 4-factor scaling pipeline → D7 (Visual Experience Architecture) as next phase with Vision-Diskussion zuerst; Q-15 tracks the architectural debt. |
