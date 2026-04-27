@@ -35,6 +35,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **B-Wave** | #25 | UX-Polish-Sweep: B-1 (player-group load StrictMode-Fix), B-3 (winners max 5→20), B-10 (InfoTooltip auto-boundary), B-11 (display-size tooltip), B-12 (maxPlayers konfigurierbar), B-13 (Language-Selector entfernt), B-14 (TrackManager-Hint), B-15 (alle deutschen UI-Strings → Englisch). 694 Unit + 88 e2e Tests. Master `697e081`. |
 | ✅ **B-16 + B-17** | #26 | Große Tracks: B-16 CameraDirector adaptive Zoom (zoom = worldW/VIEW_W, max 6), B-17 Track-Speed-Scaling (baseSpeed ÷ pathLengthPx/referencePathLength). pathLengthPx bei Track-Save berechnet + Migration für bestehende Geometrien. SpeedScaleSection im Dev-Screen. 719 Unit + 100 e2e Tests. Master `7cdde15`. |
 | ✅ **fix/list-tracks** | #27 | Root-Cause-Fix für Large-Track-Render-Bug: `listTracks()` gab worldWidth/worldHeight nicht zurück → bsX=1.0 → nur ~549px sichtbar auf 6000px-World. A1: 2-Zeilen-Fix in trackStorage.js. A2: Migration-IIFE in storage.js. 723 Unit + 103 e2e Tests. |
+| ✅ **fix/camera-polish + Q-14** | #28 | CameraDirector: adaptive zoom (zoom=worldW²/VIEW_W/worldW, clamp 0.15–6), clampOffset 2-anchor-Formel, top-3-Focus. cameraZoomFactor-Invariante (REFERENCE_CAMERA_ZOOM/cam.zoom, nur Closed Tracks). BaseSpeedSection im Dev-Screen: tunable min/max baseSpeed, Spread-Preview, 2-Lap-Gap-Schätzung. Q-14 lapUtils SoT: DEFAULT_BASE_SPEED_CONFIG aus defaults.js, private Konstanten, optionale Params auf openTrackFinishT/estimatedSecondsPerLap. camera-polish-ux-verification.spec.js (31 Tests, permanent). 759 Unit + 157 e2e Tests. Master `750d826`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -66,9 +67,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - **D6** — Racer-Track-Effects (RTE): `rteDefinitions` auf SpriteRacerType ist reserviert.
   Braucht `RteManager` in RaceScreen und Schema-Spec. Per-Racer Partikel-Effekte
   durch Track-Zustand (Schlamm-Spray, Wasser-Splash etc.).
-- **D7** — Camera-Director Polish: Schwellwerte konfigurierbar, Zoom-Verhalten bei
-  variablen Speeds (D9-Abhängigkeit), Spread-Handling bei großer Speed-Varianz.
-  **Vorgezogen durch B-16** (Camera bleibt still auf großen Tracks).
+- **D7** — Camera-Director Polish: Smooth Zoom-Transitions, Spread-Handling bei großer
+  Speed-Varianz, konfigurierbare Director-Schwellwerte pro Track. Adaptive Zoom und
+  clampOffset-Fix wurden in PR #28 (fix/camera-polish) umgesetzt; D7 fokussiert jetzt auf
+  Transitions und verbleibende Director-Heuristiken.
 - **D8** — Voller Racer-Config-Editor: Coats-Edit-UI, alle Felder, Sprite-Wechsel-UI.
   Baut auf Override-Pattern (B-7) auf.
 
@@ -99,23 +101,6 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   - Maßnahme: alle deutschen Strings auf Englisch übersetzen + kompletter i18n-Sweep für
     versteckte deutsche Strings. Funktional kein Block, aber unsauber.
 
-- **B-16** — Camera-Director funktioniert nicht mehr bei großen Tracks (**HOCH-PRIO**)
-  - Beobachtet: Auf hochauflösendem Track bleibt Kamera fast still, folgt Racern nicht mehr
-  - Vermutete Ursache: D10 bsX/bsY-Transformation hat Camera-Director-Berechnungen
-    durcheinandergebracht — Camera arbeitet in Canvas-Koordinaten, Racer-Positionen in
-    Welt-Koordinaten
-  - **Macht große Tracks aktuell unbrauchbar** — sollte vor D11 gefixt werden
-  - Verwandt mit D7 (Camera-Director Polish) — B-16 zieht D7 de facto vor
-
-- **B-17** — Race-Speed bei großen Tracks visuell zu schnell (**HOCH-PRIO**)
-  - Beobachtet: Auf hochauflösendem Track wirken Racer "wie geflogen"
-  - Ursache: Race-Engine arbeitet in normalisiertem t-Raum (1 Runde = t 0..1, track-unabhängig)
-  - Render konvertiert t → Pixel — bei 6× größerem Track fährt Racer 6× schneller in px/s
-  - **Konzeptionelle Entscheidung nötig:**
-    - Option A: weiter im t-Raum (track-unabhängig, "Pferd schafft 1 Runde in 16s immer")
-    - Option B: Pixel/Sekunde-Skalierung (6× Track → Runde dauert 6× länger)
-  - User-Beobachtung "Racer fliegen" deutet auf Pixel-Sense-Erwartung → Option B wahrscheinlich
-  - **Macht große Tracks aktuell unbrauchbar** — sollte zusammen mit B-16 gefixt werden
 
 ### Phase Q (Quality-Hygiene)
 
@@ -176,13 +161,14 @@ aus D3.5.5.
 
 1. ✅ **B-Wave** (B-1, B-3, B-10..B-15) — PR #25, master `697e081`
 2. ✅ **B-16 + B-17** — PR #26, master `7cdde15`
-3. 🔜 **D11** Racer Behavior (Soft Avoidance + Drafting)
-4. **D3.5.4** Trail-Tuning
-5. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-6. **D6**, **D8**
-7. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
-8. **Phase V** (Verification-Sprint)
-9. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+3. ✅ **fix/camera-polish + Q-14** — PR #28, master `750d826`
+4. 🔜 **D11** Racer Behavior (Soft Avoidance + Drafting)
+5. **D3.5.4** Trail-Tuning
+6. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+7. **D6**, **D8**
+8. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
+9. **Phase V** (Verification-Sprint)
+10. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
 
 ---
 
