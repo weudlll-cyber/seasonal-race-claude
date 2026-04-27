@@ -19,6 +19,7 @@ export const KEYS = {
   DATA_VERSION: 'racearena:dataVersion',
   AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
   SPEED_SCALE_CONFIG: 'racearena:speedScaleConfig',
+  BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
 };
 
 export function storageGet(key, fallback = null) {

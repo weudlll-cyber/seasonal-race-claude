@@ -118,3 +118,10 @@ export const DEFAULT_SPEED_SCALE_CONFIG = {
   minScale: 0.5,
   maxScale: 4.0,
 };
+
+// ±12.9% from mean (0.001045) — tight enough to prevent lap-wrap visual gaps
+// on 60s races while keeping visible drama. Old values were 0.00085/0.0012 (±17%).
+export const DEFAULT_BASE_SPEED_CONFIG = {
+  min: 0.00091,
+  max: 0.00118,
+};
