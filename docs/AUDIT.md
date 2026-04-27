@@ -129,10 +129,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-26 | **678 unit + 57 e2e** | UX-Verifikations-Spec permanent hinzugefügt (d3-5-5-ux-verification.spec.js, 21 Tests), Quality-Gate-Fix (Doppelimport, PR #21) |
 | 2026-04-27 | **694 unit + 75 e2e** | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Beide Specs permanent als Regressions-Schutz. |
 | 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX-Polish-Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification angepasst (dt. Strings → englisch). Keine neuen Unit-Tests. |
+| 2026-04-27 | **719 unit + 100 e2e** | B-16+B-17 Große-Tracks Fix (PR #26, master `7cdde15`). +25 unit (speedScale.test.js ×16, trackEditorSave pathLengthPx ×4, CameraDirector B-16 ×8, updated ×1), +12 e2e (b1617-smoke.spec.js). |
 
-**Aktueller Master-HEAD:** `697e081` (post B-Wave, PR #25)
+**Aktueller Master-HEAD:** `7cdde15` (post B-16+B-17, PR #26)
 **ESLint-Warnings:** 3 pre-existing (unverändert)
-**Playwright e2e:** 88 Tests (6 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1)
+**Playwright e2e:** 100 Tests (7 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1)
 
 ---
 
@@ -154,6 +155,14 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #26 (B-16+B-17):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unchanged; `worldH` → `_worldH` prefix fix applied)
+- ✅ 719 Unit-Tests grün (+25 neue Tests)
+- ✅ 100 e2e-Tests grün (+12 neue Tests in b1617-smoke.spec.js)
+- ✅ CI green (PR #26, squash-merged `7cdde15`)
+- ✅ B-16: CameraDirector adaptive zoom — `zoom = clamp(worldW/VIEW_W, 1, 6)`. 1280px→≈1.4 (unchanged), 4000px→≈4.4
+- ✅ B-17: pathLengthPx computed at save (200-sample Catmull-Rom arc), migration IIFE backfills old geometries, speedScaleFactor applied to baseSpeed, SpeedScaleSection in Dev-Screen
 
 **Quality-Gate auf PR #25 (B-Wave):** 0 Show-Stopper, 0 neue Errors/Warnings
 - ✅ ESLint: 0 Errors, 0 neue Warnings (3 pre-existing unverändert)
