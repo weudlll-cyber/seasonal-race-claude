@@ -170,8 +170,8 @@ test.describe('V1 — Bild-Upload-Flow End-to-End', () => {
   test('full new-track upload workflow', async ({ page }) => {
     await page.goto('/track-editor');
 
-    // Upload button shows "Kein Bild" in required state
-    const uploadBtn = page.locator('button').filter({ hasText: /Kein Bild/ });
+    // Upload button shows "No image" in required state
+    const uploadBtn = page.locator('button').filter({ hasText: /No image/ });
     await expect(uploadBtn).toBeVisible();
 
     // Save button is disabled before upload
@@ -180,13 +180,13 @@ test.describe('V1 — Bild-Upload-Flow End-to-End', () => {
     // Upload 2000×1000 image
     await uploadPng(page, 2000, 1000);
 
-    // Upload button changes to "Bild hochgeladen"
+    // Upload button changes to "Image uploaded"
     await expect(
-      page.locator('button').filter({ hasText: /Bild hochgeladen/ })
+      page.locator('button').filter({ hasText: /Image uploaded/ })
     ).toBeVisible();
 
     // Read-only dimensions display
-    await expect(page.getByText(/2000.*1000|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/2000.*1000|Track Size/)).toBeVisible();
 
     // Save button becomes enabled
     await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled();
@@ -203,10 +203,10 @@ test.describe('V2 — Bild-Validation greift bei zu großem Bild', () => {
     await uploadPng(page, 9000, 500, 'oversized.png');
 
     // Error message appears
-    await expect(page.getByText(/Bild zu groß.*Maximum.*8000|Maximum.*8000.*4096/)).toBeVisible();
+    await expect(page.getByText(/Image too large.*Maximum.*8000|Maximum.*8000.*4096/)).toBeVisible();
 
-    // Upload button still shows "Kein Bild" — not set to bad image
-    await expect(page.locator('button').filter({ hasText: /Kein Bild/ })).toBeVisible();
+    // Upload button still shows "No image" — not set to bad image
+    await expect(page.locator('button').filter({ hasText: /No image/ })).toBeVisible();
 
     // Save button stays disabled
     await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
@@ -217,12 +217,12 @@ test.describe('V2 — Bild-Validation greift bei zu großem Bild', () => {
 
     // First: oversized
     await uploadPng(page, 9000, 500, 'oversized.png');
-    await expect(page.getByText(/Bild zu groß/)).toBeVisible();
+    await expect(page.getByText(/Image too large/)).toBeVisible();
 
     // Then: valid
     await uploadPng(page, 800, 600, 'valid.png');
-    await expect(page.getByText(/Bild zu groß/)).not.toBeVisible();
-    await expect(page.locator('button').filter({ hasText: /Bild hochgeladen/ })).toBeVisible();
+    await expect(page.getByText(/Image too large/)).not.toBeVisible();
+    await expect(page.locator('button').filter({ hasText: /Image uploaded/ })).toBeVisible();
   });
 });
 
@@ -242,7 +242,7 @@ test.describe('V3 — Bild-Wechsel mit Dimensions-Mismatch', () => {
     await uploadPng(page, 4000, 720, 'second.png');
 
     // Dimensions stay at original (1280×720)
-    await expect(page.getByText(/1280.*720|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/1280.*720|Track Size/)).toBeVisible();
   });
 
   test('accept resets points and activates new dimensions', async ({ page }) => {
@@ -259,7 +259,7 @@ test.describe('V3 — Bild-Wechsel mit Dimensions-Mismatch', () => {
     await uploadPng(page, 4000, 720, 'second.png');
 
     // New dimensions shown
-    await expect(page.getByText(/4000.*720|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/4000.*720|Track Size/)).toBeVisible();
   });
 });
 
@@ -284,9 +284,9 @@ test.describe('V4 — Bild-Wechsel mit gleichen Dimensionen', () => {
     expect(dialogFired).toBe(false);
 
     // Dimensions still 1280×720
-    await expect(page.getByText(/1280.*720|Track-Größe/)).toBeVisible();
-    // Upload button still shows "Bild hochgeladen"
-    await expect(page.locator('button').filter({ hasText: /Bild hochgeladen/ })).toBeVisible();
+    await expect(page.getByText(/1280.*720|Track Size/)).toBeVisible();
+    // Upload button still shows "Image uploaded"
+    await expect(page.locator('button').filter({ hasText: /Image uploaded/ })).toBeVisible();
   });
 });
 
@@ -342,13 +342,13 @@ test.describe('V6 — TrackManager Auto-Derive', () => {
     await expect(page.getByText('World Dimensions')).toBeVisible();
 
     // Before geometry: shows placeholder
-    await expect(page.getByText(/Geometrie wählen/)).toBeVisible();
+    await expect(page.getByText(/Choose Geometry/)).toBeVisible();
 
     // Select the seeded geometry
     await page.locator('select.select, select').filter({ hasText: /New Img Track/ }).selectOption({ value: 'new-img-track' });
 
     // Dimensions auto-derived from geometry
-    await expect(page.getByText(/4000.*720.*Geometrie|aus Geometrie/)).toBeVisible();
+    await expect(page.getByText(/4000.*720.*Geometry|from Geometry/)).toBeVisible();
   });
 });
 
@@ -361,7 +361,7 @@ test.describe('V7 — TrackManager ohne Geometrie-Auswahl', () => {
     await page.getByRole('button', { name: /\+ Add Track/ }).click();
 
     await expect(page.getByText('World Dimensions')).toBeVisible();
-    await expect(page.getByText(/Geometrie wählen/)).toBeVisible();
+    await expect(page.getByText(/Choose Geometry/)).toBeVisible();
   });
 
   test('World Width and Height pill buttons are absent', async ({ page }) => {
@@ -420,19 +420,19 @@ test.describe('V9 — TrackEditor Zoom + Pan funktional', () => {
     await expect(page.getByText(/100%/)).toBeVisible();
   });
 
-  test('Track-Größe display is visible in toolbar', async ({ page }) => {
+  test('Track Size display is visible in toolbar', async ({ page }) => {
     await page.goto('/track-editor');
-    await expect(page.getByText(/Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/Track Size/)).toBeVisible();
   });
 
-  test('after image upload, Track-Größe updates to image dimensions', async ({ page }) => {
+  test('after image upload, Track Size updates to image dimensions', async ({ page }) => {
     await page.goto('/track-editor');
     await uploadPng(page, 3000, 1500);
-    await expect(page.getByText(/3000.*1500|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/3000.*1500|Track Size/)).toBeVisible();
   });
 });
 
-// ── V10 — Race startet mit verschiedenen Track-Größen ────────────────────
+// ── V10 — Race startet mit verschiedenen Track Sizen ────────────────────
 
 test.describe('V10a — Default-Track startet Race ohne JS-Fehler', () => {
   test.beforeEach(async ({ page }) => {

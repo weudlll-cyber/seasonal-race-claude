@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId, storageSet } from '../../../modules/storage/storage.js';
-import { DEFAULT_PLAYER_GROUPS } from '../../../modules/storage/defaults.js';
+import { DEFAULT_PLAYER_GROUPS, DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
 import { assignRacers } from '../../../modules/utils/RandomHelper.js';
 import s from '../DevScreen.module.css';
 
@@ -19,6 +19,8 @@ const BLANK_FORM = { name: '', playersText: '' };
 
 function PlayerGroupsManager() {
   const [groups, setGroups] = useStorage(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
+  const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
+  const maxPlayers = raceDefaults.maxPlayers ?? 20;
   const [form, setForm] = useState(BLANK_FORM);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -29,7 +31,7 @@ function PlayerGroupsManager() {
       .split(',')
       .map((n) => n.trim())
       .filter(Boolean)
-      .slice(0, 20); // enforce max players cap
+      .slice(0, maxPlayers);
   }
 
   function handleSave() {
@@ -147,7 +149,7 @@ function PlayerGroupsManager() {
                 <span
                   style={{ textTransform: 'none', fontWeight: 400, color: 'var(--color-muted)' }}
                 >
-                  — comma-separated, max 20
+                  — comma-separated, max {maxPlayers}
                 </span>
               </label>
               <textarea
@@ -157,7 +159,7 @@ function PlayerGroupsManager() {
                 onChange={(e) => setForm((f) => ({ ...f, playersText: e.target.value }))}
               />
               <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
-                {parseNames(form.playersText).length} / 20 names detected
+                {parseNames(form.playersText).length} / {maxPlayers} names detected
               </span>
             </div>
             <div className={s.btnRow}>

@@ -809,7 +809,7 @@ export default function TrackEditor() {
         const w = img.naturalWidth;
         const h = img.naturalHeight;
         if (w > MAX_BG_W || h > MAX_BG_H) {
-          setBgUploadError(`Bild zu groß. Maximum: ${MAX_BG_W}×${MAX_BG_H} Pixel.`);
+          setBgUploadError(`Image too large. Maximum: ${MAX_BG_W}×${MAX_BG_H} pixels.`);
           return;
         }
         setBgUploadError(null);
@@ -819,7 +819,7 @@ export default function TrackEditor() {
         if (dimChanged && hasPoints) {
           if (
             !window.confirm(
-              `Das neue Bild hat andere Abmessungen (${w}×${h} statt ${editorWorldW}×${editorWorldH}). Der Pfad wird zurückgesetzt und muss neu gezeichnet werden. Fortfahren?`
+              `The new image has different dimensions (${w}×${h} instead of ${editorWorldW}×${editorWorldH}). The path will be reset and must be redrawn. Continue?`
             )
           )
             return;
@@ -837,7 +837,7 @@ export default function TrackEditor() {
         viewTransformRef.current.worldH = h;
         markDirty();
       };
-      img.onerror = () => setBgUploadError('Bild konnte nicht geladen werden.');
+      img.onerror = () => setBgUploadError('Image could not be loaded.');
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
@@ -848,7 +848,7 @@ export default function TrackEditor() {
   function handleSave() {
     setSaveAttempted(true);
     if (!backgroundImage) {
-      setSaveError('Hintergrundbild ist erforderlich. Bitte zuerst ein Bild hochladen.');
+      setSaveError('Background image is required. Please upload an image first.');
       return;
     }
     const error = validateEditorState({
@@ -1138,7 +1138,7 @@ export default function TrackEditor() {
         {/* Viewport controls */}
         <div className={s.toolbarRow}>
           <span className={s.sliderLabel}>
-            Track-Größe: {editorWorldW}×{editorWorldH} px
+            Track Size: {editorWorldW}×{editorWorldH} px
           </span>
           <button
             className={s.historyBtn}
@@ -1199,14 +1199,12 @@ export default function TrackEditor() {
             className={`${s.bgUploadBtn}${!backgroundImage ? ` ${s.bgUploadBtnRequired}` : ''}`}
             onClick={() => fileInputRef.current?.click()}
             title={
-              backgroundImage
-                ? 'Hintergrundbild ändern'
-                : 'Hintergrundbild hochladen (erforderlich)'
+              backgroundImage ? 'Change background image' : 'Upload background image (required)'
             }
           >
             {backgroundImage
-              ? `🖼 ${backgroundImage.startsWith('data:') ? 'Bild hochgeladen' : backgroundImage.split('/').pop()}`
-              : '📷 Kein Bild · erforderlich'}
+              ? `🖼 ${backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
+              : '📷 No image · required'}
           </button>
           <button
             className={s.saveBtn}

@@ -71,15 +71,17 @@ function SetupScreen() {
   })();
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
 
-  // Lazily consume any group loaded from the Dev Panel (one-shot read + clear)
-  const [players, setPlayers] = useState(() => {
+  // Consume any group loaded from the Dev Panel (one-shot read + clear).
+  // useEffect instead of lazy initializer: StrictMode double-invokes initializers,
+  // clearing storage on the first call so the second finds nothing.
+  const [players, setPlayers] = useState([]);
+  useEffect(() => {
     const active = storageGet(KEYS.ACTIVE_GROUP);
     if (active && active.length > 0) {
-      storageSet(KEYS.ACTIVE_GROUP, null); // consume so it doesn't re-apply on remount
-      return active;
+      storageSet(KEYS.ACTIVE_GROUP, null);
+      setPlayers(active);
     }
-    return [];
-  });
+  }, []);
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
@@ -257,7 +259,11 @@ function SetupScreen() {
           {activeTab === 0 && (
             <>
               <h2 className={styles.panelTitle}>Players</h2>
-              <PlayerSetup players={players} onChange={setPlayers} />
+              <PlayerSetup
+                players={players}
+                onChange={setPlayers}
+                maxPlayers={raceDefaults.maxPlayers ?? 20}
+              />
             </>
           )}
           {activeTab === 1 && (

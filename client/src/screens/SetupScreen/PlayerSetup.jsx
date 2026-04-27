@@ -11,14 +11,12 @@ import { useState } from 'react';
 import { assignRacers } from '../../modules/utils/RandomHelper.js';
 import styles from './SetupScreen.module.css';
 
-const MAX_PLAYERS = 20;
-
-function PlayerSetup({ players, onChange }) {
+function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
   const [inputValue, setInputValue] = useState('');
 
   function handleAdd() {
     const name = inputValue.trim();
-    if (!name || players.length >= MAX_PLAYERS) return;
+    if (!name || players.length >= maxPlayers) return;
 
     // Re-shuffle racer assignments every time the roster changes
     const newNames = [...players.map((p) => p.name), name];
@@ -39,7 +37,7 @@ function PlayerSetup({ players, onChange }) {
     onChange(assignRacers(players.map((p) => p.name)));
   }
 
-  const atMax = players.length >= MAX_PLAYERS;
+  const atMax = players.length >= maxPlayers;
 
   return (
     <div>
@@ -47,7 +45,7 @@ function PlayerSetup({ players, onChange }) {
         <input
           className={styles.playerInput}
           type="text"
-          placeholder={atMax ? 'Maximum 20 players reached' : 'Enter player name…'}
+          placeholder={atMax ? `Maximum ${maxPlayers} players reached` : 'Enter player name…'}
           value={inputValue}
           disabled={atMax}
           maxLength={32}
@@ -64,7 +62,7 @@ function PlayerSetup({ players, onChange }) {
       </div>
 
       <p className={styles.playerCount}>
-        {players.length} / {MAX_PLAYERS} players
+        {players.length} / {maxPlayers} players
       </p>
 
       {players.length === 0 ? (

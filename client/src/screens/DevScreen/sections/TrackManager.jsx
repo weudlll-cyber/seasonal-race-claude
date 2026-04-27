@@ -294,6 +294,22 @@ function TrackManager() {
                   </option>
                 ))}
               </select>
+              {!form.geometryId && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--color-muted)',
+                    marginTop: '0.25rem',
+                    display: 'block',
+                  }}
+                >
+                  No geometry yet. Go to{' '}
+                  <a href="/track-editor" style={{ color: 'var(--color-accent)' }}>
+                    Track Editor
+                  </a>{' '}
+                  to draw a track, then return here to link it.
+                </span>
+              )}
               {form.geometryId &&
                 (() => {
                   const geom = geometries.find((g) => g.id === form.geometryId);
@@ -344,8 +360,8 @@ function TrackManager() {
               <label className={s.label}>World Dimensions</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
                 {form.geometryId
-                  ? `${form.worldWidth}×${form.worldHeight} px (aus Geometrie)`
-                  : '— (Geometrie wählen)'}
+                  ? `${form.worldWidth}×${form.worldHeight} px (from Geometry)`
+                  : '— (Choose Geometry)'}
               </span>
             </div>
           </div>
