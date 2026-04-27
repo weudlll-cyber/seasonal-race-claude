@@ -131,10 +131,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX-Polish-Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification angepasst (dt. Strings → englisch). Keine neuen Unit-Tests. |
 | 2026-04-27 | **719 unit + 100 e2e** | B-16+B-17 Große-Tracks Fix (PR #26, master `7cdde15`). +25 unit (speedScale.test.js ×16, trackEditorSave pathLengthPx ×4, CameraDirector B-16 ×8, updated ×1), +12 e2e (b1617-smoke.spec.js). |
 | 2026-04-27 | **723 unit + 103 e2e** | fix(tracks): listTracks() worldWidth/worldHeight + migration (PR #27). +4 unit (trackStorage.test.js), +3 e2e (fix-list-tracks-world-dimensions.spec.js). Root cause fix for large-track render bug (bsX=1.0). |
+| 2026-04-27 | **723 unit + 118 e2e** | test(e2e): fix 7 selector issues in b-wave-smoke + b1617-smoke (PR #27, selber Squash). 7 pre-existing Selector-Fehler behoben: B-3×2 (div-ancestor), B-14 (option-text), B-12 (substring), B-10/B-11 (falsches Label + Edit-Regex-Anker), B-17 (tooltip-collision). 118/118 grün. |
 
-**Aktueller Master-HEAD:** `09b634a` (post B-16+B-17 docs sprint, PR #27 pending merge)
+**Aktueller Master-HEAD:** `a40059c` (PR #27, squash-merged)
 **ESLint-Warnings:** 3 pre-existing (unverändert)
-**Playwright e2e:** 103 Tests (8 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1)
+**Playwright e2e:** 118 Tests (8 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1) — 118/118 grün
 
 ---
 
