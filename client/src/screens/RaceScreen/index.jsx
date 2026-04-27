@@ -36,8 +36,7 @@ import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import {
   loadAutoScaleConfig,
   computeAutoScaleFactor,
-  computeCameraZoomFactor,
-  computeOpenTrackCameraZoomFactor,
+  computeRenderDisplayScale,
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
@@ -165,6 +164,7 @@ export default function RaceScreen() {
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
+    const displaySize = racerType.config.displaySize;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -172,12 +172,7 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(
-          trackWidth,
-          nRacers,
-          autoScaleConfig,
-          racerType.config.displaySize
-        );
+        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
       }
     }
 
@@ -829,24 +824,19 @@ export default function RaceScreen() {
       // move together when the camera pans or zooms. HUD draws after ctx.restore()
       // so it stays in fixed screen space.
       //
-      // Camera-aware sprite scale: the canvas transform applies a zoom factor, so
-      // sprites must grow inversely to stay visually consistent across zoom states
-      // and world sizes.
+      // Sprite scaling (D7a proportional): sprites scale naturally with the camera
+      // zoom — closer = bigger. computeRenderDisplayScale applies a floor so sprites
+      // stay visible on very large tracks where the camera zooms far out.
       //
-      // Closed tracks: total transform = cam.zoom × bsX (where bsX = canvasW/worldW).
-      //   cameraZoomFactor = REFERENCE_CAMERA_ZOOM / (cam.zoom × bsX)
-      //   → displaySize × factor × cam.zoom × bsX = displaySize × REFERENCE_CAMERA_ZOOM (constant)
-      //
-      // Open tracks: total transform = OPEN_TRACK_BASE_ZOOM × cam.zoom (bsX ≡ 1).
-      //   cameraZoomFactor accounts for both terms via computeOpenTrackCameraZoomFactor.
-      //
-      // frameEffZoom is the raw canvas scale used to keep labels/trail at constant
-      // screen sizes: worldPx × frameEffZoom = screenPx.
-      const cameraZoomFactor = isOpenTrack
-        ? computeOpenTrackCameraZoomFactor(cam.zoom)
-        : computeCameraZoomFactor(cam.zoom, bsX);
-      const frameDisplayScale = displaySizeScale * cameraZoomFactor;
+      // frameEffZoom is the raw canvas scale (cam.zoom×bsX closed, BASE×cam.zoom open).
+      // It's used by labels/trail (via 1/frameEffZoom) to stay constant screen-size.
       const frameEffZoom = isOpenTrack ? effectiveZoom(cam.zoom) : cam.zoom * bsX;
+      const frameDisplayScale = computeRenderDisplayScale(
+        displaySize,
+        displaySizeScale,
+        frameEffZoom,
+        autoScaleConfig.minTargetScreenPx ?? 32
+      );
 
       if (isOpenTrack) {
         ctx.save();

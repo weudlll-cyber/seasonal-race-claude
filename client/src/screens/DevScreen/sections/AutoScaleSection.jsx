@@ -125,21 +125,21 @@ function AutoScaleSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Min Visible Pixels
-              <InfoTooltip text="Minimum on-canvas sprite diameter in pixels. Auto-scale raises the factor above minScale if needed to keep sprites this large. Uses racer display size and camera reference zoom. Default 32." />
+              Min Target Screen Px
+              <InfoTooltip text="Minimum sprite diameter on screen in pixels. Acts as a floor in the render pipeline: on very large tracks where the camera zooms far out, sprites are enlarged to stay at least this many pixels. Default 32." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="Min Visible Pixels"
+              aria-label="Min Target Screen Px"
               min={8}
               max={120}
               step={4}
-              value={config.minVisiblePixels}
+              value={config.minTargetScreenPx}
               disabled={!config.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0) set('minVisiblePixels', v);
+                if (v > 0) set('minTargetScreenPx', v);
               }}
             />
           </div>

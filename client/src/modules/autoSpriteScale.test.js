@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
-  computeCameraZoomFactor,
-  computeOpenTrackCameraZoomFactor,
-  REFERENCE_CAMERA_ZOOM,
+  computeRenderDisplayScale,
   DEFAULT_AUTO_SCALE_CONFIG,
   loadAutoScaleConfig,
   saveAutoScaleConfig,
 } from './autoSpriteScale.js';
-import { OPEN_TRACK_BASE_ZOOM } from './camera/openTrackCamera.js';
 
 // Mock storage module
 vi.mock('./storage/storage.js', () => ({
@@ -31,7 +28,7 @@ describe('DEFAULT_AUTO_SCALE_CONFIG', () => {
       referenceValue: 23,
       minScale: 0.65,
       maxScale: 2.5,
-      minVisiblePixels: 32,
+      minTargetScreenPx: 32,
     });
   });
 });
@@ -67,7 +64,7 @@ describe('computeAutoScaleFactor', () => {
   });
 
   it('minScale 0.65 floor: 6 racers on 50px track still returns at least 0.65', () => {
-    // 50 / 6 / 23 ≈ 0.362 — below old minScale 0.4 and new 0.65 — floor prevents tiny sprites
+    // 50 / 6 / 23 ≈ 0.362 — below minScale 0.65 — floor prevents tiny sprites
     const result = computeAutoScaleFactor(50, 6, DEFAULT_AUTO_SCALE_CONFIG);
     expect(result).toBeGreaterThanOrEqual(0.65);
   });
@@ -135,138 +132,96 @@ describe('saveAutoScaleConfig', () => {
   });
 });
 
-describe('computeCameraZoomFactor', () => {
-  it('returns 1.0 at the reference zoom (1280-track LEADER state, bsX=1)', () => {
-    expect(computeCameraZoomFactor(REFERENCE_CAMERA_ZOOM)).toBeCloseTo(1.0);
+describe('computeRenderDisplayScale', () => {
+  const displaySize = 40;
+  const displaySizeScale = 1.0145; // 140/6/23 — neutral on reference track
+  const minPx = 32;
+
+  it('no-floor case: result = displaySizeScale (proportional, floor not active)', () => {
+    // effZoom=1.5 (open-track OVERVIEW): proportionalPx = 40×1.0145×1.5 = 60.9 > 32
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
+    expect(result).toBeCloseTo(displaySizeScale, 5);
   });
 
-  it('returns ≈ 4.67 at zoom=0.3, bsX=1 (backward-compat)', () => {
-    expect(computeCameraZoomFactor(0.3)).toBeCloseTo(1.4 / 0.3, 3);
-    expect(computeCameraZoomFactor(0.3)).toBeCloseTo(4.667, 2);
+  it('sprite screen size scales proportionally with effZoom (LEADER > OVERVIEW)', () => {
+    // OVERVIEW: effZoom=1.5 → screenPx = 40×1.0145×1.5 = 60.9
+    // LEADER:   effZoom=2.1 → screenPx = 40×1.0145×2.1 = 85.2
+    const overviewScale = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
+    const leaderScale = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
+    const overviewScreenPx = displaySize * overviewScale * 1.5;
+    const leaderScreenPx = displaySize * leaderScale * 2.1;
+    expect(leaderScreenPx).toBeGreaterThan(overviewScreenPx);
+    expect(leaderScreenPx).toBeCloseTo(85.2, 0);
+    expect(overviewScreenPx).toBeCloseTo(60.9, 0);
   });
 
-  it('returns ≈ 3.11 at zoom=0.45, bsX=1 (backward-compat)', () => {
-    expect(computeCameraZoomFactor(0.45)).toBeCloseTo(1.4 / 0.45, 3);
-    expect(computeCameraZoomFactor(0.45)).toBeCloseTo(3.111, 2);
+  it('1280-track + LEADER: screen size ≈ 85px (proportional, was 57px constant in D7a)', () => {
+    // worldWidth=1280 open track, LEADER cam.zoom=1.4: effZoom=1.5×1.4=2.1
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
+    const screenPx = displaySize * result * 2.1;
+    expect(screenPx).toBeCloseTo(85.2, 0);
   });
 
-  it('returns 1 for zoom=0 (guard against divide-by-zero)', () => {
-    expect(computeCameraZoomFactor(0)).toBe(1);
+  it('1280-track + OVERVIEW: screen size ≈ 61px', () => {
+    // worldWidth=1280 open track, OVERVIEW cam.zoom=1.0: effZoom=1.5×1.0=1.5
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
+    const screenPx = displaySize * result * 1.5;
+    expect(screenPx).toBeCloseTo(60.9, 0);
   });
 
-  it('returns 1 for negative or falsy zoom (guard)', () => {
-    expect(computeCameraZoomFactor(-1)).toBe(1);
-    expect(computeCameraZoomFactor(null)).toBe(1);
+  it('floor kicks in on large closed track (effZoom≈0.064) — screenPx = 32', () => {
+    // worldWidth=6000 closed track, LEADER state:
+    // cam.zoom = (1280/6000)×1.4 = 0.2987, bsX = 1280/6000 = 0.2133
+    // effZoom = 0.2987 × 0.2133 = 0.0637
+    const effZoom = (1280 / 6000) * 1.4 * (1280 / 6000);
+    const dss = computeAutoScaleFactor(140, 6, DEFAULT_AUTO_SCALE_CONFIG); // 1.0145
+    const result = computeRenderDisplayScale(displaySize, dss, effZoom, minPx);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(32, 1);
+    expect(screenPx).toBeGreaterThanOrEqual(32);
   });
 
-  it('on-screen sprite size invariant with bsX=1: factor × zoom = REFERENCE_CAMERA_ZOOM', () => {
-    for (const zoom of [0.3, 0.45, 0.9, 1.4, 2.0]) {
-      const onScreen = computeCameraZoomFactor(zoom) * zoom;
-      expect(onScreen).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
+  it('floor protects on any large track: screenPx never falls below minTargetScreenPx', () => {
+    for (const effZoom of [0.01, 0.05, 0.1, 0.15]) {
+      const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx);
+      const screenPx = displaySize * result * effZoom;
+      expect(screenPx).toBeGreaterThanOrEqual(minPx - 0.001);
     }
   });
 
-  it('bsX=1 default is backward-compatible: same result as old single-arg call', () => {
-    expect(computeCameraZoomFactor(0.3, 1)).toBeCloseTo(computeCameraZoomFactor(0.3), 10);
-    expect(computeCameraZoomFactor(1.4, 1)).toBeCloseTo(computeCameraZoomFactor(1.4), 10);
+  it('custom minTargetScreenPx=48: floor at 48px', () => {
+    const effZoom = 0.05; // tiny, would give proportional ~2px
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, 48);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(48, 1);
   });
 
-  it('6000-track: factor × zoom × bsX = REFERENCE_CAMERA_ZOOM (bsX-fix invariant)', () => {
-    // bsX = 1280/6000 ≈ 0.2133, zoom ≈ 0.298 (1.4 × 1280/6000)
-    const bsX = 1280 / 6000;
-    const zoom = (1280 / 6000) * 1.4; // new leaderZoom formula
-    const factor = computeCameraZoomFactor(zoom, bsX);
-    expect(factor * zoom * bsX).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
-  });
-
-  it('6000-track: on-screen sprite size = displaySize × REFERENCE_CAMERA_ZOOM (same as 1280-track)', () => {
-    const bsX = 1280 / 6000;
-    const zoom = (1280 / 6000) * 1.4;
-    const factor = computeCameraZoomFactor(zoom, bsX);
-    const onScreen1280 = computeCameraZoomFactor(1.4, 1) * 1.4 * 1; // bsX=1
-    const onScreen6000 = factor * zoom * bsX;
-    expect(onScreen6000).toBeCloseTo(onScreen1280, 5);
-  });
-
-  it('invariant holds for a range of (zoom, bsX) pairs', () => {
-    const pairs = [
-      [1.4, 1], // 1280 reference
-      [0.298, 1280 / 6000], // 6000-track
-      [0.45, 1280 / 4000], // 4000-track
-      [2.5, 1280 / 512], // very small track (clamped)
-    ];
-    for (const [zoom, bsX] of pairs) {
-      const factor = computeCameraZoomFactor(zoom, bsX);
-      expect(factor * zoom * bsX).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 4);
-    }
-  });
-});
-
-describe('computeOpenTrackCameraZoomFactor', () => {
-  it('at cam.zoom=1: factor = REFERENCE / BASE ≈ 0.933', () => {
-    expect(computeOpenTrackCameraZoomFactor(1)).toBeCloseTo(
-      REFERENCE_CAMERA_ZOOM / OPEN_TRACK_BASE_ZOOM,
-      5
+  it('returns displaySizeScale for invalid effZoom (guard against divide-by-zero)', () => {
+    expect(computeRenderDisplayScale(displaySize, displaySizeScale, 0, minPx)).toBe(
+      displaySizeScale
+    );
+    expect(computeRenderDisplayScale(displaySize, displaySizeScale, -1, minPx)).toBe(
+      displaySizeScale
+    );
+    expect(computeRenderDisplayScale(displaySize, displaySizeScale, null, minPx)).toBe(
+      displaySizeScale
     );
   });
 
-  it('on-screen size is invariant: factor × effZoom = REFERENCE_CAMERA_ZOOM', () => {
-    // factor × (BASE × camZoom) = REFERENCE regardless of camZoom
-    for (const z of [0.8, 1.0, 1.4, 1.6]) {
-      const effZoom = OPEN_TRACK_BASE_ZOOM * z;
-      const onScreen = computeOpenTrackCameraZoomFactor(z) * effZoom;
-      expect(onScreen).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
-    }
+  it('returns displaySizeScale for invalid displaySize (guard)', () => {
+    expect(computeRenderDisplayScale(0, displaySizeScale, 1.5, minPx)).toBe(displaySizeScale);
+    expect(computeRenderDisplayScale(-5, displaySizeScale, 1.5, minPx)).toBe(displaySizeScale);
   });
 
-  it('open-track on-screen size matches closed-track reference (backward-compat)', () => {
-    // Closed 1280 at LEADER_ZOOM: displaySize × factor(1.4) × cam.zoom(1.4) = displaySize × 1.4
-    const closedOnScreen = computeCameraZoomFactor(1.4) * 1.4;
-    // Open track at cam.zoom=1.0: displaySize × factor × effZoom = displaySize × 1.4
-    const openOnScreen = computeOpenTrackCameraZoomFactor(1.0) * (OPEN_TRACK_BASE_ZOOM * 1.0);
-    expect(openOnScreen).toBeCloseTo(closedOnScreen, 5);
-  });
-
-  it('returns 1 for invalid input', () => {
-    expect(computeOpenTrackCameraZoomFactor(0)).toBe(1);
-    expect(computeOpenTrackCameraZoomFactor(-1)).toBe(1);
-    expect(computeOpenTrackCameraZoomFactor(null)).toBe(1);
-  });
-});
-
-describe('computeAutoScaleFactor — pixel floor', () => {
-  it('pixel floor raises factor above minScale for snail (displaySize=35, 20 racers)', () => {
-    // Without pixel floor: 140/20/23 ≈ 0.304, clamped to minScale=0.65 → 35×0.65×1.4=31.85 < 32
-    // With pixel floor: floor = 32/(35×1.4) ≈ 0.653 > minScale=0.65 → raised above minScale
-    const factor = computeAutoScaleFactor(140, 20, DEFAULT_AUTO_SCALE_CONFIG, 35);
-    // factor is set by pixel floor (> minScale), on-screen ≈ exactly 32px
-    expect(factor).toBeGreaterThan(DEFAULT_AUTO_SCALE_CONFIG.minScale);
-    expect(35 * factor * REFERENCE_CAMERA_ZOOM).toBeCloseTo(32, 0); // within ±0.5px
-  });
-
-  it('auto-scale minimum visible pixels — horse (displaySize=40) >= 32px', () => {
-    const factor = computeAutoScaleFactor(140, 20, DEFAULT_AUTO_SCALE_CONFIG, 40);
-    const onScreenPixels = 40 * factor * REFERENCE_CAMERA_ZOOM;
-    expect(onScreenPixels).toBeGreaterThanOrEqual(32);
-  });
-
-  it('pixel floor does not affect 6-racer case (lane factor dominates)', () => {
-    const withFloor = computeAutoScaleFactor(140, 6, DEFAULT_AUTO_SCALE_CONFIG, 40);
-    const withoutFloor = computeAutoScaleFactor(140, 6, DEFAULT_AUTO_SCALE_CONFIG);
-    // 140/6/23 ≈ 1.014 — well above any pixel floor
-    expect(withFloor).toBeCloseTo(withoutFloor, 5);
-  });
-
-  it('custom minVisiblePixels=48 raises floor for small displaySize', () => {
-    const cfg = { ...DEFAULT_AUTO_SCALE_CONFIG, minVisiblePixels: 48 };
-    const factor = computeAutoScaleFactor(140, 20, cfg, 35);
-    // floor = 48 / (35 × 1.4) ≈ 0.980 → on screen ≈ 48px
-    expect(35 * factor * REFERENCE_CAMERA_ZOOM).toBeCloseTo(48, 0);
-  });
-
-  it('without displaySize, falls back to minScale-only behavior', () => {
-    // No pixel floor when displaySize not provided
-    const factor = computeAutoScaleFactor(140, 20, DEFAULT_AUTO_SCALE_CONFIG);
-    expect(factor).toBe(DEFAULT_AUTO_SCALE_CONFIG.minScale);
+  it('BATTLE > LEADER > OVERVIEW screen size (proportional ordering preserved)', () => {
+    // worldWidth=1280 open track
+    const overview = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
+    const leader = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
+    const battle = computeRenderDisplayScale(displaySize, displaySizeScale, 2.4, minPx);
+    const overviewPx = displaySize * overview * 1.5;
+    const leaderPx = displaySize * leader * 2.1;
+    const battlePx = displaySize * battle * 2.4;
+    expect(battlePx).toBeGreaterThan(leaderPx);
+    expect(leaderPx).toBeGreaterThan(overviewPx);
   });
 });
