@@ -428,6 +428,40 @@ describe('CameraDirector — _clampOffset for zoom < 1', () => {
   });
 });
 
+// ── CameraDirector — world-edge clamp (Befund 2) ─────────────────────────────
+// Regression: positive offsetY caused a black strip above the track when
+// bbox fits within the viewport. After the fix, offsetY must be ≤ 0 at zoom > 1.
+
+describe('CameraDirector — world-edge clamp (Befund 2)', () => {
+  it('offsetY stays ≤ 0 at zoom > 1 even when small bbox fits in viewport', () => {
+    // bbox top edge at y=100 (not y=0): bbox fits inside canvas at battleZoom≈1.6
+    // Raw target = hh - racerY*zoom > 0 → bbox clamp alone allows positive offsetY.
+    // World-edge clamp must force offsetY ≤ 0.
+    const bbox = { minX: 0, minY: 100, maxX: 1280, maxY: 400 };
+    const cd = new CameraDirector(bbox);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    const racers = [
+      { t: 0.9, x: 640, y: 110, finished: false },
+      { t: 0.8, x: 640, y: 120, finished: false },
+    ];
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    expect(cd.offsetY).toBeLessThanOrEqual(0);
+  });
+
+  it('offsetX stays ≤ 0 at zoom > 1 even when small bbox fits in viewport', () => {
+    // Symmetric check for X axis
+    const bbox = { minX: 100, minY: 0, maxX: 600, maxY: 720 };
+    const cd = new CameraDirector(bbox);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    const racers = [
+      { t: 0.9, x: 110, y: 360, finished: false },
+      { t: 0.8, x: 120, y: 360, finished: false },
+    ];
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    expect(cd.offsetX).toBeLessThanOrEqual(0);
+  });
+});
+
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {

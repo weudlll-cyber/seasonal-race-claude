@@ -26,6 +26,8 @@ import {
   openTrackFinishT,
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -35,6 +37,7 @@ import {
   loadAutoScaleConfig,
   computeAutoScaleFactor,
   computeCameraZoomFactor,
+  computeOpenTrackCameraZoomFactor,
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
@@ -158,6 +161,8 @@ export default function RaceScreen() {
     const BASE_SPEED_MIN = baseSpeedConfig.min;
     const BASE_SPEED_MAX = baseSpeedConfig.max;
 
+    const behaviorConfig = loadRaceBehaviorConfig();
+
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
     let displaySizeScale = 1;
@@ -167,7 +172,12 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
+        displaySizeScale = computeAutoScaleFactor(
+          trackWidth,
+          nRacers,
+          autoScaleConfig,
+          racerType.config.displaySize
+        );
       }
     }
 
@@ -230,28 +240,33 @@ export default function RaceScreen() {
       camX: 0,
       camY: 0,
       finalLapStartTs: null,
-      racers: raceData.racers.map((r, i) => ({
-        ...r,
-        index: i,
-        t: 0,
-        lap: 1,
-        trackOffset: racerOffsets[i],
-        icon: trackEmoji ?? r.icon,
-        baseSpeed:
-          ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier) /
-          speedScaleFactor,
-        jitterFreq: 0.0006 + Math.random() * 0.0014,
-        jitterPhase: Math.random() * Math.PI * 2,
-        color: LANE_COLORS[i % LANE_COLORS.length],
-        coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
-        finished: false,
-        finishRank: null,
-        runoutDecay: 1,
-        trail: [],
-        x: 0,
-        y: 0,
-        angle: 0,
-      })),
+      racers: raceData.racers.map((r, i) => {
+        const racer = {
+          ...r,
+          index: i,
+          t: 0,
+          lap: 1,
+          trackOffset: racerOffsets[i],
+          icon: trackEmoji ?? r.icon,
+          baseSpeed:
+            ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
+              speedMultiplier) /
+            speedScaleFactor,
+          jitterFreq: 0.0006 + Math.random() * 0.0014,
+          jitterPhase: Math.random() * Math.PI * 2,
+          color: LANE_COLORS[i % LANE_COLORS.length],
+          coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
+          finished: false,
+          finishRank: null,
+          runoutDecay: 1,
+          trail: [],
+          x: 0,
+          y: 0,
+          angle: 0,
+        };
+        initRacerBehavior(racer);
+        return racer;
+      }),
     };
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
@@ -262,33 +277,10 @@ export default function RaceScreen() {
       const shape = shapeRef.current;
       for (const r of st.racers) {
         const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        const pos = shape.getPosition(t, r.trackOffset);
+        const pos = shape.getPosition(t, r.currentLaneY);
         r.x = pos.x;
         r.y = pos.y;
         r.angle = pos.angle;
-      }
-    }
-
-    // ── Collision avoidance ─────────────────────────────────────────────────
-    function applyCollisionAvoidance() {
-      const active = g.current.racers.filter((r) => !r.finished);
-      for (let i = 0; i < active.length; i++) {
-        for (let j = i + 1; j < active.length; j++) {
-          const r1 = active[i],
-            r2 = active[j];
-          const dx = r2.x - r1.x,
-            dy = r2.y - r1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 25 && dist > 0) {
-            const nudge = (25 - dist) / 2;
-            const perpX = -Math.sin(r1.angle);
-            const perpY = Math.cos(r1.angle);
-            r1.x += perpX * nudge * 0.5;
-            r1.y += perpY * nudge * 0.5;
-            r2.x -= perpX * nudge * 0.5;
-            r2.y -= perpY * nudge * 0.5;
-          }
-        }
       }
     }
 
@@ -692,8 +684,11 @@ export default function RaceScreen() {
           // Per-racer sine jitter — each racer has its own frequency and phase,
           // so speeds fluctuate independently instead of all spiking together.
           const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
+          // Apply D11 boost/brake flags from the previous frame
+          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoostFactor : 1.0;
+          const brake = r.avoidanceActive ? behaviorConfig.avoidanceSpeedBrake : 1.0;
           if (!r.finished) {
-            r.t += (r.baseSpeed + jitter) * (dt / 16);
+            r.t += (r.baseSpeed * boost * brake + jitter) * (dt / 16);
           } else {
             // Run-out: finished racers keep moving but decay to a stop
             r.runoutDecay *= 0.97;
@@ -701,7 +696,7 @@ export default function RaceScreen() {
           }
         }
         computePositions();
-        applyCollisionAvoidance();
+        applyRacerBehavior(st.racers, behaviorConfig);
 
         for (const r of st.racers) {
           if (r.finished) continue;
@@ -826,10 +821,14 @@ export default function RaceScreen() {
       // move together when the camera pans or zooms. HUD draws after ctx.restore()
       // so it stays in fixed screen space.
       //
-      // Camera-aware sprite scale: on closed tracks the canvas transform applies
-      // cam.zoom, so sprites must grow inversely to stay visually consistent.
-      // Open tracks use effectiveZoom (base × cam.zoom) — skip the extra factor there.
-      const cameraZoomFactor = isOpenTrack ? 1 : computeCameraZoomFactor(cam.zoom);
+      // Camera-aware sprite scale: the canvas transform applies a zoom factor, so
+      // sprites must grow inversely to stay visually consistent across zoom states.
+      // Closed tracks: effectiveZoom = cam.zoom × bsX → factor = REFERENCE / cam.zoom
+      // Open tracks:  effectiveZoom = OPEN_TRACK_BASE_ZOOM × cam.zoom → factor accounts
+      //               for both terms so on-screen size equals the closed-track reference.
+      const cameraZoomFactor = isOpenTrack
+        ? computeOpenTrackCameraZoomFactor(cam.zoom)
+        : computeCameraZoomFactor(cam.zoom);
       const frameDisplayScale = displaySizeScale * cameraZoomFactor;
 
       if (isOpenTrack) {

@@ -125,3 +125,15 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
   min: 0.00091,
   max: 0.00118,
 };
+
+export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
+  enabled: true,
+  avoidanceDistance: 120,
+  avoidanceLateralForce: 0.012,
+  avoidanceMaxLateral: 0.35,
+  avoidanceSpeedBrake: 0.95,
+  avoidanceReturnSpeed: 0.05,
+  draftingDistanceT: 0.02,
+  draftingLaneThreshold: 0.15,
+  draftingBoostFactor: 1.1,
+};
