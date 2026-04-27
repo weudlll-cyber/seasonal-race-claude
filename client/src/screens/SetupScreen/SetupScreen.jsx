@@ -15,11 +15,7 @@ import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
-import {
-  DEFAULT_TRACKS,
-  DEFAULT_RACE_DEFAULTS,
-  DEFAULT_RACERS,
-} from '../../modules/storage/defaults.js';
+import { DEFAULT_TRACKS, DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import {
   getRacerType,
   RACER_TYPE_IDS,
@@ -34,6 +30,30 @@ import {
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
+
+const QUICK_TEST_NAMES = [
+  'Turbo',
+  'Blaze',
+  'Rocket',
+  'Flash',
+  'Speedy',
+  'Thunder',
+  'Nitro',
+  'Drift',
+  'Bolt',
+  'Zephyr',
+  'Storm',
+  'Comet',
+  'Arrow',
+  'Blitz',
+  'Apex',
+  'Ridge',
+  'Flare',
+  'Surge',
+  'Dash',
+  'Nova',
+];
+const QUICK_TEST_TARGET = 20;
 
 function SetupScreen() {
   const navigate = useNavigate();
@@ -154,12 +174,11 @@ function SetupScreen() {
     })();
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     const effectiveTypeId = racerTypeOverride ?? defaultTypeId;
-    const trackIcon = getRacerType(effectiveTypeId).getEmoji();
-    const testPlayers = Array.from({ length: 6 }, (_, i) => ({
-      name: `Player ${i + 1}`,
-      color: DEFAULT_RACERS[i % DEFAULT_RACERS.length].color,
-      icon: trackIcon,
-    }));
+
+    const needed = Math.max(0, QUICK_TEST_TARGET - players.length);
+    const existingNames = new Set(players.map((p) => p.name));
+    const fillNames = QUICK_TEST_NAMES.filter((n) => !existingNames.has(n)).slice(0, needed);
+    const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
 
     const quickLaps = lapsFromDuration(raceDefaults.duration);
     const race = {
@@ -495,11 +514,11 @@ function SetupScreen() {
                 disabled={!quickTrack?.geometryId}
                 title={
                   quickTrack?.geometryId
-                    ? 'Auto-fill 6 test players and start race'
+                    ? 'Auto-fill to 20 test players and start race'
                     : 'Draw a track in the Track Editor first'
                 }
               >
-                ⚡ Quick Test
+                ⚡ Quick Test (20)
               </button>
             </div>
             <button
