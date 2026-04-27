@@ -175,6 +175,16 @@ export class CameraDirector {
       canvasH,
       this.targetZoom
     );
+
+    // World-edge clamp: prevent positive offsets that expose the black canvas
+    // background when the world fits entirely within the viewport.
+    // If zoom < 1 and world fits, center instead of leaving a black strip.
+    const edgeLoX = canvasW * (1 - this.targetZoom);
+    const edgeLoY = canvasH * (1 - this.targetZoom);
+    this.targetOffsetX =
+      edgeLoX > 0 ? edgeLoX / 2 : Math.max(edgeLoX, Math.min(0, this.targetOffsetX));
+    this.targetOffsetY =
+      edgeLoY > 0 ? edgeLoY / 2 : Math.max(edgeLoY, Math.min(0, this.targetOffsetY));
   }
 
   // Clamps a camera offset so no black strips appear and, when the track bbox fits

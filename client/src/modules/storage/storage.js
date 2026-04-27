@@ -20,6 +20,7 @@ export const KEYS = {
   AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
   SPEED_SCALE_CONFIG: 'racearena:speedScaleConfig',
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
+  RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig',
 };
 
 export function storageGet(key, fallback = null) {

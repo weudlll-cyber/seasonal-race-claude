@@ -19,6 +19,7 @@ import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import SpeedScaleSection from './sections/SpeedScaleSection.jsx';
 import BaseSpeedSection from './sections/BaseSpeedSection.jsx';
+import RaceBehaviorSection from './sections/RaceBehaviorSection.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [
@@ -91,6 +92,13 @@ const SECTIONS = [
     label: 'Base Speed',
     desc: 'Tune min/max speed range — wider = more drama, narrower = closer races',
     component: BaseSpeedSection,
+  },
+  {
+    id: 'behavior',
+    icon: '🏁',
+    label: 'Race Behavior',
+    desc: 'Soft avoidance and drafting — racers react to each other during the race',
+    component: RaceBehaviorSection,
   },
 ];
 
