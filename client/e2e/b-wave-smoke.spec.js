@@ -62,11 +62,12 @@ test.describe('B-3 — Winners stepper max is 20', () => {
     await page.getByRole('button', { name: /Race Defaults/ }).click();
 
     // Click + six times (from default 3 to 9 — if max were still 5, it would stop)
-    const plusBtn = page.locator('div').filter({ hasText: /Default Number of Winners/ }).getByRole('button', { name: '+' });
+    const winnersSection = page.locator('label', { hasText: /Default Number of Winners/ }).locator('..');
+    const plusBtn = winnersSection.getByRole('button', { name: '+' });
     for (let i = 0; i < 6; i++) {
       await plusBtn.click();
     }
-    await expect(page.getByText('9')).toBeVisible();
+    await expect(page.getByText('9', { exact: true })).toBeVisible();
   });
 
   test('Winners stepper + is disabled at 20', async ({ page }) => {
@@ -74,7 +75,8 @@ test.describe('B-3 — Winners stepper max is 20', () => {
     await page.getByRole('button', { name: /Race Defaults/ }).click();
 
     // Set winners to 20 by clicking + 17 times (from default 3)
-    const plusBtn = page.locator('div').filter({ hasText: /Default Number of Winners/ }).getByRole('button', { name: '+' });
+    const winnersSection = page.locator('label', { hasText: /Default Number of Winners/ }).locator('..');
+    const plusBtn = winnersSection.getByRole('button', { name: '+' });
     for (let i = 0; i < 17; i++) {
       await plusBtn.click();
     }
@@ -89,7 +91,7 @@ test.describe('B-14 — TrackManager hint to Track Editor', () => {
     await page.goto('/dev');
     await page.getByRole('button', { name: /Tracks/ }).click();
     await page.getByRole('button', { name: /\+ Add Track/ }).click();
-    await expect(page.getByText(/Track Editor/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Track Editor' })).toBeVisible();
     await expect(page.getByText(/draw a track/i)).toBeVisible();
   });
 });
@@ -107,7 +109,7 @@ test.describe('B-12 — Max Players stepper in Race Defaults', () => {
     await page.goto('/dev');
     await page.getByRole('button', { name: /Race Defaults/ }).click();
     const section = page.locator('div').filter({ hasText: /Max Players per Race/ });
-    await expect(section.getByText('20')).toBeVisible();
+    await expect(section.getByText('20', { exact: true })).toBeVisible();
   });
 });
 
@@ -116,8 +118,11 @@ test.describe('B-12 — Max Players stepper in Race Defaults', () => {
 test.describe('B-10 — InfoTooltip boundary detection', () => {
   test('InfoTooltip icon is visible in RacerManager', async ({ page }) => {
     await page.goto('/dev');
-    await page.getByRole('button', { name: /Racers/ }).click();
-    // At least one info icon should be present
+    await page.getByRole('button', { name: /Racer Types/ }).click();
+    // InfoTooltip icons live inside the edit modal, not the list
+    // Use anchored regex to avoid matching the "Track Geometry Editor →" sidebar button
+    await page.getByRole('button', { name: /^Edit$/ }).first().click();
+    // InfoTooltip renders <span role="img" aria-label={text}>
     const infoIcon = page.locator('[role="img"][aria-label]').first();
     await expect(infoIcon).toBeVisible();
   });
@@ -130,15 +135,14 @@ test.describe('B-11 — Display-size tooltip text', () => {
     page,
   }) => {
     await page.goto('/dev');
-    await page.getByRole('button', { name: /Racers/ }).click();
+    await page.getByRole('button', { name: /Racer Types/ }).click();
 
-    // Open first racer edit modal
-    const editBtn = page.getByRole('button', { name: /Edit/ }).first();
-    await editBtn.click();
+    // Open first racer edit modal — anchored regex avoids matching "Track Geometry Editor →"
+    await page.getByRole('button', { name: /^Edit$/ }).first().click();
 
-    // Hover the display-size info icon to show tooltip
-    const displaySizeRow = page.locator('label', { hasText: /Display Size/ });
-    await expect(displaySizeRow).toBeVisible();
+    // Verify the modal is open — field labels are <span> not <label>
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+    await expect(page.locator('[role="dialog"]').getByText(/Display Size/)).toBeVisible();
 
     // The verbose old text should not appear anywhere in the DOM
     await expect(page.getByText(/Affects visual scale only, not gameplay speed/)).not.toBeVisible();
