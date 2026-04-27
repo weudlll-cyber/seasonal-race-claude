@@ -241,6 +241,45 @@ zuerst fragen ob X überhaupt nötig ist statt X zu rechtfertigen.
 
 ---
 
+## Lesson 15 — E2E-Selector-Drift: Tests veralten wenn UI-Text sich ändert (PR #27)
+
+**Kontext:** Nach B-Wave (PR #25) wurden in b-wave-smoke und b1617-smoke 7 pre-existing
+Selector-Fehler entdeckt: Ein Label hatte sich von Deutsch auf Englisch geändert, ein
+`getByRole` traf einen anderen DOM-Knoten, ein Text-Match war nicht lang genug angebunden.
+Diese Tests waren beim Schreiben korrekt — aber jede UI-String-Änderung macht Text-basierte
+Selektoren fragil.
+
+**Erkenntnis:** Playwright-Tests mit hartem Text-Match (`getByText('Geometrie wählen')`,
+`getByRole('option', { name: 'City Circuit' })`) veralten leise wenn UI-Text in einer
+anderen PR geändert wird. Die Tests schlagen erst im nächsten CI-Run fehl, nicht beim
+Schreiben der UI-Änderung.
+
+**Konsequenz:** Bei UI-String-Änderungen (Deutsch → Englisch, Label-Umbenennungen): Code-Sweep
+über alle e2e-Specs nach betroffenen Selektoren. Robustere Selektoren bevorzugen: `data-testid`,
+ARIA-Rollen mit partiellem Match (`{ name: /City/ }`), oder `.first()` bei unvermeidlicher
+Ambiguität.
+
+---
+
+## Lesson 16 — Rückgabe-Lücke in Storage-Layer maskiert Feature-Bug (fix/list-tracks)
+
+**Kontext:** `listTracks()` in `trackStorage.js` gab `worldWidth` und `worldHeight` nicht zurück.
+Das war seit D10 ein Bug, aber für alle bestehenden Tracks (1280×720) war die Konsequenz
+unsichtbar: bsX=1.0 war korrekt für 1280px. Erst beim Test mit einem echten 6000px-Track
+wurde sichtbar dass nur ~549px der World gerendert wurden.
+
+**Erkenntnis:** Storage-Layer-Lücken (fehlende Felder im Return-Objekt) können durch Default-
+Fallbacks (`?? 1280`) im Consumer vollständig versteckt werden solange der Default-Wert dem
+realen Wert entspricht. Eine neue Feature-Klasse (große Tracks) hebelt den Default aus und
+macht den Bug erst sichtbar.
+
+**Konsequenz:** Nach Storage-Schema-Erweiterungen (neues Feld) alle Read-Paths explizit
+testen, nicht nur Write-Paths. Unit-Test für `listTracks()` sollte alle Felder aus dem
+gespeicherten Objekt im Return-Objekt verifizieren — nicht nur die offensichtlichen
+(id, name, icon).
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
