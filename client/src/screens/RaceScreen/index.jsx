@@ -32,10 +32,15 @@ import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
+import { loadAutoScaleConfig, computeAutoScaleFactor } from '../../modules/autoSpriteScale.js';
+import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import './RaceScreen.css';
 
-const CW = 1280;
-const CH = 720;
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
+// Keep legacy aliases used throughout this file
+const CW = CANVAS_W;
+const CH = CANVAS_H;
 
 const LANE_COLORS = [
   '#ff6b35',
@@ -104,6 +109,7 @@ export default function RaceScreen() {
 
     const typeId = raceData.racerTypeId || 'horse';
     const trackWidth = raceData.trackWidth ?? 140;
+    const worldHeight = raceData.worldHeight ?? 720;
 
     if (!raceData.geometryId) {
       console.error('[RaceArena] No geometryId in raceData — cannot start race.');
@@ -123,6 +129,8 @@ export default function RaceScreen() {
     // TODO(Phase Q): add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
+    const bsX = CANVAS_W / worldWidth;
+    const bsY = CANVAS_H / worldHeight;
     const bgImagePath = geometry.backgroundImage ?? null;
     effectsRef.current = extractEffects(geometry)
       .map(({ id, config }) => {
@@ -137,6 +145,19 @@ export default function RaceScreen() {
     const trackEmoji = racerType.getEmoji() ?? null;
     const speedMultiplier = racerType.getSpeedMultiplier();
 
+    // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
+    const autoScaleConfig = loadAutoScaleConfig();
+    let displaySizeScale = 1;
+    if (autoScaleConfig.enabled) {
+      const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
+      const typeOverride = rawOverrides[typeId];
+      const hasDisplaySizeOverride =
+        typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
+      if (!hasDisplaySizeOverride) {
+        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
+      }
+    }
+
     // Determine finish position in t-space
     const duration = raceData.duration ?? 60;
     const finishT = isOpenTrack
@@ -144,7 +165,14 @@ export default function RaceScreen() {
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 
-    camDirRef.current = new CameraDirector(shapeRef.current.getBoundingBox());
+    const rawBbox = shapeRef.current.getBoundingBox();
+    const scaledBbox = {
+      minX: rawBbox.minX * bsX,
+      minY: rawBbox.minY * bsY,
+      maxX: rawBbox.maxX * bsX,
+      maxY: rawBbox.maxY * bsY,
+    };
+    camDirRef.current = new CameraDirector(scaledBbox);
     setFinishTState(finishT);
 
     // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
@@ -316,7 +344,7 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0);
+        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, displaySizeScale);
         drawNameTag(r.x, r.y, r.name, r === leader);
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
@@ -431,26 +459,20 @@ export default function RaceScreen() {
     }
 
     // ── Editor track rendering (replaces environment classes) ────────────────
-    const CROWD = Array.from({ length: 60 }, (_, i) => ({
-      x: (i * 137.5) % CW,
-      phase: i * 0.41,
-      size: 6 + (i % 4),
-    }));
-
-    function drawEditorBackground(ctx, frame, bgPath, ww = CW) {
+    function drawEditorBackground(ctx, frame, bgPath, ww = CANVAS_W, wh = CANVAS_H) {
       const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
       if (bgImg) {
-        ctx.drawImage(bgImg, 0, 0, ww, CH);
+        ctx.drawImage(bgImg, 0, 0, ww, wh);
         ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.fillRect(0, 0, CW, CH);
+        ctx.fillRect(0, 0, ww, wh);
       } else {
         const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
-        const grad = ctx.createLinearGradient(0, 0, CW, CH);
+        const grad = ctx.createLinearGradient(0, 0, ww, wh);
         grad.addColorStop(0, '#0a0414');
         grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
         grad.addColorStop(1, '#0a0414');
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, CW, CH);
+        ctx.fillRect(0, 0, ww, wh);
       }
       const stars = [
         [80, 35],
@@ -471,26 +493,31 @@ export default function RaceScreen() {
         ctx.globalAlpha = 0.3 + 0.4 * Math.abs(Math.sin(frame * 0.001 + sx * 0.05));
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
+        ctx.arc(sx * (ww / CANVAS_W), sy, 1.3, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(14,7,2,0.92)';
-      ctx.fillRect(0, 0, CW, 58);
-      for (const p of CROWD) {
-        const bob = Math.sin(frame * 0.003 + p.phase) * 2;
-        ctx.fillStyle = `hsl(${20 + ((p.size * 7) % 30)},30%,${18 + (p.size % 4) * 3}%)`;
+      ctx.fillRect(0, 0, ww, 58);
+      // Crowd members span full world width
+      const crowdCount = Math.max(60, Math.ceil((ww / CANVAS_W) * 60));
+      for (let i = 0; i < crowdCount; i++) {
+        const cx = (i * 137.5) % ww;
+        const phase = i * 0.41;
+        const size = 6 + (i % 4);
+        const bob = Math.sin(frame * 0.003 + phase) * 2;
+        ctx.fillStyle = `hsl(${20 + ((size * 7) % 30)},30%,${18 + (size % 4) * 3}%)`;
         ctx.beginPath();
-        ctx.ellipse(p.x, 50 + bob, p.size * 0.6, p.size, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, 50 + bob, size * 0.6, size, 0, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.strokeStyle = 'rgba(200,130,40,0.3)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, 58);
-      ctx.lineTo(CW, 58);
+      ctx.lineTo(ww, 58);
       ctx.stroke();
-      const sunX = CW * 0.9,
+      const sunX = ww * 0.9,
         sunY = 28,
         sunR = 18;
       const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 3);
@@ -744,14 +771,24 @@ export default function RaceScreen() {
       }
 
       // ── Camera update ──
+      const scaledRacersForCam =
+        bsX === 1 && bsY === 1
+          ? st.racers
+          : st.racers.map((r) => ({ ...r, x: r.x * bsX, y: r.y * bsY }));
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(st.racers, ts, CW, CH)
+          ? camDirRef.current.update(scaledRacersForCam, ts, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       if (isOpenTrack) {
         const effZoom = effectiveZoom(cam.zoom);
-        const { camXMax, camYMax } = openTrackPanBounds(worldWidth, CH, CW, CH, effZoom);
+        const { camXMax, camYMax } = openTrackPanBounds(
+          worldWidth,
+          worldHeight,
+          CANVAS_W,
+          CANVAS_H,
+          effZoom
+        );
         const { targetX, targetY } = openTrackPanTarget(
           st.racers,
           CW,
@@ -775,7 +812,7 @@ export default function RaceScreen() {
         // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
         ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
         ctx.scale(effZoom, effZoom);
-        drawEditorBackground(ctx, ts, bgImagePath, worldWidth);
+        drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
         for (const inst of effectsRef.current) {
           ctx.save();
           inst.render(ctx);
@@ -790,8 +827,8 @@ export default function RaceScreen() {
       } else {
         ctx.save();
         ctx.translate(cam.offsetX, cam.offsetY);
-        ctx.scale(cam.zoom, cam.zoom);
-        drawEditorBackground(ctx, ts, bgImagePath);
+        ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
+        drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
         for (const inst of effectsRef.current) {
           ctx.save();
           inst.render(ctx);

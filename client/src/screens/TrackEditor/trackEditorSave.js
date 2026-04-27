@@ -45,6 +45,8 @@ export function buildTrackFromEditorState({
   name,
   backgroundImage,
   effects,
+  worldWidth = 1280,
+  worldHeight = 720,
 }) {
   const minPts = closed ? 3 : 2;
   const effectsArray = Array.isArray(effects) ? effects.slice(0, 3) : [];
@@ -68,6 +70,8 @@ export function buildTrackFromEditorState({
       innerPoints: derivedInner,
       outerPoints: derivedOuter,
       effects: effectsArray,
+      worldWidth,
+      worldHeight,
     };
   }
 
@@ -90,6 +94,8 @@ export function buildTrackFromEditorState({
     innerPoints,
     outerPoints,
     effects: effectsArray,
+    worldWidth,
+    worldHeight,
   };
 }
 

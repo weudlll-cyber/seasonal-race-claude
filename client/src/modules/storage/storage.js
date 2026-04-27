@@ -17,6 +17,7 @@ export const KEYS = {
   SETTINGS: 'racearena:settings',
   ACTIVE_GROUP: 'racearena:activeGroup',
   DATA_VERSION: 'racearena:dataVersion',
+  AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
 };
 
 export function storageGet(key, fallback = null) {
@@ -152,6 +153,30 @@ export function newId() {
     localStorage.removeItem('racearena:racerTypes');
     console.warn('[RaceArena] Migrated racearena:racerTypes array → racerTypeOverrides map (B7).');
   } catch (_e) {
+    // Best-effort — migration failure must not break the app.
+  }
+})();
+
+// One-time migration: backfill worldHeight: 720 on track presets that predate D10.
+// Safe to call multiple times — exits immediately if all tracks already have the field.
+(function migrateTracksAddWorldHeight() {
+  try {
+    const raw = localStorage.getItem('racearena:tracks');
+    if (!raw) return;
+    const tracks = JSON.parse(raw);
+    if (!Array.isArray(tracks)) return;
+    let changed = false;
+    for (const track of tracks) {
+      if (track.worldHeight == null) {
+        track.worldHeight = 720;
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
+      console.warn('[RaceArena] Backfilled worldHeight: 720 on track presets (D10).');
+    }
+  } catch {
     // Best-effort — migration failure must not break the app.
   }
 })();

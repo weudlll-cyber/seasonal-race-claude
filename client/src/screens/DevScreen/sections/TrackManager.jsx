@@ -31,6 +31,8 @@ const BLANK = {
   defaultDuration: 60,
   defaultWinners: 3,
   trackWidth: 140,
+  worldWidth: 1280,
+  worldHeight: 720,
 };
 
 function TrackManager() {
@@ -72,6 +74,8 @@ function TrackManager() {
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
       trackWidth: track.trackWidth ?? 140,
+      worldWidth: track.worldWidth ?? 1280,
+      worldHeight: track.worldHeight ?? 720,
     });
     setEditId(track.id);
     setShowForm(true);
@@ -94,6 +98,18 @@ function TrackManager() {
   }
 
   function f(key, val) {
+    if (key === 'geometryId' && val) {
+      const geom = geometries.find((g) => g.id === val);
+      if (geom?.worldWidth && geom?.worldHeight) {
+        setForm((prev) => ({
+          ...prev,
+          geometryId: val,
+          worldWidth: geom.worldWidth,
+          worldHeight: geom.worldHeight,
+        }));
+        return;
+      }
+    }
     setForm((prev) => ({ ...prev, [key]: val }));
   }
 
@@ -323,6 +339,14 @@ function TrackManager() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>World Dimensions</label>
+              <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                {form.geometryId
+                  ? `${form.worldWidth}×${form.worldHeight} px (aus Geometrie)`
+                  : '— (Geometrie wählen)'}
+              </span>
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>

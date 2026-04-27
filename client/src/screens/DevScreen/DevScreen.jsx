@@ -16,6 +16,7 @@ import BrandingProfiles from './sections/BrandingProfiles.jsx';
 import RaceDefaults from './sections/RaceDefaults.jsx';
 import RaceHistory from './sections/RaceHistory.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
+import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [
@@ -67,6 +68,13 @@ const SECTIONS = [
     label: 'System',
     desc: 'Backup, restore, and factory reset',
     component: SystemSettings,
+  },
+  {
+    id: 'autoscale',
+    icon: '📐',
+    label: 'Auto-Scale',
+    desc: 'Auto-adjust sprite sizes based on track width and racer count',
+    component: AutoScaleSection,
   },
 ];
 
