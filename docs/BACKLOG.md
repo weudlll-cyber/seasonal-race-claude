@@ -7,7 +7,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **B-16 + B-17** — Priority-Fix: Camera-Director auf großen Tracks (B-16) + Race-Speed-Perception (B-17). Quasi vorgezogenes D7.
+- 🔜 **D11** — Racer Behavior: Soft Avoidance + Drafting
 
 ---
 
@@ -33,6 +33,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **D3.5.5** | #21 | Per-Type-Tuning-UI im Dev-Screen: 6 Felder (speedMultiplier, displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy) live-apply via Edit-Modal. CONFIG_SNAPSHOT, normalizeOverrideMap (Legacy-Migration), InfoTooltip-Komponente. 678 Unit + 36 e2e Tests. Master `2d76bc3`. |
 | ✅ **D10** | #23 | Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow. worldWidth/worldHeight automatisch aus Bild-Dimensionen (naturalWidth/naturalHeight). Hart-Limit 8000×4096. Image required to save. Dimension-Mismatch-Dialog. TrackEditor Zoom+Pan. trackWidth variabel. Auto-Sprite-Scaling Formel. Alle 8 Anforderungen (A1-A8) erfüllt. Hotfix `13a2dd2` (🏁 Default-Icon). 694 Unit + 75 e2e Tests. Master `13a2dd2`. |
 | ✅ **B-Wave** | #25 | UX-Polish-Sweep: B-1 (player-group load StrictMode-Fix), B-3 (winners max 5→20), B-10 (InfoTooltip auto-boundary), B-11 (display-size tooltip), B-12 (maxPlayers konfigurierbar), B-13 (Language-Selector entfernt), B-14 (TrackManager-Hint), B-15 (alle deutschen UI-Strings → Englisch). 694 Unit + 88 e2e Tests. Master `697e081`. |
+| ✅ **B-16 + B-17** | #26 | Große Tracks: B-16 CameraDirector adaptive Zoom (zoom = worldW/VIEW_W, max 6), B-17 Track-Speed-Scaling (baseSpeed ÷ pathLengthPx/referencePathLength). pathLengthPx bei Track-Save berechnet + Migration für bestehende Geometrien. SpeedScaleSection im Dev-Screen. 719 Unit + 100 e2e Tests. Master `7cdde15`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -162,9 +163,8 @@ aus D3.5.5.
 ## Reihenfolge nächste Schritte
 
 1. ✅ **B-Wave** (B-1, B-3, B-10..B-15) — PR #25, master `697e081`
-2. 🔜 **B-16 + B-17** als Priority-Fix (Camera-Director auf großen Tracks + Race-Speed-Perception)
-   → quasi vorgezogenes D7 (Camera-Director Polish)
-3. **D11** Racer Behavior (Soft Avoidance + Drafting)
+2. ✅ **B-16 + B-17** — PR #26, master `7cdde15`
+3. 🔜 **D11** Racer Behavior (Soft Avoidance + Drafting)
 4. **D3.5.4** Trail-Tuning
 5. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
 6. **D6**, **D8**
