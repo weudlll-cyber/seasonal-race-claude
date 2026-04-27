@@ -90,7 +90,7 @@ function validateTrack(track) {
 
 /**
  * Returns metadata for all saved tracks, sorted by updatedAt descending.
- * @returns {{ id: string, name: string, backgroundImage: string, createdAt: string, updatedAt: string }[]}
+ * @returns {{ id: string, name: string, backgroundImage: string, createdAt: string, updatedAt: string, worldWidth: number, worldHeight: number }[]}
  */
 export function listTracks() {
   const ids = readIndex();
@@ -105,6 +105,8 @@ export function listTracks() {
         backgroundImage: t.backgroundImage,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
+        worldWidth: t.worldWidth ?? 1280,
+        worldHeight: t.worldHeight ?? 720,
       };
     })
     .filter(Boolean);
