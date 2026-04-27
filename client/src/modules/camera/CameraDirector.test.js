@@ -6,10 +6,9 @@ import {
   currentLap,
   estimatedSecondsPerLap,
   openTrackFinishT,
-  BASE_SPEED_MEAN,
-  BASE_SPEED_MAX,
   REFERENCE_FPS,
 } from './lapUtils.js';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 
 // ── lapsFromDuration ──────────────────────────────────────────────────────────
 
@@ -218,8 +217,8 @@ describe('CameraDirector — bbox clamping', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, 1280, 720);
-    // Adaptive leaderZoom = 1280/910 ≈ 1.407; targetOffsetX = 640 - 640*leaderZoom ≈ -260
-    const leaderZoom = worldW / 910;
+    // Adaptive leaderZoom = CANVAS_W²/(LEADER_VIEW_W*worldW) = 1280/910 ≈ 1.407 at worldW=1280
+    const leaderZoom = (1280 * 1280) / (910 * worldW);
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
@@ -272,15 +271,15 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     expect(cd._leaderZoom).toBeLessThan(1.45);
   });
 
-  it('4000-wide world gives leaderZoom ≈ 4.4 (scales with track size)', () => {
+  it('4000-wide world gives leaderZoom ≈ 0.45 (zoom-out for large tracks)', () => {
     const cd = new CameraDirector(undefined, 4000, 720);
-    expect(cd._leaderZoom).toBeCloseTo(4000 / 910, 3);
-    expect(cd._leaderZoom).toBeGreaterThan(4);
+    expect(cd._leaderZoom).toBeCloseTo((1280 * 1280) / (910 * 4000), 3);
+    expect(cd._leaderZoom).toBeLessThan(1); // large track → zoom-out
   });
 
-  it('clamps leaderZoom at MAX_ZOOM (6) for very large worlds', () => {
+  it('clamps leaderZoom at MIN_ZOOM (0.15) for very large worlds', () => {
     const cd = new CameraDirector(undefined, 100000, 720);
-    expect(cd._leaderZoom).toBe(6);
+    expect(cd._leaderZoom).toBe(0.15);
   });
 
   it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
@@ -293,15 +292,15 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
-  it('all three zoom values scale proportionally with worldW', () => {
+  it('all three zoom values scale inversely with worldW (wider world → lower zoom)', () => {
     const cd1 = new CameraDirector(undefined, 1280, 720);
     const cd2 = new CameraDirector(undefined, 2560, 720);
-    expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom * 2, 3);
-    expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom * 2, 3);
-    expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom * 2, 3);
+    expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom / 2, 3);
+    expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom / 2, 3);
+    expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom / 2, 3);
   });
 
-  it('LEADER_ZOOM state on large world converges to a higher zoom', () => {
+  it('LEADER_ZOOM state on large world converges to a lower zoom', () => {
     const cdSmall = new CameraDirector(undefined, 1280, 720);
     const cdLarge = new CameraDirector(undefined, 4000, 720);
     const racers = [{ t: 1, x: 640, y: 360, finished: false }];
@@ -311,16 +310,131 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
       cdSmall.update(racers, 1000, 1280, 720);
       cdLarge.update(racers, 1000, 1280, 720);
     }
-    expect(cdLarge.zoom).toBeGreaterThan(cdSmall.zoom * 2);
+    expect(cdLarge.zoom).toBeLessThan(cdSmall.zoom * 0.5);
+  });
+});
+
+// ── CameraDirector — top-3 focus ─────────────────────────────────────────────
+
+describe('CameraDirector — top-3 focus', () => {
+  it('_focusRacers returns top-3 sorted by t-position', () => {
+    const cd = new CameraDirector();
+    const racers = [
+      { t: 0.5, x: 400 },
+      { t: 0.9, x: 800 },
+      { t: 0.3, x: 200 },
+      { t: 1.0, x: 900 },
+      { t: 0.7, x: 600 },
+      { t: 0.1, x: 100 },
+    ];
+    const focus = cd._focusRacers(racers);
+    expect(focus).toHaveLength(3);
+    expect(focus[0].t).toBe(1.0);
+    expect(focus[1].t).toBe(0.9);
+    expect(focus[2].t).toBe(0.7);
+  });
+
+  it('_focusRacers returns all racers when count ≤ 3', () => {
+    const cd = new CameraDirector();
+    const two = [
+      { t: 0.8, x: 600 },
+      { t: 0.5, x: 400 },
+    ];
+    expect(cd._focusRacers(two)).toHaveLength(2);
+    expect(cd._focusRacers([{ t: 1, x: 640 }])).toHaveLength(1);
+  });
+
+  it('_focusRacers handles 0 racers without crash', () => {
+    const cd = new CameraDirector();
+    expect(cd._focusRacers([])).toHaveLength(0);
+  });
+
+  it('COMEBACK_ZOOM targets 3rd-place racer, not last-place, when spread is large', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    cd.state = CAM_STATE.COMEBACK_ZOOM;
+    const racers = [
+      { t: 0.9, x: 900, y: 360, finished: false }, // 1st
+      { t: 0.7, x: 700, y: 360, finished: false }, // 2nd
+      { t: 0.5, x: 500, y: 360, finished: false }, // 3rd — should be targeted
+      { t: 0.1, x: 100, y: 360, finished: false }, // last — should NOT be targeted
+    ];
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    // comebackZoom ≈ 1.30 on 1280-track.
+    // Target at x=500: targetOffsetX = 640 - 500*1.30 = -10 → clamps within valid range.
+    // Camera world-center should be near x=500, far from last-place x=100.
+    const worldXAtCenter = (640 - cd.offsetX) / cd.zoom;
+    expect(worldXAtCenter).toBeGreaterThan(300); // clearly not last-place (x=100)
+  });
+});
+
+// ── CameraDirector — adaptive zoom: corrected formula ────────────────────────
+
+describe('CameraDirector — adaptive zoom (corrected formula)', () => {
+  it('6000-wide world gives leaderZoom ≈ 0.30 (deep zoom-out)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    expect(cd._leaderZoom).toBeCloseTo((1280 * 1280) / (910 * 6000), 3);
+    expect(cd._leaderZoom).toBeCloseTo(0.3, 1);
+  });
+
+  it('16000-wide world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
+    const cd = new CameraDirector(undefined, 16000, 720);
+    expect(cd._leaderZoom).toBe(0.15);
+  });
+
+  it('very small world (512px) clamps leaderZoom at MAX_ZOOM (2.5)', () => {
+    // 1280²/(910×512) ≈ 3.50 → clamped to MAX_ZOOM=2.5
+    const cd = new CameraDirector(undefined, 512, 720);
+    expect(cd._leaderZoom).toBe(2.5);
+  });
+
+  it('battleZoom > leaderZoom on 6000-track (battle still tighter than leader)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
+  });
+
+  it('comebackZoom < leaderZoom on 6000-track (comeback still wider than leader)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
+  });
+});
+
+// ── CameraDirector — _clampOffset for zoom < 1 ───────────────────────────────
+
+describe('CameraDirector — _clampOffset for zoom < 1', () => {
+  it('zoom=0.3, 6000px world: pan range is [-520, 0]', () => {
+    const cd = new CameraDirector();
+    // Within range — unchanged
+    expect(cd._clampOffset(0, 0, 6000, 1280, 0.3)).toBe(0);
+    expect(cd._clampOffset(-260, 0, 6000, 1280, 0.3)).toBe(-260);
+    // Below lower bound — clamped to -520
+    expect(cd._clampOffset(-600, 0, 6000, 1280, 0.3)).toBeCloseTo(-520, 0);
+    // Above upper bound — clamped to 0
+    expect(cd._clampOffset(50, 0, 6000, 1280, 0.3)).toBe(0);
+  });
+
+  it('zoom=0.5, 4000px world: pan range is [-720, 0]', () => {
+    // 4000*0.5 = 2000 > 1280 canvas → world larger than viewport
+    const cd = new CameraDirector();
+    expect(cd._clampOffset(0, 0, 4000, 1280, 0.5)).toBe(0);
+    expect(cd._clampOffset(-400, 0, 4000, 1280, 0.5)).toBe(-400);
+    expect(cd._clampOffset(-800, 0, 4000, 1280, 0.5)).toBeCloseTo(-720, 0);
+  });
+
+  it('zoom=2.0, standard 1280px world: pan range is [-1280, 0] (backward compat)', () => {
+    const cd = new CameraDirector();
+    expect(cd._clampOffset(100, 0, 1280, 1280, 2.0)).toBe(0);
+    expect(cd._clampOffset(-1500, 0, 1280, 1280, 2.0)).toBeCloseTo(-1280, 0);
+    expect(cd._clampOffset(-640, 0, 1280, 1280, 2.0)).toBe(-640);
   });
 });
 
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {
-  it('returns exactly 1 / (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS)', () => {
+  it('returns exactly 1 / (baseSpeedMean * speedMultiplier * REFERENCE_FPS)', () => {
     const sm = 1.0;
-    expect(estimatedSecondsPerLap(sm)).toBeCloseTo(1 / (BASE_SPEED_MEAN * sm * REFERENCE_FPS));
+    const mean = (DEFAULT_BASE_SPEED_CONFIG.min + DEFAULT_BASE_SPEED_CONFIG.max) / 2;
+    expect(estimatedSecondsPerLap(sm)).toBeCloseTo(1 / (mean * sm * REFERENCE_FPS));
   });
 
   it('horse (1.0) is approx 15-16 seconds', () => {
@@ -363,8 +477,8 @@ describe('openTrackFinishT', () => {
   });
 
   it('gives a fractional value for a short target race', () => {
-    // 10s at horse (1.0): fastest racer advances BASE_SPEED_MAX * 1.0 * REFERENCE_FPS * 10
-    const expected = Math.min(1, BASE_SPEED_MAX * 1.0 * REFERENCE_FPS * 10);
+    // 10s at horse (1.0): fastest racer advances DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10
+    const expected = Math.min(1, DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10);
     expect(openTrackFinishT(10, 1.0)).toBeCloseTo(expected);
     expect(openTrackFinishT(10, 1.0)).toBeLessThan(1);
   });

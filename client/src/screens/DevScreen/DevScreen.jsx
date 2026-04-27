@@ -18,6 +18,7 @@ import RaceHistory from './sections/RaceHistory.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import SpeedScaleSection from './sections/SpeedScaleSection.jsx';
+import BaseSpeedSection from './sections/BaseSpeedSection.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [
@@ -83,6 +84,13 @@ const SECTIONS = [
     label: 'Speed Scale',
     desc: 'Adjust race pace so large tracks feel similar in speed to small ones',
     component: SpeedScaleSection,
+  },
+  {
+    id: 'basespeed',
+    icon: '🎲',
+    label: 'Base Speed',
+    desc: 'Tune min/max speed range — wider = more drama, narrower = closer races',
+    component: BaseSpeedSection,
   },
 ];
 
