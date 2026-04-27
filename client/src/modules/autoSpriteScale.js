@@ -7,89 +7,70 @@
 //              Computes a display-size scale factor based on track width
 //              and racer count. Operator overrides from D3.5.5 take priority
 //              over the auto factor when applied by the caller.
+//              D7a: sprites now scale proportionally with camera zoom
+//              (natural "closer = bigger"). Floor in computeRenderDisplayScale
+//              guarantees minimum visibility on large tracks.
 // ============================================================
 
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
-import { OPEN_TRACK_BASE_ZOOM } from './camera/openTrackCamera.js';
-
-// Camera zoom on the 1280px reference track (LEADER state). Used to keep sprites
-// visually consistent across track sizes when camera-aware scaling is active.
-export const REFERENCE_CAMERA_ZOOM = 1.4;
-
-/**
- * Returns the inverse-zoom factor so sprites appear at the same screen size
- * regardless of camera zoom level.
- *
- * factor = REFERENCE_CAMERA_ZOOM / currentZoom
- *   - At zoom 1.4 (1280 reference track): factor = 1.0 → no change
- *   - At zoom 0.3 (6000px track): factor ≈ 4.67 → world sprites 4.67× larger,
- *     but rendered at 0.3× scale → same on-screen size as reference
- *
- * @param {number} currentZoom  Current camera zoom (from CameraDirector)
- * @returns {number}            Scale factor to multiply into displaySizeScale
- */
-export function computeCameraZoomFactor(currentZoom) {
-  if (!currentZoom || currentZoom <= 0) return 1;
-  return REFERENCE_CAMERA_ZOOM / currentZoom;
-}
-
-/**
- * Camera-aware scale factor for open tracks.
- *
- * Open tracks apply effectiveZoom = OPEN_TRACK_BASE_ZOOM × cam.zoom to the canvas,
- * so the inverse factor must account for that base multiplier:
- *
- *   factor = REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM × camZoom)
- *
- * Verification: displaySize × factor × effZoom
- *   = displaySize × REFERENCE_CAMERA_ZOOM/(BASE×z) × BASE×z = displaySize × REFERENCE_CAMERA_ZOOM
- * — identical to closed-track reference, regardless of cam.zoom.
- *
- * @param {number} camZoom  Director zoom (from CameraDirector.update())
- * @returns {number}        Scale factor to multiply into displaySizeScale
- */
-export function computeOpenTrackCameraZoomFactor(camZoom) {
-  if (!camZoom || camZoom <= 0) return 1;
-  return REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM * camZoom);
-}
 
 export const DEFAULT_AUTO_SCALE_CONFIG = {
   enabled: true,
   referenceValue: 23,
   minScale: 0.65,
   maxScale: 2.5,
-  minVisiblePixels: 32,
+  minTargetScreenPx: 32,
 };
 
 /**
  * Compute the auto scale factor for racer display size.
  *
- * Lane-density formula: (trackWidth / racerCount) / referenceValue
- * Pixel floor: minVisiblePixels / (displaySize × REFERENCE_CAMERA_ZOOM)
- * Result: clamp( max(laneBasedFactor, pixelFloor), minScale, maxScale )
+ * Lane-density formula: clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale)
  *
  * A referenceValue of 23 means: at the default 140px track with 6 racers (ratio ≈ 23.3),
  * the lane factor is ≈ 1.0 (neutral — no change from default displaySize).
  *
- * The pixel floor ensures sprites stay visible at minVisiblePixels on canvas regardless
- * of racerCount, when the racer type's displaySize is supplied by the caller.
- *
  * @param {number} trackWidth   Track width in world pixels
  * @param {number} racerCount   Number of racers in the race
- * @param {object} config       Config object (referenceValue, minScale, maxScale, minVisiblePixels)
- * @param {number} [displaySize] Racer type display size in world pixels (optional; enables pixel floor)
+ * @param {object} config       Config object (referenceValue, minScale, maxScale)
  * @returns {number}            Scale factor to apply to displaySize
  */
-export function computeAutoScaleFactor(trackWidth, racerCount, config, displaySize) {
-  const { referenceValue, minScale, maxScale, minVisiblePixels } = config;
+export function computeAutoScaleFactor(trackWidth, racerCount, config) {
+  const { referenceValue, minScale, maxScale } = config;
   if (!racerCount || !trackWidth) return minScale;
-  const laneBasedFactor = trackWidth / racerCount / referenceValue;
-  const pixelFloor =
-    displaySize > 0 && minVisiblePixels > 0
-      ? minVisiblePixels / (displaySize * REFERENCE_CAMERA_ZOOM)
-      : 0;
-  const combined = Math.max(laneBasedFactor, pixelFloor);
-  return Math.max(minScale, Math.min(maxScale, combined));
+  const laneFactor = trackWidth / racerCount / referenceValue;
+  return Math.max(minScale, Math.min(maxScale, laneFactor));
+}
+
+/**
+ * Compute the final world-space sprite scale for rendering.
+ *
+ * Sprites scale proportionally with the camera zoom (natural "closer = bigger").
+ * A floor of minTargetScreenPx guarantees visibility on very large tracks where
+ * the camera zooms far out.
+ *
+ * screenPx = displaySize × result × frameEffZoom
+ *
+ * When floor doesn't apply: result = displaySizeScale (lane-density factor unchanged).
+ * When floor applies:       result = minTargetScreenPx / (displaySize × frameEffZoom).
+ *
+ * @param {number} displaySize        Racer type base display size in world pixels
+ * @param {number} displaySizeScale   Lane-density auto-scale factor (from computeAutoScaleFactor)
+ * @param {number} frameEffZoom       Effective canvas scale this frame (cam.zoom×bsX or BASE_ZOOM×cam.zoom)
+ * @param {number} minTargetScreenPx  Floor: minimum sprite size in screen pixels
+ * @returns {number}  World-space scale factor to pass to drawRacer
+ */
+export function computeRenderDisplayScale(
+  displaySize,
+  displaySizeScale,
+  frameEffZoom,
+  minTargetScreenPx
+) {
+  if (!frameEffZoom || frameEffZoom <= 0 || !displaySize || displaySize <= 0)
+    return displaySizeScale;
+  const proportionalScreenPx = displaySize * displaySizeScale * frameEffZoom;
+  const targetScreenPx = Math.max(proportionalScreenPx, minTargetScreenPx);
+  return targetScreenPx / (displaySize * frameEffZoom);
 }
 
 /** Load config from localStorage, merging with defaults. */
