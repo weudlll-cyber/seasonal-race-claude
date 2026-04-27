@@ -293,6 +293,96 @@ describe('validateEditorState', () => {
   });
 });
 
+describe('buildTrackFromEditorState — pathLengthPx (B-17)', () => {
+  it('Center Mode returns a positive pathLengthPx', () => {
+    const result = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: two,
+      centerWidth: 80,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Test',
+      backgroundImage: '/x.jpg',
+    });
+    expect(typeof result.pathLengthPx).toBe('number');
+    expect(result.pathLengthPx).toBeGreaterThan(0);
+  });
+
+  it('Center Mode: straight 100px line has pathLengthPx ≈ 100', () => {
+    const straight = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ];
+    const result = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: straight,
+      centerWidth: 20,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Straight',
+      backgroundImage: '/x.jpg',
+    });
+    // With 200 samples the arc length should be very close to 100
+    expect(result.pathLengthPx).toBeGreaterThan(95);
+    expect(result.pathLengthPx).toBeLessThan(105);
+  });
+
+  it('Boundary Mode returns a positive pathLengthPx', () => {
+    const inner = [
+      { x: 10, y: 0 },
+      { x: 90, y: 0 },
+    ];
+    const outer = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ];
+    const result = buildTrackFromEditorState({
+      mode: 'boundary',
+      centerPoints: [],
+      centerWidth: 0,
+      innerPoints: inner,
+      outerPoints: outer,
+      closed: false,
+      name: 'Boundary',
+      backgroundImage: '/x.jpg',
+    });
+    expect(typeof result.pathLengthPx).toBe('number');
+    expect(result.pathLengthPx).toBeGreaterThan(0);
+  });
+
+  it('Larger world produces a proportionally larger pathLengthPx', () => {
+    const small = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+      ],
+      centerWidth: 20,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Small',
+      backgroundImage: '/x.jpg',
+    });
+    const large = buildTrackFromEditorState({
+      mode: 'center',
+      centerPoints: [
+        { x: 0, y: 0 },
+        { x: 400, y: 0 },
+      ],
+      centerWidth: 20,
+      innerPoints: [],
+      outerPoints: [],
+      closed: false,
+      name: 'Large',
+      backgroundImage: '/x.jpg',
+    });
+    expect(large.pathLengthPx).toBeGreaterThan(small.pathLengthPx * 3);
+  });
+});
+
 // Regression guard: loading a saved track and immediately re-saving must be a data no-op.
 describe('buildTrackFromEditorState — load/save round-trip fidelity', () => {
   it('closed: true survives a build → re-build cycle', () => {
