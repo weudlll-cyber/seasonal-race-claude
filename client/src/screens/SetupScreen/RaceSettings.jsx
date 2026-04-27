@@ -16,7 +16,7 @@ const DURATION_OPTIONS = [
 ];
 
 const MIN_WINNERS = 1;
-const MAX_WINNERS = 5;
+const MAX_WINNERS = 20;
 
 function RaceSettings({ settings, onChange }) {
   const { duration, winners, eventName } = settings;
