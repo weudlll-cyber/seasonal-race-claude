@@ -37,6 +37,7 @@ import {
   loadAutoScaleConfig,
   computeAutoScaleFactor,
   computeCameraZoomFactor,
+  computeOpenTrackCameraZoomFactor,
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
@@ -171,7 +172,12 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
+        displaySizeScale = computeAutoScaleFactor(
+          trackWidth,
+          nRacers,
+          autoScaleConfig,
+          racerType.config.displaySize
+        );
       }
     }
 
@@ -815,10 +821,14 @@ export default function RaceScreen() {
       // move together when the camera pans or zooms. HUD draws after ctx.restore()
       // so it stays in fixed screen space.
       //
-      // Camera-aware sprite scale: on closed tracks the canvas transform applies
-      // cam.zoom, so sprites must grow inversely to stay visually consistent.
-      // Open tracks use effectiveZoom (base × cam.zoom) — skip the extra factor there.
-      const cameraZoomFactor = isOpenTrack ? 1 : computeCameraZoomFactor(cam.zoom);
+      // Camera-aware sprite scale: the canvas transform applies a zoom factor, so
+      // sprites must grow inversely to stay visually consistent across zoom states.
+      // Closed tracks: effectiveZoom = cam.zoom × bsX → factor = REFERENCE / cam.zoom
+      // Open tracks:  effectiveZoom = OPEN_TRACK_BASE_ZOOM × cam.zoom → factor accounts
+      //               for both terms so on-screen size equals the closed-track reference.
+      const cameraZoomFactor = isOpenTrack
+        ? computeOpenTrackCameraZoomFactor(cam.zoom)
+        : computeCameraZoomFactor(cam.zoom);
       const frameDisplayScale = displaySizeScale * cameraZoomFactor;
 
       if (isOpenTrack) {

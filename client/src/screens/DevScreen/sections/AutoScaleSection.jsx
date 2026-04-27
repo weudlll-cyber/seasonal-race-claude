@@ -103,7 +103,7 @@ function AutoScaleSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Min Scale
-              <InfoTooltip text="Minimum sprite scale factor (clamp lower bound). Default 0.4 = 40% of normal size." />
+              <InfoTooltip text="Minimum sprite scale factor (clamp lower bound). Default 0.65 = 65% of normal size." />
             </label>
             <input
               type="number"
@@ -116,6 +116,30 @@ function AutoScaleSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > 0 && v < config.maxScale) set('minScale', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup} style={{ opacity: config.enabled ? 1 : 0.45 }}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Min Visible Pixels
+              <InfoTooltip text="Minimum on-canvas sprite diameter in pixels. Auto-scale raises the factor above minScale if needed to keep sprites this large. Uses racer display size and camera reference zoom. Default 32." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Min Visible Pixels"
+              min={8}
+              max={120}
+              step={4}
+              value={config.minVisiblePixels}
+              disabled={!config.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0) set('minVisiblePixels', v);
               }}
             />
           </div>

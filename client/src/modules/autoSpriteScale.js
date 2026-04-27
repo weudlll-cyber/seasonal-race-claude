@@ -10,6 +10,7 @@
 // ============================================================
 
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
+import { OPEN_TRACK_BASE_ZOOM } from './camera/openTrackCamera.js';
 
 // Camera zoom on the 1280px reference track (LEADER state). Used to keep sprites
 // visually consistent across track sizes when camera-aware scaling is active.
@@ -32,31 +33,63 @@ export function computeCameraZoomFactor(currentZoom) {
   return REFERENCE_CAMERA_ZOOM / currentZoom;
 }
 
+/**
+ * Camera-aware scale factor for open tracks.
+ *
+ * Open tracks apply effectiveZoom = OPEN_TRACK_BASE_ZOOM × cam.zoom to the canvas,
+ * so the inverse factor must account for that base multiplier:
+ *
+ *   factor = REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM × camZoom)
+ *
+ * Verification: displaySize × factor × effZoom
+ *   = displaySize × REFERENCE_CAMERA_ZOOM/(BASE×z) × BASE×z = displaySize × REFERENCE_CAMERA_ZOOM
+ * — identical to closed-track reference, regardless of cam.zoom.
+ *
+ * @param {number} camZoom  Director zoom (from CameraDirector.update())
+ * @returns {number}        Scale factor to multiply into displaySizeScale
+ */
+export function computeOpenTrackCameraZoomFactor(camZoom) {
+  if (!camZoom || camZoom <= 0) return 1;
+  return REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM * camZoom);
+}
+
 export const DEFAULT_AUTO_SCALE_CONFIG = {
   enabled: true,
   referenceValue: 23,
   minScale: 0.65,
   maxScale: 2.5,
+  minVisiblePixels: 32,
 };
 
 /**
  * Compute the auto scale factor for racer display size.
  *
- * Formula: clamp( (trackWidth / racerCount) / referenceValue, minScale, maxScale )
+ * Lane-density formula: (trackWidth / racerCount) / referenceValue
+ * Pixel floor: minVisiblePixels / (displaySize × REFERENCE_CAMERA_ZOOM)
+ * Result: clamp( max(laneBasedFactor, pixelFloor), minScale, maxScale )
  *
  * A referenceValue of 23 means: at the default 140px track with 6 racers (ratio ≈ 23.3),
- * the factor is ≈ 1.0 (neutral — no change from default displaySize).
+ * the lane factor is ≈ 1.0 (neutral — no change from default displaySize).
+ *
+ * The pixel floor ensures sprites stay visible at minVisiblePixels on canvas regardless
+ * of racerCount, when the racer type's displaySize is supplied by the caller.
  *
  * @param {number} trackWidth   Track width in world pixels
  * @param {number} racerCount   Number of racers in the race
- * @param {object} config       Config object (referenceValue, minScale, maxScale)
+ * @param {object} config       Config object (referenceValue, minScale, maxScale, minVisiblePixels)
+ * @param {number} [displaySize] Racer type display size in world pixels (optional; enables pixel floor)
  * @returns {number}            Scale factor to apply to displaySize
  */
-export function computeAutoScaleFactor(trackWidth, racerCount, config) {
-  const { referenceValue, minScale, maxScale } = config;
+export function computeAutoScaleFactor(trackWidth, racerCount, config, displaySize) {
+  const { referenceValue, minScale, maxScale, minVisiblePixels } = config;
   if (!racerCount || !trackWidth) return minScale;
-  const ratio = trackWidth / racerCount / referenceValue;
-  return Math.max(minScale, Math.min(maxScale, ratio));
+  const laneBasedFactor = trackWidth / racerCount / referenceValue;
+  const pixelFloor =
+    displaySize > 0 && minVisiblePixels > 0
+      ? minVisiblePixels / (displaySize * REFERENCE_CAMERA_ZOOM)
+      : 0;
+  const combined = Math.max(laneBasedFactor, pixelFloor);
+  return Math.max(minScale, Math.min(maxScale, combined));
 }
 
 /** Load config from localStorage, merging with defaults. */
