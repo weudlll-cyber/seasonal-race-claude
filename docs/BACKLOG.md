@@ -134,6 +134,17 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - **Q-12** — localStorage-Quota bei großen data-URL-Bildern
   Tracks speichern jetzt data-URLs (1–5 MB möglich für hochauflösende Bilder).
   Kein Quota-Handling implementiert. Info-level, kein akuter Block.
+- **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
+  Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
+  sehr groß. Die Frame-Wechsel der Sprite-Animation (z.B. Pferd 16 Frames Lauf-
+  Zyklus, basePeriodMs=800ms) werden dadurch deutlich sichtbar — wirken ruckartig
+  statt smooth.
+  Mögliche Lösungen:
+  - basePeriodMs per Camera-Zoom skalieren (kürzere Period bei großen Sprites)
+  - Sprite-Frame-Interpolation (Tweening zwischen Frames, komplexer)
+  - Performance-Profiling falls Render-Last das Problem ist
+  Wahrscheinlich Phase D7 (Camera-Director Polish) zugehörig oder eigenes Q-Item.
+  Niedrige Priorität — pragmatisch akzeptabel für aktuelle Use-Cases.
 
 ### Phase V (Verification-Sprint)
 

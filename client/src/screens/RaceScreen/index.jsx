@@ -32,7 +32,11 @@ import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
-import { loadAutoScaleConfig, computeAutoScaleFactor } from '../../modules/autoSpriteScale.js';
+import {
+  loadAutoScaleConfig,
+  computeAutoScaleFactor,
+  computeCameraZoomFactor,
+} from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import './RaceScreen.css';
@@ -338,7 +342,7 @@ export default function RaceScreen() {
       }
     }
 
-    function drawRacers() {
+    function drawRacers(effectiveScale) {
       const st = g.current;
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
@@ -352,7 +356,7 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, displaySizeScale);
+        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
         drawNameTag(r.x, r.y, r.name, r === leader);
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
@@ -814,6 +818,13 @@ export default function RaceScreen() {
       // A single save/transform/restore wraps every world-space layer so they all
       // move together when the camera pans or zooms. HUD draws after ctx.restore()
       // so it stays in fixed screen space.
+      //
+      // Camera-aware sprite scale: on closed tracks the canvas transform applies
+      // cam.zoom, so sprites must grow inversely to stay visually consistent.
+      // Open tracks use effectiveZoom (base × cam.zoom) — skip the extra factor there.
+      const cameraZoomFactor = isOpenTrack ? 1 : computeCameraZoomFactor(cam.zoom);
+      const frameDisplayScale = displaySizeScale * cameraZoomFactor;
+
       if (isOpenTrack) {
         ctx.save();
         const effZoom = effectiveZoom(cam.zoom);
@@ -829,7 +840,7 @@ export default function RaceScreen() {
         drawEditorTrackSurface(ctx, shape, ts);
         if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
         drawParticles();
-        drawRacers();
+        drawRacers(frameDisplayScale);
         ctx.restore();
         drawTitleOpen();
       } else {
@@ -844,7 +855,7 @@ export default function RaceScreen() {
         }
         drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
-        drawRacers();
+        drawRacers(frameDisplayScale);
         ctx.restore();
         drawTitle();
         drawLapInfo(st);

@@ -20,6 +20,7 @@ const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
 const MAX_ZOOM = 2.5; // ceiling for very small tracks
 const CANVAS_W = 1280; // reference canvas width used in the adaptive-zoom formula
+const TOP_N = 3; // camera focuses on the top-N racers by position
 
 // How many world-pixels each camera state keeps in view horizontally.
 // On the 1280px reference world these give zoom ≈ 1.4 / 1.6 / 1.3.
@@ -99,20 +100,34 @@ export class CameraDirector {
     this.stateEnteredAt = ts;
   }
 
+  // Returns the top-N racers by position — the set the camera focuses on.
+  _focusRacers(racers) {
+    return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
+  }
+
   _setTargets(racers, canvasW, canvasH) {
-    const ordered = [...racers].sort((a, b) => b.t - a.t);
+    const focusRacers = this._focusRacers(racers);
     const hw = canvasW / 2;
     const hh = canvasH / 2;
 
     switch (this.state) {
-      case CAM_STATE.OVERVIEW:
+      case CAM_STATE.OVERVIEW: {
+        // Pan to the center of the top-N racers so the camera follows the action
+        // on large tracks. On 1280-reference tracks clampOffset forces offset back to 0.
+        const cx = focusRacers.length
+          ? focusRacers.reduce((s, r) => s + r.x, 0) / focusRacers.length
+          : hw;
+        const cy = focusRacers.length
+          ? focusRacers.reduce((s, r) => s + r.y, 0) / focusRacers.length
+          : hh;
         this.targetZoom = 1;
-        this.targetOffsetX = 0;
-        this.targetOffsetY = 0;
+        this.targetOffsetX = hw - cx;
+        this.targetOffsetY = hh - cy;
         break;
+      }
 
       case CAM_STATE.LEADER_ZOOM: {
-        const r = ordered[0];
+        const r = focusRacers[0];
         if (r) {
           this.targetZoom = this._leaderZoom;
           this.targetOffsetX = hw - r.x * this._leaderZoom;
@@ -122,7 +137,7 @@ export class CameraDirector {
       }
 
       case CAM_STATE.BATTLE_ZOOM: {
-        const top2 = ordered.slice(0, 2);
+        const top2 = focusRacers.slice(0, 2);
         const cx = top2.reduce((s, r) => s + r.x, 0) / top2.length;
         const cy = top2.reduce((s, r) => s + r.y, 0) / top2.length;
         this.targetZoom = this._battleZoom;
@@ -132,11 +147,13 @@ export class CameraDirector {
       }
 
       case CAM_STATE.COMEBACK_ZOOM: {
-        const last = ordered[ordered.length - 1];
-        if (last) {
+        // Target 3rd-place (bottom of top-N) rather than last-place, keeping the
+        // camera near the main field even when last-place lags far behind.
+        const target = focusRacers[focusRacers.length - 1];
+        if (target) {
           this.targetZoom = this._comebackZoom;
-          this.targetOffsetX = hw - last.x * this._comebackZoom;
-          this.targetOffsetY = hh - last.y * this._comebackZoom;
+          this.targetOffsetX = hw - target.x * this._comebackZoom;
+          this.targetOffsetY = hh - target.y * this._comebackZoom;
         }
         break;
       }

@@ -11,6 +11,27 @@
 
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
 
+// Camera zoom on the 1280px reference track (LEADER state). Used to keep sprites
+// visually consistent across track sizes when camera-aware scaling is active.
+export const REFERENCE_CAMERA_ZOOM = 1.4;
+
+/**
+ * Returns the inverse-zoom factor so sprites appear at the same screen size
+ * regardless of camera zoom level.
+ *
+ * factor = REFERENCE_CAMERA_ZOOM / currentZoom
+ *   - At zoom 1.4 (1280 reference track): factor = 1.0 → no change
+ *   - At zoom 0.3 (6000px track): factor ≈ 4.67 → world sprites 4.67× larger,
+ *     but rendered at 0.3× scale → same on-screen size as reference
+ *
+ * @param {number} currentZoom  Current camera zoom (from CameraDirector)
+ * @returns {number}            Scale factor to multiply into displaySizeScale
+ */
+export function computeCameraZoomFactor(currentZoom) {
+  if (!currentZoom || currentZoom <= 0) return 1;
+  return REFERENCE_CAMERA_ZOOM / currentZoom;
+}
+
 export const DEFAULT_AUTO_SCALE_CONFIG = {
   enabled: true,
   referenceValue: 23,

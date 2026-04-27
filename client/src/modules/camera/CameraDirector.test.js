@@ -315,6 +315,59 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
   });
 });
 
+// ── CameraDirector — top-3 focus ─────────────────────────────────────────────
+
+describe('CameraDirector — top-3 focus', () => {
+  it('_focusRacers returns top-3 sorted by t-position', () => {
+    const cd = new CameraDirector();
+    const racers = [
+      { t: 0.5, x: 400 },
+      { t: 0.9, x: 800 },
+      { t: 0.3, x: 200 },
+      { t: 1.0, x: 900 },
+      { t: 0.7, x: 600 },
+      { t: 0.1, x: 100 },
+    ];
+    const focus = cd._focusRacers(racers);
+    expect(focus).toHaveLength(3);
+    expect(focus[0].t).toBe(1.0);
+    expect(focus[1].t).toBe(0.9);
+    expect(focus[2].t).toBe(0.7);
+  });
+
+  it('_focusRacers returns all racers when count ≤ 3', () => {
+    const cd = new CameraDirector();
+    const two = [
+      { t: 0.8, x: 600 },
+      { t: 0.5, x: 400 },
+    ];
+    expect(cd._focusRacers(two)).toHaveLength(2);
+    expect(cd._focusRacers([{ t: 1, x: 640 }])).toHaveLength(1);
+  });
+
+  it('_focusRacers handles 0 racers without crash', () => {
+    const cd = new CameraDirector();
+    expect(cd._focusRacers([])).toHaveLength(0);
+  });
+
+  it('COMEBACK_ZOOM targets 3rd-place racer, not last-place, when spread is large', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    cd.state = CAM_STATE.COMEBACK_ZOOM;
+    const racers = [
+      { t: 0.9, x: 900, y: 360, finished: false }, // 1st
+      { t: 0.7, x: 700, y: 360, finished: false }, // 2nd
+      { t: 0.5, x: 500, y: 360, finished: false }, // 3rd — should be targeted
+      { t: 0.1, x: 100, y: 360, finished: false }, // last — should NOT be targeted
+    ];
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    // comebackZoom ≈ 1.30 on 1280-track.
+    // Target at x=500: targetOffsetX = 640 - 500*1.30 = -10 → clamps within valid range.
+    // Camera world-center should be near x=500, far from last-place x=100.
+    const worldXAtCenter = (640 - cd.offsetX) / cd.zoom;
+    expect(worldXAtCenter).toBeGreaterThan(300); // clearly not last-place (x=100)
+  });
+});
+
 // ── CameraDirector — adaptive zoom: corrected formula ────────────────────────
 
 describe('CameraDirector — adaptive zoom (corrected formula)', () => {

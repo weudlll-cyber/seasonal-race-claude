@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
+  computeCameraZoomFactor,
+  REFERENCE_CAMERA_ZOOM,
   DEFAULT_AUTO_SCALE_CONFIG,
   loadAutoScaleConfig,
   saveAutoScaleConfig,
@@ -120,5 +122,38 @@ describe('saveAutoScaleConfig', () => {
     const cfg = { enabled: true, referenceValue: 30, minScale: 0.3, maxScale: 3.0 };
     saveAutoScaleConfig(cfg);
     expect(storageSet).toHaveBeenCalledWith('racearena:autoScaleConfig', cfg);
+  });
+});
+
+describe('computeCameraZoomFactor', () => {
+  it('returns 1.0 at the reference zoom (1280-track LEADER state)', () => {
+    expect(computeCameraZoomFactor(REFERENCE_CAMERA_ZOOM)).toBeCloseTo(1.0);
+  });
+
+  it('returns ≈ 4.67 at zoom=0.3 (6000px track)', () => {
+    expect(computeCameraZoomFactor(0.3)).toBeCloseTo(1.4 / 0.3, 3);
+    expect(computeCameraZoomFactor(0.3)).toBeCloseTo(4.667, 2);
+  });
+
+  it('returns ≈ 3.11 at zoom=0.45 (4000px track)', () => {
+    expect(computeCameraZoomFactor(0.45)).toBeCloseTo(1.4 / 0.45, 3);
+    expect(computeCameraZoomFactor(0.45)).toBeCloseTo(3.111, 2);
+  });
+
+  it('returns 1 for zoom=0 (guard against divide-by-zero)', () => {
+    expect(computeCameraZoomFactor(0)).toBe(1);
+  });
+
+  it('returns 1 for negative or falsy zoom (guard)', () => {
+    expect(computeCameraZoomFactor(-1)).toBe(1);
+    expect(computeCameraZoomFactor(null)).toBe(1);
+  });
+
+  it('on-screen sprite size is invariant: displaySize × factor × zoom = displaySize × REFERENCE_CAMERA_ZOOM', () => {
+    // The whole point: sprite in world-space × cameraZoomFactor × zoom = constant on screen
+    for (const zoom of [0.3, 0.45, 0.9, 1.4, 2.0]) {
+      const onScreen = computeCameraZoomFactor(zoom) * zoom;
+      expect(onScreen).toBeCloseTo(REFERENCE_CAMERA_ZOOM, 5);
+    }
   });
 });
