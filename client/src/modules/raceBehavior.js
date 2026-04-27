@@ -51,7 +51,10 @@ export function applyRacerBehavior(racers, config) {
   // Reset drafting flags
   for (const r of active) r.draftingBoostActive = false;
 
-  // ── Avoidance ──────────────────────────────────────────────────────────────
+  // ── Avoidance (asymmetric: trailer yields, leader holds) ──────────────────
+  // The racer further ahead (higher t) is the leader and holds its lane.
+  // The trailing racer (lower t, tie-break by index) yields entirely.
+  // This avoids symmetric-force cancellation in evenly-spaced packs.
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
       const r1 = active[i];
@@ -64,15 +67,18 @@ export function applyRacerBehavior(racers, config) {
       // Scale force by proximity: full force at dist=0, zero force at avoidanceDistance
       const forceMag = config.avoidanceLateralForce * (1 - dist / config.avoidanceDistance);
 
-      // Push apart in normalized-offset space: racer with higher offset goes higher,
-      // racer with lower offset goes lower. Ties break deterministically (r1 → +).
-      const laneDiff = r1.currentLaneY - r2.currentLaneY;
-      const pushSign = laneDiff >= 0 ? 1 : -1;
+      // Trailer = lower t (further back), tie-break by index. Trailer yields, leader holds.
+      const r1IsTrailer = r1.t < r2.t || (r1.t === r2.t && r1.index < r2.index);
+      const trailer = r1IsTrailer ? r1 : r2;
+      const leader = r1IsTrailer ? r2 : r1;
 
-      lateralForces.set(r1.index, lateralForces.get(r1.index) + pushSign * forceMag);
-      lateralForces.set(r2.index, lateralForces.get(r2.index) - pushSign * forceMag);
-      speedBrakeSet.add(r1.index);
-      speedBrakeSet.add(r2.index);
+      // Push trailer away from leader's current lane
+      const laneDiff = trailer.currentLaneY - leader.currentLaneY;
+      const pushDir = laneDiff >= 0 ? 1 : -1;
+
+      lateralForces.set(trailer.index, lateralForces.get(trailer.index) + pushDir * forceMag);
+      speedBrakeSet.add(trailer.index);
+      speedBrakeSet.add(leader.index);
     }
   }
 

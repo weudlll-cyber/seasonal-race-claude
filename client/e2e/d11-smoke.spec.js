@@ -64,8 +64,8 @@ test.describe('D11 — Race Behavior Dev-Screen section', () => {
     await expect(page.getByLabel('Enabled')).toBeChecked();
   });
 
-  test('avoidance distance field shows default value 80', async ({ page }) => {
-    await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('80');
+  test('avoidance distance field shows default value 120', async ({ page }) => {
+    await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
   });
 
   test('drafting boost factor field shows default 1.1', async ({ page }) => {
@@ -78,9 +78,9 @@ test.describe('D11 — Race Behavior Dev-Screen section', () => {
   });
 
   test('Reset Defaults button restores default avoidance distance', async ({ page }) => {
-    await page.getByLabel('Avoidance Distance (px)').fill('120');
+    await page.getByLabel('Avoidance Distance (px)').fill('200');
     await page.getByRole('button', { name: /reset defaults/i }).click();
-    await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('80');
+    await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
   });
 
   test('drafting summary text is visible', async ({ page }) => {

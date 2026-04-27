@@ -107,15 +107,16 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r2.avoidanceActive).toBe(true);
   });
 
-  it('pushes racers apart in lane offset', () => {
+  it('only trailer (lower index on t-tie) yields — leader holds lane', () => {
+    // Both have default t=0.5; tie-break by index: r1 (index=0) is trailer.
+    // Asymmetric mode: trailer yields, leader holds its current lane.
     const r1 = makeRacer({ index: 0, x: 0, y: 0, trackOffset: -0.1 });
     const r2 = makeRacer({ index: 1, x: 30, y: 0, trackOffset: 0.1 });
-    // r1 has lower offset (-0.1 < 0.1), so r1 should move more negative and r2 more positive
     const before1 = r1.currentLaneY;
     const before2 = r2.currentLaneY;
     applyRacerBehavior([r1, r2], { ...cfg, avoidanceDistance: 80 });
-    expect(r1.currentLaneY).toBeLessThan(before1);
-    expect(r2.currentLaneY).toBeGreaterThan(before2);
+    expect(r1.currentLaneY).toBeLessThan(before1); // trailer pushed further negative
+    expect(r2.currentLaneY).toBeCloseTo(before2, 5); // leader unchanged
   });
 
   it('respects avoidanceMaxLateral clamp', () => {
@@ -136,14 +137,29 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r1.currentLaneY).toBeGreaterThanOrEqual(-0.5);
   });
 
-  it('both racers can shift simultaneously', () => {
+  it('at least one racer shifts when a pair is within avoidance distance', () => {
     const r1 = makeRacer({ index: 0, x: 0, y: 0, trackOffset: 0 });
     const r2 = makeRacer({ index: 1, x: 10, y: 0, trackOffset: 0 });
     applyRacerBehavior([r1, r2], cfg);
-    // Both should have shifted (one up, one down)
     const moved1 = r1.currentLaneY !== r1.targetLaneY;
     const moved2 = r2.currentLaneY !== r2.targetLaneY;
     expect(moved1 || moved2).toBe(true);
+  });
+
+  it('avoidance produces measurable spread over 60 frames with packed racers', () => {
+    // 6 racers tightly packed — after 60 frames the trailer pack should have spread visibly
+    const racers = [
+      makeRacer({ index: 0, x: 0, y: 200, t: 0.0, trackOffset: 0.05 }),
+      makeRacer({ index: 1, x: 10, y: 200, t: 0.001, trackOffset: -0.05 }),
+      makeRacer({ index: 2, x: 20, y: 200, t: 0.002, trackOffset: 0.1 }),
+      makeRacer({ index: 3, x: 10, y: 210, t: 0.003, trackOffset: -0.1 }),
+      makeRacer({ index: 4, x: 5, y: 195, t: 0.004, trackOffset: 0.2 }),
+      makeRacer({ index: 5, x: 15, y: 205, t: 0.005, trackOffset: -0.2 }),
+    ];
+    const initial = racers.map((r) => r.currentLaneY);
+    for (let f = 0; f < 60; f++) applyRacerBehavior(racers, cfg);
+    const maxShift = Math.max(...racers.map((r, i) => Math.abs(r.currentLaneY - initial[i])));
+    expect(maxShift).toBeGreaterThan(0.05);
   });
 });
 

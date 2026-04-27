@@ -128,9 +128,9 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
-  avoidanceDistance: 80,
-  avoidanceLateralForce: 0.004,
-  avoidanceMaxLateral: 0.18,
+  avoidanceDistance: 120,
+  avoidanceLateralForce: 0.012,
+  avoidanceMaxLateral: 0.35,
   avoidanceSpeedBrake: 0.95,
   avoidanceReturnSpeed: 0.05,
   draftingDistanceT: 0.02,

@@ -27,7 +27,7 @@ describe('DEFAULT_AUTO_SCALE_CONFIG', () => {
     expect(DEFAULT_AUTO_SCALE_CONFIG).toEqual({
       enabled: true,
       referenceValue: 23,
-      minScale: 0.4,
+      minScale: 0.65,
       maxScale: 2.5,
     });
   });
@@ -42,8 +42,8 @@ describe('computeAutoScaleFactor', () => {
   });
 
   it('clamps to minScale for very narrow track or many racers', () => {
-    // 50 / 10 / 23 ≈ 0.217, below minScale 0.4
-    expect(computeAutoScaleFactor(50, 10, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.4);
+    // 50 / 10 / 23 ≈ 0.217, below minScale 0.65 (Befund-3 fix: was 0.4)
+    expect(computeAutoScaleFactor(50, 10, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.65);
   });
 
   it('clamps to maxScale for very wide track or few racers', () => {
@@ -52,20 +52,27 @@ describe('computeAutoScaleFactor', () => {
   });
 
   it('returns minScale when racerCount is 0', () => {
-    expect(computeAutoScaleFactor(140, 0, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.4);
+    expect(computeAutoScaleFactor(140, 0, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.65);
   });
 
   it('returns minScale when trackWidth is 0', () => {
-    expect(computeAutoScaleFactor(0, 6, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.4);
+    expect(computeAutoScaleFactor(0, 6, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.65);
   });
 
   it('returns minScale when both are 0', () => {
-    expect(computeAutoScaleFactor(0, 0, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.4);
+    expect(computeAutoScaleFactor(0, 0, DEFAULT_AUTO_SCALE_CONFIG)).toBe(0.65);
+  });
+
+  it('minScale 0.65 floor: 6 racers on 50px track still returns at least 0.65', () => {
+    // 50 / 6 / 23 ≈ 0.362 — below old minScale 0.4 and new 0.65 — floor prevents tiny sprites
+    const result = computeAutoScaleFactor(50, 6, DEFAULT_AUTO_SCALE_CONFIG);
+    expect(result).toBeGreaterThanOrEqual(0.65);
   });
 
   it('scales proportionally with larger referenceValue', () => {
     // doubling referenceValue halves the factor (before clamping)
-    const cfg = { ...DEFAULT_AUTO_SCALE_CONFIG, referenceValue: 46 };
+    // Use minScale=0.3 so 0.507 is not clamped
+    const cfg = { ...DEFAULT_AUTO_SCALE_CONFIG, referenceValue: 46, minScale: 0.3 };
     const factor = computeAutoScaleFactor(140, 6, cfg);
     // 140 / 6 / 46 ≈ 0.507
     expect(factor).toBeCloseTo(0.507, 2);

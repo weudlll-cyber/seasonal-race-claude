@@ -47,9 +47,9 @@ async function seedGeometry(page) {
 
 const DEFAULT_CFG = {
   enabled: true,
-  avoidanceDistance: 80,
-  avoidanceLateralForce: 0.004,
-  avoidanceMaxLateral: 0.18,
+  avoidanceDistance: 120,
+  avoidanceLateralForce: 0.012,
+  avoidanceMaxLateral: 0.35,
   avoidanceSpeedBrake: 0.95,
   avoidanceReturnSpeed: 0.05,
   draftingDistanceT: 0.02,
@@ -64,14 +64,14 @@ async function openBehaviorSection(page) {
 }
 
 // ── V1: Default values match spec ──────────────────────────────────────────
-test('V1 — default avoidanceDistance is 80', async ({ page }) => {
+test('V1 — default avoidanceDistance is 120', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('80');
+  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
 });
 
-test('V1 — default avoidanceLateralForce is 0.004', async ({ page }) => {
+test('V1 — default avoidanceLateralForce is 0.012', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Lateral Force (per frame)')).toHaveValue('0.004');
+  await expect(page.getByLabel('Lateral Force (per frame)')).toHaveValue('0.012');
 });
 
 test('V1 — default draftingBoostFactor is 1.1', async ({ page }) => {
@@ -95,11 +95,11 @@ test('V2 — changed avoidanceDistance persists across reload', async ({ page })
 });
 
 // ── V3: Reset Defaults restores all values ─────────────────────────────────
-test('V3 — Reset Defaults restores avoidanceDistance to 80', async ({ page }) => {
+test('V3 — Reset Defaults restores avoidanceDistance to 120', async ({ page }) => {
   await openBehaviorSection(page);
   await page.getByLabel('Avoidance Distance (px)').fill('200');
   await page.getByRole('button', { name: /reset defaults/i }).click();
-  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('80');
+  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
 });
 
 test('V3 — Reset Defaults restores draftingBoostFactor to 1.1', async ({ page }) => {

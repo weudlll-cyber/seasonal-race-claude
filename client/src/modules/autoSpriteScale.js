@@ -35,7 +35,7 @@ export function computeCameraZoomFactor(currentZoom) {
 export const DEFAULT_AUTO_SCALE_CONFIG = {
   enabled: true,
   referenceValue: 23,
-  minScale: 0.4,
+  minScale: 0.65,
   maxScale: 2.5,
 };
 
