@@ -62,6 +62,8 @@ function SetupScreen() {
             existing.racerId ??
             d.defaultRacerTypeId,
           worldWidth: existing.worldWidth ?? d.worldWidth,
+          worldHeight: existing.worldHeight ?? d.worldHeight,
+          trackWidth: existing.trackWidth ?? d.trackWidth,
         });
       }
     }
@@ -126,6 +128,8 @@ function SetupScreen() {
       geometryId: selectedTrack?.geometryId ?? null,
       racerTypeId: effectiveTypeId,
       worldWidth: selectedTrack?.worldWidth ?? 1280,
+      worldHeight: selectedTrack?.worldHeight ?? 720,
+      trackWidth: selectedTrack?.trackWidth ?? 140,
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
@@ -163,6 +167,8 @@ function SetupScreen() {
       geometryId: track.geometryId ?? null,
       racerTypeId: effectiveTypeId,
       worldWidth: track.worldWidth ?? 1280,
+      worldHeight: track.worldHeight ?? 720,
+      trackWidth: track.trackWidth ?? 140,
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,

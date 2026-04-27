@@ -18,6 +18,8 @@ const ctxStub = {
   setLineDash: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
+  scale: vi.fn(),
+  translate: vi.fn(),
   globalAlpha: 1,
   strokeStyle: '',
   fillStyle: '',
