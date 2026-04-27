@@ -128,10 +128,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-26 | **678 unit + 36 e2e** | D3.5.5 Per-Type-Tuning-UI (PR #21) — +50 unit (normalizeOverrideMap, CONFIG_SNAPSHOT, applyTunableOverride, restoreTunableDefault, RacerEditModal.test.jsx, InfoTooltip.test.jsx), +14 e2e (d355-smoke.spec.js) |
 | 2026-04-26 | **678 unit + 57 e2e** | UX-Verifikations-Spec permanent hinzugefügt (d3-5-5-ux-verification.spec.js, 21 Tests), Quality-Gate-Fix (Doppelimport, PR #21) |
 | 2026-04-27 | **694 unit + 75 e2e** | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Beide Specs permanent als Regressions-Schutz. |
+| 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX-Polish-Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification angepasst (dt. Strings → englisch). Keine neuen Unit-Tests. |
 
-**Aktueller Master-HEAD:** `13a2dd2` (post D10-Merge + Hotfix)
-**ESLint-Warnings:** 0 (D10 hat alle PR-eingeführten Warnings vor Merge gefixt)
-**Playwright e2e:** 75 Tests (5 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2)
+**Aktueller Master-HEAD:** `697e081` (post B-Wave, PR #25)
+**ESLint-Warnings:** 3 pre-existing (unverändert)
+**Playwright e2e:** 88 Tests (6 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1)
 
 ---
 
@@ -153,6 +154,12 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #25 (B-Wave):** 0 Show-Stopper, 0 neue Errors/Warnings
+- ✅ ESLint: 0 Errors, 0 neue Warnings (3 pre-existing unverändert)
+- ✅ Stale `alignRight`-Prop aus RacerEditModal-Aufruf entfernt
+- ✅ d10-smoke + d10-ux-verification: alle dt. String-Assertions → Englisch aktualisiert
+- ✅ 694 Unit-Tests unverändert grün; +13 e2e-Tests (b-wave-smoke.spec.js)
 
 **Quality-Gate auf PR #23 (D10 + Bild-First-Fix):** 0 Show-Stopper, 0 Errors, 0 Warnings (alle PR-eingeführten Findings vor Merge gefixt)
 - ✅ Alle 8 Anforderungen (A1-A8) erfüllt
