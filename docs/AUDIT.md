@@ -127,10 +127,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-26 | **628 unit + 22 e2e** | Quality-Gate-Cleanup-Commit (PR #19) — Playwright-Infrastruktur fertig |
 | 2026-04-26 | **678 unit + 36 e2e** | D3.5.5 Per-Type-Tuning-UI (PR #21) — +50 unit (normalizeOverrideMap, CONFIG_SNAPSHOT, applyTunableOverride, restoreTunableDefault, RacerEditModal.test.jsx, InfoTooltip.test.jsx), +14 e2e (d355-smoke.spec.js) |
 | 2026-04-26 | **678 unit + 57 e2e** | UX-Verifikations-Spec permanent hinzugefügt (d3-5-5-ux-verification.spec.js, 21 Tests), Quality-Gate-Fix (Doppelimport, PR #21) |
+| 2026-04-27 | **694 unit + 75 e2e** | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Beide Specs permanent als Regressions-Schutz. |
 
-**Aktueller Master-HEAD:** `2d76bc3`
-**ESLint-Warnings:** 3 (unverändert seit PR #17 Quality-Cleanup — pre-existing)
-**Playwright e2e:** 57 Tests (2 Spec-Files D9 + 3 Spec-Files D3.5.5)
+**Aktueller Master-HEAD:** `13a2dd2` (post D10-Merge + Hotfix)
+**ESLint-Warnings:** 0 (D10 hat alle PR-eingeführten Warnings vor Merge gefixt)
+**Playwright e2e:** 75 Tests (5 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2)
 
 ---
 
@@ -152,6 +153,14 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 - ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
 
 **Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+
+**Quality-Gate auf PR #23 (D10 + Bild-First-Fix):** 0 Show-Stopper, 0 Errors, 0 Warnings (alle PR-eingeführten Findings vor Merge gefixt)
+- ✅ Alle 8 Anforderungen (A1-A8) erfüllt
+- ✅ ESLint: 0 Errors, 0 Warnings (gefixt: `handleWorldSizeChange` unused, `Buffer` undeclared, unused import)
+- ⚠️ Q-11 (niedrig, deferred): `reader.onerror` fehlt in `handleBgUpload` — FileReader-Fehler stumm geschluckt
+- ⚠️ Q-12 (info, deferred): localStorage-Quota bei großen data-URL-Bildern — kein Quota-Handling
+- ✅ UX-Verifikation: 17/17 Tests (d10-ux-verification.spec.js) grün, permanent als Regressions-Schutz
+- ✅ Smoke-Tests: 18/18 Tests (d10-smoke.spec.js) grün
 
 **Quality-Gate auf PR #21 (D3.5.5):** 0 Show-Stopper, 2 W-D3.5.5, 3 pre-existing
 - ⚠️ W-D3.5.5 #1 (vor Merge gefixt): Doppelter Import von `normalizeOverrideMap` in RacerEditModal.jsx (zwei Import-Statements aus demselben Modul) — 1-Zeilen-Fix im selben Branch

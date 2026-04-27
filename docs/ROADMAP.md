@@ -65,7 +65,7 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] D7 — Camera polish: smooth zoom transitions, configurable director preferences per track
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
-## Phase B — Bug Fixes & Wiring
+## Phase B — Bug Fixes & Wiring 🔜 NEXT (B-Wave)
 
 - [x] B-6 — speedMultiplier-Bug — subsumed by D9
 - [x] B-7 — Dev-Screen UI-Drift: Code-Registry as Single Source of Truth (PR #17)
@@ -76,6 +76,10 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] B-3 — Result-Screen winner count configurable (currently hardcoded)
 - [ ] B-4 — Branding profile applied to race/result screens (UI exists, wiring missing)
 - [ ] B-5 — System Backup/Restore/Reset end-to-end verified (UI-only so far)
+- [ ] **B-14** — TrackManager workflow friction: no visible path to Track Editor from "New Track" dialog
+- [ ] **B-15** — i18n leak: German strings in English UI (Geometrie wählen, Track-Größe, confirm dialogs)
+- [ ] **B-16** — **HOCH-PRIO:** Camera-Director still on large tracks (D10 bsX/bsY breaks coordinate space)
+- [ ] **B-17** — **HOCH-PRIO:** Race speed visually too fast on large tracks (t-space → pixel mismatch)
 
 ## D9 — Race Engine Speed Refactor ✅ Done (PR #19, master `dad3300`)
 
@@ -94,13 +98,20 @@ reusable component. Override-API extended generically (setRacerTypeOverride 3-ar
 resetRacerTypeOverride with optional fieldName, CONFIG_SNAPSHOT, normalizeOverrideMap).
 678 unit tests + 36 e2e + 21 UX-verification tests.
 
-## D10 — Track-Größen-Variabilität + Auto-Sprite-Skalierung 🔜 NEXT
+## D10 — Track-Größen-Variabilität + Auto-Sprite-Skalierung ✅ Done (PR #23, master `13a2dd2`)
 
-Lifts the 1280px track-width constraint. Variable worldWidth + worldHeight per track (hard
-limit 16000×8192). trackWidth becomes truly variable (currently hardcoded to 140 everywhere).
-TrackEditor with robust zoom + pan for designing large tracks. Auto-sprite-scaling formula:
-factor = clamp(trackWidth / racerCount / referenceValue, minScale, maxScale). Operator
-overrides from D3.5.5 win over auto-factor. Tunable globals via Dev-Screen (D3.5.5 pattern).
+worldWidth/worldHeight automatically derived from uploaded background image (naturalWidth/naturalHeight).
+Hard limit 8000×4096 enforced at upload. Image required to save; save button disabled until image
+uploaded. Dimension mismatch on swap: confirm dialog, path reset on accept; same-dimensions swap
+silent. TrackEditor: zoom+pan (pinch/wheel zoom-to-cursor, fit-to-screen, pan via viewTransformRef
+for stale-closure safety). trackWidth truly variable from track config. Auto-sprite-scaling:
+factor = clamp(trackWidth / racerCount / referenceValue, minScale, maxScale). D3.5.5 operator
+overrides win over auto-factor. AutoScaleSection in Dev-Screen. Bild-First replaces all pre-set
+buttons (WORLD_SIZES/WIDTHS/HEIGHTS removed). Backward-compat for path-based backgroundImage.
+694 unit tests + 75 e2e tests. Hotfix `13a2dd2`: default icon 🏁 in TrackManager Add-Track form.
+
+**Post-D10 User-Test:** B-16 (Camera still on large tracks) + B-17 (race speed perceived too fast)
+aufgedeckt — beide HOCH-PRIO, werden als Priority-Fix vor D11 angegangen.
 
 ## D11 — Racer Behavior: Soft Avoidance + Drafting (planned, after D10)
 
@@ -164,7 +175,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (678 unit tests, 47 test files) + Playwright e2e (57 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification)
+- [x] Vitest + React Testing Library (694 unit tests, 48 test files) + Playwright e2e (75 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -187,3 +198,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-26 | B-7+B-8+W3 complete (PR #17): code registry as Single Source of Truth for racer types; racerTypeOverrides override map; emoji from registry; session-only race-type override selector; filter for inactive types (Test-3.1 fix). Quality-gate cleanup: dead RACER_TYPE_EMOJIS export removed, 11 unused imports removed, JSON.parse defensive hygiene, 13 file headers added. 618 tests, 3 ESLint warnings (down from 13). |
 | 2026-04-26 | D9 Race-Engine-Speed-Refactor complete (PR #19, master `dad3300`): speedMultiplier wired to baseSpeed; explicit lap/time selection with live duration estimates; dynamic finish-line for open tracks; run-out behavior; 2s result delay; sessionStorage extended with raceMode/targetLaps/targetDuration. New Playwright e2e infrastructure (playwright.config.js + 22 smoke tests). Quality-gate cleanup: vitest excludes e2e/, BASE_SPEED constants imported in RaceScreen, getRacerType cached, file headers added. 628 unit tests + 22 e2e tests. |
 | 2026-04-26 | D3.5.5 Per-Type-Tuning-UI complete (PR #21, master `2d76bc3`): Edit-Modal for all 12 racer types with 6 live-tuneable fields; InfoTooltip reusable component; CONFIG_SNAPSHOT + normalizeOverrideMap (legacy migration); override-API extended to 3-arg form. UX-verification spec (21 tests, permanent). Quality-gate: 0 show-stoppers, duplicate import fix before merge. 678 unit tests + 57 e2e tests. Doc sprint: BACKLOG (D10/D11 concepts), RACER_DATA_MODEL (single-type-per-race clarification, updated API), LESSONS 11+12, AUDIT, ROADMAP, PROJECT-PRINCIPLES (UX-verification convention). |
+| 2026-04-27 | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow complete (PR #23, squash `c700ef4`, hotfix `13a2dd2`): worldWidth/worldHeight from image naturalWidth/naturalHeight; hard limit 8000×4096; image required to save; mismatch dialog + path reset; zoom+pan (viewTransformRef); trackWidth variable; autoSpriteScale formula; AutoScaleSection; Bild-First replaces WORLD_SIZES pre-sets; backward-compat for path-based BG. Quality-gate: 0 show-stoppers, all warnings fixed before merge. 694 unit + 75 e2e tests. User browser-test exposed B-16 (camera still on large tracks) + B-17 (speed too fast on large tracks) as priority post-D10 bugs. Doc sprint: BACKLOG (D10 ✅, B-14..B-17, Q-11/Q-12, reihenfolge), LESSONS 13+14, AUDIT, ROADMAP (D10 ✅, B-Wave 🔜), PROJECT-PRINCIPLES (English-only UI). |

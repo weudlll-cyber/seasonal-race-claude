@@ -84,6 +84,14 @@ Architecture Consistency, Test-Coverage Plausibility. Severity: ✅ PASS / ⚠�
 ❌ FAIL (show-stopper). Strategic Claude reviews findings and presents a summary; user decides.
 Pre-existing findings are separated from PR-introduced findings.
 
+### App Language Convention
+
+The application UI language is **English**. All UI strings — labels, tooltips, confirm dialogs,
+error messages, button text, placeholder text, default track/category names — are written in
+English. Code comments and documentation files may be German or English but must be consistent
+within a single file. Existing German strings in the UI are tracked as B-15 and will be swept
+in the B-Wave.
+
 ### Spec Writing Style Convention
 
 Strategic Claude describes What + Why (requirements, API signatures, storage schemas, data

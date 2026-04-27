@@ -7,15 +7,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **D10** — Track-Größen-Variabilität + Auto-Sprite-Skalierung. Doc-Sprint ist gemergt.
-  Spec bereit (TEIL 2 des Doppel-Auftrags 2026-04-26).
+- 🔜 **B-Wave** — UX-Polish: B-1, B-3, B-10..B-15 (kleine PR). Danach B-16/B-17 als Priority-Fix.
 
 ---
 
 ## Ready — spec existiert oder trivial
 
-- **D3.5.4** — Trail-Tuning: visuelle Nachzieh-Qualität pro Type verfeinern. Unabhängig
-  von D10.
+- **D3.5.4** — Trail-Tuning: visuelle Nachzieh-Qualität pro Type verfeinern. Unabhängig von D10.
 
 ---
 
@@ -33,6 +31,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **Q-1 bis Q-5** | #17 | Dead-Exports, ungenutzte Imports, TODO-Tags, JSON.parse-Hygiene, File-Headers |
 | ✅ **D9** | #19 | Race-Engine-Speed-Refactor: speedMultiplier wirkt auf Race-Speed, explizite Lap/Time-Wahl, dynamische Ziellinie für Open-Tracks, Auslauf-Verhalten, 2s Result-Delay, 22 Playwright e2e Tests. Master `dad3300`. |
 | ✅ **D3.5.5** | #21 | Per-Type-Tuning-UI im Dev-Screen: 6 Felder (speedMultiplier, displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy) live-apply via Edit-Modal. CONFIG_SNAPSHOT, normalizeOverrideMap (Legacy-Migration), InfoTooltip-Komponente. 678 Unit + 36 e2e Tests. Master `2d76bc3`. |
+| ✅ **D10** | #23 | Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow. worldWidth/worldHeight automatisch aus Bild-Dimensionen (naturalWidth/naturalHeight). Hart-Limit 8000×4096. Image required to save. Dimension-Mismatch-Dialog. TrackEditor Zoom+Pan. trackWidth variabel. Auto-Sprite-Scaling Formel. Alle 8 Anforderungen (A1-A8) erfüllt. Hotfix `13a2dd2` (🏁 Default-Icon). 694 Unit + 75 e2e Tests. Master `13a2dd2`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -43,39 +42,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ### Phase D (Racer-Design-Weiterentwicklung)
 
-- **D10** — Track-Größen-Variabilität + Auto-Sprite-Skalierung (geplant, NÄCHSTE Phase)
-
-  User-Entscheidung: User möchte bald lange Tracks designen.
-
-  **Track-Dimensionen frei wählbar in beide Achsen:**
-  - `worldWidth` und `worldHeight` werden pro Track konfigurierbar
-  - Hart-Limit: 16000 × 8192 (Browser-GPU-Grenze)
-  - Soft-Empfehlung in UI: bis 8000 × 1080 bewährt
-  - `worldWidth` existiert schon als Config-Feld, `worldHeight` evtl. neu
-  - Code-Sweep: alle hartkodierte 1280/720-Werte und impliziten Annahmen finden
-
-  **TrackEditor mit robustem Zoom + Pan:**
-  - Pinch/Mausrad-Zoom + Zoom-to-Cursor
-  - Zoom-Level-Anzeige + "Fit to screen"
-  - Pan im eingezoomten Zustand
-  - Pfad-Punkte präzise bei jedem Zoom-Level editierbar
-  - Heute existiert wahrscheinlich Pan/Zoom in Grundzügen — D10 macht es robust
-
-  **trackWidth wird variabel:**
-  - Existiert als Config-Feld, heute überall hart auf 140 (Sweep nötig)
-  - TrackEditor-UI für trackWidth-Einstellung beim Design
-
-  **Auto-Sprite-Skalierung:**
-  - Formel: `auto_factor = clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale)`
-  - Auto-Faktor ist Default — Spielleiter-Override aus D3.5.5 gewinnt wenn vorhanden
-  - referenceValue, minScale, maxScale via Dev-Screen tunbar (D3.5.5-Pattern)
-  - Berechnung beim Race-Start einmal, gecached für Race-Dauer
-
-  **Track-Bild-Standard:** JPEG, max ~2 MB pro Datei empfohlen
-
-  **Test-Strategie:** Smoke-Tests mit 2-3 Beispiel-Tracks unterschiedlicher Größen
-
-- **D11** — Racer Behavior: Soft Avoidance + Drafting (geplant, nach D10)
+- **D11** — Racer Behavior: Soft Avoidance + Drafting (geplant, nach B-Wave + B-16/B-17)
 
   Heute überlappen sich Racer ohne Interaktion — visuell unaufgeräumt. User-Beobachtung: stört im Race.
 
@@ -98,20 +65,58 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   durch Track-Zustand (Schlamm-Spray, Wasser-Splash etc.).
 - **D7** — Camera-Director Polish: Schwellwerte konfigurierbar, Zoom-Verhalten bei
   variablen Speeds (D9-Abhängigkeit), Spread-Handling bei großer Speed-Varianz.
+  **Vorgezogen durch B-16** (Camera bleibt still auf großen Tracks).
 - **D8** — Voller Racer-Config-Editor: Coats-Edit-UI, alle Felder, Sprite-Wechsel-UI.
   Baut auf Override-Pattern (B-7) auf.
 
-### Phase B (Wiring-Lücken)
+### Phase B (Wiring-Lücken + UX-Verbesserungen)
 
 - **B-1** — PlayerSetup: Laden gespeicherter Gruppen-Listen (Ladebutton vorhanden, Verhalten unklar)
 - **B-2** — TrackSelector: Custom-Track-Verhalten bei fehlender Geometry
 - **B-3** — Result-Screen Winner-Count konfigurierbar (aktuell hardcoded 3)
 - **B-4** — Branding Profiles auf Race/Result-Screen anwenden (UI vorhanden, Wiring fehlt)
 - **B-5** — System Backup/Restore/Reset: End-to-End verifiziert (UI-only bisher)
+- **B-10** — (reserviert für weitere Items aus letztem Sprint)
+- **B-11** — (reserviert)
+- **B-12** — (reserviert)
+- **B-13** — (reserviert)
+
+- **B-14** — TrackManager-Workflow für neuen Track verwirrend (Schwere: mittel)
+  - User findet im "New Track"-Dialog keinen offensichtlichen Bild-Upload
+  - "World Dimensions" zeigt "(Choose Geometry)" — User muss erst zum TrackEditor wechseln
+    um Geometrie+Bild anzulegen
+  - Lösung-Optionen: Link/Button zum TrackEditor direkt aus dem TrackManager-Dialog,
+    oder direkter Upload im TrackManager
+  - Workflow-Friction beim ersten Track-Anlegen, besonders für neue User
+
+- **B-15** — i18n-Leak: deutsche Strings in englischer UI (Schwere: niedrig)
+  - Konkret beobachtet: `(Geometrie wählen)` im TrackManager, `Track-Größe: W×H px`
+    im TrackEditor, Confirm-Dialog auf Deutsch
+  - **App-Sprach-Entscheidung: Englisch überall** (→ PROJECT-PRINCIPLES.md)
+  - Maßnahme: alle deutschen Strings auf Englisch übersetzen + kompletter i18n-Sweep für
+    versteckte deutsche Strings. Funktional kein Block, aber unsauber.
+
+- **B-16** — Camera-Director funktioniert nicht mehr bei großen Tracks (**HOCH-PRIO**)
+  - Beobachtet: Auf hochauflösendem Track bleibt Kamera fast still, folgt Racern nicht mehr
+  - Vermutete Ursache: D10 bsX/bsY-Transformation hat Camera-Director-Berechnungen
+    durcheinandergebracht — Camera arbeitet in Canvas-Koordinaten, Racer-Positionen in
+    Welt-Koordinaten
+  - **Macht große Tracks aktuell unbrauchbar** — sollte vor D11 gefixt werden
+  - Verwandt mit D7 (Camera-Director Polish) — B-16 zieht D7 de facto vor
+
+- **B-17** — Race-Speed bei großen Tracks visuell zu schnell (**HOCH-PRIO**)
+  - Beobachtet: Auf hochauflösendem Track wirken Racer "wie geflogen"
+  - Ursache: Race-Engine arbeitet in normalisiertem t-Raum (1 Runde = t 0..1, track-unabhängig)
+  - Render konvertiert t → Pixel — bei 6× größerem Track fährt Racer 6× schneller in px/s
+  - **Konzeptionelle Entscheidung nötig:**
+    - Option A: weiter im t-Raum (track-unabhängig, "Pferd schafft 1 Runde in 16s immer")
+    - Option B: Pixel/Sekunde-Skalierung (6× Track → Runde dauert 6× länger)
+  - User-Beobachtung "Racer fliegen" deutet auf Pixel-Sense-Erwartung → Option B wahrscheinlich
+  - **Macht große Tracks aktuell unbrauchbar** — sollte zusammen mit B-16 gefixt werden
 
 ### Phase Q (Quality-Hygiene)
 
-- **Q-6** — TrackEditor.jsx (1006 LOC) Split-Refactor. Pre-existing, eigene PR.
+- **Q-6** — TrackEditor.jsx Split-Refactor. Pre-existing, eigene PR.
 - **Q-7** — RaceScreen/index.jsx Split-Refactor. Nach D9 auf **940 LOC** gewachsen —
   Priorität für Refactor gestiegen. Pre-existing, eigene PR.
 - **Q-8** — Watch-List: TrackManager.jsx (346 LOC) und BrandingProfiles.jsx (330 LOC).
@@ -120,6 +125,12 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   (Override-API vs. Registry vs. Boot-Logik). Kein Problem heute, beobachten.
 - **Q-10** — Watch: `RacerEditModal.jsx` bei 302 LOC — bereits 75% der 400-LOC-Schwelle.
   Im Auge behalten bei D8 (voller Config-Editor).
+- **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
+  FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.
+  Defensiv-Hygiene, niedrige Priorität.
+- **Q-12** — localStorage-Quota bei großen data-URL-Bildern
+  Tracks speichern jetzt data-URLs (1–5 MB möglich für hochauflösende Bilder).
+  Kein Quota-Handling implementiert. Info-level, kein akuter Block.
 
 ### Phase V (Verification-Sprint)
 
@@ -149,12 +160,13 @@ aus D3.5.5.
 
 ## Reihenfolge nächste Schritte
 
-1. 🔜 **D10** Track-Größen-Variabilität + Auto-Sprite-Skalierung (nächster konkreter Schritt)
-2. **D11** Racer Behavior (Soft Avoidance + Drafting)
-3. **D3.5.4** Trail-Tuning
-4. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-5. **D6**, **D7**, **D8**
-6. **Phase B** (B-1 bis B-5 verbleibend)
+1. 🔜 **B-Wave** (B-1, B-3, B-10..B-15) — kleine UX-Polish-PR
+2. **B-16 + B-17** als Priority-Fix (Camera-Director auf großen Tracks + Race-Speed-Perception)
+   → quasi vorgezogenes D7 (Camera-Director Polish)
+3. **D11** Racer Behavior (Soft Avoidance + Drafting)
+4. **D3.5.4** Trail-Tuning
+5. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+6. **D6**, **D8**
 7. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
 8. **Phase V** (Verification-Sprint)
 9. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
@@ -165,6 +177,6 @@ aus D3.5.5.
 
 - Phase 5: Server, Leaderboard, Socket.IO (Architektur geplant, kein Code)
 - Phase 7: Custom Sprite-Upload via Dev-Panel; dynamischer SpriteRacerType aus JSON
-- i18n (Englisch + Deutsch Basis)
+- i18n (Englisch + Deutsch Basis) — App-Sprache ist Englisch, Doku kann beides
 - Multi-Tenant-Isolation (pro-Organizer Track-Sets und Branding)
 - Mobile / Tablet Responsive-Tuning

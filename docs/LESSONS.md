@@ -196,6 +196,51 @@ Workflow: nach Push warten bis CI grün, dann `gh pr merge`. Bei `UNSTABLE`:
 
 ---
 
+## Lesson 13 — Pre-Sets können einen echten Bug verschleiern (D10)
+
+**Kontext:** Bei D10 (Track-Größen-Variabilität) wurden zunächst Pre-Set-Buttons
+(HD/FHD/QHD/4K) für `worldWidth` und `worldHeight` implementiert. Das funktionierte
+technisch, aber der User-Einwand "warum sollte ich überhaupt ein Format wählen?" deckte
+auf: tatsächliche Bild-Dimensionen (1168×784, 1536×1024) passten niemals zu Pre-Set-Werten
+— der Code arbeitete also mit fundamental falschen worldWidth/Height-Werten gegenüber den
+echten Bildern.
+
+Erst beim Bild-First-Workflow-Fix wurde sichtbar dass Dimensionen eine Eigenschaft des
+Bildes sind, nicht eine Setting des Tracks.
+
+**Erkenntnis:** Wenn UI vom User Werte verlangt die aus einem Asset abgeleitet werden
+könnten (Bild-Dimensionen, File-Größen, etc.), lieber automatisch ableiten statt
+User-Wahl. User hat sonst keine sinnvolle Wahl-Basis und wählt vermutlich falsch.
+
+**Konsequenz:** Bei UI-Designs die Werte erfragen die aus vorhandenen Assets ableitbar
+sind: automatisch ableiten. Pre-Sets die "ungefähr passen" verschleiern den eigentlichen
+Bug (falsche Werte) und geben dem User eine sinnlose Wahl.
+
+---
+
+## Lesson 14 — User-Bauchgefühl wertvoller als Spec-Antizipation (D10 Post-Test)
+
+**Kontext:** Strategischer Claude hatte in der D10-Spec Pre-Set-Buttons als pragmatische
+Lösung vorgesehen, ohne zu hinterfragen ob die Werte zu echten Bildern passen. Erst der
+User-Einwand "warum überhaupt ein Format auswählen" hat das Design-Problem aufgedeckt
+(→ Lesson 13).
+
+Ähnlich bei B-16/B-17: User-Test mit großem Track hat zwei kritische Probleme aufgedeckt
+(Camera bleibt still, Race-Speed wirkt zu schnell) die in der D10-Spec nicht antizipiert
+wurden. Track-Größen-Änderungen haben Auswirkungen auf Camera-Heuristiken und
+Speed-Empfindung die nur durch praktischen Test sichtbar werden.
+
+**Erkenntnis:** Bei UX-Designs immer aus User-Sicht hinterfragen, auch wenn die
+Implementation funktional korrekt ist. User-Browser-Tests sind eine eigene Verifikations-
+Schicht die systematische Tests nicht ersetzen können: sie decken Probleme auf die in
+Specs übersehen wurden, weil Specs logisch denken, User aber intuitiv reagieren.
+
+**Konsequenz:** Nach jeder größeren Phase User-Browser-Test einplanen, nicht nur
+automatisierte Tests als Verifikation zählen. Wenn User-Einwand "warum X?" kommt:
+zuerst fragen ob X überhaupt nötig ist statt X zu rechtfertigen.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
