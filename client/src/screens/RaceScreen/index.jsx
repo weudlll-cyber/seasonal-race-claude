@@ -33,6 +33,7 @@ import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import { loadAutoScaleConfig, computeAutoScaleFactor } from '../../modules/autoSpriteScale.js';
+import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import './RaceScreen.css';
 
@@ -145,6 +146,11 @@ export default function RaceScreen() {
     const trackEmoji = racerType.getEmoji() ?? null;
     const speedMultiplier = racerType.getSpeedMultiplier();
 
+    // Speed-scale (B-17): divide baseSpeed by path-length ratio so larger tracks
+    // feel visually similar in pace to the 1280px reference track.
+    const speedScaleConfig = loadSpeedScaleConfig();
+    const speedScaleFactor = computeSpeedScaleFactor(geometry.pathLengthPx, speedScaleConfig);
+
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
     let displaySizeScale = 1;
@@ -158,10 +164,11 @@ export default function RaceScreen() {
       }
     }
 
-    // Determine finish position in t-space
+    // Determine finish position in t-space (speed scale applied so open-track
+    // finish line matches the scaled pace)
     const duration = raceData.duration ?? 60;
     const finishT = isOpenTrack
-      ? openTrackFinishT(raceData.targetDuration ?? duration, speedMultiplier)
+      ? openTrackFinishT(raceData.targetDuration ?? duration, speedMultiplier / speedScaleFactor)
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 
@@ -172,7 +179,7 @@ export default function RaceScreen() {
       maxX: rawBbox.maxX * bsX,
       maxY: rawBbox.maxY * bsY,
     };
-    camDirRef.current = new CameraDirector(scaledBbox);
+    camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight);
     setFinishTState(finishT);
 
     // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
@@ -220,7 +227,8 @@ export default function RaceScreen() {
         trackOffset: racerOffsets[i],
         icon: trackEmoji ?? r.icon,
         baseSpeed:
-          (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier,
+          ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier) /
+          speedScaleFactor,
         jitterFreq: 0.0006 + Math.random() * 0.0014,
         jitterPhase: Math.random() * Math.PI * 2,
         color: LANE_COLORS[i % LANE_COLORS.length],

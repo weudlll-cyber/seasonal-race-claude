@@ -1,6 +1,16 @@
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 
+function computeSplineLengthPx(points) {
+  let len = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    len += Math.sqrt(dx * dx + dy * dy);
+  }
+  return len;
+}
+
 export function validateEditorState({
   mode,
   centerPoints,
@@ -72,6 +82,7 @@ export function buildTrackFromEditorState({
       effects: effectsArray,
       worldWidth,
       worldHeight,
+      pathLengthPx: computeSplineLengthPx(centerCurve),
     };
   }
 
@@ -86,6 +97,12 @@ export function buildTrackFromEditorState({
       `Boundary Mode requires at least ${minPts} outer points to save, got ${outerPoints.length}`
     );
   }
+  const innerCurve = catmullRomSpline(innerPoints, { closed, tension: 0.5, samples: SAMPLES });
+  const outerCurve = catmullRomSpline(outerPoints, { closed, tension: 0.5, samples: SAMPLES });
+  const midCurve = innerCurve.map((p, i) => ({
+    x: (p.x + outerCurve[i].x) / 2,
+    y: (p.y + outerCurve[i].y) / 2,
+  }));
   return {
     name,
     backgroundImage,
@@ -96,6 +113,7 @@ export function buildTrackFromEditorState({
     effects: effectsArray,
     worldWidth,
     worldHeight,
+    pathLengthPx: computeSplineLengthPx(midCurve),
   };
 }
 

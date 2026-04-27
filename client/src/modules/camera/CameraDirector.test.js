@@ -211,14 +211,16 @@ describe('CameraDirector — bbox clamping', () => {
     expect(bbox.maxX * cd.zoom + cd.offsetX).toBeLessThanOrEqual(1281);
   });
 
-  it('LEADER_ZOOM with racers near canvas center: existing behaviour preserved (no unwanted clamping)', () => {
-    const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
-    const cd = new CameraDirector(bbox);
+  it('LEADER_ZOOM with racers near canvas center: converges to adaptive offset with no clamping', () => {
+    const worldW = 1280;
+    const bbox = { minX: 0, minY: 0, maxX: worldW, maxY: 720 };
+    const cd = new CameraDirector(bbox, worldW, 720);
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, 1280, 720);
-    // targetOffsetX = 640 - 640*1.4 = -256, within [-512, 0] — no clamping
-    expect(cd.offsetX).toBeCloseTo(-256, 0);
+    // Adaptive leaderZoom = 1280/910 ≈ 1.407; targetOffsetX = 640 - 640*leaderZoom ≈ -260
+    const leaderZoom = worldW / 910;
+    expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
   it('default bbox (no arg) behaves identically to explicit full-canvas bbox', () => {
@@ -256,6 +258,60 @@ describe('CameraDirector — canvas-edge clamping (F6a)', () => {
     const cd = new CameraDirector();
     const clamped = cd._clampOffset(100, 0, 1280, 1280, 1.5);
     expect(clamped).toBe(0);
+  });
+});
+
+// ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
+
+describe('CameraDirector — adaptive zoom (B-16)', () => {
+  it('default 1280-wide world gives leaderZoom ≈ 1.4 (same as old hardcoded value)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._leaderZoom).toBeCloseTo(1280 / 910, 3);
+    // Verify it's ≈ the old hardcoded 1.4
+    expect(cd._leaderZoom).toBeGreaterThan(1.38);
+    expect(cd._leaderZoom).toBeLessThan(1.45);
+  });
+
+  it('4000-wide world gives leaderZoom ≈ 4.4 (scales with track size)', () => {
+    const cd = new CameraDirector(undefined, 4000, 720);
+    expect(cd._leaderZoom).toBeCloseTo(4000 / 910, 3);
+    expect(cd._leaderZoom).toBeGreaterThan(4);
+  });
+
+  it('clamps leaderZoom at MAX_ZOOM (6) for very large worlds', () => {
+    const cd = new CameraDirector(undefined, 100000, 720);
+    expect(cd._leaderZoom).toBe(6);
+  });
+
+  it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
+  });
+
+  it('comebackZoom < leaderZoom (comeback shows a wider view)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
+  });
+
+  it('all three zoom values scale proportionally with worldW', () => {
+    const cd1 = new CameraDirector(undefined, 1280, 720);
+    const cd2 = new CameraDirector(undefined, 2560, 720);
+    expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom * 2, 3);
+    expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom * 2, 3);
+    expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom * 2, 3);
+  });
+
+  it('LEADER_ZOOM state on large world converges to a higher zoom', () => {
+    const cdSmall = new CameraDirector(undefined, 1280, 720);
+    const cdLarge = new CameraDirector(undefined, 4000, 720);
+    const racers = [{ t: 1, x: 640, y: 360, finished: false }];
+    cdSmall.state = CAM_STATE.LEADER_ZOOM;
+    cdLarge.state = CAM_STATE.LEADER_ZOOM;
+    for (let i = 0; i < 200; i++) {
+      cdSmall.update(racers, 1000, 1280, 720);
+      cdLarge.update(racers, 1000, 1280, 720);
+    }
+    expect(cdLarge.zoom).toBeGreaterThan(cdSmall.zoom * 2);
   });
 });
 

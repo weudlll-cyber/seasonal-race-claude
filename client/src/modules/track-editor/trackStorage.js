@@ -3,6 +3,18 @@
 //   racearena:trackGeometries:index  — JSON array of geometry IDs
 //   racearena:trackGeometries:<id>   — full geometry JSON
 
+import { catmullRomSpline } from './catmullRom.js';
+
+function _computeSplineLengthPx(pts) {
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x;
+    const dy = pts[i].y - pts[i - 1].y;
+    len += Math.sqrt(dx * dx + dy * dy);
+  }
+  return len;
+}
+
 const GEOMETRIES_INDEX_KEY = 'racearena:trackGeometries:index';
 const trackGeometryKey = (id) => `racearena:trackGeometries:${id}`;
 
@@ -160,3 +172,51 @@ export function deleteTrack(id) {
   writeIndex(readIndex().filter((i) => i !== id));
   return true;
 }
+
+// Migration: add pathLengthPx to saved geometries that pre-date B-17.
+// Runs once at module load; skips geometries that already have the field.
+(function migratePathLength() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const ids = readIndex();
+    for (const id of ids) {
+      const raw = lsGet(trackGeometryKey(id));
+      if (!raw) continue;
+      const geo = JSON.parse(raw);
+      if (typeof geo.pathLengthPx === 'number') continue;
+
+      const closed = geo.closed ?? false;
+      const samples = 200;
+      let pathLengthPx;
+      try {
+        if (
+          geo.sourceMode === 'center' &&
+          Array.isArray(geo.centerPoints) &&
+          geo.centerPoints.length >= (closed ? 3 : 2)
+        ) {
+          const curve = catmullRomSpline(geo.centerPoints, { closed, tension: 0.5, samples });
+          pathLengthPx = _computeSplineLengthPx(curve);
+        } else if (Array.isArray(geo.innerPoints) && Array.isArray(geo.outerPoints)) {
+          const minPts = closed ? 3 : 2;
+          if (geo.innerPoints.length >= minPts && geo.outerPoints.length >= minPts) {
+            const inner = catmullRomSpline(geo.innerPoints, { closed, tension: 0.5, samples });
+            const outer = catmullRomSpline(geo.outerPoints, { closed, tension: 0.5, samples });
+            const mid = inner.map((p, i) => ({
+              x: (p.x + outer[i].x) / 2,
+              y: (p.y + outer[i].y) / 2,
+            }));
+            pathLengthPx = _computeSplineLengthPx(mid);
+          }
+        }
+      } catch {
+        // Skip geometries that can't be parsed (corrupted data)
+      }
+
+      if (typeof pathLengthPx === 'number' && pathLengthPx > 0) {
+        lsSet(trackGeometryKey(id), JSON.stringify({ ...geo, pathLengthPx }));
+      }
+    }
+  } catch {
+    // Never let migration crash the app
+  }
+})();

@@ -111,3 +111,10 @@ export const DEFAULT_RACE_DEFAULTS = {
 export const DEFAULT_PLAYER_GROUPS = [];
 export const DEFAULT_BRANDING = [];
 export const DEFAULT_RACE_HISTORY = [];
+
+export const DEFAULT_SPEED_SCALE_CONFIG = {
+  enabled: true,
+  referencePathLength: 2000,
+  minScale: 0.5,
+  maxScale: 4.0,
+};
