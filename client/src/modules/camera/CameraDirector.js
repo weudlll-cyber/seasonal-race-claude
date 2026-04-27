@@ -17,7 +17,9 @@ export const CAM_STATE = {
 
 const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
-const MAX_ZOOM = 6;
+const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
+const MAX_ZOOM = 2.5; // ceiling for very small tracks
+const CANVAS_W = 1280; // reference canvas width used in the adaptive-zoom formula
 
 // How many world-pixels each camera state keeps in view horizontally.
 // On the 1280px reference world these give zoom ≈ 1.4 / 1.6 / 1.3.
@@ -34,11 +36,22 @@ export class CameraDirector {
    */
   constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }, worldW = 1280, _worldH = 720) {
     this._bbox = bbox;
-    // Adaptive zoom: larger worlds get proportionally higher zoom so the same
-    // number of world-pixels stays in view regardless of track size.
-    this._leaderZoom = Math.min(MAX_ZOOM, worldW / LEADER_VIEW_W);
-    this._battleZoom = Math.min(MAX_ZOOM, worldW / BATTLE_VIEW_W);
-    this._comebackZoom = Math.min(MAX_ZOOM, worldW / COMEBACK_VIEW_W);
+    // Adaptive zoom: keeps a constant ~71 % of the world visible regardless of
+    // track size.  Formula: (CANVAS_W / VIEW_W) * (CANVAS_W / worldW).
+    // At worldW = CANVAS_W this reduces to CANVAS_W / VIEW_W (≈ 1.41 / 1.60 / 1.30).
+    // For larger worlds the second factor < 1, producing zoom-out.
+    this._leaderZoom = Math.max(
+      MIN_ZOOM,
+      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * worldW))
+    );
+    this._battleZoom = Math.max(
+      MIN_ZOOM,
+      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (BATTLE_VIEW_W * worldW))
+    );
+    this._comebackZoom = Math.max(
+      MIN_ZOOM,
+      Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (COMEBACK_VIEW_W * worldW))
+    );
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = 1;
@@ -147,31 +160,18 @@ export class CameraDirector {
     );
   }
 
-  // Clamps a camera offset so the viewport never exposes the canvas edge (black strips),
-  // and, when the track bbox fits on-screen at the current zoom, further restricts so the
-  // track stays visible.
+  // Clamps a camera offset so no black strips appear and, when the track bbox fits
+  // in the viewport, the entire track stays visible.
   //
-  // Canvas-edge (hard outer limit):
-  //   offsetX >= canvasSize * (1 - zoom)  →  world right edge covers screen right
-  //   offsetX <= 0                        →  world left edge covers screen left
+  //   a = -bboxMin * zoom          → offset where world-left aligns to canvas-left
+  //   b = canvasSize - bboxMax*zoom → offset where world-right aligns to canvas-right
   //
-  // Bbox (inner tightening, only when track fits at this zoom):
-  //   lo = -bboxMin * zoom  (left edge ≥ 0)
-  //   hi = canvasSize - bboxMax * zoom  (right edge ≤ canvasSize)
+  // When b ≤ a (world wider than viewport): pan freely within [b, a] — no black strips.
+  // When b > a (track fits in viewport):    keep track fully visible within [a, b].
+  // Both cases reduce to clamp(val, min(a,b), max(a,b)).
   _clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
-    // Hard canvas-edge constraint
-    let lo = canvasSize * (1 - zoom);
-    let hi = 0;
-
-    // Optional bbox tightening (only when track fits in the viewport)
-    const bboxLo = -bboxMin * zoom;
-    const bboxHi = canvasSize - bboxMax * zoom;
-    if (bboxLo <= bboxHi) {
-      lo = Math.max(lo, bboxLo);
-      hi = Math.min(hi, bboxHi);
-    }
-
-    if (lo > hi) return 0; // should not happen for zoom ≥ 1; safe fallback
-    return Math.max(lo, Math.min(hi, val));
+    const a = 0 - bboxMin * zoom; // 0 - avoids -0 when bboxMin is 0
+    const b = canvasSize - bboxMax * zoom;
+    return Math.max(Math.min(a, b), Math.min(Math.max(a, b), val));
   }
 }

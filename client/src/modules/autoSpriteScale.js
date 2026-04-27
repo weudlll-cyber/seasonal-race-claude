@@ -12,7 +12,7 @@
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
 
 export const DEFAULT_AUTO_SCALE_CONFIG = {
-  enabled: false,
+  enabled: true,
   referenceValue: 23,
   minScale: 0.4,
   maxScale: 2.5,

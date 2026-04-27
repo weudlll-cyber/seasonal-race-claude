@@ -23,7 +23,7 @@ beforeEach(() => {
 describe('DEFAULT_AUTO_SCALE_CONFIG', () => {
   it('has expected defaults', () => {
     expect(DEFAULT_AUTO_SCALE_CONFIG).toEqual({
-      enabled: false,
+      enabled: true,
       referenceValue: 23,
       minScale: 0.4,
       maxScale: 2.5,
@@ -111,7 +111,7 @@ describe('loadAutoScaleConfig', () => {
   it('does not mutate DEFAULT_AUTO_SCALE_CONFIG', () => {
     storageGet.mockReturnValue({ enabled: true });
     loadAutoScaleConfig();
-    expect(DEFAULT_AUTO_SCALE_CONFIG.enabled).toBe(false);
+    expect(DEFAULT_AUTO_SCALE_CONFIG.enabled).toBe(true);
   });
 });
 
