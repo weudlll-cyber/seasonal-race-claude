@@ -38,8 +38,7 @@ const FIELD_META = {
     min: 16,
     max: 80,
     step: 2,
-    tooltip:
-      'Rendered sprite size in pixels. Affects visual scale only, not gameplay speed. Default range is 35–50 px.',
+    tooltip: 'Sprite size in pixels. Default range 35–50 px.',
   },
   basePeriodMs: {
     label: 'Anim Period (ms)',
@@ -227,7 +226,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
               >
                 <div className={s.labelRow}>
                   <span className={s.fieldLabel}>{meta.label}</span>
-                  <InfoTooltip text={meta.tooltip} alignRight />
+                  <InfoTooltip text={meta.tooltip} />
                   {modified && <span className={s.modifiedBadge}>modified</span>}
                 </div>
 

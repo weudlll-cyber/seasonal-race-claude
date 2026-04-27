@@ -100,6 +100,7 @@ export const DEFAULT_TRACKS = [
 export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
   winners: 3,
+  maxPlayers: 20,
   countdownDuration: 3,
   autoAdvance: false,
   autoAdvanceDelay: 5,

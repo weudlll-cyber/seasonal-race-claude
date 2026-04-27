@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Configure global race defaults — duration, winners, countdown,
-//              auto-advance, sound effects, and language
+//              auto-advance, and sound effects
 // ============================================================
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
@@ -14,10 +14,6 @@ import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
 const COUNTDOWNS = [3, 5, 10];
-const LANGUAGES = [
-  { value: 'en', label: 'English' },
-  { value: 'de', label: 'Deutsch' },
-];
 
 function RaceDefaults() {
   const [defaults, setDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
@@ -59,8 +55,30 @@ function RaceDefaults() {
             <span className={s.stepperValue}>{defaults.winners}</span>
             <button
               className={s.stepperBtn}
-              disabled={defaults.winners >= 5}
+              disabled={defaults.winners >= 20}
               onClick={() => set({ winners: defaults.winners + 1 })}
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        {/* Max Players */}
+        <div className={s.formGroup}>
+          <label className={s.label}>Max Players per Race</label>
+          <div className={s.stepper}>
+            <button
+              className={s.stepperBtn}
+              disabled={defaults.maxPlayers <= 1}
+              onClick={() => set({ maxPlayers: defaults.maxPlayers - 1 })}
+            >
+              −
+            </button>
+            <span className={s.stepperValue}>{defaults.maxPlayers ?? 20}</span>
+            <button
+              className={s.stepperBtn}
+              disabled={(defaults.maxPlayers ?? 20) >= 30}
+              onClick={() => set({ maxPlayers: (defaults.maxPlayers ?? 20) + 1 })}
             >
               +
             </button>
@@ -139,25 +157,6 @@ function RaceDefaults() {
             </label>
             <span style={{ fontSize: '0.875rem' }}>Sound effects</span>
           </div>
-        </div>
-
-        {/* Language */}
-        <div className={s.formGroup}>
-          <label className={s.label}>Language</label>
-          <div className={s.optionPills}>
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.value}
-                className={`${s.optionPill} ${defaults.language === lang.value ? s.optionPillActive : ''}`}
-                onClick={() => set({ language: lang.value })}
-              >
-                {lang.label}
-              </button>
-            ))}
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '0.25rem' }}>
-            Note: full translations are applied in a later phase.
-          </span>
         </div>
       </div>
     </div>

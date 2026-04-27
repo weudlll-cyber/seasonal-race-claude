@@ -145,7 +145,7 @@ test.describe('D10-T1 — sessionStorage worldHeight + trackWidth', () => {
 test.describe('D10-T2 — TrackEditor image-upload controls', () => {
   test('background upload button and Fit button are visible in TrackEditor', async ({ page }) => {
     await page.goto('/track-editor');
-    await expect(page.locator('button').filter({ hasText: /Kein Bild|Bild hochgeladen|🖼/ })).toBeVisible();
+    await expect(page.locator('button').filter({ hasText: /No image|Image uploaded|🖼/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Fit/ })).toBeVisible();
   });
 
@@ -156,7 +156,7 @@ test.describe('D10-T2 — TrackEditor image-upload controls', () => {
 
   test('upload button shows required hint when no image uploaded', async ({ page }) => {
     await page.goto('/track-editor');
-    await expect(page.getByRole('button', { name: /Kein Bild/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /No image/ })).toBeVisible();
   });
 
   test('dimension display updates after image upload', async ({ page }) => {
@@ -167,7 +167,7 @@ test.describe('D10-T2 — TrackEditor image-upload controls', () => {
       mimeType: 'image/png',
       buffer: png,
     });
-    await expect(page.getByText(/800.*600|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/800.*600|Track Size/)).toBeVisible();
   });
 });
 
@@ -246,7 +246,7 @@ test.describe('D10-T6 — TrackEditor saves worldWidth/worldHeight from uploaded
     });
 
     // Wait for dimension display to update
-    await expect(page.getByText(/2000.*1400|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/2000.*1400|Track Size/)).toBeVisible();
 
     await page.getByRole('button', { name: 'Closed Loop' }).click();
     const canvas = page.locator('canvas');
@@ -286,7 +286,7 @@ test.describe('D10-T7 — Upload validation', () => {
       buffer: png,
     });
 
-    await expect(page.getByText(/Bild zu groß|Maximum.*8000/)).toBeVisible();
+    await expect(page.getByText(/Image too large|Maximum.*8000/)).toBeVisible();
   });
 
   test('valid large image (4000×720) is accepted and derives correct dimensions', async ({
@@ -301,8 +301,8 @@ test.describe('D10-T7 — Upload validation', () => {
       buffer: png,
     });
 
-    await expect(page.getByText(/4000.*720|Track-Größe/)).toBeVisible();
-    await expect(page.locator('button').filter({ hasText: /Bild hochgeladen|🖼/ })).toBeVisible();
+    await expect(page.getByText(/4000.*720|Track Size/)).toBeVisible();
+    await expect(page.locator('button').filter({ hasText: /Image uploaded|🖼/ })).toBeVisible();
   });
 });
 
@@ -358,7 +358,7 @@ test.describe('D10-T9 — Image swap dimension handling', () => {
     });
 
     // After accepting, dimensions update and page shows the new size
-    await expect(page.getByText(/1200.*800|Track-Größe/)).toBeVisible();
+    await expect(page.getByText(/1200.*800|Track Size/)).toBeVisible();
   });
 
   test('swapping to same-dimension image swaps silently without dialog', async ({ page }) => {

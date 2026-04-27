@@ -7,19 +7,24 @@
 //              Phase T will retrofit existing Dev-Screen fields to use this.
 // ============================================================
 
+import { useRef, useState } from 'react';
 import s from './InfoTooltip.module.css';
 
-/**
- * Renders a small ⓘ icon. On hover (desktop) or focus (keyboard), a tooltip
- * with the provided text appears above the icon.
- *
- * @param {object} props
- * @param {string} props.text  - Tooltip content
- * @param {boolean} [props.alignRight] - Pin tooltip to right edge (avoids viewport clip)
- */
-export function InfoTooltip({ text, alignRight = false }) {
+const TIP_WIDTH = 220;
+
+export function InfoTooltip({ text }) {
+  const wrapperRef = useRef(null);
+  const [alignRight, setAlignRight] = useState(false);
+
+  function handleShow() {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setAlignRight(rect.left + TIP_WIDTH / 2 > window.innerWidth - 16);
+    }
+  }
+
   return (
-    <span className={s.wrapper}>
+    <span className={s.wrapper} ref={wrapperRef} onMouseEnter={handleShow} onFocus={handleShow}>
       <span className={s.icon} tabIndex={0} role="img" aria-label={text}>
         i
       </span>
