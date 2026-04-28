@@ -75,6 +75,41 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ### Phase B (Wiring-Lücken + UX-Verbesserungen)
 
+- **B-UX1** — Name-Tag-Readability bei dichten Pulks (aus D7b-Browser-Test)
+  - Lane-frei erlaubt beliebige Y-Cluster → schwarze Namens-Tags überlappen in dichten Pulks,
+    einzelne Namen nicht mehr lesbar
+  - Lösungs-Ideen (Spec steht noch aus):
+    - Tags bei LEADER_ZOOM / BATTLE_ZOOM ausblenden oder reduzieren
+    - Nur Top-N sichtbare Spieler bekommen Tags (Rest kein Tag)
+    - Anti-Overlap-Algorithmus: überlappende Tags vertikal stapeln
+    - Tags in OVERVIEW-State kleiner, in Zoom-States größer
+    - Hover/Click auf Spieler zeigt Namen prominent
+  - Priorität: mittel. Race-Lesbarkeit leidet, aber kein Blocker für D7c.
+    Empfehlung: nach D7c oder D7d angehen.
+
+- **B-UX2** — Dev-Screen Cleanup + Hilfe-Screen
+  - Dev-Screen ist über D9/D10/D11/D7a/D7b auf 30+ tunable Werte gewachsen.
+    User-Befund: „die einzelnen Werte sind schwer einzuordnen, mit Tooltips alleine wenig Mehrwert"
+  - Geplant (Spec steht noch aus):
+    - Strukturelle Neuordnung: Race-Behavior-Slider zusammen, Visual-Slider zusammen, etc.
+    - Hilfe-Modal pro Sektion mit ausführlicheren Erklärungen (mehr als InfoTooltip)
+    - Optional: Beginner / Advanced-Trennung (Power-User sehen alles, Standard nur Key-Values)
+    - Optional: Visuelle Vorschau-Komponenten in Sektionen wo sinnvoll (analog D7a-Plus)
+  - Priorität: mittel-hoch. Soll vor D8 (voller Racer-Config-Editor) angegangen werden,
+    damit D8 nicht in eine ungeordnete Dev-Screen-Umgebung gebaut wird.
+
+- **B-UX3** — Detaillierte Variablen-Dokumentation
+  - User-Befund: „ich brauche eine Erklärung die mehr aussagt als der Tooltip — was bewirken
+    all die Variablen im Dev-Screen wirklich"
+  - Geplant (Spec steht noch aus):
+    - Pro Sektion ein eigenes Doc-File oder zentrales DEVSCREEN_REFERENCE.md unter docs/
+    - Pro Parameter: Name, Typ, Default, Range, Wirkung in einfachen Worten,
+      Beispiel-Werte für verschiedene Use-Cases (kleines Race vs. großes Race, etc.)
+    - Diagramme/Bilder wo sinnvoll (z.B. comfortThreshold visuell)
+    - Cross-References zu ARCHITECTURE.md-Pipeline-Sektionen
+  - Priorität: zusammen mit B-UX2 — Hilfe-Screen kann die Doku referenzieren oder einbinden.
+    Kann auch als reiner Doku-Sprint vor B-UX2 entstehen, dann nutzt B-UX2 die Inhalte.
+
 - **B-1** — PlayerSetup: Laden gespeicherter Gruppen-Listen (Ladebutton vorhanden, Verhalten unklar)
 - **B-2** — TrackSelector: Custom-Track-Verhalten bei fehlender Geometry
 - **B-3** — Result-Screen Winner-Count konfigurierbar (aktuell hardcoded 3)
