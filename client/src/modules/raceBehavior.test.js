@@ -7,7 +7,7 @@
 //              avoidance, home force, drafting cone, speed brake).
 // ============================================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
