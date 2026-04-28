@@ -69,6 +69,14 @@ confirmation (observed in a running browser). Claims about UI elements "renderin
 confirm render output" rather than "Section renders in the modal". The user's browser test
 remains the final visual check.
 
+A separate visual smoke test in a real browser by Claude Code is not required
+by default. The user performs the visual check, which is typically faster than
+spinning up Playwright. Unit and component tests remain mandatory for UI-affecting
+changes; Playwright e2e tests remain required when selectors or user flows change
+(regression protection). Claude Code may run a visual check voluntarily when an
+issue is hard to assess from code alone, or when the user explicitly requests it
+in the prompt (e.g. "please verify visually before reporting").
+
 ### UX-Verifikations-Convention (Erweiterung der CC-Smoke-Test-Convention)
 
 Bei UI-schweren Phasen kann zusätzlich zur normalen Smoke-Test-Spec eine separate
@@ -104,3 +112,15 @@ Strategic Claude describes What + Why (requirements, API signatures, storage sch
 decisions, test expectations). Implementation (the How) is left to Claude Code. Code examples
 in specs only when interfaces or APIs are being defined, not as implementation prescriptions
 for internal function logic.
+
+### Inline Doc-Maintenance Convention
+
+Documentation updates ship in the same PR as the code that changes them — not in
+separate doc-sprint PRs. Before creating a PR, Claude Code reviews BACKLOG, ROADMAP,
+ARCHITECTURE, RACER_DATA_MODEL, TRACK_EDITOR, PROJECT-PRINCIPLES, and LESSONS for
+relevance and updates whatever applies. The PR body includes a "Doc-Updates" section
+listing touched files and one-line change summaries. Pure bugfixes without conceptual
+change may explicitly skip doc updates by stating "Doc-Updates: none — bugfix only".
+LESSONS.md is updated only when there is a genuine pattern to capture, not as a forced
+ritual. Strategic Claude's chat report after each PR includes the same Doc-Updates
+section so the next session has visibility without diffing files.
