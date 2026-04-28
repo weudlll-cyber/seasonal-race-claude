@@ -374,6 +374,31 @@ Entscheidung produzierte saubere Architektur. 4 Skalierungs-Faktoren → 1 Pipel
 
 ---
 
+## Lesson 20 — N-Force-Accumulation braucht N-Scaling by Design, nicht nach Browser-Test (D7b B3)
+
+**Kontext:** Die D7b-Avoidance akkumulierte Lateral-Forces linear über alle `neighborCount`
+Nachbarn — ein Racer mit N=10 Nachbarn erhielt 10× die Per-Pair-Force. Das war als
+"Force-Stacking bei 20+ Racers" im D11-Backlog bekannt und explizit deferred.
+
+Browser-Test nach D7b B1+B2 zeigte sofort: alle 20 Racer clusterten an den Boundaries in
+zwei Gruppen. Home-Force (~0.04/Frame) wurde von akkumulierter Avoidance (~0.4/Frame von 10
+Paaren) overwhelmt. Diagnose war korrekt — aber die Behebung kostete einen zusätzlichen
+Commit-Sprint obwohl das Problem beim D11-Befund vorhersehbar war.
+
+**Erkenntnis:** Jedes Force-System wo ein Entity Beiträge von N Nachbarn sammelt muss
+N-Scaling from the start berücksichtigen. `sqrt(N)` als Normalisierung ist 4 Zeilen Code
+— aber sie müssen bei System-Design stehen, nicht nach dem ersten Scale-Test.
+
+Backlog-Eintrag "defer pending browser-test" für bekannte Force-Balance-Issues ist eine
+Hochrisiko-Entscheidung: bei 2-Racer-Tests ist das Problem unsichtbar, bei N=20 sofort
+sichtbar. Das ist das Muster.
+
+**Konsequenz:** Bei Force/Physics-Systemen: explizit fragen "was passiert bei N=20 Entities
+die alle auf dasselbe Ziel einwirken?" bevor Feature shipped. N-Scaling (÷sqrt(N) oder
+÷N) als Default-Kandidat, nicht als spätere Optimierung.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

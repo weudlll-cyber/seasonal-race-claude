@@ -2,8 +2,9 @@
 // File:        d11-ux-verification.spec.js
 // Path:        client/e2e/d11-ux-verification.spec.js
 // Project:     RaceArena
-// Created:     2026-04-27
-// Description: UX verification spec for D11 — Race Behavior.
+// Created:     2026-04-26
+// Description: UX verification spec for D7b — Lane-free Race Behavior.
+//              Updated from D11 (lane-based) to D7b (physicalY-based) params.
 //              Kept permanently as regression coverage.
 //              V1-V10: config persistence, validation, toggle, race integration.
 // ============================================================
@@ -47,14 +48,20 @@ async function seedGeometry(page) {
 
 const DEFAULT_CFG = {
   enabled: true,
-  avoidanceDistance: 120,
-  avoidanceLateralForce: 0.012,
-  avoidanceMaxLateral: 0.35,
-  avoidanceSpeedBrake: 0.95,
-  avoidanceReturnSpeed: 0.05,
-  draftingDistanceT: 0.02,
-  draftingLaneThreshold: 0.15,
-  draftingBoostFactor: 1.1,
+  homeForceStrength: 0.018,
+  comfortThreshold: 0.70,
+  softRepulsionStrength: 0.06,
+  avoidanceDistance: 0.35,
+  tWeight: 2.0,
+  yWeight: 1.0,
+  lateralForce: 0.015,
+  maxLateral: 0.95,
+  speedBrakeYThreshold: 0.20,
+  speedBrakeTThreshold: 0.015,
+  speedBrakeFactor: 0.95,
+  draftingMaxDistance: 110,
+  draftingConeAngle: 30,
+  draftingBoost: 1.1,
 };
 
 async function openBehaviorSection(page) {
@@ -64,17 +71,17 @@ async function openBehaviorSection(page) {
 }
 
 // ── V1: Default values match spec ──────────────────────────────────────────
-test('V1 — default avoidanceDistance is 120', async ({ page }) => {
+test('V1 — default homeForceStrength is 0.018', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
+  await expect(page.getByLabel('Home Force Strength')).toHaveValue('0.018');
 });
 
-test('V1 — default avoidanceLateralForce is 0.012', async ({ page }) => {
+test('V1 — default avoidanceDistance is 0.35', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Lateral Force (per frame)')).toHaveValue('0.012');
+  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.35');
 });
 
-test('V1 — default draftingBoostFactor is 1.1', async ({ page }) => {
+test('V1 — default draftingBoost is 1.1', async ({ page }) => {
   await openBehaviorSection(page);
   await expect(page.getByLabel('Boost Factor')).toHaveValue('1.1');
 });
@@ -87,22 +94,22 @@ test('V1 — default enabled is true', async ({ page }) => {
 // ── V2: Config persists across page reload ─────────────────────────────────
 test('V2 — changed avoidanceDistance persists across reload', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance (px)').fill('150');
+  await page.getByLabel('Avoidance Distance').fill('0.5');
 
   await page.reload();
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('150');
+  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.5');
 });
 
 // ── V3: Reset Defaults restores all values ─────────────────────────────────
-test('V3 — Reset Defaults restores avoidanceDistance to 120', async ({ page }) => {
+test('V3 — Reset Defaults restores avoidanceDistance to 0.35', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance (px)').fill('200');
+  await page.getByLabel('Avoidance Distance').fill('0.8');
   await page.getByRole('button', { name: /reset defaults/i }).click();
-  await expect(page.getByLabel('Avoidance Distance (px)')).toHaveValue('120');
+  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.35');
 });
 
-test('V3 — Reset Defaults restores draftingBoostFactor to 1.1', async ({ page }) => {
+test('V3 — Reset Defaults restores draftingBoost to 1.1', async ({ page }) => {
   await openBehaviorSection(page);
   await page.getByLabel('Boost Factor').fill('1.5');
   await page.getByRole('button', { name: /reset defaults/i }).click();
@@ -128,14 +135,14 @@ test('V4 — unchecking Enabled persists across reload', async ({ page }) => {
 // ── V5: Live apply — config stored immediately ─────────────────────────────
 test('V5 — config change is stored in localStorage immediately', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance (px)').fill('100');
+  await page.getByLabel('Avoidance Distance').fill('0.6');
 
   const stored = await page.evaluate(() => {
     const raw = localStorage.getItem('racearena:raceBehaviorConfig');
     return raw ? JSON.parse(raw) : null;
   });
   expect(stored).not.toBeNull();
-  expect(stored.avoidanceDistance).toBe(100);
+  expect(stored.avoidanceDistance).toBeCloseTo(0.6, 5);
 });
 
 // ── V6: Custom config loaded by race engine ────────────────────────────────
@@ -144,7 +151,7 @@ test('V6 — race engine reads custom behavior config from localStorage', async 
 
   await page.addInitScript((cfg) => {
     localStorage.setItem('racearena:raceBehaviorConfig', JSON.stringify(cfg));
-  }, { ...DEFAULT_CFG, avoidanceDistance: 200 });
+  }, { ...DEFAULT_CFG, avoidanceDistance: 0.6 });
 
   const errors = [];
   page.on('console', (msg) => {
@@ -211,29 +218,28 @@ test('V8 — race with 5 racers and behavior enabled produces no errors', async 
 });
 
 // ── V9: All tunable fields are editable ───────────────────────────────────
-test('V9 — avoidanceSpeedBrake can be changed', async ({ page }) => {
+test('V9 — homeForceStrength can be changed', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Speed Brake').fill('0.9');
-  await expect(page.getByLabel('Speed Brake')).toHaveValue('0.9');
+  await page.getByLabel('Home Force Strength').fill('0.03');
+  await expect(page.getByLabel('Home Force Strength')).toHaveValue('0.03');
 });
 
-test('V9 — draftingDistanceT can be changed', async ({ page }) => {
+test('V9 — speedBrakeFactor can be changed', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Drafting Distance (t)').fill('0.03');
-  await expect(page.getByLabel('Drafting Distance (t)')).toHaveValue('0.03');
+  await page.getByLabel('Speed Brake Factor').fill('0.9');
+  await expect(page.getByLabel('Speed Brake Factor')).toHaveValue('0.9');
 });
 
-test('V9 — avoidanceReturnSpeed can be changed', async ({ page }) => {
+test('V9 — draftingConeAngle can be changed', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Return Speed').fill('0.08');
-  await expect(page.getByLabel('Return Speed')).toHaveValue('0.08');
+  await page.getByLabel('Drafting Cone Angle').fill('45');
+  await expect(page.getByLabel('Drafting Cone Angle')).toHaveValue('45');
 });
 
 // ── V10: Drafting summary text reflects current values ────────────────────
 test('V10 — drafting summary reflects boost factor change', async ({ page }) => {
   await openBehaviorSection(page);
   await page.getByLabel('Boost Factor').fill('1.2');
-  // Summary shows +20% when boostFactor = 1.2
   const summary = page.locator('[data-testid="drafting-summary"]');
   await expect(summary).toContainText('20%');
 });

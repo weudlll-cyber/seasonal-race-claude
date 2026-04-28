@@ -2,8 +2,8 @@
 // File:        raceBehaviorConfig.js
 // Path:        client/src/modules/raceBehaviorConfig.js
 // Project:     RaceArena
-// Created:     2026-04-27
-// Description: Storage CRUD for race-behavior tuning config (D11).
+// Created:     2026-04-26
+// Description: Storage CRUD for race-behavior tuning config (D7b).
 //              Follows the baseSpeedConfig.js pattern.
 // ============================================================
 
@@ -17,16 +17,25 @@ export function loadRaceBehaviorConfig() {
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   const merged = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...stored };
   if (
+    merged.startSpreadRange <= 0 ||
+    merged.startSpreadRange > 1 ||
+    merged.homeForceStrength <= 0 ||
+    merged.comfortThreshold <= 0 ||
+    merged.comfortThreshold >= 1 ||
+    merged.softRepulsionStrength <= 0 ||
     merged.avoidanceDistance <= 0 ||
-    merged.avoidanceLateralForce <= 0 ||
-    merged.avoidanceMaxLateral <= 0 ||
-    merged.avoidanceSpeedBrake <= 0 ||
-    merged.avoidanceSpeedBrake > 1 ||
-    merged.avoidanceReturnSpeed <= 0 ||
-    merged.avoidanceReturnSpeed >= 1 ||
-    merged.draftingDistanceT <= 0 ||
-    merged.draftingLaneThreshold <= 0 ||
-    merged.draftingBoostFactor < 1
+    merged.tWeight <= 0 ||
+    merged.yWeight <= 0 ||
+    merged.lateralForce <= 0 ||
+    merged.maxLateral <= 0 ||
+    merged.speedBrakeYThreshold <= 0 ||
+    merged.speedBrakeTThreshold <= 0 ||
+    merged.speedBrakeFactor <= 0 ||
+    merged.speedBrakeFactor > 1 ||
+    merged.draftingMaxDistance <= 0 ||
+    merged.draftingConeAngle <= 0 ||
+    merged.draftingConeAngle >= 180 ||
+    merged.draftingBoost < 1
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }
