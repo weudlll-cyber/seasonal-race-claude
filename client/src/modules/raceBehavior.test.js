@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
+import { initRacerBehavior, applyRacerBehavior, computeStartPhysicalY } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
 function makeRacer(overrides = {}) {
@@ -43,6 +43,43 @@ describe('initRacerBehavior', () => {
   it('sets draftingBoostActive to false', () => {
     const r = makeRacer();
     expect(r.draftingBoostActive).toBe(false);
+  });
+});
+
+// ── computeStartPhysicalY (B1 — start-spread) ─────────────────────────────
+
+describe('computeStartPhysicalY', () => {
+  it('returns 0 for a single racer (n=1)', () => {
+    expect(computeStartPhysicalY(0, 1, 0.7)).toBe(0);
+  });
+
+  it('places two racers symmetrically at ±spreadRange', () => {
+    expect(computeStartPhysicalY(0, 2, 0.7)).toBeCloseTo(-0.7, 5);
+    expect(computeStartPhysicalY(1, 2, 0.7)).toBeCloseTo(0.7, 5);
+  });
+
+  it('places n=20 racers evenly across [-spreadRange, +spreadRange]', () => {
+    const n = 20;
+    const range = 0.7;
+    const ys = Array.from({ length: n }, (_, i) => computeStartPhysicalY(i, n, range));
+    expect(ys[0]).toBeCloseTo(-range, 5);
+    expect(ys[n - 1]).toBeCloseTo(range, 5);
+    // spacing must be uniform
+    const step = ys[1] - ys[0];
+    for (let i = 1; i < n; i++) {
+      expect(ys[i] - ys[i - 1]).toBeCloseTo(step, 5);
+    }
+    // all values within [-range, +range]
+    for (const y of ys) {
+      expect(y).toBeGreaterThanOrEqual(-range - 1e-9);
+      expect(y).toBeLessThanOrEqual(range + 1e-9);
+    }
+  });
+
+  it('respects different spreadRange values', () => {
+    expect(computeStartPhysicalY(0, 3, 0.5)).toBeCloseTo(-0.5, 5);
+    expect(computeStartPhysicalY(1, 3, 0.5)).toBeCloseTo(0.0, 5);
+    expect(computeStartPhysicalY(2, 3, 0.5)).toBeCloseTo(0.5, 5);
   });
 });
 
@@ -169,18 +206,29 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r2.avoidanceActive).toBe(false);
   });
 
-  it('asymmetric: trailer yields, leader physicalY unchanged', () => {
-    // r1 (lower t) is trailer; r2 (higher t) is leader
+  it('no lateral force when both racers share the same physicalY (yDiff≈0, B2)', () => {
     const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
     const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
     r1.physicalY = 0;
     r2.physicalY = 0;
+    applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
+    // Neither racer should be pushed (no meaningful yDiff direction)
+    expect(r1.physicalY).toBe(0);
+    expect(r2.physicalY).toBe(0);
+  });
+
+  it('asymmetric: trailer yields, leader physicalY unchanged', () => {
+    // r1 (lower t) is trailer; r2 (higher t) is leader — start at different Y
+    const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
+    const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
+    r1.physicalY = -0.1; // trailer slightly below leader
+    r2.physicalY = 0.1;
     const before2 = r2.physicalY;
     applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
     // Leader (r2) should not change (no avoidance force applied to leader)
     expect(r2.physicalY).toBeCloseTo(before2, 5);
-    // Trailer (r1) should be pushed in some direction
-    expect(r1.physicalY).not.toBe(0);
+    // Trailer (r1) should be pushed further negative (away from leader's Y)
+    expect(r1.physicalY).toBeLessThan(-0.1);
   });
 
   it('trailer is pushed away from leader physicalY', () => {
@@ -197,16 +245,18 @@ describe('applyRacerBehavior — avoidance', () => {
     const close1 = makeRacer({ index: 0, t: 0.4, x: 0, y: 0 });
     const close2 = makeRacer({ index: 1, t: 0.41, x: 0, y: 0 });
     const far1 = makeRacer({ index: 0, t: 0.4, x: 0, y: 0 });
-    const far2 = makeRacer({ index: 1, t: 0.48, x: 0, y: 0 }); // larger deltaT
-    [close1, close2, far1, far2].forEach((r) => {
-      r.physicalY = 0;
-    });
+    const far2 = makeRacer({ index: 1, t: 0.48, x: 0, y: 0 }); // larger deltaT = more distant
+    // Give each pair different physicalY so yDiff ≠ 0 (avoidance needs a direction)
+    close1.physicalY = -0.05;
+    close2.physicalY = 0.05;
+    far1.physicalY = -0.05;
+    far2.physicalY = 0.05;
 
     applyRacerBehavior([close1, close2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
     applyRacerBehavior([far1, far2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
 
-    // Both trailers are pushed; the closer pair should push more
-    expect(Math.abs(close1.physicalY)).toBeGreaterThanOrEqual(Math.abs(far1.physicalY));
+    // Trailers are pushed; the closer pair should push more
+    expect(Math.abs(close1.physicalY)).toBeGreaterThan(Math.abs(far1.physicalY));
   });
 
   it('anisotropic distance: deltaT×tWeight > deltaY×yWeight when tWeight is high', () => {
@@ -224,11 +274,12 @@ describe('applyRacerBehavior — avoidance', () => {
     });
     expect(r1.avoidanceActive).toBe(false);
 
-    // Same pair, tWeight=0.1: dist = 0.12*0.1 = 0.012 < 0.35 → avoidance
+    // Same pair, tWeight=0.1: dist = 0.12*0.1 = 0.012 < 0.35 → avoidance fires.
+    // Give different physicalY so the yDiff direction is defined.
     const r3 = makeRacer({ index: 0, t: 0.0, x: 0, y: 0 });
     const r4 = makeRacer({ index: 1, t: 0.12, x: 0, y: 0 });
-    r3.physicalY = 0;
-    r4.physicalY = 0;
+    r3.physicalY = -0.01;
+    r4.physicalY = 0.01;
     applyRacerBehavior([r3, r4], {
       ...cfg,
       homeForceStrength: 0,
@@ -255,9 +306,11 @@ describe('applyRacerBehavior — avoidance', () => {
       makeRacer({ index: 2, t: 0.502, x: 204, y: 200 }),
       makeRacer({ index: 3, t: 0.503, x: 206, y: 200 }),
     ];
-    racers.forEach((r) => {
-      r.physicalY = 0;
-    });
+    // Stagger initial physicalY (as computeStartPhysicalY would) so avoidance has a direction
+    racers[0].physicalY = -0.03;
+    racers[1].physicalY = -0.01;
+    racers[2].physicalY = 0.01;
+    racers[3].physicalY = 0.03;
     for (let f = 0; f < 60; f++) applyRacerBehavior(racers, cfg);
     const spread =
       Math.max(...racers.map((r) => r.physicalY)) - Math.min(...racers.map((r) => r.physicalY));

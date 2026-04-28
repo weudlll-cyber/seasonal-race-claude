@@ -17,6 +17,8 @@ export function loadRaceBehaviorConfig() {
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   const merged = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...stored };
   if (
+    merged.startSpreadRange <= 0 ||
+    merged.startSpreadRange > 1 ||
     merged.homeForceStrength <= 0 ||
     merged.comfortThreshold <= 0 ||
     merged.comfortThreshold >= 1 ||

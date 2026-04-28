@@ -27,7 +27,11 @@ import {
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import {
+  initRacerBehavior,
+  applyRacerBehavior,
+  computeStartPhysicalY,
+} from '../../modules/raceBehavior.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -236,7 +240,8 @@ export default function RaceScreen() {
           y: 0,
           angle: 0,
         };
-        initRacerBehavior(racer); // sets physicalY = 0
+        initRacerBehavior(racer);
+        racer.physicalY = computeStartPhysicalY(i, nRacers, behaviorConfig.startSpreadRange);
         return racer;
       }),
     };

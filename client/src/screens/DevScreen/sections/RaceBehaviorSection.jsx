@@ -74,6 +74,35 @@ function RaceBehaviorSection() {
         </div>
       </div>
 
+      {/* ── Start Layout ── */}
+      <div className={s.card}>
+        <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Start Layout</p>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Start Spread Range
+              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.7 uses 70% of each half-width, leaving a small gap to the boundary. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Start Spread Range"
+              min={0.1}
+              max={1.0}
+              step={0.05}
+              value={config.startSpreadRange}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0 && v <= 1) set('startSpreadRange', v);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* ── Home Force ── */}
       <div className={s.card} style={{ opacity: off ? 0.45 : 1 }}>
         <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Home Force</p>

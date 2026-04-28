@@ -10,11 +10,25 @@
 // ============================================================
 
 /**
+ * Compute the initial physicalY for racer `index` of `total`.
+ * Spreads racers evenly across [-spreadRange, +spreadRange] in one row.
+ * @param {number} index - zero-based racer index
+ * @param {number} total - total racer count
+ * @param {number} spreadRange - half-width of the start spread ∈ (0, 1]
+ * @returns {number}
+ */
+export function computeStartPhysicalY(index, total, spreadRange) {
+  if (total <= 1) return 0;
+  return -spreadRange + (2 * spreadRange * index) / (total - 1);
+}
+
+/**
  * Initialise per-racer behavior state. Call once per racer at race start.
+ * physicalY is set separately via computeStartPhysicalY in RaceScreen.
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
-  racer.physicalY = 0; // all racers start at the centerline
+  racer.physicalY = 0;
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
 }
@@ -92,15 +106,19 @@ export function applyRacerBehavior(racers, config) {
       const trailer = aIsTrailer ? rA : rB;
       const leader = aIsTrailer ? rB : rA;
 
-      // Push trailer away from leader's physicalY
-      const yDiff = trailer.physicalY - leader.physicalY;
-      const pushDir = yDiff >= 0 ? 1 : -1;
-      yDeltas.set(trailer.index, yDeltas.get(trailer.index) + pushDir * forceMag);
-
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T)
+      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
+      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
       if (Math.abs(dY) < config.speedBrakeYThreshold && dT < config.speedBrakeTThreshold) {
         speedBrakeSet.add(trailer.index);
       }
+
+      // Push trailer away from leader's physicalY.
+      // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
+      // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
+      const yDiff = trailer.physicalY - leader.physicalY;
+      if (Math.abs(yDiff) < 1e-6) continue;
+      const pushDir = yDiff >= 0 ? 1 : -1;
+      yDeltas.set(trailer.index, yDeltas.get(trailer.index) + pushDir * forceMag);
     }
   }
 

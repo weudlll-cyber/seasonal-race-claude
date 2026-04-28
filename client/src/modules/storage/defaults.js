@@ -128,6 +128,8 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
+  // Start layout — initial lateral spread at race start
+  startSpreadRange: 0.7,
   // Home force — spring toward centerline (physicalY = 0)
   homeForceStrength: 0.018,
   // Comfort zone & soft boundary repulsion
