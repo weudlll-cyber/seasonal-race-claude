@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
   computeRenderDisplayScale,
+  getEffectiveMinTargetScreenPx,
   DEFAULT_AUTO_SCALE_CONFIG,
   loadAutoScaleConfig,
   saveAutoScaleConfig,
@@ -129,6 +130,31 @@ describe('saveAutoScaleConfig', () => {
     const cfg = { enabled: true, referenceValue: 30, minScale: 0.3, maxScale: 3.0 };
     saveAutoScaleConfig(cfg);
     expect(storageSet).toHaveBeenCalledWith('racearena:autoScaleConfig', cfg);
+  });
+});
+
+describe('getEffectiveMinTargetScreenPx', () => {
+  it('returns the type override when set', () => {
+    expect(getEffectiveMinTargetScreenPx(48, 32)).toBe(48);
+  });
+
+  it('returns the global default when type override is undefined', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 32)).toBe(32);
+  });
+
+  it('returns the global default when type override is null', () => {
+    expect(getEffectiveMinTargetScreenPx(null, 32)).toBe(32);
+  });
+
+  it('returns type override 0 (edge case: explicit 0 is falsy but set)', () => {
+    // 0 is a valid override of 0px — unusual but should be respected
+    // getEffectiveMinTargetScreenPx uses != null check so 0 is treated as "set"
+    expect(getEffectiveMinTargetScreenPx(0, 32)).toBe(0);
+  });
+
+  it('type override wins over any global value', () => {
+    expect(getEffectiveMinTargetScreenPx(8, 64)).toBe(8);
+    expect(getEffectiveMinTargetScreenPx(120, 16)).toBe(120);
   });
 });
 

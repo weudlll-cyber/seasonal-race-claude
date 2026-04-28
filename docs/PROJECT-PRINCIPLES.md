@@ -63,6 +63,12 @@ data-flow changes, race-engine changes. Pure code refactors without UI impact, d
 and storage-only migrations do not require a smoke-test. User final review remains mandatory
 before every merge.
 
+Reports must distinguish between implementation-level confidence (code + tests) and visual
+confirmation (observed in a running browser). Claims about UI elements "rendering" or
+"appearing" should be phrased to make the verification source clear — e.g. "Component tests
+confirm render output" rather than "Section renders in the modal". The user's browser test
+remains the final visual check.
+
 ### UX-Verifikations-Convention (Erweiterung der CC-Smoke-Test-Convention)
 
 Bei UI-schweren Phasen kann zusätzlich zur normalen Smoke-Test-Spec eine separate

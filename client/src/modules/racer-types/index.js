@@ -117,6 +117,7 @@ export const TUNABLE_FIELDS = [
   'leaderRingColor',
   'leaderEllipseRx',
   'leaderEllipseRy',
+  'minTargetScreenPx',
 ];
 
 /**

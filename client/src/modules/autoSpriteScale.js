@@ -73,6 +73,18 @@ export function computeRenderDisplayScale(
   return targetScreenPx / (displaySize * frameEffZoom);
 }
 
+/**
+ * Resolve the effective minTargetScreenPx for a single racer type.
+ * Returns the type-specific override if set, otherwise the global default.
+ *
+ * @param {number|undefined} typeOverridePx  Per-type override (from racerType.config.minTargetScreenPx)
+ * @param {number}           globalMinPx     Global default (from autoScaleConfig.minTargetScreenPx)
+ * @returns {number}
+ */
+export function getEffectiveMinTargetScreenPx(typeOverridePx, globalMinPx) {
+  return typeOverridePx != null ? typeOverridePx : globalMinPx;
+}
+
 /** Load config from localStorage, merging with defaults. */
 export function loadAutoScaleConfig() {
   const stored = storageGet(KEYS.AUTO_SCALE_CONFIG, null);

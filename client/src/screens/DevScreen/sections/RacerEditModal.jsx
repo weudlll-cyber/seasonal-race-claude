@@ -6,9 +6,11 @@
 // Description: Per-type tuning modal for D3.5.5. Live-apply: every field
 //              change writes to localStorage and mutates the live config
 //              immediately. No save button — reset restores code defaults.
+//              D7a-Plus: adds per-type minTargetScreenPx slider with
+//              animated sprite preview.
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { InfoTooltip } from '../../../components/InfoTooltip/InfoTooltip.jsx';
 import {
   RACER_TYPES,
@@ -18,9 +20,17 @@ import {
   restoreTunableDefault,
   normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
+import {
+  loadAutoScaleConfig,
+  DEFAULT_AUTO_SCALE_CONFIG,
+} from '../../../modules/autoSpriteScale.js';
+import { MinSpriteSizePreview } from './MinSpriteSizePreview.jsx';
 import s from './RacerEditModal.module.css';
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+// Fields rendered in the standard loop. minTargetScreenPx has its own section.
+const STANDARD_FIELDS = TUNABLE_FIELDS.filter((f) => f !== 'minTargetScreenPx');
 
 const FIELD_META = {
   speedMultiplier: {
@@ -100,22 +110,50 @@ function coerceField(fieldName, raw) {
 export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   const typeOverrides = normalizeOverrideMap(overrides)[typeId] ?? {};
 
-  // Local text state for each field (drives the inputs)
+  // Local text state for each standard field (drives the inputs)
   const initialText = () =>
     Object.fromEntries(
-      TUNABLE_FIELDS.map((f) => [
-        f,
-        String(f in typeOverrides ? typeOverrides[f] : RACER_TYPES[typeId].config[f]),
-      ])
+      STANDARD_FIELDS.map((f) => {
+        const raw = f in typeOverrides ? typeOverrides[f] : RACER_TYPES[typeId].config[f];
+        return [f, raw !== undefined ? String(raw) : ''];
+      })
     );
 
   const [text, setText] = useState(initialText);
   const [errors, setErrors] = useState({});
 
-  // Keep local text in sync if parent overrides change externally (e.g. reset-all)
+  // Per-type minTargetScreenPx override: undefined = use global default
+  const [minSizeOverride, setMinSizeOverride] = useState(() =>
+    'minTargetScreenPx' in typeOverrides ? typeOverrides.minTargetScreenPx : undefined
+  );
+
+  // Scroll indicator: true when body has more content below the visible area
+  const bodyRef = useRef(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    function check() {
+      setHasMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    }
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, []);
+
+  // Keep local state in sync if parent overrides change externally (e.g. reset-all)
   useEffect(() => {
     setText(initialText());
     setErrors({});
+    const freshOverrides = normalizeOverrideMap(overrides)[typeId] ?? {};
+    setMinSizeOverride(
+      'minTargetScreenPx' in freshOverrides ? freshOverrides.minTargetScreenPx : undefined
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
 
@@ -155,7 +193,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   function handleFieldReset(fieldName) {
     const snap = CONFIG_SNAPSHOT[typeId];
     const defaultVal = snap[fieldName];
-    const defaultStr = String(defaultVal);
+    const defaultStr = defaultVal !== undefined ? String(defaultVal) : '';
     setText((prev) => ({ ...prev, [fieldName]: defaultStr }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -176,9 +214,36 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     });
   }
 
+  function handleMinSizeChange(newPx) {
+    setMinSizeOverride(newPx);
+    applyTunableOverride(typeId, 'minTargetScreenPx', newPx);
+    setOverrides((prev) => {
+      const all = normalizeOverrideMap(prev);
+      const typeOvr = { ...(all[typeId] ?? {}) };
+      typeOvr.minTargetScreenPx = newPx;
+      return { ...all, [typeId]: typeOvr };
+    });
+  }
+
+  function handleMinSizeReset() {
+    setMinSizeOverride(undefined);
+    restoreTunableDefault(typeId, 'minTargetScreenPx');
+    setOverrides((prev) => {
+      const all = normalizeOverrideMap(prev);
+      const typeOvr = { ...(all[typeId] ?? {}) };
+      delete typeOvr.minTargetScreenPx;
+      const next = { ...all };
+      if (Object.keys(typeOvr).length === 0) delete next[typeId];
+      else next[typeId] = typeOvr;
+      return next;
+    });
+  }
+
   function handleResetAll() {
     // Restore all tunable fields from snapshot
     for (const f of TUNABLE_FIELDS) restoreTunableDefault(typeId, f);
+    // Reset min size state
+    setMinSizeOverride(undefined);
     // Remove all tunable overrides from storage (keep isActive if set)
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
@@ -190,7 +255,14 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
       return next;
     });
     // Reset local text to code defaults
-    setText(Object.fromEntries(TUNABLE_FIELDS.map((f) => [f, String(CONFIG_SNAPSHOT[typeId][f])])));
+    setText(
+      Object.fromEntries(
+        STANDARD_FIELDS.map((f) => {
+          const val = CONFIG_SNAPSHOT[typeId][f];
+          return [f, val !== undefined ? String(val) : ''];
+        })
+      )
+    );
     setErrors({});
   }
 
@@ -204,6 +276,11 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     return fieldName in typeOvr;
   }
 
+  const globalDefault =
+    loadAutoScaleConfig().minTargetScreenPx ?? DEFAULT_AUTO_SCALE_CONFIG.minTargetScreenPx;
+  const effectiveMinSize = minSizeOverride ?? globalDefault;
+  const minSizeModified = minSizeOverride !== undefined;
+
   return (
     <div className={s.overlay} role="dialog" aria-modal="true" aria-label={`Edit ${label}`}>
       <div className={s.modal}>
@@ -214,8 +291,8 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
           </button>
         </div>
 
-        <div className={s.body}>
-          {TUNABLE_FIELDS.map((fieldName) => {
+        <div className={s.body} ref={bodyRef}>
+          {STANDARD_FIELDS.map((fieldName) => {
             const meta = FIELD_META[fieldName];
             const modified = isFieldOverridden(fieldName);
             const err = errors[fieldName];
@@ -277,7 +354,52 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
               </div>
             );
           })}
+
+          {/* ── Min Sprite Screen Size ── */}
+          <div className={`${s.fieldRow}${minSizeModified ? ` ${s.fieldRowModified}` : ''}`}>
+            <div className={s.labelRow}>
+              <span className={s.fieldLabel}>Min Sprite Screen Size</span>
+              <InfoTooltip text="Minimum on-screen diameter for this racer in pixels. On very large tracks the camera zooms out; this floor keeps the sprite visible. Camera zoom still makes it larger when nearby." />
+              {minSizeModified && <span className={s.modifiedBadge}>modified</span>}
+            </div>
+
+            <div className={s.minSizeRow}>
+              <input
+                type="range"
+                className={s.slider}
+                min={8}
+                max={120}
+                step={4}
+                value={effectiveMinSize}
+                onChange={(e) => handleMinSizeChange(parseInt(e.target.value, 10))}
+                aria-label="Min Sprite Screen Size"
+              />
+              <span className={s.sliderValue}>{effectiveMinSize}px</span>
+              {minSizeModified && (
+                <button
+                  className={s.resetFieldBtn}
+                  onClick={handleMinSizeReset}
+                  title="Reset Min Sprite Screen Size to global default"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+
+            {!minSizeModified && (
+              <span className={s.minSizeHint}>global default ({globalDefault}px)</span>
+            )}
+
+            <div className={s.minSizePreviewRow}>
+              <MinSpriteSizePreview racerType={RACER_TYPES[typeId]} sizePx={effectiveMinSize} />
+              <p className={s.minSizeDesc}>
+                This is how small this racer will be on a busy track. Camera zoom makes it bigger
+                during the race.
+              </p>
+            </div>
+          </div>
         </div>
+        {hasMoreBelow && <div className={s.scrollFade} aria-hidden="true" />}
 
         <div className={s.footer}>
           <button
