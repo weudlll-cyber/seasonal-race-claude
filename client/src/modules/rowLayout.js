@@ -24,13 +24,20 @@ function shuffleInPlace(arr) {
 }
 
 /**
- * Compute how many racers fit in one row.
- * @param {number} trackWidthPx
- * @param {number} pixelsPerRacer
+ * Compute how many racers fit side-by-side in one row.
+ * Uses the actual geometric track width (world px) and the screen-space scale
+ * factor so the result adapts correctly to any world size.
+ *
+ * Each racer slot is minTargetScreenPx/2 screen-px wide — half the minimum
+ * sprite size, matching the shoulder-to-shoulder density seen in real grid starts.
+ *
+ * @param {number} geometricTrackWidthPx  World-pixel inner-to-outer track width
+ * @param {number} bsX                    Canvas px per world px (CANVAS_W / worldWidth)
+ * @param {number} minTargetScreenPx      Minimum rendered sprite size in screen px
  * @returns {number} at least 1
  */
-function racersPerRowCount(trackWidthPx, pixelsPerRacer) {
-  return Math.max(1, Math.floor(trackWidthPx / pixelsPerRacer));
+export function computeRacersPerRow(geometricTrackWidthPx, bsX, minTargetScreenPx) {
+  return Math.max(1, Math.floor((2 * geometricTrackWidthPx * bsX) / minTargetScreenPx));
 }
 
 /**
@@ -38,16 +45,15 @@ function racersPerRowCount(trackWidthPx, pixelsPerRacer) {
  * Racer indices are shuffled so grid position is random (not rank-ordered).
  *
  * @param {number} racerCount
- * @param {number} trackWidthPx
- * @param {number} pixelsPerRacer
+ * @param {number} racersPerRow  Pre-computed via computeRacersPerRow()
  * @returns {{
  *   racersPerRow: number,
  *   totalRows: number,
  *   assignments: Array<{ racerIndex: number, rowIndex: number, indexInRow: number }>
  * }}
  */
-export function computeRowLayout(racerCount, trackWidthPx, pixelsPerRacer) {
-  const perRow = racersPerRowCount(trackWidthPx, pixelsPerRacer);
+export function computeRowLayout(racerCount, racersPerRow) {
+  const perRow = Math.max(1, racersPerRow);
   const totalRows = Math.ceil(racerCount / perRow);
 
   const indices = Array.from({ length: racerCount }, (_, i) => i);
@@ -95,22 +101,15 @@ export function computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFa
 /**
  * Compute the auto-default maxRacers for a track.
  * Caps the rearmost row at maxCapacityFactor × pathLengthPx behind the start.
- * Uses pixelsPerRacer as the row-spacing proxy (no sprite-size dependency).
  *
  * @param {number} pathLengthPx
- * @param {number} trackWidthPx
- * @param {number} pixelsPerRacer
+ * @param {number} racersPerRow    Pre-computed via computeRacersPerRow()
+ * @param {number} rowGapPx        World-pixel gap between rows (spriteSize × rowGapMultiplier)
  * @param {number} maxCapacityFactor - fraction of path length the rearmost row may use
  * @returns {number}
  */
-export function computeMaxRacersDefault(
-  pathLengthPx,
-  trackWidthPx,
-  pixelsPerRacer,
-  maxCapacityFactor
-) {
-  const perRow = racersPerRowCount(trackWidthPx, pixelsPerRacer);
+export function computeMaxRacersDefault(pathLengthPx, racersPerRow, rowGapPx, maxCapacityFactor) {
   const budget = pathLengthPx * maxCapacityFactor;
-  const maxRows = Math.max(1, Math.floor(budget / pixelsPerRacer));
-  return maxRows * perRow;
+  const maxRows = Math.max(1, Math.floor(budget / Math.max(1, rowGapPx)));
+  return maxRows * Math.max(1, racersPerRow);
 }

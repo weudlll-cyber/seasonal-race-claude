@@ -127,7 +127,6 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
 };
 
 export const DEFAULT_ROW_LAYOUT_CONFIG = {
-  pixelsPerRacer: 80,
   rowGapMultiplier: 1.5,
   speedBonusFactor: 1.0,
   maxCapacityFactor: 0.3,

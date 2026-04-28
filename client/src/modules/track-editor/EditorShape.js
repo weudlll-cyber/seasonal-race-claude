@@ -120,4 +120,30 @@ export class EditorShape {
     const { minX, maxX, minY, maxY } = this.getBoundingBox();
     return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
   }
+
+  /**
+   * Measures the median cross-section width of the track in world pixels.
+   * Samples `samples` evenly-spaced t positions and computes the inner-to-outer
+   * distance at each. Returns the median (robust against narrow corners).
+   * Result is cached — call once per shape instance.
+   *
+   * @param {number} [samples=20]
+   * @returns {number} median track width in world pixels
+   */
+  getActualTrackWidth(samples = 20) {
+    if (this._cachedActualTrackWidth !== undefined) return this._cachedActualTrackWidth;
+    const widths = [];
+    for (let i = 0; i < samples; i++) {
+      const t = i / samples;
+      const idx = this._idx(t);
+      const inner = this._inner[idx];
+      const outer = this._outer[idx];
+      const dx = outer.x - inner.x;
+      const dy = outer.y - inner.y;
+      widths.push(Math.sqrt(dx * dx + dy * dy));
+    }
+    widths.sort((a, b) => a - b);
+    this._cachedActualTrackWidth = widths[Math.floor(widths.length / 2)];
+    return this._cachedActualTrackWidth;
+  }
 }

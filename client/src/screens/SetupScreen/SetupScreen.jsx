@@ -22,12 +22,13 @@ import {
   RACER_TYPE_LABELS,
 } from '../../modules/racer-types/index.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
   estimatedSecondsPerLap,
   openTrackFinishT,
   lapsFromDuration,
 } from '../../modules/camera/lapUtils.js';
-import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
+import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -130,17 +131,25 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
-  // D7c: row-start hints — compute once per render, cheap
+  // D7c: row-start hints — racersPerRow from actual geometry so large worlds are correct
+  const geometricRacersPerRow = useMemo(() => {
+    if (!selectedTrack?.geometryId) return 8;
+    const geom = getTrack(selectedTrack.geometryId);
+    if (!geom) return 8;
+    const shape = new EditorShape(geom);
+    const worldWidth = selectedTrack.worldWidth ?? geom.worldWidth ?? 1280;
+    const bsX = 1280 / worldWidth;
+    return computeRacersPerRow(shape.getActualTrackWidth(), bsX, 32);
+  }, [selectedTrack]);
+
   const rowLayoutHints = useMemo(() => {
-    const rowConfig = loadRowLayoutConfig();
-    const trackW = selectedTrack?.trackWidth ?? 140;
-    const racersPerRow = Math.max(1, Math.floor(trackW / rowConfig.pixelsPerRacer));
+    const racersPerRow = geometricRacersPerRow;
     const totalRows = players.length > 0 ? Math.ceil(players.length / racersPerRow) : 1;
     const showRowHint = players.length > racersPerRow;
     const maxRacers = selectedTrack?.maxRacers ?? null;
     const showCapacityWarn = maxRacers !== null && players.length > maxRacers;
     return { racersPerRow, totalRows, showRowHint, maxRacers, showCapacityWarn };
-  }, [players.length, selectedTrack]);
+  }, [players.length, selectedTrack, geometricRacersPerRow]);
 
   // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
   const trackIsOpen = useMemo(() => {

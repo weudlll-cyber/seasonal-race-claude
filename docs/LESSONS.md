@@ -399,6 +399,29 @@ die alle auf dasselbe Ziel einwirken?" bevor Feature shipped. N-Scaling (÷sqrt(
 
 ---
 
+## Lesson 21 — Metadata-Werte sind keine Messung — Skalen-Berechnung braucht echte Geometrie (D7c-fix)
+
+**Kontext:** D7c nutzte `trackWidth` (Operator-deklarierte Metadata, Default 140 px) als
+Eingabe für `computeRowLayout`. Das ergab `racersPerRow = floor(140 / 80) = 1` auf allen
+Tracks — korrekt für 1280px-Referenz-Welten, aber fatal auf großen Welten (z.B. 6000px):
+dort entsprachen 140 Metadata-Pixel nur ~30 Screen-Pixel, und alle 20 Racer wurden in
+Einzelreihen platziert → eine einzelne vertikale Linie beim Race-Start.
+
+Die Metadata war nie eine Messung. Sie war eine UI-Wahl aus `[100, 140, 200, 280, 360]`
+und kalibriert für 1280px-Welten. Auf anderen Weltgrößen war sie bedeutungslos.
+
+**Erkenntnis:** Wenn ein Wert für eine Skalen-Berechnung verwendet wird, muss er die
+richtige physikalische Einheit in Bezug auf die aktuelle Welt haben. Operator-deklarierte
+Metadata (die für eine Referenz-Welt sinnvoll war) ist keine Messung — sie bricht silently
+in anderen Skalierungsbereichen. Die echte Track-Breite liegt nur in der Geometrie (Abstand
+inner/outer Kurve in World-Koordinaten).
+
+**Konsequenz:** Bei Layout- oder Skalen-Berechnungen die von Track-Geometrie abhängen:
+immer `EditorShape.getActualTrackWidth()` (oder Äquivalent) statt Metadata verwenden.
+Metadata-Felder sind für UI-Anzeige und User-Kommunikation — nicht als Messgröße in Berechnungen.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

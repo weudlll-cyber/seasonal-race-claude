@@ -127,29 +127,6 @@ function RaceBehaviorSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Pixels per Racer
-              <InfoTooltip text="Track-width pixels allocated per racer when computing how many fit in one row. Lower = more racers per row (denser pack). Higher = fewer racers per row (more spread). Example: at 80 px on a 1280 px track, 16 racers fit per row; at 40 px that becomes 32. Setting this very low with many racers can create very dense starting packs. Range 30–200, step 5." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Pixels per Racer"
-              min={30}
-              max={200}
-              step={5}
-              value={rowConfig.pixelsPerRacer}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 30 && v <= 200) setRow('pixelsPerRacer', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Row Gap Multiplier
               <InfoTooltip text="Distance between rows expressed as a multiple of the rendered sprite size. At 1.5× the rows are 1.5 sprite-heights apart at race start. Lower values compress rows closer together (can look crowded); higher values spread them further back (longer stagger). Range 0.5–4.0." />
             </label>
@@ -218,9 +195,8 @@ function RaceBehaviorSection() {
           data-testid="row-start-summary"
           style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
         >
-          At defaults: <strong>{Math.max(1, Math.floor(140 / rowConfig.pixelsPerRacer))}</strong>{' '}
-          racers per row on a 140 px track · gap <strong>{rowConfig.rowGapMultiplier}×</strong>{' '}
-          sprite size ·{' '}
+          Racers per row auto-computed from track geometry · gap{' '}
+          <strong>{rowConfig.rowGapMultiplier}×</strong> sprite size ·{' '}
           <strong>
             {rowConfig.speedBonusFactor === 1.0
               ? 'full'

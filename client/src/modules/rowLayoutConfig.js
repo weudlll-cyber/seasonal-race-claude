@@ -17,7 +17,6 @@ export function loadRowLayoutConfig() {
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_ROW_LAYOUT_CONFIG };
   const merged = { ...DEFAULT_ROW_LAYOUT_CONFIG, ...stored };
   if (
-    merged.pixelsPerRacer <= 0 ||
     merged.rowGapMultiplier <= 0 ||
     merged.speedBonusFactor < 0 ||
     merged.maxCapacityFactor <= 0 ||

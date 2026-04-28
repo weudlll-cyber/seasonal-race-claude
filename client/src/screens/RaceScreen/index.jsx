@@ -29,6 +29,7 @@ import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import {
+  computeRacersPerRow,
   computeRowLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
@@ -212,7 +213,15 @@ export default function RaceScreen() {
     const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
-    const rowLayout = computeRowLayout(nRacers, trackWidth, rowConfig.pixelsPerRacer);
+    // Use the actual geometric track width (world px) so racersPerRow scales correctly
+    // for any world size — metadata trackWidth is not a measurement and breaks on large worlds.
+    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
+    const minTargetPx = getEffectiveMinTargetScreenPx(
+      racerType.config?.minTargetScreenPx,
+      autoScaleConfig.minTargetScreenPx ?? 32
+    );
+    const racersPerRowValue = computeRacersPerRow(geometricTrackWidthPx, bsX, minTargetPx);
+    const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
     // Index assignments by racerIndex for O(1) lookup in the map below
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {

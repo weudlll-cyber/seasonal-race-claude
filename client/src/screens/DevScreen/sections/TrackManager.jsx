@@ -10,11 +10,16 @@ import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
-import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
+import {
+  RACER_TYPE_IDS,
+  RACER_TYPE_LABELS,
+  getRacerType,
+} from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
 import { listEffects } from '../../../modules/track-effects/index.js';
 import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
-import { computeMaxRacersDefault } from '../../../modules/rowLayout.js';
+import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
+import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import s from '../DevScreen.module.css';
 
 const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
@@ -38,6 +43,25 @@ const BLANK = {
   maxRacers: null,
   maxRacersIsOverride: false,
 };
+
+// Compute the auto max-racers suggestion for a given geometry + track metadata.
+// Uses actual geometric track width so large worlds get correct capacity.
+function autoMaxRacers(geom, track, rowCfg) {
+  if (!geom?.pathLengthPx) return null;
+  const racerType = getRacerType(track.defaultRacerTypeId ?? 'horse');
+  const displaySize = racerType?.config?.displaySize ?? 40;
+  const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
+  const worldWidth = geom.worldWidth ?? track.worldWidth ?? 1280;
+  const bsX = 1280 / worldWidth;
+  const shape = new EditorShape(geom);
+  const racersPerRow = computeRacersPerRow(shape.getActualTrackWidth(), bsX, 32);
+  return computeMaxRacersDefault(
+    geom.pathLengthPx,
+    racersPerRow,
+    rowGapPx,
+    rowCfg.maxCapacityFactor
+  );
+}
 
 function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
@@ -72,14 +96,7 @@ function TrackManager() {
     const rowCfg = loadRowLayoutConfig();
     const geomId = track.geometryId ?? null;
     const geom = geomId ? geometries.find((g) => g.id === geomId) : null;
-    const autoMax = geom?.pathLengthPx
-      ? computeMaxRacersDefault(
-          geom.pathLengthPx,
-          track.trackWidth ?? 140,
-          rowCfg.pixelsPerRacer,
-          rowCfg.maxCapacityFactor
-        )
-      : null;
+    const autoMax = autoMaxRacers(geom, track, rowCfg);
     const storedMax = track.maxRacers ?? null;
     setForm({
       name: track.name,
@@ -121,14 +138,7 @@ function TrackManager() {
       const geom = geometries.find((g) => g.id === val);
       if (geom) {
         const rowCfg = loadRowLayoutConfig();
-        const autoMax = geom.pathLengthPx
-          ? computeMaxRacersDefault(
-              geom.pathLengthPx,
-              form.trackWidth ?? 140,
-              rowCfg.pixelsPerRacer,
-              rowCfg.maxCapacityFactor
-            )
-          : null;
+        const autoMax = autoMaxRacers(geom, form, rowCfg);
         setForm((prev) => ({
           ...prev,
           geometryId: val,
@@ -436,12 +446,7 @@ function TrackManager() {
                       const geom = geometries.find((g) => g.id === form.geometryId);
                       if (!geom?.pathLengthPx) return;
                       const rowCfg = loadRowLayoutConfig();
-                      const autoMax = computeMaxRacersDefault(
-                        geom.pathLengthPx,
-                        form.trackWidth ?? 140,
-                        rowCfg.pixelsPerRacer,
-                        rowCfg.maxCapacityFactor
-                      );
+                      const autoMax = autoMaxRacers(geom, form, rowCfg);
                       setForm((prev) => ({
                         ...prev,
                         maxRacers: autoMax,
