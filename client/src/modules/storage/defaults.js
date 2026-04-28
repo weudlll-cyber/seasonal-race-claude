@@ -131,15 +131,15 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Start layout — initial lateral spread at race start
   startSpreadRange: 0.7,
   // Home force — spring toward centerline (physicalY = 0)
-  homeForceStrength: 0.018,
+  homeForceStrength: 0.04,
   // Comfort zone & soft boundary repulsion
   comfortThreshold: 0.7,
-  softRepulsionStrength: 0.06,
+  softRepulsionStrength: 0.1,
   // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
   avoidanceDistance: 0.35,
   tWeight: 2.0,
   yWeight: 1.0,
-  lateralForce: 0.015,
+  lateralForce: 0.01,
   maxLateral: 0.95,
   // Speed brake for side-by-side (adjacent) racers
   speedBrakeYThreshold: 0.2,

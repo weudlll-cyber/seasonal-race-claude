@@ -78,6 +78,9 @@ export function applyRacerBehavior(racers, config) {
 
   // Accumulate physicalY deltas from home force + avoidance
   const yDeltas = new Map(active.map((r) => [r.index, 0]));
+  // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
+  const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
+  const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
 
   // ── Home force — spring toward centerline ──────────────────────────────────
@@ -118,8 +121,19 @@ export function applyRacerBehavior(racers, config) {
       const yDiff = trailer.physicalY - leader.physicalY;
       if (Math.abs(yDiff) < 1e-6) continue;
       const pushDir = yDiff >= 0 ? 1 : -1;
-      yDeltas.set(trailer.index, yDeltas.get(trailer.index) + pushDir * forceMag);
+      yAvoidDeltas.set(trailer.index, yAvoidDeltas.get(trailer.index) + pushDir * forceMag);
+      neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
     }
+  }
+
+  // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).
+  // Prevents boundary-clinging at high racer counts where linear force accumulation
+  // across N neighbors would otherwise overwhelm restoring forces.
+  for (const r of active) {
+    const count = neighborCounts.get(r.index);
+    const avoid =
+      count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
+    yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
   }
 
   // Apply deltas + soft repulsion + hard clamp

@@ -113,7 +113,7 @@ function RaceBehaviorSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Home Force Strength
-              <InfoTooltip text="Spring constant pulling each racer back toward the centerline (physicalY = 0). Applied every frame as Δy = −physicalY × strength. Higher = faster return. At default 0.018 a racer at the boundary converges ~80% within 1.5 s at 60 fps. Range 0.005 (very slow) to 0.1 (very fast)." />
+              <InfoTooltip text="Spring constant pulling each racer back toward the centerline (physicalY = 0). Applied every frame as Δy = −physicalY × strength. Higher = faster return. At default 0.04 a racer at the boundary converges ~95% within 1.5 s at 60 fps. Range 0.005 (very slow) to 0.1 (very fast)." />
             </label>
             <input
               type="number"

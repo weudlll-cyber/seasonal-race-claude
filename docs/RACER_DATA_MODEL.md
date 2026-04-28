@@ -222,6 +222,8 @@ Per-Racer Runtime-Felder (D7b, gesetzt von `initRacerBehavior` + RaceScreen-Init
 - `avoidanceActive` — boolean: true wenn Racer adjacent-Speed-Brake-Bedingung triggert
 - `draftingBoostActive` — boolean: true wenn Racer im Slipstream-Kegel eines Vordermanns
 
+> **Anti-Stacking (D7b-fix B3):** Avoidance-Forces werden vor der Anwendung durch `sqrt(neighborCount)` normalisiert, wobei `neighborCount` = Anzahl der Racer die in diesem Frame eine non-zero Avoidance-Force auf diesen Racer ausüben. Verhindert Boundary-Clinging bei 20+ Racers: ohne Normalisierung akkumuliert ein Racer mit N Nachbarn N× die Einzelforce, was die restoring forces (home force + soft repulsion) overwhelmt.
+
 Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
 
 ---

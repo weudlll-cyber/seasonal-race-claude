@@ -299,6 +299,34 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r1.physicalY).toBe(0.3); // not modified
   });
 
+  it('anti-stacking: force with 4 neighbors is sqrt(4)× solo force, not 4×', () => {
+    // racer 0 as trailer, 4 identical leaders equidistant in t and physicalY.
+    // All 4 leaders have the same physicalY so they don't push each other (B2 skip).
+    const solo0 = makeRacer({ index: 0, t: 0.5, x: 0, y: 0 });
+    const solo1 = makeRacer({ index: 1, t: 0.51, x: 0, y: 0 });
+    solo0.physicalY = -0.2;
+    solo1.physicalY = 0.2;
+    applyRacerBehavior([solo0, solo1], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
+    const deltaSolo = Math.abs(solo0.physicalY - -0.2);
+
+    const r0 = makeRacer({ index: 0, t: 0.5, x: 0, y: 0 });
+    const r1 = makeRacer({ index: 1, t: 0.51, x: 0, y: 0 });
+    const r2 = makeRacer({ index: 2, t: 0.51, x: 0, y: 0 });
+    const r3 = makeRacer({ index: 3, t: 0.51, x: 0, y: 0 });
+    const r4 = makeRacer({ index: 4, t: 0.51, x: 0, y: 0 });
+    r0.physicalY = -0.2;
+    r1.physicalY = r2.physicalY = r3.physicalY = r4.physicalY = 0.2;
+    applyRacerBehavior([r0, r1, r2, r3, r4], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+    });
+    const delta5 = Math.abs(r0.physicalY - -0.2);
+
+    // Without normalization delta5 would be 4 × deltaSolo. With sqrt(4) it should be 2 ×.
+    expect(delta5).toBeCloseTo(2 * deltaSolo, 3);
+  });
+
   it('avoidance produces measurable spread over 60 frames in a tight pack', () => {
     const racers = [
       makeRacer({ index: 0, t: 0.5, x: 200, y: 200 }),
