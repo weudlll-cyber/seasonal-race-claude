@@ -3,7 +3,7 @@
 // Path:        client/src/screens/DevScreen/sections/RacerEditModal.test.jsx
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Component tests for RacerEditModal (D3.5.5)
+// Description: Component tests for RacerEditModal (D3.5.5 + D7a-Plus)
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -26,6 +26,11 @@ vi.mock('../../../modules/racer-types/spriteTinter.js', () => {
     _clearMaskedTintCache: vi.fn(),
   };
 });
+
+vi.mock('../../../modules/autoSpriteScale.js', () => ({
+  loadAutoScaleConfig: vi.fn(() => ({ minTargetScreenPx: 32 })),
+  DEFAULT_AUTO_SCALE_CONFIG: { minTargetScreenPx: 32 },
+}));
 
 import { RacerEditModal } from './RacerEditModal.jsx';
 import {
@@ -153,10 +158,80 @@ describe('RacerEditModal', () => {
     expect(resetAllBtn.disabled).toBe(true);
   });
 
-  it('InfoTooltip is present for each field', () => {
+  it('InfoTooltip is present for each field including min sprite size', () => {
     renderModal('horse');
     // tooltip spans have display:none — query with hidden:true
+    // 6 standard fields + 1 min sprite size = 7 total
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
-    expect(tooltips.length).toBe(6);
+    expect(tooltips.length).toBe(7);
+  });
+});
+
+describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
+  it('renders the Min Sprite Screen Size slider', () => {
+    renderModal('horse');
+    expect(screen.getByLabelText(/Min Sprite Screen Size/i)).toBeTruthy();
+  });
+
+  it('slider shows global default (32) when no override is set', () => {
+    renderModal('horse');
+    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    expect(slider.value).toBe('32');
+  });
+
+  it('slider shows override value when override is set', () => {
+    renderModal('horse', { horse: { minTargetScreenPx: 64 } });
+    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    expect(slider.value).toBe('64');
+  });
+
+  it('shows global default hint when no override is set', () => {
+    renderModal('horse');
+    expect(screen.getByText(/global default \(32px\)/i)).toBeTruthy();
+  });
+
+  it('hides global default hint when override is set', () => {
+    renderModal('horse', { horse: { minTargetScreenPx: 48 } });
+    expect(screen.queryByText(/global default/i)).toBeNull();
+  });
+
+  it('shows modified badge when override is set', () => {
+    renderModal('horse', { horse: { minTargetScreenPx: 48 } });
+    // At least one "modified" badge (the minSize one)
+    expect(screen.getAllByText('modified').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls setOverrides when slider changes', () => {
+    const { setOverrides } = renderModal('horse');
+    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    fireEvent.change(slider, { target: { value: '56' } });
+    expect(setOverrides).toHaveBeenCalled();
+  });
+
+  it('shows Reset button for min size when override is set', () => {
+    renderModal('horse', { horse: { minTargetScreenPx: 48 } });
+    const resetBtns = screen.getAllByRole('button', { name: /reset/i });
+    expect(resetBtns.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Reset for min size calls setOverrides to remove override', () => {
+    const { setOverrides } = renderModal('horse', { horse: { minTargetScreenPx: 48 } });
+    // Find the Reset button in the min size row (title contains "global default")
+    const resetBtn = screen.getByTitle(/Reset Min Sprite Screen Size/i);
+    fireEvent.click(resetBtn);
+    expect(setOverrides).toHaveBeenCalled();
+  });
+
+  it('renders a canvas preview element', () => {
+    renderModal('horse');
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeTruthy();
+  });
+
+  it('Reset all to defaults also resets min size override', () => {
+    const { setOverrides } = renderModal('horse', { horse: { minTargetScreenPx: 80 } });
+    const resetAllBtn = screen.getByRole('button', { name: /Reset all to defaults/i });
+    fireEvent.click(resetAllBtn);
+    expect(setOverrides).toHaveBeenCalled();
   });
 });

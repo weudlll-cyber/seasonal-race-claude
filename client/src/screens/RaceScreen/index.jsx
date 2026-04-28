@@ -37,6 +37,7 @@ import {
   loadAutoScaleConfig,
   computeAutoScaleFactor,
   computeRenderDisplayScale,
+  getEffectiveMinTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
@@ -835,7 +836,10 @@ export default function RaceScreen() {
         displaySize,
         displaySizeScale,
         frameEffZoom,
-        autoScaleConfig.minTargetScreenPx ?? 32
+        getEffectiveMinTargetScreenPx(
+          racerTypeRef.current?.config?.minTargetScreenPx,
+          autoScaleConfig.minTargetScreenPx ?? 32
+        )
       );
 
       if (isOpenTrack) {
