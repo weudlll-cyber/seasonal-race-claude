@@ -63,8 +63,8 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
 - [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
 - [x] D7a — Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. computeRenderDisplayScale as single-source render pipeline. cameraZoomFactor removed. 808 unit + 183 e2e tests. PR #33, master `a49baa0`.
-- [ ] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern) — 🔜 next
-- [ ] D7b — Lane-frei: remove lane system, physical-Y avoidance in world-pixel space
+- [x] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern). Animated canvas preview, global-default hint, modified badge, reset. Scroll indicator in modal. PR #35, master `27cba65`.
+- [x] D7b — Lane-free: physicalY system replaces currentLaneY/targetLaneY. Home force, anisotropic avoidance, cone drafting, soft repulsion, hard clamp. 13 tunable params in Dev Screen. PR #37.
 - [ ] D7c — Reihen-Start: staggered start layout, speed-bonus for rear rows, track-capacity system
 - [ ] D7d — 100-Racer-Performance: spatial grid O(N) avoidance, smart camera for packs
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)

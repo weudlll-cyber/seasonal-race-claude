@@ -128,12 +128,23 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
-  avoidanceDistance: 120,
-  avoidanceLateralForce: 0.012,
-  avoidanceMaxLateral: 0.35,
-  avoidanceSpeedBrake: 0.95,
-  avoidanceReturnSpeed: 0.05,
-  draftingDistanceT: 0.02,
-  draftingLaneThreshold: 0.15,
-  draftingBoostFactor: 1.1,
+  // Home force — spring toward centerline (physicalY = 0)
+  homeForceStrength: 0.018,
+  // Comfort zone & soft boundary repulsion
+  comfortThreshold: 0.7,
+  softRepulsionStrength: 0.06,
+  // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
+  avoidanceDistance: 0.35,
+  tWeight: 2.0,
+  yWeight: 1.0,
+  lateralForce: 0.015,
+  maxLateral: 0.95,
+  // Speed brake for side-by-side (adjacent) racers
+  speedBrakeYThreshold: 0.2,
+  speedBrakeTThreshold: 0.015,
+  speedBrakeFactor: 0.95,
+  // Drafting / slipstream
+  draftingMaxDistance: 110,
+  draftingConeAngle: 30,
+  draftingBoost: 1.1,
 };

@@ -2,8 +2,8 @@
 // File:        raceBehaviorConfig.test.js
 // Path:        client/src/modules/raceBehaviorConfig.test.js
 // Project:     RaceArena
-// Created:     2026-04-27
-// Description: Unit tests for race-behavior config CRUD (D11).
+// Created:     2026-04-26
+// Description: Unit tests for race-behavior config CRUD (D7b).
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -30,19 +30,31 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled).toBe(true);
   });
 
-  it('has positive avoidance values', () => {
+  it('has positive homeForceStrength', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
+  });
+
+  it('comfortThreshold is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeGreaterThan(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
+  });
+
+  it('has positive avoidanceDistance', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceLateralForce).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceMaxLateral).toBeGreaterThan(0);
   });
 
-  it('avoidanceSpeedBrake is between 0 and 1', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceSpeedBrake).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceSpeedBrake).toBeLessThanOrEqual(1);
+  it('speedBrakeFactor is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor).toBeGreaterThan(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor).toBeLessThanOrEqual(1);
   });
 
-  it('draftingBoostFactor >= 1', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoostFactor).toBeGreaterThanOrEqual(1);
+  it('draftingBoost >= 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost).toBeGreaterThanOrEqual(1);
+  });
+
+  it('draftingConeAngle is between 0 and 180', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle).toBeGreaterThan(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle).toBeLessThan(180);
   });
 });
 
@@ -54,33 +66,39 @@ describe('loadRaceBehaviorConfig', () => {
   });
 
   it('merges stored values with defaults', () => {
-    storageGet.mockReturnValue({ avoidanceDistance: 120, draftingBoostFactor: 1.2 });
+    storageGet.mockReturnValue({ avoidanceDistance: 0.5, draftingBoost: 1.2 });
     const cfg = loadRaceBehaviorConfig();
-    expect(cfg.avoidanceDistance).toBe(120);
-    expect(cfg.draftingBoostFactor).toBe(1.2);
+    expect(cfg.avoidanceDistance).toBe(0.5);
+    expect(cfg.draftingBoost).toBe(1.2);
     expect(cfg.enabled).toBe(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled);
   });
 
-  it('returns defaults when stored config has invalid avoidanceDistance', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, avoidanceDistance: -1 });
+  it('returns defaults when homeForceStrength <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceStrength: 0 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
-  it('returns defaults when avoidanceSpeedBrake > 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, avoidanceSpeedBrake: 1.5 });
+  it('returns defaults when comfortThreshold >= 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, comfortThreshold: 1.0 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
-  it('returns defaults when draftingBoostFactor < 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingBoostFactor: 0.9 });
+  it('returns defaults when speedBrakeFactor > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, speedBrakeFactor: 1.5 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
-  it('returns defaults when avoidanceReturnSpeed >= 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, avoidanceReturnSpeed: 1.0 });
+  it('returns defaults when draftingBoost < 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingBoost: 0.9 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when draftingConeAngle >= 180', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingConeAngle: 180 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });

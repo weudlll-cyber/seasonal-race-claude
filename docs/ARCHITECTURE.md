@@ -111,6 +111,23 @@ What was eliminated in D7a:
 Entry point: `computeRenderDisplayScale` in `modules/autoSpriteScale.js`. Called once per frame
 in the `RaceScreen` render loop.
 
+## Race Behavior System (D7b — lane-free)
+
+Racer lateral movement is governed by `modules/raceBehavior.js`. All racers share a continuous `physicalY ∈ [-1.0, +1.0]` in normalized track-width space (0 = centerline, ±1 = boundary). `initRacerBehavior` sets every racer to `physicalY = 0` at race start.
+
+**Force pipeline (applied once per frame after world positions are computed):**
+
+1. **Home force** — `Δy = -physicalY × homeForceStrength` (spring toward centerline)
+2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields; leader holds. Force magnitude scales with proximity.
+3. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
+4. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
+5. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
+6. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
+
+`getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
+
+All parameters are tunable in the Dev Screen (Race Behavior section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
+
 ## Camera System
 
 The race camera lives in `modules/camera/` and supports four director modes:

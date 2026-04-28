@@ -217,6 +217,13 @@ RaceScreen liest aus `sessionStorage['activeRace']`:
 - `racerTypeId` → bestimmt welche Racer-Instanz für alle Spieler verwendet wird
 - `racers[]` → bekommen alle denselben Type, jeweils einen Coat per djb2-Hash auf Name
 
+Per-Racer Runtime-Felder (D7b, gesetzt von `initRacerBehavior`):
+- `physicalY` — normalisierte Lateralposition, ∈ [-1.0, +1.0]: -1=innere Boundary, 0=Centerline, +1=äußere Boundary. Alle Racer starten bei 0. Wird durch Home-Force + Avoidance + Soft-Repulsion pro Frame mutiert.
+- `avoidanceActive` — boolean: true wenn Racer adjacent-Speed-Brake-Bedingung triggert
+- `draftingBoostActive` — boolean: true wenn Racer im Slipstream-Kegel eines Vordermanns
+
+Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
+
 ---
 
 ## Racer-Track-Effects (D6 — reserviert)

@@ -199,29 +199,6 @@ export default function RaceScreen() {
     camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight);
     setFinishTState(finishT);
 
-    // ── Racer spread: evenly-distributed slots + jitter + Fisher-Yates shuffle ─
-    function buildOffsets(n) {
-      if (n === 1) return [0];
-      const RANGE_MIN = -0.45,
-        RANGE_MAX = 0.45;
-      const slots = Array.from(
-        { length: n },
-        (_, i) => RANGE_MIN + (i / (n - 1)) * (RANGE_MAX - RANGE_MIN)
-      );
-      const slotWidth = (RANGE_MAX - RANGE_MIN) / (n - 1);
-      const jitter = slotWidth * 0.45;
-      const jittered = slots.map((s) =>
-        Math.max(RANGE_MIN, Math.min(RANGE_MAX, s + (Math.random() - 0.5) * jitter * 2))
-      );
-      for (let i = jittered.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [jittered[i], jittered[j]] = [jittered[j], jittered[i]];
-      }
-      return jittered;
-    }
-
-    const racerOffsets = buildOffsets(nRacers);
-
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -242,7 +219,6 @@ export default function RaceScreen() {
           index: i,
           t: 0,
           lap: 1,
-          trackOffset: racerOffsets[i],
           icon: trackEmoji ?? r.icon,
           baseSpeed:
             ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
@@ -260,7 +236,7 @@ export default function RaceScreen() {
           y: 0,
           angle: 0,
         };
-        initRacerBehavior(racer);
+        initRacerBehavior(racer); // sets physicalY = 0
         return racer;
       }),
     };
@@ -268,12 +244,13 @@ export default function RaceScreen() {
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
     // ── Canvas positions ────────────────────────────────────────────────────
+    // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
       const st = g.current;
       const shape = shapeRef.current;
       for (const r of st.racers) {
         const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        const pos = shape.getPosition(t, r.currentLaneY);
+        const pos = shape.getPosition(t, r.physicalY / 2);
         r.x = pos.x;
         r.y = pos.y;
         r.angle = pos.angle;
@@ -688,9 +665,9 @@ export default function RaceScreen() {
           // Per-racer sine jitter — each racer has its own frequency and phase,
           // so speeds fluctuate independently instead of all spiking together.
           const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
-          // Apply D11 boost/brake flags from the previous frame
-          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoostFactor : 1.0;
-          const brake = r.avoidanceActive ? behaviorConfig.avoidanceSpeedBrake : 1.0;
+          // Apply D7b boost/brake flags from the previous frame
+          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
+          const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
           if (!r.finished) {
             r.t += (r.baseSpeed * boost * brake + jitter) * (dt / 16);
           } else {
