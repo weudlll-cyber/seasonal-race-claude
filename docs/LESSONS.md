@@ -339,6 +339,41 @@ vor Code schreiben: klärt was "gut" heißt bevor die Implementierung festlegt w
 
 ---
 
+## Lesson 19 — Browser-Test-driven Architecture-Correction (D7a)
+
+**Kontext:** D7a wurde mit Math-Korrektheit als primärem Ziel implementiert: Sprites
+sollten konstante Bildschirm-Größe über alle Camera-Zoom-States behalten (`cameraZoomFactor`
+× `effZoom = REFERENCE_CAMERA_ZOOM`). 819 Unit + 183 e2e Tests bestätigten korrekte
+Implementation.
+
+**Aber:** User-Browser-Test zeigte dass die Sprites sich "falsch anfühlen". Auf Open-Track
+wirkten Sprites bei Zoom-IN kleiner statt größer: das Sprite-Track-Verhältnis verkleinerte
+sich von 27% (OVERVIEW) auf 17% (LEADER) während die Track-Hintergründe mit dem Zoom wuchsen.
+
+Statt weiter zu tunen: Diagnose-Auftrag an Claude Code. Ergebnis: Math war korrekt (Sprites
+objektiv 56.8px in allen States), aber das Verhältnis Sprite/Track-Hintergrund änderte sich
+wahrnehmbar. Drei Optionen wurden präsentiert (Konstant, Proportional, Proportional+Floor).
+
+User entschied für Option 3: natürliches "näher = größer"-Verhalten mit Mindest-Sichtbarkeit
+als Sicherheits-Floor. Korrektur in derselben PR:
+- `cameraZoomFactor` + `REFERENCE_CAMERA_ZOOM` komplett entfernt
+- `computeRenderDisplayScale` als Single-Source der Render-Pipeline
+- `autoSpriteScale.js` massiv vereinfacht (19 obsolete Tests entfernt, 10 neue hinzugefügt)
+
+**Wichtige Erkenntnis:** Die User-driven Korrektur machte die Architektur **einfacher**,
+nicht komplexer. Browser-Test entdeckte UX-Problem → Diagnose verstand die Math → User-
+Entscheidung produzierte saubere Architektur. 4 Skalierungs-Faktoren → 1 Pipeline.
+
+**Pattern für künftige Visual-Phasen:**
+1. Implementation mit Math-Korrektheit
+2. Browser-Test mit ehrlicher User-Wahrnehmung
+3. Bei Problemen: Diagnose-Auftrag (nicht raten, nicht tunen)
+4. Optionen mit Trade-offs präsentieren
+5. User-Entscheidung treibt Architektur
+6. Korrektur in derselben PR möglich und bevorzugt
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

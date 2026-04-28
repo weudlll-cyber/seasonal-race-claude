@@ -134,10 +134,39 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-27 | **723 unit + 118 e2e** | test(e2e): fix 7 selector issues in b-wave-smoke + b1617-smoke (PR #27, selber Squash). 7 pre-existing Selector-Fehler behoben: B-3×2 (div-ancestor), B-14 (option-text), B-12 (substring), B-10/B-11 (falsches Label + Edit-Regex-Anker), B-17 (tooltip-collision). 118/118 grün. |
 | 2026-04-27 | **759 unit + 157 e2e** | fix/camera-polish + Q-14 (PR #28, squash `750d826`). +36 unit (baseSpeedConfig.test.js ×16, CameraDirector adaptive-zoom ×16, lapUtils SoT ×4), +39 e2e (camera-polish-smoke.spec.js ×8, camera-polish-ux-verification.spec.js ×31 permanent). d10-ux-verification stale V8 assertion gefixt (auto-scale default changed). |
 | 2026-04-27 | **809 unit + 183 e2e** | D11 Racer Behavior + Visual-Fixes (PR #30, squash `d46cab2`). +50 unit (raceBehavior.test.js ×6 neu/rewritten, autoSpriteScale.test.js ×14 erweitert, CameraDirector world-edge-clamp ×2), +26 e2e (d11-smoke.spec.js ×14, d11-ux-verification.spec.js ×12 permanent). |
+| 2026-04-28 | **808 unit + 183 e2e** | D7a Proportional Sprite Scaling + Zoom-Ratios + Label-Skalierung (PR #33, squash `a49baa0`). -19 unit (computeCameraZoomFactor ×10, computeOpenTrackCameraZoomFactor ×4, pixel-floor-in-autoScale ×5 — obsolete functions entfernt), +10 unit (computeRenderDisplayScale proportional + floor), net -1. e2e unverändert. |
 
-**Aktueller Master-HEAD:** `d46cab2` (PR #30, squash-merged)
+**Aktueller Master-HEAD:** `a49baa0` (PR #33, squash-merged)
 **ESLint-Warnings:** 3 pre-existing (unverändert)
 **Playwright e2e:** 183 Tests (12 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1, camera-polish-smoke ×1, camera-polish-ux-verification ×1, D11-smoke ×1, D11-ux-verification ×1) — 183/183 grün
+
+---
+
+**Quality-Gate auf PR #33 (D7a — Proportional Sprite Scaling):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ Sprites skalieren proportional mit Camera-Zoom (natürliches "näher = größer")
+- ✅ Floor: `max(proportionalScreenPx, minTargetScreenPx)` — Mindest-Sichtbarkeit auf großen Tracks
+- ✅ computeRenderDisplayScale als Single-Source (computeCameraZoomFactor + computeOpenTrackCameraZoomFactor entfernt)
+- ✅ CameraDirector: overviewZoom × ratio — 1280-Track Backward-Compat (1.4/1.6/1.3 unverändert)
+- ✅ Label-Skalierung mit effZoom — konstante ~11px Screen-Größe unabhängig von Track-Größe
+- ✅ minVisiblePixels → minTargetScreenPx (Naming + UI-Label in AutoScaleSection)
+- ✅ 808 Unit-Tests grün (net -1: -19 obsolete + +10 neue Proportional-Pipeline-Tests)
+- ✅ 183 e2e-Tests grün (unverändert)
+- ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unverändert)
+- ✅ Prettier: clean
+
+**D7a Browser-Test-Verifikation (post-Merge):**
+- ✅ 1280-Track Backward-Compat: LEADER ~85px (proportional, vorher konstant 57px)
+- ✅ Open-Track natürliches Zoom: BATTLE ~97px > LEADER ~85px > OVERVIEW ~61px
+- ✅ Großer Track + Floor: 6000-Track bleibt ≥32px Mindest-Sichtbarkeit
+- ✅ Camera-States visuell deutlich unterscheidbar auf allen Track-Größen
+- ✅ Labels passen proportional zu Sprite-Größen
+
+**D7-Vision-Phase Story:**
+- 6 Browser-Test-Befunde aus D11 → Vision-Diskussion
+- Drei Sparring-Partner: User + strategischer Claude + Claude Code
+- 5 Architektur-Konzepte erarbeitet (Speed-Bonus, Lane-frei, Track-Capacity, Proportional+Floor, per-Type-Override)
+- Phased Rollout beschlossen: D7a → D7a-Plus → D7b → D7c → D7d
+- D7a: Math-korrekte Implementation → Browser-Test → UX-Problem diagnostiziert → User entschied Option 3 (Proportional+Floor) → Korrektur in selber PR → sauberere Architektur
 
 ---
 
@@ -145,6 +174,7 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | Phase | Code-Tests | Playwright-Smoke-Test | Browser-Verifikation User |
 |---|---|---|---|
+| D7a (PR #33) | ✅ 808 Tests (-1 netto, -19 obsolete +10 neue) | ✅ 183/183 PASS | ✅ grün (Browser-Test-driven Korrektur in selber PR) |
 | D11 (PR #30) | ✅ 809 Tests (+50 unit, +26 e2e) | ✅ 183/183 PASS | ✅ grün (4 Befunde gefunden + gefixt vor Merge) |
 | D3.5.1 | ✅ 52 neue Tests | — (kein UI-Impact) | ✅ grün |
 | D3.5.2 | ✅ Tests migriert | — (interne Refactor) | ✅ grün |
