@@ -21,6 +21,7 @@ export const KEYS = {
   SPEED_SCALE_CONFIG: 'racearena:speedScaleConfig',
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
   RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig',
+  ROW_LAYOUT_CONFIG: 'racearena:rowLayoutConfig',
 };
 
 export function storageGet(key, fallback = null) {

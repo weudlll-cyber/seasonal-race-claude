@@ -111,6 +111,27 @@ What was eliminated in D7a:
 Entry point: `computeRenderDisplayScale` in `modules/autoSpriteScale.js`. Called once per frame
 in the `RaceScreen` render loop.
 
+## Row-Start Layout (D7c)
+
+Implemented in `modules/rowLayout.js`. Called once at race start in `RaceScreen` before the
+racer init map.
+
+**Algorithm:**
+1. `computeRowLayout(racerCount, trackWidthPx, pixelsPerRacer)` — shuffles racer indices
+   (Fisher-Yates) and assigns them to rows. `racersPerRow = floor(trackWidthPx / pixelsPerRacer)`.
+2. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across
+   `[-spreadRange, +spreadRange]`, including partial last rows (full spread, not clustered).
+3. t-start: Row 0 at `t=0`, Row k at `t = -(k × rowGapPx / pathLengthPx)`. Closed tracks:
+   `tPos` wraps negative t correctly (e.g. -0.008 → 0.992 = just before start line).
+   Open tracks: EditorShape clamps to idx=0 (start of path).
+4. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — fractional bonus
+   applied to `baseSpeed` for rear rows. Factor 1.0 = exact distance compensation = pole neutral.
+5. `computeMaxRacersDefault(...)` — auto-capacity for a track based on path length and config.
+
+Config stored in `racearena:rowLayoutConfig` via `rowLayoutConfig.js`. 4 tunable parameters
+in Dev Screen Row Start section: `pixelsPerRacer`, `rowGapMultiplier`, `speedBonusFactor`,
+`maxCapacityFactor`. Track-level `maxRacers` shown in TrackManager with "modified" badge.
+
 ## Race Behavior System (D7b — lane-free)
 
 Racer lateral movement is governed by `modules/raceBehavior.js`. All racers share a continuous `physicalY ∈ [-1.0, +1.0]` in normalized track-width space (0 = centerline, ±1 = boundary). `initRacerBehavior` sets every racer to `physicalY = 0` at race start.

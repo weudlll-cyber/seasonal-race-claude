@@ -27,11 +27,13 @@ import {
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import {
-  initRacerBehavior,
-  applyRacerBehavior,
-  computeStartPhysicalY,
-} from '../../modules/raceBehavior.js';
+  computeRowLayout,
+  computeRowPhysicalY,
+  computeSpeedBonus,
+} from '../../modules/rowLayout.js';
+import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -166,6 +168,7 @@ export default function RaceScreen() {
     const BASE_SPEED_MAX = baseSpeedConfig.max;
 
     const behaviorConfig = loadRaceBehaviorConfig();
+    const rowConfig = loadRowLayoutConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -203,6 +206,20 @@ export default function RaceScreen() {
     camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight);
     setFinishTState(finishT);
 
+    // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
+    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    const spriteSize = displaySize * displaySizeScale;
+    const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
+    const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
+
+    const rowLayout = computeRowLayout(nRacers, trackWidth, rowConfig.pixelsPerRacer);
+    // Index assignments by racerIndex for O(1) lookup in the map below
+    const rowSizeByRow = new Map();
+    for (const a of rowLayout.assignments) {
+      rowSizeByRow.set(a.rowIndex, (rowSizeByRow.get(a.rowIndex) ?? 0) + 1);
+    }
+    const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
+
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -218,16 +235,28 @@ export default function RaceScreen() {
       camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => {
+        const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
+        const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
+        const speedBonus = computeSpeedBonus(
+          assignment.rowIndex,
+          rowGapPx,
+          pathLengthPx,
+          rowConfig.speedBonusFactor
+        );
+        // Closed tracks: rear rows start behind the start line (negative t wraps correctly).
+        // Open tracks: EditorShape clamps negative t to idx=0 (start of path), which is fine.
+        const tStart = -(assignment.rowIndex * deltaT_per_row);
         const racer = {
           ...r,
           index: i,
-          t: 0,
+          t: tStart,
           lap: 1,
           icon: trackEmoji ?? r.icon,
           baseSpeed:
-            ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
+            (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
               speedMultiplier) /
-            speedScaleFactor,
+              speedScaleFactor) *
+            (1 + speedBonus),
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
           color: LANE_COLORS[i % LANE_COLORS.length],
@@ -241,7 +270,11 @@ export default function RaceScreen() {
           angle: 0,
         };
         initRacerBehavior(racer);
-        racer.physicalY = computeStartPhysicalY(i, nRacers, behaviorConfig.startSpreadRange);
+        racer.physicalY = computeRowPhysicalY(
+          assignment.indexInRow,
+          rowSize,
+          behaviorConfig.startSpreadRange
+        );
         return racer;
       }),
     };
@@ -955,7 +988,7 @@ export default function RaceScreen() {
                     <div
                       className="sb-bar-fill"
                       style={{
-                        width: `${Math.min(lapProgress(r.t ?? 0, finishTState), 1) * 100}%`,
+                        width: `${Math.min(Math.max(0, lapProgress(r.t ?? 0, finishTState)), 1) * 100}%`,
                         background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
                       }}
                     />

@@ -27,6 +27,7 @@ import {
   openTrackFinishT,
   lapsFromDuration,
 } from '../../modules/camera/lapUtils.js';
+import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -128,6 +129,18 @@ function SetupScreen() {
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
+
+  // D7c: row-start hints — compute once per render, cheap
+  const rowLayoutHints = useMemo(() => {
+    const rowConfig = loadRowLayoutConfig();
+    const trackW = selectedTrack?.trackWidth ?? 140;
+    const racersPerRow = Math.max(1, Math.floor(trackW / rowConfig.pixelsPerRacer));
+    const totalRows = players.length > 0 ? Math.ceil(players.length / racersPerRow) : 1;
+    const showRowHint = players.length > racersPerRow;
+    const maxRacers = selectedTrack?.maxRacers ?? null;
+    const showCapacityWarn = maxRacers !== null && players.length > maxRacers;
+    return { racersPerRow, totalRows, showRowHint, maxRacers, showCapacityWarn };
+  }, [players.length, selectedTrack]);
 
   // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
   const trackIsOpen = useMemo(() => {
@@ -447,6 +460,31 @@ function SetupScreen() {
 
         {/* Start bar — always visible at the bottom */}
         <div className={styles.startBar}>
+          {rowLayoutHints.showRowHint && (
+            <div
+              data-testid="row-start-hint"
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--color-muted)',
+                padding: '0.2rem 0',
+              }}
+            >
+              ℹ️ {players.length} players will start in {rowLayoutHints.totalRows} rows
+            </div>
+          )}
+          {rowLayoutHints.showCapacityWarn && (
+            <div
+              data-testid="capacity-warning"
+              style={{
+                fontSize: '0.78rem',
+                color: '#f4a261',
+                padding: '0.2rem 0',
+              }}
+            >
+              ⚠️ This track recommends a maximum of {rowLayoutHints.maxRacers} racers — you have{' '}
+              {players.length}. The race will still start but may feel cramped.
+            </div>
+          )}
           <div className={styles.startSummary}>
             <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
             {selectedTrack ? (

@@ -95,7 +95,8 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 
 | Storage Key | Inhalt | Status |
 |---|---|---|
-| `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, trackWidth, worldWidth, ...` | Aktiv |
+| `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, trackWidth, worldWidth, maxRacers (null=no limit), ...` | Aktiv |
+| `racearena:rowLayoutConfig` | Row-Start-Tuning-Config. Felder: `pixelsPerRacer, rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. | Aktiv (post D7c) |
 | `racearena:racerTypeOverrides` | Override-Map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` für deaktivierte Types und Tuning-Overrides (post D3.5.5). Legacy-Format `{[typeId]: false}` wird on-read via `normalizeOverrideMap()` migriert. | Aktiv (post D3.5.5) |
 | `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |
 | `racearena:trackGeometries:<id>` | Track-Geometry-Records (Catmull-Rom Spline-Punkte) | Aktiv |
@@ -217,12 +218,16 @@ RaceScreen liest aus `sessionStorage['activeRace']`:
 - `racerTypeId` → bestimmt welche Racer-Instanz für alle Spieler verwendet wird
 - `racers[]` → bekommen alle denselben Type, jeweils einen Coat per djb2-Hash auf Name
 
-Per-Racer Runtime-Felder (D7b, gesetzt von `initRacerBehavior` + RaceScreen-Init):
-- `physicalY` — normalisierte Lateralposition, ∈ [-1.0, +1.0]: -1=innere Boundary, 0=Centerline, +1=äußere Boundary. Beim Race-Start werden alle Racer gleichmäßig über [-startSpreadRange, +startSpreadRange] verteilt (`computeStartPhysicalY`), so wie eine Reihe an der Startlinie. Wird danach durch Home-Force + Avoidance + Soft-Repulsion pro Frame mutiert.
+Per-Racer Runtime-Felder (D7b/D7c, gesetzt von `initRacerBehavior` + RaceScreen-Init):
+- `physicalY` — normalisierte Lateralposition, ∈ [-1.0, +1.0]: -1=innere Boundary, 0=Centerline, +1=äußere Boundary. D7b: alle Racer in einer Reihe gleichmäßig verteilt via `computeRowPhysicalY`. D7c: gilt pro Reihe, auch für unvollständige letzte Reihen (full-spread). Wird danach durch Home-Force + Avoidance + Soft-Repulsion pro Frame mutiert.
+- `t` — Race-progress ∈ [0, finishT]. Seit D7c: hintere Reihen starten bei negativem t (z.B. -0.008 für Reihe 1) — auf Closed Tracks wird durch `tPos` korrekt hinter die Startlinie gewickelt; auf Open Tracks klemmt EditorShape._idx auf idx=0.
+- `baseSpeed` — seit D7c multipliziert mit `(1 + speedBonus)` für hintere Reihen. Speed-Bonus kompensiert die physische Startdistanz. `speedBonusFactor=1.0` → Pole-Position mathematisch neutral.
 - `avoidanceActive` — boolean: true wenn Racer adjacent-Speed-Brake-Bedingung triggert
 - `draftingBoostActive` — boolean: true wenn Racer im Slipstream-Kegel eines Vordermanns
 
 > **Anti-Stacking (D7b-fix B3):** Avoidance-Forces werden vor der Anwendung durch `sqrt(neighborCount)` normalisiert, wobei `neighborCount` = Anzahl der Racer die in diesem Frame eine non-zero Avoidance-Force auf diesen Racer ausüben. Verhindert Boundary-Clinging bei 20+ Racers: ohne Normalisierung akkumuliert ein Racer mit N Nachbarn N× die Einzelforce, was die restoring forces (home force + soft repulsion) overwhelmt.
+
+> **Reihen-Start (D7c):** `computeRowLayout(racerCount, trackWidthPx, pixelsPerRacer)` mischt Racer-Indices (Fisher-Yates) und weist sie Reihen zu. `rowGapPx = spriteSize × rowGapMultiplier`. `deltaT_per_row = rowGapPx / pathLengthPx`. Reihe 0 → t=0; Reihe k → t=-(k × deltaT_per_row). Speed-Bonus: `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)`. Alle 4 Parameter in Dev-Screen Row-Start-Section tunable.
 
 Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
 

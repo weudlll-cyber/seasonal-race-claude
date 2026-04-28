@@ -42,6 +42,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **D7b** | #37 | Lane-frei: physicalY-System ersetzt currentLaneY/targetLaneY vollständig. physicalY ∈ [-1,+1] (0=Centerline). Home-Force-Spring, anisotrope Avoidance-Distanz (t×tWeight + physicalY×yWeight), Cone-Drafting (Weltkoordinaten), Speed-Brake für Adjacent-Racer, Soft-Repulsion + Hard-Clamp. 13 neue/angepasste tunable Parameter im Dev-Screen. Lane-Code hart entfernt. Unit + e2e Tests aktualisiert. |
 | ✅ **D7b-fix B1+B2** | #37 | Folge-Commit auf Branch D7b: B1 — Start-Spread: Racer starten gleichmäßig verteilt über [-startSpreadRange, +startSpreadRange] statt alle bei physicalY=0 (computeStartPhysicalY, neuer Dev-Screen-Parameter). B2 — yDiff=0 Edge-Case: wenn beide Racer gleiche physicalY haben, wird keine Lateral-Force angewendet (prevents alle Trailers fliegen in Richtung +1). |
 | ✅ **D7b-fix B3** | #37 | Anti-Stacking (Kraft-Imbalance, war als D11-Befund im Backlog): Avoidance-Forces werden durch sqrt(neighborCount) normalisiert — verhindert Boundary-Clinging bei 20+ Racers wo lineare Force-Akkumulation die restoring forces überwältigte. Neue Defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
+| ✅ **D7c** | #39 | Reihen-Start + Speed-Bonus + Track-Capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full-spread auch für letzte unvollständige Reihe), `computeSpeedBonus` (Faktor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto-Capacity aus pathLengthPx). Closed tracks: hintere Reihen starten bei negativem t (tPos wraps korrekt). Open tracks: t=0 durch EditorShape-Clamp. `maxRacers` auf Track mit "modified"-Badge. Setup-Screen: Reihen-Hinweis + Capacity-Warnung. Dev-Screen Row-Start-Section: 4 Parameter. 21 Unit + 6 e2e Tests. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -60,13 +61,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - ✅ **D7a** — Proportional Sprite Scaling + Min-Size-Floor + Zoom-Ratios + Label-Skalierung (PR #33, master `a49baa0`)
 - ✅ **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (PR #35, master `27cba65`)
 - ✅ **D7b** — Lane-frei: physicalY ersetzt Lane-System (PR #37)
+- ✅ **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity (PR #39)
 
-- 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
-  - Reihen-Start (Layout) für viele Racer mit negativen t-Start-Offsets für hintere Reihen
-  - Speed-Bonus kompensiert physische Distanz (`speedBonus = startOffset / trackLength`, capped)
-  - Track-Capacity-System (maxRacers pro Track)
-
-- **D7d** — 100-Racer-Performance
+- 🔜 **D7d** — 100-Racer-Performance
   - Spatial-Grid für O(N) Avoidance-Performance
   - Smartere Camera für Pulk-Übersicht
   - LOD oder ähnliche Strategien für 100 Racer
@@ -205,8 +202,8 @@ aus D3.5.5.
 5. ✅ **D7a** Proportional Sprites + Zoom + Labels — PR #33, master `a49baa0`
 6. ✅ **D7a-Plus** Per-Type Sprite-Mindest-Größe + Live-Vorschau — PR #35, master `27cba65`
 7. ✅ **D7b** Lane-frei + physicalY-Avoidance — PR #37
-8. 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
-9. **D7d** — 100-Racer-Performance
+8. ✅ **D7c** Reihen-Start + Speed-Bonus + Track-Capacity — PR #39
+9. 🔜 **D7d** — 100-Racer-Performance
 10. **D3.5.4** Trail-Tuning
 11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
 12. **D6**, **D8**

@@ -126,6 +126,13 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
   max: 0.00118,
 };
 
+export const DEFAULT_ROW_LAYOUT_CONFIG = {
+  pixelsPerRacer: 80,
+  rowGapMultiplier: 1.5,
+  speedBonusFactor: 1.0,
+  maxCapacityFactor: 0.3,
+};
+
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
   // Start layout — initial lateral spread at race start
