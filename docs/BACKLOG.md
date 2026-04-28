@@ -7,7 +7,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **D7** — Visual Experience Architecture (Vision-Diskussion zuerst)
+- 🔜 **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (D3.5.5-Pattern)
 
 ---
 
@@ -37,6 +37,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **fix/list-tracks** | #27 | Root-Cause-Fix für Large-Track-Render-Bug: `listTracks()` gab worldWidth/worldHeight nicht zurück → bsX=1.0 → nur ~549px sichtbar auf 6000px-World. A1: 2-Zeilen-Fix in trackStorage.js. A2: Migration-IIFE in storage.js. 723 Unit + 103 e2e Tests. |
 | ✅ **fix/camera-polish + Q-14** | #28 | CameraDirector: adaptive zoom (zoom=worldW²/VIEW_W/worldW, clamp 0.15–6), clampOffset 2-anchor-Formel, top-3-Focus. cameraZoomFactor-Invariante (REFERENCE_CAMERA_ZOOM/cam.zoom, nur Closed Tracks). BaseSpeedSection im Dev-Screen: tunable min/max baseSpeed, Spread-Preview, 2-Lap-Gap-Schätzung. Q-14 lapUtils SoT: DEFAULT_BASE_SPEED_CONFIG aus defaults.js, private Konstanten, optionale Params auf openTrackFinishT/estimatedSecondsPerLap. camera-polish-ux-verification.spec.js (31 Tests, permanent). 759 Unit + 157 e2e Tests. Master `750d826`. |
 | ✅ **D11** | #30 | Racer Behavior: Soft Avoidance + Drafting. Asymmetric avoidance (trailer yields, leader holds lane) — eliminates symmetric force cancellation in packs. Proximity-scaled force, configurable avoidanceDistance/lateralForce/maxLateral. Speed brake for adjacent racers. Drafting boost for close followers in same lane. World-edge camera clamp (Befund 2, prevents black strips at high zoom). Camera-zoom-aware sprite scaling for open tracks: `computeOpenTrackCameraZoomFactor()` produces identical on-screen size as closed-track reference at any zoom. Pixel-floor logic: `minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks. All 5 params tunable in Dev-Screen. 809 Unit + 183 e2e Tests. Master `d46cab2`. |
+| ✅ **D7a** | #33 | Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. cameraZoomFactor + REFERENCE_CAMERA_ZOOM entfernt. computeRenderDisplayScale als Single-Source der Render-Pipeline: max(proportionalScreenPx, minTargetScreenPx). CameraDirector: overviewZoom × ratio pro State (LEADER:1.4, BATTLE:1.6, COMEBACK:1.3). Label-Skalierung mit effZoom. Q-15 strukturell adressiert: 4 Skalierungs-Faktoren → 1 Pipeline. 808 Unit + 183 e2e Tests. Master `a49baa0`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -52,30 +53,28 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - **D6** — Racer-Track-Effects (RTE): `rteDefinitions` auf SpriteRacerType ist reserviert.
   Braucht `RteManager` in RaceScreen und Schema-Spec. Per-Racer Partikel-Effekte
   durch Track-Zustand (Schlamm-Spray, Wasser-Splash etc.).
-- **D7** — Visual Experience Architecture (🔜 nächste Phase)
+- ✅ **D7a** — Proportional Sprite Scaling + Min-Size-Floor + Zoom-Ratios + Label-Skalierung (PR #33, master `a49baa0`)
 
-  Nach D11 sind 4 multiplikative Skalierungsfaktoren aktiv: `speedScale` (Track-Länge),
-  `displaySizeScale` (Auto-Sprite, lane-basiert + pixelFloor), `cameraZoomFactor`
-  (Closed-Track-Referenz-Invariante oder Open-Track-Formel), `behaviorSpeedFactor`
-  (Drafting-Boost). Diese Faktoren wurden jeweils einzeln korrekt eingeführt, aber ihr
-  Zusammenspiel ist durch Browser-Tests als visuell komplex identifiziert worden.
+- 🔜 **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau
+  - Globaler Default minTargetScreenPx (32px) bleibt erhalten
+  - Per-Type Override-Möglichkeit (D3.5.5-Pattern): Slider im Edit-Modal mit Live-Update
+  - Animierte Sprite-Vorschau in exakt der Mindest-Größe
+  - Reset-to-default Button; Fall-back auf globalen Default wenn Override nicht gesetzt
 
-  **Bekannte offene Punkte aus Browser-Tests (D11-Phase):**
-  - Force-Stacking bei 20+ Racers: letzter Racer empfängt Force von bis zu 19 Leadern;
-    durch `maxLateral`-Clamp begrenzt aber nicht normalisiert. Fix: Force ÷ sqrt(neighborCount)
-  - Label-Skalierung: Labels skalieren nicht mit Sprite-Größe → bei großen Sprites
-    (pixel-floor-erhöhter Scale) sind Labels unverhältnismäßig klein
-  - Q-13 (Sprite-Frame-Animation ruckelt bei großen Sprites) gehört zur D7-Vision
-  - Camera smooth zoom transitions (aus ursprünglichem D7-Scope, noch offen)
+- **D7b** — Lane-frei + Physical-Y-Avoidance
+  - Lane-System (currentLaneY/targetLaneY) komplett entfernen
+  - physicalY in Welt-Pixel-Raum; Avoidance + Drafting wirken auf physische Distanz
+  - Gesamte Strecken-Breite frei nutzbar
 
-  **Architektur-Refactor-Kandidat (Q-15):** Die Skalierungs-Pipeline ist schwer zu
-  debuggen und zu testen weil sie über RaceScreen/index.jsx, autoSpriteScale.js,
-  openTrackCamera.js und CameraDirector.js verteilt ist. D7 sollte mit einer
-  Vision-Diskussion beginnen bevor Code geschrieben wird.
+- **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
+  - Reihen-Start (Layout) für viele Racer mit negativen t-Start-Offsets für hintere Reihen
+  - Speed-Bonus kompensiert physische Distanz (`speedBonus = startOffset / trackLength`, capped)
+  - Track-Capacity-System (maxRacers pro Track)
 
-  **Vision-Diskussion zuerst:** Kläre was "gutes visuelles Ergebnis" heißt (sprite
-  consistent size, camera framing rule, label legibility) bevor Refactor-Scope festgelegt
-  wird. Cross-reference: Q-15.
+- **D7d** — 100-Racer-Performance
+  - Spatial-Grid für O(N) Avoidance-Performance
+  - Smartere Camera für Pulk-Übersicht
+  - LOD oder ähnliche Strategien für 100 Racer
 - **D8** — Voller Racer-Config-Editor: Coats-Edit-UI, alle Felder, Sprite-Wechsel-UI.
   Baut auf Override-Pattern (B-7) auf.
 
@@ -136,22 +135,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   Wahrscheinlich Phase D7 (Visual Experience Architecture) zugehörig oder eigenes Q-Item.
   Niedrige Priorität — pragmatisch akzeptabel für aktuelle Use-Cases.
 
-- **Q-15** — Visual-System Architectural Debt (cross-reference D7)
-
-  4 multiplikative Skalierungsfaktoren in der Render-Pipeline sind über 4 Module verteilt
-  und interagieren nicht-trivial: `speedScale`, `displaySizeScale`, `cameraZoomFactor`,
-  `behaviorSpeedFactor`. Jeder Faktor für sich korrekt, aber das Zusammenspiel ist opak.
-  Browser-Tests in D11 fanden 4 visuelle Bugs trotz 791 Unit + 183 e2e Tests grün — Indiz
-  dass die aktuelle Testpyramide das visuelle Outcome nicht abdeckt.
-
-  **Konkrete Schulden:**
-  - Keine Visual-Outcome-Tests (was der Nutzer sieht, nicht was berechnet wird)
-  - Keine Boundary-Geometry-Tests (kleine/große Tracks, extreme Racer-Counts)
-  - Keine Realistic-Configuration-Tests (echte Track + Racer-Kombos, nicht Unit-Inputs)
-  - Skalierungs-Pipeline nicht dokumentiert als Ganzes
-
-  Wahrscheinlich zusammen mit D7 adressieren. Keine akute Blockierung, aber erhöht
-  Debugging-Aufwand bei jedem weiteren visuellen Feature.
+- ✅ **Q-15** — Visual-System Architectural Debt — durch D7a (PR #33) strukturell adressiert.
+  4 multiplikative Skalierungs-Faktoren auf eine Pipeline (computeRenderDisplayScale) reduziert.
+  cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminiert. Closed/Open-Track-Math-Pipelines durch
+  einheitliche effZoom-basierte Berechnung vereinheitlicht.
 
 ### Phase V (Verification-Sprint)
 
@@ -185,13 +172,17 @@ aus D3.5.5.
 2. ✅ **B-16 + B-17** — PR #26, master `7cdde15`
 3. ✅ **fix/camera-polish + Q-14** — PR #28, master `750d826`
 4. ✅ **D11** Racer Behavior — PR #30, master `d46cab2`
-5. 🔜 **D7** Visual Experience Architecture (Vision-Diskussion zuerst, dann Q-15 ggf. integriert)
-6. **D3.5.4** Trail-Tuning
-7. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-8. **D6**, **D8**
-9. **Phase Q-6**, **Q-7** (+ Q-9/Q-10/Q-15 watch)
-10. **Phase V** (Verification-Sprint)
-11. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+5. ✅ **D7a** Proportional Sprites + Zoom + Labels — PR #33, master `a49baa0`
+6. 🔜 **D7a-Plus** — Per-Type Sprite-Mindest-Größe + Live-Vorschau
+7. **D7b** — Lane-frei + Physical-Y-Avoidance
+8. **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
+9. **D7d** — 100-Racer-Performance
+10. **D3.5.4** Trail-Tuning
+11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+12. **D6**, **D8**
+13. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
+14. **Phase V** (Verification-Sprint)
+15. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
 
 ---
 

@@ -80,6 +80,37 @@ Browser → React (screens/)
 - **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are currently inlined in `RaceScreen/index.jsx`. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
 - **Sprite-based racers, not procedural primitives** — Issue D started with procedural Canvas drawing for racer bodies. Three iterations confirmed that anatomical detail (horse vs duck vs snail) at 22-26 px scale cannot be made readable with primitives. Racer types now use PNG sprite sheets with frame-based animation and offscreen-canvas tinting for color variants. Per-racer assets live under `client/public/assets/racers/` with credits in `CREDITS.md`.
 
+## Visual Sprite-Scaling Pipeline (after D7a)
+
+Sprites scale proportionally with camera zoom (natural "closer = bigger"), with a minimum-size
+floor that guarantees visibility on very large tracks.
+
+```
+spriteWorldScale = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minTargetScreenPx)
+screenPx         = displaySize × spriteWorldScale × effZoom
+               = max(displaySize × displaySizeScale × effZoom, minTargetScreenPx)
+
+Where:
+  effZoom (Closed) = cam.zoom × bsX       where bsX = CANVAS_W / worldW
+  effZoom (Open)   = OPEN_TRACK_BASE_ZOOM × cam.zoom   (OPEN_TRACK_BASE_ZOOM = 1.5)
+
+  cam.zoom     = overviewZoom × stateRatio    (lerp-smoothed each frame)
+  overviewZoom = CANVAS_W / worldW            (adaptive: full world fits at zoom=1 on 1280px ref)
+  stateRatio   = LEADER:1.4, BATTLE:1.6, COMEBACK:1.3, OVERVIEW:1.0
+
+  displaySizeScale = computeAutoScaleFactor(trackWidth, racerCount, config)
+                   = clamp(trackWidth / racerCount / referenceValue, minScale, maxScale)
+```
+
+What was eliminated in D7a:
+- `cameraZoomFactor` — per-frame compensating multiplier that kept sprites constant-size
+- `REFERENCE_CAMERA_ZOOM = 1.4` — magic constant the above aimed to match
+- Pixel floor inside `computeAutoScaleFactor` — floor is now in the render pipeline only
+- `computeCameraZoomFactor` + `computeOpenTrackCameraZoomFactor` — helper functions for the above
+
+Entry point: `computeRenderDisplayScale` in `modules/autoSpriteScale.js`. Called once per frame
+in the `RaceScreen` render loop.
+
 ## Camera System
 
 The race camera lives in `modules/camera/` and supports four director modes:
