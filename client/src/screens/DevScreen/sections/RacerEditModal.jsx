@@ -10,7 +10,7 @@
 //              animated sprite preview.
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { InfoTooltip } from '../../../components/InfoTooltip/InfoTooltip.jsx';
 import {
   RACER_TYPES,
@@ -126,6 +126,25 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   const [minSizeOverride, setMinSizeOverride] = useState(() =>
     'minTargetScreenPx' in typeOverrides ? typeOverrides.minTargetScreenPx : undefined
   );
+
+  // Scroll indicator: true when body has more content below the visible area
+  const bodyRef = useRef(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    function check() {
+      setHasMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    }
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, []);
 
   // Keep local state in sync if parent overrides change externally (e.g. reset-all)
   useEffect(() => {
@@ -272,7 +291,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
           </button>
         </div>
 
-        <div className={s.body}>
+        <div className={s.body} ref={bodyRef}>
           {STANDARD_FIELDS.map((fieldName) => {
             const meta = FIELD_META[fieldName];
             const modified = isFieldOverridden(fieldName);
@@ -380,6 +399,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
             </div>
           </div>
         </div>
+        {hasMoreBelow && <div className={s.scrollFade} aria-hidden="true" />}
 
         <div className={s.footer}>
           <button

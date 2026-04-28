@@ -191,6 +191,16 @@
   margin-top: 0.1rem;
 }
 
+.scrollFade {
+  height: 52px;
+  flex-shrink: 0;
+  transform: translateY(-52px);
+  margin-bottom: -52px;
+  background: linear-gradient(to bottom, transparent 0%, var(--color-surface) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .footer {
   display: flex;
   align-items: center;
