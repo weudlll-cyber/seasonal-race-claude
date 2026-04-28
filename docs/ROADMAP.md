@@ -62,7 +62,11 @@ Replaces emoji racers with sprite-based renderable types.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
 - [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
-- [ ] D7 — Visual Experience Architecture: refactor 4-factor scaling pipeline, smooth zoom transitions, label scaling, force-stacking fix — 🔜 next (Vision-Diskussion zuerst)
+- [x] D7a — Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. computeRenderDisplayScale as single-source render pipeline. cameraZoomFactor removed. 808 unit + 183 e2e tests. PR #33, master `a49baa0`.
+- [ ] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern) — 🔜 next
+- [ ] D7b — Lane-frei: remove lane system, physical-Y avoidance in world-pixel space
+- [ ] D7c — Reihen-Start: staggered start layout, speed-bonus for rear rows, track-capacity system
+- [ ] D7d — 100-Racer-Performance: spatial grid O(N) avoidance, smart camera for packs
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
 ## Phase B — Bug Fixes & Wiring ✅ B-Wave done (PR #25)
@@ -142,6 +146,25 @@ on-screen sprite size to closed-track reference at any zoom. Pixel-floor logic:
 `minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks.
 809 unit tests + 183 e2e tests. 4 browser bugs found and fixed before merge.
 
+## D7a — Proportional Sprite Scaling + Zoom-Ratios + Label-Skalierung ✅ Done (PR #33, master `a49baa0`)
+
+Visual-system architectural cleanup. Replaces 4 multiplicative scaling factors with a single
+proportional pipeline plus floor. `cameraZoomFactor` and `REFERENCE_CAMERA_ZOOM` removed —
+the constant-size mechanism is obsolete. `computeRenderDisplayScale` is the new single-source
+sprite-sizing function: `screenPx = max(displaySize × displaySizeScale × effZoom, minTargetScreenPx)`.
+
+CameraDirector relative zoom ratios: `overviewZoom × ratio` per state (LEADER:1.4, BATTLE:1.6,
+COMEBACK:1.3). 1280-track behavior identical to previous. Large tracks (e.g. 6000px) now show
+clearly distinct camera states.
+
+Label scaling: hardcoded 11px font replaced with effZoom-based scaling for consistent ~11
+screen-pixel labels regardless of track size. Trail-dot scaling consistent.
+
+`minVisiblePixels` renamed to `minTargetScreenPx` (config key + UI label). Browser-test-driven
+correction in same PR: initial constant-size implementation felt wrong → diagnosed as
+sprite/track-background ratio perception → user decided proportional + floor → simpler architecture.
+808 unit tests + 183 e2e tests. Q-15 structurally addressed.
+
 ## W3 — Race-Type Override ✅ Done (PR #17)
 
 Session-only racer-type override selector in the Setup Track tab. Filters disabled types.
@@ -197,7 +220,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (809 unit tests, 50 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
+- [x] Vitest + React Testing Library (808 unit tests, 50 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -224,3 +247,4 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 | 2026-04-27 | B-Wave UX-Polish sweep complete (PR #25, master `697e081`): B-1 player-group load fix (StrictMode useEffect), B-3 winners max 5→20, B-10 InfoTooltip auto-boundary detection, B-11 display-size tooltip simplified, B-12 maxPlayers configurable in Dev Panel, B-13 language selector removed, B-14 TrackManager hint to Track Editor, B-15 all German UI strings → English (TrackEditor + TrackManager) + d10-smoke/d10-ux-verification updated. 694 unit + 88 e2e tests (13 new b-wave-smoke). |
 | 2026-04-27 | fix/camera-polish + Q-14 complete (PR #28, master `750d826`): CameraDirector adaptive zoom + clampOffset 2-anchor + top-3 focus; cameraZoomFactor invariant (closed tracks). BaseSpeedSection in Dev-Screen (tunable min/max, spread preview, 2-lap gap). Q-14 lapUtils SoT (DEFAULT_BASE_SPEED_CONFIG from defaults.js, private consts, optional params). camera-polish-ux-verification.spec.js (31 tests, V1-V12, permanent). d10-ux-verification V8 stale assertion fixed. 759 unit + 157 e2e tests. |
 | 2026-04-27 | D11 Racer Behavior + Visual-Fixes complete (PR #30, master `d46cab2`): asymmetric avoidance (trailer yields/leader holds), proximity-scaled force, speed brake, drafting boost, RaceBehaviorSection in Dev-Screen. Camera world-edge clamp (Befund 2). Open-track camera-zoom-aware sprite scaling: `computeOpenTrackCameraZoomFactor()` + pixel-floor `minVisiblePixels`. 4 browser bugs found during review and fixed before merge. 809 unit + 183 e2e tests. Decision: accumulated complexity in 4-factor scaling pipeline → D7 (Visual Experience Architecture) as next phase with Vision-Diskussion zuerst; Q-15 tracks the architectural debt. |
+| 2026-04-28 | D7-Vision-Phase: 6 D11-Browser-Test-Befunde → Vision-Diskussion mit drei Sparring-Partnern (User + strat. Claude + Claude Code). 5 Architektur-Konzepte beschlossen: proportional+Floor-Sprites, relative Zoom-Ratios, Label-Skalierung, Lane-frei (D7b), Reihen-Start+Speed-Bonus (D7c), 100-Racer-Performance (D7d). D7a complete (PR #33, master `a49baa0`): computeRenderDisplayScale Single-Source, cameraZoomFactor entfernt, CameraDirector overviewZoom×ratio, Label-Skalierung mit effZoom. Browser-test-driven Korrektur in selber PR: konstante Sprites → proportional+Floor → sauberere Architektur. Q-15 strukturell adressiert. 808 unit + 183 e2e tests. |
