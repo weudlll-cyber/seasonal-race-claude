@@ -38,6 +38,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **fix/camera-polish + Q-14** | #28 | CameraDirector: adaptive zoom (zoom=worldW²/VIEW_W/worldW, clamp 0.15–6), clampOffset 2-anchor-Formel, top-3-Focus. cameraZoomFactor-Invariante (REFERENCE_CAMERA_ZOOM/cam.zoom, nur Closed Tracks). BaseSpeedSection im Dev-Screen: tunable min/max baseSpeed, Spread-Preview, 2-Lap-Gap-Schätzung. Q-14 lapUtils SoT: DEFAULT_BASE_SPEED_CONFIG aus defaults.js, private Konstanten, optionale Params auf openTrackFinishT/estimatedSecondsPerLap. camera-polish-ux-verification.spec.js (31 Tests, permanent). 759 Unit + 157 e2e Tests. Master `750d826`. |
 | ✅ **D11** | #30 | Racer Behavior: Soft Avoidance + Drafting. Asymmetric avoidance (trailer yields, leader holds lane) — eliminates symmetric force cancellation in packs. Proximity-scaled force, configurable avoidanceDistance/lateralForce/maxLateral. Speed brake for adjacent racers. Drafting boost for close followers in same lane. World-edge camera clamp (Befund 2, prevents black strips at high zoom). Camera-zoom-aware sprite scaling for open tracks: `computeOpenTrackCameraZoomFactor()` produces identical on-screen size as closed-track reference at any zoom. Pixel-floor logic: `minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks. All 5 params tunable in Dev-Screen. 809 Unit + 183 e2e Tests. Master `d46cab2`. |
 | ✅ **D7a** | #33 | Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. cameraZoomFactor + REFERENCE_CAMERA_ZOOM entfernt. computeRenderDisplayScale als Single-Source der Render-Pipeline: max(proportionalScreenPx, minTargetScreenPx). CameraDirector: overviewZoom × ratio pro State (LEADER:1.4, BATTLE:1.6, COMEBACK:1.3). Label-Skalierung mit effZoom. Q-15 strukturell adressiert: 4 Skalierungs-Faktoren → 1 Pipeline. 808 Unit + 183 e2e Tests. Master `a49baa0`. |
+| ✅ **D7a-Plus** | #35 | Per-Type minTargetScreenPx mit Live-Vorschau. Slider + animierter Canvas-Preview im RacerEditModal. Global-Default-Hint, Modified-Badge, Reset. getEffectiveMinTargetScreenPx() in Render-Pipeline. Scroll-Indikator-Follow-up (Fade-Gradient). CC Smoke-Test Convention: Verifikations-Quellen-Klarstellung. Master `27cba65`. |
+| ✅ **D7b** | #37 | Lane-frei: physicalY-System ersetzt currentLaneY/targetLaneY vollständig. physicalY ∈ [-1,+1] (0=Centerline). Home-Force-Spring, anisotrope Avoidance-Distanz (t×tWeight + physicalY×yWeight), Cone-Drafting (Weltkoordinaten), Speed-Brake für Adjacent-Racer, Soft-Repulsion + Hard-Clamp. 13 neue/angepasste tunable Parameter im Dev-Screen. Lane-Code hart entfernt. Unit + e2e Tests aktualisiert. |
+| ✅ **D7b-fix B1+B2** | #37 | Folge-Commit auf Branch D7b: B1 — Start-Spread: Racer starten gleichmäßig verteilt über [-startSpreadRange, +startSpreadRange] statt alle bei physicalY=0 (computeStartPhysicalY, neuer Dev-Screen-Parameter). B2 — yDiff=0 Edge-Case: wenn beide Racer gleiche physicalY haben, wird keine Lateral-Force angewendet (prevents alle Trailers fliegen in Richtung +1). |
+| ✅ **D7b-fix B3** | #37 | Anti-Stacking (Kraft-Imbalance, war als D11-Befund im Backlog): Avoidance-Forces werden durch sqrt(neighborCount) normalisiert — verhindert Boundary-Clinging bei 20+ Racers wo lineare Force-Akkumulation die restoring forces überwältigte. Neue Defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -54,19 +58,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   Braucht `RteManager` in RaceScreen und Schema-Spec. Per-Racer Partikel-Effekte
   durch Track-Zustand (Schlamm-Spray, Wasser-Splash etc.).
 - ✅ **D7a** — Proportional Sprite Scaling + Min-Size-Floor + Zoom-Ratios + Label-Skalierung (PR #33, master `a49baa0`)
+- ✅ **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (PR #35, master `27cba65`)
+- ✅ **D7b** — Lane-frei: physicalY ersetzt Lane-System (PR #37)
 
-- 🔜 **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau
-  - Globaler Default minTargetScreenPx (32px) bleibt erhalten
-  - Per-Type Override-Möglichkeit (D3.5.5-Pattern): Slider im Edit-Modal mit Live-Update
-  - Animierte Sprite-Vorschau in exakt der Mindest-Größe
-  - Reset-to-default Button; Fall-back auf globalen Default wenn Override nicht gesetzt
-
-- **D7b** — Lane-frei + Physical-Y-Avoidance
-  - Lane-System (currentLaneY/targetLaneY) komplett entfernen
-  - physicalY in Welt-Pixel-Raum; Avoidance + Drafting wirken auf physische Distanz
-  - Gesamte Strecken-Breite frei nutzbar
-
-- **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
+- 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
   - Reihen-Start (Layout) für viele Racer mit negativen t-Start-Offsets für hintere Reihen
   - Speed-Bonus kompensiert physische Distanz (`speedBonus = startOffset / trackLength`, capped)
   - Track-Capacity-System (maxRacers pro Track)
@@ -173,9 +168,9 @@ aus D3.5.5.
 3. ✅ **fix/camera-polish + Q-14** — PR #28, master `750d826`
 4. ✅ **D11** Racer Behavior — PR #30, master `d46cab2`
 5. ✅ **D7a** Proportional Sprites + Zoom + Labels — PR #33, master `a49baa0`
-6. 🔜 **D7a-Plus** — Per-Type Sprite-Mindest-Größe + Live-Vorschau
-7. **D7b** — Lane-frei + Physical-Y-Avoidance
-8. **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
+6. ✅ **D7a-Plus** Per-Type Sprite-Mindest-Größe + Live-Vorschau — PR #35, master `27cba65`
+7. ✅ **D7b** Lane-frei + physicalY-Avoidance — PR #37
+8. 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
 9. **D7d** — 100-Racer-Performance
 10. **D3.5.4** Trail-Tuning
 11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
