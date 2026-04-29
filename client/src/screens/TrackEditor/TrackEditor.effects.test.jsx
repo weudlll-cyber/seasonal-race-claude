@@ -203,7 +203,7 @@ describe('TrackEditor effect preview (F12/F13)', () => {
 
 // ── Background image upload: file size guard (SEC-4) ────────────────────────
 describe('TrackEditor background upload size guard', () => {
-  it('shows an error and does not call FileReader when file exceeds 5 MB', async () => {
+  it('shows an error and does not call FileReader when file exceeds 10 MB', async () => {
     const readSpy = vi.fn();
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = readSpy;
@@ -213,7 +213,7 @@ describe('TrackEditor background upload size guard', () => {
     const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
 
     const oversizeFile = new File(['x'], 'big.jpg', { type: 'image/jpeg' });
-    Object.defineProperty(oversizeFile, 'size', { value: 6 * 1024 * 1024 });
+    Object.defineProperty(oversizeFile, 'size', { value: 11 * 1024 * 1024 });
 
     await act(async () => {
       fireEvent.change(fileInput, { target: { files: [oversizeFile] } });
@@ -223,7 +223,7 @@ describe('TrackEditor background upload size guard', () => {
     expect(container.textContent).toMatch(/too large/i);
   });
 
-  it('does not show a size error for a file within the 5 MB limit', async () => {
+  it('does not show a size error for a file within the 10 MB limit', async () => {
     // FileReader is synchronous in jsdom — stub it so onload never fires.
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = vi.fn();

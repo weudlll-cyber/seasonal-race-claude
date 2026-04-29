@@ -142,6 +142,13 @@ router.post('/', (req, res) => {
   // eslint-disable-next-line no-unused-vars
   const { backgroundImage, ...rest } = req.body;
   const track = {
+    // Sensible defaults — overridden by anything in req.body
+    icon: '🏁',
+    description: '',
+    defaultRacerTypeId: 'horse',
+    color: '#e63946',
+    defaultDuration: 60,
+    defaultWinners: 3,
     ...rest,
     id,
     geometryId,

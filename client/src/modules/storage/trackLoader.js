@@ -10,9 +10,9 @@
 // ============================================================
 
 import { API_BASE_URL } from '../../services/api.js';
-import { storageGet, storageSet, KEYS } from './storage.js';
+import { storageGet, storageSet, storageRemove, KEYS } from './storage.js';
 import { DEFAULT_TRACKS } from './defaults.js';
-import { cacheBackground, getCachedBackground } from './trackCache.js';
+import { cacheBackground, getCachedBackground, removeBackgroundFromCache } from './trackCache.js';
 
 export const CACHE_KEY = 'racearena:cache:serverTracks';
 const GEO_KEY = (id) => `racearena:trackGeometries:${id}`;
@@ -93,6 +93,32 @@ async function _cacheBackgroundAsync(trackId) {
 }
 
 /**
+ * Remove the cached geometry and background for a single track.
+ * Call after deleting a track or when a track is no longer on the server.
+ * @param {string} geometryId
+ * @param {string} trackId
+ */
+export function removeCachedTrackData(geometryId, trackId) {
+  if (geometryId) storageRemove(GEO_KEY(geometryId));
+  if (trackId) removeBackgroundFromCache(trackId);
+}
+
+/**
+ * Remove cached geometries and backgrounds for server tracks that no longer
+ * exist on the server (evicted between two successful fetches).
+ * @param {object[]} newTracks — fresh list from server
+ */
+function purgeStaleServerGeometries(newTracks) {
+  const oldTracks = getCachedServerTracks();
+  const newIds = new Set(newTracks.map((t) => t.id));
+  for (const old of oldTracks) {
+    if (!newIds.has(old.id)) {
+      removeCachedTrackData(old.geometryId, old.id);
+    }
+  }
+}
+
+/**
  * Fetch fresh server tracks, eagerly cache their geometries, and persist the
  * track list in the local cache. Falls back to the last cached list on any error.
  * @returns {Promise<object[]>}  array of server track summary objects
@@ -102,6 +128,7 @@ export async function fetchServerTracks() {
     const res = await withTimeout(fetch(`${API_BASE_URL}/api/tracks`), FETCH_TIMEOUT_MS);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tracks = await res.json();
+    purgeStaleServerGeometries(tracks); // A5.4 — remove cache entries for deleted tracks
     storageSet(CACHE_KEY, tracks);
     await Promise.allSettled(tracks.map(cacheTrackGeometry));
     return tracks;

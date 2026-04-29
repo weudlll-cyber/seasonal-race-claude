@@ -14,8 +14,10 @@ import {
   cacheTrackGeometry,
   getInitialTracks,
   getTrackBackgroundUrl,
+  removeCachedTrackData,
   CACHE_KEY,
 } from './trackLoader.js';
+import { cacheBackground, getCachedBackground } from './trackCache.js';
 import { storageSet, storageGet, KEYS } from './storage.js';
 
 const MOCK_TRACK_SUMMARY = {
@@ -177,5 +179,51 @@ describe('getTrackBackgroundUrl', () => {
   it('returns empty string when no backgroundImage and not a server track', () => {
     const url = getTrackBackgroundUrl('unknown', undefined);
     expect(url).toBe('');
+  });
+});
+
+describe('removeCachedTrackData', () => {
+  it('removes cached geometry from localStorage', () => {
+    storageSet('racearena:trackGeometries:custom-geo-xyz', { id: 'custom-geo-xyz', name: 'X' });
+    removeCachedTrackData('custom-geo-xyz', 'track-xyz');
+    const after = storageGet('racearena:trackGeometries:custom-geo-xyz', null);
+    expect(after).toBeNull();
+  });
+
+  it('removes background from background cache', () => {
+    cacheBackground('track-xyz', 'data:image/jpeg;base64,abc==');
+    expect(getCachedBackground('track-xyz')).toBeTruthy();
+    removeCachedTrackData('custom-geo-xyz', 'track-xyz');
+    expect(getCachedBackground('track-xyz')).toBeNull();
+  });
+
+  it('is a no-op when geometry or track ID is falsy', () => {
+    expect(() => removeCachedTrackData(null, null)).not.toThrow();
+    expect(() => removeCachedTrackData(undefined, undefined)).not.toThrow();
+  });
+});
+
+describe('fetchServerTracks — purge stale geometries', () => {
+  it('removes geometry for a track that disappeared from server', async () => {
+    // Seed cache with two tracks
+    storageSet(CACHE_KEY, [
+      MOCK_TRACK_SUMMARY,
+      { id: 'old-track', geometryId: 'custom-old-geo', name: 'Old' },
+    ]);
+    storageSet('racearena:trackGeometries:custom-old-geo', { id: 'custom-old-geo', name: 'Old' });
+
+    // Server now returns only the new track (old-track removed)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [MOCK_TRACK_SUMMARY],
+      })
+    );
+
+    await fetchServerTracks();
+
+    const gone = storageGet('racearena:trackGeometries:custom-old-geo', null);
+    expect(gone).toBeNull();
   });
 });

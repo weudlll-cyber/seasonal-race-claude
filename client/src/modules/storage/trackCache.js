@@ -73,6 +73,21 @@ export function clearBackgroundCache() {
   storageRemove(META_KEY);
 }
 
+/**
+ * Remove a single track's cached background (called when a track is deleted or evicted).
+ * @param {string} trackId
+ */
+export function removeBackgroundFromCache(trackId) {
+  const cache = readBackgroundCache();
+  const meta = readMeta();
+  if (trackId in cache || trackId in meta) {
+    delete cache[trackId];
+    delete meta[trackId];
+    storageSet(BACKGROUNDS_KEY, cache);
+    writeMeta(meta);
+  }
+}
+
 function _totalSize(meta) {
   return Object.values(meta).reduce((sum, m) => sum + m.size, 0);
 }

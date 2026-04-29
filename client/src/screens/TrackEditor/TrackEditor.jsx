@@ -1,12 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
-import {
-  listTracks,
-  getTrack,
-  saveTrack,
-  deleteTrack,
-} from '../../modules/track-editor/trackStorage.js';
+import { listTracks, getTrack, deleteTrack } from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
 import {
   buildTrackFromEditorState,
@@ -15,6 +10,15 @@ import {
 } from './trackEditorSave.js';
 import { useHistory } from './useHistory.js';
 import { getEffect } from '../../modules/track-effects/index.js';
+import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
+import { cacheTrackGeometry, removeCachedTrackData } from '../../modules/storage/trackLoader.js';
+import {
+  createTrackOnServer,
+  updateTrackOnServer,
+  deleteTrackFromServer,
+  uploadTrackBackground,
+} from '../../services/trackApi.js';
+import { API_BASE_URL } from '../../services/api.js';
 import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
 import s from './TrackEditor.module.css';
 
@@ -28,7 +32,7 @@ const NAME_DEBOUNCE_MS = 600;
 
 const MAX_BG_W = 8000;
 const MAX_BG_H = 4096;
-const MAX_BG_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB — checked before FileReader to avoid OOM
+const MAX_BG_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB — checked before FileReader to avoid OOM
 
 // drawStaticScene does NOT clear the canvas — callers apply the viewport
 // transform first, then call this, then restore. clearRect must happen
@@ -158,6 +162,8 @@ function drawStaticScene(ctx, state) {
 
 export default function TrackEditor() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const serverTracksCtl = useServerTracksControl();
 
   // ── canvas / UI refs ──────────────────────────────────────────────────────
   const canvasRef = useRef(null);
@@ -220,13 +226,33 @@ export default function TrackEditor() {
   const [bgReady, setBgReady] = useState(false);
   const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
-  const [loadedTrackId, setLoadedTrackId] = useState(null);
-  const [savedTracks, setSavedTracks] = useState([]);
+  // loadedGeometryId — geometry ID in localStorage cache (null for unsaved new tracks)
+  const [loadedGeometryId, setLoadedGeometryId] = useState(null);
+  // loadedServerId — server track ID (null for local/new tracks; set after first server save)
+  const [loadedServerId, setLoadedServerId] = useState(null);
+  // localTracks — localStorage-only tracks (for Load dropdown; refreshed after save/delete)
+  const [localTracks, setLocalTracks] = useState(() => listTracks());
   const [saveLabel, setSaveLabel] = useState('Save');
+  const [isSaving, setIsSaving] = useState(false);
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  // serverError — shown when server is unreachable, with Retry button
+  const [serverError, setServerError] = useState(null);
+  // backgroundFile — set when user picks a new local image; cleared after upload
+  const [backgroundFile, setBackgroundFile] = useState(null);
+
+  // ── combined load dropdown list (local + server, deduplicated) ───────────
+  const allSavedTracks = useMemo(() => {
+    const serverGeoIds = new Set(serverTracksCtl.tracks.map((t) => t.geometryId));
+    return [
+      ...localTracks
+        .filter((t) => !serverGeoIds.has(t.id))
+        .map((t) => ({ id: t.id, name: t.name, serverId: null })),
+      ...serverTracksCtl.tracks.map((t) => ({ id: t.geometryId, name: t.name, serverId: t.id })),
+    ];
+  }, [localTracks, serverTracksCtl.tracks]);
 
   // ── keep viewTransformRef in sync with state ──────────────────────────────
   useEffect(() => {
@@ -365,10 +391,19 @@ export default function TrackEditor() {
     };
   }, [backgroundImage]);
 
-  // Populate Load dropdown on mount
+  // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
+  // Runs whenever server tracks become available.
   useEffect(() => {
-    setSavedTracks(listTracks());
-  }, []);
+    const preloadId = searchParams.get('load');
+    if (!preloadId) return;
+    const entry = allSavedTracks.find((t) => t.serverId === preloadId || t.id === preloadId);
+    if (!entry) return;
+    const track = getTrack(entry.id);
+    if (!track) return;
+    loadTrackData(track, entry.serverId ?? null);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSavedTracks]);
 
   // Global keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -804,10 +839,11 @@ export default function TrackEditor() {
     e.target.value = '';
     if (file.size > MAX_BG_FILE_SIZE_BYTES) {
       setBgUploadError(
-        `Image file too large (max 5 MB, got ${(file.size / 1024 / 1024).toFixed(1)} MB).`
+        `Image file too large (max 10 MB, got ${(file.size / 1024 / 1024).toFixed(1)} MB).`
       );
       return;
     }
+    setBackgroundFile(file); // remember File for server upload
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target.result;
@@ -852,65 +888,14 @@ export default function TrackEditor() {
 
   // ── save / load / delete ──────────────────────────────────────────────────
 
-  function handleSave() {
-    setSaveAttempted(true);
-    if (!backgroundImage) {
-      setSaveError('Background image is required. Please upload an image first.');
-      return;
-    }
-    const error = validateEditorState({
-      mode,
-      centerPoints,
-      innerPoints,
-      outerPoints,
-      closed,
-      name: trackName.trim(),
-    });
-    if (error) {
-      setSaveError(error.message);
-      return;
-    }
-    setSaveError(null);
-    try {
-      const track = buildTrackFromEditorState({
-        mode,
-        centerPoints,
-        centerWidth,
-        innerPoints,
-        outerPoints,
-        closed,
-        name: trackName.trim(),
-        backgroundImage,
-        effects,
-        worldWidth: editorWorldW,
-        worldHeight: editorWorldH,
-      });
-      if (loadedTrackId) track.id = loadedTrackId;
-      const saved = saveTrack(track);
-      setLoadedTrackId(saved.id);
-      setSavedTracks(listTracks());
-      setIsDirty(false);
-      resetHistory();
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      setSaveLabel('Saved ✓');
-      saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
-    } catch (err) {
-      setSaveError(err.message);
-      console.warn('Save failed:', err.message);
-    }
-  }
-
-  function handleLoad(e) {
-    const id = e.target.value;
-    if (!id) return;
-    const track = getTrack(id);
-    if (!track) return;
-
+  function loadTrackData(track, serverId) {
     setTrackName(track.name);
-    setBackgroundImage(track.backgroundImage);
+    setBackgroundImage(track.backgroundImage ?? null);
+    setBackgroundFile(null);
     setBgUploadError(null);
     setClosed(track.closed === true);
-    setLoadedTrackId(track.id);
+    setLoadedGeometryId(track.id);
+    setLoadedServerId(serverId ?? null);
     setEffects(extractEffects(track));
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
@@ -919,9 +904,9 @@ export default function TrackEditor() {
     setIsDirty(false);
     setSaveAttempted(false);
     setSaveError(null);
+    setServerError(null);
     resetHistory();
 
-    // Restore world dimensions and reset viewport
     const ww = track.worldWidth ?? 1280;
     const wh = track.worldHeight ?? 720;
     setEditorWorldW(ww);
@@ -951,28 +936,132 @@ export default function TrackEditor() {
     }
   }
 
-  function handleDelete() {
-    if (!loadedTrackId) return;
-    if (!window.confirm(`Delete track "${trackName}"? This cannot be undone.`)) return;
-    deleteTrack(loadedTrackId);
-    setCenterPoints([]);
-    setInnerPoints([]);
-    setOuterPoints([]);
-    setTrackName('');
-    setBackgroundImage(null);
-    setBgUploadError(null);
-    setEffects([]);
-    setLoadedTrackId(null);
-    setBoundarySwitchConfirmed(false);
-    setSelectedPointIndex(-1);
-    setSavedTracks(listTracks());
-    setIsDirty(false);
-    setSaveAttempted(false);
+  async function handleSave() {
+    setSaveAttempted(true);
+    if (!backgroundImage && !backgroundFile) {
+      setSaveError('Background image is required. Please upload an image first.');
+      return;
+    }
+    const error = validateEditorState({
+      mode,
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      closed,
+      name: trackName.trim(),
+    });
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
     setSaveError(null);
-    resetHistory();
+    setServerError(null);
+    setIsSaving(true);
+
+    try {
+      // Build geometry — strip backgroundImage from JSON sent to server
+      const { backgroundImage: _bgUrl, ...trackJson } = buildTrackFromEditorState({
+        mode,
+        centerPoints,
+        centerWidth,
+        innerPoints,
+        outerPoints,
+        closed,
+        name: trackName.trim(),
+        backgroundImage,
+        effects,
+        worldWidth: editorWorldW,
+        worldHeight: editorWorldH,
+      });
+
+      let savedServerId = loadedServerId;
+      let savedGeometryId = loadedGeometryId;
+
+      if (savedServerId) {
+        await updateTrackOnServer(savedServerId, trackJson);
+      } else {
+        const created = await createTrackOnServer(trackJson);
+        savedServerId = created.id;
+        savedGeometryId = created.geometryId;
+        setLoadedServerId(created.id);
+        setLoadedGeometryId(created.geometryId);
+      }
+
+      if (backgroundFile) {
+        await uploadTrackBackground(savedServerId, backgroundFile);
+        setBackgroundFile(null);
+        setBackgroundImage(`${API_BASE_URL}/api/tracks/${savedServerId}/background`);
+      }
+
+      // Refresh geometry cache so race engine / thumbnails see updated data
+      await cacheTrackGeometry({ id: savedServerId, geometryId: savedGeometryId });
+      await serverTracksCtl.refresh();
+      setLocalTracks(listTracks());
+
+      setIsDirty(false);
+      resetHistory();
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      setSaveLabel('Saved ✓');
+      saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
+    } catch (err) {
+      setServerError(err.message || 'Server nicht erreichbar.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleLoad(e) {
+    const geoId = e.target.value;
+    if (!geoId) return;
+    const entry = allSavedTracks.find((t) => t.id === geoId);
+    const track = getTrack(geoId);
+    if (!track) return;
+    loadTrackData(track, entry?.serverId ?? null);
+  }
+
+  async function handleDelete() {
+    if (!loadedServerId && !loadedGeometryId) return;
+    if (!window.confirm(`Delete track "${trackName}"? This cannot be undone.`)) return;
+
+    setIsSaving(true);
+    try {
+      if (loadedServerId) {
+        await deleteTrackFromServer(loadedServerId);
+        removeCachedTrackData(loadedGeometryId, loadedServerId);
+        await serverTracksCtl.refresh();
+      } else if (loadedGeometryId) {
+        deleteTrack(loadedGeometryId);
+      }
+      setLocalTracks(listTracks());
+
+      setCenterPoints([]);
+      setInnerPoints([]);
+      setOuterPoints([]);
+      setTrackName('');
+      setBackgroundImage(null);
+      setBackgroundFile(null);
+      setBgUploadError(null);
+      setEffects([]);
+      setLoadedGeometryId(null);
+      setLoadedServerId(null);
+      setBoundarySwitchConfirmed(false);
+      setSelectedPointIndex(-1);
+      setIsDirty(false);
+      setSaveAttempted(false);
+      setSaveError(null);
+      setServerError(null);
+      resetHistory();
+    } catch (err) {
+      setServerError(err.message || 'Delete fehlgeschlagen.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   // ── derived labels ────────────────────────────────────────────────────────
+
+  const hasLoaded = !!(loadedGeometryId || loadedServerId);
+  const saveDisabled = (!backgroundImage && !backgroundFile) || saveLabel !== 'Save' || isSaving;
 
   const counterLabel =
     mode === 'center'
@@ -1213,29 +1302,44 @@ export default function TrackEditor() {
               ? `🖼 ${backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
               : '📷 No image · required'}
           </button>
-          <button
-            className={s.saveBtn}
-            disabled={!backgroundImage || saveLabel !== 'Save'}
-            onClick={handleSave}
-          >
-            {saveLabel}
+          <button className={s.saveBtn} disabled={saveDisabled} onClick={handleSave}>
+            {isSaving ? 'Saving…' : saveLabel}
           </button>
           <select className={s.loadSelect} value="" onChange={handleLoad}>
             <option value="" disabled>
               Load track…
             </option>
-            {savedTracks.map((t) => (
+            {allSavedTracks.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
           </select>
-          <button className={s.deleteBtn} disabled={!loadedTrackId} onClick={handleDelete}>
+          <button className={s.deleteBtn} disabled={!hasLoaded || isSaving} onClick={handleDelete}>
             Delete
           </button>
         </div>
         {bgUploadError && <p className={s.saveError}>{bgUploadError}</p>}
         {saveError && <p className={s.saveError}>{saveError}</p>}
+        {serverError && (
+          <div
+            className={s.saveError}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}
+          >
+            <span>{serverError}</span>
+            <button
+              type="button"
+              className={s.saveBtn}
+              style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }}
+              onClick={() => {
+                setServerError(null);
+                handleSave();
+              }}
+            >
+              Erneut versuchen
+            </button>
+          </div>
+        )}
       </div>
 
       <div className={s.main}>
