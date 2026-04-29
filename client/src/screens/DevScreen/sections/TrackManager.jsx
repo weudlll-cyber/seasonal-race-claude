@@ -529,7 +529,6 @@ function TrackManager() {
               <button
                 className={`${s.btn} ${s.btnGhost}`}
                 onClick={handleOpenTrackEditor}
-                style={{ marginLeft: 'auto' }}
                 title="Open this track in the Track Geometry Editor"
               >
                 {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}

@@ -71,6 +71,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
+import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import TrackManager from './TrackManager.jsx';
 
 // ── test data ─────────────────────────────────────────────────────────────────
@@ -213,5 +214,41 @@ describe('TrackManager — Edit behaviour', () => {
 
     expect(screen.getByText('Add Track', { selector: 'button' })).toBeInTheDocument();
     expect(screen.queryByText(/Edit Geometry|Draw Geometry/)).not.toBeInTheDocument();
+  });
+});
+
+describe('TrackManager — Geometry dropdown after server-cache fix (L.6-Bug2)', () => {
+  const SERVER_GEOMETRY = {
+    id: SERVER_TRACK.geometryId,
+    name: 'Weltall',
+    backgroundImage: '/bg.png',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    worldWidth: 6000,
+    worldHeight: 4000,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('geometry dropdown shows server geometry option when listTracks returns it', () => {
+    vi.mocked(listTracks).mockReturnValue([SERVER_GEOMETRY]);
+
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(screen.getByRole('option', { name: 'Weltall' })).toBeInTheDocument();
+  });
+
+  it('geometry dropdown value matches server track geometryId after edit', () => {
+    vi.mocked(listTracks).mockReturnValue([SERVER_GEOMETRY]);
+
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    // Track Geometry is the first <select> in the form; Default Racer Type is second
+    const [geometrySelect] = screen.getAllByRole('combobox');
+    expect(geometrySelect.value).toBe(SERVER_TRACK.geometryId);
   });
 });

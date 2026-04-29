@@ -530,6 +530,16 @@ führt zu schwer debuggbaren UI-Zuständen.
 
 ---
 
+## Lesson 26 — Cache und Index müssen synchron gehalten werden (L.6-Bug2)
+
+**Kontext:** `cacheTrackGeometry` (trackLoader.js) speicherte Server-Geometrien unter `racearena:trackGeometries:<id>` — genau dort wo auch `getTrack(id)` liest. Aber `racearena:trackGeometries:index` wurde nicht aktualisiert. `listTracks()` liest ausschließlich aus dem Index. Ergebnis: Geometrie-Daten lagen im Storage, waren aber für alle Index-Leser unsichtbar. Der Modal-Dropdown zeigte "No tracks drawn yet", obwohl die Geometrie vorhanden war.
+
+**Erkenntnis:** Wenn zwei Funktionen dasselbe Storage-Schema verwenden aber eine davon den Index überspringt, entsteht ein stiller Konsistenzbruch. Tests prüfen in der Regel "Daten können geschrieben und gelesen werden" — aber nicht "sind die Daten über alle vorgesehenen Read-Paths erreichbar". Der Bruch wird erst sichtbar wenn eine UI-Komponente den indirekten Read-Path (via Index) verwendet statt direkt per ID zu lesen.
+
+**Konsequenz:** Bei Storage-Schemas mit Index-Pointer-Struktur: jede Write-Operation (sowohl lokale saves als auch externe Cache-Einträge) muss den Index mitpflegen. Index-Registrierung und Daten-Write als unteilbares Paar behandeln. Beim Löschen analog: erst Daten entfernen, dann Index-Eintrag entfernen.
+
+---
+
 ## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
 
 **Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.

@@ -19,6 +19,7 @@ import {
 } from './trackLoader.js';
 import { cacheBackground, getCachedBackground } from './trackCache.js';
 import { storageSet, storageGet, KEYS } from './storage.js';
+import { listTracks } from '../track-editor/trackStorage.js';
 
 const MOCK_TRACK_SUMMARY = {
   id: 'test-track-1',
@@ -225,5 +226,75 @@ describe('fetchServerTracks — purge stale geometries', () => {
 
     const gone = storageGet('racearena:trackGeometries:custom-old-geo', null);
     expect(gone).toBeNull();
+  });
+});
+
+describe('cacheTrackGeometry — index registration (L.6-Bug2 fix)', () => {
+  it('registers the geometry id in the index after caching', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    const index = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
+    expect(index).toContain(MOCK_TRACK_FULL.geometryId);
+  });
+
+  it('listTracks() returns the server geometry after cacheTrackGeometry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    const list = listTracks();
+    expect(list.some((g) => g.id === MOCK_TRACK_FULL.geometryId)).toBe(true);
+  });
+
+  it('does not duplicate an id that is already in the index', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    const index = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
+    const count = index.filter((id) => id === MOCK_TRACK_FULL.geometryId).length;
+    expect(count).toBe(1);
+  });
+});
+
+describe('removeCachedTrackData — index cleanup (L.6-Bug2 fix)', () => {
+  it('removes geometry id from the index', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    const before = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
+    expect(before).toContain(MOCK_TRACK_FULL.geometryId);
+
+    removeCachedTrackData(MOCK_TRACK_FULL.geometryId, MOCK_TRACK_SUMMARY.id);
+
+    const after = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
+    expect(after).not.toContain(MOCK_TRACK_FULL.geometryId);
+  });
+
+  it('listTracks() no longer returns the geometry after removeCachedTrackData', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+    removeCachedTrackData(MOCK_TRACK_FULL.geometryId, MOCK_TRACK_SUMMARY.id);
+
+    const list = listTracks();
+    expect(list.some((g) => g.id === MOCK_TRACK_FULL.geometryId)).toBe(false);
   });
 });

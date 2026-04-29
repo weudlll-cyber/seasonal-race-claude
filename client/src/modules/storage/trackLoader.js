@@ -13,6 +13,7 @@ import { API_BASE_URL } from '../../services/api.js';
 import { storageGet, storageSet, storageRemove, KEYS } from './storage.js';
 import { DEFAULT_TRACKS } from './defaults.js';
 import { cacheBackground, getCachedBackground, removeBackgroundFromCache } from './trackCache.js';
+import { registerInIndex, unregisterFromIndex } from '../track-editor/trackStorage.js';
 
 export const CACHE_KEY = 'racearena:cache:serverTracks';
 const GEO_KEY = (id) => `racearena:trackGeometries:${id}`;
@@ -61,6 +62,7 @@ export async function cacheTrackGeometry(summaryTrack) {
       updatedAt: full.updatedAt,
     };
     storageSet(GEO_KEY(full.geometryId), geometry);
+    registerInIndex(full.geometryId);
 
     // Fetch and cache the background image as a data-URL for offline use.
     // Best-effort: failures are silently ignored — server URL still works when online.
@@ -99,7 +101,10 @@ async function _cacheBackgroundAsync(trackId) {
  * @param {string} trackId
  */
 export function removeCachedTrackData(geometryId, trackId) {
-  if (geometryId) storageRemove(GEO_KEY(geometryId));
+  if (geometryId) {
+    storageRemove(GEO_KEY(geometryId));
+    unregisterFromIndex(geometryId);
+  }
   if (trackId) removeBackgroundFromCache(trackId);
 }
 
