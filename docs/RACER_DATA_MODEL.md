@@ -173,6 +173,7 @@ listAllRacerTypes()                   →  Code-Registry + Overrides zusammengef
 | `RACER_TYPE_IDS` | Sortiertes Array aller 12 Type-IDs |
 | `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` für UI-Anzeige |
 | `COATS_BY_TYPE` | Map `{id → coats[]}` für RaceScreen-Coat-Assignment; auto-derived aus Type-Configs |
+| `getSurfaceClasses()` on SpriteRacerType | Gibt `surfaceClasses`-Array zurück (Surface-Class-IDs dieses Types, Default: `[]`). Wird in VRE-3 von RaceScreen + SetupScreen gelesen. |
 
 ### SpriteRacerType — Config-Felder
 
@@ -187,11 +188,12 @@ Keine Subklassen. Required config fields:
 | `basePeriodMs` | number | Base animation period at speed 1.0 |
 | `displaySize` | number | Bounding box size in px |
 | `coats` | `{id, name, tint}[]` | Color variant definitions |
-| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` |
+| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` — Heimat-Trail (Fallback wenn kein Surface-Class-Match) |
+| `surfaceClasses` | `string[]` | Surface-Class-IDs dieses Types (Visual Racer Effects). Default: `[]` = alle Tracks kompatibel, immer Heimat-Trail. |
 
 Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier` (default 1.0),
 `baseRotationOffset`, `tintMode` (`'multiply'` or `'mask'`), `maskUrl` (required when
-`tintMode='mask'`), `fallbackColor`, `rteDefinitions` (D6-reserviert).
+`tintMode='mask'`), `fallbackColor`.
 
 ### Mask-Tinting (Buggy, Motorbike, Plane)
 
@@ -233,12 +235,67 @@ Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
 
 ---
 
-## Racer-Track-Effects (D6 — reserviert)
+## Visual Racer Effects — Surface Classes (Phase VRE)
 
-`SpriteRacerType` speichert ein optionales `rteDefinitions`-Array (Default: `[]`). Es wird
-akzeptiert, gespeichert und über `getRteDefinitions()` exposiert — aber in der aktuellen
-Codebase nicht ausgewertet. Phase D6 führt einen `RteManager` in RaceScreen ein, der diese
-Definitionen ausliest und pro Racer Partikel-Effekte spawnt. Schema wird im D6-Spec definiert.
+Surface Classes ersetzen das statische Trail-System. Statt einer festen `trailFactory` pro Type ergibt sich der aktive Trail aus der Schnittmenge von Racer-Type-Klassen und Track-Klassen.
+
+### surfaceClasses-Feld auf SpriteRacerType
+
+```javascript
+// Beispiel: Pferd — kann auf Sand, Erde, Gras, Asphalt, Schnee, Schlamm fahren
+const HorseRacerType = new SpriteRacerType({
+  id: 'horse',
+  // ... andere Felder ...
+  surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'],
+  trailFactory: horseTrailFactory,  // Heimat-Trail (Fallback)
+});
+```
+
+### Initial-Zuordnung — alle 12 Racer-Types
+
+| Racer-Type | surfaceClasses |
+|---|---|
+| `snail` | `['grass']` |
+| `horse` | `['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud']` |
+| `duck` | `['water', 'grass']` |
+| `elephant` | `['sand', 'earth', 'grass']` |
+| `giraffe` | `['sand', 'earth', 'grass']` |
+| `snake` | `['sand', 'earth', 'grass']` |
+| `dragon` | `['air', 'asphalt', 'earth', 'water']` |
+| `buggy` | `['sand', 'earth', 'mud']` |
+| `motorbike` | `['asphalt', 'earth']` |
+| `f1` | `['asphalt']` |
+| `plane` | `['air']` |
+| `rocket` | `['air', 'water']` |
+
+### Heimat-Trail (Fallback)
+
+Die vorhandene `trailFactory`-Funktion bleibt bestehen und ist der **Heimat-Trail** des Types. Er wird in zwei Fällen verwendet:
+1. `surfaceClasses: []` (leer) — Type hat noch keine Klassen-Zuordnung → immer Heimat-Trail.
+2. Kein Match — der gewählte Track hat keine Klasse die mit dem Racer-Type übereinstimmt → Heimat-Trail statt kein Trail.
+
+Der Heimat-Trail garantiert Rückwärtskompatibilität: Tracks ohne `surfaceClasses`-Feld verhalten sich wie bisher.
+
+### trailFactory nach VRE-4
+
+Nach der Race-Integration (VRE-4) erhält die Trail-Dispatch-Logik in RaceScreen Zugriff auf die aktive Surface-Class:
+```javascript
+// Konzept — exakte Signatur wird in VRE-4-Spec definiert
+const activeClass = resolveActiveSurfaceClass(racerType, track);  // null wenn kein Match
+const particles = activeClass
+  ? activeClass.generator(x, y, speed, angle, activeClass.config)
+  : racerType.trailFactory(x, y, speed, angle, frame);
+```
+
+### API-Erweiterung (VRE-1)
+
+`SpriteRacerType` bekommt den neuen Accessor:
+
+```javascript
+getSurfaceClasses()  // → string[] (IDs der Surface Classes dieses Types)
+```
+
+Der frühere `rteDefinitions`-Platzhalter (`getRteDefinitions()`) wird in VRE-1 entfernt.
 
 ---
 

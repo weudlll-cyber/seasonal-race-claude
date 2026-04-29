@@ -100,6 +100,7 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
     { "id": "rain", "config": { "count": 80, "speed": 6 } },
     { "id": "stars", "config": { "count": 120, "twinkleSpeed": 1.5 } }
   ],
+  "surfaceClasses": ["asphalt"],
   "createdAt": "2026-04-23T21:00:00Z",
   "updatedAt": "2026-04-23T21:30:00Z"
 }
@@ -108,6 +109,7 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 - `sourceMode` and the optional `centerPoints` + `width` are only present for center-mode tracks. For boundary-mode tracks, they are omitted.
 - `innerPoints` and `outerPoints` are always present and authoritative for the race engine.
 - `effects` is an array of up to 3 `{id, config}` entries. Empty array = no effects. See [Track Effects](#track-effects) below.
+- `surfaceClasses` is an array of Surface-Class IDs (Visual Racer Effects — Phase VRE). Controls which racer types are compatible with this track and which surface-class trail effect is rendered. Missing or empty array = all racer types compatible, all use their Heimat-Trail (backwards-compatible default). See [Surface Classes](#surface-classes-visual-racer-effects) below.
 - Minimum 3 points per boundary for a closed track, minimum 2 for an open course.
 
 ### Migration
@@ -141,6 +143,31 @@ Each effect module under `client/src/modules/track-effects/effects/` exports:
 ```
 
 The `EffectConfig` component (`client/src/components/EffectConfig/`) provides the editor UI: add/remove effects, select IDs from a dropdown (duplicates prevented), configure parameters per schema. The editor canvas shows a live preview of the selected effects.
+
+---
+
+## Surface Classes (Visual Racer Effects)
+
+**Status:** Planned — Phase VRE-3 adds the Track Manager UI; VRE-1 defines the data model.
+
+Each track stores a `surfaceClasses` array of Surface-Class IDs. These IDs determine:
+
+1. **Trail rendering:** During a race, the active surface class is the intersection of the racer type's `surfaceClasses` and the track's `surfaceClasses`. The matching class's generator module renders the trail. If no class matches, the racer falls back to its Heimat-Trail (`trailFactory`).
+2. **Setup filtering:** The Setup Screen only shows racer types that have ≥ 1 overlapping surface class with the track. Types with no overlap are suppressed or marked incompatible.
+
+### Initial Surface-Class Assignments — 5 Default Tracks
+
+| Track | surfaceClasses |
+|---|---|
+| Dirt Oval | `['earth']` |
+| River Run | `['water']` |
+| Space Sprint | `['air']` |
+| Garden Path | `['grass', 'earth']` |
+| City Circuit | `['asphalt']` |
+
+### Track Manager UI (VRE-3)
+
+The Track Manager preset editor gains a **Surface Classes** multi-select field listing all available surface classes (fetched from `/api/surface-classes`). Administrators can assign any combination of classes to a track preset. The geometry editor itself is not changed.
 
 ---
 
@@ -266,6 +293,13 @@ All keys follow the `racearena:*` convention. The `trackGeometries:index` is upd
 - Effect trigger conditions (e.g. fireworks on final lap)
 - Performance optimisation for high particle counts with multiple stacked effects
 - Additional effect types (snow, confetti, heat shimmer)
+
+**Surface Zones (Folge-Phase nach Visual Racer Effects):**
+- Local surface-class overrides within a track — e.g. a mud patch on an asphalt circuit, a puddle on a garden path.
+- Zone definition: `{ id, type: surfaceClassId, tStart, tEnd, lateralRange }` stored in the track geometry.
+- Track Editor gains a Zones tab: click on the canvas to set zone start/end, select class from dropdown.
+- Visual overlay: semi-transparent colored bands along the zone extent on the editor canvas.
+- `EditorShape.getZonesAtPosition(t, offset) → Zone[]` — used by RaceScreen to query the active zone for each racer per frame.
 
 **Integration:**
 - Track metadata: difficulty rating, recommended racer types, recommended race length
