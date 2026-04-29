@@ -7,21 +7,20 @@
 //              Modified / Custom badges), right editor + live canvas preview.
 //              Save: POST for new custom classes, PUT for existing (isOverride:true
 //              when editing a code-default). Reset-to-Default: DELETE the override.
-//              No race integration — purely for class management.
+//              ID is auto-generated from the label via slugify — not user-visible.
 // ============================================================
 
 import { useState, useEffect } from 'react';
 import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
-import { GENERATORS } from '../../../modules/surface-effects/registry.js';
+import { GENERATORS, getSurfaceClass } from '../../../modules/surface-effects/registry.js';
 import {
   createSurfaceClass,
   updateSurfaceClass,
   deleteSurfaceClass,
 } from '../../../services/surfaceClassApi.js';
+import { slugify, uniqueSlug } from '../../../utils/slugify.js';
 import { SurfaceClassPreview } from './SurfaceClassPreview.jsx';
 import s from '../DevScreen.module.css';
-
-const ID_RE = /^[a-z0-9_-]+$/;
 
 const GENERATOR_OPTIONS = Object.values(GENERATORS).map((g) => ({ id: g.id, label: g.label }));
 
@@ -150,9 +149,8 @@ function SurfaceClassManager() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [isNew, setIsNew] = useState(false);
-  // draft: { label, id, generatorId, config }
+  // draft: { label, generatorId, config } — id is managed separately via selectedId
   const [draft, setDraft] = useState(null);
-  const [idError, setIdError] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -169,12 +167,10 @@ function SurfaceClassManager() {
     setIsNew(false);
     setDraft({
       label: cls.label,
-      id: cls.id,
       generatorId: cls.generatorId,
       config: { ...cls.config },
     });
     setSaveError(null);
-    setIdError(null);
   }
 
   function handleNewClass() {
@@ -183,17 +179,14 @@ function SurfaceClassManager() {
     setSelectedId(null);
     setDraft({
       label: '',
-      id: '',
       generatorId: 'particle',
       config: { ...defaultGen.defaultConfig },
     });
     setSaveError(null);
-    setIdError(null);
   }
 
   function handleCancel() {
     setSaveError(null);
-    setIdError(null);
     if (isNew) {
       setIsNew(false);
       const fallback = classes[0];
@@ -218,9 +211,7 @@ function SurfaceClassManager() {
   async function handleSave() {
     if (!draft || isSaving) return;
     setSaveError(null);
-    setIdError(null);
 
-    // Validate label
     if (!draft.label.trim()) {
       setSaveError('Label is required');
       return;
@@ -229,29 +220,19 @@ function SurfaceClassManager() {
     setIsSaving(true);
     try {
       if (isNew) {
-        // Validate ID
-        if (!draft.id || !ID_RE.test(draft.id)) {
-          setIdError('ID must be lowercase letters, digits, hyphens or underscores');
-          setIsSaving(false);
-          return;
-        }
+        // Generate ID from label; append suffix if it collides with an existing class
         const allIds = new Set(classes.map((c) => c.id));
-        if (allIds.has(draft.id)) {
-          setIdError('ID already exists');
-          setIsSaving(false);
-          return;
-        }
+        const id = uniqueSlug(slugify(draft.label.trim()), allIds);
         await createSurfaceClass({
-          id: draft.id,
+          id,
           label: draft.label.trim(),
           generatorId: draft.generatorId,
           config: draft.config,
           isOverride: false,
         });
-        const newId = draft.id;
         await refresh();
         setIsNew(false);
-        setSelectedId(newId);
+        setSelectedId(id);
       } else {
         // Editing existing: for code-defaults and existing overrides, PUT with isOverride:true
         const cls = classes.find((c) => c.id === selectedId);
@@ -292,25 +273,18 @@ function SurfaceClassManager() {
     if (!selectedId || isSaving) return;
     const cls = classes.find((c) => c.id === selectedId);
     if (!cls || classKind(cls) !== 'modified') return;
-    if (!window.confirm(`Reset "${cls.label}" to code default? The override will be removed.`))
-      return;
 
     try {
       await deleteSurfaceClass(selectedId);
       await refresh();
-      // Class still exists as code-default — reselect it
-      const fresh = listAllSurfaceClassesAfterRefresh(selectedId);
-      if (fresh) openClass(fresh);
+      // After refresh(), the registry has the updated code-default for selectedId.
+      // React's classes state is stale in this closure, so read directly from the
+      // registry (loadServerClasses was already called inside fetchServerSurfaceClasses).
+      const defaultClass = getSurfaceClass(selectedId);
+      if (defaultClass) openClass(defaultClass);
     } catch (e) {
       setSaveError(e.message ?? 'Server error');
     }
-  }
-
-  // Helper: after refresh, get the current state of a class by id
-  function listAllSurfaceClassesAfterRefresh(_id) {
-    // classes state hasn't updated yet (it'll update async via refresh).
-    // Return null; the useEffect above will auto-select after re-render.
-    return null;
   }
 
   // Derived state
@@ -375,11 +349,6 @@ function SurfaceClassManager() {
                     {cls.label}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span
-                      style={{ fontSize: '0.68rem', color: 'var(--color-muted)', flexShrink: 0 }}
-                    >
-                      {cls.id}
-                    </span>
                     <KindBadge kind={kind} />
                   </div>
                 </button>
@@ -452,49 +421,6 @@ function SurfaceClassManager() {
                     value={draft.label}
                     onChange={(e) => setDraft((p) => ({ ...p, label: e.target.value }))}
                   />
-                </div>
-
-                {/* ID */}
-                <div className={s.formGroup}>
-                  <label className={s.label} htmlFor="sc-id">
-                    ID
-                    {!isNew && (
-                      <span
-                        style={{
-                          marginLeft: '0.35rem',
-                          color: 'var(--color-muted)',
-                          fontWeight: 400,
-                          textTransform: 'none',
-                          letterSpacing: 0,
-                        }}
-                      >
-                        (read-only)
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="sc-id"
-                    className={`${s.input}${idError ? ' ' + s.inputError : ''}`}
-                    placeholder="e.g. lava"
-                    maxLength={40}
-                    value={draft.id}
-                    readOnly={!isNew}
-                    onChange={
-                      isNew
-                        ? (e) => {
-                            setIdError(null);
-                            setDraft((p) => ({ ...p, id: e.target.value }));
-                          }
-                        : undefined
-                    }
-                    style={!isNew ? { opacity: 0.5, cursor: 'default' } : undefined}
-                    aria-label="Surface class ID"
-                  />
-                  {idError && (
-                    <span style={{ fontSize: '0.72rem', color: '#e63946', marginTop: '0.1rem' }}>
-                      {idError}
-                    </span>
-                  )}
                 </div>
 
                 {/* Generator */}

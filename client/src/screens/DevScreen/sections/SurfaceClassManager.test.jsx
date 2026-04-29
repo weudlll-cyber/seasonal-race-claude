@@ -4,8 +4,9 @@
 // Project:     RaceArena
 // Description: Unit tests for VRE-2 — SurfaceClassManager component.
 //              Covers: list rendering, badge types, class selection, generator
-//              switch (config reset), ID validation, Save/Delete/Reset-to-Default
-//              flows. rAF lifecycle tests are in SurfaceClassPreview.test.jsx.
+//              switch (config reset), new-class Save (auto-ID), Save existing,
+//              Delete, Reset-to-Default. rAF lifecycle tests are in
+//              SurfaceClassPreview.test.jsx.
 // ============================================================
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
@@ -136,7 +137,6 @@ describe('SurfaceClassManager — list rendering', () => {
   it('count badge shows total number of classes', () => {
     mockHook([DEFAULT_CLASS, CUSTOM_CLASS]);
     render(<SurfaceClassManager />);
-    // Verify by checking how many list-item buttons exist (aria-pressed)
     const pressable = screen
       .getAllByRole('button')
       .filter((b) => b.getAttribute('aria-pressed') !== null);
@@ -162,7 +162,6 @@ describe('SurfaceClassManager — class selection', () => {
   it('clicking a second class populates the editor with that class', () => {
     mockHook([DEFAULT_CLASS, CUSTOM_CLASS]);
     render(<SurfaceClassManager />);
-    // Lava button in list
     const lavaBtn = screen
       .getAllByRole('button')
       .find((b) => b.getAttribute('aria-pressed') === 'false' && b.textContent.includes('Lava'));
@@ -213,7 +212,6 @@ describe('SurfaceClassManager — generator switch', () => {
     fireEvent.change(screen.getByRole('combobox', { name: /Generator type/i }), {
       target: { value: 'cloud' },
     });
-    // Cloud has Start Size field (range), Splash does not
     expect(screen.getByLabelText('Start Size')).toBeDefined();
   });
 });
@@ -277,60 +275,19 @@ describe('SurfaceClassManager — New class flow', () => {
     expect(screen.getByText('New Surface Class')).toBeDefined();
   });
 
-  it('ID field is writable in new-class form', () => {
+  it('new-class form has no ID input field — ID is auto-generated', () => {
     mockHook([DEFAULT_CLASS]);
     render(<SurfaceClassManager />);
     fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
-    const idInput = document.getElementById('sc-id');
-    expect(idInput).toBeDefined();
-    expect(idInput.readOnly).toBe(false);
-    fireEvent.change(idInput, { target: { value: 'lava' } });
-    expect(idInput.value).toBe('lava');
+    expect(document.getElementById('sc-id')).toBeNull();
   });
 
-  it('invalid ID pattern shows validation error', async () => {
-    mockHook([DEFAULT_CLASS]);
-    render(<SurfaceClassManager />);
-    fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
-
-    const idInput = document.getElementById('sc-id');
-    const labelInput = document.getElementById('sc-label');
-    fireEvent.change(idInput, { target: { value: 'INVALID ID!' } });
-    fireEvent.change(labelInput, { target: { value: 'My Label' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Save surface class/i }));
-    });
-
-    expect(createSurfaceClass).not.toHaveBeenCalled();
-    expect(screen.getByText(/lowercase/i)).toBeDefined();
-  });
-
-  it('duplicate ID shows validation error', async () => {
-    mockHook([DEFAULT_CLASS]);
-    render(<SurfaceClassManager />);
-    fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
-
-    const idInput = document.getElementById('sc-id');
-    const labelInput = document.getElementById('sc-label');
-    fireEvent.change(idInput, { target: { value: 'mud' } }); // already exists
-    fireEvent.change(labelInput, { target: { value: 'My Mud' } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Save surface class/i }));
-    });
-
-    expect(createSurfaceClass).not.toHaveBeenCalled();
-    expect(screen.getByText(/already exists/i)).toBeDefined();
-  });
-
-  it('valid new class calls createSurfaceClass and refresh', async () => {
+  it('ID is auto-generated from the label on save (slugify)', async () => {
     createSurfaceClass.mockResolvedValue({ id: 'lava' });
     const refresh = mockHook([DEFAULT_CLASS]);
     render(<SurfaceClassManager />);
     fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
 
-    fireEvent.change(document.getElementById('sc-id'), { target: { value: 'lava' } });
     fireEvent.change(document.getElementById('sc-label'), { target: { value: 'Lava' } });
 
     await act(async () => {
@@ -338,9 +295,25 @@ describe('SurfaceClassManager — New class flow', () => {
     });
 
     expect(createSurfaceClass).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'lava', isOverride: false })
+      expect.objectContaining({ id: 'lava', label: 'Lava', isOverride: false })
     );
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it('ID gets a suffix when the slugified label collides with an existing class', async () => {
+    createSurfaceClass.mockResolvedValue({ id: 'mud-2' });
+    mockHook([DEFAULT_CLASS]); // DEFAULT_CLASS has id 'mud'
+    render(<SurfaceClassManager />);
+    fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
+
+    // 'Mud' slugifies to 'mud' which already exists → expect 'mud-2'
+    fireEvent.change(document.getElementById('sc-label'), { target: { value: 'Mud' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Save surface class/i }));
+    });
+
+    expect(createSurfaceClass).toHaveBeenCalledWith(expect.objectContaining({ id: 'mud-2' }));
   });
 
   it('Cancel from new-class form returns to first class', () => {
@@ -416,10 +389,9 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
     expect(screen.queryByRole('button', { name: /Reset to default/i })).toBeNull();
   });
 
-  it('Reset-to-Default calls deleteSurfaceClass on the override', async () => {
+  it('Reset-to-Default calls deleteSurfaceClass without confirm dialog', async () => {
     const refresh = mockHook([OVERRIDE_CLASS]);
     deleteSurfaceClass.mockResolvedValue(undefined);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<SurfaceClassManager />);
 
     await act(async () => {
@@ -430,16 +402,30 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it('Default-Override lifecycle: Default → save override → shows Modified → reset → shows Default', async () => {
-    // Step 1: start with code-default
+  it('Reset-to-Default reverts the editor label to the code-default value', async () => {
+    // OVERRIDE_CLASS has label 'Super Mud'; the real registry default for 'mud' has label 'Mud'
+    mockHook([OVERRIDE_CLASS]);
+    deleteSurfaceClass.mockResolvedValue(undefined);
+    render(<SurfaceClassManager />);
+
+    // Override is auto-selected — editor shows 'Super Mud'
+    expect(screen.getByDisplayValue('Super Mud')).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Reset to default/i }));
+    });
+
+    // After reset, openClass is called with registry code-default → label reverts to 'Mud'
+    expect(screen.getByDisplayValue('Mud')).toBeDefined();
+  });
+
+  it('Default-Override lifecycle: Default → save override → shows Modified → reset → DELETE called', async () => {
     const refresh = mockHook([DEFAULT_CLASS]);
     updateSurfaceClass.mockResolvedValue({});
     const { rerender } = render(<SurfaceClassManager />);
 
     expect(screen.getAllByText('Default').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('Modified')).toBeNull();
 
-    // Step 2: save override → backend returns override in next list
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Save surface class/i }));
     });
@@ -448,7 +434,6 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
       expect.objectContaining({ isOverride: true })
     );
 
-    // Step 3: simulate refresh returning the override class
     useSurfaceClasses.mockReturnValue({
       classes: [OVERRIDE_CLASS],
       refresh,
@@ -458,10 +443,7 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
     rerender(<SurfaceClassManager />);
     expect(screen.getAllByText('Modified').length).toBeGreaterThanOrEqual(1);
 
-    // Step 4: reset to default
     deleteSurfaceClass.mockResolvedValue(undefined);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reset to default/i }));
     });
