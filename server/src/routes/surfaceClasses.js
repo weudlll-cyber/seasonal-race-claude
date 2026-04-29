@@ -130,7 +130,11 @@ router.post('/', (req, res) => {
   res.status(201).json(cls);
 });
 
-// PUT /api/surface-classes/:id — update existing class or create default override
+// PUT /api/surface-classes/:id — idempotent upsert.
+// Intentional: if the id does not exist yet the entry is created. This lets
+// the VRE editor write a default-class override (e.g. PUT /api/surface-classes/mud
+// with isOverride:true) without needing a prior POST, and makes the operation
+// safe to retry without checking existence first.
 router.put('/:id', (req, res) => {
   const existing = classesMap.get(req.params.id);
 
