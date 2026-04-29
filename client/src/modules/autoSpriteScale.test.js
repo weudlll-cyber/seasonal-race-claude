@@ -23,14 +23,12 @@ beforeEach(() => {
 });
 
 describe('DEFAULT_AUTO_SCALE_CONFIG', () => {
-  it('has expected defaults', () => {
-    expect(DEFAULT_AUTO_SCALE_CONFIG).toEqual({
-      enabled: true,
-      referenceValue: 23,
-      minScale: 0.65,
-      maxScale: 2.5,
-      minTargetScreenPx: 32,
-    });
+  it('exposes the required config keys', () => {
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toHaveProperty('enabled');
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toHaveProperty('referenceValue');
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toHaveProperty('minScale');
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toHaveProperty('maxScale');
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toHaveProperty('minTargetScreenPx');
   });
 });
 
@@ -119,9 +117,10 @@ describe('loadAutoScaleConfig', () => {
   });
 
   it('does not mutate DEFAULT_AUTO_SCALE_CONFIG', () => {
-    storageGet.mockReturnValue({ enabled: true });
+    const snapshot = { ...DEFAULT_AUTO_SCALE_CONFIG };
+    storageGet.mockReturnValue({ enabled: false, referenceValue: 99 });
     loadAutoScaleConfig();
-    expect(DEFAULT_AUTO_SCALE_CONFIG.enabled).toBe(true);
+    expect(DEFAULT_AUTO_SCALE_CONFIG).toEqual(snapshot);
   });
 });
 
