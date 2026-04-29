@@ -10,16 +10,22 @@ import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
-import { RACER_TYPE_IDS, RACER_TYPE_LABELS } from '../../../modules/racer-types/index.js';
+import {
+  RACER_TYPE_IDS,
+  RACER_TYPE_LABELS,
+  getRacerType,
+} from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
 import { listEffects } from '../../../modules/track-effects/index.js';
+import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
+import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
+import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
+import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import s from '../DevScreen.module.css';
 
 const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
 
 const DURATIONS = [30, 60, 90, 120];
-
-const TRACK_WIDTHS = [100, 140, 200, 280, 360];
 
 const BLANK = {
   name: '',
@@ -30,10 +36,30 @@ const BLANK = {
   color: '#e63946',
   defaultDuration: 60,
   defaultWinners: 3,
-  trackWidth: 140,
   worldWidth: 1280,
   worldHeight: 720,
+  maxRacers: null,
+  maxRacersIsOverride: false,
 };
+
+// Compute the auto max-racers suggestion for a given geometry + track metadata.
+// Uses actual geometric track width so large worlds get correct capacity.
+function autoMaxRacers(geom, track, rowCfg) {
+  if (!geom?.pathLengthPx) return null;
+  const racerType = getRacerType(track.defaultRacerTypeId ?? 'horse');
+  const displaySize = racerType?.config?.displaySize ?? 40;
+  const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
+  const shape = new EditorShape(geom);
+  const behaviorCfg = loadRaceBehaviorConfig();
+  const effectiveWidth = shape.getActualTrackWidth() * behaviorCfg.startSpreadRange;
+  const racersPerRow = computeRacersPerRow(effectiveWidth, displaySize);
+  return computeMaxRacersDefault(
+    geom.pathLengthPx,
+    racersPerRow,
+    rowGapPx,
+    rowCfg.maxCapacityFactor
+  );
+}
 
 function TrackManager() {
   const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
@@ -46,8 +72,9 @@ function TrackManager() {
 
   function handleSave() {
     if (!form.name.trim() || !form.icon.trim()) return;
+    const { maxRacersIsOverride: _drop, ...formData } = form;
     const track = {
-      ...form,
+      ...formData,
       name: form.name.trim(),
       icon: form.icon.trim(),
       isDefault: false,
@@ -64,18 +91,24 @@ function TrackManager() {
   }
 
   function handleEdit(track) {
+    const rowCfg = loadRowLayoutConfig();
+    const geomId = track.geometryId ?? null;
+    const geom = geomId ? geometries.find((g) => g.id === geomId) : null;
+    const autoMax = autoMaxRacers(geom, track, rowCfg);
+    const storedMax = track.maxRacers ?? null;
     setForm({
       name: track.name,
       icon: track.icon,
       description: track.description,
       defaultRacerTypeId: track.defaultRacerTypeId ?? track.racerTypeId ?? track.racerId ?? 'horse',
-      geometryId: track.geometryId ?? null,
+      geometryId: geomId,
       color: track.color,
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
-      trackWidth: track.trackWidth ?? 140,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
+      maxRacers: storedMax ?? autoMax,
+      maxRacersIsOverride: storedMax !== null && storedMax !== autoMax,
     });
     setEditId(track.id);
     setShowForm(true);
@@ -100,12 +133,15 @@ function TrackManager() {
   function f(key, val) {
     if (key === 'geometryId' && val) {
       const geom = geometries.find((g) => g.id === val);
-      if (geom?.worldWidth && geom?.worldHeight) {
+      if (geom) {
+        const rowCfg = loadRowLayoutConfig();
+        const autoMax = autoMaxRacers(geom, form, rowCfg);
         setForm((prev) => ({
           ...prev,
           geometryId: val,
-          worldWidth: geom.worldWidth,
-          worldHeight: geom.worldHeight,
+          worldWidth: geom.worldWidth ?? prev.worldWidth,
+          worldHeight: geom.worldHeight ?? prev.worldHeight,
+          maxRacers: prev.maxRacersIsOverride ? prev.maxRacers : autoMax,
         }));
         return;
       }
@@ -343,25 +379,79 @@ function TrackManager() {
               </select>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Track Width (px)</label>
-              <div className={s.optionPills}>
-                {TRACK_WIDTHS.map((w) => (
-                  <button
-                    key={w}
-                    className={`${s.optionPill} ${form.trackWidth === w ? s.optionPillActive : ''}`}
-                    onClick={() => f('trackWidth', w)}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={s.formGroup}>
               <label className={s.label}>World Dimensions</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
                 {form.geometryId
                   ? `${form.worldWidth}×${form.worldHeight} px (from Geometry)`
                   : '— (Choose Geometry)'}
+              </span>
+            </div>
+
+            <div className={s.formGroup}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Max Racers
+                {form.maxRacersIsOverride && (
+                  <span
+                    className={s.badge}
+                    style={{ background: 'rgba(244,162,97,0.2)', color: '#f4a261' }}
+                  >
+                    modified
+                  </span>
+                )}
+              </label>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  className={s.input}
+                  aria-label="Max Racers"
+                  min={1}
+                  max={500}
+                  step={1}
+                  placeholder={form.geometryId ? 'auto' : 'set geometry first'}
+                  value={form.maxRacers ?? ''}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1) {
+                      setForm((prev) => ({ ...prev, maxRacers: v, maxRacersIsOverride: true }));
+                    } else if (e.target.value === '') {
+                      setForm((prev) => ({ ...prev, maxRacers: null, maxRacersIsOverride: false }));
+                    }
+                  }}
+                />
+                {form.maxRacersIsOverride && form.geometryId && (
+                  <button
+                    className={`${s.btn} ${s.btnGhost}`}
+                    style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      const geom = geometries.find((g) => g.id === form.geometryId);
+                      if (!geom?.pathLengthPx) return;
+                      const rowCfg = loadRowLayoutConfig();
+                      const autoMax = autoMaxRacers(geom, form, rowCfg);
+                      setForm((prev) => ({
+                        ...prev,
+                        maxRacers: autoMax,
+                        maxRacersIsOverride: false,
+                      }));
+                    }}
+                  >
+                    Reset to auto
+                  </button>
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-muted)',
+                  marginTop: '0.25rem',
+                  display: 'block',
+                }}
+              >
+                {form.maxRacers
+                  ? `Setup shows a warning above ${form.maxRacers} players${form.maxRacersIsOverride ? ' (manual override)' : ' (auto)'}`
+                  : 'No limit set — auto-computed when geometry is selected.'}
               </span>
             </div>
           </div>

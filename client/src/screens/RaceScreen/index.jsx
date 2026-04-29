@@ -19,19 +19,17 @@ import {
   openTrackPanTarget,
 } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import {
-  lapsFromDuration,
-  lapProgress,
-  currentLap,
-  openTrackFinishT,
-} from '../../modules/camera/lapUtils.js';
+import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import {
-  initRacerBehavior,
-  applyRacerBehavior,
-  computeStartPhysicalY,
-} from '../../modules/raceBehavior.js';
+  computeRacersPerRow,
+  computeRowLayout,
+  computeRowPhysicalY,
+  computeSpeedBonus,
+} from '../../modules/rowLayout.js';
+import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -119,7 +117,6 @@ export default function RaceScreen() {
     const nRacers = raceData.racers.length;
 
     const typeId = raceData.racerTypeId || 'horse';
-    const trackWidth = raceData.trackWidth ?? 140;
     const worldHeight = raceData.worldHeight ?? 720;
 
     if (!raceData.geometryId) {
@@ -137,6 +134,7 @@ export default function RaceScreen() {
     }
 
     shapeRef.current = new EditorShape(geometry);
+    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
     // TODO(Phase Q): add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
@@ -166,6 +164,7 @@ export default function RaceScreen() {
     const BASE_SPEED_MAX = baseSpeedConfig.max;
 
     const behaviorConfig = loadRaceBehaviorConfig();
+    const rowConfig = loadRowLayoutConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -177,19 +176,15 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
+        displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
       }
     }
 
-    // Determine finish position in t-space (speed scale applied so open-track
-    // finish line matches the scaled pace)
     const duration = raceData.duration ?? 60;
+    // Open tracks: finish line at 1 - runoutZone (runout zone is at the end of the path).
+    // Closed tracks: finish line determined by target lap count.
     const finishT = isOpenTrack
-      ? openTrackFinishT(
-          raceData.targetDuration ?? duration,
-          speedMultiplier / speedScaleFactor,
-          BASE_SPEED_MAX
-        )
+      ? 1.0 - behaviorConfig.runoutZone
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 
@@ -203,6 +198,23 @@ export default function RaceScreen() {
     camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight);
     setFinishTState(finishT);
 
+    // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
+    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    const spriteSize = displaySize * displaySizeScale;
+    const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
+    const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
+
+    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
+    const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
+    const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
+
+    // Index assignments by racerIndex for O(1) lookup in the map below
+    const rowSizeByRow = new Map();
+    for (const a of rowLayout.assignments) {
+      rowSizeByRow.set(a.rowIndex, (rowSizeByRow.get(a.rowIndex) ?? 0) + 1);
+    }
+    const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
+
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -211,23 +223,37 @@ export default function RaceScreen() {
       finishedCount: 0,
       dustParticles: [],
       burstParticles: [],
-      trackWidth,
       maxLaps,
       finishT,
       camX: 0,
       camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => {
+        const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
+        const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
+        const speedBonus = computeSpeedBonus(
+          assignment.rowIndex,
+          rowGapPx,
+          pathLengthPx,
+          rowConfig.speedBonusFactor
+        );
+        // Closed tracks: negative t wraps correctly via modulo in _idx.
+        // Open tracks: offset each row forward from t=0 so all rows start within the path.
+        // Front row (rowIndex 0) starts at totalRows×deltaT; last row starts at 1×deltaT.
+        const tStart = isOpenTrack
+          ? (rowLayout.totalRows - assignment.rowIndex) * deltaT_per_row
+          : -(assignment.rowIndex * deltaT_per_row);
         const racer = {
           ...r,
           index: i,
-          t: 0,
+          t: tStart,
           lap: 1,
           icon: trackEmoji ?? r.icon,
           baseSpeed:
-            ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
+            (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
               speedMultiplier) /
-            speedScaleFactor,
+              speedScaleFactor) *
+            (1 + speedBonus),
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
           color: LANE_COLORS[i % LANE_COLORS.length],
@@ -241,7 +267,11 @@ export default function RaceScreen() {
           angle: 0,
         };
         initRacerBehavior(racer);
-        racer.physicalY = computeStartPhysicalY(i, nRacers, behaviorConfig.startSpreadRange);
+        racer.physicalY = computeRowPhysicalY(
+          assignment.indexInRow,
+          rowSize,
+          behaviorConfig.startSpreadRange
+        );
         return racer;
       }),
     };
@@ -955,7 +985,7 @@ export default function RaceScreen() {
                     <div
                       className="sb-bar-fill"
                       style={{
-                        width: `${Math.min(lapProgress(r.t ?? 0, finishTState), 1) * 100}%`,
+                        width: `${Math.min(Math.max(0, lapProgress(r.t ?? 0, finishTState)), 1) * 100}%`,
                         background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
                       }}
                     />

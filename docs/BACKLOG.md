@@ -42,6 +42,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **D7b** | #37 | Lane-frei: physicalY-System ersetzt currentLaneY/targetLaneY vollständig. physicalY ∈ [-1,+1] (0=Centerline). Home-Force-Spring, anisotrope Avoidance-Distanz (t×tWeight + physicalY×yWeight), Cone-Drafting (Weltkoordinaten), Speed-Brake für Adjacent-Racer, Soft-Repulsion + Hard-Clamp. 13 neue/angepasste tunable Parameter im Dev-Screen. Lane-Code hart entfernt. Unit + e2e Tests aktualisiert. |
 | ✅ **D7b-fix B1+B2** | #37 | Folge-Commit auf Branch D7b: B1 — Start-Spread: Racer starten gleichmäßig verteilt über [-startSpreadRange, +startSpreadRange] statt alle bei physicalY=0 (computeStartPhysicalY, neuer Dev-Screen-Parameter). B2 — yDiff=0 Edge-Case: wenn beide Racer gleiche physicalY haben, wird keine Lateral-Force angewendet (prevents alle Trailers fliegen in Richtung +1). |
 | ✅ **D7b-fix B3** | #37 | Anti-Stacking (Kraft-Imbalance, war als D11-Befund im Backlog): Avoidance-Forces werden durch sqrt(neighborCount) normalisiert — verhindert Boundary-Clinging bei 20+ Racers wo lineare Force-Akkumulation die restoring forces überwältigte. Neue Defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
+| ✅ **D7c** | #39 | Reihen-Start + Speed-Bonus + Track-Capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full-spread auch für letzte unvollständige Reihe), `computeSpeedBonus` (Faktor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto-Capacity aus pathLengthPx). Closed tracks: hintere Reihen starten bei negativem t (tPos wraps korrekt). Open tracks: t=0 durch EditorShape-Clamp. `maxRacers` auf Track mit "modified"-Badge. Setup-Screen: Reihen-Hinweis + Capacity-Warnung. Dev-Screen Row-Start-Section: 4 Parameter. 21 Unit + 6 e2e Tests. |
+| ✅ **D7c-fix** | #39 | Bug: `trackWidth`-Metadata (140 px, kalibriert für 1280px-Welt) gab `racersPerRow=1` auf großen Welten (6000px) → alle 20 Racer in Einzelreihen → einzelne vertikale Linie. Fix Phase 1: `EditorShape.getActualTrackWidth()` misst echte geometrische Breite (Median, gecached). Fix Phase 2 (D7c-fix-v2): Formel komplett in World-Pixel-Raum: `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` = `floor(2×geometricW/spriteWorldSizePx)`. `trackWidth`-Feld komplett aus Track-Datenmodell entfernt — TrackManager-Dropdown (100/140/200/280/360) entfernt, `raceData.trackWidth` und `track.trackWidth` aus allen Callers entfernt, Storage-Migration: alte Einträge ignorieren. `autoSpriteScale` nutzt jetzt `getActualTrackWidth()` statt Metadata. Fix Phase 3 (D7c-fix-v3): Floating-Point-Rundungsfehler in catmullRom-Spline (~10⁻¹³) führte zu `racersPerRow=11` statt 12 wenn Rocket-displaySize-Override (50px) Auto-Scale deaktiviert → `getActualTrackWidth()` rundet Median jetzt per `Math.round()`. |
+| ✅ **D7c-Phase4** | #39 | Drei Fixes auf feat/d7c-row-start-with-speed-bonus. (1) **startSpreadRange 0.7→0.95**: Default erhöht; Migration: gespeicherter Wert 0.7 wird beim Laden auf 0.95 aktualisiert. (2) **Formel-Mismatch beheben**: `computeRacersPerRow` erhält jetzt `effectiveWidth = geometricWidth × startSpreadRange` — Packing-Berechnung stimmt jetzt mit der tatsächlichen Racer-Verteilung überein (vorher: Formel nutzte 100% der Streckenbreite, Verteilung aber nur 70%). Angepasst in RaceScreen, TrackManager, SetupScreen. (3) **Open-Track-Layout**: a) Assembly-Bereich — Reihen starten bei `t = (totalRows − rowIndex) × deltaT_per_row` statt negativem t → kein Clamp mehr, alle Reihen innerhalb der Strecke. b) `runoutZone`-Parameter (Default 0.05) — Finish-Linie auf Open-Tracks bei `1.0 − runoutZone` (tunable im Dev-Screen). Kein `openTrackFinishT` mehr in RaceScreen. Setup-Screen zeigt Finish-% aus runoutZone. Migration für startSpreadRange + runoutZone-Validation in loadRaceBehaviorConfig. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -60,13 +63,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - ✅ **D7a** — Proportional Sprite Scaling + Min-Size-Floor + Zoom-Ratios + Label-Skalierung (PR #33, master `a49baa0`)
 - ✅ **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (PR #35, master `27cba65`)
 - ✅ **D7b** — Lane-frei: physicalY ersetzt Lane-System (PR #37)
+- ✅ **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity (PR #39)
 
-- 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
-  - Reihen-Start (Layout) für viele Racer mit negativen t-Start-Offsets für hintere Reihen
-  - Speed-Bonus kompensiert physische Distanz (`speedBonus = startOffset / trackLength`, capped)
-  - Track-Capacity-System (maxRacers pro Track)
-
-- **D7d** — 100-Racer-Performance
+- 🔜 **D7d** — 100-Racer-Performance
   - Spatial-Grid für O(N) Avoidance-Performance
   - Smartere Camera für Pulk-Übersicht
   - LOD oder ähnliche Strategien für 100 Racer
@@ -109,6 +108,18 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
     - Cross-References zu ARCHITECTURE.md-Pipeline-Sektionen
   - Priorität: zusammen mit B-UX2 — Hilfe-Screen kann die Doku referenzieren oder einbinden.
     Kann auch als reiner Doku-Sprint vor B-UX2 entstehen, dann nutzt B-UX2 die Inhalte.
+
+- **B-UX4** — Sprite-Größen-System überarbeiten
+  - Aktuelles Verhalten: per-Type-Overrides (z.B. `displaySize: 50` für Rocket) sind absolute
+    Werte und deaktivieren die Auto-Skalierung vollständig (`displaySizeScale = 1`). Das hat zur
+    Folge dass Sprites auf schmalen Strecken zu groß wirken können — und war einer der Faktoren
+    die während D7c-Diagnose zu einem falschen `racersPerRow`-Wert führten.
+  - Alternative Konzepte (Spec steht noch aus):
+    - **(a) Override als Multiplikator** über der Auto-Skalierung (z.B. `displaySizeOverride: 1.25` = 25% größer als Auto)
+    - **(b) Gemischter Modus mit Min/Max-Grenzen** — Auto-Scale läuft, Override setzt Ober-/Untergrenze
+    - **(c) Komplettes Re-Design des Tunable-Konzepts** — Auto und absoluter Wert als wählbare Modi
+  - Aufgekommen während D7c-Diagnose (2026-04-29). Braucht Vision-Diskussion bevor Spec geschrieben wird.
+  - Priorität: niedrig. Aktuell kein UX-Blocker — nur bei deliberatem displaySize-Override + großer Strecke sichtbar.
 
 - **B-1** — PlayerSetup: Laden gespeicherter Gruppen-Listen (Ladebutton vorhanden, Verhalten unklar)
 - **B-2** — TrackSelector: Custom-Track-Verhalten bei fehlender Geometry
@@ -205,8 +216,8 @@ aus D3.5.5.
 5. ✅ **D7a** Proportional Sprites + Zoom + Labels — PR #33, master `a49baa0`
 6. ✅ **D7a-Plus** Per-Type Sprite-Mindest-Größe + Live-Vorschau — PR #35, master `27cba65`
 7. ✅ **D7b** Lane-frei + physicalY-Avoidance — PR #37
-8. 🔜 **D7c** — Reihen-Start + Speed-Bonus + Track-Capacity
-9. **D7d** — 100-Racer-Performance
+8. ✅ **D7c** Reihen-Start + Speed-Bonus + Track-Capacity — PR #39
+9. 🔜 **D7d** — 100-Racer-Performance
 10. **D3.5.4** Trail-Tuning
 11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
 12. **D6**, **D8**
