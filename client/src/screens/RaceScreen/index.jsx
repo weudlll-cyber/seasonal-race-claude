@@ -9,6 +9,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
+import { validateActiveRace } from './raceSession.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
@@ -102,7 +103,7 @@ export default function RaceScreen() {
     try {
       const raw = sessionStorage.getItem('activeRace');
       if (!raw) throw new Error('No race data. Please start a race from Setup.');
-      setRaceData(JSON.parse(raw));
+      setRaceData(validateActiveRace(JSON.parse(raw)));
     } catch (e) {
       setError(e.message);
     }
@@ -704,7 +705,10 @@ export default function RaceScreen() {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
           if (!r.finished) {
-            r.t += (r.baseSpeed * boost * brake + jitter) * (dt / 16);
+            r.t = Math.min(
+              r.t + (r.baseSpeed * boost * brake + jitter) * (dt / 16),
+              st.finishT + 0.001
+            );
           } else {
             // Run-out: finished racers keep moving but decay to a stop
             r.runoutDecay *= 0.97;

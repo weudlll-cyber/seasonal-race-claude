@@ -52,5 +52,5 @@ export function loadRaceBehaviorConfig() {
 }
 
 export function saveRaceBehaviorConfig(config) {
-  storageSet(KEYS.RACE_BEHAVIOR_CONFIG, config);
+  return storageSet(KEYS.RACE_BEHAVIOR_CONFIG, config);
 }

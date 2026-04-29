@@ -36,8 +36,10 @@ export function storageGet(key, fallback = null) {
 export function storageSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch (err) {
     console.warn('[RaceArena] localStorage write failed:', err);
+    return false;
   }
 }
 

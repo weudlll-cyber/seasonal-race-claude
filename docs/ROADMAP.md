@@ -65,7 +65,7 @@ Replaces emoji racers with sprite-based renderable types.
 - [x] D7a — Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. computeRenderDisplayScale as single-source render pipeline. cameraZoomFactor removed. 808 unit + 183 e2e tests. PR #33, master `a49baa0`.
 - [x] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern). Animated canvas preview, global-default hint, modified badge, reset. Scroll indicator in modal. PR #35, master `27cba65`.
 - [x] D7b — Lane-free: physicalY system replaces currentLaneY/targetLaneY. Home force, anisotropic avoidance, cone drafting, soft repulsion, hard clamp. 13 tunable params in Dev Screen. PR #37.
-- [x] D7c — Reihen-Start: multi-row layout, speed-bonus for rear rows, track-capacity system. PR #39, master TBD.
+- [x] D7c — Reihen-Start: multi-row layout, speed-bonus for rear rows, track-capacity system. PR #39, master `ca2efcd`.
 - [ ] D7d — 100-Racer-Performance: spatial grid O(N) avoidance, smart camera for packs
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
