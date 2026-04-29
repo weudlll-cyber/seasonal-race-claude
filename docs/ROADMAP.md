@@ -186,9 +186,9 @@ Resets on track change. Not persisted.
 
 - [x] Q-1 through Q-5 — Dead exports, unused imports, TODO tags, JSON.parse hygiene, file
   headers (PR #17 cleanup commit)
-- [ ] Q-6 — TrackEditor.jsx split-refactor (1006 LOC, pre-existing)
-- [ ] Q-7 — RaceScreen/index.jsx split-refactor (886 LOC, pre-existing)
-- [ ] Q-8 — Watch-list: TrackManager.jsx (346 LOC), BrandingProfiles.jsx (330 LOC)
+- [ ] Q-6 — TrackEditor.jsx split-refactor (1222 LOC, pre-existing)
+- [ ] Q-7 — RaceScreen/index.jsx split-refactor (1032 LOC, pre-existing)
+- [ ] Q-8 — Watch-list: TrackManager.jsx (535 LOC), BrandingProfiles.jsx (330 LOC)
 
 ## Phase V — Verification Sprint (planned)
 
@@ -234,7 +234,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (808 unit tests, 50 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
+- [x] Vitest + React Testing Library (984 unit tests, 61 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -281,4 +281,4 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 | 2026-04-27 | D11 Racer Behavior + Visual-Fixes complete (PR #30, master `d46cab2`): asymmetric avoidance (trailer yields/leader holds), proximity-scaled force, speed brake, drafting boost, RaceBehaviorSection in Dev-Screen. Camera world-edge clamp (Befund 2). Open-track camera-zoom-aware sprite scaling: `computeOpenTrackCameraZoomFactor()` + pixel-floor `minVisiblePixels`. 4 browser bugs found during review and fixed before merge. 809 unit + 183 e2e tests. Decision: accumulated complexity in 4-factor scaling pipeline → D7 (Visual Experience Architecture) as next phase with Vision-Diskussion zuerst; Q-15 tracks the architectural debt. |
 | 2026-04-28 | D7-Vision-Phase: 6 D11-Browser-Test-Befunde → Vision-Diskussion mit drei Sparring-Partnern (User + strat. Claude + Claude Code). 5 Architektur-Konzepte beschlossen: proportional+Floor-Sprites, relative Zoom-Ratios, Label-Skalierung, Lane-frei (D7b), Reihen-Start+Speed-Bonus (D7c), 100-Racer-Performance (D7d). D7a complete (PR #33, master `a49baa0`): computeRenderDisplayScale Single-Source, cameraZoomFactor entfernt, CameraDirector overviewZoom×ratio, Label-Skalierung mit effZoom. Browser-test-driven Korrektur in selber PR: konstante Sprites → proportional+Floor → sauberere Architektur. Q-15 strukturell adressiert. 808 unit + 183 e2e tests. |
 | 2026-04-29 | D7a-Plus (PR #35), D7b (PR #37), D7c (PR #39): Per-type minTargetScreenPx override; lane-free physicalY + home force + anisotropic avoidance + cone drafting (13 tunable params); multi-row start + speed-bonus + track-capacity. Q-Cleanup PRs #40–#42: security (SEC-1..5), data hygiene, source & test hygiene. |
-| 2026-04-29 | Phase L complete (PR #43 + #44): L.1 Docker/Express skeleton; L.2 track read API + seed data; L.3 frontend loads from backend with geometry caching; L.4 offline background cache (3 MB LRU); L.5 write-path — TrackEditor saves to server (POST/PUT + background upload), TrackManager Delete via API, one-time localStorage→server migration, stale-cache cleanup. 945 unit + 183 e2e tests. ⚠️ Auth required before VPS deployment. |
+| 2026-04-29 | Phase L complete (PR #43 + #44): L.1 Docker/Express skeleton; L.2 track read API + seed data; L.3 frontend loads from backend with geometry caching; L.4 offline background cache (3 MB LRU); L.5 write-path — TrackEditor saves to server (POST/PUT + background upload), TrackManager Delete via API, one-time localStorage→server migration, stale-cache cleanup. 984 unit + 183 e2e tests. L.6: Track-Editor visibility improvements (60% overlay, magenta lines, white outlines), background upload no longer resets drawn track (BgBug fix). ⚠️ Auth required before VPS deployment. |

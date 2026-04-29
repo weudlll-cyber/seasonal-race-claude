@@ -159,6 +159,22 @@ bestehenden. Tests sollten die Symmetrie absichern.
 
 ---
 
+## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
+
+**Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
+Standard-Projekt-File-Header geschrieben. Test-Infrastruktur ist auch Repo-Code
+und sollte denselben Konventionen folgen wie Source-Files.
+
+**Erkenntnis:** Der Reflex "das ist nur eine Config / ein Test" führt dazu dass neue
+Infrastruktur-Files die im Rest des Repos etablierten Konventionen nicht erben. Das
+fällt erst beim Quality-Gate auf, nicht beim Schreiben.
+
+**Konsequenz:** Bei Erstellung neuer Files (egal ob Source, Config, oder Test):
+Standard-Header anwenden. Quality-Gate-Check für File-Headers gilt für alle
+`.js`/`.jsx`/`.config.*` Files, nicht nur Source.
+
+---
+
 ## Lesson 11 — UX-Verifikation als zusätzliche Smoke-Test-Schicht (PR #21)
 
 **Kontext:** D3.5.5 hatte umfangreichen UI-Impact (Edit-Modal, 6 Felder, Tooltips, Override-
@@ -464,7 +480,67 @@ auf den anderen schließen — die Topologien sind grundlegend verschieden.
 
 ---
 
-## Lesson 11 — Container-First: Skeleton vor Logik (Phase L / PR #43)
+## Lesson 24 — Atomic Write: temp + rename schützt vor korrupten Dateien (L.5)
+
+**Kontext:** Die L.5-Write-Endpoints mussten Track-JSON-Dateien updaten ohne das Risiko einer halbfertigen Datei (z.B. bei Absturz während des Schreibens oder volllaufender Disk). Standard `writeFileSync` direkt auf die Zieldatei ist nicht atomar — ein Leser zwischen Write-Start und Write-Ende sieht inkonsistenten Inhalt.
+
+**Erkenntnis:** Das OS garantiert dass `rename()` auf demselben Filesystem atomar ist: Leser sehen entweder die alte oder die neue Datei, nie eine unvollständige. Temporäre Datei auf demselben Volume schreiben (`.tmp`-Suffix auf selber Partition), dann `renameSync` zur finalen Adresse.
+
+**Konsequenz:** Für alle Datei-Writes die konsistenten Zustand erfordern: `writeFileSync(tmpPath, content)` dann `renameSync(tmpPath, finalPath)`. Node-built-ins — kein Extra-Package nötig. Test-Absicherung: prüfe dass `.tmp`-Datei nach erfolgreichem Save nicht existiert.
+
+---
+
+## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
+
+**Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.
+
+**Erkenntnis:** Der Marker muss exakt dann gesetzt werden wenn alle Tracks erfolgreich übertragen wurden. Einzelne Track-Fehler loggen und Migration fortsetzen (kein Early-Exit), am Ende Marker setzen wenn `allSucceeded === true`. Versionierter Key-Name (`...-v1`) erlaubt Folge-Migrationen durch neuen Key.
+
+**Konsequenz:** One-shot Migrations-Pattern: (1) Marker prüfen → abbrechen wenn gesetzt. (2) Jeden Eintrag individuell verarbeiten, Fehler loggen, kein Early-Exit. (3) Marker nur setzen wenn `allSucceeded`. (4) Marker-Key versionieren: `racearena:migration:tracks-to-server-v1`.
+
+---
+
+## Lesson 26 — Cache und Index müssen synchron gehalten werden (L.6-Bug2)
+
+**Kontext:** `cacheTrackGeometry` (trackLoader.js) speicherte Server-Geometrien unter `racearena:trackGeometries:<id>` — genau dort wo auch `getTrack(id)` liest. Aber `racearena:trackGeometries:index` wurde nicht aktualisiert. `listTracks()` liest ausschließlich aus dem Index. Ergebnis: Geometrie-Daten lagen im Storage, waren aber für alle Index-Leser unsichtbar. Der Modal-Dropdown zeigte "No tracks drawn yet", obwohl die Geometrie vorhanden war.
+
+**Erkenntnis:** Wenn zwei Funktionen dasselbe Storage-Schema verwenden aber eine davon den Index überspringt, entsteht ein stiller Konsistenzbruch. Tests prüfen in der Regel "Daten können geschrieben und gelesen werden" — aber nicht "sind die Daten über alle vorgesehenen Read-Paths erreichbar". Der Bruch wird erst sichtbar wenn eine UI-Komponente den indirekten Read-Path (via Index) verwendet statt direkt per ID zu lesen.
+
+**Konsequenz:** Bei Storage-Schemas mit Index-Pointer-Struktur: jede Write-Operation (sowohl lokale saves als auch externe Cache-Einträge) muss den Index mitpflegen. Index-Registrierung und Daten-Write als unteilbares Paar behandeln. Beim Löschen analog: erst Daten entfernen, dann Index-Eintrag entfernen.
+
+---
+
+## Lesson 27 — Metadaten-UI und Asset-UI gehören in getrennte Oberflächen (L.6-Bug2-UX)
+
+**Kontext:** Das Edit-Track-Modal zeigte eine read-only "Effects: none/..."-Zeile die aus der verknüpften Geometrie gelesen wurde. Die Effects werden im Track-Editor konfiguriert und sind Teil der Geometrie — nicht der Track-Metadaten. Browser-Test zeigte: User sucht Background-Bild-Verwaltung im Modal und findet sie nicht. Die Effects-Anzeige im Modal gab keinen Hinweis wohin man für Asset-Verwaltung gehen muss.
+
+**Erkenntnis:** Eine UI-Oberfläche die Daten aus zwei semantisch unterschiedlichen Quellen anzeigt (Metadaten + Asset-Eigenschaften) erzeugt Verwirrung wo welche Verwaltung stattfindet. Read-only Anzeige von Asset-Properties im Metadaten-Modal gibt keine Orientierung — im Gegenteil: sie suggeriert dass Assets hier verwaltbar sind. Ein klarer Hinweis-Text ("Background image and effects are managed in the Track Editor") ist informativer als das Anzeigen von Werten ohne Edit-Möglichkeit.
+
+**Konsequenz:** Jede UI-Oberfläche sollte eine klar definierte Domäne haben: Metadaten-Modal für Metadaten, Track-Editor für Assets/Geometrie. Informationen aus der anderen Domäne entweder weglassen oder durch Hinweis-Text auf die zuständige Oberfläche zeigen. Read-only Properties aus einer anderen Domäne anzeigen ohne Edit-Pfad führt zu UX-Verwirrung.
+
+---
+
+## Lesson 28 — Canvas-Lesbarkeit: Overlay und Kontrast-Defaults für dunkle Hintergründe (L.6-VIS)
+
+**Kontext:** Der Track-Editor renderte Track-Linien direkt auf das Hintergrundbild ohne Zwischenschicht. Auf Bildern mit helleren Bereichen (Gras, Himmel, Beton) verschwanden die farbigen Linien (#4fc3f7 auf weißem Untergrund) oder die Cyan-gefüllten Kontrollpunkte waren kaum von hellen Bildregionen zu unterscheiden. Erst ein Browser-Test auf echtem Track-Material machte das Problem sichtbar — Unit-Tests und Code-Review gaben kein Signal.
+
+**Erkenntnis:** Canvas-Overlays (globalAlpha + fillRect) sind der einfachste Weg um einen zuverlässigen Kontrast-Boden zu schaffen unabhängig vom Bild-Inhalt. Eine 35%-Opacity-Schicht zwischen Bild und Linien kostet eine Zeile Code und macht alle weiteren Farb-Entscheidungen Bild-agnostisch. Kontrollpunkte mit weißer Füllung und dunklem Rand (Kreismarkierung-Prinzip) sind auf jedem Hintergrund sichtbar — Cyan auf Cyan-Hintergrund nie.
+
+**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand. Für Linien: kontrastreiche Farbe (Magenta) die in keinem typischen Bildinhalt vorkommt, plus weiße Outline dahinter — damit ist die Lesbarkeit auf beliebigem Hintergrund garantiert ohne auf den Hintergrund-Typ angewiesen zu sein.
+
+---
+
+## Lesson 29 — Partielle State-Updates: nie mehr Felder überschreiben als nötig (L.6-BgBug)
+
+**Kontext:** Der Bild-Upload-Handler im Track-Editor enthielt eine `dimChanged && hasPoints`-Verzweigung die bei Dimensionsunterschied zwischen neuem Bild und aktueller Welt `setCenterPoints([])`, `setInnerPoints([])`, `setOuterPoints([])` aufrief. Intention: vermeiden dass gezeichnete Punkte nach Dimensions-Änderung "falsch positioniert" sind. Effekt: jeder Bild-Upload auf einem neuen Track (Standardgröße 1280×720, Foto typisch andere Auflösung) zerstörte die gezeichnete Strecke.
+
+**Erkenntnis:** Handler die primär eine einzige Ressource ändern (hier: Background-Bild) dürfen keine anderen State-Felder als unbeabsichtigten Nebeneffekt zurücksetzen. Die "Schutz"-Logik war schlechter als nichts: sie überschrieb User-Arbeit, die der User nicht zurückfordern kann wenn er den confirm-Dialog bestätigt. State-Updates sollten chirurgisch sein — nur das ändern, was der Handler explizit ändern soll.
+
+**Konsequenz:** Bei jedem Handler der State ändert: prüfen welche anderen State-Felder er berührt und ob das beabsichtigt ist. "Cleanup für den Fall dass X" in einem State-Update-Handler ist ein Warnsignal — das gehört entweder in einen separaten Handler (der explizit ausgelöst wird) oder gar nicht rein.
+
+---
+
+## Lesson 30 — Container-First: Skeleton vor Logik (Phase L / PR #43)
 
 **Kontext:** Statt den Backend-Server erst in Phase 5 als vollständiges System aufzubauen,
 wurde in Phase L zunächst nur das Container-Skeleton etabliert (Express + Dockerfile +
@@ -484,23 +560,7 @@ Infrastruktur, bevor der Komplexitätssockel steigt.
 
 ---
 
-## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
-
-**Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
-Standard-Projekt-File-Header geschrieben. Test-Infrastruktur ist auch Repo-Code
-und sollte denselben Konventionen folgen wie Source-Files.
-
-**Erkenntnis:** Der Reflex "das ist nur eine Config / ein Test" führt dazu dass neue
-Infrastruktur-Files die im Rest des Repos etablierten Konventionen nicht erben. Das
-fällt erst beim Quality-Gate auf, nicht beim Schreiben.
-
-**Konsequenz:** Bei Erstellung neuer Files (egal ob Source, Config, oder Test):
-Standard-Header anwenden. Quality-Gate-Check für File-Headers gilt für alle
-`.js`/`.jsx`/`.config.*` Files, nicht nur Source.
-
----
-
-## Lesson 12 — Server-Daten mit Code-Defaults über gemeinsame ID-Deduplication mergen (L.2–L.4)
+## Lesson 31 — Server-Daten mit Code-Defaults über gemeinsame ID-Deduplication mergen (L.2–L.4)
 
 **Kontext:** Phase L führte Server-Tracks (Weltall) ein, aber dieselbe Track-ID existierte
 noch in localStorage aus der Zeit bevor sie "auf den Server gewandert" ist. Die kombinierte
@@ -517,63 +577,3 @@ Menge definieren und lokale Kopien beim Merge herausfiltern (`serverIds`-Dedupli
 immer explizit prüfen welche Quelle Vorrang hat und Duplikate by-ID herausfiltern.
 Merge-Logik die stillschweigend die erste Kopie bevorzugt, ohne explizite Quelle-Priorisierung,
 führt zu schwer debuggbaren UI-Zuständen.
-
----
-
-## Lesson 24 — Atomic Write: temp + rename schützt vor korrupten Dateien (L.5)
-
-**Kontext:** Die L.5-Write-Endpoints mussten Track-JSON-Dateien updaten ohne das Risiko einer halbfertigen Datei (z.B. bei Absturz während des Schreibens oder volllaufender Disk). Standard `writeFileSync` direkt auf die Zieldatei ist nicht atomar — ein Leser zwischen Write-Start und Write-Ende sieht inkonsistenten Inhalt.
-
-**Erkenntnis:** Das OS garantiert dass `rename()` auf demselben Filesystem atomar ist: Leser sehen entweder die alte oder die neue Datei, nie eine unvollständige. Temporäre Datei auf demselben Volume schreiben (`.tmp`-Suffix auf selber Partition), dann `renameSync` zur finalen Adresse.
-
-**Konsequenz:** Für alle Datei-Writes die konsistenten Zustand erfordern: `writeFileSync(tmpPath, content)` dann `renameSync(tmpPath, finalPath)`. Node-built-ins — kein Extra-Package nötig. Test-Absicherung: prüfe dass `.tmp`-Datei nach erfolgreichem Save nicht existiert.
-
----
-
-## Lesson 27 — Metadaten-UI und Asset-UI gehören in getrennte Oberflächen (L.6-Bug2-UX)
-
-**Kontext:** Das Edit-Track-Modal zeigte eine read-only "Effects: none/..."-Zeile die aus der verknüpften Geometrie gelesen wurde. Die Effects werden im Track-Editor konfiguriert und sind Teil der Geometrie — nicht der Track-Metadaten. Browser-Test zeigte: User sucht Background-Bild-Verwaltung im Modal und findet sie nicht. Die Effects-Anzeige im Modal gab keinen Hinweis wohin man für Asset-Verwaltung gehen muss.
-
-**Erkenntnis:** Eine UI-Oberfläche die Daten aus zwei semantisch unterschiedlichen Quellen anzeigt (Metadaten + Asset-Eigenschaften) erzeugt Verwirrung wo welche Verwaltung stattfindet. Read-only Anzeige von Asset-Properties im Metadaten-Modal gibt keine Orientierung — im Gegenteil: sie suggeriert dass Assets hier verwaltbar sind. Ein klarer Hinweis-Text ("Background image and effects are managed in the Track Editor") ist informativer als das Anzeigen von Werten ohne Edit-Möglichkeit.
-
-**Konsequenz:** Jede UI-Oberfläche sollte eine klar definierte Domäne haben: Metadaten-Modal für Metadaten, Track-Editor für Assets/Geometrie. Informationen aus der anderen Domäne entweder weglassen oder durch Hinweis-Text auf die zuständige Oberfläche zeigen. Read-only Properties aus einer anderen Domäne anzeigen ohne Edit-Pfad führt zu UX-Verwirrung.
-
----
-
-## Lesson 26 — Cache und Index müssen synchron gehalten werden (L.6-Bug2)
-
-**Kontext:** `cacheTrackGeometry` (trackLoader.js) speicherte Server-Geometrien unter `racearena:trackGeometries:<id>` — genau dort wo auch `getTrack(id)` liest. Aber `racearena:trackGeometries:index` wurde nicht aktualisiert. `listTracks()` liest ausschließlich aus dem Index. Ergebnis: Geometrie-Daten lagen im Storage, waren aber für alle Index-Leser unsichtbar. Der Modal-Dropdown zeigte "No tracks drawn yet", obwohl die Geometrie vorhanden war.
-
-**Erkenntnis:** Wenn zwei Funktionen dasselbe Storage-Schema verwenden aber eine davon den Index überspringt, entsteht ein stiller Konsistenzbruch. Tests prüfen in der Regel "Daten können geschrieben und gelesen werden" — aber nicht "sind die Daten über alle vorgesehenen Read-Paths erreichbar". Der Bruch wird erst sichtbar wenn eine UI-Komponente den indirekten Read-Path (via Index) verwendet statt direkt per ID zu lesen.
-
-**Konsequenz:** Bei Storage-Schemas mit Index-Pointer-Struktur: jede Write-Operation (sowohl lokale saves als auch externe Cache-Einträge) muss den Index mitpflegen. Index-Registrierung und Daten-Write als unteilbares Paar behandeln. Beim Löschen analog: erst Daten entfernen, dann Index-Eintrag entfernen.
-
----
-
-## Lesson 29 — Partielle State-Updates: nie mehr Felder überschreiben als nötig (L.6-BgBug)
-
-**Kontext:** Der Bild-Upload-Handler im Track-Editor enthielt eine `dimChanged && hasPoints`-Verzweigung die bei Dimensionsunterschied zwischen neuem Bild und aktueller Welt `setCenterPoints([])`, `setInnerPoints([])`, `setOuterPoints([])` aufrief. Intention: vermeiden dass gezeichnete Punkte nach Dimensions-Änderung "falsch positioniert" sind. Effekt: jeder Bild-Upload auf einem neuen Track (Standardgröße 1280×720, Foto typisch andere Auflösung) zerstörte die gezeichnete Strecke.
-
-**Erkenntnis:** Handler die primär eine einzige Ressource ändern (hier: Background-Bild) dürfen keine anderen State-Felder als unbeabsichtigten Nebeneffekt zurücksetzen. Die "Schutz"-Logik war schlechter als nichts: sie überschrieb User-Arbeit, die der User nicht zurückfordern kann wenn er den confirm-Dialog bestätigt. State-Updates sollten chirurgisch sein — nur das ändern, was der Handler explizit ändern soll.
-
-**Konsequenz:** Bei jedem Handler der State ändert: prüfen welche anderen State-Felder er berührt und ob das beabsichtigt ist. "Cleanup für den Fall dass X" in einem State-Update-Handler ist ein Warnsignal — das gehört entweder in einen separaten Handler (der explizit ausgelöst wird) oder gar nicht rein.
-
----
-
-## Lesson 28 — Canvas-Lesbarkeit: Overlay und Kontrast-Defaults für dunkle Hintergründe (L.6-VIS)
-
-**Kontext:** Der Track-Editor renderte Track-Linien direkt auf das Hintergrundbild ohne Zwischenschicht. Auf Bildern mit helleren Bereichen (Gras, Himmel, Beton) verschwanden die farbigen Linien (#4fc3f7 auf weißem Untergrund) oder die Cyan-gefüllten Kontrollpunkte waren kaum von hellen Bildregionen zu unterscheiden. Erst ein Browser-Test auf echtem Track-Material machte das Problem sichtbar — Unit-Tests und Code-Review gaben kein Signal.
-
-**Erkenntnis:** Canvas-Overlays (globalAlpha + fillRect) sind der einfachste Weg um einen zuverlässigen Kontrast-Boden zu schaffen unabhängig vom Bild-Inhalt. Eine 35%-Opacity-Schicht zwischen Bild und Linien kostet eine Zeile Code und macht alle weiteren Farb-Entscheidungen Bild-agnostisch. Kontrollpunkte mit weißer Füllung und dunklem Rand (Kreismarkierung-Prinzip) sind auf jedem Hintergrund sichtbar — Cyan auf Cyan-Hintergrund nie.
-
-**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand. Für Linien: kontrastreiche Farbe (Magenta) die in keinem typischen Bildinhalt vorkommt, plus weiße Outline dahinter — damit ist die Lesbarkeit auf beliebigem Hintergrund garantiert ohne auf den Hintergrund-Typ angewiesen zu sein.
-
----
-
-## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
-
-**Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.
-
-**Erkenntnis:** Der Marker muss exakt dann gesetzt werden wenn alle Tracks erfolgreich übertragen wurden. Einzelne Track-Fehler loggen und Migration fortsetzen (kein Early-Exit), am Ende Marker setzen wenn `allSucceeded === true`. Versionierter Key-Name (`...-v1`) erlaubt Folge-Migrationen durch neuen Key.
-
-**Konsequenz:** One-shot Migrations-Pattern: (1) Marker prüfen → abbrechen wenn gesetzt. (2) Jeden Eintrag individuell verarbeiten, Fehler loggen, kein Early-Exit. (3) Marker nur setzen wenn `allSucceeded`. (4) Marker-Key versionieren: `racearena:migration:tracks-to-server-v1`.

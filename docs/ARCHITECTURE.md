@@ -2,7 +2,7 @@
 
 ## Overview
 
-RaceArena is currently a self-contained React client. All race logic runs in the browser; all persistence uses `localStorage`. A backend server is planned for Phase 5 (see below).
+RaceArena has a React client and a local backend (Phase L). Race logic runs in the browser. Custom tracks and background images persist server-side; `localStorage` remains in use for settings, race config, and offline geometry cache. A Phase 5 server for race-integrity, leaderboard, and Socket.IO multiplayer is planned.
 
 ## Folder Structure
 
@@ -50,6 +50,11 @@ seasonal-race-claude/
 │       ├── App.jsx
 │       └── main.jsx
 │
+├── server/          # Express backend, port 4000 (Phase L)
+│   ├── src/         # app.js, routes/tracks.js
+│   └── data/        # tracks/*.json, backgrounds/*.jpg
+├── docker-compose.yml  # starts server with `docker compose up`
+│
 ├── docs/
 │   ├── ARCHITECTURE.md             # This file
 │   ├── API.md                      # Phase 5 placeholder
@@ -73,7 +78,7 @@ Browser → React (screens/)
 
 ## Key Design Decisions
 
-- **Pure client for Phases 1–4** — no server dependency. All race state, track geometry, player settings, and results persist in `localStorage` under `racearena:*` keys. See [TRACK_EDITOR.md — localStorage Keys](TRACK_EDITOR.md#localstorage-keys) for the key schema.
+- **Phase 1–4 pure client; Phase L adds local backend** — A local Express server (Phase L, PR #43–#44) handles custom track storage and background images. Race state, settings, and results still persist in `localStorage`. The backend runs on port 4000 via `docker compose up`. See [TRACK_EDITOR.md — localStorage Keys](TRACK_EDITOR.md#localstorage-keys) for the key schema.
 - **modules/ are framework-agnostic** — no React imports in `modules/`; screens own the component tree, modules own the logic.
 - **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
