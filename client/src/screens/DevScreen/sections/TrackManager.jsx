@@ -7,23 +7,24 @@
 // ============================================================
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
+import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
+import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
+import { deleteTrackFromServer } from '../../../services/trackApi.js';
 import {
   RACER_TYPE_IDS,
   RACER_TYPE_LABELS,
   getRacerType,
 } from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
-import { listEffects } from '../../../modules/track-effects/index.js';
 import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
 import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
 import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import s from '../DevScreen.module.css';
-
-const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
 
 const DURATIONS = [30, 60, 90, 120];
 
@@ -62,7 +63,13 @@ function autoMaxRacers(geom, track, rowCfg) {
 }
 
 function TrackManager() {
-  const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const navigate = useNavigate();
+  const [localTracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const serverTracksCtl = useServerTracksControl();
+  const serverTracks = serverTracksCtl.tracks;
+  const serverTrackIds = new Set(serverTracks.map((t) => t.id));
+  // Combined list for display: local tracks + server tracks (server deduplicates local copies)
+  const tracks = [...localTracks.filter((t) => !serverTrackIds.has(t.id)), ...serverTracks];
   const [geometries] = useState(() =>
     listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
   );
@@ -114,9 +121,31 @@ function TrackManager() {
     setShowForm(true);
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
-    setTracks((prev) => prev.filter((t) => t.id !== id));
+    if (serverTrackIds.has(id)) {
+      const track = serverTracks.find((t) => t.id === id);
+      try {
+        await deleteTrackFromServer(id);
+        if (track?.geometryId) removeCachedTrackData(track.geometryId, id);
+        await serverTracksCtl.refresh();
+      } catch (err) {
+        window.alert(`Delete fehlgeschlagen: ${err.message}`);
+      }
+    } else {
+      setTracks((prev) => prev.filter((t) => t.id !== id));
+    }
+  }
+
+  function handleOpenTrackEditor() {
+    const isServer = serverTrackIds.has(editId);
+    if (isServer) {
+      navigate(`/track-editor?load=${editId}`);
+    } else if (form.geometryId) {
+      navigate(`/track-editor?load=${form.geometryId}`);
+    } else {
+      navigate('/track-editor');
+    }
   }
 
   // Only one track can be the default; toggling clears all others
@@ -169,6 +198,7 @@ function TrackManager() {
         ) : (
           <div className={s.rowList}>
             {tracks.map((track) => {
+              const isServerTrack = serverTrackIds.has(track.id);
               return (
                 <div
                   key={track.id}
@@ -179,38 +209,64 @@ function TrackManager() {
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
-                  {track.isDefault ? (
-                    <span
-                      style={{
-                        fontSize: '0.7rem',
-                        color: '#f4a261',
-                        fontWeight: 600,
-                        padding: '0.2rem 0.5rem',
-                        border: '1px solid #f4a261',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      Default
-                    </span>
+                  {!isServerTrack &&
+                    (track.isDefault ? (
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          color: '#f4a261',
+                          fontWeight: 600,
+                          padding: '0.2rem 0.5rem',
+                          border: '1px solid #f4a261',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Default
+                      </span>
+                    ) : (
+                      <button
+                        className={`${s.btn} ${s.btnGhost}`}
+                        style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+                        onClick={() => handleSetDefault(track.id)}
+                      >
+                        Set Default
+                      </button>
+                    ))}
+                  {isServerTrack ? (
+                    <>
+                      <button
+                        className={s.btnIconOnly}
+                        onClick={() => handleEdit(track)}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className={`${s.btnIconOnly} ${s.danger}`}
+                        onClick={() => handleDelete(track.id)}
+                        title="Delete from server"
+                      >
+                        🗑
+                      </button>
+                    </>
                   ) : (
-                    <button
-                      className={`${s.btn} ${s.btnGhost}`}
-                      style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                      onClick={() => handleSetDefault(track.id)}
-                    >
-                      Set Default
-                    </button>
+                    <>
+                      <button
+                        className={s.btnIconOnly}
+                        onClick={() => handleEdit(track)}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className={`${s.btnIconOnly} ${s.danger}`}
+                        onClick={() => handleDelete(track.id)}
+                        title="Delete"
+                      >
+                        🗑
+                      </button>
+                    </>
                   )}
-                  <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
-                    ✏️
-                  </button>
-                  <button
-                    className={`${s.btnIconOnly} ${s.danger}`}
-                    onClick={() => handleDelete(track.id)}
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
                 </div>
               );
             })}
@@ -346,23 +402,26 @@ function TrackManager() {
                   to draw a track, then return here to link it.
                 </span>
               )}
-              {form.geometryId &&
-                (() => {
-                  const geom = geometries.find((g) => g.id === form.geometryId);
-                  const labels = (geom?.effects ?? []).map((e) => EFFECT_LABELS[e.id] ?? e.id);
-                  return (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: '#888',
-                        marginTop: '0.25rem',
-                        display: 'block',
-                      }}
-                    >
-                      Effects: {labels.length > 0 ? labels.join(', ') : 'none'}
-                    </span>
-                  );
-                })()}
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-muted)',
+                  marginTop: '0.25rem',
+                  display: 'block',
+                }}
+              >
+                Background image and effects are managed in the Track Editor.
+              </span>
+              {editId && (
+                <button
+                  className={`${s.btn} ${s.btnGhost}`}
+                  onClick={handleOpenTrackEditor}
+                  style={{ marginTop: '0.5rem' }}
+                  title="Open this track in the Track Geometry Editor"
+                >
+                  {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
+                </button>
+              )}
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Default Racer Type</label>

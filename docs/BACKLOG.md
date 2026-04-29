@@ -10,9 +10,20 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | Item | Status | Beschreibung |
 |---|---|---|
 | ✅ **L.1** | PR #43 | Backend-Skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, Frontend-Config-Hook in `client/src/services/api.js`. |
-| ⏳ **L.1.5** | planned | Track-Endpunkte: `GET /api/tracks` + `GET /api/tracks/:id/background`. Frontend lädt Tracks vom Server, cached für Offline. |
-| ⏳ **L.2** | planned | Frontend nutzt `API_BASE_URL` aus `services/api.js`. Track-List + Background vom Server. Offline-Fallback auf localStorage. |
-| ⏳ **L.3+** | future | Multi-Admin, Auth (Phase 5). |
+| ✅ **L.2** | PR #44 | Track-API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Weltall migriert aus Snapshot. 12 Backend-Tests. |
+| ✅ **L.3** | PR #44 | Frontend-Integration: `trackLoader.js`, `useServerTracks` Hook. SetupScreen + TrackManager + RaceHistory nutzen combined list. Geometry-Caching in localStorage. 14 Tests. |
+| ✅ **L.4** | PR #44 | Offline-Cache: `trackCache.js` — Background-Bilder als data-URLs, 3 MB-Limit mit LRU-Eviction, Quota-Guard. `getTrackBackgroundUrl` offline-aware. 6 Tests. |
+| ✅ **L.5** | PR #44 | Write-Path: POST/PUT/DELETE + Background-Upload Endpunkte (Server). TrackEditor async-Save zum Server, Retry-UI bei Server-not-reachable. Migration beim ersten Connect (localStorage Custom-Tracks → Server, Marker). Cache-Cleanup: gelöschte Server-Tracks werden aus localStorage+Background-Cache entfernt. TrackManager Edit öffnet TrackEditor (/track-editor?load=), Delete ruft API. Server-Badge entfernt. 10 MB Bild-Limit. +23 Frontend-Tests, +16 Backend-Tests. |
+| ✅ **L.6-Bug1** | PR #44 | Edit-Konsistenz: Edit öffnet jetzt für ALLE Track-Typen (Default, Local, Server) das Metadaten-Modal. Im Modal "Edit Geometry" / "Draw Geometry"-Button navigiert zum Track-Editor. +8 Tests. |
+| ✅ **L.6-Bug2** | PR #44 | Geometry-Index-Sync: `cacheTrackGeometry` registriert Server-Geometrien jetzt in `racearena:trackGeometries:index` via `registerInIndex`. `removeCachedTrackData` deregistriert via `unregisterFromIndex`. Dadurch erscheinen Server-Geometrien im Modal-Dropdown + "📐 Edit Geometry"-Button korrekt. Edit-Geometry-Button in Button-Row ohne marginLeft:auto. +7 Tests. |
+| ✅ **L.6-Bug2-UX** | PR #44 | Edit-Modal UX: Edit-Geometry-Button unter Track-Geometry-Dropdown (nicht in Action-Row). Effects-Anzeige entfernt; Hinweis "Background image and effects are managed in the Track Editor" ergänzt. Action-Row enthält nur noch Save/Cancel. +5 Tests. |
+| ✅ **L.6-VIS** | PR #44 | Track-Editor Sichtbarkeits-Verbesserung (Iter 2): A1 — 60% schwarzer Overlay. A2 — Linien Magenta (#FF00FF) statt Hellblau. A3 — Weiße Outline hinter jeder Linie (outline 5–6px, Farbe 3–4px). A4 — Width-Boundaries 1→3, Center-Line + Curves 3→4. A5 — Kontrollpunkte weiß/dunkel unverändert. `drawStaticScene` in `trackEditorDraw.js` (Testbarkeit). +18 Tests. |
+| ✅ **L.6-BgBug** | PR #44 | Bild-Upload resettet Strecke: `handleBgUpload` löschte `centerPoints`/`innerPoints`/`outerPoints` wenn Bild-Dimensionen von Editor-Welt abwichen. Fix: Reset-Block + `window.confirm`-Dialog entfernt — Dimensionsänderung übernommen, Strecke bleibt erhalten. +1 Regression-Test. |
+| ⏳ **L.7-Bug2** | planned | Default-Tracks ohne Geometrie: Alle 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) haben `geometryId: null` — nie spielbar ohne manuell gezeichnete Geometrie. Lösungsoption (a) empfohlen: Geometrien als JSON-Files auf Server. Geometrien müssen neu gezeichnet werden (4 fehlen komplett, Space-Sprint-Geometrie ist nicht mehr vorhanden). User-Diskussion 2026-04-29. |
+| ⏳ **L.8-Hybrid** | planned | Hybrid-Konzept: Default-Tracks sollen "offline-first" funktionieren (ohne Backend). Aktuell sind Default-Tracks Metadaten-only in Code, Server-Tracks vollständig auf Backend. Wenn Backend nicht erreichbar, sind Custom-Tracks nicht spielbar. Diskutiert 2026-04-29. |
+| ⏳ **L.9-Status** | planned | Server-Verbindungsstatus sichtbar in UI: Anzeige ob Backend erreichbar ist (grüner/roter Punkt oder ähnliches), damit User weiss warum Custom-Tracks nicht laden. Diskutiert 2026-04-29. |
+
+> ⚠️ **Vor VPS-Deployment Auth nachrüsten!** Aktuell hat jeder Browser-Besucher volle Schreib-Rechte auf alle Tracks (kein Auth auf Write-Endpunkten). Phase 5 muss JWT/Auth vor Go-Live implementieren. |
 
 ---
 

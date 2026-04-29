@@ -191,24 +191,74 @@ Phase L introduces a local backend running in Docker alongside the existing Reac
 
 ```
 seasonal-race-claude/
-├── client/          # React frontend, port 3000 (unchanged)
+├── client/          # React frontend, port 3000
+│   └── src/
+│       ├── services/
+│       │   ├── api.js               # API_BASE_URL — single config point
+│       │   └── trackApi.js          # Write-path client: create/update/deleteTrack, uploadTrackBackground
+│       └── modules/storage/
+│           ├── trackLoader.js       # fetchServerTracks, cacheTrackGeometry, removeCachedTrackData
+│           ├── trackCache.js        # Background image cache (data-URLs, 3 MB LRU)
+│           ├── trackMigration.js    # One-time localStorage→server migration (marker prevents re-runs)
+│           └── useServerTracks.js   # React hooks: useServerTracks() + useServerTracksControl()
 ├── server/          # Node.js / Express backend, port 4000
 │   ├── src/
-│   │   └── index.js   # Entry point; registers all routes
+│   │   ├── app.js            # Express app factory (separated for testability)
+│   │   ├── index.js          # Server entry point
+│   │   └── routes/tracks.js  # GET /api/tracks, /:id, /:id/background
+│   ├── data/
+│   │   ├── tracks/<id>.json        # Combined preset + geometry (no background bytes)
+│   │   └── backgrounds/<id>.jpg    # Binary background image
 │   ├── Dockerfile
 │   └── package.json
 └── docker-compose.yml  # Starts server with `docker-compose up`
 ```
 
+**Track Read API (L.2):**
+- `GET /api/tracks` → array of custom track summaries (no geometry arrays)
+- `GET /api/tracks/:id` → full track including `innerPoints`/`outerPoints`/`centerPoints`
+- `GET /api/tracks/:id/background` → binary JPEG/PNG
+
+**Frontend loading strategy (L.3):**
+1. `useServerTracks()` hook fires on component mount (SetupScreen, TrackManager, RaceHistory)
+2. `fetchServerTracks()` fetches the list, caches it, then eagerly calls `cacheTrackGeometry()` for each track
+3. `cacheTrackGeometry()` stores the full geometry in `racearena:trackGeometries:<geometryId>` — existing `getTrack(geometryId)` calls in RaceScreen/PresetThumbnail work unchanged
+4. `backgroundImage` in the cached geometry = the live server URL
+
+**Offline fallback strategy (L.4):**
+- After geometry caching, `_cacheBackgroundAsync()` fetches the background and stores it as a data-URL in `racearena:cache:backgrounds`
+- `getTrackBackgroundUrl(trackId)` returns the cached data-URL when available, server URL otherwise
+- Cache is capped at 3 MB; oldest entries are evicted first (LRU)
+- Quota errors from `storageSet` are caught silently
+
+**Track Write API (L.5):**
+- `POST /api/tracks` — creates track (validates name, closed, worldWidth/worldHeight, geometry arrays); atomic write (temp + rename); returns new track object
+- `PUT /api/tracks/:id` — updates track; preserves `geometryId`, `createdAt`, `backgroundImageFile`; atomic write; 404 if not found
+- `DELETE /api/tracks/:id` — removes JSON file + background image; 404 if not found
+- `POST /api/tracks/:id/background` — multer multipart (10 MB limit); saves to `data/backgrounds/`; returns `{ backgroundImageFile }`; 413 if oversized
+
+**Frontend write strategy (L.5):**
+- `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
+- TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Erneut versuchen" button
+- TrackManager: Delete → `deleteTrackFromServer` + `removeCachedTrackData`; Edit → `/track-editor?load=<serverId>`
+
+**Migration strategy (L.5):**
+- On first server connection, `migrateLocalTracksToServer()` runs once per browser
+- Reads all custom (non-default) tracks from `KEYS.TRACKS`; POSTs each to server; converts data-URL backgrounds to Blob via `fetch(dataUrl).then(r => r.blob())` and uploads
+- Removes each track from localStorage on success; marker key `racearena:migration:tracks-to-server-v1` set only after all tracks migrated successfully
+
+**Stale-cache cleanup (L.5):**
+- `fetchServerTracks()` calls `purgeStaleServerGeometries()` before writing the fresh list to cache
+- For each track in the old cache absent from the new list, `removeCachedTrackData(geometryId, trackId)` is called
+- Removes geometry from `racearena:trackGeometries:<id>` and background from `racearena:cache:backgrounds`
+
 **Phase L scope:**
-- **L.1** (this PR) — skeleton: `GET /api/health` only. No DB, no auth.
-- **L.1.5 / L.2** — track endpoints: serve track JSON + background images from server.
-- **L.3+** — offline cache, multi-admin, race-integrity hooks.
-- **Phase 5** — VPS deployment (see below).
+- **L.1–L.5** — ✅ all complete (see BACKLOG.md)
+
+⚠️ **Before VPS deployment: add auth.** Currently any browser visitor has full write access. See Phase 5.
 
 **Frontend config hook** — `client/src/services/api.js` exports `API_BASE_URL` (defaults to
 `http://localhost:4000`). Set `VITE_API_URL` in a `.env` file to point at staging or VPS.
-Not yet consumed by any screen — wired up in L.2 when the first real endpoint lands.
 
 ## Future: Phase 5 Server
 

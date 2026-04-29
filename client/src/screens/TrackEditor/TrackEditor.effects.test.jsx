@@ -201,9 +201,76 @@ describe('TrackEditor effect preview (F12/F13)', () => {
   });
 });
 
+// ── Background upload: track path preserved on dimension change (bug fix) ───
+describe('TrackEditor background upload — track path preserved', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not call window.confirm when uploading a background with different dimensions', async () => {
+    vi.spyOn(window, 'confirm');
+
+    // FileReader mock: fires onload synchronously with a dummy data URL
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+      this.readAsDataURL = () => {
+        this.onload?.({ target: { result: 'data:image/jpeg;base64,test' } });
+      };
+    });
+
+    // Image mock: fires onload with 1920×1080 (different from default 1280×720)
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () {
+      const self = this;
+      let _onload = null;
+      Object.defineProperty(self, 'onload', {
+        get: () => _onload,
+        set: (fn) => {
+          _onload = fn;
+        },
+        configurable: true,
+      });
+      Object.defineProperty(self, 'onerror', {
+        get: () => null,
+        set: () => {},
+        configurable: true,
+      });
+      Object.defineProperty(self, 'src', {
+        get: () => '',
+        set: () => {
+          self.naturalWidth = 1920;
+          self.naturalHeight = 1080;
+          if (_onload) queueMicrotask(() => _onload());
+        },
+        configurable: true,
+      });
+      self.naturalWidth = 0;
+      self.naturalHeight = 0;
+    });
+
+    const { container } = renderEditor();
+
+    // Add a center point via canvas click so hasPoints = true in the old code path
+    const canvas = container.querySelector('canvas');
+    await act(async () => {
+      fireEvent.click(canvas, { clientX: 640, clientY: 360 });
+    });
+
+    // Upload a background with dimensions that differ from the 1280×720 default
+    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
+    const bgFile = new File(['data'], 'bg.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(bgFile, 'size', { value: 1 * 1024 * 1024 });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [bgFile] } });
+    });
+
+    // Bug fix: the reset-on-dimension-change path is removed — confirm must never be shown
+    expect(window.confirm).not.toHaveBeenCalled();
+  });
+});
+
 // ── Background image upload: file size guard (SEC-4) ────────────────────────
 describe('TrackEditor background upload size guard', () => {
-  it('shows an error and does not call FileReader when file exceeds 5 MB', async () => {
+  it('shows an error and does not call FileReader when file exceeds 10 MB', async () => {
     const readSpy = vi.fn();
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = readSpy;
@@ -213,7 +280,7 @@ describe('TrackEditor background upload size guard', () => {
     const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
 
     const oversizeFile = new File(['x'], 'big.jpg', { type: 'image/jpeg' });
-    Object.defineProperty(oversizeFile, 'size', { value: 6 * 1024 * 1024 });
+    Object.defineProperty(oversizeFile, 'size', { value: 11 * 1024 * 1024 });
 
     await act(async () => {
       fireEvent.change(fileInput, { target: { files: [oversizeFile] } });
@@ -223,7 +290,7 @@ describe('TrackEditor background upload size guard', () => {
     expect(container.textContent).toMatch(/too large/i);
   });
 
-  it('does not show a size error for a file within the 5 MB limit', async () => {
+  it('does not show a size error for a file within the 10 MB limit', async () => {
     // FileReader is synchronous in jsdom — stub it so onload never fires.
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = vi.fn();

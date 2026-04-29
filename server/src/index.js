@@ -1,15 +1,15 @@
-const express = require('express');
-const cors = require('cors');
+// ============================================================
+// File:        index.js
+// Path:        server/src/index.js
+// Project:     RaceArena
+// Created:     2026-04-29
+// Description: Server entry point — binds the Express app to a port
+// ============================================================
 
-const app = express();
+import { createApp } from './app.js';
+
+const app = createApp();
 const PORT = process.env.PORT || 4000;
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 app.listen(PORT, () => {
   console.log(`RaceArena server running on port ${PORT}`);
