@@ -30,4 +30,22 @@ cd client && npm test
 
 ---
 
-*Note: A backend server (race-integrity, leaderboard, Socket.IO) is planned for Phase 5. When that is built, server setup instructions will be added here.*
+## 4. Start the backend server (optional — custom track storage)
+
+The Track Editor saves custom tracks to a local backend. Start it with Docker:
+
+```bash
+docker compose up
+```
+
+The backend runs at `http://localhost:4000`. Without it, the Track Editor shows a "Server not reachable" message and only default tracks are available.
+
+To point the frontend at a different backend URL, create `client/.env`:
+
+```
+VITE_API_URL=http://localhost:4000
+```
+
+---
+
+*Phase 5 will add race-integrity, leaderboard, and Socket.IO multiplayer (separate server implementation).*

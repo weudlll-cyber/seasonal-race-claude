@@ -29,7 +29,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (D3.5.5-Pattern)
+- 🔜 **D7d** — 100-Racer-Performance (Spatial-Grid, smarter Camera, LOD)
 
 ---
 
@@ -143,38 +143,17 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   - Aufgekommen während D7c-Diagnose (2026-04-29). Braucht Vision-Diskussion bevor Spec geschrieben wird.
   - Priorität: niedrig. Aktuell kein UX-Blocker — nur bei deliberatem displaySize-Override + großer Strecke sichtbar.
 
-- **B-1** — PlayerSetup: Laden gespeicherter Gruppen-Listen (Ladebutton vorhanden, Verhalten unklar)
 - **B-2** — TrackSelector: Custom-Track-Verhalten bei fehlender Geometry
-- **B-3** — Result-Screen Winner-Count konfigurierbar (aktuell hardcoded 3)
 - **B-4** — Branding Profiles auf Race/Result-Screen anwenden (UI vorhanden, Wiring fehlt)
 - **B-5** — System Backup/Restore/Reset: End-to-End verifiziert (UI-only bisher)
-- **B-10** — (reserviert für weitere Items aus letztem Sprint)
-- **B-11** — (reserviert)
-- **B-12** — (reserviert)
-- **B-13** — (reserviert)
-
-- **B-14** — TrackManager-Workflow für neuen Track verwirrend (Schwere: mittel)
-  - User findet im "New Track"-Dialog keinen offensichtlichen Bild-Upload
-  - "World Dimensions" zeigt "(Choose Geometry)" — User muss erst zum TrackEditor wechseln
-    um Geometrie+Bild anzulegen
-  - Lösung-Optionen: Link/Button zum TrackEditor direkt aus dem TrackManager-Dialog,
-    oder direkter Upload im TrackManager
-  - Workflow-Friction beim ersten Track-Anlegen, besonders für neue User
-
-- **B-15** — i18n-Leak: deutsche Strings in englischer UI (Schwere: niedrig)
-  - Konkret beobachtet: `(Geometrie wählen)` im TrackManager, `Track-Größe: W×H px`
-    im TrackEditor, Confirm-Dialog auf Deutsch
-  - **App-Sprach-Entscheidung: Englisch überall** (→ PROJECT-PRINCIPLES.md)
-  - Maßnahme: alle deutschen Strings auf Englisch übersetzen + kompletter i18n-Sweep für
-    versteckte deutsche Strings. Funktional kein Block, aber unsauber.
 
 
 ### Phase Q (Quality-Hygiene)
 
 - **Q-6** — TrackEditor.jsx Split-Refactor. Pre-existing, eigene PR.
-- **Q-7** — RaceScreen/index.jsx Split-Refactor. Nach D9 auf **940 LOC** gewachsen —
+- **Q-7** — RaceScreen/index.jsx Split-Refactor. Nach D9 auf **1032 LOC** gewachsen —
   Priorität für Refactor gestiegen. Pre-existing, eigene PR.
-- **Q-8** — Watch-List: TrackManager.jsx (346 LOC) und BrandingProfiles.jsx (330 LOC).
+- **Q-8** — Watch-List: TrackManager.jsx (535 LOC) und BrandingProfiles.jsx (330 LOC).
   Bei nächster Erweiterung Refactor erwägen.
 - **Q-9** — Watch: `racer-types/index.js` wächst auf 286 LOC — Kandidat für Aufspaltung
   (Override-API vs. Registry vs. Boot-Logik). Kein Problem heute, beobachten.
