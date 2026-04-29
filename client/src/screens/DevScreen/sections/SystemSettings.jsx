@@ -10,6 +10,7 @@
 import { useRef } from 'react';
 import {
   exportAllStorage,
+  exportDiagnosticSnapshot,
   importAllStorage,
   clearAllStorage,
 } from '../../../modules/storage/storage.js';
@@ -56,6 +57,18 @@ function SystemSettings() {
     reader.readAsText(file);
     // Reset input so the same file can be re-imported if needed
     e.target.value = '';
+  }
+
+  function handleDiagnosticExport() {
+    const snap = exportDiagnosticSnapshot();
+    const ts = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+    const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `racearena-snapshot-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleReset() {
@@ -105,6 +118,21 @@ function SystemSettings() {
             onChange={handleImport}
           />
         </div>
+      </div>
+
+      {/* Diagnostic Snapshot */}
+      <div className={s.card}>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Diagnostic Snapshot</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Exports all localStorage data including track geometries (
+          <code style={{ fontSize: '0.75rem' }}>racearena:trackGeometries:*</code>) and all tuning
+          configs. Use when reporting a bug that depends on browser configuration — place the
+          downloaded file at{' '}
+          <code style={{ fontSize: '0.75rem' }}>docs/internal/current-config-snapshot.json</code>.
+        </p>
+        <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleDiagnosticExport}>
+          🔬 Export Diagnostic Snapshot
+        </button>
       </div>
 
       {/* Reset */}

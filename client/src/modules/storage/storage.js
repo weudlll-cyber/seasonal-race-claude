@@ -55,6 +55,33 @@ export function exportAllStorage() {
   return out;
 }
 
+/**
+ * Export every racearena:* key in localStorage as a diagnostic snapshot.
+ * Unlike exportAllStorage(), this iterates ALL localStorage entries so it
+ * captures dynamic keys such as racearena:trackGeometries:* that are not
+ * listed in the KEYS enum.
+ */
+export function exportDiagnosticSnapshot() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith('racearena:')) continue;
+    try {
+      data[key] = JSON.parse(localStorage.getItem(key));
+    } catch {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  return {
+    _meta: {
+      exportedAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    },
+    data,
+  };
+}
+
 /** Restore a full backup object (from importAllStorage). */
 export function importAllStorage(data) {
   for (const [key, val] of Object.entries(data)) {
