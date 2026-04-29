@@ -20,14 +20,11 @@ import {
   getRacerType,
 } from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
-import { listEffects } from '../../../modules/track-effects/index.js';
 import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
 import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
 import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import s from '../DevScreen.module.css';
-
-const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label]));
 
 const DURATIONS = [30, 60, 90, 120];
 
@@ -405,23 +402,26 @@ function TrackManager() {
                   to draw a track, then return here to link it.
                 </span>
               )}
-              {form.geometryId &&
-                (() => {
-                  const geom = geometries.find((g) => g.id === form.geometryId);
-                  const labels = (geom?.effects ?? []).map((e) => EFFECT_LABELS[e.id] ?? e.id);
-                  return (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: '#888',
-                        marginTop: '0.25rem',
-                        display: 'block',
-                      }}
-                    >
-                      Effects: {labels.length > 0 ? labels.join(', ') : 'none'}
-                    </span>
-                  );
-                })()}
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-muted)',
+                  marginTop: '0.25rem',
+                  display: 'block',
+                }}
+              >
+                Background image and effects are managed in the Track Editor.
+              </span>
+              {editId && (
+                <button
+                  className={`${s.btn} ${s.btnGhost}`}
+                  onClick={handleOpenTrackEditor}
+                  style={{ marginTop: '0.5rem' }}
+                  title="Open this track in the Track Geometry Editor"
+                >
+                  {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
+                </button>
+              )}
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Default Racer Type</label>
@@ -525,15 +525,6 @@ function TrackManager() {
             <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
               Cancel
             </button>
-            {editId && (
-              <button
-                className={`${s.btn} ${s.btnGhost}`}
-                onClick={handleOpenTrackEditor}
-                title="Open this track in the Track Geometry Editor"
-              >
-                {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
-              </button>
-            )}
           </div>
         </div>
       )}

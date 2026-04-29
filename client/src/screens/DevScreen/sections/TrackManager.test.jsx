@@ -8,7 +8,7 @@
 //              track types, and that the Track Editor button navigates correctly.
 // ============================================================
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -250,5 +250,60 @@ describe('TrackManager — Geometry dropdown after server-cache fix (L.6-Bug2)',
     // Track Geometry is the first <select> in the form; Default Racer Type is second
     const [geometrySelect] = screen.getAllByRole('combobox');
     expect(geometrySelect.value).toBe(SERVER_TRACK.geometryId);
+  });
+});
+
+describe('TrackManager — Edit Geometry button placement (A1 UX fix)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('Edit Geometry button appears inside the Track Geometry section', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    const geoLabel = screen.getByText('Track Geometry');
+    const formGroup = geoLabel.closest('div');
+    expect(within(formGroup).getByText(/Edit Geometry/)).toBeInTheDocument();
+  });
+
+  it('Edit Geometry button is NOT in the action row (Save/Cancel)', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    const actionRow = saveBtn.closest('div');
+    expect(within(actionRow).queryByText(/Edit Geometry|Draw Geometry/)).toBeNull();
+  });
+
+  it('action row has exactly Save Changes and Cancel — no third button', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    const actionRow = saveBtn.closest('div');
+    expect(within(actionRow).getAllByRole('button')).toHaveLength(2);
+  });
+});
+
+describe('TrackManager — Track Editor hint text and no effects display (A2 UX fix)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('modal shows hint that background and effects are managed in the Track Editor', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(
+      screen.getByText(/background image and effects are managed in the track editor/i)
+    ).toBeInTheDocument();
+  });
+
+  it('modal does not show "Effects:" info text', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(screen.queryByText(/^Effects:/)).toBeNull();
   });
 });

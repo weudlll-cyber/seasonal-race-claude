@@ -530,6 +530,16 @@ führt zu schwer debuggbaren UI-Zuständen.
 
 ---
 
+## Lesson 27 — Metadaten-UI und Asset-UI gehören in getrennte Oberflächen (L.6-Bug2-UX)
+
+**Kontext:** Das Edit-Track-Modal zeigte eine read-only "Effects: none/..."-Zeile die aus der verknüpften Geometrie gelesen wurde. Die Effects werden im Track-Editor konfiguriert und sind Teil der Geometrie — nicht der Track-Metadaten. Browser-Test zeigte: User sucht Background-Bild-Verwaltung im Modal und findet sie nicht. Die Effects-Anzeige im Modal gab keinen Hinweis wohin man für Asset-Verwaltung gehen muss.
+
+**Erkenntnis:** Eine UI-Oberfläche die Daten aus zwei semantisch unterschiedlichen Quellen anzeigt (Metadaten + Asset-Eigenschaften) erzeugt Verwirrung wo welche Verwaltung stattfindet. Read-only Anzeige von Asset-Properties im Metadaten-Modal gibt keine Orientierung — im Gegenteil: sie suggeriert dass Assets hier verwaltbar sind. Ein klarer Hinweis-Text ("Background image and effects are managed in the Track Editor") ist informativer als das Anzeigen von Werten ohne Edit-Möglichkeit.
+
+**Konsequenz:** Jede UI-Oberfläche sollte eine klar definierte Domäne haben: Metadaten-Modal für Metadaten, Track-Editor für Assets/Geometrie. Informationen aus der anderen Domäne entweder weglassen oder durch Hinweis-Text auf die zuständige Oberfläche zeigen. Read-only Properties aus einer anderen Domäne anzeigen ohne Edit-Pfad führt zu UX-Verwirrung.
+
+---
+
 ## Lesson 26 — Cache und Index müssen synchron gehalten werden (L.6-Bug2)
 
 **Kontext:** `cacheTrackGeometry` (trackLoader.js) speicherte Server-Geometrien unter `racearena:trackGeometries:<id>` — genau dort wo auch `getTrack(id)` liest. Aber `racearena:trackGeometries:index` wurde nicht aktualisiert. `listTracks()` liest ausschließlich aus dem Index. Ergebnis: Geometrie-Daten lagen im Storage, waren aber für alle Index-Leser unsichtbar. Der Modal-Dropdown zeigte "No tracks drawn yet", obwohl die Geometrie vorhanden war.
