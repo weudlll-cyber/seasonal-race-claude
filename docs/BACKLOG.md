@@ -43,7 +43,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **D7b-fix B1+B2** | #37 | Folge-Commit auf Branch D7b: B1 — Start-Spread: Racer starten gleichmäßig verteilt über [-startSpreadRange, +startSpreadRange] statt alle bei physicalY=0 (computeStartPhysicalY, neuer Dev-Screen-Parameter). B2 — yDiff=0 Edge-Case: wenn beide Racer gleiche physicalY haben, wird keine Lateral-Force angewendet (prevents alle Trailers fliegen in Richtung +1). |
 | ✅ **D7b-fix B3** | #37 | Anti-Stacking (Kraft-Imbalance, war als D11-Befund im Backlog): Avoidance-Forces werden durch sqrt(neighborCount) normalisiert — verhindert Boundary-Clinging bei 20+ Racers wo lineare Force-Akkumulation die restoring forces überwältigte. Neue Defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
 | ✅ **D7c** | #39 | Reihen-Start + Speed-Bonus + Track-Capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full-spread auch für letzte unvollständige Reihe), `computeSpeedBonus` (Faktor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto-Capacity aus pathLengthPx). Closed tracks: hintere Reihen starten bei negativem t (tPos wraps korrekt). Open tracks: t=0 durch EditorShape-Clamp. `maxRacers` auf Track mit "modified"-Badge. Setup-Screen: Reihen-Hinweis + Capacity-Warnung. Dev-Screen Row-Start-Section: 4 Parameter. 21 Unit + 6 e2e Tests. |
-| ✅ **D7c-fix** | #39 | Bug: `trackWidth`-Metadata (140 px, kalibriert für 1280px-Welt) gab `racersPerRow=1` auf großen Welten (6000px) → alle 20 Racer in Einzelreihen → einzelne vertikale Linie. Fix Phase 1: `EditorShape.getActualTrackWidth()` misst echte geometrische Breite (Median, gecached). Fix Phase 2 (D7c-fix-v2): Formel komplett in World-Pixel-Raum: `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` = `floor(2×geometricW/spriteWorldSizePx)`. `trackWidth`-Feld komplett aus Track-Datenmodell entfernt — TrackManager-Dropdown (100/140/200/280/360) entfernt, `raceData.trackWidth` und `track.trackWidth` aus allen Callers entfernt, Storage-Migration: alte Einträge ignorieren. `autoSpriteScale` nutzt jetzt `getActualTrackWidth()` statt Metadata. |
+| ✅ **D7c-fix** | #39 | Bug: `trackWidth`-Metadata (140 px, kalibriert für 1280px-Welt) gab `racersPerRow=1` auf großen Welten (6000px) → alle 20 Racer in Einzelreihen → einzelne vertikale Linie. Fix Phase 1: `EditorShape.getActualTrackWidth()` misst echte geometrische Breite (Median, gecached). Fix Phase 2 (D7c-fix-v2): Formel komplett in World-Pixel-Raum: `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` = `floor(2×geometricW/spriteWorldSizePx)`. `trackWidth`-Feld komplett aus Track-Datenmodell entfernt — TrackManager-Dropdown (100/140/200/280/360) entfernt, `raceData.trackWidth` und `track.trackWidth` aus allen Callers entfernt, Storage-Migration: alte Einträge ignorieren. `autoSpriteScale` nutzt jetzt `getActualTrackWidth()` statt Metadata. Fix Phase 3 (D7c-fix-v3): Floating-Point-Rundungsfehler in catmullRom-Spline (~10⁻¹³) führte zu `racersPerRow=11` statt 12 wenn Rocket-displaySize-Override (50px) Auto-Scale deaktiviert → `getActualTrackWidth()` rundet Median jetzt per `Math.round()`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
@@ -107,6 +107,18 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
     - Cross-References zu ARCHITECTURE.md-Pipeline-Sektionen
   - Priorität: zusammen mit B-UX2 — Hilfe-Screen kann die Doku referenzieren oder einbinden.
     Kann auch als reiner Doku-Sprint vor B-UX2 entstehen, dann nutzt B-UX2 die Inhalte.
+
+- **B-UX4** — Sprite-Größen-System überarbeiten
+  - Aktuelles Verhalten: per-Type-Overrides (z.B. `displaySize: 50` für Rocket) sind absolute
+    Werte und deaktivieren die Auto-Skalierung vollständig (`displaySizeScale = 1`). Das hat zur
+    Folge dass Sprites auf schmalen Strecken zu groß wirken können — und war einer der Faktoren
+    die während D7c-Diagnose zu einem falschen `racersPerRow`-Wert führten.
+  - Alternative Konzepte (Spec steht noch aus):
+    - **(a) Override als Multiplikator** über der Auto-Skalierung (z.B. `displaySizeOverride: 1.25` = 25% größer als Auto)
+    - **(b) Gemischter Modus mit Min/Max-Grenzen** — Auto-Scale läuft, Override setzt Ober-/Untergrenze
+    - **(c) Komplettes Re-Design des Tunable-Konzepts** — Auto und absoluter Wert als wählbare Modi
+  - Aufgekommen während D7c-Diagnose (2026-04-29). Braucht Vision-Diskussion bevor Spec geschrieben wird.
+  - Priorität: niedrig. Aktuell kein UX-Blocker — nur bei deliberatem displaySize-Override + großer Strecke sichtbar.
 
 - **B-1** — PlayerSetup: Laden gespeicherter Gruppen-Listen (Ladebutton vorhanden, Verhalten unklar)
 - **B-2** — TrackSelector: Custom-Track-Verhalten bei fehlender Geometry

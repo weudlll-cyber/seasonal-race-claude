@@ -143,7 +143,10 @@ export class EditorShape {
       widths.push(Math.sqrt(dx * dx + dy * dy));
     }
     widths.sort((a, b) => a - b);
-    this._cachedActualTrackWidth = widths[Math.floor(widths.length / 2)];
+    // Math.round: track widths are set in whole world-pixels; catmullRom spline
+    // interpolation introduces ~10⁻¹³ fp error that would corrupt floor-based
+    // downstream calculations (e.g. computeRacersPerRow).
+    this._cachedActualTrackWidth = Math.round(widths[Math.floor(widths.length / 2)]);
     return this._cachedActualTrackWidth;
   }
 }

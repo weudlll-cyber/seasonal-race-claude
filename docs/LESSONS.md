@@ -424,6 +424,27 @@ Metadata-Felder sind für UI-Anzeige und User-Kommunikation — nicht als Messgr
 
 ---
 
+## Lesson 22 — floor() ist sensitiv gegenüber Floating-Point-Fehlern nahe Ganzzahlen (D7c-fix-v3)
+
+**Kontext:** Nach D7c-fix-v2 zeigte der Browser-Test `racersPerRow=11` statt erwarteter 12.
+Diagnose über Diagnostic-Snapshot-Tool: `getActualTrackWidth()` lieferte `299.9999999999994`
+statt `300` — catmullRom-Hermite-Interpolation über 500 Sample-Punkte akkumuliert ~6×10⁻¹³
+Rundungsfehler. Mit `spriteSize = 50` (Rocket-Override deaktiviert Auto-Scale) ergibt das
+`floor(2×299.9999.../50) = floor(11.9999...) = 11` statt 12.
+
+**Erkenntnis:** `Math.floor()` ist nicht tolerant gegenüber floating-point Underflow.
+Ein Wert der konzeptuell exakt 12.0 ist, aber durch Akkumulation winziger Fehler als
+11.9999...998 repräsentiert wird, gibt floor=11 — eine Reihe zu viel, 9 Racer falsch platziert.
+Das ist besonders gefährlich wenn: (1) der Eingangs-Wert durch mehrere fp-Operationen berechnet
+wird, und (2) das Ergebnis diskret ist (ganzzahlige Reihenanzahl).
+
+**Konsequenz:** Werte die konzeptuell ganzzahlig sind (Track-Breiten in World-Pixeln, die der
+Editor in ganzen Zahlen setzt) vor dem Eingang in `floor()`-Berechnungen durch `Math.round()`
+normalisieren. `Math.round()` absorbiert den Fehler; `Math.floor()` verstärkt ihn.
+Fix: `getActualTrackWidth()` rundet den Median-Wert per `Math.round()` bevor er gecacht wird.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

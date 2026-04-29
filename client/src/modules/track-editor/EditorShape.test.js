@@ -118,6 +118,35 @@ describe('EditorShape — getEdgePoints', () => {
   });
 });
 
+describe('EditorShape — getActualTrackWidth', () => {
+  it('returns the median inner-to-outer distance rounded to the nearest integer', () => {
+    // Straight open track with inner y=0, outer y=300 → width exactly 300.
+    const shape = new EditorShape(STRAIGHT_OPEN, { samples: 500 });
+    // STRAIGHT_OPEN: inner y=10, outer y=50 → width = 40
+    expect(shape.getActualTrackWidth()).toBe(40);
+  });
+
+  it('rounds fractional catmullRom result to nearest integer (fp regression)', () => {
+    // Simulate a track whose spline samples produce 299.9999999999994 at the median.
+    // We build a track whose inner/outer points are exactly 300px apart, then verify
+    // getActualTrackWidth() returns 300 (not 299 via floor artifact).
+    const pts = (y) => Array.from({ length: 10 }, (_, i) => ({ x: i * 100, y }));
+    const shape = new EditorShape(
+      { closed: false, innerPoints: pts(0), outerPoints: pts(300) },
+      { samples: 500 }
+    );
+    expect(shape.getActualTrackWidth()).toBe(300);
+  });
+
+  it('result is cached — second call returns the same value without recomputing', () => {
+    const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
+    const first = shape.getActualTrackWidth();
+    const second = shape.getActualTrackWidth();
+    expect(second).toBe(first);
+    expect(shape._cachedActualTrackWidth).toBeDefined();
+  });
+});
+
 describe('EditorShape — getBoundingBox', () => {
   it('returns a box that contains all inner and outer points', () => {
     const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 120 });
