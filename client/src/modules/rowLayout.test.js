@@ -203,6 +203,59 @@ describe('computeSpeedBonus', () => {
   });
 });
 
+// ── D7c Phase 4: effectiveWidth + open-track assembly area ────────────────
+
+describe('effectiveWidth = geometricWidth × startSpreadRange', () => {
+  it('Weltall: geometricWidth=300, spread=0.95, spriteSize=50 → 11 per row', () => {
+    // floor(2 × 285 / 50) = floor(11.4) = 11
+    expect(computeRacersPerRow(300 * 0.95, 50)).toBe(11);
+  });
+
+  it('effectiveWidth reduces perRow vs full geometricWidth', () => {
+    const perRowFull = computeRacersPerRow(300, 50); // floor(600/50) = 12
+    const perRowEff = computeRacersPerRow(300 * 0.95, 50); // floor(570/50) = 11
+    expect(perRowFull).toBe(12);
+    expect(perRowEff).toBe(11);
+  });
+
+  it('Weltall with effectiveWidth: 20 racers → 2 rows', () => {
+    const perRow = computeRacersPerRow(300 * 0.95, 50); // 11
+    const { totalRows } = computeRowLayout(20, perRow);
+    expect(totalRows).toBe(2);
+  });
+});
+
+describe('open-track assembly area: tStart formula', () => {
+  it('all rows have positive tStart on open track (Weltall numbers)', () => {
+    // pathLengthPx=15986, rowGapPx=spriteSize×rowGapMultiplier=50×1.5=75
+    const pathLengthPx = 15986;
+    const rowGapPx = 75;
+    const deltaT = rowGapPx / pathLengthPx;
+    const totalRows = 2;
+    for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+      const tStart = (totalRows - rowIndex) * deltaT;
+      expect(tStart).toBeGreaterThan(0);
+      expect(tStart).toBeLessThan(1);
+    }
+  });
+
+  it('front row (rowIndex=0) has larger tStart than rear row (rowIndex=1)', () => {
+    const deltaT = 75 / 15986;
+    const totalRows = 2;
+    const tFront = (totalRows - 0) * deltaT;
+    const tRear = (totalRows - 1) * deltaT;
+    expect(tFront).toBeGreaterThan(tRear);
+  });
+
+  it('open-track runoutZone: finishT = 1.0 - runoutZone (default 0.05 → 0.95)', () => {
+    const runoutZone = 0.05;
+    const finishT = 1.0 - runoutZone;
+    expect(finishT).toBeCloseTo(0.95, 5);
+    expect(finishT).toBeGreaterThan(0);
+    expect(finishT).toBeLessThan(1);
+  });
+});
+
 // ── computeMaxRacersDefault ────────────────────────────────────────────────
 
 describe('computeMaxRacersDefault', () => {

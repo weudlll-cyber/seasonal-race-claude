@@ -23,12 +23,9 @@ import {
 } from '../../modules/racer-types/index.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
-import {
-  estimatedSecondsPerLap,
-  openTrackFinishT,
-  lapsFromDuration,
-} from '../../modules/camera/lapUtils.js';
+import { estimatedSecondsPerLap, lapsFromDuration } from '../../modules/camera/lapUtils.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -104,6 +101,8 @@ function SetupScreen() {
     }
   }, []);
 
+  const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
+
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   const [selectedLaps, setSelectedLaps] = useState(null); // null = auto (from duration)
@@ -130,7 +129,8 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
-  // D7c: row-start hints — racersPerRow from actual geometry so large worlds are correct
+  // D7c: row-start hints — racersPerRow from actual geometry so large worlds are correct.
+  // Uses effectiveWidth = geometricWidth × startSpreadRange (matches RaceScreen formula).
   const geometricRacersPerRow = useMemo(() => {
     if (!selectedTrack?.geometryId) return 8;
     const geom = getTrack(selectedTrack.geometryId);
@@ -138,8 +138,9 @@ function SetupScreen() {
     const shape = new EditorShape(geom);
     const racerType = getRacerType(selectedTrack.defaultRacerTypeId ?? 'horse');
     const displaySize = racerType?.config?.displaySize ?? 40;
-    return computeRacersPerRow(shape.getActualTrackWidth(), displaySize);
-  }, [selectedTrack]);
+    const effectiveWidth = shape.getActualTrackWidth() * behaviorConfig.startSpreadRange;
+    return computeRacersPerRow(effectiveWidth, displaySize);
+  }, [selectedTrack, behaviorConfig]);
 
   const rowLayoutHints = useMemo(() => {
     const racersPerRow = geometricRacersPerRow;
@@ -372,16 +373,11 @@ function SetupScreen() {
                         Race duration (set in Settings tab)
                       </label>
                       <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>
-                        {raceSettings.duration}s — open track, finish line placed at{' '}
-                        {Math.round(
-                          openTrackFinishT(
-                            raceSettings.duration,
-                            getRacerType(
-                              racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
-                            ).getSpeedMultiplier()
-                          ) * 100
-                        )}
-                        % of track
+                        {raceSettings.duration}s — open track, finish line at{' '}
+                        {Math.round((1 - behaviorConfig.runoutZone) * 100)}% of track
+                        {behaviorConfig.runoutZone > 0
+                          ? ` (${Math.round(behaviorConfig.runoutZone * 100)}% runout)`
+                          : ''}
                       </span>
                     </div>
                   ) : (

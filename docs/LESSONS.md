@@ -445,6 +445,25 @@ Fix: `getActualTrackWidth()` rundet den Median-Wert per `Math.round()` bevor er 
 
 ---
 
+## Lesson 23 — Open-Track-Layout parallel zu Closed-Track denken, nicht als Sonderfall (D7c-Phase4)
+
+**Kontext:** D7c implementierte Row-Start mit negativem t für hintere Reihen. Closed tracks:
+korrekt — `tPos(t)` wraps negatives t hinter die Startlinie. Open tracks: `_idx(t)` klemmt
+auf idx=0 → alle Reihen stehen am selben Punkt. Statt eigener Lösung für Open-Track wurde
+der Closed-Track-Ansatz kommentarlos als "für Open Tracks kein Problem" übernommen.
+
+**Erkenntnis:** Open-Track-Strecken haben eine andere Topologie als Closed-Track-Strecken:
+kein Wrap-Around, Anfang und Ende sind echte Grenzen. Ein Mechanismus der bei Closed
+Tracks funktioniert (negativer t) bricht bei Open Tracks auf eine Weise die visuell wie
+"kein Problem" aussieht (alle Reihen am Startpunkt) aber tatsächlich die Row-Logik
+vollständig außer Kraft setzt.
+
+**Konsequenz:** Für jeden neuen Mechanismus der t-Werte manipuliert: explizit prüfen ob
+das Verhalten für Open und Closed Tracks separat korrekt ist. Nicht von einem Tracktyp
+auf den anderen schließen — die Topologien sind grundlegend verschieden.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

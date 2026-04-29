@@ -18,6 +18,7 @@ import {
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
 import { listEffects } from '../../../modules/track-effects/index.js';
 import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
+import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
 import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import s from '../DevScreen.module.css';
@@ -49,7 +50,9 @@ function autoMaxRacers(geom, track, rowCfg) {
   const displaySize = racerType?.config?.displaySize ?? 40;
   const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
   const shape = new EditorShape(geom);
-  const racersPerRow = computeRacersPerRow(shape.getActualTrackWidth(), displaySize);
+  const behaviorCfg = loadRaceBehaviorConfig();
+  const effectiveWidth = shape.getActualTrackWidth() * behaviorCfg.startSpreadRange;
+  const racersPerRow = computeRacersPerRow(effectiveWidth, displaySize);
   return computeMaxRacersDefault(
     geom.pathLengthPx,
     racersPerRow,

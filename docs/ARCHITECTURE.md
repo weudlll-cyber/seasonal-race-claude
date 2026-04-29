@@ -111,7 +111,7 @@ What was eliminated in D7a:
 Entry point: `computeRenderDisplayScale` in `modules/autoSpriteScale.js`. Called once per frame
 in the `RaceScreen` render loop.
 
-## Row-Start Layout (D7c + D7c-fix)
+## Row-Start Layout (D7c + D7c-fix + D7c-Phase4)
 
 Implemented in `modules/rowLayout.js`. Called once at race start in `RaceScreen` before the
 racer init map.
@@ -121,25 +121,37 @@ racer init map.
    median inner-to-outer distance in world pixels. This is the ground-truth geometric width —
    it scales correctly with any world size. The `trackWidth` metadata field has been removed
    from the track data model (D7c-fix-v2); all width-dependent calculations use this method.
-2. `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` — computes how many
-   sprites fit shoulder-to-shoulder: `floor(2 × geometricTrackWidthPx / spriteWorldSizePx)`.
+2. `effectiveWidth = geometricTrackWidthPx × startSpreadRange` — the region actually used by
+   racers at start. This ensures the packing formula matches the actual lateral distribution.
+3. `computeRacersPerRow(effectiveWidth, spriteWorldSizePx)` — computes how many
+   sprites fit shoulder-to-shoulder: `floor(2 × effectiveWidth / spriteWorldSizePx)`.
    Stays in world-pixel space — correct at any world size.
    `spriteWorldSizePx = displaySize × displaySizeScale` (same values as the render pipeline).
-3. `computeRowLayout(racerCount, racersPerRow)` — shuffles racer indices (Fisher-Yates) and
+4. `computeRowLayout(racerCount, racersPerRow)` — shuffles racer indices (Fisher-Yates) and
    assigns them to rows based on the pre-computed `racersPerRow`.
-4. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across
+5. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across
    `[-spreadRange, +spreadRange]`, including partial last rows (full spread, not clustered).
-5. t-start: Row 0 at `t=0`, Row k at `t = -(k × rowGapPx / pathLengthPx)`. Closed tracks:
-   `tPos` wraps negative t correctly (e.g. -0.008 → 0.992 = just before start line).
-   Open tracks: EditorShape clamps to idx=0 (start of path).
-6. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — fractional bonus
+6. **t-start (track-type dependent):**
+   - *Closed tracks*: Row k at `t = -(k × rowGapPx / pathLengthPx)`. `tPos` wraps negative t
+     correctly (e.g. -0.008 → 0.992 = just before start line).
+   - *Open tracks*: Row k at `t = (totalRows − k) × rowGapPx / pathLengthPx`. All rows start
+     at t > 0 within the path (assembly area). Front row at `totalRows × deltaT`, last row at
+     `1 × deltaT`. No clamping needed.
+7. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — fractional bonus
    applied to `baseSpeed` for rear rows. Factor 1.0 = exact distance compensation = pole neutral.
-7. `computeMaxRacersDefault(pathLengthPx, racersPerRow, rowGapPx, maxCapacityFactor)` — auto-capacity
+   Applies on both closed and open tracks.
+8. `computeMaxRacersDefault(pathLengthPx, racersPerRow, rowGapPx, maxCapacityFactor)` — auto-capacity
    for a track based on path length, pre-computed racersPerRow, and row gap.
 
-Config stored in `racearena:rowLayoutConfig` via `rowLayoutConfig.js`. 3 tunable parameters
-in Dev Screen Row Start section: `rowGapMultiplier`, `speedBonusFactor`, `maxCapacityFactor`.
-Track-level `maxRacers` shown in TrackManager with "modified" badge.
+**Open-track finish line (D7c-Phase4):** On open tracks `finishT = 1.0 − runoutZone` (default
+0.05). The last 5% of the path is the run-out zone — racers cross the finish line and coast to
+the track end with `runoutDecay`. Configurable via `raceBehaviorConfig.runoutZone` (Dev Screen).
+`openTrackFinishT` (duration-based) is no longer used for race-end logic.
+
+Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `speedBonusFactor`,
+`maxCapacityFactor`). Start-layout params in `racearena:raceBehaviorConfig` (`startSpreadRange`,
+`runoutZone`). All tunable in Dev Screen. Track-level `maxRacers` shown in TrackManager with
+"modified" badge.
 
 ## Race Behavior System (D7b — lane-free)
 

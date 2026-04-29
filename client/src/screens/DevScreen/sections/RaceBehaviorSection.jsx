@@ -99,7 +99,7 @@ function RaceBehaviorSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Start Spread Range
-              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.7 uses 70% of each half-width, leaving a small gap to the boundary. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
+              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.95 uses 95% of each half-width — the formula uses this as effectiveWidth so the packing calculation matches actual placement. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
             </label>
             <input
               type="number"
@@ -112,6 +112,29 @@ function RaceBehaviorSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > 0 && v <= 1) set('startSpreadRange', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Runout Zone
+              <InfoTooltip text="Fraction of the track path reserved for run-out after the finish line, on open tracks only. At 0.05 (5%) the finish line sits at 95% of the track — racers cross it then coast to the end. Closed tracks are unaffected (they use the runoutDecay system). Range 0.0–0.20." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Runout Zone"
+              min={0.0}
+              max={0.2}
+              step={0.01}
+              value={config.runoutZone}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.2) set('runoutZone', v);
               }}
             />
           </div>

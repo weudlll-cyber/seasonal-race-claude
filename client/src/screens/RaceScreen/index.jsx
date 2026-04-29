@@ -19,12 +19,7 @@ import {
   openTrackPanTarget,
 } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import {
-  lapsFromDuration,
-  lapProgress,
-  currentLap,
-  openTrackFinishT,
-} from '../../modules/camera/lapUtils.js';
+import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
@@ -185,15 +180,11 @@ export default function RaceScreen() {
       }
     }
 
-    // Determine finish position in t-space (speed scale applied so open-track
-    // finish line matches the scaled pace)
     const duration = raceData.duration ?? 60;
+    // Open tracks: finish line at 1 - runoutZone (runout zone is at the end of the path).
+    // Closed tracks: finish line determined by target lap count.
     const finishT = isOpenTrack
-      ? openTrackFinishT(
-          raceData.targetDuration ?? duration,
-          speedMultiplier / speedScaleFactor,
-          BASE_SPEED_MAX
-        )
+      ? 1.0 - behaviorConfig.runoutZone
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 
@@ -213,7 +204,8 @@ export default function RaceScreen() {
     const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
-    const racersPerRowValue = computeRacersPerRow(geometricTrackWidthPx, spriteSize);
+    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
+    const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
     const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
 
     // Index assignments by racerIndex for O(1) lookup in the map below
@@ -245,9 +237,12 @@ export default function RaceScreen() {
           pathLengthPx,
           rowConfig.speedBonusFactor
         );
-        // Closed tracks: rear rows start behind the start line (negative t wraps correctly).
-        // Open tracks: EditorShape clamps negative t to idx=0 (start of path), which is fine.
-        const tStart = -(assignment.rowIndex * deltaT_per_row);
+        // Closed tracks: negative t wraps correctly via modulo in _idx.
+        // Open tracks: offset each row forward from t=0 so all rows start within the path.
+        // Front row (rowIndex 0) starts at totalRows×deltaT; last row starts at 1×deltaT.
+        const tStart = isOpenTrack
+          ? (rowLayout.totalRows - assignment.rowIndex) * deltaT_per_row
+          : -(assignment.rowIndex * deltaT_per_row);
         const racer = {
           ...r,
           index: i,
