@@ -550,6 +550,16 @@ führt zu schwer debuggbaren UI-Zuständen.
 
 ---
 
+## Lesson 28 — Canvas-Lesbarkeit: Overlay und Kontrast-Defaults für dunkle Hintergründe (L.6-VIS)
+
+**Kontext:** Der Track-Editor renderte Track-Linien direkt auf das Hintergrundbild ohne Zwischenschicht. Auf Bildern mit helleren Bereichen (Gras, Himmel, Beton) verschwanden die farbigen Linien (#4fc3f7 auf weißem Untergrund) oder die Cyan-gefüllten Kontrollpunkte waren kaum von hellen Bildregionen zu unterscheiden. Erst ein Browser-Test auf echtem Track-Material machte das Problem sichtbar — Unit-Tests und Code-Review gaben kein Signal.
+
+**Erkenntnis:** Canvas-Overlays (globalAlpha + fillRect) sind der einfachste Weg um einen zuverlässigen Kontrast-Boden zu schaffen unabhängig vom Bild-Inhalt. Eine 35%-Opacity-Schicht zwischen Bild und Linien kostet eine Zeile Code und macht alle weiteren Farb-Entscheidungen Bild-agnostisch. Kontrollpunkte mit weißer Füllung und dunklem Rand (Kreismarkierung-Prinzip) sind auf jedem Hintergrund sichtbar — Cyan auf Cyan-Hintergrund nie.
+
+**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand.
+
+---
+
 ## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
 
 **Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.
