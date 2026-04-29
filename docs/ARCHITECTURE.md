@@ -181,9 +181,9 @@ The race camera lives in `modules/camera/` and supports four director modes:
 
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
 
-## Racer-Track-Effects (D6 — reserved)
+## Racer-Track-Effects (reserved — not yet scheduled)
 
-`SpriteRacerType` accepts an optional `rteDefinitions` array in its config. This array is stored and exposed via `getRteDefinitions()` but is not processed in the current codebase. Phase D6 will introduce an `RteManager` in `RaceScreen` that consumes these definitions to spawn per-racer particle effects triggered by track state (e.g., mud spray on muddy sectors, splash on water crossings). Schema TBD in the D6 spec.
+`SpriteRacerType` accepts an optional `rteDefinitions` array in its config. This array is stored and exposed via `getRteDefinitions()` but is not processed in the current codebase. A future phase could introduce an `RteManager` in `RaceScreen` that consumes these definitions to spawn per-racer particle effects triggered by track state (e.g., mud spray on muddy sectors, splash on water crossings). Schema TBD if/when scoped.
 
 ## Future: Phase 5 Server
 

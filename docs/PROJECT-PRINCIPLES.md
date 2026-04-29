@@ -124,3 +124,11 @@ change may explicitly skip doc updates by stating "Doc-Updates: none — bugfix 
 LESSONS.md is updated only when there is a genuine pattern to capture, not as a forced
 ritual. Strategic Claude's chat report after each PR includes the same Doc-Updates
 section so the next session has visibility without diffing files.
+
+### CC Work-Update Convention
+
+During implementation, Claude Code keeps progress updates to one sentence per step.
+Detailed technical explanations, reasoning, and diagnostic findings belong in the
+final report at the end of the task — not in intermediate chat messages. Rationale:
+the user needs visible progress signals but not running technical commentary; shorter
+intermediate updates also reduce context consumption.
