@@ -26,13 +26,22 @@ import s from '../DevScreen.module.css';
 function RaceBehaviorSection() {
   const [config, setConfig] = useState(() => loadRaceBehaviorConfig());
   const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
+  const [storageError, setStorageError] = useState(null);
 
   useEffect(() => {
-    saveRaceBehaviorConfig(config);
+    if (!saveRaceBehaviorConfig(config)) {
+      setStorageError('Settings could not be saved — storage is full.');
+    } else {
+      setStorageError(null);
+    }
   }, [config]);
 
   useEffect(() => {
-    saveRowLayoutConfig(rowConfig);
+    if (!saveRowLayoutConfig(rowConfig)) {
+      setStorageError('Settings could not be saved — storage is full.');
+    } else {
+      setStorageError(null);
+    }
   }, [rowConfig]);
 
   function set(key, val) {
@@ -52,6 +61,11 @@ function RaceBehaviorSection() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {storageError && (
+        <p style={{ color: 'var(--color-error, #e55)', margin: 0, fontSize: '0.85rem' }}>
+          ⚠ {storageError}
+        </p>
+      )}
       {/* ── Toggle + Reset ── */}
       <div className={s.card}>
         <div

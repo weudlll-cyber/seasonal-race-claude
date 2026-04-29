@@ -28,6 +28,7 @@ const NAME_DEBOUNCE_MS = 600;
 
 const MAX_BG_W = 8000;
 const MAX_BG_H = 4096;
+const MAX_BG_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB — checked before FileReader to avoid OOM
 
 // drawStaticScene does NOT clear the canvas — callers apply the viewport
 // transform first, then call this, then restore. clearRect must happen
@@ -801,6 +802,12 @@ export default function TrackEditor() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    if (file.size > MAX_BG_FILE_SIZE_BYTES) {
+      setBgUploadError(
+        `Image file too large (max 5 MB, got ${(file.size / 1024 / 1024).toFixed(1)} MB).`
+      );
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target.result;
