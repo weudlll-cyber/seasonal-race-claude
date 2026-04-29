@@ -175,6 +175,32 @@ export function deleteTrack(id) {
   return true;
 }
 
+/**
+ * Add a geometry id to the index without writing geometry data.
+ * Used by trackLoader when caching server geometries so listTracks() finds them.
+ * No-op if the id is already registered.
+ * @param {string} id
+ */
+export function registerInIndex(id) {
+  const ids = readIndex();
+  if (!ids.includes(id)) {
+    writeIndex([...ids, id]);
+  }
+}
+
+/**
+ * Remove a geometry id from the index without deleting the geometry data.
+ * Used by trackLoader when evicting a server geometry from cache.
+ * No-op if the id is not in the index.
+ * @param {string} id
+ */
+export function unregisterFromIndex(id) {
+  const ids = readIndex();
+  if (ids.includes(id)) {
+    writeIndex(ids.filter((i) => i !== id));
+  }
+}
+
 // Migration: add pathLengthPx to saved geometries that pre-date B-17.
 // Runs once at module load; skips geometries that already have the field.
 (function migratePathLength() {
