@@ -276,7 +276,7 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 
 **Quality-Gate auf PR #46 (VRE-1 — Foundation):** 0 Show-Stopper, 0 Errors, 0 new Warnings
 - ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1100 Unit-Tests grün (+88 neue: 64 Frontend + 24 Backend)
+- ✅ ~1044 Unit-Tests grün (+88 neue: 64 Frontend + 24 Backend) — exact count per vitest: 1084 − 40 VRE-2 additions = 1044
 - ✅ 183 e2e-Tests grün (unverändert — kein UI in VRE-1)
 - ✅ CI green (PR #46, squash-merged `e4fd947`)
 
