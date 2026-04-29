@@ -185,6 +185,31 @@ All modes apply a single world-space affine transform (translate + scale) before
 
 `SpriteRacerType` accepts an optional `rteDefinitions` array in its config. This array is stored and exposed via `getRteDefinitions()` but is not processed in the current codebase. A future phase could introduce an `RteManager` in `RaceScreen` that consumes these definitions to spawn per-racer particle effects triggered by track state (e.g., mud spray on muddy sectors, splash on water crossings). Schema TBD if/when scoped.
 
+## Backend Architecture (Phase L)
+
+Phase L introduces a local backend running in Docker alongside the existing React client. The frontend remains unchanged — the backend is an independent process.
+
+```
+seasonal-race-claude/
+├── client/          # React frontend, port 3000 (unchanged)
+├── server/          # Node.js / Express backend, port 4000
+│   ├── src/
+│   │   └── index.js   # Entry point; registers all routes
+│   ├── Dockerfile
+│   └── package.json
+└── docker-compose.yml  # Starts server with `docker-compose up`
+```
+
+**Phase L scope:**
+- **L.1** (this PR) — skeleton: `GET /api/health` only. No DB, no auth.
+- **L.1.5 / L.2** — track endpoints: serve track JSON + background images from server.
+- **L.3+** — offline cache, multi-admin, race-integrity hooks.
+- **Phase 5** — VPS deployment (see below).
+
+**Frontend config hook** — `client/src/services/api.js` exports `API_BASE_URL` (defaults to
+`http://localhost:4000`). Set `VITE_API_URL` in a `.env` file to point at staging or VPS.
+Not yet consumed by any screen — wired up in L.2 when the first real endpoint lands.
+
 ## Future: Phase 5 Server
 
 A backend will be built in Phase 5 with the following responsibilities:

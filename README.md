@@ -43,6 +43,21 @@ cd client && npm run dev
 
 App runs at `http://localhost:3000`.
 
+## Local Backend (Phase L)
+
+```bash
+docker-compose up
+```
+
+Server starts at `http://localhost:4000`. Verify with:
+
+```
+GET http://localhost:4000/api/health
+→ { "status": "ok", "timestamp": "..." }
+```
+
+The frontend continues to run on port 3000 and is independent — the backend is not yet wired into any screen (comes in L.2).
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)

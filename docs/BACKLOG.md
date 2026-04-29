@@ -5,6 +5,17 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Phase L — Local Backend
+
+| Item | Status | Beschreibung |
+|---|---|---|
+| ✅ **L.1** | PR #43 | Backend-Skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, Frontend-Config-Hook in `client/src/services/api.js`. |
+| ⏳ **L.1.5** | planned | Track-Endpunkte: `GET /api/tracks` + `GET /api/tracks/:id/background`. Frontend lädt Tracks vom Server, cached für Offline. |
+| ⏳ **L.2** | planned | Frontend nutzt `API_BASE_URL` aus `services/api.js`. Track-List + Background vom Server. Offline-Fallback auf localStorage. |
+| ⏳ **L.3+** | future | Multi-Admin, Auth (Phase 5). |
+
+---
+
 ## Hot — next PR
 
 - 🔜 **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (D3.5.5-Pattern)
