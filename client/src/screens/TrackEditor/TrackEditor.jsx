@@ -731,23 +731,7 @@ export default function TrackEditor() {
           return;
         }
         setBgUploadError(null);
-        const hasPoints =
-          centerPoints.length > 0 || innerPoints.length > 0 || outerPoints.length > 0;
-        const dimChanged = w !== editorWorldW || h !== editorWorldH;
-        if (dimChanged && hasPoints) {
-          if (
-            !window.confirm(
-              `The new image has different dimensions (${w}×${h} instead of ${editorWorldW}×${editorWorldH}). The path will be reset and must be redrawn. Continue?`
-            )
-          )
-            return;
-          pushHistory(getSnapshot());
-          setCenterPoints([]);
-          setInnerPoints([]);
-          setOuterPoints([]);
-        } else {
-          pushHistory(getSnapshot());
-        }
+        pushHistory(getSnapshot());
         setBackgroundImage(dataUrl);
         setEditorWorldW(w);
         setEditorWorldH(h);

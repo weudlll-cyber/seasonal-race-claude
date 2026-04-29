@@ -550,6 +550,16 @@ führt zu schwer debuggbaren UI-Zuständen.
 
 ---
 
+## Lesson 29 — Partielle State-Updates: nie mehr Felder überschreiben als nötig (L.6-BgBug)
+
+**Kontext:** Der Bild-Upload-Handler im Track-Editor enthielt eine `dimChanged && hasPoints`-Verzweigung die bei Dimensionsunterschied zwischen neuem Bild und aktueller Welt `setCenterPoints([])`, `setInnerPoints([])`, `setOuterPoints([])` aufrief. Intention: vermeiden dass gezeichnete Punkte nach Dimensions-Änderung "falsch positioniert" sind. Effekt: jeder Bild-Upload auf einem neuen Track (Standardgröße 1280×720, Foto typisch andere Auflösung) zerstörte die gezeichnete Strecke.
+
+**Erkenntnis:** Handler die primär eine einzige Ressource ändern (hier: Background-Bild) dürfen keine anderen State-Felder als unbeabsichtigten Nebeneffekt zurücksetzen. Die "Schutz"-Logik war schlechter als nichts: sie überschrieb User-Arbeit, die der User nicht zurückfordern kann wenn er den confirm-Dialog bestätigt. State-Updates sollten chirurgisch sein — nur das ändern, was der Handler explizit ändern soll.
+
+**Konsequenz:** Bei jedem Handler der State ändert: prüfen welche anderen State-Felder er berührt und ob das beabsichtigt ist. "Cleanup für den Fall dass X" in einem State-Update-Handler ist ein Warnsignal — das gehört entweder in einen separaten Handler (der explizit ausgelöst wird) oder gar nicht rein.
+
+---
+
 ## Lesson 28 — Canvas-Lesbarkeit: Overlay und Kontrast-Defaults für dunkle Hintergründe (L.6-VIS)
 
 **Kontext:** Der Track-Editor renderte Track-Linien direkt auf das Hintergrundbild ohne Zwischenschicht. Auf Bildern mit helleren Bereichen (Gras, Himmel, Beton) verschwanden die farbigen Linien (#4fc3f7 auf weißem Untergrund) oder die Cyan-gefüllten Kontrollpunkte waren kaum von hellen Bildregionen zu unterscheiden. Erst ein Browser-Test auf echtem Track-Material machte das Problem sichtbar — Unit-Tests und Code-Review gaben kein Signal.
