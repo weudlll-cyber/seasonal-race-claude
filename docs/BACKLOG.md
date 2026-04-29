@@ -239,6 +239,11 @@ aus D3.5.5.
   SEC-4 File-Size-Guard) wurden in PR cleanup/security-and-crash-protection adressiert
   (Audit-Bericht: docs/internal/audit-2026-04-29.md).
 
+- **TEST-RaceScreen** — RaceScreen-Integrationstest für `isOpenTrack`-Propagation *(Priorität: niedrig)*
+  Erfordert Canvas + `requestAnimationFrame`-Mocking in jsdom. Aktuell kein Test-Infrastruktur für den
+  Animations-Loop vorhanden. Wurde als TODO in `RaceScreen/index.jsx` geführt und in Cleanup PR 2/3
+  (audit-2026-04-29.md) ins Backlog überführt.
+
 ---
 
 ## Parking Lot — Zukunft / unklarer Scope

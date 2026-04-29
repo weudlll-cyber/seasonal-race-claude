@@ -6,14 +6,6 @@
 // Description: Default data for all storage keys — seeded on first launch
 // ============================================================
 
-export const DEFAULT_RACERS = [
-  { id: 'horse', name: 'Horse', emoji: '🐴', color: '#a0522d', isActive: true },
-  { id: 'duck', name: 'Duck', emoji: '🦆', color: '#2196f3', isActive: true },
-  { id: 'rocket', name: 'Rocket', emoji: '🚀', color: '#7c3aed', isActive: true },
-  { id: 'snail', name: 'Snail', emoji: '🐌', color: '#16a34a', isActive: true },
-  { id: 'buggy', name: 'Buggy', emoji: '🚙', color: '#64748b', isActive: true },
-];
-
 export const DEFAULT_TRACKS = [
   {
     id: 'dirt-oval',
