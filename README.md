@@ -46,17 +46,20 @@ App runs at `http://localhost:3000`.
 ## Local Backend (Phase L)
 
 ```bash
-docker-compose up
+docker-compose up          # starts server on port 4000
+cd client && npm run dev   # starts frontend on port 3000 (separate terminal)
 ```
 
-Server starts at `http://localhost:4000`. Verify with:
+### Available endpoints
 
-```
-GET http://localhost:4000/api/health
-→ { "status": "ok", "timestamp": "..." }
-```
+| Endpoint | Response |
+|---|---|
+| `GET /api/health` | `{ status: "ok", timestamp }` |
+| `GET /api/tracks` | Array of custom track summaries |
+| `GET /api/tracks/:id` | Full track including geometry points |
+| `GET /api/tracks/:id/background` | Binary image (JPEG/PNG) |
 
-The frontend continues to run on port 3000 and is independent — the backend is not yet wired into any screen (comes in L.2).
+The frontend loads server custom tracks (e.g. Weltall) automatically and merges them with the code-defined default tracks. Background images are cached locally for offline use.
 
 ## Documentation
 

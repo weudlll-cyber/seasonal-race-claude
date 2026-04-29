@@ -10,9 +10,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | Item | Status | Beschreibung |
 |---|---|---|
 | ✅ **L.1** | PR #43 | Backend-Skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, Frontend-Config-Hook in `client/src/services/api.js`. |
-| ⏳ **L.1.5** | planned | Track-Endpunkte: `GET /api/tracks` + `GET /api/tracks/:id/background`. Frontend lädt Tracks vom Server, cached für Offline. |
-| ⏳ **L.2** | planned | Frontend nutzt `API_BASE_URL` aus `services/api.js`. Track-List + Background vom Server. Offline-Fallback auf localStorage. |
-| ⏳ **L.3+** | future | Multi-Admin, Auth (Phase 5). |
+| ✅ **L.2** | PR #44 | Track-API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Weltall migriert aus Snapshot. 12 Backend-Tests. |
+| ✅ **L.3** | PR #44 | Frontend-Integration: `trackLoader.js`, `useServerTracks` Hook. SetupScreen + TrackManager + RaceHistory nutzen combined list. Geometry-Caching in localStorage. 14 Tests. |
+| ✅ **L.4** | PR #44 | Offline-Cache: `trackCache.js` — Background-Bilder als data-URLs, 3 MB-Limit mit LRU-Eviction, Quota-Guard. `getTrackBackgroundUrl` offline-aware. 6 Tests. |
+| ⏳ **L.5+** | future | Write-Path: TrackEditor → Server. Multi-Admin, Auth (Phase 5). |
 
 ---
 

@@ -497,3 +497,23 @@ fällt erst beim Quality-Gate auf, nicht beim Schreiben.
 **Konsequenz:** Bei Erstellung neuer Files (egal ob Source, Config, oder Test):
 Standard-Header anwenden. Quality-Gate-Check für File-Headers gilt für alle
 `.js`/`.jsx`/`.config.*` Files, nicht nur Source.
+
+---
+
+## Lesson 12 — Server-Daten mit Code-Defaults über gemeinsame ID-Deduplication mergen (L.2–L.4)
+
+**Kontext:** Phase L führte Server-Tracks (Weltall) ein, aber dieselbe Track-ID existierte
+noch in localStorage aus der Zeit bevor sie "auf den Server gewandert" ist. Die kombinierte
+Track-Liste (Frontend) müsste Weltall aus localStorage UND vom Server zeigen, was zu doppelten
+Einträgen führt.
+
+**Erkenntnis:** Wenn Daten von einer Quelle (localStorage) zu einer anderen (Server) migrieren,
+bleibt die alte Kopie in der Quell-Quelle — bis eine explizite localStorage-Migration die
+Daten bereinigt. Die sauberste Lösung in der Zwischenzeit: Server-Track-IDs als autoritative
+Menge definieren und lokale Kopien beim Merge herausfiltern (`serverIds`-Deduplication in
+`getInitialTracks()`/`loadAllTracks()`).
+
+**Konsequenz:** Bei Read-Path-Integrationen, die Daten aus mehreren Quellen kombinieren,
+immer explizit prüfen welche Quelle Vorrang hat und Duplikate by-ID herausfiltern.
+Merge-Logik die stillschweigend die erste Kopie bevorzugt, ohne explizite Quelle-Priorisierung,
+führt zu schwer debuggbaren UI-Zuständen.
