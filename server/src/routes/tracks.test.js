@@ -3,14 +3,56 @@
 // Path:        server/src/routes/tracks.test.js
 // Project:     RaceArena
 // Created:     2026-04-29
-// Description: Integration tests for the tracks API endpoints
+// Description: Integration tests for the tracks API endpoints (read + write)
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import request from 'supertest';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = join(__dirname, '../../data/tracks');
+
 const app = createApp();
+
+// IDs created during tests — cleaned up in afterAll
+const createdIds = [];
+
+const VALID_TRACK = {
+  name: 'Test Track',
+  icon: '🏁',
+  closed: true,
+  worldWidth: 1280,
+  worldHeight: 720,
+  centerPoints: [
+    { x: 100, y: 100 },
+    { x: 200, y: 200 },
+    { x: 300, y: 100 },
+  ],
+  innerPoints: [
+    { x: 80, y: 80 },
+    { x: 200, y: 180 },
+    { x: 320, y: 80 },
+  ],
+  outerPoints: [
+    { x: 120, y: 120 },
+    { x: 200, y: 220 },
+    { x: 280, y: 120 },
+  ],
+  effects: [],
+};
+
+afterAll(async () => {
+  // Clean up any tracks created during tests
+  for (const id of createdIds) {
+    await request(app).delete(`/api/tracks/${id}`);
+  }
+});
+
+// ── Read endpoints (pre-existing) ─────────────────────────────────────────────
 
 describe('GET /api/health', () => {
   it('returns status ok', async () => {
@@ -106,5 +148,178 @@ describe('GET /api/tracks/:id/background', () => {
   it('returns 404 for unknown track background', async () => {
     const res = await request(app).get('/api/tracks/nonexistent-id-xyz/background');
     expect(res.status).toBe(404);
+  });
+});
+
+// ── Write endpoints ───────────────────────────────────────────────────────────
+
+describe('POST /api/tracks', () => {
+  it('creates a track and returns 201 with id and geometryId', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    expect(res.status).toBe(201);
+    expect(typeof res.body.id).toBe('string');
+    expect(res.body.id.length).toBeGreaterThan(0);
+    expect(typeof res.body.geometryId).toBe('string');
+    expect(res.body.name).toBe('Test Track');
+    expect(res.body).not.toHaveProperty('backgroundImageFile');
+    createdIds.push(res.body.id);
+  });
+
+  it('persists the track so it appears in GET /api/tracks', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    createdIds.push(createRes.body.id);
+
+    const listRes = await request(app).get('/api/tracks');
+    const found = listRes.body.find((t) => t.id === createRes.body.id);
+    expect(found).toBeDefined();
+    expect(found.name).toBe('Test Track');
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const { name: _drop, ...noName } = VALID_TRACK;
+    const res = await request(app).post('/api/tracks').send(noName);
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 400 when closed is not boolean', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, closed: 'yes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when no geometry points provided', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ name: 'X', closed: false, worldWidth: 1280, worldHeight: 720 });
+    expect(res.status).toBe(400);
+  });
+
+  it('does not leave a .tmp file after successful save', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    createdIds.push(res.body.id);
+    expect(existsSync(join(DATA_DIR, `${res.body.id}.json.tmp`))).toBe(false);
+  });
+
+  it('strips backgroundImage from stored JSON', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, backgroundImage: 'data:image/jpeg;base64,/9j/' });
+    createdIds.push(res.body.id);
+    expect(res.status).toBe(201);
+    // Re-fetch: backgroundImage should not be in the response
+    const detail = await request(app).get(`/api/tracks/${res.body.id}`);
+    expect(detail.body).not.toHaveProperty('backgroundImage');
+  });
+});
+
+describe('PUT /api/tracks/:id', () => {
+  it('updates an existing track and returns 200', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, name: 'Updated Track' });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.name).toBe('Updated Track');
+    expect(updateRes.body.id).toBe(id);
+  });
+
+  it('preserves geometryId and createdAt on update', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    const geometryId = createRes.body.geometryId;
+    const createdAt = createRes.body.createdAt;
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, name: 'Updated', geometryId: 'should-be-ignored' });
+    expect(updateRes.body.geometryId).toBe(geometryId);
+    expect(updateRes.body.createdAt).toBe(createdAt);
+  });
+
+  it('returns 404 when track does not exist', async () => {
+    const res = await request(app).put('/api/tracks/nonexistent-xyz').send(VALID_TRACK);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 for invalid update body', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    createdIds.push(createRes.body.id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${createRes.body.id}`)
+      .send({ name: '', closed: false, worldWidth: 1280, worldHeight: 720 });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/tracks/:id', () => {
+  it('deletes an existing track and returns 204', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+
+    const deleteRes = await request(app).delete(`/api/tracks/${id}`);
+    expect(deleteRes.status).toBe(204);
+
+    const getRes = await request(app).get(`/api/tracks/${id}`);
+    expect(getRes.status).toBe(404);
+  });
+
+  it('returns 404 when track does not exist', async () => {
+    const res = await request(app).delete('/api/tracks/nonexistent-xyz');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/tracks/:id/background', () => {
+  it('rejects a file exceeding 10 MB with 413', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const bigBuffer = Buffer.alloc(11 * 1024 * 1024, 0xff);
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', bigBuffer, { filename: 'big.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(413);
+    expect(res.body.error).toMatch(/too large/i);
+  });
+
+  it('returns 400 when no file is attached', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).post(`/api/tracks/${id}/background`);
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a valid image and returns backgroundImageFile', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    // Minimal 1×1 white JPEG (valid JPEG bytes)
+    const minimalJpeg = Buffer.from(
+      '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
+        'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+        'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+        'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+        'AAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA' +
+        '/9oADAMBAAIRAxEAPwCwABmX/9k=',
+      'base64'
+    );
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', minimalJpeg, { filename: 'track.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('backgroundImageFile');
+    expect(res.body.backgroundImageFile).toMatch(/\.jpg$/);
   });
 });
