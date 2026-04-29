@@ -1,6 +1,12 @@
-// Pure math helpers for open-track camera.
-// All functions are side-effect-free and accept explicit dimensions so they
-// can be unit-tested without a DOM or React context.
+// ============================================================
+// File:        openTrackCamera.js
+// Path:        client/src/modules/camera/openTrackCamera.js
+// Project:     RaceArena
+// Created:     2026-04-26
+// Description: Pure math helpers for the open-track camera mode (D7c-Phase4).
+//              All functions are side-effect-free and accept explicit dimensions
+//              so they can be unit-tested without a DOM or React context.
+// ============================================================
 
 export const OPEN_TRACK_BASE_ZOOM = 1.5;
 

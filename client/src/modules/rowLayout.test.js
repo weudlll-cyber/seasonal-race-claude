@@ -127,16 +127,16 @@ describe('computeRowLayout', () => {
 
 describe('computeRowPhysicalY', () => {
   it('single racer in row → physicalY = 0', () => {
-    expect(computeRowPhysicalY(0, 1, 0.7)).toBe(0);
+    expect(computeRowPhysicalY(0, 1, 0.7)).toBe(0); // intentional test value, not current default (0.95 since D7c-Phase4)
   });
 
   it('two racers in row → symmetric at ±spreadRange', () => {
-    expect(computeRowPhysicalY(0, 2, 0.7)).toBeCloseTo(-0.7, 5);
+    expect(computeRowPhysicalY(0, 2, 0.7)).toBeCloseTo(-0.7, 5); // intentional test value, not current default (0.95 since D7c-Phase4)
     expect(computeRowPhysicalY(1, 2, 0.7)).toBeCloseTo(0.7, 5);
   });
 
   it('full row of 8 spans [-spreadRange, +spreadRange]', () => {
-    const range = 0.7;
+    const range = 0.7; // intentional test value, not current default (0.95 since D7c-Phase4)
     const ys = Array.from({ length: 8 }, (_, i) => computeRowPhysicalY(i, 8, range));
     expect(ys[0]).toBeCloseTo(-range, 5);
     expect(ys[7]).toBeCloseTo(range, 5);
@@ -146,14 +146,14 @@ describe('computeRowPhysicalY', () => {
   });
 
   it('partial last row of 4 (from 20 racers, 8 per row) spans full [-range, +range]', () => {
-    const range = 0.7;
+    const range = 0.7; // intentional test value, not current default (0.95 since D7c-Phase4)
     const ys = Array.from({ length: 4 }, (_, i) => computeRowPhysicalY(i, 4, range));
     expect(ys[0]).toBeCloseTo(-range, 5);
     expect(ys[3]).toBeCloseTo(range, 5);
   });
 
   it('all values within [-spreadRange, +spreadRange]', () => {
-    const range = 0.7;
+    const range = 0.7; // intentional test value, not current default (0.95 since D7c-Phase4)
     for (let n = 1; n <= 10; n++) {
       for (let i = 0; i < n; i++) {
         const y = computeRowPhysicalY(i, n, range);

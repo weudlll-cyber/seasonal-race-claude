@@ -10,21 +10,8 @@
 // ============================================================
 
 /**
- * Compute the initial physicalY for racer `index` of `total`.
- * Spreads racers evenly across [-spreadRange, +spreadRange] in one row.
- * @param {number} index - zero-based racer index
- * @param {number} total - total racer count
- * @param {number} spreadRange - half-width of the start spread ∈ (0, 1]
- * @returns {number}
- */
-export function computeStartPhysicalY(index, total, spreadRange) {
-  if (total <= 1) return 0;
-  return -spreadRange + (2 * spreadRange * index) / (total - 1);
-}
-
-/**
  * Initialise per-racer behavior state. Call once per racer at race start.
- * physicalY is set separately via computeStartPhysicalY in RaceScreen.
+ * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
