@@ -12,6 +12,7 @@
 import { API_BASE_URL } from '../../services/api.js';
 import { storageGet, storageSet, KEYS } from './storage.js';
 import { DEFAULT_TRACKS } from './defaults.js';
+import { cacheBackground, getCachedBackground } from './trackCache.js';
 
 export const CACHE_KEY = 'racearena:cache:serverTracks';
 const GEO_KEY = (id) => `racearena:trackGeometries:${id}`;
@@ -60,9 +61,34 @@ export async function cacheTrackGeometry(summaryTrack) {
       updatedAt: full.updatedAt,
     };
     storageSet(GEO_KEY(full.geometryId), geometry);
+
+    // Fetch and cache the background image as a data-URL for offline use.
+    // Best-effort: failures are silently ignored — server URL still works when online.
+    _cacheBackgroundAsync(full.id).catch(() => {});
+
     return geometry;
   } catch {
     return null;
+  }
+}
+
+async function _cacheBackgroundAsync(trackId) {
+  try {
+    const res = await withTimeout(
+      fetch(`${API_BASE_URL}/api/tracks/${trackId}/background`),
+      FETCH_TIMEOUT_MS
+    );
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    cacheBackground(trackId, dataUrl);
+  } catch {
+    // Background cache failure is non-critical — online URL still works
   }
 }
 
@@ -110,7 +136,9 @@ export function getInitialTracks() {
 
 /**
  * Returns the background URL for a track.
- * Server tracks → backend endpoint; local tracks → geometry's backgroundImage.
+ * Server tracks: returns cached data-URL if available (works offline),
+ * otherwise the live server endpoint URL.
+ * Local tracks: returns geometry's backgroundImage field as-is.
  * @param {string} trackId
  * @param {string|undefined} geometryBackgroundImage  — from cached geometry
  * @returns {string}
@@ -118,7 +146,7 @@ export function getInitialTracks() {
 export function getTrackBackgroundUrl(trackId, geometryBackgroundImage) {
   const serverIds = new Set(getCachedServerTracks().map((t) => t.id));
   if (serverIds.has(trackId)) {
-    return `${API_BASE_URL}/api/tracks/${trackId}/background`;
+    return getCachedBackground(trackId) ?? `${API_BASE_URL}/api/tracks/${trackId}/background`;
   }
   return geometryBackgroundImage ?? '';
 }
