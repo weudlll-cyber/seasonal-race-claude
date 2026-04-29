@@ -33,9 +33,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
-## Ready — spec existiert oder trivial
+## Ready — spec existiert, Konzept beschlossen
 
-- **D3.5.4** — Trail-Tuning: visuelle Nachzieh-Qualität pro Type verfeinern. Unabhängig von D10.
+- **Visual Racer Effects** — Surface-Class-driven trail system. Konzept-Doku in dieser PR festgehalten. Vier Sub-PRs:
+  - **VRE-1** — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` Backend-API, Storage. Kein UI, keine Race-Integration.
+  - **VRE-2** — Surface-Class Editor im Dev-Screen mit animierter Live-Preview im Modal.
+  - **VRE-3** — Racer/Track-Verknüpfung (je ein Klassen-Selector) + Setup-Filter (nur Racer mit ≥1 Klassen-Überlappung zum gewählten Track sichtbar).
+  - **VRE-4** — Race-Integration: Trail-Rendering in RaceScreen umgestellt. Heimat-Trail-Fallback (aktuelles `trailFactory`-Verhalten wenn kein Surface-Class-Match). Browser-Test.
 
 ---
 
@@ -79,9 +83,12 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 - **D3.6** — File-Reorganisation: `racer-types/` → `racer-configs/` (39 Files).
   Trennt Konfiguration von Engine-Code. Eigene kleine PR.
-- **D6** — Racer-Track-Effects (RTE): `rteDefinitions` auf SpriteRacerType ist reserviert.
-  Braucht `RteManager` in RaceScreen und Schema-Spec. Per-Racer Partikel-Effekte
-  durch Track-Zustand (Schlamm-Spray, Wasser-Splash etc.).
+- **Surface Zones** (Folge-Phase nach Visual Racer Effects) — lokale Surface-Class-Überschreibungen
+  innerhalb eines Tracks (z.B. Pfütze auf Asphalt, Schlammloch auf Erde). Track-Editor bekommt
+  Zonen-Zeichenwerkzeug; `EditorShape` bekommt `getZonesAtPosition(t, offset) → Zone[]`. Geplant
+  sobald Visual Racer Effects abgeschlossen.
+  *(Früher als D6 / RTE-Reservierung geführt — `rteDefinitions`-Platz auf SpriteRacerType wird
+  durch Surface Classes ersetzt; alter Platzhalter wird in VRE-1 aufgeräumt.)*
 - ✅ **D7a** — Proportional Sprite Scaling + Min-Size-Floor + Zoom-Ratios + Label-Skalierung (PR #33, master `a49baa0`)
 - ✅ **D7a-Plus** — Per-Type minTargetScreenPx mit Live-Vorschau (PR #35, master `27cba65`)
 - ✅ **D7b** — Lane-frei: physicalY ersetzt Lane-System (PR #37)
@@ -219,9 +226,9 @@ aus D3.5.5.
 7. ✅ **D7b** Lane-frei + physicalY-Avoidance — PR #37
 8. ✅ **D7c** Reihen-Start + Speed-Bonus + Track-Capacity — PR #39
 9. 🔜 **D7d** — 100-Racer-Performance
-10. **D3.5.4** Trail-Tuning
+10. **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4)
 11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-12. **D6**, **D8**
+12. **Surface Zones**, **D8**
 13. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
 14. **Phase V** (Verification-Sprint)
 15. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
