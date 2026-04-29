@@ -517,3 +517,23 @@ Menge definieren und lokale Kopien beim Merge herausfiltern (`serverIds`-Dedupli
 immer explizit prüfen welche Quelle Vorrang hat und Duplikate by-ID herausfiltern.
 Merge-Logik die stillschweigend die erste Kopie bevorzugt, ohne explizite Quelle-Priorisierung,
 führt zu schwer debuggbaren UI-Zuständen.
+
+---
+
+## Lesson 24 — Atomic Write: temp + rename schützt vor korrupten Dateien (L.5)
+
+**Kontext:** Die L.5-Write-Endpoints mussten Track-JSON-Dateien updaten ohne das Risiko einer halbfertigen Datei (z.B. bei Absturz während des Schreibens oder volllaufender Disk). Standard `writeFileSync` direkt auf die Zieldatei ist nicht atomar — ein Leser zwischen Write-Start und Write-Ende sieht inkonsistenten Inhalt.
+
+**Erkenntnis:** Das OS garantiert dass `rename()` auf demselben Filesystem atomar ist: Leser sehen entweder die alte oder die neue Datei, nie eine unvollständige. Temporäre Datei auf demselben Volume schreiben (`.tmp`-Suffix auf selber Partition), dann `renameSync` zur finalen Adresse.
+
+**Konsequenz:** Für alle Datei-Writes die konsistenten Zustand erfordern: `writeFileSync(tmpPath, content)` dann `renameSync(tmpPath, finalPath)`. Node-built-ins — kein Extra-Package nötig. Test-Absicherung: prüfe dass `.tmp`-Datei nach erfolgreichem Save nicht existiert.
+
+---
+
+## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
+
+**Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.
+
+**Erkenntnis:** Der Marker muss exakt dann gesetzt werden wenn alle Tracks erfolgreich übertragen wurden. Einzelne Track-Fehler loggen und Migration fortsetzen (kein Early-Exit), am Ende Marker setzen wenn `allSucceeded === true`. Versionierter Key-Name (`...-v1`) erlaubt Folge-Migrationen durch neuen Key.
+
+**Konsequenz:** One-shot Migrations-Pattern: (1) Marker prüfen → abbrechen wenn gesetzt. (2) Jeden Eintrag individuell verarbeiten, Fehler loggen, kein Early-Exit. (3) Marker nur setzen wenn `allSucceeded`. (4) Marker-Key versionieren: `racearena:migration:tracks-to-server-v1`.

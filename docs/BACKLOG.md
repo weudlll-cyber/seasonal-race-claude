@@ -13,7 +13,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 | ✅ **L.2** | PR #44 | Track-API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Weltall migriert aus Snapshot. 12 Backend-Tests. |
 | ✅ **L.3** | PR #44 | Frontend-Integration: `trackLoader.js`, `useServerTracks` Hook. SetupScreen + TrackManager + RaceHistory nutzen combined list. Geometry-Caching in localStorage. 14 Tests. |
 | ✅ **L.4** | PR #44 | Offline-Cache: `trackCache.js` — Background-Bilder als data-URLs, 3 MB-Limit mit LRU-Eviction, Quota-Guard. `getTrackBackgroundUrl` offline-aware. 6 Tests. |
-| ⏳ **L.5+** | future | Write-Path: TrackEditor → Server. Multi-Admin, Auth (Phase 5). |
+| ✅ **L.5** | PR #44 | Write-Path: POST/PUT/DELETE + Background-Upload Endpunkte (Server). TrackEditor async-Save zum Server, Retry-UI bei Server-not-reachable. Migration beim ersten Connect (localStorage Custom-Tracks → Server, Marker). Cache-Cleanup: gelöschte Server-Tracks werden aus localStorage+Background-Cache entfernt. TrackManager Edit öffnet TrackEditor (/track-editor?load=), Delete ruft API. Server-Badge entfernt. 10 MB Bild-Limit. +23 Frontend-Tests, +16 Backend-Tests. |
+
+> ⚠️ **Vor VPS-Deployment Auth nachrüsten!** Aktuell hat jeder Browser-Besucher volle Schreib-Rechte auf alle Tracks (kein Auth auf Write-Endpunkten). Phase 5 muss JWT/Auth vor Go-Live implementieren. |
 
 ---
 

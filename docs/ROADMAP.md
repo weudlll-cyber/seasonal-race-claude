@@ -46,6 +46,18 @@
 
 See `docs/TRACK_EDITOR.md` for the full specification, architectural decisions, and future extensions.
 
+## Phase L — Local Backend for Track Storage ✅ Complete (PR #43, #44)
+
+A local Docker-based backend that persists custom tracks and background images server-side, allowing the Track Editor to save to a real server instead of only localStorage.
+
+- [x] L.1 — Express + Docker skeleton with `/api/health` (PR #43)
+- [x] L.2 — Track read API: `GET /api/tracks`, `/:id`, `/:id/background` with seed data
+- [x] L.3 — Frontend loads server tracks; geometry cached so offline races work unchanged
+- [x] L.4 — Background images cached as data-URLs (3 MB LRU); offline fallback
+- [x] L.5 — Write-path: TrackEditor saves to server (POST/PUT + background upload); TrackManager Delete via API; one-time localStorage→server migration on first connect; stale-cache cleanup on fetch
+
+⚠️ **Auth required before VPS deployment** — currently any browser visitor has full write access to all tracks. See Phase 5 / BACKLOG.md.
+
 ## Issue D — Racer Redesign ✅ Parts 1–3 merged, Parts 4–5 pending
 
 Replaces emoji racers with sprite-based renderable types.
@@ -190,6 +202,8 @@ See BACKLOG.md T-1 through T-4.
 
 ## Phase 5 — Race-Integrity Server & Leaderboard (planned)
 
+⚠️ **Auth prerequisite:** Phase L (PR #44) added track write endpoints with no authentication. Before any VPS deployment, auth must be added to the Phase L backend. Phase 5 "Basic admin auth" covers this requirement.
+
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
 - [ ] Server-authoritative race finale: server signs and persists race outcomes
@@ -266,3 +280,5 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 | 2026-04-27 | fix/camera-polish + Q-14 complete (PR #28, master `750d826`): CameraDirector adaptive zoom + clampOffset 2-anchor + top-3 focus; cameraZoomFactor invariant (closed tracks). BaseSpeedSection in Dev-Screen (tunable min/max, spread preview, 2-lap gap). Q-14 lapUtils SoT (DEFAULT_BASE_SPEED_CONFIG from defaults.js, private consts, optional params). camera-polish-ux-verification.spec.js (31 tests, V1-V12, permanent). d10-ux-verification V8 stale assertion fixed. 759 unit + 157 e2e tests. |
 | 2026-04-27 | D11 Racer Behavior + Visual-Fixes complete (PR #30, master `d46cab2`): asymmetric avoidance (trailer yields/leader holds), proximity-scaled force, speed brake, drafting boost, RaceBehaviorSection in Dev-Screen. Camera world-edge clamp (Befund 2). Open-track camera-zoom-aware sprite scaling: `computeOpenTrackCameraZoomFactor()` + pixel-floor `minVisiblePixels`. 4 browser bugs found during review and fixed before merge. 809 unit + 183 e2e tests. Decision: accumulated complexity in 4-factor scaling pipeline → D7 (Visual Experience Architecture) as next phase with Vision-Diskussion zuerst; Q-15 tracks the architectural debt. |
 | 2026-04-28 | D7-Vision-Phase: 6 D11-Browser-Test-Befunde → Vision-Diskussion mit drei Sparring-Partnern (User + strat. Claude + Claude Code). 5 Architektur-Konzepte beschlossen: proportional+Floor-Sprites, relative Zoom-Ratios, Label-Skalierung, Lane-frei (D7b), Reihen-Start+Speed-Bonus (D7c), 100-Racer-Performance (D7d). D7a complete (PR #33, master `a49baa0`): computeRenderDisplayScale Single-Source, cameraZoomFactor entfernt, CameraDirector overviewZoom×ratio, Label-Skalierung mit effZoom. Browser-test-driven Korrektur in selber PR: konstante Sprites → proportional+Floor → sauberere Architektur. Q-15 strukturell adressiert. 808 unit + 183 e2e tests. |
+| 2026-04-29 | D7a-Plus (PR #35), D7b (PR #37), D7c (PR #39): Per-type minTargetScreenPx override; lane-free physicalY + home force + anisotropic avoidance + cone drafting (13 tunable params); multi-row start + speed-bonus + track-capacity. Q-Cleanup PRs #40–#42: security (SEC-1..5), data hygiene, source & test hygiene. |
+| 2026-04-29 | Phase L complete (PR #43 + #44): L.1 Docker/Express skeleton; L.2 track read API + seed data; L.3 frontend loads from backend with geometry caching; L.4 offline background cache (3 MB LRU); L.5 write-path — TrackEditor saves to server (POST/PUT + background upload), TrackManager Delete via API, one-time localStorage→server migration, stale-cache cleanup. 945 unit + 183 e2e tests. ⚠️ Auth required before VPS deployment. |
