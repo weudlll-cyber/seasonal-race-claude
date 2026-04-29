@@ -140,8 +140,15 @@ function TrackManager() {
     }
   }
 
-  function handleEditServer(track) {
-    navigate(`/track-editor?load=${track.id}`);
+  function handleOpenTrackEditor() {
+    const isServer = serverTrackIds.has(editId);
+    if (isServer) {
+      navigate(`/track-editor?load=${editId}`);
+    } else if (form.geometryId) {
+      navigate(`/track-editor?load=${form.geometryId}`);
+    } else {
+      navigate('/track-editor');
+    }
   }
 
   // Only one track can be the default; toggling clears all others
@@ -232,8 +239,8 @@ function TrackManager() {
                     <>
                       <button
                         className={s.btnIconOnly}
-                        onClick={() => handleEditServer(track)}
-                        title="Edit in Track Editor"
+                        onClick={() => handleEdit(track)}
+                        title="Edit"
                       >
                         ✏️
                       </button>
@@ -518,6 +525,16 @@ function TrackManager() {
             <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
               Cancel
             </button>
+            {editId && (
+              <button
+                className={`${s.btn} ${s.btnGhost}`}
+                onClick={handleOpenTrackEditor}
+                style={{ marginLeft: 'auto' }}
+                title="Open this track in the Track Geometry Editor"
+              >
+                {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
+              </button>
+            )}
           </div>
         </div>
       )}
