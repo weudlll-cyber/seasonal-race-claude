@@ -35,8 +35,8 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Ready — spec existiert, Konzept beschlossen
 
-- **Visual Racer Effects** — Surface-Class-driven trail system. Konzept-Doku in dieser PR festgehalten. Vier Sub-PRs:
-  - **VRE-1** — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` Backend-API, Storage. Kein UI, keine Race-Integration.
+- **Visual Racer Effects** — Surface-Class-driven trail system. Vier Sub-PRs:
+  - ✅ **VRE-1** — Foundation: 4 generator modules (`particle`, `cloud`, `splash`, `line`), 9 default Surface Classes, registry with override-resolution, `/api/surface-classes` Backend-API (CRUD, atomic writes), `surfaceClassLoader.js` cache, `surfaceClassApi.js` service layer. 64 Frontend + 24 Backend Tests. Kein UI, keine Race-Integration.
   - **VRE-2** — Surface-Class Editor im Dev-Screen mit animierter Live-Preview im Modal.
   - **VRE-3** — Racer/Track-Verknüpfung (je ein Klassen-Selector) + Setup-Filter (nur Racer mit ≥1 Klassen-Überlappung zum gewählten Track sichtbar).
   - **VRE-4** — Race-Integration: Trail-Rendering in RaceScreen umgestellt. Heimat-Trail-Fallback (aktuelles `trailFactory`-Verhalten wenn kein Surface-Class-Match). Browser-Test.
