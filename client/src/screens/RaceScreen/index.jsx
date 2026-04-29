@@ -122,7 +122,6 @@ export default function RaceScreen() {
     const nRacers = raceData.racers.length;
 
     const typeId = raceData.racerTypeId || 'horse';
-    const trackWidth = raceData.trackWidth ?? 140;
     const worldHeight = raceData.worldHeight ?? 720;
 
     if (!raceData.geometryId) {
@@ -140,6 +139,7 @@ export default function RaceScreen() {
     }
 
     shapeRef.current = new EditorShape(geometry);
+    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
     // TODO(Phase Q): add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
@@ -181,7 +181,7 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(trackWidth, nRacers, autoScaleConfig);
+        displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
       }
     }
 
@@ -213,15 +213,9 @@ export default function RaceScreen() {
     const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
-    // Use the actual geometric track width (world px) so racersPerRow scales correctly
-    // for any world size — metadata trackWidth is not a measurement and breaks on large worlds.
-    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
-    const minTargetPx = getEffectiveMinTargetScreenPx(
-      racerType.config?.minTargetScreenPx,
-      autoScaleConfig.minTargetScreenPx ?? 32
-    );
-    const racersPerRowValue = computeRacersPerRow(geometricTrackWidthPx, bsX, minTargetPx);
+    const racersPerRowValue = computeRacersPerRow(geometricTrackWidthPx, spriteSize);
     const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
+
     // Index assignments by racerIndex for O(1) lookup in the map below
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -237,7 +231,6 @@ export default function RaceScreen() {
       finishedCount: 0,
       dustParticles: [],
       burstParticles: [],
-      trackWidth,
       maxLaps,
       finishT,
       camX: 0,

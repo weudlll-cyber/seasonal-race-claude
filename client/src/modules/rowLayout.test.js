@@ -18,33 +18,41 @@ import {
 // ── computeRacersPerRow ────────────────────────────────────────────────────
 
 describe('computeRacersPerRow', () => {
-  it('standard 1280px world, 140 world-px track → 8 per row', () => {
-    // bsX = 1280/1280 = 1.0; 2*140*1.0/32 = 8.75 → 8
-    expect(computeRacersPerRow(140, 1.0, 32)).toBe(8);
+  it('Weltall regression: geometricWidth=300 world-px, spriteSize=26 → 23 per row', () => {
+    // D7c-fix-v2: world-space formula floor(2×300/26)=23 — old screen-space formula gave 3
+    expect(computeRacersPerRow(300, 26)).toBe(23);
   });
 
-  it('large 6000px world, ~1500 world-px track → 20 per row', () => {
-    // bsX = 1280/6000; 2*1500*(1280/6000)/32 = 2*1500*0.21333/32 = 640/32 = 20
-    const bsX = 1280 / 6000;
-    expect(computeRacersPerRow(1500, bsX, 32)).toBe(20);
+  it('Weltall regression: 20 racers fit in 1 row (≥ 20)', () => {
+    expect(computeRacersPerRow(300, 26)).toBeGreaterThanOrEqual(20);
   });
 
-  it('very narrow track width → at least 1', () => {
-    expect(computeRacersPerRow(10, 1.0, 32)).toBe(1);
+  it('reference 1280 world: geometricWidth=140, spriteSize=26 → 10 per row (8-12 range)', () => {
+    // floor(2*140/26) = floor(10.77) = 10 → multiple rows for 20 racers
+    const perRow = computeRacersPerRow(140, 26);
+    expect(perRow).toBe(10);
+    expect(perRow).toBeGreaterThanOrEqual(8);
+    expect(perRow).toBeLessThanOrEqual(12);
   });
 
-  it('large world with wide track fits all 20 racers in 1 row', () => {
-    // Regression for D7c bug: Weltall-Strecke with 6000px world and wide track
-    // should not collapse all racers into 1-per-row
-    const bsX = 1280 / 6000;
-    const racersPerRow = computeRacersPerRow(1500, bsX, 32);
-    expect(racersPerRow).toBeGreaterThan(10);
+  it('very narrow track → at least 1', () => {
+    expect(computeRacersPerRow(10, 40)).toBe(1);
   });
 
-  it('larger minTargetScreenPx → fewer per row', () => {
-    const narrow = computeRacersPerRow(1000, 1.0, 64);
-    const wide = computeRacersPerRow(1000, 1.0, 32);
+  it('wider track → more per row', () => {
+    const narrow = computeRacersPerRow(100, 26);
+    const wide = computeRacersPerRow(300, 26);
     expect(wide).toBeGreaterThan(narrow);
+  });
+
+  it('larger sprite size → fewer per row', () => {
+    const small = computeRacersPerRow(200, 20);
+    const large = computeRacersPerRow(200, 40);
+    expect(small).toBeGreaterThan(large);
+  });
+
+  it('spriteWorldSizePx = 0 → clamped to 1, returns sensible value', () => {
+    expect(computeRacersPerRow(100, 0)).toBeGreaterThan(0);
   });
 });
 
@@ -94,12 +102,10 @@ describe('computeRowLayout', () => {
     expect(totalRows).toBe(5);
   });
 
-  it('large geometric width → all 20 fit in 1 row (D7c regression)', () => {
-    // Simulate Weltall-Strecke: geometric width gives racersPerRow=20
-    const bsX = 1280 / 6000;
-    const perRow = computeRacersPerRow(1500, bsX, 32); // 20
+  it('Weltall-Strecke: geometric width 300 world-px, spriteSize 26 → all 20 fit in 1 row', () => {
+    // D7c-fix-v2: world-space formula gives perRow=23, so 20 racers → 1 row
+    const perRow = computeRacersPerRow(300, 26); // 23
     const { totalRows } = computeRowLayout(20, perRow);
-    // All 20 fit in 1 row — NOT 20 rows as with the old metadata bug
     expect(totalRows).toBe(1);
   });
 

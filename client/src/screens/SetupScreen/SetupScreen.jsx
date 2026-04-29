@@ -85,7 +85,6 @@ function SetupScreen() {
             d.defaultRacerTypeId,
           worldWidth: existing.worldWidth ?? d.worldWidth,
           worldHeight: existing.worldHeight ?? d.worldHeight,
-          trackWidth: existing.trackWidth ?? d.trackWidth,
         });
       }
     }
@@ -137,9 +136,9 @@ function SetupScreen() {
     const geom = getTrack(selectedTrack.geometryId);
     if (!geom) return 8;
     const shape = new EditorShape(geom);
-    const worldWidth = selectedTrack.worldWidth ?? geom.worldWidth ?? 1280;
-    const bsX = 1280 / worldWidth;
-    return computeRacersPerRow(shape.getActualTrackWidth(), bsX, 32);
+    const racerType = getRacerType(selectedTrack.defaultRacerTypeId ?? 'horse');
+    const displaySize = racerType?.config?.displaySize ?? 40;
+    return computeRacersPerRow(shape.getActualTrackWidth(), displaySize);
   }, [selectedTrack]);
 
   const rowLayoutHints = useMemo(() => {
@@ -173,7 +172,6 @@ function SetupScreen() {
       racerTypeId: effectiveTypeId,
       worldWidth: selectedTrack?.worldWidth ?? 1280,
       worldHeight: selectedTrack?.worldHeight ?? 720,
-      trackWidth: selectedTrack?.trackWidth ?? 140,
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
@@ -211,7 +209,6 @@ function SetupScreen() {
       racerTypeId: effectiveTypeId,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
-      trackWidth: track.trackWidth ?? 140,
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,

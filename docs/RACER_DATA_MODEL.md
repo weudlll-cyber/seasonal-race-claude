@@ -95,7 +95,7 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 
 | Storage Key | Inhalt | Status |
 |---|---|---|
-| `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, trackWidth, worldWidth, maxRacers (null=no limit), ...` | Aktiv |
+| `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, worldWidth, worldHeight, maxRacers (null=no limit), ...` — `trackWidth` entfernt in D7c-fix-v2; alte Einträge dürfen das Feld noch enthalten, wird ignoriert. | Aktiv |
 | `racearena:rowLayoutConfig` | Row-Start-Tuning-Config. Felder: `rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. (`pixelsPerRacer` war in D7c vorhanden, seit D7c-fix entfernt — racersPerRow wird jetzt auto-computed aus Geometrie.) | Aktiv (post D7c) |
 | `racearena:racerTypeOverrides` | Override-Map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` für deaktivierte Types und Tuning-Overrides (post D3.5.5). Legacy-Format `{[typeId]: false}` wird on-read via `normalizeOverrideMap()` migriert. | Aktiv (post D3.5.5) |
 | `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |

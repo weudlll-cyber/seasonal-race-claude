@@ -26,7 +26,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'medium',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: true,
@@ -42,7 +42,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'easy',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -58,7 +58,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 90,
     defaultWinners: 3,
     difficulty: 'hard',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -74,7 +74,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 120,
     defaultWinners: 3,
     difficulty: 'easy',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -90,7 +90,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'hard',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,

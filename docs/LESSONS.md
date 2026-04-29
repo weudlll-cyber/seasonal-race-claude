@@ -420,6 +420,8 @@ inner/outer Kurve in World-Koordinaten).
 immer `EditorShape.getActualTrackWidth()` (oder Äquivalent) statt Metadata verwenden.
 Metadata-Felder sind für UI-Anzeige und User-Kommunikation — nicht als Messgröße in Berechnungen.
 
+**Eskalation (D7c-fix-v2):** Das `trackWidth`-Feld wurde komplett aus dem Track-Datenmodell entfernt, nachdem sich auch nach der ersten Fix-Iteration herausstellte, dass die Formel noch auf einem falschen Einheitenkonzept basierte (Screen-Pixel statt World-Pixel). Wenn ein Metadata-Feld in Berechnungen nicht sinnvoll einsetzbar ist, ist das richtige Vorgehen seine vollständige Entfernung — nicht Umwege über Korrekturfaktoren.
+
 ---
 
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)

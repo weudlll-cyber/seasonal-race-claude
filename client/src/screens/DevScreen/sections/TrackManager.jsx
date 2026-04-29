@@ -26,8 +26,6 @@ const EFFECT_LABELS = Object.fromEntries(listEffects().map((e) => [e.id, e.label
 
 const DURATIONS = [30, 60, 90, 120];
 
-const TRACK_WIDTHS = [100, 140, 200, 280, 360];
-
 const BLANK = {
   name: '',
   icon: '🏁',
@@ -37,7 +35,6 @@ const BLANK = {
   color: '#e63946',
   defaultDuration: 60,
   defaultWinners: 3,
-  trackWidth: 140,
   worldWidth: 1280,
   worldHeight: 720,
   maxRacers: null,
@@ -51,10 +48,8 @@ function autoMaxRacers(geom, track, rowCfg) {
   const racerType = getRacerType(track.defaultRacerTypeId ?? 'horse');
   const displaySize = racerType?.config?.displaySize ?? 40;
   const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
-  const worldWidth = geom.worldWidth ?? track.worldWidth ?? 1280;
-  const bsX = 1280 / worldWidth;
   const shape = new EditorShape(geom);
-  const racersPerRow = computeRacersPerRow(shape.getActualTrackWidth(), bsX, 32);
+  const racersPerRow = computeRacersPerRow(shape.getActualTrackWidth(), displaySize);
   return computeMaxRacersDefault(
     geom.pathLengthPx,
     racersPerRow,
@@ -107,7 +102,6 @@ function TrackManager() {
       color: track.color,
       defaultDuration: track.defaultDuration,
       defaultWinners: track.defaultWinners,
-      trackWidth: track.trackWidth ?? 140,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
       maxRacers: storedMax ?? autoMax,
@@ -380,20 +374,6 @@ function TrackManager() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Track Width (px)</label>
-              <div className={s.optionPills}>
-                {TRACK_WIDTHS.map((w) => (
-                  <button
-                    key={w}
-                    className={`${s.optionPill} ${form.trackWidth === w ? s.optionPillActive : ''}`}
-                    onClick={() => f('trackWidth', w)}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>World Dimensions</label>

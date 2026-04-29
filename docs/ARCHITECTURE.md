@@ -118,12 +118,13 @@ racer init map.
 
 **Algorithm:**
 1. `EditorShape.getActualTrackWidth()` — samples 20 evenly-spaced positions and returns the
-   median inner-to-outer distance in world pixels. This is the ground-truth track width —
-   it scales correctly with any world size. The operator-declared `trackWidth` metadata is
-   NOT used for row layout (it was calibrated for 1280px worlds and gave perRow=1 on large worlds).
-2. `computeRacersPerRow(geometricTrackWidthPx, bsX, minTargetScreenPx)` — computes how many
-   sprites fit shoulder-to-shoulder: `floor(2 × geometricTrackWidthPx × bsX / minTargetScreenPx)`.
-   The "2×" allows half-sprite-width slot per racer, matching real grid-start density.
+   median inner-to-outer distance in world pixels. This is the ground-truth geometric width —
+   it scales correctly with any world size. The `trackWidth` metadata field has been removed
+   from the track data model (D7c-fix-v2); all width-dependent calculations use this method.
+2. `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` — computes how many
+   sprites fit shoulder-to-shoulder: `floor(2 × geometricTrackWidthPx / spriteWorldSizePx)`.
+   Stays in world-pixel space — correct at any world size.
+   `spriteWorldSizePx = displaySize × displaySizeScale` (same values as the render pipeline).
 3. `computeRowLayout(racerCount, racersPerRow)` — shuffles racer indices (Fisher-Yates) and
    assigns them to rows based on the pre-computed `racersPerRow`.
 4. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across

@@ -25,19 +25,17 @@ function shuffleInPlace(arr) {
 
 /**
  * Compute how many racers fit side-by-side in one row.
- * Uses the actual geometric track width (world px) and the screen-space scale
- * factor so the result adapts correctly to any world size.
+ * Uses world-pixel coordinates throughout so the result is correct at any world size.
  *
- * Each racer slot is minTargetScreenPx/2 screen-px wide — half the minimum
- * sprite size, matching the shoulder-to-shoulder density seen in real grid starts.
+ * Each slot is half a sprite wide (shoulder-to-shoulder packing).
+ * Formula: floor(2 × geometricTrackWidthPx / spriteWorldSizePx)
  *
  * @param {number} geometricTrackWidthPx  World-pixel inner-to-outer track width
- * @param {number} bsX                    Canvas px per world px (CANVAS_W / worldWidth)
- * @param {number} minTargetScreenPx      Minimum rendered sprite size in screen px
+ * @param {number} spriteWorldSizePx      Sprite display size in world pixels (displaySize × displaySizeScale)
  * @returns {number} at least 1
  */
-export function computeRacersPerRow(geometricTrackWidthPx, bsX, minTargetScreenPx) {
-  return Math.max(1, Math.floor((2 * geometricTrackWidthPx * bsX) / minTargetScreenPx));
+export function computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx) {
+  return Math.max(1, Math.floor((2 * geometricTrackWidthPx) / Math.max(1, spriteWorldSizePx)));
 }
 
 /**
