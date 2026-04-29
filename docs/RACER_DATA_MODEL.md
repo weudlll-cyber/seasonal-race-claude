@@ -237,6 +237,8 @@ Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
 
 ## Visual Racer Effects — Surface Classes (Phase VRE)
 
+> **UI:** Surface classes are created and edited in the Dev Screen → **Surface Classes** section (VRE-2). The master-detail editor provides a class list with Default / Modified / Custom badges, a live animated canvas preview, and full generator config controls. No code changes needed to add or tune a surface class.
+
 Surface Classes ersetzen das statische Trail-System. Statt einer festen `trailFactory` pro Type ergibt sich der aktive Trail aus der Schnittmenge von Racer-Type-Klassen und Track-Klassen.
 
 ### surfaceClasses-Feld auf SpriteRacerType

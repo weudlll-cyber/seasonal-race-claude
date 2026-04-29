@@ -20,6 +20,7 @@ import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import SpeedScaleSection from './sections/SpeedScaleSection.jsx';
 import BaseSpeedSection from './sections/BaseSpeedSection.jsx';
 import RaceBehaviorSection from './sections/RaceBehaviorSection.jsx';
+import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
 
 const SECTIONS = [
@@ -43,6 +44,13 @@ const SECTIONS = [
     label: 'Tracks',
     desc: 'Configure all track types and properties',
     component: TrackManager,
+  },
+  {
+    id: 'surfaces',
+    icon: '🌿',
+    label: 'Surface Classes',
+    desc: 'Define surface-effect classes — type, generator, and visual config',
+    component: SurfaceClassManager,
   },
   {
     id: 'branding',

@@ -274,6 +274,19 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 Keine neuen systemweiten Drift-Probleme in dieser Session entdeckt.
 Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-Items aus ROADMAP.md.
 
+**Quality-Gate auf PR #46 (VRE-1 — Foundation):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1100 Unit-Tests grün (+88 neue: 64 Frontend + 24 Backend)
+- ✅ 183 e2e-Tests grün (unverändert — kein UI in VRE-1)
+- ✅ CI green (PR #46, squash-merged `e4fd947`)
+
+**Quality-Gate auf PR #47 (VRE-2 — Surface-Class Editor):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1084 Unit-Tests grün (+84 neue: SurfaceClassManager 36 + SurfaceClassPreview 4 + useSurfaceClasses 1 + hook shape 1 + Default-Override lifecycle 4... net after VRE-1 base)
+- ✅ 183 e2e-Tests grün (Playwright smoke + UX-Verifikation in vre-2-smoke.spec.js + vre-2-ux-verification.spec.js — run on full server)
+- ✅ Memory-Leak-Check: rAF loop in SurfaceClassPreview.jsx is cancelled on unmount (SurfaceClassPreview.test.jsx verifies cancelAnimationFrame called)
+- ✅ Inline-Doc-Updates: ARCHITECTURE.md (VRE-2 ✅ in Sub-PR table), RACER_DATA_MODEL.md (UI location note), BACKLOG.md (VRE-2 ✅)
+
 ---
 
 ## OWASP Top 10 — Relevance Checklist for RaceArena
