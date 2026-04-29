@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
+import { useServerTracks } from '../../../modules/storage/useServerTracks.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
 import {
@@ -62,7 +63,11 @@ function autoMaxRacers(geom, track, rowCfg) {
 }
 
 function TrackManager() {
-  const [tracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const [localTracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
+  const serverTracks = useServerTracks();
+  const serverTrackIds = new Set(serverTracks.map((t) => t.id));
+  // Combined list for display: local tracks + server tracks (server deduplicates local copies)
+  const tracks = [...localTracks.filter((t) => !serverTrackIds.has(t.id)), ...serverTracks];
   const [geometries] = useState(() =>
     listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
   );
@@ -169,6 +174,7 @@ function TrackManager() {
         ) : (
           <div className={s.rowList}>
             {tracks.map((track) => {
+              const isServerTrack = serverTrackIds.has(track.id);
               return (
                 <div
                   key={track.id}
@@ -179,7 +185,20 @@ function TrackManager() {
                   <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
                   <span className={s.badge}>{track.defaultDuration}s</span>
                   <span className={s.spacer} />
-                  {track.isDefault ? (
+                  {isServerTrack ? (
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        color: '#60a5fa',
+                        fontWeight: 600,
+                        padding: '0.2rem 0.5rem',
+                        border: '1px solid #60a5fa',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      Server
+                    </span>
+                  ) : track.isDefault ? (
                     <span
                       style={{
                         fontSize: '0.7rem',
@@ -201,16 +220,24 @@ function TrackManager() {
                       Set Default
                     </button>
                   )}
-                  <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
-                    ✏️
-                  </button>
-                  <button
-                    className={`${s.btnIconOnly} ${s.danger}`}
-                    onClick={() => handleDelete(track.id)}
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
+                  {!isServerTrack && (
+                    <>
+                      <button
+                        className={s.btnIconOnly}
+                        onClick={() => handleEdit(track)}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className={`${s.btnIconOnly} ${s.danger}`}
+                        onClick={() => handleDelete(track.id)}
+                        title="Delete"
+                      >
+                        🗑
+                      </button>
+                    </>
+                  )}
                 </div>
               );
             })}
