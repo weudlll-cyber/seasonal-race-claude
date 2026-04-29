@@ -136,7 +136,6 @@ export default function RaceScreen() {
 
     shapeRef.current = new EditorShape(geometry);
     const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
-    // TODO(Phase Q): add RaceScreen integration test for isOpenTrack propagation (requires canvas + rAF mocking)
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
     const bsX = CANVAS_W / worldWidth;
