@@ -15,22 +15,37 @@ import {
   saveRaceBehaviorConfig,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
 } from '../../../modules/raceBehaviorConfig.js';
+import {
+  loadRowLayoutConfig,
+  saveRowLayoutConfig,
+  DEFAULT_ROW_LAYOUT_CONFIG,
+} from '../../../modules/rowLayoutConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function RaceBehaviorSection() {
   const [config, setConfig] = useState(() => loadRaceBehaviorConfig());
+  const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
 
   useEffect(() => {
     saveRaceBehaviorConfig(config);
   }, [config]);
 
+  useEffect(() => {
+    saveRowLayoutConfig(rowConfig);
+  }, [rowConfig]);
+
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));
   }
 
+  function setRow(key, val) {
+    setRowConfig((prev) => ({ ...prev, [key]: val }));
+  }
+
   function handleReset() {
     setConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
+    setRowConfig({ ...DEFAULT_ROW_LAYOUT_CONFIG });
   }
 
   const off = !config.enabled;
@@ -84,7 +99,7 @@ function RaceBehaviorSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Start Spread Range
-              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.7 uses 70% of each half-width, leaving a small gap to the boundary. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
+              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.95 uses 95% of each half-width — the formula uses this as effectiveWidth so the packing calculation matches actual placement. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
             </label>
             <input
               type="number"
@@ -100,7 +115,120 @@ function RaceBehaviorSection() {
               }}
             />
           </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Runout Zone
+              <InfoTooltip text="Fraction of the track path reserved for run-out after the finish line, on open tracks only. At 0.05 (5%) the finish line sits at 95% of the track — racers cross it then coast to the end. Closed tracks are unaffected (they use the runoutDecay system). Range 0.0–0.20." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Runout Zone"
+              min={0.0}
+              max={0.2}
+              step={0.01}
+              value={config.runoutZone}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.2) set('runoutZone', v);
+              }}
+            />
+          </div>
         </div>
+      </div>
+
+      {/* ── Row Start ── */}
+      <div className={s.card}>
+        <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Row Start</p>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Row Gap Multiplier
+              <InfoTooltip text="Distance between rows expressed as a multiple of the rendered sprite size. At 1.5× the rows are 1.5 sprite-heights apart at race start. Lower values compress rows closer together (can look crowded); higher values spread them further back (longer stagger). Range 0.5–4.0." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Row Gap Multiplier"
+              min={0.5}
+              max={4.0}
+              step={0.1}
+              value={rowConfig.rowGapMultiplier}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.5 && v <= 4.0) setRow('rowGapMultiplier', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Speed Bonus Factor
+              <InfoTooltip text="Controls how much of the physical start-distance disadvantage rear rows get back as a permanent speed bonus. 1.0 = full compensation (pole position has zero mathematical advantage). 0.0 = no compensation (front row always wins on average). Values above 1.0 over-compensate, giving rear rows a net advantage. Range 0.0–2.0." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Speed Bonus Factor"
+              min={0.0}
+              max={2.0}
+              step={0.1}
+              value={rowConfig.speedBonusFactor}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 2.0) setRow('speedBonusFactor', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Capacity Factor
+              <InfoTooltip text="Fraction of the total track path length that the rearmost starting row may occupy. 0.3 means the last row can be at most 30% of the track length behind the start line. Used to auto-calculate the recommended max-racers value on each track. Too high and the last row wraps almost back to the finish line. Range 0.1–0.6." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Max Capacity Factor"
+              min={0.1}
+              max={0.6}
+              step={0.05}
+              value={rowConfig.maxCapacityFactor}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.1 && v <= 0.6) setRow('maxCapacityFactor', v);
+              }}
+            />
+          </div>
+        </div>
+        <p
+          data-testid="row-start-summary"
+          style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
+        >
+          Racers per row auto-computed from track geometry · gap{' '}
+          <strong>{rowConfig.rowGapMultiplier}×</strong> sprite size ·{' '}
+          <strong>
+            {rowConfig.speedBonusFactor === 1.0
+              ? 'full'
+              : rowConfig.speedBonusFactor === 0
+                ? 'no'
+                : `${Math.round(rowConfig.speedBonusFactor * 100)}%`}
+          </strong>{' '}
+          speed compensation.
+        </p>
       </div>
 
       {/* ── Home Force ── */}

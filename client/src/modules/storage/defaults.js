@@ -26,7 +26,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'medium',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: true,
@@ -42,7 +42,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'easy',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -58,7 +58,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 90,
     defaultWinners: 3,
     difficulty: 'hard',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -74,7 +74,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 120,
     defaultWinners: 3,
     difficulty: 'easy',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -90,7 +90,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'hard',
-    trackWidth: 140,
+
     worldWidth: 1280,
     worldHeight: 720,
     isDefault: false,
@@ -126,10 +126,18 @@ export const DEFAULT_BASE_SPEED_CONFIG = {
   max: 0.00118,
 };
 
+export const DEFAULT_ROW_LAYOUT_CONFIG = {
+  rowGapMultiplier: 1.5,
+  speedBonusFactor: 1.0,
+  maxCapacityFactor: 0.3,
+};
+
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
   // Start layout — initial lateral spread at race start
-  startSpreadRange: 0.7,
+  startSpreadRange: 0.95,
+  // Open-track run-out zone: fraction of path after which the finish line sits (0 = no runout)
+  runoutZone: 0.05,
   // Home force — spring toward centerline (physicalY = 0)
   homeForceStrength: 0.04,
   // Comfort zone & soft boundary repulsion

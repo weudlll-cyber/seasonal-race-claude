@@ -21,6 +21,7 @@ export const KEYS = {
   SPEED_SCALE_CONFIG: 'racearena:speedScaleConfig',
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
   RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig',
+  ROW_LAYOUT_CONFIG: 'racearena:rowLayoutConfig',
 };
 
 export function storageGet(key, fallback = null) {
@@ -52,6 +53,33 @@ export function exportAllStorage() {
     if (val !== null) out[key] = val;
   }
   return out;
+}
+
+/**
+ * Export every racearena:* key in localStorage as a diagnostic snapshot.
+ * Unlike exportAllStorage(), this iterates ALL localStorage entries so it
+ * captures dynamic keys such as racearena:trackGeometries:* that are not
+ * listed in the KEYS enum.
+ */
+export function exportDiagnosticSnapshot() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith('racearena:')) continue;
+    try {
+      data[key] = JSON.parse(localStorage.getItem(key));
+    } catch {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  return {
+    _meta: {
+      exportedAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    },
+    data,
+  };
 }
 
 /** Restore a full backup object (from importAllStorage). */

@@ -22,11 +22,10 @@ import {
   RACER_TYPE_LABELS,
 } from '../../modules/racer-types/index.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
-import {
-  estimatedSecondsPerLap,
-  openTrackFinishT,
-  lapsFromDuration,
-} from '../../modules/camera/lapUtils.js';
+import { EditorShape } from '../../modules/track-editor/EditorShape.js';
+import { estimatedSecondsPerLap, lapsFromDuration } from '../../modules/camera/lapUtils.js';
+import { computeRacersPerRow } from '../../modules/rowLayout.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -83,7 +82,6 @@ function SetupScreen() {
             d.defaultRacerTypeId,
           worldWidth: existing.worldWidth ?? d.worldWidth,
           worldHeight: existing.worldHeight ?? d.worldHeight,
-          trackWidth: existing.trackWidth ?? d.trackWidth,
         });
       }
     }
@@ -102,6 +100,8 @@ function SetupScreen() {
       setPlayers(active);
     }
   }, []);
+
+  const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
@@ -129,6 +129,28 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
+  // D7c: row-start hints — racersPerRow from actual geometry so large worlds are correct.
+  // Uses effectiveWidth = geometricWidth × startSpreadRange (matches RaceScreen formula).
+  const geometricRacersPerRow = useMemo(() => {
+    if (!selectedTrack?.geometryId) return 8;
+    const geom = getTrack(selectedTrack.geometryId);
+    if (!geom) return 8;
+    const shape = new EditorShape(geom);
+    const racerType = getRacerType(selectedTrack.defaultRacerTypeId ?? 'horse');
+    const displaySize = racerType?.config?.displaySize ?? 40;
+    const effectiveWidth = shape.getActualTrackWidth() * behaviorConfig.startSpreadRange;
+    return computeRacersPerRow(effectiveWidth, displaySize);
+  }, [selectedTrack, behaviorConfig]);
+
+  const rowLayoutHints = useMemo(() => {
+    const racersPerRow = geometricRacersPerRow;
+    const totalRows = players.length > 0 ? Math.ceil(players.length / racersPerRow) : 1;
+    const showRowHint = players.length > racersPerRow;
+    const maxRacers = selectedTrack?.maxRacers ?? null;
+    const showCapacityWarn = maxRacers !== null && players.length > maxRacers;
+    return { racersPerRow, totalRows, showRowHint, maxRacers, showCapacityWarn };
+  }, [players.length, selectedTrack, geometricRacersPerRow]);
+
   // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
   const trackIsOpen = useMemo(() => {
     if (!selectedTrack?.geometryId) return false;
@@ -151,7 +173,6 @@ function SetupScreen() {
       racerTypeId: effectiveTypeId,
       worldWidth: selectedTrack?.worldWidth ?? 1280,
       worldHeight: selectedTrack?.worldHeight ?? 720,
-      trackWidth: selectedTrack?.trackWidth ?? 140,
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       winners: raceSettings.winners,
@@ -189,7 +210,6 @@ function SetupScreen() {
       racerTypeId: effectiveTypeId,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
-      trackWidth: track.trackWidth ?? 140,
       duration: raceDefaults.duration,
       eventName: 'Quick Test',
       winners: raceDefaults.winners,
@@ -353,16 +373,11 @@ function SetupScreen() {
                         Race duration (set in Settings tab)
                       </label>
                       <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>
-                        {raceSettings.duration}s — open track, finish line placed at{' '}
-                        {Math.round(
-                          openTrackFinishT(
-                            raceSettings.duration,
-                            getRacerType(
-                              racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
-                            ).getSpeedMultiplier()
-                          ) * 100
-                        )}
-                        % of track
+                        {raceSettings.duration}s — open track, finish line at{' '}
+                        {Math.round((1 - behaviorConfig.runoutZone) * 100)}% of track
+                        {behaviorConfig.runoutZone > 0
+                          ? ` (${Math.round(behaviorConfig.runoutZone * 100)}% runout)`
+                          : ''}
                       </span>
                     </div>
                   ) : (
@@ -447,6 +462,31 @@ function SetupScreen() {
 
         {/* Start bar — always visible at the bottom */}
         <div className={styles.startBar}>
+          {rowLayoutHints.showRowHint && (
+            <div
+              data-testid="row-start-hint"
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--color-muted)',
+                padding: '0.2rem 0',
+              }}
+            >
+              ℹ️ {players.length} players will start in {rowLayoutHints.totalRows} rows
+            </div>
+          )}
+          {rowLayoutHints.showCapacityWarn && (
+            <div
+              data-testid="capacity-warning"
+              style={{
+                fontSize: '0.78rem',
+                color: '#f4a261',
+                padding: '0.2rem 0',
+              }}
+            >
+              ⚠️ This track recommends a maximum of {rowLayoutHints.maxRacers} racers — you have{' '}
+              {players.length}. The race will still start but may feel cramped.
+            </div>
+          )}
           <div className={styles.startSummary}>
             <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
             {selectedTrack ? (

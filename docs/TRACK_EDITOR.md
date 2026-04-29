@@ -178,7 +178,8 @@ The `EffectConfig` component (`client/src/components/EffectConfig/`) provides th
 
 `EditorShape` replaces `SvgPathShape` as the default shape implementation. It implements the existing shape API:
 
-- `getPosition(t, offset, trackWidth)` — returns `{x, y, angle}` at parameter `t ∈ [0, 1]` along the lane
+- `getPosition(t, offset)` — returns `{x, y, angle}` at parameter `t ∈ [0, 1]` along the lane; `offset ∈ [-0.5, +0.5]` = inner to outer boundary
+- `getActualTrackWidth(samples?)` — returns median inner-to-outer distance in world pixels (cached); used instead of metadata for all width-dependent calculations
 - `isOpen` — boolean, matches the track's `closed` field inverted
 - `getCenterFrac` — computed from track extents
 

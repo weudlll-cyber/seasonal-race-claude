@@ -399,6 +399,71 @@ die alle auf dasselbe Ziel einwirken?" bevor Feature shipped. N-Scaling (÷sqrt(
 
 ---
 
+## Lesson 21 — Metadata-Werte sind keine Messung — Skalen-Berechnung braucht echte Geometrie (D7c-fix)
+
+**Kontext:** D7c nutzte `trackWidth` (Operator-deklarierte Metadata, Default 140 px) als
+Eingabe für `computeRowLayout`. Das ergab `racersPerRow = floor(140 / 80) = 1` auf allen
+Tracks — korrekt für 1280px-Referenz-Welten, aber fatal auf großen Welten (z.B. 6000px):
+dort entsprachen 140 Metadata-Pixel nur ~30 Screen-Pixel, und alle 20 Racer wurden in
+Einzelreihen platziert → eine einzelne vertikale Linie beim Race-Start.
+
+Die Metadata war nie eine Messung. Sie war eine UI-Wahl aus `[100, 140, 200, 280, 360]`
+und kalibriert für 1280px-Welten. Auf anderen Weltgrößen war sie bedeutungslos.
+
+**Erkenntnis:** Wenn ein Wert für eine Skalen-Berechnung verwendet wird, muss er die
+richtige physikalische Einheit in Bezug auf die aktuelle Welt haben. Operator-deklarierte
+Metadata (die für eine Referenz-Welt sinnvoll war) ist keine Messung — sie bricht silently
+in anderen Skalierungsbereichen. Die echte Track-Breite liegt nur in der Geometrie (Abstand
+inner/outer Kurve in World-Koordinaten).
+
+**Konsequenz:** Bei Layout- oder Skalen-Berechnungen die von Track-Geometrie abhängen:
+immer `EditorShape.getActualTrackWidth()` (oder Äquivalent) statt Metadata verwenden.
+Metadata-Felder sind für UI-Anzeige und User-Kommunikation — nicht als Messgröße in Berechnungen.
+
+**Eskalation (D7c-fix-v2):** Das `trackWidth`-Feld wurde komplett aus dem Track-Datenmodell entfernt, nachdem sich auch nach der ersten Fix-Iteration herausstellte, dass die Formel noch auf einem falschen Einheitenkonzept basierte (Screen-Pixel statt World-Pixel). Wenn ein Metadata-Feld in Berechnungen nicht sinnvoll einsetzbar ist, ist das richtige Vorgehen seine vollständige Entfernung — nicht Umwege über Korrekturfaktoren.
+
+---
+
+## Lesson 22 — floor() ist sensitiv gegenüber Floating-Point-Fehlern nahe Ganzzahlen (D7c-fix-v3)
+
+**Kontext:** Nach D7c-fix-v2 zeigte der Browser-Test `racersPerRow=11` statt erwarteter 12.
+Diagnose über Diagnostic-Snapshot-Tool: `getActualTrackWidth()` lieferte `299.9999999999994`
+statt `300` — catmullRom-Hermite-Interpolation über 500 Sample-Punkte akkumuliert ~6×10⁻¹³
+Rundungsfehler. Mit `spriteSize = 50` (Rocket-Override deaktiviert Auto-Scale) ergibt das
+`floor(2×299.9999.../50) = floor(11.9999...) = 11` statt 12.
+
+**Erkenntnis:** `Math.floor()` ist nicht tolerant gegenüber floating-point Underflow.
+Ein Wert der konzeptuell exakt 12.0 ist, aber durch Akkumulation winziger Fehler als
+11.9999...998 repräsentiert wird, gibt floor=11 — eine Reihe zu viel, 9 Racer falsch platziert.
+Das ist besonders gefährlich wenn: (1) der Eingangs-Wert durch mehrere fp-Operationen berechnet
+wird, und (2) das Ergebnis diskret ist (ganzzahlige Reihenanzahl).
+
+**Konsequenz:** Werte die konzeptuell ganzzahlig sind (Track-Breiten in World-Pixeln, die der
+Editor in ganzen Zahlen setzt) vor dem Eingang in `floor()`-Berechnungen durch `Math.round()`
+normalisieren. `Math.round()` absorbiert den Fehler; `Math.floor()` verstärkt ihn.
+Fix: `getActualTrackWidth()` rundet den Median-Wert per `Math.round()` bevor er gecacht wird.
+
+---
+
+## Lesson 23 — Open-Track-Layout parallel zu Closed-Track denken, nicht als Sonderfall (D7c-Phase4)
+
+**Kontext:** D7c implementierte Row-Start mit negativem t für hintere Reihen. Closed tracks:
+korrekt — `tPos(t)` wraps negatives t hinter die Startlinie. Open tracks: `_idx(t)` klemmt
+auf idx=0 → alle Reihen stehen am selben Punkt. Statt eigener Lösung für Open-Track wurde
+der Closed-Track-Ansatz kommentarlos als "für Open Tracks kein Problem" übernommen.
+
+**Erkenntnis:** Open-Track-Strecken haben eine andere Topologie als Closed-Track-Strecken:
+kein Wrap-Around, Anfang und Ende sind echte Grenzen. Ein Mechanismus der bei Closed
+Tracks funktioniert (negativer t) bricht bei Open Tracks auf eine Weise die visuell wie
+"kein Problem" aussieht (alle Reihen am Startpunkt) aber tatsächlich die Row-Logik
+vollständig außer Kraft setzt.
+
+**Konsequenz:** Für jeden neuen Mechanismus der t-Werte manipuliert: explizit prüfen ob
+das Verhalten für Open und Closed Tracks separat korrekt ist. Nicht von einem Tracktyp
+auf den anderen schließen — die Topologien sind grundlegend verschieden.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den

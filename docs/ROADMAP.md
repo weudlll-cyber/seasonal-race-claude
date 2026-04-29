@@ -65,7 +65,7 @@ Replaces emoji racers with sprite-based renderable types.
 - [x] D7a — Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. computeRenderDisplayScale as single-source render pipeline. cameraZoomFactor removed. 808 unit + 183 e2e tests. PR #33, master `a49baa0`.
 - [x] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern). Animated canvas preview, global-default hint, modified badge, reset. Scroll indicator in modal. PR #35, master `27cba65`.
 - [x] D7b — Lane-free: physicalY system replaces currentLaneY/targetLaneY. Home force, anisotropic avoidance, cone drafting, soft repulsion, hard clamp. 13 tunable params in Dev Screen. PR #37.
-- [ ] D7c — Reihen-Start: staggered start layout, speed-bonus for rear rows, track-capacity system
+- [x] D7c — Reihen-Start: multi-row layout, speed-bonus for rear rows, track-capacity system. PR #39, master TBD.
 - [ ] D7d — 100-Racer-Performance: spatial grid O(N) avoidance, smart camera for packs
 - [ ] D8 — Full Racer Config Editor in Dev-Screen (coats, all fields, sprite switching)
 
@@ -224,6 +224,24 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
+
+## D7c — Row Start with Speed Bonus + Track Capacity ✅ Done (PR #39)
+
+Multi-row start layout for races with more players than fit in one row across the track width.
+`computeRowLayout` shuffles players and assigns them to rows; `computeRowPhysicalY` distributes
+each row evenly across the full track width (including partial last rows). Rear rows start at
+a negative t-position (physically behind the start line; closed-track `tPos` wraps correctly,
+open-track EditorShape clamps to position 0). Speed bonus per row (`computeSpeedBonus`) compensates
+the physical distance disadvantage — factor 1.0 = pole position neutral by default.
+
+Track capacity (`maxRacers` on each track preset) auto-computed from `pathLengthPx × maxCapacityFactor
+/ pixelsPerRacer × racersPerRow` when geometry is selected in TrackManager; user-overridable with
+"modified" badge. SetupScreen shows a row-count hint (ℹ️) and a capacity warning (⚠️) inline
+above the start bar.
+
+Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMultiplier`,
+`speedBonusFactor`, `maxCapacityFactor`) with extended tooltips. All persisted via
+`racearena:rowLayoutConfig`. 21 new unit tests, 6 new e2e tests (Playwright).
 
 ---
 
