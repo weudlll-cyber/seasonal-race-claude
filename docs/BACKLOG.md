@@ -227,6 +227,20 @@ aus D3.5.5.
 
 ---
 
+## Known Limitations — bewusst akzeptiert
+
+- **SEC-2 — Race-State-Manipulation via React DevTools** *(audit-2026-04-29, Severity: High — wird akzeptiert)*
+  `g.current.racers` im RaceScreen lebt als mutabler `useRef`. Technisch versierte Gäste können via
+  React DevTools / `__reactFiber$` auf Racer-Objekte zugreifen und Felder wie `t`, `baseSpeed`,
+  `finished` direkt setzen. `Object.freeze()` schützt nur direkte Properties und ist durch DevTools
+  bypassbar. **Client-seitig nicht vollständig behebbar.** Vollständige Absicherung erfordert
+  Server-Architektur mit Race-Replay oder kryptographischer Signierung (Phase 5).
+  Die anderen drei Security-Findings (SEC-1 r.t-Clamp, SEC-3 sessionStorage-Validation,
+  SEC-4 File-Size-Guard) wurden in PR cleanup/security-and-crash-protection adressiert
+  (Audit-Bericht: docs/internal/audit-2026-04-29.md).
+
+---
+
 ## Parking Lot — Zukunft / unklarer Scope
 
 - Phase 5: Server, Leaderboard, Socket.IO (Architektur geplant, kein Code)

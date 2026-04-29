@@ -28,5 +28,5 @@ export function loadRowLayoutConfig() {
 }
 
 export function saveRowLayoutConfig(config) {
-  storageSet(KEYS.ROW_LAYOUT_CONFIG, config);
+  return storageSet(KEYS.ROW_LAYOUT_CONFIG, config);
 }

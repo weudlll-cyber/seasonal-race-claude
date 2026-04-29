@@ -200,3 +200,45 @@ describe('TrackEditor effect preview (F12/F13)', () => {
     expect(cafSpy.mock.calls.length).toBeGreaterThan(callCountBefore);
   });
 });
+
+// ── Background image upload: file size guard (SEC-4) ────────────────────────
+describe('TrackEditor background upload size guard', () => {
+  it('shows an error and does not call FileReader when file exceeds 5 MB', async () => {
+    const readSpy = vi.fn();
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+      this.readAsDataURL = readSpy;
+    });
+
+    const { container } = renderEditor();
+    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
+
+    const oversizeFile = new File(['x'], 'big.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(oversizeFile, 'size', { value: 6 * 1024 * 1024 });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [oversizeFile] } });
+    });
+
+    expect(readSpy).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/too large/i);
+  });
+
+  it('does not show a size error for a file within the 5 MB limit', async () => {
+    // FileReader is synchronous in jsdom — stub it so onload never fires.
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+      this.readAsDataURL = vi.fn();
+    });
+
+    const { container } = renderEditor();
+    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
+
+    const smallFile = new File(['x'], 'small.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(smallFile, 'size', { value: 1 * 1024 * 1024 });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [smallFile] } });
+    });
+
+    expect(container.textContent).not.toMatch(/too large/i);
+  });
+});
