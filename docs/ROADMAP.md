@@ -69,11 +69,15 @@ Replaces emoji racers with sprite-based renderable types.
 - [x] D3.5.1 — SpriteRacerType config-driven base class; tintSpriteWithMask for mask-restricted tinting
 - [x] D3.5.2 — Horse/Duck/Snail → SpriteRacerType; `_createTrail` system removed
 - [x] D3.5.3 — 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket)
-- [ ] D3.5.4 — Trail-Tuning: visual trail quality refinement per type
+- [ ] **Visual Racer Effects** — Surface-Class-driven trail system. Static per-type trails replaced by a data-driven Racer + Track → Surface Class → Generator pipeline. Four Sub-PRs (replaces D3.5.4 Trail-Tuning; D6 RTE evolved into this phase + the follow-on Surface Zones):
+  - [ ] VRE-1 — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` backend API, storage. No UI, no race integration.
+  - [ ] VRE-2 — Surface-Class Editor in Dev-Screen with animated live-preview modal.
+  - [ ] VRE-3 — Racer/Track class selectors + Setup-Screen compatibility filter (only racers with ≥1 matching class shown).
+  - [ ] VRE-4 — Race-Integration: trail rendering switched to surface-class system, Heimat-Trail fallback (current `trailFactory` behavior when no class matches), browser test.
 - [x] D3.5.5 — Per-Type-Tuning-UI in Dev-Screen: 6 Felder live-tunbar via Edit-Modal, InfoTooltip-Komponente, CONFIG_SNAPSHOT, normalizeOverrideMap. 678 unit + 36 e2e Tests. PR #21, master `2d76bc3`.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
-- [ ] D6 — Racer-Track-Effects (RTE): per-racer effects triggered by track geometry
+- [ ] **Surface Zones** (follow-on to Visual Racer Effects) — local surface-class overrides within a track (e.g. mud patch on an asphalt circuit, puddle on earth). Track-Editor zone-drawing tool, `EditorShape.getZonesAtPosition(t, offset) → Zone[]`. Planned after Visual Racer Effects is complete.
 - [x] D7a — Proportional Sprite Scaling + Min-Size-Floor + relative Zoom-Ratios + Label-Skalierung. computeRenderDisplayScale as single-source render pipeline. cameraZoomFactor removed. 808 unit + 183 e2e tests. PR #33, master `a49baa0`.
 - [x] D7a-Plus — Per-Type minTargetScreenPx override with live preview (D3.5.5 pattern). Animated canvas preview, global-default hint, modified badge, reset. Scroll indicator in modal. PR #35, master `27cba65`.
 - [x] D7b — Lane-free: physicalY system replaces currentLaneY/targetLaneY. Home force, anisotropic avoidance, cone drafting, soft repulsion, hard clamp. 13 tunable params in Dev Screen. PR #37.

@@ -38,6 +38,15 @@ seasonal-race-claude/
 │       │   │   ├── coatAssignment.js   # Hash-based coat selection
 │       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
+│       │   ├── surface-effects/    # Visual Racer Effects system (planned — VRE-1+)
+│       │   │   ├── index.js              # listSurfaceClasses / getSurfaceClass / getSurfaceClassApi
+│       │   │   ├── defaultClasses.js     # 9 default Surface Class definitions (code constants)
+│       │   │   ├── surfaceClassApi.js    # GET/POST/PUT/DELETE /api/surface-classes
+│       │   │   └── generators/           # Generator modules
+│       │   │       ├── particle.js       # Individual point/circle particles
+│       │   │       ├── cloud.js          # Soft, growing, fading blobs
+│       │   │       ├── splash.js         # Fast particles with gravity
+│       │   │       └── line.js           # Persistent ground-level streaks
 │       │   ├── track-editor/       # Geometry CRUD, Catmull-Rom, EditorShape
 │       │   ├── track-effects/      # Animated effect layers
 │       │   │   ├── bgImageCache.js # Async image loader with module-level cache
@@ -186,9 +195,86 @@ The race camera lives in `modules/camera/` and supports four director modes:
 
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
 
-## Racer-Track-Effects (reserved — not yet scheduled)
+## Visual Racer Effects System (planned — Phase VRE)
 
-`SpriteRacerType` accepts an optional `rteDefinitions` array in its config. This array is stored and exposed via `getRteDefinitions()` but is not processed in the current codebase. A future phase could introduce an `RteManager` in `RaceScreen` that consumes these definitions to spawn per-racer particle effects triggered by track state (e.g., mud spray on muddy sectors, splash on water crossings). Schema TBD if/when scoped.
+Trail rendering will be data-driven by a **Surface Class system**. Instead of a static `trailFactory` per racer type, the active trail is determined by the combination of racer type + track + the matching surface class.
+
+### Generator Modules
+
+Four generator modules under `client/src/modules/surface-effects/generators/`:
+
+| Generator | Description |
+|---|---|
+| `particle` | Individual point/circle particles (e.g. asphalt dust, ice chips) |
+| `cloud` | Soft, growing, fading blobs (e.g. sand, snow, earth) |
+| `splash` | Fast particles with gravity (e.g. mud splatter, water drops) |
+| `line` | Persistent ground-level streaks (e.g. ice scratches) |
+
+Each generator exports a factory:
+
+```javascript
+createGenerator(config) → (x, y, speed, angle, surfaceClass) → Particle[]
+```
+
+### Surface Class Data Model
+
+A Surface Class references one generator and configures its parameters (color, size, lifetime, spawn rate, etc.). New classes can be added in the UI without code changes, as long as a matching generator exists.
+
+**9 Default Surface Classes (code constants in `defaultClasses.js`):**
+
+| id | Display Label | Generator |
+|---|---|---|
+| `asphalt` | Asphalt | `particle` |
+| `sand` | Sand | `cloud` |
+| `earth` | Erde | `cloud` |
+| `mud` | Schlamm | `splash` |
+| `grass` | Gras | `particle` |
+| `snow` | Schnee | `cloud` |
+| `ice` | Eis | `line` |
+| `water` | Wasser | `splash` |
+| `air` | Luft | `particle` |
+
+Default classes are code constants (single source of truth, analogous to racer types). Custom classes and default overrides are stored in the backend.
+
+### Data Flow
+
+```
+RacerType.surfaceClasses ∩ Track.surfaceClasses
+          ↓  (matching class — first intersection wins)
+  SurfaceClass → Generator(config) → Particle[]
+          ↓
+  dustParticles pool (existing RaceScreen infrastructure)
+```
+
+**Heimat-Trail Fallback:** If no class from the racer type's `surfaceClasses` list intersects the current track's `surfaceClasses`, the racer falls back to its static `trailFactory` (current behavior, unchanged).
+
+### Setup Filter
+
+The Setup Screen filters the racer type selector: only racer types with at least one `surfaceClasses` entry overlapping with the chosen track's `surfaceClasses` are shown. Types with no overlap are suppressed or marked incompatible.
+
+### Backend Extension (`/api/surface-classes`)
+
+A new API resource manages surface classes alongside tracks:
+
+- `GET /api/surface-classes` — merged list: default constants + custom entries from server
+- `POST /api/surface-classes` — creates a new custom class
+- `PUT /api/surface-classes/:id` — updates a class (including default-class parameter overrides)
+- `DELETE /api/surface-classes/:id` — removes a custom class (built-in defaults cannot be deleted)
+
+The backend seeds the defaults on first boot if storage is empty. The frontend caches the class list locally (analog to track geometry caching in `trackLoader.js`).
+
+### Sub-PR Structure
+
+| Sub-PR | Scope |
+|---|---|
+| VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
+| VRE-2 — Class Editor | Surface-Classes section in Dev Screen with animated live-preview modal. |
+| VRE-3 — Racer/Track Linking | Racer editor and Track Manager get class multi-selectors; Setup Screen filters by intersection. |
+| VRE-4 — Race Integration | Trail rendering in RaceScreen switched to surface-class system. Heimat-Trail fallback. Browser test. |
+
+### Future: Surface Zones
+
+A follow-on phase will support local surface-class overrides within a track (e.g. a puddle on asphalt, a mud patch on earth). The Track Editor gains a zone-drawing tool; `EditorShape` gains `getZonesAtPosition(t, offset) → Zone[]`. See `docs/TRACK_EDITOR.md — Future Extensions`.
 
 ## Backend Architecture (Phase L)
 
