@@ -464,6 +464,26 @@ auf den anderen schließen — die Topologien sind grundlegend verschieden.
 
 ---
 
+## Lesson 11 — Container-First: Skeleton vor Logik (Phase L / PR #43)
+
+**Kontext:** Statt den Backend-Server erst in Phase 5 als vollständiges System aufzubauen,
+wurde in Phase L zunächst nur das Container-Skeleton etabliert (Express + Dockerfile +
+docker-compose, ein einziger Health-Check-Endpunkt). Keine Datenbank, keine Authentifizierung,
+keine Geschäftslogik.
+
+**Erkenntnis:** Container-Integrationsthemen (Port-Konflikte, Build-Kontext, Volume-Mounts,
+CORS-Config) treten immer beim ersten Aufsetzen auf, unabhängig davon wie viel Logik im
+Container läuft. Diese Probleme früh zu lösen — wenn der Code noch trivial ist — kostet
+wenig. Wenn sie erst bei Phase 5 (mit Datenbank, Auth, Socket.IO) auftreten, blockieren
+sie das gesamte Feature-Delivery.
+
+**Konsequenz:** Für jeden neuen Infra-Layer (Backend, Worker, Queue) zuerst das
+Container-Skeleton etablieren und einen Smoke-Endpunkt deployen, bevor echte Logik
+hinzukommt. Dadurch kann die CI-Pipeline und das lokale Setup vertraut werden mit der
+Infrastruktur, bevor der Komplexitätssockel steigt.
+
+---
+
 ## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
 
 **Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
