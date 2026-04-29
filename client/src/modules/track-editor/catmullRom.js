@@ -1,5 +1,11 @@
-// Pure Catmull-Rom spline math — no DOM, no React.
-// Convention: positive offset amount = left of travel direction.
+// ============================================================
+// File:        catmullRom.js
+// Path:        client/src/modules/track-editor/catmullRom.js
+// Project:     RaceArena
+// Created:     2026-04-26
+// Description: Pure Catmull-Rom spline math — no DOM, no React.
+//              Convention: positive offset amount = left of travel direction.
+// ============================================================
 
 function getControlPoints(points, segIndex, closed) {
   const n = points.length;

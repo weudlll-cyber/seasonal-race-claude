@@ -1,3 +1,13 @@
+// ============================================================
+// File:        Minimap.js
+// Path:        client/src/modules/camera/Minimap.js
+// Project:     RaceArena
+// Created:     2026-04-26
+// Description: Picture-in-picture minimap renderer (Phase 2.5 F6b).
+//              Draws a scaled world overview in the bottom-left corner
+//              of the race canvas with a leader indicator dot.
+// ============================================================
+
 export const MINIMAP_W = 280;
 export const MINIMAP_H = 160;
 export const MINIMAP_MARGIN = 14;

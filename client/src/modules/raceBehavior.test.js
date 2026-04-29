@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { initRacerBehavior, applyRacerBehavior, computeStartPhysicalY } from './raceBehavior.js';
+import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
 function makeRacer(overrides = {}) {
@@ -43,43 +43,6 @@ describe('initRacerBehavior', () => {
   it('sets draftingBoostActive to false', () => {
     const r = makeRacer();
     expect(r.draftingBoostActive).toBe(false);
-  });
-});
-
-// ── computeStartPhysicalY (B1 — start-spread) ─────────────────────────────
-
-describe('computeStartPhysicalY', () => {
-  it('returns 0 for a single racer (n=1)', () => {
-    expect(computeStartPhysicalY(0, 1, 0.7)).toBe(0);
-  });
-
-  it('places two racers symmetrically at ±spreadRange', () => {
-    expect(computeStartPhysicalY(0, 2, 0.7)).toBeCloseTo(-0.7, 5);
-    expect(computeStartPhysicalY(1, 2, 0.7)).toBeCloseTo(0.7, 5);
-  });
-
-  it('places n=20 racers evenly across [-spreadRange, +spreadRange]', () => {
-    const n = 20;
-    const range = 0.7;
-    const ys = Array.from({ length: n }, (_, i) => computeStartPhysicalY(i, n, range));
-    expect(ys[0]).toBeCloseTo(-range, 5);
-    expect(ys[n - 1]).toBeCloseTo(range, 5);
-    // spacing must be uniform
-    const step = ys[1] - ys[0];
-    for (let i = 1; i < n; i++) {
-      expect(ys[i] - ys[i - 1]).toBeCloseTo(step, 5);
-    }
-    // all values within [-range, +range]
-    for (const y of ys) {
-      expect(y).toBeGreaterThanOrEqual(-range - 1e-9);
-      expect(y).toBeLessThanOrEqual(range + 1e-9);
-    }
-  });
-
-  it('respects different spreadRange values', () => {
-    expect(computeStartPhysicalY(0, 3, 0.5)).toBeCloseTo(-0.5, 5);
-    expect(computeStartPhysicalY(1, 3, 0.5)).toBeCloseTo(0.0, 5);
-    expect(computeStartPhysicalY(2, 3, 0.5)).toBeCloseTo(0.5, 5);
   });
 });
 

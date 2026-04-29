@@ -52,7 +52,7 @@ const CANVAS_H = 720;
 const CW = CANVAS_W;
 const CH = CANVAS_H;
 
-const LANE_COLORS = [
+const RACER_COLORS = [
   '#ff6b35',
   '#4fc3f7',
   '#a5d6a7',
@@ -256,7 +256,7 @@ export default function RaceScreen() {
             (1 + speedBonus),
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
-          color: LANE_COLORS[i % LANE_COLORS.length],
+          color: RACER_COLORS[i % RACER_COLORS.length],
           coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
           finished: false,
           finishRank: null,
