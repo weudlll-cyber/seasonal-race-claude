@@ -556,7 +556,7 @@ führt zu schwer debuggbaren UI-Zuständen.
 
 **Erkenntnis:** Canvas-Overlays (globalAlpha + fillRect) sind der einfachste Weg um einen zuverlässigen Kontrast-Boden zu schaffen unabhängig vom Bild-Inhalt. Eine 35%-Opacity-Schicht zwischen Bild und Linien kostet eine Zeile Code und macht alle weiteren Farb-Entscheidungen Bild-agnostisch. Kontrollpunkte mit weißer Füllung und dunklem Rand (Kreismarkierung-Prinzip) sind auf jedem Hintergrund sichtbar — Cyan auf Cyan-Hintergrund nie.
 
-**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand.
+**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand. Für Linien: kontrastreiche Farbe (Magenta) die in keinem typischen Bildinhalt vorkommt, plus weiße Outline dahinter — damit ist die Lesbarkeit auf beliebigem Hintergrund garantiert ohne auf den Hintergrund-Typ angewiesen zu sein.
 
 ---
 

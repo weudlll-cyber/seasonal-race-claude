@@ -91,17 +91,17 @@ describe('drawStaticScene — A1: dark overlay', () => {
     };
   });
 
-  it('draws a fillRect with opacity ~0.35 and black fill after background', () => {
+  it('draws a fillRect with opacity ~0.60 and black fill after background', () => {
     drawStaticScene(ctx, {});
     const overlayCall = alphaValues.find(
-      (v) => Math.abs(v.alpha - 0.35) < 0.01 && v.fillStyle === '#000000'
+      (v) => Math.abs(v.alpha - 0.6) < 0.01 && v.fillStyle === '#000000'
     );
     expect(overlayCall).toBeDefined();
   });
 
   it('resets globalAlpha to 1 after overlay', () => {
     drawStaticScene(ctx, { centerPoints: POINTS_3, mode: 'center' });
-    expect(ctx.globalAlpha).not.toBe(0.35);
+    expect(ctx.globalAlpha).not.toBe(0.6);
   });
 });
 
@@ -197,5 +197,59 @@ describe('drawStaticScene — A3: improved control points', () => {
     drawStaticScene(ctx, { centerPoints: POINTS_3, mode: 'center' });
 
     expect(strokeStyles.some((s) => s === '#222222')).toBe(true);
+  });
+});
+
+describe('drawStaticScene — VIS-iter2: magenta lines and white outline', () => {
+  it('draws center line with magenta stroke color', () => {
+    const ctx = makeFakeCtx();
+    const strokeStyles = [];
+    ctx.stroke = () => strokeStyles.push(ctx.strokeStyle);
+
+    drawStaticScene(ctx, { centerPoints: POINTS_3, mode: 'center' });
+
+    expect(strokeStyles.some((s) => s === '#FF00FF')).toBe(true);
+  });
+
+  it('draws center line with white outline stroke before magenta', () => {
+    const ctx = makeFakeCtx();
+    const strokeStyles = [];
+    ctx.stroke = () => strokeStyles.push(ctx.strokeStyle);
+
+    drawStaticScene(ctx, { centerPoints: POINTS_3, mode: 'center' });
+
+    const magentaIdx = strokeStyles.indexOf('#FF00FF');
+    const whiteIdx = strokeStyles.lastIndexOf('#ffffff', magentaIdx);
+    expect(whiteIdx).toBeGreaterThanOrEqual(0);
+    expect(whiteIdx).toBeLessThan(magentaIdx);
+  });
+
+  it('white outline lineWidth is larger than magenta lineWidth', () => {
+    const ctx = makeFakeCtx();
+    const strokes = [];
+    ctx.stroke = () => strokes.push({ style: ctx.strokeStyle, width: ctx.lineWidth });
+
+    drawStaticScene(ctx, { centerPoints: POINTS_3, mode: 'center' });
+
+    const magentaStroke = strokes.find((s) => s.style === '#FF00FF');
+    const whiteOutline = strokes.find((s) => s.style === '#ffffff' && s.width >= 5);
+    expect(magentaStroke).toBeDefined();
+    expect(whiteOutline).toBeDefined();
+    expect(whiteOutline.width).toBeGreaterThan(magentaStroke.width);
+  });
+
+  it('draws boundary-mode active curves with magenta', () => {
+    const ctx = makeFakeCtx();
+    const strokeStyles = [];
+    ctx.stroke = () => strokeStyles.push(ctx.strokeStyle);
+
+    drawStaticScene(ctx, {
+      mode: 'boundary',
+      innerPoints: POINTS_3,
+      outerPoints: POINTS_3,
+      activeBoundary: 'inner',
+    });
+
+    expect(strokeStyles.some((s) => s === '#FF00FF')).toBe(true);
   });
 });
