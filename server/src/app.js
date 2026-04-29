@@ -9,6 +9,7 @@
 import express from 'express';
 import cors from 'cors';
 import tracksRouter from './routes/tracks.js';
+import surfaceClassesRouter from './routes/surfaceClasses.js';
 
 export function createApp() {
   const app = express();
@@ -20,6 +21,7 @@ export function createApp() {
   });
 
   app.use('/api/tracks', tracksRouter);
+  app.use('/api/surface-classes', surfaceClassesRouter);
 
   return app;
 }
