@@ -9,19 +9,7 @@
 //              Pure functions — no React or DOM deps.
 // ============================================================
 
-/**
- * Fisher-Yates in-place shuffle.
- * @template T
- * @param {T[]} arr
- * @returns {T[]}
- */
-function shuffleInPlace(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
+import { shuffle } from './utils/RandomHelper.js';
 
 /**
  * Compute how many racers fit side-by-side in one row.
@@ -55,7 +43,7 @@ export function computeRowLayout(racerCount, racersPerRow) {
   const totalRows = Math.ceil(racerCount / perRow);
 
   const indices = Array.from({ length: racerCount }, (_, i) => i);
-  shuffleInPlace(indices);
+  shuffle(indices);
 
   const assignments = indices.map((racerIndex, position) => ({
     racerIndex,

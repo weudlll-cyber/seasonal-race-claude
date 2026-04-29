@@ -25,10 +25,10 @@ export const DEFAULT_AUTO_SCALE_CONFIG = {
 /**
  * Compute the auto scale factor for racer display size.
  *
- * Lane-density formula: clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale)
+ * Track-density formula: clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale)
  *
  * A referenceValue of 23 means: at the default 140px track with 6 racers (ratio ≈ 23.3),
- * the lane factor is ≈ 1.0 (neutral — no change from default displaySize).
+ * the density factor is ≈ 1.0 (neutral — no change from default displaySize).
  *
  * @param {number} trackWidth   Track width in world pixels
  * @param {number} racerCount   Number of racers in the race
@@ -38,8 +38,8 @@ export const DEFAULT_AUTO_SCALE_CONFIG = {
 export function computeAutoScaleFactor(trackWidth, racerCount, config) {
   const { referenceValue, minScale, maxScale } = config;
   if (!racerCount || !trackWidth) return minScale;
-  const laneFactor = trackWidth / racerCount / referenceValue;
-  return Math.max(minScale, Math.min(maxScale, laneFactor));
+  const densityFactor = trackWidth / racerCount / referenceValue;
+  return Math.max(minScale, Math.min(maxScale, densityFactor));
 }
 
 /**
@@ -51,11 +51,11 @@ export function computeAutoScaleFactor(trackWidth, racerCount, config) {
  *
  * screenPx = displaySize × result × frameEffZoom
  *
- * When floor doesn't apply: result = displaySizeScale (lane-density factor unchanged).
+ * When floor doesn't apply: result = displaySizeScale (track-density factor unchanged).
  * When floor applies:       result = minTargetScreenPx / (displaySize × frameEffZoom).
  *
  * @param {number} displaySize        Racer type base display size in world pixels
- * @param {number} displaySizeScale   Lane-density auto-scale factor (from computeAutoScaleFactor)
+ * @param {number} displaySizeScale   Track-density auto-scale factor (from computeAutoScaleFactor)
  * @param {number} frameEffZoom       Effective canvas scale this frame (cam.zoom×bsX or BASE_ZOOM×cam.zoom)
  * @param {number} minTargetScreenPx  Floor: minimum sprite size in screen pixels
  * @returns {number}  World-space scale factor to pass to drawRacer
