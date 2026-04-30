@@ -5,3 +5,17 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
+    # Volume mounts so code changes never require a full `docker compose build`.
+    # Just `docker compose restart server` (or rely on --watch auto-reload below).
+    #
+    # Rebuild IS still required when:
+    #   - package.json changes (new/removed npm dependencies)
+    #   - Dockerfile itself changes
+    volumes:
+      - ./server/src:/app/src         # live code — src changes visible without rebuild
+      - ./server/data:/app/data       # surface-class JSON files persist across rebuilds
+      - /app/node_modules             # keep container's npm install isolated from host
+    # node --watch (Node 20 built-in) auto-restarts on src file changes.
+    # Note: on Windows Docker Desktop, file-change events across the WSL2 boundary
+    # can be slow; if auto-restart doesn't fire, use `docker compose restart server`.
+    command: node --watch src/index.js

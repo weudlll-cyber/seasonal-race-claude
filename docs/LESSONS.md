@@ -577,3 +577,31 @@ Menge definieren und lokale Kopien beim Merge herausfiltern (`serverIds`-Dedupli
 immer explizit prüfen welche Quelle Vorrang hat und Duplikate by-ID herausfiltern.
 Merge-Logik die stillschweigend die erste Kopie bevorzugt, ohne explizite Quelle-Priorisierung,
 führt zu schwer debuggbaren UI-Zuständen.
+
+---
+
+## Lesson 32 — `docker compose up` ohne `--build` ist nicht idempotent gegenüber Code-Änderungen (VRE-2 Browser-Test)
+
+**Kontext:** VRE-1 (PR #46) fügte die Surface-Classes-API-Routes hinzu (`server/src/routes/surfaceClasses.js`,
+registriert in `app.js`). VRE-2 (PR #47) baute den Frontend-Editor darauf auf. Beim ersten Browser-Test
+nach VRE-2 erschien beim Save einer Default-Klasse "HTTP 404". Diagnose: Der Docker-Container lief
+noch aus einer Session vor VRE-1 — das Image enthielt die Surface-Classes-Routes nicht. Gleichzeitig
+fehlten `volumes:`-Mounts in `docker-compose.yml`, sodass laufende Container niemals aktualisierten
+Quellcode sahen.
+
+`docker compose up -d` — das Kommando das beim Session-Start zum "Server starten" genutzt wurde —
+startet existierende Container ohne Rebuild. Die Ausgabe `Container seasonalraceclaude-server-1 Running`
+ist kein Indikator für Code-Aktualität, sondern nur ein Liveness-Check.
+
+**Erkenntnis:** `docker compose up` ohne `--build` baut das Image nie neu. Wenn kein `volumes:`-Mount
+existiert, laufen Code-Änderungen an `src/` unsichtbar am Container vorbei. "Der Container läuft"
+bedeutet nicht "der Container hat den aktuellen Code." Dieses Muster führt zu Phantom-404s die schwer
+zu debuggen sind, weil Code und Routen korrekt aussehen — der Fehler liegt im Deployment-Gap.
+
+**Konsequenz:** `docker-compose.yml` erhält immer `volumes:`-Mounts für Quellcode-Verzeichnisse
+(`./server/src:/app/src`) und persistente Daten (`./server/data:/app/data`). Mit Live-Mount reicht
+`docker compose restart server` statt `docker compose build`. Rebuild bleibt nötig bei
+`package.json`-Änderungen (neue Dependencies) oder Dockerfile-Änderungen. Regeln:
+- Code-Änderung (`src/`): `docker compose restart server`
+- Neue npm-Dependency: `docker compose up --build -d`
+- Frischer Start: `docker compose down && docker compose up -d`
