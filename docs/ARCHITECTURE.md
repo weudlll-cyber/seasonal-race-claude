@@ -195,7 +195,7 @@ The race camera lives in `modules/camera/` and supports four director modes:
 
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
 
-## Visual Racer Effects System (planned — Phase VRE)
+## Visual Racer Effects System (Phase VRE)
 
 Trail rendering will be data-driven by a **Surface Class system**. Instead of a static `trailFactory` per racer type, the active trail is determined by the combination of racer type + track + the matching surface class.
 
@@ -267,8 +267,8 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 
 | Sub-PR | Scope |
 |---|---|
-| VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
-| VRE-2 — Class Editor | Surface-Classes section in Dev Screen with animated live-preview modal. |
+| ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
+| ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
 | VRE-3 — Racer/Track Linking | Racer editor and Track Manager get class multi-selectors; Setup Screen filters by intersection. |
 | VRE-4 — Race Integration | Trail rendering in RaceScreen switched to surface-class system. Heimat-Trail fallback. Browser test. |
 

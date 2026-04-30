@@ -197,6 +197,10 @@
   border-color: var(--color-primary);
 }
 
+.inputError {
+  border-color: #e63946 !important;
+}
+
 .input::placeholder {
   color: var(--color-muted);
 }
