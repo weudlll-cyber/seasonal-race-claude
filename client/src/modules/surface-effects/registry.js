@@ -95,3 +95,30 @@ export function resolveActiveSurfaceClass(racerClasses, trackClasses) {
   }
   return null;
 }
+
+/**
+ * Filter racer types to only those compatible with a given track's surface classes.
+ *
+ * A racer is compatible when it has ≥1 class overlapping with the track's classes.
+ * Racers with an empty surfaceClasses array are never filtered — they always show up
+ * (backwards-compatible: they always use their Heimat-Trail).
+ *
+ * Edge-case: if trackSurfaceClasses is empty or missing, all racers are returned
+ * (legacy tracks without the field remain fully compatible with all racers).
+ *
+ * @param {object[]} racerTypes         — array from listAllRacerTypes() with id field
+ * @param {string[]} trackSurfaceClasses — surfaceClasses from the track preset
+ * @param {function} getRacerClassesFn  — (id) => string[], retrieves surfaceClasses for a type
+ * @returns {object[]} filtered racer types
+ */
+export function filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn) {
+  if (!Array.isArray(trackSurfaceClasses) || trackSurfaceClasses.length === 0) {
+    return racerTypes;
+  }
+  const trackSet = new Set(trackSurfaceClasses);
+  return racerTypes.filter((rt) => {
+    const classes = getRacerClassesFn(rt.id);
+    if (!Array.isArray(classes) || classes.length === 0) return true;
+    return classes.some((c) => trackSet.has(c));
+  });
+}

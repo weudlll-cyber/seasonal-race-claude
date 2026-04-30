@@ -52,6 +52,7 @@ export const ElephantRacerType = new SpriteRacerType({
   speedMultiplier: 0.6,
 
   trailFactory: makeGenericDustTrail({ color: '#a09070', ttl: 28 }),
+  surfaceClasses: ['sand', 'earth', 'grass'],
 });
 
 export default ElephantRacerType;

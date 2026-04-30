@@ -68,6 +68,7 @@ export const SnailRacerType = new SpriteRacerType({
   speedMultiplier: 0.3,
 
   trailFactory: snailTrailFactory,
+  surfaceClasses: ['grass'],
 });
 
 export default SnailRacerType;

@@ -45,6 +45,7 @@ export const BuggyRacerType = new SpriteRacerType({
   speedMultiplier: 0.95,
 
   trailFactory: makeGenericDustTrail({ color: '#998866', ttl: 22 }),
+  surfaceClasses: ['sand', 'earth', 'mud'],
 });
 
 export default BuggyRacerType;

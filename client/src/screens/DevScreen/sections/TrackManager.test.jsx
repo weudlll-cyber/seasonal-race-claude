@@ -59,6 +59,19 @@ vi.mock('../../../modules/storage/trackLoader.js', () => ({
 vi.mock('../../../services/trackApi.js', () => ({
   deleteTrackFromServer: vi.fn(),
 }));
+
+vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
+  useSurfaceClasses: () => ({
+    classes: [
+      { id: 'earth', label: 'Earth' },
+      { id: 'grass', label: 'Grass' },
+      { id: 'water', label: 'Water' },
+    ],
+    refresh: vi.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}));
 vi.mock('../../../modules/track-editor/EditorShape.js', () => ({
   EditorShape: vi.fn().mockImplementation(() => ({
     getActualTrackWidth: vi.fn().mockReturnValue(200),
@@ -283,6 +296,58 @@ describe('TrackManager — Edit Geometry button placement (A1 UX fix)', () => {
     const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
     const actionRow = saveBtn.closest('div');
     expect(within(actionRow).getAllByRole('button')).toHaveLength(2);
+  });
+});
+
+describe('TrackManager — surface class pills (VRE-3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('surface-class pills container is present when edit form is open', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByTestId('track-surface-class-pills')).toBeInTheDocument();
+  });
+
+  it('renders 3 pill buttons from mocked surface classes', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const pillContainer = screen.getByTestId('track-surface-class-pills');
+    const pills = within(pillContainer).getAllByRole('button');
+    expect(pills).toHaveLength(3);
+  });
+
+  it('Save Changes is disabled when no surface classes selected (server track with none)', () => {
+    // SERVER_TRACK has no surfaceClasses field → handleEdit initialises to []
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    expect(saveBtn.disabled).toBe(true);
+  });
+
+  it('shows error hint when no surface class is selected', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByText(/At least one surface class is required/i)).toBeInTheDocument();
+  });
+
+  it('Save Changes becomes enabled after selecting a surface class pill', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const pillContainer = screen.getByTestId('track-surface-class-pills');
+    const firstPill = within(pillContainer).getAllByRole('button')[0];
+    fireEvent.click(firstPill);
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    expect(saveBtn.disabled).toBe(false);
+  });
+
+  it('Add Track button is disabled when surfaceClasses is empty (BLANK form)', () => {
+    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+    fireEvent.click(screen.getByText('+ Add Track'));
+    const addBtn = screen.getByText('Add Track', { selector: 'button' });
+    // Disabled because name is also empty in BLANK form — but surfaceClasses is also empty
+    expect(addBtn.disabled).toBe(true);
   });
 });
 

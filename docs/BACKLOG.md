@@ -38,7 +38,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - **Visual Racer Effects** — Surface-Class-driven trail system. Vier Sub-PRs:
   - ✅ **VRE-1** — Foundation: 4 generator modules (`particle`, `cloud`, `splash`, `line`), 9 default Surface Classes, registry with override-resolution, `/api/surface-classes` Backend-API (CRUD, atomic writes), `surfaceClassLoader.js` cache, `surfaceClassApi.js` service layer. 64 Frontend + 24 Backend Tests. Kein UI, keine Race-Integration.
   - ✅ **VRE-2** — Surface-Class Editor im Dev-Screen. Master-Detail-Layout: Klassenliste mit Default/Modified/Custom-Badges links, animierter Live-Preview-Canvas + Generator-Config-Editor rechts. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. 36 neue Unit-Tests + 31 neue e2e-Tests (Smoke + UX-Verifikation). 1084 Unit + 183 e2e Tests gesamt.
-  - **VRE-3** — Racer/Track-Verknüpfung (je ein Klassen-Selector) + Setup-Filter (nur Racer mit ≥1 Klassen-Überlappung zum gewählten Track sichtbar).
+  - ✅ **VRE-3** — Racer/Track-Verknüpfung: `surfaceClasses` auf SpriteRacerType + `getSurfaceClasses()`, alle 12 Racer-Types mit Klassen, surfaceClasses in TUNABLE_FIELDS + CONFIG_SNAPSHOT, `filterRacerTypesForTrack()` in registry.js, surfaceClasses auf DEFAULT_TRACKS + Server-Migration, Pill-Multi-Select UI in RacerEditModal + TrackManager, SetupScreen-Filter + Surface-Hint. 1134 Frontend + 60 Backend Tests. 2 Playwright-Specs (Smoke + UX-Verifikation) geschrieben.
   - **VRE-4** — Race-Integration: Trail-Rendering in RaceScreen umgestellt. Heimat-Trail-Fallback (aktuelles `trailFactory`-Verhalten wenn kein Surface-Class-Match). Browser-Test.
 
 ---

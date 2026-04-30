@@ -52,6 +52,7 @@ export const SnakeRacerType = new SpriteRacerType({
   speedMultiplier: 0.75,
 
   trailFactory: makeGenericDustTrail({ color: '#88aa66', ttl: 22 }),
+  surfaceClasses: ['sand', 'earth', 'grass'],
 });
 
 export default SnakeRacerType;

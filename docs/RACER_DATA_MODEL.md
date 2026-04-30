@@ -168,8 +168,9 @@ listAllRacerTypes()                   →  Code-Registry + Overrides zusammengef
 | `normalizeOverrideMap(raw)` | Migriert Legacy-Format `{id: false}` → `{id: {isActive: false}}`; gibt bei null/undefined `{}` zurück |
 | `applyTunableOverride(id, fieldName, value)` | Mutiert `RACER_TYPES[id].config[fieldName]` direkt ohne Storage-Write |
 | `restoreTunableDefault(id, fieldName)` | Setzt `RACER_TYPES[id].config[fieldName]` aus CONFIG_SNAPSHOT zurück |
-| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy']` |
-| `CONFIG_SNAPSHOT` | Eingefrorene Kopie der Code-Defaults aller 6 TUNABLE_FIELDS, captured vor Boot-Override-Application |
+| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 Felder seit VRE-3 |
+| `CONFIG_SNAPSHOT` | Eingefrorene Kopie der Code-Defaults aller 8 TUNABLE_FIELDS (seit VRE-3), captured vor Boot-Override-Application. Arrays werden deep-copied (kein Reference-Sharing) |
+| `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filtert Racer-Types auf jene mit ≥1 Klassen-Überlappung zum Track. Leere `trackSurfaceClasses` → alle zurück (Legacy). Leere Racer-Klassen → immer eingeschlossen (Heimat-Trail). VRE-3. |
 | `RACER_TYPE_IDS` | Sortiertes Array aller 12 Type-IDs |
 | `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` für UI-Anzeige |
 | `COATS_BY_TYPE` | Map `{id → coats[]}` für RaceScreen-Coat-Assignment; auto-derived aus Type-Configs |

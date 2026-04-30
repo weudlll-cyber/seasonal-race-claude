@@ -470,3 +470,39 @@ describe('SpriteRacerType — getRteDefinitions', () => {
     expect(rt.getRteDefinitions()).toBe(defs);
   });
 });
+
+describe('SpriteRacerType — getSurfaceClasses (VRE-3)', () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it('returns [] by default when surfaceClasses is not provided', () => {
+    const rt = new SpriteRacerType(makeConfig());
+    expect(rt.getSurfaceClasses()).toEqual([]);
+  });
+
+  it('returns the configured surfaceClasses array', () => {
+    const rt = new SpriteRacerType(makeConfig({ surfaceClasses: ['earth', 'grass'] }));
+    expect(rt.getSurfaceClasses()).toEqual(['earth', 'grass']);
+  });
+
+  it('returns a single-element array', () => {
+    const rt = new SpriteRacerType(makeConfig({ surfaceClasses: ['air'] }));
+    expect(rt.getSurfaceClasses()).toEqual(['air']);
+  });
+
+  it('throws TypeError when surfaceClasses is a string', () => {
+    expect(() => new SpriteRacerType(makeConfig({ surfaceClasses: 'earth' }))).toThrow(TypeError);
+  });
+
+  it('throws TypeError when surfaceClasses is a number', () => {
+    expect(() => new SpriteRacerType(makeConfig({ surfaceClasses: 42 }))).toThrow(TypeError);
+  });
+
+  it('does not throw when surfaceClasses is explicitly []', () => {
+    expect(() => new SpriteRacerType(makeConfig({ surfaceClasses: [] }))).not.toThrow();
+  });
+
+  it('returns [] when surfaceClasses is explicitly set to []', () => {
+    const rt = new SpriteRacerType(makeConfig({ surfaceClasses: [] }));
+    expect(rt.getSurfaceClasses()).toEqual([]);
+  });
+});

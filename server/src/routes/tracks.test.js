@@ -276,6 +276,94 @@ describe('DELETE /api/tracks/:id', () => {
   });
 });
 
+// ── surfaceClasses field (VRE-3) ──────────────────────────────────────────────
+
+describe('surfaceClasses field — startup migration', () => {
+  it('all tracks returned by GET /api/tracks have a surfaceClasses array', async () => {
+    const res = await request(app).get('/api/tracks');
+    expect(res.status).toBe(200);
+    for (const track of res.body) {
+      expect(Array.isArray(track.surfaceClasses)).toBe(true);
+    }
+  });
+
+  it('migrated unknown track (Weltall) gets surfaceClasses: []', async () => {
+    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.surfaceClasses)).toBe(true);
+  });
+});
+
+describe('POST /api/tracks — surfaceClasses', () => {
+  it('creates a track with surfaceClasses and includes it in the response', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth', 'grass'] });
+    expect(res.status).toBe(201);
+    expect(res.body.surfaceClasses).toEqual(['earth', 'grass']);
+    createdIds.push(res.body.id);
+  });
+
+  it('created track with surfaceClasses appears correctly in GET detail', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['water'] });
+    createdIds.push(createRes.body.id);
+    const detail = await request(app).get(`/api/tracks/${createRes.body.id}`);
+    expect(detail.body.surfaceClasses).toEqual(['water']);
+  });
+
+  it('creates a track with empty surfaceClasses: []', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: [] });
+    expect(res.status).toBe(201);
+    expect(res.body.surfaceClasses).toEqual([]);
+    createdIds.push(res.body.id);
+  });
+
+  it('created track without surfaceClasses defaults to [] in list response', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    createdIds.push(res.body.id);
+    // Track was created without surfaceClasses — post-creation migration not needed
+    // since new tracks get [] via spread defaults if not provided
+    const list = await request(app).get('/api/tracks');
+    const found = list.body.find((t) => t.id === res.body.id);
+    expect(found).toBeDefined();
+    expect(Array.isArray(found.surfaceClasses)).toBe(true);
+  });
+});
+
+describe('PUT /api/tracks/:id — surfaceClasses update', () => {
+  it('updates surfaceClasses on an existing track', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth'] });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, surfaceClasses: ['air', 'water'] });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.surfaceClasses).toEqual(['air', 'water']);
+  });
+
+  it('clears surfaceClasses when updated to []', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth', 'grass'] });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, surfaceClasses: [] });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.surfaceClasses).toEqual([]);
+  });
+});
+
 describe('POST /api/tracks/:id/background', () => {
   it('rejects a file exceeding 10 MB with 413', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);

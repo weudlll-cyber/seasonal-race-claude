@@ -24,6 +24,7 @@ import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
 import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
 import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
+import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
 import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
@@ -41,6 +42,7 @@ const BLANK = {
   worldHeight: 720,
   maxRacers: null,
   maxRacersIsOverride: false,
+  surfaceClasses: [],
 };
 
 // Compute the auto max-racers suggestion for a given geometry + track metadata.
@@ -66,6 +68,7 @@ function TrackManager() {
   const navigate = useNavigate();
   const [localTracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const serverTracksCtl = useServerTracksControl();
+  const { classes: allSurfaceClasses } = useSurfaceClasses();
   const serverTracks = serverTracksCtl.tracks;
   const serverTrackIds = new Set(serverTracks.map((t) => t.id));
   // Combined list for display: local tracks + server tracks (server deduplicates local copies)
@@ -116,6 +119,7 @@ function TrackManager() {
       worldHeight: track.worldHeight ?? 720,
       maxRacers: storedMax ?? autoMax,
       maxRacersIsOverride: storedMax !== null && storedMax !== autoMax,
+      surfaceClasses: Array.isArray(track.surfaceClasses) ? [...track.surfaceClasses] : [],
     });
     setEditId(track.id);
     setShowForm(true);
@@ -437,6 +441,55 @@ function TrackManager() {
                 ))}
               </select>
             </div>
+            <div className={s.formGroupFull}>
+              <label className={s.label}>Surface Classes</label>
+              <div
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}
+                data-testid="track-surface-class-pills"
+              >
+                {allSurfaceClasses.map((cls) => {
+                  const active = form.surfaceClasses.includes(cls.id);
+                  return (
+                    <button
+                      key={cls.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => {
+                        const next = active
+                          ? form.surfaceClasses.filter((c) => c !== cls.id)
+                          : [...form.surfaceClasses, cls.id];
+                        f('surfaceClasses', next);
+                      }}
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '99px',
+                        cursor: 'pointer',
+                        border: `1px solid ${active ? 'var(--color-primary, #4488ff)' : 'rgba(255,255,255,0.15)'}`,
+                        background: active ? 'rgba(68,136,255,0.18)' : 'transparent',
+                        color: active ? 'var(--color-primary, #4488ff)' : 'var(--color-muted)',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {cls.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.surfaceClasses.length === 0 && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    color: '#ef4444',
+                    marginTop: '0.25rem',
+                    display: 'block',
+                  }}
+                >
+                  At least one surface class is required
+                </span>
+              )}
+            </div>
             <div className={s.formGroup}>
               <label className={s.label}>World Dimensions</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
@@ -518,7 +571,12 @@ function TrackManager() {
             <button
               className={`${s.btn} ${s.btnPrimary}`}
               onClick={handleSave}
-              disabled={!form.name.trim() || !form.icon.trim()}
+              disabled={!form.name.trim() || !form.icon.trim() || form.surfaceClasses.length === 0}
+              title={
+                form.surfaceClasses.length === 0
+                  ? 'At least one surface class is required'
+                  : undefined
+              }
             >
               {editId ? 'Save Changes' : 'Add Track'}
             </button>

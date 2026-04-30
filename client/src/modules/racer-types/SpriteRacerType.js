@@ -49,6 +49,10 @@ export class SpriteRacerType {
       throw new TypeError('SpriteRacerType: rteDefinitions must be an Array');
     }
 
+    if (config.surfaceClasses !== undefined && !Array.isArray(config.surfaceClasses)) {
+      throw new TypeError('SpriteRacerType: surfaceClasses must be an Array');
+    }
+
     this.config = {
       frameWidth: 128,
       frameHeight: 128,
@@ -57,6 +61,7 @@ export class SpriteRacerType {
       baseRotationOffset: Math.PI / 2,
       tintMode: 'multiply',
       rteDefinitions: [],
+      surfaceClasses: [],
       ...config,
     };
 
@@ -171,6 +176,15 @@ export class SpriteRacerType {
    */
   getTrailParticles(x, y, speed, angle, frame) {
     return this.config.trailFactory(x, y, speed, angle, frame, undefined);
+  }
+
+  /**
+   * Returns the surfaceClasses array — the Surface-Class IDs this racer type
+   * is compatible with. An empty array means the racer always uses its
+   * Heimat-Trail (trailFactory) regardless of track surface classes.
+   */
+  getSurfaceClasses() {
+    return this.config.surfaceClasses ?? [];
   }
 
   /**

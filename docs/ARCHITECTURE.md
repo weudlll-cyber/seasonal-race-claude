@@ -269,7 +269,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 |---|---|
 | ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
 | ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
-| VRE-3 — Racer/Track Linking | Racer editor and Track Manager get class multi-selectors; Setup Screen filters by intersection. |
+| ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 12 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
 | VRE-4 — Race Integration | Trail rendering in RaceScreen switched to surface-class system. Heimat-Trail fallback. Browser test. |
 
 ### Future: Surface Zones

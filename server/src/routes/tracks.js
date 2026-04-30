@@ -52,6 +52,29 @@ function loadAllTracks() {
 
 const tracksMap = loadAllTracks();
 
+// Initial surfaceClasses assignments for the 5 code-default tracks.
+const DEFAULT_TRACK_SURFACE_CLASSES = {
+  'dirt-oval': ['earth'],
+  'river-run': ['water'],
+  'space-sprint': ['air'],
+  'garden-path': ['grass', 'earth'],
+  'city-circuit': ['asphalt'],
+};
+
+// On startup: patch any stored track that lacks surfaceClasses.
+// Idempotent — only mutates tracks where the field is missing.
+function migrateTrackSurfaceClasses() {
+  for (const [id, track] of tracksMap.entries()) {
+    if (Array.isArray(track.surfaceClasses)) continue;
+    const classes = DEFAULT_TRACK_SURFACE_CLASSES[id] ?? [];
+    const patched = { ...track, surfaceClasses: classes };
+    atomicWriteJson(join(DATA_DIR, `${id}.json`), patched);
+    tracksMap.set(id, patched);
+  }
+}
+
+migrateTrackSurfaceClasses();
+
 // Strip geometry arrays and internal file references from the list response.
 function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile, ...rest }) {
   return rest;
@@ -149,6 +172,7 @@ router.post('/', (req, res) => {
     color: '#e63946',
     defaultDuration: 60,
     defaultWinners: 3,
+    surfaceClasses: [],
     ...rest,
     id,
     geometryId,
