@@ -164,6 +164,37 @@ test.describe('V3 — TrackManager surface class pill UX', () => {
     await firstPill.click();
     await expect(page.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
   });
+
+  test('surface class saved to server track persists after page reload', async ({ page }) => {
+    // Regression test for VRE-3 bug: handleSave() was writing only to localStorage.
+    // After reload, useServerTracks() fetched the unchanged server file and overwrote the change.
+    await goToDevTracks(page);
+    await openTrackEditForm(page);
+
+    const pillContainer = page.getByTestId('track-surface-class-pills');
+
+    // Note which pill we're about to activate
+    const firstPill = pillContainer.getByRole('button').first();
+    const pillName = await firstPill.textContent();
+
+    // Activate the pill and save
+    await firstPill.click();
+    await page.getByRole('button', { name: /Save Changes/i }).click();
+
+    // Wait for form to close (success path)
+    await expect(page.getByText('Edit Track')).not.toBeVisible();
+
+    // Reload and reopen the same track's edit form
+    await page.reload();
+    await expect(page.getByRole('button', { name: /Tracks/i })).toBeVisible();
+    await openTrackEditForm(page);
+
+    // The pill must still be active after reload (data was persisted to server)
+    const savedPill = page.getByTestId('track-surface-class-pills')
+      .getByRole('button')
+      .filter({ hasText: pillName });
+    await expect(savedPill).toHaveAttribute('aria-pressed', 'true');
+  });
 });
 
 // ── V4 — SetupScreen filter effect ───────────────────────────────────────────

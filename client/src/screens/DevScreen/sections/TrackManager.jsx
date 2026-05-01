@@ -13,7 +13,7 @@ import { useServerTracksControl } from '../../../modules/storage/useServerTracks
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
 import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
-import { deleteTrackFromServer } from '../../../services/trackApi.js';
+import { deleteTrackFromServer, updateTrackOnServer } from '../../../services/trackApi.js';
 import {
   RACER_TYPE_IDS,
   RACER_TYPE_LABELS,
@@ -80,7 +80,9 @@ function TrackManager() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  function handleSave() {
+  const [saveError, setSaveError] = useState(null);
+
+  async function handleSave() {
     if (!form.name.trim() || !form.icon.trim()) return;
     const { maxRacersIsOverride: _drop, ...formData } = form;
     const track = {
@@ -90,7 +92,16 @@ function TrackManager() {
       isDefault: false,
     };
 
-    if (editId) {
+    if (editId && serverTrackIds.has(editId)) {
+      setSaveError(null);
+      try {
+        await updateTrackOnServer(editId, track);
+        await serverTracksCtl.refresh();
+      } catch (err) {
+        setSaveError(err.message ?? 'Server-Fehler beim Speichern');
+        return;
+      }
+    } else if (editId) {
       setTracks((prev) => prev.map((t) => (t.id === editId ? { ...t, ...track } : t)));
     } else {
       setTracks((prev) => [...prev, { id: newId(), ...track }]);
@@ -98,6 +109,7 @@ function TrackManager() {
     setForm(BLANK);
     setEditId(null);
     setShowForm(false);
+    setSaveError(null);
   }
 
   function handleEdit(track) {
@@ -567,6 +579,11 @@ function TrackManager() {
               </span>
             </div>
           </div>
+          {saveError && (
+            <p style={{ color: '#f87171', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>
+              {saveError}
+            </p>
+          )}
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>
             <button
               className={`${s.btn} ${s.btnPrimary}`}
