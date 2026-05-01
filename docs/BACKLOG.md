@@ -29,8 +29,42 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor Implementierung. (User-Hauptpriorität, Stand 2026-05-01)
-- ⏳ **Default-Tracks zeichnen** — User-Aufgabe: 5 Geometrien im Track Editor zeichnen (L.7-Bug2). Kein Code nötig. Läuft parallel zur Kamera-Planung.
+### 1 — Track Lifecycle Hybrid (TLH) 🔜 Nächste Implementierungsphase
+
+Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zeichnen aufgedeckt (User-Browser-Test 2026-05-01, Daten-Verlust-Bug):
+
+1. "Draw Geometry"-Button öffnet blank Track-Editor ohne Preset-Kontext → erstellt neuen unverbundenen Track
+2. Backend-PUT ignoriert Client-geometryId (`existing.geometryId` hartcodiert) → Geometrie-Link wird beim Speichern gebrochen
+3. Track-Delete löscht assoziierte Geometrie via `removeCachedTrackData` ohne Verwendungs-Prüfung
+4. Default-Tracks existieren nur als Code-Konstanten, nicht als Server-Records → UI-Flow für sie funktioniert nicht
+
+**TLH-1 — Backend-Fixes + Migration (Sub-PR 1)**
+- Server-Boot-Migration: 5 Default-Tracks als Server-Records anlegen (name, icon, color, defaultRacerType, surfaceClasses, trackLights, leere Geometrie-Felder). Idempotent via One-Shot-Marker.
+- PUT `/api/tracks/:id`: `geometryId` vom Client übernehmen wenn im Body vorhanden; sonst `existing.geometryId` behalten (Backward-compat)
+- DELETE `/api/tracks/:id`: Track-Datei entfernen, aber NIEMALS Geometrie automatisch löschen. Frontend `removeCachedTrackData` auf `trackOnly: true` anpassen.
+- Auto-Backup: bei jedem PUT/POST Backup-Kopie nach `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. Kein Auto-Cleanup.
+
+**TLH-2 — UI-Flow + Cleanup (Sub-PR 2)**
+- "Draw Geometry"-Button navigiert zu `/track-editor?load=<serverId>` (Preset-Kontext als URL-Parameter)
+- Track-Editor: wenn `?load=<id>` gesetzt → vorhandene Geometrie laden, bei Save `PUT /api/tracks/<id>` statt POST
+- UI-Felder im Edit-Modal die unmögliche Aktionen suggerieren überprüfen / entfernen (z.B. "Geometry = none"-Option)
+
+**TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3)**
+- Frontend Lade-Reihenfolge: Server → Cache → Code-Bundle (`defaultTracks.js`)
+- Code-Bundle initial mit leeren Geometrien (Bootstrap)
+- Status-Banner wenn Code-Bundle-Modus aktiv: "Server unavailable — showing default tracks (limited functionality)"
+- Export-Button im Dev-Screen: schreibt aktuelle Server-Tracks als JSON-Snapshot (User committet manuell)
+
+> **Reihenfolge wichtig:** TLH-1 macht System sicher (Backup + keine Daten-Verlust-Bugs), TLH-2 macht es benutzbar (korrekter UI-Flow), TLH-3 macht es resilient (Offline-Fallback). Siehe `docs/TRACK_LIFECYCLE.md` für vollständige Spec.
+
+### 1a — Default-Tracks zeichnen (User-Aufgabe nach TLH-2)
+
+User zeichnet 5 Geometrien im Track Editor: Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. Erst nach TLH-2 sicher (UI-Flow korrekt, kein Daten-Verlust-Risiko). Läuft zwischen TLH-2 und TLH-3.
+
+### 2 — Kamera-Phase + RaceScreen-Refactor (nach TLH)
+
+CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor Implementierung.
+
 - **D7d** — 100-Racer-Performance (Spatial-Grid, smarter Camera, LOD) — zurückgestellt hinter Kamera-Phase
 
 ---
@@ -267,8 +301,9 @@ aus D3.5.5.
 12. ✅ **Error Boundary** (Deep-Audit HIGH-Finding adressiert — Top-Level React Error Boundary, PR #51)
 13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash). Cache-Bug (L37) + CSS-Fix im selben PR.
    - **L37-Drift-Risiko (nicht in PR #52 gefixt):** `buildTrackFromEditorState` in `trackEditorSave.js` enthält eine explizite Ausgabe-Feld-Liste — das ist dort intentionell (Form kennt nur eigene Felder), aber neue Editor-Features brauchen explizites Update dieser Funktion. Kein akuter Bug, aber bei künftigen Features daran erinnern.
-14. ⏳ **Default-Tracks zeichnen** — User-Aufgabe (kein Code). 5 Geometrien zeichnen und speichern. Läuft parallel zur Kamera-Spec.
-15. 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst.
+14. 🔜 **Track Lifecycle Hybrid** — TLH-1 (Backend-Fixes + Migration), TLH-2 (UI-Flow + Cleanup), TLH-3 (Code-Fallback + Banner + Export). Drei Sub-PRs in Reihenfolge.
+14a. ⏳ **Default-Tracks zeichnen** — User-Aufgabe nach TLH-2. 5 Geometrien zeichnen und speichern. Zwischen TLH-2 und TLH-3.
+15. **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst. Nach TLH abgeschlossen.
 16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.
 17. **B-UX-Phase** — Dev-Screen Cleanup (B-UX2/B-UX3), Hilfe-Modal. Vor D8.
 18. **Backup/Export** (B-5) — UI vorhanden, Wiring fehlt.

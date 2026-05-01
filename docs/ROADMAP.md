@@ -290,6 +290,7 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 | 2026-05-01 | Error Boundary (PR #51): `ErrorBoundary.jsx` wraps entire app in `main.jsx` — catches all render-time throws, shows "Something went wrong" fallback, prevents blank-screen crashes. +8 unit tests. |
 | 2026-05-01 | Race Track Lights + Cache-Bug-Fix (PR #52): Feature complete (see entry above). Post-PR Browser-Test aufgedeckt: (1) `trackLights` wurde nicht über Cache-Reload persistiert — Root Cause: `cacheTrackGeometry` hatte explizite Whitelist, `trackLights` fehlte. Struktureller Fix: Spread+Exclusion-Pattern (L37). +23 Round-Trip-Tests. (2) Track-Lights-Controls zu breit — CSS-Fix (width:100% + flex:1 entfernt). PR #52 squash-gemergt auf master (dc62557). |
 | 2026-05-01 | Doc-Sprint (docs/post-vre-sync): Phasen-Status post-VRE + Track-Lights synchronisiert. Geplante Phasen-Reihenfolge ergänzt (Kamera-Phase als nächste Hauptpriorität). |
+| 2026-05-01 | Konzept-Doku-Sprint (docs/track-lifecycle-hybrid-concept): Phase Track Lifecycle Hybrid vor Implementation dokumentiert. UI-Flow-Bug (Draw-Geometry öffnet blank Editor ohne Preset-Kontext), Backend-PUT ignoriert Client-geometryId, Track-Delete löscht Geometrie automatisch, Default-Tracks haben keine Server-Records. Hybrid-Konzept: Default-Tracks → Server-Records bei Boot (idempotent), Code-Bundle als Fallback-Schicht, Server-PUT respektiert Client-geometryId, Track-Delete löscht NIEMALS automatisch Geometrie, Auto-Backup bei jedem PUT/POST, Status-Banner im Fallback-Modus. Drei Sub-PRs: TLH-1 (Backend-Fixes + Migration), TLH-2 (UI-Flow + Cleanup), TLH-3 (Code-Fallback + Banner + Export). |
 
 ---
 
@@ -297,8 +298,9 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 
 | # | Phase | Status | Notiz |
 |---|---|---|---|
-| 1 | **Default-Tracks zeichnen** | User-Aufgabe (kein Code) | 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) brauchen Geometrien. L.7-Bug2 — User zeichnet in Track Editor. |
-| 2 | **Kamera-Phase + RaceScreen-Refactor** | 🔜 nächste Hauptpriorität | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Spec wird vor Implementierung diskutiert. |
+| 1 | **Track Lifecycle Hybrid (TLH)** | 🔜 nächste Implementierungsphase | UI-Flow-Bug beim Zeichnen von Default-Track-Geometrien aufgedeckt (Daten-Verlust). Drei Sub-PRs: **TLH-1** Backend-Fixes + Migration, **TLH-2** UI-Flow + Cleanup, **TLH-3** Code-Fallback + Status-Banner + Export. Siehe `docs/TRACK_LIFECYCLE.md`. |
+| 1a | **Default-Tracks zeichnen** | User-Aufgabe nach TLH-2 | 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) brauchen Geometrien. Erst nach TLH-2 (UI-Flow korrekt) sicher zeichenbar. Zwischen TLH-2 und TLH-3. |
+| 2 | **Kamera-Phase + RaceScreen-Refactor** | geplant nach TLH | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Spec wird vor Implementierung diskutiert. |
 | 3 | **Surface Zones** | geplant | Lokale Surface-Class-Überschreibungen innerhalb eines Tracks (Pfützen, Schlammstellen). Folge-Phase nach VRE. TrackEditor-Zonen-Zeichenwerkzeug, `EditorShape.getZonesAtPosition()`. |
 | 4 | **B-UX-Phase** (Dev-Screen Cleanup) | geplant | Dev-Screen auf 30+ Parameter gewachsen — strukturelle Neuordnung, Hilfe-Modal pro Sektion (B-UX2/B-UX3). Vor D8 (voller Racer-Editor). |
 | 5 | **Backup/Export-Feature** (B-5) | geplant | System Backup/Restore/Reset end-to-end verifiziert (UI vorhanden, Wiring fehlt). |

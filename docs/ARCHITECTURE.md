@@ -386,6 +386,85 @@ seasonal-race-claude/
 **Frontend config hook** — `client/src/services/api.js` exports `API_BASE_URL` (defaults to
 `http://localhost:4000`). Set `VITE_API_URL` in a `.env` file to point at staging or VPS.
 
+## Track Lifecycle and Hybrid Persistence
+
+See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summarises the key architectural decisions agreed in the Track Lifecycle Hybrid (TLH) concept phase (2026-05-01).
+
+### Terminology
+
+| Term | Meaning |
+|---|---|
+| **Track-Preset** | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`. |
+| **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`. |
+| **Server-Track** | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file). |
+| **Default-Track** | One of the 5 built-in tracks (dirt-oval, river-run, space-sprint, garden-path, city-circuit). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
+| **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty. |
+
+### Persistence Layer (after TLH)
+
+```
+Frontend loading order for track list:
+  1. Server  (GET /api/tracks — live, authoritative)
+  2. Cache   (localStorage racearena:trackGeometries:* — populated after last server fetch)
+  3. Code-Bundle (defaultTracks.js — hardcoded snapshot, bootstrap + last-resort fallback)
+```
+
+The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 5 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
+
+### Default-Tracks as Server-Records (TLH-1)
+
+On server boot, a one-shot migration checks a marker file (`server/data/.default-tracks-seeded`). If absent, it creates server records for all 5 default tracks with full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry fields (`innerPoints: [], outerPoints: [], centerPoints: []`). The migration is idempotent — running it twice produces no duplicate records.
+
+`DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
+
+### Server-PUT Respects Client geometryId (TLH-1)
+
+```
+PUT /api/tracks/:id body includes geometryId → server uses client value
+PUT /api/tracks/:id body omits geometryId  → server preserves existing.geometryId
+```
+
+Before TLH, the PUT handler silently discarded any `geometryId` sent by the client and always kept `existing.geometryId`. This caused the Track Editor to create a new geometry UUID on save while the server-record stayed linked to the old UUID — effectively severing the geometry link invisibly.
+
+### Track-Delete Never Removes Geometry (TLH-1)
+
+`DELETE /api/tracks/:id` removes the track JSON file only. It does **not** call `removeCachedTrackData` for the associated geometry. Orphaned geometries (geometry files whose linked track no longer exists) are preserved indefinitely.
+
+- **Rationale:** Geometry data is expensive to recreate. Automatic deletion on track-delete destroyed user-drawn paths in the bug that triggered TLH. An orphaned geometry harms nothing; a lost geometry cannot be recovered.
+- **Future cleanup:** A "Clean up orphaned geometries" action (optional, explicit, UI-triggered) may be added later. It is not part of TLH.
+
+On the frontend, `removeCachedTrackData` is called with `{ trackOnly: true }` — removes the track-list cache entry and the background image cache, but leaves `racearena:trackGeometries:<id>` intact.
+
+### Draw Geometry Flow with Preset Context (TLH-2)
+
+The "Draw Geometry" button in the Track-Manager Edit-Modal navigates to the Track Editor with the preset ID as a URL parameter:
+
+```
+/track-editor?load=<serverId>
+```
+
+The Track Editor reads this parameter on mount, loads the existing server-track data (including any previously saved geometry), and — on save — sends a `PUT /api/tracks/<serverId>` with the new geometry fields. No new track record is created.
+
+Before TLH, the button navigated to the Track Editor without any context parameter. The editor defaulted to "new track" mode, created a fresh geometry UUID, and saved it as a new POST — leaving the original preset unlinked.
+
+### Auto-Backup Pipeline (TLH-1)
+
+Every `POST /api/tracks` and `PUT /api/tracks/:id` writes a timestamped backup copy before modifying the authoritative file:
+
+```
+server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json
+```
+
+No auto-cleanup. Backups accumulate indefinitely (storage is cheap; data loss is expensive). Manual cleanup by deleting backup directories is always safe.
+
+### Status-Banner in Code-Bundle Fallback Mode (TLH-3)
+
+When the frontend is operating in Code-Bundle fallback mode (server unreachable, cache empty):
+
+- A persistent top-of-page banner is shown: **"Server unavailable — showing default tracks (limited functionality)"**
+- Write operations (save, delete) are disabled or show a "Server required" error
+- The banner disappears automatically once the server becomes reachable again and tracks are refreshed from the server
+
 ## Future: Phase 5 Server
 
 A backend will be built in Phase 5 with the following responsibilities:
