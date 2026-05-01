@@ -279,3 +279,42 @@ describe('localStorage unavailability', () => {
     }
   });
 });
+
+// ── Corrupted localStorage data — JSON.parse safety (Quick-Wins audit fix) ────
+
+describe('corrupted localStorage — safe fallback', () => {
+  it('readIndex corruption: listTracks returns [] without throwing', () => {
+    localStorage.setItem('racearena:trackGeometries:index', '{invalid json}');
+    expect(() => listTracks()).not.toThrow();
+    expect(listTracks()).toEqual([]);
+  });
+
+  it('single geometry corruption: listTracks skips corrupt entry, returns rest', () => {
+    const saved = saveTrack(makeTrack({ name: 'Good Track' }));
+    // Manually corrupt the geometry of a second entry
+    const badId = 'corrupt-id-123';
+    const index = JSON.parse(localStorage.getItem('racearena:trackGeometries:index'));
+    index.push(badId);
+    localStorage.setItem('racearena:trackGeometries:index', JSON.stringify(index));
+    localStorage.setItem(`racearena:trackGeometries:${badId}`, '<<<not json>>>');
+
+    const list = listTracks();
+    expect(list.length).toBe(1);
+    expect(list[0].id).toBe(saved.id);
+  });
+
+  it('getTrack corruption: returns null without throwing', () => {
+    const saved = saveTrack(makeTrack());
+    localStorage.setItem(`racearena:trackGeometries:${saved.id}`, 'not-valid-json!!');
+    expect(() => getTrack(saved.id)).not.toThrow();
+    expect(getTrack(saved.id)).toBeNull();
+  });
+
+  it('readIndex corruption: getTrack still works for directly-keyed entries', () => {
+    // Even if the index is corrupt, getTrack(id) can still read if caller knows the id
+    const saved = saveTrack(makeTrack({ name: 'Direct Access' }));
+    localStorage.setItem('racearena:trackGeometries:index', 'broken');
+    expect(getTrack(saved.id)).not.toBeNull();
+    expect(getTrack(saved.id).name).toBe('Direct Access');
+  });
+});

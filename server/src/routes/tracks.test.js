@@ -442,6 +442,169 @@ describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)'
   });
 });
 
+// ── surfaceClasses + maxRacers validation (Quick-Wins audit fix) ──────────────
+
+describe('POST /api/tracks — surfaceClasses validation', () => {
+  it('returns 400 when surfaceClasses is an object, not an array', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: {} });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
+  });
+
+  it('returns 400 when surfaceClasses is a string', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: 'earth' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
+  });
+
+  it('returns 400 when surfaceClasses contains non-string elements', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: [123, 'earth'] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
+  });
+
+  it('returns 201 when surfaceClasses is a valid string array', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth', 'grass'] });
+    expect(res.status).toBe(201);
+    expect(res.body.surfaceClasses).toEqual(['earth', 'grass']);
+    createdIds.push(res.body.id);
+  });
+});
+
+describe('PUT /api/tracks/:id — surfaceClasses validation', () => {
+  it('returns 400 when surfaceClasses is not an array', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ surfaceClasses: 'water' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
+  });
+
+  it('returns 400 when surfaceClasses contains non-string elements', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ surfaceClasses: [null, 'earth'] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
+  });
+
+  it('returns 200 when surfaceClasses is a valid string array', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ surfaceClasses: ['air'] });
+    expect(res.status).toBe(200);
+    expect(res.body.surfaceClasses).toEqual(['air']);
+  });
+});
+
+describe('POST /api/tracks — maxRacers validation', () => {
+  it('returns 400 when maxRacers is negative', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: -1 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
+  });
+
+  it('returns 400 when maxRacers is a string', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: 'auto' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
+  });
+
+  it('returns 400 when maxRacers is an array', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: [] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
+  });
+
+  it('returns 201 when maxRacers is a positive number', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: 10 });
+    expect(res.status).toBe(201);
+    expect(res.body.maxRacers).toBe(10);
+    createdIds.push(res.body.id);
+  });
+
+  it('returns 201 when maxRacers is null', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: null });
+    expect(res.status).toBe(201);
+    expect(res.body.maxRacers).toBeNull();
+    createdIds.push(res.body.id);
+  });
+});
+
+describe('PUT /api/tracks/:id — maxRacers validation', () => {
+  it('returns 400 when maxRacers is zero', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).put(`/api/tracks/${id}`).send({ maxRacers: 0 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
+  });
+
+  it('returns 400 when maxRacers is a string', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).put(`/api/tracks/${id}`).send({ maxRacers: 'twenty' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
+  });
+
+  it('returns 200 when maxRacers is updated to a positive number', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).put(`/api/tracks/${id}`).send({ maxRacers: 20 });
+    expect(res.status).toBe(200);
+    expect(res.body.maxRacers).toBe(20);
+  });
+
+  it('returns 200 when maxRacers is updated to null', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, maxRacers: 12 });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).put(`/api/tracks/${id}`).send({ maxRacers: null });
+    expect(res.status).toBe(200);
+    expect(res.body.maxRacers).toBeNull();
+  });
+});
+
 describe('POST /api/tracks/:id/background', () => {
   it('rejects a file exceeding 10 MB with 413', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);

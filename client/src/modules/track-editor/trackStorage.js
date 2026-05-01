@@ -52,7 +52,13 @@ function lsRemove(key) {
 
 function readIndex() {
   const raw = lsGet(GEOMETRIES_INDEX_KEY);
-  return raw ? JSON.parse(raw) : [];
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.warn('[RaceArena] trackStorage: corrupted geometry index — resetting to empty');
+    return [];
+  }
 }
 
 function writeIndex(ids) {
@@ -98,7 +104,13 @@ export function listTracks() {
     .map((id) => {
       const raw = lsGet(trackGeometryKey(id));
       if (!raw) return null;
-      const t = JSON.parse(raw);
+      let t;
+      try {
+        t = JSON.parse(raw);
+      } catch {
+        console.warn(`[RaceArena] trackStorage: corrupted geometry for id "${id}" — skipping`);
+        return null;
+      }
       return {
         id: t.id,
         name: t.name,
@@ -121,7 +133,13 @@ export function listTracks() {
 export function getTrack(id) {
   const raw = lsGet(trackGeometryKey(id));
   if (!raw) return null;
-  const t = JSON.parse(raw);
+  let t;
+  try {
+    t = JSON.parse(raw);
+  } catch {
+    console.warn(`[RaceArena] trackStorage: corrupted geometry for id "${id}" — returning null`);
+    return null;
+  }
   if (!Array.isArray(t.effects)) {
     const effects = t.effectId ? [{ id: t.effectId, config: t.effectConfig ?? {} }] : [];
     return { ...t, effects };
@@ -146,7 +164,11 @@ export function saveTrack(track) {
   if (!isNew) {
     const existing = lsGet(trackGeometryKey(id));
     if (existing) {
-      createdAt = JSON.parse(existing).createdAt ?? now;
+      try {
+        createdAt = JSON.parse(existing).createdAt ?? now;
+      } catch {
+        // Corrupted existing data — keep createdAt = now
+      }
     }
   }
 

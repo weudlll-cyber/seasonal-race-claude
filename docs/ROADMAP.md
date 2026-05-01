@@ -69,11 +69,11 @@ Replaces emoji racers with sprite-based renderable types.
 - [x] D3.5.1 — SpriteRacerType config-driven base class; tintSpriteWithMask for mask-restricted tinting
 - [x] D3.5.2 — Horse/Duck/Snail → SpriteRacerType; `_createTrail` system removed
 - [x] D3.5.3 — 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket)
-- [ ] **Visual Racer Effects** — Surface-Class-driven trail system. Static per-type trails replaced by a data-driven Racer + Track → Surface Class → Generator pipeline. Four Sub-PRs (replaces D3.5.4 Trail-Tuning; D6 RTE evolved into this phase + the follow-on Surface Zones):
-  - [ ] VRE-1 — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` backend API, storage. No UI, no race integration.
-  - [ ] VRE-2 — Surface-Class Editor in Dev-Screen with animated live-preview modal.
-  - [ ] VRE-3 — Racer/Track class selectors + Setup-Screen compatibility filter (only racers with ≥1 matching class shown).
-  - [x] VRE-4 — Race-Integration: `trailResolver.js`, per-racer emitter at race start, Heimat-Trail fallback, `trackSurfaceClasses` in raceData. Phase complete.
+- [x] **Visual Racer Effects** ✅ — Surface-Class-driven trail system. Static per-type trails replaced by a data-driven Racer + Track → Surface Class → Generator pipeline. Four Sub-PRs merged to master:
+  - [x] VRE-1 — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` backend API, storage. (PR #46)
+  - [x] VRE-2 — Surface-Class Editor in Dev-Screen with animated live-preview modal. (PR #47)
+  - [x] VRE-3 — Racer/Track class selectors + Setup-Screen compatibility filter (only racers with ≥1 matching class shown). (PR #48)
+  - [x] VRE-4 — Race-Integration: `trailResolver.js`, per-racer emitter at race start, Heimat-Trail fallback, `trackSurfaceClasses` in raceData. Phase complete. (PR #49)
 - [x] D3.5.5 — Per-Type-Tuning-UI in Dev-Screen: 6 Felder live-tunbar via Edit-Modal, InfoTooltip-Komponente, CONFIG_SNAPSHOT, normalizeOverrideMap. 678 unit + 36 e2e Tests. PR #21, master `2d76bc3`.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS

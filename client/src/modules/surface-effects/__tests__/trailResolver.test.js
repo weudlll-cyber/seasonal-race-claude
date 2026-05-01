@@ -177,11 +177,12 @@ describe('resolveTrailEmitter — performance smoke', () => {
     }
     const elapsed = performance.now() - start;
 
-    // CI runners (GitHub Actions, cold V8, no JIT warm-up) run ~10-15x slower than
-    // dev hardware. A single global threshold either fails on CI or loses the dev-side
-    // regression guard. Split: 50ms on dev (10x buffer over ~5ms baseline), 200ms on
-    // CI (2.7x buffer over ~74ms measured baseline). See LESSONS.md Lesson 36.
-    const threshold = process.env.CI ? 200 : 50;
+    // Thresholds split by environment: V8 JIT state varies between isolated runs (~5ms)
+    // and full-suite runs under load (~60ms with 67 parallel files). CI runners
+    // (GitHub Actions, cold V8, no JIT warm-up) measured ~74ms.
+    // 150ms local = 30x over isolated baseline; passes under full-suite load.
+    // 200ms CI = 2.7x over measured CI baseline. See LESSONS.md Lesson 36.
+    const threshold = process.env.CI ? 200 : 150;
     expect(elapsed).toBeLessThan(threshold);
   });
 });
