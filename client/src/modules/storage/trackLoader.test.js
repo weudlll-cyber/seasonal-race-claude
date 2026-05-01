@@ -298,3 +298,135 @@ describe('removeCachedTrackData — index cleanup (L.6-Bug2 fix)', () => {
     expect(list.some((g) => g.id === MOCK_TRACK_FULL.geometryId)).toBe(false);
   });
 });
+
+// ── Cache round-trip: all server fields must survive cacheTrackGeometry ────────
+//
+// This suite catches regressions when new fields are added to the track data model.
+// With the spread-pattern refactor, new fields flow through automatically — but the
+// tests document intent and guard against future whitelist regressions.
+
+const FULL_TRACK_ALL_FIELDS = {
+  id: 'track-server-001',
+  geometryId: 'geo-abc123',
+  name: 'Round-Trip Test Track',
+  icon: '🏎️',
+  description: 'A track used for round-trip field tests',
+  defaultRacerTypeId: 'car',
+  color: '#ff8844',
+  defaultDuration: 90,
+  defaultWinners: 3,
+  worldWidth: 1920,
+  worldHeight: 1080,
+  isDefault: false,
+  closed: true,
+  sourceMode: 'center',
+  width: 100,
+  centerPoints: [
+    { x: 100, y: 200 },
+    { x: 400, y: 200 },
+  ],
+  innerPoints: [
+    { x: 100, y: 150 },
+    { x: 400, y: 150 },
+  ],
+  outerPoints: [
+    { x: 100, y: 250 },
+    { x: 400, y: 250 },
+  ],
+  effects: [{ id: 'glow', config: {} }],
+  pathLengthPx: 1500,
+  backgroundImageFile: 'uploads/bg-internal.jpg', // server-internal — must NOT appear in cache
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-05-01T12:00:00.000Z',
+  surfaceClasses: { default: 'asphalt', zone_1: 'grass' },
+  maxRacers: 8,
+  trackLights: { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
+};
+
+describe('cacheTrackGeometry — field round-trip preservation (L37)', () => {
+  let cached;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => FULL_TRACK_ALL_FIELDS,
+        blob: async () => {
+          throw new Error('no bg');
+        },
+      })
+    );
+    cached = await cacheTrackGeometry({
+      id: FULL_TRACK_ALL_FIELDS.id,
+      geometryId: FULL_TRACK_ALL_FIELDS.geometryId,
+    });
+  });
+
+  it('uses geometryId as the cache id', () => {
+    expect(cached.id).toBe('geo-abc123');
+  });
+
+  it('sets backgroundImage to a computed server URL', () => {
+    expect(cached.backgroundImage).toContain(`/api/tracks/${FULL_TRACK_ALL_FIELDS.id}/background`);
+  });
+
+  it('does not include backgroundImageFile (server-internal field)', () => {
+    expect(cached.backgroundImageFile).toBeUndefined();
+  });
+
+  it('does not expose geometryId as a separate field (already mapped to id)', () => {
+    expect(cached.geometryId).toBeUndefined();
+  });
+
+  // Per-field passthrough: each field is a separate test so failures name the missing field.
+  const PASSTHROUGH_FIELDS = [
+    'name',
+    'icon',
+    'description',
+    'defaultRacerTypeId',
+    'color',
+    'defaultDuration',
+    'defaultWinners',
+    'worldWidth',
+    'worldHeight',
+    'isDefault',
+    'closed',
+    'sourceMode',
+    'width',
+    'centerPoints',
+    'innerPoints',
+    'outerPoints',
+    'effects',
+    'pathLengthPx',
+    'createdAt',
+    'updatedAt',
+    'surfaceClasses',
+    'maxRacers',
+    'trackLights',
+  ];
+
+  for (const field of PASSTHROUGH_FIELDS) {
+    it(`preserves field "${field}" from server response`, () => {
+      expect(cached[field]).toEqual(FULL_TRACK_ALL_FIELDS[field]);
+    });
+  }
+
+  it('persists trackLights in localStorage', () => {
+    const stored = storageGet(
+      `racearena:trackGeometries:${FULL_TRACK_ALL_FIELDS.geometryId}`,
+      null
+    );
+    expect(stored).not.toBeNull();
+    expect(stored.trackLights).toEqual(FULL_TRACK_ALL_FIELDS.trackLights);
+  });
+
+  it('persists surfaceClasses in localStorage', () => {
+    const stored = storageGet(
+      `racearena:trackGeometries:${FULL_TRACK_ALL_FIELDS.geometryId}`,
+      null
+    );
+    expect(stored.surfaceClasses).toEqual(FULL_TRACK_ALL_FIELDS.surfaceClasses);
+  });
+});

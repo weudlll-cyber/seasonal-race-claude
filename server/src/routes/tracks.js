@@ -61,6 +61,41 @@ const DEFAULT_TRACK_SURFACE_CLASSES = {
   'city-circuit': ['asphalt'],
 };
 
+// Initial trackLights configuration for the 5 code-default tracks and custom tracks.
+const DEFAULT_TRACK_LIGHTS_BY_ID = {
+  'dirt-oval': { color: '#ff8844', style: 'sequence', speed: 1.0 },
+  'river-run': { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
+  'space-sprint': { color: '#a8d4ff', style: 'sequence', speed: 1.5 },
+  'garden-path': { color: '#ffdd66', style: 'steady', speed: 1.0 },
+  'city-circuit': { color: '#ffffff', style: 'sequence', speed: 1.0 },
+};
+const CUSTOM_TRACK_LIGHTS_DEFAULT = { color: '#ffffff', style: 'sequence', speed: 1.0 };
+
+const VALID_LIGHT_STYLES = ['steady', 'sequence', 'sync_pulse', 'random_flash'];
+
+function isValidHexColor(c) {
+  return typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c);
+}
+
+function validateTrackLights(lights) {
+  if (typeof lights !== 'object' || lights === null || Array.isArray(lights)) {
+    return 'trackLights must be an object';
+  }
+  if ('color' in lights && !isValidHexColor(lights.color)) {
+    return 'trackLights.color must be a valid #RRGGBB hex string';
+  }
+  if ('style' in lights && !VALID_LIGHT_STYLES.includes(lights.style)) {
+    return `trackLights.style must be one of: ${VALID_LIGHT_STYLES.join(', ')}`;
+  }
+  if (
+    'speed' in lights &&
+    (typeof lights.speed !== 'number' || lights.speed < 0.1 || lights.speed > 3.0)
+  ) {
+    return 'trackLights.speed must be a number between 0.1 and 3.0';
+  }
+  return null;
+}
+
 // On startup: patch any stored track that lacks surfaceClasses.
 // Idempotent — only mutates tracks where the field is missing.
 function migrateTrackSurfaceClasses() {
@@ -74,6 +109,22 @@ function migrateTrackSurfaceClasses() {
 }
 
 migrateTrackSurfaceClasses();
+
+// On startup: patch any stored track that lacks trackLights.
+// Idempotent — only mutates tracks where the field is missing or not an object.
+function migrateTrackLights() {
+  for (const [id, track] of tracksMap.entries()) {
+    if (track.trackLights && typeof track.trackLights === 'object' && !Array.isArray(track.trackLights)) {
+      continue;
+    }
+    const lights = DEFAULT_TRACK_LIGHTS_BY_ID[id] ?? CUSTOM_TRACK_LIGHTS_DEFAULT;
+    const patched = { ...track, trackLights: lights };
+    atomicWriteJson(join(DATA_DIR, `${id}.json`), patched);
+    tracksMap.set(id, patched);
+  }
+}
+
+migrateTrackLights();
 
 // Strip geometry arrays and internal file references from the list response.
 function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile, ...rest }) {
@@ -131,6 +182,10 @@ function validateTrackBodyForCreate(body) {
       errors.push('maxRacers must be a positive number or null');
     }
   }
+  if ('trackLights' in body) {
+    const err = validateTrackLights(body.trackLights);
+    if (err) errors.push(err);
+  }
   return errors;
 }
 
@@ -176,6 +231,10 @@ function validateTrackBodyForUpdate(body) {
     if (body.maxRacers !== null && (typeof body.maxRacers !== 'number' || body.maxRacers <= 0)) {
       errors.push('maxRacers must be a positive number or null');
     }
+  }
+  if ('trackLights' in body) {
+    const err = validateTrackLights(body.trackLights);
+    if (err) errors.push(err);
   }
   return errors;
 }
