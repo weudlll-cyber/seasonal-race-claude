@@ -243,6 +243,25 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
   in Isolation stabil. Root cause: vermutlich globaler `FileReader`-Mock wird von einem anderen Test-File
   überschrieben. Fix: Spy-Scope prüfen oder `--sequence.shuffle false` + Isolations-Test.
   *(Entdeckt 2026-05-01 während Quick-Wins PR #50, Severity: LOW)*
+  **Update TLH-1:** Root cause bestätigt und gefixt — `fetch`-Stub aus `trackLoader.test.js` leckte in
+  TrackEditor-Worker. Fix: `vi.unstubAllGlobals()` in `beforeEach`. PR #55, 2026-05-01.
+
+- **Q-20** — Server-Test-Backup-Cleanup nicht Crash-resistent (TLH-1)
+  `afterAll` in `tracks.test.js` räumt Backup-Files über `rmSync` auf, aber nur bei normalem
+  Testlauf-Ende. Bei Ctrl+C / Crash vor `afterAll` bleiben alle Backup-Files im realen
+  `server/data/tracks-backups/` liegen. Während TLH-1-Entwicklung wurden ~41 Orphan-Files
+  erzeugt. Möglicher Ansatz: `process.on('exit', cleanup)` + `process.on('SIGINT', cleanup)` als
+  Guard, oder Tests auf temporäres Verzeichnis umstellen (DATA_DIR Override per Env-Var).
+  *(Entdeckt TLH-1 2026-05-01, Severity: LOW)*
+
+- **Q-21** — `.json.tmp`-Orphans bei OneDrive-EPERM-Fallback (TLH-1)
+  `atomicWriteJson` schreibt erst `.tmp`, dann `renameSync`. Schlägt `renameSync` fehl (OneDrive
+  EPERM), greift Fallback `writeFileSync` auf die Zieldatei — danach soll `unlinkSync(tmp)` die
+  `.tmp`-Datei löschen. Schlägt auch das fehl, bleibt eine `.json.tmp`-Datei liegen. `findBackupFiles`
+  sucht nach `endsWith('.json')` und findet `.json.tmp` nicht — solche Orphans werden nie aufgeräumt.
+  Möglicher Ansatz: Server-Boot-Routine scannt `tracks-backups/` nach `*.json.tmp` und löscht sie,
+  oder `findBackupFiles` schließt `.json.tmp` ein.
+  *(Entdeckt TLH-1 2026-05-01, Severity: LOW)*
 
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
