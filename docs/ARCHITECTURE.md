@@ -85,6 +85,20 @@ Browser → React (screens/)
             ↓ localStorage (modules/storage/)    ← all settings, tracks, results
 ```
 
+## Error Boundary (Top-Level)
+
+`client/src/components/ErrorBoundary/ErrorBoundary.jsx` wraps the entire app in `main.jsx`:
+
+```
+React.StrictMode
+  └── ErrorBoundary          ← catches all render-time throws
+        └── App (Router, screens, contexts)
+```
+
+On any render crash, instead of a blank screen the user sees: headline, reload button, "Reset local data" button (clears all `racearena:*` localStorage + sessionStorage keys, then reloads), and a toggleable technical-details panel showing the error message + component stack. The crash is logged via `console.error` with prefix `[RaceArena] Render crash:`.
+
+Per-screen boundaries are not used — the top-level catch-all is sufficient for the current single-page structure. Backend logging will be added in Phase 5.
+
 ## Key Design Decisions
 
 - **Phase 1–4 pure client; Phase L adds local backend** — A local Express server (Phase L, PR #43–#44) handles custom track storage and background images. Race state, settings, and results still persist in `localStorage`. The backend runs on port 4000 via `docker compose up`. See [TRACK_EDITOR.md — localStorage Keys](TRACK_EDITOR.md#localstorage-keys) for the key schema.
