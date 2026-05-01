@@ -32,6 +32,19 @@ vi.mock('../../../modules/autoSpriteScale.js', () => ({
   DEFAULT_AUTO_SCALE_CONFIG: { minTargetScreenPx: 32 },
 }));
 
+vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
+  useSurfaceClasses: () => ({
+    classes: [
+      { id: 'earth', label: 'Earth' },
+      { id: 'grass', label: 'Grass' },
+      { id: 'water', label: 'Water' },
+    ],
+    refresh: vi.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 import { RacerEditModal } from './RacerEditModal.jsx';
 import {
   RACER_TYPE_IDS,
@@ -158,12 +171,12 @@ describe('RacerEditModal', () => {
     expect(resetAllBtn.disabled).toBe(true);
   });
 
-  it('InfoTooltip is present for each field including min sprite size', () => {
+  it('InfoTooltip is present for each field including min sprite size and surface classes', () => {
     renderModal('horse');
     // tooltip spans have display:none — query with hidden:true
-    // 6 standard fields + 1 min sprite size = 7 total
+    // 6 standard fields + 1 min sprite size + 1 surface classes = 8 total
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
-    expect(tooltips.length).toBe(7);
+    expect(tooltips.length).toBe(8);
   });
 });
 
@@ -230,6 +243,58 @@ describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
 
   it('Reset all to defaults also resets min size override', () => {
     const { setOverrides } = renderModal('horse', { horse: { minTargetScreenPx: 80 } });
+    const resetAllBtn = screen.getByRole('button', { name: /Reset all to defaults/i });
+    fireEvent.click(resetAllBtn);
+    expect(setOverrides).toHaveBeenCalled();
+  });
+});
+
+describe('RacerEditModal — surface classes section (VRE-3)', () => {
+  it('renders the surface-class pills container', () => {
+    renderModal('horse');
+    expect(screen.getByTestId('surface-class-pills')).toBeTruthy();
+  });
+
+  it('renders all 3 mock surface class pills as buttons', () => {
+    renderModal('horse');
+    expect(screen.getByTitle('Earth')).toBeTruthy();
+    expect(screen.getByTitle('Grass')).toBeTruthy();
+    expect(screen.getByTitle('Water')).toBeTruthy();
+  });
+
+  it('Done button is disabled when surfaceClasses override is empty []', () => {
+    renderModal('horse', { horse: { surfaceClasses: [] } });
+    const doneBtn = screen.getByRole('button', { name: /Done/i });
+    expect(doneBtn.disabled).toBe(true);
+  });
+
+  it('Done button is enabled when surfaceClasses has at least one entry', () => {
+    renderModal('horse');
+    const doneBtn = screen.getByRole('button', { name: /Done/i });
+    // horse defaults include surfaceClasses from code defaults — Done should be enabled
+    expect(doneBtn.disabled).toBe(false);
+  });
+
+  it('shows error message when no surface class is selected', () => {
+    renderModal('horse', { horse: { surfaceClasses: [] } });
+    expect(screen.getByText(/At least one surface class is required/i)).toBeTruthy();
+  });
+
+  it('shows modified badge when surfaceClasses is overridden', () => {
+    renderModal('horse', { horse: { surfaceClasses: ['earth'] } });
+    expect(screen.getAllByText('modified').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('toggles a pill off and shows error when result is empty', () => {
+    // Start with only 'earth' selected via override
+    renderModal('horse', { horse: { surfaceClasses: ['earth'] } });
+    // Deselect Earth — no classes remain → error appears
+    fireEvent.click(screen.getByTitle('Earth'));
+    expect(screen.getByText(/At least one surface class is required/i)).toBeTruthy();
+  });
+
+  it('Reset all to defaults also resets surfaceClasses state', () => {
+    const { setOverrides } = renderModal('horse', { horse: { surfaceClasses: ['water'] } });
     const resetAllBtn = screen.getByRole('button', { name: /Reset all to defaults/i });
     fireEvent.click(resetAllBtn);
     expect(setOverrides).toHaveBeenCalled();

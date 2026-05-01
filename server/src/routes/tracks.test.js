@@ -276,6 +276,172 @@ describe('DELETE /api/tracks/:id', () => {
   });
 });
 
+// ── surfaceClasses field (VRE-3) ──────────────────────────────────────────────
+
+describe('surfaceClasses field — startup migration', () => {
+  it('all tracks returned by GET /api/tracks have a surfaceClasses array', async () => {
+    const res = await request(app).get('/api/tracks');
+    expect(res.status).toBe(200);
+    for (const track of res.body) {
+      expect(Array.isArray(track.surfaceClasses)).toBe(true);
+    }
+  });
+
+  it('migrated unknown track (Weltall) gets surfaceClasses: []', async () => {
+    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.surfaceClasses)).toBe(true);
+  });
+});
+
+describe('POST /api/tracks — surfaceClasses', () => {
+  it('creates a track with surfaceClasses and includes it in the response', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth', 'grass'] });
+    expect(res.status).toBe(201);
+    expect(res.body.surfaceClasses).toEqual(['earth', 'grass']);
+    createdIds.push(res.body.id);
+  });
+
+  it('created track with surfaceClasses appears correctly in GET detail', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['water'] });
+    createdIds.push(createRes.body.id);
+    const detail = await request(app).get(`/api/tracks/${createRes.body.id}`);
+    expect(detail.body.surfaceClasses).toEqual(['water']);
+  });
+
+  it('creates a track with empty surfaceClasses: []', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: [] });
+    expect(res.status).toBe(201);
+    expect(res.body.surfaceClasses).toEqual([]);
+    createdIds.push(res.body.id);
+  });
+
+  it('created track without surfaceClasses defaults to [] in list response', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    createdIds.push(res.body.id);
+    // Track was created without surfaceClasses — post-creation migration not needed
+    // since new tracks get [] via spread defaults if not provided
+    const list = await request(app).get('/api/tracks');
+    const found = list.body.find((t) => t.id === res.body.id);
+    expect(found).toBeDefined();
+    expect(Array.isArray(found.surfaceClasses)).toBe(true);
+  });
+});
+
+describe('PUT /api/tracks/:id — surfaceClasses update', () => {
+  it('updates surfaceClasses on an existing track', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth'] });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, surfaceClasses: ['air', 'water'] });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.surfaceClasses).toEqual(['air', 'water']);
+  });
+
+  it('clears surfaceClasses when updated to []', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, surfaceClasses: ['earth', 'grass'] });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, surfaceClasses: [] });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.surfaceClasses).toEqual([]);
+  });
+});
+
+// ── PUT partial-update validation (VRE-3 Bug Fix) ────────────────────────────
+
+describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)', () => {
+  it('returns 200 when PUT body contains only metadata fields (no closed, no geometry)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'Metadata Only', surfaceClasses: ['air'] });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Metadata Only');
+    expect(res.body.surfaceClasses).toEqual(['air']);
+  });
+
+  it('preserves existing geometry when PUT body omits geometry fields', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    await request(app).put(`/api/tracks/${id}`).send({ name: 'No Geo In Body' });
+
+    const detail = await request(app).get(`/api/tracks/${id}`);
+    expect(Array.isArray(detail.body.centerPoints)).toBe(true);
+    expect(detail.body.centerPoints.length).toBeGreaterThanOrEqual(2);
+    expect(typeof detail.body.closed).toBe('boolean');
+  });
+
+  it('returns 400 when PUT body includes closed as non-boolean', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'Bad Closed', closed: 'yes' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/closed must be a boolean/i);
+  });
+
+  it('returns 400 when PUT body includes geometry with too few centerPoints', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ centerPoints: [{ x: 1, y: 1 }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/geometry/i);
+  });
+
+  it('returns 200 when PUT body includes valid updated geometry', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const newCenter = [{ x: 10, y: 20 }, { x: 30, y: 40 }, { x: 50, y: 20 }];
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ closed: true, centerPoints: newCenter });
+    expect(res.status).toBe(200);
+
+    const detail = await request(app).get(`/api/tracks/${id}`);
+    expect(detail.body.centerPoints).toEqual(newCenter);
+    expect(detail.body.closed).toBe(true);
+  });
+
+  it('POST without geometry still returns 400 (create validation unchanged)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ name: 'No Geometry', closed: false, worldWidth: 1280, worldHeight: 720 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/geometry/i);
+  });
+});
+
 describe('POST /api/tracks/:id/background', () => {
   it('rejects a file exceeding 10 MB with 413', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);

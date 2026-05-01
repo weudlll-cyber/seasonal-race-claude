@@ -269,7 +269,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 |---|---|
 | ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
 | ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
-| VRE-3 — Racer/Track Linking | Racer editor and Track Manager get class multi-selectors; Setup Screen filters by intersection. |
+| ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 12 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
 | VRE-4 — Race Integration | Trail rendering in RaceScreen switched to surface-class system. Heimat-Trail fallback. Browser test. |
 
 ### Future: Surface Zones
@@ -331,7 +331,9 @@ seasonal-race-claude/
 **Frontend write strategy (L.5):**
 - `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
 - TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Erneut versuchen" button
-- TrackManager: Delete → `deleteTrackFromServer` + `removeCachedTrackData`; Edit → `/track-editor?load=<serverId>`
+- TrackManager: Save (server track) → `updateTrackOnServer` + `refresh`; Save (local track) → `setTracks` (localStorage); Delete (server) → `deleteTrackFromServer` + `removeCachedTrackData`; Geometry edit → `/track-editor?load=<serverId>`
+- **Rule:** Every mutation flow that touches a server track (identified via `serverTrackIds.has(id)`) must call the corresponding API function (`updateTrackOnServer` / `deleteTrackFromServer`) and call `refresh()` afterwards. Writing only to `localStorage` via `setTracks()` is insufficient — the `useServerTracks` fetch overwrites local state on next render.
+- **PUT validation is partial:** `validateTrackBodyForUpdate` only validates fields actually present in the request body. Geometry fields (`closed`, `centerPoints`, `innerPoints`, `outerPoints`) are optional in PUT — if omitted they are merged from the existing track. POST uses `validateTrackBodyForCreate` which is strict (all geometry fields required). This allows TrackManager to send metadata-only PUTs without re-sending the full geometry.
 
 **Migration strategy (L.5):**
 - On first server connection, `migrateLocalTracksToServer()` runs once per browser

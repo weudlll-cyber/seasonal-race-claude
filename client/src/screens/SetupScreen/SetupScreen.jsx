@@ -21,7 +21,9 @@ import {
   getRacerType,
   RACER_TYPE_IDS,
   RACER_TYPE_LABELS,
+  listAllRacerTypes,
 } from '../../modules/racer-types/index.js';
+import { filterRacerTypesForTrack } from '../../modules/surface-effects/registry.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { estimatedSecondsPerLap, lapsFromDuration } from '../../modules/camera/lapUtils.js';
@@ -135,6 +137,35 @@ function SetupScreen() {
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
+  // Filter racer types to those compatible with the selected track's surface classes.
+  // Types with empty surfaceClasses are always included (Heimat-Trail fallback).
+  const filteredRacerTypeIds = useMemo(() => {
+    const activeIds = RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false);
+    if (!selectedTrack?.surfaceClasses?.length) return activeIds;
+    const allTypes = listAllRacerTypes().filter((t) => t.isActive);
+    const filtered = filterRacerTypesForTrack(allTypes, selectedTrack.surfaceClasses, (id) =>
+      getRacerType(id).getSurfaceClasses()
+    );
+    return filtered.map((t) => t.id);
+  }, [selectedTrack, racerTypeOverrides]);
+
+  // Clear override if it's no longer compatible with the selected track's surface classes.
+  useEffect(() => {
+    if (racerTypeOverride && filteredRacerTypeIds.length > 0) {
+      if (!filteredRacerTypeIds.includes(racerTypeOverride)) {
+        setRacerTypeOverride(null);
+      }
+    }
+  }, [filteredRacerTypeIds, racerTypeOverride]);
+
+  // Track's surface classes as readable labels for the hint.
+  const trackSurfaceLabel = useMemo(() => {
+    if (!selectedTrack?.surfaceClasses?.length) return null;
+    return selectedTrack.surfaceClasses
+      .map((id) => id.charAt(0).toUpperCase() + id.slice(1))
+      .join(', ');
+  }, [selectedTrack]);
+
   // D7c: row-start hints — racersPerRow from actual geometry so large worlds are correct.
   // Uses effectiveWidth = geometricWidth × startSpreadRange (matches RaceScreen formula).
   const geometricRacersPerRow = useMemo(() => {
@@ -169,7 +200,10 @@ function SetupScreen() {
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
 
   function handleStartRace() {
-    const effectiveTypeId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
+    const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
+    const effectiveTypeId = filteredRacerTypeIds.includes(preferredId)
+      ? preferredId
+      : (filteredRacerTypeIds[0] ?? preferredId);
     const effectiveLaps = selectedLaps ?? lapsFromDuration(raceSettings.duration);
     const race = {
       racers: players,
@@ -340,7 +374,13 @@ function SetupScreen() {
                       Racer type for this race
                     </label>
                     <select
-                      value={racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'}
+                      value={
+                        filteredRacerTypeIds.includes(
+                          racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                        )
+                          ? (racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse')
+                          : (filteredRacerTypeIds[0] ?? 'horse')
+                      }
                       onChange={(e) => {
                         const val = e.target.value;
                         setRacerTypeOverride(
@@ -357,13 +397,26 @@ function SetupScreen() {
                         cursor: 'pointer',
                       }}
                     >
-                      {RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false).map((id) => (
+                      {filteredRacerTypeIds.map((id) => (
                         <option key={id} value={id}>
                           {RACER_TYPE_LABELS[id]}
                           {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
                         </option>
                       ))}
                     </select>
+                    {trackSurfaceLabel && (
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--color-muted)',
+                          marginTop: '0.25rem',
+                          display: 'block',
+                        }}
+                        data-testid="track-surface-hint"
+                      >
+                        Surface: {trackSurfaceLabel}
+                      </span>
+                    )}
                   </div>
 
                   {trackIsOpen ? (

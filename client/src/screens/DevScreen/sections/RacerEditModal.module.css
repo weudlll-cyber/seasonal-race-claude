@@ -293,3 +293,43 @@
   margin: 0;
   flex: 1;
 }
+
+/* ── Surface class pills ── */
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+}
+
+.classPill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background var(--transition),
+    color var(--transition),
+    border-color var(--transition);
+  line-height: 1.4;
+}
+
+.classPillActive {
+  background: rgba(68, 136, 255, 0.22);
+  color: var(--color-primary, #4488ff);
+  border-color: var(--color-primary, #4488ff);
+}
+
+.classPillInactive {
+  background: #17171f;
+  color: var(--color-muted);
+  border-color: #2a2a35;
+}
+
+.classPillInactive:hover {
+  border-color: #4a4a5a;
+  color: var(--color-text);
+}

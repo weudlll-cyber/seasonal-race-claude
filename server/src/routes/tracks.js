@@ -52,6 +52,29 @@ function loadAllTracks() {
 
 const tracksMap = loadAllTracks();
 
+// Initial surfaceClasses assignments for the 5 code-default tracks.
+const DEFAULT_TRACK_SURFACE_CLASSES = {
+  'dirt-oval': ['earth'],
+  'river-run': ['water'],
+  'space-sprint': ['air'],
+  'garden-path': ['grass', 'earth'],
+  'city-circuit': ['asphalt'],
+};
+
+// On startup: patch any stored track that lacks surfaceClasses.
+// Idempotent — only mutates tracks where the field is missing.
+function migrateTrackSurfaceClasses() {
+  for (const [id, track] of tracksMap.entries()) {
+    if (Array.isArray(track.surfaceClasses)) continue;
+    const classes = DEFAULT_TRACK_SURFACE_CLASSES[id] ?? [];
+    const patched = { ...track, surfaceClasses: classes };
+    atomicWriteJson(join(DATA_DIR, `${id}.json`), patched);
+    tracksMap.set(id, patched);
+  }
+}
+
+migrateTrackSurfaceClasses();
+
 // Strip geometry arrays and internal file references from the list response.
 function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile, ...rest }) {
   return rest;
@@ -73,10 +96,11 @@ function generateGeometryId() {
 }
 
 /**
- * Validate required fields for track create/update.
+ * Validate required fields for track CREATE (POST).
+ * All structural and geometry fields are mandatory.
  * @returns {string[]} array of error messages, empty if valid
  */
-function validateTrackBody(body) {
+function validateTrackBodyForCreate(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
     errors.push('name is required');
@@ -96,6 +120,42 @@ function validateTrackBody(body) {
     body.outerPoints.length >= 2;
   if (!hasCenter && !hasInnerOuter) {
     errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
+  }
+  return errors;
+}
+
+/**
+ * Validate fields for track UPDATE (PUT).
+ * Only validates fields actually present in the body — omitted fields are
+ * merged from the existing track, so they do not need to be re-sent.
+ * Geometry is optional: if any geometry key is present it must be complete.
+ * @returns {string[]} array of error messages, empty if valid
+ */
+function validateTrackBodyForUpdate(body) {
+  const errors = [];
+  if ('name' in body && (!body.name || typeof body.name !== 'string' || !body.name.trim())) {
+    errors.push('name is required');
+  }
+  if ('closed' in body && typeof body.closed !== 'boolean') {
+    errors.push('closed must be a boolean');
+  }
+  if ('worldWidth' in body && typeof body.worldWidth !== 'number') {
+    errors.push('worldWidth must be a number');
+  }
+  if ('worldHeight' in body && typeof body.worldHeight !== 'number') {
+    errors.push('worldHeight must be a number');
+  }
+  const hasAnyGeometry = 'centerPoints' in body || 'innerPoints' in body || 'outerPoints' in body;
+  if (hasAnyGeometry) {
+    const hasCenter = Array.isArray(body.centerPoints) && body.centerPoints.length >= 2;
+    const hasInnerOuter =
+      Array.isArray(body.innerPoints) &&
+      body.innerPoints.length >= 2 &&
+      Array.isArray(body.outerPoints) &&
+      body.outerPoints.length >= 2;
+    if (!hasCenter && !hasInnerOuter) {
+      errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
+    }
   }
   return errors;
 }
@@ -132,7 +192,7 @@ router.get('/:id/background', (req, res) => {
 
 // POST /api/tracks — create a new track
 router.post('/', (req, res) => {
-  const errors = validateTrackBody(req.body);
+  const errors = validateTrackBodyForCreate(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
   const id = generateId();
@@ -149,6 +209,7 @@ router.post('/', (req, res) => {
     color: '#e63946',
     defaultDuration: 60,
     defaultWinners: 3,
+    surfaceClasses: [],
     ...rest,
     id,
     geometryId,
@@ -171,7 +232,7 @@ router.put('/:id', (req, res) => {
   const existing = tracksMap.get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Track not found' });
 
-  const errors = validateTrackBody(req.body);
+  const errors = validateTrackBodyForUpdate(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
   // eslint-disable-next-line no-unused-vars

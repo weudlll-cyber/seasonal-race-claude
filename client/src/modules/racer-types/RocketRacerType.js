@@ -46,6 +46,7 @@ export const RocketRacerType = new SpriteRacerType({
     minRadius: 3,
     maxRadius: 6,
   }),
+  surfaceClasses: ['air', 'water'],
 });
 
 export default RocketRacerType;

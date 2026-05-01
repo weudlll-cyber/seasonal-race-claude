@@ -24,13 +24,16 @@ import {
   loadAutoScaleConfig,
   DEFAULT_AUTO_SCALE_CONFIG,
 } from '../../../modules/autoSpriteScale.js';
+import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
 import { MinSpriteSizePreview } from './MinSpriteSizePreview.jsx';
 import s from './RacerEditModal.module.css';
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
-// Fields rendered in the standard loop. minTargetScreenPx has its own section.
-const STANDARD_FIELDS = TUNABLE_FIELDS.filter((f) => f !== 'minTargetScreenPx');
+// Fields rendered in the standard loop. minTargetScreenPx and surfaceClasses have their own sections.
+const STANDARD_FIELDS = TUNABLE_FIELDS.filter(
+  (f) => f !== 'minTargetScreenPx' && f !== 'surfaceClasses'
+);
 
 const FIELD_META = {
   speedMultiplier: {
@@ -127,6 +130,14 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     'minTargetScreenPx' in typeOverrides ? typeOverrides.minTargetScreenPx : undefined
   );
 
+  // Surface classes — local copy of the effective value (override or code default)
+  const [surfaceClassesValue, setSurfaceClassesValue] = useState(() =>
+    'surfaceClasses' in typeOverrides
+      ? [...typeOverrides.surfaceClasses]
+      : [...(RACER_TYPES[typeId]?.config?.surfaceClasses ?? [])]
+  );
+  const { classes: allSurfaceClasses } = useSurfaceClasses();
+
   // Scroll indicator: true when body has more content below the visible area
   const bodyRef = useRef(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
@@ -153,6 +164,11 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     const freshOverrides = normalizeOverrideMap(overrides)[typeId] ?? {};
     setMinSizeOverride(
       'minTargetScreenPx' in freshOverrides ? freshOverrides.minTargetScreenPx : undefined
+    );
+    setSurfaceClassesValue(
+      'surfaceClasses' in freshOverrides
+        ? [...freshOverrides.surfaceClasses]
+        : [...(RACER_TYPES[typeId]?.config?.surfaceClasses ?? [])]
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
@@ -239,11 +255,47 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     });
   }
 
+  function handleSurfaceClassToggle(classId) {
+    setSurfaceClassesValue((prev) => {
+      const next = prev.includes(classId) ? prev.filter((c) => c !== classId) : [...prev, classId];
+      if (next.length > 0) {
+        applyTunableOverride(typeId, 'surfaceClasses', next);
+        setOverrides((overridesPrev) => {
+          const all = normalizeOverrideMap(overridesPrev);
+          const typeOvr = { ...(all[typeId] ?? {}) };
+          typeOvr.surfaceClasses = next;
+          return { ...all, [typeId]: typeOvr };
+        });
+      }
+      return next;
+    });
+  }
+
+  function handleSurfaceClassesReset() {
+    const defaultVal = [...(CONFIG_SNAPSHOT[typeId]?.surfaceClasses ?? [])];
+    setSurfaceClassesValue(defaultVal);
+    restoreTunableDefault(typeId, 'surfaceClasses');
+    setOverrides((prev) => {
+      const all = normalizeOverrideMap(prev);
+      const typeOvr = { ...(all[typeId] ?? {}) };
+      delete typeOvr.surfaceClasses;
+      const next = { ...all };
+      if (Object.keys(typeOvr).length === 0) delete next[typeId];
+      else next[typeId] = typeOvr;
+      return next;
+    });
+  }
+
+  const surfaceClassesModified =
+    'surfaceClasses' in (normalizeOverrideMap(overrides)[typeId] ?? {});
+
   function handleResetAll() {
     // Restore all tunable fields from snapshot
     for (const f of TUNABLE_FIELDS) restoreTunableDefault(typeId, f);
     // Reset min size state
     setMinSizeOverride(undefined);
+    // Reset surface classes state
+    setSurfaceClassesValue([...(CONFIG_SNAPSHOT[typeId]?.surfaceClasses ?? [])]);
     // Remove all tunable overrides from storage (keep isActive if set)
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
@@ -398,6 +450,45 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
               </p>
             </div>
           </div>
+          {/* ── Surface Classes ── */}
+          <div
+            className={`${s.fieldRow}${surfaceClassesModified ? ` ${s.fieldRowModified}` : ''}${surfaceClassesValue.length === 0 ? ` ${s.fieldRowError}` : ''}`}
+          >
+            <div className={s.labelRow}>
+              <span className={s.fieldLabel}>Surface Classes</span>
+              <InfoTooltip text="Which surface classes this racer is compatible with. During a race the active class is the intersection with the track's classes. At least one class is required." />
+              {surfaceClassesModified && <span className={s.modifiedBadge}>modified</span>}
+            </div>
+            <div className={s.pillRow} data-testid="surface-class-pills">
+              {allSurfaceClasses.map((cls) => {
+                const active = surfaceClassesValue.includes(cls.id);
+                return (
+                  <button
+                    key={cls.id}
+                    className={`${s.classPill} ${active ? s.classPillActive : s.classPillInactive}`}
+                    onClick={() => handleSurfaceClassToggle(cls.id)}
+                    aria-pressed={active}
+                    title={cls.label}
+                  >
+                    {cls.label}
+                  </button>
+                );
+              })}
+            </div>
+            {surfaceClassesValue.length === 0 && (
+              <span className={s.errorMsg}>At least one surface class is required</span>
+            )}
+            {surfaceClassesModified && surfaceClassesValue.length > 0 && (
+              <button
+                className={s.resetFieldBtn}
+                onClick={handleSurfaceClassesReset}
+                style={{ marginTop: '0.3rem', alignSelf: 'flex-start' }}
+                title="Reset Surface Classes to code default"
+              >
+                Reset to default
+              </button>
+            )}
+          </div>
         </div>
         {hasMoreBelow && <div className={s.scrollFade} aria-hidden="true" />}
 
@@ -411,7 +502,16 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
             Reset all to defaults
           </button>
           <span className={s.spacer} />
-          <button className={s.doneBtn} onClick={onClose}>
+          <button
+            className={s.doneBtn}
+            onClick={onClose}
+            disabled={surfaceClassesValue.length === 0}
+            title={
+              surfaceClassesValue.length === 0
+                ? 'At least one surface class is required'
+                : undefined
+            }
+          >
             Done
           </button>
         </div>

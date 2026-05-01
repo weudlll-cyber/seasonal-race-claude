@@ -118,6 +118,7 @@ export const TUNABLE_FIELDS = [
   'leaderEllipseRx',
   'leaderEllipseRy',
   'minTargetScreenPx',
+  'surfaceClasses',
 ];
 
 /**
@@ -128,7 +129,14 @@ export const CONFIG_SNAPSHOT = Object.freeze(
   Object.fromEntries(
     RACER_TYPE_IDS.map((id) => [
       id,
-      Object.freeze(Object.fromEntries(TUNABLE_FIELDS.map((f) => [f, RACER_TYPES[id].config[f]]))),
+      Object.freeze(
+        Object.fromEntries(
+          TUNABLE_FIELDS.map((f) => {
+            const v = RACER_TYPES[id].config[f];
+            return [f, Array.isArray(v) ? Object.freeze([...v]) : v];
+          })
+        )
+      ),
     ])
   )
 );
@@ -158,7 +166,8 @@ export function applyTunableOverride(id, fieldName, value) {
 export function restoreTunableDefault(id, fieldName) {
   const snap = CONFIG_SNAPSHOT[id];
   if (RACER_TYPES[id] && snap && fieldName in snap) {
-    RACER_TYPES[id].config[fieldName] = snap[fieldName];
+    const v = snap[fieldName];
+    RACER_TYPES[id].config[fieldName] = Array.isArray(v) ? [...v] : v;
   }
 }
 

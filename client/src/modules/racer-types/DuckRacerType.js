@@ -65,6 +65,7 @@ export const DuckRacerType = new SpriteRacerType({
   speedMultiplier: 0.85,
 
   trailFactory: duckTrailFactory,
+  surfaceClasses: ['water', 'grass'],
 });
 
 export default DuckRacerType;

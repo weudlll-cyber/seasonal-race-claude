@@ -18,6 +18,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'medium',
+    surfaceClasses: ['earth'],
 
     worldWidth: 1280,
     worldHeight: 720,
@@ -34,6 +35,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'easy',
+    surfaceClasses: ['water'],
 
     worldWidth: 1280,
     worldHeight: 720,
@@ -50,6 +52,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 90,
     defaultWinners: 3,
     difficulty: 'hard',
+    surfaceClasses: ['air'],
 
     worldWidth: 1280,
     worldHeight: 720,
@@ -66,6 +69,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 120,
     defaultWinners: 3,
     difficulty: 'easy',
+    surfaceClasses: ['grass', 'earth'],
 
     worldWidth: 1280,
     worldHeight: 720,
@@ -82,6 +86,7 @@ export const DEFAULT_TRACKS = [
     defaultDuration: 60,
     defaultWinners: 3,
     difficulty: 'hard',
+    surfaceClasses: ['asphalt'],
 
     worldWidth: 1280,
     worldHeight: 720,
