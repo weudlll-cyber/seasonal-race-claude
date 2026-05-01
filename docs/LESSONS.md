@@ -635,3 +635,20 @@ zu debuggen sind, weil Code und Routen korrekt aussehen — der Fehler liegt im 
 **Erkenntnis:** Generator-Module deren `create()`-Funktion über mutablem State schließt müssen einmal pro Consumer (hier: pro Racer) instantiiert werden. Die `create()`-API ist explizit so designed: jeder Call gibt ein frisches Closure-Objekt zurück. Wird das ignoriert und `create()` nur einmal aufgerufen, funktioniert die `particle`- oder `cloud`-Implementierung noch zufällig korrekt — aber `line` bricht sofort bei mehr als einem Racer.
 
 **Konsequenz:** Wenn eine Funktion `create()` als Factory exportiert die einen Emitter zurückgibt: immer pro Konsument aufrufen, nie das Ergebnis teilen. Dokumentiert in `trailResolver.js` im JSDoc. Test `line-generator emitters maintain independent position state per instance` verifiziert dieses Verhalten explizit.
+
+## Lesson 36 — Performance-Smoke-Tests brauchen unterschiedliche Thresholds für Dev und CI (VRE-4)
+
+**Symptom:** Performance-Test läuft lokal in ~5ms und ist grün. Auf CI (GitHub Actions) läuft derselbe Test in ~74ms und schlägt fehl — obwohl kein Regressionsfall vorliegt.
+
+**Ursache:** CI-Runner (GitHub Actions Ubuntu shared runner) starten V8 cold ohne JIT-Warmup. Mikrobenchmarks die auf Dev durch JIT-Optimierung beschleunigt werden laufen auf CI ~10-15× langsamer. Ein globaler Threshold der auf Dev sinnvoll ist (z.B. 50ms = 10× über Dev-Baseline) ist auf CI zu eng.
+
+**Anti-Pattern:** Threshold global hochziehen (z.B. 50ms → 200ms) löst das CI-Problem aber verliert den Dev-seitigen Regressionsschutz. Bei 200ms würde eine quadratische Regression auf Dev erst bei ~40× Verschlechterung auffallen — de facto kein Guard mehr.
+
+**Konsequenz:** Umgebungsabhängigen Threshold verwenden:
+```js
+const threshold = process.env.CI ? 200 : 50;
+expect(elapsed).toBeLessThan(threshold);
+```
+- Dev: 50ms = sinnvoller Guard (10× über ~5ms Baseline)
+- CI: 200ms = sinnvoller Guard (2.7× über ~74ms gemessener CI-Baseline)
+- `process.env.CI` ist auf GitHub Actions automatisch gesetzt

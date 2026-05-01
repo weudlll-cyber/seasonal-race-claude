@@ -158,7 +158,7 @@ describe('resolveTrailEmitter — emitter lifecycle', () => {
 // ── Performance smoke ─────────────────────────────────────────────────────────
 
 describe('resolveTrailEmitter — performance smoke', () => {
-  test('20 racers × 60 frames of spawn+update stays within 50 ms', () => {
+  test('20 racers × 60 frames of spawn+update stays within threshold (50ms dev / 200ms CI)', () => {
     const classes = ['earth', 'water', 'asphalt', 'air'];
     const emitters = [];
     for (let i = 0; i < 20; i++) {
@@ -177,7 +177,11 @@ describe('resolveTrailEmitter — performance smoke', () => {
     }
     const elapsed = performance.now() - start;
 
-    // 200 ms is the guard; typical run is < 5 ms on dev hardware, ~75 ms on CI.
-    expect(elapsed).toBeLessThan(200);
+    // CI runners (GitHub Actions, cold V8, no JIT warm-up) run ~10-15x slower than
+    // dev hardware. A single global threshold either fails on CI or loses the dev-side
+    // regression guard. Split: 50ms on dev (10x buffer over ~5ms baseline), 200ms on
+    // CI (2.7x buffer over ~74ms measured baseline). See LESSONS.md Lesson 36.
+    const threshold = process.env.CI ? 200 : 50;
+    expect(elapsed).toBeLessThan(threshold);
   });
 });
