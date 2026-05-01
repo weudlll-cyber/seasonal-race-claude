@@ -236,17 +236,35 @@ A Surface Class references one generator and configures its parameters (color, s
 
 Default classes are code constants (single source of truth, analogous to racer types). Custom classes and default overrides are stored in the backend.
 
-### Data Flow
+### Trail Resolution Pipeline (VRE-4)
 
 ```
-RacerType.surfaceClasses ∩ Track.surfaceClasses
-          ↓  (matching class — first intersection wins)
-  SurfaceClass → Generator(config) → Particle[]
-          ↓
-  dustParticles pool (existing RaceScreen infrastructure)
+SetupScreen: track.surfaceClasses → raceData.trackSurfaceClasses (sessionStorage)
+                                     ↓
+RaceScreen init: resolveTrailEmitter(racerType, trackSurfaceClasses)
+                                     ↓
+  resolveActiveSurfaceClass(racerClasses, trackClasses)  →  first matching class
+                                     ↓
+  getGeneratorForClass(classId).create(classConfig)      →  emitter { spawn, update, render }
+                                     ↓
+  r.surfaceEmitter = emitter  (one instance per racer, created once at race start)
+  r.surfaceParticles = []
 ```
+
+**rAF loop (per unfinished racer):**
+- `r.surfaceEmitter` present → `spawn(x, y, speed, angle)` + `update(particles, dt/16)` on per-racer particle list
+- `r.surfaceEmitter` is null (no match) → `rt.getTrailParticles(...)` → global `dustParticles` pool (Heimat-Trail, unchanged)
+
+**Render (inside camera transform, world space):**
+- `drawSurfaceTrails()` calls `r.surfaceEmitter.render(ctx, r.surfaceParticles)` per racer
+- `drawParticles()` renders global `dustParticles` (Heimat-Trail path)
 
 **Heimat-Trail Fallback:** If no class from the racer type's `surfaceClasses` list intersects the current track's `surfaceClasses`, the racer falls back to its static `trailFactory` (current behavior, unchanged).
+
+**Key files:**
+- `modules/surface-effects/trailResolver.js` — `resolveTrailEmitter(racerType, trackSurfaceClasses)`
+- `screens/SetupScreen/SetupScreen.jsx` — writes `trackSurfaceClasses` into `activeRace`
+- `screens/RaceScreen/index.jsx` — consumes emitter per racer; falls back to Heimat-Trail
 
 ### Setup Filter
 
@@ -270,7 +288,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 | ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
 | ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
 | ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 12 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
-| VRE-4 — Race Integration | Trail rendering in RaceScreen switched to surface-class system. Heimat-Trail fallback. Browser test. |
+| ✅ VRE-4 — Race Integration | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; Heimat-Trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen. |
 
 ### Future: Surface Zones
 

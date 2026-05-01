@@ -73,7 +73,7 @@ Replaces emoji racers with sprite-based renderable types.
   - [ ] VRE-1 — Foundation: generator modules (`particle`, `cloud`, `splash`, `line`), Surface-Class data model, `/api/surface-classes` backend API, storage. No UI, no race integration.
   - [ ] VRE-2 — Surface-Class Editor in Dev-Screen with animated live-preview modal.
   - [ ] VRE-3 — Racer/Track class selectors + Setup-Screen compatibility filter (only racers with ≥1 matching class shown).
-  - [ ] VRE-4 — Race-Integration: trail rendering switched to surface-class system, Heimat-Trail fallback (current `trailFactory` behavior when no class matches), browser test.
+  - [x] VRE-4 — Race-Integration: `trailResolver.js`, per-racer emitter at race start, Heimat-Trail fallback, `trackSurfaceClasses` in raceData. Phase complete.
 - [x] D3.5.5 — Per-Type-Tuning-UI in Dev-Screen: 6 Felder live-tunbar via Edit-Modal, InfoTooltip-Komponente, CONFIG_SNAPSHOT, normalizeOverrideMap. 678 unit + 36 e2e Tests. PR #21, master `2d76bc3`.
 - [ ] D3.6 — File-Reorganisation: `racer-types/` → `racer-configs/` (39 files)
 - [ ] D4 — Performance pass for 100 racers @ 60 FPS
