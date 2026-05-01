@@ -29,7 +29,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-- 🔜 **D7d** — 100-Racer-Performance (Spatial-Grid, smarter Camera, LOD)
+- 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor Implementierung. (User-Hauptpriorität, Stand 2026-05-01)
+- ⏳ **Default-Tracks zeichnen** — User-Aufgabe: 5 Geometrien im Track Editor zeichnen (L.7-Bug2). Kein Code nötig. Läuft parallel zur Kamera-Planung.
+- **D7d** — 100-Racer-Performance (Spatial-Grid, smarter Camera, LOD) — zurückgestellt hinter Kamera-Phase
 
 ---
 
@@ -157,6 +159,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ### Phase Q (Quality-Hygiene)
 
+**Refactor-Brocken (hohe strukturelle Schuld — werden bei nächsten Phasen angegangen):**
+
+- **RaceScreen/index.jsx splitten** (Q-7) — >1000 LOC. Wird mit der Kamera-Phase angegangen: RaceScreen ist ohnehin Hauptarbeitsgebiet dort. Prerequisite für spätere Race-Features.
+- **TrackEditor.jsx splitten** (Q-6) — >1200 LOC. Prerequisite für Surface Zones (Track Editor muss Zonen-Zeichenwerkzeug aufnehmen). Eigene PR vor Surface Zones.
+- **Dual-Particle-System konsolidieren** — `dustParticles` (Heimat-Trail, globaler Pool) + `surfaceParticles` (VRE, per-Racer) als separate Render-Pfade. Konsolidierung nach Surface Zones sinnvoll, wenn dritter Emitter-Typ (Zone-Effekte) hinzukommt.
+- **Q-19 — TrackEditor.effects.test.jsx flaky** — intermittierend in Full-Suite-Parallel-Run. Root cause: globaler FileReader-Mock-Scope-Konflikt. Fix: Spy-Scope prüfen oder Isolations-Test. Niedrige Priorität, kein Blocker.
+
 - **Q-6** — TrackEditor.jsx Split-Refactor. Pre-existing, eigene PR.
 - **Q-7** — RaceScreen/index.jsx Split-Refactor. Nach D9 auf **1032 LOC** gewachsen —
   Priorität für Refactor gestiegen. Pre-existing, eigene PR.
@@ -258,11 +267,16 @@ aus D3.5.5.
 12. ✅ **Error Boundary** (Deep-Audit HIGH-Finding adressiert — Top-Level React Error Boundary, PR #51)
 13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash). Cache-Bug (L37) + CSS-Fix im selben PR.
    - **L37-Drift-Risiko (nicht in PR #52 gefixt):** `buildTrackFromEditorState` in `trackEditorSave.js` enthält eine explizite Ausgabe-Feld-Liste — das ist dort intentionell (Form kennt nur eigene Felder), aber neue Editor-Features brauchen explizites Update dieser Funktion. Kein akuter Bug, aber bei künftigen Features daran erinnern.
-14. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-15. **Surface Zones**, **D8**
-16. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
-17. **Phase V** (Verification-Sprint)
-18. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+14. ⏳ **Default-Tracks zeichnen** — User-Aufgabe (kein Code). 5 Geometrien zeichnen und speichern. Läuft parallel zur Kamera-Spec.
+15. 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst.
+16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.
+17. **B-UX-Phase** — Dev-Screen Cleanup (B-UX2/B-UX3), Hilfe-Modal. Vor D8.
+18. **Backup/Export** (B-5) — UI vorhanden, Wiring fehlt.
+19. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+20. **D8** — Voller Racer-Config-Editor (nach B-UX-Phase)
+21. **Phase V** (Verification-Sprint)
+22. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+23. **Phase 5** VPS-Deployment — ⚠️ Auth (JWT) zuerst
 
 ---
 
