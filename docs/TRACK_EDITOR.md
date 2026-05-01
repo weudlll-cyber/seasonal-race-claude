@@ -71,13 +71,45 @@ The race canvas is 1280×720. Background images are stretched with `ctx.drawImag
 
 Tracks have two orthogonal aspects that are managed separately:
 
-- **Preset** — configuration of a race: name, icon, duration, winners, which geometry to use, which effects to apply. Managed in the existing Dev Panel `Tracks` section (`TrackManager.jsx`). Persisted via `modules/storage/useStorage` under `KEYS.tracks`.
+- **Track-Preset** — configuration of a race: name, icon, color, default racer type, surface classes, track lights, and a reference to a geometry via `geometryId`. Managed in the DevScreen `Tracks` section (`TrackManager.jsx`). After Phase L / TLH-1, presets are stored as server records in `server/data/tracks/<id>.json`.
 
-- **Geometry** — the actual spatial path of the race: background image, inner and outer boundary points, closed/open flag, effects array. Managed by the Track Editor. Persisted under `localStorage` keys `racearena:trackGeometries:<id>`.
+- **Track-Geometry** — the actual spatial path of the race: background image, inner and outer boundary points, closed/open flag, effects array, trackLights, surfaceClasses. Managed by the Track Editor. Cached locally in `localStorage` under `racearena:trackGeometries:<id>` for offline race access.
 
-A preset references a geometry by geometry id. Multiple presets may reference the same geometry (e.g. "Sunset Derby" and "Midnight Derby" both run on the same oval, with different durations and effects).
+A preset references a geometry by `geometryId`. Multiple presets may reference the same geometry (e.g. "Sunset Derby" and "Midnight Derby" both run on the same oval, with different durations and effects).
 
 The two are edited in different places: presets in the DevScreen Track Manager, geometries in the standalone Track Editor route.
+
+### Server-Track Relationship (Phase L / TLH)
+
+After Phase L, tracks are Server-Tracks: the preset and geometry data live together in a single `server/data/tracks/<id>.json` file. The `geometryId` field on a server-track is the geometry identifier used for the localStorage cache key. The Track Editor's save path sends a `PUT /api/tracks/<id>` to update the geometry fields in place — it does not create a new record.
+
+**Critical invariant:** The server `PUT` handler must respect the `geometryId` value sent by the client. If the client sends a new UUID (e.g. after drawing geometry for the first time), the server stores it. If `geometryId` is absent from the request body, the server keeps the existing value. This ensures the preset stays linked to the correct geometry after every save.
+
+### "Draw Geometry" Flow (after TLH-2)
+
+The "Draw Geometry" button in the Track-Manager Edit-Modal opens the Track Editor with the preset's server ID as a URL parameter:
+
+```
+/track-editor?load=<serverId>
+```
+
+The editor loads the existing preset data from the server, including any previously saved geometry. On save, it sends `PUT /api/tracks/<serverId>` — updating geometry fields in the existing record. No new track record is created.
+
+**Before TLH-2** this button navigated without context, causing the editor to open in "new track" mode — creating an orphaned record unlinked from the original preset.
+
+### Track-Delete and Geometry Preservation
+
+`DELETE /api/tracks/:id` removes the preset record only. It **never** automatically deletes geometry data. Orphaned geometries (geometry cache entries whose preset no longer exists) are preserved. See `docs/TRACK_LIFECYCLE.md — Track-Delete Behavior`.
+
+### Code-Bundle Fallback
+
+When the server is unreachable and the geometry cache is empty, the frontend falls back to the Code-Bundle (`defaultTracks.js`). In this mode:
+
+- A status banner is shown: "Server unavailable — showing default tracks (limited functionality)"
+- Default tracks appear with empty geometries (not selectable for races until drawn)
+- Write operations are disabled
+
+The Code-Bundle is updated manually: after the 5 default tracks have been drawn, the Dev-Screen "Export" button (TLH-3) writes a JSON snapshot which the user commits into `defaultTracks.js`.
 
 ---
 
