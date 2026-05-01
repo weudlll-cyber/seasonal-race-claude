@@ -695,3 +695,24 @@ for (const field of PASSTHROUGH_FIELDS) {
 Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` versehentlich NICHT mehr ausgeschlossen wird).
 
 **Wann Whitelist legitim ist:** Build-Funktionen die einen definierten Output-Shape erzeugen (z.B. `buildTrackFromEditorState` — nur Editor-bekannte Felder sollen gespeichert werden). Cache/Passthrough-Funktionen dagegen sollen transparent sein — dort ist Whitelist falsch.
+
+---
+
+## Lesson 38 — UI-Felder die nicht der Server-Realität entsprechen führen zu Daten-Verlust
+
+**Kontext:** User wollte eine Default-Track-Geometrie über das Edit-Modal neu verknüpfen, indem er "Geometry = none" wählte und speicherte — in der Annahme das entkoppele das Preset von der alten Geometrie. Stattdessen ignorierte der Backend-PUT-Handler das `geometryId`-Feld vom Client komplett (`existing.geometryId` wurde hartcodiert übernommen). Gleichzeitig öffnete der "Draw Geometry"-Button den Track-Editor ohne Preset-Kontext — in "neuer Track"-Modus — und die gezeichnete Geometrie wurde als separater Track gespeichert statt das Preset zu aktualisieren. Das Ergebnis: die gezeichnete Geometrie war irreversibel verloren (als unbenannter verwaister Track im System), das Original-Preset unverändert.
+
+**Symptom:** User führt eine UI-Aktion aus die dem gewünschten Ergebnis entspricht (Geometrie neu verknüpfen), erhält keine Fehlermeldung, und verliert dabei Arbeit die er nicht zurückfordern kann.
+
+**Ursache:** Zwei voneinander unabhängige Fehler, beide mit demselben Root-Cause:
+1. Der "Geometry = none"-Dropdown im Edit-Modal suggeriert dass das Preset von einer Geometrie entkoppelt werden kann — aber das Backend hat diesen Pfad nie implementiert.
+2. Der "Draw Geometry"-Button im Edit-Modal suggeriert dass die Geometrie für dieses Preset gezeichnet wird — aber der Navigationspfad transportiert keinen Preset-Kontext.
+
+**Konsequenz:** UI muss entweder exakt das widerspiegeln was der Server tatsächlich tut, oder Felder entfernen / deaktivieren die Aktionen suggerieren die der Server nicht ausführt. Eine UI-Option die immer eine No-Op ist (oder schlimmer: eine andere als die gezeigte Aktion auslöst) ist schlimmer als keine Option.
+
+**Leitfrage für UI-Design:** "Wenn der User diese Schaltfläche / dieses Dropdown betätigt und speichert — tut der Server exakt das was die UI andeutet?" Wenn nein: die Option entfernen oder eine Warnung zeigen, niemals still divergieren.
+
+**Abgeleitete Entscheidungen (TLH):**
+- "Geometry = none"-Option: konzeptionell überprüfen — wenn "kein Geometrie-Link" ein unterstützter Zustand ist, muss der Server ihn auch unterstützen; sonst Option entfernen
+- "Draw Geometry"-Button: sendet jetzt Preset-Kontext (`/track-editor?load=<serverId>`) damit der Editor weiß für welches Preset er arbeitet
+- Backend-PUT: respektiert `geometryId` vom Client wenn im Body vorhanden
