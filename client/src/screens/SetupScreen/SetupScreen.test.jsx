@@ -78,9 +78,10 @@ describe('SetupScreen', () => {
 
 describe('SetupScreen — override selector filters inactive racer types', () => {
   function renderWithTrackSelected() {
-    // Seed a track with a real geometryId so the card is enabled and can be selected
+    // Seed a track with a real geometryId and empty surfaceClasses so the filter
+    // does not interfere with the existing isActive-override tests.
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
-      i === 0 ? { ...t, geometryId: 'geom-test-001' } : t
+      i === 0 ? { ...t, geometryId: 'geom-test-001', surfaceClasses: [] } : t
     );
     storageSet(KEYS.TRACKS, tracksWithGeometry);
     renderSetupScreen();
@@ -111,6 +112,74 @@ describe('SetupScreen — override selector filters inactive racer types', () =>
     const optionValues = Array.from(select.options).map((o) => o.value);
     expect(optionValues).not.toContain('snail');
     expect(select.options).toHaveLength(11);
+  });
+});
+
+describe('SetupScreen — surface class filter (VRE-3)', () => {
+  // Space Sprint (index 2) has surfaceClasses: ['air'].
+  // Compatible racer types: plane ['air'], dragon ['air', ...], rocket ['air', 'water'] — 3 total.
+  function renderWithAirTrack() {
+    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+      i === 2 ? { ...t, geometryId: 'geom-air-001' } : t
+    );
+    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    renderSetupScreen();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Space Sprint') && !b.disabled);
+    fireEvent.click(trackCard);
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('racer dropdown shows only 3 air-compatible types for Space Sprint', () => {
+    renderWithAirTrack();
+    const select = screen.getByRole('combobox');
+    expect(select.options).toHaveLength(3);
+  });
+
+  it('racer dropdown includes dragon (air-compatible multi-class type)', () => {
+    renderWithAirTrack();
+    const select = screen.getByRole('combobox');
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toContain('dragon');
+  });
+
+  it('racer dropdown excludes horse (not air-compatible)', () => {
+    renderWithAirTrack();
+    const select = screen.getByRole('combobox');
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).not.toContain('horse');
+  });
+
+  it('shows track-surface-hint element for a track with surface classes', () => {
+    renderWithAirTrack();
+    expect(screen.getByTestId('track-surface-hint')).toBeInTheDocument();
+  });
+
+  it('surface hint contains the capitalised class label', () => {
+    renderWithAirTrack();
+    expect(screen.getByTestId('track-surface-hint').textContent).toContain('Air');
+  });
+
+  it('does not show surface hint for a track with empty surfaceClasses', () => {
+    const tracksNoClasses = DEFAULT_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-test-hint', surfaceClasses: [] } : t
+    );
+    storageSet(KEYS.TRACKS, tracksNoClasses);
+    renderSetupScreen();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+    expect(screen.queryByTestId('track-surface-hint')).toBeNull();
   });
 });
 

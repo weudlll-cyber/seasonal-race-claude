@@ -605,3 +605,23 @@ zu debuggen sind, weil Code und Routen korrekt aussehen — der Fehler liegt im 
 - Code-Änderung (`src/`): `docker compose restart server`
 - Neue npm-Dependency: `docker compose up --build -d`
 - Frischer Start: `docker compose down && docker compose up -d`
+
+---
+
+## Lesson 33 — Server-Resource-Edits brauchen API-Calls in allen Mutations-Flows, nicht nur Delete (VRE-3 Bug)
+
+**Kontext:** VRE-3 fügte `surfaceClasses: string[]` zu Server-Tracks hinzu. TrackManager hatte `handleDelete()` korrekt implementiert (prüft `serverTrackIds.has(id)`, ruft `deleteTrackFromServer()`). `handleSave()` tat das aber nicht — es schrieb immer nur in localStorage via `setTracks()`. User-Änderungen (z.B. "air" zuweisen) schienen zu funktionieren, gingen aber beim nächsten Render verloren: `useServerTracks()` feuert im Hintergrund, holt `surfaceClasses: []` vom Server, und der SetupScreen-Merge überschreibt den localStorage-Wert bedingungslos mit dem Server-Stand.
+
+**Erkenntnis:** Wenn ein Merge-Layer existiert der Server-Daten gegenüber localStorage priorisiert, ist ein "nur localStorage schreiben" nicht nur unvollständig — es ist effektiv ein No-Op. Der Fehler ist zudem schwer zu entdecken: Die UI sieht sofort korrekt aus (der localStorage-Wert wird kurz gerendert), und erst nach dem Hintergrund-Fetch oder einem Reload verschwindet die Änderung. Tests die localStorage direkt prüfen, anstatt das Merge-Ergebnis, maskieren diesen Bug.
+
+**Konsequenz:** Bei jeder neuen Mutations-Operation (Save, Update, Clone, Set-Default, usw.) für Server-Resources explizit prüfen: Unterscheidet der Handler zwischen Server-Track und Local-Track? Muster: `if (serverTrackIds.has(id)) { await apiCall(); await refresh(); } else { setLocalState(); }`. `handleDelete()` ist die Referenz-Implementation. Analog gilt das Muster für Surface-Classes, Racer-Overrides oder andere Ressourcen mit dualem Speicherpfad.
+
+---
+
+## Lesson 34 — POST und PUT brauchen unterschiedliche Validation-Strenge (VRE-3 Bug)
+
+**Kontext:** `validateTrackBody()` war eine einzige Funktion die für POST und PUT gleich verwendet wurde. Sie verlangte `closed` als Boolean und vollständige Geometrie-Arrays. TrackManager sendet beim PUT nur Metadaten-Felder (name, icon, surfaceClasses, etc.) — keine Geometrie. Der PUT schlug deshalb mit 400 fehl, obwohl das Track-Objekt im Backend vollständige Geometrie hatte. Der Merge `{ ...existing, ...rest }` hätte die Geometrie erhalten — aber die Validierung lief auf `req.body` bevor der Merge stattfand.
+
+**Erkenntnis:** POST-Validation prüft Vollständigkeit (ist das Objekt komplett genug um erstellt zu werden?). PUT-Validation prüft Korrektheit der gesendeten Felder (ist was gesendet wurde valide?). Das sind zwei verschiedene Fragen. Eine strikte Create-Validation auf Update anzuwenden zwingt den Client dazu, Felder zu schicken die er gar nicht kennt oder ändern möchte — und versteckt den Merge, der danach sowieso passiert.
+
+**Konsequenz:** Bei CRUD-APIs getrennte Validierungs-Funktionen für POST und PUT schreiben. PUT-Validation iteriert über vorhandene Keys im Body (`'field' in body`), nicht über ein fixes Schema. Felder die nicht gesendet werden, werden nicht validiert — der Merge mit `existing` macht sie idempotent. Geometrie-Felder in PUT: nur validieren wenn mindestens ein Geometrie-Key im Body vorhanden ist; sonst aus `existing` übernehmen.

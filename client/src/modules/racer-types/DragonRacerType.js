@@ -54,6 +54,7 @@ export const DragonRacerType = new SpriteRacerType({
   speedMultiplier: 1.1,
 
   trailFactory: makeGenericDustTrail({ color: '#cc6633', ttl: 30 }),
+  surfaceClasses: ['air', 'asphalt', 'earth', 'water'],
 });
 
 export default DragonRacerType;

@@ -58,6 +58,20 @@ vi.mock('../../../modules/storage/trackLoader.js', () => ({
 }));
 vi.mock('../../../services/trackApi.js', () => ({
   deleteTrackFromServer: vi.fn(),
+  updateTrackOnServer: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
+  useSurfaceClasses: () => ({
+    classes: [
+      { id: 'earth', label: 'Earth' },
+      { id: 'grass', label: 'Grass' },
+      { id: 'water', label: 'Water' },
+    ],
+    refresh: vi.fn(),
+    isLoading: false,
+    error: null,
+  }),
 }));
 vi.mock('../../../modules/track-editor/EditorShape.js', () => ({
   EditorShape: vi.fn().mockImplementation(() => ({
@@ -72,6 +86,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
+import { updateTrackOnServer } from '../../../services/trackApi.js';
 import TrackManager from './TrackManager.jsx';
 
 // ── test data ─────────────────────────────────────────────────────────────────
@@ -286,6 +301,58 @@ describe('TrackManager — Edit Geometry button placement (A1 UX fix)', () => {
   });
 });
 
+describe('TrackManager — surface class pills (VRE-3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('surface-class pills container is present when edit form is open', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByTestId('track-surface-class-pills')).toBeInTheDocument();
+  });
+
+  it('renders 3 pill buttons from mocked surface classes', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const pillContainer = screen.getByTestId('track-surface-class-pills');
+    const pills = within(pillContainer).getAllByRole('button');
+    expect(pills).toHaveLength(3);
+  });
+
+  it('Save Changes is disabled when no surface classes selected (server track with none)', () => {
+    // SERVER_TRACK has no surfaceClasses field → handleEdit initialises to []
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    expect(saveBtn.disabled).toBe(true);
+  });
+
+  it('shows error hint when no surface class is selected', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByText(/At least one surface class is required/i)).toBeInTheDocument();
+  });
+
+  it('Save Changes becomes enabled after selecting a surface class pill', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    const pillContainer = screen.getByTestId('track-surface-class-pills');
+    const firstPill = within(pillContainer).getAllByRole('button')[0];
+    fireEvent.click(firstPill);
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    expect(saveBtn.disabled).toBe(false);
+  });
+
+  it('Add Track button is disabled when surfaceClasses is empty (BLANK form)', () => {
+    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+    fireEvent.click(screen.getByText('+ Add Track'));
+    const addBtn = screen.getByText('Add Track', { selector: 'button' });
+    // Disabled because name is also empty in BLANK form — but surfaceClasses is also empty
+    expect(addBtn.disabled).toBe(true);
+  });
+});
+
 describe('TrackManager — Track Editor hint text and no effects display (A2 UX fix)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -305,5 +372,96 @@ describe('TrackManager — Track Editor hint text and no effects display (A2 UX 
     fireEvent.click(screen.getByTitle('Edit'));
 
     expect(screen.queryByText(/^Effects:/)).toBeNull();
+  });
+});
+
+// ── VRE-3 Bug Fix: Server-Track Save must use PUT API ─────────────────────────
+
+const SERVER_TRACK_WITH_CLASSES = {
+  ...SERVER_TRACK,
+  surfaceClasses: ['air'],
+};
+
+describe('TrackManager — handleSave routes correctly for server vs local tracks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(updateTrackOnServer).mockResolvedValue({});
+  });
+
+  it('Save on a server track calls updateTrackOnServer, not setTracks', async () => {
+    const setTracksMock = vi.fn();
+    vi.mocked(useStorage).mockReturnValue([[], setTracksMock]);
+    const refreshMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useServerTracksControl).mockReturnValue({
+      tracks: [SERVER_TRACK_WITH_CLASSES],
+      refresh: refreshMock,
+    });
+
+    render(
+      <MemoryRouter>
+        <TrackManager />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    // Let async handleSave complete
+    await vi.waitFor(() => expect(updateTrackOnServer).toHaveBeenCalled());
+    expect(updateTrackOnServer).toHaveBeenCalledWith(
+      SERVER_TRACK_WITH_CLASSES.id,
+      expect.objectContaining({ surfaceClasses: ['air'] })
+    );
+    // setTracks (localStorage write) must NOT have been called for the save
+    expect(setTracksMock).not.toHaveBeenCalled();
+    // Refresh must follow to sync UI
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it('Save on a local track writes to localStorage, does not call updateTrackOnServer', async () => {
+    const setTracksMock = vi.fn();
+    vi.mocked(useStorage).mockReturnValue([[LOCAL_TRACK_WITH_GEO], setTracksMock]);
+    vi.mocked(useServerTracksControl).mockReturnValue({
+      tracks: [],
+      refresh: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <TrackManager />
+      </MemoryRouter>
+    );
+
+    // LOCAL_TRACK_WITH_GEO has no surfaceClasses → initialised to [] → Save disabled
+    // Simulate the edit by clicking then toggling a surface class pill first
+    fireEvent.click(screen.getByTitle('Edit'));
+    const pill = within(screen.getByTestId('track-surface-class-pills')).getAllByRole('button')[0];
+    fireEvent.click(pill);
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    expect(setTracksMock).toHaveBeenCalled();
+    expect(updateTrackOnServer).not.toHaveBeenCalled();
+  });
+
+  it('shows inline error message when server PUT fails', async () => {
+    vi.mocked(updateTrackOnServer).mockRejectedValue(new Error('Network error'));
+    vi.mocked(useStorage).mockReturnValue([[], vi.fn()]);
+    vi.mocked(useServerTracksControl).mockReturnValue({
+      tracks: [SERVER_TRACK_WITH_CLASSES],
+      refresh: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <TrackManager />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    await vi.waitFor(() => expect(screen.getByText(/Network error/i)).toBeInTheDocument());
+    // Form stays open — user can retry
+    expect(screen.getByText('Edit Track')).toBeInTheDocument();
   });
 });

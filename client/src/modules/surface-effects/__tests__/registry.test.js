@@ -14,6 +14,7 @@ import {
   resolveActiveSurfaceClass,
   loadServerClasses,
   resetToDefaults,
+  filterRacerTypesForTrack,
   GENERATORS,
 } from '../registry.js';
 import { DEFAULT_SURFACE_CLASSES, DEFAULT_CLASS_IDS } from '../defaults.js';
@@ -191,5 +192,73 @@ describe('resolveActiveSurfaceClass', () => {
   it('returns null for non-array inputs', () => {
     expect(resolveActiveSurfaceClass(null, ['mud'])).toBeNull();
     expect(resolveActiveSurfaceClass(['mud'], undefined)).toBeNull();
+  });
+});
+
+// ── filterRacerTypesForTrack ──────────────────────────────────────────────────
+
+describe('filterRacerTypesForTrack', () => {
+  it('returns all racers when track classes is empty array', () => {
+    const racerTypes = [{ id: 'horse' }, { id: 'duck' }];
+    const result = filterRacerTypesForTrack(racerTypes, [], () => ['earth']);
+    expect(result).toHaveLength(2);
+  });
+
+  it('returns all racers when track classes is undefined', () => {
+    const racerTypes = [{ id: 'horse' }];
+    expect(filterRacerTypesForTrack(racerTypes, undefined, () => ['earth'])).toHaveLength(1);
+  });
+
+  it('returns all racers when track classes is null', () => {
+    const racerTypes = [{ id: 'horse' }];
+    expect(filterRacerTypesForTrack(racerTypes, null, () => ['earth'])).toHaveLength(1);
+  });
+
+  it('includes racers with at least one overlapping class', () => {
+    const racerTypes = [{ id: 'horse' }, { id: 'duck' }, { id: 'plane' }];
+    const classesByType = { horse: ['earth', 'grass'], duck: ['water'], plane: ['air'] };
+    const result = filterRacerTypesForTrack(
+      racerTypes,
+      ['earth', 'water'],
+      (id) => classesByType[id] ?? []
+    );
+    expect(result.map((r) => r.id)).toEqual(['horse', 'duck']);
+  });
+
+  it('excludes racers with no overlapping class', () => {
+    const racerTypes = [{ id: 'plane' }];
+    const result = filterRacerTypesForTrack(racerTypes, ['earth'], () => ['air']);
+    expect(result).toHaveLength(0);
+  });
+
+  it('always includes racers with empty surfaceClasses (Heimat-Trail fallback)', () => {
+    const racerTypes = [{ id: 'legacy' }];
+    const result = filterRacerTypesForTrack(racerTypes, ['earth'], () => []);
+    expect(result).toHaveLength(1);
+  });
+
+  it('always includes racers when getRacerClassesFn returns null', () => {
+    const racerTypes = [{ id: 'legacy' }];
+    const result = filterRacerTypesForTrack(racerTypes, ['earth'], () => null);
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns empty array when no racers are compatible', () => {
+    const racerTypes = [{ id: 'plane' }, { id: 'rocket' }];
+    const classesByType = { plane: ['air'], rocket: ['air', 'water'] };
+    const result = filterRacerTypesForTrack(racerTypes, ['earth'], (id) => classesByType[id] ?? []);
+    expect(result).toHaveLength(0);
+  });
+
+  it('is order-preserving — result follows input order', () => {
+    const racerTypes = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const classesByType = { a: ['earth'], b: ['air'], c: ['earth', 'air'] };
+    const result = filterRacerTypesForTrack(racerTypes, ['earth'], (id) => classesByType[id] ?? []);
+    expect(result.map((r) => r.id)).toEqual(['a', 'c']);
+  });
+
+  it('returns empty array when input racerTypes is empty', () => {
+    const result = filterRacerTypesForTrack([], ['earth'], () => ['earth']);
+    expect(result).toHaveLength(0);
   });
 });
