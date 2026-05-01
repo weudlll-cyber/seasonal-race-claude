@@ -10,3 +10,5 @@ client/test-results/
 .playwright-mcp/
 /tmp/
 AUDIT.md
+server/data/**/*.json.tmp
+server/data/tracks-backups/

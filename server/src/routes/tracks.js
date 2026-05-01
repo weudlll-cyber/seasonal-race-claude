@@ -25,6 +25,8 @@ import { randomUUID } from 'crypto';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/tracks');
 const BG_DIR = join(__dirname, '../../data/backgrounds');
+const BACKUP_DIR = join(__dirname, '../../data/tracks-backups');
+const DEFAULT_TRACKS_MARKER = join(__dirname, '../../data/.tlh1-defaults-migrated');
 
 const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const MAX_BG_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -132,10 +134,18 @@ function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile
 }
 
 // Write JSON atomically: write to .tmp then rename.
+// On Windows with OneDrive, renameSync can transiently fail with EPERM.
+// Fall back to a direct overwrite and clean up the .tmp file in that case.
 function atomicWriteJson(filePath, data) {
+  const json = JSON.stringify(data, null, 2);
   const tmp = filePath + '.tmp';
-  writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-  renameSync(tmp, filePath);
+  writeFileSync(tmp, json, 'utf8');
+  try {
+    renameSync(tmp, filePath);
+  } catch {
+    writeFileSync(filePath, json, 'utf8');
+    try { unlinkSync(tmp); } catch {}
+  }
 }
 
 function generateId() {
@@ -144,6 +154,133 @@ function generateId() {
 
 function generateGeometryId() {
   return `custom-${randomUUID()}`;
+}
+
+// Write a timestamped backup of a track record. Called after every POST/PUT write.
+// Failures are non-fatal — a backup miss must never prevent the primary save.
+function writeTrackBackup(trackId, trackData) {
+  try {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+    const timeStr = now.toISOString().slice(11, 23).replace(/[:.]/g, '-'); // HH-MM-SS-mmm
+    const dayDir = join(BACKUP_DIR, dateStr);
+    if (!existsSync(dayDir)) mkdirSync(dayDir, { recursive: true });
+    atomicWriteJson(join(dayDir, `${timeStr}-${trackId}.json`), trackData);
+  } catch (err) {
+    console.warn(`[RaceArena] Backup write failed for ${trackId}: ${err.message}`);
+  }
+}
+
+// Metadata for the 5 built-in default tracks — seeded as server records on first boot.
+// Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
+const DEFAULT_TRACK_SEEDS = [
+  {
+    id: 'dirt-oval',
+    name: 'Dirt Oval',
+    icon: '🐴',
+    description: 'Classic oval on packed earth — tight turns, lots of dust.',
+    color: '#a0522d',
+    defaultRacerTypeId: 'horse',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['earth'],
+    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['dirt-oval'],
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'river-run',
+    name: 'River Run',
+    icon: '🦆',
+    description: 'Downstream sprint through meandering rapids and lily pads.',
+    color: '#2196f3',
+    defaultRacerTypeId: 'duck',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'easy',
+    surfaceClasses: ['water'],
+    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['river-run'],
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'space-sprint',
+    name: 'Space Sprint',
+    icon: '🚀',
+    description: 'Zero-gravity dash past asteroids and nebula clouds.',
+    color: '#7c3aed',
+    defaultRacerTypeId: 'rocket',
+    defaultDuration: 90,
+    defaultWinners: 3,
+    difficulty: 'hard',
+    surfaceClasses: ['air'],
+    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['space-sprint'],
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'garden-path',
+    name: 'Garden Path',
+    icon: '🐌',
+    description: 'A leisurely (yet surprisingly competitive) crawl through the roses.',
+    color: '#16a34a',
+    defaultRacerTypeId: 'snail',
+    defaultDuration: 120,
+    defaultWinners: 3,
+    difficulty: 'easy',
+    surfaceClasses: ['grass', 'earth'],
+    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['garden-path'],
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'city-circuit',
+    name: 'City Circuit',
+    icon: '🚙',
+    description: 'High-speed urban track with hairpin corners and tunnel sections.',
+    color: '#64748b',
+    defaultRacerTypeId: 'buggy',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'hard',
+    surfaceClasses: ['asphalt'],
+    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['city-circuit'],
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+];
+
+// One-shot migration: seed the 5 built-in default tracks as server records on first boot.
+// Idempotent — skips any track that already exists; writes marker only when all are done.
+function migrateDefaultTracks() {
+  if (existsSync(DEFAULT_TRACKS_MARKER)) return;
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  const now = new Date().toISOString();
+  for (const seed of DEFAULT_TRACK_SEEDS) {
+    if (tracksMap.has(seed.id)) continue;
+    const track = {
+      ...seed,
+      geometryId: null,
+      backgroundImageFile: null,
+      closed: false,
+      centerPoints: [],
+      innerPoints: [],
+      outerPoints: [],
+      effects: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    atomicWriteJson(join(DATA_DIR, `${seed.id}.json`), track);
+    tracksMap.set(seed.id, track);
+  }
+  writeFileSync(DEFAULT_TRACKS_MARKER, new Date().toISOString(), 'utf8');
+  console.log('[RaceArena] Default tracks seeded as server records (TLH-1)');
 }
 
 /**
@@ -222,6 +359,11 @@ function validateTrackBodyForUpdate(body) {
       errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
     }
   }
+  if ('geometryId' in body) {
+    if (body.geometryId !== null && typeof body.geometryId !== 'string') {
+      errors.push('geometryId must be a string or null');
+    }
+  }
   if ('surfaceClasses' in body) {
     if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
       errors.push('surfaceClasses must be an array of strings');
@@ -238,6 +380,9 @@ function validateTrackBodyForUpdate(body) {
   }
   return errors;
 }
+
+// TLH-1: seed default tracks after all consts are initialized.
+migrateDefaultTracks();
 
 const router = express.Router();
 
@@ -289,6 +434,7 @@ router.post('/', (req, res) => {
     defaultDuration: 60,
     defaultWinners: 3,
     surfaceClasses: [],
+    trackLights: CUSTOM_TRACK_LIGHTS_DEFAULT,
     ...rest,
     id,
     geometryId,
@@ -301,6 +447,7 @@ router.post('/', (req, res) => {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
   atomicWriteJson(join(DATA_DIR, `${id}.json`), track);
   tracksMap.set(id, track);
+  writeTrackBackup(id, track);
 
   const { backgroundImageFile: _drop, ...responseTrack } = track;
   res.status(201).json(responseTrack);
@@ -320,7 +467,7 @@ router.put('/:id', (req, res) => {
     ...existing,
     ...rest,
     id: existing.id,
-    geometryId: existing.geometryId,
+    geometryId: 'geometryId' in rest ? rest.geometryId : existing.geometryId,
     isDefault: existing.isDefault,
     backgroundImageFile: existing.backgroundImageFile,
     createdAt: existing.createdAt,
@@ -329,6 +476,7 @@ router.put('/:id', (req, res) => {
 
   atomicWriteJson(join(DATA_DIR, `${existing.id}.json`), track);
   tracksMap.set(existing.id, track);
+  writeTrackBackup(existing.id, track);
 
   const { backgroundImageFile: _drop, ...responseTrack } = track;
   res.json(responseTrack);
@@ -391,6 +539,7 @@ router.post('/:id/background', (req, res, next) => {
   };
   atomicWriteJson(join(DATA_DIR, `${track.id}.json`), updatedTrack);
   tracksMap.set(track.id, updatedTrack);
+  writeTrackBackup(track.id, updatedTrack);
 
   res.json({ backgroundImageFile: filename });
 });

@@ -1,0 +1,31 @@
+{
+  "id": "dirt-oval",
+  "name": "Dirt Oval",
+  "icon": "🐴",
+  "description": "Classic oval on packed earth — tight turns, lots of dust.",
+  "color": "#a0522d",
+  "defaultRacerTypeId": "horse",
+  "defaultDuration": 60,
+  "defaultWinners": 3,
+  "difficulty": "medium",
+  "surfaceClasses": [
+    "earth"
+  ],
+  "trackLights": {
+    "color": "#ff8844",
+    "style": "sequence",
+    "speed": 1
+  },
+  "worldWidth": 1280,
+  "worldHeight": 720,
+  "isDefault": true,
+  "geometryId": null,
+  "backgroundImageFile": null,
+  "closed": false,
+  "centerPoints": [],
+  "innerPoints": [],
+  "outerPoints": [],
+  "effects": [],
+  "createdAt": "2026-05-01T21:15:30.352Z",
+  "updatedAt": "2026-05-01T21:15:30.352Z"
+}

@@ -145,7 +145,7 @@ function TrackManager() {
       const track = serverTracks.find((t) => t.id === id);
       try {
         await deleteTrackFromServer(id);
-        if (track?.geometryId) removeCachedTrackData(track.geometryId, id);
+        removeCachedTrackData(null, id);
         await serverTracksCtl.refresh();
       } catch (err) {
         setDeleteError(err.message ?? 'Failed to delete track');
