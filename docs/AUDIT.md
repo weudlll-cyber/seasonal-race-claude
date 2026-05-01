@@ -135,10 +135,16 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-27 | **759 unit + 157 e2e** | fix/camera-polish + Q-14 (PR #28, squash `750d826`). +36 unit (baseSpeedConfig.test.js ×16, CameraDirector adaptive-zoom ×16, lapUtils SoT ×4), +39 e2e (camera-polish-smoke.spec.js ×8, camera-polish-ux-verification.spec.js ×31 permanent). d10-ux-verification stale V8 assertion gefixt (auto-scale default changed). |
 | 2026-04-27 | **809 unit + 183 e2e** | D11 Racer Behavior + Visual-Fixes (PR #30, squash `d46cab2`). +50 unit (raceBehavior.test.js ×6 neu/rewritten, autoSpriteScale.test.js ×14 erweitert, CameraDirector world-edge-clamp ×2), +26 e2e (d11-smoke.spec.js ×14, d11-ux-verification.spec.js ×12 permanent). |
 | 2026-04-28 | **808 unit + 183 e2e** | D7a Proportional Sprite Scaling + Zoom-Ratios + Label-Skalierung (PR #33, squash `a49baa0`). -19 unit (computeCameraZoomFactor ×10, computeOpenTrackCameraZoomFactor ×4, pixel-floor-in-autoScale ×5 — obsolete functions entfernt), +10 unit (computeRenderDisplayScale proportional + floor), net -1. e2e unverändert. |
+| 2026-04-28–29 | **~870 unit + 183 e2e** | D7a-Plus + D7b + D7c sub-PRs (per-type minTargetScreenPx, lane-free physicalY, row-start layout). Exact counts in quality gates; gap between D7a und VRE-1 nicht einzeln in Tabelle erfasst. |
+| 2026-04-29 | **1044 unit + 183 e2e + 60 backend** | VRE-1 — Visual-Racer-Effects Foundation (PR #46, squash `e4fd947`). +88 neue unit (surface-effects defaults/registry/generators/hooks) + 24 backend (surfaceClasses API). Phase L Track-Server-Integration (PR #44) war Vorstufe. |
+| 2026-04-29 | **1084 unit + 183 e2e** | VRE-2 — Surface-Class Editor in Dev-Screen (PR #47, squash `2c058b1`). +40 neue unit (SurfaceClassManager ×36 + SurfaceClassPreview ×4). 2 Playwright-Specs hinzugefügt. |
+| 2026-04-30 | **1134 unit + 183 e2e + 66 backend** | VRE-3 — Surface-Class Linking (PR #48, squash `93a55b4`). +50 unit (SpriteRacerType ×10 + filterRacerTypes ×15 + UI-Tests ×25) + 6 backend (PUT partial-update). 2 Bugs gefixt. |
+| 2026-05-01 | **1165 unit + 183 e2e + 82 backend** | VRE-4 — Race Integration, Phase Visual Racer Effects abgeschlossen (PR #49, squash `c857a7e`). +14 unit (trailResolver ×14) + 16 backend (surfaceClasses+maxRacers Validation) + --no-file-parallelism Flag für Windows-renameSync-Stabilität. |
+| 2026-05-01 | **1169 unit + 183 e2e + 82 backend** | Quick-Wins Post-VRE (aktueller PR). +4 unit (trackStorage Corruption-Tests). Server-vitest auf v4.1.4 (0 vulns). |
 
-**Aktueller Master-HEAD:** `a49baa0` (PR #33, squash-merged)
-**ESLint-Warnings:** 3 pre-existing (unverändert)
-**Playwright e2e:** 183 Tests (12 Spec-Files: D9 ×1, D3.5.5 ×3, D10 ×2, B-Wave ×1, B-16/17 ×1, fix-list-tracks ×1, camera-polish-smoke ×1, camera-polish-ux-verification ×1, D11-smoke ×1, D11-ux-verification ×1) — 183/183 grün
+**Aktueller Master-HEAD:** `c857a7e` (VRE-4, PR #49, squash-merged)
+**ESLint-Warnings:** 1 pre-existing (TransitionContext.jsx:44 fast-refresh)
+**Playwright e2e:** 183 Tests — 183/183 grün
 
 ---
 
