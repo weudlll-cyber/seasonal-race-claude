@@ -56,9 +56,15 @@ const classesMap = loadAll();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function atomicWriteJson(filePath, data) {
+  const json = JSON.stringify(data, null, 2);
   const tmp = filePath + '.tmp';
-  writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-  renameSync(tmp, filePath);
+  writeFileSync(tmp, json, 'utf8');
+  try {
+    renameSync(tmp, filePath);
+  } catch {
+    writeFileSync(filePath, json, 'utf8');
+    try { unlinkSync(tmp); } catch {}
+  }
 }
 
 function filePath(id) {

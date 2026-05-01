@@ -48,10 +48,12 @@ const MOCK_TRACK_FULL = {
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('getCachedServerTracks', () => {
@@ -205,13 +207,14 @@ describe('removeCachedTrackData', () => {
 });
 
 describe('fetchServerTracks — purge stale geometries', () => {
-  it('removes geometry for a track that disappeared from server', async () => {
+  it('preserves geometry for a track that disappeared from server (TLH-1)', async () => {
     // Seed cache with two tracks
     storageSet(CACHE_KEY, [
       MOCK_TRACK_SUMMARY,
       { id: 'old-track', geometryId: 'custom-old-geo', name: 'Old' },
     ]);
-    storageSet('racearena:trackGeometries:custom-old-geo', { id: 'custom-old-geo', name: 'Old' });
+    const geoData = { id: 'custom-old-geo', name: 'Old' };
+    storageSet('racearena:trackGeometries:custom-old-geo', geoData);
 
     // Server now returns only the new track (old-track removed)
     vi.stubGlobal(
@@ -224,8 +227,23 @@ describe('fetchServerTracks — purge stale geometries', () => {
 
     await fetchServerTracks();
 
-    const gone = storageGet('racearena:trackGeometries:custom-old-geo', null);
-    expect(gone).toBeNull();
+    // Geometry must NOT be removed — it may represent manual drawing work
+    const preserved = storageGet('racearena:trackGeometries:custom-old-geo', null);
+    expect(preserved).toEqual(geoData);
+  });
+});
+
+describe('removeCachedTrackData — TLH-1 geometry preservation', () => {
+  it('null geometryId skips geometry removal but still clears background', () => {
+    storageSet('racearena:trackGeometries:some-geo', { id: 'some-geo' });
+    cacheBackground('track-abc', 'data:image/jpeg;base64,abc==');
+
+    removeCachedTrackData(null, 'track-abc');
+
+    // Geometry must survive
+    expect(storageGet('racearena:trackGeometries:some-geo', null)).toEqual({ id: 'some-geo' });
+    // Background cleared
+    expect(getCachedBackground('track-abc')).toBeNull();
   });
 });
 

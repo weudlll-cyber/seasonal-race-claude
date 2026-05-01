@@ -113,7 +113,7 @@ function purgeStaleServerGeometries(newTracks) {
   const newIds = new Set(newTracks.map((t) => t.id));
   for (const old of oldTracks) {
     if (!newIds.has(old.id)) {
-      removeCachedTrackData(old.geometryId, old.id);
+      removeCachedTrackData(null, old.id);
     }
   }
 }

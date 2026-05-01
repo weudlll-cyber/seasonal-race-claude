@@ -1,0 +1,31 @@
+{
+  "id": "space-sprint",
+  "name": "Space Sprint",
+  "icon": "🚀",
+  "description": "Zero-gravity dash past asteroids and nebula clouds.",
+  "color": "#7c3aed",
+  "defaultRacerTypeId": "rocket",
+  "defaultDuration": 90,
+  "defaultWinners": 3,
+  "difficulty": "hard",
+  "surfaceClasses": [
+    "air"
+  ],
+  "trackLights": {
+    "color": "#a8d4ff",
+    "style": "sequence",
+    "speed": 1.5
+  },
+  "worldWidth": 1280,
+  "worldHeight": 720,
+  "isDefault": true,
+  "geometryId": null,
+  "backgroundImageFile": null,
+  "closed": false,
+  "centerPoints": [],
+  "innerPoints": [],
+  "outerPoints": [],
+  "effects": [],
+  "createdAt": "2026-05-01T21:15:30.352Z",
+  "updatedAt": "2026-05-01T21:15:30.352Z"
+}
