@@ -364,6 +364,84 @@ describe('PUT /api/tracks/:id — surfaceClasses update', () => {
   });
 });
 
+// ── PUT partial-update validation (VRE-3 Bug Fix) ────────────────────────────
+
+describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)', () => {
+  it('returns 200 when PUT body contains only metadata fields (no closed, no geometry)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'Metadata Only', surfaceClasses: ['air'] });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Metadata Only');
+    expect(res.body.surfaceClasses).toEqual(['air']);
+  });
+
+  it('preserves existing geometry when PUT body omits geometry fields', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    await request(app).put(`/api/tracks/${id}`).send({ name: 'No Geo In Body' });
+
+    const detail = await request(app).get(`/api/tracks/${id}`);
+    expect(Array.isArray(detail.body.centerPoints)).toBe(true);
+    expect(detail.body.centerPoints.length).toBeGreaterThanOrEqual(2);
+    expect(typeof detail.body.closed).toBe('boolean');
+  });
+
+  it('returns 400 when PUT body includes closed as non-boolean', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'Bad Closed', closed: 'yes' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/closed must be a boolean/i);
+  });
+
+  it('returns 400 when PUT body includes geometry with too few centerPoints', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ centerPoints: [{ x: 1, y: 1 }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/geometry/i);
+  });
+
+  it('returns 200 when PUT body includes valid updated geometry', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const newCenter = [{ x: 10, y: 20 }, { x: 30, y: 40 }, { x: 50, y: 20 }];
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ closed: true, centerPoints: newCenter });
+    expect(res.status).toBe(200);
+
+    const detail = await request(app).get(`/api/tracks/${id}`);
+    expect(detail.body.centerPoints).toEqual(newCenter);
+    expect(detail.body.closed).toBe(true);
+  });
+
+  it('POST without geometry still returns 400 (create validation unchanged)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ name: 'No Geometry', closed: false, worldWidth: 1280, worldHeight: 720 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/geometry/i);
+  });
+});
+
 describe('POST /api/tracks/:id/background', () => {
   it('rejects a file exceeding 10 MB with 413', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
