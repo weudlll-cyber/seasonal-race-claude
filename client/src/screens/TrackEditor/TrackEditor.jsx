@@ -1127,7 +1127,7 @@ export default function TrackEditor() {
           <span className={s.sliderLabel} style={{ fontWeight: 600 }}>
             Track Lights
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
               Color
             </label>
@@ -1151,7 +1151,7 @@ export default function TrackEditor() {
               {trackLights.color}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
               Style
             </label>
@@ -1163,7 +1163,7 @@ export default function TrackEditor() {
                 setTrackLights((prev) => ({ ...prev, style: e.target.value }));
                 markDirty();
               }}
-              style={{ flex: 1, fontSize: '0.8rem' }}
+              style={{ fontSize: '0.8rem' }}
             >
               <option value="steady">Steady</option>
               <option value="sequence">Sequence</option>
@@ -1171,11 +1171,11 @@ export default function TrackEditor() {
               <option value="random_flash">Random Flash</option>
             </select>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <label
               style={{
                 fontSize: '0.78rem',
-                color: trackLights.style === 'steady' ? 'var(--color-muted)' : 'var(--color-muted)',
+                color: 'var(--color-muted)',
                 minWidth: '2.5rem',
                 opacity: trackLights.style === 'steady' ? 0.4 : 1,
               }}
@@ -1191,7 +1191,7 @@ export default function TrackEditor() {
               value={trackLights.speed}
               disabled={trackLights.style === 'steady'}
               onChange={(e) => handleTrackLightsChange({ speed: parseFloat(e.target.value) })}
-              style={{ flex: 1 }}
+              style={{ width: 180 }}
               title="Animation speed (disabled for Steady)"
             />
             <span

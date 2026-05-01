@@ -652,3 +652,46 @@ expect(elapsed).toBeLessThan(threshold);
 - Dev: 50ms = sinnvoller Guard (10× über ~5ms Baseline)
 - CI: 200ms = sinnvoller Guard (2.7× über ~74ms gemessener CI-Baseline)
 - `process.env.CI` ist auf GitHub Actions automatisch gesetzt
+
+---
+
+## Lesson 37 — Explizite Feld-Listen in Cache/Build-Funktionen sind ein Bug-Magnet (PR #52)
+
+**Symptom:** User ändert `trackLights.style` im Track-Editor, speichert, öffnet den Track erneut — Style steht wieder auf dem Default. Kein Fehler, keine Warnung. Die Änderung sieht funktional korrekt aus (Server speichert korrekt, Tests grün), aber geht beim nächsten Laden lautlos verloren.
+
+**Ursache:** `cacheTrackGeometry` in `trackLoader.js` baute ein `geometry`-Objekt aus einer expliziten Feld-Liste:
+```js
+const geometry = {
+  id: full.geometryId,
+  name: full.name,
+  effects: full.effects ?? [],
+  // ... 10 weitere Felder
+  // ❌ trackLights fehlt — nie eingetragen
+};
+```
+Neues Datenmodell-Feld (`trackLights`) wurde im Server, im Editor, im Save-Pfad korrekt implementiert — aber in dieser einen Cache-Funktion vergessen. `surfaceClasses` hatte dasselbe Problem, fiel nur nicht auf weil es über einen anderen Lese-Pfad läuft.
+
+**Konsequenz — Spread-Pattern mit bewussten Ausschlüssen:**
+```js
+// Statt Whitelist: Spread + explizite Ausschlüsse für Felder die NICHT gecached werden sollen
+const { id: serverId, geometryId, backgroundImageFile, ...rest } = full;
+const geometry = {
+  ...rest,                         // alle Felder automatisch durch
+  id: geometryId,                  // Umbenennung
+  backgroundImage: computedUrl,   // Überschreibung
+};
+```
+Neue Datenmodell-Felder fließen automatisch durch — kein Code-Change in der Cache-Funktion nötig.
+
+**Test-Pattern als Sicherheitsnetz:**
+Round-Trip-Tests pro Feld garantieren dass `cacheTrackGeometry` keinen Server-Response-Inhalt fallen lässt:
+```js
+for (const field of PASSTHROUGH_FIELDS) {
+  it(`preserves field "${field}" from server response`, () => {
+    expect(cached[field]).toEqual(FULL_TRACK_ALL_FIELDS[field]);
+  });
+}
+```
+Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` versehentlich NICHT mehr ausgeschlossen wird).
+
+**Wann Whitelist legitim ist:** Build-Funktionen die einen definierten Output-Shape erzeugen (z.B. `buildTrackFromEditorState` — nur Editor-bekannte Felder sollen gespeichert werden). Cache/Passthrough-Funktionen dagegen sollen transparent sein — dort ist Whitelist falsch.
