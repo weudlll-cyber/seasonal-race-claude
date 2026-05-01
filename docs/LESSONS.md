@@ -625,3 +625,13 @@ zu debuggen sind, weil Code und Routen korrekt aussehen — der Fehler liegt im 
 **Erkenntnis:** POST-Validation prüft Vollständigkeit (ist das Objekt komplett genug um erstellt zu werden?). PUT-Validation prüft Korrektheit der gesendeten Felder (ist was gesendet wurde valide?). Das sind zwei verschiedene Fragen. Eine strikte Create-Validation auf Update anzuwenden zwingt den Client dazu, Felder zu schicken die er gar nicht kennt oder ändern möchte — und versteckt den Merge, der danach sowieso passiert.
 
 **Konsequenz:** Bei CRUD-APIs getrennte Validierungs-Funktionen für POST und PUT schreiben. PUT-Validation iteriert über vorhandene Keys im Body (`'field' in body`), nicht über ein fixes Schema. Felder die nicht gesendet werden, werden nicht validiert — der Merge mit `existing` macht sie idempotent. Geometrie-Felder in PUT: nur validieren wenn mindestens ein Geometrie-Key im Body vorhanden ist; sonst aus `existing` übernehmen.
+
+---
+
+## Lesson 35 — Stateful Generatoren brauchen eine Instanz pro Racer, nicht pro Race (VRE-4)
+
+**Kontext:** Der `line`-Generator (`line.js`) schließt über `let lastX = null; let lastY = null;` — er merkt sich die letzte bekannte Racer-Position um kontinuierliche Linien-Segmente zu zeichnen. Wenn ein einzelner Emitter über alle Racers geteilt würde (einmal pro Race erstellt), würden die Position-Werte von verschiedenen Racers sich überschreiben: Racer A schreibt `lastX=200`, Racer B überschreibt mit `lastX=800`, nächstes Segment von A läuft von 800 nach 205 statt von 200 nach 205.
+
+**Erkenntnis:** Generator-Module deren `create()`-Funktion über mutablem State schließt müssen einmal pro Consumer (hier: pro Racer) instantiiert werden. Die `create()`-API ist explizit so designed: jeder Call gibt ein frisches Closure-Objekt zurück. Wird das ignoriert und `create()` nur einmal aufgerufen, funktioniert die `particle`- oder `cloud`-Implementierung noch zufällig korrekt — aber `line` bricht sofort bei mehr als einem Racer.
+
+**Konsequenz:** Wenn eine Funktion `create()` als Factory exportiert die einen Emitter zurückgibt: immer pro Konsument aufrufen, nie das Ergebnis teilen. Dokumentiert in `trailResolver.js` im JSDoc. Test `line-generator emitters maintain independent position state per instance` verifiziert dieses Verhalten explizit.

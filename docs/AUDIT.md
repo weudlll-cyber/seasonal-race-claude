@@ -287,6 +287,22 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 - ✅ Memory-Leak-Check: rAF loop in SurfaceClassPreview.jsx is cancelled on unmount (SurfaceClassPreview.test.jsx verifies cancelAnimationFrame called)
 - ✅ Inline-Doc-Updates: ARCHITECTURE.md (VRE-2 ✅ in Sub-PR table), RACER_DATA_MODEL.md (UI location note), BACKLOG.md (VRE-2 ✅)
 
+**Quality-Gate auf PR #48 (VRE-3 — Surface-Class Linking):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1134 Unit-Tests grün (+50 neue: SpriteRacerType surfaceClasses 10 + filterRacerTypesForTrack 15 + RacerEditModal pills 8 + TrackManager pills 5 + SetupScreen filter 6 + backend partial-update validation 6)
+- ✅ 60 Backend-Tests grün (+6 neue partial-update PUT-Tests)
+- ✅ 2 neue Playwright-Specs: vre-3-smoke.spec.js + vre-3-ux-verification.spec.js
+- ✅ 2 Bugs gefixt: handleSave() Server-Tracks via API (Bug 1) + validateTrackBodyForUpdate split (Bug 2)
+- ✅ Inline-Doc-Updates: ARCHITECTURE.md (VRE-3 ✅), RACER_DATA_MODEL.md (getSurfaceClasses, TUNABLE_FIELDS), LESSONS.md (L33, L34)
+
+**Quality-Gate auf PR #49 (VRE-4 — Race Integration):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1165 Unit-Tests grün (+14 neue: trailResolver.test.js — match/no-match/edge cases/perf smoke)
+- ✅ 2 neue Playwright-Specs: vre-4-smoke.spec.js (4 Tests) + vre-4-ux-verification.spec.js (5 Tests)
+- ✅ Phase Visual Racer Effects abgeschlossen (VRE-1 through VRE-4 all ✅)
+- ✅ Heimat-Trail-Fallback: racers ohne Surface-Class-Match nutzen weiterhin trailFactory (rückwärtskompatibel)
+- ✅ Inline-Doc-Updates: ARCHITECTURE.md (Trail-Resolution-Pipeline, Sub-PR-Tabelle), RACER_DATA_MODEL.md (trailFactory-Status, sessionStorage-Schema), ROADMAP.md (VRE-4 ✅), BACKLOG.md (VRE-4 ✅)
+
 ---
 
 ## OWASP Top 10 — Relevance Checklist for RaceArena

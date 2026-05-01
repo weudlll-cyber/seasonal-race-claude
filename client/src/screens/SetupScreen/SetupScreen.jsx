@@ -219,6 +219,7 @@ function SetupScreen() {
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
       targetDuration: trackIsOpen ? raceSettings.duration : undefined,
+      trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -256,6 +257,7 @@ function SetupScreen() {
       raceMode: quickIsOpen ? 'time' : 'laps',
       targetLaps: quickIsOpen ? undefined : quickLaps,
       targetDuration: quickIsOpen ? raceDefaults.duration : undefined,
+      trackSurfaceClasses: track.surfaceClasses ?? [],
       timestamp: new Date().toISOString(),
     };
 
