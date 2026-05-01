@@ -172,6 +172,26 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 - **Q-12** — localStorage-Quota bei großen data-URL-Bildern
   Tracks speichern jetzt data-URLs (1–5 MB möglich für hochauflösende Bilder).
   Kein Quota-Handling implementiert. Info-level, kein akuter Block.
+- **Q-16** — CORS Wildcard auf allen Backend-Endpunkten
+  `app.use(cors())` ohne Origin-Einschränkung — jeder Browser-Tab kann auf alle API-Write-Endpunkte
+  zugreifen (POST/PUT/DELETE Tracks + Surface Classes). Bewusst akzeptiert für Lokal-Betrieb.
+  Fix: `cors({ origin: 'http://localhost:3000' })` für Dev, Env-Var für VPS.
+  **Priorität: VPS-Phase / Phase 5.** Kein akuter Blocker für Single-User-Lokal-Betrieb.
+  *(Deep-Audit 2026-05-01, Severity: HIGH — akzeptiert für local-only)*
+
+- **Q-17** — Fehlende `reader.onerror` Handler in SystemSettings.jsx und TrackEditor.jsx
+  `FileReader.onload` Handler sind ohne `onerror`-Pendant. Fehler beim Einlesen (korrupte Datei,
+  Berechtigungsproblem) werden stumm ignoriert. Q-11 ist spezifisch für TrackEditor-Hintergrundbilder;
+  Q-17 erweitert auf SystemSettings JSON-Import. Niedrige Priorität — kein Datenverlust, nur schlechte
+  UX (keine Fehlermeldung bei Import-Fehler).
+  *(Deep-Audit 2026-05-01, Severity: LOW)*
+
+- **Q-18** — RaceScreen-Integrations-Test-Infrastruktur
+  RaceScreen hat 0 Unit-Tests trotz Kern-Spiellogik (Finish-Detection, Phase-Transitions, Storage-Write).
+  Blocker: Canvas + rAF in jsdom erfordert `vi.stubGlobal` + Mock-rAF. Vorschlag: 3 minimale Tests
+  (Session-Load → Race-Init, Finish-Detection, sessionStorage-Write bei Race-Ende).
+  *(Deep-Audit 2026-05-01, Severity: MEDIUM — in TEST-RaceScreen-Backlog bestätigt)*
+
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
   sehr groß. Die Frame-Wechsel der Sprite-Animation (z.B. Pferd 16 Frames Lauf-
@@ -226,12 +246,13 @@ aus D3.5.5.
 7. ✅ **D7b** Lane-frei + physicalY-Avoidance — PR #37
 8. ✅ **D7c** Reihen-Start + Speed-Bonus + Track-Capacity — PR #39
 9. 🔜 **D7d** — 100-Racer-Performance
-10. **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4)
-11. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-12. **Surface Zones**, **D8**
-13. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
-14. **Phase V** (Verification-Sprint)
-15. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+10. ✅ **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4) — Master `c857a7e`
+11. ✅ **Quick-Wins Post-VRE** (Server-vitest v4, Backend-Validation, window.alert, JSON.parse, Doc-Drift)
+12. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+13. **Surface Zones**, **D8**
+14. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
+15. **Phase V** (Verification-Sprint)
+16. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
 
 ---
 

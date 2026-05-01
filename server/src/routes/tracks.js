@@ -121,6 +121,16 @@ function validateTrackBodyForCreate(body) {
   if (!hasCenter && !hasInnerOuter) {
     errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
   }
+  if ('surfaceClasses' in body) {
+    if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
+      errors.push('surfaceClasses must be an array of strings');
+    }
+  }
+  if ('maxRacers' in body) {
+    if (body.maxRacers !== null && (typeof body.maxRacers !== 'number' || body.maxRacers <= 0)) {
+      errors.push('maxRacers must be a positive number or null');
+    }
+  }
   return errors;
 }
 
@@ -155,6 +165,16 @@ function validateTrackBodyForUpdate(body) {
       body.outerPoints.length >= 2;
     if (!hasCenter && !hasInnerOuter) {
       errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
+    }
+  }
+  if ('surfaceClasses' in body) {
+    if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
+      errors.push('surfaceClasses must be an array of strings');
+    }
+  }
+  if ('maxRacers' in body) {
+    if (body.maxRacers !== null && (typeof body.maxRacers !== 'number' || body.maxRacers <= 0)) {
+      errors.push('maxRacers must be a positive number or null');
     }
   }
   return errors;

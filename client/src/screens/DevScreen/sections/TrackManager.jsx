@@ -81,6 +81,7 @@ function TrackManager() {
   const [showForm, setShowForm] = useState(false);
 
   const [saveError, setSaveError] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   async function handleSave() {
     if (!form.name.trim() || !form.icon.trim()) return;
@@ -139,6 +140,7 @@ function TrackManager() {
 
   async function handleDelete(id) {
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
+    setDeleteError(null);
     if (serverTrackIds.has(id)) {
       const track = serverTracks.find((t) => t.id === id);
       try {
@@ -146,7 +148,7 @@ function TrackManager() {
         if (track?.geometryId) removeCachedTrackData(track.geometryId, id);
         await serverTracksCtl.refresh();
       } catch (err) {
-        window.alert(`Delete fehlgeschlagen: ${err.message}`);
+        setDeleteError(err.message ?? 'Failed to delete track');
       }
     } else {
       setTracks((prev) => prev.filter((t) => t.id !== id));
@@ -287,6 +289,11 @@ function TrackManager() {
               );
             })}
           </div>
+        )}
+        {deleteError && (
+          <p style={{ color: '#f87171', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>
+            {deleteError}
+          </p>
         )}
       </div>
 
