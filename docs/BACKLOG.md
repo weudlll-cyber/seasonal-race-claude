@@ -192,6 +192,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   (Session-Load → Race-Init, Finish-Detection, sessionStorage-Write bei Race-Ende).
   *(Deep-Audit 2026-05-01, Severity: MEDIUM — in TEST-RaceScreen-Backlog bestätigt)*
 
+- **Q-19** — TrackEditor.effects.test.jsx flaky in Full-Suite-Parallel-Run
+  Test `background upload size guard > shows an error and does not call FileReader when file exceeds 10 MB`
+  schlägt intermittierend fehl wenn alle 67 Client-Test-Files parallel laufen (vitest vmForks), besteht
+  in Isolation stabil. Root cause: vermutlich globaler `FileReader`-Mock wird von einem anderen Test-File
+  überschrieben. Fix: Spy-Scope prüfen oder `--sequence.shuffle false` + Isolations-Test.
+  *(Entdeckt 2026-05-01 während Quick-Wins PR #50, Severity: LOW)*
+
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
   sehr groß. Die Frame-Wechsel der Sprite-Animation (z.B. Pferd 16 Frames Lauf-
