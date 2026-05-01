@@ -145,8 +145,7 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-01 | **1234 unit + 183 e2e + 107 backend** | Race Track Lights + Cache-Fix (PR #52, master dc62557). +25 unit (trackLights.js), +17 component (TrackEditor.trackLights.test.jsx), +23 round-trip (trackLoader.test.js L37). 42 neue Backend-Tests (tracks.test.js trackLights-Validation + Migration). CSS-Fix (Track-Lights-Controls zu breit). |
 | 2026-05-01 | **1235 unit + 183 e2e + 107 backend** | TLH-1 — Backend-Fixes + Migration (PR #53 ausstehend). +1 unit (trackLoader geometry-preservation). +10 backend (geometryId ×3, auto-backup ×3, default-seed-migration ×4). atomicWriteJson OneDrive-Fallback, vi.unstubAllGlobals() in beforeEach. |
 
-**Aktueller Master-HEAD:** `dc62557` (Track-Lights + Cache-Fix, PR #52, squash-merged 2026-05-01)
-**Branch:** `tlh-1-backend-fixes` (TLH-1 ausstehend — PR noch nicht geöffnet)
+**Aktueller Master-HEAD:** `6855b16` (TLH-1 Backend-Fixes + Migration, PR #55, squash-merged 2026-05-02)
 **ESLint-Warnings:** 1 pre-existing (TransitionContext.jsx:44 fast-refresh)
 **Playwright e2e:** 183 Tests — 183/183 grün
 
