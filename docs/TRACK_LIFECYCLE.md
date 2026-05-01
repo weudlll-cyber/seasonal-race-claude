@@ -150,20 +150,23 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 ---
 
-### TLH-2 — UI-Flow + Cleanup
+### TLH-2 — UI-Flow + Cleanup ✅
 
 **Goal:** Make the system usable. Fix the "Draw Geometry" navigation. Remove misleading UI fields.
 
+**Status:** Implemented 2026-05-02. Branch `feat/tlh-2-ui-flow-and-cleanup`. PR open, pending user merge.
+
 **Changes:**
-- **"Draw Geometry" button** — Navigate to `/track-editor?load=<serverId>` instead of bare `/track-editor`. The Track Editor reads `?load` on mount, fetches the server-track, pre-populates all fields (including existing geometry if present).
-- **Track Editor save path** — When `?load=<serverId>` is present: on save, send `PUT /api/tracks/<serverId>` with geometry fields + `geometryId`. Do not POST a new record.
-- **Edit-Modal cleanup** — Review UI fields that suggest impossible actions:
-  - "Geometry = none" option: if a geometry-less state is a valid concept for the server, implement server support; otherwise remove the option from the dropdown.
-  - Hint texts: verify all hint texts in Edit-Modal match actual server behavior.
+- **"Draw Geometry" / "Edit Geometry" button** — Edit-Modal geometry `<select>` dropdown replaced with a status display for server tracks: "Geometry: drawn (XX pts)" or "Geometry: not yet drawn". Button navigates to `/track-editor?load=<serverId>`.
+- **Track Editor two modes:**
+  - *Load mode* (`?load=<serverId>`): header "Editing: [track name]", name input hidden, Save = `PUT /api/tracks/<serverId>`. Two-path load: (1) geometry cache path for tracks with existing geometry, (2) direct server-track state path for `geometryId: null` tracks.
+  - *New track mode* (no param): header "New Track", name input visible, Save = `POST /api/tracks`.
+- **geometryId on first save** — When saving geometry for the first time on an existing server track (`geometryId: null`), generates `custom-${crypto.randomUUID()}` and includes it in the PUT body. Server stores it. Subsequent saves preserve the existing `geometryId`.
+- **Edit-Modal cleanup** — Removed geometry dropdown for server tracks. "Background image and effects are managed in the Track Editor" hint retained.
 
-**Test scope:** Playwright e2e — "Draw Geometry" button navigates with correct param, Track Editor in `?load` mode saves via PUT, no new record created.
+**Test scope:** 12 new component tests in `TrackEditor.loadmode.test.jsx` (new/load mode title, name input visibility, save path PUT/POST routing, geometryId handling). 7 updated component tests in `TrackManager.test.jsx` (geometry status display).
 
-**Dependency:** TLH-1 must be merged first (PUT handler must accept geometryId from client).
+**Dependency:** TLH-1 must be merged first (PUT handler must accept geometryId from client). ✅
 
 ---
 
