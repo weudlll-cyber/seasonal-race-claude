@@ -29,7 +29,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-### 1 — Track Lifecycle Hybrid (TLH) 🔜 Nächste Implementierungsphase
+### 1 — Track Lifecycle Hybrid (TLH) — TLH-1 ✅ → TLH-2 🔜 Nächste Implementierungsphase
 
 Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zeichnen aufgedeckt (User-Browser-Test 2026-05-01, Daten-Verlust-Bug):
 
@@ -38,13 +38,15 @@ Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zei
 3. Track-Delete löscht assoziierte Geometrie via `removeCachedTrackData` ohne Verwendungs-Prüfung
 4. Default-Tracks existieren nur als Code-Konstanten, nicht als Server-Records → UI-Flow für sie funktioniert nicht
 
-**TLH-1 — Backend-Fixes + Migration (Sub-PR 1)**
-- Server-Boot-Migration: 5 Default-Tracks als Server-Records anlegen (name, icon, color, defaultRacerType, surfaceClasses, trackLights, leere Geometrie-Felder). Idempotent via One-Shot-Marker.
-- PUT `/api/tracks/:id`: `geometryId` vom Client übernehmen wenn im Body vorhanden; sonst `existing.geometryId` behalten (Backward-compat)
-- DELETE `/api/tracks/:id`: Track-Datei entfernen, aber NIEMALS Geometrie automatisch löschen. Frontend `removeCachedTrackData` auf `trackOnly: true` anpassen.
-- Auto-Backup: bei jedem PUT/POST Backup-Kopie nach `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. Kein Auto-Cleanup.
+**TLH-1 — Backend-Fixes + Migration (Sub-PR 1) ✅**
+- ✅ Server-Boot-Migration: 5 Default-Tracks als Server-Records angelegt (idempotent via One-Shot-Marker `.tlh1-defaults-migrated`)
+- ✅ PUT `/api/tracks/:id`: `geometryId` vom Client übernehmen wenn im Body vorhanden; sonst `existing.geometryId` behalten
+- ✅ DELETE + `removeCachedTrackData`: Geometrie wird NIE automatisch gelöscht — nur Background-Cache
+- ✅ Auto-Backup: bei jedem PUT/POST nach `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-mmm-<id>.json`
+- ✅ atomicWriteJson OneDrive-Fallback: renameSync-Fehler → direktes writeFileSync
+- ✅ 10 neue Backend-Tests (geometryId ×3, backup ×3, default-seed ×4), 1 neuer Client-Unit-Test
 
-**TLH-2 — UI-Flow + Cleanup (Sub-PR 2)**
+**TLH-2 — UI-Flow + Cleanup (Sub-PR 2) 🔜**
 - "Draw Geometry"-Button navigiert zu `/track-editor?load=<serverId>` (Preset-Kontext als URL-Parameter)
 - Track-Editor: wenn `?load=<id>` gesetzt → vorhandene Geometrie laden, bei Save `PUT /api/tracks/<id>` statt POST
 - UI-Felder im Edit-Modal die unmögliche Aktionen suggerieren überprüfen / entfernen (z.B. "Geometry = none"-Option)
@@ -301,7 +303,7 @@ aus D3.5.5.
 12. ✅ **Error Boundary** (Deep-Audit HIGH-Finding adressiert — Top-Level React Error Boundary, PR #51)
 13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash). Cache-Bug (L37) + CSS-Fix im selben PR.
    - **L37-Drift-Risiko (nicht in PR #52 gefixt):** `buildTrackFromEditorState` in `trackEditorSave.js` enthält eine explizite Ausgabe-Feld-Liste — das ist dort intentionell (Form kennt nur eigene Felder), aber neue Editor-Features brauchen explizites Update dieser Funktion. Kein akuter Bug, aber bei künftigen Features daran erinnern.
-14. 🔜 **Track Lifecycle Hybrid** — TLH-1 (Backend-Fixes + Migration), TLH-2 (UI-Flow + Cleanup), TLH-3 (Code-Fallback + Banner + Export). Drei Sub-PRs in Reihenfolge.
+14. ✅ **TLH-1 — Backend-Fixes + Migration** — geometryId client-authoritative, Delete bewahrt Geometrie, Auto-Backup, Default-Track-Seed-Migration. PR #53 ausstehend. 🔜 **TLH-2** (UI-Flow + Cleanup), **TLH-3** (Code-Fallback + Banner + Export) folgen.
 14a. ⏳ **Default-Tracks zeichnen** — User-Aufgabe nach TLH-2. 5 Geometrien zeichnen und speichern. Zwischen TLH-2 und TLH-3.
 15. **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst. Nach TLH abgeschlossen.
 16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.

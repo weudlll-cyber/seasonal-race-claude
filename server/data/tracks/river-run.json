@@ -1,0 +1,31 @@
+{
+  "id": "river-run",
+  "name": "River Run",
+  "icon": "🦆",
+  "description": "Downstream sprint through meandering rapids and lily pads.",
+  "color": "#2196f3",
+  "defaultRacerTypeId": "duck",
+  "defaultDuration": 60,
+  "defaultWinners": 3,
+  "difficulty": "easy",
+  "surfaceClasses": [
+    "water"
+  ],
+  "trackLights": {
+    "color": "#3aa0ff",
+    "style": "sync_pulse",
+    "speed": 0.7
+  },
+  "worldWidth": 1280,
+  "worldHeight": 720,
+  "isDefault": true,
+  "geometryId": null,
+  "backgroundImageFile": null,
+  "closed": false,
+  "centerPoints": [],
+  "innerPoints": [],
+  "outerPoints": [],
+  "effects": [],
+  "createdAt": "2026-05-01T21:15:30.352Z",
+  "updatedAt": "2026-05-01T21:15:30.352Z"
+}

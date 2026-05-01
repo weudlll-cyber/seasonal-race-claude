@@ -1,0 +1,31 @@
+{
+  "id": "city-circuit",
+  "name": "City Circuit",
+  "icon": "🚙",
+  "description": "High-speed urban track with hairpin corners and tunnel sections.",
+  "color": "#64748b",
+  "defaultRacerTypeId": "buggy",
+  "defaultDuration": 60,
+  "defaultWinners": 3,
+  "difficulty": "hard",
+  "surfaceClasses": [
+    "asphalt"
+  ],
+  "trackLights": {
+    "color": "#ffffff",
+    "style": "sequence",
+    "speed": 1
+  },
+  "worldWidth": 1280,
+  "worldHeight": 720,
+  "isDefault": true,
+  "geometryId": null,
+  "backgroundImageFile": null,
+  "closed": false,
+  "centerPoints": [],
+  "innerPoints": [],
+  "outerPoints": [],
+  "effects": [],
+  "createdAt": "2026-05-01T21:15:30.352Z",
+  "updatedAt": "2026-05-01T21:15:30.352Z"
+}

@@ -8,13 +8,29 @@
 
 import { describe, it, expect, afterAll } from 'vitest';
 import request from 'supertest';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/tracks');
+const BACKUP_DIR = join(__dirname, '../../data/tracks-backups');
+
+function findBackupFiles(trackId) {
+  if (!existsSync(BACKUP_DIR)) return [];
+  const files = [];
+  for (const entry of readdirSync(BACKUP_DIR, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const dayPath = join(BACKUP_DIR, entry.name);
+    for (const file of readdirSync(dayPath)) {
+      if (file.endsWith(`-${trackId}.json`)) {
+        files.push(join(dayPath, file));
+      }
+    }
+  }
+  return files;
+}
 
 const app = createApp();
 
@@ -49,6 +65,12 @@ afterAll(async () => {
   // Clean up any tracks created during tests
   for (const id of createdIds) {
     await request(app).delete(`/api/tracks/${id}`);
+  }
+  // Clean up backup files created for test tracks
+  for (const id of createdIds) {
+    for (const file of findBackupFiles(id)) {
+      rmSync(file, { force: true });
+    }
   }
 });
 
@@ -228,18 +250,43 @@ describe('PUT /api/tracks/:id', () => {
     expect(updateRes.body.id).toBe(id);
   });
 
-  it('preserves geometryId and createdAt on update', async () => {
+  it('accepts geometryId from body when present (TLH-1)', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
     const id = createRes.body.id;
     createdIds.push(id);
-    const geometryId = createRes.body.geometryId;
+
+    const newGeometryId = 'client-supplied-geometry-id';
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ ...VALID_TRACK, name: 'Updated', geometryId: newGeometryId });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.geometryId).toBe(newGeometryId);
+  });
+
+  it('preserves existing geometryId when not in body (TLH-1)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    const originalGeometryId = createRes.body.geometryId;
     const createdAt = createRes.body.createdAt;
 
     const updateRes = await request(app)
       .put(`/api/tracks/${id}`)
-      .send({ ...VALID_TRACK, name: 'Updated', geometryId: 'should-be-ignored' });
-    expect(updateRes.body.geometryId).toBe(geometryId);
+      .send({ ...VALID_TRACK, name: 'Updated' });
+    expect(updateRes.body.geometryId).toBe(originalGeometryId);
     expect(updateRes.body.createdAt).toBe(createdAt);
+  });
+
+  it('accepts geometryId: null to clear geometry link (TLH-1)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ geometryId: null });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.geometryId).toBeNull();
   });
 
   it('returns 404 when track does not exist', async () => {
@@ -273,6 +320,38 @@ describe('DELETE /api/tracks/:id', () => {
   it('returns 404 when track does not exist', async () => {
     const res = await request(app).delete('/api/tracks/nonexistent-xyz');
     expect(res.status).toBe(404);
+  });
+});
+
+// ── Auto-backup (TLH-1) ───────────────────────────────────────────────────────
+
+describe('Auto-backup (TLH-1)', () => {
+  it('POST creates a backup file for the new track', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    expect(res.status).toBe(201);
+    const id = res.body.id;
+    createdIds.push(id);
+    expect(findBackupFiles(id).length).toBeGreaterThan(0);
+  });
+
+  it('PUT creates an additional backup file', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    const countBefore = findBackupFiles(id).length;
+
+    await request(app).put(`/api/tracks/${id}`).send({ name: 'Backup Test' });
+    expect(findBackupFiles(id).length).toBeGreaterThan(countBefore);
+  });
+
+  it('DELETE does not create a backup file', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    const countAfterPost = findBackupFiles(id).length;
+
+    await request(app).delete(`/api/tracks/${id}`);
+    expect(findBackupFiles(id).length).toBe(countAfterPost);
   });
 });
 
@@ -771,6 +850,49 @@ describe('PUT /api/tracks/:id — trackLights update', () => {
     expect(res.status).toBe(200);
     // trackLights should be preserved from the original
     expect(res.body.trackLights).toMatchObject(VALID_LIGHTS);
+  });
+});
+
+// ── Default-Track seed migration (TLH-1) ─────────────────────────────────────
+
+describe('Default-Track seed migration (TLH-1)', () => {
+  const DEFAULT_IDS = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit'];
+
+  it('all 5 default tracks appear in GET /api/tracks', async () => {
+    const res = await request(app).get('/api/tracks');
+    expect(res.status).toBe(200);
+    const ids = res.body.map((t) => t.id);
+    for (const id of DEFAULT_IDS) {
+      expect(ids).toContain(id);
+    }
+  });
+
+  it('each default track has isDefault: true', async () => {
+    for (const id of DEFAULT_IDS) {
+      const res = await request(app).get(`/api/tracks/${id}`);
+      expect(res.status).toBe(200);
+      expect(res.body.isDefault).toBe(true);
+    }
+  });
+
+  it('dirt-oval has expected metadata', async () => {
+    const res = await request(app).get('/api/tracks/dirt-oval');
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Dirt Oval');
+    expect(typeof res.body.icon).toBe('string');
+    expect(Array.isArray(res.body.surfaceClasses)).toBe(true);
+    expect(typeof res.body.trackLights).toBe('object');
+    expect(res.body.trackLights).not.toBeNull();
+  });
+
+  it('default tracks appear in GET /api/tracks list without geometry arrays', async () => {
+    const res = await request(app).get('/api/tracks');
+    const defaults = res.body.filter((t) => DEFAULT_IDS.includes(t.id));
+    expect(defaults.length).toBe(5);
+    for (const t of defaults) {
+      expect(t).not.toHaveProperty('innerPoints');
+      expect(t).not.toHaveProperty('outerPoints');
+    }
   });
 });
 
