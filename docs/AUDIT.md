@@ -309,6 +309,12 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 - ✅ Heimat-Trail-Fallback: racers ohne Surface-Class-Match nutzen weiterhin trailFactory (rückwärtskompatibel)
 - ✅ Inline-Doc-Updates: ARCHITECTURE.md (Trail-Resolution-Pipeline, Sub-PR-Tabelle), RACER_DATA_MODEL.md (trailFactory-Status, sessionStorage-Schema), ROADMAP.md (VRE-4 ✅), BACKLOG.md (VRE-4 ✅)
 
+**Quality-Gate auf PR #51 (feat/error-boundary — Top-Level React Error Boundary):** 0 Show-Stopper, 0 Errors, 0 new Warnings
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1163 Unit-Tests grün (+8 neue: ErrorBoundary — children/catch/details-toggle/reload/reset-confirm/reset-cancel/undefined-message)
+- ✅ Deep-Audit HIGH-Finding adressiert: "Kein React Error Boundary — Render-Crash führt zu Blank-Screen" → behoben durch `ErrorBoundary` über `<App>` in `main.jsx`. Drei Recovery-Optionen: Reload, Reset local data (clears `racearena:*`), Show technical details.
+- ✅ Inline-Doc-Updates: ARCHITECTURE.md (Error Boundary Section), BACKLOG.md (Audit-Finding als ✅ vermerkt)
+
 ---
 
 ## OWASP Top 10 — Relevance Checklist for RaceArena
