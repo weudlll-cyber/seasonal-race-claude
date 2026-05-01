@@ -177,7 +177,7 @@ describe('resolveTrailEmitter — performance smoke', () => {
     }
     const elapsed = performance.now() - start;
 
-    // 50 ms is generous; typical run is < 5 ms. Guard against severe regression.
-    expect(elapsed).toBeLessThan(50);
+    // 200 ms is the guard; typical run is < 5 ms on dev hardware, ~75 ms on CI.
+    expect(elapsed).toBeLessThan(200);
   });
 });
