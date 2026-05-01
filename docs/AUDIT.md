@@ -140,9 +140,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-29 | **1084 unit + 183 e2e** | VRE-2 — Surface-Class Editor in Dev-Screen (PR #47, squash `2c058b1`). +40 neue unit (SurfaceClassManager ×36 + SurfaceClassPreview ×4). 2 Playwright-Specs hinzugefügt. |
 | 2026-04-30 | **1134 unit + 183 e2e + 66 backend** | VRE-3 — Surface-Class Linking (PR #48, squash `93a55b4`). +50 unit (SpriteRacerType ×10 + filterRacerTypes ×15 + UI-Tests ×25) + 6 backend (PUT partial-update). 2 Bugs gefixt. |
 | 2026-05-01 | **1165 unit + 183 e2e + 82 backend** | VRE-4 — Race Integration, Phase Visual Racer Effects abgeschlossen (PR #49, squash `c857a7e`). +14 unit (trailResolver ×14) + 16 backend (surfaceClasses+maxRacers Validation) + --no-file-parallelism Flag für Windows-renameSync-Stabilität. |
-| 2026-05-01 | **1169 unit + 183 e2e + 82 backend** | Quick-Wins Post-VRE (aktueller PR). +4 unit (trackStorage Corruption-Tests). Server-vitest auf v4.1.4 (0 vulns). |
+| 2026-05-01 | **1169 unit + 183 e2e + 82 backend** | Quick-Wins Post-VRE (PR #50). +4 unit (trackStorage Corruption-Tests). Server-vitest auf v4.1.4 (0 vulns). |
+| 2026-05-01 | **1177 unit + 183 e2e + 82 backend** | Error Boundary (PR #51). +8 unit (ErrorBoundary.test.jsx). Top-level React Error Boundary in main.jsx — verhindert Blank-Screen bei Render-Crash. |
+| 2026-05-01 | **1234 unit + 183 e2e + ~124 backend** | Race Track Lights + Cache-Fix (PR #52, master dc62557). +25 unit (trackLights.js), +17 component (TrackEditor.trackLights.test.jsx), +23 round-trip (trackLoader.test.js L37). ~42 neue Backend-Tests (tracks.test.js trackLights-Validation + Migration). CSS-Fix (Track-Lights-Controls zu breit). |
 
-**Aktueller Master-HEAD:** `c857a7e` (VRE-4, PR #49, squash-merged)
+**Aktueller Master-HEAD:** `dc62557` (Track-Lights + Cache-Fix, PR #52, squash-merged 2026-05-01)
 **ESLint-Warnings:** 1 pre-existing (TransitionContext.jsx:44 fast-refresh)
 **Playwright e2e:** 183 Tests — 183/183 grün
 
@@ -333,3 +335,16 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 | A10 | SSRF | **Low** — no outbound HTTP from client | Client calls own API only; no user-supplied URLs |
 
 > Last reviewed: 2026-04-19. Review schedule: after every significant feature sprint.
+
+---
+
+## Bewusst akzeptierte Befunde (Stand 2026-05-01)
+
+| Befund | Severity | Akzeptiert weil | Wann adressieren |
+|---|---|---|---|
+| **CORS Wildcard** (`app.use(cors())` ohne Origin-Einschränkung) | HIGH | Local-only Betrieb, kein öffentlicher Server | Phase 5 VPS-Deployment: `cors({ origin: process.env.CLIENT_ORIGIN })` |
+| **SEC-2 — Race-State-Manipulation via React DevTools** | HIGH | Client-seitig nicht vollständig behebbar; erfordert Server-Architektur | Phase 5: Server-authoritative Race-Finale mit Signierung |
+| **RaceScreen LOC > 1000** | MEDIUM | Funktional korrekt; Refactor braucht eigene Phase | Kamera-Phase — RaceScreen ist ohnehin Hauptarbeitsgebiet |
+| **TrackEditor LOC > 1200** | MEDIUM | Funktional korrekt; Refactor ist Prerequisite für Surface Zones | Vor Surface Zones Phase |
+| **Q-19 — TrackEditor.effects.test.jsx flaky** | LOW | Nur in Full-Suite-Parallel-Run; in Isolation stabil | Nach Kamera-Phase: FileReader-Mock-Scope-Fix |
+| **TEST-RaceScreen** — 0 Unit-Tests für RaceScreen | MEDIUM | Canvas + rAF in jsdom erfordert aufwändige Mock-Infrastruktur | Kamera-Phase: minimale Integration-Tests mitliefern |

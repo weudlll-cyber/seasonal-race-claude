@@ -346,8 +346,8 @@ seasonal-race-claude/
 **Frontend loading strategy (L.3):**
 1. `useServerTracks()` hook fires on component mount (SetupScreen, TrackManager, RaceHistory)
 2. `fetchServerTracks()` fetches the list, caches it, then eagerly calls `cacheTrackGeometry()` for each track
-3. `cacheTrackGeometry()` stores the full geometry in `racearena:trackGeometries:<geometryId>` — existing `getTrack(geometryId)` calls in RaceScreen/PresetThumbnail work unchanged
-4. `backgroundImage` in the cached geometry = the live server URL
+3. `cacheTrackGeometry()` stores the full geometry in `racearena:trackGeometries:<geometryId>`. Uses spread+exclusion (`{ ...full }` minus server `id`, `geometryId`, `backgroundImageFile`) so new data-model fields (e.g. `trackLights`, `surfaceClasses`) flow through automatically without code changes here — see Lesson 37. Existing `getTrack(geometryId)` calls in RaceScreen/PresetThumbnail work unchanged.
+4. `backgroundImage` in the cached geometry = the live server URL (computed from server track `id`)
 
 **Offline fallback strategy (L.4):**
 - After geometry caching, `_cacheBackgroundAsync()` fetches the background and stores it as a data-URL in `racearena:cache:backgrounds`

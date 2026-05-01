@@ -238,7 +238,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (984 unit tests, 61 test files) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
+- [x] Vitest + React Testing Library (1234 client unit tests, 70 test files; ~124 server unit tests) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -287,3 +287,26 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 | 2026-04-29 | D7a-Plus (PR #35), D7b (PR #37), D7c (PR #39): Per-type minTargetScreenPx override; lane-free physicalY + home force + anisotropic avoidance + cone drafting (13 tunable params); multi-row start + speed-bonus + track-capacity. Q-Cleanup PRs #40–#42: security (SEC-1..5), data hygiene, source & test hygiene. |
 | 2026-04-29 | Phase L complete (PR #43 + #44): L.1 Docker/Express skeleton; L.2 track read API + seed data; L.3 frontend loads from backend with geometry caching; L.4 offline background cache (3 MB LRU); L.5 write-path — TrackEditor saves to server (POST/PUT + background upload), TrackManager Delete via API, one-time localStorage→server migration, stale-cache cleanup. 984 unit + 183 e2e tests. L.6: Track-Editor visibility improvements (60% overlay, magenta lines, white outlines), background upload no longer resets drawn track (BgBug fix). ⚠️ Auth required before VPS deployment. |
 | 2026-05-01 | Race Track Lights (feat/race-track-lights): Solid boundary lines + lane fill removed from Race Screen. Replaced by glowing track-light dots (~400 per frame, cached at init). `trackLights` field added to track data model (color, style, speed). Four animation styles: steady, sequence (wave), sync_pulse, random_flash. Track Editor gains Track Lights section (color picker, style dropdown, speed slider). Server startup migration sets themed defaults per track ID. `trackLights.js` module: `sampleBoundaryAtInterval`, `getLightAlpha`, `drawTrackLights`. Server-side validation in POST/PUT. |
+| 2026-05-01 | Error Boundary (PR #51): `ErrorBoundary.jsx` wraps entire app in `main.jsx` — catches all render-time throws, shows "Something went wrong" fallback, prevents blank-screen crashes. +8 unit tests. |
+| 2026-05-01 | Race Track Lights + Cache-Bug-Fix (PR #52): Feature complete (see entry above). Post-PR Browser-Test aufgedeckt: (1) `trackLights` wurde nicht über Cache-Reload persistiert — Root Cause: `cacheTrackGeometry` hatte explizite Whitelist, `trackLights` fehlte. Struktureller Fix: Spread+Exclusion-Pattern (L37). +23 Round-Trip-Tests. (2) Track-Lights-Controls zu breit — CSS-Fix (width:100% + flex:1 entfernt). PR #52 squash-gemergt auf master (dc62557). |
+| 2026-05-01 | Doc-Sprint (docs/post-vre-sync): Phasen-Status post-VRE + Track-Lights synchronisiert. Geplante Phasen-Reihenfolge ergänzt (Kamera-Phase als nächste Hauptpriorität). |
+
+---
+
+## Geplante Phasen-Reihenfolge (Stand 2026-05-01)
+
+| # | Phase | Status | Notiz |
+|---|---|---|---|
+| 1 | **Default-Tracks zeichnen** | User-Aufgabe (kein Code) | 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) brauchen Geometrien. L.7-Bug2 — User zeichnet in Track Editor. |
+| 2 | **Kamera-Phase + RaceScreen-Refactor** | 🔜 nächste Hauptpriorität | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Spec wird vor Implementierung diskutiert. |
+| 3 | **Surface Zones** | geplant | Lokale Surface-Class-Überschreibungen innerhalb eines Tracks (Pfützen, Schlammstellen). Folge-Phase nach VRE. TrackEditor-Zonen-Zeichenwerkzeug, `EditorShape.getZonesAtPosition()`. |
+| 4 | **B-UX-Phase** (Dev-Screen Cleanup) | geplant | Dev-Screen auf 30+ Parameter gewachsen — strukturelle Neuordnung, Hilfe-Modal pro Sektion (B-UX2/B-UX3). Vor D8 (voller Racer-Editor). |
+| 5 | **Backup/Export-Feature** (B-5) | geplant | System Backup/Restore/Reset end-to-end verifiziert (UI vorhanden, Wiring fehlt). |
+| 6 | **Docker `node --watch` Folge-PR** | geplant | Dev-Ergonomie: Hot-Reload im Docker-Container ohne Rebuild. |
+| 7 | **Phase 5 — VPS-Deployment** | geplant ⚠️ Auth zuerst | Auth (JWT) muss vor Go-Live implementiert sein. CORS Wildcard + SEC-2 adressieren. |
+
+**Bewusst zurückgestellt (Backlog, kein aktives Datum):**
+- **D7d** — 100-Racer-Performance (Spatial Grid, LOD): kein akuter Blocker für aktuelle Use-Cases
+- **D8** — Voller Racer-Config-Editor: nach B-UX-Phase
+- **Dual-Particle-System** — `dustParticles` (Heimat-Trail) + `surfaceParticles` (VRE) als separate Pools: Konsolidierung nach Surface Zones sinnvoller
+- **D3.6** — File-Reorganisation `racer-types/` → `racer-configs/` (39 Files): niedrige Priorität
