@@ -256,11 +256,12 @@ aus D3.5.5.
 10. ✅ **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4) — Master `c857a7e`
 11. ✅ **Quick-Wins Post-VRE** (Server-vitest v4, Backend-Validation, window.alert, JSON.parse, Doc-Drift)
 12. ✅ **Error Boundary** (Deep-Audit HIGH-Finding adressiert — Top-Level React Error Boundary, PR #51)
-13. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
-14. **Surface Zones**, **D8**
-15. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
-16. **Phase V** (Verification-Sprint)
-16. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
+13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash).
+14. **D3.6** File-Reorganisation (`racer-types/` → `racer-configs/`, 39 Files)
+15. **Surface Zones**, **D8**
+16. **Phase Q-6**, **Q-7** (+ Q-9/Q-10 watch)
+17. **Phase V** (Verification-Sprint)
+18. **Phase T** (Tooltip-Retrofit — nutzt InfoTooltip aus D3.5.5)
 
 ---
 

@@ -101,6 +101,11 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
     { "id": "stars", "config": { "count": 120, "twinkleSpeed": 1.5 } }
   ],
   "surfaceClasses": ["asphalt"],
+  "trackLights": {
+    "color": "#ffffff",
+    "style": "sequence",
+    "speed": 1.0
+  },
   "createdAt": "2026-04-23T21:00:00Z",
   "updatedAt": "2026-04-23T21:30:00Z"
 }
@@ -110,6 +115,7 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 - `innerPoints` and `outerPoints` are always present and authoritative for the race engine.
 - `effects` is an array of up to 3 `{id, config}` entries. Empty array = no effects. See [Track Effects](#track-effects) below.
 - `surfaceClasses` is an array of Surface-Class IDs (Visual Racer Effects — Phase VRE). Controls which racer types are compatible with this track and which surface-class trail effect is rendered. Missing or empty array = all racer types compatible, all use their Heimat-Trail (backwards-compatible default). See [Surface Classes](#surface-classes-visual-racer-effects) below.
+- `trackLights` configures the boundary light dots rendered in the Race Screen instead of solid boundary lines. Fields: `color` (#RRGGBB hex), `style` (`'steady' | 'sequence' | 'sync_pulse' | 'random_flash'`), `speed` (0.1–3.0, relative animation speed; ignored for `steady`). Defaults are applied per default-track ID on server startup (migration) and fall back to `{ color: '#ffffff', style: 'sequence', speed: 1.0 }` for custom tracks. See [Track Lights](#track-lights) below.
 - Minimum 3 points per boundary for a closed track, minimum 2 for an open course.
 
 ### Migration
@@ -117,6 +123,37 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 `getTrack()` normalises legacy geometries on load (no stored data is mutated):
 - If `effects` array is missing and `effectId` is present → migrated to `[{id, config}]`
 - If `effects` array is missing and no `effectId` → migrated to `[]`
+
+---
+
+## Track Lights
+
+Each track stores a `trackLights` object controlling how boundary lights appear in the Race Screen.
+
+```json
+{ "color": "#3aa0ff", "style": "sequence", "speed": 1.0 }
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `color` | `#RRGGBB` string | Light color (hex). |
+| `style` | string | Animation style: `steady`, `sequence`, `sync_pulse`, `random_flash`. |
+| `speed` | number | Animation speed multiplier 0.1–3.0. Ignored when `style` is `steady`. |
+
+**Styles:**
+- `steady` — lights glow at constant base brightness (0.4 alpha), no animation.
+- `sequence` — a wave of bright light travels along the track in race direction. Wave is ~10 lights wide with smooth falloff. Lights not under the wave dim to base (never off).
+- `sync_pulse` — all lights pulse together between base (0.4) and full brightness (1.0) using a sine wave.
+- `random_flash` — individual lights flash briefly to full brightness at random intervals (~8% chance per time window); others stay at base.
+
+**Track Editor UI:** The "Track Lights" section in the Track Editor toolbar (below Effects) provides:
+- Color picker (`<input type="color">`) + hex display
+- Style dropdown (Steady / Sequence / Sync Pulse / Random Flash)
+- Speed slider 0.1–3.0 (disabled when style is Steady)
+
+**Server migration:** On server startup, any stored track lacking `trackLights` is patched with a thematically appropriate default (e.g. dirt-oval → orange sequence, river-run → blue sync_pulse).
+
+**Rendering:** `client/src/modules/trackLights.js` — `sampleBoundaryAtInterval` pre-computes ~400 light positions at race init; `drawTrackLights` renders them per frame with glow effect. Solid boundary lines and lane fill are removed from the Race Screen.
 
 ---
 

@@ -8,7 +8,9 @@ import {
   buildTrackFromEditorState,
   validateEditorState,
   extractEffects,
+  extractTrackLights,
 } from './trackEditorSave.js';
+import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';
 import { useHistory } from './useHistory.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
@@ -73,6 +75,8 @@ export default function TrackEditor() {
   const preNameSnapshotRef = useRef(null);
   const effectHistoryTimerRef = useRef(null);
   const preEffectSnapshotRef = useRef(null);
+  const lightsHistoryTimerRef = useRef(null);
+  const preLightsSnapshotRef = useRef(null);
 
   // ── history hook ──────────────────────────────────────────────────────────
   const { pushHistory, undo, redo, canUndo, canRedo, resetHistory } = useHistory();
@@ -89,6 +93,7 @@ export default function TrackEditor() {
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [bgUploadError, setBgUploadError] = useState(null);
   const [effects, setEffects] = useState([]);
+  const [trackLights, setTrackLights] = useState(DEFAULT_TRACK_LIGHTS);
 
   // ── viewport state ────────────────────────────────────────────────────────
   const [viewZoom, setViewZoom] = useState(1.0);
@@ -154,6 +159,7 @@ export default function TrackEditor() {
       name: trackName,
       backgroundImage,
       effects,
+      trackLights,
     };
   }
 
@@ -168,6 +174,7 @@ export default function TrackEditor() {
     setTrackName(snapshot.name);
     setBackgroundImage(snapshot.backgroundImage);
     setEffects(snapshot.effects ?? []);
+    setTrackLights(snapshot.trackLights ?? DEFAULT_TRACK_LIGHTS);
     setSelectedPointIndex(-1);
   }, []);
 
@@ -706,6 +713,26 @@ export default function TrackEditor() {
     }
   }
 
+  // ── track lights config ───────────────────────────────────────────────────
+
+  function handleTrackLightsChange(patch) {
+    const next = { ...trackLights, ...patch };
+    if (!lightsHistoryTimerRef.current) {
+      preLightsSnapshotRef.current = getSnapshot();
+    } else {
+      clearTimeout(lightsHistoryTimerRef.current);
+    }
+    setTrackLights(next);
+    markDirty();
+    lightsHistoryTimerRef.current = setTimeout(() => {
+      if (preLightsSnapshotRef.current) {
+        pushHistory(preLightsSnapshotRef.current);
+        preLightsSnapshotRef.current = null;
+      }
+      lightsHistoryTimerRef.current = null;
+    }, SLIDER_DEBOUNCE_MS);
+  }
+
   // ── background image upload ───────────────────────────────────────────────
 
   function handleBgUpload(e) {
@@ -756,6 +783,7 @@ export default function TrackEditor() {
     setLoadedGeometryId(track.id);
     setLoadedServerId(serverId ?? null);
     setEffects(extractEffects(track));
+    setTrackLights(extractTrackLights(track));
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
     dragIndexRef.current = -1;
@@ -829,6 +857,7 @@ export default function TrackEditor() {
         name: trackName.trim(),
         backgroundImage,
         effects,
+        trackLights,
         worldWidth: editorWorldW,
         worldHeight: editorWorldH,
       });
@@ -1088,6 +1117,94 @@ export default function TrackEditor() {
         <div className={s.toolbarRow}>
           <span className={s.sliderLabel}>Effects:</span>
           <EffectConfig effects={effects} onChange={handleEffectsChange} max={3} />
+        </div>
+
+        {/* Track Lights */}
+        <div
+          className={s.toolbarRow}
+          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}
+        >
+          <span className={s.sliderLabel} style={{ fontWeight: 600 }}>
+            Track Lights
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
+              Color
+            </label>
+            <input
+              type="color"
+              value={trackLights.color}
+              onChange={(e) => handleTrackLightsChange({ color: e.target.value })}
+              style={{
+                width: 32,
+                height: 24,
+                padding: 0,
+                border: 'none',
+                cursor: 'pointer',
+                background: 'none',
+              }}
+              title="Boundary light color"
+            />
+            <span
+              style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontFamily: 'monospace' }}
+            >
+              {trackLights.color}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
+              Style
+            </label>
+            <select
+              data-testid="track-lights-style"
+              value={trackLights.style}
+              onChange={(e) => {
+                pushHistory(getSnapshot());
+                setTrackLights((prev) => ({ ...prev, style: e.target.value }));
+                markDirty();
+              }}
+              style={{ flex: 1, fontSize: '0.8rem' }}
+            >
+              <option value="steady">Steady</option>
+              <option value="sequence">Sequence</option>
+              <option value="sync_pulse">Sync Pulse</option>
+              <option value="random_flash">Random Flash</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            <label
+              style={{
+                fontSize: '0.78rem',
+                color: trackLights.style === 'steady' ? 'var(--color-muted)' : 'var(--color-muted)',
+                minWidth: '2.5rem',
+                opacity: trackLights.style === 'steady' ? 0.4 : 1,
+              }}
+            >
+              Speed
+            </label>
+            <input
+              data-testid="track-lights-speed"
+              type="range"
+              min={0.1}
+              max={3.0}
+              step={0.1}
+              value={trackLights.speed}
+              disabled={trackLights.style === 'steady'}
+              onChange={(e) => handleTrackLightsChange({ speed: parseFloat(e.target.value) })}
+              style={{ flex: 1 }}
+              title="Animation speed (disabled for Steady)"
+            />
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--color-muted)',
+                minWidth: '2rem',
+                opacity: trackLights.style === 'steady' ? 0.4 : 1,
+              }}
+            >
+              {trackLights.speed.toFixed(1)}×
+            </span>
+          </div>
         </div>
 
         {/* Viewport controls */}

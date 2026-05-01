@@ -605,6 +605,175 @@ describe('PUT /api/tracks/:id — maxRacers validation', () => {
   });
 });
 
+// ── trackLights field ─────────────────────────────────────────────────────────
+
+const VALID_LIGHTS = { color: '#3aa0ff', style: 'sequence', speed: 1.0 };
+
+describe('trackLights field — startup migration', () => {
+  it('all tracks returned by GET /api/tracks have a trackLights object', async () => {
+    const res = await request(app).get('/api/tracks');
+    expect(res.status).toBe(200);
+    for (const track of res.body) {
+      expect(track).toHaveProperty('trackLights');
+      expect(typeof track.trackLights).toBe('object');
+      expect(track.trackLights).not.toBeNull();
+    }
+  });
+
+  it('migrated Weltall track gets a valid trackLights object', async () => {
+    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    expect(res.status).toBe(200);
+    expect(typeof res.body.trackLights).toBe('object');
+    expect(res.body.trackLights).toHaveProperty('color');
+    expect(res.body.trackLights).toHaveProperty('style');
+    expect(res.body.trackLights).toHaveProperty('speed');
+  });
+});
+
+describe('POST /api/tracks — trackLights', () => {
+  it('creates a track with valid trackLights and returns it in the response', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
+    expect(res.status).toBe(201);
+    expect(res.body.trackLights).toMatchObject(VALID_LIGHTS);
+    createdIds.push(res.body.id);
+  });
+
+  it('persists trackLights so it appears in GET detail', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
+    createdIds.push(createRes.body.id);
+    const detail = await request(app).get(`/api/tracks/${createRes.body.id}`);
+    expect(detail.body.trackLights).toMatchObject(VALID_LIGHTS);
+  });
+
+  it('returns 400 when trackLights.color is not a valid hex string', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, color: 'blue' } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.color/i);
+  });
+
+  it('returns 400 when trackLights.color is missing the # prefix', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, color: '3aa0ff' } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.color/i);
+  });
+
+  it('returns 400 when trackLights.style is unknown', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, style: 'blink' } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.style/i);
+  });
+
+  it('returns 400 when trackLights.speed is below 0.1', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, speed: 0 } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.speed/i);
+  });
+
+  it('returns 400 when trackLights.speed exceeds 3.0', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, speed: 5 } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.speed/i);
+  });
+
+  it('returns 400 when trackLights is an array', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: [] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights must be an object/i);
+  });
+
+  it('returns 201 for all valid styles', async () => {
+    for (const style of ['steady', 'sequence', 'sync_pulse', 'random_flash']) {
+      const res = await request(app)
+        .post('/api/tracks')
+        .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, style } });
+      expect(res.status).toBe(201);
+      expect(res.body.trackLights.style).toBe(style);
+      createdIds.push(res.body.id);
+    }
+  });
+
+  it('returns 201 for speed boundary values 0.1 and 3.0', async () => {
+    for (const speed of [0.1, 3.0]) {
+      const res = await request(app)
+        .post('/api/tracks')
+        .send({ ...VALID_TRACK, trackLights: { ...VALID_LIGHTS, speed } });
+      expect(res.status).toBe(201);
+      expect(res.body.trackLights.speed).toBe(speed);
+      createdIds.push(res.body.id);
+    }
+  });
+});
+
+describe('PUT /api/tracks/:id — trackLights update', () => {
+  it('updates trackLights on an existing track', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const newLights = { color: '#ff8844', style: 'sync_pulse', speed: 0.7 };
+    const updateRes = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ trackLights: newLights });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.trackLights).toMatchObject(newLights);
+  });
+
+  it('returns 400 when trackLights.color is invalid on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ trackLights: { color: '#gggggg', style: 'steady', speed: 1 } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.color/i);
+  });
+
+  it('returns 400 when trackLights.speed is out of range on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ trackLights: { color: '#ffffff', style: 'steady', speed: 10 } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/trackLights\.speed/i);
+  });
+
+  it('returns 200 for a partial update that omits trackLights', async () => {
+    const createRes = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).put(`/api/tracks/${id}`).send({ name: 'Name Only' });
+    expect(res.status).toBe(200);
+    // trackLights should be preserved from the original
+    expect(res.body.trackLights).toMatchObject(VALID_LIGHTS);
+  });
+});
+
 describe('POST /api/tracks/:id/background', () => {
   it('rejects a file exceeding 10 MB with 413', async () => {
     const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
