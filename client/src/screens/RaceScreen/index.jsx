@@ -44,6 +44,12 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
+import {
+  DEFAULT_TRACK_LIGHTS,
+  LIGHT_SPACING_PX,
+  sampleBoundaryAtInterval,
+  drawTrackLights,
+} from '../../modules/trackLights.js';
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
@@ -144,6 +150,17 @@ export default function RaceScreen() {
     const bsX = CANVAS_W / worldWidth;
     const bsY = CANVAS_H / worldHeight;
     const bgImagePath = geometry.backgroundImage ?? null;
+
+    // Cache track-light positions once at race init (not per frame).
+    // 800 samples gives ~18 px/sample on a 15 000 px track — accurate enough
+    // for sampleBoundaryAtInterval to place lights at the target 30 px spacing.
+    const { outer: edgeOuter, inner: edgeInner } = shapeRef.current.getEdgePoints(800);
+    const cachedLightPts = {
+      outer: sampleBoundaryAtInterval(edgeOuter, LIGHT_SPACING_PX),
+      inner: sampleBoundaryAtInterval(edgeInner, LIGHT_SPACING_PX),
+    };
+    const trackLightsConfig = geometry.trackLights ?? DEFAULT_TRACK_LIGHTS;
+
     effectsRef.current = extractEffects(geometry)
       .map(({ id, config }) => {
         const manifest = getEffect(id);
@@ -572,45 +589,9 @@ export default function RaceScreen() {
       ctx.fill();
     }
 
-    function drawEditorTrackSurface(ctx, shape, frame) {
-      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0022);
-      const { outer, inner } = shape.getEdgePoints(120);
-      ctx.beginPath();
-      ctx.moveTo(outer[0].x, outer[0].y);
-      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-      for (const p of [...inner].reverse()) ctx.lineTo(p.x, p.y);
-      ctx.closePath();
-      ctx.fillStyle = '#c8a46a';
-      ctx.fill();
-      ctx.globalAlpha = 0.12;
-      for (let i = 0; i < outer.length; i += 4) {
-        const po = outer[i],
-          pi_ = inner[i];
-        for (let f = 0.15; f < 1; f += 0.25) {
-          const sx = po.x + (pi_.x - po.x) * f + (Math.random() - 0.5) * 3;
-          const sy = po.y + (pi_.y - po.y) * f + (Math.random() - 0.5) * 3;
-          ctx.fillStyle = i % 3 === 0 ? '#b08840' : '#dbbf7a';
-          ctx.beginPath();
-          ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.globalAlpha = 1;
-      const glow = 14 + 12 * pulse;
-      ctx.shadowBlur = glow;
-      ctx.shadowColor = '#00eeff';
-      ctx.strokeStyle = `rgba(0,${200 + Math.round(55 * pulse)},255,0.9)`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(outer[0].x, outer[0].y);
-      for (const p of outer.slice(1)) ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(inner[0].x, inner[0].y);
-      for (const p of inner.slice(1)) ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      // Finish line
+    function drawEditorTrackSurface(ctx, shape) {
+      // Boundary lines and lane fill removed — replaced by track-light dots.
+      // Only the finish line is drawn here.
       const pOuter = shape.getPosition(0, 1.0);
       const pInner = shape.getPosition(0, -1.0);
       const dx = pOuter.x - pInner.x,
@@ -901,7 +882,8 @@ export default function RaceScreen() {
           inst.render(ctx);
           ctx.restore();
         }
-        drawEditorTrackSurface(ctx, shape, ts);
+        drawEditorTrackSurface(ctx, shape);
+        drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
         if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
         drawParticles();
         drawSurfaceTrails();
@@ -918,7 +900,8 @@ export default function RaceScreen() {
           inst.render(ctx);
           ctx.restore();
         }
-        drawEditorTrackSurface(ctx, shape, ts);
+        drawEditorTrackSurface(ctx, shape);
+        drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
         drawParticles();
         drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);

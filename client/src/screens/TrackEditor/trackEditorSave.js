@@ -1,5 +1,6 @@
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
 import { getEffect } from '../../modules/track-effects/index.js';
+import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';
 
 function computeSplineLengthPx(points) {
   let len = 0;
@@ -55,11 +56,14 @@ export function buildTrackFromEditorState({
   name,
   backgroundImage,
   effects,
+  trackLights,
   worldWidth = 1280,
   worldHeight = 720,
 }) {
   const minPts = closed ? 3 : 2;
   const effectsArray = Array.isArray(effects) ? effects.slice(0, 3) : [];
+
+  const lightsConfig = trackLights ?? DEFAULT_TRACK_LIGHTS;
 
   if (mode === 'center') {
     if (centerPoints.length < minPts) {
@@ -80,6 +84,7 @@ export function buildTrackFromEditorState({
       innerPoints: derivedInner,
       outerPoints: derivedOuter,
       effects: effectsArray,
+      trackLights: lightsConfig,
       worldWidth,
       worldHeight,
       pathLengthPx: computeSplineLengthPx(centerCurve),
@@ -111,6 +116,7 @@ export function buildTrackFromEditorState({
     innerPoints,
     outerPoints,
     effects: effectsArray,
+    trackLights: lightsConfig,
     worldWidth,
     worldHeight,
     pathLengthPx: computeSplineLengthPx(midCurve),
@@ -126,4 +132,11 @@ export function extractEffects(geometry) {
     }
     return true;
   });
+}
+
+export function extractTrackLights(geometry) {
+  if (geometry.trackLights && typeof geometry.trackLights === 'object') {
+    return { ...DEFAULT_TRACK_LIGHTS, ...geometry.trackLights };
+  }
+  return { ...DEFAULT_TRACK_LIGHTS };
 }

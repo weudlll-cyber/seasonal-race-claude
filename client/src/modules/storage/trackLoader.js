@@ -44,29 +44,24 @@ export async function cacheTrackGeometry(summaryTrack) {
     );
     if (!res.ok) return null;
     const full = await res.json();
+    // Three fields need special handling; everything else passes through automatically
+    // so new data-model fields (trackLights, surfaceClasses, …) are never silently dropped.
+    //   • `id` (server track ID) → used only for the background URL; geometry is keyed by geometryId
+    //   • `geometryId` → becomes the cache `id` (matches the key getTrack() looks up)
+    //   • `backgroundImageFile` → server-internal path; clients use the computed URL instead
+    // eslint-disable-next-line no-unused-vars
+    const { id: serverId, geometryId, backgroundImageFile, ...rest } = full;
     const geometry = {
-      id: full.geometryId,
-      name: full.name,
-      backgroundImage: `${API_BASE_URL}/api/tracks/${full.id}/background`,
-      closed: full.closed,
-      sourceMode: full.sourceMode,
-      centerPoints: full.centerPoints,
-      innerPoints: full.innerPoints,
-      outerPoints: full.outerPoints,
-      effects: full.effects ?? [],
-      worldWidth: full.worldWidth,
-      worldHeight: full.worldHeight,
-      width: full.width,
-      pathLengthPx: full.pathLengthPx,
-      createdAt: full.createdAt,
-      updatedAt: full.updatedAt,
+      ...rest,
+      id: geometryId,
+      backgroundImage: `${API_BASE_URL}/api/tracks/${serverId}/background`,
     };
-    storageSet(GEO_KEY(full.geometryId), geometry);
-    registerInIndex(full.geometryId);
+    storageSet(GEO_KEY(geometryId), geometry);
+    registerInIndex(geometryId);
 
     // Fetch and cache the background image as a data-URL for offline use.
     // Best-effort: failures are silently ignored — server URL still works when online.
-    _cacheBackgroundAsync(full.id).catch(() => {});
+    _cacheBackgroundAsync(serverId).catch(() => {});
 
     return geometry;
   } catch {
