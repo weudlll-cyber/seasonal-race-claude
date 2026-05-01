@@ -11,3 +11,4 @@ client/test-results/
 /tmp/
 AUDIT.md
 server/data/**/*.json.tmp
+server/data/tracks-backups/
