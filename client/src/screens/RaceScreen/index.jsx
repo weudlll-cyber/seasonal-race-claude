@@ -44,6 +44,9 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
+import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
+import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
+import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -208,6 +211,11 @@ export default function RaceScreen() {
     const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
     const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
 
+    // Ensure surface-class registry has the latest cached server data.
+    // Code defaults are always present; this picks up any user-defined overrides.
+    loadServerClasses(getCachedServerSurfaceClasses());
+    const trackSurfaceClasses = raceData.trackSurfaceClasses ?? [];
+
     // Index assignments by racerIndex for O(1) lookup in the map below
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -265,6 +273,9 @@ export default function RaceScreen() {
           x: 0,
           y: 0,
           angle: 0,
+          // VRE-4: one emitter instance per racer (stateful generators must not be shared)
+          surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
+          surfaceParticles: [],
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -676,6 +687,15 @@ export default function RaceScreen() {
       ctx.fillText('FINISH', midX, midY - 8);
     }
 
+    // Render per-racer surface-class particles (world coords, inside camera transform).
+    function drawSurfaceTrails() {
+      for (const r of g.current.racers) {
+        if (r.surfaceEmitter && r.surfaceParticles.length > 0) {
+          r.surfaceEmitter.render(ctx, r.surfaceParticles);
+        }
+      }
+    }
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       const st = g.current;
@@ -728,11 +748,23 @@ export default function RaceScreen() {
         }
 
         const rt = racerTypeRef.current;
+        // dt is in ms; generators expect dt in frames (1 = one frame at 60fps)
+        const dtFrames = dt / 16;
         for (const r of st.racers) {
           if (!r.finished) {
-            st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+            if (r.surfaceEmitter) {
+              // Surface-class trail: each racer drives its own emitter
+              r.surfaceParticles.push(
+                ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts)
+              );
+              r.surfaceParticles = r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
+            } else {
+              // Heimat-Trail fallback: trailFactory-based particles pooled globally
+              st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+            }
           }
         }
+        // Advance Heimat-Trail dustParticles (unchanged behavior)
         st.dustParticles = st.dustParticles
           .map((p) => ({
             ...p,
@@ -872,6 +904,7 @@ export default function RaceScreen() {
         drawEditorTrackSurface(ctx, shape, ts);
         if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
         drawParticles();
+        drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
         ctx.restore();
         drawTitleOpen();
@@ -887,6 +920,7 @@ export default function RaceScreen() {
         }
         drawEditorTrackSurface(ctx, shape, ts);
         drawParticles();
+        drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
         ctx.restore();
         drawTitle();

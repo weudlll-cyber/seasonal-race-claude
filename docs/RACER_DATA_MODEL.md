@@ -101,7 +101,7 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 | `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |
 | `racearena:trackGeometries:<id>` | Track-Geometry-Records (Catmull-Rom Spline-Punkte) | Aktiv |
 | `racearena:trackGeometries:index` | Geometry-Index | Aktiv |
-| `sessionStorage['activeRace']` | Race-Setup-Daten für Setup → Race-Screen Übergang. Felder: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration` | Aktiv |
+| `sessionStorage['activeRace']` | Race-Setup-Daten für Setup → Race-Screen Übergang. Felder: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration, trackSurfaceClasses` | Aktiv |
 | `sessionStorage['activeRace'].racerTypeId` | **W3 Race-Override:** session-only, zurückgesetzt bei Track-Wechsel. Kein Persist. | Aktiv (post W3) |
 | `sessionStorage['activeRace'].raceMode` | `'laps'` (Closed-Track) oder `'time'` (Open-Track). Steuert Race-End-Logik in RaceScreen. | Aktiv (post D9) |
 | `sessionStorage['activeRace'].targetLaps` | Gewählte Lap-Anzahl (integer, 1–4). Nur gesetzt wenn `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`. | Aktiv (post D9) |
@@ -283,14 +283,27 @@ Der Heimat-Trail garantiert Rückwärtskompatibilität: Tracks ohne `surfaceClas
 
 ### trailFactory nach VRE-4
 
-Nach der Race-Integration (VRE-4) erhält die Trail-Dispatch-Logik in RaceScreen Zugriff auf die aktive Surface-Class:
+`trailFactory` bleibt in jeder Racer-Type-Config erhalten als **Heimat-Trail** — der statische Default-Effekt des Types.
+
+Nach VRE-4 dispatcht RaceScreen über `resolveTrailEmitter()`:
 ```javascript
-// Konzept — exakte Signatur wird in VRE-4-Spec definiert
-const activeClass = resolveActiveSurfaceClass(racerType, track);  // null wenn kein Match
-const particles = activeClass
-  ? activeClass.generator(x, y, speed, angle, activeClass.config)
-  : racerType.trailFactory(x, y, speed, angle, frame);
+// trailResolver.js
+const emitter = resolveTrailEmitter(racerType, raceData.trackSurfaceClasses);
+// emitter = { spawn, update, render } wenn Klasse matched, sonst null
+
+// In RaceScreen rAF loop (pro Racer):
+if (r.surfaceEmitter) {
+  r.surfaceParticles = r.surfaceEmitter.update(
+    [...r.surfaceParticles, ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts)],
+    dt / 16
+  );
+} else {
+  // Heimat-Trail: trailFactory-Partikel in globalem dustParticles Pool
+  st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+}
 ```
+
+`trailFactory` wird in der Praxis bei allen 5 Default-Tracks nicht mehr aktiv (alle haben passende surfaceClasses). Es bleibt aber aktiv für Custom-Tracks ohne surfaceClasses und für Legacy-Kombinationen.
 
 ### API-Erweiterung (VRE-1)
 
