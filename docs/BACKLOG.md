@@ -29,7 +29,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-### 1 — Track Lifecycle Hybrid (TLH) — TLH-1 ✅ TLH-2 ✅ → TLH-3 🔜 Nächste Implementierungsphase
+### 1 — Kamera-Phase + RaceScreen-Refactor 🔜 Hot — nächste Implementierungsphase
+
+CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Vorgehen: Konzept-Doku-Sprint zuerst (Architektur-Diskussion), dann Implementation. Parallel-Überlegung: Q-25 (Strecken-Canvas-Größe begrenzt Strecken-Länge) sollte in der Konzept-Phase mitgedacht werden, da Canvas-Limits das Camera-Verhalten beeinflussen.
+
+---
+
+### TLH — Track Lifecycle Hybrid — TLH-1 ✅ TLH-2 ✅ Track-Delete-Safeguards ✅ → TLH-3 ⏳ zurückgestellt
 
 Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zeichnen aufgedeckt (User-Browser-Test 2026-05-01, Daten-Verlust-Bug):
 
@@ -60,21 +66,32 @@ Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zei
 - ✅ Lesson 39 + 40 in LESSONS.md dokumentiert
 - ✅ F2-Folge: `autoMaxRacers` in `handleEdit` nutzte `isServer ? track` als EditorShape-Input → crash (TypeError: `undefined.length`) weil `toSummary` `innerPoints` strippt. Fix: immer geometry cache statt server summary. L39 um Audit-Pattern ergänzt.
 
-**TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3) 🔜 Hot Pos 1**
+**Track-Delete-Safeguards (PR #58) ✅**
+- ✅ "Remove background"-Button im Track-Editor (neben Background-Upload, erscheint wenn Bild geladen ist)
+- ✅ `DELETE /api/tracks/:id/background` Endpoint — entfernt nur das Bild, lässt Track-Record intakt
+- ✅ `DELETE /api/tracks/:id` gibt 403 für Default-Tracks (`isDefault: true`) — verhindert versehentliches Löschen
+- ✅ `migrateDefaultTracks()` läuft bei jedem Boot (idempotent) — stellt fehlende Default-Records wieder her
+- ✅ React key=null Fix in TrackManager Geometrie-Select
+- ✅ Background-Image useEffect Race Condition Fix (L43) — cancelled-Flag verhindert stale onerror-Callbacks
+
+**TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3) ⏳ zurückgestellt nach Kamera-Phase**
 - Frontend Lade-Reihenfolge: Server → Cache → Code-Bundle (`defaultTracks.js`)
 - Code-Bundle initial mit leeren Geometrien (Bootstrap)
 - Status-Banner wenn Code-Bundle-Modus aktiv: "Server unavailable — showing default tracks (limited functionality)"
 - Export-Button im Dev-Screen: schreibt aktuelle Server-Tracks als JSON-Snapshot (User committet manuell)
 
-> **Reihenfolge wichtig:** TLH-1 macht System sicher (Backup + keine Daten-Verlust-Bugs), TLH-2 macht es benutzbar (korrekter UI-Flow), TLH-3 macht es resilient (Offline-Fallback). Siehe `docs/TRACK_LIFECYCLE.md` für vollständige Spec.
+> **Reihenfolge wichtig:** TLH-1 macht System sicher (Backup + keine Daten-Verlust-Bugs), TLH-2 macht es benutzbar (korrekter UI-Flow), TLH-3 macht es resilient (Offline-Fallback). TLH-3 wurde nach Kamera-Phase zurückgestellt. Siehe `docs/TRACK_LIFECYCLE.md` für vollständige Spec.
 
-### 1a — Default-Tracks zeichnen (User-Aufgabe nach TLH-2)
+### 1a — Default-Tracks zeichnen ✅ Abgeschlossen 2026-05-02
 
-User zeichnet 5 Geometrien im Track Editor: Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. Erst nach TLH-2 sicher (UI-Flow korrekt, kein Daten-Verlust-Risiko). Läuft zwischen TLH-2 und TLH-3.
+Alle 5 Geometrien gezeichnet und im Track Editor gespeichert:
+- ✅ Dirt Oval
+- ✅ River Run
+- ✅ Space Sprint
+- ✅ Garden Path
+- ✅ City Circuit
 
-### 2 — Kamera-Phase + RaceScreen-Refactor (nach TLH)
-
-CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor Implementierung.
+Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
 
 - **D7d** — 100-Racer-Performance (Spatial-Grid, smarter Camera, LOD) — zurückgestellt hinter Kamera-Phase
 
@@ -247,14 +264,10 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
   (Session-Load → Race-Init, Finish-Detection, sessionStorage-Write bei Race-Ende).
   *(Deep-Audit 2026-05-01, Severity: MEDIUM — in TEST-RaceScreen-Backlog bestätigt)*
 
-- **Q-19** — TrackEditor.effects.test.jsx flaky in Full-Suite-Parallel-Run
-  Test `background upload size guard > shows an error and does not call FileReader when file exceeds 10 MB`
-  schlägt intermittierend fehl wenn alle 67 Client-Test-Files parallel laufen (vitest vmForks), besteht
-  in Isolation stabil. Root cause: vermutlich globaler `FileReader`-Mock wird von einem anderen Test-File
-  überschrieben. Fix: Spy-Scope prüfen oder `--sequence.shuffle false` + Isolations-Test.
-  *(Entdeckt 2026-05-01 während Quick-Wins PR #50, Severity: LOW)*
-  **Update TLH-1:** Root cause bestätigt und gefixt — `fetch`-Stub aus `trackLoader.test.js` leckte in
-  TrackEditor-Worker. Fix: `vi.unstubAllGlobals()` in `beforeEach`. PR #55, 2026-05-01.
+- ✅ **Q-19** — TrackEditor.effects.test.jsx flaky — **gefixt PR #55 (2026-05-01)**
+  Root cause: `fetch`-Stub aus `trackLoader.test.js` leckte in TrackEditor-Worker via fehlenden
+  `vi.unstubAllGlobals()` in `beforeEach`. Fix: `vi.unstubAllGlobals()` in `beforeEach` added.
+  *(Entdeckt PR #50, gefixt PR #55)*
 
 - **Q-20** — Server-Test-Backup-Cleanup nicht Crash-resistent (TLH-1)
   `afterAll` in `tracks.test.js` räumt Backup-Files über `rmSync` auf, aber nur bei normalem
@@ -292,6 +305,19 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
   Fall dauerhaft ohne Upload. Mögliche Lösungen: (a) pro Stufe eigene Fehlermeldung mit „Retry Background"-
   Option, (b) Atomic-Save (rollback Geometrie wenn Background fehlschlägt). Aufwand: klein–mittel.
   *(Aufgekommen 2026-05-02 nach Background-Diagnose dirt-oval, Severity: MEDIUM)*
+
+- **Q-25** — Track-Canvas-Größe begrenzt Strecken-Länge
+  User-Beobachtung (2026-05-02): Ein 6000×4000-Background-Bild führt nicht automatisch zu einer längeren
+  Strecke, weil die Geometrie im Canvas-Koordinatensystem (CW=1280, CH=720 in TrackEditor.jsx) gezeichnet
+  wird. `worldWidth`/`worldHeight` setzen den Maßstab der Welt, aber die maximale Zeichenfläche entspricht
+  dem Canvas-Viewport nach Zoom/Pan — sehr lange Strecken (z.B. mehrfacher worldWidth-Umfang) lassen sich
+  im aktuellen Editor schwer realisieren, weil der Zeichenbereich durch die Canvas-Auflösung begrenzt ist.
+  Ein grundlegend anderer Ansatz (unbegrenzte Welt-Koordinaten, unbegrenzter Zoom/Pan) würde echte
+  Langstrecken ermöglichen — aber das ist eine größere Architektur-Änderung.
+  Severity: MEDIUM. Aufwand: ungeklärt — braucht Konzept-Überlegung vor Implementation.
+  Beziehung zur Kamera-Phase: Strecken-Länge beeinflusst Camera-Verhalten und Zoom-Stufen.
+  Konzept-Überlegung sollte parallel zur Kamera-Phase-Planung stattfinden (Q-25 im Konzept-Sprint).
+  *(User-Beobachtung 2026-05-02)*
 
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
@@ -353,9 +379,11 @@ aus D3.5.5.
 13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash). Cache-Bug (L37) + CSS-Fix im selben PR.
    - **L37-Drift-Risiko (nicht in PR #52 gefixt):** `buildTrackFromEditorState` in `trackEditorSave.js` enthält eine explizite Ausgabe-Feld-Liste — das ist dort intentionell (Form kennt nur eigene Felder), aber neue Editor-Features brauchen explizites Update dieser Funktion. Kein akuter Bug, aber bei künftigen Features daran erinnern.
 14. ✅ **TLH-1 — Backend-Fixes + Migration** — geometryId client-authoritative, Delete bewahrt Geometrie, Auto-Backup, Default-Track-Seed-Migration. PR #55.
-14b. ✅ **TLH-2 — UI-Flow + Cleanup** — Edit-Modal Geometry-Status-Display, Track-Editor Two-Mode (Load/New), Two-Path-Load, geometryId-First-Draw. PR offen, pending merge. 🔜 **TLH-3** (Code-Fallback + Banner + Export) folgt.
-14a. ⏳ **Default-Tracks zeichnen** — User-Aufgabe nach TLH-2. 5 Geometrien zeichnen und speichern. Zwischen TLH-2 und TLH-3.
-15. **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst. Nach TLH abgeschlossen.
+14b. ✅ **TLH-2 — UI-Flow + Cleanup** — Edit-Modal Geometry-Status-Display, Track-Editor Two-Mode (Load/New), Two-Path-Load, geometryId-First-Draw. PR #56/#57, squash-gemergt.
+14c. ✅ **Track-Delete-Safeguards + Background-Race-Condition-Fix** — Remove-Background-Button, DELETE-Background-Endpoint, isDefault-403-Guard, migrateDefaultTracks idempotent, useEffect cancelled-Flag (L43). PR #58, squash-gemergt `fc5690f`.
+14a. ✅ **Default-Tracks zeichnen** — Alle 5 Geometrien gezeichnet und gespeichert (2026-05-02): Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit.
+15. 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Konzept-Doku-Sprint zuerst. Q-25 (Strecken-Canvas-Größe) als Parallel-Überlegung im Konzept-Sprint.
+16 (verschoben). **TLH-3 — Code-Fallback + Status-Banner + Export** — zurückgestellt nach Kamera-Phase.
 16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.
 17. **B-UX-Phase** — Dev-Screen Cleanup (B-UX2/B-UX3), Hilfe-Modal. Vor D8.
 18. **Backup/Export** (B-5) — UI vorhanden, Wiring fehlt.

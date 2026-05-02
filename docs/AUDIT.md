@@ -148,10 +148,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-02 | **1254 unit + 183 e2e + 109 backend** | TLH-2 Post-Merge Bug-Fixes (same branch): F2 (hasGeo→geometryId+pointCount via extended toSummary), F4 (scroll-reset on mount + scrollIntoView on serverError), F1-revised (load-mode background optional). +2 unit (F3 reproduction: 2 scenarios), +2 backend (pointCount in list). ESLint: 0 errors, 0 warnings. |
 | 2026-05-02 | **1256 unit + 183 e2e + 109 backend** | toSummary Folge-Regression: autoMaxRacers in handleEdit nutzte `isServer ? track` als EditorShape-Input → crash (TypeError: innerPoints undefined). Fix: immer geometry cache statt server summary. +2 unit (Regression-Guard + no-crash-test). L39 Audit-Pattern ergänzt. ESLint: 0 errors, 0 warnings. |
 | 2026-05-02 | **1261 unit + 183 e2e + 114 backend** | City-Circuit-Bug-Fix (fix/track-delete-safeguards): "Remove background"-Button (+5 unit), DELETE /api/tracks/:id/background Endpoint (+3 backend), Default-Track DELETE-Schutz 403 (+2 backend), migrateDefaultTracks idempotent, React key=null Fix in TrackManager. L41+L42, Q-24 ergänzt. ESLint: 0 errors, 0 warnings. |
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Background-Image Race Condition Fix + L43 (PR #58, squash-merged `fc5690f`): Pre-existing race condition im backgroundImage useEffect — stale onerror-Callback vom Null-Run überschrieb bgRef nach erfolgreichem onload beim Track-Load. Fix: Null-Guard (verhindert `img.src='null'`) + cancelled-Flag mit cleanup-Return. 4 neue Komponenten-Tests (TrackEditor.effects.test.jsx — null-path, URL-load, race-guard). ESLint: 0 errors, 0 warnings. |
 
-**Aktueller Branch-HEAD:** `fix/track-delete-safeguards` (PR offen, pending user merge)
-**Master-HEAD:** `c2961c9` (TLH-2 Followup Bug-Fixes, PR #57, squash-merged 2026-05-02)
-**ESLint-Warnings:** 0 (TLH-2 branch); 1 pre-existing on master (TransitionContext.jsx:44 fast-refresh)
+**Aktueller Branch-HEAD:** `master` — alle PRs gemergt
+**Master-HEAD:** `fc5690f` (PR #58 fix/track-delete-safeguards + Background-Image-Race-Condition-Fix, squash-merged 2026-05-02)
+**ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün
 
 ---
@@ -352,6 +353,6 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 | **SEC-2 — Race-State-Manipulation via React DevTools** | HIGH | Client-seitig nicht vollständig behebbar; erfordert Server-Architektur | Phase 5: Server-authoritative Race-Finale mit Signierung |
 | **RaceScreen LOC > 1000** | MEDIUM | Funktional korrekt; Refactor braucht eigene Phase | Kamera-Phase — RaceScreen ist ohnehin Hauptarbeitsgebiet |
 | **TrackEditor LOC > 1200** | MEDIUM | Funktional korrekt; Refactor ist Prerequisite für Surface Zones | Vor Surface Zones Phase |
-| **Q-19 — TrackEditor.effects.test.jsx flaky** | LOW | Nur in Full-Suite-Parallel-Run; in Isolation stabil | Nach Kamera-Phase: FileReader-Mock-Scope-Fix |
+| ~~**Q-19 — TrackEditor.effects.test.jsx flaky**~~ | ✅ gefixt PR #55 | Root cause: `fetch`-Stub aus `trackLoader.test.js` leckte via `vi.unstubAllGlobals()` Fix. | — |
 | **TEST-RaceScreen** — 0 Unit-Tests für RaceScreen | MEDIUM | Canvas + rAF in jsdom erfordert aufwändige Mock-Infrastruktur | Kamera-Phase: minimale Integration-Tests mitliefern |
 | **Verwaiste Geometrien** — Track-Delete hinterlässt orphaned geometry cache-entries in localStorage und (nach TLH-1) keine Geometrie-Bereinigung im Backend | LOW | Explizit akzeptiert in TLH-Konzept: Geometrien sind teuer, Verlust ist irreversibel. Verwaiste Einträge nehmen keinen merkbaren Speicher und verursachen keine Fehler. | Optional: "Clean up orphaned geometries" als UI-Action in einem späteren Cleanup-Sprint. Kein akuter Handlungsbedarf. |
