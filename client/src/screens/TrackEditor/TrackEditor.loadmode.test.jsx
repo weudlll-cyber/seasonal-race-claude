@@ -314,6 +314,62 @@ describe('TrackEditor — save path in load mode', () => {
   });
 });
 
+// ── F3 reproduction: dirt-oval no-background save path ───────────────────────
+// Reproduces the exact scenario from the 2026-05-02 browser test:
+//   - dirt-oval loads (geometryId: null, no background)
+//   - user draws geometry (mocked via buildTrackFromEditorState stub)
+//   - user clicks Save
+// Confirms the frontend PUT path fires correctly — if this test passes, any
+// save failure during the real browser test was environmental (server/disk), not a frontend bug.
+
+describe('TrackEditor — F3 reproduction: save from no-background track (load mode)', () => {
+  it('Save calls PUT (not POST) even when track has no background', async () => {
+    vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
+    renderEditor('/track-editor?load=dirt-oval');
+
+    // Wait for load mode to activate (Path 2 load from serverTracksCtl.tracks)
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
+    });
+
+    // Save is enabled in load mode even without a background (F1-revised fix)
+    const saveBtn = screen.getByRole('button', { name: /^Save$/ });
+    expect(saveBtn.disabled).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith('dirt-oval', expect.any(Object));
+    });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('first-draw on no-background track generates a new geometryId in PUT body', async () => {
+    vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
+    renderEditor('/track-editor?load=dirt-oval');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
+    });
+
+    const saveBtn = screen.getByRole('button', { name: /^Save$/ });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalled();
+    });
+
+    const [serverId, putBody] = mockUpdate.mock.calls[0];
+    expect(serverId).toBe('dirt-oval');
+    expect(typeof putBody.geometryId).toBe('string');
+    expect(putBody.geometryId.startsWith('custom-')).toBe(true);
+  });
+});
+
 // ── Save path: new track mode → POST ─────────────────────────────────────────
 
 describe('TrackEditor — save path in new track mode', () => {
