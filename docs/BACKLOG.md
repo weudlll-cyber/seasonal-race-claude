@@ -29,7 +29,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-### 1 — Track Lifecycle Hybrid (TLH) — TLH-1 ✅ → TLH-2 🔜 Nächste Implementierungsphase
+### 1 — Track Lifecycle Hybrid (TLH) — TLH-1 ✅ TLH-2 ✅ → TLH-3 🔜 Nächste Implementierungsphase
 
 Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zeichnen aufgedeckt (User-Browser-Test 2026-05-01, Daten-Verlust-Bug):
 
@@ -46,12 +46,14 @@ Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zei
 - ✅ atomicWriteJson OneDrive-Fallback: renameSync-Fehler → direktes writeFileSync
 - ✅ 10 neue Backend-Tests (geometryId ×3, backup ×3, default-seed ×4), 1 neuer Client-Unit-Test
 
-**TLH-2 — UI-Flow + Cleanup (Sub-PR 2) 🔜**
-- "Draw Geometry"-Button navigiert zu `/track-editor?load=<serverId>` (Preset-Kontext als URL-Parameter)
-- Track-Editor: wenn `?load=<id>` gesetzt → vorhandene Geometrie laden, bei Save `PUT /api/tracks/<id>` statt POST
-- UI-Felder im Edit-Modal die unmögliche Aktionen suggerieren überprüfen / entfernen (z.B. "Geometry = none"-Option)
+**TLH-2 — UI-Flow + Cleanup (Sub-PR 2) ✅**
+- ✅ Edit-Modal: Geometry-Dropdown durch Status-Anzeige ersetzt ("Geometry: drawn (XX pts)" / "Geometry: not yet drawn" + "Draw/Edit Geometry"-Button)
+- ✅ Track-Editor: Two-mode — Load mode (`?load=<id>`) zeigt "Editing: X" ohne Name-Input, New mode zeigt "New Track" mit Name-Input
+- ✅ Track-Editor Load-Path: Zwei-Pfad-Load — (1) Geometry-Cache, (2) direkter Server-Track-State für `geometryId: null`-Tracks
+- ✅ Track-Editor Save-Path: Load mode → PUT mit geometryId-Generierung bei First-Draw; New mode → POST
+- ✅ 17 neue Unit-Tests (12 TrackEditor.loadmode.test.jsx + 5 netto TrackManager.test.jsx)
 
-**TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3)**
+**TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3) 🔜 Hot Pos 1**
 - Frontend Lade-Reihenfolge: Server → Cache → Code-Bundle (`defaultTracks.js`)
 - Code-Bundle initial mit leeren Geometrien (Bootstrap)
 - Status-Banner wenn Code-Bundle-Modus aktiv: "Server unavailable — showing default tracks (limited functionality)"
@@ -322,7 +324,8 @@ aus D3.5.5.
 12. ✅ **Error Boundary** (Deep-Audit HIGH-Finding adressiert — Top-Level React Error Boundary, PR #51)
 13. ✅ **Race Track Lights** — Boundary-Linien + Lane-Fill entfernt, ersetzt durch leuchtende Track-Lights. `trackLights`-Feld im Datenmodell, Track-Editor-UI, Server-Migration, `trackLights.js`-Modul mit Animation-Styles (steady / sequence / sync_pulse / random_flash). Cache-Bug (L37) + CSS-Fix im selben PR.
    - **L37-Drift-Risiko (nicht in PR #52 gefixt):** `buildTrackFromEditorState` in `trackEditorSave.js` enthält eine explizite Ausgabe-Feld-Liste — das ist dort intentionell (Form kennt nur eigene Felder), aber neue Editor-Features brauchen explizites Update dieser Funktion. Kein akuter Bug, aber bei künftigen Features daran erinnern.
-14. ✅ **TLH-1 — Backend-Fixes + Migration** — geometryId client-authoritative, Delete bewahrt Geometrie, Auto-Backup, Default-Track-Seed-Migration. PR #53 ausstehend. 🔜 **TLH-2** (UI-Flow + Cleanup), **TLH-3** (Code-Fallback + Banner + Export) folgen.
+14. ✅ **TLH-1 — Backend-Fixes + Migration** — geometryId client-authoritative, Delete bewahrt Geometrie, Auto-Backup, Default-Track-Seed-Migration. PR #55.
+14b. ✅ **TLH-2 — UI-Flow + Cleanup** — Edit-Modal Geometry-Status-Display, Track-Editor Two-Mode (Load/New), Two-Path-Load, geometryId-First-Draw. PR offen, pending merge. 🔜 **TLH-3** (Code-Fallback + Banner + Export) folgt.
 14a. ⏳ **Default-Tracks zeichnen** — User-Aufgabe nach TLH-2. 5 Geometrien zeichnen und speichern. Zwischen TLH-2 und TLH-3.
 15. **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion zuerst. Nach TLH abgeschlossen.
 16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.

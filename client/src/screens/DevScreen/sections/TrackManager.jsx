@@ -116,7 +116,10 @@ function TrackManager() {
   function handleEdit(track) {
     const rowCfg = loadRowLayoutConfig();
     const geomId = track.geometryId ?? null;
-    const geom = geomId ? geometries.find((g) => g.id === geomId) : null;
+    // For server tracks, geometry data is embedded in the track itself (TLH-1 invariant).
+    // For local tracks, look up in the geometry cache by geometryId.
+    const isServer = serverTrackIds.has(track.id);
+    const geom = isServer ? track : geomId ? geometries.find((g) => g.id === geomId) : null;
     const autoMax = autoMaxRacers(geom, track, rowCfg);
     const storedMax = track.maxRacers ?? null;
     setForm({
@@ -142,7 +145,6 @@ function TrackManager() {
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
     setDeleteError(null);
     if (serverTrackIds.has(id)) {
-      const track = serverTracks.find((t) => t.id === id);
       try {
         await deleteTrackFromServer(id);
         removeCachedTrackData(null, id);
@@ -392,58 +394,101 @@ function TrackManager() {
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Track Geometry</label>
-              <select
-                className={s.select}
-                value={form.geometryId ?? ''}
-                onChange={(e) => f('geometryId', e.target.value || null)}
-                disabled={geometries.length === 0}
-              >
-                <option value="">
-                  {geometries.length === 0
-                    ? 'No tracks drawn yet — use Track Editor to create one'
-                    : '— none —'}
-                </option>
-                {geometries.map((geom) => (
-                  <option key={geom.id} value={geom.id}>
-                    {geom.name}
-                  </option>
-                ))}
-              </select>
-              {!form.geometryId && (
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--color-muted)',
-                    marginTop: '0.25rem',
-                    display: 'block',
-                  }}
-                >
-                  No geometry yet. Go to{' '}
-                  <a href="/track-editor" style={{ color: 'var(--color-accent)' }}>
-                    Track Editor
-                  </a>{' '}
-                  to draw a track, then return here to link it.
-                </span>
-              )}
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--color-muted)',
-                  marginTop: '0.25rem',
-                  display: 'block',
-                }}
-              >
-                Background image and effects are managed in the Track Editor.
-              </span>
-              {editId && (
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  onClick={handleOpenTrackEditor}
-                  style={{ marginTop: '0.5rem' }}
-                  title="Open this track in the Track Geometry Editor"
-                >
-                  {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
-                </button>
+              {editId && serverTrackIds.has(editId) ? (
+                // Server track: status display + editor button (no dropdown)
+                (() => {
+                  const srv = serverTracks.find((t) => t.id === editId);
+                  const hasGeo =
+                    (srv?.innerPoints?.length ?? 0) > 0 || (srv?.outerPoints?.length ?? 0) > 0;
+                  const ptCount = (srv?.innerPoints?.length ?? 0) + (srv?.outerPoints?.length ?? 0);
+                  return (
+                    <>
+                      <span
+                        style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}
+                        data-testid="geometry-status"
+                      >
+                        {hasGeo ? `Geometry: drawn (${ptCount} pts)` : 'Geometry: not yet drawn'}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--color-muted)',
+                          marginTop: '0.25rem',
+                          display: 'block',
+                        }}
+                      >
+                        Background image and effects are managed in the Track Editor.
+                      </span>
+                      <button
+                        className={`${s.btn} ${s.btnGhost}`}
+                        onClick={handleOpenTrackEditor}
+                        style={{ marginTop: '0.5rem' }}
+                        data-testid="track-geometry-btn"
+                        title="Open this track in the Track Geometry Editor"
+                      >
+                        {hasGeo ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
+                      </button>
+                    </>
+                  );
+                })()
+              ) : (
+                // Local track (legacy): original dropdown
+                <>
+                  <select
+                    className={s.select}
+                    value={form.geometryId ?? ''}
+                    onChange={(e) => f('geometryId', e.target.value || null)}
+                    disabled={geometries.length === 0}
+                  >
+                    <option value="">
+                      {geometries.length === 0
+                        ? 'No tracks drawn yet — use Track Editor to create one'
+                        : '— none —'}
+                    </option>
+                    {geometries.map((geom) => (
+                      <option key={geom.id} value={geom.id}>
+                        {geom.name}
+                      </option>
+                    ))}
+                  </select>
+                  {!form.geometryId && (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--color-muted)',
+                        marginTop: '0.25rem',
+                        display: 'block',
+                      }}
+                    >
+                      No geometry yet. Go to{' '}
+                      <a href="/track-editor" style={{ color: 'var(--color-accent)' }}>
+                        Track Editor
+                      </a>{' '}
+                      to draw a track, then return here to link it.
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--color-muted)',
+                      marginTop: '0.25rem',
+                      display: 'block',
+                    }}
+                  >
+                    Background image and effects are managed in the Track Editor.
+                  </span>
+                  {editId && (
+                    <button
+                      className={`${s.btn} ${s.btnGhost}`}
+                      onClick={handleOpenTrackEditor}
+                      style={{ marginTop: '0.5rem' }}
+                      data-testid="track-geometry-btn"
+                      title="Open this track in the Track Geometry Editor"
+                    >
+                      {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <div className={s.formGroup}>
@@ -512,8 +557,8 @@ function TrackManager() {
             <div className={s.formGroup}>
               <label className={s.label}>World Dimensions</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-                {form.geometryId
-                  ? `${form.worldWidth}×${form.worldHeight} px (from Geometry)`
+                {(editId && serverTrackIds.has(editId)) || form.geometryId
+                  ? `${form.worldWidth}×${form.worldHeight} px`
                   : '— (Choose Geometry)'}
               </span>
             </div>
@@ -541,7 +586,11 @@ function TrackManager() {
                   min={1}
                   max={500}
                   step={1}
-                  placeholder={form.geometryId ? 'auto' : 'set geometry first'}
+                  placeholder={
+                    (editId && serverTrackIds.has(editId)) || form.geometryId
+                      ? 'auto'
+                      : 'set geometry first'
+                  }
                   value={form.maxRacers ?? ''}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);

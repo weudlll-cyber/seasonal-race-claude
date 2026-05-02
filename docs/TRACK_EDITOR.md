@@ -1,7 +1,6 @@
 # RaceArena — Track Editor Specification
 
-**Status:** Implemented — Phase 2.5 complete (2026-04-24)
-**Branch:** `feat/track-editor` (open PR, CI green)
+**Status:** Implemented — TLH-2 complete (2026-05-02)
 **Lead document:** This file is the single source of truth for the Track Editor feature.
 
 ---
@@ -96,6 +95,28 @@ The "Draw Geometry" button in the Track-Manager Edit-Modal opens the Track Edito
 The editor loads the existing preset data from the server, including any previously saved geometry. On save, it sends `PUT /api/tracks/<serverId>` — updating geometry fields in the existing record. No new track record is created.
 
 **Before TLH-2** this button navigated without context, causing the editor to open in "new track" mode — creating an orphaned record unlinked from the original preset.
+
+### Track Editor — Two Modes (TLH-2)
+
+The Track Editor behaves differently depending on whether a `?load=<serverId>` URL parameter is present.
+
+**Load mode** (`/track-editor?load=<serverId>`):
+- Header shows `"Editing: <track name>"` (`data-testid="editor-title"`)
+- Name input field is hidden (the preset name is managed in the Track Manager)
+- Canvas is pre-populated with existing geometry if available, or starts empty if the track has `geometryId: null`
+- Save sends `PUT /api/tracks/<serverId>` — updates the existing server record
+- On first save (track had `geometryId: null`), a new UUID is generated (`custom-${crypto.randomUUID()}`) and included in the PUT body so the server stores it permanently
+
+**New track mode** (`/track-editor` — no param):
+- Header shows `"New Track"` (`data-testid="editor-title"`)
+- Name input field is visible (`data-testid="track-name-input"`)
+- Canvas starts empty
+- Save sends `POST /api/tracks` — creates a new server record
+
+**Two-path load (load mode):**
+
+1. *Geometry cache path* — if the server track has a `geometryId` and that geometry is cached in localStorage, load from cache (fast, works offline).
+2. *Direct server-track path* — if the server track has `geometryId: null` or the cache entry is missing, load directly from the server tracks state. The editor starts empty; the `loadedServerId` is set so Save routes to PUT.
 
 ### Track-Delete and Geometry Preservation
 
