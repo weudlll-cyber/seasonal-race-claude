@@ -144,9 +144,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-01 | **1177 unit + 183 e2e + 82 backend** | Error Boundary (PR #51). +8 unit (ErrorBoundary.test.jsx). Top-level React Error Boundary in main.jsx — verhindert Blank-Screen bei Render-Crash. |
 | 2026-05-01 | **1234 unit + 183 e2e + 107 backend** | Race Track Lights + Cache-Fix (PR #52, master dc62557). +25 unit (trackLights.js), +17 component (TrackEditor.trackLights.test.jsx), +23 round-trip (trackLoader.test.js L37). 42 neue Backend-Tests (tracks.test.js trackLights-Validation + Migration). CSS-Fix (Track-Lights-Controls zu breit). |
 | 2026-05-01 | **1235 unit + 183 e2e + 107 backend** | TLH-1 — Backend-Fixes + Migration (PR #53 ausstehend). +1 unit (trackLoader geometry-preservation). +10 backend (geometryId ×3, auto-backup ×3, default-seed-migration ×4). atomicWriteJson OneDrive-Fallback, vi.unstubAllGlobals() in beforeEach. |
+| 2026-05-02 | **1252 unit + 183 e2e + 107 backend** | TLH-2 — UI-Flow + Cleanup (PR open, pending merge). +17 unit: TrackEditor.loadmode.test.jsx ×12 (new file), TrackManager.test.jsx +7/−2 (geometry-status tests replace old L.6-Bug2 tests). ESLint: 0 errors, 0 warnings. 71 test files. |
 
-**Aktueller Master-HEAD:** `6855b16` (TLH-1 Backend-Fixes + Migration, PR #55, squash-merged 2026-05-02)
-**ESLint-Warnings:** 1 pre-existing (TransitionContext.jsx:44 fast-refresh)
+**Aktueller Branch-HEAD:** `feat/tlh-2-ui-flow-and-cleanup` (PR open, pending user merge)
+**Master-HEAD:** `6855b16` (TLH-1 Backend-Fixes + Migration, PR #55, squash-merged 2026-05-02)
+**ESLint-Warnings:** 0 (TLH-2 branch); 1 pre-existing on master (TransitionContext.jsx:44 fast-refresh)
 **Playwright e2e:** 183 Tests — 183/183 grün
 
 ---

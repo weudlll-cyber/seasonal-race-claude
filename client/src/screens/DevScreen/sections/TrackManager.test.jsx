@@ -85,7 +85,6 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
-import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import { updateTrackOnServer } from '../../../services/trackApi.js';
 import TrackManager from './TrackManager.jsx';
 
@@ -121,6 +120,37 @@ const SERVER_TRACK = {
   worldHeight: 4000,
   isDefault: false,
   maxRacers: null,
+  // Geometry data embedded in server track (TLH-1 invariant)
+  innerPoints: [
+    { x: 100, y: 100 },
+    { x: 300, y: 100 },
+    { x: 300, y: 300 },
+  ],
+  outerPoints: [
+    { x: 80, y: 80 },
+    { x: 320, y: 80 },
+    { x: 320, y: 320 },
+  ],
+};
+
+// Default track after TLH-1 seeding — server record, no geometry drawn yet
+const SERVER_TRACK_NO_GEO = {
+  id: 'dirt-oval',
+  name: 'Dirt Oval',
+  icon: '🏟️',
+  geometryId: null,
+  color: '#c8a96e',
+  defaultDuration: 60,
+  defaultWinners: 3,
+  defaultRacerTypeId: 'horse',
+  description: 'Classic dirt oval',
+  worldWidth: 1280,
+  worldHeight: 720,
+  isDefault: false,
+  maxRacers: null,
+  innerPoints: [],
+  outerPoints: [],
+  surfaceClasses: ['earth'],
 };
 
 const LOCAL_TRACK_WITH_GEO = {
@@ -232,39 +262,65 @@ describe('TrackManager — Edit behaviour', () => {
   });
 });
 
-describe('TrackManager — Geometry dropdown after server-cache fix (L.6-Bug2)', () => {
-  const SERVER_GEOMETRY = {
-    id: SERVER_TRACK.geometryId,
-    name: 'Weltall',
-    backgroundImage: '/bg.png',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    worldWidth: 6000,
-    worldHeight: 4000,
-  };
-
+describe('TrackManager — TLH-2: Geometry status display for server tracks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('geometry dropdown shows server geometry option when listTracks returns it', () => {
-    vi.mocked(listTracks).mockReturnValue([SERVER_GEOMETRY]);
-
+  it('server track with geometry shows "Geometry: drawn (X pts)" status', () => {
     renderTrackManager({ serverTracks: [SERVER_TRACK] });
     fireEvent.click(screen.getByTitle('Edit'));
 
-    expect(screen.getByRole('option', { name: 'Weltall' })).toBeInTheDocument();
+    const status = screen.getByTestId('geometry-status');
+    const expectedPts = SERVER_TRACK.innerPoints.length + SERVER_TRACK.outerPoints.length;
+    expect(status.textContent).toBe(`Geometry: drawn (${expectedPts} pts)`);
   });
 
-  it('geometry dropdown value matches server track geometryId after edit', () => {
-    vi.mocked(listTracks).mockReturnValue([SERVER_GEOMETRY]);
+  it('server track without geometry shows "Geometry: not yet drawn" status', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK_NO_GEO] });
+    fireEvent.click(screen.getByTitle('Edit'));
 
+    expect(screen.getByTestId('geometry-status').textContent).toBe('Geometry: not yet drawn');
+  });
+
+  it('server track with geometry shows "Edit Geometry" button', () => {
     renderTrackManager({ serverTracks: [SERVER_TRACK] });
     fireEvent.click(screen.getByTitle('Edit'));
 
-    // Track Geometry is the first <select> in the form; Default Racer Type is second
-    const [geometrySelect] = screen.getAllByRole('combobox');
-    expect(geometrySelect.value).toBe(SERVER_TRACK.geometryId);
+    expect(screen.getByTestId('track-geometry-btn').textContent).toMatch(/Edit Geometry/);
+  });
+
+  it('server track without geometry shows "Draw Geometry" button', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK_NO_GEO] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(screen.getByTestId('track-geometry-btn').textContent).toMatch(/Draw Geometry/);
+  });
+
+  it('"Edit Geometry" on server track with geometry navigates to /track-editor?load=<serverId>', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.click(screen.getByTestId('track-geometry-btn'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(`/track-editor?load=${SERVER_TRACK.id}`);
+  });
+
+  it('"Draw Geometry" on server track without geometry navigates to /track-editor?load=<serverId>', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK_NO_GEO] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.click(screen.getByTestId('track-geometry-btn'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(`/track-editor?load=${SERVER_TRACK_NO_GEO.id}`);
+  });
+
+  it('no geometry dropdown visible for server tracks', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    // Only the Default Racer Type combobox should remain — no geometry select
+    const combos = screen.getAllByRole('combobox');
+    expect(combos).toHaveLength(1);
+    expect(combos[0]).toHaveDisplayValue(/horse/i);
   });
 });
 
@@ -273,16 +329,16 @@ describe('TrackManager — Edit Geometry button placement (A1 UX fix)', () => {
     vi.clearAllMocks();
   });
 
-  it('Edit Geometry button appears inside the Track Geometry section', () => {
+  it('geometry button appears inside the Track Geometry section', () => {
     renderTrackManager({ serverTracks: [SERVER_TRACK] });
     fireEvent.click(screen.getByTitle('Edit'));
 
     const geoLabel = screen.getByText('Track Geometry');
     const formGroup = geoLabel.closest('div');
-    expect(within(formGroup).getByText(/Edit Geometry/)).toBeInTheDocument();
+    expect(within(formGroup).getByTestId('track-geometry-btn')).toBeInTheDocument();
   });
 
-  it('Edit Geometry button is NOT in the action row (Save/Cancel)', () => {
+  it('geometry button is NOT in the action row (Save/Cancel)', () => {
     renderTrackManager({ serverTracks: [SERVER_TRACK] });
     fireEvent.click(screen.getByTitle('Edit'));
 

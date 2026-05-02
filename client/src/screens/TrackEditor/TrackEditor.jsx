@@ -274,18 +274,39 @@ export default function TrackEditor() {
   }, [backgroundImage]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
-  // Runs whenever server tracks become available.
+  // Runs whenever server tracks or the geometry cache list become available.
+  // Two-path load:
+  //   1. Geometry cache path — used when the track already has a drawn geometry in localStorage.
+  //   2. Server-track direct path — used for tracks with geometryId: null (no geometry yet).
   useEffect(() => {
     const preloadId = searchParams.get('load');
     if (!preloadId) return;
+
+    // Path 1: try loading via geometry cache (covers tracks that already have geometry)
     const entry = allSavedTracks.find((t) => t.serverId === preloadId || t.id === preloadId);
-    if (!entry) return;
-    const track = getTrack(entry.id);
-    if (!track) return;
-    loadTrackData(track, entry.serverId ?? null);
+    if (entry?.id) {
+      const track = getTrack(entry.id);
+      if (track) {
+        loadTrackData(track, entry.serverId ?? null);
+        setSearchParams({}, { replace: true });
+        return;
+      }
+    }
+
+    // Path 2: load directly from server tracks state (for tracks without geometry in cache)
+    const serverTrack = serverTracksCtl.tracks.find((t) => t.id === preloadId);
+    if (!serverTrack) return;
+    const bgUrl = serverTrack.backgroundImageFile
+      ? `${API_BASE_URL}/api/tracks/${serverTrack.id}/background`
+      : null;
+    // Map to the shape loadTrackData expects: id = geometryId (null when no geometry drawn yet)
+    loadTrackData(
+      { ...serverTrack, id: serverTrack.geometryId, backgroundImage: bgUrl },
+      serverTrack.id
+    );
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSavedTracks]);
+  }, [allSavedTracks, serverTracksCtl.tracks]);
 
   // Global keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -866,7 +887,14 @@ export default function TrackEditor() {
       let savedGeometryId = loadedGeometryId;
 
       if (savedServerId) {
-        await updateTrackOnServer(savedServerId, trackJson);
+        // For first-time geometry save (loadedGeometryId is null), generate a new geometry ID
+        // and include it in the PUT body so the server stores the link.
+        const geometryIdForBody = savedGeometryId ?? `custom-${crypto.randomUUID()}`;
+        await updateTrackOnServer(savedServerId, { ...trackJson, geometryId: geometryIdForBody });
+        if (!savedGeometryId) {
+          savedGeometryId = geometryIdForBody;
+          setLoadedGeometryId(geometryIdForBody);
+        }
       } else {
         const created = await createTrackOnServer(trackJson);
         savedServerId = created.id;
@@ -948,6 +976,10 @@ export default function TrackEditor() {
 
   // ── derived labels ────────────────────────────────────────────────────────
 
+  // Load mode: true when editing an existing server track (navigated here via ?load=<serverId>).
+  // The name is read-only in this mode — it is managed in the Track Manager metadata form.
+  const isLoadMode = loadedServerId !== null;
+
   const hasLoaded = !!(loadedGeometryId || loadedServerId);
   const saveDisabled = (!backgroundImage && !backgroundFile) || saveLabel !== 'Save' || isSaving;
 
@@ -972,7 +1004,9 @@ export default function TrackEditor() {
         >
           ← Back to Dev Panel
         </button>
-        <h1 className={s.title}>Track Geometry Editor</h1>
+        <h1 className={s.title} data-testid="editor-title">
+          {isLoadMode ? `Editing: ${trackName}` : 'New Track'}
+        </h1>
         <div className={s.headerCounter}>{counterLabel}</div>
       </div>
 
@@ -1227,38 +1261,41 @@ export default function TrackEditor() {
 
       <div className={s.saveBar}>
         <div className={s.saveBarRow}>
-          <input
-            type="text"
-            className={`${s.nameInput}${saveAttempted && !trackName.trim() ? ` ${s.nameInputError}` : ''}`}
-            placeholder="Track name…"
-            value={trackName}
-            onChange={(e) => {
-              if (!nameHistoryTimerRef.current) {
-                preNameSnapshotRef.current = getSnapshot();
-              } else {
-                clearTimeout(nameHistoryTimerRef.current);
-              }
-              setTrackName(e.target.value);
-              markDirty();
-              nameHistoryTimerRef.current = setTimeout(() => {
-                if (preNameSnapshotRef.current) {
-                  pushHistory(preNameSnapshotRef.current);
-                  preNameSnapshotRef.current = null;
+          {isLoadMode ? null : (
+            <input
+              type="text"
+              className={`${s.nameInput}${saveAttempted && !trackName.trim() ? ` ${s.nameInputError}` : ''}`}
+              placeholder="Track name…"
+              value={trackName}
+              data-testid="track-name-input"
+              onChange={(e) => {
+                if (!nameHistoryTimerRef.current) {
+                  preNameSnapshotRef.current = getSnapshot();
+                } else {
+                  clearTimeout(nameHistoryTimerRef.current);
                 }
-                nameHistoryTimerRef.current = null;
-              }, NAME_DEBOUNCE_MS);
-            }}
-            onBlur={() => {
-              if (nameHistoryTimerRef.current) {
-                clearTimeout(nameHistoryTimerRef.current);
-                nameHistoryTimerRef.current = null;
-                if (preNameSnapshotRef.current) {
-                  pushHistory(preNameSnapshotRef.current);
-                  preNameSnapshotRef.current = null;
+                setTrackName(e.target.value);
+                markDirty();
+                nameHistoryTimerRef.current = setTimeout(() => {
+                  if (preNameSnapshotRef.current) {
+                    pushHistory(preNameSnapshotRef.current);
+                    preNameSnapshotRef.current = null;
+                  }
+                  nameHistoryTimerRef.current = null;
+                }, NAME_DEBOUNCE_MS);
+              }}
+              onBlur={() => {
+                if (nameHistoryTimerRef.current) {
+                  clearTimeout(nameHistoryTimerRef.current);
+                  nameHistoryTimerRef.current = null;
+                  if (preNameSnapshotRef.current) {
+                    pushHistory(preNameSnapshotRef.current);
+                    preNameSnapshotRef.current = null;
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
+          )}
           <input
             ref={fileInputRef}
             type="file"
