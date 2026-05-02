@@ -182,13 +182,15 @@ Camera ignoriert den Rest des Feldes bewusst — das ist Feature, kein Bug.
 
 | Phase | Charakteristik | Programmatisch erkennbar |
 |-------|---------------|--------------------------|
-| **Start-Pulk** | Alle Racer dicht beieinander | `raceElapsed < 3000ms` |
+| **PRE_RACE** | Startreihen aufgebaut, Countdown läuft | `racePhase === 'COUNTDOWN'` |
+| **Start-Pulk** | Rennen gestartet, Racer noch dicht beieinander | `raceElapsed < 3000ms` |
 | **Auseinanderziehen** | Feld spreizt sich auf | `gapLeadLast 0.05..0.15` |
 | **Spitzenkampf** | 2 Racer eng vorn innerhalb Spitzengruppe | `gap01 < 0.05` |
 | **Klarer Anführer** | Leader weit vor 2nd | `gap01 >= 0.15` |
 | **Endspurt** | Leader nähert sich finishT | `leader.t / finishT > 0.85` |
 | **Outlier / Last-place-Drama** | Letzter weit abgehängt, vorne klar | `gapLeadLast > 0.3 && gap01 >= 0.1` |
 | **Finish** | Erster hat finishT überschritten | `st.finishedCount >= 1` |
+| **RACE_END** | Alle Racer fertig oder Timeout | `st.finishedCount === N` |
 
 ### 4.2 Camera-State-Tabelle (nach User-Klärung UI-1)
 
@@ -362,7 +364,20 @@ sich zu kleineren Zoom-Werten.
 
 **Ziel:** Klare Tags für die Führenden, keine Überlappungs-Kakophonie.
 
-Regeln:
+**Tag-Strategie nach Phase:**
+
+| Phase | Tag-Strategie | Begründung |
+|-------|---------------|------------|
+| PRE_RACE (Countdown) | **Alle Racer** haben Tags | Spieler findet sich in Startreihe ("welcher bin ich?") |
+| RACE_START (0–3s) | Fade-out für Nicht-Spitzengruppe | Weicher Übergang, kurz Zeit zur Orientierung |
+| RACING | Top-N nach `tagVisibleCount` | Lesbarkeit, Fokus auf Spitze |
+| RACE_END | Optional: Tags wieder einblenden | Kontext für Auflösung + Ergebnis-Anzeige |
+
+PRE_RACE → RACE_START Übergangspunkt: Startsignal + `tagFadeOutDelay` (Tunable, Default 3s).
+Bei N=100 in PRE_RACE: 100 Tags, dicht, akzeptabel — Spieler scannt aktiv, kein passiver Konsum.
+Tag-Größe in PRE_RACE kann etwas kleiner sein als in RACING (eigener Tunable oder fixer Faktor 0.8×).
+
+**RACING-Regeln:**
 - Nur Top-N Tags sichtbar, N = `tagVisibleCount` (Dev-Panel-Slider)
 - Default für `tagVisibleCount` = `spitzengruppe` (round(N×0.1), cap 3–10)
 - **Kein "eigener Spieler"** — Project-Principle 3: alle Racer gleichberechtigt
@@ -474,12 +489,55 @@ const finishT = isOpenTrack
 **Warum runoutZone behalten:** Schützt vor Racer-am-Ende-des-Pfades-Bug wenn finishT zu nah an 1.0.
 Kann tunable bleiben oder auf Default=0.05 eingefroren werden.
 
-### 7.3 Was dadurch geklärt ist
+### 7.3 Was dadurch geklärt ist (PR-A1)
 
 - Q-25 Root Cause: identifiziert und lösbar mit 1-Zeilen-Fix in defaults.js
 - Space Sprint ~144s ist die korrekte Referenz-Dauer bei maxScale=10
 - Duration-Slider macht Open-Track-Setup für Spielleiter intuitiv
 - finishT-Bug (duration-Einstellung hatte keinen Effekt auf Open-Tracks) wird behoben
+
+### 7.4 Speed-Pipeline-Architektur (PR-A2)
+
+**Aktueller Stack:**
+```
+baseSpeed (global Default) × speedMultiplier (per Type) × speedScaleFactor (per Track)
+  → effektive px/s des Racers
+```
+
+`speedScaleFactor` gleicht unterschiedliche pathLengthPx aus (B-17). Bei maxScale=10 funktioniert
+das für alle aktuellen Tracks (pathLengthPx ≤ 20 000). Aber das User-Modell ist noch nicht konsistent:
+Spielleiter denkt in Sekunden, Code denkt in px/s + Faktoren. Sehr kurze Strecken (~800px) würden
+in 6s enden — die untere Schranke ist nicht kontrollierbar ohne Code-Änderung.
+
+**Ziel-Stack (PR-A2 — User-Option C):**
+```
+gewählte_renndauer (Spielleiter-Input)
+  → race_baseSpeed = f(pathLengthPx, renndauer, speedMultiplier_distribution)
+    → effektive px/s = race_baseSpeed × speedMultiplier (per Type)
+```
+
+Kernprinzip: **Spielleiter wählt Renndauer, alles andere folgt daraus.**
+- `race_baseSpeed` wird bei Race-Init berechnet damit der Median-Racer nach `renndauer` Sekunden fertig ist
+- `speedMultiplier`-Verhältnisse zwischen Racer-Types bleiben unverändert (Rocket ist immer 1.25× schneller als Basis)
+- `speedScaleFactor` wird überflüssig oder wird zu einem simplen Korrekturfaktor für Track-Geometrie-Anomalien
+- Closed-Tracks: Spielleiter wählt Rundenzahl + optionale Wunsch-Dauer; race_baseSpeed so gesetzt
+  dass N Runden in etwa der Wunsch-Dauer entsprechen
+- Open-Tracks: Spielleiter wählt Gesamt-Dauer; race_baseSpeed direkt daraus
+
+**Was sich für den Spielleiter ändert:**
+- Slider "Renndauer" wird zur zentralen Steuerung — menschenfreundlich
+- Keine px/s-Denkweise mehr nötig
+- Unterschiedlich schnelle Racer-Types erzeugen natürliche Streuung um die Ziel-Dauer
+
+**Was offen ist (CC-Vorschlag: User-Entscheidung vor PR-A2):**
+- Entfällt `speedScaleFactor` komplett oder bleibt als interner Faktor?
+  CC-Empfehlung: entfällt als eigenständiger Wert, Berechnung landet direkt in `race_baseSpeed`
+- `speedMultiplier`-Override pro Race über Dev-Panel? Vermutlich nicht nötig wenn race_baseSpeed die Strecke steuert
+- Falls Scope-Analyse zeigt > 30 Files betroffen: CC meldet zurück vor Implementation
+
+**Scope-Risiko:** Bestehende Tests aus D9/D10/D11/D7a/D7b basieren auf aktueller Speed-Pipeline.
+PR-A2 muss Tests anpassen ohne Race-Verhalten zu brechen. Mitigation: Speed-Formel-Änderung in
+isolierter Funktion (`computeRaceBaseSpeed`) — Rest des Systems referenziert diese Funktion.
 
 ---
 
@@ -516,7 +574,13 @@ Kann tunable bleiben oder auf Default=0.05 eingefroren werden.
 |-----------|-----|---------|---------|
 | `hudOverlayOpacity` | slider 0–1 step 0.05 | 0.75 | "Transparenz der HUD-Elemente im Fullscreen-Modus. 1.0 = vollständig opak. Wert: [x]." |
 | `hudStandingsPosition` | select left/right | right | "Position des Live-Standings-Overlays im Fullscreen." |
-| `hudShowCount` | slider 0–20 | = spitzengruppe | "Anzahl der Racer im Standings-Overlay. Default = Camera-Spitzengruppe. Wert: [x]." |
+| `hudMaxStandings` | slider 5–30 | 15 | "Obere Grenze für Standings-Einträge. Tatsächliche Anzeige = min(Wert, passt in Viewport). Wert: [x]." |
+
+**HUD-Layout-Constraint:** `hudMaxStandings` ist obere Grenze, kein statischer Wert.
+Zur Laufzeit wird die tatsächliche Anzeige-Anzahl aus der verfügbaren Viewport-Höhe berechnet:
+`actualShowCount = min(hudMaxStandings, floor((viewportH - reservedButtonsH - padding) / rowH))`.
+Buttons (Cancel Race, Fullscreen) sind immer vollständig sichtbar — werden nie durch Standings verdeckt.
+"More..." Indikator wenn hudMaxStandings > fitsInViewport (kein Scrollen). reservedButtonsH ≈ 120px.
 
 **Bestehende Sektion "Speed Scale" — Default ändern:**
 
@@ -594,7 +658,12 @@ Position: `hudStandingsPosition` (Dev-Panel, Default right).
 Technisch: wenn `canvasRef.current` fullscreen ist, brauchen Overlay-Divs `position: fixed`
 und hohen Z-Index um über dem Canvas sichtbar zu bleiben. CSS `::backdrop` für Hintergrund-Dimming.
 
-Bei N=100: Standings zeigt Top-`hudShowCount` (Default = spitzengruppe → max. 10 Racer).
+**HUD-Layout-Constraint:** Buttons (Cancel Race, Fullscreen) sind IMMER vollständig sichtbar —
+nie durch Standings verdeckbar. Standings-Anzahl wird zur Laufzeit aus Viewport-Höhe berechnet
+(`hudMaxStandings` ist obere Grenze, nicht statischer Wert). Kein Scrollen — "More..." Indikator
+wenn Liste abgeschnitten wird. Implementierung in PR-F mit dem HUD-Overlay.
+
+Bei N=100: Standings-Anzeige = min(hudMaxStandings=15, fitsInViewport) — max. 15 Racer sichtbar.
 
 ### 9.3 Minimap
 
@@ -651,6 +720,12 @@ die effektive Dauer. Setup-Screen sollte Estimated-Duration-Anzeige haben.
 **Minimap + Camera-Regie:**
 Minimap gibt dem Operator den Kontext den die Camera bewusst ignoriert (§3.1).
 Diese Komplementarität macht die Regie-Philosophie "entfernte Nachzügler dürfen fallen" tragfähig.
+
+**Renndauer-Slider als zentrale Spielleiter-Größe (nach PR-A2):**
+Nach der Speed-Pipeline-Architektur-Änderung (§7.4) denkt der Spielleiter nur noch in Sekunden.
+`race_baseSpeed` wird intern berechnet — px/s ist ein Implementierungsdetail, kein UX-Concept.
+Konsequenz: Setup-Screen vereinfacht sich: Closed-Track = Runden + optionale Wunschdauer,
+Open-Track = Dauer. Beide sehen für den Spielleiter konsistent aus.
 
 ### 10.3 N=100: Was kollabiert wenn nicht vorbereitet
 
@@ -734,15 +809,25 @@ Begründung: Bug A+B sind in `modules/camera/` — unabhängig von RaceScreen, s
 Bug C ist eine 3-Zeilen-Änderung in RaceScreen — kein Grund auf Refactor zu warten.
 PR-C (Refactor) danach ist 100% behavior-preserving von Anfang an. Kein "Refactor eines buggy State".
 
-### 12.2 Sub-PR-Plan (7 PRs)
+### 12.2 Sub-PR-Plan (8 PRs: PR-A aufgeteilt in A1 + A2)
 
 ```
-PR-A: Q-25-Fix + Duration-Slider + finishT für Open-Tracks
+PR-A1: Q-25-Fix + Duration-Slider + finishT (bestehende Pipeline)
   - DEFAULT_SPEED_SCALE_CONFIG.maxScale: 4.0 → 10.0 (defaults.js:112)
   - finishT: openTrackFinishT(duration, ...) clamped by runoutZone (lapUtils.js)
   - Duration-Slider im Setup-Screen für Open-Tracks (Min/Max aus Strecken-Physik)
   - Estimated-Duration-Anzeige im Setup-Screen
   - +Tests: speedScale neue maxScale-Grenze, openTrackFinishT-Integration
+  - Macht Space Sprint sofort spielbar (~131 px/s, ~144s)
+
+PR-A2: Speed-Pipeline-Architektur-Umbau (§7.4)
+  - computeRaceBaseSpeed(pathLengthPx, renndauer, speedMultiplier_distribution) neue Funktion
+  - race_baseSpeed wird race-spezifisch bei Race-Init berechnet
+  - speedScaleFactor entfällt als eigenständige Größe (in computeRaceBaseSpeed integriert)
+  - Closed-Tracks: optionale Wunschdauer zusätzlich zur Rundenzahl
+  - Spielleiter denkt in Sekunden, nicht px/s
+  - +Tests: alle bestehenden Speed-Tests anpassen (D9/D10/D11 Basis nicht brechen)
+  - Prerequisite: Scope-Analyse vor Implementation (> 30 Files? → CC meldet zurück)
 
 PR-B: Camera-Bug-Fixes (Bug A + Bug B + Bug C)
   - Bug A: targetZoom = overviewZoom statt 1 im OVERVIEW-State (CameraDirector.js:178-183)
@@ -830,6 +915,18 @@ Default 128px (4× min=32) ist Ausgangspunkt — muss mit Browser-Tests nach PR-
 bevor als stabiler Default festgelegt. Bei kleinen Racer-Types (kleines displaySize) muss max
 entsprechend angepasst werden.
 
+**R7 — Speed-Pipeline-Refactor (PR-A2) Scope-Unsicherheit:**
+Speed-Pipeline (baseSpeed, speedMultiplier, speedScaleFactor) ist in vielen Stellen referenziert.
+D9/D10/D11/D7a/D7b/D7c bauen auf aktueller Pipeline. PR-A2 muss alle Tests anpassen.
+Mitigation: `computeRaceBaseSpeed` als isolierte neue Funktion; bestehende Aufrufer werden
+nacheinander umgestellt. Bei > 30 Files betroffen: CC meldet zurück vor Implementation.
+
+**R8 — PRE_RACE-Phase Tag-Dichte bei N=100:**
+100 Tags gleichzeitig in PRE_RACE. Bei kleinem Canvas könnten Tags komplett überlappen.
+Mitigation: Tag-Größe in PRE_RACE 0.8× der RACING-Größe. Falls noch zu dicht:
+Tags in PRE_RACE ebenfalls limitieren (nur Name-Tags der ersten 20 Racer), aber das
+konterkariert den "Spieler findet sich"-Use-Case. Erst im Browser-Test bewerten.
+
 ### 13.2 User-Input-Fragen
 
 *Alle 6 ursprünglichen User-Input-Fragen (UI-1 bis UI-6) geklärt per User-Entscheidung 2026-05-02.*
@@ -839,6 +936,7 @@ Neue offene Frage:
 | # | Frage | Kontext |
 |---|-------|---------|
 | UI-7 | Soll OVERVIEW-Cooldown durationsadaptiv sein? Festes 20s-Cooldown ergibt bei 30s-Race 1 OVERVIEW-Slot, bei 144s-Race 7 Slots. Alternative: `cooldown = max(10s, duration × 0.14)` → immer ~2–3 Slots unabhängig von Renndauer. | §10.2 |
+| UI-8 | Speed-Pipeline-Refactor (PR-A2): Falls Scope-Analyse > 30 Files betroffen zeigt — soll CC zurückmelden vor Implementation oder eingepreist (einfach durchziehen)? | §7.4, R7 |
 
 ### 13.3 Annahmen
 
