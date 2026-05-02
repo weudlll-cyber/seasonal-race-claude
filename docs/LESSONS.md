@@ -716,3 +716,37 @@ Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` v
 - "Geometry = none"-Option: konzeptionell überprüfen — wenn "kein Geometrie-Link" ein unterstützter Zustand ist, muss der Server ihn auch unterstützen; sonst Option entfernen
 - "Draw Geometry"-Button: sendet jetzt Preset-Kontext (`/track-editor?load=<serverId>`) damit der Editor weiß für welches Preset er arbeitet
 - Backend-PUT: respektiert `geometryId` vom Client wenn im Body vorhanden
+
+---
+
+## Lesson 39 — List-APIs die Felder strippen müssen mit dem Code synchron sein der diese Felder liest
+
+**Kontext:** `toSummary` in `server/src/routes/tracks.js` entfernt `innerPoints`/`outerPoints` aus der List-API-Response für Performance. `TrackManager.jsx` prüfte `srv.innerPoints.length > 0` um den Geometry-Status anzuzeigen — ein Feld das nicht mehr in der Response enthalten war. Ergebnis: `hasGeo` war immer `false`, das Modal zeigte immer "Geometry: not yet drawn" egal ob Geometrie gespeichert war oder nicht.
+
+**Symptom:** Status-Anzeige zeigt immer dasselbe egal was tatsächlich gespeichert ist — keine Fehlermeldung, kein sichtbarer Hinweis.
+
+**Ursache:** List-API strippt Performance-Felder, Frontend liest diese gestrippten Felder.
+
+**Konsequenz:** Bei `toSummary`-Pattern explizit dokumentieren welche Felder verfügbar bleiben. Frontend soll IDs oder kompakte Zähler nutzen, nicht die gestrippten Daten selbst. Konkret: `geometryId` für `hasGeo`-Check, `pointCount: { inner, outer }` für Anzeige.
+
+**Leitfrage:** "Welche Felder werden von der List-API geliefert? Sind alle Frontend-Reads auf Felder die garantiert in der Response sind?"
+
+**Audit-Pattern nach toSummary-Änderungen:** Für jedes Feld das aus `toSummary` entfernt oder durch ein kompaktes Äquivalent ersetzt wird:
+1. `grep -r "srv\.<field>\|track\.<field>\|geom\.<field>"` in `client/src/` nach allen Lesestellen des Feldes
+2. Jede Stelle prüfen: kommt das Objekt aus der List-API (`serverTracks`, `tracks`-Array) oder aus einer vollständigen Quelle (localStorage-Cache, GET `:id`)?
+3. List-API-Konsumenten müssen auf die neuen kompakten Felder umgestellt werden
+4. Eine Stelle zu fixen reicht nicht — der gleiche Pattern kann an mehreren Stellen vorkommen (F2: `hasGeo` in TrackManager; Folge-Bug: `autoMaxRacers` in `handleEdit`)
+
+---
+
+## Lesson 40 — Stille Fehlerzustände sind das gefährlichste UI-Verhalten
+
+**Kontext:** Beim TLH-2 Browser-Test zeigte der Track-Editor nach einer gescheiterten (oder scheinbar erfolgreichen) Speicherung kein sichtbares Feedback. Die Fehler-Anzeige (`saveBar` mit `serverError`) befand sich im DOM oberhalb der Canvas — aber React Router setzt die Scroll-Position nicht zurück bei Navigation. Der User öffnete den Editor scrolled to canvas, sah das Save-Ergebnis nicht, und dachte der Save sei erfolgreich gewesen.
+
+**Symptom:** Save klingt erfolgreich, User sieht keine Fehlermeldung, Geometrie ist verloren.
+
+**Ursache:** Fehler-Anzeige war außerhalb des sichtbaren Bereichs (Scroll-Bug), und `hasGeo`-Status las falsche Felder (Lesson 39).
+
+**Konsequenz:** Errors müssen erzwungen sichtbar sein. `window.scrollTo(0, 0)` beim Mount des Track-Editors stellt sicher dass die Save-Bar sichtbar ist. `scrollIntoView` wenn `serverError` gesetzt wird ist eine zweite Absicherung. Status-Anzeigen müssen die echte Quelle der Wahrheit nutzen.
+
+**Leitfrage:** "Wenn der Save fehlschlägt, sieht der User es garantiert? Oder kann der Fehler unsichtbar sein?"

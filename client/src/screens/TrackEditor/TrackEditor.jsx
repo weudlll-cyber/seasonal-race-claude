@@ -48,6 +48,7 @@ export default function TrackEditor() {
   const fileInputRef = useRef(null);
   const wrapperRef = useRef(null);
   const saveTimerRef = useRef(null);
+  const saveBarRef = useRef(null);
 
   // ── drag tracking refs ────────────────────────────────────────────────────
   const dragIndexRef = useRef(-1);
@@ -307,6 +308,19 @@ export default function TrackEditor() {
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSavedTracks, serverTracksCtl.tracks]);
+
+  // Scroll to top on mount so toolbar and saveBar are visible from the start.
+  // React Router does not auto-reset scroll on navigation.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // When a server error appears, scroll the saveBar into view so it is never hidden.
+  useEffect(() => {
+    if (serverError && saveBarRef.current) {
+      saveBarRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [serverError]);
 
   // Global keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -846,7 +860,8 @@ export default function TrackEditor() {
 
   async function handleSave() {
     setSaveAttempted(true);
-    if (!backgroundImage && !backgroundFile) {
+    // In load mode the track already exists — background is optional for a geometry-only edit.
+    if (loadedServerId === null && !backgroundImage && !backgroundFile) {
       setSaveError('Background image is required. Please upload an image first.');
       return;
     }
@@ -981,7 +996,8 @@ export default function TrackEditor() {
   const isLoadMode = loadedServerId !== null;
 
   const hasLoaded = !!(loadedGeometryId || loadedServerId);
-  const saveDisabled = (!backgroundImage && !backgroundFile) || saveLabel !== 'Save' || isSaving;
+  const saveDisabled =
+    (!isLoadMode && !backgroundImage && !backgroundFile) || saveLabel !== 'Save' || isSaving;
 
   const counterLabel =
     mode === 'center'
@@ -1259,7 +1275,7 @@ export default function TrackEditor() {
         </div>
       </div>
 
-      <div className={s.saveBar}>
+      <div className={s.saveBar} ref={saveBarRef}>
         <div className={s.saveBarRow}>
           {isLoadMode ? null : (
             <input
@@ -1305,15 +1321,21 @@ export default function TrackEditor() {
           />
           <button
             type="button"
-            className={`${s.bgUploadBtn}${!backgroundImage ? ` ${s.bgUploadBtnRequired}` : ''}`}
+            className={`${s.bgUploadBtn}${!isLoadMode && !backgroundImage ? ` ${s.bgUploadBtnRequired}` : ''}`}
             onClick={() => fileInputRef.current?.click()}
             title={
-              backgroundImage ? 'Change background image' : 'Upload background image (required)'
+              backgroundImage
+                ? 'Change background image'
+                : isLoadMode
+                  ? 'Upload background image (optional)'
+                  : 'Upload background image (required)'
             }
           >
             {backgroundImage
               ? `🖼 ${backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
-              : '📷 No image · required'}
+              : isLoadMode
+                ? '📷 No image'
+                : '📷 No image · required'}
           </button>
           <button className={s.saveBtn} disabled={saveDisabled} onClick={handleSave}>
             {isSaving ? 'Saving…' : saveLabel}

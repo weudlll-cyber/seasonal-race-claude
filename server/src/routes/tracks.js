@@ -128,9 +128,15 @@ function migrateTrackLights() {
 
 migrateTrackLights();
 
-// Strip geometry arrays and internal file references from the list response.
+// Strip geometry arrays from list response; expose compact pointCount for display.
 function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile, ...rest }) {
-  return rest;
+  return {
+    ...rest,
+    pointCount: {
+      inner: (innerPoints || []).length,
+      outer: (outerPoints || []).length,
+    },
+  };
 }
 
 // Write JSON atomically: write to .tmp then rename.

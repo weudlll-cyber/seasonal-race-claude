@@ -116,10 +116,9 @@ function TrackManager() {
   function handleEdit(track) {
     const rowCfg = loadRowLayoutConfig();
     const geomId = track.geometryId ?? null;
-    // For server tracks, geometry data is embedded in the track itself (TLH-1 invariant).
-    // For local tracks, look up in the geometry cache by geometryId.
-    const isServer = serverTrackIds.has(track.id);
-    const geom = isServer ? track : geomId ? geometries.find((g) => g.id === geomId) : null;
+    // Always look up full geometry from local cache — server list API strips innerPoints/outerPoints
+    // (toSummary), so the server track object cannot be used directly for EditorShape.
+    const geom = geomId ? geometries.find((g) => g.id === geomId) : null;
     const autoMax = autoMaxRacers(geom, track, rowCfg);
     const storedMax = track.maxRacers ?? null;
     setForm({
@@ -398,9 +397,8 @@ function TrackManager() {
                 // Server track: status display + editor button (no dropdown)
                 (() => {
                   const srv = serverTracks.find((t) => t.id === editId);
-                  const hasGeo =
-                    (srv?.innerPoints?.length ?? 0) > 0 || (srv?.outerPoints?.length ?? 0) > 0;
-                  const ptCount = (srv?.innerPoints?.length ?? 0) + (srv?.outerPoints?.length ?? 0);
+                  const hasGeo = srv?.geometryId != null;
+                  const ptCount = (srv?.pointCount?.inner ?? 0) + (srv?.pointCount?.outer ?? 0);
                   return (
                     <>
                       <span

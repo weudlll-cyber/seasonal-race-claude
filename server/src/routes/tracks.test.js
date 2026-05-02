@@ -107,6 +107,15 @@ describe('GET /api/tracks', () => {
     }
   });
 
+  it('includes pointCount.inner and pointCount.outer in list response', async () => {
+    const res = await request(app).get('/api/tracks');
+    for (const track of res.body) {
+      expect(track).toHaveProperty('pointCount');
+      expect(typeof track.pointCount.inner).toBe('number');
+      expect(typeof track.pointCount.outer).toBe('number');
+    }
+  });
+
   it('returns expected fields in list items', async () => {
     const res = await request(app).get('/api/tracks');
     const track = res.body[0];
@@ -115,6 +124,18 @@ describe('GET /api/tracks', () => {
     expect(track).toHaveProperty('geometryId');
     expect(track).toHaveProperty('worldWidth');
     expect(track).toHaveProperty('worldHeight');
+  });
+
+  it('pointCount in list response reflects actual inner/outer point counts', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    expect(createRes.status).toBe(201);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const listRes = await request(app).get('/api/tracks');
+    const item = listRes.body.find((t) => t.id === id);
+    expect(item.pointCount.inner).toBe(VALID_TRACK.innerPoints.length);
+    expect(item.pointCount.outer).toBe(VALID_TRACK.outerPoints.length);
   });
 });
 
@@ -885,13 +906,16 @@ describe('Default-Track seed migration (TLH-1)', () => {
     expect(res.body.trackLights).not.toBeNull();
   });
 
-  it('default tracks appear in GET /api/tracks list without geometry arrays', async () => {
+  it('default tracks appear in GET /api/tracks list without geometry arrays but with pointCount', async () => {
     const res = await request(app).get('/api/tracks');
     const defaults = res.body.filter((t) => DEFAULT_IDS.includes(t.id));
     expect(defaults.length).toBe(5);
     for (const t of defaults) {
       expect(t).not.toHaveProperty('innerPoints');
       expect(t).not.toHaveProperty('outerPoints');
+      expect(t).toHaveProperty('pointCount');
+      expect(typeof t.pointCount.inner).toBe('number');
+      expect(typeof t.pointCount.outer).toBe('number');
     }
   });
 });
