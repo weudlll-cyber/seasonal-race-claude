@@ -750,3 +750,67 @@ Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` v
 **Konsequenz:** Errors müssen erzwungen sichtbar sein. `window.scrollTo(0, 0)` beim Mount des Track-Editors stellt sicher dass die Save-Bar sichtbar ist. `scrollIntoView` wenn `serverError` gesetzt wird ist eine zweite Absicherung. Status-Anzeigen müssen die echte Quelle der Wahrheit nutzen.
 
 **Leitfrage:** "Wenn der Save fehlschlägt, sieht der User es garantiert? Oder kann der Fehler unsichtbar sein?"
+
+---
+
+## Lesson 41 — Lösch-Buttons müssen klar machen WAS sie löschen
+
+**Kontext:** City-Circuit-Bug (TLH-2 Followup). User wollte das falsche Background-Bild eines Default-Tracks entfernen. Im Track-Editor gab es nur einen roten "Delete"-Button — keinen separaten "Background entfernen"-Button. User klickte "Delete", bestätigte den Confirm-Dialog ohne die genaue Wirkung zu verstehen, und der gesamte Track (inklusive Geometrie und Background) wurde permanent gelöscht.
+
+**Symptom:** User klickt Lösch-Button mit Erwartung A ("Background entfernen"), tatsächlich passiert B ("gesamter Track gelöscht"). Kein Feedback über den erweiterten Scope der Aktion.
+
+**Ursache:** Generischer "Delete"-Button ohne Scope-Klarstellung. Confirm-Dialog enthielt nicht die vollständige Information ("Track UND Background-Bild werden gelöscht"). Kein separater Button für die tatsächlich gewollte Aktion.
+
+**Konsequenz:** (1) Separate Buttons für separate Lösch-Aktionen: "Remove background" für nur das Bild, "Delete track" für den ganzen Track. (2) Confirm-Dialog muss den vollständigen Scope nennen: "Delete track 'X' and its background image permanently? This cannot be undone." (3) Lösch-Aktionen mit großem Scope brauchen explizite Scope-Benennung im Button-Label oder Tooltip.
+
+**Leitfrage:** "Wenn der User diesen Button klickt — sieht er danach was er erwartet hat? Oder mehr?"
+
+**Konkrete Umsetzung:** Track-Editor hat jetzt einen "Remove background"-Button der neben dem Background-Upload-Button erscheint wenn ein Bild geladen ist. Der Delete-Button löscht weiterhin den ganzen Track, aber der Confirm-Dialog nennt jetzt explizit dass auch das Background-Bild permanent gelöscht wird.
+
+---
+
+## Lesson 42 — Default-Records brauchen server-seitigen Schutz
+
+**Kontext:** City-Circuit-Bug (TLH-2 Followup). Die 5 Default-Tracks aus der TLH-1-Migration hatten `isDefault: true` als Daten-Flag, aber kein Verhaltens-Unterschied im API-Handler. `DELETE /api/tracks/:id` löschte Default-Tracks ohne Prüfung. Außerdem: `migrateDefaultTracks()` lief nur einmal beim ersten Boot (marker-geschützt) — ein einmal gelöschter Default-Track konnte nicht automatisch wiederhergestellt werden.
+
+**Symptom:** Kritische System-Records (Defaults, Templates, Seed-Daten) werden versehentlich via API gelöscht. Nach Server-Neustart fehlen sie immer noch.
+
+**Ursache:** `isDefault`-Flag nur als Metadaten-Feld ohne API-Enforcement. Migration nur als einmalige Initialisierung statt als idempotente Startup-Routine.
+
+**Konsequenz:** (1) DELETE-Handler muss `isDefault: true` mit 403 ablehnen. (2) Migrations-/Seeding-Routinen müssen fehlende Default-Records bei jedem Boot wiederherstellen (idempotent, nicht nur beim ersten Boot). Marker-Files für "bereits migriert" sind sinnvoll für Einmal-Transformationen, aber nicht für Daten-Integrität. (3) PUT-Handler sollte `isDefault`-Flag nie aus dem Request-Body übernehmen (bereits korrekt via `isDefault: existing.isDefault`).
+
+**Leitfrage:** "Welche Records dürfen niemals fehlen? Sind sie durch API-Guards UND Startup-Wiederherstellung geschützt?"
+
+**Konkrete Umsetzung:** `DELETE /api/tracks/:id` gibt 403 für Default-Tracks. `migrateDefaultTracks()` läuft bei jedem Boot und sät fehlende Default-Tracks nach.
+
+---
+
+## Lesson 43 — useEffect mit asynchronen Callbacks brauchen Cleanup
+
+**Symptom:** State wechselt mehrfach schnell, alte async Callbacks (`onload`, `onerror`, `fetch.then`, `setTimeout`) überschreiben das Resultat neuer Effekte. Sichtbar z.B. als: UI-Button zeigt "Remove background" (state truthy), Canvas bleibt aber schwarz (bgRef.current ist null, weil ein alter Callback ihn nach dem erfolgreichen Load wieder auf null gesetzt hat).
+
+**Ursache:** `useEffect` ohne Cleanup — alte Callbacks bleiben aktiv auch wenn ein neuer Effect-Run bereits läuft. Wenn `backgroundImage` von `null` auf eine URL wechselt (z.B. beim Track-Load), überleben Callbacks des null-Runs und können den bgRef nach erfolgreichem Load erneut nullen.
+
+**Konsequenz:** `useEffect` mit asynchronen Callbacks IMMER mit `cancelled`-Flag oder `AbortController` + `return cleanup`.
+
+```js
+useEffect(() => {
+  if (!backgroundImage) {
+    bgRef.current = null;
+    setBgReady(true);
+    return;
+  }
+  setBgReady(false);
+  bgRef.current = null;
+  const img = new Image();
+  let cancelled = false;
+  img.onload = () => { if (!cancelled) { bgRef.current = img; setBgReady(true); } };
+  img.onerror = () => { if (!cancelled) { bgRef.current = null; setBgReady(true); } };
+  img.src = backgroundImage;
+  return () => { cancelled = true; };
+}, [backgroundImage]);
+```
+
+Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn der State-Wert `null` oder `undefined` ist.
+
+**Konkret in TrackEditor:** Background-Image-Effect ohne Cleanup führte zu Race-Condition wenn `backgroundImage` von `null` auf URL wechselte beim Track-Load (fix/track-delete-safeguards, PR #58 Followup).

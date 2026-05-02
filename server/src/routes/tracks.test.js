@@ -342,6 +342,19 @@ describe('DELETE /api/tracks/:id', () => {
     const res = await request(app).delete('/api/tracks/nonexistent-xyz');
     expect(res.status).toBe(404);
   });
+
+  it('returns 403 when attempting to delete a default track', async () => {
+    const res = await request(app).delete('/api/tracks/dirt-oval');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/cannot delete default track/i);
+  });
+
+  it('default track still exists after rejected DELETE', async () => {
+    await request(app).delete('/api/tracks/dirt-oval');
+    const res = await request(app).get('/api/tracks/dirt-oval');
+    expect(res.status).toBe(200);
+    expect(res.body.isDefault).toBe(true);
+  });
 });
 
 // ── Auto-backup (TLH-1) ───────────────────────────────────────────────────────
@@ -917,6 +930,49 @@ describe('Default-Track seed migration (TLH-1)', () => {
       expect(typeof t.pointCount.inner).toBe('number');
       expect(typeof t.pointCount.outer).toBe('number');
     }
+  });
+});
+
+describe('DELETE /api/tracks/:id/background', () => {
+  const minimalJpeg = Buffer.from(
+    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
+      'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+      'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+      'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+      'AAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA' +
+      '/9oADAMBAAIRAxEAPwCwABmX/9k=',
+    'base64'
+  );
+
+  it('returns 404 for a non-existent track', async () => {
+    const res = await request(app).delete('/api/tracks/nonexistent-xyz/background');
+    expect(res.status).toBe(404);
+  });
+
+  it('removes the background image and returns 204', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', minimalJpeg, { filename: 'track.jpg', contentType: 'image/jpeg' });
+
+    const res = await request(app).delete(`/api/tracks/${id}/background`);
+    expect(res.status).toBe(204);
+
+    const detail = await request(app).get(`/api/tracks/${id}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.backgroundImageFile).toBeUndefined();
+  });
+
+  it('is idempotent when called on a track with no background', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app).delete(`/api/tracks/${id}/background`);
+    expect(res.status).toBe(204);
   });
 });
 
