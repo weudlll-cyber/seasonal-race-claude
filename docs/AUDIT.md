@@ -147,9 +147,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-02 | **1252 unit + 183 e2e + 107 backend** | TLH-2 — UI-Flow + Cleanup (PR open, pending merge). +17 unit: TrackEditor.loadmode.test.jsx ×12 (new file), TrackManager.test.jsx +7/−2 (geometry-status tests replace old L.6-Bug2 tests). ESLint: 0 errors, 0 warnings. 71 test files. |
 | 2026-05-02 | **1254 unit + 183 e2e + 109 backend** | TLH-2 Post-Merge Bug-Fixes (same branch): F2 (hasGeo→geometryId+pointCount via extended toSummary), F4 (scroll-reset on mount + scrollIntoView on serverError), F1-revised (load-mode background optional). +2 unit (F3 reproduction: 2 scenarios), +2 backend (pointCount in list). ESLint: 0 errors, 0 warnings. |
 | 2026-05-02 | **1256 unit + 183 e2e + 109 backend** | toSummary Folge-Regression: autoMaxRacers in handleEdit nutzte `isServer ? track` als EditorShape-Input → crash (TypeError: innerPoints undefined). Fix: immer geometry cache statt server summary. +2 unit (Regression-Guard + no-crash-test). L39 Audit-Pattern ergänzt. ESLint: 0 errors, 0 warnings. |
+| 2026-05-02 | **1261 unit + 183 e2e + 114 backend** | City-Circuit-Bug-Fix (fix/track-delete-safeguards): "Remove background"-Button (+5 unit), DELETE /api/tracks/:id/background Endpoint (+3 backend), Default-Track DELETE-Schutz 403 (+2 backend), migrateDefaultTracks idempotent, React key=null Fix in TrackManager. L41+L42, Q-24 ergänzt. ESLint: 0 errors, 0 warnings. |
 
-**Aktueller Branch-HEAD:** `feat/tlh-2-ui-flow-and-cleanup` (PR open, pending user merge)
-**Master-HEAD:** `6855b16` (TLH-1 Backend-Fixes + Migration, PR #55, squash-merged 2026-05-02)
+**Aktueller Branch-HEAD:** `fix/track-delete-safeguards` (PR offen, pending user merge)
+**Master-HEAD:** `c2961c9` (TLH-2 Followup Bug-Fixes, PR #57, squash-merged 2026-05-02)
 **ESLint-Warnings:** 0 (TLH-2 branch); 1 pre-existing on master (TransitionContext.jsx:44 fast-refresh)
 **Playwright e2e:** 183 Tests — 183/183 grün
 

@@ -262,10 +262,10 @@ const DEFAULT_TRACK_SEEDS = [
   },
 ];
 
-// One-shot migration: seed the 5 built-in default tracks as server records on first boot.
-// Idempotent — skips any track that already exists; writes marker only when all are done.
+// Seed the 5 built-in default tracks as server records.
+// Runs on every boot but only creates tracks that are missing — idempotent for
+// existing tracks. Marker file is written once for historical reference.
 function migrateDefaultTracks() {
-  if (existsSync(DEFAULT_TRACKS_MARKER)) return;
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
   const now = new Date().toISOString();
   for (const seed of DEFAULT_TRACK_SEEDS) {
@@ -284,9 +284,12 @@ function migrateDefaultTracks() {
     };
     atomicWriteJson(join(DATA_DIR, `${seed.id}.json`), track);
     tracksMap.set(seed.id, track);
+    console.log(`[RaceArena] Default track re-seeded: ${seed.id}`);
   }
-  writeFileSync(DEFAULT_TRACKS_MARKER, new Date().toISOString(), 'utf8');
-  console.log('[RaceArena] Default tracks seeded as server records (TLH-1)');
+  if (!existsSync(DEFAULT_TRACKS_MARKER)) {
+    writeFileSync(DEFAULT_TRACKS_MARKER, new Date().toISOString(), 'utf8');
+    console.log('[RaceArena] Default tracks seeded as server records (TLH-1)');
+  }
 }
 
 /**
@@ -492,6 +495,12 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   const track = tracksMap.get(req.params.id);
   if (!track) return res.status(404).json({ error: 'Track not found' });
+  if (track.isDefault) {
+    return res.status(403).json({
+      error:
+        'Cannot delete default track. Default tracks can be modified (geometry, background, metadata) but not deleted.',
+    });
+  }
 
   const jsonPath = join(DATA_DIR, `${track.id}.json`);
   if (existsSync(jsonPath)) unlinkSync(jsonPath);
@@ -502,6 +511,24 @@ router.delete('/:id', (req, res) => {
   }
 
   tracksMap.delete(track.id);
+  res.status(204).send();
+});
+
+// DELETE /api/tracks/:id/background — remove background image from a track
+router.delete('/:id/background', (req, res) => {
+  const track = tracksMap.get(req.params.id);
+  if (!track) return res.status(404).json({ error: 'Track not found' });
+
+  if (track.backgroundImageFile) {
+    const bgPath = join(BG_DIR, track.backgroundImageFile);
+    if (existsSync(bgPath)) unlinkSync(bgPath);
+  }
+
+  const updatedTrack = { ...track, backgroundImageFile: null, updatedAt: new Date().toISOString() };
+  atomicWriteJson(join(DATA_DIR, `${track.id}.json`), updatedTrack);
+  tracksMap.set(track.id, updatedTrack);
+  writeTrackBackup(track.id, updatedTrack);
+
   res.status(204).send();
 });
 

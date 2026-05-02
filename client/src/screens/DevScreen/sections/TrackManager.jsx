@@ -443,11 +443,13 @@ function TrackManager() {
                         ? 'No tracks drawn yet — use Track Editor to create one'
                         : '— none —'}
                     </option>
-                    {geometries.map((geom) => (
-                      <option key={geom.id} value={geom.id}>
-                        {geom.name}
-                      </option>
-                    ))}
+                    {geometries
+                      .filter((geom) => geom.id != null)
+                      .map((geom) => (
+                        <option key={geom.id} value={geom.id}>
+                          {geom.name}
+                        </option>
+                      ))}
                   </select>
                   {!form.geometryId && (
                     <span

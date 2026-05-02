@@ -281,6 +281,10 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
   Eigene kleine PR.
   *(Aufgekommen aus TLH-2 Browser-Test 2026-05-02, Severity: MEDIUM)*
 
+- **Q-24** — isDefault-Immutabilität via PUT explizit testen
+  Audit ergab: `PUT /api/tracks/:id`-Handler setzt `isDefault: existing.isDefault` explizit und überschreibt damit jeden Client-gesendeten Wert — `isDefault` ist damit de facto immutable via API. Aber es gibt keinen expliziten Backend-Test der dieses Verhalten schützt. Falls jemand den PUT-Handler umstrukturiert, könnte dieser Schutz unbemerkt wegfallen. Eigener Backend-Test-Case: "PUT mit `isDefault: false` auf Default-Track verändert `isDefault` nicht".
+  *(Aufgekommen bei Audit im City-Circuit-Bug-Fix 2026-05-02, Severity: LOW)*
+
 - **Q-23** — Two-Step-Save: keine differenzierte Fehlermeldung bei Background-Upload-Fehler
   Track-Save ist zweistufig: Schritt 1 `PUT /api/tracks/:id` (Geometrie), Schritt 2 `POST /api/tracks/:id/background`
   (Bild-File). Wenn Schritt 1 erfolgreich und Schritt 2 fehlschlägt, sieht der User einen generischen
