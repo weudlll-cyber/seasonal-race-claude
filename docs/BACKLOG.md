@@ -31,7 +31,32 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ### 1 — Kamera-Phase + RaceScreen-Refactor 🔜 Hot — nächste Implementierungsphase
 
-CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Vorgehen: Konzept-Doku-Sprint zuerst (Architektur-Diskussion), dann Implementation. Parallel-Überlegung: Q-25 (Strecken-Canvas-Größe begrenzt Strecken-Länge) sollte in der Konzept-Phase mitgedacht werden, da Canvas-Limits das Camera-Verhalten beeinflussen.
+**Konzept-Doku-Sprint abgeschlossen 2026-05-02.** Vollständige Spezifikation in `docs/CAMERA_DIRECTOR.md`.
+
+**3 strukturelle Bugs identifiziert** (empirisch aus Code-Analyse, nicht nur Vermutung):
+- **Bug A** (Garden Path P1): OVERVIEW-Pan ist ein No-Op — World-Edge-Clamp forciert offsetX/Y=0 wenn zoom=1 (`CameraDirector.js:178-183`)
+- **Bug B** (River Run P2): Zoom-Inversion auf großen Open-Tracks — LEADER_ZOOM zoomt raus statt rein (effZoom=1.5×0.298=0.447 < OVERVIEW=1.5)
+- **Bug C** (River Run P3): `openTrackPanTarget` nutzt alle Racer statt Focus-Group — zeigt Pulk-Mitte statt Spitze
+
+**Q-25 Root Cause identifiziert** (empirisch gemessen):
+- `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in `defaults.js:112` — zu niedrig für pathLengthPx > 8000
+- Space Sprint (pathLengthPx=19772, cap=8000): traversiert bei 323 px/s statt Referenz-131 px/s
+- Alle anderen Tracks traversieren exakt bei 131 px/s — Formula korrekt, nur Cap falsch
+- Fix: maxScale=10.0 — dann Space Sprint bei ~131 px/s, Renndauer ~144s (User-Input nötig)
+
+**User-Input-Fragen (vor Implementation):** 6 offene Entscheidungen, gelistet in `docs/CAMERA_DIRECTOR.md §12.2`.
+
+**Sub-PR-Plan (7 PRs):**
+- PR-A: Q-25 + finishT-Fix für Open-Tracks
+- PR-B: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
+- PR-C: Camera-Bug-Fixes (Bug A+B+C)
+- PR-D: Phase-Erkennung + Camera-State-Machine
+- PR-E: Sprite-Min-Constraint + Tag-Visibility N-adaptiv (B-UX1 integriert)
+- PR-F: Dev-Panel Camera-Tunables
+- PR-G: UI-Bugs (Fullscreen API + Setup-Button)
+
+Vorgehen: User-Input-Fragen klären → PR-A → PR-C → PR-B → PR-D → PR-E → PR-F → PR-G.
+Parallel-Überlegung: Q-25 (Strecken-Canvas-Größe begrenzt Strecken-Länge) sollte in der Konzept-Phase mitgedacht werden, da Canvas-Limits das Camera-Verhalten beeinflussen.
 
 ---
 
