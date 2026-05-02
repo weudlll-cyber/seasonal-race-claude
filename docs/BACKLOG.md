@@ -53,6 +53,13 @@ Drei konzeptionelle Probleme wurden beim Versuch Default-Track-Geometrien zu zei
 - ✅ Track-Editor Save-Path: Load mode → PUT mit geometryId-Generierung bei First-Draw; New mode → POST
 - ✅ 17 neue Unit-Tests (12 TrackEditor.loadmode.test.jsx + 5 netto TrackManager.test.jsx)
 
+**TLH-2 Post-Merge Bug-Fixes (Branch-Erweiterung nach Browser-Test)**
+- ✅ F2: `hasGeo` las `innerPoints.length` (immer 0 dank `toSummary`-Strip) → jetzt `geometryId != null` + `pointCount` via erweitertem `toSummary`
+- ✅ F4: Track-Editor öffnete scrolled to canvas (kein Scroll-Reset bei Navigation) → `window.scrollTo(0,0)` on mount + `scrollIntoView` bei `serverError`
+- ✅ F1-revised: Save in Load-Mode war blockiert wenn kein Background → Background nur in New-mode required; Load-mode immer speicherbar
+- ✅ Lesson 39 + 40 in LESSONS.md dokumentiert
+- ✅ F2-Folge: `autoMaxRacers` in `handleEdit` nutzte `isServer ? track` als EditorShape-Input → crash (TypeError: `undefined.length`) weil `toSummary` `innerPoints` strippt. Fix: immer geometry cache statt server summary. L39 um Audit-Pattern ergänzt.
+
 **TLH-3 — Code-Fallback + Status-Banner + Export (Sub-PR 3) 🔜 Hot Pos 1**
 - Frontend Lade-Reihenfolge: Server → Cache → Code-Bundle (`defaultTracks.js`)
 - Code-Bundle initial mit leeren Geometrien (Bootstrap)
@@ -216,6 +223,7 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
 - **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
   FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.
   Defensiv-Hygiene, niedrige Priorität.
+- **Q-20** — Track-Editor Load-Mode: Background-Upload ist jetzt optional (F1-revised Fix). Aber wenn ein Load-mode-Track kein Background hat und der User speichert ohne eines hochzuladen, bleibt die Race-Engine ohne Background-Bild. Erwägen: Hinweis-Text "No background — race will show empty canvas" wenn Track in Load-Mode ohne Background gespeichert wird.
 - **Q-12** — localStorage-Quota bei großen data-URL-Bildern
   Tracks speichern jetzt data-URLs (1–5 MB möglich für hochauflösende Bilder).
   Kein Quota-Handling implementiert. Info-level, kein akuter Block.
@@ -264,6 +272,22 @@ CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Spec-Diskussion vor 
   Möglicher Ansatz: Server-Boot-Routine scannt `tracks-backups/` nach `*.json.tmp` und löscht sie,
   oder `findBackupFiles` schließt `.json.tmp` ein.
   *(Entdeckt TLH-1 2026-05-01, Severity: LOW)*
+
+- **Q-22** — TrackEditor Frontend-Draft-Snapshot
+  localStorage-Snapshot der gezeichneten Geometrie (Key: `racearena:trackEditor:draft:<serverId>` für
+  Load-Mode, `racearena:trackEditor:draft:new` für New-Mode). Wird bei jeder Punkt-Aktion oder alle
+  ~30s geschrieben, nach erfolgreichem Server-Save gelöscht. Schützt vor Datenverlust bei stillen
+  Server-Fehlern (F3-Szenario aus TLH-2 Browser-Test) oder Browser-Crash. Aufwand: klein (~50 LOC).
+  Eigene kleine PR.
+  *(Aufgekommen aus TLH-2 Browser-Test 2026-05-02, Severity: MEDIUM)*
+
+- **Q-23** — Two-Step-Save: keine differenzierte Fehlermeldung bei Background-Upload-Fehler
+  Track-Save ist zweistufig: Schritt 1 `PUT /api/tracks/:id` (Geometrie), Schritt 2 `POST /api/tracks/:id/background`
+  (Bild-File). Wenn Schritt 1 erfolgreich und Schritt 2 fehlschlägt, sieht der User einen generischen
+  Save-Fehler — nicht „Geometrie gespeichert, Background nicht". Das Background-File bleibt in diesem
+  Fall dauerhaft ohne Upload. Mögliche Lösungen: (a) pro Stufe eigene Fehlermeldung mit „Retry Background"-
+  Option, (b) Atomic-Save (rollback Geometrie wenn Background fehlschlägt). Aufwand: klein–mittel.
+  *(Aufgekommen 2026-05-02 nach Background-Diagnose dirt-oval, Severity: MEDIUM)*
 
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
