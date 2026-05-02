@@ -1,7 +1,7 @@
 # RaceArena — Track Lifecycle and Hybrid Persistence
 
-**Status:** Concept — documented before implementation (2026-05-01)
-**Phase:** Track Lifecycle Hybrid (TLH) — three Sub-PRs: TLH-1, TLH-2, TLH-3
+**Status:** Partially implemented — TLH-1 ✅ (PR #55), TLH-2 ✅ (PR #56/#57), Track-Delete-Safeguards ✅ (PR #58), TLH-3 ⏳ zurückgestellt nach Kamera-Phase
+**Phase:** Track Lifecycle Hybrid (TLH) — three Sub-PRs: TLH-1 ✅, TLH-2 ✅, TLH-3 ⏳
 **Related:** `docs/ARCHITECTURE.md — Track Lifecycle and Hybrid Persistence`, `docs/TRACK_EDITOR.md`
 
 ---
@@ -119,7 +119,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │    tracks-backups/           ← Auto-backup (TLH-1)          │
 │      YYYY-MM-DD/                                            │
 │        HH-MM-SS-<id>.json    ← Timestamped backup copy      │
-│    .default-tracks-seeded    ← One-shot migration marker    │
+│    (no migration marker — boot migration runs on every boot) │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -148,13 +148,20 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 **Test scope:** Backend unit tests for PUT geometryId behavior, DELETE non-geometry-deletion, backup file creation, migration idempotency.
 
+**PR #58 Followup — Track-Delete-Safeguards (2026-05-02):**
+- `DELETE /api/tracks/:id` returns **403** for `isDefault: true` tracks — default tracks cannot be deleted via API
+- `DELETE /api/tracks/:id/background` new endpoint — removes only the background image, leaves track record intact
+- `migrateDefaultTracks()` changed from one-shot (marker file) to **idempotent boot routine** — re-seeds any missing default records on every server start; prevents permanent data loss after accidental deletion (Lesson 42)
+- "Remove background" button added to Track Editor UI — separate from "Delete track" to avoid scope confusion (Lesson 41)
+- Background-Image useEffect race condition fix — cancelled-flag cleanup pattern (Lesson 43)
+
 ---
 
 ### TLH-2 — UI-Flow + Cleanup ✅
 
 **Goal:** Make the system usable. Fix the "Draw Geometry" navigation. Remove misleading UI fields.
 
-**Status:** Implemented 2026-05-02. Branch `feat/tlh-2-ui-flow-and-cleanup`. PR open, pending user merge.
+**Status:** Implemented and merged 2026-05-02. PR #56 (initial) + PR #57 (post-merge bug-fixes), squash-merged to master.
 
 **Changes:**
 - **"Draw Geometry" / "Edit Geometry" button** — Edit-Modal geometry `<select>` dropdown replaced with a status display for server tracks: "Geometry: drawn (XX pts)" or "Geometry: not yet drawn". Button navigates to `/track-editor?load=<serverId>`.
@@ -170,9 +177,11 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 ---
 
-### TLH-3 — Code-Fallback + Status-Banner + Export
+### TLH-3 — Code-Fallback + Status-Banner + Export ⏳ zurückgestellt nach Kamera-Phase
 
 **Goal:** Make the system resilient. Graceful offline behavior. Manual Code-Bundle snapshot mechanism.
+
+**Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅, all 5 default-track geometries drawn ✅) is met — but implementation is postponed until after the Camera-Director phase. The system is currently functional without TLH-3 (all tracks have geometry, server is always reachable in local-only use).
 
 **Changes:**
 - **Frontend loading chain** — `useServerTracks()` / `fetchServerTracks()`: if server unreachable → try geometry cache → if cache empty → fall back to Code-Bundle (`defaultTracks.js`). Emit `fallbackMode: 'code-bundle'` flag.
