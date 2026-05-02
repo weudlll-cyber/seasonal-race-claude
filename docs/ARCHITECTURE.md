@@ -360,6 +360,8 @@ seasonal-race-claude/
 - `PUT /api/tracks/:id` — updates track; preserves `geometryId`, `createdAt`, `backgroundImageFile`; atomic write; 404 if not found
 - `DELETE /api/tracks/:id` — removes JSON file + background image; 404 if not found
 - `POST /api/tracks/:id/background` — multer multipart (10 MB limit); saves to `data/backgrounds/`; returns `{ backgroundImageFile }`; 413 if oversized
+- `DELETE /api/tracks/:id/background` — removes background image file and clears `backgroundImageFile` on the track record; returns updated track; 404 if track not found
+- `DELETE /api/tracks/:id` returns **403** if `isDefault: true` — default tracks cannot be deleted via API
 
 **Frontend write strategy (L.5):**
 - `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
@@ -413,7 +415,7 @@ The Code-Bundle initially ships with empty geometry fields (bootstrap). After th
 
 ### Default-Tracks as Server-Records (TLH-1)
 
-On server boot, a one-shot migration checks a marker file (`server/data/.default-tracks-seeded`). If absent, it creates server records for all 5 default tracks with full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry fields (`innerPoints: [], outerPoints: [], centerPoints: []`). The migration is idempotent — running it twice produces no duplicate records.
+On every server boot, `migrateDefaultTracks()` checks which of the 5 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
 `DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
 

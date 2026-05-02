@@ -238,7 +238,7 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 - [x] ESLint v9 flat config (React + hooks + Prettier compat)
 - [x] Prettier (single quotes, 2-space, printWidth 100)
-- [x] Vitest + React Testing Library (1234 client unit tests, 70 test files; ~124 server unit tests) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
+- [x] Vitest + React Testing Library (1265 client unit tests, 71 test files; 114 server unit tests) + Playwright e2e (183 tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
 - [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
@@ -291,16 +291,20 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 | 2026-05-01 | Race Track Lights + Cache-Bug-Fix (PR #52): Feature complete (see entry above). Post-PR Browser-Test aufgedeckt: (1) `trackLights` wurde nicht über Cache-Reload persistiert — Root Cause: `cacheTrackGeometry` hatte explizite Whitelist, `trackLights` fehlte. Struktureller Fix: Spread+Exclusion-Pattern (L37). +23 Round-Trip-Tests. (2) Track-Lights-Controls zu breit — CSS-Fix (width:100% + flex:1 entfernt). PR #52 squash-gemergt auf master (dc62557). |
 | 2026-05-01 | Doc-Sprint (docs/post-vre-sync): Phasen-Status post-VRE + Track-Lights synchronisiert. Geplante Phasen-Reihenfolge ergänzt (Kamera-Phase als nächste Hauptpriorität). |
 | 2026-05-01 | Konzept-Doku-Sprint (docs/track-lifecycle-hybrid-concept): Phase Track Lifecycle Hybrid vor Implementation dokumentiert. UI-Flow-Bug (Draw-Geometry öffnet blank Editor ohne Preset-Kontext), Backend-PUT ignoriert Client-geometryId, Track-Delete löscht Geometrie automatisch, Default-Tracks haben keine Server-Records. Hybrid-Konzept: Default-Tracks → Server-Records bei Boot (idempotent), Code-Bundle als Fallback-Schicht, Server-PUT respektiert Client-geometryId, Track-Delete löscht NIEMALS automatisch Geometrie, Auto-Backup bei jedem PUT/POST, Status-Banner im Fallback-Modus. Drei Sub-PRs: TLH-1 (Backend-Fixes + Migration), TLH-2 (UI-Flow + Cleanup), TLH-3 (Code-Fallback + Banner + Export). |
+| 2026-05-01 | TLH-1 — Backend-Fixes + Migration (PR #55, squash-merged): Default-Tracks als Server-Records seeded, PUT geometryId client-authoritative, DELETE bewahrt Geometrie-Cache, Auto-Backup bei jedem PUT/POST, atomicWriteJson OneDrive-Fallback, vi.unstubAllGlobals() Fix (Q-19). +11 Tests (10 Backend + 1 Frontend). 1235 unit + 183 e2e + 107 backend Tests. |
+| 2026-05-02 | TLH-2 — UI-Flow + Cleanup (PR #56 + Post-Merge Bug-Fixes PR #57): Edit-Modal Geometry-Status-Display (ersetzt Dropdown), Track-Editor Two-Mode (Load/New), Two-Path-Load (Geometry-Cache + Direct-Server), geometryId-First-Draw. Bug-Fixes: hasGeo→geometryId+pointCount, scroll-reset on mount, Load-Mode Background optional, autoMaxRacers crash-fix (Lessons 39/40). +19 Tests. 1256 unit + 183 e2e + 109 backend Tests. |
+| 2026-05-02 | Track-Delete-Safeguards + Background-Race-Condition-Fix (PR #58, squash-merged `fc5690f`): "Remove background"-Button im Track-Editor, `DELETE /api/tracks/:id/background` Endpoint, isDefault-403-Guard für `DELETE /api/tracks/:id`, migrateDefaultTracks von one-shot→idempotent, React key=null Fix, Background-Image useEffect cancelled-Flag (Lessons 41/42/43). +9 Tests. 1265 unit + 183 e2e + 114 backend Tests. |
+| 2026-05-02 | Default-Tracks zeichnen: Alle 5 Geometrien im Track Editor gezeichnet und gespeichert — Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. Weltall (Custom-Track) ebenfalls vorhanden. Phase TLH-1+2+Safeguards damit vollständig abgeschlossen. |
 
 ---
 
-## Geplante Phasen-Reihenfolge (Stand 2026-05-01)
+## Geplante Phasen-Reihenfolge (Stand 2026-05-02)
 
 | # | Phase | Status | Notiz |
 |---|---|---|---|
-| 1 | **Track Lifecycle Hybrid (TLH)** | 🔜 nächste Implementierungsphase | UI-Flow-Bug beim Zeichnen von Default-Track-Geometrien aufgedeckt (Daten-Verlust). Drei Sub-PRs: **TLH-1** Backend-Fixes + Migration, **TLH-2** UI-Flow + Cleanup, **TLH-3** Code-Fallback + Status-Banner + Export. Siehe `docs/TRACK_LIFECYCLE.md`. |
-| 1a | **Default-Tracks zeichnen** | User-Aufgabe nach TLH-2 | 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) brauchen Geometrien. Erst nach TLH-2 (UI-Flow korrekt) sicher zeichenbar. Zwischen TLH-2 und TLH-3. |
-| 2 | **Kamera-Phase + RaceScreen-Refactor** | geplant nach TLH | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Spec wird vor Implementierung diskutiert. |
+| 1 | **Kamera-Phase + RaceScreen-Refactor** | 🔜 Hot — nächste Implementierungsphase | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Vorgehen: Konzept-Doku-Sprint zuerst (Architektur-Diskussion), dann Implementation. Q-25 (Strecken-Canvas-Größe) als Parallel-Überlegung im Konzept-Sprint. |
+| — | **Track Lifecycle Hybrid (TLH)** | ✅ TLH-1+2+Safeguards abgeschlossen | TLH-1 (PR #55): Backend-Fixes, Default-Track-Migration, Auto-Backup. TLH-2 (PR #56/57): UI-Flow, Two-Mode-Editor. Track-Delete-Safeguards (PR #58): Remove-Background-Button, 403-Guard, idempotente Migration. TLH-3 (Code-Fallback + Export) ⏳ zurückgestellt. Siehe `docs/TRACK_LIFECYCLE.md`. |
+| — | **Default-Tracks zeichnen** | ✅ Abgeschlossen 2026-05-02 | Alle 5 Geometrien gezeichnet: Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. |
 | 3 | **Surface Zones** | geplant | Lokale Surface-Class-Überschreibungen innerhalb eines Tracks (Pfützen, Schlammstellen). Folge-Phase nach VRE. TrackEditor-Zonen-Zeichenwerkzeug, `EditorShape.getZonesAtPosition()`. |
 | 4 | **B-UX-Phase** (Dev-Screen Cleanup) | geplant | Dev-Screen auf 30+ Parameter gewachsen — strukturelle Neuordnung, Hilfe-Modal pro Sektion (B-UX2/B-UX3). Vor D8 (voller Racer-Editor). |
 | 5 | **Backup/Export-Feature** (B-5) | geplant | System Backup/Restore/Reset end-to-end verifiziert (UI vorhanden, Wiring fehlt). |
