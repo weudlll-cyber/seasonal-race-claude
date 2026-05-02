@@ -74,9 +74,10 @@ vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
   }),
 }));
 vi.mock('../../../modules/track-editor/EditorShape.js', () => ({
-  EditorShape: vi.fn().mockImplementation(() => ({
-    getActualTrackWidth: vi.fn().mockReturnValue(200),
-  })),
+  // Use regular function (not arrow) so the mock can be called with `new`
+  EditorShape: vi.fn().mockImplementation(function () {
+    return { getActualTrackWidth: vi.fn().mockReturnValue(200) };
+  }),
 }));
 vi.mock('../../../modules/storage/storage.js', () => ({
   KEYS: { TRACKS: 'racearena:tracks' },
@@ -86,6 +87,8 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
 import { updateTrackOnServer } from '../../../services/trackApi.js';
+import { listTracks } from '../../../modules/track-editor/trackStorage.js';
+import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import TrackManager from './TrackManager.jsx';
 
 // ── test data ─────────────────────────────────────────────────────────────────
@@ -120,17 +123,8 @@ const SERVER_TRACK = {
   worldHeight: 4000,
   isDefault: false,
   maxRacers: null,
-  // Geometry data embedded in server track (TLH-1 invariant)
-  innerPoints: [
-    { x: 100, y: 100 },
-    { x: 300, y: 100 },
-    { x: 300, y: 300 },
-  ],
-  outerPoints: [
-    { x: 80, y: 80 },
-    { x: 320, y: 80 },
-    { x: 320, y: 320 },
-  ],
+  // List API returns pointCount (not the arrays themselves — those are stripped by toSummary)
+  pointCount: { inner: 3, outer: 3 },
 };
 
 // Default track after TLH-1 seeding — server record, no geometry drawn yet
@@ -148,8 +142,8 @@ const SERVER_TRACK_NO_GEO = {
   worldHeight: 720,
   isDefault: false,
   maxRacers: null,
-  innerPoints: [],
-  outerPoints: [],
+  // List API returns pointCount; innerPoints/outerPoints are stripped by toSummary
+  pointCount: { inner: 0, outer: 0 },
   surfaceClasses: ['earth'],
 };
 
@@ -272,7 +266,7 @@ describe('TrackManager — TLH-2: Geometry status display for server tracks', ()
     fireEvent.click(screen.getByTitle('Edit'));
 
     const status = screen.getByTestId('geometry-status');
-    const expectedPts = SERVER_TRACK.innerPoints.length + SERVER_TRACK.outerPoints.length;
+    const expectedPts = SERVER_TRACK.pointCount.inner + SERVER_TRACK.pointCount.outer;
     expect(status.textContent).toBe(`Geometry: drawn (${expectedPts} pts)`);
   });
 
@@ -519,5 +513,60 @@ describe('TrackManager — handleSave routes correctly for server vs local track
     await vi.waitFor(() => expect(screen.getByText(/Network error/i)).toBeInTheDocument());
     // Form stays open — user can retry
     expect(screen.getByText('Edit Track')).toBeInTheDocument();
+  });
+});
+
+// ── toSummary regression guard: geometry source must be cache, not server summary ──────────────
+
+describe('TrackManager — handleEdit geometry source (toSummary regression)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('Edit on server track with geometry uses cached geometry for EditorShape, not server summary', () => {
+    // Simulates a real server track: has pathLengthPx (so autoMaxRacers proceeds past the guard),
+    // but toSummary has stripped innerPoints/outerPoints — only pointCount is present.
+    const serverTrackWithPath = { ...SERVER_TRACK, pathLengthPx: 3244 };
+
+    // The cached geometry from listTracks() has the full innerPoints/outerPoints.
+    const cachedGeo = {
+      id: SERVER_TRACK.geometryId,
+      pathLengthPx: 3244,
+      innerPoints: [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+      ],
+      outerPoints: [
+        { x: -10, y: -10 },
+        { x: 110, y: -10 },
+        { x: 110, y: 110 },
+      ],
+    };
+    vi.mocked(listTracks).mockReturnValue([cachedGeo]);
+
+    renderTrackManager({ serverTracks: [serverTrackWithPath] });
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(screen.getByText('Edit Track')).toBeInTheDocument();
+    // EditorShape must be called with the cached geometry (has innerPoints),
+    // NOT with the server summary (has pointCount but no innerPoints).
+    expect(EditorShape).toHaveBeenCalledWith(
+      expect.objectContaining({ id: cachedGeo.id, pathLengthPx: 3244 })
+    );
+    expect(EditorShape).not.toHaveBeenCalledWith(
+      expect.objectContaining({ pointCount: expect.any(Object) })
+    );
+  });
+
+  it('Edit on server track without geometry opens modal without crashing (autoMax = null)', () => {
+    // SERVER_TRACK_NO_GEO has geometryId: null → geom = null → autoMaxRacers returns null
+    renderTrackManager({ serverTracks: [SERVER_TRACK_NO_GEO] });
+
+    fireEvent.click(screen.getByTitle('Edit'));
+
+    expect(screen.getByText('Edit Track')).toBeInTheDocument();
+    // EditorShape must NOT be called when there is no geometry
+    expect(EditorShape).not.toHaveBeenCalled();
   });
 });
