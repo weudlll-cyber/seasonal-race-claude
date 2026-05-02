@@ -549,7 +549,8 @@ isolierter Funktion (`computeRaceBaseSpeed`) — Rest des Systems referenziert d
 
 | Parameter | Typ | Default | Tooltip |
 |-----------|-----|---------|---------|
-| `overviewCooldown` | slider 5–60 s | 20 | "Pause zwischen OVERVIEW-Checks. Kleiner = öfter Überblick. Wert: [x]s." |
+| `overviewCooldownMin` | slider 5–60 s | 15 | "Kürzeste Pause zwischen OVERVIEW-Checks. Nächster Cooldown wird zufällig aus [Min, Max] gezogen. Beide gleich = fester Rhythmus. Wert: [x]s." |
+| `overviewCooldownMax` | slider 5–60 s | 25 | "Längste Pause zwischen OVERVIEW-Checks. Zufalls-Jitter wirkt menschlicher als fester Takt (TV-Regie-Analogie). Max ≥ Min. Wert: [x]s." |
 | `overviewDuration` | slider 2–10 s | 4 | "Dauer des OVERVIEW-Modus. Dann zurück zu LEADER. Wert: [x]s." |
 | `spitzengruppeMin` | slider 1–5 | 3 | "Mindest-Größe der Camera-Fokusgruppe. round(N×0.1) wird nach oben auf diesen Wert gecappt. Wert: [x]." |
 | `spitzengruppeMax` | slider 5–20 | 10 | "Maximal-Größe der Camera-Fokusgruppe. Wert: [x]." |
@@ -708,10 +709,11 @@ können aber unabhängig gesetzt werden. Ein Tunable (`spitzengruppeMax`) steuer
 
 ### 10.2 Neue Kopplungen aus User-Klärungen
 
-**OVERVIEW-Cooldown vs Renndauer:**
-Bei 30s-Race: 1 OVERVIEW-Slot (Cooldown=20s, Dauer=4s).
-Bei 144s-Race (Space Sprint nach Fix): ~7 OVERVIEW-Slots.
-→ Soll Cooldown durationsadaptiv sein? Notiert in §13.2 als User-Input-Frage UI-7.
+**OVERVIEW-Cooldown: Random-Jitter statt fester Takt:**
+Nach jedem OVERVIEW wird der nächste Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax]
+gezogen. Default 15–25s. Begründung: im Fernsehen springt man auch nicht roboterhaft alle 20 Minuten
+um — leichte Zufalls-Variation wirkt menschlicher. Beide Slider auf gleichen Wert = fester Takt.
+Bei 30s-Race: 1–2 OVERVIEW-Slots. Bei 144s-Race: 5–9 Slots (natürliche Streuung, kein Klackern).
 
 **finishT + Duration-Slider Kopplung für Open-Tracks:**
 Duration-Slider beeinflusst direkt finishT. speedMultiplier der Racer beeinflusst ebenfalls
@@ -809,7 +811,7 @@ Begründung: Bug A+B sind in `modules/camera/` — unabhängig von RaceScreen, s
 Bug C ist eine 3-Zeilen-Änderung in RaceScreen — kein Grund auf Refactor zu warten.
 PR-C (Refactor) danach ist 100% behavior-preserving von Anfang an. Kein "Refactor eines buggy State".
 
-### 12.2 Sub-PR-Plan (8 PRs: PR-A aufgeteilt in A1 + A2)
+### 12.2 Sub-PR-Plan (9 PRs: PR-A aufgeteilt in A1 + A2-Diagnose + A2)
 
 ```
 PR-A1: Q-25-Fix + Duration-Slider + finishT (bestehende Pipeline)
@@ -820,14 +822,24 @@ PR-A1: Q-25-Fix + Duration-Slider + finishT (bestehende Pipeline)
   - +Tests: speedScale neue maxScale-Grenze, openTrackFinishT-Integration
   - Macht Space Sprint sofort spielbar (~131 px/s, ~144s)
 
-PR-A2: Speed-Pipeline-Architektur-Umbau (§7.4)
+PR-A2-Diagnose: Speed-Pipeline Lese-PR (kein Code-Change)
+  - Analog TLH-Konzept-Sprint-Pattern: Diagnose vor Implementation
+  - CC liest alle relevanten Speed-Pipeline-Files vollständig
+  - Output: docs/SPEED_REFACTOR_ANALYSIS.md
+    - Welche Files betroffen (Ziel: < 30)
+    - Welche Tests touchiert
+    - Welche Pattern-Brüche entstehen
+    - Geschätzter Scope
+  - PR-Body: "Diagnose vor PR-A2-Implementation, kein Code-Change"
+  - User + Strategie-Review der Diagnose vor PR-A2-Start
+  - Falls Scope groß (> 30 Files / Test-Architektur-Umbau): zusätzlicher Konzept-Sprint
+
+PR-A2: Speed-Pipeline-Architektur-Umbau (§7.4, startet erst nach Diagnose-Review)
   - computeRaceBaseSpeed(pathLengthPx, renndauer, speedMultiplier_distribution) neue Funktion
   - race_baseSpeed wird race-spezifisch bei Race-Init berechnet
   - speedScaleFactor entfällt als eigenständige Größe (in computeRaceBaseSpeed integriert)
   - Closed-Tracks: optionale Wunschdauer zusätzlich zur Rundenzahl
-  - Spielleiter denkt in Sekunden, nicht px/s
   - +Tests: alle bestehenden Speed-Tests anpassen (D9/D10/D11 Basis nicht brechen)
-  - Prerequisite: Scope-Analyse vor Implementation (> 30 Files? → CC meldet zurück)
 
 PR-B: Camera-Bug-Fixes (Bug A + Bug B + Bug C)
   - Bug A: targetZoom = overviewZoom statt 1 im OVERVIEW-State (CameraDirector.js:178-183)
@@ -918,8 +930,9 @@ entsprechend angepasst werden.
 **R7 — Speed-Pipeline-Refactor (PR-A2) Scope-Unsicherheit:**
 Speed-Pipeline (baseSpeed, speedMultiplier, speedScaleFactor) ist in vielen Stellen referenziert.
 D9/D10/D11/D7a/D7b/D7c bauen auf aktueller Pipeline. PR-A2 muss alle Tests anpassen.
-Mitigation: `computeRaceBaseSpeed` als isolierte neue Funktion; bestehende Aufrufer werden
-nacheinander umgestellt. Bei > 30 Files betroffen: CC meldet zurück vor Implementation.
+**Mitigation: PR-A2-Diagnose-PR** (Lese-PR vor Implementation) — CC analysiert Scope vollständig,
+schreibt `docs/SPEED_REFACTOR_ANALYSIS.md`, User reviewed vor PR-A2-Start. Scope-Risiko damit
+strukturell adressiert. Weiteres Mitigation: `computeRaceBaseSpeed` als isolierte Funktion.
 
 **R8 — PRE_RACE-Phase Tag-Dichte bei N=100:**
 100 Tags gleichzeitig in PRE_RACE. Bei kleinem Canvas könnten Tags komplett überlappen.
@@ -927,16 +940,17 @@ Mitigation: Tag-Größe in PRE_RACE 0.8× der RACING-Größe. Falls noch zu dich
 Tags in PRE_RACE ebenfalls limitieren (nur Name-Tags der ersten 20 Racer), aber das
 konterkariert den "Spieler findet sich"-Use-Case. Erst im Browser-Test bewerten.
 
-### 13.2 User-Input-Fragen
+### 13.2 Geklärte Konzept-Fragen (alle beantwortet 2026-05-02/03)
 
-*Alle 6 ursprünglichen User-Input-Fragen (UI-1 bis UI-6) geklärt per User-Entscheidung 2026-05-02.*
-
-Neue offene Frage:
-
-| # | Frage | Kontext |
-|---|-------|---------|
-| UI-7 | Soll OVERVIEW-Cooldown durationsadaptiv sein? Festes 20s-Cooldown ergibt bei 30s-Race 1 OVERVIEW-Slot, bei 144s-Race 7 Slots. Alternative: `cooldown = max(10s, duration × 0.14)` → immer ~2–3 Slots unabhängig von Renndauer. | §10.2 |
-| UI-8 | Speed-Pipeline-Refactor (PR-A2): Falls Scope-Analyse > 30 Files betroffen zeigt — soll CC zurückmelden vor Implementation oder eingepreist (einfach durchziehen)? | §7.4, R7 |
+| # | Frage | Entscheidung |
+|---|-------|--------------|
+| UI-1 | OVERVIEW-Camera-Verhalten | LEADER_ZOOM als Default; OVERVIEW-Cooldown [15s, 25s] Random-Jitter |
+| UI-2+UI-3 | Renndauer + finishT für Open-Tracks | Duration-Slider + maxScale=10 + finishT dynamisch aus openTrackFinishT |
+| UI-4 | Setup-Button während Race | "Cancel Race" + Confirm-Dialog; Pause+Resume als separates BACKLOG-Item |
+| UI-5 | Fullscreen HUD | Echtes Browser-Fullscreen via API; HUD als halbtransparente Overlays; hudMaxStandings viewport-aware |
+| UI-6 | Name-Tags | Iter 1 (Top-N, PR-E) + Iter 2 state-abhängig als B-UX1-Iter2 im BACKLOG |
+| UI-7 | OVERVIEW-Cooldown-Rhythmus | Random-Jitter [overviewCooldownMin=15s, overviewCooldownMax=25s] — TV-Regie-Analogie |
+| UI-8 | PR-A2 Speed-Refactor Scope-Risiko | Diagnose-Lese-PR (PR-A2-Diagnose) vor Implementation — analog TLH-Pattern |
 
 ### 13.3 Annahmen
 
