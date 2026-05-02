@@ -92,6 +92,15 @@ export async function deleteTrackFromServer(id) {
 }
 
 /**
+ * Remove the background image from a track.
+ * @param {string} trackId — server track ID
+ * @returns {Promise<void>}
+ */
+export async function removeTrackBackground(trackId) {
+  await apiCall(`${API_BASE_URL}/api/tracks/${trackId}/background`, { method: 'DELETE' });
+}
+
+/**
  * Upload a background image for a track.
  * @param {string} trackId — server track ID
  * @param {File|Blob} fileOrBlob — image file (jpeg/png/webp)

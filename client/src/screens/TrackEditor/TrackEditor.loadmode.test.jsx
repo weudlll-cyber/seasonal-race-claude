@@ -73,11 +73,14 @@ vi.mock('../../modules/storage/trackLoader.js', () => ({
 const mockUpdate = vi.fn().mockResolvedValue({ id: 'dirt-oval', geometryId: 'custom-new' });
 const mockCreate = vi.fn().mockResolvedValue({ id: 'new-id', geometryId: 'custom-123' });
 
+const mockRemoveBg = vi.fn().mockResolvedValue(undefined);
+
 vi.mock('../../services/trackApi.js', () => ({
   updateTrackOnServer: (...args) => mockUpdate(...args),
   createTrackOnServer: (...args) => mockCreate(...args),
   deleteTrackFromServer: vi.fn().mockResolvedValue(undefined),
   uploadTrackBackground: vi.fn().mockResolvedValue({ backgroundImageFile: 'bg.jpg' }),
+  removeTrackBackground: (...args) => mockRemoveBg(...args),
 }));
 
 // Mock trackEditorSave so tests can trigger save without real geometry data
@@ -367,6 +370,81 @@ describe('TrackEditor — F3 reproduction: save from no-background track (load m
     expect(serverId).toBe('dirt-oval');
     expect(typeof putBody.geometryId).toBe('string');
     expect(putBody.geometryId.startsWith('custom-')).toBe(true);
+  });
+});
+
+// ── Remove background button ──────────────────────────────────────────────────
+
+describe('TrackEditor — "Remove background" button', () => {
+  it('is not visible when no background is set (new track mode)', () => {
+    renderEditor('/track-editor');
+    expect(screen.queryByTestId('remove-background-btn')).not.toBeInTheDocument();
+  });
+
+  it('is visible when a background image is loaded (load mode)', async () => {
+    vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
+    renderEditor('/track-editor?load=dirt-oval');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
+    });
+  });
+
+  it('click in load mode calls removeTrackBackground with the server ID', async () => {
+    vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
+    renderEditor('/track-editor?load=dirt-oval');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('remove-background-btn'));
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveBg).toHaveBeenCalledWith('dirt-oval');
+    });
+  });
+
+  it('click in load mode hides the button after removal', async () => {
+    vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
+    renderEditor('/track-editor?load=dirt-oval');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('remove-background-btn'));
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('remove-background-btn')).not.toBeInTheDocument();
+    });
+  });
+
+  it('click in new track mode resets state without calling removeTrackBackground', async () => {
+    renderEditor('/track-editor');
+
+    const fileInput = document.querySelector('input[type="file"]');
+    const file = new File(['x'], 'bg.png', { type: 'image/png' });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('remove-background-btn'));
+    });
+
+    expect(mockRemoveBg).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByTestId('remove-background-btn')).not.toBeInTheDocument();
+    });
   });
 });
 

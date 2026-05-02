@@ -20,6 +20,7 @@ import {
   updateTrackOnServer,
   deleteTrackFromServer,
   uploadTrackBackground,
+  removeTrackBackground,
 } from '../../services/trackApi.js';
 import { API_BASE_URL } from '../../services/api.js';
 import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
@@ -950,9 +951,30 @@ export default function TrackEditor() {
     loadTrackData(track, entry?.serverId ?? null);
   }
 
+  async function handleRemoveBackground() {
+    if (loadedServerId) {
+      setIsSaving(true);
+      try {
+        await removeTrackBackground(loadedServerId);
+      } catch (err) {
+        setServerError(err.message || 'Background entfernen fehlgeschlagen.');
+        return;
+      } finally {
+        setIsSaving(false);
+      }
+    }
+    setBackgroundImage(null);
+    setBackgroundFile(null);
+  }
+
   async function handleDelete() {
     if (!loadedServerId && !loadedGeometryId) return;
-    if (!window.confirm(`Delete track "${trackName}"? This cannot be undone.`)) return;
+    if (
+      !window.confirm(
+        `Delete track "${trackName}" and its background image permanently? This cannot be undone.`
+      )
+    )
+      return;
 
     setIsSaving(true);
     try {
@@ -1321,22 +1343,34 @@ export default function TrackEditor() {
           />
           <button
             type="button"
-            className={`${s.bgUploadBtn}${!isLoadMode && !backgroundImage ? ` ${s.bgUploadBtnRequired}` : ''}`}
+            className={`${s.bgUploadBtn}${!isLoadMode && !backgroundImage && !backgroundFile ? ` ${s.bgUploadBtnRequired}` : ''}`}
             onClick={() => fileInputRef.current?.click()}
             title={
-              backgroundImage
+              backgroundImage || backgroundFile
                 ? 'Change background image'
                 : isLoadMode
                   ? 'Upload background image (optional)'
                   : 'Upload background image (required)'
             }
           >
-            {backgroundImage
-              ? `🖼 ${backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
+            {backgroundImage || backgroundFile
+              ? `🖼 ${backgroundFile ? backgroundFile.name : backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
               : isLoadMode
                 ? '📷 No image'
                 : '📷 No image · required'}
           </button>
+          {(backgroundImage || backgroundFile) && (
+            <button
+              type="button"
+              className={s.bgRemoveBtn}
+              disabled={isSaving}
+              onClick={handleRemoveBackground}
+              data-testid="remove-background-btn"
+              title="Remove background image"
+            >
+              Remove background
+            </button>
+          )}
           <button className={s.saveBtn} disabled={saveDisabled} onClick={handleSave}>
             {isSaving ? 'Saving…' : saveLabel}
           </button>
