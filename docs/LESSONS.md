@@ -782,3 +782,35 @@ Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` v
 **Leitfrage:** "Welche Records dürfen niemals fehlen? Sind sie durch API-Guards UND Startup-Wiederherstellung geschützt?"
 
 **Konkrete Umsetzung:** `DELETE /api/tracks/:id` gibt 403 für Default-Tracks. `migrateDefaultTracks()` läuft bei jedem Boot und sät fehlende Default-Tracks nach.
+
+---
+
+## Lesson 43 — useEffect mit asynchronen Callbacks brauchen Cleanup
+
+**Symptom:** State wechselt mehrfach schnell, alte async Callbacks (`onload`, `onerror`, `fetch.then`, `setTimeout`) überschreiben das Resultat neuer Effekte. Sichtbar z.B. als: UI-Button zeigt "Remove background" (state truthy), Canvas bleibt aber schwarz (bgRef.current ist null, weil ein alter Callback ihn nach dem erfolgreichen Load wieder auf null gesetzt hat).
+
+**Ursache:** `useEffect` ohne Cleanup — alte Callbacks bleiben aktiv auch wenn ein neuer Effect-Run bereits läuft. Wenn `backgroundImage` von `null` auf eine URL wechselt (z.B. beim Track-Load), überleben Callbacks des null-Runs und können den bgRef nach erfolgreichem Load erneut nullen.
+
+**Konsequenz:** `useEffect` mit asynchronen Callbacks IMMER mit `cancelled`-Flag oder `AbortController` + `return cleanup`.
+
+```js
+useEffect(() => {
+  if (!backgroundImage) {
+    bgRef.current = null;
+    setBgReady(true);
+    return;
+  }
+  setBgReady(false);
+  bgRef.current = null;
+  const img = new Image();
+  let cancelled = false;
+  img.onload = () => { if (!cancelled) { bgRef.current = img; setBgReady(true); } };
+  img.onerror = () => { if (!cancelled) { bgRef.current = null; setBgReady(true); } };
+  img.src = backgroundImage;
+  return () => { cancelled = true; };
+}, [backgroundImage]);
+```
+
+Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn der State-Wert `null` oder `undefined` ist.
+
+**Konkret in TrackEditor:** Background-Image-Effect ohne Cleanup führte zu Race-Condition wenn `backgroundImage` von `null` auf URL wechselte beim Track-Load (fix/track-delete-safeguards, PR #58 Followup).

@@ -259,19 +259,34 @@ export default function TrackEditor() {
 
   // ── effects ───────────────────────────────────────────────────────────────
 
-  // Load background image whenever backgroundImage state changes
+  // Load background image whenever backgroundImage state changes.
+  // Null-guard avoids creating an Image for null/undefined (prevents img.src = "null").
+  // cancelled flag ensures stale callbacks from a superseded effect run are ignored.
   useEffect(() => {
+    if (!backgroundImage) {
+      bgRef.current = null;
+      setBgReady(true);
+      return;
+    }
     setBgReady(false);
     bgRef.current = null;
     const img = new Image();
-    img.src = backgroundImage;
+    let cancelled = false;
     img.onload = () => {
-      bgRef.current = img;
-      setBgReady(true);
+      if (!cancelled) {
+        bgRef.current = img;
+        setBgReady(true);
+      }
     };
     img.onerror = () => {
-      bgRef.current = null;
-      setBgReady(true);
+      if (!cancelled) {
+        bgRef.current = null;
+        setBgReady(true);
+      }
+    };
+    img.src = backgroundImage;
+    return () => {
+      cancelled = true;
     };
   }, [backgroundImage]);
 
