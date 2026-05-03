@@ -52,7 +52,7 @@ N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverwe
 **Sub-PR-Plan (9 PRs):**
 - ✅ PR-A1: Q-25-Fix (maxScale=10) + Duration-Slider + finishT für Open-Tracks (2026-05-03)
 - ✅ PR-A2-Diagnose: Lese-PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (kein Code-Change) (2026-05-03)
-- ✅ PR-A2: Speed-Pipeline-Architektur-Umbau — `computeRaceBaseSpeed`, speedScaleFactor entfernt, Closed-Track Duration-Slider (Model D), SpeedScaleSection entfernt (2026-05-03)
+- ✅ PR-A2: Speed-Pipeline-Architektur-Umbau — `computeRaceBaseSpeed`, speedScaleFactor entfernt, Closed-Track Duration-Slider (Model D), SpeedScaleSection entfernt (2026-05-03). **Fix-Commit 2026-05-04:** speedMultiplier-Normalisierung + spreadMinFactor (E1+E2) — Browser-Verifikation ausstehend.
 - PR-B: Camera-Bug-Fixes (Bug A+B+C)
 - PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
 - PR-D: Camera-State-Machine (OVERVIEW Random-Jitter, Spannungs-Stärke-Logik, findBattleCandidate)

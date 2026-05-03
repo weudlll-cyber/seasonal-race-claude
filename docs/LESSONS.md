@@ -886,7 +886,7 @@ Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn de
 
 ---
 
-## Lesson — Symptom-Fix vs. Architektur-Fix (PR-A1 / PR-A2)
+## Lesson 48 — Symptom-Fix vs. Architektur-Fix (PR-A1 / PR-A2)
 
 **Kontext:** Q-25 (Space Sprint zu schnell) wurde in PR-A1 als Symptom-Fix gelöst:
 `maxScale` von 4.0 auf 10.0 erhöht. Das Ergebnis war besser, aber der fundamentale
@@ -908,3 +908,40 @@ die Architektur selbst das Problem verursacht. Eine 3-Zeilen-Formel kann eine
 10-Parameter-Konfiguration überflüssig machen.
 
 **Verweis:** PR #60 Nachtrag 5 — 10 K-Korrekturen aus kombiniertem User+Strategie-Claude-Review.
+
+---
+
+## Lesson 49 — Last-Finisher vs. Median-Racer Semantics bei duration-driven Speed
+
+**Kontext:** PR-A2 implementierte `computeRaceBaseSpeed(finishT, targetDuration)` so dass der
+Median-Racer (spreadFactor=1.0) in `targetDuration` fertig wird. Browser-Test (2026-05-04) zeigte:
+Dirt Oval Horse 46s → 48s (+4%, akzeptabel), Space Sprint Rocket 30s → 26s (-13%). Zwei Bugs:
+E1: `speedMultiplier` nicht normalisiert (Rocket sm=1.25 läuft 25% schneller → fertig nach 24s).
+E2: "Race Duration 30s" war de facto ein Median-Versprechen, nicht ein Last-Finisher-Versprechen.
+
+**Erkenntnis:** Eine duration-driven Speed-Architektur braucht zwei explizite Entscheidungen:
+
+1. **Was verspricht die Duration?** Median-Racer-Semantik: Mitte des Feldes fertig bei T. Last-Finisher-Semantik: letzter Racer fertig bei T. Beide sind valide — aber es muss eine Entscheidung getroffen werden und sie muss im Code codiert sein.
+
+2. **Welchen speedMultiplier hat die Kalibrierung?** Wenn `computeRaceBaseSpeed` für sm=1.0 kalibriert ist, muss der Aufruf T mit sm multiplizieren damit der Racer-eigene sm sich herauskürzt.
+
+**Korrekte Formel (Last-Finisher + sm-normalisiert):**
+```
+T = targetDuration × spreadMinFactor × speedMultiplier
+race_baseSpeed = finishT / (REFERENCE_FPS × T)
+```
+Der sloweste Racer zeichnet BASE_SPEED_MIN → spreadFactor = BASE_SPEED_MIN/MEAN = spreadMinFactor.
+Sein Finish: `finishT / (race_baseSpeed × sm × spreadMinFactor × FPS)` = targetDuration ✓.
+Der Median-Racer fertig bei `targetDuration × spreadMinFactor ≈ 87%` von targetDuration.
+
+**Spec-Fehler-Lektion:** Die Spec zeigte `T = targetDuration × spreadMinFactor / speedMultiplier`.
+Das ist falsch. Die eigenen Validierungszahlen der Spec (Rocket 30s → letzter fertig bei 30s)
+sind nur mit Multiplikation erreichbar. Immer die Validierungszahlen gegen die Formel prüfen,
+nicht nur die Formel-Zeile im Spec-Text.
+
+**Konsequenz:** Bei der Implementierung einer duration-driven Speed-Architektur:
+1. Die Duration-Semantik explizit festlegen und im Code kommentieren (last-finisher vs. median).
+2. `speedMultiplier`-Normalisierung am Aufruf-Ort, nicht in der Pure Function — die Pure Function bleibt generisch.
+3. Pipeline-Contract-Tests schreiben die End-to-End verifizieren dass der sloweste und median Racer zur richtigen Zeit ankommen.
+
+**Verweis:** PR-A2-fix-commit (2026-05-04), `raceBaseSpeed.test.js` describe-Block "pipeline contract — last-finisher semantics".

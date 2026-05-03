@@ -207,9 +207,13 @@ export default function RaceScreen() {
     const finishT = isOpenTrack
       ? 1.0 - behaviorConfig.runoutZone
       : (raceData.targetLaps ?? lapsFromDuration(duration));
-    // targetDuration drives race_baseSpeed. Fallback: natural duration at mean speed.
     const targetDuration = raceData.targetDuration ?? finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
-    const race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration);
+    // Last finisher arrives at targetDuration: normalize by spreadMinFactor (E2) and speedMultiplier (E1).
+    const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
+    const race_baseSpeed = computeRaceBaseSpeed(
+      finishT,
+      targetDuration * spreadMinFactor * speedMultiplier
+    );
     const maxLaps = isOpenTrack ? 1 : finishT;
 
     const rawBbox = shapeRef.current.getBoundingBox();
