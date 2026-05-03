@@ -154,8 +154,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Konzept-Doku-Sprint Camera-Director (PR in Arbeit). Neue Datei `docs/CAMERA_DIRECTOR.md` (12 Sektionen, 3 Code-Bugs diagnostiziert, Q-25 empirisch gelöst). Kein Code-Change — Test-Counts unverändert. |
 | 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Camera-Director-Konzept (PR #60, merge-commit `123faeb`). `docs/CAMERA_DIRECTOR.md` final — 13 Sektionen, 5 Commits, alle §13.2-Fragen UI-1–UI-8 beantwortet. Nachtrag 5 (K1–K10): TENDENZ-LOGIK Architektur-Klarstellung, minGapInSpitzengruppe-Trigger, Random-Jitter OVERVIEW, findBattleCandidate(). 9 Sub-PRs spezifiziert (PR-A1 bis PR-G). Kein Code-Change — Test-Counts unverändert. |
 
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Lessons L44–L47 (PR #61, merge-commit `0481689`). Docs-only — Test-Counts unverändert. |
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Default-Track-Geometrien + Backgrounds (PR #62, merge-commit `6d12037`). L.7-Bug2 behoben: alle 5 Default-Tracks spielbar. Kein Code-Change — Test-Counts unverändert. |
+
 **Aktueller Branch-HEAD:** `master` — alle PRs gemergt
-**Master-HEAD:** `123faeb` (PR #60 Camera-Director-Konzept, merge-commit 2026-05-03)
+**Master-HEAD:** `6d12037` (PR #62 Default-Track-Geometrien, merge-commit 2026-05-03)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün
 
