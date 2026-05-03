@@ -181,31 +181,41 @@ Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `s
 `runoutZone`). All tunable in Dev Screen. Track-level `maxRacers` shown in TrackManager with
 "modified" badge.
 
-## Speed Pipeline (PR-A2)
+## Speed Pipeline (PR-A2 + fix)
 
 Race speed is duration-driven. The operator chooses a target duration in the SetupScreen; race
 init translates that directly into per-racer `baseSpeed`.
 
 **Formula:**
 ```
-race_baseSpeed = computeRaceBaseSpeed(finishT, targetDurationSeconds)
-               = finishT / (REFERENCE_FPS × targetDurationSeconds)
+spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN
+
+race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × spreadMinFactor × speedMultiplier)
+               = finishT / (REFERENCE_FPS × targetDuration × spreadMinFactor × speedMultiplier)
 
 r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBonus)
 ```
 
 - `finishT` — target position: `1.0 − runoutZone` (open track) or lap count 1–4 (closed track).
-- `targetDurationSeconds` — operator-chosen race duration (open-track slider or closed-track
-  duration slider). Fallback: natural duration derived from mean base speed.
+- `targetDuration` — operator-chosen race duration (open-track slider or closed-track duration
+  slider). Fallback: natural duration derived from mean base speed.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
   around the median; tunable in Dev Screen → Base Speed section.
-- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …).
+- `spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN ≈ 0.871` — the minimum possible spreadFactor.
+  Used to calibrate `race_baseSpeed` so the slowest racer (who draws BASE_SPEED_MIN) finishes at
+  exactly `targetDuration`.
+- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
+  into the T argument so it cancels out in each racer's actual finish time.
 - `speedBonus` — rear-row compensation from D7c row layout.
 
-**Consequence:** A horse (sm=1.0) with spreadFactor=1.0 finishes in exactly `targetDurationSeconds`.
-A rocket (sm=1.25) finishes in `targetDuration / 1.25`. `openTrackDurationRange` (lapUtils.js)
-derives the slider [min=30s, max] from track physics (path length) so the operator only sees
-meaningful duration values.
+**Race-end-time semantics:** `targetDuration` = time until the **last** finisher crosses the line.
+The median racer finishes at approximately `targetDuration × spreadMinFactor ≈ 87%` of target
+(e.g. ~52s for a 60s race). The spread of finish times is ~±13% of target around the median.
+All racer types (horse, rocket, snail, …) honour the same last-finisher deadline regardless of
+their `speedMultiplier`.
+
+`openTrackDurationRange` (lapUtils.js) derives the slider [min=30s, max] from track physics
+(path length) so the operator only sees meaningful duration values.
 
 **Removed (PR-A2):** `speedScaleFactor` / `SpeedScaleSection` / `DEFAULT_SPEED_SCALE_CONFIG` —
 superseded by the duration-driven approach above.
