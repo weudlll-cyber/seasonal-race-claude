@@ -66,41 +66,50 @@ describe('computeRaceBaseSpeed', () => {
   });
 });
 
-describe('pipeline contract — last-finisher semantics', () => {
+describe('pipeline contract — N-calibrated expected-min semantics', () => {
   const BASE_SPEED_MIN = DEFAULT_BASE_SPEED_CONFIG.min;
   const BASE_SPEED_MAX = DEFAULT_BASE_SPEED_CONFIG.max;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
   const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
+  const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
 
-  it('horse (sm=1.0): slowest racer finishes at exactly targetDuration', () => {
+  function expectedMinSpread(n) {
+    return spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (n + 1);
+  }
+
+  it('expectedMinSpread(3) matches formula: 0.871 + 0.258/4 ≈ 0.9355', () => {
+    expect(expectedMinSpread(3)).toBeCloseTo(0.9355, 3);
+  });
+
+  it('horse (sm=1.0, n=3): expected last finisher arrives at targetDuration', () => {
     const finishT = 0.95;
     const targetDuration = 60;
     const sm = 1.0;
-    const rbsp = computeRaceBaseSpeed(finishT, targetDuration * spreadMinFactor * sm);
-    const framesNeeded = finishT / (rbsp * sm * spreadMinFactor);
-    const secondsNeeded = framesNeeded / REFERENCE_FPS;
+    const ems = expectedMinSpread(3);
+    const rbsp = computeRaceBaseSpeed(finishT, targetDuration * ems * sm);
+    const secondsNeeded = finishT / (rbsp * sm * ems) / REFERENCE_FPS;
     expect(secondsNeeded).toBeCloseTo(targetDuration, 2);
   });
 
-  it('rocket (sm=1.25): slowest racer finishes at exactly targetDuration', () => {
+  it('rocket (sm=1.25, n=4): expected last finisher arrives at targetDuration', () => {
     const finishT = 0.95;
     const targetDuration = 30;
     const sm = 1.25;
-    const rbsp = computeRaceBaseSpeed(finishT, targetDuration * spreadMinFactor * sm);
-    const framesNeeded = finishT / (rbsp * sm * spreadMinFactor);
-    const secondsNeeded = framesNeeded / REFERENCE_FPS;
+    const ems = expectedMinSpread(4);
+    const rbsp = computeRaceBaseSpeed(finishT, targetDuration * ems * sm);
+    const secondsNeeded = finishT / (rbsp * sm * ems) / REFERENCE_FPS;
     expect(secondsNeeded).toBeCloseTo(targetDuration, 2);
   });
 
-  it('median racer finishes at targetDuration × spreadMinFactor (earlier than last)', () => {
-    const finishT = 0.95;
-    const targetDuration = 60;
+  it('N-invariance: n=3 and n=20 both calibrate expected last finisher to targetDuration', () => {
+    const finishT = 1.0;
+    const targetDuration = 46;
     const sm = 1.0;
-    const rbsp = computeRaceBaseSpeed(finishT, targetDuration * spreadMinFactor * sm);
-    // Median racer draws spreadFactor=1.0 (BASE_SPEED_MEAN / BASE_SPEED_MEAN)
-    const framesNeeded = finishT / (rbsp * sm * 1.0);
-    const secondsNeeded = framesNeeded / REFERENCE_FPS;
-    expect(secondsNeeded).toBeCloseTo(targetDuration * spreadMinFactor, 2);
-    expect(secondsNeeded).toBeLessThan(targetDuration);
+    for (const n of [3, 20]) {
+      const ems = expectedMinSpread(n);
+      const rbsp = computeRaceBaseSpeed(finishT, targetDuration * ems * sm);
+      const secondsNeeded = finishT / (rbsp * sm * ems) / REFERENCE_FPS;
+      expect(secondsNeeded).toBeCloseTo(targetDuration, 2);
+    }
   });
 });

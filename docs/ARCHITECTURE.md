@@ -188,10 +188,14 @@ init translates that directly into per-racer `baseSpeed`.
 
 **Formula:**
 ```
-spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN
+spreadMinFactor  = BASE_SPEED_MIN / BASE_SPEED_MEAN
+spreadMaxFactor  = BASE_SPEED_MAX / BASE_SPEED_MEAN
 
-race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × spreadMinFactor × speedMultiplier)
-               = finishT / (REFERENCE_FPS × targetDuration × spreadMinFactor × speedMultiplier)
+// N-calibrated: E[min of n U(spreadMin, spreadMax)] = spreadMin + range / (n+1)
+expectedMinSpreadFactor = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1)
+
+race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier)
+               = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier)
 
 r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBonus)
 ```
@@ -201,18 +205,20 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBon
   slider). Fallback: natural duration derived from mean base speed.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
   around the median; tunable in Dev Screen → Base Speed section.
-- `spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN ≈ 0.871` — the minimum possible spreadFactor.
-  Used to calibrate `race_baseSpeed` so the slowest racer (who draws BASE_SPEED_MIN) finishes at
-  exactly `targetDuration`.
+- `expectedMinSpreadFactor` — N-calibrated expected value of the minimum spreadFactor across all
+  racers. With n players drawing from U[spreadMin, spreadMax], the expected minimum is
+  `spreadMin + (spreadMax − spreadMin) / (n + 1)`. At n=3: ≈ 0.9355. At n=∞: → spreadMinFactor ≈ 0.871.
+  Pre-multiplied into the T argument of `computeRaceBaseSpeed` so the expected last finisher
+  cancels out and arrives exactly at `targetDuration`.
 - `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
   into the T argument so it cancels out in each racer's actual finish time.
 - `speedBonus` — rear-row compensation from D7c row layout.
 
-**Race-end-time semantics:** `targetDuration` = time until the **last** finisher crosses the line.
-The median racer finishes at approximately `targetDuration × spreadMinFactor ≈ 87%` of target
-(e.g. ~52s for a 60s race). The spread of finish times is ~±13% of target around the median.
-All racer types (horse, rocket, snail, …) honour the same last-finisher deadline regardless of
-their `speedMultiplier`.
+**Race-end-time semantics:** `targetDuration` = **expected** time until the last finisher crosses
+the line, calibrated for the actual player count. Individual runs still vary by ±5% due to
+random spread sampling, but the expectation is exact for any N. The median racer finishes at
+approximately `targetDuration × expectedMinSpreadFactor` (i.e. earlier than targetDuration).
+All racer types honour the same deadline regardless of their `speedMultiplier`.
 
 `openTrackDurationRange` (lapUtils.js) derives the slider [min=30s, max] from track physics
 (path length) so the operator only sees meaningful duration values.

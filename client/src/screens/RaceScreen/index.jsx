@@ -208,11 +208,15 @@ export default function RaceScreen() {
       ? 1.0 - behaviorConfig.runoutZone
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const targetDuration = raceData.targetDuration ?? finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
-    // Last finisher arrives at targetDuration: normalize by spreadMinFactor (E2) and speedMultiplier (E1).
+    // N-calibrated expected-minimum spread: E[min_n] = spreadMin + (spreadMax - spreadMin) / (n+1).
+    // Ensures the expected last finisher arrives at targetDuration regardless of player count.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
+    const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
+    const expectedMinSpreadFactor =
+      spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
     const race_baseSpeed = computeRaceBaseSpeed(
       finishT,
-      targetDuration * spreadMinFactor * speedMultiplier
+      targetDuration * expectedMinSpreadFactor * speedMultiplier
     );
     const maxLaps = isOpenTrack ? 1 : finishT;
 
