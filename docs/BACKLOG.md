@@ -31,7 +31,34 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ### 1 — Kamera-Phase + RaceScreen-Refactor 🔜 Hot — nächste Implementierungsphase
 
-CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Vorgehen: Konzept-Doku-Sprint zuerst (Architektur-Diskussion), dann Implementation. Parallel-Überlegung: Q-25 (Strecken-Canvas-Größe begrenzt Strecken-Länge) sollte in der Konzept-Phase mitgedacht werden, da Canvas-Limits das Camera-Verhalten beeinflussen.
+**Konzept-Doku-Sprint abgeschlossen 2026-05-02. User-Klärungen aller 6 §12.2-Fragen 2026-05-02.**
+Vollständige Spezifikation in `docs/CAMERA_DIRECTOR.md`.
+
+**3 strukturelle Bugs identifiziert** (empirisch aus Code-Analyse):
+- **Bug A** (Garden Path P1): OVERVIEW-Pan ist ein No-Op — World-Edge-Clamp forciert offsetX/Y=0 wenn zoom=1 (`CameraDirector.js:178-183`)
+- **Bug B** (River Run P2): Zoom-Inversion auf großen Open-Tracks — LEADER_ZOOM zoomt raus statt rein (effZoom=1.5×0.298=0.447 < OVERVIEW=1.5)
+- **Bug C** (River Run P3): `openTrackPanTarget` nutzt alle Racer statt Focus-Group — zeigt Pulk-Mitte statt Spitze
+
+**Q-25 Root Cause identifiziert und Lösung beschlossen:**
+- `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in `defaults.js:112` → Fix: `maxScale=10.0`
+- Space Sprint bei ~131 px/s (Referenz), Renndauer ~144s
+- Open-Tracks: Duration-Slider im Setup-Screen, finishT dynamisch aus Strecken-Physik
+
+**Camera-Regie-Philosophie beschlossen:** LEADER_ZOOM als Default, Spitze immer im Bild,
+Sprite-Korridor [min, max] als harte Camera-Constraints, OVERVIEW periodisch (20s cooldown, 4s dauer).
+N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverweis: D7d.
+
+**Sub-PR-Plan (7 PRs):**
+- PR-A: Q-25-Fix + Duration-Slider + finishT für Open-Tracks
+- PR-B: Camera-Bug-Fixes (Bug A+B+C)
+- PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
+- PR-D: Camera-State-Machine (OVERVIEW-Cooldown, Aufmerksamkeits-Hierarchie, Phase-Erkennung)
+- PR-E: Sprite-Korridor [min+max] + Tag-Visibility Iter 1 (B-UX1) + Dev-Panel-Sliders beider Werte
+- PR-F: Dev-Panel Camera-Tunables + HUD-Overlay
+- PR-G: UI-Bugs (Cancel Race + Fullscreen API)
+
+Vorgehen: PR-A → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
+Offene User-Input-Frage: UI-7 (OVERVIEW-Cooldown durationsadaptiv?) in `docs/CAMERA_DIRECTOR.md §13.2`.
 
 ---
 
@@ -167,17 +194,30 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
 
 ### Phase B (Wiring-Lücken + UX-Verbesserungen)
 
-- **B-UX1** — Name-Tag-Readability bei dichten Pulks (aus D7b-Browser-Test)
-  - Lane-frei erlaubt beliebige Y-Cluster → schwarze Namens-Tags überlappen in dichten Pulks,
-    einzelne Namen nicht mehr lesbar
-  - Lösungs-Ideen (Spec steht noch aus):
-    - Tags bei LEADER_ZOOM / BATTLE_ZOOM ausblenden oder reduzieren
-    - Nur Top-N sichtbare Spieler bekommen Tags (Rest kein Tag)
-    - Anti-Overlap-Algorithmus: überlappende Tags vertikal stapeln
-    - Tags in OVERVIEW-State kleiner, in Zoom-States größer
-    - Hover/Click auf Spieler zeigt Namen prominent
-  - Priorität: mittel. Race-Lesbarkeit leidet, aber kein Blocker für D7c.
-    Empfehlung: nach D7c oder D7d angehen.
+- **B-UX1** — Name-Tag-Readability (Iteration 1, umzusetzen in PR-E der Kamera-Phase)
+  - Spec in `docs/CAMERA_DIRECTOR.md §6.3`
+  - Top-N Tags sichtbar (N = `tagVisibleCount`, Default = spitzengruppe = clamp(round(N×0.1), 3, 10))
+  - `tagVisibleCount` als Dev-Panel-Slider
+  - Kein "eigener Spieler" (Project-Principle 3) — alle Racer gleichberechtigt
+  - Alle anderen Racer ohne Tag
+
+- **B-UX1-Iter2** — Name-Tags state-abhängige Strategie (Iteration 2, nach Iteration 1)
+  - Spec in `docs/CAMERA_DIRECTOR.md §6.4`
+  - OVERVIEW: nur Top-3 oder keine Tags; LEADER_ZOOM: Spitzengruppe prominent;
+    BATTLE_ZOOM: beteiligte Racer prominent; Zoom-Out: Anti-Overlap wenn Platz
+  - User möchte das explizit umsetzen sobald Iteration 1 stabil läuft
+  - Priorität: nach PR-E (Kamera-Phase)
+
+- **B-UX-Pause** — Pause+Resume Race
+  - Während laufendem Rennen Pause-Button → rAF-Loop einfrieren, Resume → fortsetzen
+  - Explizit NICHT Teil der Kamera-Phase (PR-G implementiert nur Cancel Race mit Confirm-Dialog)
+  - Priorität: nach Kamera-Phase
+
+- **B-UX-ManualFocus** — MANUAL_FOCUS: Spielleiter-Klick auf Racer sperrt Camera
+  - Canvas-Click-Handler + Hit-Test Racer + neuer MANUAL_FOCUS-State in CameraDirector
+  - Lock-UI-Indikator, Unlock-Mechanismus (click empty / button)
+  - Aufwand: ~150–200 LOC, neuer Camera-State
+  - Priorität: nach Kamera-Phase (zu komplex für diese Phase)
 
 - **B-UX2** — Dev-Screen Cleanup + Hilfe-Screen
   - Dev-Screen ist über D9/D10/D11/D7a/D7b auf 30+ tunable Werte gewachsen.
@@ -320,16 +360,12 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   *(User-Beobachtung 2026-05-02)*
 
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
-  Auf 6000-Tracks mit Camera-Zoom-aware Sprite-Skalierung werden Sprites visuell
-  sehr groß. Die Frame-Wechsel der Sprite-Animation (z.B. Pferd 16 Frames Lauf-
-  Zyklus, basePeriodMs=800ms) werden dadurch deutlich sichtbar — wirken ruckartig
-  statt smooth.
-  Mögliche Lösungen:
-  - basePeriodMs per Camera-Zoom skalieren (kürzere Period bei großen Sprites)
-  - Sprite-Frame-Interpolation (Tweening zwischen Frames, komplexer)
-  - Performance-Profiling falls Render-Last das Problem ist
-  Wahrscheinlich Phase D7 (Visual Experience Architecture) zugehörig oder eigenes Q-Item.
-  Niedrige Priorität — pragmatisch akzeptabel für aktuelle Use-Cases.
+  Auf 6000-Tracks werden Sprites sehr groß — Frame-Wechsel wirken ruckartig.
+  **Strukturelle Lösung in PR-E der Kamera-Phase:** `maxTargetScreenPx` als oberer Camera-Zoom-Limit
+  verhindert dass Camera nah genug ranzoomt um Sprites "Animation-ruckartig" groß werden zu lassen.
+  Spec in `docs/CAMERA_DIRECTOR.md §6.2`. Q-13 kann nach PR-E + Browser-Verifikation als erledigt
+  markiert werden. Fallback-Lösungen (basePeriodMs-Skalierung, Frame-Interpolation) erst wenn
+  maxTargetScreenPx-Kalibrierung nicht ausreicht.
 
 - ✅ **Q-15** — Visual-System Architectural Debt — durch D7a (PR #33) strukturell adressiert.
   4 multiplikative Skalierungs-Faktoren auf eine Pipeline (computeRenderDisplayScale) reduziert.
