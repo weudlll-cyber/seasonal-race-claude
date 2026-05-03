@@ -119,7 +119,7 @@ Defaults: `spitzengruppeMin=3`, `spitzengruppeMax=10`. Beide als Dev-Panel-Tunab
 | Tags sichtbar (Default) | 3 | 5 | 10 |
 | HUD-Standings | Top-3 | Top-5 | Top-10 |
 | Pulk-Spread-Erwartung | eng | mittel | breit |
-| BATTLE_ZOOM Häufigkeit | hoch | mittel | niedrig (nur Top-3-Duelle) |
+| BATTLE_ZOOM Häufigkeit | hoch | mittel | niedrig (nur Spitzengruppen-Duelle) |
 
 **N=100 Skalierbarkeit:** Camera-Logik ist O(1) pro Frame (nur Spitzengruppe betrachtet).
 `openTrackPanTarget` mit focusRacers berechnet Midpoint über max. 10 Racer — akzeptabel.
@@ -133,15 +133,26 @@ aber Camera-Architektur selbst skaliert.
 Dieser normative Rahmen leitet alle Camera-State-Entscheidungen. Im bestehenden Code
 nur implizit — hier explizit formuliert.
 
+> **Architektur-Hinweis:** Die Camera-Regie ist als TENDENZ-LOGIK formuliert, nicht als
+> Constraint-System. Default-Tendenzen (LEADER_ZOOM ist häufigster State) und Spannungs-Metriken
+> (engstes Duell in Spitzengruppe triggert BATTLE_ZOOM) ersetzen feste Prioritäten-Hierarchien.
+> Das ist bewusste Architektur-Entscheidung — Camera reagiert auf Race-Dynamik, nicht auf
+> starre Reihenfolge.
+
 ### 3.1 Leitsätze
 
 **LEADER_ZOOM ist Default-Modus, nicht OVERVIEW.**
 Das Rennen dreht sich um die Spitze. LEADER_ZOOM auf die Spitzengruppe ist der Ruhezustand
 zwischen dramatischen Momenten. OVERVIEW ist ein periodischer Kontext-Geber, kein Heimat-State.
 
-**Die Spitze ist immer im Bild.**
-Der Leader muss in jedem Camera-State sichtbar sein — hartes Constraint, keine Heuristik.
-Ein Camera-Wechsel der den Leader aus dem Frame schiebt ist verboten.
+**Die Spitze ist die Default-Aufmerksamkeit der Camera.**
+LEADER_ZOOM ist Default-State, der Leader ist meistens im Bild.
+Andere States dürfen den Fokus temporär verschieben:
+- BATTLE_ZOOM auf Spitzengruppen-Duelle (auch wenn Leader nicht im Duell ist)
+- COMEBACK_ZOOM auf besondere Fälle (Last-place-Drama, schneller Aufholer)
+- OVERVIEW auf Pulk-Mitte (periodisch)
+Nach temporärem Abstecher kehrt Camera zu LEADER_ZOOM zurück.
+Es gibt KEIN hartes Constraint dass der Leader in jedem Frame sichtbar sein muss.
 
 **Sprite-Min-Floor ist HARTER Constraint.**
 Wenn ein Camera-Zoom den Sprite unter `minTargetScreenPx` bringen würde, wird der Zoom
@@ -153,25 +164,26 @@ Der Spielleiter sieht auf der Minimap wo alle Racer sind.
 Last-Place-Drama (COMEBACK_ZOOM) ist ein dramatischer Ausnahmefall.
 
 **OVERVIEW ist periodischer Kontext-Geber.**
-Alle 20 Sekunden (tunable) gibt es eine kurze OVERVIEW-Phase (4s, tunable) die das gesamte
+Alle [overviewCooldownMin–overviewCooldownMax]s (Random-Jitter, tunbar im Dev-Panel) gibt es eine kurze OVERVIEW-Phase (overviewDuration, tunbar) die das gesamte
 Feld zeigt. Zusätzlich am Start und am Ende des Rennens. Nicht öfter.
 
-### 3.2 Aufmerksamkeits-Hierarchie
+### 3.2 Aufmerksamkeits-Tendenzen
 
 ```
-1. Spitzengruppe    — Camera folgt IMMER (LEADER_ZOOM, Default)
-2. Top-3-Duelle     — Camera zoomt ran wenn eng (BATTLE_ZOOM)
-3. Pulk-Übersicht   — Kurze periodische OVERVIEW-Checks
-4. Last-place-Drama — Gelegentlich wenn vorne entschieden (COMEBACK_ZOOM)
+1. Spitzengruppe           — LEADER_ZOOM als Default-Tendenz (häufigster State)
+2. Spitzengruppen-Duelle   — Camera zoomt ran wenn eng (BATTLE_ZOOM)
+3. Pulk-Übersicht          — Kurze periodische OVERVIEW-Checks (OVERVIEW)
+4. Last-place-Drama        — Gelegentlich wenn besonders (COMEBACK_ZOOM)
 ```
 
-Wenn zwei Prioritäten konkurrieren, gewinnt die höhere. Beispiel: BATTLE_ZOOM zwischen
-Platz 8 und 9 während Leader allein führt → LEADER_ZOOM bleibt aktiv.
+Das sind **Tendenzen**, keine starre Prioritäts-Hierarchie. Wenn zwei States gleichzeitig
+triggern, gewinnt der mit höherer Spannungs-Stärke (§5.3) — nicht per fixer Reihenfolge.
+LEADER_ZOOM ist häufigster State, aber andere States dürfen den Fokus temporär verschieben.
 
 ### 3.3 Implikationen für N=4 vs N=100
 
 Bei N=4: BATTLE_ZOOM fast immer relevant.
-Bei N=100: BATTLE_ZOOM nur für Top-3-Duelle — nicht für den Kampf um Platz 47.
+Bei N=100: BATTLE_ZOOM nur innerhalb der Top-10-Spitzengruppe — nicht für den Kampf um Platz 47.
 Camera ignoriert den Rest des Feldes bewusst — das ist Feature, kein Bug.
 
 ---
@@ -185,29 +197,30 @@ Camera ignoriert den Rest des Feldes bewusst — das ist Feature, kein Bug.
 | **PRE_RACE** | Startreihen aufgebaut, Countdown läuft | `racePhase === 'COUNTDOWN'` |
 | **Start-Pulk** | Rennen gestartet, Racer noch dicht beieinander | `raceElapsed < 3000ms` |
 | **Auseinanderziehen** | Feld spreizt sich auf | `gapLeadLast 0.05..0.15` |
-| **Spitzenkampf** | 2 Racer eng vorn innerhalb Spitzengruppe | `gap01 < 0.05` |
+| **Spitzenkampf** | Engster Abstand innerhalb Spitzengruppe | `minGapInSpitzengruppe < 0.05` |
 | **Klarer Anführer** | Leader weit vor 2nd | `gap01 >= 0.15` |
 | **Endspurt** | Leader nähert sich finishT | `leader.t / finishT > 0.85` |
-| **Outlier / Last-place-Drama** | Letzter weit abgehängt, vorne klar | `gapLeadLast > 0.3 && gap01 >= 0.1` |
+| **Outlier / Last-place-Drama** | Letzter weit abgehängt, vorne klar entschieden | `gapLeadLast > 0.3 && firstHalfClear` |
 | **Finish** | Erster hat finishT überschritten | `st.finishedCount >= 1` |
 | **RACE_END** | Alle Racer fertig oder Timeout | `st.finishedCount === N` |
 
 ### 4.2 Camera-State-Tabelle (nach User-Klärung UI-1)
 
-| State | Trigger | Priorität | Default Dauer | Anmerkung |
-|-------|---------|-----------|---------------|-----------|
-| **LEADER_ZOOM** | Default-Modus | 1 (höchste) | unbegrenzt | Zielt auf Spitzengruppe-Centroid |
-| **BATTLE_ZOOM** | gap01 < 0.05 (innerhalb Spitzengruppe) | 2 | bis gap01 ≥ 0.07 | Hysterese: eintritt 0.05, austritt 0.07 |
-| **OVERVIEW** | Cooldown abgelaufen (20s) + Start + Ende | 3 | 4s, dann LEADER_ZOOM | Zeigt gesamtes Feld mit Pan |
-| **COMEBACK_ZOOM** | Last-place-Drama (gapLeadLast>0.3 + vorne klar) | 4 (niedrigste) | max 8s | Gelegentlich, nicht dauerhaft |
+| State | Trigger | Tendenz-Stärke | Default Dauer | Anmerkung |
+|-------|---------|----------------|---------------|-----------|
+| **LEADER_ZOOM** | Default-Modus | 1 (stärkste Tendenz) | unbegrenzt | Zielt auf Spitzengruppe-Centroid |
+| **BATTLE_ZOOM** | minGapInSpitzengruppe < 0.05 (engstes Duell in Spitzengruppe) | 2 | bis minGapInSpitzengruppe ≥ 0.07 | Hysterese: eintritt 0.05, austritt 0.07 |
+| **OVERVIEW** | Cooldown abgelaufen ([overviewCooldownMin–overviewCooldownMax]s, Random-Jitter) + Start + Ende | 3 | overviewDuration, dann LEADER_ZOOM | Zeigt gesamtes Feld mit Pan |
+| **COMEBACK_ZOOM** | Last-place-Drama (gapLeadLast>0.3 + firstHalfClear) | 4 (schwächste Tendenz) | max 8s | Gelegentlich, nicht dauerhaft |
 
-OVERVIEW-Cooldown (20s) und OVERVIEW-Dauer (4s) sind Dev-Panel-Tunables.
+OVERVIEW-Cooldown wird zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen (Defaults 15s/25s).
+OVERVIEW-Dauer (overviewDuration) sind Dev-Panel-Tunables.
 
 ### 4.3 OVERVIEW als wiederkehrender State
 
 OVERVIEW wird dreifach ausgelöst:
 1. **Start** — erste ~3s des Rennens, zeigt gesamten Start-Pulk
-2. **Periodisch** — alle 20s (Cooldown), Dauer 4s, dann zurück zu LEADER_ZOOM
+2. **Periodisch** — Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen (Defaults 15s/25s), Dauer overviewDuration, dann zurück zu LEADER_ZOOM
 3. **Ende** — letzte 5s vor `finishT` oder wenn `finishedCount >= 1`, zeigt gesamtes Feld
 
 ### 4.4 MANUAL_FOCUS (aufgeschoben)
@@ -222,7 +235,7 @@ in CameraDirector, Lock-UI-Indikator, Unlock-Mechanismus. ~150–200 LOC, neuer 
 ### 4.5 Smooth Transitions
 
 `MAX_STATE_DURATION=8000ms` als globaler Timer bleibt, ergänzt durch:
-- **Hysterese:** BATTLE_ZOOM bleibt aktiv solange `gap01 < 0.07` (Eintritt 0.05, Austritt 0.07)
+- **Hysterese:** BATTLE_ZOOM bleibt aktiv solange `minGapInSpitzengruppe < 0.07` (Eintritt 0.05, Austritt 0.07)
 - **Event-Trigger:** `finishedCount > 0` erzwingt sofort LEADER_ZOOM auf winner
 - LERP=0.04 (~1.5s zu 90%) gibt bereits sanfte Übergänge beim State-Wechsel
 
@@ -286,18 +299,36 @@ const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, spitzengru
 const { targetX, targetY } = openTrackPanTarget(focusRacers, CW, CH, effZoom, camXMax, camYMax);
 ```
 
-### 5.3 Aufmerksamkeits-Hierarchie im Code
+### 5.3 Spannungs-Stärke-Logik im Code
 
-Prioritäts-Reihenfolge direkt in `_transition()` kodiert:
+`_transition()` evaluiert Race-Zustand und wählt den passendsten State:
 
-1. `finishedCount > 0` → erzwingt LEADER_ZOOM auf winner (override alles)
-2. `raceElapsed < 3000` → erzwingt OVERVIEW (Start-Phase)
-3. `overviewCooldownExpired && !battleCondition` → OVERVIEW (Kontext-Check)
-4. `gap01 < 0.05` (innerhalb Spitzengruppe) → BATTLE_ZOOM
-5. Sonst → LEADER_ZOOM
+```js
+// findBattleCandidate — engstes Duell innerhalb Spitzengruppe
+function findBattleCandidate(racersByPosition, spitzengruppe) {
+  const top = racersByPosition.slice(0, spitzengruppe);
+  let minGap = Infinity, candidatePair = null;
+  for (let i = 0; i < top.length - 1; i++) {
+    const gap = top[i].t - top[i + 1].t;
+    if (gap < minGap) { minGap = gap; candidatePair = [top[i], top[i + 1]]; }
+  }
+  return { minGap, candidatePair };
+}
+// minGapInSpitzengruppe = findBattleCandidate(...).minGap
+// firstHalfClear       = minGapInSpitzengruppe >= 0.05
+```
 
-COMEBACK_ZOOM als Zufalls-Alternative: aktiv wenn `gapLeadLast > 0.3 && gap01 >= 0.1` — gelegentlich,
-nicht dauerhaft. Leader muss noch im Bild bleiben (§3.1).
+Evaluierungs-Logik in `_transition()` (harte Overrides zuerst, dann Tendenzen):
+
+1. `finishedCount > 0` → erzwingt LEADER_ZOOM auf winner *(hartes Override — Rennen vorbei)*
+2. `raceElapsed < startPhaseSeconds×1000` → erzwingt OVERVIEW *(hartes Override — Startphase)*
+3. `minGapInSpitzengruppe < 0.05` → BATTLE_ZOOM auf candidatePair-Centroid
+4. `overviewCooldownExpired` → OVERVIEW *(Kontext-Check, tritt zurück wenn BATTLE_ZOOM aktiv)*
+5. Sonst → LEADER_ZOOM *(Default-Tendenz)*
+
+COMEBACK_ZOOM als gelegentliche Variante: aktiv wenn `gapLeadLast > 0.3 && firstHalfClear` —
+kein enges Duell vorne, Nachzügler weit abgehängt. Wird zufällig eingemischt, ersetzt kurz
+LEADER_ZOOM. Camera muss danach nicht sofort zurück — natürlicher Abstecher.
 
 ### 5.4 Trigger-Erweiterung
 
@@ -398,7 +429,7 @@ Langfristige Vision: state-abhängige Tag-Strategie:
 
 | Camera-State | Tag-Strategie |
 |-------------|---------------|
-| OVERVIEW | Nur Top-3 Tags oder keine |
+| OVERVIEW | Nur Spitzengruppe-Tags oder keine |
 | LEADER_ZOOM | Spitzengruppe-Tags prominent |
 | BATTLE_ZOOM | Tags der beteiligten Racer prominent |
 | COMEBACK_ZOOM | Tag des fokussierten Racers + Leader als Referenz |
@@ -529,11 +560,10 @@ Kernprinzip: **Spielleiter wählt Renndauer, alles andere folgt daraus.**
 - Keine px/s-Denkweise mehr nötig
 - Unterschiedlich schnelle Racer-Types erzeugen natürliche Streuung um die Ziel-Dauer
 
-**Was offen ist (CC-Vorschlag: User-Entscheidung vor PR-A2):**
-- Entfällt `speedScaleFactor` komplett oder bleibt als interner Faktor?
-  CC-Empfehlung: entfällt als eigenständiger Wert, Berechnung landet direkt in `race_baseSpeed`
-- `speedMultiplier`-Override pro Race über Dev-Panel? Vermutlich nicht nötig wenn race_baseSpeed die Strecke steuert
-- Falls Scope-Analyse zeigt > 30 Files betroffen: CC meldet zurück vor Implementation
+**Empfohlene Pipeline-Architektur:**
+- `speedScaleFactor` entfällt als eigenständiger Wert. Die Berechnung wird in `race_baseSpeed` integriert.
+- `speedMultiplier`-Override pro Race ist nicht nötig — `race_baseSpeed` steuert die Strecke ausreichend.
+- Detaillierte Scope-Analyse erfolgt in PR-A2-Diagnose (siehe §13.1 R7).
 
 **Scope-Risiko:** Bestehende Tests aus D9/D10/D11/D7a/D7b basieren auf aktueller Speed-Pipeline.
 PR-A2 muss Tests anpassen ohne Race-Verhalten zu brechen. Mitigation: Speed-Formel-Änderung in
@@ -603,7 +633,7 @@ aus D3.5.5. Beide Overrides in PR-E implementieren — nicht aufschieben.
 
 Alle neuen Camera-Parameter sofort live-wirksam beim nächsten Frame.
 CameraDirector-Instanz wird nicht neu erstellt — Parameter direkt auf dem Objekt aktualisiert.
-`overviewCooldown` und `overviewDuration` werden in `_transition()` live gelesen.
+`overviewCooldownMin`, `overviewCooldownMax` und `overviewDuration` werden in `_transition()` live gelesen. Bei jedem OVERVIEW wird ein neuer Cooldown-Wert zufällig aus [Min, Max] gezogen.
 
 ### 8.3 Per-Track-Overrides (Zukunft)
 
@@ -649,7 +679,7 @@ function toggleFullscreen() {
 
 | Element | Position (Vorschlag CC) | Verhalten |
 |---------|------------------------|-----------|
-| Live-Standings | rechts | zeigt Top-`hudShowCount` Racer |
+| Live-Standings | rechts | zeigt Top-`hudMaxStandings` Racer |
 | Buttons (Cancel, Fullscreen) | oben rechts | immer sichtbar |
 | Status (Renndauer, Phase) | oben links | Renn-Kontext |
 
@@ -704,7 +734,7 @@ Wenn Korridor weit (max sehr groß): Q-13-Risiko (Sprite-Animation ruckartig bei
 Optimum: max ≈ 4× min gibt ~2 f-Stops Spielraum ohne Q-13-Bereich zu erreichen.
 
 **Kopplung 5: N → Spitzengruppe → Tag-Anzahl + HUD-Overlay-Größe**
-Wenn N steigt, wächst spitzengruppe. `tagVisibleCount` und `hudShowCount` defaulten auf spitzengruppe,
+Wenn N steigt, wächst spitzengruppe. `tagVisibleCount` und `hudMaxStandings` defaulten auf spitzengruppe,
 können aber unabhängig gesetzt werden. Ein Tunable (`spitzengruppeMax`) steuert alle drei indirekt.
 
 ### 10.2 Neue Kopplungen aus User-Klärungen
@@ -855,11 +885,12 @@ PR-C: RaceScreen-Split (reines Refactor, kein Behavior-Change)
   - Prerequisite: PR-B gemergt
 
 PR-D: Camera-State-Machine (neue Logik)
-  - LEADER_ZOOM als Default-Modus (ergibt sich aus Aufmerksamkeits-Hierarchie)
-  - OVERVIEW-Cooldown-Logik (20s cooldown, 4s dauer, erzwingend per Hierarchie)
+  - LEADER_ZOOM als Default-Modus (Default-Tendenz, §3.2)
+  - OVERVIEW-Cooldown-Logik (Random-Jitter aus [overviewCooldownMin, overviewCooldownMax], Dauer overviewDuration, soft-Trigger über Spannungs-Stärke)
   - Start-Pulk + Endspurt + Finish-Event-Trigger
-  - Hysterese-Schwellen (BATTLE: eintritt 0.05, austritt 0.07)
-  - COMEBACK_ZOOM: Last-place-Drama-Trigger
+  - findBattleCandidate() für engstes Duell in Spitzengruppe (§5.3)
+  - Hysterese-Schwellen (BATTLE: eintritt 0.05, austritt 0.07 auf minGapInSpitzengruppe)
+  - COMEBACK_ZOOM: Last-place-Drama-Trigger (gapLeadLast>0.3 && firstHalfClear)
   - +Tests: State-Transitions unter simulierten Rennphasen
 
 PR-E: Sprite-Korridor + Tag-Visibility Iter 1 (B-UX1)
@@ -908,9 +939,10 @@ Extraktion nur von Funktionen ohne rAF-Loop-State (`drawNameTag`, `computeRaceCa
 Beide haben keine State-Closures die den rAF-Loop referenzieren — sicher extrahierbar.
 
 **R3 — OVERVIEW-Cooldown + BATTLE_ZOOM-Konflikt:**
-Wenn BATTLE_ZOOM aktiv und OVERVIEW-Cooldown abläuft: BATTLE_ZOOM hat Priorität 2 > OVERVIEW Priorität 3.
-OVERVIEW wird nicht ausgelöst — Cooldown-Timer bleibt wartend. Nach BATTLE_ZOOM-Ende:
-nächster OVERVIEW nach `overviewCooldown`-Sekunden. Korrekt per Hierarchie (§3.2).
+Wenn BATTLE_ZOOM aktiv und OVERVIEW-Cooldown abläuft: BATTLE_ZOOM hat höhere Spannungs-Stärke
+(enges Duell in Spitzengruppe > periodischer Kontext-Check). OVERVIEW wird zurückgestellt —
+Cooldown-Timer wartet bis BATTLE_ZOOM endet. Nach BATTLE_ZOOM-Ende wird ein neuer Cooldown
+zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen. Korrekt nach Tendenz-Logik (§3.2).
 
 **R4 — finishT + Duration-Slider Kopplung:**
 `openTrackFinishT` berechnet finishT bei Race-Init. Wenn Spielleiter während Race speedMultiplier
