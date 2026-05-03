@@ -24,9 +24,10 @@ import {
   lapsFromDuration,
   lapProgress,
   currentLap,
-  openTrackFinishT,
+  REFERENCE_FPS,
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
+import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import {
@@ -47,7 +48,6 @@ import {
   computeRenderDisplayScale,
   getEffectiveMinTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
-import { loadSpeedScaleConfig, computeSpeedScaleFactor } from '../../modules/speedScale.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
   DEFAULT_TRACK_LIGHTS,
@@ -179,14 +179,10 @@ export default function RaceScreen() {
     const trackEmoji = racerType.getEmoji() ?? null;
     const speedMultiplier = racerType.getSpeedMultiplier();
 
-    // Speed-scale (B-17): divide baseSpeed by path-length ratio so larger tracks
-    // feel visually similar in pace to the 1280px reference track.
-    const speedScaleConfig = loadSpeedScaleConfig();
-    const speedScaleFactor = computeSpeedScaleFactor(geometry.pathLengthPx, speedScaleConfig);
-
     const baseSpeedConfig = loadBaseSpeedConfig();
     const BASE_SPEED_MIN = baseSpeedConfig.min;
     const BASE_SPEED_MAX = baseSpeedConfig.max;
+    const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
     const behaviorConfig = loadRaceBehaviorConfig();
     const rowConfig = loadRowLayoutConfig();
@@ -206,15 +202,14 @@ export default function RaceScreen() {
     }
 
     const duration = raceData.duration ?? 60;
-    const targetDuration = raceData.targetDuration ?? duration;
-    // Open tracks: finish-line position from operator-chosen duration, clamped by runoutZone.
-    // Closed tracks: finish line determined by target lap count.
+    // Open tracks: finish line is fixed at (1 - runoutZone); race speed comes from targetDuration.
+    // Closed tracks: finish line is the target lap count.
     const finishT = isOpenTrack
-      ? Math.min(
-          openTrackFinishT(targetDuration, racerType.getSpeedMultiplier(), baseSpeedConfig.max),
-          1.0 - behaviorConfig.runoutZone
-        )
+      ? 1.0 - behaviorConfig.runoutZone
       : (raceData.targetLaps ?? lapsFromDuration(duration));
+    // targetDuration drives race_baseSpeed. Fallback: natural duration at mean speed.
+    const targetDuration = raceData.targetDuration ?? finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
+    const race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration);
     const maxLaps = isOpenTrack ? 1 : finishT;
 
     const rawBbox = shapeRef.current.getBoundingBox();
@@ -284,9 +279,10 @@ export default function RaceScreen() {
           lap: 1,
           icon: trackEmoji ?? r.icon,
           baseSpeed:
-            (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) *
-              speedMultiplier) /
-              speedScaleFactor) *
+            race_baseSpeed *
+            speedMultiplier *
+            ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) /
+              BASE_SPEED_MEAN) *
             (1 + speedBonus),
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,

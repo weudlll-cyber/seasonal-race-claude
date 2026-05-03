@@ -884,4 +884,27 @@ Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn de
 
 **Leitfrage:** "Gibt es jemanden der prüft ob das technisch konsistent ist — und jemanden der prüft ob das die eigene Aussage korrekt wiedergibt?"
 
+---
+
+## Lesson — Symptom-Fix vs. Architektur-Fix (PR-A1 / PR-A2)
+
+**Kontext:** Q-25 (Space Sprint zu schnell) wurde in PR-A1 als Symptom-Fix gelöst:
+`maxScale` von 4.0 auf 10.0 erhöht. Das Ergebnis war besser, aber der fundamentale
+Defekt blieb: `openTrackFinishT` teilte nicht durch `speedScaleFactor`, d.h. der
+Duration-Slider hatte bei langen Strecken null Wirkung.
+
+**PR-A2-Diagnose** identifizierte den Architectural Gap. **PR-A2** löste ihn durch
+einen anderen Ansatz: statt "baseSpeed durch Länge dividieren" nun "baseSpeed so
+berechnen dass der Median-Racer in targetDuration fertig wird". 3-Zeilen-Formel,
+kein Konfigurationsparameter.
+
+**Erkenntnis:** Symptom-Fixes (maxScale erhöhen) können als Stepping-Stone sinnvoll
+sein — PR-A1 war notwendig um das Problem sichtbar zu machen. Aber ein Diagnose-Sprint
+vor der Implementierung (PR-A2-Diagnose) verhindert, dass man sich mit dem nächsten
+Symptom-Fix in eine Sackgasse manövriert.
+
+**Konsequenz:** Bei komplexen Bugs die UI-Parameter-Tuning erfordern: prüfen ob
+die Architektur selbst das Problem verursacht. Eine 3-Zeilen-Formel kann eine
+10-Parameter-Konfiguration überflüssig machen.
+
 **Verweis:** PR #60 Nachtrag 5 — 10 K-Korrekturen aus kombiniertem User+Strategie-Claude-Review.
