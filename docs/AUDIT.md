@@ -152,9 +152,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Docs: sync after TLH + Track-Delete-Safeguards (PR #59, squash-merged `b7f5bd8`). Nur Doku-Änderungen — AUDIT/BACKLOG/ARCHITECTURE/TRACK_LIFECYCLE/ROADMAP aktualisiert. Test-Counts unverändert. |
 | 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Konzept-Doku-Sprint Camera-Director (PR in Arbeit). Neue Datei `docs/CAMERA_DIRECTOR.md` (12 Sektionen, 3 Code-Bugs diagnostiziert, Q-25 empirisch gelöst). Kein Code-Change — Test-Counts unverändert. |
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Camera-Director-Konzept (PR #60, merge-commit `123faeb`). `docs/CAMERA_DIRECTOR.md` final — 13 Sektionen, 5 Commits, alle §13.2-Fragen UI-1–UI-8 beantwortet. Nachtrag 5 (K1–K10): TENDENZ-LOGIK Architektur-Klarstellung, minGapInSpitzengruppe-Trigger, Random-Jitter OVERVIEW, findBattleCandidate(). 9 Sub-PRs spezifiziert (PR-A1 bis PR-G). Kein Code-Change — Test-Counts unverändert. |
 
 **Aktueller Branch-HEAD:** `master` — alle PRs gemergt
-**Master-HEAD:** `b7f5bd8` (PR #59 docs: sync after TLH + Track-Delete-Safeguards completion, squash-merged 2026-05-02)
+**Master-HEAD:** `123faeb` (PR #60 Camera-Director-Konzept, merge-commit 2026-05-03)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün
 

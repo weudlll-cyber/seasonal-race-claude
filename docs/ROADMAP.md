@@ -302,7 +302,7 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 
 | # | Phase | Status | Notiz |
 |---|---|---|---|
-| 1 | **Kamera-Phase + RaceScreen-Refactor** | 🔜 Hot — nächste Implementierungsphase | CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7, derzeit >1000 LOC). Vorgehen: Konzept-Doku-Sprint zuerst (Architektur-Diskussion), dann Implementation. Q-25 (Strecken-Canvas-Größe) als Parallel-Überlegung im Konzept-Sprint. |
+| 1 | **Kamera-Phase + RaceScreen-Refactor** | 🔜 Konzept ✅ PR #60 — Implementation startet mit PR-A1 | Vollständige Spezifikation in `docs/CAMERA_DIRECTOR.md`. 9 Sub-PRs: PR-A1 (nächster), PR-A2-Diagnose, PR-A2, PR-B, PR-C, PR-D, PR-E, PR-F, PR-G. TENDENZ-LOGIK Architektur, minGapInSpitzengruppe-Trigger, Random-Jitter OVERVIEW, Sprite-Korridor [min/max]. |
 | — | **Track Lifecycle Hybrid (TLH)** | ✅ TLH-1+2+Safeguards abgeschlossen | TLH-1 (PR #55): Backend-Fixes, Default-Track-Migration, Auto-Backup. TLH-2 (PR #56/57): UI-Flow, Two-Mode-Editor. Track-Delete-Safeguards (PR #58): Remove-Background-Button, 403-Guard, idempotente Migration. TLH-3 (Code-Fallback + Export) ⏳ zurückgestellt. Siehe `docs/TRACK_LIFECYCLE.md`. |
 | — | **Default-Tracks zeichnen** | ✅ Abgeschlossen 2026-05-02 | Alle 5 Geometrien gezeichnet: Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. |
 | 3 | **Surface Zones** | geplant | Lokale Surface-Class-Überschreibungen innerhalb eines Tracks (Pfützen, Schlammstellen). Folge-Phase nach VRE. TrackEditor-Zonen-Zeichenwerkzeug, `EditorShape.getZonesAtPosition()`. |

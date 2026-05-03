@@ -29,10 +29,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-### 1 — Kamera-Phase + RaceScreen-Refactor 🔜 Hot — nächste Implementierungsphase
+### 1 — Kamera-Phase + RaceScreen-Refactor 🔜 Hot — Konzept ✅ (PR #60) — Implementation startet mit PR-A1
 
-**Konzept-Doku-Sprint abgeschlossen 2026-05-02. User-Klärungen aller 6 §12.2-Fragen 2026-05-02.**
-Vollständige Spezifikation in `docs/CAMERA_DIRECTOR.md`.
+**Konzept-Doku-Sprint vollständig abgeschlossen. PR #60 gemergt 2026-05-03.**
+Authoritative Spezifikation in `docs/CAMERA_DIRECTOR.md` (13 Sektionen, alle §13.2-Fragen UI-1–UI-8 beantwortet).
 
 **3 strukturelle Bugs identifiziert** (empirisch aus Code-Analyse):
 - **Bug A** (Garden Path P1): OVERVIEW-Pan ist ein No-Op — World-Edge-Clamp forciert offsetX/Y=0 wenn zoom=1 (`CameraDirector.js:178-183`)
@@ -44,21 +44,23 @@ Vollständige Spezifikation in `docs/CAMERA_DIRECTOR.md`.
 - Space Sprint bei ~131 px/s (Referenz), Renndauer ~144s
 - Open-Tracks: Duration-Slider im Setup-Screen, finishT dynamisch aus Strecken-Physik
 
-**Camera-Regie-Philosophie beschlossen:** LEADER_ZOOM als Default, Spitze immer im Bild,
-Sprite-Korridor [min, max] als harte Camera-Constraints, OVERVIEW periodisch (20s cooldown, 4s dauer).
+**Camera-Regie-Philosophie beschlossen (TENDENZ-LOGIK, nicht Constraint-System):**
+LEADER_ZOOM als Default-Tendenz, Spitzengruppen-Duelle triggern BATTLE_ZOOM (minGapInSpitzengruppe),
+Sprite-Korridor [min, max] als harte Camera-Constraints, OVERVIEW Random-Jitter [15s–25s].
 N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverweis: D7d.
 
-**Sub-PR-Plan (7 PRs):**
-- PR-A: Q-25-Fix + Duration-Slider + finishT für Open-Tracks
+**Sub-PR-Plan (9 PRs):**
+- PR-A1: Q-25-Fix (maxScale=10) + Duration-Slider + finishT für Open-Tracks ← **nächster PR**
+- PR-A2-Diagnose: Lese-PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (kein Code-Change)
+- PR-A2: Speed-Pipeline-Architektur-Umbau (race_baseSpeed, speedScaleFactor entfällt)
 - PR-B: Camera-Bug-Fixes (Bug A+B+C)
 - PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
-- PR-D: Camera-State-Machine (OVERVIEW-Cooldown, Aufmerksamkeits-Hierarchie, Phase-Erkennung)
+- PR-D: Camera-State-Machine (OVERVIEW Random-Jitter, Spannungs-Stärke-Logik, findBattleCandidate)
 - PR-E: Sprite-Korridor [min+max] + Tag-Visibility Iter 1 (B-UX1) + Dev-Panel-Sliders beider Werte
 - PR-F: Dev-Panel Camera-Tunables + HUD-Overlay
 - PR-G: UI-Bugs (Cancel Race + Fullscreen API)
 
-Vorgehen: PR-A → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
-Offene User-Input-Frage: UI-7 (OVERVIEW-Cooldown durationsadaptiv?) in `docs/CAMERA_DIRECTOR.md §13.2`.
+Vorgehen: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
 ---
 
