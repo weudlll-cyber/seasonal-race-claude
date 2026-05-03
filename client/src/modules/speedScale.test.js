@@ -33,7 +33,7 @@ describe('DEFAULT_SPEED_SCALE_CONFIG', () => {
       enabled: true,
       referencePathLength: 2000,
       minScale: 0.5,
-      maxScale: 4.0,
+      maxScale: 10.0,
     });
   });
 });
@@ -107,5 +107,38 @@ describe('saveSpeedScaleConfig', () => {
     const config = { ...DEFAULT_SPEED_SCALE_CONFIG, referencePathLength: 3000 };
     saveSpeedScaleConfig(config);
     expect(storageSet).toHaveBeenCalledWith('racearena:speedScaleConfig', config);
+  });
+});
+
+describe('maxScale=10 — Space Sprint consistency (Q-25)', () => {
+  // Space Sprint empirical values from §7.1 of CAMERA_DIRECTOR.md
+  const SPACE_SPRINT_PATH_PX = 19772;
+  const REFERENCE_FPS = 62.5;
+  const BASE_SPEED_MEAN = 0.001045;
+
+  it('Space Sprint ssf is no longer capped at 4.0 with maxScale=10', () => {
+    const ssf = computeSpeedScaleFactor(SPACE_SPRINT_PATH_PX, DEFAULT_SPEED_SCALE_CONFIG);
+    // raw = 19772/2000 = 9.886; maxScale=10 => not capped
+    expect(ssf).toBeCloseTo(9.886, 2);
+    expect(ssf).toBeGreaterThan(4.0);
+  });
+
+  it('Space Sprint visual pixel rate matches River Run rate within 5% with maxScale=10 (B-17)', () => {
+    const RIVER_RUN_PATH_PX = 6156;
+    const ssfSpace = computeSpeedScaleFactor(SPACE_SPRINT_PATH_PX, DEFAULT_SPEED_SCALE_CONFIG);
+    const ssfRiver = computeSpeedScaleFactor(RIVER_RUN_PATH_PX, DEFAULT_SPEED_SCALE_CONFIG);
+    // B-17: visual traversal rate (px/s) = baseSpeedMean * REFERENCE_FPS / ssf * pathLengthPx
+    // ssf = pathLengthPx / referencePathLength, so rate = baseSpeedMean * REFERENCE_FPS * referencePathLength (constant)
+    const rateSpace = (BASE_SPEED_MEAN * REFERENCE_FPS * SPACE_SPRINT_PATH_PX) / ssfSpace;
+    const rateRiver = (BASE_SPEED_MEAN * REFERENCE_FPS * RIVER_RUN_PATH_PX) / ssfRiver;
+    expect(Math.abs(rateSpace - rateRiver) / rateRiver).toBeLessThan(0.05);
+  });
+
+  it('Space Sprint race duration at maxScale=10 is approximately 144s', () => {
+    const ssf = computeSpeedScaleFactor(SPACE_SPRINT_PATH_PX, DEFAULT_SPEED_SCALE_CONFIG);
+    const runoutZone = 0.05;
+    const naturalSeconds = (ssf * (1 - runoutZone)) / (BASE_SPEED_MEAN * REFERENCE_FPS);
+    expect(naturalSeconds).toBeGreaterThan(130);
+    expect(naturalSeconds).toBeLessThan(160);
   });
 });
