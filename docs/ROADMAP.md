@@ -186,6 +186,17 @@ sprite/track-background ratio perception → user decided proportional + floor �
 Session-only racer-type override selector in the Setup Track tab. Filters disabled types.
 Resets on track change. Not persisted.
 
+## PR-A1 — Open-Track Duration UX + Q-25 Fix ✅ Done (2026-05-03)
+
+`DEFAULT_SPEED_SCALE_CONFIG.maxScale` raised 4.0 → 10.0, resolving Q-25: Space Sprint now runs
+at ~131 px/s traversal rate (consistent with other tracks) and ~144s natural race duration.
+Open-track Duration Slider in Setup Track tab: range derived from track physics
+(`openTrackDurationRange`), default 65% of max, "Estimated duration: {X}s" display.
+`openTrackFinishT` now wired into RaceScreen finishT calculation (was previously unused —
+duration had no effect on open-track finish line). Closed-track label "Laps & Duration" +
+"Estimated duration: {X}s" format (A2.5 audit). +3 new tests, +35 test cases (1299 total).
+**Next: PR-A2-Diagnose** — speed-pipeline scope analysis → `docs/SPEED_REFACTOR_ANALYSIS.md`.
+
 ## Phase Q — Quality Hygiene
 
 - [x] Q-1 through Q-5 — Dead exports, unused imports, TODO tags, JSON.parse hygiene, file

@@ -20,7 +20,12 @@ import {
   openTrackPanTarget,
 } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import { lapsFromDuration, lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
+import {
+  lapsFromDuration,
+  lapProgress,
+  currentLap,
+  openTrackFinishT,
+} from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
@@ -201,10 +206,14 @@ export default function RaceScreen() {
     }
 
     const duration = raceData.duration ?? 60;
-    // Open tracks: finish line at 1 - runoutZone (runout zone is at the end of the path).
+    const targetDuration = raceData.targetDuration ?? duration;
+    // Open tracks: finish-line position from operator-chosen duration, clamped by runoutZone.
     // Closed tracks: finish line determined by target lap count.
     const finishT = isOpenTrack
-      ? 1.0 - behaviorConfig.runoutZone
+      ? Math.min(
+          openTrackFinishT(targetDuration, racerType.getSpeedMultiplier(), baseSpeedConfig.max),
+          1.0 - behaviorConfig.runoutZone
+        )
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     const maxLaps = isOpenTrack ? 1 : finishT;
 

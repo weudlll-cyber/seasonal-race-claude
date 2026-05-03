@@ -113,7 +113,7 @@ export const DEFAULT_SPEED_SCALE_CONFIG = {
   enabled: true,
   referencePathLength: 2000,
   minScale: 0.5,
-  maxScale: 4.0,
+  maxScale: 10.0,
 };
 
 // ±12.9% from mean (0.001045) — tight enough to prevent lap-wrap visual gaps

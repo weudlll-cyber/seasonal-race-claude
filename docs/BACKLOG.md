@@ -50,8 +50,8 @@ Sprite-Korridor [min, max] als harte Camera-Constraints, OVERVIEW Random-Jitter 
 N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverweis: D7d.
 
 **Sub-PR-Plan (9 PRs):**
-- PR-A1: Q-25-Fix (maxScale=10) + Duration-Slider + finishT für Open-Tracks ← **nächster PR**
-- PR-A2-Diagnose: Lese-PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (kein Code-Change)
+- ✅ PR-A1: Q-25-Fix (maxScale=10) + Duration-Slider + finishT für Open-Tracks (2026-05-03)
+- PR-A2-Diagnose: Lese-PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (kein Code-Change) ← **nächster PR**
 - PR-A2: Speed-Pipeline-Architektur-Umbau (race_baseSpeed, speedScaleFactor entfällt)
 - PR-B: Camera-Bug-Fixes (Bug A+B+C)
 - PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
@@ -348,18 +348,13 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   Option, (b) Atomic-Save (rollback Geometrie wenn Background fehlschlägt). Aufwand: klein–mittel.
   *(Aufgekommen 2026-05-02 nach Background-Diagnose dirt-oval, Severity: MEDIUM)*
 
-- **Q-25** — Track-Canvas-Größe begrenzt Strecken-Länge
-  User-Beobachtung (2026-05-02): Ein 6000×4000-Background-Bild führt nicht automatisch zu einer längeren
-  Strecke, weil die Geometrie im Canvas-Koordinatensystem (CW=1280, CH=720 in TrackEditor.jsx) gezeichnet
-  wird. `worldWidth`/`worldHeight` setzen den Maßstab der Welt, aber die maximale Zeichenfläche entspricht
-  dem Canvas-Viewport nach Zoom/Pan — sehr lange Strecken (z.B. mehrfacher worldWidth-Umfang) lassen sich
-  im aktuellen Editor schwer realisieren, weil der Zeichenbereich durch die Canvas-Auflösung begrenzt ist.
-  Ein grundlegend anderer Ansatz (unbegrenzte Welt-Koordinaten, unbegrenzter Zoom/Pan) würde echte
-  Langstrecken ermöglichen — aber das ist eine größere Architektur-Änderung.
-  Severity: MEDIUM. Aufwand: ungeklärt — braucht Konzept-Überlegung vor Implementation.
-  Beziehung zur Kamera-Phase: Strecken-Länge beeinflusst Camera-Verhalten und Zoom-Stufen.
-  Konzept-Überlegung sollte parallel zur Kamera-Phase-Planung stattfinden (Q-25 im Konzept-Sprint).
-  *(User-Beobachtung 2026-05-02)*
+- ✅ **Q-25** — Open-Track zu schnell / Renndauer zu kurz (PR-A1)
+  Root Cause (empirisch widerlegt Canvas-Hypothese): `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in
+  `defaults.js` cappte Space Sprint bei 4.0 statt dem physikalisch korrekten ssf=9.886. Space Sprint
+  lief bei 323 px/s statt ~131 px/s und dauerte ~58s statt ~144s.
+  Fix: `maxScale=10.0` + Duration-Slider für Open-Tracks + `openTrackFinishT`-Integration in RaceScreen.
+  Canvas-Koordinatensystem-Hypothese widerlegt — Space Sprint Geometrie nutzt Welt-Koordinaten 256..5707,
+  nicht Canvas-gebunden. *(Behoben in PR-A1, 2026-05-03)*
 
 - **Q-13** — Sprite-Frame-Animation ruckelt bei großen Sprites
   Auf 6000-Tracks werden Sprites sehr groß — Frame-Wechsel wirken ruckartig.
