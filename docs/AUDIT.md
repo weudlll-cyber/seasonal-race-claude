@@ -150,8 +150,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-02 | **1261 unit + 183 e2e + 114 backend** | City-Circuit-Bug-Fix (fix/track-delete-safeguards): "Remove background"-Button (+5 unit), DELETE /api/tracks/:id/background Endpoint (+3 backend), Default-Track DELETE-Schutz 403 (+2 backend), migrateDefaultTracks idempotent, React key=null Fix in TrackManager. L41+L42, Q-24 ergänzt. ESLint: 0 errors, 0 warnings. |
 | 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Background-Image Race Condition Fix + L43 (PR #58, squash-merged `fc5690f`): Pre-existing race condition im backgroundImage useEffect — stale onerror-Callback vom Null-Run überschrieb bgRef nach erfolgreichem onload beim Track-Load. Fix: Null-Guard (verhindert `img.src='null'`) + cancelled-Flag mit cleanup-Return. 4 neue Komponenten-Tests (TrackEditor.effects.test.jsx — null-path, URL-load, race-guard). ESLint: 0 errors, 0 warnings. |
 
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Docs: sync after TLH + Track-Delete-Safeguards (PR #59, squash-merged `b7f5bd8`). Nur Doku-Änderungen — AUDIT/BACKLOG/ARCHITECTURE/TRACK_LIFECYCLE/ROADMAP aktualisiert. Test-Counts unverändert. |
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Konzept-Doku-Sprint Camera-Director (PR in Arbeit). Neue Datei `docs/CAMERA_DIRECTOR.md` (12 Sektionen, 3 Code-Bugs diagnostiziert, Q-25 empirisch gelöst). Kein Code-Change — Test-Counts unverändert. |
+
 **Aktueller Branch-HEAD:** `master` — alle PRs gemergt
-**Master-HEAD:** `fc5690f` (PR #58 fix/track-delete-safeguards + Background-Image-Race-Condition-Fix, squash-merged 2026-05-02)
+**Master-HEAD:** `b7f5bd8` (PR #59 docs: sync after TLH + Track-Delete-Safeguards completion, squash-merged 2026-05-02)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün
 
