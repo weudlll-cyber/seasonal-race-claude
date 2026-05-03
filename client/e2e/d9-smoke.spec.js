@@ -224,7 +224,7 @@ test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', ()
     );
     expect(session.raceMode).toBe('laps');
     expect(session.targetLaps).toBeGreaterThanOrEqual(1);
-    expect(session.targetDuration).toBeUndefined();
+    expect(session.targetDuration).toBeGreaterThan(0);
   });
 
   test('Quick Test on open track writes raceMode=time and targetDuration', async ({ page }) => {

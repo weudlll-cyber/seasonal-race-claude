@@ -5,7 +5,6 @@ import {
   lapProgress,
   currentLap,
   estimatedSecondsPerLap,
-  openTrackFinishT,
   REFERENCE_FPS,
 } from './lapUtils.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
@@ -525,43 +524,5 @@ describe('estimatedSecondsPerLap', () => {
     for (const sm of [0.1, 0.3, 0.5, 1.0, 1.25, 2.0]) {
       expect(estimatedSecondsPerLap(sm)).toBeGreaterThan(0);
     }
-  });
-});
-
-// ── openTrackFinishT ──────────────────────────────────────────────────────────
-
-describe('openTrackFinishT', () => {
-  it('result is between 0 and 1 (inclusive) for any input', () => {
-    for (const sm of [0.3, 1.0, 1.25]) {
-      for (const secs of [5, 15, 30, 60, 120]) {
-        const ft = openTrackFinishT(secs, sm);
-        expect(ft).toBeGreaterThan(0);
-        expect(ft).toBeLessThanOrEqual(1);
-      }
-    }
-  });
-
-  it('caps at 1.0 when fastest racer would overshoot the track', () => {
-    // Large target seconds → fastest racer overshoots t=1
-    expect(openTrackFinishT(60, 1.0)).toBe(1);
-  });
-
-  it('gives a fractional value for a short target race', () => {
-    // 10s at horse (1.0): fastest racer advances DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10
-    const expected = Math.min(1, DEFAULT_BASE_SPEED_CONFIG.max * 1.0 * REFERENCE_FPS * 10);
-    expect(openTrackFinishT(10, 1.0)).toBeCloseTo(expected);
-    expect(openTrackFinishT(10, 1.0)).toBeLessThan(1);
-  });
-
-  it('higher speedMultiplier produces larger or equal finishT', () => {
-    const sm1 = openTrackFinishT(10, 0.5);
-    const sm2 = openTrackFinishT(10, 1.0);
-    const sm3 = openTrackFinishT(10, 1.25);
-    expect(sm2).toBeGreaterThanOrEqual(sm1);
-    expect(sm3).toBeGreaterThanOrEqual(sm2);
-  });
-
-  it('longer target seconds produce larger or equal finishT', () => {
-    expect(openTrackFinishT(20, 0.3)).toBeGreaterThanOrEqual(openTrackFinishT(10, 0.3));
   });
 });

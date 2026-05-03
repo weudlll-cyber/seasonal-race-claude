@@ -172,15 +172,59 @@ racer init map.
 8. `computeMaxRacersDefault(pathLengthPx, racersPerRow, rowGapPx, maxCapacityFactor)` — auto-capacity
    for a track based on path length, pre-computed racersPerRow, and row gap.
 
-**Open-track finish line (D7c-Phase4):** On open tracks `finishT = 1.0 − runoutZone` (default
-0.05). The last 5% of the path is the run-out zone — racers cross the finish line and coast to
-the track end with `runoutDecay`. Configurable via `raceBehaviorConfig.runoutZone` (Dev Screen).
-`openTrackFinishT` (duration-based) is no longer used for race-end logic.
+**Open-track finish line:** On open tracks `finishT = 1.0 − runoutZone` (default 0.05). The last
+5% of the path is the run-out zone — racers cross the finish line and coast to the track end with
+`runoutDecay`. Configurable via `raceBehaviorConfig.runoutZone` (Dev Screen).
 
 Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `speedBonusFactor`,
 `maxCapacityFactor`). Start-layout params in `racearena:raceBehaviorConfig` (`startSpreadRange`,
 `runoutZone`). All tunable in Dev Screen. Track-level `maxRacers` shown in TrackManager with
 "modified" badge.
+
+## Speed Pipeline (PR-A2 + fix)
+
+Race speed is duration-driven. The operator chooses a target duration in the SetupScreen; race
+init translates that directly into per-racer `baseSpeed`.
+
+**Formula:**
+```
+spreadMinFactor  = BASE_SPEED_MIN / BASE_SPEED_MEAN
+spreadMaxFactor  = BASE_SPEED_MAX / BASE_SPEED_MEAN
+
+// N-calibrated: E[min of n U(spreadMin, spreadMax)] = spreadMin + range / (n+1)
+expectedMinSpreadFactor = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1)
+
+race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier)
+               = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier)
+
+r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBonus)
+```
+
+- `finishT` — target position: `1.0 − runoutZone` (open track) or lap count 1–4 (closed track).
+- `targetDuration` — operator-chosen race duration (open-track slider or closed-track duration
+  slider). Fallback: natural duration derived from mean base speed.
+- `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
+  around the median; tunable in Dev Screen → Base Speed section.
+- `expectedMinSpreadFactor` — N-calibrated expected value of the minimum spreadFactor across all
+  racers. With n players drawing from U[spreadMin, spreadMax], the expected minimum is
+  `spreadMin + (spreadMax − spreadMin) / (n + 1)`. At n=3: ≈ 0.9355. At n=∞: → spreadMinFactor ≈ 0.871.
+  Pre-multiplied into the T argument of `computeRaceBaseSpeed` so the expected last finisher
+  cancels out and arrives exactly at `targetDuration`.
+- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
+  into the T argument so it cancels out in each racer's actual finish time.
+- `speedBonus` — rear-row compensation from D7c row layout.
+
+**Race-end-time semantics:** `targetDuration` = **expected** time until the last finisher crosses
+the line, calibrated for the actual player count. Individual runs still vary by ±5% due to
+random spread sampling, but the expectation is exact for any N. The median racer finishes at
+approximately `targetDuration × expectedMinSpreadFactor` (i.e. earlier than targetDuration).
+All racer types honour the same deadline regardless of their `speedMultiplier`.
+
+`openTrackDurationRange` (lapUtils.js) derives the slider [min=30s, max] from track physics
+(path length) so the operator only sees meaningful duration values.
+
+**Removed (PR-A2):** `speedScaleFactor` / `SpeedScaleSection` / `DEFAULT_SPEED_SCALE_CONFIG` —
+superseded by the duration-driven approach above.
 
 ## Race Behavior System (D7b — lane-free)
 

@@ -31,7 +31,6 @@ import {
   lapsFromDuration,
   openTrackDurationRange,
 } from '../../modules/camera/lapUtils.js';
-import { loadSpeedScaleConfig } from '../../modules/speedScale.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
@@ -120,12 +119,14 @@ function SetupScreen() {
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   const [selectedLaps, setSelectedLaps] = useState(null); // null = auto (from duration)
-  const [openTrackDuration, setOpenTrackDuration] = useState(null); // null = set from track default on selection
+  const [openTrackDuration, setOpenTrackDuration] = useState(null); // null = set from track default
+  const [closedTrackDuration, setClosedTrackDuration] = useState(null); // null = auto from laps
 
   useEffect(() => {
     setRacerTypeOverride(null);
     setSelectedLaps(null);
     setOpenTrackDuration(null);
+    setClosedTrackDuration(null);
   }, [selectedTrackId]);
 
   // Clear override if the chosen type gets disabled while it's selected.
@@ -203,14 +204,13 @@ function SetupScreen() {
     return geom ? !geom.closed : false;
   }, [selectedTrack]);
 
-  // Duration slider range for open tracks — derived from track physics (pathLengthPx + speedScaleFactor)
+  // Duration slider range for open tracks — derived from track physics (pathLengthPx)
   const openTrackSliderRange = useMemo(() => {
     if (!trackIsOpen || !selectedTrack?.geometryId) return null;
     const geom = getTrack(selectedTrack.geometryId);
     if (!geom) return null;
     const pathLengthPx = geom.pathLengthPx ?? 0;
     if (!pathLengthPx) return null;
-    const speedScaleConfig = loadSpeedScaleConfig();
     const baseSpeedConfig = loadBaseSpeedConfig();
     const racerType = getRacerType(
       racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
@@ -218,7 +218,6 @@ function SetupScreen() {
     const speedMultiplier = racerType?.getSpeedMultiplier() ?? 1.0;
     const range = openTrackDurationRange(
       pathLengthPx,
-      speedScaleConfig,
       baseSpeedConfig,
       speedMultiplier,
       behaviorConfig.runoutZone
@@ -233,6 +232,31 @@ function SetupScreen() {
     if (openTrackDuration === null) return Math.max(min, Math.min(max, Math.round(max * 0.65)));
     return Math.max(min, Math.min(max, openTrackDuration));
   }, [openTrackDuration, openTrackSliderRange, raceSettings.duration]);
+
+  // Closed-track duration slider: range based on laps × natural pace, default = natural duration.
+  // Model D: lap-picker change resets duration to auto; duration-slider change overrides it.
+  const closedTrackSliderRange = useMemo(() => {
+    if (!selectedTrack || trackIsOpen) return null;
+    const effectiveLaps = selectedLaps ?? lapsFromDuration(raceSettings.duration);
+    const racerType = getRacerType(
+      racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+    );
+    const speedMultiplier = racerType?.getSpeedMultiplier() ?? 1.0;
+    const naturalDuration = Math.round(estimatedSecondsPerLap(speedMultiplier) * effectiveLaps);
+    return {
+      min: Math.max(15, Math.round(naturalDuration * 0.3)),
+      max: Math.round(naturalDuration * 5),
+      natural: naturalDuration,
+    };
+  }, [selectedLaps, selectedTrack, racerTypeOverride, raceSettings.duration, trackIsOpen]);
+
+  // Effective closed-track duration: user override clamped to range, or natural duration.
+  const effectiveClosedDuration = useMemo(() => {
+    if (!closedTrackSliderRange) return raceSettings.duration;
+    const { min, max, natural } = closedTrackSliderRange;
+    if (closedTrackDuration === null) return natural;
+    return Math.max(min, Math.min(max, closedTrackDuration));
+  }, [closedTrackDuration, closedTrackSliderRange, raceSettings.duration]);
 
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
@@ -257,7 +281,7 @@ function SetupScreen() {
       winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
-      targetDuration: trackIsOpen ? effectiveOpenTrackDuration : undefined,
+      targetDuration: trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
       timestamp: new Date().toISOString(),
     };
@@ -282,6 +306,11 @@ function SetupScreen() {
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
 
     const quickLaps = lapsFromDuration(raceDefaults.duration);
+    const quickRacerType = getRacerType(effectiveTypeId);
+    const quickSpeedMultiplier = quickRacerType?.getSpeedMultiplier() ?? 1.0;
+    const quickClosedDuration = Math.round(
+      estimatedSecondsPerLap(quickSpeedMultiplier) * quickLaps
+    );
     const race = {
       racers: testPlayers,
       trackId: track.id,
@@ -295,7 +324,7 @@ function SetupScreen() {
       winners: raceDefaults.winners,
       raceMode: quickIsOpen ? 'time' : 'laps',
       targetLaps: quickIsOpen ? undefined : quickLaps,
-      targetDuration: quickIsOpen ? raceDefaults.duration : undefined,
+      targetDuration: quickIsOpen ? raceDefaults.duration : quickClosedDuration,
       trackSurfaceClasses: track.surfaceClasses ?? [],
       timestamp: new Date().toISOString(),
     };
@@ -563,9 +592,10 @@ function SetupScreen() {
                           return (
                             <button
                               key={n}
-                              onClick={() =>
-                                setSelectedLaps(n === auto && selectedLaps === null ? null : n)
-                              }
+                              onClick={() => {
+                                setSelectedLaps(n === auto && selectedLaps === null ? null : n);
+                                setClosedTrackDuration(null); // Model D: lap change resets duration to auto
+                              }}
                               title={`~${secs}s estimated`}
                               style={{
                                 padding: '0.25rem 0.55rem',
@@ -586,6 +616,50 @@ function SetupScreen() {
                           );
                         })}
                       </div>
+                      {closedTrackSliderRange && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginTop: '0.5rem',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: '0.78rem',
+                              color: 'var(--color-muted)',
+                              minWidth: '3.5rem',
+                            }}
+                          >
+                            Race duration
+                          </span>
+                          <input
+                            data-testid="closed-track-duration-slider"
+                            type="range"
+                            min={closedTrackSliderRange.min}
+                            max={closedTrackSliderRange.max}
+                            value={effectiveClosedDuration}
+                            onChange={(e) => setClosedTrackDuration(Number(e.target.value))}
+                            style={{
+                              flex: 1,
+                              cursor: 'pointer',
+                              accentColor: 'var(--color-accent)',
+                            }}
+                            title="Adjust race duration. Lap count stays fixed; race speed adapts."
+                          />
+                          <span
+                            style={{
+                              fontSize: '0.85rem',
+                              color: 'var(--color-text)',
+                              minWidth: '2.5rem',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {effectiveClosedDuration}s
+                          </span>
+                        </div>
+                      )}
                       <span
                         data-testid="closed-track-estimated-duration"
                         style={{
@@ -595,15 +669,7 @@ function SetupScreen() {
                           display: 'block',
                         }}
                       >
-                        * auto · Estimated duration:{' '}
-                        {Math.round(
-                          estimatedSecondsPerLap(
-                            getRacerType(
-                              racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
-                            ).getSpeedMultiplier()
-                          ) * (selectedLaps ?? lapsFromDuration(raceSettings.duration))
-                        )}
-                        s
+                        * auto · Estimated duration: {effectiveClosedDuration}s
                       </span>
                     </div>
                   )}

@@ -195,7 +195,25 @@ Open-track Duration Slider in Setup Track tab: range derived from track physics
 `openTrackFinishT` now wired into RaceScreen finishT calculation (was previously unused —
 duration had no effect on open-track finish line). Closed-track label "Laps & Duration" +
 "Estimated duration: {X}s" format (A2.5 audit). +3 new tests, +35 test cases (1299 total).
-**Next: PR-A2-Diagnose** — speed-pipeline scope analysis → `docs/SPEED_REFACTOR_ANALYSIS.md`.
+
+## PR-A2-Diagnose — Speed-Pipeline Scope Analysis ✅ Done (2026-05-03)
+
+Read-only diagnosis sprint: identified Architectural Gap in `openTrackFinishT` (missing
+`/ speedScaleFactor`), designed `computeRaceBaseSpeed` formula, categorized 9 test files,
+assessed MEDIUM risk. Output: `docs/SPEED_REFACTOR_ANALYSIS.md` (499 lines, 8 sections).
+
+## PR-A2 — Duration-Driven Speed Architecture ✅ Done (2026-05-03) + fix (2026-05-04)
+
+`computeRaceBaseSpeed(finishT, T)` = `finishT / (REFERENCE_FPS × T)` where
+`T = targetDuration × spreadMinFactor × speedMultiplier`.
+Race-end-time semantics: "Race Duration X" means the last finisher crosses at Xs; median ~87% earlier.
+Closes Q-25 architecturally: open-track Duration Slider now has real effect on any track.
+Removed: `speedScaleFactor`, `SpeedScaleSection`, `DEFAULT_SPEED_SCALE_CONFIG`, `openTrackFinishT`.
+Added: Closed-Track Duration Slider (Model D sync — lap change resets duration to auto).
+Fix (2026-05-04): speedMultiplier not normalized (rockets finished 20% early); spreadMinFactor
+missing (last finisher was at targetDuration × spreadMinFactor, not targetDuration). 3 new
+pipeline-contract tests added. Browser verification pending.
+**Next: PR-B** — Camera Bug Fixes (Bug A+B+C).
 
 ## Phase Q — Quality Hygiene
 

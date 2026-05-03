@@ -44,7 +44,7 @@ function BaseSpeedSection() {
           style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem', gap: '0.5rem' }}
         >
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Racer Base Speed Range</span>
-          <InfoTooltip text="Each racer draws a random base speed uniformly from [min, max] at race start. Wider range = more separation between front and back. Too wide causes lap-wrap visual gaps on the minimap: on a 60s race, ±17% spread produces ~1.3 lap separation; ±13% produces ~0.5 laps." />
+          <InfoTooltip text="Each racer draws a random spread factor from [min, max] at race start, applied around the race base speed (derived from operator-chosen duration). Wider range = more separation between front and back. Too wide causes lap-wrap visual gaps: ±17% spread produces ~1.3 lap separation; ±13% produces ~0.5 laps." />
           <span className={s.spacer} />
           <button
             className={`${s.btn} ${s.btnGhost}`}
