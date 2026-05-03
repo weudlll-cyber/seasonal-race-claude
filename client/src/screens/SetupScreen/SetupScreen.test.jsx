@@ -260,3 +260,135 @@ describe('SetupScreen — Quick Test autofill', () => {
     expect(names[2]).toBe('Rocket');
   });
 });
+
+describe('SetupScreen — open-track Duration Slider (PR-A1)', () => {
+  // River Run (index 1) has no surfaceClasses and is an open track in this test via a mock geometry.
+  // We seed a geometry that is open (closed: false) so trackIsOpen becomes true.
+  function renderWithOpenTrack() {
+    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+      i === 1 ? { ...t, geometryId: 'geom-open-001' } : t
+    );
+    storageSet(KEYS.TRACKS, tracksWithGeometry);
+
+    // Seed a minimal open-track geometry into trackGeometries storage
+    const geomKey = 'racearena:trackGeometries:geom-open-001';
+    const geomIndex = { 'geom-open-001': 'geom-open-001' };
+    const pts = Array.from({ length: 5 }, (_, i) => ({ x: i * 100, y: 0 }));
+    localStorage.setItem(
+      geomKey,
+      JSON.stringify({
+        id: 'geom-open-001',
+        closed: false,
+        pathLengthPx: 6156,
+        innerPoints: pts.map((p) => ({ ...p, y: -20 })),
+        outerPoints: pts.map((p) => ({ ...p, y: 20 })),
+        centerPoints: pts,
+      })
+    );
+    localStorage.setItem('racearena:trackGeometries:index', JSON.stringify(geomIndex));
+
+    return render(
+      <MemoryRouter>
+        <SetupScreen />
+      </MemoryRouter>
+    );
+  }
+
+  function selectOpenTrack() {
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]); // Track tab
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('River Run') && !b.disabled);
+    if (trackCard) fireEvent.click(trackCard);
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('renders the duration slider for an open track', () => {
+    renderWithOpenTrack();
+    selectOpenTrack();
+    expect(screen.getByTestId('open-track-duration-slider')).toBeInTheDocument();
+  });
+
+  it('slider has correct type=range', () => {
+    renderWithOpenTrack();
+    selectOpenTrack();
+    const slider = screen.getByTestId('open-track-duration-slider');
+    expect(slider.type).toBe('range');
+  });
+
+  it('shows Estimated duration text for an open track', () => {
+    renderWithOpenTrack();
+    selectOpenTrack();
+    expect(screen.getByTestId('open-track-estimated-duration')).toBeInTheDocument();
+    expect(screen.getByTestId('open-track-estimated-duration').textContent).toMatch(
+      /Estimated duration:/
+    );
+  });
+});
+
+describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
+  function renderWithClosedTrack() {
+    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-closed-001' } : t
+    );
+    storageSet(KEYS.TRACKS, tracksWithGeometry);
+
+    const geomKey = 'racearena:trackGeometries:geom-closed-001';
+    const pts = Array.from({ length: 5 }, (_, i) => ({ x: i * 50, y: 0 }));
+    localStorage.setItem(
+      geomKey,
+      JSON.stringify({
+        id: 'geom-closed-001',
+        closed: true,
+        pathLengthPx: 3245,
+        innerPoints: pts.map((p) => ({ ...p, y: -20 })),
+        outerPoints: pts.map((p) => ({ ...p, y: 20 })),
+        centerPoints: pts,
+      })
+    );
+    localStorage.setItem(
+      'racearena:trackGeometries:index',
+      JSON.stringify({ 'geom-closed-001': 'geom-closed-001' })
+    );
+
+    return render(
+      <MemoryRouter>
+        <SetupScreen />
+      </MemoryRouter>
+    );
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('shows "Laps & Duration" label for a closed track', () => {
+    renderWithClosedTrack();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+    expect(screen.getByText(/Laps & Duration/i)).toBeInTheDocument();
+  });
+
+  it('shows "Estimated duration:" for a closed track', () => {
+    renderWithClosedTrack();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+    expect(screen.getByTestId('closed-track-estimated-duration').textContent).toMatch(
+      /Estimated duration:/
+    );
+  });
+});
