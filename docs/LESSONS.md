@@ -814,3 +814,74 @@ useEffect(() => {
 Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn der State-Wert `null` oder `undefined` ist.
 
 **Konkret in TrackEditor:** Background-Image-Effect ohne Cleanup führte zu Race-Condition wenn `backgroundImage` von `null` auf URL wechselte beim Track-Load (fix/track-delete-safeguards, PR #58 Followup).
+
+---
+
+## Lesson 44 — Tendenz-Drift bei Konzept-Doc-Sprints
+
+**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Beim Übersetzen von User-Regie-Vorgaben in eine Spezifikation entstand über mehrere Nachtrag-Runden ein konsistentes Drift-Pattern: Tendenz-Aussagen wurden schrittweise zu starren Algorithmen verfestigt.
+
+**Symptom (Kette, die sich in PR #60 ergab):**
+1. User-Aussage: "Leader soll am häufigsten im Bild sein" (Tendenz)
+2. Konzept-Doc: "Leader muss in jedem Frame sichtbar sein — hartes Constraint"
+3. Folge: starre Prioritäts-Hierarchie 1–4
+4. Folge: `gap01`-Trigger der algorithmisch nur Leader-vs-Zweiter erlaubt
+5. Folge: Risiko-Doku beschreibt den entstehenden Bug als "korrekt per Hierarchie"
+
+**Ursache:** Jede einzelne Übersetzungsstufe wirkt logisch konsequent. Erst beim Gesamtbild widerspricht das Resultat der ursprünglichen Aussage. CC hat keine Rückkopplung zur User-Intention zwischen den Stufen.
+
+**Konsequenz:** (1) Bei Konzept-Docs explizit zwischen TENDENZ und CONSTRAINT unterscheiden — beide Typen sind valide, müssen aber benannt werden. (2) Reviews brauchen Aufmerksamkeit für Verfestigungs-Drift: "War das als Constraint gemeint oder als Tendenz?". (3) Architektur-Hinweis früh im Doc verankern: "Dieses System ist als Tendenz-Logik formuliert, nicht als Constraint-System."
+
+**Leitfrage:** "Ist das eine Tendenz-Aussage oder ein hartes Constraint? Hätte der User das auch so formuliert?"
+
+**Verweis:** `docs/CAMERA_DIRECTOR.md §3` Architektur-Hinweis-Blockquote, K1+K2+K5+K6 in Nachtrag 5.
+
+---
+
+## Lesson 45 — Doc-weite Konsistenz bei Variablen-Refactor
+
+**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Variablen-Rename `overviewCooldown → overviewCooldownMin + overviewCooldownMax` sowie Wert-Änderung "fest 20s → Random-Jitter [15s/25s]" wurden nicht doc-weit durchgezogen. Erst beim Sammel-Review wurden 5 Stellen mit dem alten Wert und 2 Stellen mit dem alten Variablen-Namen gefunden.
+
+**Symptom:** Tunable-Definition in §8.1 korrekt (`overviewCooldownMin`, `overviewCooldownMax`), aber §3.1, §4.2, §4.3, §8.2 und §12.2 noch mit altem Wert/Namen. Gleiches Muster bei `hudShowCount → hudMaxStandings`.
+
+**Ursache:** Variablen-Refactor nur an der Definition-Stelle gemacht, nicht überall wo der Wert oder Name vorkommt. Docs sind anders als Code — kein Compiler prüft Konsistenz.
+
+**Konsequenz:** Bei jedem Variablen-Rename oder Wert-Änderung in einem Konzept-Doc: Grep nach altem Namen/Wert und alle Treffer in einem Batch ersetzen. "Definition aktualisiert" ist nicht dasselbe wie "Doc-weit konsistent".
+
+**Leitfrage:** "Gibt es noch andere Stellen im Doc wo der alte Wert oder Name steht?"
+
+**Verweis:** K3 (5 Stellen "20s"), K9 (2 Stellen "overviewCooldown" Singular), K7 (2 Stellen "hudShowCount") aus PR #60 Nachtrag 5.
+
+---
+
+## Lesson 46 — Empirische Messung schlägt strukturelle Vermutung
+
+**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Q-25-Diagnose: Space Sprint fühlte sich zu kurz an. Eine strukturelle Hypothese ("Canvas-Koordinaten sind auf 1280×720 begrenzt, daher ist Space Sprint kurz") war im HANDOFF dokumentiert. Tatsächliche Ursache: `maxScale=4.0` zu niedrig.
+
+**Symptom:** HANDOFF beschreibt Hypothese A als "wahrscheinliche Ursache". Wenn man Hypothese A glaubt, folgt ein Refactor der Canvas-Koordinaten-Logik. Tatsächlich ist Hypothese A falsch — empirische Messung widerlegt sie sofort.
+
+**Ursache:** Strukturelle Hypothesen klingen plausibel und werden ohne Mess-Schritt als Grundlage für Lösungs-Konzepte verwendet. Empirische Verifikation wird als "offensichtlich" übersprungen.
+
+**Konsequenz:** Bei strukturellen Vermutungen ("wahrscheinlich liegt es an X") immer einen Mess-Auftrag in den Diagnose-Sprint einbauen bevor Lösungs-Konzepte entwickelt werden. Der Mess-Auftrag kostet wenig; das falsche Refactor kostet viel.
+
+**Leitfrage:** "Ist das eine Messung oder eine Vermutung? Kann ich die Vermutung in 5 Minuten empirisch prüfen?"
+
+**Verweis:** PR #60 Phase 1 — empirische Widerlegung der Canvas-Koordinaten-Hypothese, `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` als Root Cause identifiziert.
+
+---
+
+## Lesson 47 — Konzept-Doc-Reviews brauchen zwei Perspektiven
+
+**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Das abschließende Review vor Merge fand 10 Korrektur-Punkte (K1–K10) die in 5 vorherigen Commits unentdeckt geblieben waren.
+
+**Beobachtung:** User-Review und Strategie-Claude-Review fanden unterschiedliche Probleme:
+- **User** fand K1+K2+K3: Wording-Sensibilität ("das habe ich nicht gesagt"), Hierarchie-Logik, offensichtliche Zahlenwidersprüche
+- **Strategie-Claude** fand K4–K10: technische Variablen-Inkonsistenzen, algorithmische Widersprüche in Trigger-Logik, Folge-Effekte von Architektur-Änderungen in abhängigen Sektionen
+
+**Ursache:** User kennt die eigenen Intentions am besten (Wording-Check), hat aber keine Zeit für vollständige technische Konsistenzprüfung. Strategie-Claude prüft technische Konsistenz, kennt aber die User-Intentionen nur aus dem Doc-Text.
+
+**Konsequenz:** Zwei-stufiges Review-Pattern für Konzept-Docs: (1) User-Review zuerst — Wording, Intention-Check, offensichtliche Widersprüche zur eigenen Aussage. (2) Strategie-Claude-Review — vollständiger Konsistenz-Scan, Variablen-Grep, Folge-Effekte prüfen. (3) Sammel-Nachtrag in einem Commit, nicht einzeln.
+
+**Leitfrage:** "Gibt es jemanden der prüft ob das technisch konsistent ist — und jemanden der prüft ob das die eigene Aussage korrekt wiedergibt?"
+
+**Verweis:** PR #60 Nachtrag 5 — 10 K-Korrekturen aus kombiniertem User+Strategie-Claude-Review.
