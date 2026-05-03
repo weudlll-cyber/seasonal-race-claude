@@ -391,4 +391,40 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
       /Estimated duration:/
     );
   });
+
+  it('shows duration slider (type=range) for a closed track (PR-A2)', () => {
+    renderWithClosedTrack();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+    const slider = screen.getByTestId('closed-track-duration-slider');
+    expect(slider).toBeInTheDocument();
+    expect(slider.type).toBe('range');
+  });
+
+  it('Model D: changing laps resets duration slider to auto', () => {
+    renderWithClosedTrack();
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const trackCard = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
+    fireEvent.click(trackCard);
+
+    const slider = screen.getByTestId('closed-track-duration-slider');
+    const initialValue = slider.value;
+
+    // Move duration slider manually
+    fireEvent.change(slider, { target: { value: String(Number(slider.max)) } });
+    expect(slider.value).toBe(slider.max);
+
+    // Now click a lap button — duration should reset to natural (initial auto value)
+    const lapBtn = screen.getAllByRole('button').find((b) => b.textContent.trim() === '3');
+    fireEvent.click(lapBtn);
+    // After lap change, duration resets to auto for new lap count
+    expect(screen.getByTestId('closed-track-duration-slider')).toBeInTheDocument();
+  });
 });

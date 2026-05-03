@@ -2,8 +2,8 @@
 // File:        lapUtils.test.js
 // Path:        client/src/modules/camera/lapUtils.test.js
 // Project:     RaceArena
-// Created:     2026-05-03
-// Description: Unit tests for lap utilities, openTrackFinishT, and openTrackDurationRange
+// Created:     2026-04-22
+// Description: Unit tests for lap utilities and openTrackDurationRange
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
@@ -12,11 +12,10 @@ import {
   lapProgress,
   currentLap,
   estimatedSecondsPerLap,
-  openTrackFinishT,
   openTrackDurationRange,
   REFERENCE_FPS,
 } from './lapUtils.js';
-import { DEFAULT_BASE_SPEED_CONFIG, DEFAULT_SPEED_SCALE_CONFIG } from '../storage/defaults.js';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 
 describe('lapsFromDuration', () => {
   it('returns 1 for durations under 60s', () => {
@@ -82,52 +81,6 @@ describe('estimatedSecondsPerLap', () => {
   });
 });
 
-describe('openTrackFinishT', () => {
-  const { max: BASE_SPEED_MAX } = DEFAULT_BASE_SPEED_CONFIG;
-
-  it('returns finishT clamped to 1 for long durations', () => {
-    // Any duration > ~13s will push finishT above 1 and get clamped
-    expect(openTrackFinishT(60, 1.0, BASE_SPEED_MAX)).toBe(1);
-  });
-
-  it('returns a value below 1 for very short durations', () => {
-    const finishT = openTrackFinishT(5, 1.0, BASE_SPEED_MAX);
-    expect(finishT).toBeGreaterThan(0);
-    expect(finishT).toBeLessThan(1);
-  });
-
-  it('formula: finishT = baseSpeedMax * speedMultiplier * REFERENCE_FPS * targetSeconds', () => {
-    const targetSeconds = 5;
-    const speedMultiplier = 1.0;
-    const expected = BASE_SPEED_MAX * speedMultiplier * REFERENCE_FPS * targetSeconds;
-    expect(openTrackFinishT(targetSeconds, speedMultiplier, BASE_SPEED_MAX)).toBeCloseTo(
-      expected,
-      5
-    );
-  });
-
-  it('scales with speedMultiplier', () => {
-    const base = openTrackFinishT(5, 1.0, BASE_SPEED_MAX);
-    const fast = openTrackFinishT(5, 2.0, BASE_SPEED_MAX);
-    expect(fast).toBeCloseTo(base * 2, 5);
-  });
-
-  it('uses DEFAULT_BASE_SPEED_CONFIG.max when baseSpeedMax not passed', () => {
-    const withDefault = openTrackFinishT(5, 1.0);
-    const withExplicit = openTrackFinishT(5, 1.0, BASE_SPEED_MAX);
-    expect(withDefault).toBeCloseTo(withExplicit, 10);
-  });
-
-  it('finishT integration — chosen duration produces expected finishT within tolerance', () => {
-    // With targetSeconds=10, speedMultiplier=1.0:
-    // finishT = 0.00118 * 1.0 * 62.5 * 10 = 0.7375 (well below 1)
-    const targetSeconds = 10;
-    const finishT = openTrackFinishT(targetSeconds, 1.0, BASE_SPEED_MAX);
-    expect(finishT).toBeCloseTo(BASE_SPEED_MAX * REFERENCE_FPS * targetSeconds, 5);
-    expect(finishT).toBeLessThan(1);
-  });
-});
-
 describe('openTrackDurationRange', () => {
   const SPACE_SPRINT_PATH_PX = 19772;
   const RIVER_RUN_PATH_PX = 6156;
@@ -142,27 +95,20 @@ describe('openTrackDurationRange', () => {
     expect(range.max).toBeGreaterThanOrEqual(range.min);
   });
 
-  it('Space Sprint max is approximately 144s at maxScale=10', () => {
+  it('Space Sprint max is approximately 144s', () => {
     const range = openTrackDurationRange(
       SPACE_SPRINT_PATH_PX,
-      DEFAULT_SPEED_SCALE_CONFIG,
       DEFAULT_BASE_SPEED_CONFIG,
       1.0,
       0.05
     );
-    // §7.1: Space Sprint ~144s at maxScale=10
+    // §7.1: Space Sprint ~144s at internal ssf=9.886
     expect(range.max).toBeGreaterThan(130);
     expect(range.max).toBeLessThan(160);
   });
 
   it('River Run max is approximately 45s', () => {
-    const range = openTrackDurationRange(
-      RIVER_RUN_PATH_PX,
-      DEFAULT_SPEED_SCALE_CONFIG,
-      DEFAULT_BASE_SPEED_CONFIG,
-      1.0,
-      0.05
-    );
+    const range = openTrackDurationRange(RIVER_RUN_PATH_PX, DEFAULT_BASE_SPEED_CONFIG, 1.0, 0.05);
     // §7.1: River Run ~45s at ssf=3.08
     expect(range.max).toBeGreaterThan(35);
     expect(range.max).toBeLessThan(60);
@@ -175,13 +121,7 @@ describe('openTrackDurationRange', () => {
   });
 
   it('slider min/max calculation — River Run slider range is [30, ~45]', () => {
-    const range = openTrackDurationRange(
-      RIVER_RUN_PATH_PX,
-      DEFAULT_SPEED_SCALE_CONFIG,
-      DEFAULT_BASE_SPEED_CONFIG,
-      1.0,
-      0.05
-    );
+    const range = openTrackDurationRange(RIVER_RUN_PATH_PX, DEFAULT_BASE_SPEED_CONFIG, 1.0, 0.05);
     expect(range.min).toBe(30);
     expect(range.max).toBeGreaterThanOrEqual(30);
   });
@@ -189,14 +129,12 @@ describe('openTrackDurationRange', () => {
   it('runoutZone=0 gives slightly higher max than runoutZone=0.05', () => {
     const withRunout = openTrackDurationRange(
       SPACE_SPRINT_PATH_PX,
-      DEFAULT_SPEED_SCALE_CONFIG,
       DEFAULT_BASE_SPEED_CONFIG,
       1.0,
       0.05
     );
     const noRunout = openTrackDurationRange(
       SPACE_SPRINT_PATH_PX,
-      DEFAULT_SPEED_SCALE_CONFIG,
       DEFAULT_BASE_SPEED_CONFIG,
       1.0,
       0.0

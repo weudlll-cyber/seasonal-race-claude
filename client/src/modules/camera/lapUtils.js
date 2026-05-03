@@ -6,8 +6,7 @@
 // Description: Testable utility functions for multi-lap race logic and speed estimation
 // ============================================================
 
-import { DEFAULT_BASE_SPEED_CONFIG, DEFAULT_SPEED_SCALE_CONFIG } from '../storage/defaults.js';
-import { computeSpeedScaleFactor } from '../speedScale.js';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 
 // Module-level defaults derived from config — single source of truth.
 // Not exported: callers that need exact values should import DEFAULT_BASE_SPEED_CONFIG.
@@ -40,27 +39,29 @@ export function estimatedSecondsPerLap(speedMultiplier, baseSpeedMean = _BASE_SP
   return 1 / (baseSpeedMean * speedMultiplier * REFERENCE_FPS);
 }
 
-// Finish-line position (0..1) on an open track so the fastest racer crosses it in targetSeconds.
-// Pass baseSpeedMax explicitly when the live config value matters (e.g. RaceScreen at race start).
-// Default uses DEFAULT_BASE_SPEED_CONFIG.max so SetupScreen previews stay consistent with defaults.
-export function openTrackFinishT(targetSeconds, speedMultiplier, baseSpeedMax = _BASE_SPEED_MAX) {
-  return Math.min(1, baseSpeedMax * speedMultiplier * REFERENCE_FPS * targetSeconds);
+// Internal ssf computation for openTrackDurationRange — not a public API.
+// Hardcoded constants match the former DEFAULT_SPEED_SCALE_CONFIG values.
+const _REFERENCE_PATH_LENGTH = 2000;
+const _MIN_SCALE = 0.5;
+const _MAX_SCALE = 10.0;
+function _computeSpeedScaleFactor(pathLengthPx) {
+  if (!pathLengthPx || pathLengthPx <= 0) return 1;
+  const raw = pathLengthPx / _REFERENCE_PATH_LENGTH;
+  return Math.max(_MIN_SCALE, Math.min(_MAX_SCALE, raw));
 }
 
 const OPEN_TRACK_DURATION_MIN = 30;
 
 // Slider range [min, max] for the open-track duration picker.
-// max = natural traversal time of the track given its speedScaleFactor (from pathLengthPx)
-// and the current mean base speed, accounting for runoutZone.
-// speedScaleConfig defaults to DEFAULT_SPEED_SCALE_CONFIG; baseSpeedConfig defaults to DEFAULT_BASE_SPEED_CONFIG.
+// max = natural traversal time of the track given its path length and mean base speed,
+// accounting for runoutZone.
 export function openTrackDurationRange(
   pathLengthPx,
-  speedScaleConfig = DEFAULT_SPEED_SCALE_CONFIG,
   baseSpeedConfig = DEFAULT_BASE_SPEED_CONFIG,
   speedMultiplier = 1.0,
   runoutZone = 0.05
 ) {
-  const ssf = computeSpeedScaleFactor(pathLengthPx, speedScaleConfig);
+  const ssf = _computeSpeedScaleFactor(pathLengthPx);
   const baseSpeedMean = (baseSpeedConfig.min + baseSpeedConfig.max) / 2;
   const naturalSeconds =
     (ssf * (1 - runoutZone)) / (baseSpeedMean * speedMultiplier * REFERENCE_FPS);
