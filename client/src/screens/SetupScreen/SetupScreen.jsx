@@ -26,7 +26,13 @@ import {
 import { filterRacerTypesForTrack } from '../../modules/surface-effects/registry.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
-import { estimatedSecondsPerLap, lapsFromDuration } from '../../modules/camera/lapUtils.js';
+import {
+  estimatedSecondsPerLap,
+  lapsFromDuration,
+  openTrackDurationRange,
+} from '../../modules/camera/lapUtils.js';
+import { loadSpeedScaleConfig } from '../../modules/speedScale.js';
+import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import styles from './SetupScreen.module.css';
@@ -114,10 +120,12 @@ function SetupScreen() {
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   const [selectedLaps, setSelectedLaps] = useState(null); // null = auto (from duration)
+  const [openTrackDuration, setOpenTrackDuration] = useState(null); // null = set from track default on selection
 
   useEffect(() => {
     setRacerTypeOverride(null);
     setSelectedLaps(null);
+    setOpenTrackDuration(null);
   }, [selectedTrackId]);
 
   // Clear override if the chosen type gets disabled while it's selected.
@@ -195,6 +203,37 @@ function SetupScreen() {
     return geom ? !geom.closed : false;
   }, [selectedTrack]);
 
+  // Duration slider range for open tracks — derived from track physics (pathLengthPx + speedScaleFactor)
+  const openTrackSliderRange = useMemo(() => {
+    if (!trackIsOpen || !selectedTrack?.geometryId) return null;
+    const geom = getTrack(selectedTrack.geometryId);
+    if (!geom) return null;
+    const pathLengthPx = geom.pathLengthPx ?? 0;
+    if (!pathLengthPx) return null;
+    const speedScaleConfig = loadSpeedScaleConfig();
+    const baseSpeedConfig = loadBaseSpeedConfig();
+    const racerType = getRacerType(
+      racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+    );
+    const speedMultiplier = racerType?.getSpeedMultiplier() ?? 1.0;
+    const range = openTrackDurationRange(
+      pathLengthPx,
+      speedScaleConfig,
+      baseSpeedConfig,
+      speedMultiplier,
+      behaviorConfig.runoutZone
+    );
+    return range;
+  }, [trackIsOpen, selectedTrack, racerTypeOverride, behaviorConfig.runoutZone]);
+
+  // Effective open-track duration: user-selected value clamped to [min, max], or 65% of max as default
+  const effectiveOpenTrackDuration = useMemo(() => {
+    if (!openTrackSliderRange) return raceSettings.duration;
+    const { min, max } = openTrackSliderRange;
+    if (openTrackDuration === null) return Math.max(min, Math.min(max, Math.round(max * 0.65)));
+    return Math.max(min, Math.min(max, openTrackDuration));
+  }, [openTrackDuration, openTrackSliderRange, raceSettings.duration]);
+
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
@@ -218,7 +257,7 @@ function SetupScreen() {
       winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
-      targetDuration: trackIsOpen ? raceSettings.duration : undefined,
+      targetDuration: trackIsOpen ? effectiveOpenTrackDuration : undefined,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
       timestamp: new Date().toISOString(),
     };
@@ -431,15 +470,72 @@ function SetupScreen() {
                           marginBottom: '0.35rem',
                         }}
                       >
-                        Race duration (set in Settings tab)
+                        Race Duration
                       </label>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>
-                        {raceSettings.duration}s — open track, finish line at{' '}
-                        {Math.round((1 - behaviorConfig.runoutZone) * 100)}% of track
-                        {behaviorConfig.runoutZone > 0
-                          ? ` (${Math.round(behaviorConfig.runoutZone * 100)}% runout)`
-                          : ''}
-                      </span>
+                      {openTrackSliderRange ? (
+                        <>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              marginBottom: '0.25rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '0.78rem',
+                                color: 'var(--color-muted)',
+                                minWidth: '3.5rem',
+                              }}
+                            >
+                              Total race duration
+                            </span>
+                            <input
+                              data-testid="open-track-duration-slider"
+                              type="range"
+                              min={openTrackSliderRange.min}
+                              max={openTrackSliderRange.max}
+                              value={effectiveOpenTrackDuration}
+                              onChange={(e) => setOpenTrackDuration(Number(e.target.value))}
+                              style={{
+                                flex: 1,
+                                cursor: 'pointer',
+                                accentColor: 'var(--color-accent)',
+                              }}
+                              title="Choose total race duration. Range derived from track physics. Race ends when leader crosses finish point."
+                            />
+                            <span
+                              style={{
+                                fontSize: '0.85rem',
+                                color: 'var(--color-text)',
+                                minWidth: '2.5rem',
+                                textAlign: 'right',
+                              }}
+                            >
+                              {effectiveOpenTrackDuration}s
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: '0.72rem',
+                              color: 'var(--color-muted)',
+                            }}
+                          >
+                            <span>Min: {openTrackSliderRange.min}s</span>
+                            <span data-testid="open-track-estimated-duration">
+                              Estimated duration: {effectiveOpenTrackDuration}s
+                            </span>
+                            <span>Max: {openTrackSliderRange.max}s</span>
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                          Draw a track geometry to unlock duration settings.
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -451,7 +547,7 @@ function SetupScreen() {
                           marginBottom: '0.35rem',
                         }}
                       >
-                        Laps
+                        Laps &amp; Duration
                       </label>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                         {[1, 2, 3, 4].map((n) => {
@@ -489,24 +585,26 @@ function SetupScreen() {
                             </button>
                           );
                         })}
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--color-muted)',
-                            marginLeft: '0.25rem',
-                          }}
-                        >
-                          * auto from duration · ~
-                          {Math.round(
-                            estimatedSecondsPerLap(
-                              getRacerType(
-                                racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
-                              ).getSpeedMultiplier()
-                            ) * (selectedLaps ?? lapsFromDuration(raceSettings.duration))
-                          )}
-                          s est.
-                        </span>
                       </div>
+                      <span
+                        data-testid="closed-track-estimated-duration"
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--color-muted)',
+                          marginTop: '0.25rem',
+                          display: 'block',
+                        }}
+                      >
+                        * auto · Estimated duration:{' '}
+                        {Math.round(
+                          estimatedSecondsPerLap(
+                            getRacerType(
+                              racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+                            ).getSpeedMultiplier()
+                          ) * (selectedLaps ?? lapsFromDuration(raceSettings.duration))
+                        )}
+                        s
+                      </span>
                     </div>
                   )}
                 </div>
@@ -572,7 +670,8 @@ function SetupScreen() {
             ) : (
               <>
                 {' '}
-                · <strong>{raceSettings.duration}s</strong>
+                ·{' '}
+                <strong>{trackIsOpen ? effectiveOpenTrackDuration : raceSettings.duration}s</strong>
               </>
             )}{' '}
             · Top <strong>{raceSettings.winners}</strong>
