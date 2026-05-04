@@ -11,6 +11,7 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../../modules/storage/useServerTracks.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_HISTORY, DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function RaceHistory() {
@@ -62,58 +63,74 @@ function RaceHistory() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Filter bar */}
-      <div
-        className={s.card}
-        style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}
-      >
-        <div className={s.formGroup} style={{ minWidth: '160px' }}>
-          <label className={s.label}>Filter by Track</label>
-          <select
-            className={s.select}
-            value={filterTrack}
-            onChange={(e) => setFilterTrack(e.target.value)}
-          >
-            <option value="">All tracks</option>
-            {tracks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.icon} {t.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className={s.formGroup} style={{ minWidth: '160px' }}>
-          <label className={s.label}>Filter by Date</label>
-          <input
-            className={s.input}
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-        </div>
-        <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            onClick={() => {
-              setFilterTrack('');
-              setFilterDate('');
-            }}
-          >
-            Clear Filters
-          </button>
-          <button
-            className={`${s.btn} ${s.btnSecondary}`}
-            onClick={handleExportCSV}
-            disabled={filtered.length === 0}
-          >
-            Export CSV
-          </button>
-          <button
-            className={`${s.btn} ${s.btnDanger}`}
-            onClick={handleClear}
-            disabled={history.length === 0}
-          >
-            Clear History
-          </button>
+      <div className={s.card}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Browse all past races and export them as CSV. Useful for reviewing tournaments, sharing
+          results with players, or keeping a record. You can filter by track or date to find
+          specific events.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Filter by Track
+              <InfoTooltip text="Show only races on the selected track. Pick 'All tracks' to see every race regardless of track." />
+            </label>
+            <select
+              className={s.select}
+              value={filterTrack}
+              onChange={(e) => setFilterTrack(e.target.value)}
+            >
+              <option value="">All tracks</option>
+              {tracks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.icon} {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Filter by Date
+              <InfoTooltip text="Show only races within this time period. Useful for narrowing down to a specific event day or recent weeks." />
+            </label>
+            <input
+              className={s.input}
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+            />
+          </div>
+          <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              onClick={() => {
+                setFilterTrack('');
+                setFilterDate('');
+              }}
+            >
+              Clear Filters
+            </button>
+            <button
+              className={`${s.btn} ${s.btnSecondary}`}
+              onClick={handleExportCSV}
+              disabled={filtered.length === 0}
+            >
+              Export CSV
+            </button>
+            <button
+              className={`${s.btn} ${s.btnDanger}`}
+              onClick={handleClear}
+              disabled={history.length === 0}
+            >
+              Clear History
+            </button>
+          </div>
         </div>
       </div>
 

@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import {
   RACER_TYPE_IDS,
   RACER_TYPES,
@@ -63,12 +64,46 @@ function RacerManager() {
   return (
     <>
       <div className={s.card}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.35rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
             Racer Types{' '}
             <span className={s.badge}>
               {activeCount}/{types.length}
             </span>
+          </span>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.5rem' }}>
+          The different categories of racers available in your races (horses, rockets, boats, etc.).
+          Each type has its own look, sprite image, and default characters. You can mix and match
+          types or stick with one per race.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            marginBottom: '0.75rem',
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+          }}
+        >
+          <span>Per type you can configure:</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Name
+            <InfoTooltip text="What this category of racers is called. Choose a name that describes the racer style — for example 'Horse', 'Rocket', or 'Boat'." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Sprite
+            <InfoTooltip text="The image file used for racers of this type. The image should show the racer facing right — the app handles rotation automatically when racers turn corners." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Characters
+            <InfoTooltip text="Pre-made racer characters of this type with names and color variations. These appear as ready-to-use options when you set up a race." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Min Size
+            <InfoTooltip text="The smallest size at which the racer image still looks good. The app uses this to keep racers readable on big tracks where they would otherwise be tiny." />
           </span>
         </div>
 
