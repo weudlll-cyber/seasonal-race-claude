@@ -86,6 +86,10 @@ const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 
 const tPos = (t) => ((t % 1) + 1) % 1;
 
+export function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
@@ -304,7 +308,7 @@ export default function RaceScreen() {
           spreadFactorPrev: spreadFactor,
           spreadFactorTarget: spreadFactor,
           transitionStartTime: 0,
-          transitionDuration: 2000,
+          transitionDuration: 5000,
           nextRollTime: rollInterval + rollJitter,
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
@@ -721,10 +725,41 @@ export default function RaceScreen() {
         if (ts - st.countdownStart >= 4000) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
+          // Convert per-racer nextRollTime from relative offset to absolute timestamp
+          for (const r of st.racers) r.nextRollTime += ts;
           setPhase(PHASE.RACING);
         }
       } else if (st.phase === PHASE.RACING) {
+        // Re-Roll: spreadFactor changes are only allowed before 80% of targetDuration.
+        const lastRollDeadline = st.raceStart + targetDuration * 1000 * 0.8;
+        const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
+        const halfWidth = spreadRange * 0.85;
         for (const r of st.racers) {
+          // ── Per-racer spreadFactor re-roll + smooth transition ─────────────────
+          if (!r.finished) {
+            if (ts >= r.nextRollTime && ts < lastRollDeadline) {
+              const newTarget = Math.max(
+                BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                Math.min(
+                  BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                  r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
+                )
+              );
+              r.spreadFactorPrev = r.spreadFactor;
+              r.spreadFactorTarget = newTarget;
+              r.transitionStartTime = ts;
+              const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+              r.nextRollTime = ts + rollInterval + jOff;
+            }
+            const elapsed = ts - r.transitionStartTime;
+            if (elapsed < r.transitionDuration) {
+              const tProg = elapsed / r.transitionDuration;
+              r.spreadFactor =
+                r.spreadFactorPrev +
+                (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(tProg);
+              r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
+            }
+          }
           // Per-racer sine jitter — each racer has its own frequency and phase,
           // so speeds fluctuate independently instead of all spiking together.
           // Amplitude is ±5% of race_baseSpeed so it stays proportional after
