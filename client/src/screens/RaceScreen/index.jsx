@@ -240,6 +240,11 @@ export default function RaceScreen() {
     const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
     const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
 
+    // Re-Roll schedule: distribute rolls evenly over 0–80% of targetDuration.
+    // rollInterval is in ms (ts timestamps). Last roll lands at ~80% of the race.
+    const rollCount = Math.max(2, Math.floor(targetDuration / 15));
+    const rollInterval = (0.8 * targetDuration * 1000) / rollCount;
+
     // Ensure surface-class registry has the latest cached server data.
     // Code defaults are always present; this picks up any user-defined overrides.
     loadServerClasses(getCachedServerSurfaceClasses());
@@ -280,18 +285,27 @@ export default function RaceScreen() {
         const tStart = isOpenTrack
           ? (rowLayout.totalRows - assignment.rowIndex) * deltaT_per_row
           : -(assignment.rowIndex * deltaT_per_row);
+        // spreadFactor: random luck draw — the only part affected by re-rolls.
+        // speedBonusMult: positional back-row compensation — constant over the whole race.
+        const spreadFactor =
+          (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
+        const speedBonusMult = 1 + speedBonus;
+        // nextRollTime stored as offset from raceStart; converted to absolute ts at COUNTDOWN→RACING.
+        const rollJitter = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
         const racer = {
           ...r,
           index: i,
           t: tStart,
           lap: 1,
           icon: trackEmoji ?? r.icon,
-          baseSpeed:
-            race_baseSpeed *
-            speedMultiplier *
-            ((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) /
-              BASE_SPEED_MEAN) *
-            (1 + speedBonus),
+          spreadFactor,
+          speedBonusMult,
+          baseSpeed: race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
+          spreadFactorPrev: spreadFactor,
+          spreadFactorTarget: spreadFactor,
+          transitionStartTime: 0,
+          transitionDuration: 2000,
+          nextRollTime: rollInterval + rollJitter,
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
           color: RACER_COLORS[i % RACER_COLORS.length],
