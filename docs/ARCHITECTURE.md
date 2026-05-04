@@ -462,6 +462,8 @@ The Code-Bundle initially ships with empty geometry fields (bootstrap). After th
 
 On every server boot, `migrateDefaultTracks()` checks which of the 5 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
+**Server-wins deduplication:** `loadAllTracks()` (used by SetupScreen, TrackManager) merges code defaults from `defaults.js` with server tracks and filters out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 5 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
+
 `DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
 
 ### Server-PUT Respects Client geometryId (TLH-1)

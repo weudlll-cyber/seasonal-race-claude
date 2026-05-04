@@ -969,3 +969,17 @@ O(N log N) einmalig beim Track-Laden (nicht pro Frame). Closed-Tracks: eine extr
 **Sub-Caveat — Aufrufer von `derivativeAt` direkt:** Code der `derivativeAt(controlPoints, t)` direkt aufruft (statt das Sample-Array zu konsumieren) umgeht die Arc-Length-Reparametrisierung. `derivativeAt` erwartet `t` als T-Parameter im Kontrollpunkt-Raum; nach dem Wechsel auf arc-length-uniform Sampling ist Racer-`t` aber eine Arc-Length-Fraktion. Das gibt falsche Tangenten an falschen Spline-Punkten — auf asymmetrischen Tracks sichtbar als "Rotation hinkt der Kurve hinterher". Zusätzlich: `derivativeAt` clampt `t` auf `[0,1]`, was bei Closed-Track-Mehrfachrunden (t > 1) alle Racer ab Runde 2 auf die konstante End-Tangente zwang. Fix: Tangenten aus dem arc-length-gesampleten Array via finiter Differenz berechnen (O(1) pro Frame, kein Bug durch T-Raum-Mapping). **Bei jedem Refactoring von Spline-Sampling alle Aufrufer prüfen — nicht nur Sample-Output-Konsumenten, sondern auch Code der auf rohen Kontrollpunkten und Racer-t arbeitet.**
 
 **Verweis:** PR-A2.5 `catmullRom.js`, `catmullRom.diagnostic.test.js`, `EditorShape.js`.
+
+---
+
+## Lesson 51 — Silent Failures in Async Resource Loaders brauchen Observability
+
+**Kontext:** PR-A2.8 — User berichtete dass Backgrounds im Race fehlen, ohne zu wissen warum. Root-Cause: `bgImageCache.js` setzte `record.failed = true` im `img.onerror`-Handler, gab aber keine Rückmeldung. Kein `console.warn`, kein UI-Hinweis, kein Retry. Der User hatte mehrfach Background-Bilder hochgeladen und wusste nicht, dass das Problem der offline Docker-Server war — nicht die Bilder.
+
+**Erkenntnis:** Async Resource Loader (Image, fetch, FileReader) die UX-sichtbare Inhalte laden, müssen bei Failure mindestens eine Konsolen-Warnung ausgeben. Silent-fail ist nur akzeptabel wenn der Caller bereits einen sichtbaren Fehlerzustand anzeigt. `img.onerror = () => { record.failed = true; }` ohne jede Ausgabe macht die Ursache beim Debuggen unsichtbar — auch für den Entwickler selbst.
+
+**Pattern:** Beim ersten Fehler pro Cache-Eintrag (Flag `record.warned`) einmal warnen; danach silent. Verhindert Frame-Spam bei rAF-Loop-Callers, gibt aber dennoch einen klaren Hinweis im ersten Fehlerfall. Warn-Message soll enthalten: was fehlschlug (URL), warum wahrscheinlich (mögliche Ursache), wie zu beheben (konkreter Schritt).
+
+**Generalisierung:** Jeder `onerror` / `catch`-Handler in einem Modul das Ressourcen cached und `null` zurückgibt sollte mit `console.warn` ausgestattet sein, wenn der Aufrufer nicht selbst warnt. Die Faustregel: Wenn das Fehlen der Ressource für den User sichtbar ist (fehlender Hintergrund, fehlendes Bild), muss die Ursache für den Entwickler sichtbar sein (Konsole).
+
+**Verweis:** PR-A2.8 `bgImageCache.js`.
