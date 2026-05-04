@@ -122,6 +122,13 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
   maxCapacityFactor: 0.3,
 };
 
+export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+  reRollVariationPercent: 85,
+  reRollTransitionDuration: 5.0,
+  reRollIntervalDivisor: 15,
+  reRollLastPositionPercent: 80,
+};
+
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
   // Start layout — initial lateral spread at race start
