@@ -279,6 +279,19 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   (Override-API vs. Registry vs. Boot-Logik). Kein Problem heute, beobachten.
 - **Q-10** — Watch: `RacerEditModal.jsx` bei 302 LOC — bereits 75% der 400-LOC-Schwelle.
   Im Auge behalten bei D8 (voller Config-Editor).
+- **Q-26** — Default-Tracks ohne Backgrounds
+
+  Aktuell haben alle 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit)
+  kein `backgroundImage`-Feld in `defaults.js`. Im Race wird kein Hintergrund gerendert, unabhängig
+  vom Server-Status. Verifiziert in PR-A2.5-Diagnose. Architektur-Lücke, kein Bug.
+
+  **Lösungs-Vorschlag (wenn gewünscht):** Statische Assets in
+  `client/public/track-backgrounds/<track-id>.png` mit relativen URLs in `defaults.js`. Kein
+  Server-Aufruf nötig.
+
+  **Aufwand:** Mini-PR, ca. 2–3 Stunden inkl. Asset-Erstellung. **Schwere:** Niedrig —
+  Feature-Erweiterung, kein Defekt.
+
 - **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
   FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.
   Defensiv-Hygiene, niedrige Priorität.
