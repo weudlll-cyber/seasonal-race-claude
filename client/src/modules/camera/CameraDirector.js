@@ -150,19 +150,18 @@ export class CameraDirector {
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
-        // Pan to the center of the top-N racers so the camera follows the action
-        // on large tracks. On 1280-reference tracks clampOffset forces offset back to 0.
+        // During start phase, pan to the full-field centroid so no racer is cropped
+        // off-screen in the starting grid. After start phase, follow only the top-N.
         // When overviewZoom < 1 (worldW > canvasW), edgeLoX > 0 so the world-edge clamp
         // below centers the view rather than clamping — correct for full-world OVERVIEW.
-        const cx = focusRacers.length
-          ? focusRacers.reduce((s, r) => s + r.x, 0) / focusRacers.length
-          : hw;
-        const cy = focusRacers.length
-          ? focusRacers.reduce((s, r) => s + r.y, 0) / focusRacers.length
-          : hh;
+        const panRacers =
+          raceState && raceState.raceElapsed < START_PHASE_DURATION ? racers : focusRacers;
+        const panSrc = panRacers.length ? panRacers : focusRacers;
+        const cx = panSrc.length ? panSrc.reduce((s, r) => s + r.x, 0) / panSrc.length : hw;
+        const cy = panSrc.length ? panSrc.reduce((s, r) => s + r.y, 0) / panSrc.length : hh;
         this.targetZoom = this.overviewZoom;
-        this.targetOffsetX = hw - cx;
-        this.targetOffsetY = hh - cy;
+        this.targetOffsetX = hw - cx * this.overviewZoom;
+        this.targetOffsetY = hh - cy * this.overviewZoom;
         break;
       }
 
