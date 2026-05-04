@@ -13,6 +13,7 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId, storageSet } from '../../../modules/storage/storage.js';
 import { DEFAULT_PLAYER_GROUPS, DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
 import { assignRacers } from '../../../modules/utils/RandomHelper.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const BLANK_FORM = { name: '', playersText: '' };
@@ -77,7 +78,7 @@ function PlayerGroupsManager() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Group list */}
       <div className={s.card}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.35rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
             Saved Groups <span className={s.badge}>{groups.length}</span>
           </span>
@@ -88,6 +89,11 @@ function PlayerGroupsManager() {
             </button>
           )}
         </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Groups of players that you race with regularly. When you set up a new race, you can pick a
+          group instead of selecting players one by one. Useful for recurring events like
+          &lsquo;Friday Crew&rsquo; or &lsquo;Family Race&rsquo;.
+        </p>
 
         {groups.length === 0 ? (
           <p className={s.emptyState}>No groups yet. Create one to save a roster.</p>
@@ -134,7 +140,13 @@ function PlayerGroupsManager() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             <div className={s.formGroup}>
-              <label className={s.label}>Group Name</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Group Name
+                <InfoTooltip text="What this group is called. Choose a short, recognizable name that you'll see in race setup." />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Friday Team"
@@ -144,8 +156,12 @@ function PlayerGroupsManager() {
               />
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
                 Player Names{' '}
+                <InfoTooltip text="The players in this group. Add anyone who frequently races together so you can pick them all with one click." />
                 <span
                   style={{ textTransform: 'none', fontWeight: 400, color: 'var(--color-muted)' }}
                 >

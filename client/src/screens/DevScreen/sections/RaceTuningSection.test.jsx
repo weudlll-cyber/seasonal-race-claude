@@ -94,6 +94,7 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
 import RaceTuningSection from './RaceTuningSection.jsx';
 
 beforeEach(() => {
@@ -104,7 +105,7 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
-    expect(screen.getByText(/Fine-tune race physics/)).toBeTruthy();
+    expect(screen.getByText(/Fine-tune how races feel/)).toBeTruthy();
   });
 
   it('renders Block 1: Speed Range with inputs', () => {
@@ -201,5 +202,89 @@ describe('RaceTuningSection — row start summary', () => {
     render(<RaceTuningSection />);
     const summary = screen.getByTestId('row-start-summary');
     expect(summary.textContent).toContain('full');
+  });
+});
+
+describe('RaceTuningSection — per-block reset buttons', () => {
+  it('renders Reset button for Speed Range block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-range')).toBeTruthy();
+  });
+
+  it('renders Reset button for Start Layout block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-start-layout')).toBeTruthy();
+  });
+
+  it('renders Reset button for Row Start block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-row-start')).toBeTruthy();
+  });
+
+  it('renders Reset button for Speed Re-Roll block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-reroll')).toBeTruthy();
+  });
+
+  it('renders Reset button for Drafting block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-drafting')).toBeTruthy();
+  });
+
+  it('renders Reset button for Comfort Zone block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-comfort-zone')).toBeTruthy();
+  });
+
+  it('renders Reset button for Soft Avoidance block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-soft-avoidance')).toBeTruthy();
+  });
+
+  it('renders Reset button for Speed Brake block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-brake')).toBeTruthy();
+  });
+
+  it('renders Reset button for Home Force block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-home-force')).toBeTruthy();
+  });
+
+  it('clicking reset-speed-range restores default min/max without crash', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-speed-range'));
+    expect(screen.getByTestId('reset-speed-range')).toBeTruthy();
+  });
+
+  it('clicking reset-speed-reroll calls setDynamicsConfig with all defaults', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-speed-reroll'));
+    const preview = screen.getByTestId('reroll-preview');
+    expect(preview.textContent).toContain('4 re-rolls');
+    expect(preview.textContent).toContain('12s');
+  });
+
+  it('clicking reset-drafting does not crash', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-drafting'));
+    const summary = screen.getByTestId('drafting-summary');
+    expect(summary.textContent).toContain('110 px');
+  });
+});
+
+describe('RaceTuningSection — reset uses DEFAULT values, not current state (regression)', () => {
+  it('reset-speed-reroll restores reRollVariationPercent to 85 when loaded with stored value 150', () => {
+    loadRaceDynamicsConfig.mockReturnValueOnce({
+      reRollVariationPercent: 150,
+      reRollTransitionDuration: 3.0,
+      reRollIntervalDivisor: 20,
+      reRollLastPositionPercent: 70,
+    });
+    render(<RaceTuningSection />);
+    const input = screen.getByLabelText('Re-Roll Variation Percent');
+    expect(input.value).toBe('150');
+    fireEvent.click(screen.getByTestId('reset-speed-reroll'));
+    expect(input.value).toBe('85');
   });
 });
