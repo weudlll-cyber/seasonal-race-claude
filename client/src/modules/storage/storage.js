@@ -19,6 +19,8 @@ export const KEYS = {
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
   RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig',
   ROW_LAYOUT_CONFIG: 'racearena:rowLayoutConfig',
+  RACE_DYNAMICS_CONFIG: 'racearena:raceDynamicsConfig',
+  DEV_PANEL_VIEW: 'racearena:devPanelView',
   SURFACE_CLASSES_CACHE: 'racearena:cache:surfaceClasses',
 };
 
