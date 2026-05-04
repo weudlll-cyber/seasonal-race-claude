@@ -141,6 +141,9 @@ export function applyRacerBehavior(racers, config) {
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────
+  // Structural note (PR-A2.6 diagnosis): on tight curves the track direction rotates quickly,
+  // so the cone occasionally misses a follower that is physically in the slipstream.
+  // A full cone-geometry refactor is a separate Backlog item and is NOT done here.
   const coneHalf = (config.draftingConeAngle * Math.PI) / 180 / 2;
   for (let i = 0; i < active.length; i++) {
     const follower = active[i];
