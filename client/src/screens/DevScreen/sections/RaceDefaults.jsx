@@ -10,6 +10,7 @@
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
@@ -22,12 +23,40 @@ function RaceDefaults() {
     setDefaults((prev) => ({ ...prev, ...patch }));
   }
 
+  function handleReset() {
+    setDefaults({ ...DEFAULT_RACE_DEFAULTS });
+  }
+
   return (
     <div className={s.card}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}
+      >
+        <span style={{ fontWeight: 700, fontSize: '1rem' }}>Race Settings</span>
+        <span className={s.spacer} />
+        <button
+          className={`${s.btn} ${s.btnGhost}`}
+          onClick={handleReset}
+          style={{ fontSize: '0.75rem' }}
+        >
+          Reset Defaults
+        </button>
+      </div>
+      <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '1.25rem' }}>
+        Default settings applied to every new race. Operators can override individual values per
+        race during setup.
+      </p>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Duration */}
         <div className={s.formGroup}>
-          <label className={s.label}>Default Race Duration</label>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Default Race Duration
+            <InfoTooltip text="Default race duration in seconds applied to new races. Operators can override this per race during setup." />
+          </label>
           <div className={s.optionPills}>
             {DURATIONS.map((d) => (
               <button
@@ -43,7 +72,13 @@ function RaceDefaults() {
 
         {/* Winners */}
         <div className={s.formGroup}>
-          <label className={s.label}>Default Number of Winners (Podium Spots)</label>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Default Number of Winners (Podium Spots)
+            <InfoTooltip text="How many top finishers are highlighted as winners on the result screen. Default 3 shows podium-style top three." />
+          </label>
           <div className={s.stepper}>
             <button
               className={s.stepperBtn}
@@ -65,7 +100,13 @@ function RaceDefaults() {
 
         {/* Max Players */}
         <div className={s.formGroup}>
-          <label className={s.label}>Max Players per Race</label>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Max Players per Race
+            <InfoTooltip text="Maximum number of racers allowed in a single race. Higher counts may impact visual clarity at race start and finish." />
+          </label>
           <div className={s.stepper}>
             <button
               className={s.stepperBtn}
@@ -87,7 +128,13 @@ function RaceDefaults() {
 
         {/* Countdown */}
         <div className={s.formGroup}>
-          <label className={s.label}>Countdown Duration</label>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Countdown Duration
+            <InfoTooltip text="Length of the pre-race countdown in seconds. Gives operators time to grab attention before the start." />
+          </label>
           <div className={s.optionPills}>
             {COUNTDOWNS.map((c) => (
               <button
@@ -115,6 +162,7 @@ function RaceDefaults() {
               <span className={s.toggleSlider} />
             </label>
             <span style={{ fontSize: '0.875rem' }}>Auto-advance to Result Screen after race</span>
+            <InfoTooltip text="When enabled, the result screen automatically appears after a race ends. Useful for fully automated event runs." />
           </div>
           {defaults.autoAdvance && (
             <div
@@ -123,6 +171,7 @@ function RaceDefaults() {
               <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
                 Delay (seconds):
               </span>
+              <InfoTooltip text="Seconds to wait after race end before showing results. Only applies when Auto-advance is enabled." />
               <div className={s.stepper}>
                 <button
                   className={s.stepperBtn}
@@ -156,6 +205,7 @@ function RaceDefaults() {
               <span className={s.toggleSlider} />
             </label>
             <span style={{ fontSize: '0.875rem' }}>Sound effects</span>
+            <InfoTooltip text="Whether to play sound effects during races (start, finish, etc.). Disable for silent operation." />
           </div>
         </div>
       </div>
