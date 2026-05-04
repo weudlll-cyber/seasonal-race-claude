@@ -16,6 +16,9 @@ export const CAM_STATE = {
 };
 
 const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
+const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
+const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
+const ENDGAME_PROGRESS_THRESHOLD = 0.85; // leader.t/finishT above this → lock LEADER
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
 const MAX_ZOOM = 2.5; // ceiling for very small tracks
@@ -46,52 +49,91 @@ export class CameraDirector {
     // On the 1280px reference world overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
     // backward-compatible with the previous absolute-VIEW_W formula (< 0.5% diff).
     const overviewZoom = CANVAS_W / worldW;
+    this.overviewZoom = overviewZoom;
     this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * LEADER_ZOOM_RATIO));
     this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * BATTLE_ZOOM_RATIO));
     this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * COMEBACK_ZOOM_RATIO));
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
-    this.zoom = 1;
-    this.targetZoom = 1;
+    this.zoom = overviewZoom;
+    this.targetZoom = overviewZoom;
     this.offsetX = 0;
     this.targetOffsetX = 0;
     this.offsetY = 0;
     this.targetOffsetY = 0;
+    this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
   }
 
   // Main update — call once per frame during RACING.
+  // raceState: { raceElapsed, finishedCount, winner, finishT }
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
-  update(racers, ts, canvasW, canvasH) {
+  update(racers, ts, raceState, canvasW, canvasH) {
     if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
-      this._transition(racers, ts);
+      this._transition(racers, ts, raceState);
     }
-    this._setTargets(racers, canvasW, canvasH);
+    this._setTargets(racers, canvasW, canvasH, raceState);
     this.zoom += (this.targetZoom - this.zoom) * LERP;
     this.offsetX += (this.targetOffsetX - this.offsetX) * LERP;
     this.offsetY += (this.targetOffsetY - this.offsetY) * LERP;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
-  _transition(racers, ts) {
+  _transition(racers, ts, raceState) {
+    // Record cooldown timestamp when leaving OVERVIEW
+    if (this.state === CAM_STATE.OVERVIEW) {
+      this._lastOverviewExitTs = ts;
+    }
+
     const ordered = [...racers].sort((a, b) => b.t - a.t);
-    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
-    const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
 
-    const hasBattle = gap01 < 0.05; // top-2 within 5% of track
-    const hasLeaderGap = gap01 >= 0.15; // leader ≥ 15% ahead of 2nd (was 20%)
-    const hasComeback = gapLeadLast > 0.15; // last > 15% behind leader (was 20%)
+    // Priority 1: Finish override — camera locks on winner immediately
+    if (raceState.finishedCount > 0) {
+      this.state = CAM_STATE.LEADER_ZOOM;
+      this.stateEnteredAt = ts;
+      return;
+    }
 
-    const roll = Math.random();
-    if (hasBattle && roll < 0.7) {
-      this.state = CAM_STATE.BATTLE_ZOOM;
-    } else if (hasLeaderGap && roll < 0.7) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-    } else if (hasComeback && roll < 0.5) {
-      this.state = CAM_STATE.COMEBACK_ZOOM;
-    } else if (roll < 0.6) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-    } else {
+    // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
+    if (raceState.raceElapsed < START_PHASE_DURATION) {
       this.state = CAM_STATE.OVERVIEW;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 2.5: Endgame — leader past 85% → LEADER, bypasses cooldown
+    const leader = ordered[0];
+    if (leader && raceState.finishT > 0) {
+      const leaderProgress = leader.t / raceState.finishT;
+      if (leaderProgress > ENDGAME_PROGRESS_THRESHOLD) {
+        this.state = CAM_STATE.LEADER_ZOOM;
+        this.stateEnteredAt = ts;
+        return;
+      }
+    }
+
+    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
+    const hasBattle = gap01 < 0.05;
+
+    // Priority 3: Cooldown expired + no active battle → return to OVERVIEW
+    if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
+      this.state = CAM_STATE.OVERVIEW;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 4: Battle — top-2 within 5% of track
+    if (hasBattle) {
+      this.state = CAM_STATE.BATTLE_ZOOM;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 5: Default — LEADER with COMEBACK chance when last is far behind
+    const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
+    if (gapLeadLast > 0.3 && gap01 >= 0.1) {
+      this.state = CAM_STATE.COMEBACK_ZOOM;
+    } else {
+      this.state = CAM_STATE.LEADER_ZOOM;
     }
     this.stateEnteredAt = ts;
   }
@@ -101,24 +143,25 @@ export class CameraDirector {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
   }
 
-  _setTargets(racers, canvasW, canvasH) {
+  _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const hw = canvasW / 2;
     const hh = canvasH / 2;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
-        // Pan to the center of the top-N racers so the camera follows the action
-        // on large tracks. On 1280-reference tracks clampOffset forces offset back to 0.
-        const cx = focusRacers.length
-          ? focusRacers.reduce((s, r) => s + r.x, 0) / focusRacers.length
-          : hw;
-        const cy = focusRacers.length
-          ? focusRacers.reduce((s, r) => s + r.y, 0) / focusRacers.length
-          : hh;
-        this.targetZoom = 1;
-        this.targetOffsetX = hw - cx;
-        this.targetOffsetY = hh - cy;
+        // During start phase, pan to the full-field centroid so no racer is cropped
+        // off-screen in the starting grid. After start phase, follow only the top-N.
+        // When overviewZoom < 1 (worldW > canvasW), edgeLoX > 0 so the world-edge clamp
+        // below centers the view rather than clamping — correct for full-world OVERVIEW.
+        const panRacers =
+          raceState && raceState.raceElapsed < START_PHASE_DURATION ? racers : focusRacers;
+        const panSrc = panRacers.length ? panRacers : focusRacers;
+        const cx = panSrc.length ? panSrc.reduce((s, r) => s + r.x, 0) / panSrc.length : hw;
+        const cy = panSrc.length ? panSrc.reduce((s, r) => s + r.y, 0) / panSrc.length : hh;
+        this.targetZoom = this.overviewZoom;
+        this.targetOffsetX = hw - cx * this.overviewZoom;
+        this.targetOffsetY = hh - cy * this.overviewZoom;
         break;
       }
 

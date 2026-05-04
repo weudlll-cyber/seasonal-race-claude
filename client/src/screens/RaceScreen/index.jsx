@@ -66,6 +66,7 @@ const CANVAS_H = 720;
 // Keep legacy aliases used throughout this file
 const CW = CANVAS_W;
 const CH = CANVAS_H;
+const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -891,9 +892,15 @@ export default function RaceScreen() {
         bsX === 1 && bsY === 1
           ? st.racers
           : st.racers.map((r) => ({ ...r, x: r.x * bsX, y: r.y * bsY }));
+      const raceState = {
+        raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
+        finishedCount: st.finishedCount,
+        winner: scaledRacersForCam.find((r) => r.finishRank === 1) ?? null,
+        finishT: st.finishT,
+      };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(scaledRacersForCam, ts, CANVAS_W, CANVAS_H)
+          ? camDirRef.current.update(scaledRacersForCam, ts, raceState, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       if (isOpenTrack) {
@@ -905,8 +912,9 @@ export default function RaceScreen() {
           CANVAS_H,
           effZoom
         );
+        const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
         const { targetX, targetY } = openTrackPanTarget(
-          st.racers,
+          focusRacers,
           CW,
           CH,
           effZoom,
