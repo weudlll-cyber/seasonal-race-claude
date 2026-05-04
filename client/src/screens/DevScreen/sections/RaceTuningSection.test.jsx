@@ -203,3 +203,71 @@ describe('RaceTuningSection — row start summary', () => {
     expect(summary.textContent).toContain('full');
   });
 });
+
+describe('RaceTuningSection — per-block reset buttons', () => {
+  it('renders Reset button for Speed Range block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-range')).toBeTruthy();
+  });
+
+  it('renders Reset button for Start Layout block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-start-layout')).toBeTruthy();
+  });
+
+  it('renders Reset button for Row Start block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-row-start')).toBeTruthy();
+  });
+
+  it('renders Reset button for Speed Re-Roll block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-reroll')).toBeTruthy();
+  });
+
+  it('renders Reset button for Drafting block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-drafting')).toBeTruthy();
+  });
+
+  it('renders Reset button for Comfort Zone block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-comfort-zone')).toBeTruthy();
+  });
+
+  it('renders Reset button for Soft Avoidance block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-soft-avoidance')).toBeTruthy();
+  });
+
+  it('renders Reset button for Speed Brake block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-speed-brake')).toBeTruthy();
+  });
+
+  it('renders Reset button for Home Force block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-home-force')).toBeTruthy();
+  });
+
+  it('clicking reset-speed-range restores default min/max without crash', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-speed-range'));
+    expect(screen.getByTestId('reset-speed-range')).toBeTruthy();
+  });
+
+  it('clicking reset-speed-reroll calls setDynamicsConfig with all defaults', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-speed-reroll'));
+    const preview = screen.getByTestId('reroll-preview');
+    expect(preview.textContent).toContain('4 re-rolls');
+    expect(preview.textContent).toContain('12s');
+  });
+
+  it('clicking reset-drafting does not crash', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-drafting'));
+    const summary = screen.getByTestId('drafting-summary');
+    expect(summary.textContent).toContain('110 px');
+  });
+});

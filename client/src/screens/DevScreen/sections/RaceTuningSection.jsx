@@ -36,18 +36,36 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 // ── Sub-Card wrapper ──────────────────────────────────────────────────────────
-function SubCard({ title, subtitle, children, disabled }) {
+function SubCard({ title, subtitle, children, disabled, onReset, resetTestId }) {
   return (
     <div className={s.card} style={{ opacity: disabled ? 0.45 : 1 }}>
-      <p
+      <div
         style={{
-          fontWeight: 600,
-          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
           marginBottom: subtitle ? '0.2rem' : '0.75rem',
         }}
       >
-        {title}
-      </p>
+        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{title}</span>
+        <span className={s.spacer} />
+        {onReset && (
+          <button
+            onClick={onReset}
+            data-testid={resetTestId}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-muted)',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              padding: '0.1rem 0.2rem',
+              opacity: 0.7,
+            }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
       {subtitle && (
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           {subtitle}
@@ -108,6 +126,79 @@ function RaceTuningSection() {
     setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
   }
 
+  function resetSpeedRange() {
+    setSpeedConfig((prev) => ({
+      ...prev,
+      min: DEFAULT_BASE_SPEED_CONFIG.min,
+      max: DEFAULT_BASE_SPEED_CONFIG.max,
+    }));
+  }
+
+  function resetStartLayout() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      startSpreadRange: DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange,
+      runoutZone: DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone,
+    }));
+  }
+
+  function resetRowStart() {
+    setRowConfig((prev) => ({
+      ...prev,
+      rowGapMultiplier: DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier,
+      speedBonusFactor: DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor,
+      maxCapacityFactor: DEFAULT_ROW_LAYOUT_CONFIG.maxCapacityFactor,
+    }));
+  }
+
+  function resetSpeedReRoll() {
+    setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+  }
+
+  function resetDrafting() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      draftingMaxDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingMaxDistance,
+      draftingConeAngle: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle,
+      draftingBoost: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost,
+    }));
+  }
+
+  function resetComfortZone() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      comfortThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold,
+      softRepulsionStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.softRepulsionStrength,
+    }));
+  }
+
+  function resetSoftAvoidance() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      avoidanceDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance,
+      tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
+      yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
+      lateralForce: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralForce,
+      maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
+    }));
+  }
+
+  function resetSpeedBrake() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      speedBrakeYThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeYThreshold,
+      speedBrakeTThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTThreshold,
+      speedBrakeFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
+    }));
+  }
+
+  function resetHomeForce() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
+    }));
+  }
+
   // Speed Range preview
   const spread = spreadPercent(speedConfig.min, speedConfig.max);
   const mean = ((speedConfig.min + speedConfig.max) / 2).toFixed(5);
@@ -158,6 +249,8 @@ function RaceTuningSection() {
       {/* ── Block 1: Speed Range ── */}
       <SubCard
         title="Speed Range"
+        onReset={resetSpeedRange}
+        resetTestId="reset-speed-range"
         subtitle="The slowest and fastest base speeds racers can have. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive."
       >
         <div className={s.formGrid}>
@@ -253,6 +346,8 @@ function RaceTuningSection() {
       {/* ── Block 2: Start Layout ── */}
       <SubCard
         title="Start Layout"
+        onReset={resetStartLayout}
+        resetTestId="reset-start-layout"
         subtitle="How racers are positioned at the start and how the finish area is laid out. Affects whether racers begin tightly packed or spread out, and how much space there is to celebrate the finish before they leave the screen."
       >
         <div className={s.formGrid}>
@@ -306,6 +401,8 @@ function RaceTuningSection() {
       {/* ── Block 3: Row Start ── */}
       <SubCard
         title="Row Start"
+        onReset={resetRowStart}
+        resetTestId="reset-row-start"
         subtitle="With many racers, they don't all fit in one starting row — they line up in multiple rows, like cars at a Grand Prix. This block controls the row spacing, how many racers fit per row, and how to compensate back-row racers so they aren't doomed by their starting position."
       >
         <div className={s.formGrid}>
@@ -396,6 +493,8 @@ function RaceTuningSection() {
       {/* ── Block 4: Speed Re-Roll ── */}
       <SubCard
         title="Speed Re-Roll"
+        onReset={resetSpeedReRoll}
+        resetTestId="reset-speed-reroll"
         subtitle="During a race, each racer's speed gets re-rolled periodically — meaning their speed changes from time to time, creating dramatic shifts. This is what makes leads change and prevents predictable outcomes. Without this, the fastest racer at the start would just stay in front the whole race."
       >
         <div className={s.formGrid}>
@@ -531,6 +630,8 @@ function RaceTuningSection() {
       {/* ── Block 5: Drafting / Slipstream ── */}
       <SubCard
         title="Drafting / Slipstream"
+        onReset={resetDrafting}
+        resetTestId="reset-drafting"
         subtitle="When a racer follows closely behind another racer, they get a small speed boost from the slipstream — just like in real-world cycling or motor sports. This makes overtaking on straight sections possible. Without drafting, slow racers would never catch up; with too much, racers chain together in dense pelotons."
         disabled={!behaviorConfig.enabled}
       >
@@ -621,6 +722,8 @@ function RaceTuningSection() {
       {/* ── Block 6: Comfort Zone ── */}
       <SubCard
         title="Comfort Zone"
+        onReset={resetComfortZone}
+        resetTestId="reset-comfort-zone"
         subtitle="Racers have a personal space bubble — when another racer gets too close, they automatically push apart to keep some breathing room. This block controls how big the bubble is and how forcefully racers react when crowded. Looser values create open spacious races; tighter values let racers form dense packs."
         disabled={!behaviorConfig.enabled}
       >
@@ -677,6 +780,8 @@ function RaceTuningSection() {
       {/* ── Block 7: Soft Avoidance ── */}
       <SubCard
         title="Soft Avoidance"
+        onReset={resetSoftAvoidance}
+        resetTestId="reset-soft-avoidance"
         subtitle="When racers are about to collide, they steer around each other instead of overlapping. This block fine-tunes how they detect and avoid each other — how far ahead they look, whether they prioritize racers in front or to the side, and how strong their evasive maneuvers are. Affects the smoothness and realism of close racing."
         disabled={!behaviorConfig.enabled}
       >
@@ -802,6 +907,8 @@ function RaceTuningSection() {
       {/* ── Block 8: Speed Brake ── */}
       <SubCard
         title="Speed Brake"
+        onReset={resetSpeedBrake}
+        resetTestId="reset-speed-brake"
         subtitle="When a racer ends up directly behind another racer with no clear way to overtake, they slow down a bit instead of rear-ending them. This block controls when the brake kicks in (how close, how directly behind) and how strongly they slow down. Prevents visual collisions in tight packs."
         disabled={!behaviorConfig.enabled}
       >
@@ -881,6 +988,8 @@ function RaceTuningSection() {
       {/* ── Block 9: Home Force ── */}
       <SubCard
         title="Home Force"
+        onReset={resetHomeForce}
+        resetTestId="reset-home-force"
         subtitle="The track has a centerline that racers naturally follow. After they swerve off-line (to avoid collisions, drafting, or just by chance), this force gently pulls them back to the center. Without it, racers would drift off forever; with too much, they snap back unrealistically."
         disabled={!behaviorConfig.enabled}
       >
