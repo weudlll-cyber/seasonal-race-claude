@@ -101,7 +101,10 @@ export class EditorShape {
 
   getBoundingBox() {
     if (this._bboxCache !== undefined) return this._bboxCache;
-    const all = [...this._inner, ...this._outer];
+    // Include raw control points alongside samples: Catmull-Rom passes through
+    // all control points, so they belong in the bounding box. Arc-length uniform
+    // sampling may not place any sample exactly at a control-point T-value.
+    const all = [...this._inner, ...this._outer, ...this._innerPts, ...this._outerPts];
     let minX = Infinity,
       maxX = -Infinity,
       minY = Infinity,

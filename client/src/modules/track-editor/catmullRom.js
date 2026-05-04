@@ -67,13 +67,91 @@ function resolveSegment(T, numSegments) {
   return { segIndex, t };
 }
 
+// ── Arc-length reparametrisation ──────────────────────────────────────────────
+// Dense sample count scales with requested output samples so the lookup table
+// has enough resolution. Min 1000 keeps sub-pixel error on typical tracks.
+const ARC_DENSE_FACTOR = 5;
+const ARC_DENSE_MIN = 1000;
+
+/**
+ * Build a cumulative arc-length lookup table by sampling the spline densely in
+ * T-space.  The extra entry at the end of a closed curve closes the loop back
+ * to T=0 so the total arc length includes the wrap-around segment.
+ *
+ * Returns { arcLengths, tValues, totalLength } where arcLengths[i] is the
+ * arc length from T=0 to tValues[i].
+ */
+function buildArcTable(points, numSegments, closed, tension, denseSamples) {
+  // Closed: sample T in [0, 1] (denseSamples+1 entries — last point equals first).
+  // Open:   sample T in [0, 1] (denseSamples entries).
+  const count = closed ? denseSamples + 1 : denseSamples;
+  const arcLengths = new Float64Array(count);
+  const tValues = new Float64Array(count);
+
+  let prevX = 0;
+  let prevY = 0;
+
+  for (let i = 0; i < count; i++) {
+    const T = closed ? i / denseSamples : denseSamples === 1 ? 0 : i / (denseSamples - 1);
+    tValues[i] = T;
+    const { segIndex, t } = resolveSegment(T, numSegments);
+    const [P0, P1, P2, P3] = getControlPoints(points, segIndex, closed);
+    const { x, y } = hermitePoint(P0, P1, P2, P3, t, tension);
+    if (i === 0) {
+      arcLengths[0] = 0;
+    } else {
+      const dx = x - prevX;
+      const dy = y - prevY;
+      arcLengths[i] = arcLengths[i - 1] + Math.sqrt(dx * dx + dy * dy);
+    }
+    prevX = x;
+    prevY = y;
+  }
+
+  return { arcLengths, tValues, totalLength: arcLengths[count - 1] };
+}
+
+/**
+ * Binary-search the arc-length table for the T-value that corresponds to
+ * targetLen.  Returns tValues[0] / tValues[last] at the boundaries.
+ */
+function lookupT(targetLen, arcLengths, tValues) {
+  if (targetLen <= arcLengths[0]) return tValues[0];
+  const last = arcLengths.length - 1;
+  if (targetLen >= arcLengths[last]) return tValues[last];
+
+  let lo = 0;
+  let hi = last;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (arcLengths[mid] <= targetLen) lo = mid;
+    else hi = mid;
+  }
+
+  const segLen = arcLengths[hi] - arcLengths[lo];
+  if (segLen < 1e-12) return tValues[lo];
+  return tValues[lo] + ((targetLen - arcLengths[lo]) / segLen) * (tValues[hi] - tValues[lo]);
+}
+
 /**
  * Sample a Catmull-Rom spline through the given control points.
+ *
  * @param {{ x: number, y: number }[]} points
- * @param {{ closed?: boolean, tension?: number, samples?: number }} opts
+ * @param {{
+ *   closed?: boolean,
+ *   tension?: number,
+ *   samples?: number,
+ *   parameterization?: 'arclength' | 'parameter'
+ * }} opts
+ *   parameterization defaults to 'arclength' — consecutive output points are
+ *   spaced uniformly in arc length so racers advance at constant pixel velocity.
+ *   Pass 'parameter' to get the original T-uniform behaviour (legacy).
  * @returns {{ x: number, y: number }[]}
  */
-export function catmullRomSpline(points, { closed = false, tension = 0.5, samples = 200 } = {}) {
+export function catmullRomSpline(
+  points,
+  { closed = false, tension = 0.5, samples = 200, parameterization = 'arclength' } = {}
+) {
   const n = points.length;
   const minPts = closed ? 3 : 2;
   if (n < minPts) {
@@ -83,12 +161,43 @@ export function catmullRomSpline(points, { closed = false, tension = 0.5, sample
   }
 
   const numSegments = closed ? n : n - 1;
-  const result = [];
 
+  // ── T-uniform (legacy) ──────────────────────────────────────────────────────
+  if (parameterization !== 'arclength') {
+    const result = [];
+    for (let i = 0; i < samples; i++) {
+      // Closed: T ∈ [0, 1) — avoids duplicating the start point.
+      // Open: T ∈ [0, 1] inclusive.
+      const T = closed ? i / samples : samples <= 1 ? 0 : i / (samples - 1);
+      const { segIndex, t } = resolveSegment(T, numSegments);
+      const [P0, P1, P2, P3] = getControlPoints(points, segIndex, closed);
+      result.push(hermitePoint(P0, P1, P2, P3, t, tension));
+    }
+    return result;
+  }
+
+  // ── Arc-length-uniform (default) ────────────────────────────────────────────
+  const denseSamples = Math.max(ARC_DENSE_MIN, samples * ARC_DENSE_FACTOR);
+  const { arcLengths, tValues, totalLength } = buildArcTable(
+    points,
+    numSegments,
+    closed,
+    tension,
+    denseSamples
+  );
+
+  const result = [];
   for (let i = 0; i < samples; i++) {
-    // Closed: T ∈ [0, 1) — avoids duplicating the start point.
-    // Open: T ∈ [0, 1] inclusive.
-    const T = closed ? i / samples : samples <= 1 ? 0 : i / (samples - 1);
+    let targetLen;
+    if (totalLength < 1e-12) {
+      targetLen = 0; // degenerate: all points coincide
+    } else if (closed) {
+      targetLen = (i / samples) * totalLength;
+    } else {
+      targetLen = samples <= 1 ? 0 : (i / (samples - 1)) * totalLength;
+    }
+
+    const T = totalLength < 1e-12 ? 0 : lookupT(targetLen, arcLengths, tValues);
     const { segIndex, t } = resolveSegment(T, numSegments);
     const [P0, P1, P2, P3] = getControlPoints(points, segIndex, closed);
     result.push(hermitePoint(P0, P1, P2, P3, t, tension));
