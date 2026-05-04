@@ -182,7 +182,7 @@ Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `s
 `runoutZone`). All tunable in Dev Screen. Track-level `maxRacers` shown in TrackManager with
 "modified" badge.
 
-## Speed Pipeline (PR-A2 + fix)
+## Speed Pipeline (PR-A2 + fix + PR-A2.6)
 
 Race speed is duration-driven. The operator chooses a target duration in the SetupScreen; race
 init translates that directly into per-racer `baseSpeed`.
@@ -198,14 +198,17 @@ expectedMinSpreadFactor = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) 
 race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier)
                = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier)
 
-r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBonus)
+r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult
 ```
 
 - `finishT` — target position: `1.0 − runoutZone` (open track) or lap count 1–4 (closed track).
 - `targetDuration` — operator-chosen race duration (open-track slider or closed-track duration
   slider). Fallback: natural duration derived from mean base speed.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
-  around the median; tunable in Dev Screen → Base Speed section.
+  around the median; tunable in Dev Screen → Base Speed section. **Re-rolled periodically during
+  the race** (see Re-Roll Mechanism below); only this field changes between rolls.
+- `speedBonusMult = 1 + speedBonus` — positional back-row compensation from D7c row layout.
+  **Constant over the whole race** — re-rolls never touch it (see speedBonus below).
 - `expectedMinSpreadFactor` — N-calibrated expected value of the minimum spreadFactor across all
   racers. With n players drawing from U[spreadMin, spreadMax], the expected minimum is
   `spreadMin + (spreadMax − spreadMin) / (n + 1)`. At n=3: ≈ 0.9355. At n=∞: → spreadMinFactor ≈ 0.871.
@@ -213,16 +216,50 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × (1 + speedBon
   cancels out and arrives exactly at `targetDuration`.
 - `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
   into the T argument so it cancels out in each racer's actual finish time.
-- `speedBonus` — rear-row compensation from D7c row layout.
 
-**Race-end-time semantics:** `targetDuration` = **expected** time until the last finisher crosses
-the line, calibrated for the actual player count. Individual runs still vary by ±5% due to
-random spread sampling, but the expectation is exact for any N. The median racer finishes at
-approximately `targetDuration × expectedMinSpreadFactor` (i.e. earlier than targetDuration).
-All racer types honour the same deadline regardless of their `speedMultiplier`.
+**speedBonus (rowLayout.js) — Back-Row Positional Compensation:**
+`computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` returns a fractional
+bonus applied as `speedBonusMult = 1 + speedBonus`. Row 0 (Front-Row) gets `speedBonus = 0`.
+Rear rows (rowIndex 1, 2, …) get a bonus proportional to `rowIndex × rowGapPx / pathLengthPx`
+to compensate the spatial start disadvantage of being `rowIndex × rowGapPx` pixels behind the
+finish line. Mechanism is positions-based and temporally invariant — **not changed by the
+Re-Roll mechanism**.
+
+**Race-Duration-Garantie (Klarstellung):** The `targetDuration` formula calibrates the
+**median racer** (spreadFactor = 1.0) to finish at `targetDuration × expectedMinSpreadFactor`
+(≈ 87% of targetDuration). The actual **race end** — when the last finisher crosses — can
+deviate by ±6–8% (1σ) from `targetDuration` due to the intrinsic stochastic spread of N draws
+from U[spreadMin, spreadMax]. This deviation is physically invariant to any calibration change;
+it is a consequence of `E[min_n] ≠ min_n`. The guarantee is on the *expected* last finisher, not
+on any individual run.
 
 `openTrackDurationRange` (lapUtils.js) derives the slider [min=30s, max] from track physics
 (path length) so the operator only sees meaningful duration values.
+
+**Re-Roll Mechanism (PR-A2.6):**
+During a race each racer's `spreadFactor` is periodically re-drawn to create natural lead
+changes and prevent the field from freezing in initial order.
+
+```
+rollCount    = max(2, floor(targetDuration / 15))
+rollInterval = (0.80 × targetDuration × 1000ms) / rollCount   // ms; always ~12s
+```
+
+| Race Duration | rollCount | rollInterval | Last Roll at |
+|---|---|---|---|
+| 30s | 2 | 12s | 24s (80%) |
+| 60s | 4 | 12s | 48s (80%) |
+| 90s | 6 | 12s | 72s (80%) |
+| 120s | 8 | 12s | 96s (80%) |
+
+Each roll draws a new `spreadFactorTarget` from a distribution centered on the current value
+with ±40% of SPREAD_RANGE width, clamped to [SPREAD_MIN, SPREAD_MAX] (Variant B). Per-racer
+jitter of ±20% of rollInterval prevents simultaneous rolls. No rolls after 80% of
+`targetDuration` so the finishing order stabilizes in the last stretch.
+
+Transition: `spreadFactor` interpolates from old to new value over 2000ms using
+`easeInOutCubic` so tempo changes feel gradual. `baseSpeed` is updated live each frame during
+the transition. `speedBonusMult` is **never touched** by re-rolls.
 
 **Removed (PR-A2):** `speedScaleFactor` / `SpeedScaleSection` / `DEFAULT_SPEED_SCALE_CONFIG` —
 superseded by the duration-driven approach above.
