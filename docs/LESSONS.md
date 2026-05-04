@@ -919,6 +919,13 @@ Dirt Oval Horse 46s → 48s (+4%, akzeptabel), Space Sprint Rocket 30s → 26s (
 E1: `speedMultiplier` nicht normalisiert (Rocket sm=1.25 läuft 25% schneller → fertig nach 24s).
 E2: "Race Duration 30s" war de facto ein Median-Versprechen, nicht ein Last-Finisher-Versprechen.
 
+**Update PR-A2.6:** Empirische Messung in der Diagnose-Phase zeigte: nur 39-63% der Races landeten
+tatsächlich innerhalb ±5% des Targets beim Race-Ende. Die ±5%-Garantie galt implizit für den
+Median-Racer. Race-Ende-Abweichung ist 1σ ≈ 4-6% abhängig von N — intrinsisch durch die
+Spread-Mechanik (Minimum von N stochastischen Draws). Die Garantie ist auf den *erwarteten* letzten
+Finisher, nicht auf jeden einzelnen Run. Dokumentiert in ARCHITECTURE.md § Speed Pipeline.
+Wichtig: Garantien immer explizit zuordnen — Median-Racer vs. Race-Ende sind verschieden.
+
 **Erkenntnis:** Eine duration-driven Speed-Architektur braucht zwei explizite Entscheidungen:
 
 1. **Was verspricht die Duration?** Median-Racer-Semantik: Mitte des Feldes fertig bei T. Last-Finisher-Semantik: letzter Racer fertig bei T. Beide sind valide — aber es muss eine Entscheidung getroffen werden und sie muss im Code codiert sein.
@@ -983,3 +990,29 @@ O(N log N) einmalig beim Track-Laden (nicht pro Frame). Closed-Tracks: eine extr
 **Generalisierung:** Jeder `onerror` / `catch`-Handler in einem Modul das Ressourcen cached und `null` zurückgibt sollte mit `console.warn` ausgestattet sein, wenn der Aufrufer nicht selbst warnt. Die Faustregel: Wenn das Fehlen der Ressource für den User sichtbar ist (fehlender Hintergrund, fehlendes Bild), muss die Ursache für den Entwickler sichtbar sein (Konsole).
 
 **Verweis:** PR-A2.8 `bgImageCache.js`.
+
+---
+
+## Lesson 52 — Periodic State Re-Rolls mit Smooth Transition erzeugen Race-Dynamik ohne deterministische Garantien zu brechen
+
+**Kontext:** PR-A2.6 — Diagnose zeigte 4.3 Lead-Changes pro 30s-Race, 3% der Races völlig ohne
+Platzwechsel. Racers hielten ihre initiale Spread-Reihenfolge nahezu durchgehend.
+
+**Erkenntnis:** Einmalig gezogene Zufallswerte (spreadFactor bei Race-Start) frieren das Feld ein.
+Die Lösung: Periodische Re-Draws mit (a) Zentrierung auf den aktuellen Wert (Variant B — kein
+Reset zum globalen Mittel) und (b) einer easeInOutCubic-Übergangsanimation. Damit entstehen
+natürliche, graduelle Tempo-Schwankungen ohne ruckartige Sprünge.
+
+**Kritische Trennung: speedBonusMult vs. spreadFactor.** Nur `spreadFactor` (Glücks-Zug) darf
+re-gerollt werden. `speedBonusMult = 1 + speedBonus` (positions-basierter Back-Row-Ausgleich) ist
+räumlich determiniert und muss konstant bleiben. Vor dieser PR war speedBonus in baseSpeed
+eingerechnet — ein Re-Roll hätte den Back-Row-Ausgleich gelöscht und hintere Startpositionen
+benachteiligt. Refactor: Beide Skalare explizit als separate Felder (`spreadFactor`,
+`speedBonusMult`) — nur das erste wird re-gerollt.
+
+**Timing-Regel:** Letzter Roll bei ~80% der Race-Dauer. Danach keine Änderungen mehr — die
+Zielgerade soll von der aktuellen Reihenfolge entschieden werden, nicht von einem zufälligen
+Late-Roll. Formel: `rollCount = max(2, floor(duration/15))`, `rollInterval = 0.80 × duration / rollCount`.
+Für alle Standard-Dauern (30–120s) ergibt das konstant ~12s zwischen Rolls.
+
+**Verweis:** PR-A2.6 `RaceScreen/index.jsx`, `reRoll.test.js`, ARCHITECTURE.md § Re-Roll Mechanism.

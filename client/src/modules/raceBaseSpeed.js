@@ -19,8 +19,8 @@ import { REFERENCE_FPS } from './camera/lapUtils.js';
  * Individual racer:
  *   r.baseSpeed = computeRaceBaseSpeed(finishT, targetDuration)
  *                 * speedMultiplier
- *                 * spreadFactor   (= random[min,max] / BASE_SPEED_MEAN)
- *                 * (1 + speedBonus)
+ *                 * spreadFactor     (random[min,max] / BASE_SPEED_MEAN; re-rolled at intervals)
+ *                 * speedBonusMult   (1 + speedBonus; positional; constant over race)
  *
  * @param {number} finishT               - Laps (closed) or 0..1 position (open)
  * @param {number} targetDurationSeconds - Desired duration for the median racer
