@@ -141,7 +141,7 @@ describe('CameraDirector', () => {
   });
 
   it('OVERVIEW on 6000px world: targetZoom = overviewZoom ≈ 0.213, not 1', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
+    const cd = new CameraDirector(undefined, 6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
@@ -149,7 +149,7 @@ describe('CameraDirector', () => {
   });
 
   it('OVERVIEW on 6000px world: zoom converges to overviewZoom, not 1', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
+    const cd = new CameraDirector(undefined, 6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeCloseTo(1280 / 6000, 1);
@@ -674,7 +674,7 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     // full-field avg x=390 → targetOffsetX = 640 - 780 = -140 (start phase)
     // top-3 avg x=410     → targetOffsetX = 640 - 820 = -180 (normal phase)
     const bbox = { minX: 200, minY: 0, maxX: 440, maxY: 720 };
-    const cd = new CameraDirector(bbox, 640, 720);
+    const cd = new CameraDirector(bbox, 640, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000; // same as ts → transition will NOT fire
     const spreadRacers = [
@@ -694,6 +694,31 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, midRs, 1280, 720);
     expect(cd.targetOffsetX).toBeCloseTo(-180, 0); // top-3 only: 640 - 410*2
+  });
+});
+
+// ── CameraDirector — isOpenTrack: OVERVIEW zoom differentiation ───────────────
+// Regression: PR-B Bug-A fix set targetZoom = overviewZoom unconditionally.
+// On closed tracks (effScale = cam.zoom × bsX) this caused double-scaling and
+// 107px black bars. These two tests must fail without the isOpenTrack hotfix.
+
+describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
+  it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = 1, not overviewZoom', () => {
+    const cd = new CameraDirector(undefined, 1536, 720, false);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000; // prevents transition
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.targetZoom).toBe(1);
+    expect(cd.targetZoom).not.toBeCloseTo(1280 / 1536, 2); // must NOT be 0.833
+  });
+
+  it('open track (worldW=6000, isOpenTrack=true): OVERVIEW targetZoom = overviewZoom ≈ 0.213', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
+    expect(cd.targetZoom).not.toBe(1);
   });
 });
 
