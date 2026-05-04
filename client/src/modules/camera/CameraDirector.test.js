@@ -625,6 +625,78 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
   });
 });
 
+// ── CameraDirector — §5.4 trigger extensions ─────────────────────────────────
+
+describe('CameraDirector — §5.4 trigger extensions', () => {
+  it('Endgame (leader > 85%): LEADER_ZOOM even when cooldown would block OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    // cooldown set to ts=9000 on OVERVIEW exit; 9000-9000=0 < 8000 → would block Priority 3
+    const endgameRacers = [
+      { t: 0.9, x: 500, y: 300, finished: false }, // 0.9/1.0=90% > 85%
+      { t: 0.6, x: 300, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(endgameRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Endgame threshold: leader at exactly 85% does NOT trigger endgame', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    const atThresholdRacers = [
+      { t: 0.85, x: 500, y: 300, finished: false }, // 0.85/1.0 = 0.85, NOT > 0.85
+      { t: 0.5, x: 300, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(atThresholdRacers, 9000, rs, 1280, 720);
+    // Priority 3 cooldown not expired, Priority 4 no battle, Priority 5: LEADER or COMEBACK
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW); // endgame did not force OVERVIEW
+  });
+
+  it('Start-Pulk (raceElapsed < 3000): OVERVIEW state is set', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 2000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Start-Pulk OVERVIEW pan uses full-field centroid (all racers, not just top-3)', () => {
+    // Use worldW=640 (overviewZoom=2) with an off-center bbox so racers on the right
+    // produce a negative targetOffsetX that survives both the bbox and world-edge clamps.
+    // bbox x=[200,440] at zoom=2: clamp range [-400,400]; world-edge range [-1280,0].
+    // Racers sorted by t: top-3 at x=430,410,390 (avg 410), bottom-2 at x=370,350.
+    // full-field avg x=390 → targetOffsetX = 640 - 780 = -140 (start phase)
+    // top-3 avg x=410     → targetOffsetX = 640 - 820 = -180 (normal phase)
+    const bbox = { minX: 200, minY: 0, maxX: 440, maxY: 720 };
+    const cd = new CameraDirector(bbox, 640, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000; // same as ts → transition will NOT fire
+    const spreadRacers = [
+      { t: 0.5, x: 430, y: 360, finished: false }, // top-1
+      { t: 0.4, x: 410, y: 360, finished: false }, // top-2
+      { t: 0.3, x: 390, y: 360, finished: false }, // top-3; avg top-3 x = 410
+      { t: 0.2, x: 370, y: 360, finished: false },
+      { t: 0.1, x: 350, y: 360, finished: false }, // all-5 avg x = 390
+    ];
+
+    const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(spreadRacers, 1000, startRs, 1280, 720);
+    expect(cd.targetOffsetX).toBeCloseTo(-140, 0); // full-field: 640 - 390*2
+
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000;
+    const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(spreadRacers, 1000, midRs, 1280, 720);
+    expect(cd.targetOffsetX).toBeCloseTo(-180, 0); // top-3 only: 640 - 410*2
+  });
+});
+
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {
