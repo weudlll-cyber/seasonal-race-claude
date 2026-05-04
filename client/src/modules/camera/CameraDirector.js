@@ -40,9 +40,21 @@ export class CameraDirector {
    *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas.
    * @param {number} [worldW=1280]  World width in pixels — used to compute adaptive zoom.
    * @param {number} [_worldH=720]  World height in pixels (reserved for future vertical scaling).
+   * @param {boolean} [isOpenTrack=false]
+   *   Open tracks render without bsX (effectiveZoom = BASE × cam.zoom), so overviewZoom
+   *   must shrink cam.zoom to fit the world. Closed tracks apply bsX on top of cam.zoom
+   *   (effScale = cam.zoom × bsX), so OVERVIEW must keep cam.zoom = 1; bsX alone handles
+   *   world-to-canvas mapping. Passing the wrong value causes either black bars (false on open)
+   *   or double-scaling artifacts (true on closed).
    */
-  constructor(bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 }, worldW = 1280, _worldH = 720) {
+  constructor(
+    bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 },
+    worldW = 1280,
+    _worldH = 720,
+    isOpenTrack = false
+  ) {
     this._bbox = bbox;
+    this._isOpenTrack = isOpenTrack;
     // Adaptive zoom: overviewZoom shows the entire world, state zooms scale up
     // from there by a fixed ratio. States remain visually distinct at any worldW:
     // leader is always 1.4× closer than overview, battle 1.6×, comeback 1.3×.
@@ -159,7 +171,11 @@ export class CameraDirector {
         const panSrc = panRacers.length ? panRacers : focusRacers;
         const cx = panSrc.length ? panSrc.reduce((s, r) => s + r.x, 0) / panSrc.length : hw;
         const cy = panSrc.length ? panSrc.reduce((s, r) => s + r.y, 0) / panSrc.length : hh;
-        this.targetZoom = this.overviewZoom;
+        // Open tracks: shrink cam.zoom so effZoom (= BASE × cam.zoom) shows the full world.
+        // Closed tracks: cam.zoom stays 1; bsX (= CANVAS_W/worldW) handles world-to-canvas
+        // scaling independently, so applying overviewZoom here would double-scale and produce
+        // black bars (effScale = overviewZoom × bsX = 0.694 on a 1536px world).
+        this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
         this.targetOffsetX = hw - cx * this.overviewZoom;
         this.targetOffsetY = hh - cy * this.overviewZoom;
         break;
