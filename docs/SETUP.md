@@ -30,7 +30,7 @@ cd client && npm test
 
 ---
 
-## 4. Start the backend server (optional — custom track storage)
+## 4. Start the backend server (recommended)
 
 The Track Editor saves custom tracks to a local backend. Start it with Docker:
 
@@ -38,7 +38,11 @@ The Track Editor saves custom tracks to a local backend. Start it with Docker:
 docker compose up
 ```
 
-The backend runs at `http://localhost:4000`. Without it, the Track Editor shows a "Server not reachable" message and only default tracks are available.
+The backend runs at `http://localhost:4000`.
+
+Without it:
+- Track Editor shows "Server not reachable", only default tracks available
+- Custom-track background images do NOT load during Race (silent fail)
 
 To point the frontend at a different backend URL, create `client/.env`:
 
