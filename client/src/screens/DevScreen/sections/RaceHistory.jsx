@@ -25,7 +25,7 @@ function RaceHistory() {
   const filtered = useMemo(() => {
     return history.filter((entry) => {
       if (filterTrack && entry.trackId !== filterTrack) return false;
-      if (filterDate && !entry.date.startsWith(filterDate)) return false;
+      if (filterDate && !entry.date?.startsWith(filterDate)) return false;
       return true;
     });
   }, [history, filterTrack, filterDate]);
@@ -39,7 +39,7 @@ function RaceHistory() {
         track ? track.name : e.trackId,
         e.duration,
         e.playerCount,
-        e.winners.join(' / '),
+        (e.winners ?? []).join(' / '),
       ]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
         .join(',');
@@ -145,7 +145,7 @@ function RaceHistory() {
                     <td>{track ? `${track.icon} ${track.name}` : entry.trackId}</td>
                     <td>{entry.duration}s</td>
                     <td>{entry.playerCount}</td>
-                    <td>{entry.winners.join(', ')}</td>
+                    <td>{(entry.winners ?? []).join(', ')}</td>
                   </tr>
                 );
               })}

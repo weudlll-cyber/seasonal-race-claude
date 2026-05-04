@@ -40,12 +40,11 @@ function ResultScreen() {
     const history = storageGet(KEYS.RACE_HISTORY, []);
     history.unshift({
       id: newId(),
-      timestamp: new Date().toISOString(),
+      date: new Date().toISOString(),
       trackId: parsed.race?.trackId,
-      trackName: parsed.race?.trackName,
-      players: order.length,
-      winner: order[0]?.name,
-      elapsedTime: parsed.elapsedTime,
+      duration: parsed.elapsedTime,
+      playerCount: order.length,
+      winners: order.slice(0, parsed.race?.winners ?? 3).map((r) => r.name),
       finishOrder: order,
     });
     storageSet(KEYS.RACE_HISTORY, history.slice(0, 100));
