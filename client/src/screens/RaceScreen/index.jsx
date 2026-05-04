@@ -713,7 +713,9 @@ export default function RaceScreen() {
         for (const r of st.racers) {
           // Per-racer sine jitter — each racer has its own frequency and phase,
           // so speeds fluctuate independently instead of all spiking together.
-          const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * 0.00012;
+          // Amplitude is ±5% of race_baseSpeed so it stays proportional after
+          // PR-A2's duration-driven baseSpeed scaling (fixed 0.00012 was ±21–62%).
+          const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * (race_baseSpeed * 0.05);
           // Apply D7b boost/brake flags from the previous frame
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
