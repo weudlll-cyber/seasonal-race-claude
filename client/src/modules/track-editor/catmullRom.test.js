@@ -39,12 +39,17 @@ describe('catmullRomSpline', () => {
 
   it('closed curve: samples=n hits each control point at the start of its segment', () => {
     // With n=3 closed and samples=3, T values 0, 1/3, 2/3 land exactly on pts[0], pts[1], pts[2].
+    // This is a T-uniform property: arc-length uniform does NOT guarantee hitting control points.
     const pts = [
       { x: 0, y: 0 },
       { x: 100, y: 0 },
       { x: 50, y: 100 },
     ];
-    const result = catmullRomSpline(pts, { closed: true, samples: 3 });
+    const result = catmullRomSpline(pts, {
+      closed: true,
+      samples: 3,
+      parameterization: 'parameter',
+    });
     expect(result).toHaveLength(3);
     expect(result[0].x).toBeCloseTo(pts[0].x, 8);
     expect(result[0].y).toBeCloseTo(pts[0].y, 8);
@@ -114,6 +119,97 @@ describe('catmullRomSpline', () => {
       )
     ).toThrow();
     expect(() => catmullRomSpline([{ x: 0, y: 0 }], { closed: true })).toThrow();
+  });
+
+  // ── Arc-length-uniform (default) ──────────────────────────────────────────
+
+  it('arc-length open: step distances are uniform (max/min < 1.10) on asymmetric track', () => {
+    // Control points deliberately uneven: long straight + tight end — worst case for T-uniform.
+    const pts = [
+      { x: 100, y: 400 },
+      { x: 730, y: 400 },
+      { x: 1060, y: 320 },
+      { x: 1020, y: 120 },
+    ];
+    const result = catmullRomSpline(pts, { closed: false, samples: 200 });
+    const steps = [];
+    for (let i = 1; i < result.length; i++) {
+      const dx = result[i].x - result[i - 1].x;
+      const dy = result[i].y - result[i - 1].y;
+      steps.push(Math.sqrt(dx * dx + dy * dy));
+    }
+    const ratio = Math.max(...steps) / Math.min(...steps);
+    expect(ratio).toBeLessThan(1.1);
+  });
+
+  it('arc-length closed: step distances are uniform (max/min < 1.10) on uneven oval', () => {
+    const pts = [
+      { x: 640, y: 155 },
+      { x: 900, y: 200 },
+      { x: 1060, y: 360 },
+      { x: 900, y: 520 },
+      { x: 640, y: 565 },
+      { x: 250, y: 360 },
+    ];
+    const result = catmullRomSpline(pts, { closed: true, samples: 200 });
+    const steps = [];
+    for (let i = 1; i < result.length; i++) {
+      const dx = result[i].x - result[i - 1].x;
+      const dy = result[i].y - result[i - 1].y;
+      steps.push(Math.sqrt(dx * dx + dy * dy));
+    }
+    const ratio = Math.max(...steps) / Math.min(...steps);
+    expect(ratio).toBeLessThan(1.1);
+  });
+
+  it('arc-length closed: wrap-around gap equals step size (cyclic consistency)', () => {
+    // For a closed track with N arc-length-uniform samples, the "missing" segment
+    // from the last sample back to the first should have the same size as the others.
+    const pts = [
+      { x: 640, y: 155 },
+      { x: 1060, y: 360 },
+      { x: 640, y: 565 },
+      { x: 250, y: 360 },
+    ];
+    const result = catmullRomSpline(pts, { closed: true, samples: 100 });
+    const steps = [];
+    for (let i = 1; i < result.length; i++) {
+      const dx = result[i].x - result[i - 1].x;
+      const dy = result[i].y - result[i - 1].y;
+      steps.push(Math.sqrt(dx * dx + dy * dy));
+    }
+    const mean = steps.reduce((s, d) => s + d, 0) / steps.length;
+    // Wrap-around: distance from last sample back to first sample
+    const wdx = result[0].x - result[result.length - 1].x;
+    const wdy = result[0].y - result[result.length - 1].y;
+    const wrapDist = Math.sqrt(wdx * wdx + wdy * wdy);
+    // Should be within 10% of the mean step size
+    expect(Math.abs(wrapDist - mean) / mean).toBeLessThan(0.1);
+  });
+
+  it('arc-length open: first sample is first control point, last is last control point', () => {
+    const pts = [
+      { x: 50, y: 100 },
+      { x: 400, y: 300 },
+      { x: 900, y: 200 },
+      { x: 1200, y: 400 },
+    ];
+    const result = catmullRomSpline(pts, { closed: false, samples: 100 });
+    expect(result[0].x).toBeCloseTo(pts[0].x, 5);
+    expect(result[0].y).toBeCloseTo(pts[0].y, 5);
+    expect(result[99].x).toBeCloseTo(pts[3].x, 5);
+    expect(result[99].y).toBeCloseTo(pts[3].y, 5);
+  });
+
+  it('arc-length closed: first sample is first control point', () => {
+    const pts = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 50, y: 100 },
+    ];
+    const result = catmullRomSpline(pts, { closed: true, samples: 50 });
+    expect(result[0].x).toBeCloseTo(pts[0].x, 8);
+    expect(result[0].y).toBeCloseTo(pts[0].y, 8);
   });
 });
 
