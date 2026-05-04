@@ -192,3 +192,92 @@ describe('EditorShape — offset clamping in getPosition', () => {
     expect(pN1.y).toBeCloseTo(pN05.y, 1);
   });
 });
+
+// ── _tangentAngle regression tests (PR-A2.5 arc-length fix) ──────────────────
+//
+// Before the fix, _tangentAngle called derivativeAt(controlPoints, t):
+//   • derivativeAt treats t as a T-parameter, but racer-t is an arc-length fraction.
+//   • derivativeAt clamps t to [0,1], so closed-track lap 2+ always returned
+//     the constant end-tangent.
+//
+// L-shaped open track: horizontal leg (300px) then vertical leg (300px).
+const L_OPEN = {
+  closed: false,
+  innerPoints: [
+    { x: 0, y: 10 },
+    { x: 300, y: 10 },
+    { x: 300, y: 310 },
+  ],
+  outerPoints: [
+    { x: 0, y: 50 },
+    { x: 340, y: 50 },
+    { x: 340, y: 310 },
+  ],
+};
+
+// Asymmetric open track: horizontal (400px) >> vertical (100px).
+// Arc-length midpoint is deep on the horizontal leg; T-parameter midpoint is at the corner.
+const ASYMMETRIC_L_OPEN = {
+  closed: false,
+  innerPoints: [
+    { x: 0, y: 10 },
+    { x: 400, y: 10 },
+    { x: 400, y: 110 },
+  ],
+  outerPoints: [
+    { x: 0, y: 50 },
+    { x: 440, y: 50 },
+    { x: 440, y: 110 },
+  ],
+};
+
+describe('EditorShape — _tangentAngle (arc-length regression)', () => {
+  it('open L-track: angle before the turn (~0) differs from angle after (~π/2)', () => {
+    const shape = new EditorShape(L_OPEN, { samples: 500 });
+    const { angle: before } = shape.getPosition(0.2, 0); // on horizontal leg
+    const { angle: after } = shape.getPosition(0.8, 0); // on vertical leg
+    // Horizontal → ~0 rad; vertical → ~π/2 rad; difference ≥ 1 rad (>57°)
+    const diff = Math.abs(after - before);
+    expect(diff).toBeGreaterThan(1.0);
+    expect(Math.abs(before)).toBeLessThan(0.4); // roughly rightward
+    expect(Math.abs(after - Math.PI / 2)).toBeLessThan(0.4); // roughly downward
+  });
+
+  it('open L-track: endpoint (t=0) angle is finite and not NaN', () => {
+    const shape = new EditorShape(L_OPEN, { samples: 500 });
+    const { angle } = shape.getPosition(0, 0);
+    expect(isFinite(angle)).toBe(true);
+  });
+
+  it('open L-track: endpoint (t=1) angle is finite and not NaN', () => {
+    const shape = new EditorShape(L_OPEN, { samples: 500 });
+    const { angle } = shape.getPosition(1, 0);
+    expect(isFinite(angle)).toBe(true);
+  });
+
+  it('closed-track lap 2+: angle at t=2.5 equals angle at t=0.5 (multi-lap regression)', () => {
+    // Before the fix, derivativeAt clamped t to [0,1] — so t=2.5 always
+    // returned the angle at T=1.0 (constant end-tangent for all racers in lap 2+).
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 120 });
+    const { angle: a05 } = shape.getPosition(0.5, 0);
+    const { angle: a25 } = shape.getPosition(2.5, 0);
+    expect(a25).toBeCloseTo(a05, 10);
+  });
+
+  it('closed-track: angle at t=0 equals angle at t=1 (periodic wrap)', () => {
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 120 });
+    const { angle: a0 } = shape.getPosition(0, 0);
+    const { angle: a1 } = shape.getPosition(1, 0);
+    expect(a1).toBeCloseTo(a0, 10);
+  });
+
+  it('asymmetric open track: arc-length t=0.7 is on the long horizontal leg (angle ≈ 0)', () => {
+    // Horizontal ~400px, vertical ~100px — total ~500px.
+    // Arc-length 0.7 = ~350px → still on horizontal leg → angle ≈ 0.
+    // The old T-parameter approach: T=0.7 → 2nd segment (vertical) → angle ≈ π/2. This
+    // test distinguishes the two approaches.
+    const shape = new EditorShape(ASYMMETRIC_L_OPEN, { samples: 500 });
+    const { angle } = shape.getPosition(0.7, 0);
+    expect(Math.abs(angle)).toBeLessThan(0.4); // near 0 = rightward
+  });
+});

@@ -333,6 +333,39 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 
 ---
 
+## 2026-05-04 — PR-A2.5 Visual Race Naturalness
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (`catmullRom.js`, `EditorShape.js`, `RaceScreen/index.jsx`)
+**Branch:** feat/pr-a2.5-visual-naturalness → master
+
+### npm audit
+
+No new dependencies. Existing findings unchanged.
+
+### ESLint / Prettier
+
+0 errors, 0 new warnings. All files auto-formatted by Husky pre-commit hook.
+
+### Tests
+
+| Metric | Count |
+|--------|-------|
+| Tests before PR-A2.5 | 1286 |
+| Tests after PR-A2.5 | **1314** |
+| New tests | +28: 13 diagnostic (Phase 1), 5 arc-length unit, 10 jitter/speedBonus |
+
+### Quality Gate
+
+- ✅ Hypothesis confirmed: T-uniform max/min pixel-distance ratios 1.36–7.72× across 6 track shapes
+- ✅ Arc-length fix: all tracks ≤1.01× ratio
+- ✅ Jitter amplitude: `0.00012` → `race_baseSpeed * 0.05` (±5% proportional)
+- ✅ EditorShape.getBoundingBox: now includes raw control points (arc-length samples may miss exact T-junction positions)
+- ✅ speedBonus spatial values unchanged
+- ✅ All 1314 tests green
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |
