@@ -356,6 +356,11 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   **Priorität:** Niedrig. Kamera-Phase und Race-Dynamics-PRs sind wichtiger. Aktueller Zustand
   (PR-A2.8 Konsolen-Warning) ist akzeptables Notfall-Verhalten.
 
+- **Q-27** — Background-PNG-Komprimierung *(Audit 2026-05-04, Severity: HIGH — deferred)*
+  Die 5 Background-Images (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) sind zusammen ~11.7 MB unkomprimierte PNGs. Optimierung auf ≤500 KB/Bild möglich (pngquant, tinypng, etc.).
+  Bewusst zurückgestellt in PR-A2.9 — kein akuter UX-Blocker. Fix: Komprimierung + git-replace der Originals. Eigene Mini-PR.
+  *(Priorität: niedrig)*
+
 - **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
   FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.
   Defensiv-Hygiene, niedrige Priorität.

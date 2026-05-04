@@ -158,9 +158,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Default-Track-Geometrien + Backgrounds (PR #62, merge-commit `6d12037`). L.7-Bug2 behoben: alle 5 Default-Tracks spielbar. Kein Code-Change — Test-Counts unverändert. |
 
 | 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.6 — Race Dynamics (feat/pr-a2.6-race-dynamics). 3 Commits: (1) speedFactor/speedBonusMult-Trennung — spreadFactor + speedBonusMult als separate Felder, re-roll berührt nur spreadFactor (numerisch äquivalent zu vorher); (2) Periodischer spreadFactor Re-Roll: rollCount=max(2,⌊duration/15⌋), rollInterval≈12s, Variation ±85% of SPREAD_RANGE (Variant B), easeInOutCubic-Transition 5000ms, letzter Roll bei 80% — draftingBoost unverändert 1.10, Cone-Geometrie-Kommentar; (3) Doc-Updates ARCHITECTURE/LESSONS/BACKLOG/ROADMAP/AUDIT. +33 unit Tests (reRoll.test.js). ESLint: 0 Errors, 0 Warnings. |
+| 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.9 — Repo-Hygiene (chore/pr-a2.9-repo-hygiene). 5 Debug-Screenshots aus Repo-Root entfernt (modal-*.png). @testing-library/user-event aus devDependencies entfernt (unused). .gitignore bestätigt (audit-temp/ + diagnosis/ bereits abgedeckt). Flaky Test fix: reRoll.test.js Math.random-Spy für deterministischen Uniqueness-Test (war bei voller Suite nicht immer grün). Audit-Falsch-Positiv: services/api.js NICHT gelöscht — grep-Pattern fehlte .js-Extension, Datei hat 2 aktive Imports. Background-PNG-Komprimierung zurückgestellt (user decision). 0 neue Tests. |
 
-**Aktueller Branch-HEAD:** `feat/pr-a2.6-race-dynamics`
-**Master-HEAD:** `0752474` (PR #68 backlog-update-cache-layer, merge-commit 2026-05-04)
+**Aktueller Branch-HEAD:** `chore/pr-a2.9-repo-hygiene`
+**Master-HEAD:** `228be94` (PR #69 feat/pr-a2.6-race-dynamics, merge-commit 2026-05-04)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
