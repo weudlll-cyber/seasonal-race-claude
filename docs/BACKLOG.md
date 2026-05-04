@@ -290,12 +290,52 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   Code-Defaults ohne Backgrounds. Im normalen Betrieb (Server je einmal gestartet) sieht User
   ausschließlich Server-Tracks mit Backgrounds. Verifiziert in PR-A2.8-Diagnose.
 
-  **Lösungs-Vorschlag (wenn gewünscht):** Statische Default-Backgrounds als Code-Assets in
-  `client/public/track-backgrounds/<track-id>.png` mit relativen URLs in `defaults.js`. Greift
-  nur wenn Server-Tracks fehlen.
+  **Neu verstanden als Spezialfall:** Das generellere Problem ist Background-Caching für Offline-Spiel
+  (alle Tracks, nicht nur Defaults). Separate Planung und Lösungs-Alternativen dort — siehe
+  **"Background-Cache für Offline-Spiel"** unten.
 
-  **Aufwand:** Mini-PR, 2–3h inkl. Asset-Erstellung. **Schwere:** Niedrig — betrifft nur
-  Erstinstallation.
+- **Background-Cache für Offline-Spiel** *(Niedrige Priorität)*
+
+  Aktuell brauchen alle Tracks (Default + Custom) den laufenden Backend-Server für Background-Bilder.
+  Wenn Server offline → Konsolen-Warning (seit PR-A2.8) und schwarzer/Gradient-Background im Race.
+
+  **User-Vision:** Tracks die einmal mit laufendem Server geladen wurden sollen offline weiter mit
+  Background spielbar sein.
+
+  **Diagnose-Bestand (verifiziert in PR-A2.8-Diagnosesession):**
+  - `trackCache.js` Cache-Infrastruktur ist vollständig vorhanden
+  - Eager-Fütterung beim App-Start funktioniert (`fetchServerTracks` → `cacheTrackGeometry` →
+    `_cacheBackgroundAsync`)
+  - Cache-Writes scheitern still wegen 3 MB localStorage-Limit (Bilder 2.9–7.7 MB als data-URL nach
+    Base64-Encoding — kein einziges Bild passt in das Limit)
+  - RaceScreen liest Cache nie aus (`getTrackBackgroundUrl()` existiert in `trackLoader.js:173`,
+    wird aber im Produktionscode nicht aufgerufen — nur in Tests)
+  - Background-Auflösung ist **nicht** mit Speed-Pipeline gekoppelt (Klassifikation B in Diagnose) —
+    Resize wäre für Race-Mechanik sicher, `worldWidth`/`worldHeight`/`pathLengthPx` sind in der
+    Geometrie-JSON eingefroren
+
+  **Vier diskutierte Lösungs-Alternativen:**
+
+  1. **Smart-Switch (Resize-Cache + Server-First):** Online = Server-URL (Original-Auflösung), Offline =
+     Canvas-resized Cache (1280×720, JPEG 70% ≈ 100–300 KB/Bild). Aufwand ~3–4h. Pragmatisch, aber
+     Qualitätsdiskrepanz zwischen Online und Offline.
+
+  2. **IndexedDB ohne Resize:** Original-Bilder als Blob direkt im IndexedDB (kein Base64-Overhead,
+     kein Quota-Problem). Online und Offline identisch in Original-Qualität. Aufwand ~4–5h.
+     Sauberste Lösung, aber `getCachedBackground()` müsste async werden → Umbau der Konsumptionsseite.
+
+  3. **Notfall-Option (aktueller Zustand):** Kein Cache, schwarzer/Gradient-Background bei
+     Offline-Server. Konsolen-Warning (PR-A2.8) gibt User Hinweis. Aufwand 0h.
+
+  4. **Hybrid (IndexedDB + Smart-Switch):** Original im Cache UND Server-First für maximale Robustheit.
+     Aufwand ~5–6h.
+
+  **Empfehlung wenn realisiert:** Alternative 2 (IndexedDB) — konzeptuell sauberste Lösung, behält
+  Original-Qualität, kein Risiko mit Auflösungs-Diskrepanz zwischen Upload und Anzeige. Konsumptionsseite
+  in RaceScreen/PresetThumbnail benötigt Helper `getServerTrackIdByGeometryId()` in `trackLoader.js`.
+
+  **Priorität:** Niedrig. Kamera-Phase und Race-Dynamics-PRs sind wichtiger. Aktueller Zustand
+  (PR-A2.8 Konsolen-Warning) ist akzeptables Notfall-Verhalten.
 
 - **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
   FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.
