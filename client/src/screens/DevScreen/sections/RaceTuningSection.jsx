@@ -36,18 +36,36 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 // ── Sub-Card wrapper ──────────────────────────────────────────────────────────
-function SubCard({ title, subtitle, children, disabled }) {
+function SubCard({ title, subtitle, children, disabled, onReset, resetTestId }) {
   return (
     <div className={s.card} style={{ opacity: disabled ? 0.45 : 1 }}>
-      <p
+      <div
         style={{
-          fontWeight: 600,
-          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
           marginBottom: subtitle ? '0.2rem' : '0.75rem',
         }}
       >
-        {title}
-      </p>
+        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{title}</span>
+        <span className={s.spacer} />
+        {onReset && (
+          <button
+            onClick={onReset}
+            data-testid={resetTestId}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-muted)',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              padding: '0.1rem 0.2rem',
+              opacity: 0.7,
+            }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
       {subtitle && (
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           {subtitle}
@@ -108,6 +126,79 @@ function RaceTuningSection() {
     setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
   }
 
+  function resetSpeedRange() {
+    setSpeedConfig((prev) => ({
+      ...prev,
+      min: DEFAULT_BASE_SPEED_CONFIG.min,
+      max: DEFAULT_BASE_SPEED_CONFIG.max,
+    }));
+  }
+
+  function resetStartLayout() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      startSpreadRange: DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange,
+      runoutZone: DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone,
+    }));
+  }
+
+  function resetRowStart() {
+    setRowConfig((prev) => ({
+      ...prev,
+      rowGapMultiplier: DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier,
+      speedBonusFactor: DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor,
+      maxCapacityFactor: DEFAULT_ROW_LAYOUT_CONFIG.maxCapacityFactor,
+    }));
+  }
+
+  function resetSpeedReRoll() {
+    setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+  }
+
+  function resetDrafting() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      draftingMaxDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingMaxDistance,
+      draftingConeAngle: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle,
+      draftingBoost: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost,
+    }));
+  }
+
+  function resetComfortZone() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      comfortThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold,
+      softRepulsionStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.softRepulsionStrength,
+    }));
+  }
+
+  function resetSoftAvoidance() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      avoidanceDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance,
+      tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
+      yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
+      lateralForce: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralForce,
+      maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
+    }));
+  }
+
+  function resetSpeedBrake() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      speedBrakeYThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeYThreshold,
+      speedBrakeTThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTThreshold,
+      speedBrakeFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
+    }));
+  }
+
+  function resetHomeForce() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
+    }));
+  }
+
   // Speed Range preview
   const spread = spreadPercent(speedConfig.min, speedConfig.max);
   const mean = ((speedConfig.min + speedConfig.max) / 2).toFixed(5);
@@ -142,8 +233,10 @@ function RaceTuningSection() {
           </button>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-          Fine-tune race physics and dynamics. These values are typically set once during initial
-          calibration and rarely changed during regular operation.
+          Fine-tune how races feel and play out. These settings control race physics — how racers
+          move, how they react to each other, and how exciting or predictable the action is.
+          You&rsquo;ll usually set these once during initial calibration and only revisit them if
+          races feel wrong.
         </p>
       </div>
 
@@ -156,7 +249,9 @@ function RaceTuningSection() {
       {/* ── Block 1: Speed Range ── */}
       <SubCard
         title="Speed Range"
-        subtitle="Defines the slowest and fastest possible base speeds for racers. Tune min/max range — wider = more drama, narrower = closer races."
+        onReset={resetSpeedRange}
+        resetTestId="reset-speed-range"
+        subtitle="The slowest and fastest base speeds racers can have. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -165,7 +260,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Min Speed
-              <InfoTooltip text="Minimum base speed any racer can have. Defines the lower bound of the spread distribution at race start." />
+              <InfoTooltip text="The slowest possible base speed for a racer. Lower values mean some racers can fall well behind." />
             </label>
             <input
               type="number"
@@ -186,7 +281,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Speed
-              <InfoTooltip text="Maximum base speed any racer can have. Defines the upper bound of the spread distribution at race start." />
+              <InfoTooltip text="The fastest possible base speed for a racer. Higher values mean some racers can pull far ahead." />
             </label>
             <input
               type="number"
@@ -251,7 +346,9 @@ function RaceTuningSection() {
       {/* ── Block 2: Start Layout ── */}
       <SubCard
         title="Start Layout"
-        subtitle="How racers are distributed at the starting line and beyond the finish."
+        onReset={resetStartLayout}
+        resetTestId="reset-start-layout"
+        subtitle="How racers are positioned at the start and how the finish area is laid out. Affects whether racers begin tightly packed or spread out, and how much space there is to celebrate the finish before they leave the screen."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -260,7 +357,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Start Spread Range
-              <InfoTooltip text="Half-width of the initial lateral spread at race start, in normalized track-width units. Racers are placed evenly from −range to +range across the start line (like real-race grid positions). 0.95 uses 95% of each half-width — the formula uses this as effectiveWidth so the packing calculation matches actual placement. Range 0.1 (narrow pack) to 1.0 (edge-to-edge)." />
+              <InfoTooltip text="How spread out racers are at the starting line, relative to the track. Higher = racers start more spread out across the track. Lower = racers start in a tighter cluster." />
             </label>
             <input
               type="number"
@@ -282,7 +379,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Runout Zone
-              <InfoTooltip text="Fraction of the track path reserved for run-out after the finish line, on open tracks only. At 0.05 (5%) the finish line sits at 95% of the track — racers cross it then coast to the end. Closed tracks are unaffected (they use the runoutDecay system). Range 0.0–0.20." />
+              <InfoTooltip text="How much track space is reserved beyond the finish line for celebration. Higher = more room for finishers to coast and celebrate. Lower = race ends more abruptly at the line." />
             </label>
             <input
               type="number"
@@ -304,7 +401,9 @@ function RaceTuningSection() {
       {/* ── Block 3: Row Start ── */}
       <SubCard
         title="Row Start"
-        subtitle="How racers are arranged in starting rows and how back-row racers are compensated for starting further back."
+        onReset={resetRowStart}
+        resetTestId="reset-row-start"
+        subtitle="With many racers, they don't all fit in one starting row — they line up in multiple rows, like cars at a Grand Prix. This block controls the row spacing, how many racers fit per row, and how to compensate back-row racers so they aren't doomed by their starting position."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -313,7 +412,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Row Gap Multiplier
-              <InfoTooltip text="Distance between rows expressed as a multiple of the rendered sprite size. At 1.5× the rows are 1.5 sprite-heights apart at race start. Lower values compress rows closer together (can look crowded); higher values spread them further back (longer stagger). Range 0.5–4.0." />
+              <InfoTooltip text="How much space is between starting rows. Higher = rows further apart, more spread out start. Lower = rows tightly packed, more compact start." />
             </label>
             <input
               type="number"
@@ -335,7 +434,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Speed Bonus Factor
-              <InfoTooltip text="Controls how much of the physical start-distance disadvantage rear rows get back as a permanent speed bonus. 1.0 = full compensation (pole position has zero mathematical advantage). 0.0 = no compensation (front row always wins on average). Values above 1.0 over-compensate, giving rear rows a net advantage. Range 0.0–2.0." />
+              <InfoTooltip text="How much extra speed is given to back-row racers to compensate for starting further back. 1.0 = full compensation, they have a fair chance. 0 = no compensation, front row has a big advantage." />
             </label>
             <input
               type="number"
@@ -357,7 +456,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Capacity Factor
-              <InfoTooltip text="Fraction of the total track path length that the rearmost starting row may occupy. 0.3 means the last row can be at most 30% of the track length behind the start line. Used to auto-calculate the recommended max-racers value on each track. Too high and the last row wraps almost back to the finish line. Range 0.1–0.6." />
+              <InfoTooltip text="How wide the starting rows are — controls how many racers fit in each row before adding another row. Higher = wider rows, fewer rows total. Lower = narrower rows, more rows." />
             </label>
             <input
               type="number"
@@ -394,7 +493,9 @@ function RaceTuningSection() {
       {/* ── Block 4: Speed Re-Roll ── */}
       <SubCard
         title="Speed Re-Roll"
-        subtitle="Periodically re-rolls each racer's speed during the race. Creates lead changes and prevents predictable outcomes."
+        onReset={resetSpeedReRoll}
+        resetTestId="reset-speed-reroll"
+        subtitle="During a race, each racer's speed gets re-rolled periodically — meaning their speed changes from time to time, creating dramatic shifts. This is what makes leads change and prevents predictable outcomes. Without this, the fastest racer at the start would just stay in front the whole race."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -403,7 +504,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Variation Width (%)
-              <InfoTooltip text="How much each racer's speed can shift per re-roll, as percentage of the full speed range. Higher values create more dramatic position changes; lower values feel more predictable." />
+              <InfoTooltip text="How much a racer's speed can change per re-roll. Higher = dramatic position changes, faster races and slower races mix things up. Lower = subtle shifts, more predictable order." />
             </label>
             <input
               type="number"
@@ -425,7 +526,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Transition Smoothness (s)
-              <InfoTooltip text="How long the smooth transition lasts when a racer's speed changes during a re-roll. Higher values create more cinematic shifts, lower values feel snappier." />
+              <InfoTooltip text="How smoothly the speed change happens (in seconds). Higher = cinematic slow shifts, looks dramatic. Lower = snappy reactive changes, feels more dynamic." />
             </label>
             <input
               type="number"
@@ -447,7 +548,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Re-Roll Frequency (÷ interval)
-              <InfoTooltip text="Approximate seconds between re-rolls. Race duration determines exact roll count: count = max(2, floor(duration ÷ this value)). Lower values create more frequent shifts." />
+              <InfoTooltip text="Roughly how many seconds between re-rolls. Lower = more frequent shifts, very chaotic races. Higher = fewer shifts, calmer races." />
             </label>
             <input
               type="number"
@@ -469,7 +570,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Last Roll Position (%)
-              <InfoTooltip text="When the last re-roll happens, as percentage of race duration. Higher values keep the race dynamic until near the end; lower values create a calmer final stretch." />
+              <InfoTooltip text="When during the race the last re-roll happens, as percentage of race duration. Higher = action keeps changing right until near the end. Lower = a calm final stretch where the leader can hold their position." />
             </label>
             <input
               type="number"
@@ -529,7 +630,9 @@ function RaceTuningSection() {
       {/* ── Block 5: Drafting / Slipstream ── */}
       <SubCard
         title="Drafting / Slipstream"
-        subtitle="Slipstream effect — racers behind another racer get a small speed boost. Enables overtaking on straights."
+        onReset={resetDrafting}
+        resetTestId="reset-drafting"
+        subtitle="When a racer follows closely behind another racer, they get a small speed boost from the slipstream — just like in real-world cycling or motor sports. This makes overtaking on straight sections possible. Without drafting, slow racers would never catch up; with too much, racers chain together in dense pelotons."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -539,7 +642,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Distance (world px)
-              <InfoTooltip text="Maximum distance in world pixels at which a trailing racer can benefit from another racer's slipstream. Smaller values require closer following to enable drafting." />
+              <InfoTooltip text="How close behind another racer you need to be to get the boost (in pixels on screen). Higher = drafting works from further away, easier to use. Lower = you have to follow very closely to get the benefit." />
             </label>
             <input
               type="number"
@@ -562,7 +665,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Cone Angle (°)
-              <InfoTooltip text="Angular width of the slipstream zone behind each racer, in degrees. Wider cones make drafting easier on curves; narrower cones require more direct following." />
+              <InfoTooltip text="How wide the slipstream zone is behind each racer (in degrees). Wider = drafting works even when not directly behind, easier on curves. Narrower = you have to be straight behind to get the boost." />
             </label>
             <input
               type="number"
@@ -585,7 +688,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Boost Factor
-              <InfoTooltip text="Speed multiplier applied to a drafting racer. 1.10 = 10% boost. Higher values create stronger pelotons but can cause chain effects where everyone bunches together." />
+              <InfoTooltip text="How much of a speed boost a drafting racer gets. 1.10 = +10%. Higher = stronger boost makes overtaking easier but can cause whole packs of racers to bunch together. Lower = subtle boost, less peloton risk." />
             </label>
             <input
               type="number"
@@ -619,7 +722,9 @@ function RaceTuningSection() {
       {/* ── Block 6: Comfort Zone ── */}
       <SubCard
         title="Comfort Zone"
-        subtitle="How close racers can get to each other before they automatically adjust position."
+        onReset={resetComfortZone}
+        resetTestId="reset-comfort-zone"
+        subtitle="Racers have a personal space bubble — when another racer gets too close, they automatically push apart to keep some breathing room. This block controls how big the bubble is and how forcefully racers react when crowded. Looser values create open spacious races; tighter values let racers form dense packs."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -629,7 +734,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Comfort Threshold
-              <InfoTooltip text="Normalized physicalY fraction beyond which soft repulsion kicks in. 0.70 means the inner 70% of each half-width is 'comfortable' — no extra force. Beyond that, a quadratic push steers the racer back. Range 0.3 (repulsion starts early) to 0.95 (almost no repulsion zone)." />
+              <InfoTooltip text="How early a racer reacts when another racer comes close. Higher = racers stay further apart, more spacious feel. Lower = racers tolerate close racing, denser packs." />
             </label>
             <input
               type="number"
@@ -652,7 +757,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Soft Repulsion Strength
-              <InfoTooltip text="Multiplier for the quadratic push away from the track boundary. Applied when |physicalY| ≥ comfortThreshold. Higher = stronger wall. Hard clamp at ±1.0 always applies regardless. Range 0.01 (gentle) to 0.3 (firm)." />
+              <InfoTooltip text="How forcefully racers move away when crowded. Higher = visible swerve when crowded. Lower = subtle drift, racers barely react." />
             </label>
             <input
               type="number"
@@ -675,7 +780,9 @@ function RaceTuningSection() {
       {/* ── Block 7: Soft Avoidance ── */}
       <SubCard
         title="Soft Avoidance"
-        subtitle="How racers steer around each other to avoid collisions, and how strong the avoidance force is."
+        onReset={resetSoftAvoidance}
+        resetTestId="reset-soft-avoidance"
+        subtitle="When racers are about to collide, they steer around each other instead of overlapping. This block fine-tunes how they detect and avoid each other — how far ahead they look, whether they prioritize racers in front or to the side, and how strong their evasive maneuvers are. Affects the smoothness and realism of close racing."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -685,7 +792,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Avoidance Distance
-              <InfoTooltip text="Threshold in the anisotropic (t, physicalY) distance metric. Two racers interact when sqrt((ΔT×tWeight)² + (ΔY×yWeight)²) is below this value. Default 0.35. Increase to make racers start avoiding each other sooner." />
+              <InfoTooltip text="How far ahead racers look to detect collision risk. Higher = early smooth steering, races look graceful. Lower = last-second corrections, looks more chaotic." />
             </label>
             <input
               type="number"
@@ -708,7 +815,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               T Weight
-              <InfoTooltip text="Weight applied to the race-progress difference (ΔT) in the anisotropic distance metric. Higher tWeight = a racer directly ahead triggers avoidance sooner than a racer beside you. Default 2.0." />
+              <InfoTooltip text="How much racers care about avoiding collisions with someone directly in front. Higher = strong reaction to racers ahead, prefers to swerve around. Lower = less concerned with what's directly ahead." />
             </label>
             <input
               type="number"
@@ -731,7 +838,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Y Weight
-              <InfoTooltip text="Weight applied to the physicalY difference (ΔY) in the anisotropic distance metric. Higher yWeight = racers next to you (same t) trigger avoidance sooner. Default 1.0." />
+              <InfoTooltip text="How much racers care about avoiding collisions with someone to the side. Higher = strong reaction to racers next to them. Lower = less concerned with sideways neighbors." />
             </label>
             <input
               type="number"
@@ -754,7 +861,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Lateral Force
-              <InfoTooltip text="How fast the trailing racer shifts sideways when avoiding. Value is physicalY change per frame at full proximity. At half proximity the force is halved. Default 0.015." />
+              <InfoTooltip text="How forcefully racers steer sideways to avoid collisions. Higher = decisive sharp steering. Lower = gentle subtle drifts." />
             </label>
             <input
               type="number"
@@ -777,7 +884,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Lateral
-              <InfoTooltip text="Maximum |physicalY| avoidance and home force combined can push a racer to. Hard boundary at ±1.0 always applies. Default 0.95 allows racers to use almost the full track width." />
+              <InfoTooltip text="Maximum sideways position deviation allowed during avoidance. Caps how far a racer can swerve from their lane to dodge another." />
             </label>
             <input
               type="number"
@@ -800,7 +907,9 @@ function RaceTuningSection() {
       {/* ── Block 8: Speed Brake ── */}
       <SubCard
         title="Speed Brake"
-        subtitle="When and how strongly racers brake when another racer is directly ahead."
+        onReset={resetSpeedBrake}
+        resetTestId="reset-speed-brake"
+        subtitle="When a racer ends up directly behind another racer with no clear way to overtake, they slow down a bit instead of rear-ending them. This block controls when the brake kicks in (how close, how directly behind) and how strongly they slow down. Prevents visual collisions in tight packs."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -810,7 +919,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Adjacent Y Threshold
-              <InfoTooltip text="|physicalY| difference below which two racers are considered side-by-side (adjacent). The trailing racer then receives a speed penalty. Default 0.20 = within 20% of half-track-width." />
+              <InfoTooltip text="How sideways-aligned racers have to be for the brake to activate. Lower = only directly-behind racers brake. Higher = racers brake even when slightly off to the side." />
             </label>
             <input
               type="number"
@@ -833,7 +942,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Adjacent T Threshold
-              <InfoTooltip text="|deltaT| (race progress) below which two racers are considered side-by-side. Together with the Y threshold this defines the adjacency zone. Default 0.015 ≈ 1.5% of a lap." />
+              <InfoTooltip text="How close behind another racer triggers the brake. Higher = brakes activate earlier from further behind. Lower = only very close trailing racers brake." />
             </label>
             <input
               type="number"
@@ -856,7 +965,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Speed Brake Factor
-              <InfoTooltip text="Speed multiplier applied to the trailing racer when adjacent to another racer. 0.95 = 5% slower. Prevents tunnelling at high speed. Default 0.95." />
+              <InfoTooltip text="How much a braking racer slows down. 0.95 = -5% speed. Lower = stronger braking, racer falls back more. Higher = subtle braking, barely noticeable." />
             </label>
             <input
               type="number"
@@ -879,7 +988,9 @@ function RaceTuningSection() {
       {/* ── Block 9: Home Force ── */}
       <SubCard
         title="Home Force"
-        subtitle="How strongly racers return to the track centerline after deviating."
+        onReset={resetHomeForce}
+        resetTestId="reset-home-force"
+        subtitle="The track has a centerline that racers naturally follow. After they swerve off-line (to avoid collisions, drafting, or just by chance), this force gently pulls them back to the center. Without it, racers would drift off forever; with too much, they snap back unrealistically."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -889,7 +1000,7 @@ function RaceTuningSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Home Force Strength
-              <InfoTooltip text="Spring constant pulling each racer back toward the centerline (physicalY = 0). Applied every frame as Δy = −physicalY × strength. Higher = faster return. At default 0.04 a racer at the boundary converges ~95% within 1.5 s at 60 fps. Range 0.005 (very slow) to 0.1 (very fast)." />
+              <InfoTooltip text="How strongly racers return to the track centerline after deviating. Higher = quick return, tight racing lines. Lower = racers drift longer before recentering, more wandering feel." />
             </label>
             <input
               type="number"

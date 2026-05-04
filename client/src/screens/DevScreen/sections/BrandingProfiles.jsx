@@ -11,6 +11,7 @@ import { useState, useRef } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, newId } from '../../../modules/storage/storage.js';
 import { DEFAULT_BRANDING } from '../../../modules/storage/defaults.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const BLANK = {
@@ -94,7 +95,7 @@ function BrandingProfiles() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.35rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
             Branding Profiles <span className={s.badge}>{profiles.length}</span>
           </span>
@@ -104,6 +105,32 @@ function BrandingProfiles() {
               + New Profile
             </button>
           )}
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.5rem' }}>
+          Branding profiles let you give your races a custom look — colors, logos, sponsor messages.
+          Useful when you&rsquo;re running a tournament, event, or just want a personal touch. You
+          can switch between profiles per race.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            marginBottom: '0.75rem',
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+          }}
+        >
+          <span>Also configurable per race:</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Sponsor Overlay
+            <InfoTooltip text="Whether to show your sponsor branding (logo and tagline) during races. Turn off for unbranded races." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Overlay Position
+            <InfoTooltip text="Where on the screen the sponsor overlay appears during races. Pick a position that doesn't cover important race action — usually a corner." />
+          </span>
         </div>
 
         {profiles.length === 0 ? (
@@ -189,7 +216,13 @@ function BrandingProfiles() {
           </p>
           <div className={s.formGrid}>
             <div className={s.formGroup}>
-              <label className={s.label}>Profile Name</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Profile Name
+                <InfoTooltip text="What this branding profile is called. Pick a name that helps you recognize it — for example the event name or sponsor." />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Christmas Party"
@@ -219,7 +252,13 @@ function BrandingProfiles() {
               />
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Primary Color</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Primary Color
+                <InfoTooltip text="The main accent color used in race UI elements like the timer and headers. Pick something that fits your event's look." />
+              </label>
               <div className={s.colorRow}>
                 <input
                   type="color"
@@ -242,7 +281,13 @@ function BrandingProfiles() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Secondary Color</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Secondary Color
+                <InfoTooltip text="A supporting color used for backgrounds and secondary UI parts. Should contrast well with the primary color so text stays readable." />
+              </label>
               <div className={s.colorRow}>
                 <input
                   type="color"
@@ -265,7 +310,13 @@ function BrandingProfiles() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Sponsor Text</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Sponsor Text
+                <InfoTooltip text="A short message shown in the race intro and result screens. Keep it under 50 characters so it fits nicely on screen." />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Sponsored by Acme Corp"
@@ -275,7 +326,13 @@ function BrandingProfiles() {
               />
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Logo (image file)</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Logo (image file)
+                <InfoTooltip text="Optional logo image shown during races. PNG with transparent background works best. Keep it small — around 200x100 pixels — so it doesn't dominate the screen." />
+              </label>
               <input
                 ref={fileRef}
                 type="file"

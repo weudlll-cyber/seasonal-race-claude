@@ -25,6 +25,7 @@ import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
 import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/rowLayout.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
@@ -200,7 +201,7 @@ function TrackManager() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.35rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
             Tracks <span className={s.badge}>{tracks.length}</span>
           </span>
@@ -210,6 +211,48 @@ function TrackManager() {
               + Add Track
             </button>
           )}
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.5rem' }}>
+          All your racing tracks. Each track has its shape (the path racers follow), some visual
+          settings, and information about whether it&rsquo;s a closed loop or an open straight. You
+          can edit the track&rsquo;s shape using the Track Geometry Editor.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            marginBottom: '0.75rem',
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+          }}
+        >
+          <span>Configured in the Track Geometry Editor:</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Closed/Open
+            <InfoTooltip text="Whether the track is a closed loop where racers do laps, or an open path from start to finish. Closed tracks support multi-lap races; open tracks run end-to-end once." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Laps
+            <InfoTooltip text="How many laps racers complete on a closed track. Only used when the track is set to closed. Operators can override this per race during setup." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Background
+            <InfoTooltip text="Optional picture displayed behind the track. To use custom background images, the local server has to be running. Without it, the track shows on a plain background." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Start
+            <InfoTooltip text="Where on the track the race begins. Defined as a position along the path — you usually don't need to change this, the editor handles it." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Finish
+            <InfoTooltip text="Where on the track the race ends. For closed loops this is usually the same as the start; for open tracks it's at the end of the path." />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            Width
+            <InfoTooltip text="How wide the track is. Wider tracks let racers spread out more and overtake; narrower tracks force tighter packs." />
+          </span>
         </div>
 
         {tracks.length === 0 ? (
@@ -305,7 +348,13 @@ function TrackManager() {
           </p>
           <div className={s.formGrid}>
             <div className={s.formGroup}>
-              <label className={s.label}>Name</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Name
+                <InfoTooltip text="What this track is called. Shown in race setup and in the race history." />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Jungle Dash"
@@ -392,7 +441,13 @@ function TrackManager() {
               </div>
             </div>
             <div className={s.formGroup}>
-              <label className={s.label}>Track Geometry</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Track Geometry
+                <InfoTooltip text="The geometry of the track itself — the line racers follow. Edit this in the Track Geometry Editor by dragging control points." />
+              </label>
               {editId && serverTrackIds.has(editId) ? (
                 // Server track: status display + editor button (no dropdown)
                 (() => {
@@ -506,7 +561,13 @@ function TrackManager() {
               </select>
             </div>
             <div className={s.formGroupFull}>
-              <label className={s.label}>Surface Classes</label>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Surface Classes
+                <InfoTooltip text="The kind of surface the track has — affects dust, particles, and other visual effects. See the Surface Classes section to define new ones." />
+              </label>
               <div
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}
                 data-testid="track-surface-class-pills"
