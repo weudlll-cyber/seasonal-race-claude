@@ -892,9 +892,15 @@ export default function RaceScreen() {
         bsX === 1 && bsY === 1
           ? st.racers
           : st.racers.map((r) => ({ ...r, x: r.x * bsX, y: r.y * bsY }));
+      const raceState = {
+        raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
+        finishedCount: st.finishedCount,
+        winner: scaledRacersForCam.find((r) => r.finishRank === 1) ?? null,
+        finishT: st.finishT,
+      };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(scaledRacersForCam, ts, CANVAS_W, CANVAS_H)
+          ? camDirRef.current.update(scaledRacersForCam, ts, raceState, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       if (isOpenTrack) {

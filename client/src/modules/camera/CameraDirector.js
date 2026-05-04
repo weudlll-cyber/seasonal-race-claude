@@ -58,22 +58,24 @@ export class CameraDirector {
     this.targetOffsetX = 0;
     this.offsetY = 0;
     this.targetOffsetY = 0;
+    this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
   }
 
   // Main update — call once per frame during RACING.
+  // raceState: { raceElapsed, finishedCount, winner, finishT }
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
-  update(racers, ts, canvasW, canvasH) {
+  update(racers, ts, raceState, canvasW, canvasH) {
     if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
-      this._transition(racers, ts);
+      this._transition(racers, ts, raceState);
     }
-    this._setTargets(racers, canvasW, canvasH);
+    this._setTargets(racers, canvasW, canvasH, raceState);
     this.zoom += (this.targetZoom - this.zoom) * LERP;
     this.offsetX += (this.targetOffsetX - this.offsetX) * LERP;
     this.offsetY += (this.targetOffsetY - this.offsetY) * LERP;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
-  _transition(racers, ts) {
+  _transition(racers, ts, raceState) {
     const ordered = [...racers].sort((a, b) => b.t - a.t);
     const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
     const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
@@ -102,7 +104,7 @@ export class CameraDirector {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
   }
 
-  _setTargets(racers, canvasW, canvasH) {
+  _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const hw = canvasW / 2;
     const hh = canvasH / 2;
