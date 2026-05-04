@@ -28,6 +28,22 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('RaceHistory — section subtitle and tooltips (PR-A3.1)', () => {
+  it('renders the section subtitle', () => {
+    render(<RaceHistory />);
+    expect(screen.getByText(/Browse all past races/)).toBeTruthy();
+  });
+
+  it('renders filter label tooltips', () => {
+    render(<RaceHistory />);
+    const tooltips = screen.getAllByRole('tooltip', { hidden: true });
+    const trackTip = tooltips.find((el) => el.textContent.includes('regardless of track'));
+    const dateTip = tooltips.find((el) => el.textContent.includes('specific event day'));
+    expect(trackTip).toBeTruthy();
+    expect(dateTip).toBeTruthy();
+  });
+});
+
 describe('RaceHistory — empty state', () => {
   it('renders without crash when there is no history (empty localStorage state)', () => {
     render(<RaceHistory />);
