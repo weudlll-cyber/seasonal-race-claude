@@ -25,7 +25,7 @@ function RaceHistory() {
   const filtered = useMemo(() => {
     return history.filter((entry) => {
       if (filterTrack && entry.trackId !== filterTrack) return false;
-      if (filterDate && !entry.date?.startsWith(filterDate)) return false;
+      if (filterDate && !entry.date.startsWith(filterDate)) return false;
       return true;
     });
   }, [history, filterTrack, filterDate]);
