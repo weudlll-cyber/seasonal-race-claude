@@ -104,7 +104,7 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
-    expect(screen.getByText(/Fine-tune race physics/)).toBeTruthy();
+    expect(screen.getByText(/Fine-tune how races feel/)).toBeTruthy();
   });
 
   it('renders Block 1: Speed Range with inputs', () => {

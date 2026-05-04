@@ -43,8 +43,8 @@ function RaceDefaults() {
         </button>
       </div>
       <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '1.25rem' }}>
-        Default settings applied to every new race. Operators can override individual values per
-        race during setup.
+        Default settings applied to every new race. These are the values that pre-fill when an
+        operator sets up a new race — they can always be changed per race during setup.
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -55,7 +55,7 @@ function RaceDefaults() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Default Race Duration
-            <InfoTooltip text="Default race duration in seconds applied to new races. Operators can override this per race during setup." />
+            <InfoTooltip text="Default length of a race in seconds. The actual race duration may vary slightly because racers finish at different speeds. Operators can override this for any individual race." />
           </label>
           <div className={s.optionPills}>
             {DURATIONS.map((d) => (
@@ -77,7 +77,7 @@ function RaceDefaults() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Default Number of Winners (Podium Spots)
-            <InfoTooltip text="How many top finishers are highlighted as winners on the result screen. Default 3 shows podium-style top three." />
+            <InfoTooltip text="How many top finishers are highlighted as winners on the result screen. 3 shows a classic podium (gold, silver, bronze). Higher values include more racers in the celebration." />
           </label>
           <div className={s.stepper}>
             <button
@@ -105,7 +105,7 @@ function RaceDefaults() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Max Players per Race
-            <InfoTooltip text="Maximum number of racers allowed in a single race. Higher counts may impact visual clarity at race start and finish." />
+            <InfoTooltip text="Maximum number of racers allowed in a single race. More racers = more excitement but also more visual chaos at the start. 20 is a good upper limit for most tracks." />
           </label>
           <div className={s.stepper}>
             <button
@@ -133,7 +133,7 @@ function RaceDefaults() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Countdown Duration
-            <InfoTooltip text="Length of the pre-race countdown in seconds. Gives operators time to grab attention before the start." />
+            <InfoTooltip text="How long the pre-race countdown lasts in seconds. Gives the operator and audience time to focus before the race begins. 3 seconds is the classic countdown." />
           </label>
           <div className={s.optionPills}>
             {COUNTDOWNS.map((c) => (
@@ -162,7 +162,7 @@ function RaceDefaults() {
               <span className={s.toggleSlider} />
             </label>
             <span style={{ fontSize: '0.875rem' }}>Auto-advance to Result Screen after race</span>
-            <InfoTooltip text="When enabled, the result screen automatically appears after a race ends. Useful for fully automated event runs." />
+            <InfoTooltip text="When turned on, the result screen appears automatically after a race ends. Useful for events where the operator wants a hands-off, automated flow." />
           </div>
           {defaults.autoAdvance && (
             <div
@@ -171,7 +171,7 @@ function RaceDefaults() {
               <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
                 Delay (seconds):
               </span>
-              <InfoTooltip text="Seconds to wait after race end before showing results. Only applies when Auto-advance is enabled." />
+              <InfoTooltip text="How many seconds to wait after the race ends before showing results. Gives the audience a moment to react to the finish before the screen changes." />
               <div className={s.stepper}>
                 <button
                   className={s.stepperBtn}
@@ -205,7 +205,7 @@ function RaceDefaults() {
               <span className={s.toggleSlider} />
             </label>
             <span style={{ fontSize: '0.875rem' }}>Sound effects</span>
-            <InfoTooltip text="Whether to play sound effects during races (start, finish, etc.). Disable for silent operation." />
+            <InfoTooltip text="Whether to play sound effects during races (start, finish, etc.). Turn off for silent operation in noise-sensitive venues." />
           </div>
         </div>
       </div>
