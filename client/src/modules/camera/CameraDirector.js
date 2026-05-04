@@ -16,6 +16,9 @@ export const CAM_STATE = {
 };
 
 const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
+const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
+const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
+const ENDGAME_PROGRESS_THRESHOLD = 0.85; // leader.t/finishT above this → lock LEADER
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
 const MAX_ZOOM = 2.5; // ceiling for very small tracks
@@ -76,25 +79,61 @@ export class CameraDirector {
   }
 
   _transition(racers, ts, raceState) {
+    // Record cooldown timestamp when leaving OVERVIEW
+    if (this.state === CAM_STATE.OVERVIEW) {
+      this._lastOverviewExitTs = ts;
+    }
+
     const ordered = [...racers].sort((a, b) => b.t - a.t);
-    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
-    const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
 
-    const hasBattle = gap01 < 0.05; // top-2 within 5% of track
-    const hasLeaderGap = gap01 >= 0.15; // leader ≥ 15% ahead of 2nd (was 20%)
-    const hasComeback = gapLeadLast > 0.15; // last > 15% behind leader (was 20%)
+    // Priority 1: Finish override — camera locks on winner immediately
+    if (raceState.finishedCount > 0) {
+      this.state = CAM_STATE.LEADER_ZOOM;
+      this.stateEnteredAt = ts;
+      return;
+    }
 
-    const roll = Math.random();
-    if (hasBattle && roll < 0.7) {
-      this.state = CAM_STATE.BATTLE_ZOOM;
-    } else if (hasLeaderGap && roll < 0.7) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-    } else if (hasComeback && roll < 0.5) {
-      this.state = CAM_STATE.COMEBACK_ZOOM;
-    } else if (roll < 0.6) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-    } else {
+    // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
+    if (raceState.raceElapsed < START_PHASE_DURATION) {
       this.state = CAM_STATE.OVERVIEW;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 2.5: Endgame — leader past 85% → LEADER, bypasses cooldown
+    const leader = ordered[0];
+    if (leader && raceState.finishT > 0) {
+      const leaderProgress = leader.t / raceState.finishT;
+      if (leaderProgress > ENDGAME_PROGRESS_THRESHOLD) {
+        this.state = CAM_STATE.LEADER_ZOOM;
+        this.stateEnteredAt = ts;
+        return;
+      }
+    }
+
+    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
+    const hasBattle = gap01 < 0.05;
+
+    // Priority 3: Cooldown expired + no active battle → return to OVERVIEW
+    if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
+      this.state = CAM_STATE.OVERVIEW;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 4: Battle — top-2 within 5% of track
+    if (hasBattle) {
+      this.state = CAM_STATE.BATTLE_ZOOM;
+      this.stateEnteredAt = ts;
+      return;
+    }
+
+    // Priority 5: Default — LEADER with COMEBACK chance when last is far behind
+    const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
+    if (gapLeadLast > 0.3 && gap01 >= 0.1) {
+      this.state = CAM_STATE.COMEBACK_ZOOM;
+    } else {
+      this.state = CAM_STATE.LEADER_ZOOM;
     }
     this.stateEnteredAt = ts;
   }

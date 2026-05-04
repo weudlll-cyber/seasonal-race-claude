@@ -520,6 +520,111 @@ describe('CameraDirector — world-edge clamp (Befund 2)', () => {
   });
 });
 
+// ── CameraDirector — §5.3 attention hierarchy ────────────────────────────────
+
+// Racers at ~50% progress: endgame (>85%) does NOT fire, no finish event.
+const midRaceRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.3, x: 300, y: 300, finished: false },
+  { t: 0.1, x: 100, y: 300, finished: false },
+];
+// Top-2 gap = 0.5-0.3 = 0.2 → no battle; leaderProgress = 0.5 < 0.85
+
+const battleMidRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → battle
+  { t: 0.2, x: 200, y: 300, finished: false },
+];
+
+describe('CameraDirector — §5.3 attention hierarchy', () => {
+  it('Priority 1: finishedCount > 0 → LEADER_ZOOM, overrides all', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 1000, finishedCount: 1, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Priority 1 beats Priority 2 (finish overrides start phase)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 500, finishedCount: 1, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Priority 2: raceElapsed < 3000 → OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 1500, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Priority 3: cooldown expired + no battle → OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0; // exited OVERVIEW at t=0; 9000-0=9000 >= 8000 → expired
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Cooldown prevents OVERVIEW when not yet expired', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // 9000-3000=6000 < 8000 → NOT expired
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Priority 4: battle (gap01 < 0.05) → BATTLE_ZOOM', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(battleMidRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('Priority 5 default: gap01 < 0.1 (no comeback condition) → LEADER_ZOOM', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    // gap01=0.07 < 0.1 → comeback condition fails → LEADER_ZOOM
+    // Cooldown set to ts=9000 when leaving OVERVIEW; 9000-9000=0 < 8000 → expired guard ok
+    const compactRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.43, x: 430, y: 300, finished: false }, // gap01=0.07, not battle, not comeback
+      { t: 0.1, x: 100, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(compactRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('COMEBACK_ZOOM when last is far behind and no tight battle', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
+    const comebackRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false }, // leader
+      { t: 0.35, x: 350, y: 300, finished: false }, // gap01=0.15 >= 0.1
+      { t: 0.15, x: 150, y: 300, finished: false }, // gapLeadLast=0.35 > 0.3
+    ];
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(comebackRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.COMEBACK_ZOOM);
+  });
+});
+
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {
