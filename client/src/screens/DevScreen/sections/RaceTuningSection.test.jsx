@@ -94,6 +94,7 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
 import RaceTuningSection from './RaceTuningSection.jsx';
 
 beforeEach(() => {
@@ -269,5 +270,21 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     fireEvent.click(screen.getByTestId('reset-drafting'));
     const summary = screen.getByTestId('drafting-summary');
     expect(summary.textContent).toContain('110 px');
+  });
+});
+
+describe('RaceTuningSection — reset uses DEFAULT values, not current state (regression)', () => {
+  it('reset-speed-reroll restores reRollVariationPercent to 85 when loaded with stored value 150', () => {
+    loadRaceDynamicsConfig.mockReturnValueOnce({
+      reRollVariationPercent: 150,
+      reRollTransitionDuration: 3.0,
+      reRollIntervalDivisor: 20,
+      reRollLastPositionPercent: 70,
+    });
+    render(<RaceTuningSection />);
+    const input = screen.getByLabelText('Re-Roll Variation Percent');
+    expect(input.value).toBe('150');
+    fireEvent.click(screen.getByTestId('reset-speed-reroll'));
+    expect(input.value).toBe('85');
   });
 });
