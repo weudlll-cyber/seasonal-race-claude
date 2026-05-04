@@ -37,6 +37,7 @@ import {
   computeSpeedBonus,
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
+import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -190,6 +191,7 @@ export default function RaceScreen() {
 
     const behaviorConfig = loadRaceBehaviorConfig();
     const rowConfig = loadRowLayoutConfig();
+    const dynamicsConfig = loadRaceDynamicsConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -244,10 +246,13 @@ export default function RaceScreen() {
     const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
     const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
 
-    // Re-Roll schedule: distribute rolls evenly over 0–80% of targetDuration.
-    // rollInterval is in ms (ts timestamps). Last roll lands at ~80% of the race.
-    const rollCount = Math.max(2, Math.floor(targetDuration / 15));
-    const rollInterval = (0.8 * targetDuration * 1000) / rollCount;
+    // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of targetDuration.
+    const rollCount = Math.max(
+      2,
+      Math.floor(targetDuration / dynamicsConfig.reRollIntervalDivisor)
+    );
+    const rollInterval =
+      ((dynamicsConfig.reRollLastPositionPercent / 100) * targetDuration * 1000) / rollCount;
 
     // Ensure surface-class registry has the latest cached server data.
     // Code defaults are always present; this picks up any user-defined overrides.
@@ -308,7 +313,7 @@ export default function RaceScreen() {
           spreadFactorPrev: spreadFactor,
           spreadFactorTarget: spreadFactor,
           transitionStartTime: 0,
-          transitionDuration: 5000,
+          transitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
           nextRollTime: rollInterval + rollJitter,
           jitterFreq: 0.0006 + Math.random() * 0.0014,
           jitterPhase: Math.random() * Math.PI * 2,
@@ -730,10 +735,11 @@ export default function RaceScreen() {
           setPhase(PHASE.RACING);
         }
       } else if (st.phase === PHASE.RACING) {
-        // Re-Roll: spreadFactor changes are only allowed before 80% of targetDuration.
-        const lastRollDeadline = st.raceStart + targetDuration * 1000 * 0.8;
+        // Re-Roll: spreadFactor changes are only allowed before lastPositionPercent% of targetDuration.
+        const lastRollDeadline =
+          st.raceStart + targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
-        const halfWidth = spreadRange * 0.85;
+        const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
         for (const r of st.racers) {
           // ── Per-racer spreadFactor re-roll + smooth transition ─────────────────
           if (!r.finished) {
