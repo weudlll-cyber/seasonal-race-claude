@@ -234,7 +234,7 @@ export default function RaceScreen() {
       maxX: rawBbox.maxX * bsX,
       maxY: rawBbox.maxY * bsY,
     };
-    camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight);
+    camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight, isOpenTrack);
     setFinishTState(finishT);
 
     // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
