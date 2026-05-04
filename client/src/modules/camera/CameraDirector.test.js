@@ -108,6 +108,13 @@ const mockRacers = (n) =>
     finished: false,
   }));
 
+const mockRaceState = {
+  raceElapsed: 5000,
+  finishedCount: 0,
+  winner: null,
+  finishT: 1.0,
+};
+
 describe('CameraDirector', () => {
   it('starts in OVERVIEW state', () => {
     expect(new CameraDirector().state).toBe(CAM_STATE.OVERVIEW);
@@ -115,7 +122,7 @@ describe('CameraDirector', () => {
 
   it('update() returns {zoom, offsetX, offsetY} with finite values', () => {
     const cd = new CameraDirector();
-    const r = cd.update(mockRacers(4), 1000, 1280, 720);
+    const r = cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(typeof r.zoom).toBe('number');
     expect(typeof r.offsetX).toBe('number');
     expect(typeof r.offsetY).toBe('number');
@@ -124,33 +131,49 @@ describe('CameraDirector', () => {
     expect(isFinite(r.offsetY)).toBe(true);
   });
 
-  it('OVERVIEW state converges to zoom≈1, offset≈0', () => {
+  it('OVERVIEW state converges to zoom≈1, offset≈0 (1280px world)', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
-    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeCloseTo(1, 1);
     expect(Math.abs(cd.offsetX)).toBeLessThan(5);
     expect(Math.abs(cd.offsetY)).toBeLessThan(5);
   });
 
+  it('OVERVIEW on 6000px world: targetZoom = overviewZoom ≈ 0.213, not 1', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
+    expect(cd.targetZoom).toBeLessThan(0.3);
+  });
+
+  it('OVERVIEW on 6000px world: zoom converges to overviewZoom, not 1', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.zoom).toBeCloseTo(1280 / 6000, 1);
+    expect(cd.zoom).toBeLessThan(0.3);
+  });
+
   it('LEADER_ZOOM converges to zoom > 1', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
-    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(1.1);
   });
 
   it('BATTLE_ZOOM converges to zoom > 1', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
-    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(1.1);
   });
 
   it('transitions after MAX_STATE_DURATION (8s) — resets stateEnteredAt', () => {
     const cd = new CameraDirector();
     cd.stateEnteredAt = 0;
-    cd.update(mockRacers(4), 9000, 1280, 720);
+    cd.update(mockRacers(4), 9000, mockRaceState, 1280, 720);
     expect(cd.stateEnteredAt).toBe(9000);
   });
 
@@ -158,7 +181,7 @@ describe('CameraDirector', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 0;
-    cd.update(mockRacers(4), 7999, 1280, 720);
+    cd.update(mockRacers(4), 7999, mockRaceState, 1280, 720);
     // stateEnteredAt unchanged — transition did not fire
     expect(cd.stateEnteredAt).toBe(0);
   });
@@ -185,7 +208,7 @@ describe('CameraDirector — bbox clamping', () => {
       { t: 0.9, x: 1081, y: 360, finished: false },
       { t: 0.8, x: 1081, y: 360, finished: false },
     ];
-    for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, mockRaceState, 1280, 720);
     // Track right edge (x=1280) must remain on screen from the left: 1280*zoom + offsetX >= 0
     expect(bbox.maxX * cd.zoom + cd.offsetX).toBeGreaterThan(0);
     // Canvas-edge clamp means offsetX never goes below ≈ -768
@@ -202,7 +225,7 @@ describe('CameraDirector — bbox clamping', () => {
       { t: 0.9, x: 1090, y: 300, finished: false },
       { t: 0.8, x: 1080, y: 300, finished: false },
     ];
-    for (let i = 0; i < 300; i++) cd.update(racers, 1000, 1280, 720);
+    for (let i = 0; i < 300; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     // left edge must be at or right of screen left
     expect(bbox.minX * cd.zoom + cd.offsetX).toBeGreaterThanOrEqual(-1);
     // right edge must be at or left of screen right
@@ -215,7 +238,7 @@ describe('CameraDirector — bbox clamping', () => {
     const cd = new CameraDirector(bbox, worldW, 720);
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
-    for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
     // New formula: overviewZoom(1.0) × 1.4 = 1.4 exactly at worldW=1280
     const leaderZoom = (1280 / worldW) * 1.4;
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
@@ -228,8 +251,8 @@ describe('CameraDirector — bbox clamping', () => {
     cdDefault.state = CAM_STATE.BATTLE_ZOOM;
     cdExplicit.state = CAM_STATE.BATTLE_ZOOM;
     for (let i = 0; i < 100; i++) {
-      cdDefault.update(racers, 1000 + i * 10, 1280, 720);
-      cdExplicit.update(racers, 1000 + i * 10, 1280, 720);
+      cdDefault.update(racers, 1000 + i * 10, mockRaceState, 1280, 720);
+      cdExplicit.update(racers, 1000 + i * 10, mockRaceState, 1280, 720);
     }
     expect(cdDefault.offsetX).toBeCloseTo(cdExplicit.offsetX, 3);
     expect(cdDefault.offsetY).toBeCloseTo(cdExplicit.offsetY, 3);
@@ -307,8 +330,8 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     cdSmall.state = CAM_STATE.LEADER_ZOOM;
     cdLarge.state = CAM_STATE.LEADER_ZOOM;
     for (let i = 0; i < 200; i++) {
-      cdSmall.update(racers, 1000, 1280, 720);
-      cdLarge.update(racers, 1000, 1280, 720);
+      cdSmall.update(racers, 1000, mockRaceState, 1280, 720);
+      cdLarge.update(racers, 1000, mockRaceState, 1280, 720);
     }
     expect(cdLarge.zoom).toBeLessThan(cdSmall.zoom * 0.5);
   });
@@ -358,7 +381,7 @@ describe('CameraDirector — top-3 focus', () => {
       { t: 0.5, x: 500, y: 360, finished: false }, // 3rd — should be targeted
       { t: 0.1, x: 100, y: 360, finished: false }, // last — should NOT be targeted
     ];
-    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     // comebackZoom ≈ 1.30 on 1280-track.
     // Target at x=500: targetOffsetX = 640 - 500*1.30 = -10 → clamps within valid range.
     // Camera world-center should be near x=500, far from last-place x=100.
@@ -479,7 +502,7 @@ describe('CameraDirector — world-edge clamp (Befund 2)', () => {
       { t: 0.9, x: 640, y: 110, finished: false },
       { t: 0.8, x: 640, y: 120, finished: false },
     ];
-    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     expect(cd.offsetY).toBeLessThanOrEqual(0);
   });
 
@@ -492,8 +515,185 @@ describe('CameraDirector — world-edge clamp (Befund 2)', () => {
       { t: 0.9, x: 110, y: 360, finished: false },
       { t: 0.8, x: 120, y: 360, finished: false },
     ];
-    for (let i = 0; i < 200; i++) cd.update(racers, 1000, 1280, 720);
+    for (let i = 0; i < 200; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     expect(cd.offsetX).toBeLessThanOrEqual(0);
+  });
+});
+
+// ── CameraDirector — §5.3 attention hierarchy ────────────────────────────────
+
+// Racers at ~50% progress: endgame (>85%) does NOT fire, no finish event.
+const midRaceRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.3, x: 300, y: 300, finished: false },
+  { t: 0.1, x: 100, y: 300, finished: false },
+];
+// Top-2 gap = 0.5-0.3 = 0.2 → no battle; leaderProgress = 0.5 < 0.85
+
+const battleMidRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → battle
+  { t: 0.2, x: 200, y: 300, finished: false },
+];
+
+describe('CameraDirector — §5.3 attention hierarchy', () => {
+  it('Priority 1: finishedCount > 0 → LEADER_ZOOM, overrides all', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 1000, finishedCount: 1, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Priority 1 beats Priority 2 (finish overrides start phase)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 500, finishedCount: 1, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Priority 2: raceElapsed < 3000 → OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 1500, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Priority 3: cooldown expired + no battle → OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0; // exited OVERVIEW at t=0; 9000-0=9000 >= 8000 → expired
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Cooldown prevents OVERVIEW when not yet expired', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // 9000-3000=6000 < 8000 → NOT expired
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Priority 4: battle (gap01 < 0.05) → BATTLE_ZOOM', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(battleMidRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('Priority 5 default: gap01 < 0.1 (no comeback condition) → LEADER_ZOOM', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    // gap01=0.07 < 0.1 → comeback condition fails → LEADER_ZOOM
+    // Cooldown set to ts=9000 when leaving OVERVIEW; 9000-9000=0 < 8000 → expired guard ok
+    const compactRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.43, x: 430, y: 300, finished: false }, // gap01=0.07, not battle, not comeback
+      { t: 0.1, x: 100, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(compactRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('COMEBACK_ZOOM when last is far behind and no tight battle', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
+    const comebackRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false }, // leader
+      { t: 0.35, x: 350, y: 300, finished: false }, // gap01=0.15 >= 0.1
+      { t: 0.15, x: 150, y: 300, finished: false }, // gapLeadLast=0.35 > 0.3
+    ];
+    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(comebackRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.COMEBACK_ZOOM);
+  });
+});
+
+// ── CameraDirector — §5.4 trigger extensions ─────────────────────────────────
+
+describe('CameraDirector — §5.4 trigger extensions', () => {
+  it('Endgame (leader > 85%): LEADER_ZOOM even when cooldown would block OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    // cooldown set to ts=9000 on OVERVIEW exit; 9000-9000=0 < 8000 → would block Priority 3
+    const endgameRacers = [
+      { t: 0.9, x: 500, y: 300, finished: false }, // 0.9/1.0=90% > 85%
+      { t: 0.6, x: 300, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(endgameRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('Endgame threshold: leader at exactly 85% does NOT trigger endgame', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    const atThresholdRacers = [
+      { t: 0.85, x: 500, y: 300, finished: false }, // 0.85/1.0 = 0.85, NOT > 0.85
+      { t: 0.5, x: 300, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(atThresholdRacers, 9000, rs, 1280, 720);
+    // Priority 3 cooldown not expired, Priority 4 no battle, Priority 5: LEADER or COMEBACK
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW); // endgame did not force OVERVIEW
+  });
+
+  it('Start-Pulk (raceElapsed < 3000): OVERVIEW state is set', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const rs = { raceElapsed: 2000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(midRaceRacers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('Start-Pulk OVERVIEW pan uses full-field centroid (all racers, not just top-3)', () => {
+    // Use worldW=640 (overviewZoom=2) with an off-center bbox so racers on the right
+    // produce a negative targetOffsetX that survives both the bbox and world-edge clamps.
+    // bbox x=[200,440] at zoom=2: clamp range [-400,400]; world-edge range [-1280,0].
+    // Racers sorted by t: top-3 at x=430,410,390 (avg 410), bottom-2 at x=370,350.
+    // full-field avg x=390 → targetOffsetX = 640 - 780 = -140 (start phase)
+    // top-3 avg x=410     → targetOffsetX = 640 - 820 = -180 (normal phase)
+    const bbox = { minX: 200, minY: 0, maxX: 440, maxY: 720 };
+    const cd = new CameraDirector(bbox, 640, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000; // same as ts → transition will NOT fire
+    const spreadRacers = [
+      { t: 0.5, x: 430, y: 360, finished: false }, // top-1
+      { t: 0.4, x: 410, y: 360, finished: false }, // top-2
+      { t: 0.3, x: 390, y: 360, finished: false }, // top-3; avg top-3 x = 410
+      { t: 0.2, x: 370, y: 360, finished: false },
+      { t: 0.1, x: 350, y: 360, finished: false }, // all-5 avg x = 390
+    ];
+
+    const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(spreadRacers, 1000, startRs, 1280, 720);
+    expect(cd.targetOffsetX).toBeCloseTo(-140, 0); // full-field: 640 - 390*2
+
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000;
+    const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    cd.update(spreadRacers, 1000, midRs, 1280, 720);
+    expect(cd.targetOffsetX).toBeCloseTo(-180, 0); // top-3 only: 640 - 410*2
   });
 });
 
