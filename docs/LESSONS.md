@@ -945,3 +945,25 @@ nicht nur die Formel-Zeile im Spec-Text.
 3. Pipeline-Contract-Tests schreiben die End-to-End verifizieren dass der sloweste und median Racer zur richtigen Zeit ankommen.
 
 **Verweis:** PR-A2-fix-commit (2026-05-04), `raceBaseSpeed.test.js` describe-Block "pipeline contract — last-finisher semantics".
+
+
+---
+
+## Lesson 50 — T-Parameter-Sampling vs Arc-Length-Sampling bei stochastischen Visualisierungen
+
+**Kontext:** PR-A2.5 — Racer bewegten sich visuell mit wechselnder Pixel-Geschwindigkeit (Beschleunigen + Bremsen) obwohl ihre `t`-Fortschritt-Rate konstant war. Root-Cause: `catmullRomSpline` sampelte im T-Parameter-Raum gleichmäßig; aufeinanderfolgende Samples hatten aber unterschiedliche Pixel-Abstände (2.69×–7.72× max/min-Verhältnis je nach Track-Geometrie).
+
+**Erkenntnis:** T-Parameter-Gleichmäßigkeit ≠ Pixel-Gleichmäßigkeit. Die Spline-Segmente im T-Raum können unterschiedlich lange Bogenlängen haben — z.B. wenn der Editor-Nutzer viele Punkte in Kurven platziert (kurze Segmente) und wenige in Geraden (lange Segmente). Jede Simulation die `t` gleichmäßig inkrementiert und dann T→Pixel abbildet hat dieses Problem.
+
+**Lösung:** Arc-Length-Reparametrisierung als One-Shot-Schritt beim Sampling:
+1. Dense Sampling im T-Raum (5× Ziel-Samples, min 1000)
+2. Kumulative Bogenlängen berechnen → Lookup-Tabelle
+3. Für jeden Output-Sample: Ziel-Bogenlänge = `i/N × totalLength`, Binary-Search in LUT → T-Wert → Spline-Punkt
+
+O(N log N) einmalig beim Track-Laden (nicht pro Frame). Closed-Tracks: eine extra Eintrag für das Wrap-Segment schließt den Loop korrekt.
+
+**Generalisierung:** Jede Visualisierung die eine Simulation über eine parametrische Kurve zeigt, muss zwischen T-Parameter-Gleichmäßigkeit und Pixel-Gleichmäßigkeit unterscheiden. Für wahrnehmbare Bewegung (Rennfahrer) ist Pixel-Gleichmäßigkeit (arc-length) immer die richtige Wahl. Für Connectivity-Checks oder Punkt-Validierung reicht T-uniform.
+
+**Diagnose-Disziplin (L46):** Vor dem Fix wurde eine Diagnostic-Messung mit 6 synthetischen Track-Shapes gemacht. Hypothese (max/min > 1.3×) wurde mit Werten 1.36×–7.72× bestätigt. Erst dann wurde implementiert.
+
+**Verweis:** PR-A2.5 `catmullRom.js`, `catmullRom.diagnostic.test.js`, `EditorShape.js`.
