@@ -168,12 +168,17 @@ describe('variant B re-roll — ±85% of SPREAD_RANGE centered on current value'
 
 describe('per-racer roll jitter — racers roll at different times', () => {
   it('8 racers with ±20% jitter have distinct nextRollTime values', () => {
+    // Mock Math.random with evenly-spaced values to guarantee deterministic uniqueness
+    let call = 0;
+    const spy = vi.spyOn(Math, 'random').mockImplementation(() => call++ / 8);
+
     const rollInterval = computeRollInterval(60);
     const nextRollTimes = Array.from({ length: 8 }, () => {
       const jitter = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
       return rollInterval + jitter;
     });
-    // Round to nearest ms to check uniqueness — with ±2400ms range, collisions are negligible
+    spy.mockRestore();
+
     const unique = new Set(nextRollTimes.map((t) => Math.round(t)));
     expect(unique.size).toBe(8);
   });
