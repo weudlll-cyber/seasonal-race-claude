@@ -202,13 +202,34 @@ Read-only diagnosis sprint: identified Architectural Gap in `openTrackFinishT` (
 `/ speedScaleFactor`), designed `computeRaceBaseSpeed` formula, categorized 9 test files,
 assessed MEDIUM risk. Output: `docs/SPEED_REFACTOR_ANALYSIS.md` (499 lines, 8 sections).
 
+## PR-A2.6 — Race Dynamics ✅ Done (2026-05-04)
+
+Three combined changes addressing the Phase 1 diagnosis finding: racers maintained relative
+positions almost 1:1 from race start to end (4.3 lead-changes per 30s race in baseline
+diagnostic, 3% of races with zero changes).
+
+1. **SpeedBonus refactor:** `spreadFactor` and `speedBonusMult` extracted as separate racer
+   fields. Re-rolls only touch `spreadFactor`; `speedBonusMult` (back-row positional
+   compensation) is constant over the whole race.
+
+2. **Per-racer spreadFactor re-roll:** `rollCount = max(2, floor(duration/15))` rolls over 0–80%
+   of the race, ~12s apart for all standard durations. Variant B: draw centered on current value,
+   ±85% of SPREAD_RANGE, clamped to [SPREAD_MIN, SPREAD_MAX]. easeInOutCubic transition over
+   5000ms keeps large speed swings visually smooth. ±20% jitter per racer prevents simultaneous rolls.
+   `draftingBoost` unchanged at 1.10 (pre-PR-A2.6 value — empirical browser tests showed slipstream
+   was not the peloton driver).
+
+Race-Duration guarantee clarified in docs: median-racer calibrated to ±0% of target;
+race-end (last finisher) is ±6–8% (1σ) — was implicit before, now explicit.
++33 tests (1326 → 1359 total). Cone-geometry limitation noted in raceBehavior.js comment.
+**Next: PR-B** — Camera Bug Fixes (Bug A+B+C).
+
 ## PR-A2.5 — Visual Race Naturalness ✅ Done (2026-05-04)
 
 Arc-length-uniform spline resampling: `catmullRomSpline` now defaults to `parameterization:'arclength'`.
 T-uniform max/min pixel-distance ratios were 1.36–7.72× across representative tracks; after fix all tracks
 ≤1.01×. Jitter amplitude changed from hardcoded `0.00012` to `race_baseSpeed * 0.05` (±5% relative).
-EditorShape.getBoundingBox extended to include raw control points. +28 tests (1314 total).
-**Next: PR-B** — Camera Bug Fixes (Bug A+B+C).
+EditorShape.getBoundingBox extended to include raw control points. +28 tests (1326 total).
 
 ## PR-A2 — Duration-Driven Speed Architecture ✅ Done (2026-05-03) + fix (2026-05-04)
 

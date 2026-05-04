@@ -52,7 +52,9 @@ N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverwe
 **Sub-PR-Plan (9 PRs):**
 - ✅ PR-A1: Q-25-Fix (maxScale=10) + Duration-Slider + finishT für Open-Tracks (2026-05-03)
 - ✅ PR-A2-Diagnose: Lese-PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (kein Code-Change) (2026-05-03)
-- ✅ PR-A2: Speed-Pipeline-Architektur-Umbau — `computeRaceBaseSpeed`, speedScaleFactor entfernt, Closed-Track Duration-Slider (Model D), SpeedScaleSection entfernt (2026-05-03). **Fix-Commit 2026-05-04:** speedMultiplier-Normalisierung + spreadMinFactor (E1+E2) — Browser-Verifikation ausstehend.
+- ✅ PR-A2: Speed-Pipeline-Architektur-Umbau — `computeRaceBaseSpeed`, speedScaleFactor entfernt, Closed-Track Duration-Slider (Model D), SpeedScaleSection entfernt (2026-05-03). **Fix-Commit 2026-05-04:** speedMultiplier-Normalisierung + spreadMinFactor (E1+E2).
+- ✅ PR-A2.5: Arc-Length-Uniform Spline Resampling + relativer Jitter (2026-05-04)
+- ✅ PR-A2.6: Race Dynamics — spreadFactor Re-Roll (±85%, 5s transition) + speedBonusMult-Trennung (2026-05-04). draftingBoost unverändert 1.10.
 - PR-B: Camera-Bug-Fixes (Bug A+B+C)
 - PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
 - PR-D: Camera-State-Machine (OVERVIEW Random-Jitter, Spannungs-Stärke-Logik, findBattleCandidate)
@@ -61,6 +63,23 @@ N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverwe
 - PR-G: UI-Bugs (Cancel Race + Fullscreen API)
 
 Vorgehen: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
+
+---
+
+### Race-Duration-Recalibration für Race-Ende ⏳ Niedrige Priorität
+
+**Status:** Akzeptiert mit Doc-Klarstellung (PR-A2.6). Kein User-Beschwerde-Trigger bisher.
+
+Aktuell ist `race_baseSpeed` auf den **Median-Racer** kalibriert. Race-Ende (Letzter finisht) kann
+±6–8% vom `targetDuration` abweichen — intrinsisch durch die Spread-Mechanik (Minimum von N Draws
+aus U[spreadMin, spreadMax]).
+
+Falls je User-Beschwerden wegen Race-Duration-Abweichungen kommen:
+- `race_baseSpeed`-Formel auf **Race-Ende** statt Median kalibrieren (andere `E[min_n]`-Korrektur)
+- Race-Ende wäre dann tatsächlich in ±5%-Garantie
+
+**Aufwand:** 1–2 Tage. Inklusive Re-Verifikation aller Race-Tests.
+**Priorität:** Niedrig. Aktuell akzeptiert mit expliziter Doc-Klarstellung in ARCHITECTURE.md.
 
 ---
 
