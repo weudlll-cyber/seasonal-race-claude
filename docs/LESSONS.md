@@ -966,4 +966,6 @@ O(N log N) einmalig beim Track-Laden (nicht pro Frame). Closed-Tracks: eine extr
 
 **Diagnose-Disziplin (L46):** Vor dem Fix wurde eine Diagnostic-Messung mit 6 synthetischen Track-Shapes gemacht. Hypothese (max/min > 1.3×) wurde mit Werten 1.36×–7.72× bestätigt. Erst dann wurde implementiert.
 
+**Sub-Caveat — Aufrufer von `derivativeAt` direkt:** Code der `derivativeAt(controlPoints, t)` direkt aufruft (statt das Sample-Array zu konsumieren) umgeht die Arc-Length-Reparametrisierung. `derivativeAt` erwartet `t` als T-Parameter im Kontrollpunkt-Raum; nach dem Wechsel auf arc-length-uniform Sampling ist Racer-`t` aber eine Arc-Length-Fraktion. Das gibt falsche Tangenten an falschen Spline-Punkten — auf asymmetrischen Tracks sichtbar als "Rotation hinkt der Kurve hinterher". Zusätzlich: `derivativeAt` clampt `t` auf `[0,1]`, was bei Closed-Track-Mehrfachrunden (t > 1) alle Racer ab Runde 2 auf die konstante End-Tangente zwang. Fix: Tangenten aus dem arc-length-gesampleten Array via finiter Differenz berechnen (O(1) pro Frame, kein Bug durch T-Raum-Mapping). **Bei jedem Refactoring von Spline-Sampling alle Aufrufer prüfen — nicht nur Sample-Output-Konsumenten, sondern auch Code der auf rohen Kontrollpunkten und Racer-t arbeitet.**
+
 **Verweis:** PR-A2.5 `catmullRom.js`, `catmullRom.diagnostic.test.js`, `EditorShape.js`.
