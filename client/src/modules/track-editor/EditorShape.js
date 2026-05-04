@@ -1,4 +1,4 @@
-import { catmullRomSpline, derivativeAt } from './catmullRom.js';
+import { catmullRomSpline } from './catmullRom.js';
 
 /**
  * Race-engine shape adapter wrapping a track from the track-editor data structure.
@@ -55,12 +55,29 @@ export class EditorShape {
   }
 
   _tangentAngle(t) {
-    const closed = !this.isOpen;
-    const innerD = derivativeAt(this._innerPts, t, { closed });
-    const outerD = derivativeAt(this._outerPts, t, { closed });
-    // Average tangent of both boundaries
-    const dx = (innerD.dx + outerD.dx) / 2;
-    const dy = (innerD.dy + outerD.dy) / 2;
+    const n = this._samples;
+    const idx = this._idx(t);
+
+    // Finite difference on arc-length-sampled arrays so that racer-t (an
+    // arc-length fraction) maps to the correct tangent location.
+    // Before this fix, derivativeAt(controlPoints, t) was used — it treats t
+    // as a T-parameter, which diverges from arc-length fraction on asymmetric
+    // tracks and clamps t to [0,1], breaking closed-track multi-lap rotation.
+    let iPrev, iNext;
+    if (this.isOpen) {
+      iPrev = Math.max(0, idx - 1);
+      iNext = Math.min(n - 1, idx + 1);
+    } else {
+      iPrev = (idx - 1 + n) % n;
+      iNext = (idx + 1) % n;
+    }
+
+    // Average tangent across both boundaries (same semantics as before).
+    const dx =
+      this._inner[iNext].x - this._inner[iPrev].x + (this._outer[iNext].x - this._outer[iPrev].x);
+    const dy =
+      this._inner[iNext].y - this._inner[iPrev].y + (this._outer[iNext].y - this._outer[iPrev].y);
+
     return Math.atan2(dy, dx);
   }
 
