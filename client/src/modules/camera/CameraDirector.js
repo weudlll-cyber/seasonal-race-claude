@@ -46,13 +46,14 @@ export class CameraDirector {
     // On the 1280px reference world overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
     // backward-compatible with the previous absolute-VIEW_W formula (< 0.5% diff).
     const overviewZoom = CANVAS_W / worldW;
+    this.overviewZoom = overviewZoom;
     this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * LEADER_ZOOM_RATIO));
     this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * BATTLE_ZOOM_RATIO));
     this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * COMEBACK_ZOOM_RATIO));
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
-    this.zoom = 1;
-    this.targetZoom = 1;
+    this.zoom = overviewZoom;
+    this.targetZoom = overviewZoom;
     this.offsetX = 0;
     this.targetOffsetX = 0;
     this.offsetY = 0;
@@ -110,13 +111,15 @@ export class CameraDirector {
       case CAM_STATE.OVERVIEW: {
         // Pan to the center of the top-N racers so the camera follows the action
         // on large tracks. On 1280-reference tracks clampOffset forces offset back to 0.
+        // When overviewZoom < 1 (worldW > canvasW), edgeLoX > 0 so the world-edge clamp
+        // below centers the view rather than clamping — correct for full-world OVERVIEW.
         const cx = focusRacers.length
           ? focusRacers.reduce((s, r) => s + r.x, 0) / focusRacers.length
           : hw;
         const cy = focusRacers.length
           ? focusRacers.reduce((s, r) => s + r.y, 0) / focusRacers.length
           : hh;
-        this.targetZoom = 1;
+        this.targetZoom = this.overviewZoom;
         this.targetOffsetX = hw - cx;
         this.targetOffsetY = hh - cy;
         break;

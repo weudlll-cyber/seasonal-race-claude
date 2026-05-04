@@ -124,13 +124,29 @@ describe('CameraDirector', () => {
     expect(isFinite(r.offsetY)).toBe(true);
   });
 
-  it('OVERVIEW state converges to zoom≈1, offset≈0', () => {
+  it('OVERVIEW state converges to zoom≈1, offset≈0 (1280px world)', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, 1280, 720);
     expect(cd.zoom).toBeCloseTo(1, 1);
     expect(Math.abs(cd.offsetX)).toBeLessThan(5);
     expect(Math.abs(cd.offsetY)).toBeLessThan(5);
+  });
+
+  it('OVERVIEW on 6000px world: targetZoom = overviewZoom ≈ 0.213, not 1', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.update(mockRacers(4), 1000, 1280, 720);
+    expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
+    expect(cd.targetZoom).toBeLessThan(0.3);
+  });
+
+  it('OVERVIEW on 6000px world: zoom converges to overviewZoom, not 1', () => {
+    const cd = new CameraDirector(undefined, 6000, 720);
+    cd.state = CAM_STATE.OVERVIEW;
+    for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, 1280, 720);
+    expect(cd.zoom).toBeCloseTo(1280 / 6000, 1);
+    expect(cd.zoom).toBeLessThan(0.3);
   });
 
   it('LEADER_ZOOM converges to zoom > 1', () => {
