@@ -202,6 +202,14 @@ Read-only diagnosis sprint: identified Architectural Gap in `openTrackFinishT` (
 `/ speedScaleFactor`), designed `computeRaceBaseSpeed` formula, categorized 9 test files,
 assessed MEDIUM risk. Output: `docs/SPEED_REFACTOR_ANALYSIS.md` (499 lines, 8 sections).
 
+## PR-A2.5 — Visual Race Naturalness ✅ Done (2026-05-04)
+
+Arc-length-uniform spline resampling: `catmullRomSpline` now defaults to `parameterization:'arclength'`.
+T-uniform max/min pixel-distance ratios were 1.36–7.72× across representative tracks; after fix all tracks
+≤1.01×. Jitter amplitude changed from hardcoded `0.00012` to `race_baseSpeed * 0.05` (±5% relative).
+EditorShape.getBoundingBox extended to include raw control points. +28 tests (1314 total).
+**Next: PR-B** — Camera Bug Fixes (Bug A+B+C).
+
 ## PR-A2 — Duration-Driven Speed Architecture ✅ Done (2026-05-03) + fix (2026-05-04)
 
 `computeRaceBaseSpeed(finishT, T)` = `finishT / (REFERENCE_FPS × T)` where

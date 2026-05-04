@@ -415,6 +415,7 @@ aus D3.5.5.
 14b. ✅ **TLH-2 — UI-Flow + Cleanup** — Edit-Modal Geometry-Status-Display, Track-Editor Two-Mode (Load/New), Two-Path-Load, geometryId-First-Draw. PR #56/#57, squash-gemergt.
 14c. ✅ **Track-Delete-Safeguards + Background-Race-Condition-Fix** — Remove-Background-Button, DELETE-Background-Endpoint, isDefault-403-Guard, migrateDefaultTracks idempotent, useEffect cancelled-Flag (L43). PR #58, squash-gemergt `fc5690f`.
 14a. ✅ **Default-Tracks zeichnen** — Alle 5 Geometrien gezeichnet und gespeichert (2026-05-02): Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit.
+14d. ✅ **PR-A2.5 — Visual Race Naturalness** — arc-length-uniform spline resampling (`catmullRomSpline` default) + jitter amplitude ±5% relative (`race_baseSpeed * 0.05`). T-uniform max/min ratio was 1.36–7.72×; after fix ≤1.01×. +28 tests (1314 total). UX-vision "constant pixel velocity" from 2026-05-03 browser test addressed. UX-1…UX-4 (Setup-Screen layout/settings) remain open in UX_FOLLOWUPS.md — planned for B-Wave after Camera-Director phase.
 15. 🔜 **Kamera-Phase + RaceScreen-Refactor** — CameraDirector überarbeiten, RaceScreen aufsplitten (Q-7). Konzept-Doku-Sprint zuerst. Q-25 (Strecken-Canvas-Größe) als Parallel-Überlegung im Konzept-Sprint.
 16 (verschoben). **TLH-3 — Code-Fallback + Status-Banner + Export** — zurückgestellt nach Kamera-Phase.
 16. **Surface Zones** — Folge-Phase nach VRE. TrackEditor-Zonen-Werkzeug, `getZonesAtPosition()`.
