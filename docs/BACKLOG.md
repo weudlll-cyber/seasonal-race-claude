@@ -279,18 +279,23 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   (Override-API vs. Registry vs. Boot-Logik). Kein Problem heute, beobachten.
 - **Q-10** — Watch: `RacerEditModal.jsx` bei 302 LOC — bereits 75% der 400-LOC-Schwelle.
   Im Auge behalten bei D8 (voller Config-Editor).
-- **Q-26** — Default-Tracks ohne Backgrounds
+- **Q-26** — Default-Tracks ohne Backgrounds (Erstinstallation)
 
-  Aktuell haben alle 5 Default-Tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit)
-  kein `backgroundImage`-Feld in `defaults.js`. Im Race wird kein Hintergrund gerendert, unabhängig
-  vom Server-Status. Verifiziert in PR-A2.5-Diagnose. Architektur-Lücke, kein Bug.
+  Code-Defaults in `defaults.js` haben kein `backgroundImage`-Feld. Bei laufendem Server werden sie
+  automatisch ins Backend migriert (`migrateDefaultTracks()` läuft idempotent bei jedem Boot) und
+  User-bearbeitete Server-Versionen ersetzen sie vollständig (`loadAllTracks()` filtert Code-Defaults
+  heraus wenn Server die gleiche ID liefert).
 
-  **Lösungs-Vorschlag (wenn gewünscht):** Statische Assets in
-  `client/public/track-backgrounds/<track-id>.png` mit relativen URLs in `defaults.js`. Kein
-  Server-Aufruf nötig.
+  **Problem nur bei:** Erstinstallation oder gelöschtem Server-State. Dann sieht User die
+  Code-Defaults ohne Backgrounds. Im normalen Betrieb (Server je einmal gestartet) sieht User
+  ausschließlich Server-Tracks mit Backgrounds. Verifiziert in PR-A2.8-Diagnose.
 
-  **Aufwand:** Mini-PR, ca. 2–3 Stunden inkl. Asset-Erstellung. **Schwere:** Niedrig —
-  Feature-Erweiterung, kein Defekt.
+  **Lösungs-Vorschlag (wenn gewünscht):** Statische Default-Backgrounds als Code-Assets in
+  `client/public/track-backgrounds/<track-id>.png` mit relativen URLs in `defaults.js`. Greift
+  nur wenn Server-Tracks fehlen.
+
+  **Aufwand:** Mini-PR, 2–3h inkl. Asset-Erstellung. **Schwere:** Niedrig — betrifft nur
+  Erstinstallation.
 
 - **Q-11** — `reader.onerror` fehlt in `handleBgUpload` (TrackEditor.jsx)
   FileReader-Fehler werden stumm geschluckt; nur `img.onerror` fängt Lade-Fehler.

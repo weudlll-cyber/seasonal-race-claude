@@ -27,12 +27,19 @@ export function getBackgroundImage(path) {
   }
 
   const img = new Image();
-  const record = { img, ready: false, failed: false };
+  const record = { img, ready: false, failed: false, warned: false };
   img.onload = () => {
     record.ready = true;
   };
   img.onerror = () => {
     record.failed = true;
+    if (!record.warned) {
+      record.warned = true;
+      console.warn(
+        `[bgImageCache] Background image failed to load: ${path}\n` +
+          `Hint: Backend server may be offline. Run \`docker compose up\` in project root to enable custom-track backgrounds.`
+      );
+    }
   };
   img.src = path;
   _cache.set(path, record);
