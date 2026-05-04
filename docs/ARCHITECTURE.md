@@ -18,7 +18,7 @@ seasonal-race-claude/
 │       │   ├── SetupScreen/        # Pre-race config (players, track, settings)
 │       │   ├── RaceScreen/         # Live race canvas + camera director
 │       │   ├── ResultScreen/       # Post-race podium and history
-│       │   ├── DevScreen/          # Developer / admin panel (7 sections)
+│       │   ├── DevScreen/          # Developer / admin panel (10 sections, 2-tier Operator/Advanced)
 │       │   └── TrackEditor/        # Visual track drawing tool
 │       ├── components/             # Reusable UI building blocks
 │       │   ├── Button/
@@ -205,7 +205,7 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMul
 - `targetDuration` — operator-chosen race duration (open-track slider or closed-track duration
   slider). Fallback: natural duration derived from mean base speed.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
-  around the median; tunable in Dev Screen → Base Speed section. **Re-rolled periodically during
+  around the median; tunable in Dev Screen → **Race Tuning** section (Speed Range block, PR-A3). **Re-rolled periodically during
   the race** (see Re-Roll Mechanism below); only this field changes between rolls.
 - `speedBonusMult = 1 + speedBonus` — positional back-row compensation from D7c row layout.
   **Constant over the whole race** — re-rolls never touch it (see speedBonus below).
@@ -279,7 +279,7 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 
-All parameters are tunable in the Dev Screen (Race Behavior section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
+All parameters are tunable in the Dev Screen → **Race Tuning** section (PR-A3: formerly the standalone "Race Behavior" section, now consolidated with Base Speed, Row Start, and Re-Roll into one 9-block section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
 
 ## Camera System
 
