@@ -66,6 +66,7 @@ const CANVAS_H = 720;
 // Keep legacy aliases used throughout this file
 const CW = CANVAS_W;
 const CH = CANVAS_H;
+const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -905,8 +906,9 @@ export default function RaceScreen() {
           CANVAS_H,
           effZoom
         );
+        const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
         const { targetX, targetY } = openTrackPanTarget(
-          st.racers,
+          focusRacers,
           CW,
           CH,
           effZoom,

@@ -89,5 +89,23 @@ describe('openTrackCamera', () => {
       const { targetX } = openTrackPanTarget(racers, CW, CH, effZoom, camXMax, 0);
       expect(targetX).toBe(camXMax);
     });
+
+    it('top-3 filtering: target follows leaders, not straggler-dragged center', () => {
+      // 5 racers: 3 leaders near x=800, 2 stragglers near x=100
+      const allRacers = [
+        { t: 0.9, x: 800, y: 360 },
+        { t: 0.7, x: 720, y: 360 },
+        { t: 0.5, x: 640, y: 360 },
+        { t: 0.2, x: 150, y: 360 },
+        { t: 0.1, x: 100, y: 360 },
+      ];
+      const top3 = [...allRacers].sort((a, b) => b.t - a.t).slice(0, 3);
+      const effZoom = 1.5;
+      const { camXMax, camYMax } = openTrackPanBounds(3200, CH, CW, CH, effZoom);
+      const { targetX: tAll } = openTrackPanTarget(allRacers, CW, CH, effZoom, camXMax, camYMax);
+      const { targetX: tTop3 } = openTrackPanTarget(top3, CW, CH, effZoom, camXMax, camYMax);
+      // top-3 avg x = (800+720+640)/3 ≈ 720, all-5 avg x = (800+720+640+150+100)/5 = 482
+      expect(tTop3).toBeGreaterThan(tAll);
+    });
   });
 });
