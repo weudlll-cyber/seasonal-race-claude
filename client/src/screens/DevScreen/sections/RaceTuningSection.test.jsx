@@ -1,0 +1,205 @@
+// ============================================================
+// File:        RaceTuningSection.test.jsx
+// Path:        client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx
+// Project:     RaceArena
+// Created:     2026-05-04
+// Description: PR-A3 tests — RaceTuningSection rendering and interactions.
+// ============================================================
+
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Module mocks ──────────────────────────────────────────────────────────────
+
+vi.mock('../../../modules/baseSpeedConfig.js', () => ({
+  loadBaseSpeedConfig: vi.fn(() => ({ min: 0.00091, max: 0.00118 })),
+  saveBaseSpeedConfig: vi.fn(),
+  DEFAULT_BASE_SPEED_CONFIG: { min: 0.00091, max: 0.00118 },
+  spreadPercent: (min, max) => {
+    if (!min || !max || min >= max) return 0;
+    const mean = (min + max) / 2;
+    return ((max - min) / 2 / mean) * 100;
+  },
+}));
+
+vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
+  loadRaceBehaviorConfig: vi.fn(() => ({
+    enabled: true,
+    startSpreadRange: 0.95,
+    runoutZone: 0.05,
+    homeForceStrength: 0.04,
+    comfortThreshold: 0.7,
+    softRepulsionStrength: 0.1,
+    avoidanceDistance: 0.35,
+    tWeight: 2.0,
+    yWeight: 1.0,
+    lateralForce: 0.01,
+    maxLateral: 0.95,
+    speedBrakeYThreshold: 0.2,
+    speedBrakeTThreshold: 0.015,
+    speedBrakeFactor: 0.95,
+    draftingMaxDistance: 110,
+    draftingConeAngle: 30,
+    draftingBoost: 1.1,
+  })),
+  saveRaceBehaviorConfig: vi.fn(() => true),
+  DEFAULT_RACE_BEHAVIOR_CONFIG: {
+    enabled: true,
+    startSpreadRange: 0.95,
+    runoutZone: 0.05,
+    homeForceStrength: 0.04,
+    comfortThreshold: 0.7,
+    softRepulsionStrength: 0.1,
+    avoidanceDistance: 0.35,
+    tWeight: 2.0,
+    yWeight: 1.0,
+    lateralForce: 0.01,
+    maxLateral: 0.95,
+    speedBrakeYThreshold: 0.2,
+    speedBrakeTThreshold: 0.015,
+    speedBrakeFactor: 0.95,
+    draftingMaxDistance: 110,
+    draftingConeAngle: 30,
+    draftingBoost: 1.1,
+  },
+}));
+
+vi.mock('../../../modules/rowLayoutConfig.js', () => ({
+  loadRowLayoutConfig: vi.fn(() => ({
+    rowGapMultiplier: 1.5,
+    speedBonusFactor: 1.0,
+    maxCapacityFactor: 0.3,
+  })),
+  saveRowLayoutConfig: vi.fn(() => true),
+  DEFAULT_ROW_LAYOUT_CONFIG: {
+    rowGapMultiplier: 1.5,
+    speedBonusFactor: 1.0,
+    maxCapacityFactor: 0.3,
+  },
+}));
+
+vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
+  loadRaceDynamicsConfig: vi.fn(() => ({
+    reRollVariationPercent: 85,
+    reRollTransitionDuration: 5.0,
+    reRollIntervalDivisor: 15,
+    reRollLastPositionPercent: 80,
+  })),
+  saveRaceDynamicsConfig: vi.fn(),
+  DEFAULT_RACE_DYNAMICS_CONFIG: {
+    reRollVariationPercent: 85,
+    reRollTransitionDuration: 5.0,
+    reRollIntervalDivisor: 15,
+    reRollLastPositionPercent: 80,
+  },
+}));
+
+import RaceTuningSection from './RaceTuningSection.jsx';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('RaceTuningSection — renders all 9 blocks', () => {
+  it('renders section header and subtitle', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Race Tuning')).toBeTruthy();
+    expect(screen.getByText(/Fine-tune race physics/)).toBeTruthy();
+  });
+
+  it('renders Block 1: Speed Range with inputs', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Speed Range')).toBeTruthy();
+    // Min Speed and Max Speed labels rendered inside flex label rows
+    expect(screen.getAllByText('Min Speed').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Max Speed').length).toBeGreaterThan(0);
+  });
+
+  it('renders Block 2: Start Layout', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Start Layout')).toBeTruthy();
+    expect(screen.getByLabelText('Start Spread Range')).toBeTruthy();
+  });
+
+  it('renders Block 3: Row Start with summary', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Row Start')).toBeTruthy();
+    expect(screen.getByTestId('row-start-summary')).toBeTruthy();
+  });
+
+  it('renders Block 4: Speed Re-Roll with preview', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Speed Re-Roll')).toBeTruthy();
+    expect(screen.getByTestId('reroll-preview')).toBeTruthy();
+  });
+
+  it('renders Block 5: Drafting / Slipstream with summary', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Drafting / Slipstream')).toBeTruthy();
+    expect(screen.getByTestId('drafting-summary')).toBeTruthy();
+  });
+
+  it('renders Block 6: Comfort Zone', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Comfort Zone')).toBeTruthy();
+    expect(screen.getByLabelText('Comfort Threshold')).toBeTruthy();
+  });
+
+  it('renders Block 7: Soft Avoidance', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Soft Avoidance')).toBeTruthy();
+    expect(screen.getByLabelText('Avoidance Distance')).toBeTruthy();
+  });
+
+  it('renders Block 8: Speed Brake', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Speed Brake')).toBeTruthy();
+    expect(screen.getByLabelText('Speed Brake Factor')).toBeTruthy();
+  });
+
+  it('renders Block 9: Home Force', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Home Force')).toBeTruthy();
+    expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
+  });
+});
+
+describe('RaceTuningSection — reset button', () => {
+  it('renders Reset All Defaults button', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Reset All Defaults')).toBeTruthy();
+  });
+});
+
+describe('RaceTuningSection — Re-Roll preview', () => {
+  it('shows 4 re-rolls for 60s race with divisor=15', () => {
+    render(<RaceTuningSection />);
+    const preview = screen.getByTestId('reroll-preview');
+    expect(preview.textContent).toContain('4 re-rolls');
+  });
+
+  it('shows correct final stretch for lastPositionPercent=80 on 60s race', () => {
+    render(<RaceTuningSection />);
+    const preview = screen.getByTestId('reroll-preview');
+    // 60s × (1 - 0.80) = 12s final stretch
+    expect(preview.textContent).toContain('12s');
+  });
+});
+
+describe('RaceTuningSection — drafting summary', () => {
+  it('shows default drafting values in summary', () => {
+    render(<RaceTuningSection />);
+    const summary = screen.getByTestId('drafting-summary');
+    expect(summary.textContent).toContain('110 px');
+    expect(summary.textContent).toContain('30°');
+    expect(summary.textContent).toContain('+10%');
+  });
+});
+
+describe('RaceTuningSection — row start summary', () => {
+  it('shows full speed compensation with default speedBonusFactor=1.0', () => {
+    render(<RaceTuningSection />);
+    const summary = screen.getByTestId('row-start-summary');
+    expect(summary.textContent).toContain('full');
+  });
+});

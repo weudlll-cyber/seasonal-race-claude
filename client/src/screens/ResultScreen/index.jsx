@@ -6,7 +6,7 @@
 // Description: Post-race results screen — podium, rankings, and history tracking
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
 import './ResultScreen.css';
@@ -16,8 +16,14 @@ function ResultScreen() {
   const [finishOrder, setFinishOrder] = useState([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [race, setRace] = useState(null);
+  // React 18 StrictMode fires every effect twice in dev (mount → unmount → remount).
+  // This ref survives the simulated unmount and prevents a double history write.
+  const hasSaved = useRef(false);
 
   useEffect(() => {
+    if (hasSaved.current) return;
+    hasSaved.current = true;
+
     const raw = sessionStorage.getItem('raceResults');
     if (!raw) {
       navigate('/setup');
@@ -40,12 +46,11 @@ function ResultScreen() {
     const history = storageGet(KEYS.RACE_HISTORY, []);
     history.unshift({
       id: newId(),
-      timestamp: new Date().toISOString(),
+      date: new Date().toISOString(),
       trackId: parsed.race?.trackId,
-      trackName: parsed.race?.trackName,
-      players: order.length,
-      winner: order[0]?.name,
-      elapsedTime: parsed.elapsedTime,
+      duration: parsed.elapsedTime,
+      playerCount: order.length,
+      winners: order.slice(0, parsed.race?.winners ?? 3).map((r) => r.name),
       finishOrder: order,
     });
     storageSet(KEYS.RACE_HISTORY, history.slice(0, 100));

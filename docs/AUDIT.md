@@ -336,6 +336,42 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 
 ---
 
+## 2026-05-04 — PR-A3 Dev-Panel-Reorganisation (Tier-System + Race Tuning Konsolidierung)
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (DevScreen, RaceScreen, storage modules)
+**Branch:** feat/pr-a3-dev-panel-reorg
+
+### Quality Gate
+
+- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 1396 Unit-Tests grün (+37 neue: raceDynamicsConfig ×12, RaceTuningSection ×15, DevScreen-tier-toggle ×10)
+- ✅ All 1359 pre-existing tests still pass (no regressions)
+- ✅ BaseSpeedSection + RaceBehaviorSection deleted — content fully migrated to RaceTuningSection
+- ✅ raceDynamicsConfig new storage module — follows exact baseSpeedConfig.js pattern; all validation guards present
+- ✅ RaceScreen hardcoded values (5000ms, 0.8, 0.85, divisor 15) replaced by dynamicsConfig lookups
+- ✅ Re-Roll preview in Race Tuning Block 4 shows correct roll count and timing for default 60s race
+
+### Structural changes
+
+| What | Before | After |
+|---|---|---|
+| Dev Panel sections | 11 (no grouping) | 10 (6 Operator, 4 Advanced) |
+| Race Defaults position | 6th | 1st |
+| Base Speed section | Standalone | Merged into Race Tuning Block 1 |
+| Race Behavior section | Standalone | Merged into Race Tuning Blocks 2–9 |
+| Re-Roll values | Hardcoded in RaceScreen | raceDynamicsConfig (tunable) |
+| Tier toggle | — | "All \| Operator" with localStorage persistence |
+| Tooltips on Race Defaults | 0 | 7 |
+| Tooltips on Race Tuning | 22 (behavior-only) | 25 (all 9 blocks) |
+
+### Deferred
+
+- PR-A3.1: Tooltip-Vervollständigung für Player Groups, Racer Types, Tracks, Branding, Race History
+- Permission-Lock für Tier-Toggle (eigene PR mit Auth-System)
+
+---
+
 ## 2026-05-04 — PR-A2.5 Visual Race Naturalness
 
 **Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
