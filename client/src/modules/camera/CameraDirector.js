@@ -26,19 +26,12 @@ const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
 const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
-const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
-const MAX_ZOOM = 2.5; // ceiling for multiplier-fallback path
-const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) path
+const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
-
-// Relative zoom ratios used in the fallback multiplier path (no referenceSpriteSize).
-// On the 1280px reference world: overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
-// identical to the old absolute-VIEW_W formula to within ~0.5%.
-const LEADER_ZOOM_RATIO = 1.4;
-const BATTLE_ZOOM_RATIO = 1.6;
-const COMEBACK_ZOOM_RATIO = 1.3;
+const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
+const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
 
 export class CameraDirector {
   /**
@@ -53,14 +46,12 @@ export class CameraDirector {
    *   world-to-canvas mapping. Passing the wrong value causes either black bars (false on open)
    *   or double-scaling artifacts (true on closed).
    * @param {object|null} [config=null]
-   *   Optional camera tuning config (from cameraConfig.js). When provided and
-   *   referenceSpriteSize > 0, drives the inverse-zoom path via spritePctOfCanvas.
-   *   Falls back to leaderZoomMultiplier / battleZoomMultiplier / comebackZoomMultiplier
-   *   when referenceSpriteSize is 0 or config lacks spritePctOfCanvas.
-   *   Call updateConfig() for live-apply without re-construction.
+   *   Optional camera tuning config (from cameraConfig.js). Drives the inverse-zoom
+   *   path via spritePctOfCanvas. When spritePctOfCanvas is missing, DEFAULT_SPRITE_PCT
+   *   is used. Call updateConfig() for live-apply without re-construction.
    * @param {number} [referenceSpriteSize=0]
-   *   displaySize × displaySizeScale for the race's racer type. Required for inverse
-   *   zoom logic. When 0 (e.g. tests that don't set it), falls back to multiplier path.
+   *   displaySize × displaySizeScale for the race's racer type. When 0, a console
+   *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
    */
   constructor(
     bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 },
@@ -122,8 +113,8 @@ export class CameraDirector {
    * @returns {number}             cam.zoom to assign to this state
    */
   _computeZoomForTargetSize(targetSizePx) {
-    const baseSize = this._referenceSpriteSize;
-    if (!baseSize || baseSize <= 0) return this._isOpenTrack ? this.overviewZoom : 1.0;
+    const baseSize =
+      this._referenceSpriteSize > 0 ? this._referenceSpriteSize : FALLBACK_REFERENCE_SPRITE_SIZE;
 
     let rawZoom;
     if (this._isOpenTrack) {
@@ -140,39 +131,31 @@ export class CameraDirector {
   /**
    * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
    *
-   * Inverse path (preferred): when referenceSpriteSize > 0 and config has spritePctOfCanvas,
-   *   each zoom level is computed so sprites render at that fraction of canvas height.
-   *   Cross-track invariant: same pct → same screen pixels on any track width.
+   * Each zoom level is computed so sprites render at the configured fraction of canvas
+   * height (spritePctOfCanvas). When config lacks spritePctOfCanvas, DEFAULT_SPRITE_PCT
+   * is used. When referenceSpriteSize is 0, a 36px fallback is used with a console warning.
+   * Cross-track invariant: same pct → same screen pixels on any track width.
    *
-   * Fallback multiplier path: when referenceSpriteSize = 0 or config lacks spritePctOfCanvas.
-   *   Open-tracks: states scale relative to overviewZoom so cam.zoom adapts to worldW.
-   *   Closed-tracks: OVERVIEW uses cam.zoom=1; bsX (= CANVAS_W/worldW) handles world-to-canvas
-   *     scaling at render time. States are pure ratios so effective canvas scale = ratio × bsX,
-   *     keeping the hierarchy OVERVIEW < LEADER < BATTLE invariant at any worldW.
+   * Edge case: if effectiveOverviewPx already exceeds a state's target (e.g. large sprites
+   * on a narrow open track), the safety net in _computeZoomForTargetSize clamps zoom to
+   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise pct values
+   * or reduce sprite displaySize.
    *
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
-    if (this._referenceSpriteSize > 0 && config?.spritePctOfCanvas) {
-      const pct = config.spritePctOfCanvas;
-      this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
-      this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
-      this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
-      return;
+    const pct = config?.spritePctOfCanvas ?? DEFAULT_SPRITE_PCT;
+
+    if (!this._referenceSpriteSize || this._referenceSpriteSize <= 0) {
+      console.warn(
+        `[CameraDirector] referenceSpriteSize not set — using internal default ${FALLBACK_REFERENCE_SPRITE_SIZE}px. ` +
+          'Pass displaySize × displaySizeScale to the constructor.'
+      );
     }
-    // Fallback: multiplier-based (backward compat when referenceSpriteSize is not set)
-    const lr = config?.leaderZoomMultiplier ?? LEADER_ZOOM_RATIO;
-    const br = config?.battleZoomMultiplier ?? BATTLE_ZOOM_RATIO;
-    const cr = config?.comebackZoomMultiplier ?? COMEBACK_ZOOM_RATIO;
-    if (this._isOpenTrack) {
-      this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * lr));
-      this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * br));
-      this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * cr));
-    } else {
-      this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, lr));
-      this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, br));
-      this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, cr));
-    }
+
+    this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
+    this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
+    this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
   }
 
   /**
