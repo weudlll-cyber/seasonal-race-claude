@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../modules/cameraConfig.js', () => ({
   loadCameraConfig: vi.fn(() => ({
-    minTargetScreenPx: 32,
+    minSpritePctOfCanvas: 0.05,
     maxTargetScreenPx: 160,
     leaderZoomMultiplier: 1.8,
     battleZoomMultiplier: 2.5,
@@ -16,7 +16,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
   })),
   saveCameraConfig: vi.fn(),
   DEFAULT_CAMERA_CONFIG: {
-    minTargetScreenPx: 32,
+    minSpritePctOfCanvas: 0.05,
     maxTargetScreenPx: 160,
     leaderZoomMultiplier: 1.8,
     battleZoomMultiplier: 2.5,
@@ -35,7 +35,7 @@ import CameraZoomTuningSection from './CameraZoomTuningSection.jsx';
 beforeEach(() => {
   vi.clearAllMocks();
   loadCameraConfig.mockReturnValue({
-    minTargetScreenPx: 32,
+    minSpritePctOfCanvas: 0.05,
     maxTargetScreenPx: 160,
     leaderZoomMultiplier: 1.8,
     battleZoomMultiplier: 2.5,
@@ -139,7 +139,7 @@ describe('CameraZoomTuningSection — default rendering', () => {
 describe('CameraZoomTuningSection — reset (L58: start from non-default values)', () => {
   it('reset restores all seven tuning fields to defaults', () => {
     loadCameraConfig.mockReturnValue({
-      minTargetScreenPx: 32,
+      minSpritePctOfCanvas: 0.05,
       maxTargetScreenPx: 160,
       leaderZoomMultiplier: 2.5,
       battleZoomMultiplier: 3.0,
@@ -167,7 +167,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
 
   it('reset does NOT change sprite-size fields', () => {
     loadCameraConfig.mockReturnValue({
-      minTargetScreenPx: 48,
+      minSpritePctOfCanvas: 0.07,
       maxTargetScreenPx: 200,
       leaderZoomMultiplier: 2.5,
       battleZoomMultiplier: 3.0,
@@ -181,7 +181,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
     render(<CameraZoomTuningSection />);
     fireEvent.click(screen.getByTestId('reset-camera-zoom-tuning'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ minTargetScreenPx: 48, maxTargetScreenPx: 200 })
+      expect.objectContaining({ minSpritePctOfCanvas: 0.07, maxTargetScreenPx: 200 })
     );
   });
 });

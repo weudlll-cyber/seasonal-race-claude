@@ -3,6 +3,7 @@ import {
   computeAutoScaleFactor,
   computeRenderDisplayScale,
   getEffectiveMinTargetScreenPx,
+  getEffectiveMaxTargetScreenPx,
   DEFAULT_AUTO_SCALE_CONFIG,
   loadAutoScaleConfig,
   saveAutoScaleConfig,
@@ -132,28 +133,51 @@ describe('saveAutoScaleConfig', () => {
   });
 });
 
-describe('getEffectiveMinTargetScreenPx', () => {
-  it('returns the type override when set', () => {
-    expect(getEffectiveMinTargetScreenPx(48, 32)).toBe(48);
+describe('getEffectiveMinTargetScreenPx — scale-invariant floor (Block Y)', () => {
+  it('0.05 × 720 = 36px (default config, default canvas)', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 0.05, 720)).toBe(36);
   });
 
-  it('returns the global default when type override is undefined', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 32)).toBe(32);
+  it('0.10 × 720 = 72px', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 0.1, 720)).toBe(72);
   });
 
-  it('returns the global default when type override is null', () => {
-    expect(getEffectiveMinTargetScreenPx(null, 32)).toBe(32);
+  it('scale-invariant: 0.05 × 800 = 40px (proportional to canvas height)', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 0.05, 800)).toBe(40);
   });
 
-  it('returns type override 0 (edge case: explicit 0 is falsy but set)', () => {
-    // 0 is a valid override of 0px — unusual but should be respected
-    // getEffectiveMinTargetScreenPx uses != null check so 0 is treated as "set"
-    expect(getEffectiveMinTargetScreenPx(0, 32)).toBe(0);
+  it('type override (absolute px) wins when set', () => {
+    expect(getEffectiveMinTargetScreenPx(48, 0.05, 720)).toBe(48);
   });
 
-  it('type override wins over any global value', () => {
-    expect(getEffectiveMinTargetScreenPx(8, 64)).toBe(8);
-    expect(getEffectiveMinTargetScreenPx(120, 16)).toBe(120);
+  it('null type override falls back to pct-based floor', () => {
+    expect(getEffectiveMinTargetScreenPx(null, 0.05, 720)).toBe(36);
+  });
+
+  it('type override 0 (explicit zero) is respected', () => {
+    expect(getEffectiveMinTargetScreenPx(0, 0.05, 720)).toBe(0);
+  });
+});
+
+describe('getEffectiveMinTargetScreenPx — floor in computeRenderDisplayScale (Block Y)', () => {
+  it('closed-track: floor 36px — screenPx ≥ 36 for realistic effZoom range', () => {
+    const floor36 = getEffectiveMinTargetScreenPx(undefined, 0.05, 720);
+    for (const effZoom of [0.5, 0.8, 1.0, 1.5, 2.0]) {
+      const result = computeRenderDisplayScale(40, 0.65, effZoom, floor36);
+      const screenPx = 40 * result * effZoom;
+      expect(screenPx).toBeGreaterThanOrEqual(floor36 - 0.001);
+    }
+  });
+
+  it('open-track: effZoom ≈ 0.32 (6000px world) — floor 36 clamps render to 36px', () => {
+    // 6000px world: overviewZoom = 1280/6000 ≈ 0.213; with openTrackBaseZoom=1.5 → 0.32
+    const openEffZoom = 1.5 * (1280 / 6000);
+    const floor36 = getEffectiveMinTargetScreenPx(undefined, 0.05, 720);
+    const dss = 1.44; // river-run at N=10 from diagnostic
+    const result = computeRenderDisplayScale(40, dss, openEffZoom, floor36);
+    const screenPx = 40 * result * openEffZoom;
+    expect(screenPx).toBeCloseTo(36, 1);
+    expect(screenPx).toBeGreaterThanOrEqual(36);
   });
 });
 
@@ -248,5 +272,84 @@ describe('computeRenderDisplayScale', () => {
     const battlePx = displaySize * battle * 2.4;
     expect(battlePx).toBeGreaterThan(leaderPx);
     expect(leaderPx).toBeGreaterThan(overviewPx);
+  });
+});
+
+// ── getEffectiveMaxTargetScreenPx ──────────────────────────────────────────────
+
+describe('getEffectiveMaxTargetScreenPx', () => {
+  it('returns globalMaxPx when typeOverridePx is undefined', () => {
+    expect(getEffectiveMaxTargetScreenPx(undefined, 160)).toBe(160);
+  });
+
+  it('returns globalMaxPx when typeOverridePx is null', () => {
+    expect(getEffectiveMaxTargetScreenPx(null, 160)).toBe(160);
+  });
+
+  it('returns typeOverridePx when set', () => {
+    expect(getEffectiveMaxTargetScreenPx(200, 160)).toBe(200);
+  });
+
+  it('returns typeOverridePx=0 even when globalMaxPx is non-zero (falsy override)', () => {
+    expect(getEffectiveMaxTargetScreenPx(0, 160)).toBe(0);
+  });
+});
+
+// ── computeRenderDisplayScale — ceiling clamp (maxTargetScreenPx) ─────────────
+
+describe('computeRenderDisplayScale — ceiling clamp', () => {
+  const displaySize = 40;
+  const displaySizeScale = 1.0;
+  const minPx = 32;
+
+  it('no ceiling when maxTargetScreenPx is undefined — behavior unchanged', () => {
+    const effZoom = 2.0; // proportional = 40*1*2 = 80px, above 32 floor
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(80, 1); // no ceiling applied
+  });
+
+  it('ceiling clamps screenPx to maxTargetScreenPx when zoom pushes it over', () => {
+    const effZoom = 5.0; // proportional = 40*1*5 = 200px > max=160
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(160, 1);
+    expect(screenPx).toBeLessThanOrEqual(160.001);
+  });
+
+  it('ceiling does NOT clamp when proportional is within corridor', () => {
+    const effZoom = 2.0; // proportional = 80px, within [32, 160]
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(80, 1);
+  });
+
+  it('floor still applies when proportional is below min, ceiling above min', () => {
+    const effZoom = 0.05; // proportional = 40*1*0.05 = 2px < min=32
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(32, 1);
+  });
+
+  it('edge case: min > max — ceiling ignored (min wins)', () => {
+    const effZoom = 5.0; // proportional = 200px
+    // min=100, max=50: invalid corridor → max ignored, floor at 100 applied
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, 100, 50);
+    const screenPx = displaySize * result * effZoom;
+    // Floor at 100 wins; proportional 200 > 100, so proportional used (no floor)
+    expect(screenPx).toBeCloseTo(200, 1);
+  });
+
+  it('edge case: displaySize=0 — returns displaySizeScale, no NaN', () => {
+    const result = computeRenderDisplayScale(0, 1.5, 2.0, minPx, 160);
+    expect(result).toBe(1.5);
+    expect(isNaN(result)).toBe(false);
+  });
+
+  it('corridor clamping: extreme high zoom (effZoom=10) stays at ceiling', () => {
+    const effZoom = 10.0; // proportional = 40*1*10 = 400px
+    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
+    const screenPx = displaySize * result * effZoom;
+    expect(screenPx).toBeCloseTo(160, 1);
   });
 });

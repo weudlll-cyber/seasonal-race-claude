@@ -825,7 +825,7 @@ const zoomConfig = {
   battleZoomMultiplier: 2.5,
   comebackZoomMultiplier: 1.5,
   openTrackBaseZoom: 1.5,
-  minTargetScreenPx: 32,
+  minSpritePctOfCanvas: 0.05,
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
 };
