@@ -154,9 +154,15 @@ Andere States dürfen den Fokus temporär verschieben:
 Nach temporärem Abstecher kehrt Camera zu LEADER_ZOOM zurück.
 Es gibt KEIN hartes Constraint dass der Leader in jedem Frame sichtbar sein muss.
 
+**Jeder Camera-State hat eine Ziel-Sprite-Größe.**
+Statt Zoom-Multiplikatoren definiert jeder State, wie groß Sprites auf dem Bildschirm
+erscheinen sollen (als % der Canvas-Höhe). Die Camera berechnet den nötigen Zoom rückwärts
+daraus — deshalb "inverse Camera Logic" (§10.2). OVERVIEW-Größe dient gleichzeitig als
+skaleninvarianter Sprite-Floor.
+
 **Sprite-Min-Floor ist HARTER Constraint.**
-Wenn ein Camera-Zoom den Sprite unter `minTargetScreenPx` bringen würde, wird der Zoom
-blockiert. Der Floor überschreibt Camera-Entscheidungen. (§6.2)
+Wenn ein Camera-Zoom den Sprite unter `spritePctOfCanvas.overview × CANVAS_H` bringen würde,
+wird der Zoom blockiert. Der Floor überschreibt Camera-Entscheidungen. (§6.2)
 
 **Entfernte Nachzügler dürfen aus dem Frame fallen.**
 "Wie im Fernsehen": wenn das Feld sich streckt, zeigt die Camera die Spitze.
@@ -354,52 +360,47 @@ worldWidth → overviewZoom → State-Zooms → frameEffZoom
 N → spitzengruppe → Tag-Anzahl sichtbar
 ```
 
-### 6.2 Sprite-Größen-Korridor: Min UND Max als HARTE Camera-Constraints
+### 6.2 Sprite-Größen per Camera-State (Round 3: inverse Camera Logic)
 
-**Block Y (2026-05-05): Skaleninvarianter Sprite-Floor.**
+**Block Y (2026-05-05):** Skaleninvarianter Sprite-Floor (% der Canvas-Höhe).
+**Block Z Round 3 (2026-05-05):** State-spezifische Ziel-Sprite-Größen ersetzen Zoom-Multiplikatoren.
 
-Diagnose zeigte: absoluter `minTargetScreenPx=32px`-Floor greift auf Open-Tracks (worldW=6000)
-fast dauerhaft, weil `overviewZoom = 1280/6000 = 0.213` → alle effektiven Zooms ~2.6× niedriger
-als auf Closed-Tracks. 32px fühlt sich im Verhältnis zur sichtbaren Weltausdehnung winzig an.
+**Konzept: Jeder Camera-State hat eine Ziel-Sprite-Größe:**
 
-**Fix: Floor jetzt als Prozent der Canvas-Höhe definiert:**
+| State | Config-Key | Default | Bedeutung |
+|-------|-----------|---------|-----------|
+| OVERVIEW | `spritePctOfCanvas.overview` | 5% | Floor + OVERVIEW-Sprite-Größe |
+| LEADER_ZOOM | `spritePctOfCanvas.leader` | 8% | Sprite-Größe beim Leader-Fokus |
+| BATTLE_ZOOM | `spritePctOfCanvas.battle` | 12% | Sprite-Größe beim Duell-Zoom |
+| COMEBACK_ZOOM | `spritePctOfCanvas.comeback` | 6.5% | Sprite-Größe beim Comeback-Zoom |
 
-```
-effectiveFloorPx = minSpritePctOfCanvas × CANVAS_H
-```
-
-Beispiel: `minSpritePctOfCanvas=0.05` (5%) bei `CANVAS_H=720` → Floor = 36px.
-Auf einem 6000px-Track mit identischer Racer-Größe: gleicher visueller Mindestanteil am Bild.
-
-**Skaleninvarianz:** derselbe %-Wert erzeugt auf kleinen wie großen Welten denselben
-*visuellen* Eindruck — Floor beschreibt "wie groß Sprites mindestens im Verhältnis zum Bild",
-nicht "wie viele absolute Pixel".
-
-**Korridor (Max bleibt absolut für Q-13-Schutz):**
+**Inverse Berechnung** (warum "rückwärts" — siehe §10.2):
 
 ```
-erlaubter_min_frameEffZoom = (minSpritePctOfCanvas × CANVAS_H) / (displaySize × displaySizeScale)
-erlaubter_max_frameEffZoom = maxTargetScreenPx / (displaySize × displaySizeScale)
+targetPx = spritePctOfCanvas[state] × CANVAS_H
+cam.zoom  = targetPx / (referenceSpriteSize × bsX)    -- Closed-Track
+cam.zoom  = targetPx / (referenceSpriteSize × BASE)   -- Open-Track (BASE=1.5)
 ```
 
-**Defaults:**
-- `minSpritePctOfCanvas = 0.05` (5% = 36px bei 720p) — skaleninvarianter Floor
-- `maxTargetScreenPx = 160px` (absolut — Q-13-Grenze gilt unabhängig von Track-Größe)
+`referenceSpriteSize = displaySize × displaySizeScale` (gesetzt beim Race-Start).
 
-Beide sind Dev-Panel-Slider (Project-Principle 1) — subjektive ästhetische Werte müssen
-live getunt werden können ohne Code-Änderung.
+**Cross-Track-Invarianz (L62 gelöst):** Dasselbe % gibt auf jedem Track denselben
+screen-px-Wert — weil `cam.zoom × bsX = targetPx / referenceSpriteSize = konstant`.
+Beweis: Garden Path (bsX=1.0) und River Run (OPEN_BASE=1.5) liefern bei 8% beide ~57.6px.
 
-**Warnung im Tooltip:** Wenn User min und max zu eng setzt (z.B. min=40, max=50), wird
-der erlaubte Camera-Zoom-Range praktisch eingefroren — alle States sehen gleich aus.
+**Sicherheitsnetze:**
+```
+cam.zoom ≥ 1.0              (Closed: nie unter OVERVIEW-Level)
+cam.zoom ≥ overviewZoom     (Open: nie unter OVERVIEW-Level)
+cam.zoom ≤ 5.0              (absolutes Maximum für beide Track-Typen)
+```
 
-**Q-13-Verzahnung:** Das Ruckeln großer Sprite-Animationen (Q-13) ist ein Symptom fehlenden
-oberen Limits. Ein sinnvoll gesetztes `maxTargetScreenPx` löst Q-13 strukturell, weil
-Camera nicht mehr nah genug ranzoomen darf um Sprites "Animation-ruckartig" groß zu machen.
-Q-13 kann als erledigt markiert werden sobald `maxTargetScreenPx` implementiert und kalibriert ist.
+**Max-Cap (absolut für Q-13-Schutz):**
+- `maxTargetScreenPx = 160px` — harte Obergrenze für Sprite-Bildschirm-Größe
+- Camera zoomt nicht nah genug ran um sprites ruckartig groß werden zu lassen (Q-13)
 
-Bei N=100: Korridor muss den Spread vom kleinsten OVERVIEW-Sprite bis zum größten
-BATTLE_ZOOM-Sprite abdecken. Kleinere displaySize (Dev-Panel) → gesamter Korridor verschiebt
-sich zu kleineren Zoom-Werten.
+**Konfiguration:** `spritePctOfCanvas` ist im Dev-Panel "Camera Behavior" tunable.
+`maxTargetScreenPx` ist in "Sprite Size Cap" tunable. Beide ohne Code-Änderung (Project-Principle 1).
 
 ### 6.3 Name-Tags — Iteration 1 (umzusetzen in PR-E)
 
@@ -594,11 +595,11 @@ isolierter Funktion (`computeRaceBaseSpeed`) — Rest des Systems referenziert d
 | `overviewDuration` | slider 2–10 s | 4 | "Dauer des OVERVIEW-Modus. Dann zurück zu LEADER. Wert: [x]s." |
 | `spitzengruppeMin` | slider 1–5 | 3 | "Mindest-Größe der Camera-Fokusgruppe. round(N×0.1) wird nach oben auf diesen Wert gecappt. Wert: [x]." |
 | `spitzengruppeMax` | slider 5–20 | 10 | "Maximal-Größe der Camera-Fokusgruppe. Wert: [x]." |
-| `leaderZoomRatio` | slider 1.0–3.0 | 1.4 | "Zoom-Faktor für LEADER-State (×overviewZoom). Wert: [x]×." |
-| `battleZoomRatio` | slider 1.0–3.0 | 1.6 | "Zoom-Faktor für BATTLE-State. Wert: [x]×." |
-| `comebackZoomRatio` | slider 1.0–3.0 | 1.3 | "Zoom-Faktor für COMEBACK-State. Wert: [x]×." |
-| `openTrackBaseZoom` | slider 0.5–3.0 | 1.5 | "Basis-Zoom für Open-Tracks. Alle State-Ratios multiplizieren damit. Wert: [x]×." |
-| `maxStateDuration` | slider 2000–15000 ms | 8000 | "Max Verweildauer in einem Camera-State. Wert: [x]ms." |
+| `spritePctOfCanvas.overview` | slider 2–10% | 5% | "Ziel-Sprite-Größe in OVERVIEW (auch floor). Wert: [x]%." |
+| `spritePctOfCanvas.leader` | slider 6–16% | 8% | "Ziel-Sprite-Größe in LEADER_ZOOM. Wert: [x]%." |
+| `spritePctOfCanvas.battle` | slider 8–20% | 12% | "Ziel-Sprite-Größe in BATTLE_ZOOM. Wert: [x]%." |
+| `spritePctOfCanvas.comeback` | slider 4–12% | 6.5% | "Ziel-Sprite-Größe in COMEBACK_ZOOM. Wert: [x]%." |
+| `maxStateDuration` | slider 2000–12000 ms | 4000 | "Max Verweildauer in einem Camera-State. Wert: [x]ms." |
 | `lerpFactor` | slider 0.01–0.15 | 0.04 | "Camera-Übergangs-Geschwindigkeit. Kleiner = langsamer/sanfter. Wert: [x]." |
 | `startPhaseSeconds` | slider 1–10 s | 3 | "Dauer der erzwungenen Start-OVERVIEW-Phase. Wert: [x]s." |
 
@@ -633,8 +634,7 @@ Buttons (Cancel Race, Fullscreen) sind immer vollständig sichtbar — werden ni
 
 | Parameter | Typ | Default | Tooltip |
 |-----------|-----|---------|---------|
-| `minSpritePctOfCanvas` | slider 2–15% | 5% | "Kleinste sichtbare Sprite-Größe als % der Canvas-Höhe. Skaleninvariant — gleicher visueller Eindruck auf kleinen und großen Tracks. Wert: [x]% (≈[y] px)." |
-| `maxTargetScreenPx` | slider 32–256 px | 128 | "Größte zulässige Sprite-Größe in Bildschirm-Px. Camera zoomt nicht näher ran als dieser Wert erlaubt. Zu enger Abstand zu Min friert Camera-Zoom ein. Wert: [x]px." |
+| `maxTargetScreenPx` | slider 32–256 px | 160 | "Größte zulässige Sprite-Größe in Bildschirm-Px. Camera zoomt nicht näher ran als dieser Wert erlaubt. Wert: [x]px." |
 
 Per-Type-Override: `getEffectiveMaxTargetScreenPx()` analog zu existierendem `getEffectiveMinTargetScreenPx()`
 aus D3.5.5. Beide Overrides in PR-E implementieren — nicht aufschieben.
@@ -747,7 +747,44 @@ Optimum: max ≈ 4× min gibt ~2 f-Stops Spielraum ohne Q-13-Bereich zu erreiche
 Wenn N steigt, wächst spitzengruppe. `tagVisibleCount` und `hudMaxStandings` defaulten auf spitzengruppe,
 können aber unabhängig gesetzt werden. Ein Tunable (`spitzengruppeMax`) steuert alle drei indirekt.
 
-### 10.2 Neue Kopplungen aus User-Klärungen
+### 10.2 Inverse Camera Logic — Warum rückwärts gerechnet wird
+
+**Das Problem der vorwärts gerechneten Multiplikatoren:**
+Klassische Camera-Systeme definieren Zoom direkt: `battleZoom = overviewZoom × 2.5`. Das führt zu
+Track-Abhängigkeit: derselbe Multiplikator liefert bei worldW=1280 einen Sprite der 180px groß ist,
+bei worldW=6000 aber nur 38px — obwohl der Operator "näher dran" wollte. Jeder Track braucht eigene
+Multiplikatoren, und der Dev-Panel wird zur Kalibrierhölle.
+
+**Die Lösung: Rückwärts vom gewünschten Ergebnis rechnen:**
+```
+cam.zoom = targetSizePx / (referenceSpriteSize × bsX)   // Closed Track
+cam.zoom = targetSizePx / (referenceSpriteSize × OPEN_TRACK_BASE_ZOOM)  // Open Track
+```
+Der Operator definiert "Leader-Sprite soll 8% der Canvas-Höhe einnehmen" — die Camera löst den
+nötigen Zoom aus dieser Zielgröße. `bsX = CANVAS_W / worldW` ist der Basis-Skalierungsfaktor
+des Pixi-Containers. Da `bsX` in der Formel landet, hebt er sich mit dem worldW-Einfluss auf.
+
+**Cross-Track-Invarianz-Beweis:**
+```
+screenPx = referenceSpriteSize × bsX × cam.zoom
+         = referenceSpriteSize × bsX × (targetPx / (referenceSpriteSize × bsX))
+         = targetPx   ← konstant, unabhängig von worldW
+```
+Dieselbe `spritePctOfCanvas`-Config ergibt auf jedem Track denselben Sprite-Screen-Anteil.
+
+**Warum das nie umkehren:**
+- `referenceSpriteSize` muss die Welt-Pixel-Größe NACH Density-Skalierung sein (`displaySize × displaySizeScale`)
+- Die Formel ist nur korrekt wenn `bsX` den tatsächlichen Pixi-Container-Scale widerspiegelt
+- Wird `bsX` durch den Camera-Zoom bereits beeinflusst (circular dependency), bricht die Invarianz
+- Safety nets (min = 1.0 / overviewZoom, max = 5.0) sind Notbremsen für Edge Cases, kein Design-Target
+- Der Fallback-Pfad (`referenceSpriteSize=0`) nutzt alte Multiplikatoren — nur für Tests und Legacy-Code
+
+**Kopplung zur §10.1 Kopplung 6:**
+Die absolute Pixel-Grenze `maxTargetScreenPx` bleibt als Hard-Cap. Wenn der inverse Zoom eine
+zu große Darstellung berechnet, greift `Math.min(MAX_INVERSE_ZOOM, rawZoom)` und anschließend
+die Pixi-seitige `maxTargetScreenPx`-Prüfung. Beide Systeme sind komplementär, nicht redundant.
+
+### 10.3 Neue Kopplungen aus User-Klärungen
 
 **OVERVIEW-Cooldown: Random-Jitter statt fester Takt:**
 Nach jedem OVERVIEW wird der nächste Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax]
@@ -769,7 +806,7 @@ Nach der Speed-Pipeline-Architektur-Änderung (§7.4) denkt der Spielleiter nur 
 Konsequenz: Setup-Screen vereinfacht sich: Closed-Track = Runden + optionale Wunschdauer,
 Open-Track = Dauer. Beide sehen für den Spielleiter konsistent aus.
 
-### 10.3 N=100: Was kollabiert wenn nicht vorbereitet
+### 10.4 N=100: Was kollabiert wenn nicht vorbereitet
 
 | Component | N=100 Risiko | Status |
 |-----------|-------------|--------|

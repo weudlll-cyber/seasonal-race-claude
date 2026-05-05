@@ -314,3 +314,55 @@ In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo lead
 | [index.jsx:950–962](../client/src/screens/RaceScreen/index.jsx) | H3 — `computeRenderDisplayScale` with ceiling |
 | [autoSpriteScale.js:78–82](../client/src/modules/autoSpriteScale.js) | H3 — ceiling clamp logic |
 | [index.jsx:72, 924–931](../client/src/screens/RaceScreen/index.jsx) | H4 — `FOCUS_GROUP_SIZE`, pan centroid |
+
+---
+
+## Round 3 — Structural Resolution (2026-05-05)
+
+**Branch:** `diagnosis/camera-tuning-effectiveness`
+
+### What changed
+
+The Round 2 fix (H1+H2) corrected the double-multiplication bug and restored zoom hierarchy, but left the underlying multiplier architecture intact. Multipliers remain track-dependent: the same `leaderZoomMultiplier=1.8` produces different sprite screen sizes on worldW=1280 vs worldW=6000. Every new track requires manual re-tuning via the Dev Panel.
+
+Round 3 replaces multipliers with **inverse camera logic**: the operator specifies how large each camera state's subjects should appear on screen (as % of canvas height), and the camera computes the required zoom backwards. Cross-track scale invariance is guaranteed by construction.
+
+**Key structural change in [`CameraDirector._computeZoomLevels()`](../client/src/modules/camera/CameraDirector.js):**
+
+```
+OLD: cam.zoom = overviewZoom × leaderZoomMultiplier
+NEW: cam.zoom = (spritePctOfCanvas.leader × CANVAS_H_REF) / (referenceSpriteSize × bsX)
+```
+
+The `bsX = CANVAS_W / worldW` term cancels out worldW from the effective screen size:
+```
+screenPx = referenceSpriteSize × bsX × cam.zoom = targetPx   (constant, any worldW)
+```
+
+### Config shape change
+
+| Field | Old | New |
+|---|---|---|
+| `leaderZoomMultiplier` | 1.8 | removed |
+| `battleZoomMultiplier` | 2.5 | removed |
+| `comebackZoomMultiplier` | 1.5 | removed |
+| `openTrackBaseZoom` | 1.5 (config) | `OPEN_TRACK_BASE_ZOOM = 1.5` (constant) |
+| `minSpritePctOfCanvas` | 0.05 | `spritePctOfCanvas.overview = 0.05` |
+| `spritePctOfCanvas.leader` | — | **0.08** (new) |
+| `spritePctOfCanvas.battle` | — | **0.12** (new) |
+| `spritePctOfCanvas.comeback` | — | **0.065** (new) |
+
+Schema version bumped to `2`. Old stored configs (missing `schemaVersion` or `schemaVersion ≠ 2`) are discarded and replaced with defaults — no partial migration.
+
+### Why this is the terminal fix for size inconsistency
+
+The Round 1/2 diagnosis tables remain valid as **historical learning material**. They identified that the camera system was producing different sprite sizes on different tracks, and correctly blamed the multiplier architecture. Round 3 eliminates the root cause: zoom is now derived from a size target, not from a ratio of another zoom value. The diagnosis branch can be closed; future per-track tuning issues are out-of-scope for this system.
+
+### Test coverage added (Round 3)
+
+18 new tests in [`CameraDirector.test.js`](../client/src/modules/camera/CameraDirector.test.js):
+- `_computeZoomForTargetSize`: closed formula, open formula, safety nets (min 1.0 / overviewZoom, max 5.0), fallback when `referenceSpriteSize=0`
+- `_computeZoomLevels`: inverse path activation, multiplier fallback, battle>leader ordering, `updateConfig()` live-apply
+- Cross-track invariance: closed worldW=1280 vs 6000, open worldW=6000, all produce `targetPx ± 0.01`
+
+7 updated tests in [`cameraConfig.test.js`](../client/src/modules/cameraConfig.test.js), [`CameraZoomTuningSection.test.jsx`](../client/src/screens/DevScreen/sections/CameraZoomTuningSection.test.jsx), [`SpriteSizeRangeSection.test.jsx`](../client/src/screens/DevScreen/sections/SpriteSizeRangeSection.test.jsx).
