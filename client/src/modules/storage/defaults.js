@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  minTargetScreenPx: 32,
+  minSpritePctOfCanvas: 0.05,
   maxTargetScreenPx: 160,
   leaderZoomMultiplier: 1.8,
   battleZoomMultiplier: 2.5,
