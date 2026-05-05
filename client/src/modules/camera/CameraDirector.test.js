@@ -199,9 +199,10 @@ describe('CameraDirector', () => {
 
 describe('CameraDirector — bbox clamping', () => {
   it('with full-canvas bbox and extreme racer position, canvas-edge clamp fires and keeps track right edge on screen', () => {
-    // Full-canvas bbox: 1280*1.6=2048 > canvas width — bbox tightening does NOT fire.
-    // Canvas-edge clamp (F6a) DOES fire: lo = 1280*(1-1.6) = -768, so offsetX ≥ -768.
-    // Raw target would be hw - 1081*1.6 = -1089, but it gets clamped to ≈ -768.
+    // 36px fallback → _battleZoom = 0.12*720/36 = 2.4.
+    // Full-canvas bbox: 1280*2.4=3072 > canvas width — bbox tightening does NOT fire.
+    // Canvas-edge clamp (F6a) DOES fire: lo = 1280*(1-2.4) = -1792, so offsetX ≥ -1792.
+    // Raw target: 640 - 1081*2.4 = -1954, clamped to ≈ -1792.
     const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
     const cd = new CameraDirector(bbox);
     cd.state = CAM_STATE.BATTLE_ZOOM;
@@ -212,15 +213,16 @@ describe('CameraDirector — bbox clamping', () => {
     for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, mockRaceState, 1280, 720);
     // Track right edge (x=1280) must remain on screen from the left: 1280*zoom + offsetX >= 0
     expect(bbox.maxX * cd.zoom + cd.offsetX).toBeGreaterThan(0);
-    // Canvas-edge clamp means offsetX never goes below ≈ -768
-    expect(cd.offsetX).toBeGreaterThan(-800);
+    // Canvas-edge clamp means offsetX never goes below ≈ -1792
+    expect(cd.offsetX).toBeGreaterThan(-1850);
   });
 
-  it('with editor-scale bbox (fits at zoom=1.6), BATTLE_ZOOM clamps so full track stays visible', () => {
-    // Editor track spans x=400..1100: width=700, 700*1.6=1120 < 1280 — fits on screen.
+  it('with editor-scale bbox (fits at zoom=1.728), BATTLE_ZOOM clamps so full track stays visible', () => {
+    // referenceSpriteSize=50 → _battleZoom = 0.12*720/50 = 1.728.
+    // Editor track spans x=400..1100: width=700, 700*1.728=1209 < 1280 — fits on screen.
     // Clamp fires: keeps left edge (x=400) at screen-left and right edge (x=1100) at screen-right.
     const bbox = { minX: 400, minY: 50, maxX: 1100, maxY: 600 };
-    const cd = new CameraDirector(bbox);
+    const cd = new CameraDirector(bbox, 1280, 720, false, null, 50);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
       { t: 0.9, x: 1090, y: 300, finished: false },
@@ -240,8 +242,8 @@ describe('CameraDirector — bbox clamping', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
-    // New formula: overviewZoom(1.0) × 1.4 = 1.4 exactly at worldW=1280
-    const leaderZoom = (1280 / worldW) * 1.4;
+    // 36px fallback → _leaderZoom = 0.08*720/36 = 1.6 (bsX=1 on 1280px world)
+    const leaderZoom = (0.08 * 720) / 36; // 1.6
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
@@ -286,24 +288,18 @@ describe('CameraDirector — canvas-edge clamping (F6a)', () => {
 // ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
 
 describe('CameraDirector — adaptive zoom (B-16)', () => {
-  it('default 1280-wide world gives leaderZoom = 1.4 (relative-ratio formula)', () => {
+  it('default 1280-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1) ≈ 1.6', () => {
     const cd = new CameraDirector(undefined, 1280, 720);
-    // New formula: overviewZoom(1.0) × LEADER_ZOOM_RATIO(1.4) = 1.4 exactly
-    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
-    expect(cd._leaderZoom).toBeGreaterThan(1.38);
-    expect(cd._leaderZoom).toBeLessThan(1.45);
+    // No referenceSpriteSize → 36px fallback. bsX=1280/1280=1.
+    // leaderZoom = 0.08*720 / (36*1) = 57.6/36 = 1.6
+    expect(cd._leaderZoom).toBeCloseTo(1.6, 3);
   });
 
-  it('open-track 4000-wide world gives leaderZoom ≈ 0.448 (adaptive zoom-out)', () => {
-    const cd = new CameraDirector(undefined, 4000, 720, true); // isOpenTrack=true
-    // Open-track: overviewZoom × lr = (1280/4000) × 1.4 = 0.448
-    expect(cd._leaderZoom).toBeCloseTo((1280 / 4000) * 1.4, 3);
-    expect(cd._leaderZoom).toBeLessThan(1); // large world → cam.zoom adapts down
-  });
-
-  it('open-track very large world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
-    const cd = new CameraDirector(undefined, 100000, 720, true); // isOpenTrack=true
-    expect(cd._leaderZoom).toBe(0.15);
+  it('open-track 4000-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1.5) ≈ 1.067', () => {
+    const cd = new CameraDirector(undefined, 4000, 720, true);
+    // Open-track: cam.zoom = targetPx / (baseSize × OPEN_BASE) = 57.6/54 ≈ 1.067
+    // (worldW does not appear — open-track zoom is track-width-independent by design)
+    expect(cd._leaderZoom).toBeCloseTo(57.6 / 54, 3);
   });
 
   it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
@@ -316,17 +312,20 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
-  it('open-track: zoom values scale inversely with worldW (wider world → lower zoom)', () => {
-    const cd1 = new CameraDirector(undefined, 1280, 720, true); // isOpenTrack=true
-    const cd2 = new CameraDirector(undefined, 2560, 720, true); // isOpenTrack=true
-    expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom / 2, 3);
-    expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom / 2, 3);
-    expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom / 2, 3);
+  it('open-track: same leaderZoom regardless of worldW (inverse logic, track-width-independent)', () => {
+    // Use worldW values where overviewZoom < raw comebackZoom so safety net does not clip.
+    // With 36px fallback: comebackRaw = 0.065*720/(36*1.5) ≈ 0.867.
+    // overviewZoom < 0.867 → worldW > 1280/0.867 ≈ 1476 → use 2000 and 4000.
+    const cd1 = new CameraDirector(undefined, 2000, 720, true);
+    const cd2 = new CameraDirector(undefined, 4000, 720, true);
+    expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom, 3);
+    expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom, 3);
+    expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom, 3);
   });
 
-  it('open-track LEADER_ZOOM state on large world converges to a lower zoom', () => {
-    const cdSmall = new CameraDirector(undefined, 1280, 720, true); // isOpenTrack=true
-    const cdLarge = new CameraDirector(undefined, 4000, 720, true); // isOpenTrack=true
+  it('open-track LEADER_ZOOM: small and large world converge to same zoom (invariance)', () => {
+    const cdSmall = new CameraDirector(undefined, 1280, 720, true);
+    const cdLarge = new CameraDirector(undefined, 4000, 720, true);
     const racers = [{ t: 1, x: 640, y: 360, finished: false }];
     cdSmall.state = CAM_STATE.LEADER_ZOOM;
     cdLarge.state = CAM_STATE.LEADER_ZOOM;
@@ -334,7 +333,8 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
       cdSmall.update(racers, 1000, mockRaceState, 1280, 720);
       cdLarge.update(racers, 1000, mockRaceState, 1280, 720);
     }
-    expect(cdLarge.zoom).toBeLessThan(cdSmall.zoom * 0.5);
+    // Both worlds target the same sprite size → same cam.zoom
+    expect(cdLarge.zoom).toBeCloseTo(cdSmall.zoom, 1);
   });
 });
 
@@ -383,77 +383,38 @@ describe('CameraDirector — top-3 focus', () => {
       { t: 0.1, x: 100, y: 360, finished: false }, // last — should NOT be targeted
     ];
     for (let i = 0; i < 200; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
-    // comebackZoom ≈ 1.30 on 1280-track.
-    // Target at x=500: targetOffsetX = 640 - 500*1.30 = -10 → clamps within valid range.
+    // comebackZoom ≈ 1.3 on 1280-track (36px fallback: 0.065×720/36 = 1.3).
+    // Target at x=500: targetOffsetX = 640 - 500×1.3 = -10 → clamps within valid range.
     // Camera world-center should be near x=500, far from last-place x=100.
     const worldXAtCenter = (640 - cd.offsetX) / cd.zoom;
     expect(worldXAtCenter).toBeGreaterThan(300); // clearly not last-place (x=100)
   });
 });
 
-// ── CameraDirector — relative zoom ratios (D7a) ───────────────────────────────
+// ── CameraDirector — zoom ordering (inverse logic) ───────────────────────────
 
-describe('CameraDirector — relative zoom ratios (D7a)', () => {
-  it('1280-track: leaderZoom = 1.4, battleZoom = 1.6, comebackZoom = 1.3 (backward-compat)', () => {
+describe('CameraDirector — zoom ordering (inverse logic)', () => {
+  it('1280-track: 36px fallback → leaderZoom 1.6, battleZoom 2.4, comebackZoom 1.3', () => {
     const cd = new CameraDirector(undefined, 1280, 720);
-    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
-    expect(cd._battleZoom).toBeCloseTo(1.6, 3);
-    expect(cd._comebackZoom).toBeCloseTo(1.3, 3);
+    // No referenceSpriteSize → 36px fallback + DEFAULT_SPRITE_PCT, bsX=1.0
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
+    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
+    expect(cd._comebackZoom).toBeCloseTo((0.065 * 720) / 36, 3); // 1.3
   });
 
-  it('closed-track 6000px: state zooms are pure ratios, clearly distinct (H1 scale-invariance)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720); // isOpenTrack=false (default)
-    // Closed-track: pure ratios, independent of worldW
-    expect(cd._leaderZoom).toBeCloseTo(1.4, 4);
-    expect(cd._battleZoom).toBeCloseTo(1.6, 4);
-    expect(cd._comebackZoom).toBeCloseTo(1.3, 4);
-  });
-
-  it('zoom-state ratios are constant regardless of worldW', () => {
-    for (const worldW of [1280, 2560, 6000, 640]) {
+  it('battleZoom > leaderZoom on any track (battle pct > leader pct)', () => {
+    for (const worldW of [1280, 2560]) {
       const cd = new CameraDirector(undefined, worldW, 720);
-      // Battle should always be 1.6/1.4 ≈ 1.143× leaderZoom (before clamping)
-      if (cd._battleZoom < 2.5 && cd._leaderZoom < 2.5) {
-        expect(cd._battleZoom / cd._leaderZoom).toBeCloseTo(1.6 / 1.4, 2);
-      }
+      expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
     }
   });
 
-  it('battleZoom / leaderZoom ratio is preserved on large world', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
-    expect(cd._battleZoom).toBeCloseTo(cd._leaderZoom * (1.6 / 1.4), 4);
-  });
-});
-
-// ── CameraDirector — adaptive zoom: corrected formula ────────────────────────
-
-describe('CameraDirector — adaptive zoom (corrected formula)', () => {
-  it('open-track 6000-wide world gives leaderZoom ≈ 0.299 (deep zoom-out)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true); // isOpenTrack=true
-    // Open-track: overviewZoom × lr = (1280/6000) × 1.4 ≈ 0.299
-    expect(cd._leaderZoom).toBeCloseTo((1280 / 6000) * 1.4, 3);
-    expect(cd._leaderZoom).toBeCloseTo(0.3, 1);
-  });
-
-  it('open-track 16000-wide world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
-    const cd = new CameraDirector(undefined, 16000, 720, true); // isOpenTrack=true
-    expect(cd._leaderZoom).toBe(0.15);
-  });
-
-  it('open-track very small world (512px) clamps leaderZoom at MAX_ZOOM (2.5)', () => {
-    // Open-track: (1280/512) × 1.4 ≈ 3.5 → clamped to MAX_ZOOM=2.5
-    const cd = new CameraDirector(undefined, 512, 720, true); // isOpenTrack=true
-    expect(cd._leaderZoom).toBe(2.5);
-  });
-
-  it('battleZoom > leaderZoom on 6000-track (battle still tighter than leader)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
-    expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
-  });
-
-  it('comebackZoom < leaderZoom on 6000-track (comeback still wider than leader)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
-    expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
+  it('comebackZoom < leaderZoom (comeback pct < leader pct)', () => {
+    // Use worldW where zooms do not hit MAX_INVERSE_ZOOM ceiling (avoid 6000px closed).
+    for (const worldW of [1280, 2560]) {
+      const cd = new CameraDirector(undefined, worldW, 720);
+      expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
+    }
   });
 });
 
@@ -820,104 +781,76 @@ describe('estimatedSecondsPerLap', () => {
 
 // ── CameraDirector — configurable zoom multipliers ────────────────────────────
 
-const zoomConfig = {
-  leaderZoomMultiplier: 1.8,
-  battleZoomMultiplier: 2.5,
-  comebackZoomMultiplier: 1.5,
-  openTrackBaseZoom: 1.5,
-  minSpritePctOfCanvas: 0.05,
+// Base config shared by battle-trigger tests — includes spritePctOfCanvas so no fallback warning.
+const pctConfig = {
+  schemaVersion: 2,
+  spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
+  showCameraStateHud: true,
+  battleGapThreshold: 0.05,
+  maxStateDuration: 8000,
+  endgameThreshold: 0.85,
 };
 
-describe('CameraDirector — configurable zoom multipliers', () => {
-  it('LEADER_ZOOM with multiplier=1.8 gives _leaderZoom = overviewZoom * 1.8 (closed)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
-    // closed track: openBase=1, overviewZoom=1, leaderZoom=1*1*1.8=1.8
-    expect(cd._leaderZoom).toBeCloseTo(1.8, 3);
+describe('CameraDirector — spritePctOfCanvas config', () => {
+  it('with referenceSpriteSize=50: _leaderZoom = 0.08×720 / 50 ≈ 1.152 (closed bsX=1)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 50, 3);
   });
 
-  it('BATTLE_ZOOM with multiplier=2.5 gives _battleZoom = overviewZoom * 2.5 (closed)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
-    expect(cd._battleZoom).toBeCloseTo(2.5, 3);
+  it('with referenceSpriteSize=50: _battleZoom = 0.12×720 / 50 ≈ 1.728 (closed bsX=1)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 50, 3);
   });
 
-  it('COMEBACK_ZOOM with multiplier=1.5 gives _comebackZoom = overviewZoom * 1.5 (closed)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
-    expect(cd._comebackZoom).toBeCloseTo(1.5, 3);
+  it('extreme battle pct (0.95) clamps _battleZoom to MAX_INVERSE_ZOOM (5.0)', () => {
+    const extremeConfig = {
+      ...pctConfig,
+      spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, battle: 0.95 },
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, extremeConfig, 50);
+    // 0.95×720/50 = 13.68 → clamped to 5.0
+    expect(cd._battleZoom).toBe(5.0);
   });
 
-  it('open track: _leaderZoom = overviewZoom × lr, openTrackBaseZoom now in render path', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, true, zoomConfig);
-    // Open-track: overviewZoom(1.0) × lr(1.8) = 1.8 — openTrackBaseZoom applied in effectiveZoom()
-    expect(cd._leaderZoom).toBeCloseTo(1.8, 2);
-    expect(cd._battleZoom).toBeCloseTo(2.5, 2); // clamped to MAX_ZOOM (1.0 × 2.5 = 2.5)
+  it('no config passed: DEFAULT_SPRITE_PCT + 36px fallback gives predictable zoom values', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
+    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
   });
 
-  it('openTrackBaseZoom in config does not change _leaderZoom (render-path separation)', () => {
-    // After H2 fix: openTrackBaseZoom no longer applied inside CameraDirector.
-    // Different openTrackBaseZoom values must not affect _leaderZoom.
-    const cfg1 = { ...zoomConfig, openTrackBaseZoom: 1.0 };
-    const cfg2 = { ...zoomConfig, openTrackBaseZoom: 3.0 };
-    const cd1 = new CameraDirector(undefined, 1280, 720, true, cfg1);
-    const cd2 = new CameraDirector(undefined, 1280, 720, true, cfg2);
-    expect(cd1._leaderZoom).toBeCloseTo(cd2._leaderZoom, 4);
-    // But effectiveZoom() output differs when baseZoom is passed from config
-    expect(effectiveZoom(cd1._leaderZoom, cfg1.openTrackBaseZoom)).not.toBeCloseTo(
-      effectiveZoom(cd2._leaderZoom, cfg2.openTrackBaseZoom),
-      1
-    );
-  });
-
-  it('open track OVERVIEW targetZoom is still overviewZoom (not scaled by openTrackBaseZoom)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true, zoomConfig);
+  it('open track OVERVIEW targetZoom is overviewZoom regardless of spritePctOfCanvas', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true, pctConfig, 50);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    // OVERVIEW should be overviewZoom = 1280/6000, never affected by openTrackBaseZoom
     expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
   });
 
-  it('live-apply: updateConfig() changes zoom levels without re-construction', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
-    expect(cd._leaderZoom).toBeCloseTo(1.8, 2);
-    cd.updateConfig({ ...zoomConfig, leaderZoomMultiplier: 2.2 });
-    expect(cd._leaderZoom).toBeCloseTo(2.2, 2);
+  it('live-apply: updateConfig() with new spritePctOfCanvas changes _leaderZoom', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    const before = cd._leaderZoom;
+    cd.updateConfig({
+      ...pctConfig,
+      spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, leader: 0.12 },
+    });
+    expect(cd._leaderZoom).toBeGreaterThan(before);
+    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 50, 3); // 1.728
   });
 
-  it('live-apply: new multiplier takes effect on next _transition()', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+  it('live-apply: reduced spritePct takes effect on next _transition()', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     const zoomBefore = cd.zoom;
-
-    cd.updateConfig({ ...zoomConfig, leaderZoomMultiplier: 1.0 });
-    // targetZoom now 1.0; allow convergence
+    cd.updateConfig({
+      ...pctConfig,
+      spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, leader: 0.04 },
+    });
     for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    // new targetZoom = 1.0 < old 1.8, zoom should have decreased
     expect(cd.zoom).toBeLessThan(zoomBefore);
-  });
-
-  it('extreme multiplier (BATTLE=4.0) is clamped to MAX_ZOOM=2.5', () => {
-    const extremeConfig = { ...zoomConfig, battleZoomMultiplier: 4.0 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, extremeConfig);
-    // overviewZoom=1.0 * 4.0 = 4.0 → clamped to MAX_ZOOM=2.5
-    expect(cd._battleZoom).toBe(2.5);
-  });
-
-  it('no config passed: hardcoded defaults preserved (backward compat)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
-    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
-    expect(cd._battleZoom).toBeCloseTo(1.6, 3);
-    expect(cd._comebackZoom).toBeCloseTo(1.3, 3);
-  });
-
-  it('closed large world (6000px) with config: BATTLE zoom is pure ratio (H1 scale-invariance)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, false, zoomConfig);
-    // Closed-track: pure ratio, independent of worldW
-    expect(cd._battleZoom).toBeCloseTo(2.5, 3);
-    expect(cd._battleZoom).toBeGreaterThan(0.15); // above MIN_ZOOM
   });
 });
 
@@ -933,7 +866,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
 
   it('battleGapThreshold=0.10 fires BATTLE at gap=0.08 (old 0.05 threshold would not)', () => {
     const cfg = {
-      ...zoomConfig,
+      ...pctConfig,
       battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
@@ -960,7 +893,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
 
   it('maxStateDuration=4000 allows transition after 4s (not 8s)', () => {
     const cfg = {
-      ...zoomConfig,
+      ...pctConfig,
       battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
@@ -980,7 +913,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
 
   it('endgameThreshold=0.95 allows BATTLE at 90% progress (old 0.85 would block it)', () => {
     const cfg = {
-      ...zoomConfig,
+      ...pctConfig,
       battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.95,
@@ -1007,10 +940,10 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   });
 
   it('live-apply: updateConfig() updates all three timing params without re-construction', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
-    expect(cd._maxStateDuration).toBe(8000); // fallback from zoomConfig (no timing fields)
+    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig);
+    expect(cd._maxStateDuration).toBe(8000); // pctConfig.maxStateDuration = 8000
     cd.updateConfig({
-      ...zoomConfig,
+      ...pctConfig,
       battleGapThreshold: 0.15,
       maxStateDuration: 3000,
       endgameThreshold: 0.9,
@@ -1022,7 +955,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
 
   it('maxStateDuration in config overrides fallback: no transition before new duration', () => {
     const cfg = {
-      ...zoomConfig,
+      ...pctConfig,
       battleGapThreshold: 0.1,
       maxStateDuration: 6000,
       endgameThreshold: 0.85,
@@ -1041,93 +974,45 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   });
 });
 
-// ── Effective render-zoom: scale invariance (H1+H2 hotfix) ──────────────────────
+// ── Effective render-zoom — hierarchy ordering (H1+H2 context preserved) ─────
 
-describe('Effective render-zoom — scale invariance (H1+H2 hotfix)', () => {
-  it('closed-track hierarchy is scale-invariant across worldW values', () => {
-    // OVERVIEW eff = 1×bsX, LEADER eff = lr×bsX, BATTLE eff = br×bsX
-    // Ratios 1:lr:br are constant regardless of worldW (H1 fix).
-    for (const worldW of [1280, 2000, 3000, 6000]) {
-      const cd = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
+describe('Effective render-zoom — hierarchy ordering', () => {
+  it('closed-track: LEADER eff > OVERVIEW eff, BATTLE eff > LEADER eff across worldW', () => {
+    for (const worldW of [1280, 2000, 3000]) {
+      const cd = new CameraDirector(undefined, worldW, 720, false, pctConfig, 50);
       const bsX = 1280 / worldW;
       const overviewEff = 1 * bsX;
       const leaderEff = cd._leaderZoom * bsX;
       const battleEff = cd._battleZoom * bsX;
       expect(leaderEff).toBeGreaterThan(overviewEff);
       expect(battleEff).toBeGreaterThan(leaderEff);
-      expect(leaderEff / overviewEff).toBeCloseTo(zoomConfig.leaderZoomMultiplier, 2);
-      expect(battleEff / overviewEff).toBeCloseTo(zoomConfig.battleZoomMultiplier, 2);
     }
   });
 
-  it('open-track hierarchy is scale-invariant across worldW values', () => {
-    // OVERVIEW eff = openBase×overviewZoom, LEADER eff = openBase×_leaderZoom
-    // Ratios hold at any worldW (open-track adaptive zoom).
-    for (const worldW of [1280, 3000, 6000, 8000]) {
-      const cd = new CameraDirector(undefined, worldW, 720, true, zoomConfig);
-      const openBase = zoomConfig.openTrackBaseZoom;
-      const overviewEff = effectiveZoom(cd.overviewZoom, openBase);
-      const leaderEff = effectiveZoom(cd._leaderZoom, openBase);
-      const battleEff = effectiveZoom(cd._battleZoom, openBase);
+  it('open-track: LEADER eff > OVERVIEW eff, BATTLE eff > LEADER eff for worldW ≥ 2000', () => {
+    // worldW=1280 would clip leader to overviewZoom (safety net) because baseSize=50
+    // makes raw leaderZoom < overviewZoom on a 1280px world.
+    for (const worldW of [2000, 3000, 6000]) {
+      const cd = new CameraDirector(undefined, worldW, 720, true, pctConfig, 50);
+      const overviewEff = effectiveZoom(cd.overviewZoom, OPEN_TRACK_BASE_ZOOM);
+      const leaderEff = effectiveZoom(cd._leaderZoom, OPEN_TRACK_BASE_ZOOM);
+      const battleEff = effectiveZoom(cd._battleZoom, OPEN_TRACK_BASE_ZOOM);
       expect(leaderEff).toBeGreaterThan(overviewEff);
       expect(battleEff).toBeGreaterThan(leaderEff);
     }
   });
 
-  it('closed-track LEADER not contaminated by overviewZoom (H1): eff = lr×bsX not bsX²×lr', () => {
-    const worldW = 3000;
-    const bsX = 1280 / worldW;
-    const cd = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
-    const leaderEff = cd._leaderZoom * bsX;
-    // Correct: lr × bsX
-    expect(leaderEff).toBeCloseTo(zoomConfig.leaderZoomMultiplier * bsX, 3);
-    // Must NOT be old buggy formula: bsX² × lr
-    expect(leaderEff).not.toBeCloseTo(bsX * bsX * zoomConfig.leaderZoomMultiplier, 2);
-  });
-
-  it('open-track LEADER: effectiveZoom = overviewZoom×lr×openBase, not double-multiplied (H2)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, true, zoomConfig);
-    const openBase = zoomConfig.openTrackBaseZoom; // 1.5
-    const effZoom = effectiveZoom(cd._leaderZoom, openBase);
-    // Correct: overviewZoom(1.0) × lr(1.8) × openBase(1.5) = 2.7
-    expect(effZoom).toBeCloseTo(2.7, 2);
-    // Old bug: (overviewZoom × openBase × lr) × openBase = (1.0×1.5×1.8)×1.5 = 4.05
-    expect(effZoom).not.toBeCloseTo(4.05, 1);
-  });
-
-  it('open-track extreme leaderMult=4.0: cam.zoom clamped, effZoom = MAX_ZOOM × openBase', () => {
-    const extremeConfig = { ...zoomConfig, leaderZoomMultiplier: 4.0 };
-    const cd = new CameraDirector(undefined, 1280, 720, true, extremeConfig);
-    expect(cd._leaderZoom).toBe(2.5); // clamped to MAX_ZOOM
-    const effZoom = effectiveZoom(cd._leaderZoom, zoomConfig.openTrackBaseZoom);
-    expect(effZoom).toBeCloseTo(2.5 * zoomConfig.openTrackBaseZoom, 2); // 3.75
-  });
-
-  it('effectiveZoom with different openTrackBaseZoom values (live-apply render path)', () => {
-    // Verifies passing cameraConfig.openTrackBaseZoom to effectiveZoom() changes output.
+  it('effectiveZoom() scales linearly with openBase argument', () => {
     const camZoom = 1.8;
     expect(effectiveZoom(camZoom, 1.5)).toBeCloseTo(2.7, 2);
     expect(effectiveZoom(camZoom, 2.0)).toBeCloseTo(3.6, 2);
     expect(effectiveZoom(camZoom, 1.0)).toBeCloseTo(1.8, 2);
   });
-
-  it('open vs closed at same worldW produce different effective render scales', () => {
-    const worldW = 1280;
-    const bsX = 1280 / worldW; // = 1.0
-    const cdClosed = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
-    const cdOpen = new CameraDirector(undefined, worldW, 720, true, zoomConfig);
-    const closedLeaderEff = cdClosed._leaderZoom * bsX; // 1.8 × 1.0 = 1.8
-    const openLeaderEff = effectiveZoom(cdOpen._leaderZoom, zoomConfig.openTrackBaseZoom); // 1.5×1.8=2.7
-    expect(openLeaderEff).toBeGreaterThan(closedLeaderEff);
-    expect(openLeaderEff).toBeCloseTo(2.7, 2);
-    expect(closedLeaderEff).toBeCloseTo(1.8, 2);
-  });
 });
 
 // ── CameraDirector — inverse zoom logic (Round 3) ────────────────────────────
-// Tests for _computeZoomForTargetSize and the new spritePctOfCanvas config path.
-// referenceSpriteSize is required to activate inverse logic; without it the
-// multiplier fallback runs (all pre-Round-3 tests remain valid).
+// Tests for _computeZoomForTargetSize and the spritePctOfCanvas config path.
+// When referenceSpriteSize=0, a 36px internal default is used with a console warning.
 
 const inverseConfig = {
   schemaVersion: 2,
@@ -1175,14 +1060,16 @@ describe('CameraDirector — _computeZoomForTargetSize (Round 3)', () => {
     expect(cd._computeZoomForTargetSize(10000)).toBe(5.0);
   });
 
-  it('returns sensible fallback when referenceSpriteSize=0 (closed)', () => {
+  it('referenceSpriteSize=0: uses 36px default, closed → zoom = 58/(36×bsX)', () => {
     const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
-    expect(cd._computeZoomForTargetSize(58)).toBe(1.0);
+    // bsX = 1280/1280 = 1.0 → expected = 58/36 ≈ 1.611
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / 36, 2);
   });
 
-  it('returns overviewZoom fallback when referenceSpriteSize=0 (open)', () => {
+  it('referenceSpriteSize=0: uses 36px default, open → zoom = 58/(36×OPEN_BASE)', () => {
     const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 0);
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(1280 / 6000, 3);
+    // expected = 58/(36×1.5) ≈ 1.074; safety net min = overviewZoom≈0.213 → not clamped
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / (36 * OPEN_TRACK_BASE_ZOOM), 2);
   });
 });
 
@@ -1202,10 +1089,11 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
     expect(cd._leaderZoom).toBeCloseTo(57.6 / 50, 3);
   });
 
-  it('multiplier fallback activates when referenceSpriteSize=0', () => {
+  it('referenceSpriteSize=0 uses 36px default, NOT multiplier ratios', () => {
     const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
-    // No referenceSpriteSize → falls back to hardcoded LEADER_ZOOM_RATIO=1.4
-    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
+    // 36px fallback + leader pct 0.08: 0.08*720/36 = 1.6 (≠ old LEADER_ZOOM_RATIO=1.4)
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
+    expect(cd._leaderZoom).not.toBeCloseTo(1.4, 1); // confirm it is NOT the old multiplier value
   });
 
   it('battleZoom > leaderZoom with inverse logic (battle pct > leader pct)', () => {
