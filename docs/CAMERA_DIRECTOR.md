@@ -777,7 +777,17 @@ Dieselbe `spritePctOfCanvas`-Config ergibt auf jedem Track denselben Sprite-Scre
 - Die Formel ist nur korrekt wenn `bsX` den tatsächlichen Pixi-Container-Scale widerspiegelt
 - Wird `bsX` durch den Camera-Zoom bereits beeinflusst (circular dependency), bricht die Invarianz
 - Safety nets (min = 1.0 / overviewZoom, max = 5.0) sind Notbremsen für Edge Cases, kein Design-Target
-- Der Fallback-Pfad (`referenceSpriteSize=0`) nutzt alte Multiplikatoren — nur für Tests und Legacy-Code
+- Der Fallback-Pfad (`referenceSpriteSize=0`) nutzt intern `FALLBACK_REFERENCE_SPRITE_SIZE = 36px` mit Console-Warning — kein Rückfall auf Multiplikatoren
+
+**Edge-Case: Safety-Net-Clamp bei großen Sprites auf schmalen Open-Tracks:**
+Wenn `effectiveOverviewPx = referenceSpriteSize × OPEN_BASE × overviewZoom` größer ist als das
+konfigurierte State-Target (z. B. LEADER-Target = 57.6px, aber OVERVIEW rendert 75px weil der
+Track sehr schmal und overviewZoom = 1.0), greift das Safety-Net (`rawZoom < overviewZoom → clamp`)
+und der State erscheint visuell identisch zu OVERVIEW. Das ist kein Bug — das System schützt davor,
+beim Übergang zu einem "dramatischeren" State einen weiteren Ausschnitt zu zeigen als OVERVIEW.
+Lösung: `spritePctOfCanvas`-Werte anheben oder `displaySize` des Racer-Typs reduzieren.
+Kein versteckter Korrektur-Code (Drama-Floor-Ansatz wurde evaluiert und verworfen: er erzeugte
+Ordering-Inversions bei partieller Aktivierung und überschrieb User-Config auf normalen Tracks).
 
 **Kopplung zur §10.1 Kopplung 6:**
 Die absolute Pixel-Grenze `maxTargetScreenPx` bleibt als Hard-Cap. Wenn der inverse Zoom eine

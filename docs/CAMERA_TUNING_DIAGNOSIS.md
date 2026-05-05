@@ -362,7 +362,18 @@ The Round 1/2 diagnosis tables remain valid as **historical learning material**.
 
 18 new tests in [`CameraDirector.test.js`](../client/src/modules/camera/CameraDirector.test.js):
 - `_computeZoomForTargetSize`: closed formula, open formula, safety nets (min 1.0 / overviewZoom, max 5.0), fallback when `referenceSpriteSize=0`
-- `_computeZoomLevels`: inverse path activation, multiplier fallback, battle>leader ordering, `updateConfig()` live-apply
+- `_computeZoomLevels`: inverse path activation, 36px fallback when `referenceSpriteSize=0`, battle>leader ordering, `updateConfig()` live-apply
 - Cross-track invariance: closed worldW=1280 vs 6000, open worldW=6000, all produce `targetPx ± 0.01`
 
 7 updated tests in [`cameraConfig.test.js`](../client/src/modules/cameraConfig.test.js), [`CameraZoomTuningSection.test.jsx`](../client/src/screens/DevScreen/sections/CameraZoomTuningSection.test.jsx), [`SpriteSizeRangeSection.test.jsx`](../client/src/screens/DevScreen/sections/SpriteSizeRangeSection.test.jsx).
+
+### Evaluated and rejected: Drama-Floor
+
+A "Drama-Floor" mechanism was designed and partially implemented during this branch. The idea: if `effectiveOverviewPx` (what OVERVIEW actually renders) exceeds a state's configured target, boost that target to preserve zoom hierarchy.
+
+**Rejected because:**
+- The aggressive variant (boost all states by the same factor when `effectiveOverviewPx > 36px`) silently overrides user-configured `spritePctOfCanvas` values on the primary track (Garden Path, closed worldW=1280) when `referenceSpriteSize > 36px`. User sets `leader=0.08` (57.6px), gets 80px instead — contradicts the predictability goal of Round 3.
+- The gentle variant (boost only states where `desiredPx < effectiveOverviewPx`) produces ordering inversions: on Garden Path with `referenceSpriteSize=50`, COMEBACK gets boosted to 65px while LEADER stays at 57.6px — COMEBACK visually tighter than LEADER.
+- The actual edge case that motivated Drama-Floor (narrow open-track worldW≈1280 with large sprites) does not exist in this repo's track set.
+
+The safety net (`cam.zoom ≥ overviewZoom`) remains as the only hierarchy guard. On the one edge case where it clips (LEADER == OVERVIEW on very narrow open tracks with oversized sprites), the correct fix is to raise `spritePctOfCanvas.leader` or reduce sprite `displaySize`.
