@@ -23,6 +23,7 @@ import RaceTuningSection from './sections/RaceTuningSection.jsx';
 import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
 import CameraZoomTuningSection from './sections/CameraZoomTuningSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
+import CameraStateHudSection from './sections/CameraStateHudSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
 
@@ -107,6 +108,14 @@ const SECTIONS = [
     label: 'Name Tag Visibility',
     desc: 'How many name tags appear during the race',
     component: NameTagVisibilitySection,
+    tier: 'advanced',
+  },
+  {
+    id: 'cam-state-hud',
+    icon: '📺',
+    label: 'Camera State HUD',
+    desc: 'Show / hide the camera-state indicator overlay on the race screen',
+    component: CameraStateHudSection,
     tier: 'advanced',
   },
   {
