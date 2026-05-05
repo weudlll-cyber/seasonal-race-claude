@@ -255,6 +255,54 @@ Für LEADER_ZOOM-State den Pan-Target auf nur den Leader (`focusRacers[0]`) setz
 
 ---
 
+---
+
+## Resolution (2026-05-05)
+
+Branch `diagnosis/camera-tuning-effectiveness` → applied as hotfix on same branch.
+
+### H2 — Structural fix (Critical)
+
+**Root cause re-examined:** The original diagnosis identified `openBase` inside `_computeZoomLevels` as the source of double-multiplication. A deeper analysis also revealed that H1 ("closed-track state multipliers not scaling correctly") was not fully refuted for large tracks — on closed tracks `> 2304 px`, the old formula `overviewZoom × ratio` for state targets produced LEADER < OVERVIEW in effective canvas scale, breaking the hierarchy. Both bugs share the same root: `_computeZoomLevels` was applying `overviewZoom` asymmetrically.
+
+**Combined H1+H2 fix in [`CameraDirector._computeZoomLevels()`](../client/src/modules/camera/CameraDirector.js):**
+
+- **Open-tracks:** `_leaderZoom = clamp(overviewZoom × lr)` — cam.zoom adapts to worldW. `openTrackBaseZoom` is no longer baked in here; it belongs to the render path.
+- **Closed-tracks:** `_leaderZoom = clamp(lr)` — pure ratio. `bsX` at render time (`cam.zoom × bsX`) carries the world-size scaling. Hierarchy `OVERVIEW(1×bsX) < LEADER(lr×bsX) < BATTLE(br×bsX)` holds at any worldW.
+
+**Render path fix in [`RaceScreen/index.jsx`](../client/src/screens/RaceScreen/index.jsx):**
+- `openTrackBaseZoom` read from `cameraConfig` and passed to all three `effectiveZoom()` callsites (lines 916, ~953, ~970 after edit).
+- `effectiveZoom(cam.zoom)` → `effectiveZoom(cam.zoom, openTrackBaseZoom)` at all three sites.
+
+**Verified zoom values after fix (worldW=1280, defaults leaderMult=1.8, openBase=1.5):**
+
+| State | Open-track effZoom | Closed-track eff scale |
+|---|---|---|
+| OVERVIEW | 1.5 × 1.0 = **1.5** | 1 × 1.0 = **1.0** |
+| LEADER | 1.5 × 1.8 = **2.7** (was 4.05) | 1.8 × 1.0 = **1.8** |
+| BATTLE | 1.5 × 2.5 = **3.75** (was MAX_ZOOM-clamped) | 2.5 × 1.0 = **2.5** |
+
+Defaults (`leaderZoomMultiplier=1.8`, `battleZoomMultiplier=2.5`, `comebackZoomMultiplier=1.5`) **were not changed** — they were tuned for closed-track drama independently and were never affected by the H2 double-factor bug (open-track state multiplier was inactive on closed tracks).
+
+### H4 — Pan-target fix (Low)
+
+In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo leader) instead of the top-3 centroid. BATTLE_ZOOM and COMEBACK_ZOOM retain the centroid of top-3. `CAM_STATE` imported into `RaceScreen/index.jsx` for the state check.
+
+### Test coverage added
+
+7 new tests in [`CameraDirector.test.js`](../client/src/modules/camera/CameraDirector.test.js) (describe: "Effective render-zoom — scale invariance"):
+1. Closed-track hierarchy scale-invariant across `worldW ∈ {1280, 2000, 3000, 6000}`
+2. Open-track hierarchy scale-invariant across `worldW ∈ {1280, 3000, 6000, 8000}`
+3. Closed-track LEADER not contaminated by `overviewZoom` (H1 regression guard)
+4. Open-track LEADER: `effectiveZoom = 2.7`, not `4.05` (H2 regression guard)
+5. Extreme `leaderMult=4.0`: cam.zoom clamped to MAX_ZOOM, `effZoom = 3.75`
+6. `effectiveZoom()` output changes with different `openTrackBaseZoom` (live-apply path)
+7. Open vs closed at same `worldW` produce different effective render scales
+
+12 existing tests updated to reflect the new closed-track pure-ratio formula (tests previously assumed `_leaderZoom = overviewZoom × ratio`; after H1 fix for closed tracks this is just `ratio`). Total: **1515 tests passing**.
+
+---
+
 ## Datei-Referenzen
 
 | Datei | Relevant für |

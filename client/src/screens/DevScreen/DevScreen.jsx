@@ -20,6 +20,9 @@ import RaceHistory from './sections/RaceHistory.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import RaceTuningSection from './sections/RaceTuningSection.jsx';
+import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
+import CameraZoomTuningSection from './sections/CameraZoomTuningSection.jsx';
+import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
 
@@ -80,6 +83,30 @@ const SECTIONS = [
     label: 'Race Tuning',
     desc: 'Physics and dynamics — speed range, re-rolls, avoidance, drafting',
     component: RaceTuningSection,
+    tier: 'advanced',
+  },
+  {
+    id: 'sprite-size-range',
+    icon: '🔭',
+    label: 'Sprite Size Range',
+    desc: 'Min/max screen-pixel bounds that limit how far the camera zooms',
+    component: SpriteSizeRangeSection,
+    tier: 'advanced',
+  },
+  {
+    id: 'camera-zoom',
+    icon: '🎥',
+    label: 'Camera Zoom Tuning',
+    desc: 'Zoom multipliers for leader, battle, comeback, and open-track states',
+    component: CameraZoomTuningSection,
+    tier: 'advanced',
+  },
+  {
+    id: 'nametag-visibility',
+    icon: '🏷️',
+    label: 'Name Tag Visibility',
+    desc: 'How many name tags appear during the race',
+    component: NameTagVisibilitySection,
     tier: 'advanced',
   },
   {
