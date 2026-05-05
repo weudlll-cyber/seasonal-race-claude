@@ -123,19 +123,21 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  minSpritePctOfCanvas: 0.05,
+  schemaVersion: 2,
+  // Target sprite size per camera state — camera zoom is computed inversely so sprites
+  // render at this percentage of canvas height regardless of track world width.
+  spritePctOfCanvas: {
+    overview: 0.05, // floor for OVERVIEW + autoSpriteScale floor (5% of canvas height)
+    leader: 0.08, // target size during LEADER_ZOOM (8%)
+    battle: 0.12, // target size during BATTLE_ZOOM (12%)
+    comeback: 0.065, // target size during COMEBACK_ZOOM (6.5%)
+  },
   maxTargetScreenPx: 160,
-  leaderZoomMultiplier: 1.8,
-  battleZoomMultiplier: 2.5,
-  comebackZoomMultiplier: 1.5,
-  openTrackBaseZoom: 1.5,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
-  // Battle trigger tunables (Block X). Defaults intentionally differ from the old
-  // hardcoded values (0.05, 8000, 0.85) to produce a more responsive camera out of the box.
-  battleGapThreshold: 0.1, // top-2 gap below which BATTLE_ZOOM fires
-  maxStateDuration: 4000, // ms before the camera considers a state transition
-  endgameThreshold: 0.85, // leader progress above which camera locks to LEADER_ZOOM
+  battleGapThreshold: 0.1,
+  maxStateDuration: 4000,
+  endgameThreshold: 0.85,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
