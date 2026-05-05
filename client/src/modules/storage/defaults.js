@@ -130,6 +130,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackZoomMultiplier: 1.5,
   openTrackBaseZoom: 1.5,
   tagVisibleMaxCount: 10,
+  showCameraStateHud: true,
   // Battle trigger tunables (Block X). Defaults intentionally differ from the old
   // hardcoded values (0.05, 8000, 0.85) to produce a more responsive camera out of the box.
   battleGapThreshold: 0.1, // top-2 gap below which BATTLE_ZOOM fires

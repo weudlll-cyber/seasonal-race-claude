@@ -1,0 +1,89 @@
+/* CameraStateHUD.css — camera-state indicator overlay */
+
+.cam-state-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+  z-index: 10;
+
+  /* Backdrop */
+  background: rgba(4, 8, 22, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(5px);
+
+  /* Theming via custom properties injected per-state */
+  color: var(--hud-color, #c8c8c8);
+  box-shadow:
+    0 0 8px var(--hud-glow, rgba(200, 200, 200, 0.3)),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+
+  /* Opacity is animated by React, color/shadow fade via CSS */
+  transition:
+    opacity 150ms ease,
+    color 250ms ease,
+    box-shadow 250ms ease;
+}
+
+/* Icon — slightly larger than label text */
+.cam-hud-icon {
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px var(--hud-glow, rgba(200, 200, 200, 0.4)));
+  transition: filter 250ms ease;
+}
+
+/* Label text */
+.cam-hud-label {
+  line-height: 1;
+}
+
+/* ── Per-state accents ─────────────────────────────────────── */
+
+/* FINISH: golden glow pulse */
+@keyframes hudFinishPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(255, 215, 0, 0.55),
+      0 0 18px rgba(255, 180, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(255, 215, 0, 0.85),
+      0 0 30px rgba(255, 180, 0, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.cam-state-hud--finish {
+  animation: hudFinishPulse 1s ease-in-out infinite;
+}
+
+/* BATTLE: subtle left border accent */
+.cam-state-hud--battle-zoom {
+  border-left: 2px solid #ff6b35;
+}
+
+/* COMEBACK: subtle left border accent */
+.cam-state-hud--comeback-zoom {
+  border-left: 2px solid #00d4e8;
+}
+
+/* FOLLOWING LEADER: subtle left border accent */
+.cam-state-hud--leader-zoom {
+  border-left: 2px solid #ffd700;
+}

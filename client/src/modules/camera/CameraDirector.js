@@ -75,6 +75,7 @@ export class CameraDirector {
     this._computeTimingConfig(config);
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
+    this._inFinishDrama = false;
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
@@ -160,10 +161,12 @@ export class CameraDirector {
       if (this._finishMomentExpiry === null) {
         // First detection: start 1.5s drama pulse on winner
         this._finishMomentExpiry = ts + FINISH_DRAMA_DURATION;
+        this._inFinishDrama = true;
         this.state = CAM_STATE.LEADER_ZOOM;
         this.stateEnteredAt = ts;
       } else if (ts >= this._finishMomentExpiry) {
         // Drama pulse expired → OVERVIEW for remaining racers
+        this._inFinishDrama = false;
         this.state = CAM_STATE.OVERVIEW;
         this.stateEnteredAt = ts;
       }
@@ -306,6 +309,14 @@ export class CameraDirector {
       edgeLoX > 0 ? edgeLoX / 2 : Math.max(edgeLoX, Math.min(0, this.targetOffsetX));
     this.targetOffsetY =
       edgeLoY > 0 ? edgeLoY / 2 : Math.max(edgeLoY, Math.min(0, this.targetOffsetY));
+  }
+
+  /**
+   * Display state for the camera HUD.
+   * Returns 'FINISH' during the finish drama window, otherwise this.state.
+   */
+  get hudState() {
+    return this._inFinishDrama ? 'FINISH' : this.state;
   }
 
   // Clamps a camera offset so no black strips appear and, when the track bbox fits

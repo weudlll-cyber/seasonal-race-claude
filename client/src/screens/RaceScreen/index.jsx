@@ -51,6 +51,7 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import CameraStateHUD from './CameraStateHUD.jsx';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -113,6 +114,12 @@ export default function RaceScreen() {
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [finishTState, setFinishTState] = useState(1);
+  const [camState, setCamState] = useState('OVERVIEW');
+  const prevHudStateRef = useRef('OVERVIEW');
+  const [showCameraStateHud] = useState(() => {
+    const cfg = loadCameraConfig();
+    return cfg.showCameraStateHud ?? true;
+  });
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -919,6 +926,13 @@ export default function RaceScreen() {
           ? camDirRef.current.update(scaledRacersForCam, ts, raceState, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
+      // Sync camera HUD state — only triggers React re-render on actual state change
+      const newHudState = camDirRef.current.hudState;
+      if (newHudState !== prevHudStateRef.current) {
+        prevHudStateRef.current = newHudState;
+        setCamState(newHudState);
+      }
+
       if (isOpenTrack) {
         const effZoom = effectiveZoom(cam.zoom, openTrackBaseZoom);
         const { camXMax, camYMax } = openTrackPanBounds(
@@ -1081,6 +1095,7 @@ export default function RaceScreen() {
       <div className="race-layout">
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+          <CameraStateHUD camState={camState} visible={showCameraStateHud} />
         </div>
 
         <aside className="race-hud">
