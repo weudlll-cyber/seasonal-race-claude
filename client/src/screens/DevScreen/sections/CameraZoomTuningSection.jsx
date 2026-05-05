@@ -3,8 +3,9 @@
 // Path:        client/src/screens/DevScreen/sections/CameraZoomTuningSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Dev-Screen tuning UI for camera zoom multipliers (§6.2).
-//              Controls how dramatic zoom states feel between race phases.
+// Description: Dev-Screen tuning UI for camera behavior (§6.2).
+//              Controls target sprite size per camera state — the camera zoom is
+//              computed inversely so sprites reach the target size on any track.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -27,28 +28,34 @@ function CameraZoomTuningSection() {
     setConfig((prev) => ({ ...prev, [key]: val }));
   }
 
+  function setPct(key, val) {
+    setConfig((prev) => ({
+      ...prev,
+      spritePctOfCanvas: { ...prev.spritePctOfCanvas, [key]: val },
+    }));
+  }
+
   function handleReset() {
     setConfig((prev) => ({
       ...prev,
-      leaderZoomMultiplier: DEFAULT_CAMERA_CONFIG.leaderZoomMultiplier,
-      battleZoomMultiplier: DEFAULT_CAMERA_CONFIG.battleZoomMultiplier,
-      comebackZoomMultiplier: DEFAULT_CAMERA_CONFIG.comebackZoomMultiplier,
-      openTrackBaseZoom: DEFAULT_CAMERA_CONFIG.openTrackBaseZoom,
+      spritePctOfCanvas: { ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas },
       battleGapThreshold: DEFAULT_CAMERA_CONFIG.battleGapThreshold,
       maxStateDuration: DEFAULT_CAMERA_CONFIG.maxStateDuration,
       endgameThreshold: DEFAULT_CAMERA_CONFIG.endgameThreshold,
     }));
   }
 
+  const pct = config.spritePctOfCanvas ?? DEFAULT_CAMERA_CONFIG.spritePctOfCanvas;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.2rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Camera Zoom Tuning</span>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Camera Behavior</span>
           <span className={s.spacer} />
           <button
             onClick={handleReset}
-            data-testid="reset-camera-zoom-tuning"
+            data-testid="reset-camera-behavior"
             style={{
               background: 'none',
               border: 'none',
@@ -59,13 +66,13 @@ function CameraZoomTuningSection() {
               opacity: 0.7,
             }}
           >
-            Reset Camera Zoom Tuning
+            Reset Camera Behavior
           </button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Controls how dramatic camera zoom feels between race phases. Higher values make the
-          difference between &ldquo;see everyone&rdquo; and &ldquo;follow the leader&rdquo; more
-          striking. Sprite size range above limits how far these can actually push the camera.
+          Controls how the camera zooms to keep sprites at a target size during each race phase.
+          Higher percentage means sprites appear larger (closer camera). The zoom is calculated
+          inversely so the same percentage produces the same sprite size on any track.
         </p>
 
         <div className={s.formGrid}>
@@ -74,21 +81,21 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Leader zoom strength
+              Overview sprite size (% of canvas)
               <InfoTooltip
-                text={`How much the camera zooms in when following the leading group. Higher = closer, more focused on the front. Lower = wider view. Value: ${config.leaderZoomMultiplier}×.`}
+                text={`Target sprite size during the overview shot that shows the whole field. Also used as the minimum floor so sprites never shrink below this size. Value: ${(pct.overview * 100).toFixed(1)}%.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1.0}
-              max={3.0}
-              step={0.1}
-              value={config.leaderZoomMultiplier}
+              min={0.02}
+              max={0.1}
+              step={0.005}
+              value={pct.overview}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1.0 && v <= 3.0) set('leaderZoomMultiplier', v);
+                if (v >= 0.02 && v <= 0.1) setPct('overview', v);
               }}
             />
           </div>
@@ -98,21 +105,21 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Battle zoom strength
+              Leader sprite size (% of canvas)
               <InfoTooltip
-                text={`How much the camera zooms in during close duels at the front. Higher = more dramatic, fills the screen with the battle. Lower = less dramatic. Value: ${config.battleZoomMultiplier}×.`}
+                text={`Target sprite size when the camera follows the leading group. Higher = more zoomed in on the leader. Value: ${(pct.leader * 100).toFixed(1)}%.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1.0}
-              max={4.0}
-              step={0.1}
-              value={config.battleZoomMultiplier}
+              min={0.06}
+              max={0.16}
+              step={0.005}
+              value={pct.leader}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1.0 && v <= 4.0) set('battleZoomMultiplier', v);
+                if (v >= 0.06 && v <= 0.16) setPct('leader', v);
               }}
             />
           </div>
@@ -122,21 +129,21 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Comeback zoom strength
+              Battle sprite size (% of canvas)
               <InfoTooltip
-                text={`How much the camera zooms when showing a last-place comeback story. Higher = more focused on the comeback racer. Lower = subtler. Value: ${config.comebackZoomMultiplier}×.`}
+                text={`Target sprite size during close duels at the front. Higher = more dramatic close-up on the battle. Value: ${(pct.battle * 100).toFixed(1)}%.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1.0}
-              max={3.0}
-              step={0.1}
-              value={config.comebackZoomMultiplier}
+              min={0.08}
+              max={0.2}
+              step={0.005}
+              value={pct.battle}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1.0 && v <= 3.0) set('comebackZoomMultiplier', v);
+                if (v >= 0.08 && v <= 0.2) setPct('battle', v);
               }}
             />
           </div>
@@ -146,21 +153,21 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Open track base zoom
+              Comeback sprite size (% of canvas)
               <InfoTooltip
-                text={`Base zoom level for open tracks (River Run, Space Sprint). All other zoom multipliers scale from this value. Higher = closer baseline view. Value: ${config.openTrackBaseZoom}×.`}
+                text={`Target sprite size when showing a last-place comeback story. Lower than leader keeps the comeback shot subtler. Value: ${(pct.comeback * 100).toFixed(1)}%.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1.0}
-              max={3.0}
-              step={0.1}
-              value={config.openTrackBaseZoom}
+              min={0.04}
+              max={0.12}
+              step={0.005}
+              value={pct.comeback}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1.0 && v <= 3.0) set('openTrackBaseZoom', v);
+                if (v >= 0.04 && v <= 0.12) setPct('comeback', v);
               }}
             />
           </div>
