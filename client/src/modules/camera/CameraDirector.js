@@ -15,6 +15,10 @@ export const CAM_STATE = {
   COMEBACK_ZOOM: 'COMEBACK_ZOOM',
 };
 
+// Base zoom multiplier for open tracks — applied in the render path (effectiveZoom),
+// not inside CameraDirector. Exported so RaceScreen can use the same constant.
+export const OPEN_TRACK_BASE_ZOOM = 1.5;
+
 const MAX_STATE_DURATION = 8000; // fallback when no config provided
 const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
@@ -23,15 +27,15 @@ const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
-const MAX_ZOOM = 2.5; // ceiling for very small tracks
+const MAX_ZOOM = 2.5; // ceiling for multiplier-fallback path
+const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) path
 const CANVAS_W = 1280; // reference canvas width
+const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
 
-// Relative zoom ratios applied on top of the overview zoom (CANVAS_W / worldW).
+// Relative zoom ratios used in the fallback multiplier path (no referenceSpriteSize).
 // On the 1280px reference world: overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
 // identical to the old absolute-VIEW_W formula to within ~0.5%.
-// On large worlds (e.g. 6000px): zoom states remain visually distinct (e.g.
-// 0.213 / 0.298 / 0.341) instead of collapsing to near-identical values.
 const LEADER_ZOOM_RATIO = 1.4;
 const BATTLE_ZOOM_RATIO = 1.6;
 const COMEBACK_ZOOM_RATIO = 1.3;
@@ -49,27 +53,30 @@ export class CameraDirector {
    *   world-to-canvas mapping. Passing the wrong value causes either black bars (false on open)
    *   or double-scaling artifacts (true on closed).
    * @param {object|null} [config=null]
-   *   Optional camera tuning config (from cameraConfig.js). When provided, overrides the
-   *   hardcoded zoom ratios. Call updateConfig() for live-apply without re-construction.
-   *   Fields: leaderZoomMultiplier, battleZoomMultiplier, comebackZoomMultiplier.
-   *   openTrackBaseZoom is consumed by the render path (effectiveZoom), not here.
+   *   Optional camera tuning config (from cameraConfig.js). When provided and
+   *   referenceSpriteSize > 0, drives the inverse-zoom path via spritePctOfCanvas.
+   *   Falls back to leaderZoomMultiplier / battleZoomMultiplier / comebackZoomMultiplier
+   *   when referenceSpriteSize is 0 or config lacks spritePctOfCanvas.
+   *   Call updateConfig() for live-apply without re-construction.
+   * @param {number} [referenceSpriteSize=0]
+   *   displaySize × displaySizeScale for the race's racer type. Required for inverse
+   *   zoom logic. When 0 (e.g. tests that don't set it), falls back to multiplier path.
    */
   constructor(
     bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 },
     worldW = 1280,
     _worldH = 720,
     isOpenTrack = false,
-    config = null
+    config = null,
+    referenceSpriteSize = 0
   ) {
     this._bbox = bbox;
     this._isOpenTrack = isOpenTrack;
     this._worldW = worldW;
-    // Adaptive zoom: overviewZoom shows the entire world, state zooms scale up
-    // from there by a fixed ratio. States remain visually distinct at any worldW:
-    // leader is always 1.4× closer than overview, battle 1.6×, comeback 1.3×.
-    // On the 1280px reference world overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
-    // backward-compatible with the previous absolute-VIEW_W formula (< 0.5% diff).
-    // When config is provided, multipliers override these defaults.
+    this._referenceSpriteSize = referenceSpriteSize;
+    // Adaptive overview zoom: shows the entire world at cam.zoom=overviewZoom.
+    // For closed tracks, OVERVIEW uses cam.zoom=1 (bsX handles world mapping).
+    // For open tracks, OVERVIEW uses cam.zoom=overviewZoom to shrink the field of view.
     this.overviewZoom = CANVAS_W / worldW;
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
@@ -97,18 +104,63 @@ export class CameraDirector {
   }
 
   /**
-   * Derive _leaderZoom / _battleZoom / _comebackZoom from config or hardcoded defaults.
+   * Compute cam.zoom so that a sprite of _referenceSpriteSize renders at targetSizePx
+   * screen pixels in the current camera state.
    *
-   * Open-tracks: states scale relative to overviewZoom so cam.zoom adapts to worldW.
-   *   openTrackBaseZoom is NOT applied here — it lives in the render path (effectiveZoom).
+   * Inverse logic:
+   *   Closed: screenPx = baseSize × cam.zoom × bsX  →  cam.zoom = targetPx / (baseSize × bsX)
+   *   Open:   screenPx = baseSize × cam.zoom × BASE  →  cam.zoom = targetPx / (baseSize × BASE)
    *
-   * Closed-tracks: OVERVIEW uses cam.zoom=1; bsX (= CANVAS_W/worldW) handles world-to-canvas
-   *   scaling at render time. States are pure ratios so effective canvas scale = ratio × bsX,
-   *   keeping the hierarchy OVERVIEW < LEADER < BATTLE invariant at any worldW.
+   * This guarantees cross-track invariance: the same targetSizePx produces the same
+   * on-screen sprite size regardless of worldW (L62 proof).
+   *
+   * Safety nets (L60): result is clamped to [minZoom, MAX_INVERSE_ZOOM] where minZoom
+   * equals 1.0 for closed tracks or overviewZoom for open tracks — so zoom states
+   * never show less world context than OVERVIEW.
+   *
+   * @param {number} targetSizePx  Desired sprite size in screen pixels
+   * @returns {number}             cam.zoom to assign to this state
+   */
+  _computeZoomForTargetSize(targetSizePx) {
+    const baseSize = this._referenceSpriteSize;
+    if (!baseSize || baseSize <= 0) return this._isOpenTrack ? this.overviewZoom : 1.0;
+
+    let rawZoom;
+    if (this._isOpenTrack) {
+      rawZoom = targetSizePx / (baseSize * OPEN_TRACK_BASE_ZOOM);
+    } else {
+      const bsX = CANVAS_W / this._worldW;
+      rawZoom = targetSizePx / (baseSize * bsX);
+    }
+
+    const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
+    return Math.max(minZoom, Math.min(MAX_INVERSE_ZOOM, rawZoom));
+  }
+
+  /**
+   * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
+   *
+   * Inverse path (preferred): when referenceSpriteSize > 0 and config has spritePctOfCanvas,
+   *   each zoom level is computed so sprites render at that fraction of canvas height.
+   *   Cross-track invariant: same pct → same screen pixels on any track width.
+   *
+   * Fallback multiplier path: when referenceSpriteSize = 0 or config lacks spritePctOfCanvas.
+   *   Open-tracks: states scale relative to overviewZoom so cam.zoom adapts to worldW.
+   *   Closed-tracks: OVERVIEW uses cam.zoom=1; bsX (= CANVAS_W/worldW) handles world-to-canvas
+   *     scaling at render time. States are pure ratios so effective canvas scale = ratio × bsX,
+   *     keeping the hierarchy OVERVIEW < LEADER < BATTLE invariant at any worldW.
    *
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
+    if (this._referenceSpriteSize > 0 && config?.spritePctOfCanvas) {
+      const pct = config.spritePctOfCanvas;
+      this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
+      this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
+      this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
+      return;
+    }
+    // Fallback: multiplier-based (backward compat when referenceSpriteSize is not set)
     const lr = config?.leaderZoomMultiplier ?? LEADER_ZOOM_RATIO;
     const br = config?.battleZoomMultiplier ?? BATTLE_ZOOM_RATIO;
     const cr = config?.comebackZoomMultiplier ?? COMEBACK_ZOOM_RATIO;
