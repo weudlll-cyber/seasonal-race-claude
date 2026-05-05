@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CameraDirector, CAM_STATE } from './CameraDirector.js';
+import { CameraDirector, CAM_STATE, OPEN_TRACK_BASE_ZOOM } from './CameraDirector.js';
 import { effectiveZoom } from './openTrackCamera.js';
 import {
   lapsFromDuration,
@@ -1121,5 +1121,178 @@ describe('Effective render-zoom — scale invariance (H1+H2 hotfix)', () => {
     expect(openLeaderEff).toBeGreaterThan(closedLeaderEff);
     expect(openLeaderEff).toBeCloseTo(2.7, 2);
     expect(closedLeaderEff).toBeCloseTo(1.8, 2);
+  });
+});
+
+// ── CameraDirector — inverse zoom logic (Round 3) ────────────────────────────
+// Tests for _computeZoomForTargetSize and the new spritePctOfCanvas config path.
+// referenceSpriteSize is required to activate inverse logic; without it the
+// multiplier fallback runs (all pre-Round-3 tests remain valid).
+
+const inverseConfig = {
+  schemaVersion: 2,
+  spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+  maxTargetScreenPx: 160,
+  tagVisibleMaxCount: 10,
+  showCameraStateHud: true,
+  battleGapThreshold: 0.1,
+  maxStateDuration: 4000,
+  endgameThreshold: 0.85,
+};
+
+describe('CameraDirector — _computeZoomForTargetSize (Round 3)', () => {
+  it('closed-track: targetSize=58, baseSize=36, bsX=0.83 → cam.zoom ≈ 1.94', () => {
+    // worldW that gives bsX≈0.83: CANVAS_W/worldW=0.83 → worldW≈1542
+    const worldW = Math.round(1280 / 0.83);
+    const cd = new CameraDirector(undefined, worldW, 720, false, inverseConfig, 36);
+    const expected = 58 / (36 * (1280 / worldW));
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(1.94, 1);
+  });
+
+  it('open-track: targetSize=58, baseSize=50, OPEN_BASE=1.5 → cam.zoom ≈ 0.77', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 50);
+    const expected = 58 / (50 * OPEN_TRACK_BASE_ZOOM);
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(0.773, 2);
+  });
+
+  it('safety net closed — very small targetSize clamps cam.zoom to 1.0', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    // targetSize=1px: would give cam.zoom=1/50=0.02, clamped to 1.0
+    expect(cd._computeZoomForTargetSize(1)).toBe(1.0);
+  });
+
+  it('safety net open — very small targetSize clamps cam.zoom to overviewZoom', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 50);
+    // targetSize=1px: cam.zoom = 1/(50*1.5) = 0.013, clamped to overviewZoom≈0.213
+    expect(cd._computeZoomForTargetSize(1)).toBeCloseTo(1280 / 6000, 3);
+  });
+
+  it('safety net upper — very large targetSize clamps cam.zoom to 5.0', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    // targetSize=10000px: would give cam.zoom=200, clamped to 5.0
+    expect(cd._computeZoomForTargetSize(10000)).toBe(5.0);
+  });
+
+  it('returns sensible fallback when referenceSpriteSize=0 (closed)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
+    expect(cd._computeZoomForTargetSize(58)).toBe(1.0);
+  });
+
+  it('returns overviewZoom fallback when referenceSpriteSize=0 (open)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 0);
+    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(1280 / 6000, 3);
+  });
+});
+
+describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => {
+  it('_referenceSpriteSize is stored at construction time', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 42);
+    expect(cd._referenceSpriteSize).toBe(42);
+  });
+
+  it('OPEN_TRACK_BASE_ZOOM is exported as 1.5', () => {
+    expect(OPEN_TRACK_BASE_ZOOM).toBe(1.5);
+  });
+
+  it('inverse path activates when referenceSpriteSize > 0 and spritePctOfCanvas present', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    // With baseSize=50, bsX=1, leader=0.08*720=57.6: _leaderZoom=57.6/50=1.152
+    expect(cd._leaderZoom).toBeCloseTo(57.6 / 50, 3);
+  });
+
+  it('multiplier fallback activates when referenceSpriteSize=0', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
+    // No referenceSpriteSize → falls back to hardcoded LEADER_ZOOM_RATIO=1.4
+    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
+  });
+
+  it('battleZoom > leaderZoom with inverse logic (battle pct > leader pct)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
+  });
+
+  it('comebackZoom < leaderZoom with inverse logic (comeback pct < leader pct)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
+  });
+
+  it('live-apply: spritePctOfCanvas.leader 0.08→0.12 changes _leaderZoom after updateConfig()', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const zoomBefore = cd._leaderZoom;
+    cd.updateConfig({
+      ...inverseConfig,
+      spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.12 },
+    });
+    expect(cd._leaderZoom).toBeGreaterThan(zoomBefore);
+    // new _leaderZoom: 0.12*720/50 = 1.728
+    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 50, 3);
+  });
+});
+
+describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () => {
+  // Core test: same spritePctOfCanvas → same on-screen sprite pixels regardless of
+  // track width or type. This proves the inverse logic solves the L62 asymmetry.
+
+  it('closed 1280px and open 6000px give same leader screenPx for same targetPct', () => {
+    const baseSize = 50;
+    const targetPct = inverseConfig.spritePctOfCanvas.leader; // 0.08
+    const targetPx = targetPct * 720; // 57.6
+
+    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+
+    const bsXClosed = 1280 / 1280; // 1.0
+    const closedScreenPx = baseSize * cdClosed._leaderZoom * bsXClosed;
+    const openScreenPx = baseSize * cdOpen._leaderZoom * OPEN_TRACK_BASE_ZOOM;
+
+    expect(Math.abs(closedScreenPx - targetPx)).toBeLessThan(3);
+    expect(Math.abs(openScreenPx - targetPx)).toBeLessThan(3);
+    expect(Math.abs(closedScreenPx - openScreenPx)).toBeLessThan(3);
+  });
+
+  it('battle state: closed 1280px and open 6000px give same battleScreenPx', () => {
+    const baseSize = 36;
+    const targetPx = inverseConfig.spritePctOfCanvas.battle * 720; // 0.12*720=86.4
+
+    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+
+    const bsX = 1280 / 1280;
+    const closedScreenPx = baseSize * cdClosed._battleZoom * bsX;
+    const openScreenPx = baseSize * cdOpen._battleZoom * OPEN_TRACK_BASE_ZOOM;
+
+    expect(Math.abs(closedScreenPx - targetPx)).toBeLessThan(3);
+    expect(Math.abs(openScreenPx - targetPx)).toBeLessThan(3);
+  });
+
+  it('comeback state: closed 1280px and open 6000px give same comebackScreenPx', () => {
+    const baseSize = 36;
+    const targetPx = inverseConfig.spritePctOfCanvas.comeback * 720; // 0.065*720=46.8
+
+    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+
+    const bsX = 1280 / 1280;
+    const closedScreenPx = baseSize * cdClosed._comebackZoom * bsX;
+    const openScreenPx = baseSize * cdOpen._comebackZoom * OPEN_TRACK_BASE_ZOOM;
+
+    expect(Math.abs(closedScreenPx - targetPx)).toBeLessThan(3);
+    expect(Math.abs(openScreenPx - targetPx)).toBeLessThan(3);
+  });
+
+  it('closed track: same spritePct on 1280px and 2560px worlds gives same screenPx', () => {
+    const baseSize = 50;
+    const targetPx = inverseConfig.spritePctOfCanvas.leader * 720;
+
+    const cd1280 = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
+    const cd2560 = new CameraDirector(undefined, 2560, 720, false, inverseConfig, baseSize);
+
+    const screenPx1280 = baseSize * cd1280._leaderZoom * (1280 / 1280);
+    const screenPx2560 = baseSize * cd2560._leaderZoom * (1280 / 2560);
+
+    expect(Math.abs(screenPx1280 - targetPx)).toBeLessThan(3);
+    expect(Math.abs(screenPx2560 - targetPx)).toBeLessThan(3);
   });
 });
