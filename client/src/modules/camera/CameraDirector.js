@@ -15,10 +15,11 @@ export const CAM_STATE = {
   COMEBACK_ZOOM: 'COMEBACK_ZOOM',
 };
 
-const MAX_STATE_DURATION = 8000; // ms before trying a new camera angle
+const MAX_STATE_DURATION = 8000; // fallback when no config provided
 const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
-const ENDGAME_PROGRESS_THRESHOLD = 0.85; // leader.t/finishT above this → lock LEADER
+const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
+const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
 const MAX_ZOOM = 2.5; // ceiling for very small tracks
@@ -46,34 +47,76 @@ export class CameraDirector {
    *   (effScale = cam.zoom × bsX), so OVERVIEW must keep cam.zoom = 1; bsX alone handles
    *   world-to-canvas mapping. Passing the wrong value causes either black bars (false on open)
    *   or double-scaling artifacts (true on closed).
+   * @param {object|null} [config=null]
+   *   Optional camera tuning config (from cameraConfig.js). When provided, overrides the
+   *   hardcoded zoom ratios. Call updateConfig() for live-apply without re-construction.
+   *   Fields: leaderZoomMultiplier, battleZoomMultiplier, comebackZoomMultiplier.
+   *   openTrackBaseZoom is consumed by the render path (effectiveZoom), not here.
    */
   constructor(
     bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 },
     worldW = 1280,
     _worldH = 720,
-    isOpenTrack = false
+    isOpenTrack = false,
+    config = null
   ) {
     this._bbox = bbox;
     this._isOpenTrack = isOpenTrack;
+    this._worldW = worldW;
     // Adaptive zoom: overviewZoom shows the entire world, state zooms scale up
     // from there by a fixed ratio. States remain visually distinct at any worldW:
     // leader is always 1.4× closer than overview, battle 1.6×, comeback 1.3×.
     // On the 1280px reference world overviewZoom=1, giving 1.4 / 1.6 / 1.3 —
     // backward-compatible with the previous absolute-VIEW_W formula (< 0.5% diff).
-    const overviewZoom = CANVAS_W / worldW;
-    this.overviewZoom = overviewZoom;
-    this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * LEADER_ZOOM_RATIO));
-    this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * BATTLE_ZOOM_RATIO));
-    this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, overviewZoom * COMEBACK_ZOOM_RATIO));
+    // When config is provided, multipliers override these defaults.
+    this.overviewZoom = CANVAS_W / worldW;
+    this._computeZoomLevels(config);
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
-    this.zoom = overviewZoom;
-    this.targetZoom = overviewZoom;
+    this.zoom = this.overviewZoom;
+    this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
     this.targetOffsetX = 0;
     this.offsetY = 0;
     this.targetOffsetY = 0;
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
+    this._finishMomentExpiry = null; // null until first finish detected
+  }
+
+  /**
+   * Recompute zoom levels from a new config. Effective on the next _transition() call —
+   * no race restart needed (live-apply).
+   * @param {object|null} config
+   */
+  updateConfig(config) {
+    this._computeZoomLevels(config);
+  }
+
+  /**
+   * Derive _leaderZoom / _battleZoom / _comebackZoom from config or hardcoded defaults.
+   *
+   * Open-tracks: states scale relative to overviewZoom so cam.zoom adapts to worldW.
+   *   openTrackBaseZoom is NOT applied here — it lives in the render path (effectiveZoom).
+   *
+   * Closed-tracks: OVERVIEW uses cam.zoom=1; bsX (= CANVAS_W/worldW) handles world-to-canvas
+   *   scaling at render time. States are pure ratios so effective canvas scale = ratio × bsX,
+   *   keeping the hierarchy OVERVIEW < LEADER < BATTLE invariant at any worldW.
+   *
+   * @param {object|null} config
+   */
+  _computeZoomLevels(config) {
+    const lr = config?.leaderZoomMultiplier ?? LEADER_ZOOM_RATIO;
+    const br = config?.battleZoomMultiplier ?? BATTLE_ZOOM_RATIO;
+    const cr = config?.comebackZoomMultiplier ?? COMEBACK_ZOOM_RATIO;
+    if (this._isOpenTrack) {
+      this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * lr));
+      this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * br));
+      this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * cr));
+    } else {
+      this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, lr));
+      this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, br));
+      this._comebackZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, cr));
+    }
   }
 
   // Main update — call once per frame during RACING.
@@ -98,10 +141,19 @@ export class CameraDirector {
 
     const ordered = [...racers].sort((a, b) => b.t - a.t);
 
-    // Priority 1: Finish override — camera locks on winner immediately
+    // Priority 1: Finish override — drama pulse on first finish, then OVERVIEW
     if (raceState.finishedCount > 0) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-      this.stateEnteredAt = ts;
+      if (this._finishMomentExpiry === null) {
+        // First detection: start 1.5s drama pulse on winner
+        this._finishMomentExpiry = ts + FINISH_DRAMA_DURATION;
+        this.state = CAM_STATE.LEADER_ZOOM;
+        this.stateEnteredAt = ts;
+      } else if (ts >= this._finishMomentExpiry) {
+        // Drama pulse expired → OVERVIEW for remaining racers
+        this.state = CAM_STATE.OVERVIEW;
+        this.stateEnteredAt = ts;
+      }
+      // else: drama pulse still active, no state change
       return;
     }
 

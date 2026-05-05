@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CameraDirector, CAM_STATE } from './CameraDirector.js';
+import { effectiveZoom } from './openTrackCamera.js';
 import {
   lapsFromDuration,
   lapProgress,
@@ -293,15 +294,15 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     expect(cd._leaderZoom).toBeLessThan(1.45);
   });
 
-  it('4000-wide world gives leaderZoom ≈ 0.448 (zoom-out for large tracks)', () => {
-    const cd = new CameraDirector(undefined, 4000, 720);
-    // New formula: (1280/4000) × 1.4 = 0.448
+  it('open-track 4000-wide world gives leaderZoom ≈ 0.448 (adaptive zoom-out)', () => {
+    const cd = new CameraDirector(undefined, 4000, 720, true); // isOpenTrack=true
+    // Open-track: overviewZoom × lr = (1280/4000) × 1.4 = 0.448
     expect(cd._leaderZoom).toBeCloseTo((1280 / 4000) * 1.4, 3);
-    expect(cd._leaderZoom).toBeLessThan(1); // large track → zoom-out
+    expect(cd._leaderZoom).toBeLessThan(1); // large world → cam.zoom adapts down
   });
 
-  it('clamps leaderZoom at MIN_ZOOM (0.15) for very large worlds', () => {
-    const cd = new CameraDirector(undefined, 100000, 720);
+  it('open-track very large world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
+    const cd = new CameraDirector(undefined, 100000, 720, true); // isOpenTrack=true
     expect(cd._leaderZoom).toBe(0.15);
   });
 
@@ -315,17 +316,17 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
-  it('all three zoom values scale inversely with worldW (wider world → lower zoom)', () => {
-    const cd1 = new CameraDirector(undefined, 1280, 720);
-    const cd2 = new CameraDirector(undefined, 2560, 720);
+  it('open-track: zoom values scale inversely with worldW (wider world → lower zoom)', () => {
+    const cd1 = new CameraDirector(undefined, 1280, 720, true); // isOpenTrack=true
+    const cd2 = new CameraDirector(undefined, 2560, 720, true); // isOpenTrack=true
     expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom / 2, 3);
     expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom / 2, 3);
     expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom / 2, 3);
   });
 
-  it('LEADER_ZOOM state on large world converges to a lower zoom', () => {
-    const cdSmall = new CameraDirector(undefined, 1280, 720);
-    const cdLarge = new CameraDirector(undefined, 4000, 720);
+  it('open-track LEADER_ZOOM state on large world converges to a lower zoom', () => {
+    const cdSmall = new CameraDirector(undefined, 1280, 720, true); // isOpenTrack=true
+    const cdLarge = new CameraDirector(undefined, 4000, 720, true); // isOpenTrack=true
     const racers = [{ t: 1, x: 640, y: 360, finished: false }];
     cdSmall.state = CAM_STATE.LEADER_ZOOM;
     cdLarge.state = CAM_STATE.LEADER_ZOOM;
@@ -400,12 +401,12 @@ describe('CameraDirector — relative zoom ratios (D7a)', () => {
     expect(cd._comebackZoom).toBeCloseTo(1.3, 3);
   });
 
-  it('6000-track: states are clearly distinct (battle 1.6× closer than overview)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
-    const overviewZoom = 1280 / 6000;
-    expect(cd._leaderZoom).toBeCloseTo(overviewZoom * 1.4, 4);
-    expect(cd._battleZoom).toBeCloseTo(overviewZoom * 1.6, 4);
-    expect(cd._comebackZoom).toBeCloseTo(overviewZoom * 1.3, 4);
+  it('closed-track 6000px: state zooms are pure ratios, clearly distinct (H1 scale-invariance)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720); // isOpenTrack=false (default)
+    // Closed-track: pure ratios, independent of worldW
+    expect(cd._leaderZoom).toBeCloseTo(1.4, 4);
+    expect(cd._battleZoom).toBeCloseTo(1.6, 4);
+    expect(cd._comebackZoom).toBeCloseTo(1.3, 4);
   });
 
   it('zoom-state ratios are constant regardless of worldW', () => {
@@ -427,21 +428,21 @@ describe('CameraDirector — relative zoom ratios (D7a)', () => {
 // ── CameraDirector — adaptive zoom: corrected formula ────────────────────────
 
 describe('CameraDirector — adaptive zoom (corrected formula)', () => {
-  it('6000-wide world gives leaderZoom ≈ 0.299 (deep zoom-out)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720);
-    // New formula: (1280/6000) × 1.4 ≈ 0.2987
+  it('open-track 6000-wide world gives leaderZoom ≈ 0.299 (deep zoom-out)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true); // isOpenTrack=true
+    // Open-track: overviewZoom × lr = (1280/6000) × 1.4 ≈ 0.299
     expect(cd._leaderZoom).toBeCloseTo((1280 / 6000) * 1.4, 3);
     expect(cd._leaderZoom).toBeCloseTo(0.3, 1);
   });
 
-  it('16000-wide world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
-    const cd = new CameraDirector(undefined, 16000, 720);
+  it('open-track 16000-wide world clamps leaderZoom at MIN_ZOOM (0.15)', () => {
+    const cd = new CameraDirector(undefined, 16000, 720, true); // isOpenTrack=true
     expect(cd._leaderZoom).toBe(0.15);
   });
 
-  it('very small world (512px) clamps leaderZoom at MAX_ZOOM (2.5)', () => {
-    // 1280²/(910×512) ≈ 3.50 → clamped to MAX_ZOOM=2.5
-    const cd = new CameraDirector(undefined, 512, 720);
+  it('open-track very small world (512px) clamps leaderZoom at MAX_ZOOM (2.5)', () => {
+    // Open-track: (1280/512) × 1.4 ≈ 3.5 → clamped to MAX_ZOOM=2.5
+    const cd = new CameraDirector(undefined, 512, 720, true); // isOpenTrack=true
     expect(cd._leaderZoom).toBe(2.5);
   });
 
@@ -697,6 +698,71 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
   });
 });
 
+// ── CameraDirector — Block W: finish drama pulse ──────────────────────────────
+
+describe('CameraDirector — finish drama pulse (Block W)', () => {
+  it('first finish: state = LEADER_ZOOM and _finishMomentExpiry is set', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true, finishRank: 1 },
+      { t: 0.8, x: 500, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 9000, finishedCount: 1, winner: racers[0], finishT: 1.0 };
+    cd.update(racers, 9000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd._finishMomentExpiry).toBe(10500); // 9000 + 1500
+  });
+
+  it('500ms after first finish trigger: still LEADER_ZOOM (drama pulse active)', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true },
+      { t: 0.8, x: 500, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 9000, finishedCount: 1, winner: racers[0], finishT: 1.0 };
+    cd.update(racers, 9000, rs, 1280, 720); // _finishMomentExpiry = 10500
+    cd.stateEnteredAt = 0; // force _transition() to fire next frame
+    cd.update(racers, 9500, { ...rs, raceElapsed: 9500 }, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+  });
+
+  it('1600ms after first finish trigger: transitions to OVERVIEW', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true },
+      { t: 0.8, x: 500, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 9000, finishedCount: 1, winner: racers[0], finishT: 1.0 };
+    cd.update(racers, 9000, rs, 1280, 720); // _finishMomentExpiry = 10500
+    cd.stateEnteredAt = 0; // force _transition() to fire on next call
+    cd.update(racers, 10600, { ...rs, raceElapsed: 10600 }, 1280, 720); // ts > 10500
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('OVERVIEW after drama pulse is stable — does not flip back to LEADER on next transition', () => {
+    // After the drama pulse expires and state = OVERVIEW, the next _transition() call
+    // (triggered by MAX_STATE_DURATION) must keep OVERVIEW, not re-enter LEADER_ZOOM.
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true },
+      { t: 0.8, x: 500, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 9000, finishedCount: 1, winner: racers[0], finishT: 1.0 };
+    cd.update(racers, 9000, rs, 1280, 720); // _finishMomentExpiry = 10500
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 10600, rs, 1280, 720); // drama expired → OVERVIEW, stateEnteredAt=10600
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    // Another 8s later: _transition fires again, stays OVERVIEW (not LEADER)
+    cd.stateEnteredAt = 10600;
+    cd.update(racers, 18600 + 1, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+});
+
 // ── CameraDirector — isOpenTrack: OVERVIEW zoom differentiation ───────────────
 // Regression: PR-B Bug-A fix set targetZoom = overviewZoom unconditionally.
 // On closed tracks (effScale = cam.zoom × bsX) this caused double-scaling and
@@ -749,5 +815,191 @@ describe('estimatedSecondsPerLap', () => {
     for (const sm of [0.1, 0.3, 0.5, 1.0, 1.25, 2.0]) {
       expect(estimatedSecondsPerLap(sm)).toBeGreaterThan(0);
     }
+  });
+});
+
+// ── CameraDirector — configurable zoom multipliers ────────────────────────────
+
+const zoomConfig = {
+  leaderZoomMultiplier: 1.8,
+  battleZoomMultiplier: 2.5,
+  comebackZoomMultiplier: 1.5,
+  openTrackBaseZoom: 1.5,
+  minTargetScreenPx: 32,
+  maxTargetScreenPx: 160,
+  tagVisibleMaxCount: 10,
+};
+
+describe('CameraDirector — configurable zoom multipliers', () => {
+  it('LEADER_ZOOM with multiplier=1.8 gives _leaderZoom = overviewZoom * 1.8 (closed)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    // closed track: openBase=1, overviewZoom=1, leaderZoom=1*1*1.8=1.8
+    expect(cd._leaderZoom).toBeCloseTo(1.8, 3);
+  });
+
+  it('BATTLE_ZOOM with multiplier=2.5 gives _battleZoom = overviewZoom * 2.5 (closed)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    expect(cd._battleZoom).toBeCloseTo(2.5, 3);
+  });
+
+  it('COMEBACK_ZOOM with multiplier=1.5 gives _comebackZoom = overviewZoom * 1.5 (closed)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    expect(cd._comebackZoom).toBeCloseTo(1.5, 3);
+  });
+
+  it('open track: _leaderZoom = overviewZoom × lr, openTrackBaseZoom now in render path', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, true, zoomConfig);
+    // Open-track: overviewZoom(1.0) × lr(1.8) = 1.8 — openTrackBaseZoom applied in effectiveZoom()
+    expect(cd._leaderZoom).toBeCloseTo(1.8, 2);
+    expect(cd._battleZoom).toBeCloseTo(2.5, 2); // clamped to MAX_ZOOM (1.0 × 2.5 = 2.5)
+  });
+
+  it('openTrackBaseZoom in config does not change _leaderZoom (render-path separation)', () => {
+    // After H2 fix: openTrackBaseZoom no longer applied inside CameraDirector.
+    // Different openTrackBaseZoom values must not affect _leaderZoom.
+    const cfg1 = { ...zoomConfig, openTrackBaseZoom: 1.0 };
+    const cfg2 = { ...zoomConfig, openTrackBaseZoom: 3.0 };
+    const cd1 = new CameraDirector(undefined, 1280, 720, true, cfg1);
+    const cd2 = new CameraDirector(undefined, 1280, 720, true, cfg2);
+    expect(cd1._leaderZoom).toBeCloseTo(cd2._leaderZoom, 4);
+    // But effectiveZoom() output differs when baseZoom is passed from config
+    expect(effectiveZoom(cd1._leaderZoom, cfg1.openTrackBaseZoom)).not.toBeCloseTo(
+      effectiveZoom(cd2._leaderZoom, cfg2.openTrackBaseZoom),
+      1
+    );
+  });
+
+  it('open track OVERVIEW targetZoom is still overviewZoom (not scaled by openTrackBaseZoom)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, true, zoomConfig);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // OVERVIEW should be overviewZoom = 1280/6000, never affected by openTrackBaseZoom
+    expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
+  });
+
+  it('live-apply: updateConfig() changes zoom levels without re-construction', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    expect(cd._leaderZoom).toBeCloseTo(1.8, 2);
+    cd.updateConfig({ ...zoomConfig, leaderZoomMultiplier: 2.2 });
+    expect(cd._leaderZoom).toBeCloseTo(2.2, 2);
+  });
+
+  it('live-apply: new multiplier takes effect on next _transition()', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    const zoomBefore = cd.zoom;
+
+    cd.updateConfig({ ...zoomConfig, leaderZoomMultiplier: 1.0 });
+    // targetZoom now 1.0; allow convergence
+    for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // new targetZoom = 1.0 < old 1.8, zoom should have decreased
+    expect(cd.zoom).toBeLessThan(zoomBefore);
+  });
+
+  it('extreme multiplier (BATTLE=4.0) is clamped to MAX_ZOOM=2.5', () => {
+    const extremeConfig = { ...zoomConfig, battleZoomMultiplier: 4.0 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, extremeConfig);
+    // overviewZoom=1.0 * 4.0 = 4.0 → clamped to MAX_ZOOM=2.5
+    expect(cd._battleZoom).toBe(2.5);
+  });
+
+  it('no config passed: hardcoded defaults preserved (backward compat)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720);
+    expect(cd._leaderZoom).toBeCloseTo(1.4, 3);
+    expect(cd._battleZoom).toBeCloseTo(1.6, 3);
+    expect(cd._comebackZoom).toBeCloseTo(1.3, 3);
+  });
+
+  it('closed large world (6000px) with config: BATTLE zoom is pure ratio (H1 scale-invariance)', () => {
+    const cd = new CameraDirector(undefined, 6000, 720, false, zoomConfig);
+    // Closed-track: pure ratio, independent of worldW
+    expect(cd._battleZoom).toBeCloseTo(2.5, 3);
+    expect(cd._battleZoom).toBeGreaterThan(0.15); // above MIN_ZOOM
+  });
+});
+
+// ── Effective render-zoom: scale invariance (H1+H2 hotfix) ──────────────────────
+
+describe('Effective render-zoom — scale invariance (H1+H2 hotfix)', () => {
+  it('closed-track hierarchy is scale-invariant across worldW values', () => {
+    // OVERVIEW eff = 1×bsX, LEADER eff = lr×bsX, BATTLE eff = br×bsX
+    // Ratios 1:lr:br are constant regardless of worldW (H1 fix).
+    for (const worldW of [1280, 2000, 3000, 6000]) {
+      const cd = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
+      const bsX = 1280 / worldW;
+      const overviewEff = 1 * bsX;
+      const leaderEff = cd._leaderZoom * bsX;
+      const battleEff = cd._battleZoom * bsX;
+      expect(leaderEff).toBeGreaterThan(overviewEff);
+      expect(battleEff).toBeGreaterThan(leaderEff);
+      expect(leaderEff / overviewEff).toBeCloseTo(zoomConfig.leaderZoomMultiplier, 2);
+      expect(battleEff / overviewEff).toBeCloseTo(zoomConfig.battleZoomMultiplier, 2);
+    }
+  });
+
+  it('open-track hierarchy is scale-invariant across worldW values', () => {
+    // OVERVIEW eff = openBase×overviewZoom, LEADER eff = openBase×_leaderZoom
+    // Ratios hold at any worldW (open-track adaptive zoom).
+    for (const worldW of [1280, 3000, 6000, 8000]) {
+      const cd = new CameraDirector(undefined, worldW, 720, true, zoomConfig);
+      const openBase = zoomConfig.openTrackBaseZoom;
+      const overviewEff = effectiveZoom(cd.overviewZoom, openBase);
+      const leaderEff = effectiveZoom(cd._leaderZoom, openBase);
+      const battleEff = effectiveZoom(cd._battleZoom, openBase);
+      expect(leaderEff).toBeGreaterThan(overviewEff);
+      expect(battleEff).toBeGreaterThan(leaderEff);
+    }
+  });
+
+  it('closed-track LEADER not contaminated by overviewZoom (H1): eff = lr×bsX not bsX²×lr', () => {
+    const worldW = 3000;
+    const bsX = 1280 / worldW;
+    const cd = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
+    const leaderEff = cd._leaderZoom * bsX;
+    // Correct: lr × bsX
+    expect(leaderEff).toBeCloseTo(zoomConfig.leaderZoomMultiplier * bsX, 3);
+    // Must NOT be old buggy formula: bsX² × lr
+    expect(leaderEff).not.toBeCloseTo(bsX * bsX * zoomConfig.leaderZoomMultiplier, 2);
+  });
+
+  it('open-track LEADER: effectiveZoom = overviewZoom×lr×openBase, not double-multiplied (H2)', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, true, zoomConfig);
+    const openBase = zoomConfig.openTrackBaseZoom; // 1.5
+    const effZoom = effectiveZoom(cd._leaderZoom, openBase);
+    // Correct: overviewZoom(1.0) × lr(1.8) × openBase(1.5) = 2.7
+    expect(effZoom).toBeCloseTo(2.7, 2);
+    // Old bug: (overviewZoom × openBase × lr) × openBase = (1.0×1.5×1.8)×1.5 = 4.05
+    expect(effZoom).not.toBeCloseTo(4.05, 1);
+  });
+
+  it('open-track extreme leaderMult=4.0: cam.zoom clamped, effZoom = MAX_ZOOM × openBase', () => {
+    const extremeConfig = { ...zoomConfig, leaderZoomMultiplier: 4.0 };
+    const cd = new CameraDirector(undefined, 1280, 720, true, extremeConfig);
+    expect(cd._leaderZoom).toBe(2.5); // clamped to MAX_ZOOM
+    const effZoom = effectiveZoom(cd._leaderZoom, zoomConfig.openTrackBaseZoom);
+    expect(effZoom).toBeCloseTo(2.5 * zoomConfig.openTrackBaseZoom, 2); // 3.75
+  });
+
+  it('effectiveZoom with different openTrackBaseZoom values (live-apply render path)', () => {
+    // Verifies passing cameraConfig.openTrackBaseZoom to effectiveZoom() changes output.
+    const camZoom = 1.8;
+    expect(effectiveZoom(camZoom, 1.5)).toBeCloseTo(2.7, 2);
+    expect(effectiveZoom(camZoom, 2.0)).toBeCloseTo(3.6, 2);
+    expect(effectiveZoom(camZoom, 1.0)).toBeCloseTo(1.8, 2);
+  });
+
+  it('open vs closed at same worldW produce different effective render scales', () => {
+    const worldW = 1280;
+    const bsX = 1280 / worldW; // = 1.0
+    const cdClosed = new CameraDirector(undefined, worldW, 720, false, zoomConfig);
+    const cdOpen = new CameraDirector(undefined, worldW, 720, true, zoomConfig);
+    const closedLeaderEff = cdClosed._leaderZoom * bsX; // 1.8 × 1.0 = 1.8
+    const openLeaderEff = effectiveZoom(cdOpen._leaderZoom, zoomConfig.openTrackBaseZoom); // 1.5×1.8=2.7
+    expect(openLeaderEff).toBeGreaterThan(closedLeaderEff);
+    expect(openLeaderEff).toBeCloseTo(2.7, 2);
+    expect(closedLeaderEff).toBeCloseTo(1.8, 2);
   });
 });
