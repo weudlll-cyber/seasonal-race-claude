@@ -221,7 +221,7 @@ OVERVIEW-Dauer (overviewDuration) sind Dev-Panel-Tunables.
 OVERVIEW wird dreifach ausgelöst:
 1. **Start** — erste ~3s des Rennens, zeigt gesamten Start-Pulk
 2. **Periodisch** — Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen (Defaults 15s/25s), Dauer overviewDuration, dann zurück zu LEADER_ZOOM
-3. **Ende** — letzte 5s vor `finishT` oder wenn `finishedCount >= 1`, zeigt gesamtes Feld
+3. **Finish** — bei `finishedCount >= 1`: 1.5 s LEADER_ZOOM als Drama-Puls auf den Gewinner (`_finishMomentExpiry = ts + 1500 ms`), danach dauerhaft OVERVIEW bis Rennende. Kein OVERVIEW-Cooldown, kein Rückfall in andere States — Priority-1-Guard blockiert alle anderen Pfade für den Rest des Rennens.
 
 ### 4.4 MANUAL_FOCUS (aufgeschoben)
 
@@ -320,7 +320,7 @@ function findBattleCandidate(racersByPosition, spitzengruppe) {
 
 Evaluierungs-Logik in `_transition()` (harte Overrides zuerst, dann Tendenzen):
 
-1. `finishedCount > 0` → erzwingt LEADER_ZOOM auf winner *(hartes Override — Rennen vorbei)*
+1. `finishedCount > 0` → **Drama-Puls (Block W):** Beim ersten Auftreten (`_finishMomentExpiry === null`) → LEADER_ZOOM für 1.5 s (`_finishMomentExpiry = ts + 1500`). Nach Ablauf → OVERVIEW, dauerhaft. Der gesamte Priority-1-Block wird bei jedem `_transition()`-Aufruf solange `finishedCount > 0` als erstes evaluiert — alle anderen Pfade sind gesperrt.
 2. `raceElapsed < startPhaseSeconds×1000` → erzwingt OVERVIEW *(hartes Override — Startphase)*
 3. `minGapInSpitzengruppe < 0.05` → BATTLE_ZOOM auf candidatePair-Centroid
 4. `overviewCooldownExpired` → OVERVIEW *(Kontext-Check, tritt zurück wenn BATTLE_ZOOM aktiv)*
@@ -334,8 +334,8 @@ LEADER_ZOOM. Camera muss danach nicht sofort zurück — natürlicher Abstecher.
 
 Zusätzlich zu MAX_STATE_DURATION-Timer:
 - **Start-Pulk** (`raceElapsed < 3000ms`): erzwingt OVERVIEW auf Feld-Centroid
-- **Endspurt** (`leader.t/finishT > 0.85`): priorisiert LEADER_ZOOM, unterdrückt OVERVIEW-Cooldown
-- **Finish-Event** (`finishedCount > 0`): erzwingt sofort LEADER_ZOOM auf winner
+- **Endspurt** (`leader.t/finishT > endgameThreshold`, Default 0.85): priorisiert LEADER_ZOOM, unterdrückt OVERVIEW-Cooldown. Threshold tunable via Dev-Panel (Block X).
+- **Finish-Event** (`finishedCount > 0`): 1.5 s Drama-Puls LEADER_ZOOM auf Gewinner, danach dauerhaft OVERVIEW (Block W). `FINISH_DRAMA_DURATION = 1500 ms` hardcoded.
 
 ---
 
