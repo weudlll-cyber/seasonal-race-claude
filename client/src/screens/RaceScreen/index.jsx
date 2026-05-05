@@ -13,7 +13,11 @@ import { validateActiveRace } from './raceSession.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
-import { CameraDirector, CAM_STATE } from '../../modules/camera/CameraDirector.js';
+import {
+  CameraDirector,
+  CAM_STATE,
+  OPEN_TRACK_BASE_ZOOM,
+} from '../../modules/camera/CameraDirector.js';
 import {
   effectiveZoom,
   openTrackPanBounds,
@@ -207,7 +211,6 @@ export default function RaceScreen() {
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
     const cameraConfig = loadCameraConfig();
-    const openTrackBaseZoom = cameraConfig?.openTrackBaseZoom ?? 1.5;
     const displaySize = racerType.config.displaySize;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
@@ -219,6 +222,7 @@ export default function RaceScreen() {
         displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
       }
     }
+    const referenceSpriteSize = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
     // Open tracks: finish line is fixed at (1 - runoutZone); race speed comes from targetDuration.
@@ -251,7 +255,8 @@ export default function RaceScreen() {
       worldWidth,
       worldHeight,
       isOpenTrack,
-      cameraConfig
+      cameraConfig,
+      referenceSpriteSize
     );
     setFinishTState(finishT);
 
@@ -934,7 +939,7 @@ export default function RaceScreen() {
       }
 
       if (isOpenTrack) {
-        const effZoom = effectiveZoom(cam.zoom, openTrackBaseZoom);
+        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
         const { camXMax, camYMax } = openTrackPanBounds(
           worldWidth,
           worldHeight,
@@ -971,7 +976,7 @@ export default function RaceScreen() {
       // frameEffZoom is the raw canvas scale (cam.zoom×bsX closed, BASE×cam.zoom open).
       // It's used by labels/trail (via 1/frameEffZoom) to stay constant screen-size.
       const frameEffZoom = isOpenTrack
-        ? effectiveZoom(cam.zoom, openTrackBaseZoom)
+        ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
         : cam.zoom * bsX;
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
@@ -979,7 +984,7 @@ export default function RaceScreen() {
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          cameraConfig.minSpritePctOfCanvas,
+          cameraConfig.spritePctOfCanvas?.overview ?? 0.05,
           CANVAS_H
         ),
         getEffectiveMaxTargetScreenPx(
@@ -990,7 +995,7 @@ export default function RaceScreen() {
 
       if (isOpenTrack) {
         ctx.save();
-        const effZoom = effectiveZoom(cam.zoom, openTrackBaseZoom);
+        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
         // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
         ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
         ctx.scale(effZoom, effZoom);
