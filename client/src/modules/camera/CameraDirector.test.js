@@ -921,6 +921,126 @@ describe('CameraDirector — configurable zoom multipliers', () => {
   });
 });
 
+// ── CameraDirector — Block X: battle trigger tunables ────────────────────────
+
+describe('CameraDirector — battle trigger tunables (Block X)', () => {
+  it('no config: fallback _maxStateDuration=8000, _battleGapThreshold=0.05, _endgameThreshold=0.85', () => {
+    const cd = new CameraDirector();
+    expect(cd._maxStateDuration).toBe(8000);
+    expect(cd._battleGapThreshold).toBe(0.05);
+    expect(cd._endgameThreshold).toBe(0.85);
+  });
+
+  it('battleGapThreshold=0.10 fires BATTLE at gap=0.08 (old 0.05 threshold would not)', () => {
+    const cfg = {
+      ...zoomConfig,
+      battleGapThreshold: 0.1,
+      maxStateDuration: 4000,
+      endgameThreshold: 0.85,
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    // gap01 = 0.08 — within new 0.10 threshold but not old 0.05
+    const racers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.42, x: 420, y: 300, finished: false }, // gap = 0.08
+      { t: 0.2, x: 200, y: 300, finished: false },
+    ];
+    cd.update(
+      racers,
+      5000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('maxStateDuration=4000 allows transition after 4s (not 8s)', () => {
+    const cfg = {
+      ...zoomConfig,
+      battleGapThreshold: 0.1,
+      maxStateDuration: 4000,
+      endgameThreshold: 0.85,
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    cd.stateEnteredAt = 0;
+    // 4001ms elapsed — should trigger a transition
+    cd.update(
+      mockRacers(4),
+      4001,
+      { raceElapsed: 4001, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.stateEnteredAt).toBe(4001); // transition fired, stateEnteredAt reset
+  });
+
+  it('endgameThreshold=0.95 allows BATTLE at 90% progress (old 0.85 would block it)', () => {
+    const cfg = {
+      ...zoomConfig,
+      battleGapThreshold: 0.1,
+      maxStateDuration: 4000,
+      endgameThreshold: 0.95,
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    // leader at 90% progress: below 0.95 threshold → endgame does NOT lock LEADER
+    // gap01=0.08 < battleGapThreshold=0.10 → should fire BATTLE
+    const racers = [
+      { t: 0.9, x: 500, y: 300, finished: false }, // 90% progress (finishT=1)
+      { t: 0.82, x: 420, y: 300, finished: false }, // gap=0.08
+      { t: 0.5, x: 200, y: 300, finished: false },
+    ];
+    cd.update(
+      racers,
+      5000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('live-apply: updateConfig() updates all three timing params without re-construction', () => {
+    const cd = new CameraDirector(undefined, 1280, 720, false, zoomConfig);
+    expect(cd._maxStateDuration).toBe(8000); // fallback from zoomConfig (no timing fields)
+    cd.updateConfig({
+      ...zoomConfig,
+      battleGapThreshold: 0.15,
+      maxStateDuration: 3000,
+      endgameThreshold: 0.9,
+    });
+    expect(cd._battleGapThreshold).toBe(0.15);
+    expect(cd._maxStateDuration).toBe(3000);
+    expect(cd._endgameThreshold).toBe(0.9);
+  });
+
+  it('maxStateDuration in config overrides fallback: no transition before new duration', () => {
+    const cfg = {
+      ...zoomConfig,
+      battleGapThreshold: 0.1,
+      maxStateDuration: 6000,
+      endgameThreshold: 0.85,
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    cd.stateEnteredAt = 0;
+    // 5999ms — below the configured 6000ms duration, should NOT trigger transition
+    cd.update(
+      mockRacers(4),
+      5999,
+      { raceElapsed: 5999, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.stateEnteredAt).toBe(0); // stateEnteredAt unchanged → no transition
+  });
+});
+
 // ── Effective render-zoom: scale invariance (H1+H2 hotfix) ──────────────────────
 
 describe('Effective render-zoom — scale invariance (H1+H2 hotfix)', () => {

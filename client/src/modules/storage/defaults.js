@@ -122,6 +122,21 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
   maxCapacityFactor: 0.3,
 };
 
+export const DEFAULT_CAMERA_CONFIG = {
+  minTargetScreenPx: 32,
+  maxTargetScreenPx: 160,
+  leaderZoomMultiplier: 1.8,
+  battleZoomMultiplier: 2.5,
+  comebackZoomMultiplier: 1.5,
+  openTrackBaseZoom: 1.5,
+  tagVisibleMaxCount: 10,
+  // Battle trigger tunables (Block X). Defaults intentionally differ from the old
+  // hardcoded values (0.05, 8000, 0.85) to produce a more responsive camera out of the box.
+  battleGapThreshold: 0.1, // top-2 gap below which BATTLE_ZOOM fires
+  maxStateDuration: 4000, // ms before the camera considers a state transition
+  endgameThreshold: 0.85, // leader progress above which camera locks to LEADER_ZOOM
+};
+
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollVariationPercent: 85,
   reRollTransitionDuration: 5.0,

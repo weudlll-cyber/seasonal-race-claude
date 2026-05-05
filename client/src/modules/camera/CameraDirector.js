@@ -19,6 +19,7 @@ const MAX_STATE_DURATION = 8000; // fallback when no config provided
 const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
+const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MIN_ZOOM = 0.15; // floor for very large tracks (≥ ~12 000 px wide)
@@ -71,6 +72,7 @@ export class CameraDirector {
     // When config is provided, multipliers override these defaults.
     this.overviewZoom = CANVAS_W / worldW;
     this._computeZoomLevels(config);
+    this._computeTimingConfig(config);
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this.zoom = this.overviewZoom;
@@ -90,6 +92,7 @@ export class CameraDirector {
    */
   updateConfig(config) {
     this._computeZoomLevels(config);
+    this._computeTimingConfig(config);
   }
 
   /**
@@ -119,11 +122,22 @@ export class CameraDirector {
     }
   }
 
+  /**
+   * Derive transition timing parameters from config or hardcoded fallbacks.
+   * Called on construction and via updateConfig() for live-apply.
+   * @param {object|null} config
+   */
+  _computeTimingConfig(config) {
+    this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
+    this._battleGapThreshold = config?.battleGapThreshold ?? BATTLE_GAP_THRESHOLD;
+    this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
+  }
+
   // Main update — call once per frame during RACING.
   // raceState: { raceElapsed, finishedCount, winner, finishT }
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
   update(racers, ts, raceState, canvasW, canvasH) {
-    if (ts - this.stateEnteredAt >= MAX_STATE_DURATION) {
+    if (ts - this.stateEnteredAt >= this._maxStateDuration) {
       this._transition(racers, ts, raceState);
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
@@ -164,11 +178,11 @@ export class CameraDirector {
       return;
     }
 
-    // Priority 2.5: Endgame — leader past 85% → LEADER, bypasses cooldown
+    // Priority 2.5: Endgame — leader past threshold → LEADER, bypasses cooldown
     const leader = ordered[0];
     if (leader && raceState.finishT > 0) {
       const leaderProgress = leader.t / raceState.finishT;
-      if (leaderProgress > ENDGAME_PROGRESS_THRESHOLD) {
+      if (leaderProgress > this._endgameThreshold) {
         this.state = CAM_STATE.LEADER_ZOOM;
         this.stateEnteredAt = ts;
         return;
@@ -176,7 +190,7 @@ export class CameraDirector {
     }
 
     const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
-    const hasBattle = gap01 < 0.05;
+    const hasBattle = gap01 < this._battleGapThreshold;
 
     // Priority 3: Cooldown expired + no active battle → return to OVERVIEW
     if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
@@ -185,7 +199,7 @@ export class CameraDirector {
       return;
     }
 
-    // Priority 4: Battle — top-2 within 5% of track
+    // Priority 4: Battle — top-2 within battleGapThreshold of track progress
     if (hasBattle) {
       this.state = CAM_STATE.BATTLE_ZOOM;
       this.stateEnteredAt = ts;
