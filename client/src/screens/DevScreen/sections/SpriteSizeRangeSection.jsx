@@ -3,9 +3,10 @@
 // Path:        client/src/screens/DevScreen/sections/SpriteSizeRangeSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Dev-Screen tuning UI for sprite size corridor (§6.2).
-//              Controls min/max sprite screen-pixel bounds that constrain
-//              how far the camera can zoom in or out.
+// Description: Dev-Screen tuning UI for the sprite size ceiling (§6.2).
+//              Controls the maximum sprite size in pixels, preventing sprites
+//              from becoming too large during dramatic close-ups.
+//              The minimum floor moved to Camera Behavior (spritePctOfCanvas.overview).
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -31,7 +32,6 @@ function SpriteSizeRangeSection() {
   function handleReset() {
     setConfig((prev) => ({
       ...prev,
-      minSpritePctOfCanvas: DEFAULT_CAMERA_CONFIG.minSpritePctOfCanvas,
       maxTargetScreenPx: DEFAULT_CAMERA_CONFIG.maxTargetScreenPx,
     }));
   }
@@ -40,11 +40,11 @@ function SpriteSizeRangeSection() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.2rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Sprite Size Range</span>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Sprite Size Cap</span>
           <span className={s.spacer} />
           <button
             onClick={handleReset}
-            data-testid="reset-sprite-size-range"
+            data-testid="reset-sprite-size-cap"
             style={{
               background: 'none',
               border: 'none',
@@ -55,39 +55,15 @@ function SpriteSizeRangeSection() {
               opacity: 0.7,
             }}
           >
-            Reset Sprite Size Range
+            Reset Sprite Size Cap
           </button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Minimum is in percent of canvas height to stay consistent across track sizes. Maximum is
-          in absolute pixels to limit sprite enlargement on close-up shots.
+          Maximum sprite size in pixels. Prevents sprites from becoming too large during dramatic
+          close-ups (helps if sprite animations look choppy at very large sizes).
         </p>
 
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Minimum sprite size (% of canvas)
-              <InfoTooltip
-                text={`Smallest size racers can appear, as a percentage of canvas height. This ensures sprites stay visible at a comparable size on tracks of any world size. Higher = sprites are always larger, more readable. Lower = sprites can shrink to fit more world context. Value: ${(config.minSpritePctOfCanvas * 100).toFixed(1)}% (≈${Math.round(config.minSpritePctOfCanvas * 720)} px on current canvas).`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.02}
-              max={0.15}
-              step={0.005}
-              value={config.minSpritePctOfCanvas}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.02 && v <= 0.15) set('minSpritePctOfCanvas', v);
-              }}
-            />
-          </div>
-
           <div className={s.formGroup}>
             <label
               className={s.label}
