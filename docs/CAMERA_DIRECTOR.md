@@ -356,25 +356,35 @@ N → spitzengruppe → Tag-Anzahl sichtbar
 
 ### 6.2 Sprite-Größen-Korridor: Min UND Max als HARTE Camera-Constraints
 
-Aktuell: `computeRenderDisplayScale` hat Soft-Floor (minTargetScreenPx=32px default).
-Floor verhindert Sprites unter 32px, verhindert aber NICHT dass Camera dauerhaft den Floor erzwingt.
-Und es gibt **kein oberes Limit** — BATTLE_ZOOM kann Sprites zu Bildschirm-füllenden Klötzen machen,
-Frame-Animationen wirken ruckartig bei sehr großen Sprites (Q-13 im BACKLOG).
+**Block Y (2026-05-05): Skaleninvarianter Sprite-Floor.**
 
-**Neu: Camera-Zoom muss innerhalb eines Korridors bleiben:**
+Diagnose zeigte: absoluter `minTargetScreenPx=32px`-Floor greift auf Open-Tracks (worldW=6000)
+fast dauerhaft, weil `overviewZoom = 1280/6000 = 0.213` → alle effektiven Zooms ~2.6× niedriger
+als auf Closed-Tracks. 32px fühlt sich im Verhältnis zur sichtbaren Weltausdehnung winzig an.
+
+**Fix: Floor jetzt als Prozent der Canvas-Höhe definiert:**
 
 ```
-erlaubter_min_frameEffZoom = minTargetScreenPx / (displaySize × displaySizeScale)
+effectiveFloorPx = minSpritePctOfCanvas × CANVAS_H
+```
+
+Beispiel: `minSpritePctOfCanvas=0.05` (5%) bei `CANVAS_H=720` → Floor = 36px.
+Auf einem 6000px-Track mit identischer Racer-Größe: gleicher visueller Mindestanteil am Bild.
+
+**Skaleninvarianz:** derselbe %-Wert erzeugt auf kleinen wie großen Welten denselben
+*visuellen* Eindruck — Floor beschreibt "wie groß Sprites mindestens im Verhältnis zum Bild",
+nicht "wie viele absolute Pixel".
+
+**Korridor (Max bleibt absolut für Q-13-Schutz):**
+
+```
+erlaubter_min_frameEffZoom = (minSpritePctOfCanvas × CANVAS_H) / (displaySize × displaySizeScale)
 erlaubter_max_frameEffZoom = maxTargetScreenPx / (displaySize × displaySizeScale)
 ```
 
-Wenn ein Zoom-Wechsel `frameEffZoom` unter `min` bringen würde → Zoom wird blockiert (Camera bleibt).
-Wenn ein Zoom-Wechsel `frameEffZoom` über `max` bringen würde → Zoom wird blockiert (Camera bleibt).
-
-**Defaults (CC-Vorschlag):**
-- `minTargetScreenPx = 32px` (beibehaltener Wert aus D7a-Plus)
-- `maxTargetScreenPx = 128px` (= 4× min — Raum für BATTLE_ZOOM ohne Übergroß-Sprites)
-- Verhältnis max/min = 4× entspricht ~2 f-Stops Zoom-Spielraum — ausreichend für Camera-Dramatik
+**Defaults:**
+- `minSpritePctOfCanvas = 0.05` (5% = 36px bei 720p) — skaleninvarianter Floor
+- `maxTargetScreenPx = 160px` (absolut — Q-13-Grenze gilt unabhängig von Track-Größe)
 
 Beide sind Dev-Panel-Slider (Project-Principle 1) — subjektive ästhetische Werte müssen
 live getunt werden können ohne Code-Änderung.
@@ -623,7 +633,7 @@ Buttons (Cancel Race, Fullscreen) sind immer vollständig sichtbar — werden ni
 
 | Parameter | Typ | Default | Tooltip |
 |-----------|-----|---------|---------|
-| `minTargetScreenPx` | slider 8–64 px | 32 | "Kleinste sichtbare Sprite-Größe in Bildschirm-Px. Camera zoomt nicht weiter raus als dieser Wert erlaubt. Zu kleiner Wert: Sprites verschwinden. Wert: [x]px." |
+| `minSpritePctOfCanvas` | slider 2–15% | 5% | "Kleinste sichtbare Sprite-Größe als % der Canvas-Höhe. Skaleninvariant — gleicher visueller Eindruck auf kleinen und großen Tracks. Wert: [x]% (≈[y] px)." |
 | `maxTargetScreenPx` | slider 32–256 px | 128 | "Größte zulässige Sprite-Größe in Bildschirm-Px. Camera zoomt nicht näher ran als dieser Wert erlaubt. Zu enger Abstand zu Min friert Camera-Zoom ein. Wert: [x]px." |
 
 Per-Type-Override: `getEffectiveMaxTargetScreenPx()` analog zu existierendem `getEffectiveMinTargetScreenPx()`
