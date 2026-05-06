@@ -10,7 +10,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+    battleGapThreshold: 0.05,
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
   })),
@@ -21,7 +21,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+    battleGapThreshold: 0.05,
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
   },
@@ -37,7 +37,7 @@ function freshConfig(overrides = {}) {
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+    battleGapThreshold: 0.05,
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
     ...overrides,
@@ -119,10 +119,10 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(inputs.some((i) => i.value === '0.065')).toBe(true);
   });
 
-  it('shows default battleGapThreshold value 0.1', () => {
+  it('shows default battleGapThreshold value 0.05', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.1')).toBe(true);
+    expect(inputs.some((i) => i.value === '0.05')).toBe(true);
   });
 
   it('shows default maxStateDuration value 4000', () => {
@@ -148,7 +148,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
     loadCameraConfig.mockReturnValue(
       freshConfig({
         spritePctOfCanvas: { overview: 0.07, leader: 0.1, battle: 0.15, comeback: 0.09 },
-        battleGapThreshold: 0.05,
+        battleGapThreshold: 0.12, // non-default to verify reset changes the value
         maxStateDuration: 8000,
         endgameThreshold: 0.7,
       })
@@ -158,7 +158,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
-        battleGapThreshold: 0.1,
+        battleGapThreshold: 0.05,
         maxStateDuration: 4000,
         endgameThreshold: 0.85,
       })

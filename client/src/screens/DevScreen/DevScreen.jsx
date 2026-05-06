@@ -98,7 +98,7 @@ const SECTIONS = [
     id: 'camera-zoom',
     icon: '🎥',
     label: 'Camera Zoom Tuning',
-    desc: 'Zoom multipliers for leader, battle, comeback, and open-track states',
+    desc: 'Sprite size per camera state and timing rules for state transitions. Hover any field for details.',
     component: CameraZoomTuningSection,
     tier: 'advanced',
   },

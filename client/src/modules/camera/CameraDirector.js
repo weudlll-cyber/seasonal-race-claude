@@ -25,6 +25,10 @@ const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
 const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
+const POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
+const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
+const BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
+const MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
 const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
 const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
 const CANVAS_W = 1280; // reference canvas width
@@ -81,6 +85,7 @@ export class CameraDirector {
     this.offsetY = 0;
     this.targetOffsetY = 0;
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
+    this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
   }
 
@@ -167,6 +172,10 @@ export class CameraDirector {
     this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
     this._battleGapThreshold = config?.battleGapThreshold ?? BATTLE_GAP_THRESHOLD;
     this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
+    this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
+    this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
+    this._battleMaxDuration = config?.battleMaxDuration ?? BATTLE_MAX_DURATION;
+    this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
   }
 
@@ -174,7 +183,15 @@ export class CameraDirector {
   // raceState: { raceElapsed, finishedCount, winner, finishT }
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
   update(racers, ts, raceState, canvasW, canvasH) {
-    if (ts - this.stateEnteredAt >= this._maxStateDuration) {
+    const stateAge = ts - this.stateEnteredAt;
+    const stateCap =
+      this.state === CAM_STATE.BATTLE_ZOOM ? this._battleMaxDuration : this._maxStateDuration;
+    if (stateAge >= Math.max(this._minStateHoldMs, stateCap)) {
+      // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
+      // when battleMaxDuration expires while hasBattle is still true.
+      if (this.state === CAM_STATE.BATTLE_ZOOM) {
+        this._lastBattleExitTs = ts;
+      }
       this._transition(racers, ts, raceState);
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
@@ -189,7 +206,7 @@ export class CameraDirector {
     const prevEnteredAt = this.stateEnteredAt;
 
     // Record cooldown timestamp when leaving OVERVIEW
-    if (this.state === CAM_STATE.OVERVIEW) {
+    if (prevState === CAM_STATE.OVERVIEW) {
       this._lastOverviewExitTs = ts;
     }
 
@@ -199,78 +216,80 @@ export class CameraDirector {
     const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
     const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
     const hasBattle = gap01 < this._battleGapThreshold;
+    const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
 
-    const log = (reason) => {
-      if (!this._showDiagnostics || this.state === prevState) return;
-      console.warn(
-        `[CAMERA] ${prevState} → ${this.state} | reason: ${reason} | ` +
-          `gap01=${gap01.toFixed(3)}, leaderProgress=${leaderProgress.toFixed(2)}, ` +
-          `raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s, ` +
-          `stateAge=${((ts - prevEnteredAt) / 1000).toFixed(1)}s`
-      );
-    };
+    // Determine next state via priority chain
+    let nextState;
+    let reason;
 
     // Priority 1: Finish override — drama pulse on first finish, then OVERVIEW
     if (raceState.finishedCount > 0) {
       if (this._finishMomentExpiry === null) {
-        // First detection: start 1.5s drama pulse on winner
         this._finishMomentExpiry = ts + FINISH_DRAMA_DURATION;
         this._inFinishDrama = true;
-        this.state = CAM_STATE.LEADER_ZOOM;
-        this.stateEnteredAt = ts;
-        log('finish: drama pulse on first finish');
+        nextState = CAM_STATE.LEADER_ZOOM;
+        reason = 'finish: drama pulse on first finish';
       } else if (ts >= this._finishMomentExpiry) {
-        // Drama pulse expired → OVERVIEW for remaining racers
         this._inFinishDrama = false;
-        this.state = CAM_STATE.OVERVIEW;
-        this.stateEnteredAt = ts;
-        log('finish: drama expired → OVERVIEW');
+        nextState = CAM_STATE.OVERVIEW;
+        reason = 'finish: drama expired → OVERVIEW';
+      } else {
+        return; // drama still active, no state change
       }
-      // else: drama pulse still active, no state change
-      return;
     }
-
     // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
-    if (raceState.raceElapsed < START_PHASE_DURATION) {
-      this.state = CAM_STATE.OVERVIEW;
-      this.stateEnteredAt = ts;
-      log('start-phase: raceElapsed < 3000ms');
-      return;
+    else if (raceState.raceElapsed < START_PHASE_DURATION) {
+      nextState = CAM_STATE.OVERVIEW;
+      reason = 'start-phase: raceElapsed < 3000ms';
     }
-
+    // Priority 2.1: Post-start hold — force LEADER for postStartHoldMs after start phase.
+    // Prevents BATTLE from firing on natural cluster gaps at race start.
+    else if (raceState.raceElapsed < START_PHASE_DURATION + this._postStartHoldMs) {
+      nextState = CAM_STATE.LEADER_ZOOM;
+      reason = `post-start-hold: raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s`;
+    }
     // Priority 2.5: Endgame — leader past threshold → LEADER, bypasses cooldown
-    if (leaderProgress > this._endgameThreshold) {
-      this.state = CAM_STATE.LEADER_ZOOM;
-      this.stateEnteredAt = ts;
-      log(`endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`);
-      return;
+    else if (leaderProgress > this._endgameThreshold) {
+      nextState = CAM_STATE.LEADER_ZOOM;
+      reason = `endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`;
     }
-
     // Priority 3: Cooldown expired + no active battle → return to OVERVIEW
-    if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
-      this.state = CAM_STATE.OVERVIEW;
-      this.stateEnteredAt = ts;
-      log('cooldown: expired + no battle');
-      return;
+    else if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
+      nextState = CAM_STATE.OVERVIEW;
+      reason = 'cooldown: expired + no battle';
     }
-
-    // Priority 4: Battle — top-2 within battleGapThreshold of track progress
-    if (hasBattle) {
-      this.state = CAM_STATE.BATTLE_ZOOM;
-      this.stateEnteredAt = ts;
-      log(`battle: gap01=${gap01.toFixed(3)} < threshold=${this._battleGapThreshold}`);
-      return;
+    // Priority 4: Battle — top-2 within battleGapThreshold, off cooldown
+    else if (hasBattle && battleCooledDown) {
+      nextState = CAM_STATE.BATTLE_ZOOM;
+      reason = `battle: gap01=${gap01.toFixed(3)} < threshold=${this._battleGapThreshold}`;
     }
-
     // Priority 5: Default — LEADER with COMEBACK chance when last is far behind
-    if (gapLeadLast > 0.3 && gap01 >= 0.1) {
-      this.state = CAM_STATE.COMEBACK_ZOOM;
-      log(`comeback: gapLeadLast=${gapLeadLast.toFixed(3)} > 0.3, gap01=${gap01.toFixed(3)} ≥ 0.1`);
+    else if (gapLeadLast > 0.3 && gap01 >= 0.1) {
+      nextState = CAM_STATE.COMEBACK_ZOOM;
+      reason = `comeback: gapLeadLast=${gapLeadLast.toFixed(3)} > 0.3, gap01=${gap01.toFixed(3)} ≥ 0.1`;
     } else {
-      this.state = CAM_STATE.LEADER_ZOOM;
-      log('leader: default (no battle, no cooldown-OVERVIEW, no comeback)');
+      nextState = CAM_STATE.LEADER_ZOOM;
+      reason = 'leader: default (no battle, no cooldown-OVERVIEW, no comeback)';
     }
+
+    // Commit state transition
+    this.state = nextState;
     this.stateEnteredAt = ts;
+
+    // Track battle exit for cooldown (natural exits — forced exits handled in update())
+    if (prevState === CAM_STATE.BATTLE_ZOOM && nextState !== CAM_STATE.BATTLE_ZOOM) {
+      this._lastBattleExitTs = ts;
+    }
+
+    // Diagnostic log
+    if (this._showDiagnostics && nextState !== prevState) {
+      console.warn(
+        `[CAMERA] ${prevState} → ${nextState} | reason: ${reason} | ` +
+          `gap01=${gap01.toFixed(3)}, leaderProgress=${leaderProgress.toFixed(2)}, ` +
+          `raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s, ` +
+          `stateAge=${((ts - prevEnteredAt) / 1000).toFixed(1)}s`
+      );
+    }
   }
 
   // Returns the top-N racers by position — the set the camera focuses on.

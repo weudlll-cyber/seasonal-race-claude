@@ -530,7 +530,8 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 0; // exited OVERVIEW at t=0; 9000-0=9000 >= 8000 → expired
-    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    // raceElapsed > postStartHoldMs window (3000+7000=10000) so P2.1 does not fire
+    const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(midRaceRacers, 9000, rs, 1280, 720);
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
@@ -540,7 +541,8 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // 9000-3000=6000 < 8000 → NOT expired
-    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    // raceElapsed > postStartHoldMs window so P2.1 does not mask the cooldown check
+    const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(midRaceRacers, 9000, rs, 1280, 720);
     expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
   });
@@ -550,7 +552,8 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
-    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    // raceElapsed > postStartHoldMs window (10s) so P2.1 does not block BATTLE
+    const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(battleMidRacers, 9000, rs, 1280, 720);
     expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
   });
@@ -560,13 +563,14 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 0;
     // gap01=0.07 < 0.1 → comeback condition fails → LEADER_ZOOM
-    // Cooldown set to ts=9000 when leaving OVERVIEW; 9000-9000=0 < 8000 → expired guard ok
+    // Cooldown set to ts=9000 when leaving OVERVIEW; 9000-9000=0 < 8000 → cooldown check skipped
+    // raceElapsed > postStartHoldMs window so P2.1 does not interfere
     const compactRacers = [
       { t: 0.5, x: 500, y: 300, finished: false },
       { t: 0.43, x: 430, y: 300, finished: false }, // gap01=0.07, not battle, not comeback
       { t: 0.1, x: 100, y: 300, finished: false },
     ];
-    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(compactRacers, 9000, rs, 1280, 720);
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
   });
@@ -576,12 +580,13 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
+    // raceElapsed > postStartHoldMs window so P2.1 does not block COMEBACK
     const comebackRacers = [
       { t: 0.5, x: 500, y: 300, finished: false }, // leader
       { t: 0.35, x: 350, y: 300, finished: false }, // gap01=0.15 >= 0.1
       { t: 0.15, x: 150, y: 300, finished: false }, // gapLeadLast=0.35 > 0.3
     ];
-    const rs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
+    const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(comebackRacers, 9000, rs, 1280, 720);
     expect(cd.state).toBe(CAM_STATE.COMEBACK_ZOOM);
   });
@@ -857,11 +862,15 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
 // ── CameraDirector — Block X: battle trigger tunables ────────────────────────
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battleGapThreshold=0.05, _endgameThreshold=0.85', () => {
+  it('no config: fallback _maxStateDuration=8000, _battleGapThreshold=0.05, _endgameThreshold=0.85, new timing params', () => {
     const cd = new CameraDirector();
     expect(cd._maxStateDuration).toBe(8000);
     expect(cd._battleGapThreshold).toBe(0.05);
     expect(cd._endgameThreshold).toBe(0.85);
+    expect(cd._postStartHoldMs).toBe(7000);
+    expect(cd._battleCooldownMs).toBe(8000);
+    expect(cd._battleMaxDuration).toBe(6000);
+    expect(cd._minStateHoldMs).toBe(5000);
   });
 
   it('battleGapThreshold=0.10 fires BATTLE at gap=0.08 (old 0.05 threshold would not)', () => {
@@ -874,7 +883,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
     // gap01 = 0.08 — within new 0.10 threshold but not old 0.05
     const racers = [
       { t: 0.5, x: 500, y: 300, finished: false },
@@ -883,8 +892,8 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     ];
     cd.update(
       racers,
-      5000,
-      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      11000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
       1280,
       720
     );
@@ -900,15 +909,15 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     };
     const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
     cd.stateEnteredAt = 0;
-    // 4001ms elapsed — should trigger a transition
+    // 5001ms — minStateHoldMs=5000 is the effective cap (max(5000, 4000)=5000)
     cd.update(
       mockRacers(4),
-      4001,
-      { raceElapsed: 4001, finishedCount: 0, winner: null, finishT: 1.0 },
+      5001,
+      { raceElapsed: 5001, finishedCount: 0, winner: null, finishT: 1.0 },
       1280,
       720
     );
-    expect(cd.stateEnteredAt).toBe(4001); // transition fired, stateEnteredAt reset
+    expect(cd.stateEnteredAt).toBe(5001); // transition fired, stateEnteredAt reset
   });
 
   it('endgameThreshold=0.95 allows BATTLE at 90% progress (old 0.85 would block it)', () => {
@@ -921,7 +930,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
     // leader at 90% progress: below 0.95 threshold → endgame does NOT lock LEADER
     // gap01=0.08 < battleGapThreshold=0.10 → should fire BATTLE
     const racers = [
@@ -931,8 +940,8 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     ];
     cd.update(
       racers,
-      5000,
-      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      11000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
       1280,
       720
     );
@@ -971,6 +980,151 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       720
     );
     expect(cd.stateEnteredAt).toBe(0); // stateEnteredAt unchanged → no transition
+  });
+});
+
+// ── CameraDirector — Phase-4 timing tunables (D1–D4) ─────────────────────────
+
+const tightBattleRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → hasBattle
+  { t: 0.2, x: 200, y: 300, finished: false },
+];
+
+describe('CameraDirector — D1: postStartLeaderHold', () => {
+  it('no BATTLE before 10s even with tight gap (raceElapsed=9999)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    // stateAge=9000 >= max(5000,8000)=8000 → transition fires
+    cd.update(
+      tightBattleRacers,
+      9000,
+      { raceElapsed: 9999, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    // P2.1: raceElapsed=9999 < 3000+7000=10000 → forced LEADER, no BATTLE
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE allowed after postStartHold window (raceElapsed=10001)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 5000; // cooldown not expired (10001-5000=5001 < 8000) → P3 skipped
+    // stateAge=10001 >= max(5000,8000)=8000 → transition fires
+    cd.update(
+      tightBattleRacers,
+      10001,
+      { raceElapsed: 10001, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    // P2.1 does NOT fire (raceElapsed >= 10000); P4: hasBattle=true, battleCooledDown=true
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+});
+
+describe('CameraDirector — D2: battleCooldown', () => {
+  it('no BATTLE within 8s of last battle exit', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastBattleExitTs = 5000; // ts=12000: 12000-5000=7000 < 8000 → not cooled
+    cd._lastOverviewExitTs = 5000; // overview cooldown not expired → P3 skipped
+    cd.update(
+      tightBattleRacers,
+      12000,
+      { raceElapsed: 12000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE fires after 8s battle cooldown', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastBattleExitTs = 3000; // ts=11001: 11001-3000=8001 >= 8000 → cooled
+    cd._lastOverviewExitTs = 5000; // overview cooldown not expired (11001-5000=6001 < 8000) → P3 skipped
+    cd.update(
+      tightBattleRacers,
+      11001,
+      { raceElapsed: 11001, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+});
+
+describe('CameraDirector — D3: battleMaxDuration', () => {
+  it('no transition before 6s in BATTLE state', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    // stateAge=5999 < max(5000, 6000)=6000 → no transition
+    cd.update(
+      tightBattleRacers,
+      5999,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.stateEnteredAt).toBe(0); // unchanged — no transition fired
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE exits after 6s even with gap still tight; _lastBattleExitTs is set', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 1000; // overview cooldown not expired (6001-1000=5001 < 8000)
+    // stateAge=6001 >= max(5000, 6000)=6000 → transition fires; battle cooldown blocks re-entry
+    cd.update(
+      tightBattleRacers,
+      6001,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+    expect(cd._lastBattleExitTs).toBe(6001);
+  });
+});
+
+describe('CameraDirector — D4: minStateHold', () => {
+  it('no transition before minStateHoldMs (5s) even when maxStateDuration < 5s', () => {
+    const smallCapConfig = { ...pctConfig, maxStateDuration: 2000 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, smallCapConfig);
+    cd.stateEnteredAt = 0;
+    // stateAge=4999 < max(5000, 2000)=5000 → no transition
+    cd.update(
+      mockRacers(4),
+      4999,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.stateEnteredAt).toBe(0); // unchanged — minStateHold blocks early exit
+  });
+
+  it('transition fires at minStateHoldMs when maxStateDuration is smaller', () => {
+    const smallCapConfig = { ...pctConfig, maxStateDuration: 2000 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, smallCapConfig);
+    cd.stateEnteredAt = 0;
+    // stateAge=5000 >= max(5000, 2000)=5000 → transition fires
+    cd.update(
+      mockRacers(4),
+      5000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.stateEnteredAt).toBe(5000);
   });
 });
 

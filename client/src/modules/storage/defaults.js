@@ -136,9 +136,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
-  battleGapThreshold: 0.1,
+  battleGapThreshold: 0.05,
   maxStateDuration: 4000,
   endgameThreshold: 0.85,
+  // Timing tunables
+  postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
+  battleMaxDuration: 6000, // ms before BATTLE is force-exited regardless of gap
+  battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
+  minStateHoldMs: 5000, // minimum ms any state is held before re-evaluation
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
