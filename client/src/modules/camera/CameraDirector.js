@@ -8,6 +8,9 @@
 //              COMEBACK_ZOOM states, lerp-smoothed zoom and pan.
 // ============================================================
 
+import { getPanTarget } from './panTarget.js';
+import { resolveCamera } from './resolveCamera.js';
+
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
   LEADER_ZOOM: 'LEADER_ZOOM',
@@ -39,13 +42,12 @@ const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
 const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
+const DEFAULT_INNER_FRAME_PCT = 0.7;
 
 export class CameraDirector {
   /**
-   * @param {{ minX: number, minY: number, maxX: number, maxY: number }} [bbox]
-   *   Track bounding box in canvas pixels. Defaults to the full 1280×720 canvas.
-   * @param {number} [worldW=1280]  World width in pixels — used to compute adaptive zoom.
-   * @param {number} [_worldH=720]  World height in pixels (reserved for future vertical scaling).
+   * @param {number} [worldW=1280]  World width in pixels — used to compute adaptive zoom and pan bounds.
+   * @param {number} [worldH=720]   World height in pixels — used for pan bounds.
    * @param {boolean} [isOpenTrack=false]
    *   Open tracks render without bsX (effectiveZoom = BASE × cam.zoom), so overviewZoom
    *   must shrink cam.zoom to fit the world. Closed tracks apply bsX on top of cam.zoom
@@ -61,16 +63,17 @@ export class CameraDirector {
    *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
    */
   constructor(
-    bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 },
     worldW = 1280,
-    _worldH = 720,
+    worldH = 720,
     isOpenTrack = false,
     config = null,
     referenceSpriteSize = 0
   ) {
-    this._bbox = bbox;
     this._isOpenTrack = isOpenTrack;
     this._worldW = worldW;
+    this._worldBounds = { minX: 0, minY: 0, maxX: worldW, maxY: worldH };
+    this._bsX = CANVAS_W / worldW;
+    this._bsY = CANVAS_H_REF / worldH;
     this._referenceSpriteSize = referenceSpriteSize;
     // Adaptive overview zoom: shows the entire world at cam.zoom=overviewZoom.
     // For closed tracks, OVERVIEW uses cam.zoom=1 (bsX handles world mapping).
@@ -164,6 +167,7 @@ export class CameraDirector {
     this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
     this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
     this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
+    this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
   }
 
   /**
@@ -333,91 +337,108 @@ export class CameraDirector {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
   }
 
+  // Compute the Y offset for closed tracks using bsY (may differ from bsX on non-square worlds).
+  // effZoomX = resolved.effectiveZoom = cam.zoom * bsX; effZoomY = cam.zoom * bsY.
+  _closedOffsetY(targetY, effZoomX, canvasH) {
+    const camZoom = effZoomX / this._bsX;
+    const effZoomY = camZoom * this._bsY;
+    const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoomY);
+    const idealCamY = targetY - canvasH / (2 * effZoomY);
+    const camY = Math.max(this._worldBounds.minY, Math.min(camYMax, idealCamY));
+    return -camY * effZoomY;
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
-    const hw = canvasW / 2;
-    const hh = canvasH / 2;
+    const frameSize = { width: canvasW, height: canvasH };
+    // minEffZoom = overview effZoom for closed tracks: cam.zoom=1 → effZoom = 1 * bsX = bsX
+    const minEffZoom = this._bsX;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
-        // During start phase, pan to the full-field centroid so no racer is cropped
-        // off-screen in the starting grid. After start phase, follow only the top-N.
-        // When overviewZoom < 1 (worldW > canvasW), edgeLoX > 0 so the world-edge clamp
-        // below centers the view rather than clamping — correct for full-world OVERVIEW.
-        const panRacers =
-          raceState && raceState.raceElapsed < START_PHASE_DURATION ? racers : focusRacers;
-        const panSrc = panRacers.length ? panRacers : focusRacers;
-        const cx = panSrc.length ? panSrc.reduce((s, r) => s + r.x, 0) / panSrc.length : hw;
-        const cy = panSrc.length ? panSrc.reduce((s, r) => s + r.y, 0) / panSrc.length : hh;
-        // Open tracks: shrink cam.zoom so effZoom (= BASE × cam.zoom) shows the full world.
-        // Closed tracks: cam.zoom stays 1; bsX (= CANVAS_W/worldW) handles world-to-canvas
-        // scaling independently, so applying overviewZoom here would double-scale and produce
-        // black bars (effScale = overviewZoom × bsX = 0.694 on a 1536px world).
+        // During start phase, pan to the full-field centroid so no racer is cropped.
+        // After start phase, follow only the top-N.
+        const panSrc =
+          raceState && raceState.raceElapsed < START_PHASE_DURATION
+            ? racers.length
+              ? racers
+              : focusRacers
+            : focusRacers;
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
-        this.targetOffsetX = hw - cx * this.overviewZoom;
-        this.targetOffsetY = hh - cy * this.overviewZoom;
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc);
+          const resolved = resolveCamera({
+            targetWorld: target,
+            desiredEffZoom: minEffZoom, // effZoom at OVERVIEW = 1 * bsX
+            worldBounds: this._worldBounds,
+            frameSize,
+            innerFramePct: this._innerFramePct,
+            minEffZoom,
+          });
+          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
+          this.targetZoom = resolved.effectiveZoom / this._bsX;
+        }
         break;
       }
 
       case CAM_STATE.LEADER_ZOOM: {
-        const r = focusRacers[0];
-        if (r) {
-          this.targetZoom = this._leaderZoom;
-          this.targetOffsetX = hw - r.x * this._leaderZoom;
-          this.targetOffsetY = hh - r.y * this._leaderZoom;
+        this.targetZoom = this._leaderZoom;
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers);
+          const resolved = resolveCamera({
+            targetWorld: target,
+            desiredEffZoom: this._leaderZoom * this._bsX,
+            worldBounds: this._worldBounds,
+            frameSize,
+            innerFramePct: this._innerFramePct,
+            minEffZoom,
+          });
+          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
+          this.targetZoom = resolved.effectiveZoom / this._bsX;
         }
         break;
       }
 
       case CAM_STATE.BATTLE_ZOOM: {
-        const top2 = focusRacers.slice(0, 2);
-        const cx = top2.reduce((s, r) => s + r.x, 0) / top2.length;
-        const cy = top2.reduce((s, r) => s + r.y, 0) / top2.length;
         this.targetZoom = this._battleZoom;
-        this.targetOffsetX = hw - cx * this._battleZoom;
-        this.targetOffsetY = hh - cy * this._battleZoom;
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers);
+          const resolved = resolveCamera({
+            targetWorld: target,
+            desiredEffZoom: this._battleZoom * this._bsX,
+            worldBounds: this._worldBounds,
+            frameSize,
+            innerFramePct: this._innerFramePct,
+            minEffZoom,
+          });
+          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
+          this.targetZoom = resolved.effectiveZoom / this._bsX;
+        }
         break;
       }
 
       case CAM_STATE.COMEBACK_ZOOM: {
-        // Target 3rd-place (bottom of top-N) rather than last-place, keeping the
-        // camera near the main field even when last-place lags far behind.
-        const target = focusRacers[focusRacers.length - 1];
-        if (target) {
-          this.targetZoom = this._comebackZoom;
-          this.targetOffsetX = hw - target.x * this._comebackZoom;
-          this.targetOffsetY = hh - target.y * this._comebackZoom;
+        this.targetZoom = this._comebackZoom;
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers);
+          const resolved = resolveCamera({
+            targetWorld: target,
+            desiredEffZoom: this._comebackZoom * this._bsX,
+            worldBounds: this._worldBounds,
+            frameSize,
+            innerFramePct: this._innerFramePct,
+            minEffZoom,
+          });
+          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
+          this.targetZoom = resolved.effectiveZoom / this._bsX;
         }
         break;
       }
     }
-
-    // Clamp so the track bounding box never drifts entirely off-screen
-    const b = this._bbox;
-    this.targetOffsetX = this._clampOffset(
-      this.targetOffsetX,
-      b.minX,
-      b.maxX,
-      canvasW,
-      this.targetZoom
-    );
-    this.targetOffsetY = this._clampOffset(
-      this.targetOffsetY,
-      b.minY,
-      b.maxY,
-      canvasH,
-      this.targetZoom
-    );
-
-    // World-edge clamp: prevent positive offsets that expose the black canvas
-    // background when the world fits entirely within the viewport.
-    // If zoom < 1 and world fits, center instead of leaving a black strip.
-    const edgeLoX = canvasW * (1 - this.targetZoom);
-    const edgeLoY = canvasH * (1 - this.targetZoom);
-    this.targetOffsetX =
-      edgeLoX > 0 ? edgeLoX / 2 : Math.max(edgeLoX, Math.min(0, this.targetOffsetX));
-    this.targetOffsetY =
-      edgeLoY > 0 ? edgeLoY / 2 : Math.max(edgeLoY, Math.min(0, this.targetOffsetY));
   }
 
   /**
@@ -426,20 +447,5 @@ export class CameraDirector {
    */
   get hudState() {
     return this._inFinishDrama ? 'FINISH' : this.state;
-  }
-
-  // Clamps a camera offset so no black strips appear and, when the track bbox fits
-  // in the viewport, the entire track stays visible.
-  //
-  //   a = -bboxMin * zoom          → offset where world-left aligns to canvas-left
-  //   b = canvasSize - bboxMax*zoom → offset where world-right aligns to canvas-right
-  //
-  // When b ≤ a (world wider than viewport): pan freely within [b, a] — no black strips.
-  // When b > a (track fits in viewport):    keep track fully visible within [a, b].
-  // Both cases reduce to clamp(val, min(a,b), max(a,b)).
-  _clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
-    const a = 0 - bboxMin * zoom; // 0 - avoids -0 when bboxMin is 0
-    const b = canvasSize - bboxMax * zoom;
-    return Math.max(Math.min(a, b), Math.min(Math.max(a, b), val));
   }
 }
