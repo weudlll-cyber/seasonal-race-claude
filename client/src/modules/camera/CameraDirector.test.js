@@ -709,6 +709,23 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
+  it('drama exits after 1.5s without minStateHold override — finishDramaExpired bypass', () => {
+    // stateEnteredAt is NOT reset here — this tests the real bypass path.
+    // Before the fix, _transition() would not fire until max(5000,8000)=8000ms after drama start.
+    const cd = new CameraDirector();
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true },
+      { t: 0.8, x: 500, y: 300, finished: false },
+    ];
+    const rs = { raceElapsed: 9000, finishedCount: 1, winner: racers[0], finishT: 1.0 };
+    cd.update(racers, 9000, rs, 1280, 720); // stateEnteredAt=9000, _finishMomentExpiry=10500
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // 1.6s later — stateAge=1600 < minStateHoldMs(5000), but drama is expired (ts > 10500)
+    cd.update(racers, 10600, { ...rs, raceElapsed: 10600 }, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd.stateEnteredAt).toBe(10600);
+  });
+
   it('OVERVIEW after drama pulse is stable — does not flip back to LEADER on next transition', () => {
     // After the drama pulse expires and state = OVERVIEW, the next _transition() call
     // (triggered by MAX_STATE_DURATION) must keep OVERVIEW, not re-enter LEADER_ZOOM.

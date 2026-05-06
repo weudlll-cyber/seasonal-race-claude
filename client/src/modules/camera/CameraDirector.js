@@ -202,7 +202,10 @@ export class CameraDirector {
     const stateAge = ts - this.stateEnteredAt;
     const stateCap =
       this.state === CAM_STATE.BATTLE_ZOOM ? this._battleMaxDurationMs : this._maxStateDuration;
-    if (stateAge >= Math.max(this._minStateHoldMs, stateCap)) {
+    // Finish-drama is exempt from minStateHoldMs: when the 1500ms pulse expires, transition
+    // immediately regardless of how long the state has been held.
+    const finishDramaExpired = this._inFinishDrama && ts >= this._finishMomentExpiry;
+    if (stateAge >= Math.max(this._minStateHoldMs, stateCap) || finishDramaExpired) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
