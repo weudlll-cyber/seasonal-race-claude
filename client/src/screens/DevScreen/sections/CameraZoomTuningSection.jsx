@@ -42,6 +42,13 @@ function CameraZoomTuningSection() {
       battleGapThreshold: DEFAULT_CAMERA_CONFIG.battleGapThreshold,
       maxStateDuration: DEFAULT_CAMERA_CONFIG.maxStateDuration,
       endgameThreshold: DEFAULT_CAMERA_CONFIG.endgameThreshold,
+      postStartHoldMs: DEFAULT_CAMERA_CONFIG.postStartHoldMs,
+      battleCooldownMs: DEFAULT_CAMERA_CONFIG.battleCooldownMs,
+      battleMaxDurationMs: DEFAULT_CAMERA_CONFIG.battleMaxDurationMs,
+      minStateHoldMs: DEFAULT_CAMERA_CONFIG.minStateHoldMs,
+      cameraTransitionSeconds: DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds,
+      overviewCooldownMin: DEFAULT_CAMERA_CONFIG.overviewCooldownMin,
+      overviewCooldownMax: DEFAULT_CAMERA_CONFIG.overviewCooldownMax,
     }));
   }
 
@@ -240,6 +247,174 @@ function CameraZoomTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0.5 && v <= 1.0) set('endgameThreshold', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Post-Start LEADER Hold
+              <InfoTooltip
+                text={`After the initial 3s OVERVIEW, hold LEADER state for this duration before BATTLE can trigger. Value: ${(config.postStartHoldMs / 1000).toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={15000}
+              step={500}
+              value={config.postStartHoldMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 15000) set('postStartHoldMs', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              BATTLE Cooldown
+              <InfoTooltip
+                text={`Minimum time after BATTLE ends before a new BATTLE can trigger. Value: ${(config.battleCooldownMs / 1000).toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={20000}
+              step={500}
+              value={config.battleCooldownMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 20000) set('battleCooldownMs', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              BATTLE Max Duration
+              <InfoTooltip
+                text={`Hard cap on BATTLE state duration. Forces exit to LEADER even if racers still close. Value: ${(config.battleMaxDurationMs / 1000).toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={2000}
+              max={15000}
+              step={500}
+              value={config.battleMaxDurationMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 2000 && v <= 15000) set('battleMaxDurationMs', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Minimum State Hold
+              <InfoTooltip
+                text={`Global minimum time in any state (except Finish-Drama) to prevent rapid switching. Value: ${(config.minStateHoldMs / 1000).toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={10000}
+              step={500}
+              value={config.minStateHoldMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('minStateHoldMs', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Camera Transition Speed
+              <InfoTooltip
+                text={`Time for camera zoom to settle into new state. Lower = snappier, higher = more cinematic. Value: ${config.cameraTransitionSeconds.toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.5}
+              max={4.0}
+              step={0.1}
+              value={config.cameraTransitionSeconds}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.5 && v <= 4.0) set('cameraTransitionSeconds', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Periodic OVERVIEW — Min Interval
+              <InfoTooltip
+                text={`Minimum time between automatic OVERVIEW cuts during a race. Value: ${(config.overviewCooldownMin / 1000).toFixed(0)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={5000}
+              max={60000}
+              step={1000}
+              value={config.overviewCooldownMin}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 5000 && v < config.overviewCooldownMax) set('overviewCooldownMin', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Periodic OVERVIEW — Max Interval
+              <InfoTooltip
+                text={`Maximum time between automatic OVERVIEW cuts. Actual interval is randomly rolled between min and max each time OVERVIEW exits. Value: ${(config.overviewCooldownMax / 1000).toFixed(0)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={5000}
+              max={60000}
+              step={1000}
+              value={config.overviewCooldownMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > config.overviewCooldownMin && v <= 60000) set('overviewCooldownMax', v);
               }}
             />
           </div>
