@@ -474,6 +474,33 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminiert. Closed/Open-Track-Math-Pipelines durch
   einheitliche effZoom-basierte Berechnung vereinheitlicht.
 
+- **Q-28** — Shared HTTP helper for API services *(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)*
+  `client/src/services/surfaceClassApi.js` and `client/src/services/trackApi.js` share 48 lines of
+  identical `apiCall`/`withTimeout` infrastructure — both services copied the same HTTP wrapper.
+  Fix: extract shared helper (e.g. `services/apiUtils.js`), update both callers.
+  Estimated effort: ~1h.
+
+- **Q-29** — Shared RangeSliderSection component *(Post-Phase-4 audit 2026-05-06, Severity: LOW)*
+  Three Phase-4 Dev-Screen sections share a 36-line slider pattern:
+  `NameTagVisibilitySection.jsx`, `SpriteSizeRangeSection.jsx`, `CameraZoomTuningSection.jsx`.
+  Extract into a shared `RangeSliderSection` component before more Dev-Screen sections are added.
+  Estimated effort: ~2h.
+
+- **Q-30** — React 18 → 19 + react-router-dom 6 → 7 migration *(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)*
+  Current: `react@18.3.1`, `react-dom@18.3.1`, `react-router-dom@6.30.3`. Latest: `react@19.2.6`,
+  `react-router-dom@7.15.0`. Both have breaking API changes — no npm-audit vulnerability, but the
+  version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
+  avoid accumulating migration debt. Estimated effort: 1–2 days (route definitions + React API).
+
+- **Q-31** — Long files — updated watch list after Phase-4-Merge *(Post-Phase-4 audit 2026-05-06, Severity: LOW — information)*
+  Line counts after Phase-4-Merge (`8eb16e0`). No immediate action — split at next feature-touch
+  opportunity; Q-6 and Q-7 already planned for TrackEditor and RaceScreen.
+  - `TrackEditor/TrackEditor.jsx`: **1447 lines** (was ~1200, Q-6)
+  - `RaceScreen/index.jsx`: **1179 lines** (was ~1032, Q-7)
+  - `DevScreen/sections/RaceTuningSection.jsx`: **1046 lines** (new — added to watch list)
+  - `SetupScreen/SetupScreen.jsx`: **809 lines** (new — added to watch list)
+  - `DevScreen/sections/TrackManager.jsx`: **727 lines** (was 535, Q-8)
+
 ### Phase V (Verification-Sprint)
 
 Systematischer Test der noch unverifizierten Bereiche:

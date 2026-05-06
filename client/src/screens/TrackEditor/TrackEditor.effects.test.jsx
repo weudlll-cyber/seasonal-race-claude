@@ -222,9 +222,7 @@ describe('TrackEditor background image loading effect', () => {
   });
 
   it('loads an image and sets bgRef when backgroundImage is a URL', async () => {
-    let capturedImg = null;
     vi.spyOn(globalThis, 'Image').mockImplementation(function () {
-      capturedImg = this;
       Object.defineProperty(this, 'src', {
         set: () => {
           queueMicrotask(() => this.onload?.());
