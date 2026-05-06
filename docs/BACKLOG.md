@@ -531,6 +531,13 @@ aus D3.5.5.
   Animations-Loop vorhanden. Wurde als TODO in `RaceScreen/index.jsx` geführt und in Cleanup PR 2/3
   (audit-2026-04-29.md) ins Backlog überführt.
 
+- **DIAG-OpenTrackPan** — Open-Track-Pan-Verifikation nach Phase-4-Merge *(Priorität: niedrig)*
+  Diagnose-Session 2026-05-06: Space Sprint Browser-Test zeigte BATTLE-Pan möglicherweise außerhalb
+  des Racer-Clusters. Unklar ob echter Bug in `openTrackCamera.js` / `openTrackPanTarget()` oder
+  Browser-State-Artefakt (Browser-Zoom war in derselben Session als Fehlerquelle bekannt).
+  CameraDirector's `cam.offsetX/Y` sind für Open-Tracks irrelevant — `st.camX/Y` via
+  `openTrackPanTarget()` steuern den Pan. Separater Browser-Test nach Phase-4-Merge klären.
+
 ---
 
 ## Parking Lot — Zukunft / unklarer Scope

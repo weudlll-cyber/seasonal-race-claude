@@ -1645,91 +1645,100 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
   });
 });
 
-// ── CameraDirector — pan-offset bsX scaling (Befund C, Phase-4 fix) ──────────
-// Render pipeline for closed tracks: screen_x = r.x × cam.zoom × bsX + offsetX.
-// For centering: offsetX = hw - r.x × cam.zoom × bsX = hw - r.x × _computePanScale(zoom).
-// Tests use worldW=1536 (bsX≈0.833) — the track from the browser-test that exposed the bug.
+// ── CameraDirector — trivial pan formula (canvas-space coordinate verification) ──────────
+// Render pipeline for closed tracks: screen_x = worldX × cam.zoom × bsX + offsetX.
+// scaledRacersForCam in RaceScreen delivers canvas-space to CameraDirector: r.x = worldX × bsX.
+// Trivial formula: offsetX = hw - r.x × zoom  →  screen_x = hw (provably centered).
+// Tests pass canvas-space to CameraDirector (simulating scaledRacersForCam) and world-space
+// to the render-formula helpers. worldW=1536 (bsX≈0.833); worldH=720 so bsY=1.0 on Dirt Oval.
 
-describe('CameraDirector — pan-offset bsX scaling (closed tracks)', () => {
-  // Helper: given a CameraDirector and a racer position, compute where that racer
-  // lands on screen after 200 lerp iterations with no clamping.
-  // screen_x = r.x × cam.zoom × bsX + cam.offsetX
-  function screenX(cd, racerX, worldW) {
+describe('CameraDirector — trivial pan centering (closed tracks)', () => {
+  // Render-pipeline formula for closed tracks.
+  // racerX/racerY must be world-space (as drawn by drawRacers with ctx.scale(zoom×bsX, zoom×bsY)).
+  function screenX(cd, worldX, worldW) {
     const bsX = 1280 / worldW;
-    return racerX * cd.zoom * bsX + cd.offsetX;
+    return worldX * cd.zoom * bsX + cd.offsetX;
   }
-  function screenY(cd, racerY, worldH) {
+  function screenY(cd, worldY, worldH) {
     const bsY = 720 / worldH;
-    return racerY * cd.zoom * bsY + cd.offsetY;
+    return worldY * cd.zoom * bsY + cd.offsetY;
   }
 
-  it('LEADER_ZOOM closed worldW=1536: leader centered at hw after pan converges', () => {
-    // Reproduces Dirt Oval scenario: worldW=1536, leaderZoom≈3.22 (with 36px fallback + pct=0.16).
-    // Leader at world-x=500. Before fix: screen_x = hw - 500×3.22×(1-0.833) ≈ 372 (off by ~268px).
+  it('LEADER_ZOOM closed worldW=1536: leader centered at hw/hh after pan converges', () => {
+    // Dirt Oval scenario: bsX=0.833, bsY=1.0.
+    // worldX=350 is within centerable range (≥ hw / (bsX × leaderZoom) ≈ 200 for pct=0.16).
+    // scaledRacersForCam delivers canvas-space: leader.x = worldX × bsX, leader.y = worldY × bsY.
+    const worldW = 1536;
+    const worldH = 720;
+    const bsX = 1280 / worldW;
+    const bsY = 720 / worldH;
+    const worldX = 350;
+    const worldY = 300;
     const config = {
       ...inverseConfig,
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.16 },
     };
-    const worldW = 1536;
-    const baseSize = 36;
-    const cd = new CameraDirector(undefined, worldW, 720, false, config, baseSize);
+    const cd = new CameraDirector(undefined, worldW, worldH, false, config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
-    const leader = { t: 1, x: 500, y: 360, finished: false };
+    const leader = { t: 1, x: worldX * bsX, y: worldY * bsY, finished: false };
     for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
-    const sx = screenX(cd, leader.x, worldW);
-    expect(sx).toBeCloseTo(640, 0); // centered at hw=640
+    expect(screenX(cd, worldX, worldW)).toBeCloseTo(640, 0);
+    expect(screenY(cd, worldY, worldH)).toBeCloseTo(360, 0);
   });
 
-  it('BATTLE_ZOOM closed worldW=1536: centroid centered at hw after pan converges', () => {
+  it('BATTLE_ZOOM closed worldW=1536: centroid centered at hw/hh after pan converges', () => {
     const worldW = 1536;
-    const baseSize = 36;
-    const cd = new CameraDirector(undefined, worldW, 720, false, inverseConfig, baseSize);
+    const worldH = 720;
+    const bsX = 1280 / worldW;
+    const bsY = 720 / worldH;
+    // Top-2 world centroid: (700+500)/2=600, worldY=300
+    const worldCx = 600;
+    const worldCy = 300;
+    const cd = new CameraDirector(undefined, worldW, worldH, false, inverseConfig, 36);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
-    // Top-2 centroid at world-x=600
     const racers = [
-      { t: 0.9, x: 700, y: 300, finished: false },
-      { t: 0.8, x: 500, y: 300, finished: false },
-      { t: 0.5, x: 200, y: 300, finished: false },
+      { t: 0.9, x: 700 * bsX, y: worldCy * bsY, finished: false },
+      { t: 0.8, x: 500 * bsX, y: worldCy * bsY, finished: false },
+      { t: 0.5, x: 200 * bsX, y: worldCy * bsY, finished: false },
     ];
     for (let i = 0; i < 400; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
-    const cx = (700 + 500) / 2; // 600
-    const sx = screenX(cd, cx, worldW);
-    expect(sx).toBeCloseTo(640, 0);
+    expect(screenX(cd, worldCx, worldW)).toBeCloseTo(640, 0);
+    expect(screenY(cd, worldCy, worldH)).toBeCloseTo(360, 0);
   });
 
-  it('COMEBACK_ZOOM closed worldW=1536: 3rd-place racer centered at hw after pan converges', () => {
-    // comebackZoom ≈ 1.56, panScale = 1.56×0.833 ≈ 1.30.
-    // Centerable range: x ∈ [492, 1044] so world-edge clamp does not interfere.
+  it('COMEBACK_ZOOM closed worldW=1536: 3rd-place racer centered at hw/hh after pan converges', () => {
+    // 3rd-place (bottom of top-N=3) is the COMEBACK target.
     const worldW = 1536;
-    const baseSize = 36;
-    const cd = new CameraDirector(undefined, worldW, 720, false, inverseConfig, baseSize);
+    const worldH = 720;
+    const bsX = 1280 / worldW;
+    const bsY = 720 / worldH;
+    const worldX = 700;
+    const worldY = 360;
+    const cd = new CameraDirector(undefined, worldW, worldH, false, inverseConfig, 36);
     cd.state = CAM_STATE.COMEBACK_ZOOM;
     cd.stateEnteredAt = 1000;
     const racers = [
-      { t: 0.9, x: 900, y: 360, finished: false }, // 1st
-      { t: 0.7, x: 800, y: 360, finished: false }, // 2nd
-      { t: 0.5, x: 700, y: 360, finished: false }, // 3rd — targeted; x=700 is in centerable range
+      { t: 0.9, x: 900 * bsX, y: worldY * bsY, finished: false }, // 1st
+      { t: 0.7, x: 800 * bsX, y: worldY * bsY, finished: false }, // 2nd
+      { t: 0.5, x: worldX * bsX, y: worldY * bsY, finished: false }, // 3rd — targeted
     ];
     for (let i = 0; i < 400; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
-    const sx = screenX(cd, 700, worldW);
-    expect(sx).toBeCloseTo(640, 0);
+    expect(screenX(cd, worldX, worldW)).toBeCloseTo(640, 0);
+    expect(screenY(cd, worldY, worldH)).toBeCloseTo(360, 0);
   });
 
-  it('open track worldW=6000: pan uses offsetX which is not applied in render (st.camX/Y path)', () => {
-    // Open tracks ignore cam.offsetX in rendering. _computePanScale returns zoom (no bsX)
-    // for open tracks, which keeps the field consistent — no functional change vs pre-fix.
+  it('open track worldW=6000: cam.offsetX not used in render (st.camX/Y path) — no crash', () => {
+    // Open tracks ignore cam.offsetX/Y — st.camX/Y from openTrackPanTarget() are used instead.
+    // Trivial formula applies without bsX factor; visual output unaffected by offsetX/Y.
     const worldW = 6000;
-    const baseSize = 36;
-    const cd = new CameraDirector(undefined, worldW, 720, true, inverseConfig, baseSize);
+    const bsX = 1280 / worldW;
+    const cd = new CameraDirector(undefined, worldW, 720, true, inverseConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
-    const leader = { t: 1, x: 500, y: 360, finished: false };
+    const leader = { t: 1, x: 500 * bsX, y: 360, finished: false };
     for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
-    // Formula: targetOffsetX = hw - r.x × leaderZoom (no bsX for open track)
-    // Not tested for screen centering (open tracks use different pan system).
-    // Just verify no crash and zoom is positive.
     expect(cd.zoom).toBeGreaterThan(0);
     expect(isFinite(cd.offsetX)).toBe(true);
   });
