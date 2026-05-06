@@ -135,6 +135,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
+  showCameraDiagnostics: false,
   battleGapThreshold: 0.1,
   maxStateDuration: 4000,
   endgameThreshold: 0.85,

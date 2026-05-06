@@ -56,6 +56,7 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
+import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -123,6 +124,10 @@ export default function RaceScreen() {
   const [showCameraStateHud] = useState(() => {
     const cfg = loadCameraConfig();
     return cfg.showCameraStateHud ?? true;
+  });
+  const [showCameraDiagnostics] = useState(() => {
+    const cfg = loadCameraConfig();
+    return cfg.showCameraDiagnostics ?? false;
   });
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
@@ -1101,6 +1106,7 @@ export default function RaceScreen() {
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
+          <CameraDiagnosticsHUD cameraRef={camDirRef} visible={showCameraDiagnostics} />
         </div>
 
         <aside className="race-hud">
