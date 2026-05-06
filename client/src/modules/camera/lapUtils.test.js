@@ -13,7 +13,6 @@ import {
   currentLap,
   estimatedSecondsPerLap,
   openTrackDurationRange,
-  REFERENCE_FPS,
 } from './lapUtils.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 

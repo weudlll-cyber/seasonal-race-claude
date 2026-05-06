@@ -10,7 +10,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { computeSpeedBonus } from '../../modules/rowLayout.js';
-import { REFERENCE_FPS } from '../../modules/camera/lapUtils.js';
 
 // ── Jitter amplitude scaling ───────────────────────────────────────────────────
 
