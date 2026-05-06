@@ -49,6 +49,7 @@ function CameraZoomTuningSection() {
       cameraTransitionSeconds: DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds,
       overviewCooldownMin: DEFAULT_CAMERA_CONFIG.overviewCooldownMin,
       overviewCooldownMax: DEFAULT_CAMERA_CONFIG.overviewCooldownMax,
+      targetInnerFramePct: DEFAULT_CAMERA_CONFIG.targetInnerFramePct,
     }));
   }
 
@@ -415,6 +416,30 @@ function CameraZoomTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > config.overviewCooldownMin && v <= 60000) set('overviewCooldownMax', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Target Inner Frame %
+              <InfoTooltip
+                text={`The pan target must land within this fraction of the canvas on each axis. If it doesn't fit at the configured zoom, zoom is reduced in 10% steps until it does. Lower = more lenient (target near edge is OK); higher = stricter centering. Value: ${((config.targetInnerFramePct ?? 0.7) * 100).toFixed(0)}%.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.3}
+              max={0.95}
+              step={0.05}
+              value={config.targetInnerFramePct ?? 0.7}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.3 && v <= 0.95) set('targetInnerFramePct', v);
               }}
             />
           </div>

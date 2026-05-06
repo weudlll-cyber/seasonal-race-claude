@@ -147,6 +147,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   cameraTransitionSeconds: 1.5, // lerp time constant — 90% convergence ≈ 3.45× this value at 60fps
   overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
   overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
+  // Pan target frame: target racer must land within this fraction of the canvas (each axis).
+  // resolveCamera reduces zoom in 10% steps until satisfied or OVERVIEW effZoom is reached.
+  targetInnerFramePct: 0.7, // 70% = target must be within central 70% of canvas
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
