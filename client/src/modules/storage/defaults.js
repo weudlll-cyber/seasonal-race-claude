@@ -145,8 +145,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   minStateHoldMs: 5000, // minimum ms any state is held before re-evaluation
   cameraTransitionSeconds: 1.5, // lerp time constant — 90% convergence ≈ 3.45× this value at 60fps
-  overviewCooldownMin: 6000, // min ms after leaving OVERVIEW before it can recur
-  overviewCooldownMax: 10000, // max ms — jittered each exit for TV-style variety
+  overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
+  overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {

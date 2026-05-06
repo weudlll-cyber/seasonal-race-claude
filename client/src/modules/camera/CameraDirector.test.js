@@ -529,7 +529,8 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 0; // exited OVERVIEW at t=0; 9000-0=9000 >= 8000 → expired
+    cd._lastOverviewExitTs = 0; // exited OVERVIEW at t=0
+    cd._overviewCooldownDuration = 8000; // fix to known value: 9000-0=9000 >= 8000 → expired
     // raceElapsed > postStartHoldMs window (3000+7000=10000) so P2.1 does not fire
     const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(midRaceRacers, 9000, rs, 1280, 720);
@@ -540,7 +541,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 3000; // 9000-3000=6000 < 8000 → NOT expired
+    cd._lastOverviewExitTs = 3000; // 9000-3000=6000 < 20000 (default mean) → NOT expired
     // raceElapsed > postStartHoldMs window so P2.1 does not mask the cooldown check
     const rs = { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(midRaceRacers, 9000, rs, 1280, 720);
@@ -1082,7 +1083,7 @@ describe('CameraDirector — D3: battleMaxDuration', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 1000; // overview cooldown not expired (6001-1000=5001 < 8000)
+    cd._lastOverviewExitTs = 1000;
     // stateAge=6001 >= max(5000, 6000)=6000 → transition fires; battle cooldown blocks re-entry
     cd.update(
       tightBattleRacers,
@@ -1093,6 +1094,26 @@ describe('CameraDirector — D3: battleMaxDuration', () => {
     );
     expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
     expect(cd._lastBattleExitTs).toBe(6001);
+  });
+
+  it('battleMaxDuration hard-cap: force-exit succeeds even when gap is in hysteresis zone (0.06)', () => {
+    // Confirms hysteresis does NOT block force-exit. Mechanism: update() pre-sets
+    // _lastBattleExitTs=ts → battleCooledDown=false → P4 cannot fire → BATTLE exits to LEADER.
+    // Hysteresis (hasBattle=true via exit threshold) only prevents OVERVIEW via P3.
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 1000;
+    cd.update(
+      marginalRacers, // gap01=0.06: above entry (0.05), below exit threshold (0.07)
+      6001,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM); // hard cap fires — BATTLE exited
+    expect(cd._lastBattleExitTs).toBe(6001); // cooldown timestamp set by update() pre-transition
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM); // hasBattle=true blocks OVERVIEW → lands on LEADER
   });
 });
 
@@ -1231,10 +1252,10 @@ describe('CameraDirector — D5: cameraTransitionSeconds → _lerpFactor', () =>
 // ── CameraDirector — D5: overviewCooldown jitter ─────────────────────────────
 
 describe('CameraDirector — D5: overviewCooldown jitter', () => {
-  it('_overviewCooldownDuration initializes to (min+max)/2 mean = 8000 (deterministic)', () => {
+  it('_overviewCooldownDuration initializes to (min+max)/2 mean = 20000 (deterministic)', () => {
     const cd = new CameraDirector();
-    // Default: [6000, 10000] → mean = 8000
-    expect(cd._overviewCooldownDuration).toBe(8000);
+    // Default: [15000, 25000] → mean = 20000
+    expect(cd._overviewCooldownDuration).toBe(20000);
   });
 
   it('leaving OVERVIEW re-rolls _overviewCooldownDuration within [min, max]', () => {
@@ -1249,8 +1270,8 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
       1280,
       720
     );
-    expect(cd._overviewCooldownDuration).toBeGreaterThanOrEqual(6000);
-    expect(cd._overviewCooldownDuration).toBeLessThanOrEqual(10000);
+    expect(cd._overviewCooldownDuration).toBeGreaterThanOrEqual(15000);
+    expect(cd._overviewCooldownDuration).toBeLessThanOrEqual(25000);
   });
 
   it('P3 respects custom _overviewCooldownDuration: no OVERVIEW if elapsed < duration', () => {
