@@ -90,7 +90,6 @@ export class CameraDirector {
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
     this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
-    this._lastPanLogState = null; // diagnostic: tracks which state was last pan-logged
   }
 
   /**
@@ -366,20 +365,6 @@ export class CameraDirector {
           this.targetZoom = this._leaderZoom;
           this.targetOffsetX = hw - r.x * this._leaderZoom;
           this.targetOffsetY = hh - r.y * this._leaderZoom;
-          if (this._showDiagnostics && this.state !== this._lastPanLogState) {
-            this._lastPanLogState = this.state;
-            console.log('[PAN]', this.state, {
-              isOpenTrack: this._isOpenTrack,
-              worldW: this._worldW,
-              bsX: CANVAS_W / this._worldW,
-              targetRacer: { x: r.x, y: r.y },
-              zoom: this.targetZoom,
-              targetOffsetX: this.targetOffsetX,
-              targetOffsetY: this.targetOffsetY,
-              expectedScreenCenterX: this.targetOffsetX + r.x * this.targetZoom,
-              expectedScreenCenterY: this.targetOffsetY + r.y * this.targetZoom,
-            });
-          }
         }
         break;
       }
@@ -391,20 +376,6 @@ export class CameraDirector {
         this.targetZoom = this._battleZoom;
         this.targetOffsetX = hw - cx * this._battleZoom;
         this.targetOffsetY = hh - cy * this._battleZoom;
-        if (this._showDiagnostics && this.state !== this._lastPanLogState) {
-          this._lastPanLogState = this.state;
-          console.log('[PAN]', this.state, {
-            isOpenTrack: this._isOpenTrack,
-            worldW: this._worldW,
-            bsX: CANVAS_W / this._worldW,
-            targetRacer: { x: cx, y: cy },
-            zoom: this.targetZoom,
-            targetOffsetX: this.targetOffsetX,
-            targetOffsetY: this.targetOffsetY,
-            expectedScreenCenterX: this.targetOffsetX + cx * this.targetZoom,
-            expectedScreenCenterY: this.targetOffsetY + cy * this.targetZoom,
-          });
-        }
         break;
       }
 
@@ -416,20 +387,6 @@ export class CameraDirector {
           this.targetZoom = this._comebackZoom;
           this.targetOffsetX = hw - target.x * this._comebackZoom;
           this.targetOffsetY = hh - target.y * this._comebackZoom;
-          if (this._showDiagnostics && this.state !== this._lastPanLogState) {
-            this._lastPanLogState = this.state;
-            console.log('[PAN]', this.state, {
-              isOpenTrack: this._isOpenTrack,
-              worldW: this._worldW,
-              bsX: CANVAS_W / this._worldW,
-              targetRacer: { x: target.x, y: target.y },
-              zoom: this.targetZoom,
-              targetOffsetX: this.targetOffsetX,
-              targetOffsetY: this.targetOffsetY,
-              expectedScreenCenterX: this.targetOffsetX + target.x * this.targetZoom,
-              expectedScreenCenterY: this.targetOffsetY + target.y * this.targetZoom,
-            });
-          }
         }
         break;
       }
