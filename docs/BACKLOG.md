@@ -55,6 +55,8 @@ N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverwe
 - ✅ PR-A2: Speed-Pipeline-Architektur-Umbau — `computeRaceBaseSpeed`, speedScaleFactor entfernt, Closed-Track Duration-Slider (Model D), SpeedScaleSection entfernt (2026-05-03). **Fix-Commit 2026-05-04:** speedMultiplier-Normalisierung + spreadMinFactor (E1+E2).
 - ✅ PR-A2.5: Arc-Length-Uniform Spline Resampling + relativer Jitter (2026-05-04)
 - ✅ PR-A2.6: Race Dynamics — spreadFactor Re-Roll (±85%, 5s transition) + speedBonusMult-Trennung (2026-05-04). draftingBoost unverändert 1.10.
+- ✅ PR-A3: Dev-Panel-Reorganisation (Tier-System, Race Tuning Sektion, raceDynamicsConfig). (2026-05-04)
+- ✅ **Phase 4 (Timing Tunables + Plan-B Pan):** 7 timing tunables, battleMaxDurationMs, OVERVIEW jitter, Diagnose-HUD, `_computePanScale` entfernt, triviale Pan-Formel. (2026-05-06) — Branch: `diagnosis/camera-tuning-effectiveness`
 - PR-B: Camera-Bug-Fixes (Bug A+B+C)
 - PR-C: RaceScreen-Split (Q-7 Refactor, kein Behavior-Change)
 - PR-D: Camera-State-Machine (OVERVIEW Random-Jitter, Spannungs-Stärke-Logik, findBattleCandidate)
@@ -62,7 +64,25 @@ N=4–100 mitgedacht; Spitzengruppe = clamp(round(N×0.1), 3, 10). Parallelverwe
 - PR-F: Dev-Panel Camera-Tunables + HUD-Overlay
 - PR-G: UI-Bugs (Cancel Race + Fullscreen API)
 
-Vorgehen: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
+Vorgehen: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase-4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
+
+### 2 — Player-Group-Auswahl 🔜 PRIO 1 nach Kamera-Phase
+
+Spielleiter wählt im Setup welche Spieler-Gruppe zum Rennen antritt (z.B. "Gruppe A", "Alle", "Auswahl").
+Aktuell werden alle konfigurierten Spieler immer angezeigt — es gibt keinen Mechanismus für Teilgruppen.
+
+**Anwendungsfälle:**
+- Turnnier mit mehreren Gruppen: Nur Gruppe A fährt in Runde 1, Gruppe B in Runde 2
+- Ad-hoc-Rennen mit Teilnehmern aus der Gesamt-Roster
+- Schnellauswahl ohne alle inaktiven Spieler manuell abzuwählen
+
+**Anforderungen (Spec steht noch aus):**
+- Spieler-Gruppen in `PlayerGroupsManager` definiebar (Gruppe-Name + Spieler-Zuweisung)
+- Setup-Screen: Auswahl-Filter "Welche Gruppe fährt?" vor Race-Start
+- Keine Änderung an der Race-Engine — nur welche Spieler in `sessionStorage.activeRace` landen
+- UI-Prinzip 1: alles konfigurierbar (Gruppen-Namen, Größen, Zuweisungen) ohne Code-Änderung
+
+**Priorität:** Erste Prio nach Kamera-Phase abgeschlossen. Vor D8 (voller Racer-Editor) und Surface Zones.
 
 ---
 
@@ -262,6 +282,9 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
     - Cross-References zu ARCHITECTURE.md-Pipeline-Sektionen
   - Priorität: zusammen mit B-UX2 — Hilfe-Screen kann die Doku referenzieren oder einbinden.
     Kann auch als reiner Doku-Sprint vor B-UX2 entstehen, dann nutzt B-UX2 die Inhalte.
+
+- **B-UX-MinMax** — Dev-Panel Min/Max-Pairs UX: Silent Rejection durch visuelles Warning ersetzen, einheitlich für Speed Range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + ggf. weitere Min/Max-Pairs die später hinzukommen. Aktuell wird ein ungültiger Wert (Min > Max oder Max < Min) einfach ignoriert — kein Feedback für den User. Fix: rote Umrandung oder Inline-Text ("Min must be less than Max") wenn Grenze verletzt wird. Eigene kleine PR.
+  *(Aufgekommen bei Phase-4-Slider-Implementation 2026-05-06, Severity: LOW — aktuell konsistent mit bestehender Speed-Range-Konvention)*
 
 - **B-UX4** — Sprite-Größen-System überarbeiten
   - Aktuelles Verhalten: per-Type-Overrides (z.B. `displaySize: 50` für Rocket) sind absolute
@@ -527,6 +550,21 @@ aus D3.5.5.
   Erfordert Canvas + `requestAnimationFrame`-Mocking in jsdom. Aktuell kein Test-Infrastruktur für den
   Animations-Loop vorhanden. Wurde als TODO in `RaceScreen/index.jsx` geführt und in Cleanup PR 2/3
   (audit-2026-04-29.md) ins Backlog überführt.
+
+- **DIAG-OpenTrackPan** — Open-Track-Pan-Verifikation nach Phase-4-Merge *(Priorität: niedrig)*
+  Diagnose-Session 2026-05-06: Space Sprint Browser-Test zeigte BATTLE-Pan möglicherweise außerhalb
+  des Racer-Clusters. Unklar ob echter Bug in `openTrackCamera.js` / `openTrackPanTarget()` oder
+  Browser-State-Artefakt (Browser-Zoom war in derselben Session als Fehlerquelle bekannt).
+  CameraDirector's `cam.offsetX/Y` sind für Open-Tracks irrelevant — `st.camX/Y` via
+  `openTrackPanTarget()` steuern den Pan. Separater Browser-Test nach Phase-4-Merge klären.
+
+- **Pan-Target-Identification** — Camera zeigt nicht zuverlässig den Renn-Führer *(Priorität: mittel)*
+  LEADER_ZOOM und BATTLE_ZOOM zoomen auf den Centroid der Top-N-Spitzengruppe (`focusRacers.slice(0, N)`).
+  Das ist der t-Wert-Centroid — nicht notwendigerweise der Standings-Führer (Platz 1 nach Runden-Logik).
+  In engen Packs mit mehreren Runden-Wechseln kann der "geometrische Centroid" vom "Wer führt tatsächlich" abweichen.
+  Folge: Camera zeigt möglicherweise nicht den Player den Zuschauer als Leader wahrnehmen.
+  Mitigation: `focusRacers` durch standings-sortierte Liste ersetzen; Centroid nur innerhalb
+  der Top-N der tatsächlichen Rennreihenfolge berechnen. Eigene PR nach der Camera-Phase.
 
 ---
 

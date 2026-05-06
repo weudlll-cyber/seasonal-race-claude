@@ -1016,3 +1016,374 @@ Late-Roll. Formel: `rollCount = max(2, floor(duration/15))`, `rollInterval = 0.8
 Für alle Standard-Dauern (30–120s) ergibt das konstant ~12s zwischen Rolls.
 
 **Verweis:** PR-A2.6 `RaceScreen/index.jsx`, `reRoll.test.js`, ARCHITECTURE.md § Re-Roll Mechanism.
+
+---
+
+## Lesson 53 — Koordinatensystem-Dokumentation ist Pflicht: Pan-Offset und scaledRacersForCam (Phase-4 Diagnose-Session 2026-05-06)
+
+**Kontext:** CameraDirector erhält von RaceScreen **canvas-space** Koordinaten via `scaledRacersForCam`: `r.x = worldX × bsX`, `r.y = worldY × bsY`. Die Render-Pipeline zeichnet Racer bei World-Koordinaten unter `ctx.scale(cam.zoom × bsX, cam.zoom × bsY)`. Damit gilt: `screenX = offsetX + worldX × zoom × bsX = offsetX + r.x × zoom`.
+
+**Die triviale Pan-Formel ist korrekt:**
+```
+targetOffsetX = hw - r.x × zoom
+targetOffsetY = hh - r.y × zoom
+```
+Beweis: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw - worldX×bsX×zoom + worldX×bsX×zoom = hw ✓`. Gilt für alle bsX/bsY-Kombinationen.
+
+**Befund C (Phase-4) war ein Fehler:** Commit C führte `_computePanScale(zoom) = zoom × bsX` ein mit der Begründung, die Render-Pipeline brauche bsX im Pan. Das war falsch: bsX ist **bereits in `r.x`** enthalten. `r.x × zoom × bsX = worldX × bsX² × zoom` — ein doppelter bsX-Faktor. Für Dirt Oval (bsX=0.833, bsY=1.0) ergab das:
+- X-Fehler: `screenX = hw + worldX × zoom × bsX × (1-bsX) ≈ +36px`
+- Y-Fehler (bsX statt bsY): `screenY = hh + worldY × zoom × (1-bsX) ≈ +138px`
+
+**Warum der Fehler nicht sofort auffiel:** Das Diagnose-Log verwendete `expectedScreenCenterX = offsetX + r.x × zoom × bsX`. Das ist eine Tautologie — da `offsetX = hw - r.x × zoom × bsX`, ergibt die Summe immer `hw`. Der X-Fehler war im Log unsichtbar.
+
+**Diagnosbarkeit:** Empirische `[PAN]`-Logs zeigten `expectedScreenCenterY: 498.7 ≠ 360` (Y-Fehler sichtbar weil bsY=1.0 in diesem Track). Die korrekte Screen-Formel `screenY = offsetY + worldY × zoom × bsY = offsetY + r.y × zoom` war durch Zufall identisch mit der Log-Formel. Der X-Fehler (36px) war kleiner und wurde durch die Tautologie verdeckt.
+
+**Lehre:** Koordinatensystem (`r.x`: canvas-space oder world-space?) muss an der Systemgrenze `scaledRacersForCam` explizit dokumentiert sein. Diagnostic-Log-Formeln müssen von den Pan-Formeln **unabhängig** sein — sonst sind sie Tautologien.
+
+**Verweis:** Phase-4 Diagnose-Session 2026-05-06, `CameraDirector.js` `_setTargets()`, `index.jsx` L924–927 (`scaledRacersForCam`), L1022–1024 (Render-Transform). CAMERA_DIRECTOR.md §L62 (Zoom-Invarianz bleibt unverändert korrekt).
+
+---
+
+## Lesson 54 — Bauchgefühl als erstes Qualitätssignal (Phase-4-Diagnose)
+
+**Kontext:** Phase-4 Commit C führte `_computePanScale(zoom) = zoom × bsX` ein. Die Formel "klang
+plausibel" — bsX taucht in der Render-Pipeline auf, also schien es logisch sie in die Pan-Formel
+einzubauen. Das Gefühl "hier stimmt etwas nicht" (zu viele Faktoren, bsX kommt doppelt vor) wurde
+nicht ernst genommen. Kein algebraischer Beweis wurde aufgeschrieben. Diagnose-Session 2026-05-06
+deckte den Fehler durch empirische Messung auf.
+
+**Erkenntnis:** Das Bauchgefühl "diese Formel macht zu viel" ist oft das früheste und günstigste
+Signal. Wenn Code "sich komisch anfühlt" — Formel die verdächtig komplex ist, Faktor der zweimal
+vorkommt, Namenskonvention die verdächtig ähnlich zu einem anderen Wert ist — ist das ein Signal
+für einen Beweis-Auftrag, nicht für "wird schon passen".
+
+**Konsequenz:** Jede Camera-Formel die bsX, zoom, oder Koordinaten-Transformationen kombiniert:
+direkt einen algebraischen Beweis aufschreiben bevor committed wird. 2–3 Zeilen Mathematik
+(`screenX = offsetX + worldX × zoom × bsX = hw`) sparen Stunden Diagnose.
+
+---
+
+## Lesson 55 — Koordinatensystem-Grenzen müssen an der API-Grenze dokumentiert sein (Phase-4-Diagnose)
+
+**Kontext:** `scaledRacersForCam` in `RaceScreen/index.jsx` liefert canvas-space Koordinaten an
+CameraDirector: `r.x = worldX × bsX`. Weder die Variable noch der CameraDirector-Aufruf hatte
+einen Kommentar der das explizit machte. Ergebnis: Commit C führte `r.x × zoom × bsX` ein (bsX
+doppelt) ohne Widerspruch — weil "bsX in der Pipeline vorkommt" stimmte, aber "bsX ist bereits in
+r.x enthalten" nicht dokumentiert war.
+
+**Erkenntnis:** Koordinatensystem-Konventionen ("Wert ist canvas-space" vs. "Wert ist world-space")
+müssen an der Systemgrenze explizit stehen. In einem Canvas-System wo beide Räume simultan existieren
+und ineinander konvertiert werden, ist die implizite Annahme über den Raum eines Wertes der häufigste
+Fehler-Mechanismus.
+
+**Konsequenz:** Bei jedem Funktions-Parameter der Koordinaten enthält: Kommentar welcher Raum erwartet
+wird. `// r.x: canvas-space (= worldX × bsX)` in dem Mapping wo scaledRacersForCam gebaut wird. Im
+CameraDirector-Update-Kommentar analog. Ohne diesen Kommentar ist der nächste Entwickler (oder
+Claude) blind gegenüber dem eingebauten bsX-Faktor.
+
+**Verweis:** `index.jsx` L924–927 (`scaledRacersForCam`), Lesson 53.
+
+---
+
+## Lesson 56 — Config-Schema-Versionierung: Test-Fixtures müssen synchron bleiben (Phase-4)
+
+**Kontext:** CameraDirector-Config wurde von v2 auf v3 erweitert: `battleGapThreshold` (war
+`battleGapPct`), `battleMaxDurationMs` (war `battleMaxDuration`, ohne Ms-Suffix), neue Felder
+`battleGapHysteresis`, `overviewCooldownMin/Max`. Tests die `inverseConfig` mit dem alten Schema
+verwendeten liefen grün mit Fallback-Defaults — aber ohne die neuen Felder wurde das eigentliche
+Verhalten (Hysterese, Max-Duration-Cap) nicht getestet.
+
+**Erkenntnis:** Wenn ein Config-Objekt erweitert wird, müssen Test-Fixtures explizit mit den neuen
+Feldern aktualisiert werden. "Läuft mit Defaults" maskiert fehlende Verifikation — die neuen Features
+existieren im Code aber werden nie durch Tests ausgeübt.
+
+**Konsequenz:** Config-Schema-Erweiterungen → sofort alle Test-Fixtures (inkl. `inverseConfig`,
+Test-Helpers, `beforeEach`-Objekte) mit den neuen Feldern updaten. Idealerweise: ein zentraler
+`TEST_CONFIG`-Objekt aus der vollständigen Schema-Definition generiert — dann sind neue Felder
+automatisch in allen Tests präsent.
+
+---
+
+## Lesson 57 — Einheiten-Suffix als Pflicht für Timing-Parameter (Phase-4)
+
+**Kontext:** `battleMaxDuration` war in Millisekunden — aber der Name gab keine Einheit an.
+Commit 9a0d803 benannte es in `battleMaxDurationMs` um. Die Umbennenung war kein Refactor —
+sie war notwendige Klarstellung, weil ein Wert `4000` ohne Einheit zweideutig ist (4 Sekunden
+oder 4000 Sekunden?).
+
+**Erkenntnis:** Parameter die in Millisekunden sind MÜSSEN `Ms` im Namen haben. Parameter in
+Sekunden MÜSSEN `Seconds` oder `s` (bei sehr kurzen Namen) tragen. `duration` oder `cooldown`
+alleine sind mehrdeutig — sie laden zur falschen Einheit ein. Das Problem taucht besonders
+auf wenn Millisekunden mit Sekunden-Vergleichen gemischt werden (`timestamp > cooldown` wo
+timestamp ms ist und cooldown s sein sollte).
+
+**Konsequenz:** Bei jedem neuen Timing-Parameter direkt mit Einheiten-Suffix benennen:
+`battleGapThresholdMs`, `overviewDurationMs`, `lerpFactor` (dimensionslos — explizit so kommentieren).
+Bestehende Parameter ohne Suffix: bei nächster Berührung umbenennen + Schema-Version erhöhen.
+
+---
+
+## Lesson 58 — React StrictMode Double-Mount: useRef-Initialisierungen brauchen Cleanup (Phase-4)
+
+**Kontext:** React StrictMode ruft `useEffect` zweifach auf in Development (mount → cleanup → mount).
+Wenn `camDirRef.current = new CameraDirector(...)` in einem useEffect ohne Cleanup steht, laufen
+beim zweiten Mount zwei Instanzen parallel bis der Ref überschrieben wird. In normalen Tests (kein
+StrictMode-Doppel-Invoke) ist das unsichtbar — der Bug taucht nur im Dev-Browser auf.
+
+**Erkenntnis:** Jede `useRef`-Zuweisung in einem `useEffect` die eine externe Instanz (State-Machine,
+Timer, WebSocket) erstellt, braucht ein Cleanup-Return. Auch wenn das Objekt keinen formalen
+`dispose()`-Aufruf hat, reicht `return () => { ref.current = null; }` um StrictMode-Doppel-Instanzen
+zu verhindern.
+
+**Konsequenz:** `useEffect` mit `useRef`-Zuweisung → immer prüfen ob Cleanup nötig.
+Pattern: `useEffect(() => { ref.current = new Thing(config); return () => { ref.current = null; }; }, [])`.
+B-1 (PlayerGroups StrictMode-Fix in B-Wave) hatte denselben Root-Cause — das Pattern ist systemisch.
+
+**Verweis:** B-Wave PR #25, B-1. Lesson 1 (UI-Drift-Muster bei State-Quellen).
+
+---
+
+## Lesson 59 — beforeEach für zustandsbehaftete Testobjekte: nie State zwischen Tests teilen (Phase-4)
+
+**Kontext:** CameraDirector-Tests die eine Instanz über mehrere `it`-Blöcke teilen akkumulieren
+State: `_lastOverviewExitTs`, `_lastBattleExitTs`, `finishMomentExpiry`, Hysterese-State. Ein Test
+der BATTLE_ZOOM aktiviert lässt das Hysterese-Band für den nächsten Test aktiv. Ergebnis: Tests die
+in Isolation grün sind können in Suite-Reihenfolge fehlschlagen.
+
+**Erkenntnis:** CameraDirector ist eine State-Machine — jeder Zustand der in einem Test verändert
+wird beeinflusst alle nachfolgenden Tests bei geteilter Instanz. Das ist der häufigste Mechanismus
+für "flaky tests" die manchmal grün und manchmal rot sind je nach Ausführungsreihenfolge.
+
+**Konsequenz:** Für alle zustandsbehafteten Klassen (State-Machines, Timer-Manager, Caches):
+`let obj; beforeEach(() => { obj = new Thing(...); });` statt shared let auf Modul-Ebene.
+Keine Ausnahme. Tests sind schnell — eine neue CameraDirector-Instanz pro Test kostet <0.5ms.
+
+---
+
+## Lesson 60 — Hard-Refresh vor visueller Verifikation: Cache ist nicht trivial (Phase-4)
+
+**Kontext:** Nach Code-Änderungen in Vite kann der Browser-Cache alte JavaScript-Bundles cachen.
+Ohne Hard-Refresh (Ctrl+Shift+R / Cmd+Shift+R) kann der Browser die alte Version weiter ausführen —
+was eine noch nicht behobene Regression vortäuscht oder eine behobene Regression verbirgt.
+
+**Erkenntnis:** Browser-Cache hat eine längere Lebensdauer als intuitiv erwartet, besonders wenn
+Vite's Hot-Module-Replacement fehlschlägt oder der Dev-Server neu gestartet wurde. Der erste
+"visual check" nach einer Code-Änderung kann silent auf altem Code laufen.
+
+**Konsequenz:** Checkliste vor jedem visuellen Smoke-Test:
+1. Hard Refresh (Ctrl+Shift+R)
+2. Vite Dev-Server läuft ohne Fehler (Terminal prüfen)
+3. DevTools Network-Tab → "Disable Cache" aktivieren wenn systematische Verifikation nötig
+
+Nach Build-Fehlern oder Server-Neustart immer Hard-Refresh, nicht normaler Reload.
+
+---
+
+## Lesson 61 — Remote-Push vor PR-Erstellung: Push ist Teil des Merge-Workflows (Meta)
+
+**Kontext:** `gh pr create` erfordert dass der Branch auf `origin` gepusht ist. Der Aufruf schlägt
+fehl wenn der Branch nur lokal existiert. Trivial — aber wird als "selbstverständlich" übersprungen
+und dann blockiert er den Merge-Sprint.
+
+**Erkenntnis:** Commit → Push → PR sind eine Einheit. Der Push-Schritt ist nicht optional und
+nicht automatisch. Er muss explizit ausgeführt werden, besonders wenn zwischen Commit und PR-Erstellung
+Zeit vergeht oder andere Commits hinzukommen.
+
+**Konsequenz:** Jeder Merge-Sprint beginnt mit: `git status && git push origin <branch>`.
+Erste Aktion, bevor `gh pr create`, bevor Doc-Updates, bevor Commit-Prüfung.
+Pattern: Commit → Push → Verify-Push (`git log origin/<branch>`) → `gh pr create`.
+
+---
+
+## Lesson 62 — Render-Pipeline-Asymmetrien: Closed vs. Open Track erklären die Pan-Formel (Phase-4 Kernlektion)
+
+**Kontext:** Phase-4-Diagnose enthüllte dass die Camera-Pan-Formeln fundamental verschieden sind für
+Closed und Open Tracks — und dass diese Asymmetrie der Root-Cause des doppelten-bsX-Fehlers war.
+
+**Closed-Track-Render-Pipeline** (`RaceScreen/index.jsx` L1022–1024):
+```js
+ctx.translate(cam.offsetX, cam.offsetY);
+ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
+// Racer gezeichnet bei world-coordinates (r.x_world, r.y_world)
+```
+→ `screenX = cam.offsetX + worldX × cam.zoom × bsX`
+
+**Open-Track-Render-Pipeline** (`RaceScreen/index.jsx` L1005–1006):
+```js
+ctx.translate(-st.camX * effZoom, -st.camY * effZoom);
+ctx.scale(effZoom, effZoom);
+// Racer gezeichnet bei world-coordinates (r.x_world, r.y_world)
+```
+→ `screenX = -camX × effZoom + worldX × effZoom`
+
+**Key Asymmetrie:** Closed Track hat `cam.offsetX/Y` als Camera-Position; Open Track hat `st.camX/Y`.
+Für Closed Tracks muss `cam.offsetX = hw - worldX×zoom×bsX` damit `screenX = hw` (Racer zentriert).
+Da CameraDirector canvas-space empfängt (`r.x = worldX × bsX`), ist die Formel `hw - r.x × zoom`.
+
+**Warum das L62 ist:** §6.2 des CAMERA_DIRECTOR.md dokumentiert "Cross-Track-Invarianz (L62 gelöst)" —
+die inverse Camera-Formel `cam.zoom = targetPx / (referenceSpriteSize × bsX)` ist korrekt für Closed
+Tracks weil bsX in der Render-Scale ist. Für Open Tracks ist `cam.offsetX/Y` irrelevant; der
+Pan läuft über `openTrackCamera.js / openTrackPanTarget()`.
+
+**Konsequenz:** Für jede neue Camera-Logik: zuerst fragen "welcher Render-Pfad ist aktiv — Closed oder
+Open?" und den entsprechenden Pipeline-Pfad aus L1005–1006 bzw. L1022–1024 nachverfolgen bevor Formeln
+geschrieben werden. Die Pipelines sind nicht austauschbar.
+
+**Verweis:** `index.jsx` L1005–1006 (Open), L1022–1024 (Closed), L924–927 (`scaledRacersForCam`).
+CAMERA_DIRECTOR.md §6.2, §10.2. Lesson 53.
+
+---
+
+## Lesson 63 — Aktivierungs-Kette: Implementierter State der nie erreichbar ist (Phase-4)
+
+**Kontext:** Phase 4 implementierte BATTLE_ZOOM-Hysterese und Max-Duration-Cap korrekt.
+Aber: der BATTLE_ZOOM-Trigger (`minGapInSpitzengruppe < battleGapThreshold=0.05`) setzt voraus
+dass zwei Racer der Spitzengruppe ≤ 5% t-Wert auseinanderliegen. In Races mit früh auseinander
+gehendem Feld oder wenigen Racers kann dieser Threshold nie unterschritten werden.
+"Feature implementiert" ≠ "Feature im Betrieb aktiv".
+
+**Erkenntnis:** Wenn eine State-Machine korrekt implementiert ist aber ihre Trigger-Schwellen zu
+strikt kalibriert sind, ist der State funktional inaktiv. Das ist durch Unit-Tests unsichtbar (Tests
+setzen den State direkt, ohne den echten Trigger auszulösen) und durch Code-Review nicht erkennbar.
+
+**Konsequenz:** Für jeden neuen Camera-State nach Implementation: ein Mess-Commit der State-Transitions
+in echten 60s-Races logt. Format: `[CAMERA] transition: LEADER_ZOOM→BATTLE_ZOOM at t=12.4s`. 
+Wenn BATTLE_ZOOM in 10 Races nie auftaucht: Threshold anpassen. Lesson 67 beschreibt den Mess-Sprint.
+
+---
+
+## Lesson 64 — Lange Sessions und Kontext-Komprimierung: Stop-Points einplanen (Meta)
+
+**Kontext:** Diese Diagnose-Session überschritt das Kontext-Limit und wurde komprimiert. Die
+Komprimierung fand mitten in der Doc-Update-Phase statt — nach den Code-Commits aber vor den
+Doc-Schreibschritten. Die Wiederaufnahme nach Komprimierung ist langsamer (Kontext neu aufbauen)
+und birgt das Risiko dass offene Fragen oder Zwischenentscheidungen verloren gehen.
+
+**Erkenntnis:** Kontext-Komprimierung ist kein Fehler — sie ist strukturell unvermeidlich bei sehr
+langen Sessions. Aber der Zeitpunkt ist kontrollierbar: Komprimierung mitten in einem komplexen
+Schritt kostet mehr als Komprimierung zwischen natürlichen Pausen.
+
+**Konsequenz:** Bei langen Sessions natürliche Stop-Points als mentale Checkpoints setzen:
+- Nach jedem Commit: kurze Zusammenfassung was offen ist (in Commit-Message oder HANDOFF-Notiz)
+- Nach Diagnose-Phase: Ergebnis committen bevor Fix-Phase beginnt
+- Vor Doc-Update-Phase: sicherstellen dass alle Code-Commits fertig sind
+- "Ich mache jetzt einen Commit" ist oft der richtige Impuls auch wenn der Code noch nicht perfekt ist
+
+**Leitfrage:** "Wenn die Session jetzt endet — weiß ich was der nächste Schritt ist?"
+
+---
+
+## Lesson 65 — Phantom-Probleme durch Browser-State: Verifikation vor Bisect (Phase-4-Diagnose)
+
+**Kontext:** In der Phase-4-Diagnose-Session wurde eine Sprite-Verkleinerung nach einer Code-Änderung
+beobachtet und als potenzielle Regression eingestuft. Ein Bisect-Sprint wurde begonnen. Root Cause:
+Browser-Zoom war nicht 100% (Ctrl+0 vergessen) — was das Canvas-Rendering skaliert und Sprites
+kleiner erscheinen lässt. Kein Code-Bug. Mehrere Bisect-Commits wurden auf einem Artefakt ausgeführt.
+
+**Erkenntnis:** Visuell präsentierte Phänomene (Sprite-Größe, Canvas-Auflösung, Pan-Versatz) können
+durch Browser-State vollständig simuliert werden. Ein Bisect auf einem Browser-State-Artefakt findet
+kein "schlechtes Commit" — weil es keines gibt. Das frustriert und kostet Zeit.
+
+**Konsequenz:** Vor jedem visuellen Bisect — 5-Punkte-Checkliste:
+1. Browser-Zoom 100% (Ctrl+0 / Cmd+0 — in der Adressleiste bestätigen: "100%")
+2. Hard Refresh (Ctrl+Shift+R)
+3. DevTools geschlossen
+4. Canvas in normaler Fenstergröße (kein sehr kleines oder sehr großes Fenster)
+5. Phänomen exakt dokumentieren (screenshot oder Pixel-Messwert) bevor Bisect startet
+
+Wenn das Phänomen nach Schritt 1–4 verschwunden ist: Bisect abbrechen, Browser-State war die Ursache.
+
+---
+
+## Lesson 66 — Pixel-Invarianz: Algebraischen Beweis vor Implementation schreiben (Phase-4)
+
+**Kontext:** Die triviale Pan-Formel `targetOffsetX = hw - r.x × zoom` ist nicht offensichtlich
+korrekt bis man die Algebra aufschreibt:
+```
+screenX = cam.offsetX + worldX × cam.zoom × bsX
+        = (hw - worldX×bsX×zoom) + worldX×bsX×zoom
+        = hw  ✓
+```
+Das Aufschreiben dieses 3-Zeilen-Beweises dauert 30 Sekunden und macht die Formel diskussionsfrei.
+`_computePanScale(zoom) = zoom × bsX` hätte mit demselben Beweis sofort als falsch erkannt werden
+können: `(hw - r.x×zoom×bsX) + worldX×zoom×bsX×bsX ≠ hw` — bsX² statt bsX.
+
+**Erkenntnis:** Korrektheit von Camera-Formeln die Koordinaten transformieren ist nicht intuitiv.
+"Klingt plausibel" ist kein Beweis. "Tests sind grün" ist kein Beweis für Korrektheit bei
+Koordinaten-Formeln — Tests können falsch kalibriert sein (Tautologie, falsche Erwartungswerte).
+
+**Konsequenz:** Für jede neue Camera-Formel die bsX, zoom, oder Koordinaten-Räume kombiniert:
+algebraischen Beweis aufschreiben bevor committed wird. Format: 3 Zeilen (`screenX = ... = hw ✓`).
+Beweis geht als Kommentar in den Code (direkt über der Formel) und als Verweis in die zugehörige
+Lesson. Wenn der Beweis nicht aufgeht: Formel überdenken statt committen.
+
+**Verweis:** `CameraDirector.js` `_setTargets()`, Lesson 53. CAMERA_DIRECTOR.md §10.2.
+
+---
+
+## Lesson 67 — Werte-Roulette: Ohne Baseline-Messung ist Tuning blind (Phase-4)
+
+**Kontext:** Phase 4 übernahm Default-Werte aus dem Konzept-Doc: `battleGapThreshold=0.05`,
+`battleGapHysteresis=0.02`, `battleMaxDurationMs=4000ms`, `overviewCooldownMin=15s/Max=25s`.
+Diese Werte "klingen sinnvoll" aber wurden nicht gegen echte Race-Daten kalibriert.
+Ohne Messung ist unbekannt ob BATTLE_ZOOM in typischen Races überhaupt je aktiviert wird
+oder ob OVERVIEW alle 15–25s oder alle 5min feuert.
+
+**Erkenntnis:** Default-Werte für State-Machine-Trigger sind Hypothesen. "Klingt gut" ist kein
+Kalibrierungskriterium. Falsch kalibrierte Defaults bedeuten: implementiertes Feature das in
+der Praxis nie aktiv ist (zu strenger Trigger) oder Feature das dauerhaft aktiv ist und andere
+States verdrängt (zu breites Band).
+
+**Konsequenz:** Für jede neue State-Machine-Transition einen Mess-Sprint einplanen:
+1. Temporäre Logs einbauen: `console.log('[CAM]', newState, Date.now(), trigger_value)`
+2. Echtes Race laufen lassen (30s Dirt Oval, 60s Space Sprint, 30s City Circuit)
+3. Log auswerten: Wie oft tritt jeder State auf? Wie lang? Bei welchem Trigger-Wert?
+4. Dann Defaults anpassen
+
+Erst dann sind Defaults kalibriert — nicht nach Bauchgefühl aus dem Konzept-Doc.
+
+---
+
+## Lesson 68 — Browser-State vor Bisect: Die 5-Punkte-Umgebungs-Verifikation (Phase-4-Diagnose)
+
+**Kontext:** Der verschwendete Bisect-Sprint aus L65 kam durch fehlende Umgebungs-Verifikation.
+Das Problem ist nicht nur der Browser-Zoom — es ist das Prinzip dass Bisect auf einem bewegenden
+Ziel läuft wenn die Umgebung nicht kontrolliert ist.
+
+**Erkenntnis:** Bisect setzt Reproduzierbarkeit voraus: dasselbe Phänomen bei demselben Commit,
+dieselbe Umgebung, dieselbe Messung. Browser-State (Zoom, Cache, DevTools, Hardware-Acceleration,
+Tab-Isolation) ist Teil der "Umgebung" die reproduziert werden muss. Unkontrollierte Umgebung →
+Bisect findet kein "schlechtes Commit" → frustrierende False-Negatives.
+
+**Konsequenz:** Vor jedem Bisect:
+1. Phänomen exakt dokumentieren (screenshot + Messwert, z.B. "Sprite ist 24px, erwartet 56px")
+2. Umgebung stabilisieren (L65 Checkliste)
+3. Phänomen reproduzieren bei HEAD → erst dann `git bisect start`
+4. Nach jedem Bisect-Step: Messwert wiederholen (nicht "looks bad" — "Sprite ist X px")
+5. Wenn Phänomen "verschwindet" ohne Commit-Begründung: Schritt 2 wiederholen
+
+"Kein gutes Commit gefunden" + Phänomen weg = Browser-State war die Ursache.
+
+---
+
+## Lesson 69 — Modelle ohne Messung sind Hypothesen: Empirical First (Phase-4-Diagnose)
+
+**Kontext:** `_computePanScale(zoom) = zoom × bsX` wurde mit dem Argument eingeführt:
+"Die Render-Pipeline hat bsX in der Scale — also braucht die Pan-Formel bsX".
+Das war ein konzeptuelles Argument ("so müsste es sein") ohne algebraische Verifikation.
+Die empirischen `[PAN]`-Logs widerlegten das Modell in unter 5 Minuten: `expectedScreenCenterY: 498.7 ≠ 360`.
+
+**Erkenntnis:** Ein Mental-Model über ein Koordinatensystem ist eine Hypothese bis es empirisch
+bestätigt ist. Konzeptuelle Argumente ("bsX taucht in der Pipeline auf, also...") können elegant
+klingen und trotzdem falsch sein. Das ist besonders gefährlich in Systemen wo mehrere Koordinaten-
+Räume (world-space, canvas-space, screen-space) simultan existieren und ineinander transformiert werden.
+
+**Konsequenz:** Für jedes neue Camera-Konzept das Koordinaten transformiert:
+1. Algebraischen Beweis schreiben (L66)
+2. Falls Beweis nicht eindeutig: empirische Messung mit Log-Ausgabe (5 Minuten Aufwand)
+3. Erst wenn Beweis UND Messung übereinstimmen: committen
+
+"Das klingt logisch" ist kein Commit-Kriterium für Camera-Mathematik.
+Messungen sind günstiger als Diagnose-Sprints. Diagnose-Sprints sind günstiger als Browser-Bisect.
+
+**Verweis:** Phase-4-Diagnose-Session 2026-05-06, `[PAN]`-Log-Analyse, Lesson 53, Lesson 66.
