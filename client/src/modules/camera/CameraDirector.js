@@ -333,6 +333,14 @@ export class CameraDirector {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
   }
 
+  // Effective scale for pan-offset calculations.
+  // Closed tracks: render pipeline applies cam.zoom × bsX, so pan must use zoom × bsX.
+  // Open tracks: pan is handled by openTrackCamera.js (st.camX/camY), not by offsetX/Y,
+  // so the value here is not used for rendering — but kept consistent for symmetry.
+  _computePanScale(zoom) {
+    return this._isOpenTrack ? zoom : zoom * (CANVAS_W / this._worldW);
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const hw = canvasW / 2;
@@ -362,9 +370,10 @@ export class CameraDirector {
       case CAM_STATE.LEADER_ZOOM: {
         const r = focusRacers[0];
         if (r) {
+          const ps = this._computePanScale(this._leaderZoom);
           this.targetZoom = this._leaderZoom;
-          this.targetOffsetX = hw - r.x * this._leaderZoom;
-          this.targetOffsetY = hh - r.y * this._leaderZoom;
+          this.targetOffsetX = hw - r.x * ps;
+          this.targetOffsetY = hh - r.y * ps;
         }
         break;
       }
@@ -373,9 +382,10 @@ export class CameraDirector {
         const top2 = focusRacers.slice(0, 2);
         const cx = top2.reduce((s, r) => s + r.x, 0) / top2.length;
         const cy = top2.reduce((s, r) => s + r.y, 0) / top2.length;
+        const ps = this._computePanScale(this._battleZoom);
         this.targetZoom = this._battleZoom;
-        this.targetOffsetX = hw - cx * this._battleZoom;
-        this.targetOffsetY = hh - cy * this._battleZoom;
+        this.targetOffsetX = hw - cx * ps;
+        this.targetOffsetY = hh - cy * ps;
         break;
       }
 
@@ -384,9 +394,10 @@ export class CameraDirector {
         // camera near the main field even when last-place lags far behind.
         const target = focusRacers[focusRacers.length - 1];
         if (target) {
+          const ps = this._computePanScale(this._comebackZoom);
           this.targetZoom = this._comebackZoom;
-          this.targetOffsetX = hw - target.x * this._comebackZoom;
-          this.targetOffsetY = hh - target.y * this._comebackZoom;
+          this.targetOffsetX = hw - target.x * ps;
+          this.targetOffsetY = hh - target.y * ps;
         }
         break;
       }

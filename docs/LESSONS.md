@@ -1016,3 +1016,25 @@ Late-Roll. Formel: `rollCount = max(2, floor(duration/15))`, `rollInterval = 0.8
 Für alle Standard-Dauern (30–120s) ergibt das konstant ~12s zwischen Rolls.
 
 **Verweis:** PR-A2.6 `RaceScreen/index.jsx`, `reRoll.test.js`, ARCHITECTURE.md § Re-Roll Mechanism.
+
+---
+
+## Lesson 53 — Render-Pipeline-Asymmetrie (L62): Pan-Offset braucht denselben bsX-Faktor wie Zoom (Phase-4 Befund C)
+
+**Kontext:** CameraDirector berechnete Pan-Offset für Closed-Tracks als `hw - r.x × leaderZoom`, während die Render-Pipeline mit `ctx.scale(cam.zoom × bsX, cam.zoom × bsX)` skaliert. Für korrekte Zentrierung wäre `hw - r.x × leaderZoom × bsX` nötig.
+
+Bei Standard-Tracks (worldW=1280, bsX=1.0) ist der Fehler unsichtbar: `leaderZoom × 1.0 = leaderZoom`. Erst mit worldW=1536 (bsX=0.833) und erhöhtem Leader-Zoom (User-Test: spritePct=0.16 → leaderZoom≈3.22) wurde der Versatz augenfällig: Leader erschien in der oberen linken Ecke statt zentriert (~269px Versatz bei leader.x=500).
+
+**Erkenntnis (zweiter Datenpunkt zu L62):** Die ursprüngliche L62-Diagnose (D7c-Phase4) identifizierte die Asymmetrie für Zoom-Berechnungen — `cam.zoom × bsX` für Closed vs. `BASE × cam.zoom` für Open. Dieser Befund zeigt dieselbe Asymmetrie eine Schicht tiefer: auch die **Pan-Offset-Berechnung** muss den effektiven Render-Scale kennen, nicht nur den `cam.zoom`-Wert.
+
+OVERVIEW war zufällig korrekt: `cam.zoom = 1` und `overviewZoom = bsX`, also `targetOffsetX = hw - cx × bsX` — der bsX-Faktor steckt versteckt in `overviewZoom`. LEADER/BATTLE/COMEBACK hatten keinen analogen Schutz.
+
+Open-Tracks sind nicht betroffen: die Open-Track-Render-Pipeline verwendet `st.camX/camY` aus `openTrackCamera.js` — `cam.offsetX/Y` von CameraDirector werden dort nicht für das Rendering genutzt.
+
+**Fix:** `_computePanScale(zoom)` Helper: `zoom × (CANVAS_W/worldW)` für Closed, `zoom` für Open. Alle drei Zoom-States (LEADER, BATTLE, COMEBACK) verwenden diesen Scale für ihre Offset-Berechnung.
+
+**Pattern:** Bei Cross-Cutting-Refactors an der Render-Pipeline müssen ALLE Stellen die in der Pipeline mitwirken konsistent skaliert werden — nicht nur die Zoom-Berechnung, sondern auch abgeleitete Größen wie Pan-Offset. Wenn ein Faktor (bsX) in der Scale-Matrix steckt, muss er in allen Pan-Berechnungen die auf dieselbe Matrix wirken explizit auftauchen.
+
+**Diagnosbarkeit:** Der Bug war durch erhöhten Zoom verstärkt sichtbar (Fehler skaliert mit `leaderZoom × (1 - bsX)` — bei Standard-worldW=1280 steckt bsX=1.0 den Fehler auf 0, bei worldW=1536 + leaderZoom=3.22 wächst er auf ~269px). Boundary-Konfigurationen im Browser-Test sind essenziell.
+
+**Verweis:** Phase-4 Befund C, `CameraDirector.js` `_computePanScale()`, `_setTargets()`, `index.jsx` L1022–1024 (Render-Transform). CAMERA_DIRECTOR.md §L62.
