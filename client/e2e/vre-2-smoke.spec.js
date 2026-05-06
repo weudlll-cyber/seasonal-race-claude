@@ -111,7 +111,9 @@ test.describe('VRE-2 — New class creation', () => {
     await page.evaluate(async (id) => {
       try {
         await fetch(`http://localhost:4000/api/surface-classes/${id}`, { method: 'DELETE' });
-      } catch {}
+      } catch {
+        // cleanup — ignore if resource was never created during the test
+      }
     }, TEST_ID);
   });
 

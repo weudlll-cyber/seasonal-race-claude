@@ -157,7 +157,9 @@ test.describe('V5 — Default-Override lifecycle', () => {
     await page.evaluate(async (id) => {
       try {
         await fetch(`http://localhost:4000/api/surface-classes/${id}`, { method: 'DELETE' });
-      } catch {}
+      } catch {
+        // cleanup — ignore if resource was never created during the test
+      }
     }, OVERRIDE_ID);
   });
 
@@ -192,7 +194,9 @@ test.describe('V5 — Default-Override lifecycle', () => {
             isOverride: true,
           }),
         });
-      } catch {}
+      } catch {
+        // test setup — ignore if PUT fails (test verifies the resulting state, not the setup call)
+      }
     });
 
     await goToSurfaceClasses(page);
