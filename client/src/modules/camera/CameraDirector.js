@@ -71,6 +71,7 @@ export class CameraDirector {
     this._bbox = bbox;
     this._isOpenTrack = isOpenTrack;
     this._worldW = worldW;
+    this._worldH = _worldH;
     this._referenceSpriteSize = referenceSpriteSize;
     // Adaptive overview zoom: shows the entire world at cam.zoom=overviewZoom.
     // For closed tracks, OVERVIEW uses cam.zoom=1 (bsX handles world mapping).
@@ -90,6 +91,10 @@ export class CameraDirector {
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
     this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
+    // Diagnostic state (only active when window.__CAMERA_DIAG__ === true)
+    this._diagFrameCount = 0;
+    this._diagPrevLogState = null;
+    this._diagSnapshot = null;
   }
 
   /**
@@ -217,7 +222,29 @@ export class CameraDirector {
     this.zoom += (this.targetZoom - this.zoom) * this._lerpFactor;
     this.offsetX += (this.targetOffsetX - this.offsetX) * this._lerpFactor;
     this.offsetY += (this.targetOffsetY - this.offsetY) * this._lerpFactor;
+
+    // Diagnostic logging — only active when window.__CAMERA_DIAG__ === true
+    if (typeof window !== 'undefined' && !!window.__CAMERA_DIAG__ && this._diagSnapshot) {
+      this._diagFrameCount++;
+      const stateChanged = this.state !== this._diagPrevLogState;
+      if (stateChanged || this._diagFrameCount % 60 === 0) {
+        this._emitDiagLog(ts, raceState);
+      }
+      this._diagPrevLogState = this.state;
+    }
+
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
+  }
+
+  _emitDiagLog(ts, raceState) {
+    const entry = { timestamp: raceState?.raceElapsed ?? 0, ...this._diagSnapshot };
+    if (!window.__CAMERA_DIAG_LOG__) window.__CAMERA_DIAG_LOG__ = [];
+    window.__CAMERA_DIAG_LOG__.push(entry);
+    try {
+      localStorage.setItem('__cameraDiagLog__', JSON.stringify(window.__CAMERA_DIAG_LOG__));
+    } catch {
+      /* ignore localStorage quota errors */
+    }
   }
 
   _transition(racers, ts, raceState) {
@@ -337,6 +364,8 @@ export class CameraDirector {
     const focusRacers = this._focusRacers(racers);
     const hw = canvasW / 2;
     const hh = canvasH / 2;
+    const _diag = typeof window !== 'undefined' && !!window.__CAMERA_DIAG__;
+    let _diagPanTarget = null;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
@@ -356,6 +385,7 @@ export class CameraDirector {
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
         this.targetOffsetX = hw - cx * this.overviewZoom;
         this.targetOffsetY = hh - cy * this.overviewZoom;
+        if (_diag) _diagPanTarget = { type: 'overview', racerId: null, position: { x: cx, y: cy } };
         break;
       }
 
@@ -365,6 +395,12 @@ export class CameraDirector {
           this.targetZoom = this._leaderZoom;
           this.targetOffsetX = hw - r.x * this._leaderZoom;
           this.targetOffsetY = hh - r.y * this._leaderZoom;
+          if (_diag)
+            _diagPanTarget = {
+              type: 'leader',
+              racerId: r.id ?? null,
+              position: { x: r.x, y: r.y },
+            };
         }
         break;
       }
@@ -376,6 +412,12 @@ export class CameraDirector {
         this.targetZoom = this._battleZoom;
         this.targetOffsetX = hw - cx * this._battleZoom;
         this.targetOffsetY = hh - cy * this._battleZoom;
+        if (_diag)
+          _diagPanTarget = {
+            type: 'battle',
+            racerId: top2[0]?.id ?? null,
+            position: { x: cx, y: cy },
+          };
         break;
       }
 
@@ -387,9 +429,23 @@ export class CameraDirector {
           this.targetZoom = this._comebackZoom;
           this.targetOffsetX = hw - target.x * this._comebackZoom;
           this.targetOffsetY = hh - target.y * this._comebackZoom;
+          if (_diag)
+            _diagPanTarget = {
+              type: 'comeback',
+              racerId: target.id ?? null,
+              position: { x: target.x, y: target.y },
+            };
         }
         break;
       }
+    }
+
+    // [DIAG] Capture pre-clamp values before any clamping is applied
+    let _preClampX = 0;
+    let _preClampY = 0;
+    if (_diag) {
+      _preClampX = this.targetOffsetX;
+      _preClampY = this.targetOffsetY;
     }
 
     // Clamp so the track bounding box never drifts entirely off-screen
@@ -418,6 +474,45 @@ export class CameraDirector {
       edgeLoX > 0 ? edgeLoX / 2 : Math.max(edgeLoX, Math.min(0, this.targetOffsetX));
     this.targetOffsetY =
       edgeLoY > 0 ? edgeLoY / 2 : Math.max(edgeLoY, Math.min(0, this.targetOffsetY));
+
+    // [DIAG] Assemble snapshot after all clamping is complete
+    if (_diag) {
+      const finalX = this.targetOffsetX;
+      const finalY = this.targetOffsetY;
+      const clampedX = Math.abs(finalX - _preClampX) > 0.01;
+      const clampedY = Math.abs(finalY - _preClampY) > 0.01;
+      // bbox clamp range: the pan limits imposed by _clampOffset for each axis
+      const bxa = 0 - b.minX * this.targetZoom;
+      const bxb = canvasW - b.maxX * this.targetZoom;
+      const bya = 0 - b.minY * this.targetZoom;
+      const byb = canvasH - b.maxY * this.targetZoom;
+      let targetVisibleAfterClamp = null;
+      if (_diagPanTarget?.position) {
+        const screenX = _diagPanTarget.position.x * this.targetZoom + finalX;
+        const screenY = _diagPanTarget.position.y * this.targetZoom + finalY;
+        targetVisibleAfterClamp =
+          screenX >= 0 && screenX <= canvasW && screenY >= 0 && screenY <= canvasH;
+      }
+      this._diagSnapshot = {
+        trackType: this._isOpenTrack ? 'open' : 'closed',
+        backgroundSize: { w: this._worldW, h: this._worldH },
+        frameSize: { w: canvasW, h: canvasH },
+        currentState: this.state,
+        panTarget: _diagPanTarget,
+        computedPan: { x: _preClampX, y: _preClampY },
+        backgroundBounds: {
+          minX: Math.min(bxa, bxb),
+          maxX: Math.max(bxa, bxb),
+          minY: Math.min(bya, byb),
+          maxY: Math.max(bya, byb),
+        },
+        finalPan: { x: finalX, y: finalY },
+        wasClamped: clampedX || clampedY,
+        clampedAxis: clampedX && clampedY ? 'both' : clampedX ? 'x' : clampedY ? 'y' : 'none',
+        targetVisibleAfterClamp,
+        zoom: this.targetZoom,
+      };
+    }
   }
 
   /**
