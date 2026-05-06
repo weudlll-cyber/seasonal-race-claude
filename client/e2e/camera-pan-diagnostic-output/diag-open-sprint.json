@@ -1,0 +1,899 @@
+[
+  {
+    "timestamp": 0,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 158.71577428180234,
+        "y": 359.6754059376866
+      }
+    },
+    "computedPan": {
+      "x": 481.28422571819766,
+      "y": 0.3245940623133947
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 1000,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 197.10566241956784,
+        "y": 359.03316907186223
+      }
+    },
+    "computedPan": {
+      "x": 442.8943375804322,
+      "y": 0.9668309281377674
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 2016.5,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 235.94708283885262,
+        "y": 359.16267391326426
+      }
+    },
+    "computedPan": {
+      "x": 404.0529171611474,
+      "y": 0.837326086735743
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 3049.8,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 282.4677130749161,
+        "y": 358.6406522317327
+      }
+    },
+    "computedPan": {
+      "x": 357.5322869250839,
+      "y": 1.3593477682672983
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 4049.7999999999993,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 322.8164616152256,
+        "y": 358.67433951251513
+      }
+    },
+    "computedPan": {
+      "x": 317.1835383847744,
+      "y": 1.3256604874848676
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 5066.5,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": {
+        "x": 361.9579341303629,
+        "y": 359.12037645233113
+      }
+    },
+    "computedPan": {
+      "x": 278.0420658696371,
+      "y": 0.8796235476688707
+    },
+    "backgroundBounds": {
+      "minX": -100,
+      "maxX": 280,
+      "minY": -338.5185503011624,
+      "maxY": 320
+    },
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": true,
+    "clampedAxis": "both",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1
+  },
+  {
+    "timestamp": 5533,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 390.85696867450486,
+        "y": 359.7134958167945
+      }
+    },
+    "computedPan": {
+      "x": 62.73432318842356,
+      "y": -171.26916305249654
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -147.6923076923077,
+      "y": -171.26916305249654
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 6216.4,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 417.9374057762447,
+        "y": 360.73449331000324
+      }
+    },
+    "computedPan": {
+      "x": 22.7386006997001,
+      "y": -172.7770978116971
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -147.6923076923077,
+      "y": -172.7770978116971
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 7349.6,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 461.2111263955689,
+        "y": 363.45078667973155
+      }
+    },
+    "computedPan": {
+      "x": -41.17335590730181,
+      "y": -176.788854173142
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -147.6923076923077,
+      "y": -176.788854173142
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 8499.6,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 508.01909466111607,
+        "y": 367.38604714824186
+      }
+    },
+    "computedPan": {
+      "x": -110.30512442257145,
+      "y": -182.60093117278802
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -147.6923076923077,
+      "y": -182.60093117278802
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 9566.2,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 549.3976977839922,
+        "y": 371.1947690474972
+      }
+    },
+    "computedPan": {
+      "x": -171.41813826558848,
+      "y": -188.22612043938045
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -171.41813826558848,
+      "y": -188.22612043938045
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 10549.5,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 579.0905118946396,
+        "y": 375.2840652367963
+      }
+    },
+    "computedPan": {
+      "x": -642.908210966586,
+      "y": -471.39854452459485
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -642.908210966586,
+      "y": -471.39854452459485
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 10682.9,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 584.4912218913976,
+        "y": 375.74101182981445
+      }
+    },
+    "computedPan": {
+      "x": -654.8728608055576,
+      "y": -472.41085697681956
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -654.8728608055576,
+      "y": -472.41085697681956
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 11816.2,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 627.7312875561122,
+        "y": 376.0619345653497
+      }
+    },
+    "computedPan": {
+      "x": -750.6662370473869,
+      "y": -473.1218242678515
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -750.6662370473869,
+      "y": -473.1218242678515
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 12932.7,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 669.2352188180148,
+        "y": 378.0405332192722
+      }
+    },
+    "computedPan": {
+      "x": -842.6134078429864,
+      "y": -477.5051812857722
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -842.6134078429864,
+      "y": -477.5051812857722
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 13966.099999999999,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 707.1694910266898,
+        "y": 378.51318005077144
+      }
+    },
+    "computedPan": {
+      "x": -926.6524108898973,
+      "y": -478.55227580478584
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -926.6524108898973,
+      "y": -478.55227580478584
+    },
+    "wasClamped": false,
+    "clampedAxis": "none",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 14966,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 742.3909610080989,
+        "y": 377.79852774969163
+      }
+    },
+    "computedPan": {
+      "x": -1004.6815136179418,
+      "y": -476.96904609162436
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -935.3846153846152,
+      "y": -476.96904609162436
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 15966,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": "r0",
+      "position": {
+        "x": 778.486492312242,
+        "y": 376.16354928786683
+      }
+    },
+    "computedPan": {
+      "x": -1084.6469983532745,
+      "y": -473.3469399608125
+    },
+    "backgroundBounds": {
+      "minX": -935.3846153846152,
+      "maxX": -221.53846153846152,
+      "minY": -749.9487883594982,
+      "maxY": -166.15384615384608
+    },
+    "finalPan": {
+      "x": -935.3846153846152,
+      "y": -473.3469399608125
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 2.215384615384615
+  },
+  {
+    "timestamp": 16566,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 807.3358616094089,
+        "y": 375.79557242510646
+      }
+    },
+    "computedPan": {
+      "x": -552.3729648385117,
+      "y": -195.02115312015724
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -196.9230769230769,
+      "y": -195.02115312015724
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 17015.9,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 823.5528167452653,
+        "y": 374.6125122339946
+      }
+    },
+    "computedPan": {
+      "x": -576.3241601160842,
+      "y": -193.27386422251516
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -196.9230769230769,
+      "y": -193.27386422251516
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 18082.6,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 863.1682544166893,
+        "y": 371.3850698913258
+      }
+    },
+    "computedPan": {
+      "x": -634.8331142154179,
+      "y": -188.50718014718893
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -196.9230769230769,
+      "y": -188.50718014718893
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 19215.8,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 902.7622396162735,
+        "y": 367.90263134951573
+      }
+    },
+    "computedPan": {
+      "x": -693.3103846640347,
+      "y": -183.3638863008233
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -196.9230769230769,
+      "y": -183.3638863008233
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  },
+  {
+    "timestamp": 20415.8,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": "r0",
+      "position": {
+        "x": 945.9583920344452,
+        "y": 364.13486301284297
+      }
+    },
+    "computedPan": {
+      "x": -757.1077790047191,
+      "y": -177.79918229589123
+    },
+    "backgroundBounds": {
+      "minX": -196.9230769230769,
+      "maxX": -147.6923076923077,
+      "minY": -499.9658589063322,
+      "maxY": 129.23076923076917
+    },
+    "finalPan": {
+      "x": -196.9230769230769,
+      "y": -177.79918229589123
+    },
+    "wasClamped": true,
+    "clampedAxis": "x",
+    "targetVisibleAfterClamp": true,
+    "zoom": 1.476923076923077
+  }
+]
