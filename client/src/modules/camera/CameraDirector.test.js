@@ -241,7 +241,7 @@ describe('CameraDirector — bbox clamping', () => {
     const cd = new CameraDirector(bbox, worldW, 720);
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
-    for (let i = 0; i < 200; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
+    for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
     // 36px fallback → _leaderZoom = 0.08*720/36 = 1.6 (bsX=1 on 1280px world)
     const leaderZoom = (0.08 * 720) / 36; // 1.6
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
@@ -1125,6 +1125,174 @@ describe('CameraDirector — D4: minStateHold', () => {
       720
     );
     expect(cd.stateEnteredAt).toBe(5000);
+  });
+});
+
+// ── CameraDirector — B: BATTLE hysteresis ────────────────────────────────────
+
+const marginalRacers = [
+  { t: 0.5, x: 500, y: 300, finished: false },
+  { t: 0.44, x: 440, y: 300, finished: false }, // gap01=0.06: above entry (0.05), below exit (0.07)
+  { t: 0.2, x: 200, y: 300, finished: false },
+];
+
+describe('CameraDirector — B: BATTLE hysteresis', () => {
+  it('in BATTLE with gap 0.05–0.07: exits to LEADER, not OVERVIEW (exit threshold holds P3)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 1000; // overview cooldown not expired (6001-1000=5001 < 8000)
+    // stateAge=6001 >= max(5000,6000)=6000 → forces BATTLE exit; gap=0.06 < exit threshold 0.07
+    // hasBattle=true (exit threshold) → P3 !hasBattle=false → no OVERVIEW
+    cd.update(
+      marginalRacers,
+      6001,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('not in BATTLE: gap 0.05–0.07 does NOT enter BATTLE (entry threshold only)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired → P3 skipped
+    // gap=0.06 >= entry threshold 0.05 → hasBattle=false → P4 skipped → LEADER stays
+    cd.update(
+      marginalRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('gap below exit threshold (0.04): stays hasBattle=true in BATTLE (hysteresis confirms hold)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 1000;
+    // gap=0.04 < 0.07 exit threshold → hasBattle=true; battle exits to LEADER (not OVERVIEW)
+    const deepBattleRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.46, x: 460, y: 300, finished: false }, // gap=0.04
+      { t: 0.2, x: 200, y: 300, finished: false },
+    ];
+    cd.update(
+      deepBattleRacers,
+      6001,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+  });
+});
+
+// ── CameraDirector — D5: cameraTransitionSeconds → _lerpFactor ───────────────
+
+describe('CameraDirector — D5: cameraTransitionSeconds → _lerpFactor', () => {
+  it('no config: _lerpFactor computed from fallback 1.5s at 60fps ≈ 0.0253', () => {
+    const cd = new CameraDirector();
+    const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));
+    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
+    expect(cd._lerpFactor).toBeCloseTo(0.0253, 3);
+  });
+
+  it('cameraTransitionSeconds=0.5 gives faster lerp ≈ 0.0739', () => {
+    const fastConfig = { ...pctConfig, cameraTransitionSeconds: 0.5 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, fastConfig);
+    const expected = 1 - Math.pow(0.1, 1 / (0.5 * 60));
+    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
+    expect(cd._lerpFactor).toBeCloseTo(0.0739, 3);
+  });
+
+  it('cameraTransitionSeconds=3.0 gives slower lerp ≈ 0.0127', () => {
+    const slowConfig = { ...pctConfig, cameraTransitionSeconds: 3.0 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, slowConfig);
+    const expected = 1 - Math.pow(0.1, 1 / (3.0 * 60));
+    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
+    expect(cd._lerpFactor).toBeCloseTo(0.0127, 3);
+  });
+
+  it('live-apply: updateConfig() with faster transition increases _lerpFactor', () => {
+    const cd = new CameraDirector();
+    const before = cd._lerpFactor;
+    cd.updateConfig({ ...pctConfig, cameraTransitionSeconds: 0.5 });
+    expect(cd._lerpFactor).toBeGreaterThan(before);
+    expect(cd._lerpFactor).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+  });
+});
+
+// ── CameraDirector — D5: overviewCooldown jitter ─────────────────────────────
+
+describe('CameraDirector — D5: overviewCooldown jitter', () => {
+  it('_overviewCooldownDuration initializes to (min+max)/2 mean = 8000 (deterministic)', () => {
+    const cd = new CameraDirector();
+    // Default: [6000, 10000] → mean = 8000
+    expect(cd._overviewCooldownDuration).toBe(8000);
+  });
+
+  it('leaving OVERVIEW re-rolls _overviewCooldownDuration within [min, max]', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    // stateAge=9000 >= max(5000,8000)=8000 → _transition fires, prevState=OVERVIEW → re-roll
+    cd.update(
+      midRaceRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd._overviewCooldownDuration).toBeGreaterThanOrEqual(6000);
+    expect(cd._overviewCooldownDuration).toBeLessThanOrEqual(10000);
+  });
+
+  it('P3 respects custom _overviewCooldownDuration: no OVERVIEW if elapsed < duration', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0;
+    cd._overviewCooldownDuration = 9500; // directly set a long cooldown
+    // ts=9000: 9000-0=9000 < 9500 → P3 does NOT fire
+    cd.update(
+      midRaceRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('P3 fires when elapsed >= _overviewCooldownDuration', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0;
+    cd._overviewCooldownDuration = 8000; // explicit known value
+    // ts=9000: 9000-0=9000 >= 8000 → P3 fires
+    cd.update(
+      midRaceRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('config overviewCooldownMin/Max read via _computeTimingConfig; mean used as initial duration', () => {
+    const jitterConfig = { ...pctConfig, overviewCooldownMin: 5000, overviewCooldownMax: 9000 };
+    const cd = new CameraDirector(undefined, 1280, 720, false, jitterConfig);
+    expect(cd._overviewCooldownMin).toBe(5000);
+    expect(cd._overviewCooldownMax).toBe(9000);
+    expect(cd._overviewCooldownDuration).toBe(7000); // mean = (5000+9000)/2
   });
 });
 

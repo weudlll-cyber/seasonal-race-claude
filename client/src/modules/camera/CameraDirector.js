@@ -20,16 +20,19 @@ export const CAM_STATE = {
 export const OPEN_TRACK_BASE_ZOOM = 1.5;
 
 const MAX_STATE_DURATION = 8000; // fallback when no config provided
-const OVERVIEW_COOLDOWN_MS = 8000; // ms after leaving OVERVIEW before it can recur
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
 const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
+const BATTLE_EXIT_BUFFER = 0.02; // hysteresis: BATTLE stays until gap >= threshold + buffer
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
 const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
 const BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
 const MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
-const LERP = 0.04; // per-frame lerp factor (~1.5s to 90% convergence at 60fps)
+const FRAME_RATE = 60; // assumed display frame rate for lerp formula
+const CAMERA_TRANSITION_SECONDS = 1.5; // fallback transition time constant (90% convergence ≈ 3.45× TC)
+const OVERVIEW_COOLDOWN_MIN = 6000; // min ms after leaving OVERVIEW before it can recur
+const OVERVIEW_COOLDOWN_MAX = 10000; // max ms — jittered each exit for variety
 const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
@@ -177,6 +180,19 @@ export class CameraDirector {
     this._battleMaxDuration = config?.battleMaxDuration ?? BATTLE_MAX_DURATION;
     this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
+    this._cameraTransitionSeconds = config?.cameraTransitionSeconds ?? CAMERA_TRANSITION_SECONDS;
+    this._lerpFactor = 1 - Math.pow(0.1, 1 / (this._cameraTransitionSeconds * FRAME_RATE));
+    this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
+    this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
+    // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
+    this._overviewCooldownDuration = (this._overviewCooldownMin + this._overviewCooldownMax) / 2;
+  }
+
+  _randOverviewCooldown() {
+    return (
+      this._overviewCooldownMin +
+      Math.random() * (this._overviewCooldownMax - this._overviewCooldownMin)
+    );
   }
 
   // Main update — call once per frame during RACING.
@@ -195,9 +211,9 @@ export class CameraDirector {
       this._transition(racers, ts, raceState);
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
-    this.zoom += (this.targetZoom - this.zoom) * LERP;
-    this.offsetX += (this.targetOffsetX - this.offsetX) * LERP;
-    this.offsetY += (this.targetOffsetY - this.offsetY) * LERP;
+    this.zoom += (this.targetZoom - this.zoom) * this._lerpFactor;
+    this.offsetX += (this.targetOffsetX - this.offsetX) * this._lerpFactor;
+    this.offsetY += (this.targetOffsetY - this.offsetY) * this._lerpFactor;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -205,9 +221,10 @@ export class CameraDirector {
     const prevState = this.state;
     const prevEnteredAt = this.stateEnteredAt;
 
-    // Record cooldown timestamp when leaving OVERVIEW
+    // Record cooldown timestamp when leaving OVERVIEW and re-roll the jitter window
     if (prevState === CAM_STATE.OVERVIEW) {
       this._lastOverviewExitTs = ts;
+      this._overviewCooldownDuration = this._randOverviewCooldown();
     }
 
     const ordered = [...racers].sort((a, b) => b.t - a.t);
@@ -215,7 +232,12 @@ export class CameraDirector {
     const leaderProgress = leader && raceState.finishT > 0 ? leader.t / raceState.finishT : 0;
     const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
     const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
-    const hasBattle = gap01 < this._battleGapThreshold;
+    // Hysteresis: BATTLE enters at threshold, exits only when gap >= threshold + BATTLE_EXIT_BUFFER.
+    // Prevents state flickering when gap01 hovers just above the entry threshold.
+    const hasBattle =
+      prevState === CAM_STATE.BATTLE_ZOOM
+        ? gap01 < this._battleGapThreshold + BATTLE_EXIT_BUFFER
+        : gap01 < this._battleGapThreshold;
     const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
 
     // Determine next state via priority chain
@@ -254,7 +276,7 @@ export class CameraDirector {
       reason = `endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`;
     }
     // Priority 3: Cooldown expired + no active battle → return to OVERVIEW
-    else if (!hasBattle && ts - this._lastOverviewExitTs >= OVERVIEW_COOLDOWN_MS) {
+    else if (!hasBattle && ts - this._lastOverviewExitTs >= this._overviewCooldownDuration) {
       nextState = CAM_STATE.OVERVIEW;
       reason = 'cooldown: expired + no battle';
     }
