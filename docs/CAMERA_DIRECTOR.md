@@ -1,8 +1,59 @@
 # RaceArena — Camera-Director + RaceScreen-Refactor Konzept
 
-**Status:** Konzept-Doku — User-Klärungen abgeschlossen 2026-05-02
+**Status:** Konzept-Doku — User-Klärungen abgeschlossen 2026-05-02; Phase 4 implementiert 2026-05-06
 **Phase:** Kamera-Phase + RaceScreen-Refactor (Hot Pos 1)
 **Related:** `docs/BACKLOG.md — Hot §1`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
+
+---
+
+## Phase 4 — Implementierungsstatus (2026-05-06)
+
+### Implementiert (Branch `diagnosis/camera-tuning-effectiveness`)
+
+| Feature | Status | Verweis |
+|---------|--------|---------|
+| 7 Timing-Tunables im CameraDirector | ✅ | §8.1 (battleGapThreshold, battleGapHysteresis, battleMaxDurationMs, overviewCooldown{Min,Max}, overviewDuration, lerpFactor) |
+| BATTLE_ZOOM Hysterese | ✅ | enter bei `< battleGapThreshold`, exit bei `> threshold + hysteresis` |
+| BATTLE_ZOOM Max-Duration Cap | ✅ | `battleMaxDurationMs`: erzwingt State-Exit nach Timeout |
+| Periodic OVERVIEW Jitter | ✅ | Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax] |
+| Config-Schema v3 | ✅ | `battleGapThreshold` (war `battleGapPct`), `battleMaxDurationMs` (Ms-Suffix) |
+| Dev-Panel `CameraZoomTuningSection` | ✅ | Sliders für alle 7 Tunables; Min>Max-Validation-Warning |
+| Diagnose-HUD (Tier-2-Toggle) | ✅ | Ein/Ausblendbar im Dev-Panel ohne Code-Änderung (Project-Principle 1) |
+| **Plan-B Pan-Fix** | ✅ | `_computePanScale` entfernt; triviale Formel in LEADER/BATTLE/COMEBACK |
+
+### Triviale Pan-Formel (Plan-B)
+
+Alle drei Zoom-States (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM) verwenden:
+
+```js
+targetOffsetX = hw - r.x × zoom
+targetOffsetY = hh - r.y × zoom
+```
+
+**Beweis (Closed-Track):** `scaledRacersForCam` liefert canvas-space: `r.x = worldX × bsX`.
+Render-Pipeline: `screenX = cam.offsetX + worldX × zoom × bsX`.
+→ `screenX = (hw − worldX×bsX×zoom) + worldX×zoom×bsX = hw ✓`
+
+Keine bsX-Multiplikation in der Formel — `r.x` ist bereits canvas-space (hat bsX eingebaut).
+`_computePanScale(zoom) = zoom × bsX` war falsch weil es bsX doppelt anwendete.
+Details: Lesson 53 (Koordinatensystem), Lesson 62 (Render-Pipeline-Asymmetrien), Lesson 66 (Pixel-Invarianz).
+
+### Open Topics (nicht in dieser Phase)
+
+**DIAG-OpenTrackPan** (BACKLOG, Priorität: niedrig)
+Open-Track-Pan nutzt `openTrackCamera.js / openTrackPanTarget()` — unabhängig von `cam.offsetX/Y`.
+Die triviale Formel betrifft nur Closed-Track-Pan. Open-Track-Pan braucht separaten Browser-Test nach Merge.
+
+**Pan-Target-Identification** (BACKLOG, Priorität: mittel)
+LEADER_ZOOM zielt auf Centroid der Top-N `focusRacers` nach t-Wert. Das ist nicht notwendigerweise
+der Standings-Führer. Bei mehreren Runden und engen Packs kann Camera den falschen Racer zeigen.
+Fix: standings-sortierte `focusRacers`-Liste. Eigene PR.
+
+**State-Activation-Rates** (nicht getracked)
+battleGapThreshold (Default 0.05) und Hysterese (0.02) wurden nicht gegen echte Race-Daten kalibriert.
+Mess-Sprint empfohlen vor nächster Tunable-Phase (Lesson 67).
+
+---
 
 ---
 
