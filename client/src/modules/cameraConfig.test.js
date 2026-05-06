@@ -48,7 +48,7 @@ describe('loadCameraConfig', () => {
     expect(() => loadCameraConfig()).not.toThrow();
   });
 
-  it('schemaVersion=2 stored config is merged with defaults', () => {
+  it('schemaVersion=2 stored config is migrated to v3 and merged with defaults', () => {
     storageGet.mockReturnValue({
       schemaVersion: 2,
       maxTargetScreenPx: 200,
@@ -66,7 +66,7 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.maxTargetScreenPx).toBe(200);
-    expect(cfg.schemaVersion).toBe(2);
+    expect(cfg.schemaVersion).toBe(3);
   });
 
   it('schemaVersion=2: respects stored spritePctOfCanvas.leader', () => {
@@ -96,20 +96,56 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 2', () => {
+  it('writes schemaVersion: 3', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 2 })
+      expect.objectContaining({ schemaVersion: 3 })
     );
   });
 
-  it('writes schemaVersion: 2 even when not in input config', () => {
+  it('writes schemaVersion: 3 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 2 })
+      expect.objectContaining({ schemaVersion: 3 })
     );
+  });
+});
+
+describe('loadCameraConfig — v2→v3 migration', () => {
+  it('migrates battleMaxDuration to battleMaxDurationMs (non-default value confirms migration ran)', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 2,
+      battleMaxDuration: 9999,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.battleMaxDurationMs).toBe(9999);
+    expect('battleMaxDuration' in cfg).toBe(false);
+    expect(cfg.schemaVersion).toBe(3);
+  });
+
+  it('v2 config without battleMaxDuration still migrates to v3 and gets default battleMaxDurationMs', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 2,
+      maxTargetScreenPx: 200,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(3);
+    expect(cfg.maxTargetScreenPx).toBe(200);
+    expect('battleMaxDuration' in cfg).toBe(false);
+    expect(cfg.battleMaxDurationMs).toBe(DEFAULT_CAMERA_CONFIG.battleMaxDurationMs);
+  });
+
+  it('schemaVersion=3 config with battleMaxDurationMs is loaded without migration', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 3,
+      battleMaxDurationMs: 8000,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.battleMaxDurationMs).toBe(8000);
+    expect('battleMaxDuration' in cfg).toBe(false);
+    expect(cfg.schemaVersion).toBe(3);
   });
 });

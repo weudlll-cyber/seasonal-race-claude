@@ -870,7 +870,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     expect(cd._endgameThreshold).toBe(0.85);
     expect(cd._postStartHoldMs).toBe(7000);
     expect(cd._battleCooldownMs).toBe(8000);
-    expect(cd._battleMaxDuration).toBe(6000);
+    expect(cd._battleMaxDurationMs).toBe(6000);
     expect(cd._minStateHoldMs).toBe(5000);
   });
 
@@ -1062,7 +1062,7 @@ describe('CameraDirector — D2: battleCooldown', () => {
   });
 });
 
-describe('CameraDirector — D3: battleMaxDuration', () => {
+describe('CameraDirector — D3: battleMaxDurationMs', () => {
   it('no transition before 6s in BATTLE state', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
@@ -1096,7 +1096,7 @@ describe('CameraDirector — D3: battleMaxDuration', () => {
     expect(cd._lastBattleExitTs).toBe(6001);
   });
 
-  it('battleMaxDuration hard-cap: force-exit succeeds even when gap is in hysteresis zone (0.06)', () => {
+  it('battleMaxDurationMs hard-cap: force-exit succeeds even when gap is in hysteresis zone (0.06)', () => {
     // Confirms hysteresis does NOT block force-exit. Mechanism: update() pre-sets
     // _lastBattleExitTs=ts → battleCooledDown=false → P4 cannot fire → BATTLE exits to LEADER.
     // Hysteresis (hasBattle=true via exit threshold) only prevents OVERVIEW via P3.

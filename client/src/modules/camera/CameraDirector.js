@@ -177,7 +177,7 @@ export class CameraDirector {
     this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
-    this._battleMaxDuration = config?.battleMaxDuration ?? BATTLE_MAX_DURATION;
+    this._battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
     this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
     this._cameraTransitionSeconds = config?.cameraTransitionSeconds ?? CAMERA_TRANSITION_SECONDS;
@@ -201,10 +201,10 @@ export class CameraDirector {
   update(racers, ts, raceState, canvasW, canvasH) {
     const stateAge = ts - this.stateEnteredAt;
     const stateCap =
-      this.state === CAM_STATE.BATTLE_ZOOM ? this._battleMaxDuration : this._maxStateDuration;
+      this.state === CAM_STATE.BATTLE_ZOOM ? this._battleMaxDurationMs : this._maxStateDuration;
     if (stateAge >= Math.max(this._minStateHoldMs, stateCap)) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
-      // when battleMaxDuration expires while hasBattle is still true.
+      // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
         this._lastBattleExitTs = ts;
       }

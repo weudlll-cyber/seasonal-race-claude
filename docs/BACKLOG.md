@@ -263,6 +263,9 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
   - Priorität: zusammen mit B-UX2 — Hilfe-Screen kann die Doku referenzieren oder einbinden.
     Kann auch als reiner Doku-Sprint vor B-UX2 entstehen, dann nutzt B-UX2 die Inhalte.
 
+- **B-UX-MinMax** — Dev-Panel Min/Max-Pairs UX: Silent Rejection durch visuelles Warning ersetzen, einheitlich für Speed Range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + ggf. weitere Min/Max-Pairs die später hinzukommen. Aktuell wird ein ungültiger Wert (Min > Max oder Max < Min) einfach ignoriert — kein Feedback für den User. Fix: rote Umrandung oder Inline-Text ("Min must be less than Max") wenn Grenze verletzt wird. Eigene kleine PR.
+  *(Aufgekommen bei Phase-4-Slider-Implementation 2026-05-06, Severity: LOW — aktuell konsistent mit bestehender Speed-Range-Konvention)*
+
 - **B-UX4** — Sprite-Größen-System überarbeiten
   - Aktuelles Verhalten: per-Type-Overrides (z.B. `displaySize: 50` für Rocket) sind absolute
     Werte und deaktivieren die Auto-Skalierung vollständig (`displaySizeScale = 1`). Das hat zur

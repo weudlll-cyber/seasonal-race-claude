@@ -19,7 +19,25 @@ export { DEFAULT_CAMERA_CONFIG };
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
-  if (stored.schemaVersion !== 2) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v2 → v3 migration: rename battleMaxDuration to battleMaxDurationMs
+  if (stored.schemaVersion === 2) {
+    const patched = { ...stored, schemaVersion: 3 };
+    if ('battleMaxDuration' in patched) {
+      patched.battleMaxDurationMs = patched.battleMaxDuration;
+      delete patched.battleMaxDuration;
+    }
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...patched };
+    if (patched.spritePctOfCanvas) {
+      merged.spritePctOfCanvas = {
+        ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas,
+        ...patched.spritePctOfCanvas,
+      };
+    }
+    return merged;
+  }
+
+  if (stored.schemaVersion !== 3) return { ...DEFAULT_CAMERA_CONFIG };
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.spritePctOfCanvas) {
     merged.spritePctOfCanvas = {
@@ -31,5 +49,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 2 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 3 });
 }
