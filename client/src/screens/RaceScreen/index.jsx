@@ -22,6 +22,7 @@ import {
   effectiveZoom,
   openTrackPanBounds,
   openTrackPanTarget,
+  emitOpenTrackDiagIfNeeded,
 } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
@@ -966,6 +967,24 @@ export default function RaceScreen() {
         );
         st.camX = isFinite(st.camX) ? st.camX + (targetX - st.camX) * 0.05 : targetX;
         st.camY = isFinite(st.camY) ? st.camY + (targetY - st.camY) * 0.05 : targetY;
+        // [DIAG] emit after lerp so lerpedCamX/Y reflect what ctx.translate will use
+        emitOpenTrackDiagIfNeeded({
+          raceElapsed: raceState.raceElapsed,
+          currentState: camDirRef.current.state,
+          isRacing: st.phase === PHASE.RACING,
+          worldWidth,
+          worldHeight,
+          canvasW: CW,
+          canvasH: CH,
+          effZoom,
+          camXMax,
+          camYMax,
+          panRacers,
+          targetX,
+          targetY,
+          lerpedCamX: st.camX,
+          lerpedCamY: st.camY,
+        });
       }
 
       // ── Draw world ──

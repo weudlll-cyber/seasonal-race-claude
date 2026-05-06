@@ -494,6 +494,7 @@ export class CameraDirector {
           screenX >= 0 && screenX <= canvasW && screenY >= 0 && screenY <= canvasH;
       }
       this._diagSnapshot = {
+        source: 'CameraDirector',
         trackType: this._isOpenTrack ? 'open' : 'closed',
         backgroundSize: { w: this._worldW, h: this._worldH },
         frameSize: { w: canvasW, h: canvasH },
