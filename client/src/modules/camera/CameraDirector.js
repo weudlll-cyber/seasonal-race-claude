@@ -297,6 +297,17 @@ export class CameraDirector {
       reason = 'leader: default (no battle, no cooldown-OVERVIEW, no comeback)';
     }
 
+    // Re-roll overview cooldown when it expired but was blocked by a higher-priority state
+    // (endgame, battle, post-start-hold). Without this, the cooldown stays "expired" forever
+    // and the periodic OVERVIEW can never fire again in that race — no re-roll occurs until
+    // the next OVERVIEW exit, which may never come. Restarting the timer from ts means the
+    // next opportunity fires one fresh cooldown window later.
+    const cooldownExpired = ts - this._lastOverviewExitTs >= this._overviewCooldownDuration;
+    if (cooldownExpired && nextState !== CAM_STATE.OVERVIEW) {
+      this._lastOverviewExitTs = ts;
+      this._overviewCooldownDuration = this._randOverviewCooldown();
+    }
+
     // Commit state transition
     this.state = nextState;
     this.stateEnteredAt = ts;

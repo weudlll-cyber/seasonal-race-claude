@@ -1332,6 +1332,106 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
     expect(cd._overviewCooldownMax).toBe(9000);
     expect(cd._overviewCooldownDuration).toBe(7000); // mean = (5000+9000)/2
   });
+
+  it('cooldown expired + BATTLE active → re-rolls cooldown, no OVERVIEW', () => {
+    // When the cooldown expires but BATTLE or endgame blocks Priority 3,
+    // the cooldown must re-roll so that a later quiet window can trigger OVERVIEW.
+    const battleRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → hasBattle
+      { t: 0.2, x: 200, y: 300, finished: false },
+    ];
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0;
+    cd._overviewCooldownDuration = 5000; // expires at ts=5000+
+    // ts=9000: stateAge=9000 >= max(5000,8000)=8000 → _transition fires.
+    // hasBattle=true → P3 blocked. cooldownExpired=(9000-0>=5000)=true → re-roll fires.
+    cd.update(
+      battleRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW); // battle blocked P3
+    expect(cd._lastOverviewExitTs).toBe(9000); // re-roll fired: timer restarted at ts
+    expect(cd._overviewCooldownDuration).toBeGreaterThanOrEqual(15000); // fresh random roll
+    expect(cd._overviewCooldownDuration).toBeLessThanOrEqual(25000);
+  });
+
+  it('cooldown not yet expired → no re-roll', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0;
+    cd._overviewCooldownDuration = 25000; // far from expiry
+    cd.update(
+      midRaceRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd._lastOverviewExitTs).toBe(0); // unchanged
+  });
+
+  it('long-race scenario: two blocked cooldowns, then OVERVIEW fires in quiet LEADER window', () => {
+    // Simulates: BATTLE blocks cooldown twice (re-rolls each time), then gap opens
+    // and a third cooldown fires successfully.
+    const shortCooldownConfig = {
+      ...pctConfig,
+      overviewCooldownMin: 3000,
+      overviewCooldownMax: 3000,
+    };
+    const cd = new CameraDirector(undefined, 1280, 720, false, shortCooldownConfig);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 0;
+    cd._overviewCooldownDuration = 3000;
+
+    const battleRacers = [
+      { t: 0.5, x: 500, y: 300, finished: false },
+      { t: 0.48, x: 480, y: 300, finished: false }, // gap < threshold → hasBattle
+      { t: 0.2, x: 200, y: 300, finished: false },
+    ];
+    // Tick 1: stateAge=8001 fires _transition. Battle blocks P3 (cooldown expired at t=3000).
+    // Re-roll sets _lastOverviewExitTs=8001, new duration=3000.
+    cd.update(
+      battleRacers,
+      8001,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+    expect(cd._lastOverviewExitTs).toBe(8001);
+
+    // Tick 2: stateAge fires again. Second blocked cooldown (expires at 8001+3000=11001).
+    cd.stateEnteredAt = 8001;
+    cd.update(
+      battleRacers,
+      16100,
+      { raceElapsed: 18000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
+    expect(cd._lastOverviewExitTs).toBe(16100);
+
+    // Tick 3: gap widens → no battle. Cooldown expires at 16100+3000=19100. ts=24200 > 19100.
+    // stateAge=24200-16100=8100 >= max(5000,8000)=8000 → _transition fires. P3 wins → OVERVIEW.
+    cd.stateEnteredAt = 16100;
+    cd.update(
+      midRaceRacers,
+      24200,
+      { raceElapsed: 26000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
 });
 
 // ── Effective render-zoom — hierarchy ordering (H1+H2 context preserved) ─────
