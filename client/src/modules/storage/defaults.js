@@ -122,6 +122,33 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
   maxCapacityFactor: 0.3,
 };
 
+export const DEFAULT_CAMERA_CONFIG = {
+  schemaVersion: 2,
+  // Target sprite size per camera state — camera zoom is computed inversely so sprites
+  // render at this percentage of canvas height regardless of track world width.
+  spritePctOfCanvas: {
+    overview: 0.05, // floor for OVERVIEW + autoSpriteScale floor (5% of canvas height)
+    leader: 0.08, // target size during LEADER_ZOOM (8%)
+    battle: 0.12, // target size during BATTLE_ZOOM (12%)
+    comeback: 0.065, // target size during COMEBACK_ZOOM (6.5%)
+  },
+  maxTargetScreenPx: 160,
+  tagVisibleMaxCount: 10,
+  showCameraStateHud: true,
+  showCameraDiagnostics: false,
+  battleGapThreshold: 0.05,
+  maxStateDuration: 4000,
+  endgameThreshold: 0.85,
+  // Timing tunables
+  postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
+  battleMaxDurationMs: 6000, // ms before BATTLE is force-exited regardless of gap
+  battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
+  minStateHoldMs: 5000, // minimum ms any state is held before re-evaluation
+  cameraTransitionSeconds: 1.5, // lerp time constant — 90% convergence ≈ 3.45× this value at 60fps
+  overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
+  overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
+};
+
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollVariationPercent: 85,
   reRollTransitionDuration: 5.0,

@@ -13,7 +13,11 @@ import { validateActiveRace } from './raceSession.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
-import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import {
+  CameraDirector,
+  CAM_STATE,
+  OPEN_TRACK_BASE_ZOOM,
+} from '../../modules/camera/CameraDirector.js';
 import {
   effectiveZoom,
   openTrackPanBounds,
@@ -48,7 +52,12 @@ import {
   computeAutoScaleFactor,
   computeRenderDisplayScale,
   getEffectiveMinTargetScreenPx,
+  getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
+import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import CameraStateHUD from './CameraStateHUD.jsx';
+import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
+import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
   DEFAULT_TRACK_LIGHTS,
@@ -110,6 +119,16 @@ export default function RaceScreen() {
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [finishTState, setFinishTState] = useState(1);
+  const [camState, setCamState] = useState('OVERVIEW');
+  const prevHudStateRef = useRef('OVERVIEW');
+  const [showCameraStateHud] = useState(() => {
+    const cfg = loadCameraConfig();
+    return cfg.showCameraStateHud ?? true;
+  });
+  const [showCameraDiagnostics] = useState(() => {
+    const cfg = loadCameraConfig();
+    return cfg.showCameraDiagnostics ?? false;
+  });
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -196,6 +215,7 @@ export default function RaceScreen() {
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
+    const cameraConfig = loadCameraConfig();
     const displaySize = racerType.config.displaySize;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
@@ -207,6 +227,7 @@ export default function RaceScreen() {
         displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
       }
     }
+    const referenceSpriteSize = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
     // Open tracks: finish line is fixed at (1 - runoutZone); race speed comes from targetDuration.
@@ -234,7 +255,14 @@ export default function RaceScreen() {
       maxX: rawBbox.maxX * bsX,
       maxY: rawBbox.maxY * bsY,
     };
-    camDirRef.current = new CameraDirector(scaledBbox, worldWidth, worldHeight, isOpenTrack);
+    camDirRef.current = new CameraDirector(
+      scaledBbox,
+      worldWidth,
+      worldHeight,
+      isOpenTrack,
+      cameraConfig,
+      referenceSpriteSize
+    );
     setFinishTState(finishT);
 
     // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
@@ -426,6 +454,9 @@ export default function RaceScreen() {
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
       const inv = 1 / ezoom;
+      const tagSet = new Set(
+        visibleTagRacers(st.racers, st.phase === PHASE.RACING, cameraConfig.tagVisibleMaxCount)
+      );
       for (const r of st.racers) {
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
@@ -437,7 +468,9 @@ export default function RaceScreen() {
         }
         ctx.globalAlpha = 1;
         rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
-        drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
+        if (tagSet.has(r)) {
+          drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
+        }
         r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
       }
@@ -903,8 +936,15 @@ export default function RaceScreen() {
           ? camDirRef.current.update(scaledRacersForCam, ts, raceState, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
+      // Sync camera HUD state — only triggers React re-render on actual state change
+      const newHudState = camDirRef.current.hudState;
+      if (newHudState !== prevHudStateRef.current) {
+        prevHudStateRef.current = newHudState;
+        setCamState(newHudState);
+      }
+
       if (isOpenTrack) {
-        const effZoom = effectiveZoom(cam.zoom);
+        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
         const { camXMax, camYMax } = openTrackPanBounds(
           worldWidth,
           worldHeight,
@@ -913,8 +953,11 @@ export default function RaceScreen() {
           effZoom
         );
         const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
+        // LEADER_ZOOM: solo-leader pan prevents leader slipping off right edge at large N
+        const panRacers =
+          camDirRef.current.state === CAM_STATE.LEADER_ZOOM ? focusRacers.slice(0, 1) : focusRacers;
         const { targetX, targetY } = openTrackPanTarget(
-          focusRacers,
+          panRacers,
           CW,
           CH,
           effZoom,
@@ -937,20 +980,27 @@ export default function RaceScreen() {
       //
       // frameEffZoom is the raw canvas scale (cam.zoom×bsX closed, BASE×cam.zoom open).
       // It's used by labels/trail (via 1/frameEffZoom) to stay constant screen-size.
-      const frameEffZoom = isOpenTrack ? effectiveZoom(cam.zoom) : cam.zoom * bsX;
+      const frameEffZoom = isOpenTrack
+        ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
+        : cam.zoom * bsX;
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
         displaySizeScale,
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          autoScaleConfig.minTargetScreenPx ?? 32
+          cameraConfig.spritePctOfCanvas?.overview ?? 0.05,
+          CANVAS_H
+        ),
+        getEffectiveMaxTargetScreenPx(
+          racerTypeRef.current?.config?.maxTargetScreenPx,
+          cameraConfig.maxTargetScreenPx
         )
       );
 
       if (isOpenTrack) {
         ctx.save();
-        const effZoom = effectiveZoom(cam.zoom);
+        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
         // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
         ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
         ctx.scale(effZoom, effZoom);
@@ -1055,6 +1105,8 @@ export default function RaceScreen() {
       <div className="race-layout">
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+          <CameraStateHUD camState={camState} visible={showCameraStateHud} />
+          <CameraDiagnosticsHUD cameraRef={camDirRef} visible={showCameraDiagnostics} />
         </div>
 
         <aside className="race-hud">

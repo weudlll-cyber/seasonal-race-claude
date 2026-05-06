@@ -405,6 +405,53 @@ No new dependencies. Existing findings unchanged.
 
 ---
 
+## 2026-05-06 — diagnosis/camera-tuning-effectiveness — Phase 4: Camera Pacing Tunables + Plan-B Pan + Diagnose-HUD
+
+**Branch:** `diagnosis/camera-tuning-effectiveness` (PR-D Partial — timing tunables only; pan fix as diagnosis sub-branch)
+
+### Scope
+
+Phase 4 implemented the first round of Camera-Director runtime tunables and fixed the long-standing pan misalignment bug (Commit C double-bsX).
+
+**Implemented — Phase 4 Camera Tunables:**
+- 7 timing tunables in CameraDirector constructor: `battleGapThreshold`, `battleGapHysteresis`, `battleMaxDurationMs`, `overviewCooldownMin`, `overviewCooldownMax`, `overviewDuration`, `lerpFactor`
+- BATTLE_ZOOM hysteresis: enter at `battleGapThreshold`, exit at `battleGapThreshold + battleGapHysteresis` (prevents flickering)
+- `battleMaxDurationMs` cap: BATTLE_ZOOM forced to exit after max duration, preventing camera lock-in
+- Periodic OVERVIEW jitter: cooldown drawn randomly from `[overviewCooldownMin, overviewCooldownMax]` each cycle
+- Dev-Panel UI: `CameraZoomTuningSection.jsx` with sliders for all 7 tunables + Min>Max validation warning
+- CameraDirector config schema v3: `battleGapThreshold` replaces `battleGapPct`; `battleMaxDurationMs` replaces `battleMaxDuration` (Ms suffix for naming consistency, Lesson 57)
+- `startPhaseSeconds` + `finishMomentDuration` tunables for race-start and finish-drama camera bypass
+- Diagnose-HUD intentionally retained as Tier-2 toggle in Dev-Panel (diagnose without code change)
+
+**Implemented — Plan-B Pan Fix:**
+- `_computePanScale()` removed entirely (was applying `bsX` twice — Befund C)
+- Trivial pan formula in all 3 states: `targetOffsetX = hw - r.x × zoom`, `targetOffsetY = hh - r.y × zoom`
+- Mathematical proof: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw ✓` (r.x is canvas-space, already has bsX)
+- 4 pan-centering tests replaced with proper render-formula tests (canvas-space in, world-space to render helpers)
+- Temporary `[PAN]` diagnostic logs removed
+
+### Test Gate
+
+| Metric | Count |
+|--------|-------|
+| Tests on branch (after all commits) | **1619** (91 test files) |
+| Tests at PR-A3 baseline | 1396 |
+| Net delta on this branch | +223 (Phase 4 tunables + pan + timing + camera tuning section) |
+| Tests replaced (pan) | 4 replaced with corrected canvas-space tests |
+
+### Quality Gate
+
+- ✅ Phase 4 timing tunables: 7 parameters wired to Dev-Panel with live-apply
+- ✅ Plan-B pan formula: trivial formula in LEADER/BATTLE/COMEBACK, no bsX factor
+- ✅ `_computePanScale` deleted — dead helper eliminated
+- ✅ Naming: `battleMaxDurationMs` with Ms suffix (Lesson 57)
+- ✅ Config schema v3 tests updated
+- ⚠️ **Open: DIAG-OpenTrackPan** — Open-track pan not empirically verified post-fix (BACKLOG)
+- ⚠️ **Open: Pan-Target-Identification** — camera may show top-N centroid, not standings leader (BACKLOG)
+- ⚠️ **Open: State-Activation rates** — battleGapThreshold calibration unverified against real races (Lesson 67)
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |

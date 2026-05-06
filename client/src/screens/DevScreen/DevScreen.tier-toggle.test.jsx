@@ -34,6 +34,15 @@ vi.mock('./sections/RaceHistory.jsx', () => ({
 vi.mock('./sections/RaceTuningSection.jsx', () => ({
   default: () => <div data-testid="section-racetuning" />,
 }));
+vi.mock('./sections/SpriteSizeRangeSection.jsx', () => ({
+  default: () => <div data-testid="section-sprite-size-range" />,
+}));
+vi.mock('./sections/CameraZoomTuningSection.jsx', () => ({
+  default: () => <div data-testid="section-camera-zoom" />,
+}));
+vi.mock('./sections/NameTagVisibilitySection.jsx', () => ({
+  default: () => <div data-testid="section-nametag-visibility" />,
+}));
 vi.mock('./sections/AutoScaleSection.jsx', () => ({
   default: () => <div data-testid="section-autoscale" />,
 }));
@@ -139,6 +148,33 @@ describe('DevScreen tier toggle — active section fallback', () => {
     fireEvent.click(screen.getByText('Operator'));
     // The active section content should now be Race Defaults (first operator section)
     expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+  });
+});
+
+describe('DevScreen — new Tier-2 camera sections visibility', () => {
+  it('All view shows Sprite Size Range, Camera Zoom Tuning, Name Tag Visibility', () => {
+    renderDevScreen();
+    expect(screen.getByText('Sprite Size Range')).toBeTruthy();
+    expect(screen.getByText('Camera Zoom Tuning')).toBeTruthy();
+    expect(screen.getByText('Name Tag Visibility')).toBeTruthy();
+  });
+
+  it('Operator view hides all three new camera sections', () => {
+    renderDevScreen();
+    fireEvent.click(screen.getByText('Operator'));
+    expect(screen.queryByText('Sprite Size Range')).toBeNull();
+    expect(screen.queryByText('Camera Zoom Tuning')).toBeNull();
+    expect(screen.queryByText('Name Tag Visibility')).toBeNull();
+  });
+
+  it('new camera sections appear after Race Tuning in sidebar', () => {
+    renderDevScreen();
+    const text = document.body.textContent;
+    const raceTuningIdx = text.indexOf('Race Tuning');
+    const spriteSizeIdx = text.indexOf('Sprite Size Range');
+    const cameraZoomIdx = text.indexOf('Camera Zoom Tuning');
+    expect(spriteSizeIdx).toBeGreaterThan(raceTuningIdx);
+    expect(cameraZoomIdx).toBeGreaterThan(spriteSizeIdx);
   });
 });
 
