@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { getPanTarget } from './panTarget.js';
 
 const STATES = ['OVERVIEW', 'LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'];
@@ -29,7 +29,7 @@ describe('getPanTarget', () => {
     });
   });
 
-  describe('BATTLE_ZOOM', () => {
+  describe('BATTLE_ZOOM — no shape (euclidean fallback)', () => {
     it('midpoint of top-2 racers', () => {
       const result = getPanTarget('BATTLE_ZOOM', four);
       expect(result.x).toBeCloseTo((900 + 700) / 2);
@@ -47,6 +47,48 @@ describe('getPanTarget', () => {
         { x: 600, y: 300 },
       ];
       expect(getPanTarget('BATTLE_ZOOM', racers)).toEqual({ x: 400, y: 200 });
+    });
+  });
+
+  describe('BATTLE_ZOOM — track-curve-aware (shape provided)', () => {
+    it('calls shape.getPosition with tMid=(t0+t1)/2 and offset=0', () => {
+      const mockShape = { getPosition: vi.fn(() => ({ x: 750, y: 310, angle: 0.1 })) };
+      const racers = [
+        { t: 0.6, x: 600, y: 300 },
+        { t: 0.4, x: 400, y: 320 },
+      ];
+      const result = getPanTarget('BATTLE_ZOOM', racers, mockShape);
+      expect(mockShape.getPosition).toHaveBeenCalledWith(0.5, 0);
+      expect(result).toEqual({ x: 750, y: 310 });
+    });
+
+    it('returns shape position, NOT euclidean midpoint', () => {
+      // shape.getPosition returns a track-curve point that differs from the
+      // straight-line average — verifies we're not ignoring the shape result.
+      const mockShape = { getPosition: vi.fn(() => ({ x: 999, y: 111, angle: 0 })) };
+      const racers = [
+        { t: 0.8, x: 100, y: 200 },
+        { t: 0.2, x: 500, y: 400 },
+      ];
+      const result = getPanTarget('BATTLE_ZOOM', racers, mockShape);
+      expect(result).toEqual({ x: 999, y: 111 }); // shape result, not (300, 300)
+    });
+
+    it('single racer with shape → racer position (not shape.getPosition)', () => {
+      const mockShape = { getPosition: vi.fn(() => ({ x: 999, y: 999, angle: 0 })) };
+      const r = { t: 0.5, x: 640, y: 360 };
+      const result = getPanTarget('BATTLE_ZOOM', [r], mockShape);
+      expect(mockShape.getPosition).not.toHaveBeenCalled();
+      expect(result).toEqual({ x: 640, y: 360 });
+    });
+
+    it('null shape with t-bearing racers → euclidean midpoint', () => {
+      const racers = [
+        { t: 0.8, x: 800, y: 400 },
+        { t: 0.2, x: 200, y: 200 },
+      ];
+      const result = getPanTarget('BATTLE_ZOOM', racers, null);
+      expect(result).toEqual({ x: 500, y: 300 });
     });
   });
 
