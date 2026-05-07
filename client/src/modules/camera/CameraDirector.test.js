@@ -1639,13 +1639,17 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     expect(screenY(cd, worldY, worldH)).toBeCloseTo(360, 0);
   });
 
-  it('BATTLE_ZOOM closed worldW=1536: centroid centered at hw/hh after pan converges', () => {
+  it('BATTLE_ZOOM closed worldW=1536: track-midpoint centered at hw/hh after pan converges', () => {
     const worldW = 1536;
     const worldH = 720;
-    // Top-2 world centroid: (700+500)/2=600, worldY=300
+    // Top-2 racers have t=0.9 and t=0.8; tMid=0.85.
+    // The mock shape returns world position (600, 300) for any t, so the
+    // pan target is (600, 300) — same as the euclidean centroid but resolved via
+    // the track-curve path, confirming CameraDirector passes shape to getPanTarget.
     const worldCx = 600;
     const worldCy = 300;
-    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    const mockShape = { getPosition: (_t, _offset) => ({ x: worldCx, y: worldCy, angle: 0 }) };
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36, mockShape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     const racers = [
