@@ -32,6 +32,12 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     panProgress: 1,
     zoomProgress: 1,
     targetVisible: true,
+    offsetX: 0,
+    offsetY: 0,
+    targetOffsetX: 0,
+    targetOffsetY: 0,
+    targetZoom: 1,
+    bsY: 1,
   });
   const intervalRef = useRef(null);
 
@@ -53,6 +59,12 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         panProgress: dir.panProgress ?? 1,
         zoomProgress: dir.zoomProgress ?? 1,
         targetVisible: dir.targetInFrame ?? true,
+        offsetX: dir.offsetX ?? 0,
+        offsetY: dir.offsetY ?? 0,
+        targetOffsetX: dir.targetOffsetX ?? 0,
+        targetOffsetY: dir.targetOffsetY ?? 0,
+        targetZoom: dir.targetZoom ?? dir.zoom,
+        bsY: dir._bsY ?? 1,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
@@ -73,11 +85,28 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     panProgress,
     zoomProgress,
     targetVisible,
+    offsetX,
+    offsetY,
+    targetOffsetX,
+    targetOffsetY,
+    targetZoom,
+    bsY,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
   const lagMag = Math.sqrt(lagX * lagX + lagY * lagY);
   const lagColor = lagMag < 5 ? '#4cff91' : lagMag < 50 ? '#ffd700' : '#ff6b35';
+
+  const CANVAS_H = 720;
+  const effZoom = zoom * bsX;
+  const effZoomY = zoom * bsY;
+  const targEffZoom = targetZoom * bsX;
+  const targEffZoomY = targetZoom * bsY;
+  const camWorldX = effZoom > 0 ? Math.round((CANVAS_W / 2 - offsetX) / effZoom) : 0;
+  const camWorldY = effZoomY > 0 ? Math.round((CANVAS_H / 2 - offsetY) / effZoomY) : 0;
+  const tgtWorldX = targEffZoom > 0 ? Math.round((CANVAS_W / 2 - targetOffsetX) / targEffZoom) : 0;
+  const tgtWorldY =
+    targEffZoomY > 0 ? Math.round((CANVAS_H / 2 - targetOffsetY) / targEffZoomY) : 0;
 
   return (
     <div
@@ -122,6 +151,15 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       </div>
       <div style={{ color: lagColor }}>
         lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px
+      </div>
+      <div style={{ color: '#9be' }}>
+        cam: ({camWorldX}, {camWorldY})
+      </div>
+      <div style={{ color: '#9be' }}>
+        tgt: ({tgtWorldX}, {tgtWorldY})
+      </div>
+      <div style={{ color: '#fad' }}>
+        Δ: ({tgtWorldX - camWorldX}, {tgtWorldY - camWorldY})
       </div>
       <div>
         pan: {(panProgress * 100).toFixed(0)}% | zoom: {(zoomProgress * 100).toFixed(0)}%{' '}
