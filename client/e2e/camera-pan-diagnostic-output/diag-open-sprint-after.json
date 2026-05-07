@@ -1,0 +1,482 @@
+[
+  {
+    "timestamp": 0,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 1549.8999999999996,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 3116.5,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 4716.499999999999,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "OVERVIEW",
+    "panTarget": {
+      "type": "overview",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 5466.400000000001,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 6399.7,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 8116.400000000001,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 9899.599999999999,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 10499.599999999999,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 2.215384615384615,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 11832.8,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 2.215384615384615,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 13599.5,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 2.215384615384615,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 15366,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "BATTLE_ZOOM",
+    "panTarget": {
+      "type": "battle",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 2.215384615384615,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 16515.9,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 17132.7,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 18915.9,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  },
+  {
+    "timestamp": 20682.4,
+    "trackType": "open",
+    "backgroundSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "frameSize": {
+      "w": 1280,
+      "h": 720
+    },
+    "currentState": "LEADER_ZOOM",
+    "panTarget": {
+      "type": "leader",
+      "racerId": null,
+      "position": null
+    },
+    "computedPan": null,
+    "backgroundBounds": null,
+    "finalPan": {
+      "x": 0,
+      "y": 0
+    },
+    "wasClamped": null,
+    "clampedAxis": null,
+    "targetVisibleAfterClamp": null,
+    "zoom": 1.476923076923077,
+    "targetInInnerFrame": null,
+    "wasZoomAdapted": null
+  }
+]
