@@ -251,7 +251,8 @@ export default function RaceScreen() {
       worldHeight,
       isOpenTrack,
       cameraConfig,
-      referenceSpriteSize
+      referenceSpriteSize,
+      shapeRef.current
     );
     setFinishTState(finishT);
 
@@ -932,7 +933,7 @@ export default function RaceScreen() {
       if (isOpenTrack) {
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
         const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
-        const target = getPanTarget(camDirRef.current.state, focusRacers);
+        const target = getPanTarget(camDirRef.current.state, focusRacers, shapeRef.current);
         const resolved = resolveCamera({
           targetWorld: target,
           desiredEffZoom: effZoom,

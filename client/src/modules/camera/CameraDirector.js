@@ -66,15 +66,22 @@ export class CameraDirector {
    * @param {number} [referenceSpriteSize=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
    *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
+   * @param {object|null} [shape=null]
+   *   EditorShape instance for the current track. When provided, BATTLE_ZOOM pan
+   *   targets are resolved at the arc-length midpoint on the racing line rather than
+   *   the euclidean midpoint — prevents the camera from drifting into the infield on
+   *   curved (oval) tracks. Null is safe: falls back to euclidean midpoint.
    */
   constructor(
     worldW = 1280,
     worldH = 720,
     isOpenTrack = false,
     config = null,
-    referenceSpriteSize = 0
+    referenceSpriteSize = 0,
+    shape = null
   ) {
     this._isOpenTrack = isOpenTrack;
+    this._shape = shape;
     this._worldW = worldW;
     this._worldBounds = { minX: 0, minY: 0, maxX: worldW, maxY: worldH };
     this._bsX = CANVAS_W / worldW;
@@ -447,7 +454,7 @@ export class CameraDirector {
             : focusRacers;
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
         if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc);
+          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
           const resolved = resolveCamera({
             targetWorld: target,
             desiredEffZoom: minEffZoom,
@@ -467,7 +474,7 @@ export class CameraDirector {
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
         if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers);
+          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._leaderZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -476,7 +483,7 @@ export class CameraDirector {
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
         if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers);
+          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._battleZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -485,7 +492,7 @@ export class CameraDirector {
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
         if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers);
+          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._comebackZoom * this._bsX, frameSize, canvasH);
         }
         break;
