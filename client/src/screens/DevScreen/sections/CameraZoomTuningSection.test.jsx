@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const defaultSpritePct = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
 
+const defaultTc = { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 };
+
 vi.mock('../../../modules/cameraConfig.js', () => ({
   loadCameraConfig: vi.fn(() => ({
     schemaVersion: 2,
@@ -17,7 +19,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     battleCooldownMs: 8000,
     battleMaxDurationMs: 6000,
     minStateHoldMs: 5000,
-    cameraTransitionSeconds: 1.5,
+    cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
     overviewCooldownMin: 15000,
     overviewCooldownMax: 25000,
   })),
@@ -35,7 +37,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     battleCooldownMs: 8000,
     battleMaxDurationMs: 6000,
     minStateHoldMs: 5000,
-    cameraTransitionSeconds: 1.5,
+    cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
     overviewCooldownMin: 15000,
     overviewCooldownMax: 25000,
   },
@@ -58,7 +60,7 @@ function freshConfig(overrides = {}) {
     battleCooldownMs: 8000,
     battleMaxDurationMs: 6000,
     minStateHoldMs: 5000,
-    cameraTransitionSeconds: 1.5,
+    cameraTransitionSeconds: { ...defaultTc },
     overviewCooldownMin: 15000,
     overviewCooldownMax: 25000,
     ...overrides,
@@ -136,9 +138,24 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('Minimum State Hold')).toBeTruthy();
   });
 
-  it('renders Camera Transition Speed label', () => {
+  it('renders Transition: OVERVIEW label', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Camera Transition Speed')).toBeTruthy();
+    expect(screen.getByText('Transition: OVERVIEW')).toBeTruthy();
+  });
+
+  it('renders Transition: LEADER label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Transition: LEADER')).toBeTruthy();
+  });
+
+  it('renders Transition: BATTLE label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Transition: BATTLE')).toBeTruthy();
+  });
+
+  it('renders Transition: COMEBACK label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Transition: COMEBACK')).toBeTruthy();
   });
 
   it('renders Periodic OVERVIEW — Min Interval label', () => {
@@ -217,10 +234,11 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(inputs.some((i) => i.value === '5000')).toBe(true);
   });
 
-  it('shows default cameraTransitionSeconds value 1.5', () => {
+  it('shows default transition OVERVIEW value 1.5 and LEADER value 0.3', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '1.5')).toBe(true);
+    expect(inputs.some((i) => i.value === '0.3')).toBe(true);
   });
 
   it('shows default overviewCooldownMin value 15000', () => {
@@ -253,7 +271,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
         battleCooldownMs: 4000,
         battleMaxDurationMs: 9000,
         minStateHoldMs: 2000,
-        cameraTransitionSeconds: 2.5,
+        cameraTransitionSeconds: { overview: 2.5, leader: 1.0, battle: 1.0, comeback: 1.0 },
         overviewCooldownMin: 8000,
         overviewCooldownMax: 12000,
       })
@@ -270,7 +288,7 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
         battleCooldownMs: 8000,
         battleMaxDurationMs: 6000,
         minStateHoldMs: 5000,
-        cameraTransitionSeconds: 1.5,
+        cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
         overviewCooldownMin: 15000,
         overviewCooldownMax: 25000,
       })

@@ -35,6 +35,19 @@ function CameraZoomTuningSection() {
     }));
   }
 
+  function setTc(key, val) {
+    setConfig((prev) => {
+      const prevTc =
+        typeof prev.cameraTransitionSeconds === 'object'
+          ? prev.cameraTransitionSeconds
+          : {
+              ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds,
+              overview: prev.cameraTransitionSeconds,
+            };
+      return { ...prev, cameraTransitionSeconds: { ...prevTc, [key]: val } };
+    });
+  }
+
   function handleReset() {
     setConfig((prev) => ({
       ...prev,
@@ -46,7 +59,7 @@ function CameraZoomTuningSection() {
       battleCooldownMs: DEFAULT_CAMERA_CONFIG.battleCooldownMs,
       battleMaxDurationMs: DEFAULT_CAMERA_CONFIG.battleMaxDurationMs,
       minStateHoldMs: DEFAULT_CAMERA_CONFIG.minStateHoldMs,
-      cameraTransitionSeconds: DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds,
+      cameraTransitionSeconds: { ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds },
       overviewCooldownMin: DEFAULT_CAMERA_CONFIG.overviewCooldownMin,
       overviewCooldownMax: DEFAULT_CAMERA_CONFIG.overviewCooldownMax,
       targetInnerFramePct: DEFAULT_CAMERA_CONFIG.targetInnerFramePct,
@@ -54,6 +67,11 @@ function CameraZoomTuningSection() {
   }
 
   const pct = config.spritePctOfCanvas ?? DEFAULT_CAMERA_CONFIG.spritePctOfCanvas;
+  const tc = (() => {
+    const raw = config.cameraTransitionSeconds ?? DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds;
+    if (typeof raw === 'object') return raw;
+    return { ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds, overview: raw };
+  })();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -353,21 +371,93 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Camera Transition Speed
+              Transition: OVERVIEW
               <InfoTooltip
-                text={`Time for camera zoom to settle into new state. Lower = snappier, higher = more cinematic. Value: ${config.cameraTransitionSeconds.toFixed(1)}s.`}
+                text={`Lerp time constant for the OVERVIEW wide-shot pan. Higher = slower, more cinematic sweep. Value: ${tc.overview.toFixed(1)}s.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={0.5}
-              max={4.0}
+              min={0.1}
+              max={3.0}
               step={0.1}
-              value={config.cameraTransitionSeconds}
+              value={tc.overview}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0.5 && v <= 4.0) set('cameraTransitionSeconds', v);
+                if (v >= 0.1 && v <= 3.0) setTc('overview', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Transition: LEADER
+              <InfoTooltip
+                text={`Lerp time constant when following the leader. Lower = camera tracks the leader more tightly. Value: ${tc.leader.toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.1}
+              max={3.0}
+              step={0.1}
+              value={tc.leader}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.1 && v <= 3.0) setTc('leader', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Transition: BATTLE
+              <InfoTooltip
+                text={`Lerp time constant during battle zoom. Lower = camera responds faster to racers moving together. Value: ${tc.battle.toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.1}
+              max={3.0}
+              step={0.1}
+              value={tc.battle}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.1 && v <= 3.0) setTc('battle', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Transition: COMEBACK
+              <InfoTooltip
+                text={`Lerp time constant during comeback zoom. Lower = camera snaps to the comeback racer faster. Value: ${tc.comeback.toFixed(1)}s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.1}
+              max={3.0}
+              step={0.1}
+              value={tc.comeback}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.1 && v <= 3.0) setTc('comeback', v);
               }}
             />
           </div>
