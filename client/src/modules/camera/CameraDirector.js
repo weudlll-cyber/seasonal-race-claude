@@ -93,6 +93,7 @@ export class CameraDirector {
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
     this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
+    this._snapFiredAtWall = 0; // wall-clock ms of last snap, for HUD indicator
   }
 
   /**
@@ -209,6 +210,7 @@ export class CameraDirector {
     // Finish-drama is exempt from minStateHoldMs: when the 1500ms pulse expires, transition
     // immediately regardless of how long the state has been held.
     const finishDramaExpired = this._inFinishDrama && ts >= this._finishMomentExpiry;
+    const prevState = this.state;
     if (stateAge >= Math.max(this._minStateHoldMs, stateCap) || finishDramaExpired) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
@@ -218,6 +220,20 @@ export class CameraDirector {
       this._transition(racers, ts, raceState);
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
+    // Snap camera to target on transitions into zoom states so the leader is
+    // immediately centered rather than lerping from the previous camera position.
+    // OVERVIEW transitions are excluded — the wide-shot sweep-in is intentional.
+    if (
+      this.state !== prevState &&
+      (this.state === CAM_STATE.LEADER_ZOOM ||
+        this.state === CAM_STATE.BATTLE_ZOOM ||
+        this.state === CAM_STATE.COMEBACK_ZOOM)
+    ) {
+      this.offsetX = this.targetOffsetX;
+      this.offsetY = this.targetOffsetY;
+      this.zoom = this.targetZoom;
+      this._snapFiredAtWall = Date.now();
+    }
     this.zoom += (this.targetZoom - this.zoom) * this._lerpFactor;
     this.offsetX += (this.targetOffsetX - this.offsetX) * this._lerpFactor;
     this.offsetY += (this.targetOffsetY - this.offsetY) * this._lerpFactor;

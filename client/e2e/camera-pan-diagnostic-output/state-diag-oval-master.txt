@@ -1,0 +1,13 @@
+[CAM_DIAG] config | battleGapThreshold=0.05 postStartHoldMs=7000 minStateHoldMs=5000 maxStateDuration=4000 endgameThreshold=0.85 overviewCooldownDuration=20000ms
+[CAM_DIAG] transition fired | from=OVERVIEW | raceElapsed=550ms finishT=1.0 | gap01=0.0007 threshold=0.05 hasBattle=true | leaderProg=0.022 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=17518ms sinceOvExit=0ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] OVERVIEW → OVERVIEW | start-phase: raceElapsed < 3000ms | raceElapsed=550ms
+[CAM_DIAG] transition fired | from=OVERVIEW | raceElapsed=5566ms finishT=1.0 | gap01=0.0150 threshold=0.05 hasBattle=true | leaderProg=0.222 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=15044ms sinceOvExit=0ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] OVERVIEW → LEADER_ZOOM | post-start-hold: raceElapsed=5.6s | raceElapsed=5566ms
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=10600ms finishT=1.0 | gap01=0.0150 threshold=0.05 hasBattle=true | leaderProg=0.423 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=15044ms sinceOvExit=5033ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] LEADER_ZOOM → BATTLE_ZOOM | battle: gap01=0.015 < threshold=0.05 | raceElapsed=10600ms
+[CAM_DIAG] transition fired | from=BATTLE_ZOOM | raceElapsed=16616ms finishT=1.0 | gap01=0.0053 threshold=0.05 hasBattle=true | leaderProg=0.659 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=15044ms sinceOvExit=11050ms | battleCooldownMs=8000 sinceBattleExit=0ms
+[CAM_DIAG] BATTLE_ZOOM → LEADER_ZOOM | leader: default (no battle, no cooldown-OVERVIEW, no comeback) | raceElapsed=16616ms
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=21632ms finishT=1.0 | gap01=0.0062 threshold=0.05 hasBattle=true | leaderProg=0.853 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=15044ms sinceOvExit=16066ms | battleCooldownMs=8000 sinceBattleExit=5016ms
+[CAM_DIAG] LEADER_ZOOM → LEADER_ZOOM | endgame: leaderProgress=0.85 > 0.85 | raceElapsed=21632ms
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=26649ms finishT=1.0 | gap01=0.0020 threshold=0.05 hasBattle=true | leaderProg=1.024 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=23600ms sinceOvExit=5017ms | battleCooldownMs=8000 sinceBattleExit=10033ms
+[CAM_DIAG] LEADER_ZOOM → LEADER_ZOOM | finish: drama pulse on first finish | raceElapsed=26649ms
