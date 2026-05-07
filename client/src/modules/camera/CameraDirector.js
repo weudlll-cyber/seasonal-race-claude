@@ -98,7 +98,10 @@ export class CameraDirector {
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
     this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
-    this._snapFiredAtWall = 0; // wall-clock ms of last snap, for HUD indicator
+    this._transitionStartZoom = this.overviewZoom;
+    this._transitionStartOffsetX = 0;
+    this._transitionStartOffsetY = 0;
+    this._lastResolvedPanTarget = null;
   }
 
   /**
@@ -253,21 +256,12 @@ export class CameraDirector {
       }
       this._transition(racers, ts, raceState);
     }
-    this._setTargets(racers, canvasW, canvasH, raceState);
-    // Snap camera to target on transitions into zoom states so the leader is
-    // immediately centered rather than lerping from the previous camera position.
-    // OVERVIEW transitions are excluded — the wide-shot sweep-in is intentional.
-    if (
-      this.state !== prevState &&
-      (this.state === CAM_STATE.LEADER_ZOOM ||
-        this.state === CAM_STATE.BATTLE_ZOOM ||
-        this.state === CAM_STATE.COMEBACK_ZOOM)
-    ) {
-      this.offsetX = this.targetOffsetX;
-      this.offsetY = this.targetOffsetY;
-      this.zoom = this.targetZoom;
-      this._snapFiredAtWall = Date.now();
+    if (this.state !== prevState) {
+      this._transitionStartZoom = this.zoom;
+      this._transitionStartOffsetX = this.offsetX;
+      this._transitionStartOffsetY = this.offsetY;
     }
+    this._setTargets(racers, canvasW, canvasH, raceState);
     const lf = this._lerpFactorForState(this.state);
     this.zoom += (this.targetZoom - this.zoom) * lf;
     this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
@@ -399,10 +393,46 @@ export class CameraDirector {
     return -camY * effZoomY;
   }
 
+  /**
+   * Coordinated pan+zoom target computation for closed-track zoom states.
+   *
+   * Two resolveCamera calls are made each frame:
+   *   1. stateEffZoom  → final zoom target (may be reduced by world-edge clamping)
+   *   2. this.zoom*bsX → pan target for the *current* (lerping) zoom level
+   *
+   * Because call 2 uses the live zoom value, the pan target smoothly chases the
+   * racer as zoom lerps 1→stateZoom, keeping the target within the inner frame
+   * throughout the transition rather than snapping on entry.
+   */
+  _setClosedTrackTargets(target, stateEffZoom, frameSize, canvasH) {
+    const minEffZoom = this._bsX;
+    const zoomResolved = resolveCamera({
+      targetWorld: target,
+      desiredEffZoom: stateEffZoom,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom,
+    });
+    this.targetZoom = zoomResolved.effectiveZoom / this._bsX;
+
+    const currEffZoom = Math.max(this.zoom * this._bsX, minEffZoom);
+    const panResolved = resolveCamera({
+      targetWorld: target,
+      desiredEffZoom: currEffZoom,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom,
+    });
+    this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
+    this.targetOffsetY = this._closedOffsetY(target.y, panResolved.effectiveZoom, canvasH);
+    this._lastResolvedPanTarget = panResolved;
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
-    // minEffZoom = overview effZoom for closed tracks: cam.zoom=1 → effZoom = 1 * bsX = bsX
     const minEffZoom = this._bsX;
 
     switch (this.state) {
@@ -420,7 +450,7 @@ export class CameraDirector {
           const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc);
           const resolved = resolveCamera({
             targetWorld: target,
-            desiredEffZoom: minEffZoom, // effZoom at OVERVIEW = 1 * bsX
+            desiredEffZoom: minEffZoom,
             worldBounds: this._worldBounds,
             frameSize,
             innerFramePct: this._innerFramePct,
@@ -429,6 +459,7 @@ export class CameraDirector {
           this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
           this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
           this.targetZoom = resolved.effectiveZoom / this._bsX;
+          this._lastResolvedPanTarget = resolved;
         }
         break;
       }
@@ -437,17 +468,7 @@ export class CameraDirector {
         this.targetZoom = this._leaderZoom;
         if (!this._isOpenTrack) {
           const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers);
-          const resolved = resolveCamera({
-            targetWorld: target,
-            desiredEffZoom: this._leaderZoom * this._bsX,
-            worldBounds: this._worldBounds,
-            frameSize,
-            innerFramePct: this._innerFramePct,
-            minEffZoom,
-          });
-          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
-          this.targetZoom = resolved.effectiveZoom / this._bsX;
+          this._setClosedTrackTargets(target, this._leaderZoom * this._bsX, frameSize, canvasH);
         }
         break;
       }
@@ -456,17 +477,7 @@ export class CameraDirector {
         this.targetZoom = this._battleZoom;
         if (!this._isOpenTrack) {
           const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers);
-          const resolved = resolveCamera({
-            targetWorld: target,
-            desiredEffZoom: this._battleZoom * this._bsX,
-            worldBounds: this._worldBounds,
-            frameSize,
-            innerFramePct: this._innerFramePct,
-            minEffZoom,
-          });
-          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
-          this.targetZoom = resolved.effectiveZoom / this._bsX;
+          this._setClosedTrackTargets(target, this._battleZoom * this._bsX, frameSize, canvasH);
         }
         break;
       }
@@ -475,17 +486,7 @@ export class CameraDirector {
         this.targetZoom = this._comebackZoom;
         if (!this._isOpenTrack) {
           const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers);
-          const resolved = resolveCamera({
-            targetWorld: target,
-            desiredEffZoom: this._comebackZoom * this._bsX,
-            worldBounds: this._worldBounds,
-            frameSize,
-            innerFramePct: this._innerFramePct,
-            minEffZoom,
-          });
-          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
-          this.targetZoom = resolved.effectiveZoom / this._bsX;
+          this._setClosedTrackTargets(target, this._comebackZoom * this._bsX, frameSize, canvasH);
         }
         break;
       }
@@ -512,5 +513,39 @@ export class CameraDirector {
       default:
         return this._tcOverview;
     }
+  }
+
+  /** True when zoom has not yet converged to its target (within 0.1%). */
+  get transitioning() {
+    return Math.abs(this.zoom - this.targetZoom) > this.targetZoom * 0.001;
+  }
+
+  /**
+   * 0–1 fraction of pan travel completed since the last state transition.
+   * Returns 1 when at rest or when start equals target (no movement needed).
+   */
+  get panProgress() {
+    const dx = this.targetOffsetX - this._transitionStartOffsetX;
+    const dy = this.targetOffsetY - this._transitionStartOffsetY;
+    const total = Math.sqrt(dx * dx + dy * dy);
+    if (total < 0.5) return 1;
+    const cx = this.offsetX - this._transitionStartOffsetX;
+    const cy = this.offsetY - this._transitionStartOffsetY;
+    return Math.min(1, Math.sqrt(cx * cx + cy * cy) / total);
+  }
+
+  /**
+   * 0–1 fraction of zoom travel completed since the last state transition.
+   * Returns 1 when at rest or when start equals target.
+   */
+  get zoomProgress() {
+    const total = Math.abs(this.targetZoom - this._transitionStartZoom);
+    if (total < 0.0001) return 1;
+    return Math.min(1, Math.abs(this.zoom - this._transitionStartZoom) / total);
+  }
+
+  /** Whether the last pan-resolved target landed inside the inner frame. */
+  get targetInFrame() {
+    return this._lastResolvedPanTarget?.targetInInnerFrame ?? true;
   }
 }
