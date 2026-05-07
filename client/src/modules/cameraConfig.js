@@ -16,6 +16,21 @@ import { DEFAULT_CAMERA_CONFIG } from './storage/defaults.js';
 
 export { DEFAULT_CAMERA_CONFIG };
 
+// Converts a scalar cameraTransitionSeconds (stored by v3 configs) to the object
+// form expected by CameraDirector. Mutates the merged config in-place.
+function normalizeCameraTransitionSeconds(config) {
+  if (typeof config.cameraTransitionSeconds === 'number') {
+    const s = config.cameraTransitionSeconds;
+    const def = DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds;
+    config.cameraTransitionSeconds = {
+      overview: s,
+      leader: def.leader,
+      battle: def.battle,
+      comeback: def.comeback,
+    };
+  }
+}
+
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
@@ -34,6 +49,7 @@ export function loadCameraConfig() {
         ...patched.spritePctOfCanvas,
       };
     }
+    normalizeCameraTransitionSeconds(merged);
     return merged;
   }
 
@@ -45,6 +61,7 @@ export function loadCameraConfig() {
       ...stored.spritePctOfCanvas,
     };
   }
+  normalizeCameraTransitionSeconds(merged);
   return merged;
 }
 

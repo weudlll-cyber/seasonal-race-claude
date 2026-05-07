@@ -144,9 +144,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   battleMaxDurationMs: 6000, // ms before BATTLE is force-exited regardless of gap
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   minStateHoldMs: 5000, // minimum ms any state is held before re-evaluation
-  cameraTransitionSeconds: 1.5, // lerp time constant — 90% convergence ≈ 3.45× this value at 60fps
+  // Per-state lerp time constants (seconds). 90% convergence ≈ 3.45× TC at 60 fps.
+  cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
   overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
+  // Pan target frame: target racer must land within this fraction of the canvas (each axis).
+  // resolveCamera reduces zoom in 10% steps until satisfied or OVERVIEW effZoom is reached.
+  targetInnerFramePct: 0.7, // 70% = target must be within central 70% of canvas
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {

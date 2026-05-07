@@ -18,11 +18,9 @@ import {
   CAM_STATE,
   OPEN_TRACK_BASE_ZOOM,
 } from '../../modules/camera/CameraDirector.js';
-import {
-  effectiveZoom,
-  openTrackPanBounds,
-  openTrackPanTarget,
-} from '../../modules/camera/openTrackCamera.js';
+import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
+import { getPanTarget } from '../../modules/camera/panTarget.js';
+import { resolveCamera } from '../../modules/camera/resolveCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
   lapsFromDuration,
@@ -248,20 +246,13 @@ export default function RaceScreen() {
     );
     const maxLaps = isOpenTrack ? 1 : finishT;
 
-    const rawBbox = shapeRef.current.getBoundingBox();
-    const scaledBbox = {
-      minX: rawBbox.minX * bsX,
-      minY: rawBbox.minY * bsY,
-      maxX: rawBbox.maxX * bsX,
-      maxY: rawBbox.maxY * bsY,
-    };
     camDirRef.current = new CameraDirector(
-      scaledBbox,
       worldWidth,
       worldHeight,
       isOpenTrack,
       cameraConfig,
-      referenceSpriteSize
+      referenceSpriteSize,
+      shapeRef.current
     );
     setFinishTState(finishT);
 
@@ -921,19 +912,15 @@ export default function RaceScreen() {
       }
 
       // ── Camera update ──
-      const scaledRacersForCam =
-        bsX === 1 && bsY === 1
-          ? st.racers
-          : st.racers.map((r) => ({ ...r, x: r.x * bsX, y: r.y * bsY }));
       const raceState = {
         raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
         finishedCount: st.finishedCount,
-        winner: scaledRacersForCam.find((r) => r.finishRank === 1) ?? null,
+        winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
       };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(scaledRacersForCam, ts, raceState, CANVAS_W, CANVAS_H)
+          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // Sync camera HUD state — only triggers React re-render on actual state change
@@ -945,27 +932,18 @@ export default function RaceScreen() {
 
       if (isOpenTrack) {
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        const { camXMax, camYMax } = openTrackPanBounds(
-          worldWidth,
-          worldHeight,
-          CANVAS_W,
-          CANVAS_H,
-          effZoom
-        );
         const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
-        // LEADER_ZOOM: solo-leader pan prevents leader slipping off right edge at large N
-        const panRacers =
-          camDirRef.current.state === CAM_STATE.LEADER_ZOOM ? focusRacers.slice(0, 1) : focusRacers;
-        const { targetX, targetY } = openTrackPanTarget(
-          panRacers,
-          CW,
-          CH,
-          effZoom,
-          camXMax,
-          camYMax
-        );
-        st.camX = isFinite(st.camX) ? st.camX + (targetX - st.camX) * 0.05 : targetX;
-        st.camY = isFinite(st.camY) ? st.camY + (targetY - st.camY) * 0.05 : targetY;
+        const target = getPanTarget(camDirRef.current.state, focusRacers, shapeRef.current);
+        const resolved = resolveCamera({
+          targetWorld: target,
+          desiredEffZoom: effZoom,
+          worldBounds: { maxX: worldWidth, maxY: worldHeight },
+          frameSize: { width: CANVAS_W, height: CANVAS_H },
+          innerFramePct: cameraConfig.targetInnerFramePct ?? 0.7,
+          minEffZoom: effectiveZoom(camDirRef.current.overviewZoom, OPEN_TRACK_BASE_ZOOM),
+        });
+        st.camX = isFinite(st.camX) ? st.camX + (resolved.camX - st.camX) * 0.05 : resolved.camX;
+        st.camY = isFinite(st.camY) ? st.camY + (resolved.camY - st.camY) * 0.05 : resolved.camY;
       }
 
       // ── Draw world ──
