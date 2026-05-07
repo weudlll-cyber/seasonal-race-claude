@@ -28,7 +28,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     currentTc: 0,
     lagX: 0,
     lagY: 0,
-    showSnap: false,
+    transitioning: false,
+    panProgress: 1,
+    zoomProgress: 1,
+    targetVisible: true,
   });
   const intervalRef = useRef(null);
 
@@ -37,7 +40,6 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     intervalRef.current = setInterval(() => {
       const dir = cameraRef?.current;
       if (!dir) return;
-      const now = Date.now();
       setSnapshot({
         zoom: dir.zoom,
         refPx: dir._referenceSpriteSize ?? 0,
@@ -47,7 +49,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         currentTc: dir.currentTc ?? 0,
         lagX: (dir.targetOffsetX ?? 0) - (dir.offsetX ?? 0),
         lagY: (dir.targetOffsetY ?? 0) - (dir.offsetY ?? 0),
-        showSnap: now - (dir._snapFiredAtWall ?? 0) < 500,
+        transitioning: dir.transitioning ?? false,
+        panProgress: dir.panProgress ?? 1,
+        zoomProgress: dir.zoomProgress ?? 1,
+        targetVisible: dir.targetInFrame ?? true,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
@@ -55,7 +60,20 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
 
   if (!visible) return null;
 
-  const { zoom, refPx, worldW, isOpen, hudState, currentTc, lagX, lagY, showSnap } = snapshot;
+  const {
+    zoom,
+    refPx,
+    worldW,
+    isOpen,
+    hudState,
+    currentTc,
+    lagX,
+    lagY,
+    transitioning,
+    panProgress,
+    zoomProgress,
+    targetVisible,
+  } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
   const lagMag = Math.sqrt(lagX * lagX + lagY * lagY);
@@ -92,8 +110,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         }}
       >
         🔍 CAM DIAG
-        {showSnap && (
-          <span style={{ color: '#ffd700', fontSize: '0.65rem', fontWeight: 700 }}>⚡ SNAP</span>
+        {transitioning && (
+          <span style={{ color: '#ffd700', fontSize: '0.65rem', fontWeight: 700 }}>
+            ↔ TRANSITIONING
+          </span>
         )}
       </div>
       <div>
@@ -102,6 +122,12 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       </div>
       <div style={{ color: lagColor }}>
         lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px
+      </div>
+      <div>
+        pan: {(panProgress * 100).toFixed(0)}% | zoom: {(zoomProgress * 100).toFixed(0)}%{' '}
+        <span style={{ color: targetVisible ? '#4cff91' : '#ff6b35' }}>
+          {targetVisible ? '✓' : '✗'} target
+        </span>
       </div>
       <div>
         worldW: {worldW}px | {isOpen ? 'open' : 'closed'}
