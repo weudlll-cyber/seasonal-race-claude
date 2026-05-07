@@ -1,0 +1,13 @@
+[CAM_DIAG] config | battleGapThreshold=0.05 postStartHoldMs=7000 minStateHoldMs=5000 maxStateDuration=4000 battleCooldownMs=8000 endgameThr=0.85 overviewCooldown=15000-25000ms
+[CAM_DIAG] transition fired | from=OVERVIEW | raceElapsed=267ms finishT=1.0 | gap01=0.0004 threshold=0.05 hasBattle=true | leaderProg=0.011 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=21335ms sinceOvExit=0ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] decision | OVERVIEW → OVERVIEW | reason: start-phase: raceElapsed < 3000ms
+[CAM_DIAG] transition fired | from=OVERVIEW | raceElapsed=5283ms finishT=1.0 | gap01=0.0110 threshold=0.05 hasBattle=true | leaderProg=0.217 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=20993ms sinceOvExit=0ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] decision | OVERVIEW → LEADER_ZOOM | reason: post-start-hold: raceElapsed=5.3s
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=10300ms finishT=1.0 | gap01=0.0150 threshold=0.05 hasBattle=true | leaderProg=0.420 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=20993ms sinceOvExit=5016ms | battleCooldownMs=8000 sinceBattleExit=Infinityms
+[CAM_DIAG] decision | LEADER_ZOOM → BATTLE_ZOOM | reason: battle: gap01=0.015 < threshold=0.05
+[CAM_DIAG] transition fired | from=BATTLE_ZOOM | raceElapsed=16316ms finishT=1.0 | gap01=0.0063 threshold=0.05 hasBattle=true | leaderProg=0.642 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=20993ms sinceOvExit=11033ms | battleCooldownMs=8000 sinceBattleExit=0ms
+[CAM_DIAG] decision | BATTLE_ZOOM → LEADER_ZOOM | reason: leader: default (no battle, no cooldown-OVERVIEW, no comeback)
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=21349ms finishT=1.0 | gap01=0.0055 threshold=0.05 hasBattle=true | leaderProg=0.817 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=20993ms sinceOvExit=16066ms | battleCooldownMs=8000 sinceBattleExit=5033ms
+[CAM_DIAG] decision | LEADER_ZOOM → LEADER_ZOOM | reason: leader: default (no battle, no cooldown-OVERVIEW, no comeback)
+[CAM_DIAG] transition fired | from=LEADER_ZOOM | raceElapsed=26366ms finishT=1.0 | gap01=0.0009 threshold=0.05 hasBattle=true | leaderProg=0.993 endgameThr=0.85 | postStartHoldMs=7000 minStateHoldMs=5000 | overviewCooldownDur=20993ms sinceOvExit=21083ms | battleCooldownMs=8000 sinceBattleExit=10050ms
+[CAM_DIAG] decision | LEADER_ZOOM → LEADER_ZOOM | reason: endgame: leaderProgress=0.99 > 0.85

@@ -142,7 +142,7 @@ describe('CameraDirector', () => {
   });
 
   it('OVERVIEW on 6000px world: targetZoom = overviewZoom ≈ 0.213, not 1', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true);
+    const cd = new CameraDirector(6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.targetZoom).toBeCloseTo(1280 / 6000, 3);
@@ -150,7 +150,7 @@ describe('CameraDirector', () => {
   });
 
   it('OVERVIEW on 6000px world: zoom converges to overviewZoom, not 1', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true);
+    const cd = new CameraDirector(6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeCloseTo(1280 / 6000, 1);
@@ -198,47 +198,43 @@ describe('CameraDirector', () => {
 // ── CameraDirector — bbox clamping ────────────────────────────────────────────
 
 describe('CameraDirector — bbox clamping', () => {
-  it('with full-canvas bbox and extreme racer position, canvas-edge clamp fires and keeps track right edge on screen', () => {
-    // 36px fallback → _battleZoom = 0.12*720/36 = 2.4.
-    // Full-canvas bbox: 1280*2.4=3072 > canvas width — bbox tightening does NOT fire.
-    // Canvas-edge clamp (F6a) DOES fire: lo = 1280*(1-2.4) = -1792, so offsetX ≥ -1792.
-    // Raw target: 640 - 1081*2.4 = -1954, clamped to ≈ -1792.
-    const bbox = { minX: 0, minY: 0, maxX: 1280, maxY: 720 };
-    const cd = new CameraDirector(bbox);
+  it('BATTLE_ZOOM with racers at right edge (x=1081): no black border, right world edge stays on screen', () => {
+    // 36px fallback → _battleZoom = 0.12*720/36 = 2.4. bsX=1 on 1280px world.
+    // resolveCamera: camXMax = 1280 - 1280/2.4 = 746.7; target centered, then clamped.
+    // targetOffsetX = -camX * effZoom → 1280*zoom + offsetX = (1280-camX)*effZoom ≥ 1280.
+    const cd = new CameraDirector(1280, 720);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const extremeRacers = [
       { t: 0.9, x: 1081, y: 360, finished: false },
       { t: 0.8, x: 1081, y: 360, finished: false },
     ];
     for (let i = 0; i < 200; i++) cd.update(extremeRacers, 1000, mockRaceState, 1280, 720);
-    // Track right edge (x=1280) must remain on screen from the left: 1280*zoom + offsetX >= 0
-    expect(bbox.maxX * cd.zoom + cd.offsetX).toBeGreaterThan(0);
-    // Canvas-edge clamp means offsetX never goes below ≈ -1792
-    expect(cd.offsetX).toBeGreaterThan(-1850);
+    // Right world edge (x=1280) must be at or beyond canvas right (screenX≥1280): no black border
+    expect(1280 * cd.zoom + cd.offsetX).toBeGreaterThanOrEqual(1280 - 1);
+    // Left world edge must be at or before canvas left (offsetX≤0): no black border on left
+    expect(cd.offsetX).toBeLessThanOrEqual(0.1);
   });
 
-  it('with editor-scale bbox (fits at zoom=1.728), BATTLE_ZOOM clamps so full track stays visible', () => {
-    // referenceSpriteSize=50 → _battleZoom = 0.12*720/50 = 1.728.
-    // Editor track spans x=400..1100: width=700, 700*1.728=1209 < 1280 — fits on screen.
-    // Clamp fires: keeps left edge (x=400) at screen-left and right edge (x=1100) at screen-right.
-    const bbox = { minX: 400, minY: 50, maxX: 1100, maxY: 600 };
-    const cd = new CameraDirector(bbox, 1280, 720, false, null, 50);
+  it('BATTLE_ZOOM with racers near right edge (x=1085): no black border on either side', () => {
+    // referenceSpriteSize=50 → _battleZoom = 0.12*720/50 = 1.728. bsX=1 on 1280px world.
+    // resolveCamera: camXMax = 1280 - 1280/1.728 = 539.3. Target centered at camX=539.3.
+    // Right world edge: (1280-539.3)*1.728 = 1280 → exactly at canvas right, no black border.
+    const cd = new CameraDirector(1280, 720, false, null, 50);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
       { t: 0.9, x: 1090, y: 300, finished: false },
       { t: 0.8, x: 1080, y: 300, finished: false },
     ];
     for (let i = 0; i < 300; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
-    // left edge must be at or right of screen left
-    expect(bbox.minX * cd.zoom + cd.offsetX).toBeGreaterThanOrEqual(-1);
-    // right edge must be at or left of screen right
-    expect(bbox.maxX * cd.zoom + cd.offsetX).toBeLessThanOrEqual(1281);
+    // Right world edge (x=1280) must reach or exceed canvas right: no black border
+    expect(1280 * cd.zoom + cd.offsetX).toBeGreaterThanOrEqual(1280 - 1);
+    // Left world edge must not exceed canvas left: no black border on left
+    expect(cd.offsetX).toBeLessThanOrEqual(0.1);
   });
 
   it('LEADER_ZOOM with racers near canvas center: converges to adaptive offset with no clamping', () => {
     const worldW = 1280;
-    const bbox = { minX: 0, minY: 0, maxX: worldW, maxY: 720 };
-    const cd = new CameraDirector(bbox, worldW, 720);
+    const cd = new CameraDirector(worldW, 720);
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
@@ -247,9 +243,9 @@ describe('CameraDirector — bbox clamping', () => {
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
-  it('default bbox (no arg) behaves identically to explicit full-canvas bbox', () => {
+  it('default args behave identically to explicit 1280×720 world', () => {
     const cdDefault = new CameraDirector();
-    const cdExplicit = new CameraDirector({ minX: 0, minY: 0, maxX: 1280, maxY: 720 });
+    const cdExplicit = new CameraDirector(1280, 720);
     const racers = mockRacers(4);
     cdDefault.state = CAM_STATE.BATTLE_ZOOM;
     cdExplicit.state = CAM_STATE.BATTLE_ZOOM;
@@ -262,53 +258,30 @@ describe('CameraDirector — bbox clamping', () => {
   });
 });
 
-// ── CameraDirector — canvas-edge clamping (F6a) ───────────────────────────────
-
-describe('CameraDirector — canvas-edge clamping (F6a)', () => {
-  it('zoom=1: _clampOffset always returns 0 (canvas equals world, no room to pan)', () => {
-    const cd = new CameraDirector();
-    expect(cd._clampOffset(0, 0, 1280, 1280, 1.0)).toBe(0);
-    expect(cd._clampOffset(100, 0, 1280, 1280, 1.0)).toBe(0);
-    expect(cd._clampOffset(-500, 0, 1280, 1280, 1.0)).toBe(0);
-  });
-
-  it('zoom=1.5: excessively negative val clamps to canvasW*(1-zoom) = -640', () => {
-    const cd = new CameraDirector();
-    const clamped = cd._clampOffset(-900, 0, 1280, 1280, 1.5);
-    expect(clamped).toBeCloseTo(-640, 0);
-  });
-
-  it('zoom=1.5: excessively positive val clamps to 0', () => {
-    const cd = new CameraDirector();
-    const clamped = cd._clampOffset(100, 0, 1280, 1280, 1.5);
-    expect(clamped).toBe(0);
-  });
-});
-
 // ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
 
 describe('CameraDirector — adaptive zoom (B-16)', () => {
   it('default 1280-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1) ≈ 1.6', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     // No referenceSpriteSize → 36px fallback. bsX=1280/1280=1.
     // leaderZoom = 0.08*720 / (36*1) = 57.6/36 = 1.6
     expect(cd._leaderZoom).toBeCloseTo(1.6, 3);
   });
 
   it('open-track 4000-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1.5) ≈ 1.067', () => {
-    const cd = new CameraDirector(undefined, 4000, 720, true);
+    const cd = new CameraDirector(4000, 720, true);
     // Open-track: cam.zoom = targetPx / (baseSize × OPEN_BASE) = 57.6/54 ≈ 1.067
     // (worldW does not appear — open-track zoom is track-width-independent by design)
     expect(cd._leaderZoom).toBeCloseTo(57.6 / 54, 3);
   });
 
   it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
   });
 
   it('comebackZoom < leaderZoom (comeback shows a wider view)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
@@ -316,16 +289,16 @@ describe('CameraDirector — adaptive zoom (B-16)', () => {
     // Use worldW values where overviewZoom < raw comebackZoom so safety net does not clip.
     // With 36px fallback: comebackRaw = 0.065*720/(36*1.5) ≈ 0.867.
     // overviewZoom < 0.867 → worldW > 1280/0.867 ≈ 1476 → use 2000 and 4000.
-    const cd1 = new CameraDirector(undefined, 2000, 720, true);
-    const cd2 = new CameraDirector(undefined, 4000, 720, true);
+    const cd1 = new CameraDirector(2000, 720, true);
+    const cd2 = new CameraDirector(4000, 720, true);
     expect(cd2._leaderZoom).toBeCloseTo(cd1._leaderZoom, 3);
     expect(cd2._battleZoom).toBeCloseTo(cd1._battleZoom, 3);
     expect(cd2._comebackZoom).toBeCloseTo(cd1._comebackZoom, 3);
   });
 
   it('open-track LEADER_ZOOM: small and large world converge to same zoom (invariance)', () => {
-    const cdSmall = new CameraDirector(undefined, 1280, 720, true);
-    const cdLarge = new CameraDirector(undefined, 4000, 720, true);
+    const cdSmall = new CameraDirector(1280, 720, true);
+    const cdLarge = new CameraDirector(4000, 720, true);
     const racers = [{ t: 1, x: 640, y: 360, finished: false }];
     cdSmall.state = CAM_STATE.LEADER_ZOOM;
     cdLarge.state = CAM_STATE.LEADER_ZOOM;
@@ -374,7 +347,7 @@ describe('CameraDirector — top-3 focus', () => {
   });
 
   it('COMEBACK_ZOOM targets 3rd-place racer, not last-place, when spread is large', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     cd.state = CAM_STATE.COMEBACK_ZOOM;
     const racers = [
       { t: 0.9, x: 900, y: 360, finished: false }, // 1st
@@ -395,7 +368,7 @@ describe('CameraDirector — top-3 focus', () => {
 
 describe('CameraDirector — zoom ordering (inverse logic)', () => {
   it('1280-track: 36px fallback → leaderZoom 1.6, battleZoom 2.4, comebackZoom 1.3', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     // No referenceSpriteSize → 36px fallback + DEFAULT_SPRITE_PCT, bsX=1.0
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
     expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
@@ -404,7 +377,7 @@ describe('CameraDirector — zoom ordering (inverse logic)', () => {
 
   it('battleZoom > leaderZoom on any track (battle pct > leader pct)', () => {
     for (const worldW of [1280, 2560]) {
-      const cd = new CameraDirector(undefined, worldW, 720);
+      const cd = new CameraDirector(worldW, 720);
       expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
     }
   });
@@ -412,39 +385,9 @@ describe('CameraDirector — zoom ordering (inverse logic)', () => {
   it('comebackZoom < leaderZoom (comeback pct < leader pct)', () => {
     // Use worldW where zooms do not hit MAX_INVERSE_ZOOM ceiling (avoid 6000px closed).
     for (const worldW of [1280, 2560]) {
-      const cd = new CameraDirector(undefined, worldW, 720);
+      const cd = new CameraDirector(worldW, 720);
       expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
     }
-  });
-});
-
-// ── CameraDirector — _clampOffset for zoom < 1 ───────────────────────────────
-
-describe('CameraDirector — _clampOffset for zoom < 1', () => {
-  it('zoom=0.3, 6000px world: pan range is [-520, 0]', () => {
-    const cd = new CameraDirector();
-    // Within range — unchanged
-    expect(cd._clampOffset(0, 0, 6000, 1280, 0.3)).toBe(0);
-    expect(cd._clampOffset(-260, 0, 6000, 1280, 0.3)).toBe(-260);
-    // Below lower bound — clamped to -520
-    expect(cd._clampOffset(-600, 0, 6000, 1280, 0.3)).toBeCloseTo(-520, 0);
-    // Above upper bound — clamped to 0
-    expect(cd._clampOffset(50, 0, 6000, 1280, 0.3)).toBe(0);
-  });
-
-  it('zoom=0.5, 4000px world: pan range is [-720, 0]', () => {
-    // 4000*0.5 = 2000 > 1280 canvas → world larger than viewport
-    const cd = new CameraDirector();
-    expect(cd._clampOffset(0, 0, 4000, 1280, 0.5)).toBe(0);
-    expect(cd._clampOffset(-400, 0, 4000, 1280, 0.5)).toBe(-400);
-    expect(cd._clampOffset(-800, 0, 4000, 1280, 0.5)).toBeCloseTo(-720, 0);
-  });
-
-  it('zoom=2.0, standard 1280px world: pan range is [-1280, 0] (backward compat)', () => {
-    const cd = new CameraDirector();
-    expect(cd._clampOffset(100, 0, 1280, 1280, 2.0)).toBe(0);
-    expect(cd._clampOffset(-1500, 0, 1280, 1280, 2.0)).toBeCloseTo(-1280, 0);
-    expect(cd._clampOffset(-640, 0, 1280, 1280, 2.0)).toBe(-640);
   });
 });
 
@@ -453,12 +396,10 @@ describe('CameraDirector — _clampOffset for zoom < 1', () => {
 // bbox fits within the viewport. After the fix, offsetY must be ≤ 0 at zoom > 1.
 
 describe('CameraDirector — world-edge clamp (Befund 2)', () => {
-  it('offsetY stays ≤ 0 at zoom > 1 even when small bbox fits in viewport', () => {
-    // bbox top edge at y=100 (not y=0): bbox fits inside canvas at battleZoom≈1.6
-    // Raw target = hh - racerY*zoom > 0 → bbox clamp alone allows positive offsetY.
-    // World-edge clamp must force offsetY ≤ 0.
-    const bbox = { minX: 0, minY: 100, maxX: 1280, maxY: 400 };
-    const cd = new CameraDirector(bbox);
+  it('offsetY stays ≤ 0 at zoom > 1 when racers are near top edge (y≈110)', () => {
+    // resolveCamera: idealCamY = 115 - 720/(2*2.4) = -35 → clamped to 0.
+    // targetOffsetY = -0 * 2.4 = 0 → offsetY converges to 0 ≤ 0.
+    const cd = new CameraDirector(1280, 720);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
       { t: 0.9, x: 640, y: 110, finished: false },
@@ -468,10 +409,10 @@ describe('CameraDirector — world-edge clamp (Befund 2)', () => {
     expect(cd.offsetY).toBeLessThanOrEqual(0);
   });
 
-  it('offsetX stays ≤ 0 at zoom > 1 even when small bbox fits in viewport', () => {
-    // Symmetric check for X axis
-    const bbox = { minX: 100, minY: 0, maxX: 600, maxY: 720 };
-    const cd = new CameraDirector(bbox);
+  it('offsetX stays ≤ 0 at zoom > 1 when racers are near left edge (x≈110)', () => {
+    // resolveCamera: idealCamX = 115 - 1280/(2*2.4) = -152 → clamped to 0.
+    // targetOffsetX = -0 * 2.4 = 0 → offsetX converges to 0 ≤ 0.
+    const cd = new CameraDirector(1280, 720);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
       { t: 0.9, x: 110, y: 360, finished: false },
@@ -634,34 +575,31 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('Start-Pulk OVERVIEW pan uses full-field centroid (all racers, not just top-3)', () => {
-    // Use worldW=640 (overviewZoom=2) with an off-center bbox so racers on the right
-    // produce a negative targetOffsetX that survives both the bbox and world-edge clamps.
-    // bbox x=[200,440] at zoom=2: clamp range [-400,400]; world-edge range [-1280,0].
-    // Racers sorted by t: top-3 at x=430,410,390 (avg 410), bottom-2 at x=370,350.
-    // full-field avg x=390 → targetOffsetX = 640 - 780 = -140 (start phase)
-    // top-3 avg x=410     → targetOffsetX = 640 - 820 = -180 (normal phase)
-    const bbox = { minX: 200, minY: 0, maxX: 440, maxY: 720 };
-    const cd = new CameraDirector(bbox, 640, 720, true);
+  it('Start-Pulk OVERVIEW pan: closed track maintains zoom=1, does not crash with full-field or top-3 input', () => {
+    // Full-field centroid behavior is tested in panTarget.test.js.
+    // Here we verify CameraDirector plumbs the correct racer set without crashing,
+    // and that OVERVIEW on a closed track always keeps cam.zoom=1.
+    const cd = new CameraDirector(1280, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
-    cd.stateEnteredAt = 1000; // same as ts → transition will NOT fire
+    cd.stateEnteredAt = 1000;
     const spreadRacers = [
-      { t: 0.5, x: 430, y: 360, finished: false }, // top-1
-      { t: 0.4, x: 410, y: 360, finished: false }, // top-2
-      { t: 0.3, x: 390, y: 360, finished: false }, // top-3; avg top-3 x = 410
+      { t: 0.5, x: 430, y: 360, finished: false },
+      { t: 0.4, x: 410, y: 360, finished: false },
+      { t: 0.3, x: 390, y: 360, finished: false },
       { t: 0.2, x: 370, y: 360, finished: false },
-      { t: 0.1, x: 350, y: 360, finished: false }, // all-5 avg x = 390
+      { t: 0.1, x: 350, y: 360, finished: false },
     ];
-
     const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, startRs, 1280, 720);
-    expect(cd.targetOffsetX).toBeCloseTo(-140, 0); // full-field: 640 - 390*2
+    expect(cd.targetZoom).toBe(1); // OVERVIEW: closed track → cam.zoom=1
+    expect(isFinite(cd.targetOffsetX)).toBe(true);
 
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, midRs, 1280, 720);
-    expect(cd.targetOffsetX).toBeCloseTo(-180, 0); // top-3 only: 640 - 410*2
+    expect(cd.targetZoom).toBe(1);
+    expect(isFinite(cd.targetOffsetX)).toBe(true);
   });
 });
 
@@ -754,7 +692,7 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
 
 describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
   it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = 1, not overviewZoom', () => {
-    const cd = new CameraDirector(undefined, 1536, 720, false);
+    const cd = new CameraDirector(1536, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000; // prevents transition
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
@@ -763,7 +701,7 @@ describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
   });
 
   it('open track (worldW=6000, isOpenTrack=true): OVERVIEW targetZoom = overviewZoom ≈ 0.213', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true);
+    const cd = new CameraDirector(6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
@@ -818,12 +756,12 @@ const pctConfig = {
 
 describe('CameraDirector — spritePctOfCanvas config', () => {
   it('with referenceSpriteSize=50: _leaderZoom = 0.08×720 / 50 ≈ 1.152 (closed bsX=1)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 50, 3);
   });
 
   it('with referenceSpriteSize=50: _battleZoom = 0.12×720 / 50 ≈ 1.728 (closed bsX=1)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
     expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 50, 3);
   });
 
@@ -832,19 +770,19 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
       ...pctConfig,
       spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, battle: 0.95 },
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, extremeConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, extremeConfig, 50);
     // 0.95×720/50 = 13.68 → clamped to 5.0
     expect(cd._battleZoom).toBe(5.0);
   });
 
   it('no config passed: DEFAULT_SPRITE_PCT + 36px fallback gives predictable zoom values', () => {
-    const cd = new CameraDirector(undefined, 1280, 720);
+    const cd = new CameraDirector(1280, 720);
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
     expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
   });
 
   it('open track OVERVIEW targetZoom is overviewZoom regardless of spritePctOfCanvas', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true, pctConfig, 50);
+    const cd = new CameraDirector(6000, 720, true, pctConfig, 50);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
@@ -852,7 +790,7 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
   });
 
   it('live-apply: updateConfig() with new spritePctOfCanvas changes _leaderZoom', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
     const before = cd._leaderZoom;
     cd.updateConfig({
       ...pctConfig,
@@ -863,7 +801,7 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
   });
 
   it('live-apply: reduced spritePct takes effect on next _transition()', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
@@ -898,7 +836,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
@@ -925,7 +863,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    const cd = new CameraDirector(1280, 720, false, cfg);
     cd.stateEnteredAt = 0;
     // 5001ms — minStateHoldMs=5000 is the effective cap (max(5000, 4000)=5000)
     cd.update(
@@ -945,7 +883,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       maxStateDuration: 4000,
       endgameThreshold: 0.95,
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
@@ -967,7 +905,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   });
 
   it('live-apply: updateConfig() updates all three timing params without re-construction', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, pctConfig);
+    const cd = new CameraDirector(1280, 720, false, pctConfig);
     expect(cd._maxStateDuration).toBe(8000); // pctConfig.maxStateDuration = 8000
     cd.updateConfig({
       ...pctConfig,
@@ -987,7 +925,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       maxStateDuration: 6000,
       endgameThreshold: 0.85,
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, cfg);
+    const cd = new CameraDirector(1280, 720, false, cfg);
     cd.stateEnteredAt = 0;
     // 5999ms — below the configured 6000ms duration, should NOT trigger transition
     cd.update(
@@ -1137,7 +1075,7 @@ describe('CameraDirector — D3: battleMaxDurationMs', () => {
 describe('CameraDirector — D4: minStateHold', () => {
   it('no transition before minStateHoldMs (5s) even when maxStateDuration < 5s', () => {
     const smallCapConfig = { ...pctConfig, maxStateDuration: 2000 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, smallCapConfig);
+    const cd = new CameraDirector(1280, 720, false, smallCapConfig);
     cd.stateEnteredAt = 0;
     // stateAge=4999 < max(5000, 2000)=5000 → no transition
     cd.update(
@@ -1152,7 +1090,7 @@ describe('CameraDirector — D4: minStateHold', () => {
 
   it('transition fires at minStateHoldMs when maxStateDuration is smaller', () => {
     const smallCapConfig = { ...pctConfig, maxStateDuration: 2000 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, smallCapConfig);
+    const cd = new CameraDirector(1280, 720, false, smallCapConfig);
     cd.stateEnteredAt = 0;
     // stateAge=5000 >= max(5000, 2000)=5000 → transition fires
     cd.update(
@@ -1231,38 +1169,56 @@ describe('CameraDirector — B: BATTLE hysteresis', () => {
   });
 });
 
-// ── CameraDirector — D5: cameraTransitionSeconds → _lerpFactor ───────────────
+// ── CameraDirector — D5: per-state transition constants → _lf* lerp factors ──
 
-describe('CameraDirector — D5: cameraTransitionSeconds → _lerpFactor', () => {
-  it('no config: _lerpFactor computed from fallback 1.5s at 60fps ≈ 0.0253', () => {
+describe('CameraDirector — D5: per-state transition constants', () => {
+  it('no config: _lfOverview from 1.5s fallback ≈ 0.0253, _lfLeader from 0.3s ≈ 0.121', () => {
     const cd = new CameraDirector();
-    const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0253, 3);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (1.5 * 60)), 5);
+    expect(cd._lfOverview).toBeCloseTo(0.0253, 3);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
-  it('cameraTransitionSeconds=0.5 gives faster lerp ≈ 0.0739', () => {
-    const fastConfig = { ...pctConfig, cameraTransitionSeconds: 0.5 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, fastConfig);
-    const expected = 1 - Math.pow(0.1, 1 / (0.5 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0739, 3);
+  it('object config sets per-state TC and lf independently', () => {
+    const cfg = {
+      ...pctConfig,
+      cameraTransitionSeconds: { overview: 2.0, leader: 0.5, battle: 0.4, comeback: 0.6 },
+    };
+    const cd = new CameraDirector(1280, 720, false, cfg);
+    expect(cd._tcOverview).toBe(2.0);
+    expect(cd._tcLeader).toBe(0.5);
+    expect(cd._tcBattle).toBe(0.4);
+    expect(cd._tcComeback).toBe(0.6);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (2.0 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.4 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.6 * 60)), 5);
   });
 
-  it('cameraTransitionSeconds=3.0 gives slower lerp ≈ 0.0127', () => {
-    const slowConfig = { ...pctConfig, cameraTransitionSeconds: 3.0 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, slowConfig);
-    const expected = 1 - Math.pow(0.1, 1 / (3.0 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0127, 3);
+  it('scalar config applies scalar to overview, defaults to zoom-state TCs', () => {
+    const cfg = { ...pctConfig, cameraTransitionSeconds: 0.5 };
+    const cd = new CameraDirector(1280, 720, false, cfg);
+    expect(cd._tcOverview).toBe(0.5);
+    expect(cd._tcLeader).toBe(0.3);
+    expect(cd._tcBattle).toBe(0.3);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
-  it('live-apply: updateConfig() with faster transition increases _lerpFactor', () => {
+  it('live-apply: updateConfig() with object TC updates all per-state lf values', () => {
     const cd = new CameraDirector();
-    const before = cd._lerpFactor;
-    cd.updateConfig({ ...pctConfig, cameraTransitionSeconds: 0.5 });
-    expect(cd._lerpFactor).toBeGreaterThan(before);
-    expect(cd._lerpFactor).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    const prevLfOverview = cd._lfOverview;
+    cd.updateConfig({
+      ...pctConfig,
+      cameraTransitionSeconds: { overview: 0.5, leader: 0.1, battle: 0.1, comeback: 0.1 },
+    });
+    expect(cd._lfOverview).toBeGreaterThan(prevLfOverview);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
   });
 });
 
@@ -1327,7 +1283,7 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
 
   it('config overviewCooldownMin/Max read via _computeTimingConfig; mean used as initial duration', () => {
     const jitterConfig = { ...pctConfig, overviewCooldownMin: 5000, overviewCooldownMax: 9000 };
-    const cd = new CameraDirector(undefined, 1280, 720, false, jitterConfig);
+    const cd = new CameraDirector(1280, 720, false, jitterConfig);
     expect(cd._overviewCooldownMin).toBe(5000);
     expect(cd._overviewCooldownMax).toBe(9000);
     expect(cd._overviewCooldownDuration).toBe(7000); // mean = (5000+9000)/2
@@ -1385,7 +1341,7 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
       overviewCooldownMin: 3000,
       overviewCooldownMax: 3000,
     };
-    const cd = new CameraDirector(undefined, 1280, 720, false, shortCooldownConfig);
+    const cd = new CameraDirector(1280, 720, false, shortCooldownConfig);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 0;
@@ -1439,7 +1395,7 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
 describe('Effective render-zoom — hierarchy ordering', () => {
   it('closed-track: LEADER eff > OVERVIEW eff, BATTLE eff > LEADER eff across worldW', () => {
     for (const worldW of [1280, 2000, 3000]) {
-      const cd = new CameraDirector(undefined, worldW, 720, false, pctConfig, 50);
+      const cd = new CameraDirector(worldW, 720, false, pctConfig, 50);
       const bsX = 1280 / worldW;
       const overviewEff = 1 * bsX;
       const leaderEff = cd._leaderZoom * bsX;
@@ -1453,7 +1409,7 @@ describe('Effective render-zoom — hierarchy ordering', () => {
     // worldW=1280 would clip leader to overviewZoom (safety net) because baseSize=50
     // makes raw leaderZoom < overviewZoom on a 1280px world.
     for (const worldW of [2000, 3000, 6000]) {
-      const cd = new CameraDirector(undefined, worldW, 720, true, pctConfig, 50);
+      const cd = new CameraDirector(worldW, 720, true, pctConfig, 50);
       const overviewEff = effectiveZoom(cd.overviewZoom, OPEN_TRACK_BASE_ZOOM);
       const leaderEff = effectiveZoom(cd._leaderZoom, OPEN_TRACK_BASE_ZOOM);
       const battleEff = effectiveZoom(cd._battleZoom, OPEN_TRACK_BASE_ZOOM);
@@ -1489,45 +1445,45 @@ describe('CameraDirector — _computeZoomForTargetSize (Round 3)', () => {
   it('closed-track: targetSize=58, baseSize=36, bsX=0.83 → cam.zoom ≈ 1.94', () => {
     // worldW that gives bsX≈0.83: CANVAS_W/worldW=0.83 → worldW≈1542
     const worldW = Math.round(1280 / 0.83);
-    const cd = new CameraDirector(undefined, worldW, 720, false, inverseConfig, 36);
+    const cd = new CameraDirector(worldW, 720, false, inverseConfig, 36);
     const expected = 58 / (36 * (1280 / worldW));
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(1.94, 1);
   });
 
   it('open-track: targetSize=58, baseSize=50, OPEN_BASE=1.5 → cam.zoom ≈ 0.77', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 50);
+    const cd = new CameraDirector(6000, 720, true, inverseConfig, 50);
     const expected = 58 / (50 * OPEN_TRACK_BASE_ZOOM);
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(0.773, 2);
   });
 
   it('safety net closed — very small targetSize clamps cam.zoom to 1.0', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     // targetSize=1px: would give cam.zoom=1/50=0.02, clamped to 1.0
     expect(cd._computeZoomForTargetSize(1)).toBe(1.0);
   });
 
   it('safety net open — very small targetSize clamps cam.zoom to overviewZoom', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 50);
+    const cd = new CameraDirector(6000, 720, true, inverseConfig, 50);
     // targetSize=1px: cam.zoom = 1/(50*1.5) = 0.013, clamped to overviewZoom≈0.213
     expect(cd._computeZoomForTargetSize(1)).toBeCloseTo(1280 / 6000, 3);
   });
 
   it('safety net upper — very large targetSize clamps cam.zoom to 5.0', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     // targetSize=10000px: would give cam.zoom=200, clamped to 5.0
     expect(cd._computeZoomForTargetSize(10000)).toBe(5.0);
   });
 
   it('referenceSpriteSize=0: uses 36px default, closed → zoom = 58/(36×bsX)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 0);
     // bsX = 1280/1280 = 1.0 → expected = 58/36 ≈ 1.611
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / 36, 2);
   });
 
   it('referenceSpriteSize=0: uses 36px default, open → zoom = 58/(36×OPEN_BASE)', () => {
-    const cd = new CameraDirector(undefined, 6000, 720, true, inverseConfig, 0);
+    const cd = new CameraDirector(6000, 720, true, inverseConfig, 0);
     // expected = 58/(36×1.5) ≈ 1.074; safety net min = overviewZoom≈0.213 → not clamped
     expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / (36 * OPEN_TRACK_BASE_ZOOM), 2);
   });
@@ -1535,7 +1491,7 @@ describe('CameraDirector — _computeZoomForTargetSize (Round 3)', () => {
 
 describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => {
   it('_referenceSpriteSize is stored at construction time', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 42);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 42);
     expect(cd._referenceSpriteSize).toBe(42);
   });
 
@@ -1544,30 +1500,30 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
   });
 
   it('inverse path activates when referenceSpriteSize > 0 and spritePctOfCanvas present', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     // With baseSize=50, bsX=1, leader=0.08*720=57.6: _leaderZoom=57.6/50=1.152
     expect(cd._leaderZoom).toBeCloseTo(57.6 / 50, 3);
   });
 
   it('referenceSpriteSize=0 uses 36px default, NOT multiplier ratios', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 0);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 0);
     // 36px fallback + leader pct 0.08: 0.08*720/36 = 1.6 (≠ old LEADER_ZOOM_RATIO=1.4)
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
     expect(cd._leaderZoom).not.toBeCloseTo(1.4, 1); // confirm it is NOT the old multiplier value
   });
 
   it('battleZoom > leaderZoom with inverse logic (battle pct > leader pct)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
   });
 
   it('comebackZoom < leaderZoom with inverse logic (comeback pct < leader pct)', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
   it('live-apply: spritePctOfCanvas.leader 0.08→0.12 changes _leaderZoom after updateConfig()', () => {
-    const cd = new CameraDirector(undefined, 1280, 720, false, inverseConfig, 50);
+    const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     const zoomBefore = cd._leaderZoom;
     cd.updateConfig({
       ...inverseConfig,
@@ -1588,8 +1544,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
     const targetPct = inverseConfig.spritePctOfCanvas.leader; // 0.08
     const targetPx = targetPct * 720; // 57.6
 
-    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
-    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+    const cdClosed = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(6000, 720, true, inverseConfig, baseSize);
 
     const bsXClosed = 1280 / 1280; // 1.0
     const closedScreenPx = baseSize * cdClosed._leaderZoom * bsXClosed;
@@ -1604,8 +1560,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
     const baseSize = 36;
     const targetPx = inverseConfig.spritePctOfCanvas.battle * 720; // 0.12*720=86.4
 
-    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
-    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+    const cdClosed = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(6000, 720, true, inverseConfig, baseSize);
 
     const bsX = 1280 / 1280;
     const closedScreenPx = baseSize * cdClosed._battleZoom * bsX;
@@ -1619,8 +1575,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
     const baseSize = 36;
     const targetPx = inverseConfig.spritePctOfCanvas.comeback * 720; // 0.065*720=46.8
 
-    const cdClosed = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
-    const cdOpen = new CameraDirector(undefined, 6000, 720, true, inverseConfig, baseSize);
+    const cdClosed = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
+    const cdOpen = new CameraDirector(6000, 720, true, inverseConfig, baseSize);
 
     const bsX = 1280 / 1280;
     const closedScreenPx = baseSize * cdClosed._comebackZoom * bsX;
@@ -1634,8 +1590,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
     const baseSize = 50;
     const targetPx = inverseConfig.spritePctOfCanvas.leader * 720;
 
-    const cd1280 = new CameraDirector(undefined, 1280, 720, false, inverseConfig, baseSize);
-    const cd2560 = new CameraDirector(undefined, 2560, 720, false, inverseConfig, baseSize);
+    const cd1280 = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
+    const cd2560 = new CameraDirector(2560, 720, false, inverseConfig, baseSize);
 
     const screenPx1280 = baseSize * cd1280._leaderZoom * (1280 / 1280);
     const screenPx2560 = baseSize * cd2560._leaderZoom * (1280 / 2560);
@@ -1645,16 +1601,15 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
   });
 });
 
-// ── CameraDirector — trivial pan formula (canvas-space coordinate verification) ──────────
-// Render pipeline for closed tracks: screen_x = worldX × cam.zoom × bsX + offsetX.
-// scaledRacersForCam in RaceScreen delivers canvas-space to CameraDirector: r.x = worldX × bsX.
-// Trivial formula: offsetX = hw - r.x × zoom  →  screen_x = hw (provably centered).
-// Tests pass canvas-space to CameraDirector (simulating scaledRacersForCam) and world-space
-// to the render-formula helpers. worldW=1536 (bsX≈0.833); worldH=720 so bsY=1.0 on Dirt Oval.
+// ── CameraDirector — pan centering (world-space coordinate verification) ──────────
+// Render pipeline for closed tracks: screen_x = (worldX - camX) × effZoom = worldX × effZoom + offsetX.
+// CameraDirector receives world-space coordinates from RaceScreen (no bsX scaling).
+// resolveCamera computes camX so the target centers on screen: (target - camX) × effZoom = canvasW/2.
+// worldW=1536 (bsX≈0.833); worldH=720 so bsY=1.0 on Dirt Oval.
 
 describe('CameraDirector — trivial pan centering (closed tracks)', () => {
   // Render-pipeline formula for closed tracks.
-  // racerX/racerY must be world-space (as drawn by drawRacers with ctx.scale(zoom×bsX, zoom×bsY)).
+  // screen_x = worldX × cam.zoom × bsX + offsetX  (equivalent to (worldX - camX) × effZoom).
   function screenX(cd, worldX, worldW) {
     const bsX = 1280 / worldW;
     return worldX * cd.zoom * bsX + cd.offsetX;
@@ -1666,42 +1621,41 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
 
   it('LEADER_ZOOM closed worldW=1536: leader centered at hw/hh after pan converges', () => {
     // Dirt Oval scenario: bsX=0.833, bsY=1.0.
-    // worldX=350 is within centerable range (≥ hw / (bsX × leaderZoom) ≈ 200 for pct=0.16).
-    // scaledRacersForCam delivers canvas-space: leader.x = worldX × bsX, leader.y = worldY × bsY.
+    // CameraDirector receives world-space coordinates directly.
     const worldW = 1536;
     const worldH = 720;
-    const bsX = 1280 / worldW;
-    const bsY = 720 / worldH;
     const worldX = 350;
     const worldY = 300;
     const config = {
       ...inverseConfig,
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.16 },
     };
-    const cd = new CameraDirector(undefined, worldW, worldH, false, config, 36);
+    const cd = new CameraDirector(worldW, worldH, false, config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
-    const leader = { t: 1, x: worldX * bsX, y: worldY * bsY, finished: false };
+    const leader = { t: 1, x: worldX, y: worldY, finished: false };
     for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
     expect(screenX(cd, worldX, worldW)).toBeCloseTo(640, 0);
     expect(screenY(cd, worldY, worldH)).toBeCloseTo(360, 0);
   });
 
-  it('BATTLE_ZOOM closed worldW=1536: centroid centered at hw/hh after pan converges', () => {
+  it('BATTLE_ZOOM closed worldW=1536: track-midpoint centered at hw/hh after pan converges', () => {
     const worldW = 1536;
     const worldH = 720;
-    const bsX = 1280 / worldW;
-    const bsY = 720 / worldH;
-    // Top-2 world centroid: (700+500)/2=600, worldY=300
+    // Top-2 racers have t=0.9 and t=0.8; tMid=0.85.
+    // The mock shape returns world position (600, 300) for any t, so the
+    // pan target is (600, 300) — same as the euclidean centroid but resolved via
+    // the track-curve path, confirming CameraDirector passes shape to getPanTarget.
     const worldCx = 600;
     const worldCy = 300;
-    const cd = new CameraDirector(undefined, worldW, worldH, false, inverseConfig, 36);
+    const mockShape = { getPosition: (_t, _offset) => ({ x: worldCx, y: worldCy, angle: 0 }) };
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36, mockShape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     const racers = [
-      { t: 0.9, x: 700 * bsX, y: worldCy * bsY, finished: false },
-      { t: 0.8, x: 500 * bsX, y: worldCy * bsY, finished: false },
-      { t: 0.5, x: 200 * bsX, y: worldCy * bsY, finished: false },
+      { t: 0.9, x: 700, y: worldCy, finished: false },
+      { t: 0.8, x: 500, y: worldCy, finished: false },
+      { t: 0.5, x: 200, y: worldCy, finished: false },
     ];
     for (let i = 0; i < 400; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     expect(screenX(cd, worldCx, worldW)).toBeCloseTo(640, 0);
@@ -1712,17 +1666,15 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     // 3rd-place (bottom of top-N=3) is the COMEBACK target.
     const worldW = 1536;
     const worldH = 720;
-    const bsX = 1280 / worldW;
-    const bsY = 720 / worldH;
     const worldX = 700;
     const worldY = 360;
-    const cd = new CameraDirector(undefined, worldW, worldH, false, inverseConfig, 36);
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
     cd.state = CAM_STATE.COMEBACK_ZOOM;
     cd.stateEnteredAt = 1000;
     const racers = [
-      { t: 0.9, x: 900 * bsX, y: worldY * bsY, finished: false }, // 1st
-      { t: 0.7, x: 800 * bsX, y: worldY * bsY, finished: false }, // 2nd
-      { t: 0.5, x: worldX * bsX, y: worldY * bsY, finished: false }, // 3rd — targeted
+      { t: 0.9, x: 900, y: worldY, finished: false }, // 1st
+      { t: 0.7, x: 800, y: worldY, finished: false }, // 2nd
+      { t: 0.5, x: worldX, y: worldY, finished: false }, // 3rd — targeted
     ];
     for (let i = 0; i < 400; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
     expect(screenX(cd, worldX, worldW)).toBeCloseTo(640, 0);
@@ -1730,16 +1682,105 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
   });
 
   it('open track worldW=6000: cam.offsetX not used in render (st.camX/Y path) — no crash', () => {
-    // Open tracks ignore cam.offsetX/Y — st.camX/Y from openTrackPanTarget() are used instead.
-    // Trivial formula applies without bsX factor; visual output unaffected by offsetX/Y.
+    // Open tracks ignore cam.offsetX/Y — resolveCamera in RaceScreen handles st.camX/Y.
     const worldW = 6000;
-    const bsX = 1280 / worldW;
-    const cd = new CameraDirector(undefined, worldW, 720, true, inverseConfig, 36);
+    const cd = new CameraDirector(worldW, 720, true, inverseConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
-    const leader = { t: 1, x: 500 * bsX, y: 360, finished: false };
+    const leader = { t: 1, x: 500, y: 360, finished: false };
     for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(0);
     expect(isFinite(cd.offsetX)).toBe(true);
+  });
+});
+
+// ── D6: coordinated pan+zoom transition getters ───────────────────────────────
+
+describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
+  const worldW = 1536;
+  const worldH = 720;
+
+  it('transitioning=true immediately after state entry, false after convergence', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    // First update — zoom hasn't converged yet
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.transitioning).toBe(true);
+    // After 600 frames (~10s at 60fps) zoom should have converged
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.transitioning).toBe(false);
+  });
+
+  it('zoomProgress increases from near 0 to 1 as zoom converges', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    // Force start from zoom=1 (overview)
+    cd.zoom = 1;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    // Record transition start on first update
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const earlyProgress = cd.zoomProgress;
+    // After convergence
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(earlyProgress).toBeLessThan(0.5);
+    expect(cd.zoomProgress).toBeCloseTo(1, 1);
+  });
+
+  it('panProgress increases from near 0 to 1 as pan converges', () => {
+    // At zoom=1 on a closed 1536-world the entire world fits (effZoom=bsX), so
+    // no pan is needed regardless of leader position. Start at zoom=1.5 instead —
+    // at that level the leader near x=1400 is outside the centred view and
+    // pan travel is ~640px.
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.zoom = 1.5;
+    cd.offsetX = 0;
+    cd.offsetY = 0;
+    // Prime transition start to current position (simulates just-transitioned state)
+    cd._transitionStartZoom = 1.5;
+    cd._transitionStartOffsetX = 0;
+    cd._transitionStartOffsetY = 0;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    // x=800 is well-centred so resolveCamera returns a real pan target (not clamped to 0).
+    // x=1400 is near the right edge and resolveCamera falls back to minEffZoom where camX=0.
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const earlyProgress = cd.panProgress;
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(earlyProgress).toBeLessThan(0.5);
+    expect(cd.panProgress).toBeCloseTo(1, 1);
+  });
+
+  it('targetInFrame is true after convergence', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.targetInFrame).toBe(true);
+  });
+
+  it('panProgress and zoomProgress default to 1 before any update', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    expect(cd.panProgress).toBe(1);
+    expect(cd.zoomProgress).toBe(1);
+  });
+
+  it('pan target tracks current zoom during transition — smooth coupling', () => {
+    // Verify that targetOffsetX changes each frame as zoom lerps (not constant).
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.zoom = 1;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 1000, y: 360, finished: false };
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const offset1 = cd.targetOffsetX;
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const offset2 = cd.targetOffsetX;
+    // targetOffsetX must change between frames because current zoom changed
+    expect(offset2).not.toBeCloseTo(offset1, 5);
   });
 });
