@@ -1689,3 +1689,94 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     expect(isFinite(cd.offsetX)).toBe(true);
   });
 });
+
+// ── D6: coordinated pan+zoom transition getters ───────────────────────────────
+
+describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
+  const worldW = 1536;
+  const worldH = 720;
+
+  it('transitioning=true immediately after state entry, false after convergence', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    // First update — zoom hasn't converged yet
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.transitioning).toBe(true);
+    // After 600 frames (~10s at 60fps) zoom should have converged
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.transitioning).toBe(false);
+  });
+
+  it('zoomProgress increases from near 0 to 1 as zoom converges', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    // Force start from zoom=1 (overview)
+    cd.zoom = 1;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    // Record transition start on first update
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const earlyProgress = cd.zoomProgress;
+    // After convergence
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(earlyProgress).toBeLessThan(0.5);
+    expect(cd.zoomProgress).toBeCloseTo(1, 1);
+  });
+
+  it('panProgress increases from near 0 to 1 as pan converges', () => {
+    // At zoom=1 on a closed 1536-world the entire world fits (effZoom=bsX), so
+    // no pan is needed regardless of leader position. Start at zoom=1.5 instead —
+    // at that level the leader near x=1400 is outside the centred view and
+    // pan travel is ~640px.
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.zoom = 1.5;
+    cd.offsetX = 0;
+    cd.offsetY = 0;
+    // Prime transition start to current position (simulates just-transitioned state)
+    cd._transitionStartZoom = 1.5;
+    cd._transitionStartOffsetX = 0;
+    cd._transitionStartOffsetY = 0;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    // x=800 is well-centred so resolveCamera returns a real pan target (not clamped to 0).
+    // x=1400 is near the right edge and resolveCamera falls back to minEffZoom where camX=0.
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const earlyProgress = cd.panProgress;
+    for (let i = 0; i < 600; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(earlyProgress).toBeLessThan(0.5);
+    expect(cd.panProgress).toBeCloseTo(1, 1);
+  });
+
+  it('targetInFrame is true after convergence', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 800, y: 360, finished: false };
+    for (let i = 0; i < 400; i++) cd.update([leader], 1000, mockRaceState, 1280, 720);
+    expect(cd.targetInFrame).toBe(true);
+  });
+
+  it('panProgress and zoomProgress default to 1 before any update', () => {
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    expect(cd.panProgress).toBe(1);
+    expect(cd.zoomProgress).toBe(1);
+  });
+
+  it('pan target tracks current zoom during transition — smooth coupling', () => {
+    // Verify that targetOffsetX changes each frame as zoom lerps (not constant).
+    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    cd.zoom = 1;
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    const leader = { t: 1, x: 1000, y: 360, finished: false };
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const offset1 = cd.targetOffsetX;
+    cd.update([leader], 1000, mockRaceState, 1280, 720);
+    const offset2 = cd.targetOffsetX;
+    // targetOffsetX must change between frames because current zoom changed
+    expect(offset2).not.toBeCloseTo(offset1, 5);
+  });
+});
