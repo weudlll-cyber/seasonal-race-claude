@@ -93,10 +93,6 @@ export class CameraDirector {
     this._lastOverviewExitTs = -Infinity; // cooldown: when did we last leave OVERVIEW
     this._lastBattleExitTs = -Infinity; // cooldown: when did we last leave BATTLE
     this._finishMomentExpiry = null; // null until first finish detected
-    // Diagnostic state (only active when window.__CAMERA_DIAG__ === true)
-    this._diagFrameCount = 0;
-    this._diagPrevLogState = null;
-    this._diagSnapshot = null;
   }
 
   /**
@@ -225,29 +221,7 @@ export class CameraDirector {
     this.zoom += (this.targetZoom - this.zoom) * this._lerpFactor;
     this.offsetX += (this.targetOffsetX - this.offsetX) * this._lerpFactor;
     this.offsetY += (this.targetOffsetY - this.offsetY) * this._lerpFactor;
-
-    // Diagnostic logging — only active when window.__CAMERA_DIAG__ === true
-    if (typeof window !== 'undefined' && !!window.__CAMERA_DIAG__ && this._diagSnapshot) {
-      this._diagFrameCount++;
-      const stateChanged = this.state !== this._diagPrevLogState;
-      if (stateChanged || this._diagFrameCount % 60 === 0) {
-        this._emitDiagLog(ts, raceState);
-      }
-      this._diagPrevLogState = this.state;
-    }
-
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
-  }
-
-  _emitDiagLog(ts, raceState) {
-    const entry = { timestamp: raceState?.raceElapsed ?? 0, ...this._diagSnapshot };
-    if (!window.__CAMERA_DIAG_LOG__) window.__CAMERA_DIAG_LOG__ = [];
-    window.__CAMERA_DIAG_LOG__.push(entry);
-    try {
-      localStorage.setItem('__cameraDiagLog__', JSON.stringify(window.__CAMERA_DIAG_LOG__));
-    } catch {
-      /* ignore localStorage quota errors */
-    }
   }
 
   _transition(racers, ts, raceState) {
@@ -379,10 +353,6 @@ export class CameraDirector {
     const frameSize = { width: canvasW, height: canvasH };
     // minEffZoom = overview effZoom for closed tracks: cam.zoom=1 → effZoom = 1 * bsX = bsX
     const minEffZoom = this._bsX;
-    const _diag = typeof window !== 'undefined' && !!window.__CAMERA_DIAG__;
-    let _diagTarget = null;
-    let _diagResolved = null;
-    let _diagRacerId = null;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
@@ -408,11 +378,6 @@ export class CameraDirector {
           this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
           this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
           this.targetZoom = resolved.effectiveZoom / this._bsX;
-          if (_diag) {
-            _diagTarget = target;
-            _diagResolved = resolved;
-            _diagRacerId = null;
-          }
         }
         break;
       }
@@ -432,11 +397,6 @@ export class CameraDirector {
           this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
           this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
           this.targetZoom = resolved.effectiveZoom / this._bsX;
-          if (_diag) {
-            _diagTarget = target;
-            _diagResolved = resolved;
-            _diagRacerId = focusRacers[0]?.id ?? null;
-          }
         }
         break;
       }
@@ -456,11 +416,6 @@ export class CameraDirector {
           this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
           this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
           this.targetZoom = resolved.effectiveZoom / this._bsX;
-          if (_diag) {
-            _diagTarget = target;
-            _diagResolved = resolved;
-            _diagRacerId = focusRacers[0]?.id ?? null;
-          }
         }
         break;
       }
@@ -480,110 +435,10 @@ export class CameraDirector {
           this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
           this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
           this.targetZoom = resolved.effectiveZoom / this._bsX;
-          if (_diag) {
-            _diagTarget = target;
-            _diagResolved = resolved;
-            _diagRacerId = focusRacers[Math.min(2, focusRacers.length - 1)]?.id ?? null;
-          }
         }
         break;
       }
     }
-
-    if (_diag) {
-      this._diagSnapshot = this._buildDiagSnapshot(
-        _diagTarget,
-        _diagResolved,
-        _diagRacerId,
-        canvasW,
-        canvasH
-      );
-    }
-  }
-
-  _buildDiagSnapshot(diagTarget, diagResolved, diagRacerId, canvasW, canvasH) {
-    const stateTypeMap = {
-      OVERVIEW: 'overview',
-      LEADER_ZOOM: 'leader',
-      BATTLE_ZOOM: 'battle',
-      COMEBACK_ZOOM: 'comeback',
-    };
-    const type = stateTypeMap[this.state] ?? this.state;
-
-    let computedPan = null;
-    let finalPan = { x: this.targetOffsetX, y: this.targetOffsetY };
-    let wasClamped = null;
-    let clampedAxis = null;
-    let targetVisibleAfterClamp = null;
-    let targetInInnerFrame = null;
-    let wasZoomAdapted = null;
-    let backgroundBounds = null;
-
-    if (diagTarget && diagResolved) {
-      const eff = diagResolved.effectiveZoom;
-      const hw = canvasW / 2;
-      const hh = canvasH / 2;
-      const camZoom = eff / this._bsX;
-      const effZoomY = camZoom * this._bsY;
-
-      // Ideal canvas-space offset without bounds clamping
-      computedPan = {
-        x: hw - diagTarget.x * eff,
-        y: hh - diagTarget.y * effZoomY,
-      };
-
-      // Actual canvas-space offset after clamping (X from resolveCamera, Y from _closedOffsetY)
-      finalPan = {
-        x: -diagResolved.camX * eff,
-        y: this.targetOffsetY,
-      };
-
-      const clampedX = Math.abs(finalPan.x - computedPan.x) > 0.01;
-      const clampedY = Math.abs(finalPan.y - computedPan.y) > 0.01;
-      wasClamped = clampedX || clampedY;
-      clampedAxis = clampedX && clampedY ? 'both' : clampedX ? 'x' : clampedY ? 'y' : 'none';
-
-      const screenX = diagTarget.x * eff + finalPan.x;
-      const screenY = diagTarget.y * effZoomY + finalPan.y;
-      targetVisibleAfterClamp =
-        screenX >= 0 && screenX <= canvasW && screenY >= 0 && screenY <= canvasH;
-
-      targetInInnerFrame = diagResolved.targetInInnerFrame;
-      wasZoomAdapted = diagResolved.wasZoomAdapted;
-
-      // Canvas-space bounds of the world extent at this effectiveZoom
-      const bbXa = -this._worldBounds.minX * eff;
-      const bbXb = canvasW - this._worldBounds.maxX * eff;
-      const bbYa = -this._worldBounds.minY * effZoomY;
-      const bbYb = canvasH - this._worldBounds.maxY * effZoomY;
-      backgroundBounds = {
-        minX: Math.min(bbXa, bbXb),
-        maxX: Math.max(bbXa, bbXb),
-        minY: Math.min(bbYa, bbYb),
-        maxY: Math.max(bbYa, bbYb),
-      };
-    }
-
-    return {
-      trackType: this._isOpenTrack ? 'open' : 'closed',
-      backgroundSize: { w: this._worldW, h: this._worldBounds.maxY },
-      frameSize: { w: canvasW, h: canvasH },
-      currentState: this.state,
-      panTarget: {
-        type,
-        racerId: diagRacerId,
-        position: diagTarget ? { x: diagTarget.x, y: diagTarget.y } : null,
-      },
-      computedPan,
-      backgroundBounds,
-      finalPan,
-      wasClamped,
-      clampedAxis,
-      targetVisibleAfterClamp,
-      zoom: this.targetZoom,
-      targetInInnerFrame,
-      wasZoomAdapted,
-    };
   }
 
   /**
