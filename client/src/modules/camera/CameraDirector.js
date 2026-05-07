@@ -33,7 +33,12 @@ const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re
 const BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
 const MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
 const FRAME_RATE = 60; // assumed display frame rate for lerp formula
-const CAMERA_TRANSITION_SECONDS = 1.5; // fallback transition time constant (90% convergence ≈ 3.45× TC)
+// Per-state transition time constants (TC): higher = slower, more cinematic.
+// 90% convergence time ≈ 3.45 × TC at 60 fps.
+const TC_OVERVIEW = 1.5; // slow sweep-in when returning to wide shot
+const TC_LEADER = 0.3; // fast follow — leader moves continuously
+const TC_BATTLE = 0.3;
+const TC_COMEBACK = 0.3;
 const OVERVIEW_COOLDOWN_MIN = 15000; // min ms after leaving OVERVIEW before it can recur
 const OVERVIEW_COOLDOWN_MAX = 25000; // max ms — jittered each exit for variety
 const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
@@ -185,8 +190,24 @@ export class CameraDirector {
     this._battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
     this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
-    this._cameraTransitionSeconds = config?.cameraTransitionSeconds ?? CAMERA_TRANSITION_SECONDS;
-    this._lerpFactor = 1 - Math.pow(0.1, 1 / (this._cameraTransitionSeconds * FRAME_RATE));
+    const rawTc = config?.cameraTransitionSeconds;
+    if (rawTc && typeof rawTc === 'object') {
+      this._tcOverview = rawTc.overview ?? TC_OVERVIEW;
+      this._tcLeader = rawTc.leader ?? TC_LEADER;
+      this._tcBattle = rawTc.battle ?? TC_BATTLE;
+      this._tcComeback = rawTc.comeback ?? TC_COMEBACK;
+    } else {
+      // Scalar (old format or fallback): apply to OVERVIEW only; zoom states use new defaults.
+      const s = typeof rawTc === 'number' ? rawTc : TC_OVERVIEW;
+      this._tcOverview = s;
+      this._tcLeader = TC_LEADER;
+      this._tcBattle = TC_BATTLE;
+      this._tcComeback = TC_COMEBACK;
+    }
+    this._lfOverview = 1 - Math.pow(0.1, 1 / (this._tcOverview * FRAME_RATE));
+    this._lfLeader = 1 - Math.pow(0.1, 1 / (this._tcLeader * FRAME_RATE));
+    this._lfBattle = 1 - Math.pow(0.1, 1 / (this._tcBattle * FRAME_RATE));
+    this._lfComeback = 1 - Math.pow(0.1, 1 / (this._tcComeback * FRAME_RATE));
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -198,6 +219,19 @@ export class CameraDirector {
       this._overviewCooldownMin +
       Math.random() * (this._overviewCooldownMax - this._overviewCooldownMin)
     );
+  }
+
+  _lerpFactorForState(state) {
+    switch (state) {
+      case CAM_STATE.LEADER_ZOOM:
+        return this._lfLeader;
+      case CAM_STATE.BATTLE_ZOOM:
+        return this._lfBattle;
+      case CAM_STATE.COMEBACK_ZOOM:
+        return this._lfComeback;
+      default:
+        return this._lfOverview;
+    }
   }
 
   // Main update — call once per frame during RACING.
@@ -234,9 +268,10 @@ export class CameraDirector {
       this.zoom = this.targetZoom;
       this._snapFiredAtWall = Date.now();
     }
-    this.zoom += (this.targetZoom - this.zoom) * this._lerpFactor;
-    this.offsetX += (this.targetOffsetX - this.offsetX) * this._lerpFactor;
-    this.offsetY += (this.targetOffsetY - this.offsetY) * this._lerpFactor;
+    const lf = this._lerpFactorForState(this.state);
+    this.zoom += (this.targetZoom - this.zoom) * lf;
+    this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
+    this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -463,5 +498,19 @@ export class CameraDirector {
    */
   get hudState() {
     return this._inFinishDrama ? 'FINISH' : this.state;
+  }
+
+  /** TC (seconds) for the current state — readable by the diagnostics HUD. */
+  get currentTc() {
+    switch (this.state) {
+      case CAM_STATE.LEADER_ZOOM:
+        return this._tcLeader;
+      case CAM_STATE.BATTLE_ZOOM:
+        return this._tcBattle;
+      case CAM_STATE.COMEBACK_ZOOM:
+        return this._tcComeback;
+      default:
+        return this._tcOverview;
+    }
   }
 }

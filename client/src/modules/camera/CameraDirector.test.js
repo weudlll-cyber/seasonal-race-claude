@@ -1169,38 +1169,56 @@ describe('CameraDirector — B: BATTLE hysteresis', () => {
   });
 });
 
-// ── CameraDirector — D5: cameraTransitionSeconds → _lerpFactor ───────────────
+// ── CameraDirector — D5: per-state transition constants → _lf* lerp factors ──
 
-describe('CameraDirector — D5: cameraTransitionSeconds → _lerpFactor', () => {
-  it('no config: _lerpFactor computed from fallback 1.5s at 60fps ≈ 0.0253', () => {
+describe('CameraDirector — D5: per-state transition constants', () => {
+  it('no config: _lfOverview from 1.5s fallback ≈ 0.0253, _lfLeader from 0.3s ≈ 0.121', () => {
     const cd = new CameraDirector();
-    const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0253, 3);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (1.5 * 60)), 5);
+    expect(cd._lfOverview).toBeCloseTo(0.0253, 3);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
-  it('cameraTransitionSeconds=0.5 gives faster lerp ≈ 0.0739', () => {
-    const fastConfig = { ...pctConfig, cameraTransitionSeconds: 0.5 };
-    const cd = new CameraDirector(1280, 720, false, fastConfig);
-    const expected = 1 - Math.pow(0.1, 1 / (0.5 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0739, 3);
+  it('object config sets per-state TC and lf independently', () => {
+    const cfg = {
+      ...pctConfig,
+      cameraTransitionSeconds: { overview: 2.0, leader: 0.5, battle: 0.4, comeback: 0.6 },
+    };
+    const cd = new CameraDirector(1280, 720, false, cfg);
+    expect(cd._tcOverview).toBe(2.0);
+    expect(cd._tcLeader).toBe(0.5);
+    expect(cd._tcBattle).toBe(0.4);
+    expect(cd._tcComeback).toBe(0.6);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (2.0 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.4 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.6 * 60)), 5);
   });
 
-  it('cameraTransitionSeconds=3.0 gives slower lerp ≈ 0.0127', () => {
-    const slowConfig = { ...pctConfig, cameraTransitionSeconds: 3.0 };
-    const cd = new CameraDirector(1280, 720, false, slowConfig);
-    const expected = 1 - Math.pow(0.1, 1 / (3.0 * 60));
-    expect(cd._lerpFactor).toBeCloseTo(expected, 5);
-    expect(cd._lerpFactor).toBeCloseTo(0.0127, 3);
+  it('scalar config applies scalar to overview, defaults to zoom-state TCs', () => {
+    const cfg = { ...pctConfig, cameraTransitionSeconds: 0.5 };
+    const cd = new CameraDirector(1280, 720, false, cfg);
+    expect(cd._tcOverview).toBe(0.5);
+    expect(cd._tcLeader).toBe(0.3);
+    expect(cd._tcBattle).toBe(0.3);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
-  it('live-apply: updateConfig() with faster transition increases _lerpFactor', () => {
+  it('live-apply: updateConfig() with object TC updates all per-state lf values', () => {
     const cd = new CameraDirector();
-    const before = cd._lerpFactor;
-    cd.updateConfig({ ...pctConfig, cameraTransitionSeconds: 0.5 });
-    expect(cd._lerpFactor).toBeGreaterThan(before);
-    expect(cd._lerpFactor).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    const prevLfOverview = cd._lfOverview;
+    cd.updateConfig({
+      ...pctConfig,
+      cameraTransitionSeconds: { overview: 0.5, leader: 0.1, battle: 0.1, comeback: 0.1 },
+    });
+    expect(cd._lfOverview).toBeGreaterThan(prevLfOverview);
+    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
   });
 });
 
