@@ -1,8 +1,8 @@
-# PR #81 — Review Bundle (v6, + Etappe 4b)
-**WIP: Per-State Following Camera (Phasen 1-5)**
+# PR #81 — Review Bundle (v7, + Etappe 6)
+**WIP: Per-State Following Camera (Phasen 1-6)**
 Branch: `feat/per-state-camera-phase-1-foundation` → `master`
-Datum: 2026-05-08 | Tests: 1684 passed, 0 failed
-6 Commits auf Branch (Phase 1: 2, Etappe 2: 1, Etappe 3: 1, Etappe 4: 1, Etappe 4b: 1).
+Datum: 2026-05-09 | Tests: 1849 passed, 0 failed
+7 Commits auf Branch (Phase 1: 2, Etappe 2: 1, Etappe 3: 1, Etappe 4: 1, Etappe 4b: 1, Etappe 6: 1).
 
 ---
 
@@ -675,3 +675,121 @@ User-Tuning-Test:
 3. Δ (Camera-Target-Distanz) sollte kleiner werden — Kamera führt mit dem Pulk
 4. Reporting: wie groß ist `lookahead` im HUD? wie groß ist `Δ`?
 5. Feinjustierung: weight runter wenn zu aggressiv, distance hoch wenn zu schwach
+
+---
+
+## Etappe 6 — Lead-In / Mitlaufen / Lead-Out (Phased Observer)
+
+### Motivation
+
+Etappe 4/4b (Lookahead) löste das Grundproblem nicht: Die Kamera folgte dem Racer nie exakt
+(immer Δ > 0 durch den Lerp). Bei BATTLE_ZOOM ≥ 3.32× führte das zu sichtbarem Double-Image /
+Aliasing auf dem Racetrack-Hintergrund.
+
+Etappe 6 ersetzt Lookahead komplett durch ein **Drei-Phasen-System** mit `_camT` (eigene
+Track-Position der Kamera) und exaktem Pin-Lock im Mitlaufen.
+
+### Phasen
+
+| Phase | Bedingung | Kameraverhalten |
+|-------|-----------|----------------|
+| **lead-in** | `dT ∈ [-dtLeadIn, 0)` | Kamera wartet bei `_camT`; Racer läuft heran |
+| **follow** | `dT ≥ 0` und followedPx < followDuration | `_camT = focusT` jedes Frame; `offsetX = targetOffsetX` (kein Lerp-Lag) |
+| **lead-out** | followedPx ≥ followDuration | Kamera hält; Racer läuft weiter |
+
+`dT = focusT − _camT`, normalisiert auf `[−0.5, 0.5]` via `((dT % 1) + 1.5) % 1 − 0.5`.
+
+`idle`: Racer ist weiter als `leadInDistance` hinter `_camT` — tritt nur bei anomal großer
+Lead-In-Distanz oder direkt nach State-Wechsel auf (kein Sonderverhalten nötig, `_setTargets()`
+pant zur `_camT`-Position).
+
+### State-Initialisierung
+
+Bei `_transition()` (Closed Track + Shape vorhanden):
+```js
+const leadInDt = prof.leadInDistance / shape.getTotalLength();
+this._camT = focusT + leadInDt;  // Kamera startet leadInDistance vor Racer
+this._observerPhase = 'idle';
+this._followStartT = null;
+```
+
+`focusT` per State: LEADER → `r0.t`, BATTLE → `(r0.t + r1.t) / 2`, COMEBACK → `ordered[2].t`.
+OVERVIEW → `_camT = null` (kein phased pan).
+
+### _setTargets() — Pan-Target im lead-in und lead-out
+
+Wenn `_camT !== null && shape` gesetzt:
+```js
+const panTarget = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
+this._setClosedTrackTargets(panTarget, stateEffZoom, frameSize, canvasH);
+```
+Damit lerpt die Kamera während Entry-Phase zur lead-in Position. Im follow/lead-out hält sie dort.
+
+### _computePhasedPanTarget() — Follow Pin-Lock
+
+Wird in `update()` nach dem Lerp-Schritt aufgerufen, nur wenn `_lerpPhase === 'tracking'`:
+```js
+// follow: keine Lerp-Lag mehr
+this._camT = focusT;
+const camPos = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
+const resolved = resolveCamera({ targetWorld: camPos, ... });
+this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+this.offsetY = this.targetOffsetY = closedOffsetY(camPos.y, ...);
+```
+
+`lead-out` ist sticky bis zum nächsten `_transition()`.
+
+### Default-Werte
+
+| State | leadInDistance | followDuration | leadOutDistance |
+|-------|----------------|----------------|-----------------|
+| OVERVIEW | 0 | 0 | 0 |
+| LEADER_ZOOM | 200 | 1500 | 200 |
+| BATTLE_ZOOM | 100 | 2000 | 100 |
+| COMEBACK_ZOOM | 200 | 1500 | 200 |
+
+### Geänderte Dateien
+
+**`client/src/modules/storage/defaults.js`**
+- `lookaheadDistance` / `lookaheadWeight` → entfernt
+- `leadInDistance` / `followDuration` / `leadOutDistance` hinzugefügt (px-basiert)
+
+**`client/src/modules/camera/CameraDirector.js`**
+- `_getLookaheadOffset()` → gelöscht
+- `_lookaheadByState` → ersetzt durch `_phasedByState`
+- Constructor: `_camT = null`, `_observerPhase = 'idle'`, `_followStartT = null`, `_lastFocusT = 0`
+- `_transition()`: `_camT`-Initialisierung + Observer-Reset am Ende
+- `_setTargets()`: verwendet `_camT`-Weltposition als Pan-Target (wenn gesetzt)
+- `_computePhasedPanTarget()`: neue Methode — Phasen-Logik + Follow-Pin-Lock
+- `update()`: ruft `_computePhasedPanTarget()` nach Lerp-Schritt auf
+- Getter: `lookaheadVec` → ersetzt durch `camT`, `observerPhase`, `lastFocusT`
+
+**`client/src/screens/RaceScreen/CameraDiagnosticsHUD.jsx`**
+- Lookahead-Zeile → ersetzt durch `obs: <phase> | camT: X.XXX | focusT: X.XXX`
+- Farbe: `follow` = grün, `lead-in` = gelb, sonst gedimmt
+
+**`client/src/screens/DevScreen/sections/CameraZoomTuningSection.jsx`**
+- `lookaheadDistance` / `lookaheadWeight` Felder → ersetzt durch `leadInDistance` / `followDuration` / `leadOutDistance` (min 0, max 2000, step 50)
+
+**`client/src/modules/camera/CameraDirector.test.js`**
+- Phase-4-Lookahead-Suite (11 Tests) → gelöscht
+- Etappe-6-Suite (18 Tests) hinzugefügt: `_camT`-Init, Phasenübergänge, Pin-Lock,
+  lead-out sticky, Wraparound, `updateConfig()`, OVERVIEW no-op
+
+### Technische Invarianten
+
+- Open Tracks: **nicht betroffen** (phased pan nur auf Closed Tracks mit Shape)
+- `_lerpPhase` Automat: **unverändert** (Entry → Tracking Konvergenzcheck bleibt)
+- `r.vt` in RaceScreen: **bleibt** (für zukünftige Erweiterungen)
+- Schema v4: **kein Bump** — Deep-Merge in `cameraConfig.js` lädt neue Felder aus Defaults;
+  alte `lookaheadDistance/Weight` in localStorage werden stillschweigend ignoriert
+
+### Tuning-Anleitung (Etappe 6)
+
+1. F6 → per-State-Accordion öffnen (z.B. Leader Zoom)
+2. `Lead-in distance`: wie weit (px) die Kamera vor dem Racer startet (0 = sofort follow)
+3. `Follow duration`: wie weit (px) die Kamera mit dem Racer mitläuft (0 = kein Mitlaufen)
+4. `Lead-out distance`: wie weit (px) der Racer nach Mitlaufen vorausläuft (0 = sofort free)
+5. HUD-Diagnose: `obs: follow` (grün) = Pin-Lock aktiv, Δ sollte ≈ 0 sein
+6. Empfohlener Test-State: BATTLE_ZOOM (leadIn=100, follow=2000, leadOut=100) — bei hohem
+   Zoom-Faktor ist das Double-Image am deutlichsten sichtbar (vorher vs. nachher)
