@@ -39,6 +39,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY: 0,
     targetZoom: 1,
     bsY: 1,
+    lookaheadDx: 0,
+    lookaheadDy: 0,
   });
   const intervalRef = useRef(null);
 
@@ -67,6 +69,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         targetOffsetY: dir.targetOffsetY ?? 0,
         targetZoom: dir.targetZoom ?? dir.zoom,
         bsY: dir._bsY ?? 1,
+        lookaheadDx: dir.lookaheadVec?.dx ?? 0,
+        lookaheadDy: dir.lookaheadVec?.dy ?? 0,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
@@ -94,6 +98,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY,
     targetZoom,
     bsY,
+    lookaheadDx,
+    lookaheadDy,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
@@ -158,6 +164,16 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       </div>
       <div style={{ color: lagColor }}>
         lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px
+      </div>
+      <div
+        style={{
+          color:
+            Math.abs(lookaheadDx) + Math.abs(lookaheadDy) > 0.5
+              ? '#ffd700'
+              : 'rgba(176,224,255,0.4)',
+        }}
+      >
+        lookahead: ({lookaheadDx.toFixed(0)}, {lookaheadDy.toFixed(0)}) px
       </div>
       <div style={{ color: '#9be' }}>
         cam: ({camWorldX}, {camWorldY})

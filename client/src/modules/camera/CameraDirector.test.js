@@ -2105,3 +2105,136 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
     expect(cd._lfEntryByState[CAM_STATE.LEADER_ZOOM]).toBeCloseTo(tcToLerpFactor(3.0), 10);
   });
 });
+
+// ── Phase 4: Lookahead ────────────────────────────────────────────────────────
+
+// Open-track CameraDirector used so _lastLookaheadDx/Dy is computed without
+// triggering the closed-track pan pipeline. State is forced + stateEnteredAt
+// set 1ms before ts so minStateHold prevents any transition.
+const lookaheadConfig = {
+  ...profileConfig,
+  cameraStateProfiles: {
+    ...profileConfig.cameraStateProfiles,
+    LEADER_ZOOM: {
+      ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+      lookaheadDistance: 200,
+      lookaheadWeight: 1.0,
+    },
+    BATTLE_ZOOM: {
+      ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
+      lookaheadDistance: 100,
+      lookaheadWeight: 0.5,
+    },
+  },
+};
+
+const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };
+
+describe('CameraDirector — Phase 4: Lookahead', () => {
+  it('lookaheadDistance=0 and lookaheadWeight=0: lookaheadVec is {dx:0, dy:0}', () => {
+    // profileConfig has distance=0, weight=0 for all states
+    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('lookaheadDistance=200, lookaheadWeight=1: LEADER dx = cos(angle)*200', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }]; // vx=1, vy=0
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(200, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('angle=PI/2: LEADER dy = sin(PI/2)*200', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: Math.PI / 2 }]; // vx=0, vy=1
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(0, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(200, 3);
+  });
+
+  it('racer.angle undefined: no lookahead (graceful fallback)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5 }]; // no angle property
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('BATTLE: lookaheadVec is vector mean of r0 and r1 velocity', () => {
+    // r0: angle=0 → vx=1, vy=0; r1: angle=PI/2 → vx=0, vy=1
+    // mean: vx=0.5, vy=0.5; dist=100, weight=0.5 → dx=25, dy=25
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [
+      { x: 100, y: 100, t: 0.5, angle: 0 },
+      { x: 102, y: 100, t: 0.48, angle: Math.PI / 2 },
+    ];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(25, 3);
+  });
+
+  it('lookaheadWeight=0.5: offsets are halved (BATTLE, single direction)', () => {
+    // r0 and r1 both angle=0 → vx=1, vy=0; mean vx=1, vy=0
+    // dist=100, weight=0.5 → dx=50, dy=0
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [
+      { x: 100, y: 100, t: 0.5, angle: 0 },
+      { x: 102, y: 100, t: 0.48, angle: 0 },
+    ];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(50, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('OVERVIEW: lookaheadVec is always {dx:0, dy:0}', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('legacy config (no profiles): lookaheadVec stays {dx:0, dy:0}', () => {
+    // pctConfig has no cameraStateProfiles → legacy path → _lookaheadByState all zeros
+    const cd = new CameraDirector(6000, 720, true, pctConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('updateConfig() with new lookaheadDistance updates _lookaheadByState immediately', () => {
+    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(0);
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          lookaheadDistance: 150,
+          lookaheadWeight: 0.8,
+        },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(150);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].weight).toBe(0.8);
+  });
+});

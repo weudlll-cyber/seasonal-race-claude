@@ -120,6 +120,8 @@ export class CameraDirector {
     this._transitionStartOffsetY = 0;
     this._lastResolvedPanTarget = null;
     this._lerpPhase = 'entry';
+    this._lastLookaheadDx = 0;
+    this._lastLookaheadDy = 0;
   }
 
   /**
@@ -261,6 +263,14 @@ export class CameraDirector {
       this._tcEntryLeader = profEntryTc('LEADER_ZOOM', this._tcLeader);
       this._tcEntryBattle = profEntryTc('BATTLE_ZOOM', this._tcBattle);
       this._tcEntryComeback = profEntryTc('COMEBACK_ZOOM', this._tcComeback);
+      // Per-state lookahead config
+      this._lookaheadByState = {};
+      for (const s of Object.values(CAM_STATE)) {
+        this._lookaheadByState[s] = {
+          distance: profiles[s]?.lookaheadDistance ?? 0,
+          weight: profiles[s]?.lookaheadWeight ?? 0,
+        };
+      }
     } else {
       // Legacy flat-field path: no profiles — old config format or no config at all.
       this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
@@ -299,6 +309,10 @@ export class CameraDirector {
       this._tcEntryLeader = this._tcLeader;
       this._tcEntryBattle = this._tcBattle;
       this._tcEntryComeback = this._tcComeback;
+      // Legacy: no lookahead config
+      this._lookaheadByState = Object.fromEntries(
+        Object.values(CAM_STATE).map((s) => [s, { distance: 0, weight: 0 }])
+      );
     }
 
     // Common: compute lf values and tc lookup map from the resolved TCs.
@@ -342,6 +356,58 @@ export class CameraDirector {
   _lerpFactorForState(state) {
     const map = this._lerpPhase === 'entry' ? this._lfEntryByState : this._lfByState;
     return map[state] ?? this._lfOverview;
+  }
+
+  /**
+   * Compute the lookahead offset for the given state and focus group.
+   * Uses r.angle (world-space tangent angle) already set by RaceScreen.computePositions().
+   * Returns world-coordinate pixel offset {dx, dy}.
+   * BATTLE uses the vector mean of r0 and r1 velocities.
+   */
+  _getLookaheadOffset(state, focusRacers) {
+    const la = this._lookaheadByState?.[state];
+    if (!la || la.distance === 0 || la.weight === 0) return { dx: 0, dy: 0 };
+
+    let vx = 0;
+    let vy = 0;
+    switch (state) {
+      case CAM_STATE.LEADER_ZOOM: {
+        const r = focusRacers[0];
+        if (r?.angle != null) {
+          vx = Math.cos(r.angle);
+          vy = Math.sin(r.angle);
+        }
+        break;
+      }
+      case CAM_STATE.BATTLE_ZOOM: {
+        const r0 = focusRacers[0];
+        const r1 = focusRacers.length > 1 ? focusRacers[1] : null;
+        const n = r1 ? 2 : 1;
+        if (r0?.angle != null) {
+          vx += Math.cos(r0.angle);
+          vy += Math.sin(r0.angle);
+        }
+        if (r1?.angle != null) {
+          vx += Math.cos(r1.angle);
+          vy += Math.sin(r1.angle);
+        }
+        vx /= n;
+        vy /= n;
+        break;
+      }
+      case CAM_STATE.COMEBACK_ZOOM: {
+        const r = focusRacers[Math.min(2, focusRacers.length - 1)];
+        if (r?.angle != null) {
+          vx = Math.cos(r.angle);
+          vy = Math.sin(r.angle);
+        }
+        break;
+      }
+      default:
+        return { dx: 0, dy: 0 };
+    }
+
+    return { dx: vx * la.distance * la.weight, dy: vy * la.distance * la.weight };
   }
 
   // Main update — call once per frame during RACING.
@@ -553,6 +619,8 @@ export class CameraDirector {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
     const minEffZoom = this._bsX;
+    this._lastLookaheadDx = 0;
+    this._lastLookaheadDy = 0;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
@@ -585,27 +653,57 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-          this._setClosedTrackTargets(target, this._leaderZoom * this._bsX, frameSize, canvasH);
+        {
+          const la = this._getLookaheadOffset(CAM_STATE.LEADER_ZOOM, focusRacers);
+          this._lastLookaheadDx = la.dx;
+          this._lastLookaheadDy = la.dy;
+          if (!this._isOpenTrack) {
+            const base = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+            this._setClosedTrackTargets(
+              { x: base.x + la.dx, y: base.y + la.dy },
+              this._leaderZoom * this._bsX,
+              frameSize,
+              canvasH
+            );
+          }
         }
         break;
       }
 
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
-          this._setClosedTrackTargets(target, this._battleZoom * this._bsX, frameSize, canvasH);
+        {
+          const la = this._getLookaheadOffset(CAM_STATE.BATTLE_ZOOM, focusRacers);
+          this._lastLookaheadDx = la.dx;
+          this._lastLookaheadDy = la.dy;
+          if (!this._isOpenTrack) {
+            const base = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+            this._setClosedTrackTargets(
+              { x: base.x + la.dx, y: base.y + la.dy },
+              this._battleZoom * this._bsX,
+              frameSize,
+              canvasH
+            );
+          }
         }
         break;
       }
 
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
-          this._setClosedTrackTargets(target, this._comebackZoom * this._bsX, frameSize, canvasH);
+        {
+          const la = this._getLookaheadOffset(CAM_STATE.COMEBACK_ZOOM, focusRacers);
+          this._lastLookaheadDx = la.dx;
+          this._lastLookaheadDy = la.dy;
+          if (!this._isOpenTrack) {
+            const base = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+            this._setClosedTrackTargets(
+              { x: base.x + la.dx, y: base.y + la.dy },
+              this._comebackZoom * this._bsX,
+              frameSize,
+              canvasH
+            );
+          }
         }
         break;
       }
@@ -628,6 +726,11 @@ export class CameraDirector {
   /** Current lerp phase: 'entry' (slow, smooth) or 'tracking' (fast, sticky). */
   get lerpPhase() {
     return this._lerpPhase;
+  }
+
+  /** Last computed lookahead offset in world pixels {dx, dy}. Zero when lookahead is off. */
+  get lookaheadVec() {
+    return { dx: this._lastLookaheadDx, dy: this._lastLookaheadDy };
   }
 
   /** True when zoom has not yet converged to its target (within 0.1%). */
