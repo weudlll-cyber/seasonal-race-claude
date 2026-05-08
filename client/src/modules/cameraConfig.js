@@ -37,7 +37,7 @@ function normalizeCameraTransitionSeconds(config) {
 // Build a cameraStateProfiles object from legacy spritePctOfCanvas / cameraTransitionSeconds
 // fields present on a v2/v3 config.  Preserves any user-tuned per-state values.
 function buildProfilesFromLegacy(config) {
-  const sp = config.spritePctOfCanvas ?? DEFAULT_CAMERA_CONFIG.spritePctOfCanvas;
+  const sp = config.spritePctOfCanvas ?? {};
   const tc =
     typeof config.cameraTransitionSeconds === 'object'
       ? config.cameraTransitionSeconds
@@ -119,6 +119,8 @@ export function loadCameraConfig() {
         ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas,
         ...patched.spritePctOfCanvas,
       };
+    } else {
+      delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
     // Fall through to v3→v4 migration
@@ -134,6 +136,10 @@ export function loadCameraConfig() {
         ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas,
         ...stored.spritePctOfCanvas,
       };
+    } else {
+      // User never stored spritePctOfCanvas — remove default so buildProfilesFromLegacy
+      // falls through to profile defaults for each field via the `?? def.STATE.spritePct` chain.
+      delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
     return migrateV3toV4(merged);
