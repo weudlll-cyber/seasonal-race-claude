@@ -19,6 +19,8 @@ import {
   OPEN_TRACK_BASE_ZOOM,
 } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
+import { getPanTarget } from '../../modules/camera/panTarget.js';
+import { resolveCamera } from '../../modules/camera/resolveCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
   lapsFromDuration,
@@ -71,6 +73,7 @@ const CANVAS_H = 720;
 // Keep legacy aliases used throughout this file
 const CW = CANVAS_W;
 const CH = CANVAS_H;
+const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -299,6 +302,8 @@ export default function RaceScreen() {
       burstParticles: [],
       maxLaps,
       finishT,
+      camX: 0,
+      camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => {
         const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
@@ -966,11 +971,26 @@ export default function RaceScreen() {
       );
 
       if (isOpenTrack) {
+        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
+        const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
+        const target = getPanTarget(camDirRef.current.state, focusRacers, shapeRef.current);
+        const resolved = resolveCamera({
+          targetWorld: target,
+          desiredEffZoom: effZoom,
+          worldBounds: { maxX: worldWidth, maxY: worldHeight },
+          frameSize: { width: CANVAS_W, height: CANVAS_H },
+          innerFramePct: cameraConfigRef.current.targetInnerFramePct ?? 0.7,
+          minEffZoom: effectiveZoom(camDirRef.current.overviewZoom, OPEN_TRACK_BASE_ZOOM),
+        });
+        st.camX = isFinite(st.camX) ? st.camX + (resolved.camX - st.camX) * 0.05 : resolved.camX;
+        st.camY = isFinite(st.camY) ? st.camY + (resolved.camY - st.camY) * 0.05 : resolved.camY;
+      }
+
+      if (isOpenTrack) {
         ctx.save();
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        // cam.offsetX/Y are screen-space offsets computed by CameraDirector (= -camX_world × effZoom).
-        // Equivalent to the old -(st.camX)*effZoom pattern but now TC-based and state-aware.
-        ctx.translate(cam.offsetX, cam.offsetY);
+        // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
+        ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
         ctx.scale(effZoom, effZoom);
         drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
         for (const inst of effectsRef.current) {

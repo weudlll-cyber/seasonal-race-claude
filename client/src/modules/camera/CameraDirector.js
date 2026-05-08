@@ -521,28 +521,6 @@ export class CameraDirector {
     this._lastResolvedPanTarget = panResolved;
   }
 
-  /**
-   * Compute open-track pan targets in screen space, analogous to _setClosedTrackTargets.
-   * Uses OPEN_TRACK_BASE_ZOOM × this.zoom as the effective zoom for pan resolution.
-   * Stores result in targetOffsetX/Y (screen space: -camX_world × effZoom).
-   */
-  _setOpenTrackPanTargets(target, canvasW, canvasH) {
-    const frameSize = { width: canvasW, height: canvasH };
-    const minEffZoom = OPEN_TRACK_BASE_ZOOM * this.overviewZoom;
-    const currEffZoom = Math.max(OPEN_TRACK_BASE_ZOOM * this.zoom, minEffZoom);
-    const resolved = resolveCamera({
-      targetWorld: target,
-      desiredEffZoom: currEffZoom,
-      worldBounds: this._worldBounds,
-      frameSize,
-      innerFramePct: this._innerFramePct,
-      minEffZoom,
-    });
-    this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-    this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
-    this._lastResolvedPanTarget = resolved;
-  }
-
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
@@ -558,11 +536,9 @@ export class CameraDirector {
               ? racers
               : focusRacers
             : focusRacers;
-        const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
-        if (this._isOpenTrack) {
-          this._setOpenTrackPanTargets(target, canvasW, canvasH);
-        } else {
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
           const resolved = resolveCamera({
             targetWorld: target,
             desiredEffZoom: minEffZoom,
@@ -581,10 +557,8 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
-        const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          this._setOpenTrackPanTargets(target, canvasW, canvasH);
-        } else {
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._leaderZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -592,10 +566,8 @@ export class CameraDirector {
 
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
-        const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          this._setOpenTrackPanTargets(target, canvasW, canvasH);
-        } else {
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._battleZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -603,10 +575,8 @@ export class CameraDirector {
 
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
-        const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          this._setOpenTrackPanTargets(target, canvasW, canvasH);
-        } else {
+        if (!this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
           this._setClosedTrackTargets(target, this._comebackZoom * this._bsX, frameSize, canvasH);
         }
         break;

@@ -1687,7 +1687,7 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
   });
 
   it('open track worldW=6000: cam.offsetX not used in render (st.camX/Y path) — no crash', () => {
-    // Open tracks ignore cam.offsetX/Y — resolveCamera in RaceScreen handles st.camX/Y.
+    // Open tracks pan via RaceScreen (getPanTarget+resolveCamera+st.camX/Y), not cam.offsetX/Y.
     const worldW = 6000;
     const cd = new CameraDirector(worldW, 720, true, inverseConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
