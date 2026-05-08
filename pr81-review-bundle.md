@@ -1,8 +1,8 @@
-# PR #81 — Review Bundle (v5, + Etappe 4)
+# PR #81 — Review Bundle (v6, + Etappe 4b)
 **WIP: Per-State Following Camera (Phasen 1-5)**
 Branch: `feat/per-state-camera-phase-1-foundation` → `master`
-Datum: 2026-05-08 | Tests: 1681 passed, 0 failed
-5 Commits auf Branch (Phase 1: 2, Etappe 2: 1, Etappe 3: 1, Etappe 4: 1).
+Datum: 2026-05-08 | Tests: 1684 passed, 0 failed
+6 Commits auf Branch (Phase 1: 2, Etappe 2: 1, Etappe 3: 1, Etappe 4: 1, Etappe 4b: 1).
 
 ---
 
@@ -587,3 +587,91 @@ User-Tuning-Test:
 3. Race in LEADER_ZOOM: HUD zeigt "lookahead: (≠0, ≠0) px" (gelb), Camera führt den Racer an
 4. Zu starkes Lookahead → Racer driftet vom Bildschirm weg → `weight` reduzieren
 5. Empfohlener Startbereich: distance 50-150px, weight 0.3-0.7
+
+---
+
+## 10. Etappe 4b — Velocity-Betrag ergänzt (Option D)
+
+**Commit:** `17a8ecc` | 3 Dateien, 62 Insertions, 15 Deletions | Tests: 1684 passed (+3)
+
+### Ziel
+
+Etappe 4 gab einen konstanten Pixel-Lead unabhängig von der tatsächlichen Fahrgeschwindigkeit.
+Etappe 4b macht den Lookahead proportional zur Istgeschwindigkeit: schnelle Racers führen weiter,
+gebremste/gestoppte Racers führen gar nicht.
+
+### Entwurfsentscheidung: Option D (CC-Erweiterung zu Plan-Claudes A/B/C)
+
+Plan-Claude hatte drei Optionen vorgeschlagen:
+- **A** — Hardcoded `SPEED_NORMALIZER`-Konstante in CameraDirector
+- **B** — Kein Normalizer, `r.vt` direkt × `lookaheadDistance` → hässliche UX (distance=50000)
+- **C** — Velocity in Welt-Pixeln/Sekunde über Spline-Tangente (`shape.getTotalLength()`)
+
+**Option D** (CC-Empfehlung, akzeptiert): Normalisierung an der Quelle in RaceScreen.
+
+```js
+// RaceScreen, nach dem t-Update jedes Racers:
+r.vt = race_baseSpeed > 0 && !r.finished
+  ? (r.baseSpeed * boost * brake + jitter) / race_baseSpeed
+  : 0;
+```
+
+`r.vt ≈ 1.0` bei Normalgeschwindigkeit, `> 1.0` bei Boost, `< 1.0` bei Bremsen/Avoidance,
+`0` bei finished Racers.
+
+**Warum D besser ist als A/B/C:**
+1. `lookaheadDistance` behält seine Pixel-Semantik bei Normalgeschwindigkeit — kein UI-Range-Bruch
+2. Boost / Brake / Avoidance werden dynamisch reflektiert (echte Frame-Modifier statt Mittelwert)
+3. Robust gegen streckende race_baseSpeed-Änderungen (schnelle vs. langsame Strecke:
+   beide ergeben `vt ≈ 1.0` bei Normalpace)
+4. Kein Tangenten-Abruf nötig (Option C hätte `shape.getTotalLength()` in CameraDirector gebracht)
+5. Kein SPEED_NORMALIZER in CameraDirector — keine Magic Constants
+
+**Guard `race_baseSpeed > 0`** verhindert Division-by-zero bei Pause/Race-Ende.
+
+### Formel-Änderung in `_getLookaheadOffset()`
+
+Vorher (Etappe 4):
+```
+dx = vx × lookaheadDistance × lookaheadWeight
+```
+
+Jetzt (Etappe 4b):
+```
+dx = vx × vtFactor × lookaheadDistance × lookaheadWeight
+```
+
+BATTLE: `vtFactor = (r0.vt + r1.vt) / n` — arithmetischer Mittelwert, konsistent mit
+Richtungs-Vektormittel. Fehlender `vt` → `r?.vt ?? 0` → kein NaN, kein Crash.
+
+### Geänderte Dateien
+
+**`client/src/screens/RaceScreen/index.jsx`**
+- Nach dem `if (!r.finished) { r.t += ... } else { runout }` Block:
+  `r.vt = race_baseSpeed > 0 && !r.finished ? (r.baseSpeed * boost * brake + jitter) / race_baseSpeed : 0;`
+
+**`client/src/modules/camera/CameraDirector.js`**
+- `_getLookaheadOffset()`: `let vtFactor = 0;` vor switch, pro State gesetzt:
+  - LEADER/COMEBACK: `r?.vt ?? 0`
+  - BATTLE: `((r0?.vt ?? 0) + (r1?.vt ?? 0)) / n`
+- Return: `dx: vx * vtFactor * la.distance * la.weight`
+
+**`client/src/modules/camera/CameraDirector.test.js`**
+- 4 bestehende Phase-4-Tests angepasst: explizites `vt` im Racer-Fixture, Erwartungswerte
+  neu berechnet (verschiedene vt-Werte: `0.5`, `1.0` um Skalenbugs aufzudecken)
+- 3 neue Tests:
+  - `vt=2.0`: doppelter Lookahead-Vektor (`dx ≈ 400` statt 200)
+  - `vt=0`: Null-Vektor trotz gültigem `angle`
+  - `vt undefined`: graceful fallback zu `{dx:0, dy:0}`, kein Crash
+
+### Tuning (Etappe 4b Verify)
+
+Default-Werte (0/0) → kein Verhaltensunterschied zu Etappe 4.
+
+User-Tuning-Test:
+1. F6 → Battle Zoom → `lookaheadDistance=100`, `lookaheadWeight=0.5`
+2. Race in BATTLE: HUD "lookahead" sollte jetzt deutlich größer sein als
+   bei gleichen Etappe-4-Einstellungen (weil Velocity multipliziert)
+3. Δ (Camera-Target-Distanz) sollte kleiner werden — Kamera führt mit dem Pulk
+4. Reporting: wie groß ist `lookahead` im HUD? wie groß ist `Δ`?
+5. Feinjustierung: weight runter wenn zu aggressiv, distance hoch wenn zu schwach
