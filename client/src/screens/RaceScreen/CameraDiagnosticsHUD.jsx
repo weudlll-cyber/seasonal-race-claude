@@ -26,6 +26,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     isOpen: false,
     hudState: 'OVERVIEW',
     currentTc: 0,
+    lerpPhase: 'entry',
     lagX: 0,
     lagY: 0,
     transitioning: false,
@@ -53,6 +54,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         isOpen: dir._isOpenTrack ?? false,
         hudState: dir.hudState ?? 'OVERVIEW',
         currentTc: dir.currentTc ?? 0,
+        lerpPhase: dir.lerpPhase ?? 'tracking',
         lagX: (dir.targetOffsetX ?? 0) - (dir.offsetX ?? 0),
         lagY: (dir.targetOffsetY ?? 0) - (dir.offsetY ?? 0),
         transitioning: dir.transitioning ?? false,
@@ -79,6 +81,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     isOpen,
     hudState,
     currentTc,
+    lerpPhase,
     lagX,
     lagY,
     transitioning,
@@ -148,6 +151,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       <div>
         state: <span style={{ color: '#ffd700' }}>{hudState}</span> | TC:{' '}
         <span style={{ color: '#b0e0ff' }}>{currentTc.toFixed(1)}s</span>
+      </div>
+      <div>
+        phase:{' '}
+        <span style={{ color: lerpPhase === 'entry' ? '#ff6b35' : '#4cff91' }}>{lerpPhase}</span>
       </div>
       <div style={{ color: lagColor }}>
         lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px

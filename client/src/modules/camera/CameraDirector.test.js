@@ -1997,3 +1997,111 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
     expect(cdHalf.zoom).toBeCloseTo(cdFull.zoom, 6);
   });
 });
+
+// ── Phase 2 — lerpPhase automat ───────────────────────────────────────────────
+
+// Config with distinct entryTC and trackingTC so tests can tell them apart
+const phase2Config = {
+  ...profileConfig,
+  cameraStateProfiles: {
+    ...profileConfig.cameraStateProfiles,
+    LEADER_ZOOM: {
+      ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+      trackingTC: 0.1, // fast tracking
+      entryTC: 2.0, // slow entry (clearly different)
+    },
+    BATTLE_ZOOM: {
+      ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
+      trackingTC: 0.15,
+      entryTC: 1.8,
+    },
+  },
+  entryConvergenceZoom: 0.05,
+  entryConvergencePx: 10,
+};
+
+describe('CameraDirector — Phase 2: lerpPhase automat', () => {
+  it('lerpPhase starts as entry on construct', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('lerpPhase resets to entry on state transition', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    // Drive to tracking by converging all dimensions
+    cd.zoom = cd.targetZoom;
+    cd.offsetX = cd.targetOffsetX;
+    cd.offsetY = cd.targetOffsetY;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // Force a state transition
+    cd._transition(mockRacers(4), 20000, mockRaceState);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('lerpPhase switches to tracking when all three dimensions converge', () => {
+    // Open track: CameraDirector never touches offsetX/Y, so offsets stay at 0.
+    // Park zoom exactly at target → convergence check passes on next update.
+    const cd = new CameraDirector(6000, 720, true, phase2Config, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom; // pre-converge zoom
+    // offsets stay 0 (open-track path never writes them)
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.lerpPhase).toBe('tracking');
+  });
+
+  it('lerpPhase stays in entry while one dimension is not converged', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    // Converge zoom and Y, but leave X far away
+    cd.zoom = cd.targetZoom;
+    cd.offsetY = cd.targetOffsetY;
+    cd.offsetX = cd.targetOffsetX - 100; // 100px lag
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('entry phase uses _lfEntryByState, tracking phase uses _lfByState', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    // In entry phase, lerpFactorForState should return entry lf
+    const entryLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
+    expect(entryLf).toBeCloseTo(cd._lfEntryLeader, 10);
+    expect(entryLf).toBeCloseTo(tcToLerpFactor(2.0), 10);
+
+    // Switch to tracking, then check
+    cd._lerpPhase = 'tracking';
+    const trackingLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
+    expect(trackingLf).toBeCloseTo(cd._lfLeader, 10);
+    expect(trackingLf).toBeCloseTo(tcToLerpFactor(0.1), 10);
+
+    // The two must differ
+    expect(entryLf).not.toBeCloseTo(trackingLf, 3);
+  });
+
+  it('with entryTC == trackingTC, behavior is equivalent to phase 1 (no-op)', () => {
+    // Default profileConfig has entryTC == trackingTC for all states
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd._lfEntryLeader).toBeCloseTo(cd._lfLeader, 10);
+    expect(cd._lfEntryBattle).toBeCloseTo(cd._lfBattle, 10);
+    expect(cd._lfEntryOverview).toBeCloseTo(cd._lfOverview, 10);
+    expect(cd._lfEntryComeback).toBeCloseTo(cd._lfComeback, 10);
+  });
+
+  it('updateConfig() with new entryTC updates _lfEntry immediately', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    const before = cd._lfEntryLeader;
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, entryTC: 3.0 },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._lfEntryLeader).toBeLessThan(before); // slower convergence
+    expect(cd._lfEntryLeader).toBeCloseTo(tcToLerpFactor(3.0), 10);
+    // _lfEntryByState map updated too
+    expect(cd._lfEntryByState[CAM_STATE.LEADER_ZOOM]).toBeCloseTo(tcToLerpFactor(3.0), 10);
+  });
+});

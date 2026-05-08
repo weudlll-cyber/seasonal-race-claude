@@ -119,6 +119,7 @@ export class CameraDirector {
     this._transitionStartOffsetX = 0;
     this._transitionStartOffsetY = 0;
     this._lastResolvedPanTarget = null;
+    this._lerpPhase = 'entry';
   }
 
   /**
@@ -255,6 +256,11 @@ export class CameraDirector {
         [CAM_STATE.BATTLE_ZOOM]: profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION),
         [CAM_STATE.COMEBACK_ZOOM]: profMax('COMEBACK_ZOOM', MAX_STATE_DURATION),
       };
+      const profEntryTc = (key, fallback) => profiles[key]?.entryTC ?? fallback;
+      this._tcEntryOverview = profEntryTc('OVERVIEW', this._tcOverview);
+      this._tcEntryLeader = profEntryTc('LEADER_ZOOM', this._tcLeader);
+      this._tcEntryBattle = profEntryTc('BATTLE_ZOOM', this._tcBattle);
+      this._tcEntryComeback = profEntryTc('COMEBACK_ZOOM', this._tcComeback);
     } else {
       // Legacy flat-field path: no profiles — old config format or no config at all.
       this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
@@ -288,6 +294,11 @@ export class CameraDirector {
         [CAM_STATE.BATTLE_ZOOM]: this._battleMaxDurationMs,
         [CAM_STATE.COMEBACK_ZOOM]: this._maxStateDuration,
       };
+      // Legacy: entryTC = trackingTC (no distinction in old format)
+      this._tcEntryOverview = this._tcOverview;
+      this._tcEntryLeader = this._tcLeader;
+      this._tcEntryBattle = this._tcBattle;
+      this._tcEntryComeback = this._tcComeback;
     }
 
     // Common: compute lf values and tc lookup map from the resolved TCs.
@@ -301,6 +312,24 @@ export class CameraDirector {
     this._lfLeader = tcToLerpFactor(this._tcLeader);
     this._lfBattle = tcToLerpFactor(this._tcBattle);
     this._lfComeback = tcToLerpFactor(this._tcComeback);
+    this._lfByState = {
+      [CAM_STATE.OVERVIEW]: this._lfOverview,
+      [CAM_STATE.LEADER_ZOOM]: this._lfLeader,
+      [CAM_STATE.BATTLE_ZOOM]: this._lfBattle,
+      [CAM_STATE.COMEBACK_ZOOM]: this._lfComeback,
+    };
+    this._lfEntryOverview = tcToLerpFactor(this._tcEntryOverview);
+    this._lfEntryLeader = tcToLerpFactor(this._tcEntryLeader);
+    this._lfEntryBattle = tcToLerpFactor(this._tcEntryBattle);
+    this._lfEntryComeback = tcToLerpFactor(this._tcEntryComeback);
+    this._lfEntryByState = {
+      [CAM_STATE.OVERVIEW]: this._lfEntryOverview,
+      [CAM_STATE.LEADER_ZOOM]: this._lfEntryLeader,
+      [CAM_STATE.BATTLE_ZOOM]: this._lfEntryBattle,
+      [CAM_STATE.COMEBACK_ZOOM]: this._lfEntryComeback,
+    };
+    this._entryConvergenceZoom = config?.entryConvergenceZoom ?? 0.05;
+    this._entryConvergencePx = config?.entryConvergencePx ?? 10;
   }
 
   _randOverviewCooldown() {
@@ -311,16 +340,8 @@ export class CameraDirector {
   }
 
   _lerpFactorForState(state) {
-    switch (state) {
-      case CAM_STATE.LEADER_ZOOM:
-        return this._lfLeader;
-      case CAM_STATE.BATTLE_ZOOM:
-        return this._lfBattle;
-      case CAM_STATE.COMEBACK_ZOOM:
-        return this._lfComeback;
-      default:
-        return this._lfOverview;
-    }
+    const map = this._lerpPhase === 'entry' ? this._lfEntryByState : this._lfByState;
+    return map[state] ?? this._lfOverview;
   }
 
   // Main update — call once per frame during RACING.
@@ -357,6 +378,12 @@ export class CameraDirector {
     this.zoom += (this.targetZoom - this.zoom) * lf;
     this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
     this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+    if (this._lerpPhase === 'entry') {
+      const zoomConverged = Math.abs(this.targetZoom - this.zoom) < this._entryConvergenceZoom;
+      const xConverged = Math.abs(this.targetOffsetX - this.offsetX) < this._entryConvergencePx;
+      const yConverged = Math.abs(this.targetOffsetY - this.offsetY) < this._entryConvergencePx;
+      if (zoomConverged && xConverged && yConverged) this._lerpPhase = 'tracking';
+    }
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -451,6 +478,7 @@ export class CameraDirector {
     // Commit state transition
     this.state = nextState;
     this.stateEnteredAt = ts;
+    this._lerpPhase = 'entry';
 
     // Track battle exit for cooldown (natural exits — forced exits handled in update())
     if (prevState === CAM_STATE.BATTLE_ZOOM && nextState !== CAM_STATE.BATTLE_ZOOM) {
@@ -595,6 +623,11 @@ export class CameraDirector {
   /** TC (seconds) for the current state — readable by the diagnostics HUD. */
   get currentTc() {
     return this._tcByState?.[this.state] ?? this._tcOverview;
+  }
+
+  /** Current lerp phase: 'entry' (slow, smooth) or 'tracking' (fast, sticky). */
+  get lerpPhase() {
+    return this._lerpPhase;
   }
 
   /** True when zoom has not yet converged to its target (within 0.1%). */
