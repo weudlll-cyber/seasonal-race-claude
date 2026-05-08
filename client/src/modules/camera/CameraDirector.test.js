@@ -1821,8 +1821,9 @@ const profileConfig = {
       spritePct: 0.05,
       trackingTC: 1.5,
       entryTC: 1.5,
-      lookaheadDistance: 0,
-      lookaheadWeight: 0,
+      leadInDistance: 0,
+      followDuration: 0,
+      leadOutDistance: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -1831,8 +1832,9 @@ const profileConfig = {
       spritePct: 0.09,
       trackingTC: 0.25,
       entryTC: 0.25,
-      lookaheadDistance: 0,
-      lookaheadWeight: 0,
+      leadInDistance: 0,
+      followDuration: 0,
+      leadOutDistance: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -1841,8 +1843,9 @@ const profileConfig = {
       spritePct: 0.14,
       trackingTC: 0.35,
       entryTC: 0.35,
-      lookaheadDistance: 0,
-      lookaheadWeight: 0,
+      leadInDistance: 0,
+      followDuration: 0,
+      leadOutDistance: 0,
       innerFramePct: 0.7,
       maxStateDuration: 7000,
       minStateHold: 5000,
@@ -1851,8 +1854,9 @@ const profileConfig = {
       spritePct: 0.07,
       trackingTC: 0.3,
       entryTC: 0.3,
-      lookaheadDistance: 0,
-      lookaheadWeight: 0,
+      leadInDistance: 0,
+      followDuration: 0,
+      leadOutDistance: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -2106,168 +2110,276 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
   });
 });
 
-// ── Phase 4: Lookahead ────────────────────────────────────────────────────────
+// ── Etappe 6: Observer Phase (Lead-In / Mitlaufen / Lead-Out) ────────────────
 
-// Open-track CameraDirector used so _lastLookaheadDx/Dy is computed without
-// triggering the closed-track pan pipeline. State is forced + stateEnteredAt
-// set 1ms before ts so minStateHold prevents any transition.
-const lookaheadConfig = {
+const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };
+
+// Minimal shape stub: straight track from x=0 to x=trackLen at y=360.
+// getTotalLength() returns trackLen; getPosition(t, _) returns {x: t*trackLen, y: 360}.
+function makeShape(trackLen = 4000) {
+  return {
+    getTotalLength: () => trackLen,
+    getPosition: (t, _lateral) => ({ x: t * trackLen, y: 360 }),
+  };
+}
+
+const phasedConfig = {
   ...profileConfig,
   cameraStateProfiles: {
     ...profileConfig.cameraStateProfiles,
     LEADER_ZOOM: {
       ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
-      lookaheadDistance: 200,
-      lookaheadWeight: 1.0,
+      leadInDistance: 200,
+      followDuration: 1500,
+      leadOutDistance: 200,
     },
     BATTLE_ZOOM: {
       ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
-      lookaheadDistance: 100,
-      lookaheadWeight: 0.5,
+      leadInDistance: 100,
+      followDuration: 2000,
+      leadOutDistance: 100,
     },
   },
 };
 
-const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };
-
-describe('CameraDirector — Phase 4: Lookahead', () => {
-  it('lookaheadDistance=0 and lookaheadWeight=0: lookaheadVec is {dx:0, dy:0}', () => {
-    // profileConfig has distance=0, weight=0 for all states
-    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+describe('CameraDirector — Etappe 6: observer phase', () => {
+  it('constructor: _camT is null, _observerPhase is "idle"', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd._camT).toBeNull();
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._followStartT).toBeNull();
   });
 
-  it('lookaheadDistance=200, lookaheadWeight=1: LEADER dx = vt*cos(angle)*200', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    // vt=1.0 (normal speed) → dx = 1.0 * cos(0) * 200 * 1 = 200
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(200, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  it('_phasedByState reads leadInDistance / followDuration / leadOutDistance from profiles', () => {
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(200);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(1500);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDistance).toBe(200);
+    expect(cd._phasedByState[CAM_STATE.OVERVIEW].leadInDistance).toBe(0);
   });
 
-  it('angle=PI/2, vt=0.5: LEADER dy = 0.5*sin(PI/2)*200 = 100', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    // vt=0.5 (half speed) → dy = 0.5 * sin(PI/2) * 200 * 1 = 100
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: Math.PI / 2, vt: 0.5 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(0, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(100, 3);
+  it('legacy path: _phasedByState defaults all to 0', () => {
+    const cd = new CameraDirector(1280, 720, false, pctConfig, 36);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(0);
   });
 
-  it('racer.angle undefined: no lookahead (graceful fallback)', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5 }]; // no angle property
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
-  });
-
-  it('BATTLE: lookaheadVec is vector mean of r0 and r1 velocity', () => {
-    // r0: angle=0 → vx=1, vy=0; r1: angle=PI/2 → vx=0, vy=1
-    // mean direction: vx=0.5, vy=0.5; mean vtFactor=(1+1)/2=1.0
-    // dist=100, weight=0.5 → dx=1.0*0.5*100*0.5=25, dy=25
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.BATTLE_ZOOM;
-    cd.stateEnteredAt = 5000;
+  it('_transition() initialises _camT at focusT + leadInDt for LEADER_ZOOM', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // Force post-start window so _transition picks LEADER_ZOOM
     const racers = [
-      { x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 },
-      { x: 102, y: 100, t: 0.48, angle: Math.PI / 2, vt: 1.0 },
+      { x: 800, y: 360, t: 0.5 },
+      { x: 700, y: 360, t: 0.4 },
     ];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(25, 3);
+    // Call _transition directly with a state that resolves to LEADER_ZOOM
+    // (gap01 >= battleGapThreshold, post-start hold active)
+    cd._transition(racers, 10000, {
+      raceElapsed: 10000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6000,
+    });
+    // leadInDt = 200 / 4000 = 0.05; focusT = 0.5 → _camT = 0.55
+    expect(cd._camT).toBeCloseTo(0.55, 5);
+    expect(cd._observerPhase).toBe('idle');
   });
 
-  it('lookaheadWeight=0.5 and vt=0.5: BATTLE dx = 0.5*1*100*0.5 = 25', () => {
-    // both angle=0 → mean vx=1, vy=0; vtFactor=(0.5+0.5)/2=0.5
-    // dist=100, weight=0.5 → dx=0.5*1*100*0.5=25, dy=0
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.BATTLE_ZOOM;
-    cd.stateEnteredAt = 5000;
+  it('_transition() sets _camT = null for OVERVIEW (no phased pan on overview)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const racers = [{ x: 100, y: 360, t: 0.1 }];
+    // Force OVERVIEW by making raceElapsed < START_PHASE_DURATION (< 3000)
+    cd._transition(racers, 1000, {
+      raceElapsed: 1000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6000,
+    });
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._camT).toBeNull();
+  });
+
+  it('_transition() resets _observerPhase to "idle" on each state change', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._observerPhase = 'follow';
     const racers = [
-      { x: 100, y: 100, t: 0.5, angle: 0, vt: 0.5 },
-      { x: 102, y: 100, t: 0.48, angle: 0, vt: 0.5 },
+      { x: 800, y: 360, t: 0.5 },
+      { x: 700, y: 360, t: 0.4 },
     ];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+    cd._transition(racers, 10000, {
+      raceElapsed: 10000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6000,
+    });
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._followStartT).toBeNull();
   });
 
-  it('OVERVIEW: lookaheadVec is always {dx:0, dy:0}', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+  it('observerPhase getter returns _observerPhase', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd.observerPhase).toBe('idle');
+    cd._observerPhase = 'follow';
+    expect(cd.observerPhase).toBe('follow');
+  });
+
+  it('camT getter returns _camT', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd.camT).toBeNull();
+    cd._camT = 0.42;
+    expect(cd.camT).toBeCloseTo(0.42, 5);
+  });
+
+  it('phase: "idle" when racer is more than leadInDt behind _camT', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // leadInDt = 200/4000 = 0.05; put _camT at 0.5, racer at 0.4 → dT = -0.1 < -0.05
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const racers = [{ x: 1600, y: 360, t: 0.4 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._observerPhase).toBe('idle');
+  });
+
+  it('phase: "lead-in" when racer is within leadInDt behind _camT', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // leadInDt = 0.05; _camT = 0.5, racer at 0.47 → dT = -0.03, -0.05 <= -0.03 < 0
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const racers = [{ x: 1880, y: 360, t: 0.47 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._observerPhase).toBe('lead-in');
+  });
+
+  it('phase: "follow" when racer reaches _camT (dT >= 0)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // _camT = 0.5, racer at 0.51 → dT = 0.01 >= 0
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const racers = [{ x: 2040, y: 360, t: 0.51 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
+    expect(cd._followStartT).toBeCloseTo(0.51, 5);
+  });
+
+  it('follow: _camT tracks focusT each frame (pin-lock)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    // Transition to follow
+    let racers = [{ x: 2040, y: 360, t: 0.51 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
+    // Next frame: racer advances
+    racers = [{ x: 2120, y: 360, t: 0.53 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._camT).toBeCloseTo(0.53, 5);
+  });
+
+  it('follow: offsetX === targetOffsetX (no lerp lag)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const racers = [{ x: 2040, y: 360, t: 0.51 }];
+    cd._computePhasedPanTarget(racers, 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
+    expect(cd.offsetX).toBe(cd.targetOffsetX);
+    expect(cd.offsetY).toBe(cd.targetOffsetY);
+  });
+
+  it('phase: "lead-out" after followDuration px traversed', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    // Enter follow at t=0.51
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
+    // followDuration = 1500px; trackLength = 4000 → need 1500/4000 = 0.375 in t
+    // racer at t = 0.51 + 0.376 = 0.886 → exceeds
+    cd._computePhasedPanTarget([{ x: 3544, y: 360, t: 0.886 }], 1280, 720);
+    expect(cd._observerPhase).toBe('lead-out');
+  });
+
+  it('lead-out: sticky — does not revert even if racer moves back within dT window', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    // Enter follow → lead-out
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    cd._computePhasedPanTarget([{ x: 3544, y: 360, t: 0.886 }], 1280, 720);
+    expect(cd._observerPhase).toBe('lead-out');
+    // Even with racer at dT=0.01 (would be "follow"), lead-out sticks
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    expect(cd._observerPhase).toBe('lead-out');
+  });
+
+  it('no-op when _lerpPhase === "entry"', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'entry'; // not tracking → should not evaluate
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const before = cd._observerPhase;
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    expect(cd._observerPhase).toBe(before); // unchanged
+  });
+
+  it('OVERVIEW: _computePhasedPanTarget exits immediately (no phase change)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.OVERVIEW;
-    cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    expect(cd._observerPhase).toBe('idle'); // unchanged
   });
 
-  it('legacy config (no profiles): lookaheadVec stays {dx:0, dy:0}', () => {
-    // pctConfig has no cameraStateProfiles → legacy path → _lookaheadByState all zeros
-    const cd = new CameraDirector(6000, 720, true, pctConfig, 36);
+  it('wraparound: dT normalised to [-0.5, 0.5] when _camT > 1', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // _camT = 0.98 (near end of lap), racer at t = 0.02 (just started new lap)
+    // Raw dT = 0.02 - 0.98 = -0.96; normalised: ((-0.96 % 1) + 1.5) % 1 - 0.5 = 0.04
+    // dT = 0.04 >= 0 → follow
+    cd._camT = 0.98;
+    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+    cd._computePhasedPanTarget([{ x: 80, y: 360, t: 0.02 }], 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
   });
 
-  it('vt=2.0: double velocity doubles lookahead vector (LEADER)', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    // vt=2.0 → dx = 2.0 * cos(0) * 200 * 1 = 400
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 2.0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(400, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
-  });
-
-  it('vt=0: lookahead is zero vector regardless of angle', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
-  });
-
-  it('vt undefined: graceful fallback to zero (no NaN, no crash)', () => {
-    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    cd.stateEnteredAt = 5000;
-    // angle valid but vt missing → r?.vt ?? 0 = 0 → no lookahead, no crash
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
-    cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
-  });
-
-  it('updateConfig() with new lookaheadDistance updates _lookaheadByState immediately', () => {
-    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
-    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(0);
+  it('updateConfig() with new phase fields updates _phasedByState immediately', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(0);
     const updated = {
       ...profileConfig,
       cameraStateProfiles: {
         ...profileConfig.cameraStateProfiles,
         LEADER_ZOOM: {
           ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
-          lookaheadDistance: 150,
-          lookaheadWeight: 0.8,
+          leadInDistance: 300,
+          followDuration: 2000,
+          leadOutDistance: 150,
         },
       },
     };
     cd.updateConfig(updated);
-    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(150);
-    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].weight).toBe(0.8);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(300);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(2000);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDistance).toBe(150);
   });
 });

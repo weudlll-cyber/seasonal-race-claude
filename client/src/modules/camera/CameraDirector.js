@@ -120,8 +120,10 @@ export class CameraDirector {
     this._transitionStartOffsetY = 0;
     this._lastResolvedPanTarget = null;
     this._lerpPhase = 'entry';
-    this._lastLookaheadDx = 0;
-    this._lastLookaheadDy = 0;
+    this._camT = null;
+    this._observerPhase = 'idle';
+    this._followStartT = null;
+    this._lastFocusT = 0;
   }
 
   /**
@@ -263,12 +265,13 @@ export class CameraDirector {
       this._tcEntryLeader = profEntryTc('LEADER_ZOOM', this._tcLeader);
       this._tcEntryBattle = profEntryTc('BATTLE_ZOOM', this._tcBattle);
       this._tcEntryComeback = profEntryTc('COMEBACK_ZOOM', this._tcComeback);
-      // Per-state lookahead config
-      this._lookaheadByState = {};
+      // Per-state phased observer config
+      this._phasedByState = {};
       for (const s of Object.values(CAM_STATE)) {
-        this._lookaheadByState[s] = {
-          distance: profiles[s]?.lookaheadDistance ?? 0,
-          weight: profiles[s]?.lookaheadWeight ?? 0,
+        this._phasedByState[s] = {
+          leadInDistance: profiles[s]?.leadInDistance ?? 0,
+          followDuration: profiles[s]?.followDuration ?? 0,
+          leadOutDistance: profiles[s]?.leadOutDistance ?? 0,
         };
       }
     } else {
@@ -309,9 +312,12 @@ export class CameraDirector {
       this._tcEntryLeader = this._tcLeader;
       this._tcEntryBattle = this._tcBattle;
       this._tcEntryComeback = this._tcComeback;
-      // Legacy: no lookahead config
-      this._lookaheadByState = Object.fromEntries(
-        Object.values(CAM_STATE).map((s) => [s, { distance: 0, weight: 0 }])
+      // Legacy: no phased observer config
+      this._phasedByState = Object.fromEntries(
+        Object.values(CAM_STATE).map((s) => [
+          s,
+          { leadInDistance: 0, followDuration: 0, leadOutDistance: 0 },
+        ])
       );
     }
 
@@ -358,65 +364,6 @@ export class CameraDirector {
     return map[state] ?? this._lfOverview;
   }
 
-  /**
-   * Compute the lookahead offset for the given state and focus group.
-   * Uses r.angle (world-space tangent angle) already set by RaceScreen.computePositions().
-   * Returns world-coordinate pixel offset {dx, dy}.
-   * BATTLE uses the vector mean of r0 and r1 velocities.
-   */
-  _getLookaheadOffset(state, focusRacers) {
-    const la = this._lookaheadByState?.[state];
-    if (!la || la.distance === 0 || la.weight === 0) return { dx: 0, dy: 0 };
-
-    let vx = 0;
-    let vy = 0;
-    let vtFactor = 0; // dimensionless velocity factor; 1.0 = normal race speed
-    switch (state) {
-      case CAM_STATE.LEADER_ZOOM: {
-        const r = focusRacers[0];
-        if (r?.angle != null) {
-          vx = Math.cos(r.angle);
-          vy = Math.sin(r.angle);
-        }
-        vtFactor = r?.vt ?? 0;
-        break;
-      }
-      case CAM_STATE.BATTLE_ZOOM: {
-        const r0 = focusRacers[0];
-        const r1 = focusRacers.length > 1 ? focusRacers[1] : null;
-        const n = r1 ? 2 : 1;
-        if (r0?.angle != null) {
-          vx += Math.cos(r0.angle);
-          vy += Math.sin(r0.angle);
-        }
-        if (r1?.angle != null) {
-          vx += Math.cos(r1.angle);
-          vy += Math.sin(r1.angle);
-        }
-        vx /= n;
-        vy /= n;
-        vtFactor = ((r0?.vt ?? 0) + (r1?.vt ?? 0)) / n;
-        break;
-      }
-      case CAM_STATE.COMEBACK_ZOOM: {
-        const r = focusRacers[Math.min(2, focusRacers.length - 1)];
-        if (r?.angle != null) {
-          vx = Math.cos(r.angle);
-          vy = Math.sin(r.angle);
-        }
-        vtFactor = r?.vt ?? 0;
-        break;
-      }
-      default:
-        return { dx: 0, dy: 0 };
-    }
-
-    return {
-      dx: vx * vtFactor * la.distance * la.weight,
-      dy: vy * vtFactor * la.distance * la.weight,
-    };
-  }
-
   // Main update — call once per frame during RACING.
   // raceState: { raceElapsed, finishedCount, winner, finishT }
   // dt: frame duration in ms (optional — defaults to 1000/60 for backward compat with tests).
@@ -456,6 +403,9 @@ export class CameraDirector {
       const xConverged = Math.abs(this.targetOffsetX - this.offsetX) < this._entryConvergencePx;
       const yConverged = Math.abs(this.targetOffsetY - this.offsetY) < this._entryConvergencePx;
       if (zoomConverged && xConverged && yConverged) this._lerpPhase = 'tracking';
+    }
+    if (!this._isOpenTrack && this._camT !== null && this._shape) {
+      this._computePhasedPanTarget(this._focusRacers(racers), canvasW, canvasH);
     }
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
@@ -567,6 +517,39 @@ export class CameraDirector {
           `stateAge=${((ts - prevEnteredAt) / 1000).toFixed(1)}s`
       );
     }
+
+    // Reset observer phase and init _camT for the new state
+    this._observerPhase = 'idle';
+    this._followStartT = null;
+    if (this._shape && !this._isOpenTrack) {
+      let focusT = null;
+      switch (nextState) {
+        case CAM_STATE.LEADER_ZOOM:
+          focusT = ordered[0]?.t ?? 0;
+          break;
+        case CAM_STATE.BATTLE_ZOOM: {
+          const r0b = ordered[0];
+          const r1b = ordered.length > 1 ? ordered[1] : r0b;
+          focusT = ((r0b?.t ?? 0) + (r1b?.t ?? 0)) / 2;
+          break;
+        }
+        case CAM_STATE.COMEBACK_ZOOM:
+          focusT = ordered[Math.min(2, ordered.length - 1)]?.t ?? 0;
+          break;
+        default:
+          focusT = null;
+      }
+      if (focusT !== null) {
+        const prof = this._phasedByState?.[nextState];
+        const trackLength = this._shape.getTotalLength();
+        const leadInDt = prof && trackLength > 0 ? prof.leadInDistance / trackLength : 0;
+        this._camT = focusT + leadInDt;
+      } else {
+        this._camT = null;
+      }
+    } else {
+      this._camT = null;
+    }
   }
 
   // Returns the top-N racers by position — the set the camera focuses on.
@@ -626,8 +609,6 @@ export class CameraDirector {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
     const minEffZoom = this._bsX;
-    this._lastLookaheadDx = 0;
-    this._lastLookaheadDy = 0;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
@@ -660,14 +641,14 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
-        {
-          const la = this._getLookaheadOffset(CAM_STATE.LEADER_ZOOM, focusRacers);
-          this._lastLookaheadDx = la.dx;
-          this._lastLookaheadDy = la.dy;
-          if (!this._isOpenTrack) {
-            const base = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+        if (!this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
+              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+          if (panTarget) {
             this._setClosedTrackTargets(
-              { x: base.x + la.dx, y: base.y + la.dy },
+              panTarget,
               this._leaderZoom * this._bsX,
               frameSize,
               canvasH
@@ -679,14 +660,14 @@ export class CameraDirector {
 
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
-        {
-          const la = this._getLookaheadOffset(CAM_STATE.BATTLE_ZOOM, focusRacers);
-          this._lastLookaheadDx = la.dx;
-          this._lastLookaheadDy = la.dy;
-          if (!this._isOpenTrack) {
-            const base = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+        if (!this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
+              : getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+          if (panTarget) {
             this._setClosedTrackTargets(
-              { x: base.x + la.dx, y: base.y + la.dy },
+              panTarget,
               this._battleZoom * this._bsX,
               frameSize,
               canvasH
@@ -698,14 +679,14 @@ export class CameraDirector {
 
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
-        {
-          const la = this._getLookaheadOffset(CAM_STATE.COMEBACK_ZOOM, focusRacers);
-          this._lastLookaheadDx = la.dx;
-          this._lastLookaheadDy = la.dy;
-          if (!this._isOpenTrack) {
-            const base = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+        if (!this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
+              : getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+          if (panTarget) {
             this._setClosedTrackTargets(
-              { x: base.x + la.dx, y: base.y + la.dy },
+              panTarget,
               this._comebackZoom * this._bsX,
               frameSize,
               canvasH
@@ -715,6 +696,95 @@ export class CameraDirector {
         break;
       }
     }
+  }
+
+  /**
+   * Phased observer: evaluate lead-in / follow / lead-out transitions and pin the
+   * camera in the follow phase (Δ target→camera ≈ 0, eliminating aliasing at high zoom).
+   * Only acts when _lerpPhase === 'tracking'. Only called on closed tracks with a shape.
+   */
+  _computePhasedPanTarget(focusRacers, canvasW, canvasH) {
+    if (this._lerpPhase !== 'tracking') return;
+
+    let focusT;
+    switch (this.state) {
+      case CAM_STATE.LEADER_ZOOM:
+        focusT = focusRacers[0]?.t ?? 0;
+        break;
+      case CAM_STATE.BATTLE_ZOOM: {
+        const r0 = focusRacers[0];
+        const r1 = focusRacers.length > 1 ? focusRacers[1] : r0;
+        focusT = ((r0?.t ?? 0) + (r1?.t ?? 0)) / 2;
+        break;
+      }
+      case CAM_STATE.COMEBACK_ZOOM:
+        focusT = focusRacers[Math.min(2, focusRacers.length - 1)]?.t ?? 0;
+        break;
+      default:
+        return;
+    }
+
+    this._lastFocusT = focusT;
+
+    const prof = this._phasedByState?.[this.state];
+    if (!prof || (prof.leadInDistance === 0 && prof.followDuration === 0)) return;
+
+    const trackLength = this._shape.getTotalLength();
+    const dtLeadIn = trackLength > 0 ? prof.leadInDistance / trackLength : 0;
+
+    // Normalize dT to [-0.5, 0.5] for wraparound
+    let dT = focusT - this._camT;
+    dT = (((dT % 1) + 1.5) % 1) - 0.5;
+
+    // Phase transitions (lead-out is sticky until next _transition())
+    if (this._observerPhase !== 'lead-out') {
+      if (dT < -dtLeadIn) {
+        this._observerPhase = 'idle';
+      } else if (dT < 0) {
+        this._observerPhase = 'lead-in';
+      } else {
+        if (this._observerPhase !== 'follow') {
+          this._observerPhase = 'follow';
+          this._followStartT = focusT;
+        }
+      }
+      if (this._observerPhase === 'follow' && this._followStartT !== null) {
+        const followedPx = (focusT - this._followStartT) * trackLength;
+        if (followedPx >= prof.followDuration) {
+          this._observerPhase = 'lead-out';
+        }
+      }
+    }
+
+    if (this._observerPhase !== 'follow') return;
+
+    // Follow: pin camera to racer (Δ ≈ 0, no lerp lag)
+    this._camT = focusT;
+    const tNorm = ((this._camT % 1) + 1) % 1;
+    const camPos = this._shape.getPosition(tNorm, 0);
+    if (!camPos) return;
+
+    const stateZoom =
+      this.state === CAM_STATE.LEADER_ZOOM
+        ? this._leaderZoom
+        : this.state === CAM_STATE.BATTLE_ZOOM
+          ? this._battleZoom
+          : this._comebackZoom;
+    const frameSize = { width: canvasW, height: canvasH };
+    const resolved = resolveCamera({
+      targetWorld: camPos,
+      desiredEffZoom: stateZoom * this._bsX,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom: this._bsX,
+    });
+    this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+    this.offsetY = this.targetOffsetY = this._closedOffsetY(
+      camPos.y,
+      resolved.effectiveZoom,
+      canvasH
+    );
   }
 
   /**
@@ -735,9 +805,19 @@ export class CameraDirector {
     return this._lerpPhase;
   }
 
-  /** Last computed lookahead offset in world pixels {dx, dy}. Zero when lookahead is off. */
-  get lookaheadVec() {
-    return { dx: this._lastLookaheadDx, dy: this._lastLookaheadDy };
+  /** Camera's current track parameter. Null until first state transition with a shape. */
+  get camT() {
+    return this._camT;
+  }
+
+  /** Current observer phase: 'idle' | 'lead-in' | 'follow' | 'lead-out'. */
+  get observerPhase() {
+    return this._observerPhase;
+  }
+
+  /** Last computed focus-racer t value (informational, for HUD). */
+  get lastFocusT() {
+    return this._lastFocusT;
   }
 
   /** True when zoom has not yet converged to its target (within 0.1%). */

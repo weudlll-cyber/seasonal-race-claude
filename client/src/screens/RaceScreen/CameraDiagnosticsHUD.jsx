@@ -39,8 +39,9 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY: 0,
     targetZoom: 1,
     bsY: 1,
-    lookaheadDx: 0,
-    lookaheadDy: 0,
+    observerPhase: 'idle',
+    camT: 0,
+    lastFocusT: 0,
   });
   const intervalRef = useRef(null);
 
@@ -69,8 +70,9 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         targetOffsetY: dir.targetOffsetY ?? 0,
         targetZoom: dir.targetZoom ?? dir.zoom,
         bsY: dir._bsY ?? 1,
-        lookaheadDx: dir.lookaheadVec?.dx ?? 0,
-        lookaheadDy: dir.lookaheadVec?.dy ?? 0,
+        observerPhase: dir.observerPhase ?? 'idle',
+        camT: dir.camT ?? 0,
+        lastFocusT: dir.lastFocusT ?? 0,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
@@ -98,8 +100,9 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY,
     targetZoom,
     bsY,
-    lookaheadDx,
-    lookaheadDy,
+    observerPhase,
+    camT,
+    lastFocusT,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
@@ -168,12 +171,15 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       <div
         style={{
           color:
-            Math.abs(lookaheadDx) + Math.abs(lookaheadDy) > 0.5
-              ? '#ffd700'
-              : 'rgba(176,224,255,0.4)',
+            observerPhase === 'follow'
+              ? '#4cff91'
+              : observerPhase === 'lead-in'
+                ? '#ffd700'
+                : 'rgba(176,224,255,0.4)',
         }}
       >
-        lookahead: ({lookaheadDx.toFixed(0)}, {lookaheadDy.toFixed(0)}) px
+        obs: <span style={{ fontWeight: 700 }}>{observerPhase}</span> | camT:{' '}
+        {camT != null ? camT.toFixed(3) : 'null'} | focusT: {lastFocusT.toFixed(3)}
       </div>
       <div style={{ color: '#9be' }}>
         cam: ({camWorldX}, {camWorldY})
