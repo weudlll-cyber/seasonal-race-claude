@@ -1,8 +1,8 @@
-# PR #81 — Review Bundle (v4, + Etappe 3)
+# PR #81 — Review Bundle (v5, + Etappe 4)
 **WIP: Per-State Following Camera (Phasen 1-5)**
 Branch: `feat/per-state-camera-phase-1-foundation` → `master`
-Datum: 2026-05-08 | Tests: 1672 passed, 0 failed
-4 Commits auf Branch (Phase 1: 2 Commits, Etappe 2: 1 Commit, Etappe 3: 1 Commit).
+Datum: 2026-05-08 | Tests: 1681 passed, 0 failed
+5 Commits auf Branch (Phase 1: 2, Etappe 2: 1, Etappe 3: 1, Etappe 4: 1).
 
 ---
 
@@ -362,7 +362,7 @@ Kleiner Bonus-Fix: `innerFramePct` liest jetzt aus dem Ref statt der stale-closu
 - **A2** (Open-Track-Pan in CameraDirector): entfällt, wird separat neu evaluiert
 - **Phase 2** (entryTC / lerpPhase-Automat): ~~`entryTC` und `entryConvergenceZoom/Px` sind im Schema, werden nicht ausgewertet~~ → **Erledigt in Etappe 2**
 - **Phase 3** (DevPanel): ~~`CameraZoomTuningSection.jsx` nicht angepasst; zeigt Legacy-Felder~~ → **Erledigt in Etappe 3**
-- **Phase 4** (Lookahead): `lookaheadDistance/Weight = 0` im Schema, keine Auswertung
+- **Phase 4** (Lookahead): ~~`lookaheadDistance/Weight = 0` im Schema, keine Auswertung~~ → **Erledigt in Etappe 4**
 - **`normalizeCameraTransitionSeconds()`**: bleibt in v2/v3-Migrations-Pfad, wird bei v4 nicht aufgerufen
 - **Legacy-Lesepfad in CameraDirector**: bleibt für Backward-Compat der bestehenden Tests
 
@@ -535,3 +535,55 @@ liest es nicht direkt — BATTLE_ZOOM.maxStateDuration aus dem Profil gilt.
    glatt rein, klebt dann schnell
 4. "Reset state" für Battle Zoom: Werte gehen zurück auf Defaults
 5. "Reset Camera Behavior": alle vier States + Convergence zurück auf Defaults
+
+---
+
+## 9. Etappe 4 — Lookahead (velocity-based pan lead)
+
+**Commit:** `88fd298` | 3 Dateien, 261 Insertions, 9 Deletions | Tests: 1681 passed (+9)
+
+### Ziel
+Pan-Target wird in Fahrtrichtung des Focus-Racers vorverschoben: Die Kamera zeigt
+wohin gefahren wird, nicht wo der Racer gerade ist. Stärke = `vx × lookaheadDistance × lookaheadWeight`
+World-Pixel. Default (0/0) → kein Verhaltensunterschied zu Etappe 3.
+
+### Pre-Implementation-Antworten (Klärungsfragen)
+
+1. **Velocity-Quelle**: `r.angle` aus `EditorShape.getPosition()` — bereits jeden Frame in
+   `computePositions()` berechnet. Keine extra Kosten. Kein `getTangentAt` nötig.
+2. **BATTLE Velocity**: Vektor-Mittelwert von r0 und r1:
+   `((cos(r0.angle)+cos(r1.angle))/2, (sin(r0.angle)+sin(r1.angle))/2)`.
+3. **Performance**: Zero extra computation — `r.angle` schon auf jedem Racer.
+
+### Geänderte Dateien
+
+**`client/src/modules/camera/CameraDirector.js`**
+- Constructor: `this._lastLookaheadDx = 0; this._lastLookaheadDy = 0;`
+- `_computeTimingConfig()`: `this._lookaheadByState` pro State aus Profilen (legacy: alles 0)
+- Neue Methode `_getLookaheadOffset(state, focusRacers)`:
+  - LEADER: `cos/sin(r0.angle)`
+  - BATTLE: Vektormittel r0+r1
+  - COMEBACK: `cos/sin(r2.angle)` (index min(2, len-1))
+  - OVERVIEW: immer `{dx:0, dy:0}`
+- `_setTargets()`: für alle drei Zoom-States: `{x: base.x + la.dx, y: base.y + la.dy}` als Target
+  (nur Closed Track — Open Track Pan liegt in RaceScreen)
+- Getter `get lookaheadVec()` → `{dx, dy}` für HUD und Tests
+
+**`client/src/screens/RaceScreen/CameraDiagnosticsHUD.jsx`**
+- Neues Snapshot-Feld `lookaheadDx/Dy`, pollt `dir.lookaheadVec?.dx/dy`
+- Neue HUD-Zeile "lookahead: (dx, dy) px", gelb wenn aktiv (≥0.5px), gedimmt wenn 0
+
+**`client/src/modules/camera/CameraDirector.test.js`**
+- 9 neue Phase 4 Tests: Default no-op, angle=0/PI/2, undefined angle, BATTLE Vektormittel,
+  weight=0.5, OVERVIEW no-op, legacy config no-op, updateConfig() live-apply
+
+### Tuning (Etappe 4 Verify)
+
+Default-Werte sind 0/0 → kein sichtbarer Unterschied zu Etappe 3.
+
+User-Tuning-Test:
+1. F6 → Camera Behavior → "Leader Zoom" aufklappen
+2. `lookaheadDistance = 200`, `lookaheadWeight = 1.0`
+3. Race in LEADER_ZOOM: HUD zeigt "lookahead: (≠0, ≠0) px" (gelb), Camera führt den Racer an
+4. Zu starkes Lookahead → Racer driftet vom Bildschirm weg → `weight` reduzieren
+5. Empfohlener Startbereich: distance 50-150px, weight 0.3-0.7
