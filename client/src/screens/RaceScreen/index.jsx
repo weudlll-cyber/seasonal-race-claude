@@ -108,6 +108,7 @@ export default function RaceScreen() {
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
+  const diagRef = useRef(null);
   const effectsRef = useRef([]);
 
   const [raceData, setRaceData] = useState(null);
@@ -254,6 +255,99 @@ export default function RaceScreen() {
       referenceSpriteSize,
       shapeRef.current
     );
+
+    const DIAG_BUF = 30;
+    const SLOW_WINDOW_MS = 5000;
+    diagRef.current = {
+      dtBuf: new Array(DIAG_BUF).fill(16),
+      dtIdx: 0,
+      dtFull: false,
+      slowTimes: [],
+      prevCamState: null,
+      windowStartTs: 0,
+      prevLeaderX: null,
+      prevLeaderY: null,
+      sdBuf: new Array(DIAG_BUF).fill(0),
+      sdIdx: 0,
+      sdFull: false,
+      dt: 16,
+      dtAvg: 16,
+      dtMin: 16,
+      dtMax: 16,
+      dtJitter: 0,
+      slowFrameCount: 0,
+      windowAge: 0,
+      screenDelta: 0,
+      screenDeltaAvg: 0,
+      screenDeltaMax: 0,
+    };
+
+    function updateDiag(dt, ts, racers, camState, frameEffZoom) {
+      const d = diagRef.current;
+      d.dtBuf[d.dtIdx] = dt;
+      d.dtIdx = (d.dtIdx + 1) % DIAG_BUF;
+      if (!d.dtFull && d.dtIdx === 0) d.dtFull = true;
+      const dLen = d.dtFull ? DIAG_BUF : d.dtIdx;
+      let dSum = 0,
+        dMin = Infinity,
+        dMax = -Infinity;
+      for (let i = 0; i < dLen; i++) {
+        const v = d.dtBuf[i];
+        dSum += v;
+        if (v < dMin) dMin = v;
+        if (v > dMax) dMax = v;
+      }
+      d.dt = dt;
+      d.dtAvg = dLen > 0 ? dSum / dLen : dt;
+      d.dtMin = dLen > 0 ? dMin : dt;
+      d.dtMax = dLen > 0 ? dMax : dt;
+      d.dtJitter = dLen > 0 ? dMax - dMin : 0;
+
+      if (dt > 20) d.slowTimes.push(ts);
+      const cutoff = ts - SLOW_WINDOW_MS;
+      while (d.slowTimes.length > 0 && d.slowTimes[0] < cutoff) d.slowTimes.shift();
+      d.slowFrameCount = d.slowTimes.length;
+
+      if (camState !== d.prevCamState) {
+        d.prevCamState = camState;
+        d.sdIdx = 0;
+        d.sdFull = false;
+        d.prevLeaderX = null;
+        d.prevLeaderY = null;
+        d.windowStartTs = ts;
+        d.screenDelta = 0;
+        d.screenDeltaAvg = 0;
+        d.screenDeltaMax = 0;
+      }
+      d.windowAge = d.windowStartTs > 0 ? (ts - d.windowStartTs) / 1000 : 0;
+
+      const leader =
+        racers.length > 0 ? racers.reduce((b, r) => (r.t > b.t ? r : b), racers[0]) : null;
+      if (leader && d.prevLeaderX !== null) {
+        const delta = Math.hypot(
+          (leader.x - d.prevLeaderX) * frameEffZoom,
+          (leader.y - d.prevLeaderY) * frameEffZoom
+        );
+        d.sdBuf[d.sdIdx] = delta;
+        d.sdIdx = (d.sdIdx + 1) % DIAG_BUF;
+        if (!d.sdFull && d.sdIdx === 0) d.sdFull = true;
+        const sLen = d.sdFull ? DIAG_BUF : d.sdIdx;
+        let sSum = 0,
+          sMax = 0;
+        for (let i = 0; i < sLen; i++) {
+          sSum += d.sdBuf[i];
+          if (d.sdBuf[i] > sMax) sMax = d.sdBuf[i];
+        }
+        d.screenDelta = delta;
+        d.screenDeltaAvg = sLen > 0 ? sSum / sLen : 0;
+        d.screenDeltaMax = sMax;
+      }
+      if (leader) {
+        d.prevLeaderX = leader.x;
+        d.prevLeaderY = leader.y;
+      }
+    }
+
     setFinishTState(finishT);
 
     // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
@@ -976,6 +1070,10 @@ export default function RaceScreen() {
         )
       );
 
+      if (showCameraDiagnostics) {
+        updateDiag(dt, ts, st.racers, camDirRef.current.hudState, frameEffZoom);
+      }
+
       if (isOpenTrack) {
         ctx.save();
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
@@ -1084,7 +1182,11 @@ export default function RaceScreen() {
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
-          <CameraDiagnosticsHUD cameraRef={camDirRef} visible={showCameraDiagnostics} />
+          <CameraDiagnosticsHUD
+            cameraRef={camDirRef}
+            diagRef={diagRef}
+            visible={showCameraDiagnostics}
+          />
         </div>
 
         <aside className="race-hud">

@@ -6,6 +6,8 @@
 // Description: Live camera diagnostics overlay (Tier-2 toggle in Dev Panel).
 //              Shows zoom, sprite size, camera state, per-state TC, lerp lag,
 //              and a brief SNAP indicator when the camera snaps on state entry.
+//              Extended with frame-timing and leader-motion blocks for
+//              render-smoothness diagnosis (Hypotheses A/B/C).
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,9 +18,10 @@ const POLL_MS = 100; // update 10× per second
 
 /**
  * @param {object}  cameraRef  React ref pointing to the live CameraDirector instance.
+ * @param {object}  diagRef    React ref pointing to the live diagnostics state object.
  * @param {boolean} visible    Whether the HUD should render
  */
-export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
+export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
   const [snapshot, setSnapshot] = useState({
     zoom: 1,
     refPx: 0,
@@ -38,6 +41,18 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY: 0,
     targetZoom: 1,
     bsY: 1,
+    // frame timing
+    dt: 16,
+    dtAvg: 16,
+    dtMin: 16,
+    dtMax: 16,
+    dtJitter: 0,
+    slowFrameCount: 0,
+    windowAge: 0,
+    // leader motion
+    screenDelta: 0,
+    screenDeltaAvg: 0,
+    screenDeltaMax: 0,
   });
   const intervalRef = useRef(null);
 
@@ -46,6 +61,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     intervalRef.current = setInterval(() => {
       const dir = cameraRef?.current;
       if (!dir) return;
+      const dg = diagRef?.current ?? {};
       setSnapshot({
         zoom: dir.zoom,
         refPx: dir._referenceSpriteSize ?? 0,
@@ -65,10 +81,20 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         targetOffsetY: dir.targetOffsetY ?? 0,
         targetZoom: dir.targetZoom ?? dir.zoom,
         bsY: dir._bsY ?? 1,
+        dt: dg.dt ?? 16,
+        dtAvg: dg.dtAvg ?? 16,
+        dtMin: dg.dtMin ?? 16,
+        dtMax: dg.dtMax ?? 16,
+        dtJitter: dg.dtJitter ?? 0,
+        slowFrameCount: dg.slowFrameCount ?? 0,
+        windowAge: dg.windowAge ?? 0,
+        screenDelta: dg.screenDelta ?? 0,
+        screenDeltaAvg: dg.screenDeltaAvg ?? 0,
+        screenDeltaMax: dg.screenDeltaMax ?? 0,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
-  }, [visible, cameraRef]);
+  }, [visible, cameraRef, diagRef]);
 
   if (!visible) return null;
 
@@ -91,6 +117,16 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY,
     targetZoom,
     bsY,
+    dt,
+    dtAvg,
+    dtMin,
+    dtMax,
+    dtJitter,
+    slowFrameCount,
+    windowAge,
+    screenDelta,
+    screenDeltaAvg,
+    screenDeltaMax,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
@@ -108,6 +144,14 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
   const tgtWorldY =
     targEffZoomY > 0 ? Math.round((CANVAS_H / 2 - targetOffsetY) / targEffZoomY) : 0;
 
+  const sectionStyle = {
+    color: '#88bbdd',
+    fontWeight: 700,
+    marginTop: 4,
+    marginBottom: 1,
+    letterSpacing: '0.04em',
+  };
+
   return (
     <div
       style={{
@@ -124,7 +168,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         border: '1px solid rgba(100,180,255,0.3)',
         pointerEvents: 'none',
         zIndex: 30,
-        minWidth: 200,
+        minWidth: 260,
       }}
       data-testid="camera-diagnostics-hud"
     >
@@ -173,6 +217,28 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
       <div>refPx: {refPx.toFixed(1)}px</div>
       <div>zoom: {zoom.toFixed(4)}</div>
       <div style={{ color: '#ffd700' }}>finalPx: {finalPx.toFixed(1)}px</div>
+
+      <div style={sectionStyle}>=== Frame Timing ===</div>
+      <div>
+        dt: {dt.toFixed(1)}ms &nbsp;(avg {dtAvg.toFixed(1)} &nbsp;min {dtMin.toFixed(1)} &nbsp;max{' '}
+        {dtMax.toFixed(1)} &nbsp;jitter {dtJitter.toFixed(1)})
+      </div>
+      <div>
+        frames &gt; 20ms (5s): {slowFrameCount} &nbsp;&nbsp; window age: {windowAge.toFixed(1)}s
+      </div>
+
+      <div style={sectionStyle}>=== Leader Motion ===</div>
+      <div>
+        Δscreen: {screenDelta.toFixed(1)}px &nbsp;(avg {screenDeltaAvg.toFixed(1)} &nbsp;max{' '}
+        {screenDeltaMax.toFixed(1)})
+      </div>
+
+      <div style={sectionStyle}>=== Camera State &amp; Lag ===</div>
+      <div>
+        cam state: <span style={{ color: '#ffd700' }}>{hudState}</span> &nbsp;&nbsp; zoom:{' '}
+        {zoom.toFixed(2)}
+      </div>
+      <div>cam lag (screen px): {lagMag.toFixed(1)}</div>
     </div>
   );
 }
