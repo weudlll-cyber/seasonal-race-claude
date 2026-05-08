@@ -32,11 +32,10 @@ const POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BA
 const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
 const BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
 const MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
-const FRAME_RATE = 60; // assumed display frame rate for lerp formula
-// Per-state transition time constants (TC): higher = slower, more cinematic.
-// 90% convergence time ≈ 3.45 × TC at 60 fps.
-const TC_OVERVIEW = 1.5; // slow sweep-in when returning to wide shot
-const TC_LEADER = 0.3; // fast follow — leader moves continuously
+const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scaling applied in update)
+// Per-state transition TC fallbacks (used when no config is provided at all)
+const TC_OVERVIEW = 1.5;
+const TC_LEADER = 0.3;
 const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
 const OVERVIEW_COOLDOWN_MIN = 15000; // min ms after leaving OVERVIEW before it can recur
@@ -48,6 +47,17 @@ const TOP_N = 3; // camera focuses on the top-N racers by position
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
 const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
+
+/**
+ * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
+ * 90% convergence ≈ 3.45 × TC. Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
+ * Exported for unit tests.
+ * @param {number} tc  Time constant in seconds (must be > 0)
+ * @returns {number}   Per-frame lerp factor in (0, 1)
+ */
+export function tcToLerpFactor(tc) {
+  return 1 - Math.pow(0.1, 1 / (tc * FRAME_RATE));
+}
 
 export class CameraDirector {
   /**
@@ -171,13 +181,25 @@ export class CameraDirector {
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
-    const pct = config?.spritePctOfCanvas ?? DEFAULT_SPRITE_PCT;
-
     if (!this._referenceSpriteSize || this._referenceSpriteSize <= 0) {
       console.warn(
         `[CameraDirector] referenceSpriteSize not set — using internal default ${FALLBACK_REFERENCE_SPRITE_SIZE}px. ` +
           'Pass displaySize × displaySizeScale to the constructor.'
       );
+    }
+
+    // Prefer per-state profiles; fall back to legacy spritePctOfCanvas for old configs / tests.
+    const profiles = config?.cameraStateProfiles;
+    let pct;
+    if (profiles) {
+      pct = {
+        leader: profiles.LEADER_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.leader,
+        battle: profiles.BATTLE_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.battle,
+        comeback: profiles.COMEBACK_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.comeback,
+      };
+    } else {
+      const rawPct = config?.spritePctOfCanvas ?? DEFAULT_SPRITE_PCT;
+      pct = { leader: rawPct.leader, battle: rawPct.battle, comeback: rawPct.comeback };
     }
 
     this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
@@ -192,36 +214,93 @@ export class CameraDirector {
    * @param {object|null} config
    */
   _computeTimingConfig(config) {
-    this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
+    // Global tunables (not per-state)
     this._battleGapThreshold = config?.battleGapThreshold ?? BATTLE_GAP_THRESHOLD;
     this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
-    this._battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
-    this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
-    const rawTc = config?.cameraTransitionSeconds;
-    if (rawTc && typeof rawTc === 'object') {
-      this._tcOverview = rawTc.overview ?? TC_OVERVIEW;
-      this._tcLeader = rawTc.leader ?? TC_LEADER;
-      this._tcBattle = rawTc.battle ?? TC_BATTLE;
-      this._tcComeback = rawTc.comeback ?? TC_COMEBACK;
-    } else {
-      // Scalar (old format or fallback): apply to OVERVIEW only; zoom states use new defaults.
-      const s = typeof rawTc === 'number' ? rawTc : TC_OVERVIEW;
-      this._tcOverview = s;
-      this._tcLeader = TC_LEADER;
-      this._tcBattle = TC_BATTLE;
-      this._tcComeback = TC_COMEBACK;
-    }
-    this._lfOverview = 1 - Math.pow(0.1, 1 / (this._tcOverview * FRAME_RATE));
-    this._lfLeader = 1 - Math.pow(0.1, 1 / (this._tcLeader * FRAME_RATE));
-    this._lfBattle = 1 - Math.pow(0.1, 1 / (this._tcBattle * FRAME_RATE));
-    this._lfComeback = 1 - Math.pow(0.1, 1 / (this._tcComeback * FRAME_RATE));
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
     this._overviewCooldownDuration = (this._overviewCooldownMin + this._overviewCooldownMax) / 2;
+
+    // Per-state values: prefer cameraStateProfiles, fall back to legacy flat fields.
+    const profiles = config?.cameraStateProfiles;
+
+    if (profiles) {
+      const profTc = (key, fallback) => profiles[key]?.trackingTC ?? fallback;
+      const profMin = (key) => profiles[key]?.minStateHold ?? MIN_STATE_HOLD_MS;
+      const profMax = (key, fallback) => profiles[key]?.maxStateDuration ?? fallback;
+
+      this._tcOverview = profTc('OVERVIEW', TC_OVERVIEW);
+      this._tcLeader = profTc('LEADER_ZOOM', TC_LEADER);
+      this._tcBattle = profTc('BATTLE_ZOOM', TC_BATTLE);
+      this._tcComeback = profTc('COMEBACK_ZOOM', TC_COMEBACK);
+
+      // Flat props kept for test and external compat
+      this._minStateHoldMs = profMin('OVERVIEW');
+      this._battleMaxDurationMs = profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION);
+      this._maxStateDuration = profMax('OVERVIEW', MAX_STATE_DURATION);
+
+      this._minStateHoldByState = {
+        [CAM_STATE.OVERVIEW]: profMin('OVERVIEW'),
+        [CAM_STATE.LEADER_ZOOM]: profMin('LEADER_ZOOM'),
+        [CAM_STATE.BATTLE_ZOOM]: profMin('BATTLE_ZOOM'),
+        [CAM_STATE.COMEBACK_ZOOM]: profMin('COMEBACK_ZOOM'),
+      };
+      this._maxStateDurationByState = {
+        [CAM_STATE.OVERVIEW]: profMax('OVERVIEW', MAX_STATE_DURATION),
+        [CAM_STATE.LEADER_ZOOM]: profMax('LEADER_ZOOM', MAX_STATE_DURATION),
+        [CAM_STATE.BATTLE_ZOOM]: profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION),
+        [CAM_STATE.COMEBACK_ZOOM]: profMax('COMEBACK_ZOOM', MAX_STATE_DURATION),
+      };
+    } else {
+      // Legacy flat-field path: no profiles — old config format or no config at all.
+      this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
+      this._battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
+      this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
+
+      const rawTc = config?.cameraTransitionSeconds;
+      if (rawTc && typeof rawTc === 'object') {
+        this._tcOverview = rawTc.overview ?? TC_OVERVIEW;
+        this._tcLeader = rawTc.leader ?? TC_LEADER;
+        this._tcBattle = rawTc.battle ?? TC_BATTLE;
+        this._tcComeback = rawTc.comeback ?? TC_COMEBACK;
+      } else {
+        // Scalar (old format or fallback): apply to OVERVIEW only; zoom states use new defaults.
+        const s = typeof rawTc === 'number' ? rawTc : TC_OVERVIEW;
+        this._tcOverview = s;
+        this._tcLeader = TC_LEADER;
+        this._tcBattle = TC_BATTLE;
+        this._tcComeback = TC_COMEBACK;
+      }
+
+      this._minStateHoldByState = {
+        [CAM_STATE.OVERVIEW]: this._minStateHoldMs,
+        [CAM_STATE.LEADER_ZOOM]: this._minStateHoldMs,
+        [CAM_STATE.BATTLE_ZOOM]: this._minStateHoldMs,
+        [CAM_STATE.COMEBACK_ZOOM]: this._minStateHoldMs,
+      };
+      this._maxStateDurationByState = {
+        [CAM_STATE.OVERVIEW]: this._maxStateDuration,
+        [CAM_STATE.LEADER_ZOOM]: this._maxStateDuration,
+        [CAM_STATE.BATTLE_ZOOM]: this._battleMaxDurationMs,
+        [CAM_STATE.COMEBACK_ZOOM]: this._maxStateDuration,
+      };
+    }
+
+    // Common: compute lf values and tc lookup map from the resolved TCs.
+    this._tcByState = {
+      [CAM_STATE.OVERVIEW]: this._tcOverview,
+      [CAM_STATE.LEADER_ZOOM]: this._tcLeader,
+      [CAM_STATE.BATTLE_ZOOM]: this._tcBattle,
+      [CAM_STATE.COMEBACK_ZOOM]: this._tcComeback,
+    };
+    this._lfOverview = tcToLerpFactor(this._tcOverview);
+    this._lfLeader = tcToLerpFactor(this._tcLeader);
+    this._lfBattle = tcToLerpFactor(this._tcBattle);
+    this._lfComeback = tcToLerpFactor(this._tcComeback);
   }
 
   _randOverviewCooldown() {
@@ -246,16 +325,17 @@ export class CameraDirector {
 
   // Main update — call once per frame during RACING.
   // raceState: { raceElapsed, finishedCount, winner, finishT }
+  // dt: frame duration in ms (optional — defaults to 1000/60 for backward compat with tests).
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
-  update(racers, ts, raceState, canvasW, canvasH) {
+  update(racers, ts, raceState, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
     const stateAge = ts - this.stateEnteredAt;
-    const stateCap =
-      this.state === CAM_STATE.BATTLE_ZOOM ? this._battleMaxDurationMs : this._maxStateDuration;
+    const stateCap = this._maxStateDurationByState[this.state] ?? this._maxStateDuration;
+    const minHold = this._minStateHoldByState[this.state] ?? this._minStateHoldMs;
     // Finish-drama is exempt from minStateHoldMs: when the 1500ms pulse expires, transition
     // immediately regardless of how long the state has been held.
     const finishDramaExpired = this._inFinishDrama && ts >= this._finishMomentExpiry;
     const prevState = this.state;
-    if (stateAge >= Math.max(this._minStateHoldMs, stateCap) || finishDramaExpired) {
+    if (stateAge >= Math.max(minHold, stateCap) || finishDramaExpired) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
@@ -269,7 +349,11 @@ export class CameraDirector {
       this._transitionStartOffsetY = this.offsetY;
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
-    const lf = this._lerpFactorForState(this.state);
+
+    // dt-scaled lerp: at dt=1000/FRAME_RATE the factor equals the pre-computed lf60 value,
+    // so existing tests (which omit dt) see identical behavior.
+    const lf60 = this._lerpFactorForState(this.state);
+    const lf = 1 - Math.pow(1 - lf60, (dt * FRAME_RATE) / 1000);
     this.zoom += (this.targetZoom - this.zoom) * lf;
     this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
     this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
@@ -437,6 +521,28 @@ export class CameraDirector {
     this._lastResolvedPanTarget = panResolved;
   }
 
+  /**
+   * Compute open-track pan targets in screen space, analogous to _setClosedTrackTargets.
+   * Uses OPEN_TRACK_BASE_ZOOM × this.zoom as the effective zoom for pan resolution.
+   * Stores result in targetOffsetX/Y (screen space: -camX_world × effZoom).
+   */
+  _setOpenTrackPanTargets(target, canvasW, canvasH) {
+    const frameSize = { width: canvasW, height: canvasH };
+    const minEffZoom = OPEN_TRACK_BASE_ZOOM * this.overviewZoom;
+    const currEffZoom = Math.max(OPEN_TRACK_BASE_ZOOM * this.zoom, minEffZoom);
+    const resolved = resolveCamera({
+      targetWorld: target,
+      desiredEffZoom: currEffZoom,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom,
+    });
+    this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+    this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
+    this._lastResolvedPanTarget = resolved;
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
@@ -452,9 +558,11 @@ export class CameraDirector {
               ? racers
               : focusRacers
             : focusRacers;
+        const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
+        if (this._isOpenTrack) {
+          this._setOpenTrackPanTargets(target, canvasW, canvasH);
+        } else {
           const resolved = resolveCamera({
             targetWorld: target,
             desiredEffZoom: minEffZoom,
@@ -473,8 +581,10 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+        const target = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+        if (this._isOpenTrack) {
+          this._setOpenTrackPanTargets(target, canvasW, canvasH);
+        } else {
           this._setClosedTrackTargets(target, this._leaderZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -482,8 +592,10 @@ export class CameraDirector {
 
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+        const target = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+        if (this._isOpenTrack) {
+          this._setOpenTrackPanTargets(target, canvasW, canvasH);
+        } else {
           this._setClosedTrackTargets(target, this._battleZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -491,8 +603,10 @@ export class CameraDirector {
 
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
-        if (!this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+        const target = getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+        if (this._isOpenTrack) {
+          this._setOpenTrackPanTargets(target, canvasW, canvasH);
+        } else {
           this._setClosedTrackTargets(target, this._comebackZoom * this._bsX, frameSize, canvasH);
         }
         break;
@@ -510,16 +624,7 @@ export class CameraDirector {
 
   /** TC (seconds) for the current state — readable by the diagnostics HUD. */
   get currentTc() {
-    switch (this.state) {
-      case CAM_STATE.LEADER_ZOOM:
-        return this._tcLeader;
-      case CAM_STATE.BATTLE_ZOOM:
-        return this._tcBattle;
-      case CAM_STATE.COMEBACK_ZOOM:
-        return this._tcComeback;
-      default:
-        return this._tcOverview;
-    }
+    return this._tcByState?.[this.state] ?? this._tcOverview;
   }
 
   /** True when zoom has not yet converged to its target (within 0.1%). */

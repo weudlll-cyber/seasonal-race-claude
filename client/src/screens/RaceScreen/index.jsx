@@ -19,8 +19,6 @@ import {
   OPEN_TRACK_BASE_ZOOM,
 } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
-import { getPanTarget } from '../../modules/camera/panTarget.js';
-import { resolveCamera } from '../../modules/camera/resolveCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
   lapsFromDuration,
@@ -73,7 +71,6 @@ const CANVAS_H = 720;
 // Keep legacy aliases used throughout this file
 const CW = CANVAS_W;
 const CH = CANVAS_H;
-const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -119,14 +116,19 @@ export default function RaceScreen() {
   const [finishTState, setFinishTState] = useState(1);
   const [camState, setCamState] = useState('OVERVIEW');
   const prevHudStateRef = useRef('OVERVIEW');
-  const [showCameraStateHud] = useState(() => {
-    const cfg = loadCameraConfig();
-    return cfg.showCameraStateHud ?? true;
-  });
-  const [showCameraDiagnostics] = useState(() => {
-    const cfg = loadCameraConfig();
-    return cfg.showCameraDiagnostics ?? false;
-  });
+  // Camera config as React state so updateConfig() is called whenever it changes.
+  const [cameraConfig, setCameraConfig] = useState(() => loadCameraConfig());
+  const cameraConfigRef = useRef(cameraConfig);
+  const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
+  const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
+
+  // Keep ref in sync and notify the director whenever config changes.
+  useEffect(() => {
+    cameraConfigRef.current = cameraConfig;
+    if (camDirRef.current) {
+      camDirRef.current.updateConfig(cameraConfig);
+    }
+  }, [cameraConfig]);
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -213,7 +215,8 @@ export default function RaceScreen() {
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
-    const cameraConfig = loadCameraConfig();
+    // Use the component-level cameraConfig (via ref for closure access).
+    const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
@@ -296,8 +299,6 @@ export default function RaceScreen() {
       burstParticles: [],
       maxLaps,
       finishT,
-      camX: 0,
-      camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => {
         const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
@@ -446,7 +447,11 @@ export default function RaceScreen() {
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
       const inv = 1 / ezoom;
       const tagSet = new Set(
-        visibleTagRacers(st.racers, st.phase === PHASE.RACING, cameraConfig.tagVisibleMaxCount)
+        visibleTagRacers(
+          st.racers,
+          st.phase === PHASE.RACING,
+          cameraConfigRef.current.tagVisibleMaxCount
+        )
       );
       for (const r of st.racers) {
         for (let i = 0; i < r.trail.length; i++) {
@@ -920,7 +925,7 @@ export default function RaceScreen() {
       };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H)
+          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H, dt)
           : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // Sync camera HUD state — only triggers React re-render on actual state change
@@ -928,22 +933,6 @@ export default function RaceScreen() {
       if (newHudState !== prevHudStateRef.current) {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
-      }
-
-      if (isOpenTrack) {
-        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
-        const target = getPanTarget(camDirRef.current.state, focusRacers, shapeRef.current);
-        const resolved = resolveCamera({
-          targetWorld: target,
-          desiredEffZoom: effZoom,
-          worldBounds: { maxX: worldWidth, maxY: worldHeight },
-          frameSize: { width: CANVAS_W, height: CANVAS_H },
-          innerFramePct: cameraConfig.targetInnerFramePct ?? 0.7,
-          minEffZoom: effectiveZoom(camDirRef.current.overviewZoom, OPEN_TRACK_BASE_ZOOM),
-        });
-        st.camX = isFinite(st.camX) ? st.camX + (resolved.camX - st.camX) * 0.05 : resolved.camX;
-        st.camY = isFinite(st.camY) ? st.camY + (resolved.camY - st.camY) * 0.05 : resolved.camY;
       }
 
       // ── Draw world ──
@@ -967,20 +956,21 @@ export default function RaceScreen() {
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          cameraConfig.spritePctOfCanvas?.overview ?? 0.05,
+          cameraConfigRef.current.spritePctOfCanvas?.overview ?? 0.05,
           CANVAS_H
         ),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,
-          cameraConfig.maxTargetScreenPx
+          cameraConfigRef.current.maxTargetScreenPx
         )
       );
 
       if (isOpenTrack) {
         ctx.save();
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
-        ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
+        // cam.offsetX/Y are screen-space offsets computed by CameraDirector (= -camX_world × effZoom).
+        // Equivalent to the old -(st.camX)*effZoom pattern but now TC-based and state-aware.
+        ctx.translate(cam.offsetX, cam.offsetY);
         ctx.scale(effZoom, effZoom);
         drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
         for (const inst of effectsRef.current) {

@@ -123,34 +123,80 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 2,
-  // Target sprite size per camera state — camera zoom is computed inversely so sprites
-  // render at this percentage of canvas height regardless of track world width.
-  spritePctOfCanvas: {
-    overview: 0.05, // floor for OVERVIEW + autoSpriteScale floor (5% of canvas height)
-    leader: 0.08, // target size during LEADER_ZOOM (8%)
-    battle: 0.12, // target size during BATTLE_ZOOM (12%)
-    comeback: 0.065, // target size during COMEBACK_ZOOM (6.5%)
+  schemaVersion: 4,
+  // Per-state camera profiles — each key matches a CAM_STATE enum value.
+  // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
+  // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
+  cameraStateProfiles: {
+    OVERVIEW: {
+      spritePct: 0.05,
+      trackingTC: 1.5,
+      entryTC: 1.5,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
+    LEADER_ZOOM: {
+      spritePct: 0.08,
+      trackingTC: 0.3,
+      entryTC: 0.3,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
+    BATTLE_ZOOM: {
+      spritePct: 0.12,
+      trackingTC: 0.3,
+      entryTC: 0.3,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 6000,
+      minStateHold: 5000,
+    },
+    COMEBACK_ZOOM: {
+      spritePct: 0.065,
+      trackingTC: 0.3,
+      entryTC: 0.3,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
   },
+  // Entry-convergence thresholds: when camera is within these values of its target after
+  // a state transition, the lerpPhase switches from 'entry' (entryTC) to 'tracking' (trackingTC).
+  // Used in Phase 3; Phase 1 initialises them so the schema is stable.
+  entryConvergenceZoom: 0.05,
+  entryConvergencePx: 10,
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
   battleGapThreshold: 0.05,
-  maxStateDuration: 4000,
   endgameThreshold: 0.85,
-  // Timing tunables
+  // Timing tunables (global — not per-state)
   postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
-  battleMaxDurationMs: 6000, // ms before BATTLE is force-exited regardless of gap
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
-  minStateHoldMs: 5000, // minimum ms any state is held before re-evaluation
-  // Per-state lerp time constants (seconds). 90% convergence ≈ 3.45× TC at 60 fps.
-  cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
   overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
-  // Pan target frame: target racer must land within this fraction of the canvas (each axis).
-  // resolveCamera reduces zoom in 10% steps until satisfied or OVERVIEW effZoom is reached.
-  targetInnerFramePct: 0.7, // 70% = target must be within central 70% of canvas
+  // Legacy fields kept for v3→v4 migration reads. CameraDirector no longer reads these.
+  spritePctOfCanvas: {
+    overview: 0.05,
+    leader: 0.08,
+    battle: 0.12,
+    comeback: 0.065,
+  },
+  maxStateDuration: 4000,
+  battleMaxDurationMs: 6000,
+  minStateHoldMs: 5000,
+  cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
+  targetInnerFramePct: 0.7,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
