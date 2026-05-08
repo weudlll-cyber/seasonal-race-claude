@@ -2141,24 +2141,26 @@ describe('CameraDirector — Phase 4: Lookahead', () => {
     expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
   });
 
-  it('lookaheadDistance=200, lookaheadWeight=1: LEADER dx = cos(angle)*200', () => {
+  it('lookaheadDistance=200, lookaheadWeight=1: LEADER dx = vt*cos(angle)*200', () => {
     const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }]; // vx=1, vy=0
+    // vt=1.0 (normal speed) → dx = 1.0 * cos(0) * 200 * 1 = 200
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 }];
     cd.update(racers, 5001, raceStateIdle, 1280, 720);
     expect(cd.lookaheadVec.dx).toBeCloseTo(200, 3);
     expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
   });
 
-  it('angle=PI/2: LEADER dy = sin(PI/2)*200', () => {
+  it('angle=PI/2, vt=0.5: LEADER dy = 0.5*sin(PI/2)*200 = 100', () => {
     const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 5000;
-    const racers = [{ x: 100, y: 100, t: 0.5, angle: Math.PI / 2 }]; // vx=0, vy=1
+    // vt=0.5 (half speed) → dy = 0.5 * sin(PI/2) * 200 * 1 = 100
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: Math.PI / 2, vt: 0.5 }];
     cd.update(racers, 5001, raceStateIdle, 1280, 720);
     expect(cd.lookaheadVec.dx).toBeCloseTo(0, 3);
-    expect(cd.lookaheadVec.dy).toBeCloseTo(200, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(100, 3);
   });
 
   it('racer.angle undefined: no lookahead (graceful fallback)', () => {
@@ -2172,31 +2174,32 @@ describe('CameraDirector — Phase 4: Lookahead', () => {
 
   it('BATTLE: lookaheadVec is vector mean of r0 and r1 velocity', () => {
     // r0: angle=0 → vx=1, vy=0; r1: angle=PI/2 → vx=0, vy=1
-    // mean: vx=0.5, vy=0.5; dist=100, weight=0.5 → dx=25, dy=25
+    // mean direction: vx=0.5, vy=0.5; mean vtFactor=(1+1)/2=1.0
+    // dist=100, weight=0.5 → dx=1.0*0.5*100*0.5=25, dy=25
     const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 5000;
     const racers = [
-      { x: 100, y: 100, t: 0.5, angle: 0 },
-      { x: 102, y: 100, t: 0.48, angle: Math.PI / 2 },
+      { x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 },
+      { x: 102, y: 100, t: 0.48, angle: Math.PI / 2, vt: 1.0 },
     ];
     cd.update(racers, 5001, raceStateIdle, 1280, 720);
     expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
     expect(cd.lookaheadVec.dy).toBeCloseTo(25, 3);
   });
 
-  it('lookaheadWeight=0.5: offsets are halved (BATTLE, single direction)', () => {
-    // r0 and r1 both angle=0 → vx=1, vy=0; mean vx=1, vy=0
-    // dist=100, weight=0.5 → dx=50, dy=0
+  it('lookaheadWeight=0.5 and vt=0.5: BATTLE dx = 0.5*1*100*0.5 = 25', () => {
+    // both angle=0 → mean vx=1, vy=0; vtFactor=(0.5+0.5)/2=0.5
+    // dist=100, weight=0.5 → dx=0.5*1*100*0.5=25, dy=0
     const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 5000;
     const racers = [
-      { x: 100, y: 100, t: 0.5, angle: 0 },
-      { x: 102, y: 100, t: 0.48, angle: 0 },
+      { x: 100, y: 100, t: 0.5, angle: 0, vt: 0.5 },
+      { x: 102, y: 100, t: 0.48, angle: 0, vt: 0.5 },
     ];
     cd.update(racers, 5001, raceStateIdle, 1280, 720);
-    expect(cd.lookaheadVec.dx).toBeCloseTo(50, 3);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
     expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
   });
 
@@ -2214,6 +2217,36 @@ describe('CameraDirector — Phase 4: Lookahead', () => {
     const cd = new CameraDirector(6000, 720, true, pctConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('vt=2.0: double velocity doubles lookahead vector (LEADER)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // vt=2.0 → dx = 2.0 * cos(0) * 200 * 1 = 400
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 2.0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(400, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('vt=0: lookahead is zero vector regardless of angle', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('vt undefined: graceful fallback to zero (no NaN, no crash)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // angle valid but vt missing → r?.vt ?? 0 = 0 → no lookahead, no crash
     const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
     cd.update(racers, 5001, raceStateIdle, 1280, 720);
     expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });

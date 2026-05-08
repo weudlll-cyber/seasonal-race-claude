@@ -370,6 +370,7 @@ export class CameraDirector {
 
     let vx = 0;
     let vy = 0;
+    let vtFactor = 0; // dimensionless velocity factor; 1.0 = normal race speed
     switch (state) {
       case CAM_STATE.LEADER_ZOOM: {
         const r = focusRacers[0];
@@ -377,6 +378,7 @@ export class CameraDirector {
           vx = Math.cos(r.angle);
           vy = Math.sin(r.angle);
         }
+        vtFactor = r?.vt ?? 0;
         break;
       }
       case CAM_STATE.BATTLE_ZOOM: {
@@ -393,6 +395,7 @@ export class CameraDirector {
         }
         vx /= n;
         vy /= n;
+        vtFactor = ((r0?.vt ?? 0) + (r1?.vt ?? 0)) / n;
         break;
       }
       case CAM_STATE.COMEBACK_ZOOM: {
@@ -401,13 +404,17 @@ export class CameraDirector {
           vx = Math.cos(r.angle);
           vy = Math.sin(r.angle);
         }
+        vtFactor = r?.vt ?? 0;
         break;
       }
       default:
         return { dx: 0, dy: 0 };
     }
 
-    return { dx: vx * la.distance * la.weight, dy: vy * la.distance * la.weight };
+    return {
+      dx: vx * vtFactor * la.distance * la.weight,
+      dy: vy * vtFactor * la.distance * la.weight,
+    };
   }
 
   // Main update — call once per frame during RACING.

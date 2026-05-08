@@ -819,6 +819,13 @@ export default function RaceScreen() {
             r.runoutDecay *= 0.97;
             r.t += (r.baseSpeed * r.runoutDecay + jitter * r.runoutDecay) * (dt / 16);
           }
+          // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
+          // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
+          // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
+          r.vt =
+            race_baseSpeed > 0 && !r.finished
+              ? (r.baseSpeed * boost * brake + jitter) / race_baseSpeed
+              : 0;
         }
         computePositions();
         applyRacerBehavior(st.racers, behaviorConfig);
