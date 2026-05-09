@@ -47,6 +47,7 @@ const TOP_N = 3; // camera focuses on the top-N racers by position
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
 const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
+const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 
 /**
  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
@@ -123,6 +124,7 @@ export class CameraDirector {
     this._camT = null;
     this._observerPhase = 'idle';
     this._followStartT = null;
+    this._leadOutStartCamT = null;
     this._lastFocusT = 0;
     this._followRingBuf = new Uint8Array(60);
     this._followRingIdx = 0;
@@ -407,7 +409,7 @@ export class CameraDirector {
       if (zoomConverged && xConverged && yConverged) this._lerpPhase = 'tracking';
     }
     if (!this._isOpenTrack && this._camT !== null && this._shape) {
-      this._computePhasedPanTarget(this._focusRacers(racers), canvasW, canvasH);
+      this._computePhasedPanTarget(this._focusRacers(racers), canvasW, canvasH, dt);
     }
     this._followRingBuf[this._followRingIdx % 60] = this._observerPhase === 'follow' ? 1 : 0;
     this._followRingIdx++;
@@ -525,6 +527,7 @@ export class CameraDirector {
     // Reset observer phase and init _camT for the new state
     this._observerPhase = 'idle';
     this._followStartT = null;
+    this._leadOutStartCamT = null;
     if (this._shape && !this._isOpenTrack) {
       let focusT = null;
       switch (nextState) {
@@ -707,7 +710,7 @@ export class CameraDirector {
    * camera in the follow phase (Δ target→camera ≈ 0, eliminating aliasing at high zoom).
    * Only acts when _lerpPhase === 'tracking'. Only called on closed tracks with a shape.
    */
-  _computePhasedPanTarget(focusRacers, canvasW, canvasH) {
+  _computePhasedPanTarget(focusRacers, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
     if (this._lerpPhase !== 'tracking') return;
 
     let focusT;
@@ -756,10 +759,20 @@ export class CameraDirector {
         const followedPx = (focusT - this._followStartT) * trackLength;
         if (followedPx >= prof.followDuration) {
           this._observerPhase = 'lead-out';
+          this._leadOutStartCamT = this._camT;
         }
       }
     }
 
+    if (this._observerPhase === 'lead-out') {
+      if (prof.leadOutDistance > 0 && this._leadOutStartCamT !== null) {
+        const dtLeadOut = trackLength > 0 ? prof.leadOutDistance / trackLength : 0;
+        const leadOutTargetT = this._leadOutStartCamT + dtLeadOut;
+        const decayDt = 1 - Math.pow(1 - LEAD_OUT_DECAY, (dt * FRAME_RATE) / 1000);
+        this._camT += (leadOutTargetT - this._camT) * decayDt;
+      }
+      return;
+    }
     if (this._observerPhase !== 'follow') return;
 
     // Follow: pin camera to racer (Δ ≈ 0, no lerp lag)
