@@ -124,6 +124,8 @@ export class CameraDirector {
     this._observerPhase = 'idle';
     this._followStartT = null;
     this._lastFocusT = 0;
+    this._followRingBuf = new Uint8Array(60);
+    this._followRingIdx = 0;
   }
 
   /**
@@ -407,6 +409,8 @@ export class CameraDirector {
     if (!this._isOpenTrack && this._camT !== null && this._shape) {
       this._computePhasedPanTarget(this._focusRacers(racers), canvasW, canvasH);
     }
+    this._followRingBuf[this._followRingIdx % 60] = this._observerPhase === 'follow' ? 1 : 0;
+    this._followRingIdx++;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -818,6 +822,14 @@ export class CameraDirector {
   /** Last computed focus-racer t value (informational, for HUD). */
   get lastFocusT() {
     return this._lastFocusT;
+  }
+
+  /** Fraction of the last 60 frames spent in 'follow' phase (0.0–1.0). */
+  get followPct() {
+    let count = 0;
+    for (let i = 0; i < 60; i++) count += this._followRingBuf[i];
+    const total = Math.min(this._followRingIdx, 60);
+    return total > 0 ? count / total : 0;
   }
 
   /** True when zoom has not yet converged to its target (within 0.1%). */
