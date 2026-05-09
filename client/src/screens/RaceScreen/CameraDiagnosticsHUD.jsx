@@ -45,6 +45,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
     followPct: 0,
     dv01: 0,
     dv12: 0,
+    dv01Max: 0,
+    dv12Max: 0,
     constSpeed: false,
   });
   const intervalRef = useRef(null);
@@ -81,6 +83,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
         followPct: dir.followPct ?? 0,
         dv01: diag.dv01 ?? 0,
         dv12: diag.dv12 ?? 0,
+        dv01Max: diag.dv01Max ?? 0,
+        dv12Max: diag.dv12Max ?? 0,
         constSpeed: diag.constSpeed ?? false,
       });
     }, POLL_MS);
@@ -115,6 +119,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
     followPct,
     dv01,
     dv12,
+    dv01Max,
+    dv12Max,
     constSpeed,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
@@ -207,12 +213,20 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
         Δv: r0-r1:{' '}
         <span style={{ color: Math.abs(dv01) < 0.05 ? '#4cff91' : '#ffd700' }}>
           {dv01.toFixed(1)}
-        </span>{' '}
-        px/f | r1-r2:{' '}
+        </span>
+        {' (max '}
+        <span style={{ color: dv01Max < 0.5 ? '#4cff91' : dv01Max < 1.5 ? '#ffd700' : '#ff6b35' }}>
+          {dv01Max.toFixed(1)}
+        </span>
+        {') | r1-r2: '}
         <span style={{ color: Math.abs(dv12) < 0.05 ? '#4cff91' : '#ffd700' }}>
           {dv12.toFixed(1)}
-        </span>{' '}
-        px/f
+        </span>
+        {' (max '}
+        <span style={{ color: dv12Max < 0.5 ? '#4cff91' : dv12Max < 1.5 ? '#ffd700' : '#ff6b35' }}>
+          {dv12Max.toFixed(1)}
+        </span>
+        {') px/f'}
       </div>
       {constSpeed && <div style={{ color: '#ff6bff', fontWeight: 700 }}>[CONST SPEED]</div>}
       <div style={{ color: '#9be' }}>

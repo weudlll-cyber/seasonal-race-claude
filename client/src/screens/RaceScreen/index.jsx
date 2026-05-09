@@ -74,6 +74,10 @@ const CANVAS_H = 720;
 const CW = CANVAS_W;
 const CH = CANVAS_H;
 const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
+// EMA smoothing factor for non-lock-target sprite render positions.
+// Lower α = smoother but more positional lag. 0.3 is a good starting point.
+// Change here to tune; no Dev-Panel wiring needed.
+const SPRITE_EMA_ALPHA = 0.3;
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -109,7 +113,16 @@ export default function RaceScreen() {
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
   const effectsRef = useRef([]);
-  const diagDataRef = useRef({ dv01: 0, dv12: 0, constSpeed: false });
+  const diagDataRef = useRef({
+    dv01: 0,
+    dv12: 0,
+    dv01Max: 0,
+    dv12Max: 0,
+    _dv01Buf: new Array(60).fill(0),
+    _dv12Buf: new Array(60).fill(0),
+    _dvBufIdx: 0,
+    constSpeed: false,
+  });
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -158,6 +171,7 @@ export default function RaceScreen() {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
     const nRacers = raceData.racers.length;
 
     const typeId = raceData.racerTypeId || 'horse';
@@ -462,7 +476,29 @@ export default function RaceScreen() {
           cameraConfigRef.current.tagVisibleMaxCount
         )
       );
+      // In LEADER_ZOOM the camera pins to the leader's physics position. Rendering the
+      // leader at its exact physics position keeps it visually at screen-centre.
+      // In all other states there is no single pin-lock target, so every racer gets EMA.
+      const lockTarget = camDirRef.current?.state === CAM_STATE.LEADER_ZOOM ? leader : null;
+
       for (const r of st.racers) {
+        // EMA smoothed render position — reduces frame-to-frame position jumps for
+        // non-locked racers, which appear as double-images at high zoom.
+        // Lock-target: always snap to physics so the pin-lock stays exact.
+        if (r === lockTarget) {
+          r._drawX = r.x;
+          r._drawY = r.y;
+        } else {
+          r._drawX =
+            r._drawX !== undefined
+              ? r._drawX * (1 - SPRITE_EMA_ALPHA) + r.x * SPRITE_EMA_ALPHA
+              : r.x;
+          r._drawY =
+            r._drawY !== undefined
+              ? r._drawY * (1 - SPRITE_EMA_ALPHA) + r.y * SPRITE_EMA_ALPHA
+              : r.y;
+        }
+
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
           ctx.globalAlpha = frac * 0.4;
@@ -472,11 +508,20 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
+        rt.drawRacer(
+          ctx,
+          r._drawX,
+          r._drawY,
+          r.angle,
+          r,
+          r === leader,
+          st.lastTs ?? 0,
+          effectiveScale
+        );
         if (tagSet.has(r)) {
-          drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
+          drawNameTag(r._drawX, r._drawY, r.name, r === leader, ezoom);
         }
-        r.trail.push({ x: r.x, y: r.y });
+        r.trail.push({ x: r._drawX, y: r._drawY });
         if (r.trail.length > 10) r.trail.shift();
       }
     }
@@ -866,6 +911,14 @@ export default function RaceScreen() {
           const α = 0.1;
           diagDataRef.current.dv01 = diagDataRef.current.dv01 * (1 - α) + raw01 * α;
           diagDataRef.current.dv12 = diagDataRef.current.dv12 * (1 - α) + raw12 * α;
+          // M3: ring-buffer max over last 60 frames (absolute value, captures jitter peaks)
+          const d = diagDataRef.current;
+          const bi = d._dvBufIdx % 60;
+          d._dv01Buf[bi] = Math.abs(raw01);
+          d._dv12Buf[bi] = Math.abs(raw12);
+          d._dvBufIdx++;
+          d.dv01Max = Math.max(...d._dv01Buf);
+          d.dv12Max = Math.max(...d._dv12Buf);
         }
         applyRacerBehavior(st.racers, behaviorConfig);
 
