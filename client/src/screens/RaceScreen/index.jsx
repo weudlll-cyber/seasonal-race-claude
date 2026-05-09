@@ -75,9 +75,11 @@ const CW = CANVAS_W;
 const CH = CANVAS_H;
 const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 // EMA smoothing factor for non-lock-target sprite render positions.
-// Lower α = smoother but more positional lag. 0.3 is a good starting point.
-// Change here to tune; no Dev-Panel wiring needed.
-const SPRITE_EMA_ALPHA = 0.3;
+// Lower α = smoother but more positional lag. 0.5 was chosen after confirming
+// that animation period is already identical for all racers (racer.speed is never
+// set, so _getFrameIndex always gets speed=1 → same period). The only remaining
+// render-side lever against jitter-driven double images is this α.
+const SPRITE_EMA_ALPHA = 0.5;
 
 const RACER_COLORS = [
   '#ff6b35',
