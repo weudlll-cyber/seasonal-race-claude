@@ -18,7 +18,7 @@ const POLL_MS = 100; // update 10× per second
  * @param {object}  cameraRef  React ref pointing to the live CameraDirector instance.
  * @param {boolean} visible    Whether the HUD should render
  */
-export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
+export default function CameraDiagnosticsHUD({ cameraRef, diagRef, visible }) {
   const [snapshot, setSnapshot] = useState({
     zoom: 1,
     refPx: 0,
@@ -42,6 +42,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     observerPhase: 'idle',
     camT: 0,
     lastFocusT: 0,
+    followPct: 0,
+    dv01: 0,
+    dv12: 0,
+    constSpeed: false,
   });
   const intervalRef = useRef(null);
 
@@ -50,6 +54,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     intervalRef.current = setInterval(() => {
       const dir = cameraRef?.current;
       if (!dir) return;
+      const diag = diagRef?.current ?? {};
       setSnapshot({
         zoom: dir.zoom,
         refPx: dir._referenceSpriteSize ?? 0,
@@ -73,10 +78,14 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         observerPhase: dir.observerPhase ?? 'idle',
         camT: dir.camT ?? 0,
         lastFocusT: dir.lastFocusT ?? 0,
+        followPct: dir.followPct ?? 0,
+        dv01: diag.dv01 ?? 0,
+        dv12: diag.dv12 ?? 0,
+        constSpeed: diag.constSpeed ?? false,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
-  }, [visible, cameraRef]);
+  }, [visible, cameraRef, diagRef]);
 
   if (!visible) return null;
 
@@ -103,6 +112,10 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     observerPhase,
     camT,
     lastFocusT,
+    followPct,
+    dv01,
+    dv12,
+    constSpeed,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
@@ -181,6 +194,27 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         obs: <span style={{ fontWeight: 700 }}>{observerPhase}</span> | camT:{' '}
         {camT != null ? camT.toFixed(3) : 'null'} | focusT: {lastFocusT.toFixed(3)}
       </div>
+      <div>
+        follow%:{' '}
+        <span
+          style={{ color: followPct > 0.9 ? '#4cff91' : followPct > 0.3 ? '#ffd700' : '#b0e0ff' }}
+        >
+          {Math.round(followPct * 100)}%
+        </span>{' '}
+        (last 60f)
+      </div>
+      <div>
+        Δv: r0-r1:{' '}
+        <span style={{ color: Math.abs(dv01) < 0.05 ? '#4cff91' : '#ffd700' }}>
+          {dv01.toFixed(1)}
+        </span>{' '}
+        px/f | r1-r2:{' '}
+        <span style={{ color: Math.abs(dv12) < 0.05 ? '#4cff91' : '#ffd700' }}>
+          {dv12.toFixed(1)}
+        </span>{' '}
+        px/f
+      </div>
+      {constSpeed && <div style={{ color: '#ff6bff', fontWeight: 700 }}>[CONST SPEED]</div>}
       <div style={{ color: '#9be' }}>
         cam: ({camWorldX}, {camWorldY})
       </div>

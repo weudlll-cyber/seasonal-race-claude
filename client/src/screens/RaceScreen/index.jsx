@@ -109,6 +109,7 @@ export default function RaceScreen() {
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
   const effectsRef = useRef([]);
+  const diagDataRef = useRef({ dv01: 0, dv12: 0, constSpeed: false });
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -175,6 +176,9 @@ export default function RaceScreen() {
       setError('Track geometry not found. Open the Track Editor and save the track again.');
       return;
     }
+
+    const constSpeedActive = new URLSearchParams(window.location.search).get('constSpeed') === '1';
+    diagDataRef.current.constSpeed = constSpeedActive;
 
     shapeRef.current = new EditorShape(geometry);
     const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
@@ -775,6 +779,10 @@ export default function RaceScreen() {
           st.raceStart + targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
         const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
+        // D4: snapshot t before updates so constSpeed can equalize deltas
+        if (constSpeedActive) {
+          for (const r of st.racers) r._diagPrevT = r.t;
+        }
         for (const r of st.racers) {
           // ── Per-racer spreadFactor re-roll + smooth transition ─────────────────
           if (!r.finished) {
@@ -827,7 +835,38 @@ export default function RaceScreen() {
               ? (r.baseSpeed * boost * brake + jitter) / race_baseSpeed
               : 0;
         }
+        // D4: equalize all non-finished racers to the mean delta-t
+        if (constSpeedActive) {
+          const active = st.racers.filter((r) => !r.finished);
+          if (active.length > 0) {
+            const meanDt =
+              active.reduce((s, r) => s + (r.t - (r._diagPrevT ?? r.t)), 0) / active.length;
+            for (const r of active) {
+              r.t = (r._diagPrevT ?? r.t) + meanDt;
+              r.vt = race_baseSpeed > 0 ? meanDt / (dt / 16) / race_baseSpeed : 0;
+            }
+          }
+        }
         computePositions();
+        // D1: per-racer pixel speed and smoothed Δv between top-3
+        {
+          const ordered = [...st.racers].sort((a, b) => b.t - a.t);
+          for (const r of st.racers) {
+            const dx = r.x - (r._diagPrevX ?? r.x);
+            const dy = r.y - (r._diagPrevY ?? r.y);
+            r._diagSpeed = Math.sqrt(dx * dx + dy * dy);
+            r._diagPrevX = r.x;
+            r._diagPrevY = r.y;
+          }
+          const r0 = ordered[0];
+          const r1 = ordered[1];
+          const r2 = ordered[2];
+          const raw01 = r0 && r1 ? r0._diagSpeed - r1._diagSpeed : 0;
+          const raw12 = r1 && r2 ? r1._diagSpeed - r2._diagSpeed : 0;
+          const α = 0.1;
+          diagDataRef.current.dv01 = diagDataRef.current.dv01 * (1 - α) + raw01 * α;
+          diagDataRef.current.dv12 = diagDataRef.current.dv12 * (1 - α) + raw12 * α;
+        }
         applyRacerBehavior(st.racers, behaviorConfig);
 
         for (const r of st.racers) {
@@ -1101,7 +1140,11 @@ export default function RaceScreen() {
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
-          <CameraDiagnosticsHUD cameraRef={camDirRef} visible={showCameraDiagnostics} />
+          <CameraDiagnosticsHUD
+            cameraRef={camDirRef}
+            diagRef={diagDataRef}
+            visible={showCameraDiagnostics}
+          />
         </div>
 
         <aside className="race-hud">
