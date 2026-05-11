@@ -533,9 +533,6 @@ export default function RaceScreen() {
         )
       );
       for (const r of st.racers) {
-        r._drawX = r.x;
-        r._drawY = r.y;
-
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
           ctx.globalAlpha = frac * 0.4;
@@ -545,34 +542,22 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-        rt.drawRacer(
-          ctx,
-          r._drawX,
-          r._drawY,
-          r.angle,
-          r,
-          r === leader,
-          st.lastTs ?? 0,
-          effectiveScale
-        );
+        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
         if (tagSet.has(r)) {
-          drawNameTag(r._drawX, r._drawY, r.name, r === leader, ezoom);
+          drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
         }
-        r.trail.push({ x: r._drawX, y: r._drawY });
+        r.trail.push({ x: r.x, y: r.y });
         if (r.trail.length > 10) r.trail.shift();
       }
     }
 
-    // Etappe 16-diag: coloured world-space markers on the leader + 20-frame snapshot table.
+    // Battle-diag: coloured world-space markers on the leader + 20-frame snapshot table.
     // Markers are drawn AFTER drawRacers so they appear on top of all sprites.
-    // cam and frameEffZoom are passed from the loop caller.
     function drawBattleDiagMarkers(cam, ezoom) {
       if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
       const st = g.current;
       if (!st?.racers?.length) return;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-      if (leader._drawX === undefined) return;
-
       const mr = 5 / ezoom;
       const lw = 2 / ezoom;
       const dot = (wx, wy, color) => {
@@ -592,9 +577,8 @@ export default function RaceScreen() {
       };
 
       dot(leader.x, leader.y, '#ff4444'); // ROT  — world pos
-      dot(leader._drawX, leader._drawY, '#4488ff'); // BLAU — draw pos
       const tagOffY = Math.max(12, Math.round(22 / ezoom));
-      dot(leader._drawX, leader._drawY - tagOffY, '#ffd700'); // GELB — nameTag anchor
+      dot(leader.x, leader.y - tagOffY, '#ffd700'); // GELB — nameTag anchor
 
       const ezoomY = isOpenTrack ? ezoom : cam.zoom * bsY;
       const camWorldX = isOpenTrack
@@ -608,12 +592,12 @@ export default function RaceScreen() {
       const ld = leaderDiagRef.current;
       if (!ld.frozen) {
         const scrX = isOpenTrack
-          ? (leader._drawX - (st.camX || 0)) * ezoom
-          : leader._drawX * ezoom + cam.offsetX;
+          ? (leader.x - (st.camX || 0)) * ezoom
+          : leader.x * ezoom + cam.offsetX;
         ld.snapshots.push({
           f: ld.snapshots.length + 1,
           rx: leader.x,
-          drawX: leader._drawX,
+          drawX: leader.x,
           scrX,
           tagX: scrX,
           camX: camWorldX,
@@ -1076,12 +1060,8 @@ export default function RaceScreen() {
         const dtFrames = dt / 16;
         for (const r of st.racers) {
           if (!r.finished) {
-            // Etappe 16: spawn at the zoom-normalised draw position (_drawX/_drawY) so
-            // particles stay co-located with the sprite body at all zoom levels.
-            // _drawX is set by the previous frame's drawRacers() — 1-frame lag at 60fps
-            // is imperceptible (~1 world-pixel). Fallback to r.x on the very first frame.
-            const spawnX = r._drawX ?? r.x;
-            const spawnY = r._drawY ?? r.y;
+            const spawnX = r.x;
+            const spawnY = r.y;
             if (r.surfaceEmitter) {
               // Surface-class trail: each racer drives its own emitter
               r.surfaceParticles.push(
