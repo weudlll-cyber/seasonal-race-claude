@@ -25,8 +25,8 @@ export const OPEN_TRACK_BASE_ZOOM = 1.5;
 const MAX_STATE_DURATION = 8000; // fallback when no config provided
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
-const BATTLE_GAP_THRESHOLD = 0.05; // fallback when no config provided
-const BATTLE_EXIT_BUFFER = 0.02; // hysteresis: BATTLE stays until gap >= threshold + buffer
+const BATTLE_PULK_THRESHOLD_PX = 200; // fallback: world-pixel radius for pulk detection
+const BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
 const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
 const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
@@ -48,6 +48,7 @@ const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is n
 const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
+const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
 
 /**
  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
@@ -123,11 +124,27 @@ export class CameraDirector {
     this._lerpPhase = 'entry';
     this._camT = null;
     this._observerPhase = 'idle';
-    this._followStartT = null;
+    this._leadInStartTs = null;
     this._leadOutStartCamT = null;
+    this._leadOutStartTs = null;
+    this._leadOutDistanceT = 0;
+    this._prevFocusT = null;
     this._lastFocusT = 0;
     this._followRingBuf = new Uint8Array(60);
     this._followRingIdx = 0;
+    // Diagnostic: how often _transition() fires per 60-frame window
+    this._transitionRingBuf = new Uint8Array(60);
+    this._transitionRingIdx = 0;
+    // Diagnostic: entry-phase convergence tracking
+    this._entryStartTs = null;
+    this._lastTs = 0;
+    this._lastEntryDeltaZoom = 0;
+    this._lastEntryDeltaX = 0;
+    this._lastEntryDeltaY = 0;
+    // Diagnostic: BATTLE-DIAG frozen snapshot panel
+    this._battleDiagFrameCount = 0;
+    this._battleDiagSnapshots = [];
+    this._battleDiagFrozen = false;
   }
 
   /**
@@ -224,7 +241,8 @@ export class CameraDirector {
    */
   _computeTimingConfig(config) {
     // Global tunables (not per-state)
-    this._battleGapThreshold = config?.battleGapThreshold ?? BATTLE_GAP_THRESHOLD;
+    this._battlePulkThresholdPx = config?.battlePulkThresholdPx ?? BATTLE_PULK_THRESHOLD_PX;
+    this._battleMinDurationMs = config?.battleMinDurationMs ?? BATTLE_MIN_DURATION_MS;
     this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
@@ -273,9 +291,8 @@ export class CameraDirector {
       this._phasedByState = {};
       for (const s of Object.values(CAM_STATE)) {
         this._phasedByState[s] = {
-          leadInDistance: profiles[s]?.leadInDistance ?? 0,
-          followDuration: profiles[s]?.followDuration ?? 0,
-          leadOutDistance: profiles[s]?.leadOutDistance ?? 0,
+          leadInDuration: profiles[s]?.leadInDuration ?? 0,
+          leadOutDuration: profiles[s]?.leadOutDuration ?? 0,
         };
       }
     } else {
@@ -316,12 +333,9 @@ export class CameraDirector {
       this._tcEntryLeader = this._tcLeader;
       this._tcEntryBattle = this._tcBattle;
       this._tcEntryComeback = this._tcComeback;
-      // Legacy: no phased observer config
+      // Legacy: phased observer disabled
       this._phasedByState = Object.fromEntries(
-        Object.values(CAM_STATE).map((s) => [
-          s,
-          { leadInDistance: 0, followDuration: 0, leadOutDistance: 0 },
-        ])
+        Object.values(CAM_STATE).map((s) => [s, { leadInDuration: 0, leadOutDuration: 0 }])
       );
     }
 
@@ -380,18 +394,59 @@ export class CameraDirector {
     // immediately regardless of how long the state has been held.
     const finishDramaExpired = this._inFinishDrama && ts >= this._finishMomentExpiry;
     const prevState = this.state;
-    if (stateAge >= Math.max(minHold, stateCap) || finishDramaExpired) {
+    let _diagTransitioned = false;
+    // Early BATTLE exit: leave when pulk dissolves after battleMinDurationMs.
+    // _lastBattleExitTs is set here so the cooldown blocks immediate re-entry.
+    if (
+      this.state === CAM_STATE.BATTLE_ZOOM &&
+      stateAge >= this._battleMinDurationMs &&
+      !this._isPulk(racers)
+    ) {
+      this._lastBattleExitTs = ts;
+      this._transition(racers, ts, raceState);
+      _diagTransitioned = true;
+    }
+    if (!_diagTransitioned && (stateAge >= Math.max(minHold, stateCap) || finishDramaExpired)) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
         this._lastBattleExitTs = ts;
       }
       this._transition(racers, ts, raceState);
+      _diagTransitioned = true;
     }
+    this._transitionRingBuf[this._transitionRingIdx % 60] = _diagTransitioned ? 1 : 0;
+    this._transitionRingIdx++;
     if (this.state !== prevState) {
       this._transitionStartZoom = this.zoom;
       this._transitionStartOffsetX = this.offsetX;
       this._transitionStartOffsetY = this.offsetY;
+    }
+    // During entry, keep _camT aligned with focusT so the pan target doesn't freeze.
+    // Without this, _camT sits at the initial lead-in position while racers move ahead;
+    // targetOffsetX (computed from this.zoom which is still lerping) then keeps the
+    // pan delta above the pixel threshold permanently regardless of zoom factor (H-E).
+    if (this._lerpPhase === 'entry' && this._camT !== null && !this._isOpenTrack && this._shape) {
+      const fr = this._focusRacers(racers);
+      let fT = null;
+      switch (this.state) {
+        case CAM_STATE.LEADER_ZOOM:
+          fT = fr[0]?.t ?? null;
+          break;
+        case CAM_STATE.BATTLE_ZOOM: {
+          const r0 = fr[0],
+            r1 = fr.length > 1 ? fr[1] : fr[0];
+          fT = ((r0?.t ?? 0) + (r1?.t ?? 0)) / 2;
+          break;
+        }
+        case CAM_STATE.COMEBACK_ZOOM:
+          fT = fr[Math.min(2, fr.length - 1)]?.t ?? null;
+          break;
+      }
+      if (fT !== null) {
+        this._camT = fT;
+        this._prevFocusT = fT;
+      }
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
 
@@ -403,16 +458,59 @@ export class CameraDirector {
     this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
     this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
     if (this._lerpPhase === 'entry') {
-      const zoomConverged = Math.abs(this.targetZoom - this.zoom) < this._entryConvergenceZoom;
-      const xConverged = Math.abs(this.targetOffsetX - this.offsetX) < this._entryConvergencePx;
-      const yConverged = Math.abs(this.targetOffsetY - this.offsetY) < this._entryConvergencePx;
-      if (zoomConverged && xConverged && yConverged) this._lerpPhase = 'tracking';
+      if (this._entryStartTs === null) this._entryStartTs = ts;
+      this._lastEntryDeltaZoom = Math.abs(this.targetZoom - this.zoom);
+      this._lastEntryDeltaX = Math.abs(this.targetOffsetX - this.offsetX);
+      this._lastEntryDeltaY = Math.abs(this.targetOffsetY - this.offsetY);
+      // When phased observer is active, _camT tracks focusT (above), so targetOffsetX
+      // moves with the racers every frame — the pixel lag cannot converge to the fixed
+      // threshold regardless of zoom factor. Gate convergence on zoom only in that case.
+      const phasedActive = this._camT !== null && !this._isOpenTrack && this._shape;
+      const zoomConverged = this._lastEntryDeltaZoom < this._entryConvergenceZoom;
+      const xConverged = phasedActive || this._lastEntryDeltaX < this._entryConvergencePx;
+      const yConverged = phasedActive || this._lastEntryDeltaY < this._entryConvergencePx;
+      if (zoomConverged && xConverged && yConverged) {
+        this._lerpPhase = 'tracking';
+        this._leadInStartTs = ts; // reset so lead-in gets its full duration from tracking-start
+        this._entryStartTs = null;
+      }
+    } else {
+      this._entryStartTs = null;
+      this._lastEntryDeltaZoom = 0;
+      this._lastEntryDeltaX = 0;
+      this._lastEntryDeltaY = 0;
     }
+    this._lastTs = ts;
+    const focusRacersForPhased = this._focusRacers(racers);
     if (!this._isOpenTrack && this._camT !== null && this._shape) {
-      this._computePhasedPanTarget(this._focusRacers(racers), canvasW, canvasH, dt);
+      this._computePhasedPanTarget(focusRacersForPhased, canvasW, canvasH, dt, ts);
     }
     this._followRingBuf[this._followRingIdx % 60] = this._observerPhase === 'follow' ? 1 : 0;
     this._followRingIdx++;
+    // BATTLE-DIAG: capture snapshots at frames 1, 15, 30, 45, 60 of each BATTLE_ZOOM episode
+    if (this.state === CAM_STATE.BATTLE_ZOOM && !this._battleDiagFrozen) {
+      this._battleDiagFrameCount++;
+      const f = this._battleDiagFrameCount;
+      if (f === 1 || f === 15 || f === 30 || f === 45 || f === 60) {
+        const r0 = focusRacersForPhased[0];
+        const r1 = focusRacersForPhased.length > 1 ? focusRacersForPhased[1] : r0;
+        const fT = ((r0?.t ?? 0) + (r1?.t ?? 0)) / 2;
+        const cT = this._camT ?? fT;
+        this._battleDiagSnapshots.push({
+          f,
+          phase: this._lerpPhase,
+          obs: this._observerPhase,
+          camT: cT,
+          focusT: fT,
+          dT: cT - fT,
+          dX: this._lastEntryDeltaX,
+          dY: this._lastEntryDeltaY,
+          dZ: this._lastEntryDeltaZoom,
+          conv: this._lerpPhase === 'tracking',
+        });
+      }
+      if (f >= 60) this._battleDiagFrozen = true;
+    }
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -431,12 +529,9 @@ export class CameraDirector {
     const leaderProgress = leader && raceState.finishT > 0 ? leader.t / raceState.finishT : 0;
     const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
     const gapLeadLast = ordered.length >= 2 ? ordered[0].t - ordered[ordered.length - 1].t : 0;
-    // Hysteresis: BATTLE enters at threshold, exits only when gap >= threshold + BATTLE_EXIT_BUFFER.
-    // Prevents state flickering when gap01 hovers just above the entry threshold.
-    const hasBattle =
-      prevState === CAM_STATE.BATTLE_ZOOM
-        ? gap01 < this._battleGapThreshold + BATTLE_EXIT_BUFFER
-        : gap01 < this._battleGapThreshold;
+    // Pulk condition: ≥3 of top-10 within battlePulkThresholdPx of each other.
+    // Hysteresis is provided by battleMinDurationMs (state stays active once entered).
+    const hasBattle = this._isPulk(racers);
     const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
 
     // Determine next state via priority chain
@@ -479,10 +574,10 @@ export class CameraDirector {
       nextState = CAM_STATE.OVERVIEW;
       reason = 'cooldown: expired + no battle';
     }
-    // Priority 4: Battle — top-2 within battleGapThreshold, off cooldown
+    // Priority 4: Battle — pulk detected (≥3 racers within threshold), off cooldown
     else if (hasBattle && battleCooledDown) {
       nextState = CAM_STATE.BATTLE_ZOOM;
-      reason = `battle: gap01=${gap01.toFixed(3)} < threshold=${this._battleGapThreshold}`;
+      reason = `battle: pulk (${racers.length} racers, threshold=${this._battlePulkThresholdPx}px)`;
     }
     // Priority 5: Default — LEADER with COMEBACK chance when last is far behind
     else if (gapLeadLast > 0.3 && gap01 >= 0.1) {
@@ -508,6 +603,12 @@ export class CameraDirector {
     this.state = nextState;
     this.stateEnteredAt = ts;
     this._lerpPhase = 'entry';
+    this._entryStartTs = null; // reset; update() picks up fresh ts on first entry-phase frame
+    if (nextState === CAM_STATE.BATTLE_ZOOM) {
+      this._battleDiagFrameCount = 0;
+      this._battleDiagSnapshots = [];
+      this._battleDiagFrozen = false;
+    }
 
     // Track battle exit for cooldown (natural exits — forced exits handled in update())
     if (prevState === CAM_STATE.BATTLE_ZOOM && nextState !== CAM_STATE.BATTLE_ZOOM) {
@@ -525,9 +626,9 @@ export class CameraDirector {
     }
 
     // Reset observer phase and init _camT for the new state
-    this._observerPhase = 'idle';
-    this._followStartT = null;
     this._leadOutStartCamT = null;
+    this._leadOutStartTs = null;
+    this._leadOutDistanceT = 0;
     if (this._shape && !this._isOpenTrack) {
       let focusT = null;
       switch (nextState) {
@@ -548,20 +649,62 @@ export class CameraDirector {
       }
       if (focusT !== null) {
         const prof = this._phasedByState?.[nextState];
-        const trackLength = this._shape.getTotalLength();
-        const leadInDt = prof && trackLength > 0 ? prof.leadInDistance / trackLength : 0;
-        this._camT = focusT + leadInDt;
+        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        if (phasedEnabled) {
+          // Place camera leadInDuration seconds ahead of the racer using measured speed
+          const speedPerFrame =
+            this._prevFocusT !== null
+              ? Math.max(0, focusT - this._prevFocusT)
+              : NOMINAL_T_PER_FRAME;
+          const leadInDt = speedPerFrame * FRAME_RATE * prof.leadInDuration;
+          this._camT = focusT + leadInDt;
+          if (prof.leadInDuration > 0) {
+            this._observerPhase = 'lead-in';
+            this._leadInStartTs = ts;
+          } else {
+            this._observerPhase = 'follow';
+            this._leadInStartTs = null;
+          }
+        } else {
+          // Phased observer disabled for this state — use regular getPanTarget
+          this._camT = null;
+          this._observerPhase = 'idle';
+          this._leadInStartTs = null;
+        }
       } else {
         this._camT = null;
+        this._observerPhase = 'idle';
+        this._leadInStartTs = null;
       }
     } else {
       this._camT = null;
+      this._observerPhase = 'idle';
+      this._leadInStartTs = null;
     }
   }
 
   // Returns the top-N racers by position — the set the camera focuses on.
   _focusRacers(racers) {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
+  }
+
+  // Returns true when ≥3 of the top-10 racers form a cluster within battlePulkThresholdPx.
+  // A cluster exists when at least one racer has ≥2 others within the pixel threshold.
+  _isPulk(racers) {
+    if (!racers || racers.length < 3) return false;
+    const top10 = [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(10, racers.length));
+    const thr2 = this._battlePulkThresholdPx * this._battlePulkThresholdPx;
+    for (let i = 0; i < top10.length; i++) {
+      let closeCount = 0;
+      for (let j = 0; j < top10.length; j++) {
+        if (i === j) continue;
+        const dx = top10[i].x - top10[j].x;
+        const dy = top10[i].y - top10[j].y;
+        if (dx * dx + dy * dy < thr2) closeCount++;
+      }
+      if (closeCount >= 2) return true;
+    }
+    return false;
   }
 
   // Compute the Y offset for closed tracks using bsY (may differ from bsX on non-square worlds).
@@ -706,27 +849,33 @@ export class CameraDirector {
   }
 
   /**
-   * Phased observer: evaluate lead-in / follow / lead-out transitions and pin the
-   * camera in the follow phase (Δ target→camera ≈ 0, eliminating aliasing at high zoom).
+   * Phased observer: time-based lead-in / follow / lead-out for closed-track zoom states.
+   * Lead-in: fixed point ahead of racer for leadInDuration seconds after state start.
+   * Follow: pin camera exactly to racer (Δ ≈ 0, no lerp lag).
+   * Lead-out: EMA deceleration to near-stop, triggered leadOutDuration seconds before state end.
    * Only acts when _lerpPhase === 'tracking'. Only called on closed tracks with a shape.
    */
-  _computePhasedPanTarget(focusRacers, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
+  _computePhasedPanTarget(focusRacers, canvasW, canvasH, dt = 1000 / FRAME_RATE, ts = 0) {
     if (this._lerpPhase !== 'tracking') return;
 
     let focusT;
     switch (this.state) {
-      case CAM_STATE.LEADER_ZOOM:
-        focusT = focusRacers[0]?.t ?? 0;
+      case CAM_STATE.LEADER_ZOOM: {
+        const r = focusRacers[0];
+        focusT = r?.t ?? 0;
         break;
+      }
       case CAM_STATE.BATTLE_ZOOM: {
         const r0 = focusRacers[0];
         const r1 = focusRacers.length > 1 ? focusRacers[1] : r0;
         focusT = ((r0?.t ?? 0) + (r1?.t ?? 0)) / 2;
         break;
       }
-      case CAM_STATE.COMEBACK_ZOOM:
-        focusT = focusRacers[Math.min(2, focusRacers.length - 1)]?.t ?? 0;
+      case CAM_STATE.COMEBACK_ZOOM: {
+        const rc = focusRacers[Math.min(2, focusRacers.length - 1)];
+        focusT = rc?.t ?? 0;
         break;
+      }
       default:
         return;
     }
@@ -734,52 +883,68 @@ export class CameraDirector {
     this._lastFocusT = focusT;
 
     const prof = this._phasedByState?.[this.state];
-    if (!prof || (prof.leadInDistance === 0 && prof.followDuration === 0)) return;
+    if (!prof) {
+      this._prevFocusT = focusT;
+      return;
+    }
 
-    const trackLength = this._shape.getTotalLength();
-    const dtLeadIn = trackLength > 0 ? prof.leadInDistance / trackLength : 0;
+    // Remaining time before the hard state cap (same formula as update()'s transition check)
+    const stateCap = this._maxStateDurationByState[this.state] ?? this._maxStateDuration;
+    const minHold = this._minStateHoldByState[this.state] ?? this._minStateHoldMs;
+    const effectiveDuration = Math.max(stateCap, minHold);
+    const remainingMs = this.stateEnteredAt + effectiveDuration - ts;
 
-    // Normalize dT to [-0.5, 0.5] for wraparound
-    let dT = focusT - this._camT;
-    dT = (((dT % 1) + 1.5) % 1) - 0.5;
-
-    // Phase transitions (lead-out is sticky until next _transition())
-    if (this._observerPhase !== 'lead-out') {
-      if (dT < -dtLeadIn) {
-        this._observerPhase = 'idle';
-      } else if (dT < 0) {
-        this._observerPhase = 'lead-in';
-      } else {
-        if (this._observerPhase !== 'follow') {
-          this._observerPhase = 'follow';
-          this._followStartT = focusT;
-        }
-      }
-      if (this._observerPhase === 'follow' && this._followStartT !== null) {
-        const followedPx = (focusT - this._followStartT) * trackLength;
-        if (followedPx >= prof.followDuration) {
-          this._observerPhase = 'lead-out';
-          this._leadOutStartCamT = this._camT;
-        }
-      }
+    // Lead-out trigger: start lead-out when remaining time ≤ leadOutDuration
+    if (
+      this._observerPhase !== 'lead-out' &&
+      prof.leadOutDuration > 0 &&
+      remainingMs >= 0 &&
+      remainingMs <= prof.leadOutDuration * 1000
+    ) {
+      this._observerPhase = 'lead-out';
+      this._leadOutStartCamT = this._camT;
+      this._leadOutStartTs = ts;
+      // Camera moves at ~half racer speed during lead-out, decelerating via EMA
+      const speed =
+        this._prevFocusT !== null ? Math.max(0, focusT - this._prevFocusT) : NOMINAL_T_PER_FRAME;
+      this._leadOutDistanceT = speed * FRAME_RATE * prof.leadOutDuration * 0.5;
     }
 
     if (this._observerPhase === 'lead-out') {
-      if (prof.leadOutDistance > 0 && this._leadOutStartCamT !== null) {
-        const dtLeadOut = trackLength > 0 ? prof.leadOutDistance / trackLength : 0;
-        const leadOutTargetT = this._leadOutStartCamT + dtLeadOut;
+      if (this._leadOutStartCamT !== null && this._leadOutDistanceT > 0) {
+        const leadOutTargetT = this._leadOutStartCamT + this._leadOutDistanceT;
         const decayDt = 1 - Math.pow(1 - LEAD_OUT_DECAY, (dt * FRAME_RATE) / 1000);
         this._camT += (leadOutTargetT - this._camT) * decayDt;
       }
+      this._prevFocusT = focusT;
       return;
     }
-    if (this._observerPhase !== 'follow') return;
+
+    // Lead-in: time-based — switch to follow after leadInDuration seconds from state start
+    if (this._observerPhase === 'lead-in') {
+      const elapsed = ts - (this._leadInStartTs ?? ts);
+      if (elapsed >= prof.leadInDuration * 1000) {
+        this._observerPhase = 'follow';
+      } else {
+        // Camera stays at the lead-in position initialised in _transition()
+        this._prevFocusT = focusT;
+        return;
+      }
+    }
+
+    if (this._observerPhase !== 'follow') {
+      this._prevFocusT = focusT;
+      return;
+    }
 
     // Follow: pin camera to racer (Δ ≈ 0, no lerp lag)
     this._camT = focusT;
     const tNorm = ((this._camT % 1) + 1) % 1;
     const camPos = this._shape.getPosition(tNorm, 0);
-    if (!camPos) return;
+    if (!camPos) {
+      this._prevFocusT = focusT;
+      return;
+    }
 
     const stateZoom =
       this.state === CAM_STATE.LEADER_ZOOM
@@ -802,6 +967,8 @@ export class CameraDirector {
       resolved.effectiveZoom,
       canvasH
     );
+
+    this._prevFocusT = focusT;
   }
 
   /**
@@ -877,5 +1044,50 @@ export class CameraDirector {
   /** Whether the last pan-resolved target landed inside the inner frame. */
   get targetInFrame() {
     return this._lastResolvedPanTarget?.targetInInnerFrame ?? true;
+  }
+
+  /** How many times _transition() was called in the last 60 frames. */
+  get transitionCount60f() {
+    let count = 0;
+    for (let i = 0; i < 60; i++) count += this._transitionRingBuf[i];
+    return count;
+  }
+
+  /** Zoom delta at the last entry-phase convergence check (0 while tracking). */
+  get lastEntryDeltaZoom() {
+    return this._lastEntryDeltaZoom;
+  }
+
+  /** X pan delta in px at the last entry-phase convergence check (0 while tracking). */
+  get lastEntryDeltaX() {
+    return this._lastEntryDeltaX;
+  }
+
+  /** Y pan delta in px at the last entry-phase convergence check (0 while tracking). */
+  get lastEntryDeltaY() {
+    return this._lastEntryDeltaY;
+  }
+
+  /** Ms elapsed since the current entry phase started (0 when tracking). */
+  get entryElapsedMs() {
+    if (this._lerpPhase !== 'entry' || this._entryStartTs === null) return 0;
+    return (this._lastTs ?? 0) - this._entryStartTs;
+  }
+
+  /** BATTLE-DIAG: snapshots at frames 1, 15, 30, 45, 60 of the current BATTLE_ZOOM episode. */
+  get battleDiagSnapshots() {
+    return this._battleDiagSnapshots;
+  }
+
+  /** True once 60 frames have been collected and the BATTLE-DIAG panel is frozen. */
+  get battleDiagFrozen() {
+    return this._battleDiagFrozen;
+  }
+
+  /** Reset the BATTLE-DIAG snapshot panel (called from HUD 'R' key). */
+  resetBattleDiag() {
+    this._battleDiagFrameCount = 0;
+    this._battleDiagSnapshots = [];
+    this._battleDiagFrozen = false;
   }
 }
