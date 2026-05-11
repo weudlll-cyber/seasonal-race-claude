@@ -99,66 +99,6 @@ export function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// ── Etappe 23: Name-Tag Screen-Position Trace ─────────────────────────────────
-function _analyzeEtappe23Trace(frames) {
-  const byRank = {};
-  for (const e of frames) {
-    (byRank[e.rank] ??= []).push(e);
-  }
-  const result = {};
-  for (const [rank, entries] of Object.entries(byRank)) {
-    const dxs = [],
-      dys = [],
-      dists = [];
-    for (let i = 1; i < entries.length; i++) {
-      const dx = entries[i].tagScreenX - entries[i - 1].tagScreenX;
-      const dy = entries[i].tagScreenY - entries[i - 1].tagScreenY;
-      dxs.push(dx);
-      dys.push(dy);
-      dists.push(Math.hypot(dx, dy));
-    }
-    if (!dists.length) continue;
-    const maxDx = Math.max(...dxs.map(Math.abs));
-    const maxDy = Math.max(...dys.map(Math.abs));
-    const maxDist = Math.max(...dists);
-    const avgDist = dists.reduce((a, b) => a + b, 0) / dists.length;
-    const signCX = dxs.filter(
-      (v, i) => i > 0 && v * dxs[i - 1] < 0 && Math.abs(v) > 0.5 && Math.abs(dxs[i - 1]) > 0.5
-    ).length;
-    const signCY = dys.filter(
-      (v, i) => i > 0 && v * dys[i - 1] < 0 && Math.abs(v) > 0.5 && Math.abs(dys[i - 1]) > 0.5
-    ).length;
-    result[`rank${rank}`] = {
-      frames: entries.length,
-      maxDeltaX_px: +maxDx.toFixed(2),
-      maxDeltaY_px: +maxDy.toFixed(2),
-      maxDelta_px: +maxDist.toFixed(2),
-      avgDelta_px: +avgDist.toFixed(2),
-      ratio_max_avg: +(maxDist / avgDist).toFixed(2),
-      jumpsOver20px: dists.filter((d) => d > 20).length,
-      jumpsOver50px: dists.filter((d) => d > 50).length,
-      signChangesX: signCX,
-      signChangesY: signCY,
-      pattern: signCX + signCY === 0 ? 'A_MONOTONE' : signCX + signCY > 3 ? 'B_JUMPING' : 'C_MIXED',
-    };
-  }
-  return result;
-}
-
-function _triggerEtappe23Download(frames) {
-  const payload = { frames, analysis: _analyzeEtappe23Trace(frames) };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'etappe23-nametag-trace.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
@@ -180,7 +120,6 @@ export default function RaceScreen() {
     constSpeed: false,
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
-  const etappe23TraceRef = useRef({ frames: [], frameCount: 0, done: false });
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -603,59 +542,6 @@ export default function RaceScreen() {
           camX: camWorldX,
         });
         if (ld.snapshots.length >= 20) ld.frozen = true;
-      }
-    }
-
-    // Etappe 23: collect one entry per rank-2/3 racer per BATTLE_ZOOM frame.
-    // Called after drawRacers() so r._drawX/_drawY are current.
-    // Triggers a JSON download automatically after 200 collected frames.
-    function recordTrace(cam, ezoom) {
-      const trace = etappe23TraceRef.current;
-      if (trace.done) return;
-      if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
-      const st = g.current;
-      if (!st?.racers?.length) return;
-
-      const sorted = [...st.racers].sort((a, b) => b.t - a.t);
-      const frameN = ++trace.frameCount;
-      const ts = st.lastTs ?? 0;
-      const tagOffY = Math.max(12, Math.round(22 / ezoom));
-
-      for (let rank = 2; rank <= 3; rank++) {
-        const r = sorted[rank - 1];
-        if (!r) continue;
-        const wx = r._drawX ?? r.x;
-        const wy = (r._drawY ?? r.y) - tagOffY;
-        let sx, sy;
-        if (isOpenTrack) {
-          sx = (wx - (st.camX || 0)) * ezoom;
-          sy = (wy - (st.camY || 0)) * ezoom;
-        } else {
-          sx = wx * ezoom + cam.offsetX;
-          sy = wy * cam.zoom * bsY + cam.offsetY;
-        }
-        trace.frames.push({
-          frame: frameN,
-          ts: +ts.toFixed(1),
-          rank,
-          name: r.name,
-          tagScreenX: +sx.toFixed(2),
-          tagScreenY: +sy.toFixed(2),
-          worldX: +(r._drawX ?? r.x).toFixed(2),
-          worldY: +(r._drawY ?? r.y).toFixed(2),
-          cameraOffsetX: isOpenTrack
-            ? +(-(st.camX || 0) * ezoom).toFixed(2)
-            : +cam.offsetX.toFixed(2),
-          cameraOffsetY: isOpenTrack
-            ? +(-(st.camY || 0) * ezoom).toFixed(2)
-            : +cam.offsetY.toFixed(2),
-          effectiveZoom: +ezoom.toFixed(4),
-        });
-      }
-
-      if (frameN >= 200) {
-        trace.done = true;
-        _triggerEtappe23Download(trace.frames);
       }
     }
 
@@ -1230,7 +1116,6 @@ export default function RaceScreen() {
         drawParticles();
         drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
-        recordTrace(cam, frameEffZoom);
         drawBattleDiagMarkers(cam, frameEffZoom);
         ctx.restore();
         drawTitleOpen();
@@ -1249,7 +1134,6 @@ export default function RaceScreen() {
         drawParticles();
         drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
-        recordTrace(cam, frameEffZoom);
         drawBattleDiagMarkers(cam, frameEffZoom);
         ctx.restore();
         drawTitle();
