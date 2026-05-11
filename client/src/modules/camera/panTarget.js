@@ -31,7 +31,8 @@ export function getPanTarget(state, racers, shape = null) {
 
   switch (state) {
     case 'LEADER_ZOOM': {
-      return { x: racers[0].x, y: racers[0].y };
+      const r0 = racers[0];
+      return { x: r0.x, y: r0.y };
     }
 
     case 'BATTLE_ZOOM': {
@@ -47,7 +48,10 @@ export function getPanTarget(state, racers, shape = null) {
         const pos = shape.getPosition(tMid, 0);
         return { x: pos.x, y: pos.y };
       }
-      return { x: (r0.x + r1.x) / 2, y: (r0.y + r1.y) / 2 };
+      return {
+        x: (r0.x + r1.x) / 2,
+        y: (r0.y + r1.y) / 2,
+      };
     }
 
     case 'COMEBACK_ZOOM': {
@@ -61,6 +65,7 @@ export function getPanTarget(state, racers, shape = null) {
     case 'OVERVIEW':
     default: {
       // Centroid of all passed racers — caller controls which set to include.
+      // OVERVIEW is at low zoom; smoothing not needed, use physics positions.
       const cx = racers.reduce((s, r) => s + r.x, 0) / racers.length;
       const cy = racers.reduce((s, r) => s + r.y, 0) / racers.length;
       return { x: cx, y: cy };

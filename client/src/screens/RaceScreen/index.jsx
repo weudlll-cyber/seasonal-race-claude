@@ -74,12 +74,6 @@ const CANVAS_H = 720;
 const CW = CANVAS_W;
 const CH = CANVAS_H;
 const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
-// EMA smoothing factor for non-lock-target sprite render positions.
-// Lower α = smoother but more positional lag. 0.5 was chosen after confirming
-// that animation period is already identical for all racers (racer.speed is never
-// set, so _getFrameIndex always gets speed=1 → same period). The only remaining
-// render-side lever against jitter-driven double images is this α.
-const SPRITE_EMA_ALPHA = 0.5;
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -105,6 +99,66 @@ export function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// ── Etappe 23: Name-Tag Screen-Position Trace ─────────────────────────────────
+function _analyzeEtappe23Trace(frames) {
+  const byRank = {};
+  for (const e of frames) {
+    (byRank[e.rank] ??= []).push(e);
+  }
+  const result = {};
+  for (const [rank, entries] of Object.entries(byRank)) {
+    const dxs = [],
+      dys = [],
+      dists = [];
+    for (let i = 1; i < entries.length; i++) {
+      const dx = entries[i].tagScreenX - entries[i - 1].tagScreenX;
+      const dy = entries[i].tagScreenY - entries[i - 1].tagScreenY;
+      dxs.push(dx);
+      dys.push(dy);
+      dists.push(Math.hypot(dx, dy));
+    }
+    if (!dists.length) continue;
+    const maxDx = Math.max(...dxs.map(Math.abs));
+    const maxDy = Math.max(...dys.map(Math.abs));
+    const maxDist = Math.max(...dists);
+    const avgDist = dists.reduce((a, b) => a + b, 0) / dists.length;
+    const signCX = dxs.filter(
+      (v, i) => i > 0 && v * dxs[i - 1] < 0 && Math.abs(v) > 0.5 && Math.abs(dxs[i - 1]) > 0.5
+    ).length;
+    const signCY = dys.filter(
+      (v, i) => i > 0 && v * dys[i - 1] < 0 && Math.abs(v) > 0.5 && Math.abs(dys[i - 1]) > 0.5
+    ).length;
+    result[`rank${rank}`] = {
+      frames: entries.length,
+      maxDeltaX_px: +maxDx.toFixed(2),
+      maxDeltaY_px: +maxDy.toFixed(2),
+      maxDelta_px: +maxDist.toFixed(2),
+      avgDelta_px: +avgDist.toFixed(2),
+      ratio_max_avg: +(maxDist / avgDist).toFixed(2),
+      jumpsOver20px: dists.filter((d) => d > 20).length,
+      jumpsOver50px: dists.filter((d) => d > 50).length,
+      signChangesX: signCX,
+      signChangesY: signCY,
+      pattern: signCX + signCY === 0 ? 'A_MONOTONE' : signCX + signCY > 3 ? 'B_JUMPING' : 'C_MIXED',
+    };
+  }
+  return result;
+}
+
+function _triggerEtappe23Download(frames) {
+  const payload = { frames, analysis: _analyzeEtappe23Trace(frames) };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'etappe23-nametag-trace.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
@@ -125,6 +179,8 @@ export default function RaceScreen() {
     _dvBufIdx: 0,
     constSpeed: false,
   });
+  const leaderDiagRef = useRef({ snapshots: [], frozen: false });
+  const etappe23TraceRef = useRef({ frames: [], frameCount: 0, done: false });
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -361,8 +417,6 @@ export default function RaceScreen() {
           transitionStartTime: 0,
           transitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
           nextRollTime: rollInterval + rollJitter,
-          jitterFreq: 0.0006 + Math.random() * 0.0014,
-          jitterPhase: Math.random() * Math.PI * 2,
           color: RACER_COLORS[i % RACER_COLORS.length],
           coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
           finished: false,
@@ -478,28 +532,9 @@ export default function RaceScreen() {
           cameraConfigRef.current.tagVisibleMaxCount
         )
       );
-      // In LEADER_ZOOM the camera pins to the leader's physics position. Rendering the
-      // leader at its exact physics position keeps it visually at screen-centre.
-      // In all other states there is no single pin-lock target, so every racer gets EMA.
-      const lockTarget = camDirRef.current?.state === CAM_STATE.LEADER_ZOOM ? leader : null;
-
       for (const r of st.racers) {
-        // EMA smoothed render position — reduces frame-to-frame position jumps for
-        // non-locked racers, which appear as double-images at high zoom.
-        // Lock-target: always snap to physics so the pin-lock stays exact.
-        if (r === lockTarget) {
-          r._drawX = r.x;
-          r._drawY = r.y;
-        } else {
-          r._drawX =
-            r._drawX !== undefined
-              ? r._drawX * (1 - SPRITE_EMA_ALPHA) + r.x * SPRITE_EMA_ALPHA
-              : r.x;
-          r._drawY =
-            r._drawY !== undefined
-              ? r._drawY * (1 - SPRITE_EMA_ALPHA) + r.y * SPRITE_EMA_ALPHA
-              : r.y;
-        }
+        r._drawX = r.x;
+        r._drawY = r.y;
 
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
@@ -525,6 +560,118 @@ export default function RaceScreen() {
         }
         r.trail.push({ x: r._drawX, y: r._drawY });
         if (r.trail.length > 10) r.trail.shift();
+      }
+    }
+
+    // Etappe 16-diag: coloured world-space markers on the leader + 20-frame snapshot table.
+    // Markers are drawn AFTER drawRacers so they appear on top of all sprites.
+    // cam and frameEffZoom are passed from the loop caller.
+    function drawBattleDiagMarkers(cam, ezoom) {
+      if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
+      const st = g.current;
+      if (!st?.racers?.length) return;
+      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+      if (leader._drawX === undefined) return;
+
+      const mr = 5 / ezoom;
+      const lw = 2 / ezoom;
+      const dot = (wx, wy, color) => {
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(wx, wy, mr, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(wx, wy, lw, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      };
+
+      dot(leader.x, leader.y, '#ff4444'); // ROT  — world pos
+      dot(leader._drawX, leader._drawY, '#4488ff'); // BLAU — draw pos
+      const tagOffY = Math.max(12, Math.round(22 / ezoom));
+      dot(leader._drawX, leader._drawY - tagOffY, '#ffd700'); // GELB — nameTag anchor
+
+      const ezoomY = isOpenTrack ? ezoom : cam.zoom * bsY;
+      const camWorldX = isOpenTrack
+        ? CANVAS_W / 2 / ezoom + (st.camX || 0)
+        : (CANVAS_W / 2 - cam.offsetX) / ezoom;
+      const camWorldY = isOpenTrack
+        ? CANVAS_H / 2 / ezoom + (st.camY || 0)
+        : (CANVAS_H / 2 - cam.offsetY) / ezoomY;
+      dot(camWorldX, camWorldY, '#cc44ff'); // LILA — camera centre (= screen centre under current transform)
+
+      const ld = leaderDiagRef.current;
+      if (!ld.frozen) {
+        const scrX = isOpenTrack
+          ? (leader._drawX - (st.camX || 0)) * ezoom
+          : leader._drawX * ezoom + cam.offsetX;
+        ld.snapshots.push({
+          f: ld.snapshots.length + 1,
+          rx: leader.x,
+          drawX: leader._drawX,
+          scrX,
+          tagX: scrX,
+          camX: camWorldX,
+        });
+        if (ld.snapshots.length >= 20) ld.frozen = true;
+      }
+    }
+
+    // Etappe 23: collect one entry per rank-2/3 racer per BATTLE_ZOOM frame.
+    // Called after drawRacers() so r._drawX/_drawY are current.
+    // Triggers a JSON download automatically after 200 collected frames.
+    function recordTrace(cam, ezoom) {
+      const trace = etappe23TraceRef.current;
+      if (trace.done) return;
+      if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
+      const st = g.current;
+      if (!st?.racers?.length) return;
+
+      const sorted = [...st.racers].sort((a, b) => b.t - a.t);
+      const frameN = ++trace.frameCount;
+      const ts = st.lastTs ?? 0;
+      const tagOffY = Math.max(12, Math.round(22 / ezoom));
+
+      for (let rank = 2; rank <= 3; rank++) {
+        const r = sorted[rank - 1];
+        if (!r) continue;
+        const wx = r._drawX ?? r.x;
+        const wy = (r._drawY ?? r.y) - tagOffY;
+        let sx, sy;
+        if (isOpenTrack) {
+          sx = (wx - (st.camX || 0)) * ezoom;
+          sy = (wy - (st.camY || 0)) * ezoom;
+        } else {
+          sx = wx * ezoom + cam.offsetX;
+          sy = wy * cam.zoom * bsY + cam.offsetY;
+        }
+        trace.frames.push({
+          frame: frameN,
+          ts: +ts.toFixed(1),
+          rank,
+          name: r.name,
+          tagScreenX: +sx.toFixed(2),
+          tagScreenY: +sy.toFixed(2),
+          worldX: +(r._drawX ?? r.x).toFixed(2),
+          worldY: +(r._drawY ?? r.y).toFixed(2),
+          cameraOffsetX: isOpenTrack
+            ? +(-(st.camX || 0) * ezoom).toFixed(2)
+            : +cam.offsetX.toFixed(2),
+          cameraOffsetY: isOpenTrack
+            ? +(-(st.camY || 0) * ezoom).toFixed(2)
+            : +cam.offsetY.toFixed(2),
+          effectiveZoom: +ezoom.toFixed(4),
+        });
+      }
+
+      if (frameN >= 200) {
+        trace.done = true;
+        _triggerEtappe23Download(trace.frames);
       }
     }
 
@@ -856,31 +1003,21 @@ export default function RaceScreen() {
               r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
             }
           }
-          // Per-racer sine jitter — each racer has its own frequency and phase,
-          // so speeds fluctuate independently instead of all spiking together.
-          // Amplitude is ±5% of race_baseSpeed so it stays proportional after
-          // PR-A2's duration-driven baseSpeed scaling (fixed 0.00012 was ±21–62%).
-          const jitter = Math.sin(ts * r.jitterFreq + r.jitterPhase) * (race_baseSpeed * 0.05);
           // Apply D7b boost/brake flags from the previous frame
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
           if (!r.finished) {
-            r.t = Math.min(
-              r.t + (r.baseSpeed * boost * brake + jitter) * (dt / 16),
-              st.finishT + 0.001
-            );
+            r.t = Math.min(r.t + r.baseSpeed * boost * brake * (dt / 16), st.finishT + 0.001);
           } else {
             // Run-out: finished racers keep moving but decay to a stop
             r.runoutDecay *= 0.97;
-            r.t += (r.baseSpeed * r.runoutDecay + jitter * r.runoutDecay) * (dt / 16);
+            r.t += r.baseSpeed * r.runoutDecay * (dt / 16);
           }
           // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
           // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
           // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
           r.vt =
-            race_baseSpeed > 0 && !r.finished
-              ? (r.baseSpeed * boost * brake + jitter) / race_baseSpeed
-              : 0;
+            race_baseSpeed > 0 && !r.finished ? (r.baseSpeed * boost * brake) / race_baseSpeed : 0;
         }
         // D4: equalize all non-finished racers to the mean delta-t
         if (constSpeedActive) {
@@ -939,15 +1076,23 @@ export default function RaceScreen() {
         const dtFrames = dt / 16;
         for (const r of st.racers) {
           if (!r.finished) {
+            // Etappe 16: spawn at the zoom-normalised draw position (_drawX/_drawY) so
+            // particles stay co-located with the sprite body at all zoom levels.
+            // _drawX is set by the previous frame's drawRacers() — 1-frame lag at 60fps
+            // is imperceptible (~1 world-pixel). Fallback to r.x on the very first frame.
+            const spawnX = r._drawX ?? r.x;
+            const spawnY = r._drawY ?? r.y;
             if (r.surfaceEmitter) {
               // Surface-class trail: each racer drives its own emitter
               r.surfaceParticles.push(
-                ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts)
+                ...r.surfaceEmitter.spawn(spawnX, spawnY, r.baseSpeed, r.angle, ts)
               );
               r.surfaceParticles = r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
             } else {
               // Heimat-Trail fallback: trailFactory-based particles pooled globally
-              st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+              st.dustParticles.push(
+                ...rt.getTrailParticles(spawnX, spawnY, r.baseSpeed, r.angle, ts)
+              );
             }
           }
         }
@@ -1105,6 +1250,8 @@ export default function RaceScreen() {
         drawParticles();
         drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
+        recordTrace(cam, frameEffZoom);
+        drawBattleDiagMarkers(cam, frameEffZoom);
         ctx.restore();
         drawTitleOpen();
       } else {
@@ -1122,6 +1269,8 @@ export default function RaceScreen() {
         drawParticles();
         drawSurfaceTrails();
         drawRacers(frameDisplayScale, frameEffZoom);
+        recordTrace(cam, frameEffZoom);
+        drawBattleDiagMarkers(cam, frameEffZoom);
         ctx.restore();
         drawTitle();
         drawLapInfo(st);
@@ -1198,6 +1347,7 @@ export default function RaceScreen() {
           <CameraDiagnosticsHUD
             cameraRef={camDirRef}
             diagRef={diagDataRef}
+            leaderDiagRef={leaderDiagRef}
             visible={showCameraDiagnostics}
           />
         </div>
