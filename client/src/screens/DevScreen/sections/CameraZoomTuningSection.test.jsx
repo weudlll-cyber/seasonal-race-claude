@@ -6,9 +6,8 @@ const defaultProfiles = {
     spritePct: 0.05,
     trackingTC: 1.5,
     entryTC: 1.5,
-    leadInDistance: 0,
-    followDuration: 0,
-    leadOutDistance: 0,
+    leadInDuration: 0,
+    leadOutDuration: 0,
     innerFramePct: 0.7,
     maxStateDuration: 4000,
     minStateHold: 5000,
@@ -17,9 +16,8 @@ const defaultProfiles = {
     spritePct: 0.08,
     trackingTC: 0.3,
     entryTC: 0.3,
-    leadInDistance: 0,
-    followDuration: 0,
-    leadOutDistance: 0,
+    leadInDuration: 0,
+    leadOutDuration: 0,
     innerFramePct: 0.7,
     maxStateDuration: 4000,
     minStateHold: 5000,
@@ -28,9 +26,8 @@ const defaultProfiles = {
     spritePct: 0.12,
     trackingTC: 0.3,
     entryTC: 0.3,
-    leadInDistance: 0,
-    followDuration: 0,
-    leadOutDistance: 0,
+    leadInDuration: 0,
+    leadOutDuration: 0,
     innerFramePct: 0.7,
     maxStateDuration: 6000,
     minStateHold: 5000,
@@ -39,9 +36,8 @@ const defaultProfiles = {
     spritePct: 0.065,
     trackingTC: 0.3,
     entryTC: 0.3,
-    leadInDistance: 0,
-    followDuration: 0,
-    leadOutDistance: 0,
+    leadInDuration: 0,
+    leadOutDuration: 0,
     innerFramePct: 0.7,
     maxStateDuration: 4000,
     minStateHold: 5000,
@@ -58,9 +54,8 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         spritePct: 0.05,
         trackingTC: 1.5,
         entryTC: 1.5,
-        leadInDistance: 0,
-        followDuration: 0,
-        leadOutDistance: 0,
+        leadInDuration: 0,
+        leadOutDuration: 0,
         innerFramePct: 0.7,
         maxStateDuration: 4000,
         minStateHold: 5000,
@@ -69,9 +64,8 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         spritePct: 0.08,
         trackingTC: 0.3,
         entryTC: 0.3,
-        leadInDistance: 0,
-        followDuration: 0,
-        leadOutDistance: 0,
+        leadInDuration: 0,
+        leadOutDuration: 0,
         innerFramePct: 0.7,
         maxStateDuration: 4000,
         minStateHold: 5000,
@@ -80,9 +74,8 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         spritePct: 0.12,
         trackingTC: 0.3,
         entryTC: 0.3,
-        leadInDistance: 0,
-        followDuration: 0,
-        leadOutDistance: 0,
+        leadInDuration: 0,
+        leadOutDuration: 0,
         innerFramePct: 0.7,
         maxStateDuration: 6000,
         minStateHold: 5000,
@@ -91,9 +84,8 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         spritePct: 0.065,
         trackingTC: 0.3,
         entryTC: 0.3,
-        leadInDistance: 0,
-        followDuration: 0,
-        leadOutDistance: 0,
+        leadInDuration: 0,
+        leadOutDuration: 0,
         innerFramePct: 0.7,
         maxStateDuration: 4000,
         minStateHold: 5000,
@@ -105,6 +97,8 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
     battleGapThreshold: 0.05,
+    battlePulkThresholdPx: 200,
+    battleMinDurationMs: 3000,
     endgameThreshold: 0.85,
     postStartHoldMs: 7000,
     battleCooldownMs: 8000,
@@ -131,6 +125,8 @@ function freshConfig(overrides = {}) {
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
     battleGapThreshold: 0.05,
+    battlePulkThresholdPx: 200,
+    battleMinDurationMs: 3000,
     endgameThreshold: 0.85,
     postStartHoldMs: 7000,
     battleCooldownMs: 8000,
@@ -196,9 +192,14 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('State Trigger Settings')).toBeTruthy();
   });
 
-  it('renders Battle trigger threshold label', () => {
+  it('renders Pulk threshold (px) label', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Battle trigger threshold')).toBeTruthy();
+    expect(screen.getByText('Pulk threshold (px)')).toBeTruthy();
+  });
+
+  it('renders BATTLE min hold (ms) label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('BATTLE min hold (ms)')).toBeTruthy();
   });
 
   it('renders Endgame focus threshold label', () => {
@@ -268,10 +269,16 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(inputs.some((i) => i.value === '10')).toBe(true);
   });
 
-  it('shows default battleGapThreshold value 0.05', () => {
+  it('shows default battlePulkThresholdPx value 200', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.05')).toBe(true);
+    expect(inputs.some((i) => i.value === '200')).toBe(true);
+  });
+
+  it('shows default battleMinDurationMs value 3000', () => {
+    render(<CameraZoomTuningSection />);
+    const inputs = screen.getAllByRole('spinbutton');
+    expect(inputs.some((i) => i.value === '3000')).toBe(true);
   });
 
   it('shows default endgameThreshold value 0.85', () => {
@@ -345,7 +352,8 @@ describe('CameraZoomTuningSection — reset all (start from non-default values)'
         },
         entryConvergenceZoom: 0.1,
         entryConvergencePx: 20,
-        battleGapThreshold: 0.12,
+        battlePulkThresholdPx: 100,
+        battleMinDurationMs: 1500,
         endgameThreshold: 0.7,
         postStartHoldMs: 3000,
         battleCooldownMs: 4000,
@@ -369,7 +377,8 @@ describe('CameraZoomTuningSection — reset all (start from non-default values)'
         }),
         entryConvergenceZoom: 0.05,
         entryConvergencePx: 10,
-        battleGapThreshold: 0.05,
+        battlePulkThresholdPx: 200,
+        battleMinDurationMs: 3000,
         endgameThreshold: 0.85,
         postStartHoldMs: 7000,
         battleCooldownMs: 8000,
