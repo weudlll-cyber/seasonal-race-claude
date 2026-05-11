@@ -440,8 +440,9 @@ const midRaceRacers = [
 
 const battleMidRacers = [
   { t: 0.5, x: 500, y: 300, finished: false },
-  { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → battle
-  { t: 0.2, x: 200, y: 300, finished: false },
+  { t: 0.48, x: 480, y: 300, finished: false }, // 20px from r0 — within pulk threshold
+  { t: 0.46, x: 460, y: 300, finished: false }, // 40px from r0, 20px from r1 — forms pulk of 3
+  { t: 0.2, x: 200, y: 300, finished: false }, // far from cluster — not in pulk
 ];
 
 describe('CameraDirector — §5.3 attention hierarchy', () => {
@@ -494,7 +495,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     expect(cd.state).not.toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('Priority 4: battle (gap01 < 0.05) → BATTLE_ZOOM', () => {
+  it('Priority 4: battle (pulk of 3 within 200px) → BATTLE_ZOOM', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
@@ -823,10 +824,11 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
 // ── CameraDirector — Block X: battle trigger tunables ────────────────────────
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battleGapThreshold=0.05, _endgameThreshold=0.85, new timing params', () => {
+  it('no config: fallback _maxStateDuration=8000, _battlePulkThresholdPx=200, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
     const cd = new CameraDirector();
     expect(cd._maxStateDuration).toBe(8000);
-    expect(cd._battleGapThreshold).toBe(0.05);
+    expect(cd._battlePulkThresholdPx).toBe(200);
+    expect(cd._battleMinDurationMs).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.85);
     expect(cd._postStartHoldMs).toBe(7000);
     expect(cd._battleCooldownMs).toBe(8000);
@@ -834,21 +836,21 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     expect(cd._minStateHoldMs).toBe(5000);
   });
 
-  it('battleGapThreshold=0.10 fires BATTLE at gap=0.08 (old 0.05 threshold would not)', () => {
+  it('pulk (3 racers within 200px) triggers BATTLE_ZOOM', () => {
     const cfg = {
       ...pctConfig,
-      battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
-    // gap01 = 0.08 — within new 0.10 threshold but not old 0.05
+    cd._lastOverviewExitTs = 9000; // overview cooldown not expired
+    // 3 racers within 200px → _isPulk=true → hasBattle=true → P4 fires
     const racers = [
       { t: 0.5, x: 500, y: 300, finished: false },
-      { t: 0.42, x: 420, y: 300, finished: false }, // gap = 0.08
+      { t: 0.46, x: 460, y: 300, finished: false }, // 40px from r0
+      { t: 0.42, x: 420, y: 300, finished: false }, // 80px from r0, 40px from r1
       { t: 0.2, x: 200, y: 300, finished: false },
     ];
     cd.update(
@@ -884,19 +886,19 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   it('endgameThreshold=0.95 allows BATTLE at 90% progress (old 0.85 would block it)', () => {
     const cfg = {
       ...pctConfig,
-      battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.95,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd._lastOverviewExitTs = 9000; // cooldown not expired (11000-9000=2000 < 8000)
+    cd._lastOverviewExitTs = 9000; // overview cooldown not expired
     // leader at 90% progress: below 0.95 threshold → endgame does NOT lock LEADER
-    // gap01=0.08 < battleGapThreshold=0.10 → should fire BATTLE
+    // 3 close racers → _isPulk=true → P4 fires BATTLE_ZOOM
     const racers = [
       { t: 0.9, x: 500, y: 300, finished: false }, // 90% progress (finishT=1)
-      { t: 0.82, x: 420, y: 300, finished: false }, // gap=0.08
+      { t: 0.86, x: 460, y: 300, finished: false }, // 40px from r0
+      { t: 0.82, x: 420, y: 300, finished: false }, // 80px from r0, 40px from r1 → pulk of 3
       { t: 0.5, x: 200, y: 300, finished: false },
     ];
     cd.update(
@@ -909,16 +911,18 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
   });
 
-  it('live-apply: updateConfig() updates all three timing params without re-construction', () => {
+  it('live-apply: updateConfig() updates pulk params and timing params without re-construction', () => {
     const cd = new CameraDirector(1280, 720, false, pctConfig);
     expect(cd._maxStateDuration).toBe(8000); // pctConfig.maxStateDuration = 8000
     cd.updateConfig({
       ...pctConfig,
-      battleGapThreshold: 0.15,
+      battlePulkThresholdPx: 150,
+      battleMinDurationMs: 1500,
       maxStateDuration: 3000,
       endgameThreshold: 0.9,
     });
-    expect(cd._battleGapThreshold).toBe(0.15);
+    expect(cd._battlePulkThresholdPx).toBe(150);
+    expect(cd._battleMinDurationMs).toBe(1500);
     expect(cd._maxStateDuration).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.9);
   });
@@ -948,7 +952,8 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
 
 const tightBattleRacers = [
   { t: 0.5, x: 500, y: 300, finished: false },
-  { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → hasBattle
+  { t: 0.48, x: 480, y: 300, finished: false }, // 20px from r0
+  { t: 0.46, x: 460, y: 300, finished: false }, // 40px from r0, 20px from r1 → pulk of 3
   { t: 0.2, x: 200, y: 300, finished: false },
 ];
 
@@ -1299,7 +1304,8 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
     // the cooldown must re-roll so that a later quiet window can trigger OVERVIEW.
     const battleRacers = [
       { t: 0.5, x: 500, y: 300, finished: false },
-      { t: 0.48, x: 480, y: 300, finished: false }, // gap01=0.02 < 0.05 → hasBattle
+      { t: 0.48, x: 480, y: 300, finished: false }, // 20px from r0
+      { t: 0.46, x: 460, y: 300, finished: false }, // 40px from r0 → pulk of 3 → hasBattle=true
       { t: 0.2, x: 200, y: 300, finished: false },
     ];
     const cd = new CameraDirector();
@@ -1354,7 +1360,8 @@ describe('CameraDirector — D5: overviewCooldown jitter', () => {
 
     const battleRacers = [
       { t: 0.5, x: 500, y: 300, finished: false },
-      { t: 0.48, x: 480, y: 300, finished: false }, // gap < threshold → hasBattle
+      { t: 0.48, x: 480, y: 300, finished: false }, // 20px from r0
+      { t: 0.46, x: 460, y: 300, finished: false }, // 40px from r0 → pulk of 3 → hasBattle=true
       { t: 0.2, x: 200, y: 300, finished: false },
     ];
     // Tick 1: stateAge=8001 fires _transition. Battle blocks P3 (cooldown expired at t=3000).
@@ -1821,9 +1828,8 @@ const profileConfig = {
       spritePct: 0.05,
       trackingTC: 1.5,
       entryTC: 1.5,
-      leadInDistance: 0,
-      followDuration: 0,
-      leadOutDistance: 0,
+      leadInDuration: 0,
+      leadOutDuration: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -1832,9 +1838,8 @@ const profileConfig = {
       spritePct: 0.09,
       trackingTC: 0.25,
       entryTC: 0.25,
-      leadInDistance: 0,
-      followDuration: 0,
-      leadOutDistance: 0,
+      leadInDuration: 0,
+      leadOutDuration: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -1843,9 +1848,8 @@ const profileConfig = {
       spritePct: 0.14,
       trackingTC: 0.35,
       entryTC: 0.35,
-      leadInDistance: 0,
-      followDuration: 0,
-      leadOutDistance: 0,
+      leadInDuration: 0,
+      leadOutDuration: 0,
       innerFramePct: 0.7,
       maxStateDuration: 7000,
       minStateHold: 5000,
@@ -1854,9 +1858,8 @@ const profileConfig = {
       spritePct: 0.07,
       trackingTC: 0.3,
       entryTC: 0.3,
-      leadInDistance: 0,
-      followDuration: 0,
-      leadOutDistance: 0,
+      leadInDuration: 0,
+      leadOutDuration: 0,
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -2129,67 +2132,60 @@ const phasedConfig = {
     ...profileConfig.cameraStateProfiles,
     LEADER_ZOOM: {
       ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
-      leadInDistance: 200,
-      followDuration: 1500,
-      leadOutDistance: 200,
+      leadInDuration: 1.0,
+      leadOutDuration: 1.5,
     },
     BATTLE_ZOOM: {
       ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
-      leadInDistance: 100,
-      followDuration: 2000,
-      leadOutDistance: 100,
+      leadInDuration: 0.5,
+      leadOutDuration: 1.0,
     },
   },
 };
 
-describe('CameraDirector — Etappe 6: observer phase', () => {
+describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
   it('constructor: _camT is null, _observerPhase is "idle"', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
     expect(cd._camT).toBeNull();
     expect(cd._observerPhase).toBe('idle');
-    expect(cd._followStartT).toBeNull();
   });
 
-  it('_phasedByState reads leadInDistance / followDuration / leadOutDistance from profiles', () => {
+  it('_phasedByState reads leadInDuration / leadOutDuration from profiles', () => {
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(200);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(1500);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDistance).toBe(200);
-    expect(cd._phasedByState[CAM_STATE.OVERVIEW].leadInDistance).toBe(0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDuration).toBe(1.0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(1.5);
+    expect(cd._phasedByState[CAM_STATE.OVERVIEW].leadInDuration).toBe(0);
   });
 
   it('legacy path: _phasedByState defaults all to 0', () => {
     const cd = new CameraDirector(1280, 720, false, pctConfig, 36);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(0);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDuration).toBe(0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(0);
   });
 
   it('_transition() initialises _camT at focusT + leadInDt for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // Force post-start window so _transition picks LEADER_ZOOM
     const racers = [
       { x: 800, y: 360, t: 0.5 },
       { x: 700, y: 360, t: 0.4 },
     ];
-    // Call _transition directly with a state that resolves to LEADER_ZOOM
-    // (gap01 >= battleGapThreshold, post-start hold active)
     cd._transition(racers, 10000, {
       raceElapsed: 10000,
       finishedCount: 0,
       winner: null,
       finishT: 6000,
     });
-    // leadInDt = 200 / 4000 = 0.05; focusT = 0.5 → _camT = 0.55
-    expect(cd._camT).toBeCloseTo(0.55, 5);
-    expect(cd._observerPhase).toBe('idle');
+    // _prevFocusT is null → speedPerFrame = NOMINAL_T_PER_FRAME = 0.001
+    // leadInDt = 0.001 × 60 × 1.0 = 0.06; focusT = 0.5 → _camT = 0.56
+    expect(cd._camT).toBeCloseTo(0.56, 5);
+    expect(cd._observerPhase).toBe('lead-in');
   });
 
   it('_transition() sets _camT = null for OVERVIEW (no phased pan on overview)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [{ x: 100, y: 360, t: 0.1 }];
-    // Force OVERVIEW by making raceElapsed < START_PHASE_DURATION (< 3000)
     cd._transition(racers, 1000, {
       raceElapsed: 1000,
       finishedCount: 0,
@@ -2200,7 +2196,7 @@ describe('CameraDirector — Etappe 6: observer phase', () => {
     expect(cd._camT).toBeNull();
   });
 
-  it('_transition() resets _observerPhase to "idle" on each state change', () => {
+  it('_transition() resets _observerPhase to "lead-in" for LEADER_ZOOM on each state change', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd._observerPhase = 'follow';
@@ -2214,8 +2210,7 @@ describe('CameraDirector — Etappe 6: observer phase', () => {
       winner: null,
       finishT: 6000,
     });
-    expect(cd._observerPhase).toBe('idle');
-    expect(cd._followStartT).toBeNull();
+    expect(cd._observerPhase).toBe('lead-in');
   });
 
   it('observerPhase getter returns _observerPhase', () => {
@@ -2232,99 +2227,91 @@ describe('CameraDirector — Etappe 6: observer phase', () => {
     expect(cd.camT).toBeCloseTo(0.42, 5);
   });
 
-  it('phase: "idle" when racer is more than leadInDt behind _camT', () => {
+  it('lead-in: stays in "lead-in" phase until leadInDuration seconds elapsed', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // leadInDt = 200/4000 = 0.05; put _camT at 0.5, racer at 0.4 → dT = -0.1 < -0.05
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    const racers = [{ x: 1600, y: 360, t: 0.4 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
-    expect(cd._observerPhase).toBe('idle');
-  });
-
-  it('phase: "lead-in" when racer is within leadInDt behind _camT', () => {
-    const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // leadInDt = 0.05; _camT = 0.5, racer at 0.47 → dT = -0.03, -0.05 <= -0.03 < 0
-    cd._camT = 0.5;
+    cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    const racers = [{ x: 1880, y: 360, t: 0.47 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
+    cd._camT = 0.56;
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 10000;
+    // 500ms elapsed < 1000ms leadInDuration → stays lead-in
+    cd._computePhasedPanTarget([{ x: 800, y: 360, t: 0.5 }], 1280, 720, 1000 / 60, 10500);
     expect(cd._observerPhase).toBe('lead-in');
   });
 
-  it('phase: "follow" when racer reaches _camT (dT >= 0)', () => {
+  it('lead-in: transitions to "follow" after leadInDuration seconds elapsed', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // _camT = 0.5, racer at 0.51 → dT = 0.01 >= 0
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    const racers = [{ x: 2040, y: 360, t: 0.51 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 10000;
+    // 1001ms elapsed > 1000ms leadInDuration → transitions to follow
+    cd._computePhasedPanTarget([{ x: 800, y: 360, t: 0.5 }], 1280, 720, 1000 / 60, 11001);
     expect(cd._observerPhase).toBe('follow');
-    expect(cd._followStartT).toBeCloseTo(0.51, 5);
   });
 
   it('follow: _camT tracks focusT each frame (pin-lock)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    // Transition to follow
-    let racers = [{ x: 2040, y: 360, t: 0.51 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
-    expect(cd._observerPhase).toBe('follow');
-    // Next frame: racer advances
-    racers = [{ x: 2120, y: 360, t: 0.53 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 10500);
+    expect(cd._camT).toBeCloseTo(0.51, 5);
+    cd._computePhasedPanTarget([{ x: 2120, y: 360, t: 0.53 }], 1280, 720, 1000 / 60, 10517);
     expect(cd._camT).toBeCloseTo(0.53, 5);
   });
 
   it('follow: offsetX === targetOffsetX (no lerp lag)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    const racers = [{ x: 2040, y: 360, t: 0.51 }];
-    cd._computePhasedPanTarget(racers, 1280, 720);
-    expect(cd._observerPhase).toBe('follow');
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 10500);
     expect(cd.offsetX).toBe(cd.targetOffsetX);
     expect(cd.offsetY).toBe(cd.targetOffsetY);
   });
 
-  it('phase: "lead-out" after followDuration px traversed', () => {
+  it('lead-out triggered when remainingMs <= leadOutDuration * 1000', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    // Enter follow at t=0.51
-    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
-    expect(cd._observerPhase).toBe('follow');
-    // followDuration = 1500px; trackLength = 4000 → need 1500/4000 = 0.375 in t
-    // racer at t = 0.51 + 0.376 = 0.886 → exceeds
-    cd._computePhasedPanTarget([{ x: 3544, y: 360, t: 0.886 }], 1280, 720);
-    expect(cd._observerPhase).toBe('lead-out');
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    // effectiveDuration = max(maxStateDuration=4000, minStateHold=5000) = 5000
+    // stateEndTime = 10000 + 5000 = 15000; leadOutDuration = 1.5s = 1500ms
+    // lead-out fires when ts >= 13500 (remaining <= 1500ms)
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13000);
+    expect(cd._observerPhase).toBe('follow'); // remaining = 2000ms > 1500ms
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13600);
+    expect(cd._observerPhase).toBe('lead-out'); // remaining = 1400ms <= 1500ms
   });
 
-  it('lead-out: sticky — does not revert even if racer moves back within dT window', () => {
+  it('lead-out: sticky — does not revert once triggered', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    cd._camT = 0.5;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    // Enter follow → lead-out
-    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
-    cd._computePhasedPanTarget([{ x: 3544, y: 360, t: 0.886 }], 1280, 720);
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    // Trigger lead-out at ts=13600
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13600);
     expect(cd._observerPhase).toBe('lead-out');
-    // Even with racer at dT=0.01 (would be "follow"), lead-out sticks
-    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
+    // Next frame: still lead-out (sticky)
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13617);
     expect(cd._observerPhase).toBe('lead-out');
   });
 
@@ -2332,11 +2319,11 @@ describe('CameraDirector — Etappe 6: observer phase', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd._camT = 0.5;
-    cd._lerpPhase = 'entry'; // not tracking → should not evaluate
+    cd._lerpPhase = 'entry';
     cd.state = CAM_STATE.LEADER_ZOOM;
     const before = cd._observerPhase;
     cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
-    expect(cd._observerPhase).toBe(before); // unchanged
+    expect(cd._observerPhase).toBe(before);
   });
 
   it('OVERVIEW: _computePhasedPanTarget exits immediately (no phase change)', () => {
@@ -2346,40 +2333,596 @@ describe('CameraDirector — Etappe 6: observer phase', () => {
     cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.OVERVIEW;
     cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720);
-    expect(cd._observerPhase).toBe('idle'); // unchanged
+    expect(cd._observerPhase).toBe('idle');
   });
 
-  it('wraparound: dT normalised to [-0.5, 0.5] when _camT > 1', () => {
+  it('follow: _camT wraps correctly when focusT crosses lap boundary', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // _camT = 0.98 (near end of lap), racer at t = 0.02 (just started new lap)
-    // Raw dT = 0.02 - 0.98 = -0.96; normalised: ((-0.96 % 1) + 1.5) % 1 - 0.5 = 0.04
-    // dT = 0.04 >= 0 → follow
-    cd._camT = 0.98;
-    cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.LEADER_ZOOM;
-    cd._computePhasedPanTarget([{ x: 80, y: 360, t: 0.02 }], 1280, 720);
-    expect(cd._observerPhase).toBe('follow');
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.98;
+    cd._observerPhase = 'follow';
+    // Racer wraps from ~0.98 to 0.02 (new lap); follow pins _camT = focusT
+    cd._computePhasedPanTarget([{ x: 80, y: 360, t: 0.02 }], 1280, 720, 1000 / 60, 10500);
+    expect(cd._camT).toBeCloseTo(0.02, 5);
   });
 
   it('updateConfig() with new phase fields updates _phasedByState immediately', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(0);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDuration).toBe(0);
     const updated = {
       ...profileConfig,
       cameraStateProfiles: {
         ...profileConfig.cameraStateProfiles,
         LEADER_ZOOM: {
           ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
-          leadInDistance: 300,
-          followDuration: 2000,
-          leadOutDistance: 150,
+          leadInDuration: 1.5,
+          leadOutDuration: 2.0,
         },
       },
     };
     cd.updateConfig(updated);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDistance).toBe(300);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].followDuration).toBe(2000);
-    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDistance).toBe(150);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadInDuration).toBe(1.5);
+    expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(2.0);
+  });
+});
+
+describe('CameraDirector — Etappe 10: diagnostic fields', () => {
+  it('transitionCount60f is 0 on construction', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd.transitionCount60f).toBe(0);
+  });
+
+  it('transitionCount60f is 1 after a frame where _transition() fires', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36, shape);
+    // Force stateAge > max(minHold=5000, stateCap=4000) to trigger _transition()
+    cd.stateEnteredAt = 0;
+    const racers = [{ x: 640, y: 360, t: 0.5 }];
+    cd.update(
+      racers,
+      10000,
+      { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    expect(cd.transitionCount60f).toBe(1);
+  });
+
+  it('entryElapsedMs is 0 when tracking', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    cd._lerpPhase = 'tracking';
+    expect(cd.entryElapsedMs).toBe(0);
+  });
+
+  it('entryElapsedMs computed from _entryStartTs and _lastTs', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    cd._lerpPhase = 'entry';
+    cd._entryStartTs = 10000;
+    cd._lastTs = 11500;
+    expect(cd.entryElapsedMs).toBe(1500);
+  });
+
+  it('lastEntryDeltaZoom/X/Y are 0 when in tracking phase', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    cd._lastEntryDeltaZoom = 0.5;
+    cd._lastEntryDeltaX = 50;
+    cd._lastEntryDeltaY = 50;
+    const racers = [{ x: 640, y: 360, t: 0.5 }];
+    // ts=1000 → stateAge=1000 < minHold=5000, no transition; lerpPhase starts as 'entry'
+    // but zoom and offsets should converge immediately (worldW=1280, bsX=1, zoom≈1, offsets≈0)
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    // After update, lerpPhase may be 'tracking' if converged; else entry deltas are set
+    // We test the tracking case by forcing it:
+    cd._lerpPhase = 'tracking';
+    cd._lastEntryDeltaZoom = 0.5;
+    cd._lastEntryDeltaX = 50;
+    cd._lastEntryDeltaY = 50;
+    cd.update(
+      racers,
+      1017,
+      { raceElapsed: 1017, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    expect(cd.lastEntryDeltaZoom).toBe(0);
+    expect(cd.lastEntryDeltaX).toBe(0);
+    expect(cd.lastEntryDeltaY).toBe(0);
+  });
+
+  it('battleDiagSnapshots is empty on construction', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd.battleDiagSnapshots).toHaveLength(0);
+  });
+
+  it('battleDiagFrozen is false on construction', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd.battleDiagFrozen).toBe(false);
+  });
+
+  it('resetBattleDiag() clears snapshots and unfreezes', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    cd._battleDiagSnapshots = [{ f: 1 }];
+    cd._battleDiagFrozen = true;
+    cd._battleDiagFrameCount = 60;
+    cd.resetBattleDiag();
+    expect(cd.battleDiagSnapshots).toHaveLength(0);
+    expect(cd.battleDiagFrozen).toBe(false);
+    expect(cd._battleDiagFrameCount).toBe(0);
+  });
+
+  it('battle-diag snapshot is pushed on frame 1 of BATTLE_ZOOM', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+    ];
+    // ts=1017 → stateAge=17ms < minHold=5000ms → no transition
+    cd.update(
+      racers,
+      1017,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    expect(cd.battleDiagSnapshots).toHaveLength(1);
+    expect(cd.battleDiagSnapshots[0].f).toBe(1);
+    expect(cd.battleDiagFrozen).toBe(false);
+  });
+
+  it('battle-diag collects 5 snapshots and freezes after 60 frames', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+    ];
+    for (let i = 0; i < 60; i++) {
+      // ts stays < 1000+5000=6000 to avoid triggering _transition()
+      cd.update(
+        racers,
+        1017 + i * 16,
+        { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+        1280,
+        720
+      );
+    }
+    expect(cd.battleDiagFrozen).toBe(true);
+    // Snapshots at frames 1, 15, 30, 45, 60
+    expect(cd.battleDiagSnapshots).toHaveLength(5);
+    expect(cd.battleDiagSnapshots.map((s) => s.f)).toEqual([1, 15, 30, 45, 60]);
+  });
+
+  it('battle-diag resets automatically on new BATTLE_ZOOM entry', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._battleDiagSnapshots = [{ f: 1, phase: 'entry' }];
+    cd._battleDiagFrozen = true;
+    cd._battleDiagFrameCount = 60;
+    // Force conditions → BATTLE_ZOOM:
+    // raceElapsed=15000 > postStartHold (3000+7000=10000)
+    // _lastBattleExitTs=-Infinity (default) → cooldown passed
+    // 3 racers within 200px of each other → _isPulk=true → hasBattle=true
+    // leaderProgress=0.5/6 ≈ 0.083 < endgameThreshold=0.85
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+      { x: 1984, y: 360, t: 0.496 }, // 16px from r0 → forms pulk
+    ];
+    cd._transition(racers, 15000, {
+      raceElapsed: 15000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6,
+    });
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+    expect(cd.battleDiagSnapshots).toHaveLength(0);
+    expect(cd.battleDiagFrozen).toBe(false);
+    expect(cd._battleDiagFrameCount).toBe(0);
+  });
+});
+
+describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () => {
+  // phasedConfig has BATTLE_ZOOM: leadInDuration=0.5, leadOutDuration=1.0
+  // profileConfig has all leadInDuration=0, leadOutDuration=0
+
+  it('BATTLE_ZOOM with phasedConfig: entry phase converges to tracking as zoom settles', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    cd._lerpPhase = 'entry';
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 1000;
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+    ];
+    let reachedTracking = false;
+    for (let i = 0; i < 300; i++) {
+      // ts stays < 1000+5000=6000 to avoid forcing _transition()
+      cd.update(
+        racers,
+        1017 + i * 16,
+        { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+        1280,
+        720
+      );
+      if (cd._lerpPhase === 'tracking') {
+        reachedTracking = true;
+        break;
+      }
+    }
+    expect(reachedTracking).toBe(true);
+  });
+
+  it('BATTLE_ZOOM with high spritePct (large zoom): still converges to tracking', () => {
+    // Simulate a user having dialed spritePct up to 0.25 in the dev screen.
+    // Needs 3 close racers so _isPulk=true → early exit doesn't fire before convergence.
+    const shape = makeShape(4000);
+    const highZoomConfig = {
+      ...phasedConfig,
+      cameraStateProfiles: {
+        ...phasedConfig.cameraStateProfiles,
+        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, spritePct: 0.25 },
+      },
+    };
+    const cd = new CameraDirector(1280, 720, false, highZoomConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    cd._lerpPhase = 'entry';
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 1000;
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+      { x: 1984, y: 360, t: 0.496 }, // pulk of 3 within 200px — prevents early exit
+    ];
+    let reachedTracking = false;
+    for (let i = 0; i < 300; i++) {
+      cd.update(
+        racers,
+        1017 + i * 16,
+        { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+        1280,
+        720
+      );
+      if (cd._lerpPhase === 'tracking') {
+        reachedTracking = true;
+        break;
+      }
+    }
+    expect(reachedTracking).toBe(true);
+  });
+
+  it('_leadInStartTs is reset to ts when entry transitions to tracking', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._camT = 0.5;
+    cd._lerpPhase = 'entry';
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 0; // set at transition time
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+    ];
+    let trackingTs = null;
+    for (let i = 0; i < 300; i++) {
+      const tsNow = 100 + i * 16;
+      cd.update(
+        racers,
+        tsNow,
+        { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+        1280,
+        720
+      );
+      if (cd._lerpPhase === 'tracking') {
+        trackingTs = tsNow;
+        break;
+      }
+    }
+    expect(trackingTs).not.toBeNull();
+    expect(cd._leadInStartTs).toBe(trackingTs); // reset to tracking-start time
+  });
+
+  it('BATTLE_ZOOM transitions to follow phase after lead-in expires', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    cd._lerpPhase = 'tracking'; // already converged
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 1000; // started 1000ms ago
+    const racers = [
+      { x: 2000, y: 360, t: 0.5 },
+      { x: 1992, y: 360, t: 0.498 },
+    ];
+    // leadInDuration=0.5s=500ms. At ts=2000, elapsed=1000ms >= 500ms → follow
+    cd.update(
+      racers,
+      2000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    expect(cd._observerPhase).toBe('follow');
+  });
+
+  it('LEADER_ZOOM regression: still converges entry → tracking', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5;
+    cd._lerpPhase = 'entry';
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 1000;
+    const racers = [{ x: 2000, y: 360, t: 0.5 }];
+    let reachedTracking = false;
+    for (let i = 0; i < 300; i++) {
+      cd.update(
+        racers,
+        1017 + i * 16,
+        { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+        1280,
+        720
+      );
+      if (cd._lerpPhase === 'tracking') {
+        reachedTracking = true;
+        break;
+      }
+    }
+    expect(reachedTracking).toBe(true);
+  });
+
+  it('_camT tracks focusT during entry (not frozen at initial lead-in position)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 1000;
+    cd._camT = 0.5; // initial lead-in position
+    cd._lerpPhase = 'entry';
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 1000;
+    const racers = [
+      { x: 2100, y: 360, t: 0.525 }, // leader has moved ahead
+      { x: 2092, y: 360, t: 0.523 },
+    ];
+    cd.update(
+      racers,
+      1017,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    // _camT should track midpoint (0.525+0.523)/2 = 0.524, not stay at 0.5
+    expect(cd._camT).toBeCloseTo(0.524, 5);
+  });
+});
+
+// ── Etappe 13: Pulk-Bedingung für BATTLE_ZOOM ─────────────────────────────────
+
+describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => {
+  const rs15 = { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 };
+
+  // ── _isPulk unit tests ────────────────────────────────────────────────────
+
+  it('_isPulk: < 3 racers → false', () => {
+    const cd = new CameraDirector();
+    expect(
+      cd._isPulk([
+        { x: 100, y: 100, t: 0.9 },
+        { x: 110, y: 100, t: 0.8 },
+      ])
+    ).toBe(false);
+    expect(cd._isPulk([{ x: 100, y: 100, t: 0.9 }])).toBe(false);
+    expect(cd._isPulk([])).toBe(false);
+    expect(cd._isPulk(null)).toBe(false);
+  });
+
+  it('_isPulk: 3 racers all within threshold → true', () => {
+    const cd = new CameraDirector();
+    // All within 50px of each other — well inside default 200px threshold
+    const racers = [
+      { x: 500, y: 300, t: 0.5 },
+      { x: 520, y: 300, t: 0.49 },
+      { x: 510, y: 300, t: 0.48 },
+    ];
+    expect(cd._isPulk(racers)).toBe(true);
+  });
+
+  it('_isPulk: 2 close + 1 far → false (no racer has 2+ others within threshold)', () => {
+    const cd = new CameraDirector();
+    const racers = [
+      { x: 500, y: 300, t: 0.5 },
+      { x: 510, y: 300, t: 0.49 }, // 10px from r0 — close
+      { x: 900, y: 300, t: 0.48 }, // 400px from r0 — far
+    ];
+    // r0 has only r1 within 200px (closeCount=1 < 2). r1 same. No pulk.
+    expect(cd._isPulk(racers)).toBe(false);
+  });
+
+  it('_isPulk: custom threshold via config', () => {
+    // With threshold=50px: r0–r1 are 10px apart, r2 is 80px away → no pulk.
+    // With threshold=100px: r2 is 80px < 100px → pulk of 3.
+    const tight = new CameraDirector(1280, 720, false, { battlePulkThresholdPx: 50 });
+    const wide = new CameraDirector(1280, 720, false, { battlePulkThresholdPx: 100 });
+    const racers = [
+      { x: 500, y: 300, t: 0.5 },
+      { x: 510, y: 300, t: 0.49 },
+      { x: 580, y: 300, t: 0.48 },
+    ];
+    expect(tight._isPulk(racers)).toBe(false);
+    expect(wide._isPulk(racers)).toBe(true);
+  });
+
+  it('_isPulk: only top-10 racers considered; racer outside top-10 ignored', () => {
+    const cd = new CameraDirector();
+    // 10 spread-out racers + 3 very close racers ranked 11-13 → no pulk in top 10
+    const top10 = Array.from({ length: 10 }, (_, i) => ({
+      x: i * 300,
+      y: 0,
+      t: 1 - i * 0.05,
+    }));
+    const tail = [
+      { x: 100, y: 0, t: 0.45 },
+      { x: 102, y: 0, t: 0.44 },
+      { x: 104, y: 0, t: 0.43 },
+    ];
+    expect(cd._isPulk([...top10, ...tail])).toBe(false);
+  });
+
+  // ── State machine: BATTLE entry via pulk ─────────────────────────────────
+
+  it('BATTLE triggers via Priority 4 when pulk exists (3 racers within threshold)', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000; // cooldown not expired
+    const pulkRacers = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 515, y: 300, t: 0.48, finished: false },
+      { x: 530, y: 300, t: 0.46, finished: false },
+      { x: 100, y: 300, t: 0.1, finished: false },
+    ];
+    cd.update(
+      pulkRacers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE does NOT trigger when fewer than 3 racers form a cluster', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = 3000;
+    // r0 and r1 close, r2 far — no pulk
+    const racers = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 510, y: 300, t: 0.48, finished: false },
+      { x: 900, y: 300, t: 0.2, finished: false },
+    ];
+    cd.update(
+      racers,
+      9000,
+      { raceElapsed: 11000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  // ── Minimum hold: BATTLE stays during battleMinDurationMs even if pulk gone ─
+
+  it('BATTLE stays active during battleMinDurationMs even after pulk dissolves', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    // 2 racers only → pulk gone; but stateAge < 3000ms
+    const noPulk = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 510, y: 300, t: 0.49, finished: false },
+    ];
+    // At ts=2999: stateAge=2999 < 3000 → should NOT exit
+    cd.update(
+      noPulk,
+      2999,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE exits after battleMinDurationMs when pulk condition is not met', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lastOverviewExitTs = -Infinity; // overview cooldown irrelevant
+    const noPulk = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 510, y: 300, t: 0.49, finished: false },
+    ];
+    // At ts=3001: stateAge=3001 ≥ 3000 and no pulk → should exit BATTLE
+    cd.update(
+      noPulk,
+      3001,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('BATTLE stays if pulk still present after battleMinDurationMs', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const pulk = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 510, y: 300, t: 0.49, finished: false },
+      { x: 520, y: 300, t: 0.48, finished: false },
+    ];
+    // stateAge=4000 ≥ 3000 but pulk still present → should NOT exit via early check
+    // (May still exit via maxStateDuration, but that's 8000ms — safe here)
+    cd.update(
+      pulk,
+      4000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('battleMinDurationMs from config is respected (custom 1000ms)', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 1000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    const noPulk = [
+      { x: 500, y: 300, t: 0.5, finished: false },
+      { x: 900, y: 300, t: 0.3, finished: false },
+    ];
+    // With 1000ms min hold, should exit at ts=1001 (stateAge=1001 ≥ 1000)
+    cd.update(
+      noPulk,
+      999,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM); // not yet
+    cd.update(
+      noPulk,
+      1001,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM); // exited
   });
 });

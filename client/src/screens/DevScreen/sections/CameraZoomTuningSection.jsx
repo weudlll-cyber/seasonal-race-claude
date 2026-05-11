@@ -53,28 +53,22 @@ const PROFILE_FIELDS = [
       `Slower lerp TC used right after state entry until camera converges. ${v.toFixed(2)}s.`,
   },
   {
-    key: 'leadInDistance',
-    label: 'Lead-in distance (px)',
+    key: 'leadInDuration',
+    label: 'Lead-in duration (s)',
     min: 0,
-    max: 2000,
-    step: 50,
-    tip: (v) => `Camera waits this far ahead of the racer before Mitlaufen starts. ${v}px.`,
+    max: 5,
+    step: 0.1,
+    tip: (v) =>
+      `Camera shows the track ahead for this many seconds at state start before following the racer. ${v.toFixed(1)}s.`,
   },
   {
-    key: 'followDuration',
-    label: 'Follow duration (px)',
+    key: 'leadOutDuration',
+    label: 'Lead-out duration (s)',
     min: 0,
-    max: 2000,
-    step: 50,
-    tip: (v) => `Camera pin-locks and moves with the racer for this distance. ${v}px.`,
-  },
-  {
-    key: 'leadOutDistance',
-    label: 'Lead-out distance (px)',
-    min: 0,
-    max: 2000,
-    step: 50,
-    tip: (v) => `Camera holds after Mitlaufen while racer runs this far ahead. ${v}px.`,
+    max: 5,
+    step: 0.1,
+    tip: (v) =>
+      `Camera starts decelerating to a stop this many seconds before the state ends. ${v.toFixed(1)}s.`,
   },
   {
     key: 'innerFramePct',
@@ -218,7 +212,8 @@ function CameraZoomTuningSection() {
       ),
       entryConvergenceZoom: DEFAULT_CAMERA_CONFIG.entryConvergenceZoom,
       entryConvergencePx: DEFAULT_CAMERA_CONFIG.entryConvergencePx,
-      battleGapThreshold: DEFAULT_CAMERA_CONFIG.battleGapThreshold,
+      battlePulkThresholdPx: DEFAULT_CAMERA_CONFIG.battlePulkThresholdPx,
+      battleMinDurationMs: DEFAULT_CAMERA_CONFIG.battleMinDurationMs,
       endgameThreshold: DEFAULT_CAMERA_CONFIG.endgameThreshold,
       postStartHoldMs: DEFAULT_CAMERA_CONFIG.postStartHoldMs,
       battleCooldownMs: DEFAULT_CAMERA_CONFIG.battleCooldownMs,
@@ -253,9 +248,10 @@ function CameraZoomTuningSection() {
           </button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Per-state camera profiles. Expand a block to tune zoom speed, sprite size, lookahead, and
-          framing for each camera state. Entry TC slows the camera on state entry; Tracking TC keeps
-          it glued once converged.
+          Per-state camera profiles. Expand a block to tune zoom speed, sprite size, and framing.
+          Lead-in duration: camera shows track ahead at state start. Lead-out duration: camera
+          decelerates to a stop before state end. Entry TC slows the camera on state entry; Tracking
+          TC keeps it glued once converged.
         </p>
 
         {/* State profile blocks */}
@@ -351,21 +347,45 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Battle trigger threshold
+              Pulk threshold (px)
               <InfoTooltip
-                text={`How close the top 2 racers must be (as fraction of track progress) to trigger battle-zoom. Lower = only fires on very tight duels. Value: ${config.battleGapThreshold}.`}
+                text={`BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance of each other. Lower = only fires on very tight clusters. Value: ${config.battlePulkThresholdPx}px.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={0.02}
-              max={0.2}
-              step={0.01}
-              value={config.battleGapThreshold}
+              min={20}
+              max={500}
+              step={10}
+              value={config.battlePulkThresholdPx ?? 200}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0.02 && v <= 0.2) set('battleGapThreshold', v);
+                if (v >= 20 && v <= 500) set('battlePulkThresholdPx', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              BATTLE min hold (ms)
+              <InfoTooltip
+                text={`Minimum time BATTLE stays active after entry, even if the cluster dissolves sooner. Value: ${config.battleMinDurationMs ?? 3000}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={500}
+              max={10000}
+              step={500}
+              value={config.battleMinDurationMs ?? 3000}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 500 && v <= 10000) set('battleMinDurationMs', v);
               }}
             />
           </div>

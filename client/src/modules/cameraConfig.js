@@ -12,6 +12,10 @@
 //              Schema v4 (2026-05-08): introduces per-state cameraStateProfiles.
 //              v3→v4 migration builds profiles from legacy spritePctOfCanvas /
 //              cameraTransitionSeconds so user-tuned values survive the upgrade.
+//              Schema v5 (2026-05-09): replaces pixel-based leadInDistance /
+//              followDuration / leadOutDistance with time-based leadInDuration /
+//              leadOutDuration (seconds). v4→v5 migration preserves all non-phase
+//              profile fields; phase fields reset to new defaults.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -36,6 +40,7 @@ function normalizeCameraTransitionSeconds(config) {
 
 // Build a cameraStateProfiles object from legacy spritePctOfCanvas / cameraTransitionSeconds
 // fields present on a v2/v3 config.  Preserves any user-tuned per-state values.
+// Phase fields (leadInDuration, leadOutDuration) always use v5 defaults.
 function buildProfilesFromLegacy(config) {
   const sp = config.spritePctOfCanvas ?? {};
   const tc =
@@ -49,25 +54,26 @@ function buildProfilesFromLegacy(config) {
 
   return {
     OVERVIEW: {
-      ...def.OVERVIEW,
       spritePct: sp.overview ?? def.OVERVIEW.spritePct,
       trackingTC: tc.overview ?? def.OVERVIEW.trackingTC,
       entryTC: tc.overview ?? def.OVERVIEW.entryTC,
       innerFramePct,
       maxStateDuration: globalMax,
       minStateHold: globalMin,
+      leadInDuration: def.OVERVIEW.leadInDuration,
+      leadOutDuration: def.OVERVIEW.leadOutDuration,
     },
     LEADER_ZOOM: {
-      ...def.LEADER_ZOOM,
       spritePct: sp.leader ?? def.LEADER_ZOOM.spritePct,
       trackingTC: tc.leader ?? def.LEADER_ZOOM.trackingTC,
       entryTC: tc.leader ?? def.LEADER_ZOOM.entryTC,
       innerFramePct,
       maxStateDuration: globalMax,
       minStateHold: globalMin,
+      leadInDuration: def.LEADER_ZOOM.leadInDuration,
+      leadOutDuration: def.LEADER_ZOOM.leadOutDuration,
     },
     BATTLE_ZOOM: {
-      ...def.BATTLE_ZOOM,
       spritePct: sp.battle ?? def.BATTLE_ZOOM.spritePct,
       trackingTC: tc.battle ?? def.BATTLE_ZOOM.trackingTC,
       entryTC: tc.battle ?? def.BATTLE_ZOOM.entryTC,
@@ -75,27 +81,59 @@ function buildProfilesFromLegacy(config) {
       // BATTLE had its own maxStateDuration in v3
       maxStateDuration: config.battleMaxDurationMs ?? 6000,
       minStateHold: globalMin,
+      leadInDuration: def.BATTLE_ZOOM.leadInDuration,
+      leadOutDuration: def.BATTLE_ZOOM.leadOutDuration,
     },
     COMEBACK_ZOOM: {
-      ...def.COMEBACK_ZOOM,
       spritePct: sp.comeback ?? def.COMEBACK_ZOOM.spritePct,
       trackingTC: tc.comeback ?? def.COMEBACK_ZOOM.trackingTC,
       entryTC: tc.comeback ?? def.COMEBACK_ZOOM.entryTC,
       innerFramePct,
       maxStateDuration: globalMax,
       minStateHold: globalMin,
+      leadInDuration: def.COMEBACK_ZOOM.leadInDuration,
+      leadOutDuration: def.COMEBACK_ZOOM.leadOutDuration,
     },
   };
 }
 
-function migrateV3toV4(config) {
-  if (config.cameraStateProfiles) return { ...config, schemaVersion: 4 };
+function migrateV3toV5(config) {
+  if (config.cameraStateProfiles) {
+    // Already has profiles (shouldn't happen on v3, but guard): migrate to v5 format
+    return migrateV4toV5({ ...config, schemaVersion: 4 });
+  }
   return {
     ...config,
     cameraStateProfiles: buildProfilesFromLegacy(config),
     entryConvergenceZoom: DEFAULT_CAMERA_CONFIG.entryConvergenceZoom,
     entryConvergencePx: DEFAULT_CAMERA_CONFIG.entryConvergencePx,
-    schemaVersion: 4,
+    schemaVersion: 5,
+  };
+}
+
+// v4→v5: preserve non-phase profile fields; reset phase fields to new duration-based defaults.
+function migrateV4toV5(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = {};
+  for (const state of Object.keys(defProfiles)) {
+    const old = oldProfiles[state] ?? {};
+    newProfiles[state] = {
+      spritePct: old.spritePct ?? defProfiles[state].spritePct,
+      trackingTC: old.trackingTC ?? defProfiles[state].trackingTC,
+      entryTC: old.entryTC ?? defProfiles[state].entryTC,
+      innerFramePct: old.innerFramePct ?? defProfiles[state].innerFramePct,
+      maxStateDuration: old.maxStateDuration ?? defProfiles[state].maxStateDuration,
+      minStateHold: old.minStateHold ?? defProfiles[state].minStateHold,
+      // Phase fields: always reset to new defaults (px → seconds not convertible)
+      leadInDuration: defProfiles[state].leadInDuration,
+      leadOutDuration: defProfiles[state].leadOutDuration,
+    };
+  }
+  return {
+    ...config,
+    cameraStateProfiles: newProfiles,
+    schemaVersion: 5,
   };
 }
 
@@ -112,7 +150,7 @@ export function loadCameraConfig() {
     }
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...patched };
     // v2/v3 configs never had cameraStateProfiles; strip the default so
-    // migrateV3toV4 always calls buildProfilesFromLegacy instead of short-circuiting.
+    // migrateV3toV5 always calls buildProfilesFromLegacy instead of short-circuiting.
     delete merged.cameraStateProfiles;
     if (patched.spritePctOfCanvas) {
       merged.spritePctOfCanvas = {
@@ -123,8 +161,7 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    // Fall through to v3→v4 migration
-    return migrateV3toV4(merged);
+    return migrateV3toV5(merged);
   }
 
   if (stored.schemaVersion === 3) {
@@ -142,12 +179,17 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV3toV4(merged);
+    return migrateV3toV5(merged);
   }
 
-  if (stored.schemaVersion !== 4) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 4) {
+    // v4→v5: preserve zoom/TC fields, reset pixel phase fields to new duration defaults.
+    return migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored });
+  }
 
-  // v4: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 5) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v5: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -163,5 +205,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 4 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 5 });
 }
