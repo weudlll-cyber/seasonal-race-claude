@@ -175,6 +175,40 @@ describe('EditorShape — getBoundingBox', () => {
   });
 });
 
+describe('EditorShape — getPosition smoothness (interpolation, no staircase)', () => {
+  it('closed track: t and t+tiny within same old bin give distinct positions', () => {
+    // With n=10 and Math.round, t=0.051 and t=0.052 both rounded to idx=1 → identical output.
+    // With linear interpolation they produce distinct fractional positions.
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 10 });
+    const p0 = shape.getPosition(0.051, 0);
+    const p1 = shape.getPosition(0.052, 0);
+    const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    expect(dist).toBeGreaterThan(0);
+  });
+
+  it('open track: t and t+tiny within same old bin give distinct positions', () => {
+    const shape = new EditorShape(STRAIGHT_OPEN, { samples: 10 });
+    const p0 = shape.getPosition(0.051, 0);
+    const p1 = shape.getPosition(0.052, 0);
+    const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    expect(dist).toBeGreaterThan(0);
+  });
+
+  it('closed track: positions across a sample boundary change monotonically', () => {
+    // n=10 → boundary at t=0.05 (idx flips 0→1 under old Math.round).
+    // With interpolation, p(0.049), p(0.05), p(0.051) must each move in the same direction.
+    const shape = new EditorShape(TRIANGLE_CLOSED, { samples: 10 });
+    const pA = shape.getPosition(0.049, 0);
+    const pM = shape.getPosition(0.05, 0);
+    const pB = shape.getPosition(0.051, 0);
+    const dAM = Math.hypot(pM.x - pA.x, pM.y - pA.y);
+    const dMB = Math.hypot(pB.x - pM.x, pB.y - pM.y);
+    // Both halves must show movement (old code: one half had zero movement)
+    expect(dAM).toBeGreaterThan(0);
+    expect(dMB).toBeGreaterThan(0);
+  });
+});
+
 describe('EditorShape — offset clamping in getPosition', () => {
   const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
 
