@@ -70,8 +70,13 @@ export function resetRacePhase(raceId) {
  * }} config
  * @param {string|symbol} [raceId]  Race identifier for phase tracking. Omit for
  *   legacy callers / tests — phase tracking is skipped and race-phase forces are applied.
+ * @param {((data: object) => void) | null} [_traceCallback]  Optional per-racer-per-frame
+ *   callback receiving force decomposition data. Pass null (default) for production use.
+ *   Called after physicalY is updated: { racerIndex, physicalY_pre, delta_homeForce,
+ *   delta_avoidance, delta_softRepulsion, delta_hardClamp, delta_total, physicalY_post,
+ *   neighborCount, phase, phaseFactors_applied }.
  */
-export function applyRacerBehavior(racers, config, raceId) {
+export function applyRacerBehavior(racers, config, raceId, _traceCallback = null) {
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
@@ -120,10 +125,15 @@ export function applyRacerBehavior(racers, config, raceId) {
   const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
+  // Trace-only maps — allocated only when a callback is registered.
+  const yHomeDelta = _traceCallback ? new Map(active.map((r) => [r.index, 0])) : null;
+  const yNormAvoid = _traceCallback ? new Map(active.map((r) => [r.index, 0])) : null;
 
   // ── Home force — spring toward centerline ──────────────────────────────────
   for (const r of active) {
-    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * homeMult);
+    const hd = -r.physicalY * config.homeForceStrength * homeMult;
+    if (yHomeDelta) yHomeDelta.set(r.index, hd);
+    yDeltas.set(r.index, hd);
   }
 
   // ── Avoidance ──────────────────────────────────────────────────────────────
@@ -186,12 +196,15 @@ export function applyRacerBehavior(racers, config, raceId) {
     const count = neighborCounts.get(r.index);
     const avoid =
       count > 1 ? yAvoidDeltas.get(r.index) / Math.pow(count, exp) : yAvoidDeltas.get(r.index);
+    if (yNormAvoid) yNormAvoid.set(r.index, avoid);
     yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
   }
 
   // Apply deltas + soft repulsion + hard clamp
   for (const r of active) {
+    const _pPre = _traceCallback ? r.physicalY : 0;
     let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
+    const _pPreRepulsion = _traceCallback ? newY : 0;
 
     // Soft repulsion: grows quadratically as physicalY approaches boundary
     const absY = Math.abs(newY);
@@ -201,9 +214,26 @@ export function applyRacerBehavior(racers, config, raceId) {
     }
 
     // maxLateral cap + hard boundary clamp
+    const _pPreClamp = _traceCallback ? newY : 0;
     const cap = Math.min(config.maxLateral, 1.0);
     r.physicalY = Math.max(-cap, Math.min(cap, newY));
     r.avoidanceActive = speedBrakeSet.has(r.index);
+
+    if (_traceCallback) {
+      _traceCallback({
+        racerIndex: r.index,
+        physicalY_pre: _pPre,
+        delta_homeForce: yHomeDelta.get(r.index) ?? 0,
+        delta_avoidance: yNormAvoid.get(r.index) ?? 0,
+        delta_softRepulsion: _pPreClamp - _pPreRepulsion,
+        delta_hardClamp: r.physicalY - _pPreClamp,
+        delta_total: r.physicalY - _pPre,
+        physicalY_post: r.physicalY,
+        neighborCount: neighborCounts.get(r.index) ?? 0,
+        phase: inStartPhase ? 'start' : 'race',
+        phaseFactors_applied: { home: homeMult, avoidance: avoidMult },
+      });
+    }
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────
