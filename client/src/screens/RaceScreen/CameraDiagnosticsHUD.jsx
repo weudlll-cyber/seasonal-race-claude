@@ -26,6 +26,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     isOpen: false,
     hudState: 'OVERVIEW',
     currentTc: 0,
+    lerpPhase: 'entry',
     lagX: 0,
     lagY: 0,
     transitioning: false,
@@ -38,6 +39,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY: 0,
     targetZoom: 1,
     bsY: 1,
+    lookaheadDx: 0,
+    lookaheadDy: 0,
   });
   const intervalRef = useRef(null);
 
@@ -53,6 +56,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         isOpen: dir._isOpenTrack ?? false,
         hudState: dir.hudState ?? 'OVERVIEW',
         currentTc: dir.currentTc ?? 0,
+        lerpPhase: dir.lerpPhase ?? 'tracking',
         lagX: (dir.targetOffsetX ?? 0) - (dir.offsetX ?? 0),
         lagY: (dir.targetOffsetY ?? 0) - (dir.offsetY ?? 0),
         transitioning: dir.transitioning ?? false,
@@ -65,6 +69,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         targetOffsetY: dir.targetOffsetY ?? 0,
         targetZoom: dir.targetZoom ?? dir.zoom,
         bsY: dir._bsY ?? 1,
+        lookaheadDx: dir.lookaheadVec?.dx ?? 0,
+        lookaheadDy: dir.lookaheadVec?.dy ?? 0,
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
@@ -79,6 +85,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     isOpen,
     hudState,
     currentTc,
+    lerpPhase,
     lagX,
     lagY,
     transitioning,
@@ -91,6 +98,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
     targetOffsetY,
     targetZoom,
     bsY,
+    lookaheadDx,
+    lookaheadDy,
   } = snapshot;
   const bsX = CANVAS_W / (worldW || CANVAS_W);
   const finalPx = isOpen ? refPx * zoom * OPEN_TRACK_BASE_ZOOM : refPx * zoom * bsX;
@@ -149,8 +158,22 @@ export default function CameraDiagnosticsHUD({ cameraRef, visible }) {
         state: <span style={{ color: '#ffd700' }}>{hudState}</span> | TC:{' '}
         <span style={{ color: '#b0e0ff' }}>{currentTc.toFixed(1)}s</span>
       </div>
+      <div>
+        phase:{' '}
+        <span style={{ color: lerpPhase === 'entry' ? '#ff6b35' : '#4cff91' }}>{lerpPhase}</span>
+      </div>
       <div style={{ color: lagColor }}>
         lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px
+      </div>
+      <div
+        style={{
+          color:
+            Math.abs(lookaheadDx) + Math.abs(lookaheadDy) > 0.5
+              ? '#ffd700'
+              : 'rgba(176,224,255,0.4)',
+        }}
+      >
+        lookahead: ({lookaheadDx.toFixed(0)}, {lookaheadDy.toFixed(0)}) px
       </div>
       <div style={{ color: '#9be' }}>
         cam: ({camWorldX}, {camWorldY})
