@@ -69,7 +69,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
       if (!dir) return;
       const diag = diagRef?.current ?? {};
       setSnapshot({
-        zoom: dir.zoom,
+        zoom: dir.zoom ?? 1,
         refPx: dir._referenceSpriteSize ?? 0,
         worldW: dir._worldW ?? 1280,
         isOpen: dir._isOpenTrack ?? false,
@@ -229,14 +229,14 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
         </div>
         <div>
           state: <span style={{ color: '#ffd700' }}>{hudState}</span> | TC:{' '}
-          <span style={{ color: '#b0e0ff' }}>{currentTc.toFixed(1)}s</span>
+          <span style={{ color: '#b0e0ff' }}>{(currentTc ?? 0).toFixed(1)}s</span>
         </div>
         <div>
           phase:{' '}
           <span style={{ color: lerpPhase === 'entry' ? '#ff6b35' : '#4cff91' }}>{lerpPhase}</span>
         </div>
         <div style={{ color: lagColor }}>
-          lag: ({lagX.toFixed(0)}, {lagY.toFixed(0)}) px
+          lag: ({(lagX ?? 0).toFixed(0)}, {(lagY ?? 0).toFixed(0)}) px
         </div>
         <div
           style={{
@@ -249,7 +249,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           }}
         >
           obs: <span style={{ fontWeight: 700 }}>{observerPhase}</span> | camT:{' '}
-          {camT != null ? camT.toFixed(3) : 'null'} | focusT: {lastFocusT.toFixed(3)}
+          {camT != null ? (camT ?? 0).toFixed(3) : 'null'} | focusT: {(lastFocusT ?? 0).toFixed(3)}
         </div>
         <div>
           follow%:{' '}
@@ -272,39 +272,47 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           <>
             <div>
               entry-conv:{' '}
-              <span style={{ color: entryDeltaZoom > entryThreshZoom ? '#ff6b35' : '#4cff91' }}>
-                ΔZ={entryDeltaZoom.toFixed(3)}/{entryThreshZoom}
+              <span
+                style={{ color: (entryDeltaZoom ?? 0) > entryThreshZoom ? '#ff6b35' : '#4cff91' }}
+              >
+                ΔZ={(entryDeltaZoom ?? 0).toFixed(3)}/{entryThreshZoom}
               </span>{' '}
-              <span style={{ color: entryDeltaX > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
-                ΔX={entryDeltaX.toFixed(0)}
+              <span style={{ color: (entryDeltaX ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
+                ΔX={(entryDeltaX ?? 0).toFixed(0)}
               </span>{' '}
-              <span style={{ color: entryDeltaY > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
-                ΔY={entryDeltaY.toFixed(0)}/{entryThreshPx}px
+              <span style={{ color: (entryDeltaY ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
+                ΔY={(entryDeltaY ?? 0).toFixed(0)}/{entryThreshPx}px
               </span>
             </div>
-            <div>entry-elapsed: {entryElapsedMs.toFixed(0)}ms</div>
+            <div>entry-elapsed: {(entryElapsedMs ?? 0).toFixed(0)}ms</div>
           </>
         )}
         <div>
           Δv: r0-r1:{' '}
-          <span style={{ color: Math.abs(dv01) < 0.05 ? '#4cff91' : '#ffd700' }}>
-            {dv01.toFixed(1)}
+          <span style={{ color: Math.abs(dv01 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
+            {(dv01 ?? 0).toFixed(1)}
           </span>
           {' (max '}
           <span
-            style={{ color: dv01Max < 0.5 ? '#4cff91' : dv01Max < 1.5 ? '#ffd700' : '#ff6b35' }}
+            style={{
+              color:
+                (dv01Max ?? 0) < 0.5 ? '#4cff91' : (dv01Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+            }}
           >
-            {dv01Max.toFixed(1)}
+            {(dv01Max ?? 0).toFixed(1)}
           </span>
           {') | r1-r2: '}
-          <span style={{ color: Math.abs(dv12) < 0.05 ? '#4cff91' : '#ffd700' }}>
-            {dv12.toFixed(1)}
+          <span style={{ color: Math.abs(dv12 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
+            {(dv12 ?? 0).toFixed(1)}
           </span>
           {' (max '}
           <span
-            style={{ color: dv12Max < 0.5 ? '#4cff91' : dv12Max < 1.5 ? '#ffd700' : '#ff6b35' }}
+            style={{
+              color:
+                (dv12Max ?? 0) < 0.5 ? '#4cff91' : (dv12Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+            }}
           >
-            {dv12Max.toFixed(1)}
+            {(dv12Max ?? 0).toFixed(1)}
           </span>
           {') px/f'}
         </div>
@@ -319,7 +327,8 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           Δ: ({tgtWorldX - camWorldX}, {tgtWorldY - camWorldY})
         </div>
         <div>
-          pan: {(panProgress * 100).toFixed(0)}% | zoom: {(zoomProgress * 100).toFixed(0)}%{' '}
+          pan: {((panProgress ?? 1) * 100).toFixed(0)}% | zoom:{' '}
+          {((zoomProgress ?? 1) * 100).toFixed(0)}%{' '}
           <span style={{ color: targetVisible ? '#4cff91' : '#ff6b35' }}>
             {targetVisible ? '✓' : '✗'} target
           </span>
@@ -327,9 +336,9 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
         <div>
           worldW: {worldW}px | {isOpen ? 'open' : 'closed'}
         </div>
-        <div>refPx: {refPx.toFixed(1)}px</div>
-        <div>zoom: {zoom.toFixed(4)}</div>
-        <div style={{ color: '#ffd700' }}>finalPx: {finalPx.toFixed(1)}px</div>
+        <div>refPx: {(refPx ?? 0).toFixed(1)}px</div>
+        <div>zoom: {(zoom ?? 1).toFixed(4)}</div>
+        <div style={{ color: '#ffd700' }}>finalPx: {(finalPx ?? 0).toFixed(1)}px</div>
       </div>
       {battleSnapshots.length > 0 && (
         <div
@@ -359,11 +368,13 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           </div>
           {battleSnapshots.map((s) => (
             <div key={s.f} style={{ color: s.conv ? '#4cff91' : '#ffd700', whiteSpace: 'pre' }}>
-              {String(s.f).padStart(2)} | {s.phase === 'entry' ? 'en' : 'tr'}/
-              {OBS_ABBR[s.obs] ?? s.obs.slice(0, 2)} | {s.camT != null ? s.camT.toFixed(3) : 'null'}{' '}
-              | {s.focusT.toFixed(3)} | {(s.dT >= 0 ? '+' : '') + s.dT.toFixed(3)} |{' '}
-              {String(s.dX.toFixed(0)).padStart(4)} {String(s.dY.toFixed(0)).padStart(4)} |{' '}
-              {s.dZ.toFixed(3)} | {s.conv ? '✓' : '✗'}
+              {String(s.f ?? 0).padStart(2)} | {s.phase === 'entry' ? 'en' : 'tr'}/
+              {OBS_ABBR[s.obs] ?? (s.obs ?? '??').slice(0, 2)} |{' '}
+              {s.camT != null ? (s.camT ?? 0).toFixed(3) : 'null'} | {(s.focusT ?? 0).toFixed(3)} |{' '}
+              {((s.dT ?? 0) >= 0 ? '+' : '') + (s.dT ?? 0).toFixed(3)} |{' '}
+              {String((s.dX ?? 0).toFixed(0)).padStart(4)}{' '}
+              {String((s.dY ?? 0).toFixed(0)).padStart(4)} | {(s.dZ ?? 0).toFixed(3)} |{' '}
+              {s.conv ? '✓' : '✗'}
             </div>
           ))}
         </div>
@@ -392,14 +403,13 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
             LEADER-DIAG {leaderFrozen ? '[FROZEN — R to reset]' : '[collecting…]'}
           </div>
           <div style={{ color: '#666', fontSize: '0.62rem', marginBottom: 3 }}>
-            {' F | rx      | dispX   | drawX   | scrX    | tagX    | camX   '}
+            {' F | rx      | drawX   | scrX    | tagX    | camX   '}
           </div>
           {leaderSnapshots.map((s) => (
             <div key={s.f} style={{ color: '#b0e0ff', whiteSpace: 'pre' }}>
-              {String(s.f).padStart(2)} | {s.rx.toFixed(1).padStart(7)} |{' '}
-              {s.dispX.toFixed(1).padStart(7)} | {s.drawX.toFixed(1).padStart(7)} |{' '}
-              {s.scrX.toFixed(1).padStart(7)} | {s.tagX.toFixed(1).padStart(7)} |{' '}
-              {s.camX.toFixed(1).padStart(7)}
+              {String(s.f ?? 0).padStart(2)} | {(s.rx ?? 0).toFixed(1).padStart(7)} |{' '}
+              {(s.drawX ?? 0).toFixed(1).padStart(7)} | {(s.scrX ?? 0).toFixed(1).padStart(7)} |{' '}
+              {(s.tagX ?? 0).toFixed(1).padStart(7)} | {(s.camX ?? 0).toFixed(1).padStart(7)}
             </div>
           ))}
         </div>
