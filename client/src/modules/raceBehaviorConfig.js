@@ -58,7 +58,7 @@ export function loadRaceBehaviorConfig() {
     merged.startPhaseSpreadThreshold <= 0 ||
     merged.startPhaseSpreadThreshold > 0.2 ||
     merged.startPhaseAvoidanceFactor < 0 ||
-    merged.startPhaseAvoidanceFactor > 1 ||
+    merged.startPhaseAvoidanceFactor > 2 ||
     merged.startPhaseHomeForceFactor < 0 ||
     merged.startPhaseHomeForceFactor > 1
   ) {

@@ -1450,3 +1450,40 @@ lange Zeit unsichtbar falsch sein kann.
 
 **Verweis:** `docs/diagnose/avoidance-diagnose.md`; `docs/diagnose/avoidance-fix-verification.md`;
 `raceBehavior.js`; Commit `78efb81`.
+
+## Lesson 72 — Symmetric Force Cancellation in Dense Clusters: Start-Phase Spread Prevents Race-Phase Deadlock
+
+**Kontext:** Force-Decomposition-Trace (Etappe 25, `docs/diagnose/avoidance-force-decomposition.md`)
+zeigte: Avoidance war 11× stärker als Home-Force in der Race-Phase, dennoch blieben alle 8 Racer
+dauerhaft in einem engen Pulk nahe physicalY=0. Annahme aus dem Sweep-Report ("geometrische
+Constraint: Track zu schmal für 8 Sprites") war falsch.
+
+**Erkenntnis:** In einem dichten Pulk wirken Avoidance-Kräfte aus beiden Richtungen gleichzeitig.
+Jeder Racer hat Nachbarn auf beiden Seiten (+Y und -Y) → Kräfte heben sich auf. Net-Force ≈ 0
+trotz starker Einzel-Forces. Das 2-Körper-Gleichgewicht (physicalY_eq = 2.0, geclampt auf 0.95)
+beweist, dass die Parameter für Separation ausreichen — der Fehler liegt im Eingangs-State der
+Race-Phase, nicht in der Race-Phase selbst.
+
+Die Wurzel: `startPhaseAvoidanceFactor = 0.2` ist schwächer als Home-Force in der Start-Phase
+(Avoidance = 0.016/Einheit vs. Home = 0.020/Einheit). In den ersten 4.6 Sekunden konvergieren
+alle Racer von ±0.95 auf |physicalY| < 0.30 — bevor die Race-Phase überhaupt beginnt.
+
+**Konsequenz:** Bei Multi-Body-Kraftsystemen nicht nur die Kräfte in der kritischen Phase prüfen,
+sondern den State-Eingang in diese Phase. Eine Phase, die als "Setup" konzipiert ist (Start-Phase),
+kann den gesamten nachfolgenden Verlauf determinieren, wenn ihre Kräfte falsch kalibriert sind.
+
+**Fix:** `startPhaseAvoidanceFactor: 0.2 → 0.6` — Avoidance wird 2.4× stärker als Home-Force
+in der Start-Phase. Racer spreizen sich auf nahezu maximale Breite, bevor die Race-Phase beginnt.
+Symmetrische Cancellation greift nicht mehr, weil Racer asymmetrisch verteilt eintreten.
+
+**Regel:** Wenn ein multi-body Kraftsystem trotz starker Einzel-Forces keine Separation zeigt:
+(1) Prüfe, ob Kräfte aus entgegengesetzten Richtungen kommen und sich aufheben. (2) Prüfe den
+State-Eingang in die beobachtete Phase — welche Phase davor bestimmt die Anfangsbedingungen?
+(3) Das Problem ist oft nicht die Kraft-Magnitude, sondern die Geometrie.
+
+**Cross-Reference:** PROJECT-PRINCIPLES.md §6 (Diagnose before fix) — die drei Diagnose-Iterationen
+(avoidance-trace → Sweep → Force-Decomposition) waren notwendig, weil jede Schicht eine andere
+Hypothese widerlegte. §1 (UI-configurable) — Fix als Default-Änderung mit Slider-Range-Erweiterung,
+kein Code-Patch.
+
+**Verweis:** `docs/diagnose/avoidance-force-decomposition.md`; `raceBehavior.js`; Commits `8ed007d`, `feat(race): set startPhaseAvoidanceFactor default 0.6`.

@@ -1203,20 +1203,20 @@ function RaceTuningSection() {
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Avoidance Factor (start)
-                <InfoTooltip text="Multiplier on avoidance force during the start phase. Lower = racers stay packed at the start without being pushed apart. Higher = avoidance acts at full strength from the gun. 0 = no separation at all during start phase." />
+                <InfoTooltip text="Multiplier on avoidance force during the start phase (before the field spreads). 0 = no avoidance at start (racers stay packed). 0.5 = half race-phase strength. 1.0 = same strength as race-phase avoidance. > 1.0 = stronger than race phase, pushes racers wide before the race begins. Default 0.6 — tuned so racers enter the race phase already laterally spread, preventing pulk force-cancellation. Range 0–2, step 0.05." />
               </label>
               <input
                 type="number"
                 className={s.input}
                 aria-label="Start Phase Avoidance Factor"
                 min={0}
-                max={1}
+                max={2}
                 step={0.05}
                 value={behaviorConfig.startPhaseAvoidanceFactor}
                 disabled={!behaviorConfig.enabled}
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  if (v >= 0 && v <= 1) setBehavior('startPhaseAvoidanceFactor', v);
+                  if (v >= 0 && v <= 2) setBehavior('startPhaseAvoidanceFactor', v);
                 }}
               />
             </div>

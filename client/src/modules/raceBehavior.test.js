@@ -485,9 +485,10 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG — new fields present', () => {
     expect(d.startPhaseSpreadThreshold).toBeLessThanOrEqual(0.2);
   });
 
-  it('has startPhaseAvoidanceFactor (0–1)', () => {
+  it('has startPhaseAvoidanceFactor (0–2)', () => {
+    // Range extended to 2 to allow values > 1 for start-phase over-drive (see avoidance-force-decomposition.md)
     expect(d.startPhaseAvoidanceFactor).toBeGreaterThanOrEqual(0);
-    expect(d.startPhaseAvoidanceFactor).toBeLessThanOrEqual(1);
+    expect(d.startPhaseAvoidanceFactor).toBeLessThanOrEqual(2);
   });
 
   it('has startPhaseHomeForceFactor (0–1)', () => {

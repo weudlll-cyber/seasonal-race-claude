@@ -258,8 +258,10 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Start-phase detection: field spread below this threshold (max(t)-min(t)) triggers
   // start-phase damping. Once exceeded, race-phase applies permanently.
   startPhaseSpreadThreshold: 0.05,
-  // Avoidance force multiplier during start phase (low = racers stay in tight pack).
-  startPhaseAvoidanceFactor: 0.2,
+  // Avoidance force multiplier during start phase. 0.6 tuned so avoidance is 2.4× stronger
+  // than home-force at start, spreading racers to near-max lateral before race phase begins.
+  // Prevents symmetric force-cancellation deadlock in the race phase (see diagnose/avoidance-force-decomposition.md).
+  startPhaseAvoidanceFactor: 0.6,
   // Home-force multiplier during start phase (damped so pack doesn't collapse to centerline).
   startPhaseHomeForceFactor: 0.5,
 };
