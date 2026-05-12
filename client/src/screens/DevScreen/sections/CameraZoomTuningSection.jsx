@@ -3,19 +3,166 @@
 // Path:        client/src/screens/DevScreen/sections/CameraZoomTuningSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Dev-Screen tuning UI for camera behavior (§6.2).
-//              Controls target sprite size per camera state — the camera zoom is
-//              computed inversely so sprites reach the target size on any track.
+// Description: Dev-Screen tuning UI for camera behavior.
+//              Etappe 3: per-state cameraStateProfiles accordion,
+//              Entry Convergence globals, and State Trigger Settings.
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  DEFAULT_CAMERA_CONFIG,
   loadCameraConfig,
   saveCameraConfig,
-  DEFAULT_CAMERA_CONFIG,
 } from '../../../modules/cameraConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
+
+const CAM_STATES = ['OVERVIEW', 'LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'];
+
+const STATE_LABELS = {
+  OVERVIEW: 'Overview',
+  LEADER_ZOOM: 'Leader Zoom',
+  BATTLE_ZOOM: 'Battle Zoom',
+  COMEBACK_ZOOM: 'Comeback Zoom',
+};
+
+const PROFILE_FIELDS = [
+  {
+    key: 'spritePct',
+    label: 'Sprite size (% of canvas)',
+    min: 0.01,
+    max: 0.3,
+    step: 0.005,
+    tip: (v, n) => `Target sprite height as fraction of canvas in ${n}. ${(v * 100).toFixed(1)}%.`,
+  },
+  {
+    key: 'trackingTC',
+    label: 'Tracking TC (s)',
+    min: 0.05,
+    max: 5,
+    step: 0.05,
+    tip: (v) => `Lerp time-constant during stable tracking in this state. ${v.toFixed(2)}s.`,
+  },
+  {
+    key: 'entryTC',
+    label: 'Entry TC (s)',
+    min: 0.05,
+    max: 5,
+    step: 0.05,
+    tip: (v) =>
+      `Slower lerp TC used right after state entry until camera converges. ${v.toFixed(2)}s.`,
+  },
+  {
+    key: 'lookaheadDistance',
+    label: 'Lookahead distance (px)',
+    min: 0,
+    max: 500,
+    step: 10,
+    tip: (v) => `Pan offset in direction of travel (wired in Etappe 4). ${v}px.`,
+  },
+  {
+    key: 'lookaheadWeight',
+    label: 'Lookahead weight',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    tip: (v) => `Blend factor for lookahead offset (wired in Etappe 4). ${v.toFixed(2)}.`,
+  },
+  {
+    key: 'innerFramePct',
+    label: 'Inner frame %',
+    min: 0.3,
+    max: 1,
+    step: 0.05,
+    tip: (v) =>
+      `Target must land within this fraction of the canvas on each axis. ${(v * 100).toFixed(0)}%.`,
+  },
+  {
+    key: 'maxStateDuration',
+    label: 'Max state duration (ms)',
+    min: 1000,
+    max: 15000,
+    step: 500,
+    tip: (v) => `Hard cap on time in this state before switching. ${v}ms.`,
+  },
+  {
+    key: 'minStateHold',
+    label: 'Min state hold (ms)',
+    min: 1000,
+    max: 10000,
+    step: 500,
+    tip: (v) => `Minimum time locked in this state before any switch. ${v}ms.`,
+  },
+];
+
+function StateProfileBlock({ stateName, profile, defaults, onChangeField, onReset }) {
+  return (
+    <details style={{ marginBottom: '0.4rem' }}>
+      <summary
+        style={{
+          cursor: 'pointer',
+          fontWeight: 600,
+          fontSize: '0.85rem',
+          padding: '0.25rem 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          userSelect: 'none',
+          listStyle: 'none',
+        }}
+      >
+        <span>{STATE_LABELS[stateName]}</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onReset(stateName);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--color-muted)',
+            fontSize: '0.68rem',
+            cursor: 'pointer',
+            padding: '0.1rem 0.2rem',
+            opacity: 0.7,
+            marginLeft: 'auto',
+          }}
+          data-testid={`reset-state-${stateName}`}
+        >
+          Reset state
+        </button>
+      </summary>
+      <div className={s.formGrid} style={{ marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+        {PROFILE_FIELDS.map(({ key, label, min, max, step, tip }) => {
+          const val = profile[key] ?? defaults[key];
+          return (
+            <div key={key} className={s.formGroup}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip(val, STATE_LABELS[stateName])} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                min={min}
+                max={max}
+                step={step}
+                value={val}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= min && v <= max) onChangeField(stateName, key, v);
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
 
 function CameraZoomTuningSection() {
   const [config, setConfig] = useState(() => loadCameraConfig());
@@ -28,50 +175,52 @@ function CameraZoomTuningSection() {
     setConfig((prev) => ({ ...prev, [key]: val }));
   }
 
-  function setPct(key, val) {
-    setConfig((prev) => ({
-      ...prev,
-      spritePctOfCanvas: { ...prev.spritePctOfCanvas, [key]: val },
-    }));
+  function setProfileField(stateName, field, val) {
+    setConfig((prev) => {
+      const prevProfiles = prev.cameraStateProfiles ?? DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      return {
+        ...prev,
+        cameraStateProfiles: {
+          ...prevProfiles,
+          [stateName]: { ...prevProfiles[stateName], [field]: val },
+        },
+      };
+    });
   }
 
-  function setTc(key, val) {
+  function resetState(stateName) {
     setConfig((prev) => {
-      const prevTc =
-        typeof prev.cameraTransitionSeconds === 'object'
-          ? prev.cameraTransitionSeconds
-          : {
-              ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds,
-              overview: prev.cameraTransitionSeconds,
-            };
-      return { ...prev, cameraTransitionSeconds: { ...prevTc, [key]: val } };
+      const prevProfiles = prev.cameraStateProfiles ?? DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      return {
+        ...prev,
+        cameraStateProfiles: {
+          ...prevProfiles,
+          [stateName]: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles[stateName] },
+        },
+      };
     });
   }
 
   function handleReset() {
+    const defProfs = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
     setConfig((prev) => ({
       ...prev,
-      spritePctOfCanvas: { ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas },
+      cameraStateProfiles: Object.fromEntries(
+        Object.keys(defProfs).map((k) => [k, { ...defProfs[k] }])
+      ),
+      entryConvergenceZoom: DEFAULT_CAMERA_CONFIG.entryConvergenceZoom,
+      entryConvergencePx: DEFAULT_CAMERA_CONFIG.entryConvergencePx,
       battleGapThreshold: DEFAULT_CAMERA_CONFIG.battleGapThreshold,
-      maxStateDuration: DEFAULT_CAMERA_CONFIG.maxStateDuration,
       endgameThreshold: DEFAULT_CAMERA_CONFIG.endgameThreshold,
       postStartHoldMs: DEFAULT_CAMERA_CONFIG.postStartHoldMs,
       battleCooldownMs: DEFAULT_CAMERA_CONFIG.battleCooldownMs,
-      battleMaxDurationMs: DEFAULT_CAMERA_CONFIG.battleMaxDurationMs,
-      minStateHoldMs: DEFAULT_CAMERA_CONFIG.minStateHoldMs,
-      cameraTransitionSeconds: { ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds },
       overviewCooldownMin: DEFAULT_CAMERA_CONFIG.overviewCooldownMin,
       overviewCooldownMax: DEFAULT_CAMERA_CONFIG.overviewCooldownMax,
-      targetInnerFramePct: DEFAULT_CAMERA_CONFIG.targetInnerFramePct,
     }));
   }
 
-  const pct = config.spritePctOfCanvas ?? DEFAULT_CAMERA_CONFIG.spritePctOfCanvas;
-  const tc = (() => {
-    const raw = config.cameraTransitionSeconds ?? DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds;
-    if (typeof raw === 'object') return raw;
-    return { ...DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds, overview: raw };
-  })();
+  const profiles = config.cameraStateProfiles ?? DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -96,108 +245,99 @@ function CameraZoomTuningSection() {
           </button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Controls how the camera zooms to keep sprites at a target size during each race phase.
-          Higher percentage means sprites appear larger (closer camera). The zoom is calculated
-          inversely so the same percentage produces the same sprite size on any track.
+          Per-state camera profiles. Expand a block to tune zoom speed, sprite size, lookahead, and
+          framing for each camera state. Entry TC slows the camera on state entry; Tracking TC keeps
+          it glued once converged.
         </p>
 
+        {/* State profile blocks */}
+        <div style={{ marginBottom: '1rem' }}>
+          {CAM_STATES.map((stateName) => (
+            <StateProfileBlock
+              key={stateName}
+              stateName={stateName}
+              profile={profiles[stateName] ?? defProfiles[stateName]}
+              defaults={defProfiles[stateName]}
+              onChangeField={setProfileField}
+              onReset={resetState}
+            />
+          ))}
+        </div>
+
+        {/* Entry Convergence */}
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            marginBottom: '0.4rem',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: '0.5rem',
+          }}
+        >
+          Entry Convergence
+        </div>
+        <div className={s.formGrid} style={{ marginBottom: '1rem' }}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Convergence zoom threshold
+              <InfoTooltip
+                text={`Camera switches from entry to tracking phase once zoom delta drops below this value. Current: ${config.entryConvergenceZoom ?? 0.05}.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.001}
+              max={0.5}
+              step={0.005}
+              value={config.entryConvergenceZoom ?? 0.05}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.001 && v <= 0.5) set('entryConvergenceZoom', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Convergence px threshold
+              <InfoTooltip
+                text={`Camera switches from entry to tracking phase once offset delta drops below this many pixels on each axis. Current: ${config.entryConvergencePx ?? 10}px.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={1}
+              max={100}
+              step={1}
+              value={config.entryConvergencePx ?? 10}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 1 && v <= 100) set('entryConvergencePx', v);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* State Trigger Settings */}
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            marginBottom: '0.4rem',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: '0.5rem',
+          }}
+        >
+          State Trigger Settings
+        </div>
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Overview sprite size (% of canvas)
-              <InfoTooltip
-                text={`Target sprite size during the overview shot that shows the whole field. Also used as the minimum floor so sprites never shrink below this size. Value: ${(pct.overview * 100).toFixed(1)}%.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.02}
-              max={0.1}
-              step={0.005}
-              value={pct.overview}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.02 && v <= 0.1) setPct('overview', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Leader sprite size (% of canvas)
-              <InfoTooltip
-                text={`Target sprite size when the camera follows the leading group. Higher = more zoomed in on the leader. Value: ${(pct.leader * 100).toFixed(1)}%.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.06}
-              max={0.16}
-              step={0.005}
-              value={pct.leader}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.06 && v <= 0.16) setPct('leader', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Battle sprite size (% of canvas)
-              <InfoTooltip
-                text={`Target sprite size during close duels at the front. Higher = more dramatic close-up on the battle. Value: ${(pct.battle * 100).toFixed(1)}%.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.08}
-              max={0.2}
-              step={0.005}
-              value={pct.battle}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.08 && v <= 0.2) setPct('battle', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Comeback sprite size (% of canvas)
-              <InfoTooltip
-                text={`Target sprite size when showing a last-place comeback story. Lower than leader keeps the comeback shot subtler. Value: ${(pct.comeback * 100).toFixed(1)}%.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.04}
-              max={0.12}
-              step={0.005}
-              value={pct.comeback}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.04 && v <= 0.12) setPct('comeback', v);
-              }}
-            />
-          </div>
-
           <div className={s.formGroup}>
             <label
               className={s.label}
@@ -205,7 +345,7 @@ function CameraZoomTuningSection() {
             >
               Battle trigger threshold
               <InfoTooltip
-                text={`How close the top 2 racers must be (as fraction of track progress) to trigger the battle-zoom camera. Lower = only fires on very tight duels. Higher = fires more often. Value: ${config.battleGapThreshold}.`}
+                text={`How close the top 2 racers must be (as fraction of track progress) to trigger battle-zoom. Lower = only fires on very tight duels. Value: ${config.battleGapThreshold}.`}
               />
             </label>
             <input
@@ -227,33 +367,9 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Camera state duration (ms)
-              <InfoTooltip
-                text={`How long the camera holds a zoom state before considering a switch. Lower = more reactive camera that cuts faster. Higher = steadier camera. Value: ${config.maxStateDuration} ms.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={2000}
-              max={12000}
-              step={500}
-              value={config.maxStateDuration}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 2000 && v <= 12000) set('maxStateDuration', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Endgame focus threshold
               <InfoTooltip
-                text={`When the leader passes this fraction of the track, the camera locks onto them for the final stretch. Lower = endgame tension starts earlier. Higher = camera waits until very close to the finish. Value: ${config.endgameThreshold}.`}
+                text={`When the leader passes this fraction of the track, camera locks onto them for the final stretch. Value: ${config.endgameThreshold}.`}
               />
             </label>
             <input
@@ -323,150 +439,6 @@ function CameraZoomTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              BATTLE Max Duration
-              <InfoTooltip
-                text={`Hard cap on BATTLE state duration. Forces exit to LEADER even if racers still close. Value: ${(config.battleMaxDurationMs / 1000).toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={2000}
-              max={15000}
-              step={500}
-              value={config.battleMaxDurationMs}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 2000 && v <= 15000) set('battleMaxDurationMs', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Minimum State Hold
-              <InfoTooltip
-                text={`Global minimum time in any state (except Finish-Drama) to prevent rapid switching. Value: ${(config.minStateHoldMs / 1000).toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0}
-              max={10000}
-              step={500}
-              value={config.minStateHoldMs}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 10000) set('minStateHoldMs', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Transition: OVERVIEW
-              <InfoTooltip
-                text={`Lerp time constant for the OVERVIEW wide-shot pan. Higher = slower, more cinematic sweep. Value: ${tc.overview.toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.1}
-              max={3.0}
-              step={0.1}
-              value={tc.overview}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.1 && v <= 3.0) setTc('overview', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Transition: LEADER
-              <InfoTooltip
-                text={`Lerp time constant when following the leader. Lower = camera tracks the leader more tightly. Value: ${tc.leader.toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.1}
-              max={3.0}
-              step={0.1}
-              value={tc.leader}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.1 && v <= 3.0) setTc('leader', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Transition: BATTLE
-              <InfoTooltip
-                text={`Lerp time constant during battle zoom. Lower = camera responds faster to racers moving together. Value: ${tc.battle.toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.1}
-              max={3.0}
-              step={0.1}
-              value={tc.battle}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.1 && v <= 3.0) setTc('battle', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Transition: COMEBACK
-              <InfoTooltip
-                text={`Lerp time constant during comeback zoom. Lower = camera snaps to the comeback racer faster. Value: ${tc.comeback.toFixed(1)}s.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.1}
-              max={3.0}
-              step={0.1}
-              value={tc.comeback}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.1 && v <= 3.0) setTc('comeback', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Periodic OVERVIEW — Min Interval
               <InfoTooltip
                 text={`Minimum time between automatic OVERVIEW cuts during a race. Value: ${(config.overviewCooldownMin / 1000).toFixed(0)}s.`}
@@ -493,7 +465,7 @@ function CameraZoomTuningSection() {
             >
               Periodic OVERVIEW — Max Interval
               <InfoTooltip
-                text={`Maximum time between automatic OVERVIEW cuts. Actual interval is randomly rolled between min and max each time OVERVIEW exits. Value: ${(config.overviewCooldownMax / 1000).toFixed(0)}s.`}
+                text={`Maximum time between automatic OVERVIEW cuts. Actual interval is randomly rolled between min and max. Value: ${(config.overviewCooldownMax / 1000).toFixed(0)}s.`}
               />
             </label>
             <input
@@ -506,30 +478,6 @@ function CameraZoomTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > config.overviewCooldownMin && v <= 60000) set('overviewCooldownMax', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Target Inner Frame %
-              <InfoTooltip
-                text={`The pan target must land within this fraction of the canvas on each axis. If it doesn't fit at the configured zoom, zoom is reduced in 10% steps until it does. Lower = more lenient (target near edge is OK); higher = stricter centering. Value: ${((config.targetInnerFramePct ?? 0.7) * 100).toFixed(0)}%.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.3}
-              max={0.95}
-              step={0.05}
-              value={config.targetInnerFramePct ?? 0.7}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.3 && v <= 0.95) set('targetInnerFramePct', v);
               }}
             />
           </div>

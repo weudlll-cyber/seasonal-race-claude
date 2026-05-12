@@ -1,43 +1,105 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const defaultSpritePct = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
-
-const defaultTc = { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 };
+const defaultProfiles = {
+  OVERVIEW: {
+    spritePct: 0.05,
+    trackingTC: 1.5,
+    entryTC: 1.5,
+    lookaheadDistance: 0,
+    lookaheadWeight: 0,
+    innerFramePct: 0.7,
+    maxStateDuration: 4000,
+    minStateHold: 5000,
+  },
+  LEADER_ZOOM: {
+    spritePct: 0.08,
+    trackingTC: 0.3,
+    entryTC: 0.3,
+    lookaheadDistance: 0,
+    lookaheadWeight: 0,
+    innerFramePct: 0.7,
+    maxStateDuration: 4000,
+    minStateHold: 5000,
+  },
+  BATTLE_ZOOM: {
+    spritePct: 0.12,
+    trackingTC: 0.3,
+    entryTC: 0.3,
+    lookaheadDistance: 0,
+    lookaheadWeight: 0,
+    innerFramePct: 0.7,
+    maxStateDuration: 6000,
+    minStateHold: 5000,
+  },
+  COMEBACK_ZOOM: {
+    spritePct: 0.065,
+    trackingTC: 0.3,
+    entryTC: 0.3,
+    lookaheadDistance: 0,
+    lookaheadWeight: 0,
+    innerFramePct: 0.7,
+    maxStateDuration: 4000,
+    minStateHold: 5000,
+  },
+};
 
 vi.mock('../../../modules/cameraConfig.js', () => ({
-  loadCameraConfig: vi.fn(() => ({
-    schemaVersion: 2,
-    spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
-    maxTargetScreenPx: 160,
-    tagVisibleMaxCount: 10,
-    showCameraStateHud: true,
-    battleGapThreshold: 0.05,
-    maxStateDuration: 4000,
-    endgameThreshold: 0.85,
-    postStartHoldMs: 7000,
-    battleCooldownMs: 8000,
-    battleMaxDurationMs: 6000,
-    minStateHoldMs: 5000,
-    cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
-    overviewCooldownMin: 15000,
-    overviewCooldownMax: 25000,
-  })),
+  loadCameraConfig: vi.fn(() => freshConfig()),
   saveCameraConfig: vi.fn(),
   DEFAULT_CAMERA_CONFIG: {
-    schemaVersion: 2,
-    spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+    schemaVersion: 4,
+    cameraStateProfiles: {
+      OVERVIEW: {
+        spritePct: 0.05,
+        trackingTC: 1.5,
+        entryTC: 1.5,
+        lookaheadDistance: 0,
+        lookaheadWeight: 0,
+        innerFramePct: 0.7,
+        maxStateDuration: 4000,
+        minStateHold: 5000,
+      },
+      LEADER_ZOOM: {
+        spritePct: 0.08,
+        trackingTC: 0.3,
+        entryTC: 0.3,
+        lookaheadDistance: 0,
+        lookaheadWeight: 0,
+        innerFramePct: 0.7,
+        maxStateDuration: 4000,
+        minStateHold: 5000,
+      },
+      BATTLE_ZOOM: {
+        spritePct: 0.12,
+        trackingTC: 0.3,
+        entryTC: 0.3,
+        lookaheadDistance: 0,
+        lookaheadWeight: 0,
+        innerFramePct: 0.7,
+        maxStateDuration: 6000,
+        minStateHold: 5000,
+      },
+      COMEBACK_ZOOM: {
+        spritePct: 0.065,
+        trackingTC: 0.3,
+        entryTC: 0.3,
+        lookaheadDistance: 0,
+        lookaheadWeight: 0,
+        innerFramePct: 0.7,
+        maxStateDuration: 4000,
+        minStateHold: 5000,
+      },
+    },
+    entryConvergenceZoom: 0.05,
+    entryConvergencePx: 10,
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
     battleGapThreshold: 0.05,
-    maxStateDuration: 4000,
     endgameThreshold: 0.85,
     postStartHoldMs: 7000,
     battleCooldownMs: 8000,
-    battleMaxDurationMs: 6000,
-    minStateHoldMs: 5000,
-    cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
     overviewCooldownMin: 15000,
     overviewCooldownMax: 25000,
   },
@@ -48,19 +110,22 @@ import CameraZoomTuningSection from './CameraZoomTuningSection.jsx';
 
 function freshConfig(overrides = {}) {
   return {
-    schemaVersion: 2,
-    spritePctOfCanvas: { ...defaultSpritePct },
+    schemaVersion: 4,
+    cameraStateProfiles: {
+      OVERVIEW: { ...defaultProfiles.OVERVIEW },
+      LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM },
+      BATTLE_ZOOM: { ...defaultProfiles.BATTLE_ZOOM },
+      COMEBACK_ZOOM: { ...defaultProfiles.COMEBACK_ZOOM },
+    },
+    entryConvergenceZoom: 0.05,
+    entryConvergencePx: 10,
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
     battleGapThreshold: 0.05,
-    maxStateDuration: 4000,
     endgameThreshold: 0.85,
     postStartHoldMs: 7000,
     battleCooldownMs: 8000,
-    battleMaxDurationMs: 6000,
-    minStateHoldMs: 5000,
-    cameraTransitionSeconds: { ...defaultTc },
     overviewCooldownMin: 15000,
     overviewCooldownMax: 25000,
     ...overrides,
@@ -78,39 +143,54 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('Camera Behavior')).toBeTruthy();
   });
 
-  it('renders subtitle about inverse camera logic', () => {
+  it('renders subtitle about per-state profiles', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText(/Controls how the camera zooms/)).toBeTruthy();
+    expect(screen.getByText(/Per-state camera profiles/)).toBeTruthy();
   });
 
-  it('renders Overview sprite size label', () => {
+  it('renders state block summary for Overview', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Overview sprite size (% of canvas)')).toBeTruthy();
+    expect(screen.getByText('Overview')).toBeTruthy();
   });
 
-  it('renders Leader sprite size label', () => {
+  it('renders state block summary for Leader Zoom', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Leader sprite size (% of canvas)')).toBeTruthy();
+    expect(screen.getByText('Leader Zoom')).toBeTruthy();
   });
 
-  it('renders Battle sprite size label', () => {
+  it('renders state block summary for Battle Zoom', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Battle sprite size (% of canvas)')).toBeTruthy();
+    expect(screen.getByText('Battle Zoom')).toBeTruthy();
   });
 
-  it('renders Comeback sprite size label', () => {
+  it('renders state block summary for Comeback Zoom', () => {
     render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Comeback sprite size (% of canvas)')).toBeTruthy();
+    expect(screen.getByText('Comeback Zoom')).toBeTruthy();
+  });
+
+  it('renders Entry Convergence section header', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Entry Convergence')).toBeTruthy();
+  });
+
+  it('renders Convergence zoom threshold label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Convergence zoom threshold')).toBeTruthy();
+  });
+
+  it('renders Convergence px threshold label', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('Convergence px threshold')).toBeTruthy();
+  });
+
+  it('renders State Trigger Settings section header', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByText('State Trigger Settings')).toBeTruthy();
   });
 
   it('renders Battle trigger threshold label', () => {
     render(<CameraZoomTuningSection />);
     expect(screen.getByText('Battle trigger threshold')).toBeTruthy();
-  });
-
-  it('renders Camera state duration (ms) label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Camera state duration (ms)')).toBeTruthy();
   });
 
   it('renders Endgame focus threshold label', () => {
@@ -128,36 +208,6 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('BATTLE Cooldown')).toBeTruthy();
   });
 
-  it('renders BATTLE Max Duration label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('BATTLE Max Duration')).toBeTruthy();
-  });
-
-  it('renders Minimum State Hold label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Minimum State Hold')).toBeTruthy();
-  });
-
-  it('renders Transition: OVERVIEW label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Transition: OVERVIEW')).toBeTruthy();
-  });
-
-  it('renders Transition: LEADER label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Transition: LEADER')).toBeTruthy();
-  });
-
-  it('renders Transition: BATTLE label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Transition: BATTLE')).toBeTruthy();
-  });
-
-  it('renders Transition: COMEBACK label', () => {
-    render(<CameraZoomTuningSection />);
-    expect(screen.getByText('Transition: COMEBACK')).toBeTruthy();
-  });
-
   it('renders Periodic OVERVIEW — Min Interval label', () => {
     render(<CameraZoomTuningSection />);
     expect(screen.getByText('Periodic OVERVIEW — Min Interval')).toBeTruthy();
@@ -168,40 +218,52 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('Periodic OVERVIEW — Max Interval')).toBeTruthy();
   });
 
-  it('shows default overview pct value 0.05', () => {
+  it('shows OVERVIEW spritePct value 0.05', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '0.05')).toBe(true);
   });
 
-  it('shows default leader pct value 0.08', () => {
+  it('shows LEADER_ZOOM spritePct value 0.08', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '0.08')).toBe(true);
   });
 
-  it('shows default battle pct value 0.12', () => {
+  it('shows BATTLE_ZOOM spritePct value 0.12', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '0.12')).toBe(true);
   });
 
-  it('shows default comeback pct value 0.065', () => {
+  it('shows COMEBACK_ZOOM spritePct value 0.065', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '0.065')).toBe(true);
+  });
+
+  it('shows OVERVIEW trackingTC value 1.5', () => {
+    render(<CameraZoomTuningSection />);
+    const inputs = screen.getAllByRole('spinbutton');
+    expect(inputs.some((i) => i.value === '1.5')).toBe(true);
+  });
+
+  it('shows default entryConvergenceZoom value 0.05', () => {
+    render(<CameraZoomTuningSection />);
+    const inputs = screen.getAllByRole('spinbutton');
+    expect(inputs.some((i) => i.value === '0.05')).toBe(true);
+  });
+
+  it('shows default entryConvergencePx value 10', () => {
+    render(<CameraZoomTuningSection />);
+    const inputs = screen.getAllByRole('spinbutton');
+    expect(inputs.some((i) => i.value === '10')).toBe(true);
   });
 
   it('shows default battleGapThreshold value 0.05', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
     expect(inputs.some((i) => i.value === '0.05')).toBe(true);
-  });
-
-  it('shows default maxStateDuration value 4000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '4000')).toBe(true);
   });
 
   it('shows default endgameThreshold value 0.85', () => {
@@ -222,25 +284,6 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(inputs.some((i) => i.value === '8000')).toBe(true);
   });
 
-  it('shows default battleMaxDurationMs value 6000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '6000')).toBe(true);
-  });
-
-  it('shows default minStateHoldMs value 5000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '5000')).toBe(true);
-  });
-
-  it('shows default transition OVERVIEW value 1.5 and LEADER value 0.3', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '1.5')).toBe(true);
-    expect(inputs.some((i) => i.value === '0.3')).toBe(true);
-  });
-
   it('shows default overviewCooldownMin value 15000', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
@@ -257,21 +300,47 @@ describe('CameraZoomTuningSection — default rendering', () => {
     render(<CameraZoomTuningSection />);
     expect(screen.getByTestId('reset-camera-behavior')).toBeTruthy();
   });
+
+  it('renders per-state Reset state buttons', () => {
+    render(<CameraZoomTuningSection />);
+    expect(screen.getByTestId('reset-state-OVERVIEW')).toBeTruthy();
+    expect(screen.getByTestId('reset-state-LEADER_ZOOM')).toBeTruthy();
+    expect(screen.getByTestId('reset-state-BATTLE_ZOOM')).toBeTruthy();
+    expect(screen.getByTestId('reset-state-COMEBACK_ZOOM')).toBeTruthy();
+  });
 });
 
-describe('CameraZoomTuningSection — reset (L58: start from non-default values)', () => {
-  it('reset restores all tuning fields to defaults', () => {
+describe('CameraZoomTuningSection — reset all (start from non-default values)', () => {
+  it('reset restores all profile and global fields to defaults', () => {
     loadCameraConfig.mockReturnValue(
       freshConfig({
-        spritePctOfCanvas: { overview: 0.07, leader: 0.1, battle: 0.15, comeback: 0.09 },
+        cameraStateProfiles: {
+          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePct: 0.07, trackingTC: 2.0, entryTC: 2.0 },
+          LEADER_ZOOM: {
+            ...defaultProfiles.LEADER_ZOOM,
+            spritePct: 0.1,
+            trackingTC: 1.0,
+            entryTC: 1.0,
+          },
+          BATTLE_ZOOM: {
+            ...defaultProfiles.BATTLE_ZOOM,
+            spritePct: 0.15,
+            trackingTC: 0.8,
+            entryTC: 0.8,
+          },
+          COMEBACK_ZOOM: {
+            ...defaultProfiles.COMEBACK_ZOOM,
+            spritePct: 0.09,
+            trackingTC: 0.5,
+            entryTC: 0.5,
+          },
+        },
+        entryConvergenceZoom: 0.1,
+        entryConvergencePx: 20,
         battleGapThreshold: 0.12,
-        maxStateDuration: 8000,
         endgameThreshold: 0.7,
         postStartHoldMs: 3000,
         battleCooldownMs: 4000,
-        battleMaxDurationMs: 9000,
-        minStateHoldMs: 2000,
-        cameraTransitionSeconds: { overview: 2.5, leader: 1.0, battle: 1.0, comeback: 1.0 },
         overviewCooldownMin: 8000,
         overviewCooldownMax: 12000,
       })
@@ -280,15 +349,22 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
     fireEvent.click(screen.getByTestId('reset-camera-behavior'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({
-        spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+        cameraStateProfiles: expect.objectContaining({
+          OVERVIEW: expect.objectContaining({ spritePct: 0.05, trackingTC: 1.5, entryTC: 1.5 }),
+          LEADER_ZOOM: expect.objectContaining({ spritePct: 0.08, trackingTC: 0.3, entryTC: 0.3 }),
+          BATTLE_ZOOM: expect.objectContaining({ spritePct: 0.12, trackingTC: 0.3, entryTC: 0.3 }),
+          COMEBACK_ZOOM: expect.objectContaining({
+            spritePct: 0.065,
+            trackingTC: 0.3,
+            entryTC: 0.3,
+          }),
+        }),
+        entryConvergenceZoom: 0.05,
+        entryConvergencePx: 10,
         battleGapThreshold: 0.05,
-        maxStateDuration: 4000,
         endgameThreshold: 0.85,
         postStartHoldMs: 7000,
         battleCooldownMs: 8000,
-        battleMaxDurationMs: 6000,
-        minStateHoldMs: 5000,
-        cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
         overviewCooldownMin: 15000,
         overviewCooldownMax: 25000,
       })
@@ -305,6 +381,32 @@ describe('CameraZoomTuningSection — reset (L58: start from non-default values)
   });
 });
 
+describe('CameraZoomTuningSection — per-state reset', () => {
+  it('reset-state-OVERVIEW restores only OVERVIEW profile', () => {
+    loadCameraConfig.mockReturnValue(
+      freshConfig({
+        cameraStateProfiles: {
+          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePct: 0.09, trackingTC: 2.0 },
+          LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM, spritePct: 0.1 },
+          BATTLE_ZOOM: { ...defaultProfiles.BATTLE_ZOOM },
+          COMEBACK_ZOOM: { ...defaultProfiles.COMEBACK_ZOOM },
+        },
+      })
+    );
+    render(<CameraZoomTuningSection />);
+    vi.clearAllMocks();
+    fireEvent.click(screen.getByTestId('reset-state-OVERVIEW'));
+    expect(saveCameraConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cameraStateProfiles: expect.objectContaining({
+          OVERVIEW: expect.objectContaining({ spritePct: 0.05, trackingTC: 1.5 }),
+          LEADER_ZOOM: expect.objectContaining({ spritePct: 0.1 }), // unchanged
+        }),
+      })
+    );
+  });
+});
+
 describe('CameraZoomTuningSection — overviewCooldown min/max silent rejection', () => {
   it('setting overviewCooldownMin equal to overviewCooldownMax is rejected (silent)', () => {
     loadCameraConfig.mockReturnValue(
@@ -315,7 +417,6 @@ describe('CameraZoomTuningSection — overviewCooldown min/max silent rejection'
     const inputs = screen.getAllByRole('spinbutton');
     const minInput = inputs.find((i) => i.value === '15000');
     fireEvent.change(minInput, { target: { value: '25000' } });
-    // saveCameraConfig must NOT be called — change was rejected
     expect(saveCameraConfig).not.toHaveBeenCalled();
   });
 

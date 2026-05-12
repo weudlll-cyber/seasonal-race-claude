@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { CameraDirector, CAM_STATE, OPEN_TRACK_BASE_ZOOM } from './CameraDirector.js';
+import {
+  CameraDirector,
+  CAM_STATE,
+  OPEN_TRACK_BASE_ZOOM,
+  tcToLerpFactor,
+} from './CameraDirector.js';
 import { effectiveZoom } from './openTrackCamera.js';
 import {
   lapsFromDuration,
@@ -1682,7 +1687,7 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
   });
 
   it('open track worldW=6000: cam.offsetX not used in render (st.camX/Y path) — no crash', () => {
-    // Open tracks ignore cam.offsetX/Y — resolveCamera in RaceScreen handles st.camX/Y.
+    // Open tracks pan via RaceScreen (getPanTarget+resolveCamera+st.camX/Y), not cam.offsetX/Y.
     const worldW = 6000;
     const cd = new CameraDirector(worldW, 720, true, inverseConfig, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -1782,5 +1787,487 @@ describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
     const offset2 = cd.targetOffsetX;
     // targetOffsetX must change between frames because current zoom changed
     expect(offset2).not.toBeCloseTo(offset1, 5);
+  });
+});
+
+// ── Phase 1 — tcToLerpFactor helper ──────────────────────────────────────────
+
+describe('tcToLerpFactor (Phase 1 helper)', () => {
+  it('tc=0.3s at 60fps: 90% convergence formula matches', () => {
+    const lf = tcToLerpFactor(0.3);
+    expect(lf).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 10);
+  });
+
+  it('tc=1.5s at 60fps: slower (smaller lf) than tc=0.3s', () => {
+    expect(tcToLerpFactor(1.5)).toBeLessThan(tcToLerpFactor(0.3));
+  });
+
+  it('tc=0.3: lf is strictly between 0 and 1', () => {
+    const lf = tcToLerpFactor(0.3);
+    expect(lf).toBeGreaterThan(0);
+    expect(lf).toBeLessThan(1);
+  });
+
+  it('larger tc → smaller lf (slower convergence)', () => {
+    expect(tcToLerpFactor(2.0)).toBeLessThan(tcToLerpFactor(0.5));
+  });
+});
+
+// ── Phase 1 — cameraStateProfiles config path ────────────────────────────────
+
+const profileConfig = {
+  cameraStateProfiles: {
+    OVERVIEW: {
+      spritePct: 0.05,
+      trackingTC: 1.5,
+      entryTC: 1.5,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
+    LEADER_ZOOM: {
+      spritePct: 0.09,
+      trackingTC: 0.25,
+      entryTC: 0.25,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
+    BATTLE_ZOOM: {
+      spritePct: 0.14,
+      trackingTC: 0.35,
+      entryTC: 0.35,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 7000,
+      minStateHold: 5000,
+    },
+    COMEBACK_ZOOM: {
+      spritePct: 0.07,
+      trackingTC: 0.3,
+      entryTC: 0.3,
+      lookaheadDistance: 0,
+      lookaheadWeight: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 4000,
+      minStateHold: 5000,
+    },
+  },
+  entryConvergenceZoom: 0.05,
+  entryConvergencePx: 10,
+  battleGapThreshold: 0.05,
+  endgameThreshold: 0.85,
+  postStartHoldMs: 7000,
+  battleCooldownMs: 8000,
+  overviewCooldownMin: 15000,
+  overviewCooldownMax: 25000,
+  targetInnerFramePct: 0.7,
+};
+
+describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
+  it('_leaderZoom computed from profiles.LEADER_ZOOM.spritePct (0.09)', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
+    // 0.09 × 720 / 50 = 1.296 on closed 1280px track (bsX=1)
+    expect(cd._leaderZoom).toBeCloseTo((0.09 * 720) / 50, 3);
+  });
+
+  it('_battleZoom computed from profiles.BATTLE_ZOOM.spritePct (0.14)', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
+    expect(cd._battleZoom).toBeCloseTo((0.14 * 720) / 50, 3);
+  });
+
+  it('_tcLeader comes from profiles.LEADER_ZOOM.trackingTC (0.25)', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig);
+    expect(cd._tcLeader).toBe(0.25);
+    expect(cd._lfLeader).toBeCloseTo(tcToLerpFactor(0.25), 10);
+  });
+
+  it('_minStateHoldByState uses per-state values from profiles', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig);
+    expect(cd._minStateHoldByState[CAM_STATE.BATTLE_ZOOM]).toBe(5000);
+    expect(cd._minStateHoldByState[CAM_STATE.LEADER_ZOOM]).toBe(5000);
+  });
+
+  it('_maxStateDurationByState uses BATTLE_ZOOM.maxStateDuration (7000)', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig);
+    expect(cd._maxStateDurationByState[CAM_STATE.BATTLE_ZOOM]).toBe(7000);
+    expect(cd._maxStateDurationByState[CAM_STATE.LEADER_ZOOM]).toBe(4000);
+  });
+
+  it('updateConfig() with updated profiles changes _leaderZoom immediately', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
+    const before = cd._leaderZoom;
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, spritePct: 0.15 },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._leaderZoom).toBeGreaterThan(before);
+    expect(cd._leaderZoom).toBeCloseTo((0.15 * 720) / 50, 3);
+  });
+
+  it('updateConfig() with updated profiles changes _tcBattle and _lfBattle', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig);
+    const prevLf = cd._lfBattle;
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        BATTLE_ZOOM: { ...profileConfig.cameraStateProfiles.BATTLE_ZOOM, trackingTC: 1.0 },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._tcBattle).toBe(1.0);
+    expect(cd._lfBattle).toBeLessThan(prevLf); // slower convergence
+    expect(cd._lfBattle).toBeCloseTo(tcToLerpFactor(1.0), 10);
+  });
+});
+
+// ── Phase 1 — dt-scaled lerp ─────────────────────────────────────────────────
+
+describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
+  it('no dt arg (default 16.67ms): lerp factor equals lf60 (behavior-equivalent)', () => {
+    const cd = new CameraDirector(1280, 720, false, null, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    const startZoom = 1.0;
+    cd.zoom = startZoom;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // _setTargets() overwrites targetZoom during update; recover the actual lf
+    // from how far zoom moved toward the target.
+    const delta = cd.targetZoom - startZoom;
+    const actualLf = (cd.zoom - startZoom) / delta;
+    expect(actualLf).toBeCloseTo(cd._lfLeader, 4);
+  });
+
+  it('double dt (33.33ms) produces larger lerp step than single dt', () => {
+    const cd1 = new CameraDirector(1280, 720, false, null, 36);
+    cd1.state = CAM_STATE.LEADER_ZOOM;
+    cd1.stateEnteredAt = 0;
+    cd1.zoom = 1.0;
+    cd1.targetZoom = 3.0;
+
+    const cd2 = new CameraDirector(1280, 720, false, null, 36);
+    cd2.state = CAM_STATE.LEADER_ZOOM;
+    cd2.stateEnteredAt = 0;
+    cd2.zoom = 1.0;
+    cd2.targetZoom = 3.0;
+
+    // Single frame at default dt
+    cd1.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // Double dt frame
+    cd2.update(mockRacers(4), 1000, mockRaceState, 1280, 720, 1000 / 30);
+
+    expect(cd2.zoom).toBeGreaterThan(cd1.zoom);
+  });
+
+  it('two half-dt frames converge to the same result as one full-dt frame', () => {
+    const makeCD = () => {
+      const cd = new CameraDirector(1280, 720, false, null, 36);
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.stateEnteredAt = 0;
+      cd.zoom = 1.0;
+      cd.targetZoom = 3.0;
+      cd.offsetX = 0;
+      cd.targetOffsetX = 0;
+      cd.offsetY = 0;
+      cd.targetOffsetY = 0;
+      return cd;
+    };
+
+    const cdFull = makeCD();
+    const cdHalf = makeCD();
+
+    const halfDt = 1000 / (60 * 2);
+    const fullDt = 1000 / 60;
+
+    cdFull.update(mockRacers(4), 1000, mockRaceState, 1280, 720, fullDt);
+    cdHalf.update(mockRacers(4), 1000, mockRaceState, 1280, 720, halfDt);
+    cdHalf.update(mockRacers(4), 1000, mockRaceState, 1280, 720, halfDt);
+
+    // Two half-dt lerp steps should match one full-dt step within floating-point tolerance
+    expect(cdHalf.zoom).toBeCloseTo(cdFull.zoom, 6);
+  });
+});
+
+// ── Phase 2 — lerpPhase automat ───────────────────────────────────────────────
+
+// Config with distinct entryTC and trackingTC so tests can tell them apart
+const phase2Config = {
+  ...profileConfig,
+  cameraStateProfiles: {
+    ...profileConfig.cameraStateProfiles,
+    LEADER_ZOOM: {
+      ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+      trackingTC: 0.1, // fast tracking
+      entryTC: 2.0, // slow entry (clearly different)
+    },
+    BATTLE_ZOOM: {
+      ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
+      trackingTC: 0.15,
+      entryTC: 1.8,
+    },
+  },
+  entryConvergenceZoom: 0.05,
+  entryConvergencePx: 10,
+};
+
+describe('CameraDirector — Phase 2: lerpPhase automat', () => {
+  it('lerpPhase starts as entry on construct', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('lerpPhase resets to entry on state transition', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    // Drive to tracking by converging all dimensions
+    cd.zoom = cd.targetZoom;
+    cd.offsetX = cd.targetOffsetX;
+    cd.offsetY = cd.targetOffsetY;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    // Force a state transition
+    cd._transition(mockRacers(4), 20000, mockRaceState);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('lerpPhase switches to tracking when all three dimensions converge', () => {
+    // Open track: CameraDirector never touches offsetX/Y, so offsets stay at 0.
+    // Park zoom exactly at target → convergence check passes on next update.
+    const cd = new CameraDirector(6000, 720, true, phase2Config, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom; // pre-converge zoom
+    // offsets stay 0 (open-track path never writes them)
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.lerpPhase).toBe('tracking');
+  });
+
+  it('lerpPhase stays in entry while one dimension is not converged', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    // Converge zoom and Y, but leave X far away
+    cd.zoom = cd.targetZoom;
+    cd.offsetY = cd.targetOffsetY;
+    cd.offsetX = cd.targetOffsetX - 100; // 100px lag
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.lerpPhase).toBe('entry');
+  });
+
+  it('entry phase uses _lfEntryByState, tracking phase uses _lfByState', () => {
+    const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
+    // In entry phase, lerpFactorForState should return entry lf
+    const entryLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
+    expect(entryLf).toBeCloseTo(cd._lfEntryLeader, 10);
+    expect(entryLf).toBeCloseTo(tcToLerpFactor(2.0), 10);
+
+    // Switch to tracking, then check
+    cd._lerpPhase = 'tracking';
+    const trackingLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
+    expect(trackingLf).toBeCloseTo(cd._lfLeader, 10);
+    expect(trackingLf).toBeCloseTo(tcToLerpFactor(0.1), 10);
+
+    // The two must differ
+    expect(entryLf).not.toBeCloseTo(trackingLf, 3);
+  });
+
+  it('with entryTC == trackingTC, behavior is equivalent to phase 1 (no-op)', () => {
+    // Default profileConfig has entryTC == trackingTC for all states
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    expect(cd._lfEntryLeader).toBeCloseTo(cd._lfLeader, 10);
+    expect(cd._lfEntryBattle).toBeCloseTo(cd._lfBattle, 10);
+    expect(cd._lfEntryOverview).toBeCloseTo(cd._lfOverview, 10);
+    expect(cd._lfEntryComeback).toBeCloseTo(cd._lfComeback, 10);
+  });
+
+  it('updateConfig() with new entryTC updates _lfEntry immediately', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
+    const before = cd._lfEntryLeader;
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, entryTC: 3.0 },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._lfEntryLeader).toBeLessThan(before); // slower convergence
+    expect(cd._lfEntryLeader).toBeCloseTo(tcToLerpFactor(3.0), 10);
+    // _lfEntryByState map updated too
+    expect(cd._lfEntryByState[CAM_STATE.LEADER_ZOOM]).toBeCloseTo(tcToLerpFactor(3.0), 10);
+  });
+});
+
+// ── Phase 4: Lookahead ────────────────────────────────────────────────────────
+
+// Open-track CameraDirector used so _lastLookaheadDx/Dy is computed without
+// triggering the closed-track pan pipeline. State is forced + stateEnteredAt
+// set 1ms before ts so minStateHold prevents any transition.
+const lookaheadConfig = {
+  ...profileConfig,
+  cameraStateProfiles: {
+    ...profileConfig.cameraStateProfiles,
+    LEADER_ZOOM: {
+      ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+      lookaheadDistance: 200,
+      lookaheadWeight: 1.0,
+    },
+    BATTLE_ZOOM: {
+      ...profileConfig.cameraStateProfiles.BATTLE_ZOOM,
+      lookaheadDistance: 100,
+      lookaheadWeight: 0.5,
+    },
+  },
+};
+
+const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };
+
+describe('CameraDirector — Phase 4: Lookahead', () => {
+  it('lookaheadDistance=0 and lookaheadWeight=0: lookaheadVec is {dx:0, dy:0}', () => {
+    // profileConfig has distance=0, weight=0 for all states
+    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('lookaheadDistance=200, lookaheadWeight=1: LEADER dx = vt*cos(angle)*200', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // vt=1.0 (normal speed) → dx = 1.0 * cos(0) * 200 * 1 = 200
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(200, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('angle=PI/2, vt=0.5: LEADER dy = 0.5*sin(PI/2)*200 = 100', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // vt=0.5 (half speed) → dy = 0.5 * sin(PI/2) * 200 * 1 = 100
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: Math.PI / 2, vt: 0.5 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(0, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(100, 3);
+  });
+
+  it('racer.angle undefined: no lookahead (graceful fallback)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5 }]; // no angle property
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('BATTLE: lookaheadVec is vector mean of r0 and r1 velocity', () => {
+    // r0: angle=0 → vx=1, vy=0; r1: angle=PI/2 → vx=0, vy=1
+    // mean direction: vx=0.5, vy=0.5; mean vtFactor=(1+1)/2=1.0
+    // dist=100, weight=0.5 → dx=1.0*0.5*100*0.5=25, dy=25
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [
+      { x: 100, y: 100, t: 0.5, angle: 0, vt: 1.0 },
+      { x: 102, y: 100, t: 0.48, angle: Math.PI / 2, vt: 1.0 },
+    ];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(25, 3);
+  });
+
+  it('lookaheadWeight=0.5 and vt=0.5: BATTLE dx = 0.5*1*100*0.5 = 25', () => {
+    // both angle=0 → mean vx=1, vy=0; vtFactor=(0.5+0.5)/2=0.5
+    // dist=100, weight=0.5 → dx=0.5*1*100*0.5=25, dy=0
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [
+      { x: 100, y: 100, t: 0.5, angle: 0, vt: 0.5 },
+      { x: 102, y: 100, t: 0.48, angle: 0, vt: 0.5 },
+    ];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(25, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('OVERVIEW: lookaheadVec is always {dx:0, dy:0}', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('legacy config (no profiles): lookaheadVec stays {dx:0, dy:0}', () => {
+    // pctConfig has no cameraStateProfiles → legacy path → _lookaheadByState all zeros
+    const cd = new CameraDirector(6000, 720, true, pctConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('vt=2.0: double velocity doubles lookahead vector (LEADER)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // vt=2.0 → dx = 2.0 * cos(0) * 200 * 1 = 400
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 2.0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec.dx).toBeCloseTo(400, 3);
+    expect(cd.lookaheadVec.dy).toBeCloseTo(0, 3);
+  });
+
+  it('vt=0: lookahead is zero vector regardless of angle', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0, vt: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('vt undefined: graceful fallback to zero (no NaN, no crash)', () => {
+    const cd = new CameraDirector(6000, 720, true, lookaheadConfig, 36);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 5000;
+    // angle valid but vt missing → r?.vt ?? 0 = 0 → no lookahead, no crash
+    const racers = [{ x: 100, y: 100, t: 0.5, angle: 0 }];
+    cd.update(racers, 5001, raceStateIdle, 1280, 720);
+    expect(cd.lookaheadVec).toEqual({ dx: 0, dy: 0 });
+  });
+
+  it('updateConfig() with new lookaheadDistance updates _lookaheadByState immediately', () => {
+    const cd = new CameraDirector(6000, 720, true, profileConfig, 36);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(0);
+    const updated = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          lookaheadDistance: 150,
+          lookaheadWeight: 0.8,
+        },
+      },
+    };
+    cd.updateConfig(updated);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].distance).toBe(150);
+    expect(cd._lookaheadByState[CAM_STATE.LEADER_ZOOM].weight).toBe(0.8);
   });
 });
