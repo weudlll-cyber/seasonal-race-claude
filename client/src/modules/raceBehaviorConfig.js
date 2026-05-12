@@ -44,7 +44,23 @@ export function loadRaceBehaviorConfig() {
     merged.draftingConeAngle >= 180 ||
     merged.draftingBoost < 1 ||
     merged.runoutZone < 0 ||
-    merged.runoutZone > 0.2
+    merged.runoutZone > 0.2 ||
+    merged.minLateralEpsilon <= 0 ||
+    merged.minLateralEpsilon > 0.1 ||
+    merged.crowdNormalizationExponent < 0 ||
+    merged.crowdNormalizationExponent > 1 ||
+    typeof merged.symmetricAvoidance !== 'boolean' ||
+    !Number.isInteger(merged.draftingMaxTargets) ||
+    merged.draftingMaxTargets < 1 ||
+    merged.draftingMaxTargets > 5 ||
+    merged.avoidanceStrictness < 0 ||
+    merged.avoidanceStrictness > 1 ||
+    merged.startPhaseSpreadThreshold <= 0 ||
+    merged.startPhaseSpreadThreshold > 0.2 ||
+    merged.startPhaseAvoidanceFactor < 0 ||
+    merged.startPhaseAvoidanceFactor > 1 ||
+    merged.startPhaseHomeForceFactor < 0 ||
+    merged.startPhaseHomeForceFactor > 1
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

@@ -226,7 +226,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   avoidanceDistance: 0.35,
   tWeight: 2.0,
   yWeight: 1.0,
-  lateralForce: 0.01,
+  lateralForce: 0.04,
   maxLateral: 0.95,
   // Speed brake for side-by-side (adjacent) racers
   speedBrakeYThreshold: 0.2,
@@ -236,4 +236,30 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   draftingMaxDistance: 110,
   draftingConeAngle: 30,
   draftingBoost: 1.1,
+  // Previously hidden constants — now tunable (Phase 2, fix PR)
+  // Minimum physicalY difference before avoidance push direction is determined.
+  // Replaces the 1e-6 hard-coded skip: when |dY| < epsilon, deterministic tie-breaking
+  // pushes racer with higher index toward +Y, lower index toward -Y.
+  minLateralEpsilon: 0.01,
+  // Anti-stacking normalization exponent: avoidanceForce / neighborCount^exponent.
+  // 0.5 = sqrt (previous hard-coded behaviour), 0 = no normalization, 1 = linear damping.
+  crowdNormalizationExponent: 0.5,
+  // When true, both racers share the avoidance push (each gets half force).
+  // When false, only the trailer yields (previous hard-coded behaviour).
+  // Default true: eliminates the Centerline-Convergence deadlock where the leader
+  // never moves and the trailer cannot escape despite avoidance force.
+  symmetricAvoidance: true,
+  // Maximum number of forward racers that can grant a drafting boost simultaneously.
+  // 1 = previous hard-coded break-after-first behaviour.
+  draftingMaxTargets: 1,
+  // Convenience scaler [0, 1] that proportionally amplifies avoidanceStrength and
+  // avoidanceDistance. 0 = minimal avoidance, 1 = strict separation, 0.5 = default.
+  avoidanceStrictness: 0.5,
+  // Start-phase detection: field spread below this threshold (max(t)-min(t)) triggers
+  // start-phase damping. Once exceeded, race-phase applies permanently.
+  startPhaseSpreadThreshold: 0.05,
+  // Avoidance force multiplier during start phase (low = racers stay in tight pack).
+  startPhaseAvoidanceFactor: 0.2,
+  // Home-force multiplier during start phase (damped so pack doesn't collapse to centerline).
+  startPhaseHomeForceFactor: 0.5,
 };

@@ -31,7 +31,11 @@ import {
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import {
+  initRacerBehavior,
+  applyRacerBehavior,
+  resetRacePhase,
+} from '../../modules/raceBehavior.js';
 import {
   computeRacersPerRow,
   computeRowLayout,
@@ -307,6 +311,7 @@ export default function RaceScreen() {
     }
     const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
 
+    const racePhaseId = Symbol('racePhase');
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -320,6 +325,7 @@ export default function RaceScreen() {
       camX: 0,
       camY: 0,
       finalLapStartTs: null,
+      racePhaseId,
       racers: raceData.racers.map((r, i) => {
         const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
         const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
@@ -379,6 +385,7 @@ export default function RaceScreen() {
       }),
     };
 
+    resetRacePhase(racePhaseId);
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
     // ── Canvas positions ────────────────────────────────────────────────────
@@ -929,7 +936,7 @@ export default function RaceScreen() {
           d.dv01Max = Math.max(...d._dv01Buf);
           d.dv12Max = Math.max(...d._dv12Buf);
         }
-        applyRacerBehavior(st.racers, behaviorConfig);
+        applyRacerBehavior(st.racers, behaviorConfig, st.racePhaseId);
 
         for (const r of st.racers) {
           if (r.finished) continue;

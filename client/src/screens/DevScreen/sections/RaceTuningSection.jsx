@@ -3,9 +3,10 @@
 // Path:        client/src/screens/DevScreen/sections/RaceTuningSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Consolidated Race Tuning section — 9 blocks in storyline order:
+// Description: Consolidated Race Tuning section — 10 blocks in storyline order:
 //              Speed Range, Start Layout, Row Start, Speed Re-Roll,
-//              Drafting, Comfort Zone, Soft Avoidance, Speed Brake, Home Force.
+//              Drafting, Comfort Zone, Soft Avoidance, Speed Brake, Home Force,
+//              Avoidance Advanced (strictness + hidden constants + start phase).
 //              Combines content from former BaseSpeedSection + RaceBehaviorSection
 //              + new raceDynamicsConfig (PR-A2.6 re-roll values).
 // ============================================================
@@ -161,6 +162,20 @@ function RaceTuningSection() {
       draftingMaxDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingMaxDistance,
       draftingConeAngle: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle,
       draftingBoost: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost,
+      draftingMaxTargets: DEFAULT_RACE_BEHAVIOR_CONFIG.draftingMaxTargets,
+    }));
+  }
+
+  function resetAvoidanceAdvanced() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      avoidanceStrictness: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceStrictness,
+      symmetricAvoidance: DEFAULT_RACE_BEHAVIOR_CONFIG.symmetricAvoidance,
+      minLateralEpsilon: DEFAULT_RACE_BEHAVIOR_CONFIG.minLateralEpsilon,
+      crowdNormalizationExponent: DEFAULT_RACE_BEHAVIOR_CONFIG.crowdNormalizationExponent,
+      startPhaseSpreadThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.startPhaseSpreadThreshold,
+      startPhaseAvoidanceFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.startPhaseAvoidanceFactor,
+      startPhaseHomeForceFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.startPhaseHomeForceFactor,
     }));
   }
 
@@ -705,6 +720,29 @@ function RaceTuningSection() {
               }}
             />
           </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Slipstream Targets
+              <InfoTooltip text="How many racers ahead can grant a drafting boost at the same time. 1 = only the nearest leader helps. Higher = dense packs chain together — every racer in the slipstream benefits, creating peloton-like clusters." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Max Slipstream Targets"
+              min={1}
+              max={5}
+              step={1}
+              value={behaviorConfig.draftingMaxTargets}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isInteger(v) && v >= 1 && v <= 5) setBehavior('draftingMaxTargets', v);
+              }}
+            />
+          </div>
         </div>
         <p
           data-testid="drafting-summary"
@@ -715,7 +753,8 @@ function RaceTuningSection() {
           <strong style={{ color: 'var(--color-accent)' }}>
             +{((behaviorConfig.draftingBoost - 1) * 100).toFixed(0)}%
           </strong>{' '}
-          speed boost.
+          speed boost · up to <strong>{behaviorConfig.draftingMaxTargets}</strong> leader
+          {behaviorConfig.draftingMaxTargets === 1 ? '' : 's'} at a time.
         </p>
       </SubCard>
 
@@ -1016,6 +1055,194 @@ function RaceTuningSection() {
                 if (v > 0) setBehavior('homeForceStrength', v);
               }}
             />
+          </div>
+        </div>
+      </SubCard>
+
+      {/* ── Block 10: Avoidance Advanced ── */}
+      <SubCard
+        title="Avoidance Advanced"
+        onReset={resetAvoidanceAdvanced}
+        resetTestId="reset-avoidance-advanced"
+        subtitle="Expert controls for racer separation behaviour. Avoidance Strictness is the main dial — it proportionally amplifies both force and detection range. The other parameters expose physical constants that were previously hard-coded and are only worth touching when Strictness alone does not give the result you need."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Avoidance Strictness
+              <InfoTooltip text="Master scaler for how strongly racers separate from each other. 0 = minimal avoidance (racers may overlap), 0.5 = balanced default, 1 = strict separation with strong forces and wide detection range. Scales both lateral force and avoidance distance proportionally." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Avoidance Strictness"
+              min={0}
+              max={1}
+              step={0.05}
+              value={behaviorConfig.avoidanceStrictness}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setBehavior('avoidanceStrictness', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Crowd Normalization Exponent
+              <InfoTooltip text="Reduces avoidance force when a racer is surrounded by many neighbors. 0 = no reduction (each pair pushes full force), 0.5 = force divided by √neighbors (default), 1 = force divided by neighbor count (strong damping in crowds)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Crowd Normalization Exponent"
+              min={0}
+              max={1}
+              step={0.05}
+              value={behaviorConfig.crowdNormalizationExponent}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setBehavior('crowdNormalizationExponent', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Min Lateral Epsilon
+              <InfoTooltip text="Minimum lateral distance difference before avoidance direction is determined from position. Below this threshold, tie-breaking by racer index is used instead. Prevents flip-flopping when two racers are at nearly the same lateral position." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Min Lateral Epsilon"
+              min={0.001}
+              max={0.1}
+              step={0.001}
+              value={behaviorConfig.minLateralEpsilon}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0 && v <= 0.1) setBehavior('minLateralEpsilon', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup} style={{ gridColumn: '1 / -1' }}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
+            >
+              <input
+                type="checkbox"
+                checked={behaviorConfig.symmetricAvoidance}
+                disabled={!behaviorConfig.enabled}
+                onChange={(e) => setBehavior('symmetricAvoidance', e.target.checked)}
+                style={{ cursor: 'pointer' }}
+                aria-label="Symmetric Avoidance"
+              />
+              Symmetric Avoidance
+              <InfoTooltip text="When on, both racers share the avoidance push (each gets half force). When off, only the trailing racer yields. Symmetric avoidance prevents the leader from staying glued to the centerline while the trailer tries to escape." />
+            </label>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: '1rem',
+            paddingTop: '0.75rem',
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              color: 'var(--color-muted)',
+              marginBottom: '0.6rem',
+            }}
+          >
+            Start Phase
+          </p>
+          <div className={s.formGrid}>
+            <div className={s.formGroup}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Spread Threshold
+                <InfoTooltip text="Field spread (max t − min t) at which start-phase damping ends and normal race forces apply. Once the pack spreads beyond this, the transition is permanent. Lower = phase ends sooner. Higher = damped forces last longer into the race." />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label="Start Phase Spread Threshold"
+                min={0.01}
+                max={0.2}
+                step={0.01}
+                value={behaviorConfig.startPhaseSpreadThreshold}
+                disabled={!behaviorConfig.enabled}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v > 0 && v <= 0.2) setBehavior('startPhaseSpreadThreshold', v);
+                }}
+              />
+            </div>
+            <div className={s.formGroup}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Avoidance Factor (start)
+                <InfoTooltip text="Multiplier on avoidance force during the start phase. Lower = racers stay packed at the start without being pushed apart. Higher = avoidance acts at full strength from the gun. 0 = no separation at all during start phase." />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label="Start Phase Avoidance Factor"
+                min={0}
+                max={1}
+                step={0.05}
+                value={behaviorConfig.startPhaseAvoidanceFactor}
+                disabled={!behaviorConfig.enabled}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 0 && v <= 1) setBehavior('startPhaseAvoidanceFactor', v);
+                }}
+              />
+            </div>
+            <div className={s.formGroup}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Home Force Factor (start)
+                <InfoTooltip text="Multiplier on home force during the start phase. Lower = pack doesn't collapse to the centerline before racers have spread out. Higher = racers immediately pull toward center even in the start pack." />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label="Start Phase Home Force Factor"
+                min={0}
+                max={1}
+                step={0.05}
+                value={behaviorConfig.startPhaseHomeForceFactor}
+                disabled={!behaviorConfig.enabled}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v >= 0 && v <= 1) setBehavior('startPhaseHomeForceFactor', v);
+                }}
+              />
+            </div>
           </div>
         </div>
       </SubCard>

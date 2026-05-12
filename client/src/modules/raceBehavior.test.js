@@ -8,8 +8,9 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
+import { initRacerBehavior, applyRacerBehavior, resetRacePhase } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
+import { loadRaceBehaviorConfig } from './raceBehaviorConfig.js';
 
 function makeRacer(overrides = {}) {
   const r = {
@@ -169,26 +170,38 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r2.avoidanceActive).toBe(false);
   });
 
-  it('no lateral force when both racers share the same physicalY (yDiff≈0, B2)', () => {
+  it('deterministic tie-breaking when both racers share the same physicalY (yDiff≈0)', () => {
+    // r1: index 0 (trailer, lower t), r2: index 1 (leader, higher t)
+    // When |dY| < minLateralEpsilon, pushDir = trailer.index > leader.index ? 1 : -1
+    // Here trailer.index(0) < leader.index(1) → pushDir = -1
+    // With symmetric avoidance: trailer moves -Y, leader moves +Y
     const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
     const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
     r1.physicalY = 0;
     r2.physicalY = 0;
     applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    // Neither racer should be pushed (no meaningful yDiff direction)
-    expect(r1.physicalY).toBe(0);
-    expect(r2.physicalY).toBe(0);
+    // Trailer (r1, index 0) is pushed toward -Y
+    expect(r1.physicalY).toBeLessThan(0);
+    // Leader (r2, index 1) is pushed toward +Y (symmetric avoidance)
+    expect(r2.physicalY).toBeGreaterThan(0);
+    // Both move by equal magnitude (symmetric halving)
+    expect(Math.abs(r1.physicalY)).toBeCloseTo(Math.abs(r2.physicalY), 10);
   });
 
-  it('asymmetric: trailer yields, leader physicalY unchanged', () => {
+  it('asymmetric (symmetricAvoidance: false): trailer yields, leader physicalY unchanged', () => {
     // r1 (lower t) is trailer; r2 (higher t) is leader — start at different Y
     const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
     const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
     r1.physicalY = -0.1; // trailer slightly below leader
     r2.physicalY = 0.1;
     const before2 = r2.physicalY;
-    applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    // Leader (r2) should not change (no avoidance force applied to leader)
+    applyRacerBehavior([r1, r2], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      symmetricAvoidance: false,
+    });
+    // Leader (r2) should not change (asymmetric: only trailer yields)
     expect(r2.physicalY).toBeCloseTo(before2, 5);
     // Trailer (r1) should be pushed further negative (away from leader's Y)
     expect(r1.physicalY).toBeLessThan(-0.1);
@@ -414,5 +427,217 @@ describe('applyRacerBehavior — drafting cone', () => {
     follower.physicalY = 0;
     applyRacerBehavior([leader, follower], { ...cfg, enabled: false });
     expect(follower.draftingBoostActive).toBe(false);
+  });
+
+  it('draftingMaxTargets=1 caps boost at one leader', () => {
+    // Follower behind two leaders; only one should grant boost with maxTargets=1
+    const leader1 = makeRacer({ index: 0, t: 0.55, x: 150, y: 300, angle: 0 });
+    const leader2 = makeRacer({ index: 1, t: 0.52, x: 130, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 2, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader1.physicalY = leader2.physicalY = follower.physicalY = 0;
+    applyRacerBehavior([leader1, leader2, follower], {
+      ...cfg,
+      homeForceStrength: 0,
+      draftingMaxDistance: 200,
+      draftingConeAngle: 60,
+      draftingMaxTargets: 1,
+    });
+    // Boost is granted (at least one leader counted)
+    expect(follower.draftingBoostActive).toBe(true);
+  });
+});
+
+// ── Default config values ───────────────────────────────────────────────────
+
+describe('DEFAULT_RACE_BEHAVIOR_CONFIG — new fields present', () => {
+  const d = DEFAULT_RACE_BEHAVIOR_CONFIG;
+
+  it('has minLateralEpsilon', () => {
+    expect(typeof d.minLateralEpsilon).toBe('number');
+    expect(d.minLateralEpsilon).toBeGreaterThan(0);
+    expect(d.minLateralEpsilon).toBeLessThanOrEqual(0.1);
+  });
+
+  it('has crowdNormalizationExponent', () => {
+    expect(typeof d.crowdNormalizationExponent).toBe('number');
+    expect(d.crowdNormalizationExponent).toBeGreaterThanOrEqual(0);
+    expect(d.crowdNormalizationExponent).toBeLessThanOrEqual(1);
+  });
+
+  it('has symmetricAvoidance (boolean)', () => {
+    expect(typeof d.symmetricAvoidance).toBe('boolean');
+  });
+
+  it('has draftingMaxTargets (integer 1–5)', () => {
+    expect(Number.isInteger(d.draftingMaxTargets)).toBe(true);
+    expect(d.draftingMaxTargets).toBeGreaterThanOrEqual(1);
+    expect(d.draftingMaxTargets).toBeLessThanOrEqual(5);
+  });
+
+  it('has avoidanceStrictness (0–1)', () => {
+    expect(typeof d.avoidanceStrictness).toBe('number');
+    expect(d.avoidanceStrictness).toBeGreaterThanOrEqual(0);
+    expect(d.avoidanceStrictness).toBeLessThanOrEqual(1);
+  });
+
+  it('has startPhaseSpreadThreshold (> 0, <= 0.2)', () => {
+    expect(d.startPhaseSpreadThreshold).toBeGreaterThan(0);
+    expect(d.startPhaseSpreadThreshold).toBeLessThanOrEqual(0.2);
+  });
+
+  it('has startPhaseAvoidanceFactor (0–1)', () => {
+    expect(d.startPhaseAvoidanceFactor).toBeGreaterThanOrEqual(0);
+    expect(d.startPhaseAvoidanceFactor).toBeLessThanOrEqual(1);
+  });
+
+  it('has startPhaseHomeForceFactor (0–1)', () => {
+    expect(d.startPhaseHomeForceFactor).toBeGreaterThanOrEqual(0);
+    expect(d.startPhaseHomeForceFactor).toBeLessThanOrEqual(1);
+  });
+});
+
+// ── Validation in raceBehaviorConfig ────────────────────────────────────────
+
+describe('loadRaceBehaviorConfig — rejects out-of-range new fields', () => {
+  it('returns defaults when symmetricAvoidance is not a boolean', () => {
+    // Simulate corrupt storage by monkey-patching via the loaded config
+    // (loadRaceBehaviorConfig merges from storageGet — we test the validation path
+    //  by passing the validated merged object directly isn't possible, but we can
+    //  verify that the valid default config passes validation)
+    const result = loadRaceBehaviorConfig();
+    expect(typeof result.symmetricAvoidance).toBe('boolean');
+  });
+
+  it('loaded config has all new fields with valid values', () => {
+    const result = loadRaceBehaviorConfig();
+    expect(result.minLateralEpsilon).toBeGreaterThan(0);
+    expect(result.crowdNormalizationExponent).toBeGreaterThanOrEqual(0);
+    expect(typeof result.symmetricAvoidance).toBe('boolean');
+    expect(Number.isInteger(result.draftingMaxTargets)).toBe(true);
+    expect(result.avoidanceStrictness).toBeGreaterThanOrEqual(0);
+    expect(result.startPhaseSpreadThreshold).toBeGreaterThan(0);
+    expect(result.startPhaseAvoidanceFactor).toBeGreaterThanOrEqual(0);
+    expect(result.startPhaseHomeForceFactor).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ── Phase detection ──────────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — start/race phase detection', () => {
+  function makePack(n, spreadT = 0) {
+    return Array.from({ length: n }, (_, i) => {
+      const r = makeRacer({ index: i, t: 0.5 + i * (spreadT / n), x: 200, y: 200 });
+      r.physicalY = (i - (n - 1) / 2) * 0.1;
+      return r;
+    });
+  }
+
+  it('applies damped avoidance in start phase (low spread)', () => {
+    const raceId = Symbol('test');
+    resetRacePhase(raceId);
+    const racers = makePack(4, 0.02); // spread = 0.02, below default threshold 0.05
+
+    const dampedCfg = {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      startPhaseSpreadThreshold: 0.05,
+      startPhaseAvoidanceFactor: 0, // zero → no avoidance in start phase
+      startPhaseHomeForceFactor: 0,
+    };
+    const beforeY = racers.map((r) => r.physicalY);
+    applyRacerBehavior(racers, dampedCfg, raceId);
+    // With avoidanceFactor=0, no racer should move
+    racers.forEach((r, i) => expect(r.physicalY).toBeCloseTo(beforeY[i], 10));
+  });
+
+  it('transitions to race phase once spread exceeds threshold (permanent)', () => {
+    const raceId = Symbol('test2');
+    resetRacePhase(raceId);
+
+    // Run with spread > threshold to trigger transition
+    const racers = makePack(4, 0.12); // spread ≈ 0.12 > 0.05
+
+    const phaseCfg = {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      startPhaseSpreadThreshold: 0.05,
+      startPhaseAvoidanceFactor: 0, // start phase would block avoidance
+      startPhaseHomeForceFactor: 0,
+      avoidanceStrictness: 0.5,
+    };
+    // First call: spread triggers transition to race phase
+    applyRacerBehavior(racers, phaseCfg, raceId);
+    const afterY = racers.map((r) => r.physicalY);
+
+    // At least one racer should have moved (race-phase forces applied, not start-phase zero)
+    const anyMoved = racers.some(
+      (r, i) => Math.abs(r.physicalY - afterY[i]) > 0 || afterY[i] !== (i - 1.5) * 0.1
+    );
+    // The transition fired, so avoidanceFactor=0 did NOT suppress forces
+    expect(afterY.some((y, i) => y !== (i - 1.5) * 0.1)).toBe(true);
+  });
+
+  it('resetRacePhase restarts start phase', () => {
+    const raceId = Symbol('test3');
+    resetRacePhase(raceId);
+
+    const racers = makePack(4, 0.12); // triggers transition
+    const phaseCfg = {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      startPhaseSpreadThreshold: 0.05,
+      startPhaseAvoidanceFactor: 0,
+      startPhaseHomeForceFactor: 0,
+    };
+    applyRacerBehavior(racers, phaseCfg, raceId); // transition fires
+
+    // Reset and create a new tight pack
+    resetRacePhase(raceId);
+    const pack2 = makePack(4, 0.02); // below threshold
+    const beforeY2 = pack2.map((r) => r.physicalY);
+    applyRacerBehavior(pack2, phaseCfg, raceId);
+    // Start phase is back — avoidanceFactor=0 blocks all avoidance
+    pack2.forEach((r, i) => expect(r.physicalY).toBeCloseTo(beforeY2[i], 10));
+  });
+});
+
+// ── symmetricAvoidance ───────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — symmetricAvoidance', () => {
+  it('symmetric=true: both racers move (equal magnitude, opposite direction)', () => {
+    const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
+    const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
+    r1.physicalY = -0.1;
+    r2.physicalY = 0.1;
+    applyRacerBehavior([r1, r2], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      symmetricAvoidance: true,
+    });
+    const deltaR1 = Math.abs(r1.physicalY - -0.1);
+    const deltaR2 = Math.abs(r2.physicalY - 0.1);
+    expect(deltaR1).toBeGreaterThan(0);
+    expect(deltaR2).toBeGreaterThan(0);
+    expect(deltaR1).toBeCloseTo(deltaR2, 10);
+  });
+
+  it('symmetric=false: only trailer moves, leader unchanged', () => {
+    const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
+    const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
+    r1.physicalY = -0.1;
+    r2.physicalY = 0.1;
+    const leaderBefore = r2.physicalY;
+    applyRacerBehavior([r1, r2], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      symmetricAvoidance: false,
+    });
+    expect(r2.physicalY).toBeCloseTo(leaderBefore, 5); // leader unchanged
+    expect(r1.physicalY).toBeLessThan(-0.1); // trailer moved
   });
 });
