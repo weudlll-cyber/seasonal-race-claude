@@ -1,0 +1,139 @@
+{
+  "config": {
+    "track": "Dirt Oval",
+    "nRacers": 8,
+    "seed": 6178049,
+    "frames": 600,
+    "durationSec": 10,
+    "spriteWorldPx": 60,
+    "adjForwardPx": 120,
+    "trackWidthPx": 98,
+    "trackLengthPx": 3262,
+    "suffix": "-post-fix"
+  },
+  "aggregate": {
+    "totalPairFrames": 16800,
+    "adjPairFrames": 6815,
+    "adjPct": 40.6,
+    "latHalf_all": 8504,
+    "latHalf_adj": 6478,
+    "latHalfPct_adj": 95.1,
+    "latOne_all": 10176,
+    "latOne_adj": 6798,
+    "latOnePct_adj": 99.8,
+    "latTwo_all": 11852,
+    "latTwo_adj": 6815,
+    "latTwoPct_adj": 100
+  },
+  "episodes": {
+    "count": 13,
+    "avgDurSec": 6.72,
+    "maxDurSec": 9.55,
+    "list": [
+      {
+        "pair": [
+          3,
+          4
+        ],
+        "startSec": 0,
+        "durationSec": 0.02
+      },
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "startSec": 0.2,
+        "durationSec": 5.93
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "startSec": 2.37,
+        "durationSec": 5.12
+      },
+      {
+        "pair": [
+          0,
+          3
+        ],
+        "startSec": 3.48,
+        "durationSec": 4.37
+      },
+      {
+        "pair": [
+          5,
+          7
+        ],
+        "startSec": 1.93,
+        "durationSec": 7.27
+      },
+      {
+        "pair": [
+          6,
+          7
+        ],
+        "startSec": 0.45,
+        "durationSec": 9.55
+      },
+      {
+        "pair": [
+          5,
+          6
+        ],
+        "startSec": 0.78,
+        "durationSec": 9.22
+      },
+      {
+        "pair": [
+          4,
+          5
+        ],
+        "startSec": 1.07,
+        "durationSec": 8.93
+      },
+      {
+        "pair": [
+          2,
+          3
+        ],
+        "startSec": 1.17,
+        "durationSec": 8.83
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "startSec": 1.97,
+        "durationSec": 8.03
+      },
+      {
+        "pair": [
+          4,
+          6
+        ],
+        "startSec": 2.53,
+        "durationSec": 7.47
+      },
+      {
+        "pair": [
+          4,
+          7
+        ],
+        "startSec": 2.98,
+        "durationSec": 7.02
+      },
+      {
+        "pair": [
+          1,
+          3
+        ],
+        "startSec": 4.4,
+        "durationSec": 5.6
+      }
+    ]
+  }
+}

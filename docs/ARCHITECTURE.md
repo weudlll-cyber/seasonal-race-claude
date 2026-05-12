@@ -272,16 +272,18 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 **Force pipeline (applied once per frame after world positions are computed):**
 
-1. **Home force** — `Δy = -physicalY × homeForceStrength` (spring toward centerline)
-2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields; leader holds. Force magnitude scales with proximity. Forces are accumulated separately per racer and divided by `sqrt(neighborCount)` before applying (anti-stacking normalization — prevents boundary-clinging at 20+ racers where linear accumulation would overwhelm restoring forces).
+1. **Home force** — `Δy = -physicalY × homeForceStrength × homeMult` (spring toward centerline)
+2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields. With `symmetricAvoidance = true` (default), both trailer and leader each absorb half the force — eliminates the centerline-deadlock where the leader never moved. Force magnitude scaled by `avoidanceStrictness` convenience scaler. Forces accumulated per racer and divided by `neighborCount^crowdNormalizationExponent` (anti-stacking). When `|ΔY| < minLateralEpsilon`, deterministic tie-breaking by racer index is used instead of direction from ΔY.
 3. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
 4. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
 5. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
-6. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
+6. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of up to `draftingMaxTargets` leaders AND inside a `draftingConeAngle`-wide cone behind each leader; boost applied next frame via `draftingBoost`
+
+**Phase detection:** `applyRacerBehavior` accepts an optional `raceId` symbol for per-race phase tracking. While `max(t) - min(t) < startPhaseSpreadThreshold` the field is in "start phase" — avoidance and home forces are scaled by `startPhaseAvoidanceFactor` / `startPhaseHomeForceFactor` respectively. Once the threshold is exceeded the transition to "race phase" is permanent for that `raceId`. `resetRacePhase(raceId)` must be called at race start.
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 
-All parameters are tunable in the Dev Screen → **Race Tuning** section (PR-A3: formerly the standalone "Race Behavior" section, now consolidated with Base Speed, Row Start, and Re-Roll into one 9-block section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
+All parameters are tunable in the Dev Screen → **Race Tuning** section (10-block section): blocks 5 (Drafting) and 10 (Avoidance Advanced) cover the new fields. `avoidanceStrictness` (Block 10) is the primary user-facing dial — it proportionally amplifies both `lateralForce` and `avoidanceDistance`. Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
 
 ## Camera System
 

@@ -1417,3 +1417,36 @@ visuellen Eindrücken oder Bisect startet, ist §6 verletzt.
 
 **Verweis:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
 `docs/diag/render-smoothness-measurements.md`; Commits `c8538e0`, `7333ec4`, `b53d7d6`.
+
+---
+
+## Lesson 71 — Hidden Constants Are Tuning Landmines
+
+**Kontext:** Die Avoidance-Overlap-Diagnose (Etappe 24, `docs/diagnose/avoidance-diagnose.md`)
+identifizierte vier hard-codierte Konstanten in `raceBehavior.js`, die seit der ersten
+Implementierung nie als Tuning-Parameter exponiert wurden:
+
+- `1e-6` yDiff-Skip → Avoidance feuerte NICHT wenn beide Racer denselben physicalY hatten
+  (was durch die Home-Force regelmäßig passiert)
+- Asymmetrische Avoidance (nur der Trailer weicht aus) → Leader konvergiert zur Centerline,
+  Trailer kann nicht entkommen → Deadlock
+- `Math.sqrt(neighborCount)` Anti-Stacking-Exponent → Nicht tunable, falsch für viele Szenarien
+- `break` after first drafting target → `draftingMaxTargets` konnte nicht konfiguriert werden
+
+Das Zusammenspiel der ersten zwei Konstanten erzeugte eine stabile Gleichgewichtslücke von
+nur ~3.4 px (Sprite ~24 px) — algebraisch beweisbar aus der Force-Balance-Gleichung, aber
+nicht ohne Messung erkennbar.
+
+**Erkenntnis:** Jede hard-codierte Physik-Konstante, die das visuelle Ergebnis beeinflusst, ist
+eine potenzielle Tuning-Landmine. Wenn sie zu klein / zu groß ist, entsteht ein Bug — aber ohne
+Tuning-UI gibt es keinen Hinweis darauf, was geändert werden müsste. Das Diagnose-Werkzeug
+(avoidanceTrace.js, Etappe-23-Pattern) machte die Konstanten erstmals messbar und half,
+die zwei Hypothesen (Logik-Defekt B + Parameter-Defekt A) zu separieren.
+
+**Regel:** Jeder Physik-Parameter, der das Aussehen der Simulation beeinflusst, braucht
+einen Eintrag in der DEFAULT-Konfiguration, Validierung in `*Config.js`, und einen Slider
+in der Dev-UI. "Erst hard-coden und später exponieren" garantiert, dass der Parameter für
+lange Zeit unsichtbar falsch sein kann.
+
+**Verweis:** `docs/diagnose/avoidance-diagnose.md`; `docs/diagnose/avoidance-fix-verification.md`;
+`raceBehavior.js`; Commit `78efb81`.
