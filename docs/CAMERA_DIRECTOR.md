@@ -20,6 +20,9 @@
 | Dev-Panel `CameraZoomTuningSection` | ✅ | Sliders für alle 7 Tunables; Min>Max-Validation-Warning |
 | Diagnose-HUD (Tier-2-Toggle) | ✅ | Ein/Ausblendbar im Dev-Panel ohne Code-Änderung (Project-Principle 1) |
 | **Plan-B Pan-Fix** | ✅ | `_computePanScale` entfernt; triviale Formel in LEADER/BATTLE/COMEBACK |
+| **Pulk Battle Trigger** (Phase 1) | ✅ | `battleGapThreshold`/`battleGapHysteresis` ersetzt durch `battlePulkThresholdPx` (default 200 px); `_isPulk()`: ≥3 von top-10 Racern innerhalb Schwelle → BATTLE. `battleMinDurationMs` (3000 ms) verhindert Flickering bei kurzer Pulk-Auflösung. |
+| **Schema v5 — time-based Lead-In/Out** (Phase 1) | ✅ | `leadInDistance`/`followDuration`/`leadOutDistance` (px) ersetzt durch `leadInDuration`/`leadOutDuration` (Sekunden). Observer-Phase: lead-in → follow → lead-out pro State-Eintritt. v4→v5 Migration in `cameraConfig.js`. |
+| **Diagnose-HUD Tier-2 Erweiterung** (Phase 1) | ✅ | `transitionCount60f`, `entryElapsedMs`, `entryDeltaZoom/X/Y` in CameraDiagnosticsHUD. BATTLE-DIAG + LEADER-DIAG frozen-snapshot panels. |
 
 ### Triviale Pan-Formel (Plan-B)
 

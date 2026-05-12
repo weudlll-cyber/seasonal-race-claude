@@ -55,7 +55,9 @@ export class EditorShape {
 
   /**
    * Returns canvas-space position for a given track fraction and lateral offset.
-   * @param {number} t      Arc-length fraction 0..1
+   * Positions are linearly interpolated between adjacent precomputed samples (500 by default),
+   * not snapped to the nearest sample — eliminates the ~20 px staircase visible at zoom 4×.
+   * @param {number} t      Arc-length fraction 0..1 (open tracks clamped; closed tracks wrap)
    * @param {number} offset Lateral offset: -0.5 = inner edge, 0 = centre, +0.5 = outer edge
    * @returns {{ x: number, y: number, angle: number }}
    */

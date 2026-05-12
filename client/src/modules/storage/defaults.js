@@ -132,8 +132,8 @@ export const DEFAULT_CAMERA_CONFIG = {
       spritePct: 0.05,
       trackingTC: 1.5,
       entryTC: 1.5,
-      leadInDuration: 0,
-      leadOutDuration: 0,
+      leadInDuration: 0, // seconds camera holds lead-in position before following racer
+      leadOutDuration: 0, // seconds camera decelerates before state exit
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
@@ -181,6 +181,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   battleGapThreshold: 0.05,
   endgameThreshold: 0.85,
   // Pulk condition: BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance.
+  // Replaces the old battleGapThreshold (arc-length fraction) — pixel distance is tunable in Dev Panel.
   battlePulkThresholdPx: 200,
   // Minimum time BATTLE stays active after entry even if the pulk dissolves sooner.
   battleMinDurationMs: 3000,

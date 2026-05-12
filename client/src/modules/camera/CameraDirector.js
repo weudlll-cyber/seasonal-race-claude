@@ -688,8 +688,14 @@ export class CameraDirector {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
   }
 
-  // Returns true when ≥3 of the top-10 racers form a cluster within battlePulkThresholdPx.
-  // A cluster exists when at least one racer has ≥2 others within the pixel threshold.
+  /**
+   * Returns true when ≥3 of the top-10 racers (by t) form a cluster within
+   * `battlePulkThresholdPx` world pixels of each other.
+   * A cluster is defined as: at least one racer has ≥2 others within the threshold.
+   * Only considers the top-10 racers to ignore tail-enders milling at the back.
+   * @param {Array<{x:number, y:number, t:number}>} racers  Full racer list, any order.
+   * @returns {boolean}
+   */
   _isPulk(racers) {
     if (!racers || racers.length < 3) return false;
     const top10 = [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(10, racers.length));
