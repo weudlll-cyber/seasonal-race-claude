@@ -29,7 +29,7 @@ seasonal-race-claude/
 │       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
 │       ├── modules/                # Domain logic, independent of React
-│       │   ├── camera/             # CameraDirector, Minimap, lapUtils
+│       │   ├── camera/             # CameraDirector (state machine: OVERVIEW/LEADER/BATTLE/COMEBACK), Minimap, lapUtils, panTarget, openTrackCamera
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
 │       │   │   ├── SpriteRacerType.js  # Config-driven base class for all sprite-based racer types (D3.5)
 │       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
@@ -52,7 +52,7 @@ seasonal-race-claude/
 │       │   │   ├── bgImageCache.js # Async image loader with module-level cache
 │       │   │   ├── index.js        # listEffects / getEffect / getDefaultConfig
 │       │   │   └── effects/        # rain, stars, bubbles, fireflies, dust, mud, wave
-│       │   └── utils/              # Shared helpers (time, math)
+│       │   └── utils/              # RandomHelper (shuffle, assignRacers)
 │       ├── contexts/               # React contexts (TransitionContext)
 │       ├── styles/
 │       │   └── main.css
@@ -105,6 +105,8 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **modules/ are framework-agnostic** — no React imports in `modules/`; screens own the component tree, modules own the logic.
 - **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
 - **Spline Sampling — arc-length uniform (PR-A2.5)** — `catmullRomSpline` defaults to `parameterization: 'arclength'`. A dense T-table (5× requested samples, min 1000) is built per call; binary search maps target arc-lengths to T-values. Racers advance at constant pixel velocity regardless of editor-point distribution. Pass `parameterization: 'parameter'` for legacy T-uniform behaviour.
+- **EditorShape linear interpolation (Etappe 26)** — `EditorShape.getPosition()` uses `Math.floor()` + fractional blend between adjacent precomputed samples instead of the former `Math.round()` nearest-neighbour lookup. At 500 samples on a ~2000 px oval at zoom 4×, `Math.round()` caused ~20 px visible racer jumps per frame; linear interpolation eliminates this. Angles are precomputed once in `_precomputeAngles()` and interpolated with shortest-path wrap.
+- **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdPx` (default 200 px) of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` (default 3000 ms) prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
 - **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are inlined in `RaceScreen/index.jsx`. `drawEditorTrackSurface` now only renders the finish line — solid boundary lines and lane fill were removed in the Race Track Lights PR. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
 - **Track Lights** — Small glowing dots along both boundaries replace the solid cyan boundary lines. Light positions are cached once at race init via `sampleBoundaryAtInterval` (30 px spacing, ~400 points total for typical tracks). Per-frame, only brightness is recomputed per style (`steady`, `sequence`, `sync_pulse`, `random_flash`). Implementation: `client/src/modules/trackLights.js`. Configuration stored as `trackLights` on track geometry; editable in Track Editor; server-migration sets themed defaults on first startup.

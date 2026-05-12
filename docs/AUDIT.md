@@ -452,6 +452,52 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 
 ---
 
+## 2026-05-12 — feat/per-state-camera-phase-1-foundation — Pre-Merge Audit
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6  
+**Scope:** client + server (full)  
+**Branch:** `feat/per-state-camera-phase-1-foundation`
+
+### Metrics
+
+| Metric | Result |
+|--------|--------|
+| npm audit (client) | ✅ 0 vulnerabilities |
+| npm audit (server) | ✅ 0 vulnerabilities |
+| Tests | ✅ 1717 / 1717 (93 test files) |
+| Bundle (gzip) | 131 kB JS + 7 kB CSS |
+| ESLint | ✅ 0 errors |
+| Prettier | ✅ 0 issues |
+| CI pipeline | ✅ Lint + Format + Tests + Audit aktiv |
+| Pre-commit hooks | ✅ lint-staged (ESLint + Prettier) |
+| Build | ✅ sauber (390 ms) |
+
+### Befunde
+
+**0 CRITICAL** — Branch ist mergebereit.
+
+| Priorität | ID | Befund | Aktion |
+|-----------|-----|--------|--------|
+| IMPORTANT | I1 | `utils/index.js` — totes Modul (nie importiert) | ✅ **Gefixt** in Commit C1 |
+| IMPORTANT | I2 | `SectionContainer.jsx` — tote Komponente (nie importiert) | ✅ **Gefixt** in Commit C1 |
+| IMPORTANT | I3 | CORS Wildcard `app.use(cors())` ohne Origin-Filter | Akzeptiert — Phase-L localhost-only; adressieren vor Phase 5 VPS |
+| IMPORTANT | I4 | Keine Server-Authentication auf CRUD-Endpoints | Akzeptiert — Phase 5 JWT, wie geplant |
+| IMPORTANT | I5 | Monolithische Komponenten > 700 Zeilen (TrackEditor 1447, RaceScreen 1286, RaceTuningSection 965) | Backlog — eigener Refactor-Sprint |
+| NICE-TO-HAVE | N1–N9 | JSDoc-Lücken, Browserslist, CI-Server-Tests, React 19 Upgrade-Plan, Code-Splitting | Spätere Sprints |
+
+**Sicherheit:** Keine hardcoded Secrets, kein `dangerouslySetInnerHTML`, kein `innerHTML`-direktzugriff, keine XSS-Vektoren, kein auskommentierter Code. localStorage-Writes ausschließlich über `storage.js`-Modul.
+
+### Scope dieser Branch
+
+- **EditorShape linear interpolation** — `Math.round()` → `Math.floor()` + fraktionaler Blend; eliminiert ~20 px Staircase-Sprünge bei zoom 4× (Etappe 26)
+- **Pulk Battle Trigger** — `battlePulkThresholdPx` (200 px) + `battleMinDurationMs` (3000 ms) ersetzen `battleGapThreshold`/Hysterese
+- **Schema v5** — `leadInDuration`/`leadOutDuration` (Sekunden) ersetzen pixel-basierte `leadInDistance`/`followDuration`/`leadOutDistance`
+- **Observer-Phase** — lead-in → follow → lead-out pro State-Eintritt
+- **Cleanup** — `_display*` und `_drawX/_drawY` Workaround-Felder entfernt; Etappe-23-Trace-Instrumentation entfernt; tote Module gelöscht
+- **Net Tests:** 1619 → 1717 (+98 neue Tests auf Branch)
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |
