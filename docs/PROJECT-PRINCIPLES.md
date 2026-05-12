@@ -44,6 +44,29 @@ Claude Code CLI executes self-contained specs: writes code, tests, docs, commits
 Specs delivered to Claude Code must be fully self-contained. No follow-up clarification
 during execution. The PR body is the authoritative spec reference.
 
+## 6. Diagnose before fix
+
+For any non-trivial bug or behavioral anomaly, work begins with a diagnose sprint, not a
+fix spec. A fix spec may only be written once the root cause is established by data or
+algebraic proof — "sounds plausible" and "I think it's this" are not diagnose results.
+
+Symptom-fixes may serve as a deliberately marked stepping stone when the diagnose sprint
+shows clearly why the clean solution must follow. Stepping stones must be labeled as such
+in the PR body with a forward reference to the clean-fix spec.
+
+Siehe LESSONS.md L46, L48, L69.
+
+## 7. No hotfixes
+
+Quick workarounds that suppress a symptom without understanding the root cause are
+forbidden — including under time pressure. When a bug is blocking, the correct response
+is a prioritized diagnose sprint, not "bump maxScale" or "add a bypass flag".
+
+The only exception is a deliberately marked stepping stone (see §6). Unauthorized hotfixes
+are a design defect of the same severity as a failing test.
+
+Siehe LESSONS.md L48; SPEED_REFACTOR_ANALYSIS.md.
+
 ---
 
 ## Application Conventions
@@ -132,3 +155,78 @@ Detailed technical explanations, reasoning, and diagnostic findings belong in th
 final report at the end of the task — not in intermediate chat messages. Rationale:
 the user needs visible progress signals but not running technical commentary; shorter
 intermediate updates also reduce context consumption.
+
+### Quantitative Diagnose Convention
+
+Diagnose sprints deliver numbers, not impressions. Before any fix of a behavioral anomaly,
+the magnitude of the problem is measured or algebraically derived. For coordinate or
+geometry bugs, a 3-line algebraic proof is written before any code change is committed.
+For stochastic or dynamic bugs, a trace run is evaluated against concrete thresholds
+(e.g. "94.1% of frame-pairs are below X px").
+
+Siehe LESSONS.md L46, L50, L66, L69.
+
+### Daten-Trace Convention
+
+Visual observation ("I see it flicker", "the camera looks the wrong way") is a valid bug
+signal but not a diagnose result. Before a hypothesis counts as confirmed, it must be
+validated by instrumented trace, frame log, or empirical measurement. Browser bisect and
+code changes are not initiated on the basis of visual impression — measure first, then bisect.
+
+Siehe LESSONS.md L53, L65, L67, L68, L69.
+
+### Output-Medium Convention
+
+Persistent diagnose results belong in Markdown reports under `docs/diagnose/` or in the
+in-screen diagnose HUD — not in `console.log`. Console output is permitted for one-shot
+trace tools during active diagnosis (Etappe-23-Pattern: temporary, isolated commit, removed
+together with the fix). Diagnose reports are committed to the repo so that Strategic Claude
+and future sessions can read the data without running the code.
+
+Praxis: `docs/diag/render-smoothness-measurements.md`, Phase-4 Diagnose-HUD Deliverable.
+
+### Tests-grün Convention
+
+Before every commit that touches logic, the test count is reported as baseline
+("Baseline: 1728/1728 green"). After the commit, the new count is reported. Any deviation
+is explained in the PR body: which tests removed, which added, which adjusted, which newly
+failing and why that is intentional. A PR with failing tests may only be merged when the
+failures are documented as deliberate with a reference to the follow-up fix.
+
+Siehe LESSONS.md L1, L8, L17; docs/audit/audit-pre-merge.md.
+
+### Test-Anpassungs Convention
+
+Existing tests may be adjusted or removed when a deliberate refactor intentionally changes
+the tested behavior. In that case the PR body explains: (a) what behavior changed, (b) why
+the old test is obsolete, (c) which new test covers the new behavior. Tests that guard
+correct behavior must not be silently deleted to make a PR green.
+
+Siehe LESSONS.md L19; docs/internal/D3-5-1-diagnose.md §5.
+
+### Diagnose-Tool-Lifecycle Convention (Etappe-23-Pattern)
+
+Diagnose instrumentation (trace code, frame loggers, measurement scripts, HUD extensions)
+is added in an isolated `diag:` commit — separate from the fix commit. Once the diagnosed
+bug is fixed, the instrumentation is removed in the same merge or the immediately following
+commit. This keeps the repo free of diagnostic dead weight and makes the `diag:` commit a
+clean revert point if a refactor fails.
+
+Beispiel: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Etappe 23).
+Bestätigt in: docs/audit/audit-pre-merge.md §5.3.
+
+### Commit-Naming Convention
+
+Commit subjects begin with a prefix followed by a colon and a brief summary. Permitted
+prefixes:
+
+- `feat:` — new behavior, new component, new module
+- `fix:` — bug fix without behavior extension
+- `refactor:` — restructuring without behavior change
+- `docs:` — documentation updates (Markdown files)
+- `chore:` — housekeeping (lint, dependency bumps, file moves without logic)
+- `diag:` — diagnose instrumentation (subject to Etappe-23-Pattern above)
+- `test:` — test changes without code change to the subject under test
+
+Optional scope in parentheses, e.g. `fix(camera): …`. Any other prefix requires a
+justification in the PR body.

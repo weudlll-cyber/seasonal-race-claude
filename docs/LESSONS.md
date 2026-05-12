@@ -1387,3 +1387,33 @@ Räume (world-space, canvas-space, screen-space) simultan existieren und ineinan
 Messungen sind günstiger als Diagnose-Sprints. Diagnose-Sprints sind günstiger als Browser-Bisect.
 
 **Verweis:** Phase-4-Diagnose-Session 2026-05-06, `[PAN]`-Log-Analyse, Lesson 53, Lesson 66.
+
+---
+
+## Lesson 70 — EditorShape-Doppelbild-Marathon: Diagnose-Disziplin als Verhütungs-Prinzip (Phase 1)
+
+**Kontext:** Der EditorShape-Staircase-Bug (Doppelbild / Zackensprünge bei Racer-Positionen)
+beschäftigte die Entwicklung über Etappe 20–23. Root Cause: `Math.round()` in
+`EditorShape.getPosition()` bildete arc-length-t auf den nächsten Sample-Index ab statt linear
+zu interpolieren. Quantitativ gemessen (Etappe-23-Trace): 26.5–27.1 px Sprünge bei 500 Samples
+auf einem ~2000px-Oval bei Zoom 4×. Fix: 3 Zeilen linearer Interpolation + Winkel-Wrap.
+
+**Prozess:** Bevor die Root Cause identifiziert war, wurden Python-Frame-Analyse-Scripts,
+Playwright-Frame-Capture-Specs, 20 PNGs und mehrere Bisect-Sprints auf Browser-State-Artefakten
+ausgeführt (L65, L68). Der Diagnose-Prozess zog sich über mehrere Etappen hin weil die visuelle
+Beobachtung ("Doppelbild", "Zucken") ohne quantitative Messung früh in False-Bisects und
+Hypothesen-Roulette führte.
+
+**Erkenntnis:** Ein algebraischer Beweis der `getPosition()`-Formel (L66: 3-Zeilen-Beweis für
+Pixel-Invarianz) hätte die Root Cause in unter 30 Minuten identifiziert. Die ~14-stündige
+Diagnose entstand durch wiederholte Unterlassung des "Messung vor Bisect"-Schritts.
+
+**Konsequenz (Prinzipien-Erweiterung):** Diese Etappe war der direkte Anlass für die Erweiterung
+von PROJECT-PRINCIPLES.md um §6 (Diagnose before fix) und §7 (No hotfixes) sowie die fünf
+Diagnose-bezogenen Conventions (Quantitative Diagnose, Daten-Trace, Output-Medium,
+Etappe-23-Pattern). Die Prinzipien sind so formuliert, dass ein ähnlicher Marathon erkennbar und
+abbrechbar wird: sobald eine Diagnose-Session die quantitative Messung überspringt und mit
+visuellen Eindrücken oder Bisect startet, ist §6 verletzt.
+
+**Verweis:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
+`docs/diag/render-smoothness-measurements.md`; Commits `c8538e0`, `7333ec4`, `b53d7d6`.
