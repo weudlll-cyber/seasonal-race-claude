@@ -64,10 +64,14 @@ Wenn Drafting zu schwach sichtbar ist:
 
 ## 5. PR-Status
 
-- PR-Nummer: TBD
-- PR-URL: TBD
+- PR-Nummer: #97
+- PR-URL: https://github.com/weudlll-cyber/seasonal-race-claude/pull/97
 - Branch-Name: claude/relaxed-defaults
-- Commit-SHAs: TBD
+- Commit-SHAs:
+  - fd50e98 (feat)
+  - 437b494 (test)
+  - 830af80 (docs)
+  - 15a76fe (docs-fix)
 
 ## Test-Ergebnisse
 
