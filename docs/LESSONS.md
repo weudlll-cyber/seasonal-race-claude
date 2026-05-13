@@ -1431,3 +1431,32 @@ Pulks, die einen ganzen Diagnose-Sprint kostete bis der Architektur-Mangel erkan
 **Take-away:** Behavior-Changes an Default-Werten sind keine kosmetische Änderung. Wenn ein
 bestehender Default eine fachliche Funktion erfüllt (selbst wenn nicht explizit dokumentiert),
 ist sein Ersatz ein Architektur-Eingriff und braucht die Regression Awareness Convention.
+
+## Lesson 74 — Reactive Anti-Collision Architecture Has Structural Limits
+
+**Kontext:** Sowohl das Force-basierte als auch das Slot-basierte Anti-Collision-System waren reaktiv —
+sie erkannten Kollisionen oder unmittelbare Annäherungen und reagierten darauf. Beide zeigten in
+dichten Pulks dieselben strukturellen Probleme in unterschiedlicher Form:
+
+- Force-System: 99.2 % symmetrische Kraft-Cancellation in Pulks — Racer drücken sich gegenseitig
+  zurück zur Ausgangslage, keine Netto-Trennung (PR #88 Trace)
+- Slot-System: 86 % Fallback-Rate (kein freier Slot gefunden), Oscillation zwischen konkurrierenden
+  lokalen Optimal-Slots, 64 % aller Frames mit aktiven Clustern (PR #90 Trace)
+
+Drei Fix-Versuche im Slot-System (Hauptumbau PR #86, EMA-Glättung, Wall-Escape + Slot-Step ≥ minLat)
+zeigten in den Trace-Berichten (PR #88, #89, #90) quantitativ abnehmenden Grenznutzen. Jeder Fix löste
+ein spezifisches Symptom und legte ein neues frei: Micro-Oscillation wurde Macro-Oscillation (±40–130px),
+Wall-Lock wurde Squeeze-Resonanz. Die Cluster lösten sich primär durch longitudinalen Drift statt durch
+aktive Resolver-Logik — die Resolver-Logik war faktisch defekt.
+
+**Take-away:** In Many-Agent-Simulationen mit lokaler Pair-Resolution erzeugt das reaktive Grundprinzip
+Oscillationen (Slot-System) oder Cancellations (Force-System). Cross-Frame-Memory als Patch
+(Target-Commitment) maskiert das Symptom, behebt aber nicht die Ursache — der Resolver findet gültige
+aber wechselseitig inkonsistente Lösungen in jedem Frame.
+
+Wenn Trace-Daten zeigen dass Cluster sich primär durch physikalische Drift statt durch aktive Resolver-Logik
+auflösen, ist die Resolver-Logik faktisch defekt. Ein Architektur-Wechsel zu präventiv ("Vorausschau und
+frühe Reaktion") ist die korrekte Konsequenz, nicht ein weiterer Patch auf demselben Mechanismus.
+
+**Verweis:** PR #88 (Force-Diagnose), PR #89 (Slot-Klassifikations-Trace), PR #90 (Pulk-Genese-Entscheidung),
+PROJECT-PRINCIPLES.md §6, §7, Lesson 71.
