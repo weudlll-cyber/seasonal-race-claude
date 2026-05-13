@@ -196,11 +196,11 @@ describe('per-racer roll jitter — racers roll at different times', () => {
 // ── Slipstream Magnitude ──────────────────────────────────────────────────────
 
 describe('slipstream magnitude (PR-A2.6)', () => {
-  it('default draftingBoost is 1.10', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost).toBe(1.1);
+  it('default draftingBoost is 1.04', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingBoost).toBe(1.04);
   });
 
-  it('at avg N=3 spread, boosted follower does not structurally overtake leader (boost 1.10)', () => {
+  it('at avg N=3 spread, boosted follower does not structurally overtake leader (boost 1.04)', () => {
     // N=3: expectedMin = spreadMin + range/(n+1) = 0.871 + 0.258/4 = 0.9355
     // boost 1.10: follower 0.9355 * 1.10 = 1.029 < leader 1.0645 — no guaranteed overtake
     // (overtake requires boost >= 1.138 for N=3 average pair)
