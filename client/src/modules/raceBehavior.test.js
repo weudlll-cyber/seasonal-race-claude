@@ -678,3 +678,177 @@ describe('applyRacerBehavior — EMA lateral smoothing', () => {
     expect(Math.abs(r.physicalY)).toBeLessThanOrEqual(0.95);
   });
 });
+
+// ── Fix A: Wall-Escape ────────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — wall-escape: keeper yields when yielder is wall-pinned', () => {
+  it('keeper is nudged toward center when yielder is pinned and all slots are blocked', () => {
+    // wallPinned: was moving → yields. Pinned at -MAX_LATERAL; nudge would push further into wall.
+    // Blockers are placed at every slot candidate so slot search always fails.
+    // Fix A: when fallback nudge is clamped, nudge the keeper toward center instead.
+    const SAFETY = 3;
+    const CORR = cfg.corridorHalfWidthPx; // 75
+    const wallPinned = makeRacer({
+      index: 0,
+      t: 0.5,
+      x: 200,
+      y: 200 + -0.95 * CORR,
+      angle: 0,
+      physicalY: -0.95,
+      prevPhysicalY: -0.92, // was moving → yields by calmer-holds rule
+    });
+    const inside = makeRacer({
+      index: 1,
+      t: 0.51,
+      x: 208,
+      y: 200 + -0.82 * CORR,
+      angle: 0,
+      physicalY: -0.82,
+      prevPhysicalY: -0.82, // stable → keeper
+    });
+    // slotStepPx = 24 + 3 = 27. effectiveRadius = max(80, 27*4) = 108.
+    // Positive-side candidates from -0.95: -0.59, -0.23, +0.13, +0.49.
+    // Place a blocker at each candidate position (same x → longSep=0 → always blocks slot check).
+    const slotStepPx = 24 + SAFETY;
+    const effectiveRadius = Math.max(cfg.slotSearchRadiusPx, slotStepPx * 4);
+    const blockers = [];
+    for (
+      let deltaPx = slotStepPx, idx = 0;
+      deltaPx <= effectiveRadius;
+      deltaPx += slotStepPx, idx++
+    ) {
+      const py = -0.95 + deltaPx / CORR;
+      if (Math.abs(py) > 0.95) continue;
+      blockers.push(
+        makeRacer({
+          index: 2 + idx,
+          t: 0.5,
+          x: 200, // same longitudinal position → always blocks slot check
+          y: 200 + py * CORR,
+          angle: 0,
+          physicalY: py,
+          prevPhysicalY: py,
+        })
+      );
+    }
+    applyRacerBehavior([wallPinned, inside, ...blockers], {
+      ...cfg,
+      safetyMarginPx: SAFETY,
+      lookAheadFrames: 0,
+    });
+    // Fix A: keeper (inside) nudged 0.02 physY toward center by wall-escape.
+    expect(inside.physicalY).toBeGreaterThan(-0.82);
+    // Wall-pinned racer cannot move outward; stays at the wall.
+    expect(Math.abs(wallPinned.physicalY)).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('when both racers are at the same wall, no swap occurs and physicalY stays in bounds', () => {
+    // Both at outer wall — keeper also at wall, so wall-escape condition fails.
+    // Fallback activates (clamped nudge), physicalY must remain within ±MAX_LATERAL.
+    const rA = makeRacer({
+      index: 0,
+      t: 0.5,
+      x: 200,
+      y: 200 + 0.95 * 75,
+      angle: 0,
+      physicalY: 0.95,
+      prevPhysicalY: 0.95,
+    });
+    const rB = makeRacer({
+      index: 1,
+      t: 0.51,
+      x: 208,
+      y: 200 + 0.95 * 75,
+      angle: 0,
+      physicalY: 0.95,
+      prevPhysicalY: 0.95,
+    });
+    expect(() => applyRacerBehavior([rA, rB], { ...cfg, lookAheadFrames: 0 })).not.toThrow();
+    expect(Math.abs(rA.physicalY)).toBeLessThanOrEqual(0.95);
+    expect(Math.abs(rB.physicalY)).toBeLessThanOrEqual(0.95);
+  });
+});
+
+// ── Fix B: Slot-step ≥ minLat ─────────────────────────────────────────────────
+
+describe('applyRacerBehavior — slot step ≥ minLat: escapes squeeze without attractor', () => {
+  it('yielder at full-clearance slot — lateral distance to keeper ≥ minLat in one step', () => {
+    // Keeper stable at physY=0; yielder starts at physY=0 (direct overlap).
+    // With step=wYielder+safety=27px, the first candidate already clears the keeper.
+    // Old step=4px would have placed the yielder in the keeper's hitbox zone (< minLat).
+    const keeper = makeRacer({
+      index: 0,
+      t: 0.51,
+      x: 100,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: 0,
+    });
+    const yielder = makeRacer({
+      index: 1,
+      t: 0.5,
+      x: 108,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: -0.5, // was moving → yields
+    });
+    applyRacerBehavior([keeper, yielder], { ...cfg, lateralReturnSpeed: 1.0 });
+    const minClearPx = (keeper.visibleWidthPx + yielder.visibleWidthPx) / 2 + cfg.safetyMarginPx;
+    const latSepPx = Math.abs(keeper.physicalY - yielder.physicalY) * cfg.corridorHalfWidthPx;
+    expect(latSepPx).toBeGreaterThanOrEqual(minClearPx);
+  });
+
+  it('squeeze-attractor resolves within 60 frames (Pair 4_9 pattern)', () => {
+    // Reproduces the Pair 4_9 dead-lock from classification-trace-analysis.md:
+    // squeezed racer between keeper at physY=-0.267 and a third racer at physY=-0.55.
+    // With old step=4px, competing nudges created a stable oscillating attractor.
+    // With new step=minLat, the yielder jumps to a fully-clear slot in a few frames.
+    const SAFETY = cfg.safetyMarginPx;
+    const CORRIDOR = cfg.corridorHalfWidthPx;
+
+    const keeper = makeRacer({
+      index: 0,
+      t: 0.51,
+      x: 100,
+      y: 200 + -0.267 * CORRIDOR,
+      angle: 0,
+      physicalY: -0.267,
+      prevPhysicalY: -0.267,
+    });
+    const third = makeRacer({
+      index: 2,
+      t: 0.52,
+      x: 116,
+      y: 200 + -0.55 * CORRIDOR,
+      angle: 0,
+      physicalY: -0.55,
+      prevPhysicalY: -0.55,
+    });
+    const squeezed = makeRacer({
+      index: 1,
+      t: 0.5,
+      x: 108,
+      y: 200 + -0.3 * CORRIDOR,
+      angle: 0,
+      physicalY: -0.3,
+      prevPhysicalY: -0.26, // was moving → classified as yielder
+    });
+
+    const sqCfg = { ...cfg, safetyMarginPx: SAFETY, lateralReturnSpeed: 0.2, lookAheadFrames: 0 };
+    const minClearPx = (squeezed.visibleWidthPx + keeper.visibleWidthPx) / 2 + SAFETY;
+
+    let resolved = false;
+    for (let frame = 0; frame < 60 && !resolved; frame++) {
+      applyRacerBehavior([keeper, squeezed, third], sqCfg);
+      squeezed.y = 200 + squeezed.physicalY * CORRIDOR;
+
+      const latToKeeper = Math.abs(squeezed.physicalY - keeper.physicalY) * CORRIDOR;
+      const latToThird = Math.abs(squeezed.physicalY - third.physicalY) * CORRIDOR;
+      if (latToKeeper >= minClearPx && latToThird >= minClearPx) resolved = true;
+    }
+
+    expect(resolved).toBe(true);
+  });
+});

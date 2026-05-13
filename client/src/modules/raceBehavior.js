@@ -12,9 +12,10 @@
 // ============================================================
 
 const MAX_LATERAL = 0.95;
-const SLOT_STEP_PX = 4;
 const LATERAL_STABLE_THRESH = 0.005; // physicalY/frame — below this = "holding line"
 const SPEED_DIFF_THRESH = 0.00005; // baseSpeed difference for "faster from behind" rule
+// WALL_EPSILON: physicalY margin for "at wall" detection in wall-escape logic (Fix A).
+const WALL_EPSILON = 0.02;
 
 /**
  * Normalize an angle to [-π, π].
@@ -187,9 +188,17 @@ export function applyRacerBehavior(racers, config) {
   for (const { yielder, keeper } of collisions) {
     if (resolved.has(yielder.index)) continue;
 
+    // Slot step ≥ minLat so each candidate clears a full neighbor in one jump (Fix B).
+    // Prevents the squeeze-attractor dead-lock where fine-grained steps land in occupied gaps.
+    // Resolves Pair 4_9 pattern documented in classification-trace-analysis.md.
+    const wYielder = yielder.visibleWidthPx ?? 24;
+    const slotStepPx = wYielder + safety;
+    // Guarantee at least 4 search steps per side regardless of slotSearchRadiusPx setting.
+    const effectiveRadius = Math.max(searchRadius, slotStepPx * 4);
+
     // Build candidate slots: try increasing offsets in both lateral directions.
     const candidates = [];
-    for (let deltaPx = SLOT_STEP_PX; deltaPx <= searchRadius; deltaPx += SLOT_STEP_PX) {
+    for (let deltaPx = slotStepPx; deltaPx <= effectiveRadius; deltaPx += slotStepPx) {
       const dY = deltaPx / corridorHalf;
       candidates.push(yielder.physicalY + dY);
       candidates.push(yielder.physicalY - dY);
@@ -251,6 +260,23 @@ export function applyRacerBehavior(racers, config) {
         Math.min(MAX_LATERAL, yielder.physicalY + nudgeDir * 0.02)
       );
       targetY.set(yielder.index, nudged);
+
+      // Wall-Escape (Fix A): if the nudge is clamped to zero movement (yielder is pinned
+      // at MAX_LATERAL and cannot move outward), nudge the keeper toward center instead.
+      // Resolves Wall-Lock dead-lock: Pair 8_11 pattern, classification-trace-analysis.md.
+      const yielderClamped = nudged === yielder.physicalY;
+      if (yielderClamped && Math.abs(keeper.physicalY) < MAX_LATERAL - WALL_EPSILON) {
+        const keeperNudgeDir = -nudgeDir; // push keeper toward center
+        const keeperNudged = Math.max(
+          -MAX_LATERAL,
+          Math.min(MAX_LATERAL, keeper.physicalY + keeperNudgeDir * 0.02)
+        );
+        if (!resolved.has(keeper.index)) {
+          targetY.set(keeper.index, keeperNudged);
+          keeper.avoidanceActive = true;
+          resolved.add(keeper.index); // lock target; no other pair may override this frame
+        }
+      }
     }
   }
 

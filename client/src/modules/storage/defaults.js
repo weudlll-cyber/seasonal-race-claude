@@ -220,7 +220,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Slot-based anti-collision
   safetyMarginPx: 3,
   lookAheadFrames: 3,
-  slotSearchRadiusPx: 60,
+  // 120px = 4 × (spriteWidth + safetyMarginPx) at default 24px sprite — ensures ≥ 4 slot
+  // candidates per side after Fix B raised SLOT_STEP from 4px to wYielder+safety (≈27px).
+  slotSearchRadiusPx: 120,
   // Lateral EMA: fraction of (target - current) physicalY applied per frame.
   // 0.2 → ~14 frames (233ms) to reach 95% of a new slot. Prevents teleportation.
   lateralReturnSpeed: 0.2,
