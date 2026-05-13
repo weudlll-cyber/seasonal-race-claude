@@ -1460,3 +1460,37 @@ frühe Reaktion") ist die korrekte Konsequenz, nicht ein weiterer Patch auf dems
 
 **Verweis:** PR #88 (Force-Diagnose), PR #89 (Slot-Klassifikations-Trace), PR #90 (Pulk-Genese-Entscheidung),
 PROJECT-PRINCIPLES.md §6, §7, Lesson 71.
+
+---
+
+## Lesson 75 — Constraints Beat Forces in Many-Body Anti-Collision
+
+**Kontext:** Vier Anti-Collision-Architekturen wurden gebaut, alle scheiterten am gleichen
+Stress-Test (20 Racer, dichter Pulk):
+
+- **Force-basiert** (vor PR #84 und in PR #84): symmetrische Kraft-Cancellation bei dichten Pulks;
+  Stärke der Kraft irrelevant, weil Netto-Kraft strukturell null (PR #88 Trace: 99.2% Cancellation).
+- **Slot-basiert** (PR #86, drei Fix-Iterationen): lokale Pair-Resolution führt zu Oscillationen
+  oder Vorfahrt-Patts; Erhöhung der Slot-Schritte verlagerte Micro-Oscillation in Macro-Oscillation
+  (±40–130px). PR #89 Trace: 86% Fallback-Rate, 64% Frames mit aktiven Clustern.
+- **Sicht-Modell** (PR #91): proaktive Vorausschau-Logik unterliegt konkurrierenden Anziehungen
+  (Drafting), Pulks bilden sich trotz früher Erkennung. Visuelle Verifikation 13.05.2026.
+
+Gemeinsame strukturelle Schwäche: Anti-Collision war in allen drei Architekturen eine
+**Empfehlung neben anderen Empfehlungen**. Im konkurrierenden Mehrkräfte-System (Drafting,
+Centerline-Anziehung, eigene Geschwindigkeit) kann sie übertönt werden — strukturell, nicht
+durch Implementierungs-Fehler.
+
+**Take-away:** In Many-Agent-Simulationen mit harten Abstand-Anforderungen sind
+**harte Constraints (PBD — Position-Based Dynamics)** das richtige Paradigma — nicht
+Kraft-Empfehlungen. PBD trennt "Wünsche umsetzen" (Forward-Speed, Anziehungen) von "Constraint
+erzwingen" (Abstand) in zwei separate Schritte pro Frame. Der zweite Schritt ist mathematisch
+garantiert: überlappen ist unmöglich, nicht nur unerwünscht. Industriestandard seit über 20
+Jahren in Computergrafik (Cloth, Crowd, Particle Systems).
+
+Wenn ein System mehrere kräfteähnliche Mechanismen hat (Anziehung A, B, C) plus eine Abstoßung
+(Anti-Collision), gehört die Abstoßung mathematisch in eine andere Kategorie als die Anziehungen
+— sonst ist sie nur eine weitere Stimme im Chor und kann übertönt werden.
+
+**Verweis:** PR #88, #89, #90 (Diagnose-Trace), PR #91 (Sicht-Modell), Lesson 71, Lesson 74,
+PROJECT-PRINCIPLES.md §6, §7.
