@@ -12,9 +12,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
 vi.mock('../../../modules/baseSpeedConfig.js', () => ({
-  loadBaseSpeedConfig: vi.fn(() => ({ min: 0.00091, max: 0.00118 })),
+  loadBaseSpeedConfig: vi.fn(() => ({ min: 0.00096, max: 0.00113 })),
   saveBaseSpeedConfig: vi.fn(),
-  DEFAULT_BASE_SPEED_CONFIG: { min: 0.00091, max: 0.00118 },
+  DEFAULT_BASE_SPEED_CONFIG: { min: 0.00096, max: 0.00113 },
   spreadPercent: (min, max) => {
     if (!min || !max || min >= max) return 0;
     const mean = (min + max) / 2;
@@ -38,9 +38,9 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     speedBrakeYThreshold: 0.2,
     speedBrakeTThreshold: 0.015,
     speedBrakeFactor: 0.95,
-    draftingMaxDistance: 110,
+    draftingMaxDistance: 80,
     draftingConeAngle: 30,
-    draftingBoost: 1.1,
+    draftingBoost: 1.04,
   })),
   saveRaceBehaviorConfig: vi.fn(() => true),
   DEFAULT_RACE_BEHAVIOR_CONFIG: {
@@ -58,9 +58,9 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     speedBrakeYThreshold: 0.2,
     speedBrakeTThreshold: 0.015,
     speedBrakeFactor: 0.95,
-    draftingMaxDistance: 110,
+    draftingMaxDistance: 80,
     draftingConeAngle: 30,
-    draftingBoost: 1.1,
+    draftingBoost: 1.04,
   },
 }));
 
@@ -80,14 +80,14 @@ vi.mock('../../../modules/rowLayoutConfig.js', () => ({
 
 vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   loadRaceDynamicsConfig: vi.fn(() => ({
-    reRollVariationPercent: 85,
+    reRollVariationPercent: 45,
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
   })),
   saveRaceDynamicsConfig: vi.fn(),
   DEFAULT_RACE_DYNAMICS_CONFIG: {
-    reRollVariationPercent: 85,
+    reRollVariationPercent: 45,
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
@@ -191,9 +191,9 @@ describe('RaceTuningSection — drafting summary', () => {
   it('shows default drafting values in summary', () => {
     render(<RaceTuningSection />);
     const summary = screen.getByTestId('drafting-summary');
-    expect(summary.textContent).toContain('110 px');
+    expect(summary.textContent).toContain('80 px');
     expect(summary.textContent).toContain('30°');
-    expect(summary.textContent).toContain('+10%');
+    expect(summary.textContent).toContain('+4%');
   });
 });
 
@@ -269,12 +269,12 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     render(<RaceTuningSection />);
     fireEvent.click(screen.getByTestId('reset-drafting'));
     const summary = screen.getByTestId('drafting-summary');
-    expect(summary.textContent).toContain('110 px');
+    expect(summary.textContent).toContain('80 px');
   });
 });
 
 describe('RaceTuningSection — reset uses DEFAULT values, not current state (regression)', () => {
-  it('reset-speed-reroll restores reRollVariationPercent to 85 when loaded with stored value 150', () => {
+  it('reset-speed-reroll restores reRollVariationPercent to 45 when loaded with stored value 150', () => {
     loadRaceDynamicsConfig.mockReturnValueOnce({
       reRollVariationPercent: 150,
       reRollTransitionDuration: 3.0,
@@ -285,6 +285,6 @@ describe('RaceTuningSection — reset uses DEFAULT values, not current state (re
     const input = screen.getByLabelText('Re-Roll Variation Percent');
     expect(input.value).toBe('150');
     fireEvent.click(screen.getByTestId('reset-speed-reroll'));
-    expect(input.value).toBe('85');
+    expect(input.value).toBe('45');
   });
 });

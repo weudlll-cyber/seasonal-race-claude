@@ -77,8 +77,8 @@ describe('pipeline contract — N-calibrated expected-min semantics', () => {
     return spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (n + 1);
   }
 
-  it('expectedMinSpread(3) matches formula: 0.871 + 0.258/4 ≈ 0.9355', () => {
-    expect(expectedMinSpread(3)).toBeCloseTo(0.9355, 3);
+  it('expectedMinSpread(3) matches formula from current defaults (≈0.9593)', () => {
+    expect(expectedMinSpread(3)).toBeCloseTo(0.9593, 3);
   });
 
   it('horse (sm=1.0, n=3): expected last finisher arrives at targetDuration', () => {
