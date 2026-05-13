@@ -195,6 +195,31 @@ failures are documented as deliberate with a reference to the follow-up fix.
 
 Siehe LESSONS.md L1, L8, L17; docs/audit/audit-pre-merge.md.
 
+### Regression Awareness Convention
+
+Vor dem Ersetzen einer existierenden, funktionierenden Komponente wird explizit geprüft was
+die alte Komponente konnte und was die neue können muss. Bei jedem Architektur-Ersatz oder
+größeren Refactor:
+
+1. **Inventur der alten Komponente** — welche Funktionen, welche Edge-Cases, welche
+   User-Anforderungen werden aktuell erfüllt?
+2. **Anforderungs-Matching** — kann die neue Komponente jeden Punkt erfüllen? Welche bewussten
+   Trade-offs werden eingegangen?
+3. **Rollback-Pfad** — wie kommen wir zurück falls die neue Komponente versagt? Branch,
+   Commit-SHA oder Feature-Flag, explizit benannt in der Spec.
+4. **Sanity-Check vor Merge** — User testet visuell ob die neue Komponente nicht schlechter ist
+   als die alte. Bei erkennbarer Regression: Stopp, kein Merge.
+
+Zugleich gilt: an einer nachweislich nicht funktionierenden Komponente wird nicht beliebig
+lange weitergetuned. Wenn nach belegter Diagnose und zwei bis drei Fix-Versuchen keine spürbare
+Verbesserung erreicht wird, ist Architektur-Wechsel die korrekte Reaktion — nicht ein vierter
+Versuch am selben Mechanismus.
+
+Die Regel ist ein Gleichgewicht: nicht voreilig wegwerfen, aber auch nicht ewig am toten Pferd
+reiten. Entscheidung pro Fall, mit Belegen.
+
+Siehe LESSONS.md L73.
+
 ### Test-Anpassungs Convention
 
 Existing tests may be adjusted or removed when a deliberate refactor intentionally changes

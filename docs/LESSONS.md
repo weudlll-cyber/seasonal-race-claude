@@ -1417,3 +1417,17 @@ visuellen Eindrücken oder Bisect startet, ist §6 verletzt.
 
 **Verweis:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
 `docs/diag/render-smoothness-measurements.md`; Commits `c8538e0`, `7333ec4`, `b53d7d6`.
+
+## Lesson 71 — Symmetric Avoidance Default war eine Regression
+
+**Kontext:** Der `symmetricAvoidance: true`-Default wurde im Force-Decomposition-Sprint eingeführt und
+ersetzte stillschweigend die ursprüngliche Asymmetrie "Trailer yields, leader holds". Die alte
+Asymmetrie hatte eine echte Funktion — klare Verantwortung wer ausweicht — und war ein Feature
+der funktionierenden Anti-Collision-Logik der frühen Iterationen.
+
+Sie wurde ohne Inventur ersetzt. In der Folge gab es symmetrische Force-Cancellation in dichten
+Pulks, die einen ganzen Diagnose-Sprint kostete bis der Architektur-Mangel erkannt war.
+
+**Take-away:** Behavior-Changes an Default-Werten sind keine kosmetische Änderung. Wenn ein
+bestehender Default eine fachliche Funktion erfüllt (selbst wenn nicht explizit dokumentiert),
+ist sein Ersatz ein Architektur-Eingriff und braucht die Regression Awareness Convention.
