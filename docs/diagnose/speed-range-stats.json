@@ -1,0 +1,39 @@
+{
+  "config": {
+    "nRacers": 20,
+    "simFrames": 1200,
+    "simDurationSec": 19.2,
+    "BASE_SPEED_MIN": 0.00091,
+    "BASE_SPEED_MAX": 0.00118,
+    "BASE_SPEED_MEAN": 0.001045,
+    "spreadMinFactor": "0.8708",
+    "spreadMaxFactor": "1.1292",
+    "race_baseSpeed": "6.0392e-4",
+    "rollCount": 4,
+    "rollInterval_ms": 12000,
+    "halfWidth": "0.2196"
+  },
+  "spreadPct": {
+    "mean": "33.95",
+    "min": "33.63",
+    "max": "34.83",
+    "p10": "33.63",
+    "p50": "33.63",
+    "p90": "34.80"
+  },
+  "spreadPxPerSec": {
+    "mean": "16.6",
+    "min": "16.4",
+    "max": "17.1"
+  },
+  "initialBaseSpeedRange": {
+    "min": "5.2590e-4",
+    "max": "7.5354e-4"
+  },
+  "initialSpeedBonusMultRange": {
+    "frontRow": "1.0000",
+    "row1": "1.0350",
+    "row2": "1.0700",
+    "row3": "1.1050"
+  }
+}
