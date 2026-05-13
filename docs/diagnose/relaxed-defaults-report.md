@@ -8,8 +8,8 @@ Base commit: 47b10eff327aabd332d54af722ce79d7f6546df4
 
 | Wert | Alt | Neu | Begründung |
 |---|---:|---:|---|
-| BASE_SPEED_MIN | 0.00091 | 0.00096 | Spread reduziert, Mittelwert bleibt gleich (20.00104529). |
-| BASE_SPEED_MAX | 0.00118 | 0.00113 | Spread reduziert, Mittelwert bleibt gleich (20.00104529). |
+| BASE_SPEED_MIN | 0.00091 | 0.00096 | Spread reduziert, Mittelwert bleibt gleich (0.001045). |
+| BASE_SPEED_MAX | 0.00118 | 0.00113 | Spread reduziert, Mittelwert bleibt gleich (0.001045). |
 | Spread berechnet ((max-min)/min) | 29.7% | 17.7% | Zielkorridor unter 15-18% getroffen (nahe oberem Ende, aber innerhalb). |
 | reRollVariationPercent | 85 | 45 | In empfohlenem Bereich 35-50, weniger volatile Pulk-Neubildung. |
 | draftingBoost | 1.10 | 1.04 | In empfohlenem Bereich 1.02-1.05, weniger pack-treibende Anziehung. |
