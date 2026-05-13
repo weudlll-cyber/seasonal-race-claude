@@ -3,8 +3,8 @@
 // Path:        client/src/screens/DevScreen/sections/RaceTuningSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Consolidated Race Tuning section — 9 blocks in storyline order:
-//              Speed Range, Start Layout, Row Start, Speed Re-Roll,
+// Description: Consolidated Race Tuning section — 10 blocks in storyline order:
+//              Speed Range, Start Layout, Soft Launch, Row Start, Speed Re-Roll,
 //              Drafting, Comfort Zone, Soft Avoidance, Speed Brake, Home Force.
 //              Combines content from former BaseSpeedSection + RaceBehaviorSection
 //              + new raceDynamicsConfig (PR-A2.6 re-roll values).
@@ -148,6 +148,15 @@ function RaceTuningSection() {
       rowGapMultiplier: DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier,
       speedBonusFactor: DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor,
       maxCapacityFactor: DEFAULT_ROW_LAYOUT_CONFIG.maxCapacityFactor,
+    }));
+  }
+
+  function resetSoftLaunch() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      enableSoftLaunch: DEFAULT_RACE_BEHAVIOR_CONFIG.enableSoftLaunch,
+      softLaunchDurationSeconds: DEFAULT_RACE_BEHAVIOR_CONFIG.softLaunchDurationSeconds,
+      softLaunchRampMode: DEFAULT_RACE_BEHAVIOR_CONFIG.softLaunchRampMode,
     }));
   }
 
@@ -398,7 +407,94 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 3: Row Start ── */}
+      {/* ── Block 3: Soft Launch ── */}
+      <SubCard
+        title="Soft Launch"
+        onReset={resetSoftLaunch}
+        resetTestId="reset-soft-launch"
+        subtitle="After GO, anti-collision does not switch on instantly. It ramps from 0 to full strength over a short phase so dense start rows can naturally untangle before full avoidance and speed-brake behavior takes over."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Enable Soft Launch
+              <InfoTooltip text="Toggle progressive anti-collision activation after GO. Off = immediate full anti-collision (legacy behavior)." />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                aria-label="Enable Soft Launch"
+                checked={behaviorConfig.enableSoftLaunch}
+                disabled={!behaviorConfig.enabled}
+                onChange={(e) => setBehavior('enableSoftLaunch', e.target.checked)}
+              />
+              <span>{behaviorConfig.enableSoftLaunch ? 'On' : 'Off'}</span>
+            </label>
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Soft Launch Duration (s)
+              <InfoTooltip text="How long anti-collision takes to ramp from 0 to full strength after GO." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Soft Launch Duration (s)"
+              min={0}
+              max={10}
+              step={0.1}
+              value={behaviorConfig.softLaunchDurationSeconds}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10) setBehavior('softLaunchDurationSeconds', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Soft Launch Ramp Mode
+              <InfoTooltip text="linear = smooth ramp. twoStep = discrete two-step activation." />
+            </label>
+            <select
+              className={s.input}
+              aria-label="Soft Launch Ramp Mode"
+              value={behaviorConfig.softLaunchRampMode}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'linear' || v === 'twoStep') setBehavior('softLaunchRampMode', v);
+              }}
+            >
+              <option value="linear">linear</option>
+              <option value="twoStep">twoStep</option>
+            </select>
+          </div>
+        </div>
+        <p
+          data-testid="soft-launch-summary"
+          style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
+        >
+          Anti-collision activation after GO:{' '}
+          <strong>{behaviorConfig.enableSoftLaunch ? 'progressive' : 'immediate'}</strong>
+          {'  ·  '}duration <strong>{behaviorConfig.softLaunchDurationSeconds.toFixed(1)}s</strong>
+          {'  ·  '}mode <strong>{behaviorConfig.softLaunchRampMode}</strong>
+        </p>
+      </SubCard>
+
+      {/* ── Block 4: Row Start ── */}
       <SubCard
         title="Row Start"
         onReset={resetRowStart}
@@ -490,7 +586,7 @@ function RaceTuningSection() {
         </p>
       </SubCard>
 
-      {/* ── Block 4: Speed Re-Roll ── */}
+      {/* ── Block 5: Speed Re-Roll ── */}
       <SubCard
         title="Speed Re-Roll"
         onReset={resetSpeedReRoll}
@@ -627,7 +723,7 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 5: Drafting / Slipstream ── */}
+      {/* ── Block 6: Drafting / Slipstream ── */}
       <SubCard
         title="Drafting / Slipstream"
         onReset={resetDrafting}
@@ -719,7 +815,7 @@ function RaceTuningSection() {
         </p>
       </SubCard>
 
-      {/* ── Block 6: Comfort Zone ── */}
+      {/* ── Block 7: Comfort Zone ── */}
       <SubCard
         title="Comfort Zone"
         onReset={resetComfortZone}
@@ -777,7 +873,7 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 7: Soft Avoidance ── */}
+      {/* ── Block 8: Soft Avoidance ── */}
       <SubCard
         title="Soft Avoidance"
         onReset={resetSoftAvoidance}
@@ -904,7 +1000,7 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 8: Speed Brake ── */}
+      {/* ── Block 9: Speed Brake ── */}
       <SubCard
         title="Speed Brake"
         onReset={resetSpeedBrake}
@@ -985,7 +1081,7 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 9: Home Force ── */}
+      {/* ── Block 10: Home Force ── */}
       <SubCard
         title="Home Force"
         onReset={resetHomeForce}

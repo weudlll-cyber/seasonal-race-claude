@@ -63,6 +63,7 @@ import {
   sampleBoundaryAtInterval,
   drawTrackLights,
 } from '../../modules/trackLights.js';
+import { computeSoftLaunchFactor } from '../../modules/softLaunch.js';
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
@@ -838,6 +839,14 @@ export default function RaceScreen() {
           setPhase(PHASE.RACING);
         }
       } else if (st.phase === PHASE.RACING) {
+        const softLaunchFactor = computeSoftLaunchFactor({
+          isRacing: true,
+          raceElapsedMs: st.raceStart != null ? ts - st.raceStart : 0,
+          enableSoftLaunch: behaviorConfig.enableSoftLaunch,
+          softLaunchDurationSeconds: behaviorConfig.softLaunchDurationSeconds,
+          softLaunchRampMode: behaviorConfig.softLaunchRampMode,
+        });
+
         // Re-Roll: spreadFactor changes are only allowed before lastPositionPercent% of targetDuration.
         const lastRollDeadline =
           st.raceStart + targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
@@ -875,7 +884,13 @@ export default function RaceScreen() {
           }
           // Apply D7b boost/brake flags from the previous frame
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
+          const brakeActivation =
+            typeof r.avoidanceBrakeFactor === 'number'
+              ? r.avoidanceBrakeFactor
+              : r.avoidanceActive
+                ? 1
+                : 0;
+          const brake = 1 - (1 - behaviorConfig.speedBrakeFactor) * brakeActivation;
           if (!r.finished) {
             r.t = Math.min(r.t + r.baseSpeed * boost * brake * (dt / 16), st.finishT + 0.001);
           } else {
@@ -929,7 +944,7 @@ export default function RaceScreen() {
           d.dv01Max = Math.max(...d._dv01Buf);
           d.dv12Max = Math.max(...d._dv12Buf);
         }
-        applyRacerBehavior(st.racers, behaviorConfig);
+        applyRacerBehavior(st.racers, behaviorConfig, softLaunchFactor);
 
         for (const r of st.racers) {
           if (r.finished) continue;

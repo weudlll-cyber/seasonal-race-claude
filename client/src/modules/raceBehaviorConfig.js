@@ -24,6 +24,10 @@ export function loadRaceBehaviorConfig() {
     merged.startSpreadRange = DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
   }
   if (
+    typeof merged.enableSoftLaunch !== 'boolean' ||
+    merged.softLaunchDurationSeconds < 0 ||
+    merged.softLaunchDurationSeconds > 10 ||
+    (merged.softLaunchRampMode !== 'linear' && merged.softLaunchRampMode !== 'twoStep') ||
     merged.startSpreadRange <= 0 ||
     merged.startSpreadRange > 1 ||
     merged.homeForceStrength <= 0 ||

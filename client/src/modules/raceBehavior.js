@@ -17,6 +17,7 @@
 export function initRacerBehavior(racer) {
   racer.physicalY = 0;
   racer.avoidanceActive = false;
+  racer.avoidanceBrakeFactor = 0;
   racer.draftingBoostActive = false;
 }
 
@@ -50,18 +51,25 @@ function normalizeAngle(a) {
  *   speedBrakeFactor: number,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
  * }} config
+ * @param {number} antiCollisionFactor - activation factor in [0,1] for lateral anti-collision and speed brake
  */
-export function applyRacerBehavior(racers, config) {
+export function applyRacerBehavior(racers, config, antiCollisionFactor = 1) {
+  const factor = Math.max(0, Math.min(1, antiCollisionFactor));
+
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
+      r.avoidanceBrakeFactor = 0;
       r.draftingBoostActive = false;
     }
     return;
   }
 
   const active = racers.filter((r) => !r.finished);
-  for (const r of active) r.draftingBoostActive = false;
+  for (const r of active) {
+    r.draftingBoostActive = false;
+    r.avoidanceBrakeFactor = 0;
+  }
 
   // Accumulate physicalY deltas from home force + avoidance
   const yDeltas = new Map(active.map((r) => [r.index, 0]));
@@ -125,19 +133,23 @@ export function applyRacerBehavior(racers, config) {
 
   // Apply deltas + soft repulsion + hard clamp
   for (const r of active) {
-    let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
+    const beforeY = r.physicalY;
+    let targetY = beforeY + (yDeltas.get(r.index) ?? 0);
 
     // Soft repulsion: grows quadratically as physicalY approaches boundary
-    const absY = Math.abs(newY);
+    const absY = Math.abs(targetY);
     if (absY >= config.comfortThreshold && absY < 1.0) {
       const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
-      newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
+      targetY -= Math.sign(targetY) * config.softRepulsionStrength * pen * pen;
     }
 
     // maxLateral cap + hard boundary clamp
     const cap = Math.min(config.maxLateral, 1.0);
-    r.physicalY = Math.max(-cap, Math.min(cap, newY));
+    const cappedTargetY = Math.max(-cap, Math.min(cap, targetY));
+    const blendedY = beforeY + (cappedTargetY - beforeY) * factor;
+    r.physicalY = Math.max(-cap, Math.min(cap, blendedY));
     r.avoidanceActive = speedBrakeSet.has(r.index);
+    r.avoidanceBrakeFactor = r.avoidanceActive ? factor : 0;
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────

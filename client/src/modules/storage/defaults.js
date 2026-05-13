@@ -213,6 +213,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
+  // Phase control for progressive anti-collision activation after GO
+  enableSoftLaunch: true,
+  softLaunchDurationSeconds: 3.0,
+  softLaunchRampMode: 'linear',
   // Start layout — initial lateral spread at race start
   startSpreadRange: 0.95,
   // Open-track run-out zone: fraction of path after which the finish line sits (0 = no runout)
