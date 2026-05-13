@@ -3,11 +3,11 @@
 // Path:        client/src/screens/DevScreen/sections/RaceTuningSection.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: Consolidated Race Tuning section — 9 blocks in storyline order:
+// Description: Consolidated Race Tuning section — 7 blocks in storyline order:
 //              Speed Range, Start Layout, Row Start, Speed Re-Roll,
-//              Drafting, Comfort Zone, Soft Avoidance, Speed Brake, Home Force.
-//              Combines content from former BaseSpeedSection + RaceBehaviorSection
-//              + new raceDynamicsConfig (PR-A2.6 re-roll values).
+//              Drafting, PBD Anti-Collision, Speed Brake, Race Behavior toggle.
+//              PBD architecture (PR pbd-anti-collision):
+//              force/slot/sight constants removed; PBD constraint constants added.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -164,38 +164,21 @@ function RaceTuningSection() {
     }));
   }
 
-  function resetComfortZone() {
+  function resetPBD() {
     setBehaviorConfig((prev) => ({
       ...prev,
-      comfortThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold,
-      softRepulsionStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.softRepulsionStrength,
-    }));
-  }
-
-  function resetSoftAvoidance() {
-    setBehaviorConfig((prev) => ({
-      ...prev,
-      avoidanceDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance,
-      tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
-      yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
-      lateralForce: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralForce,
-      maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
+      pbdIterationsPerFrame: DEFAULT_RACE_BEHAVIOR_CONFIG.pbdIterationsPerFrame,
+      frontWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.frontWeight,
+      centerlineForce: DEFAULT_RACE_BEHAVIOR_CONFIG.centerlineForce,
+      safetyMarginPx: DEFAULT_RACE_BEHAVIOR_CONFIG.safetyMarginPx,
+      maxLateralStepPerFrame: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralStepPerFrame,
     }));
   }
 
   function resetSpeedBrake() {
     setBehaviorConfig((prev) => ({
       ...prev,
-      speedBrakeYThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeYThreshold,
-      speedBrakeTThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTThreshold,
       speedBrakeFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
-    }));
-  }
-
-  function resetHomeForce() {
-    setBehaviorConfig((prev) => ({
-      ...prev,
-      homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
     }));
   }
 
@@ -719,12 +702,12 @@ function RaceTuningSection() {
         </p>
       </SubCard>
 
-      {/* ── Block 6: Comfort Zone ── */}
+      {/* ── Block 6: PBD Anti-Collision ── */}
       <SubCard
-        title="Comfort Zone"
-        onReset={resetComfortZone}
-        resetTestId="reset-comfort-zone"
-        subtitle="Racers have a personal space bubble — when another racer gets too close, they automatically push apart to keep some breathing room. This block controls how big the bubble is and how forcefully racers react when crowded. Looser values create open spacious races; tighter values let racers form dense packs."
+        title="PBD Anti-Collision"
+        onReset={resetPBD}
+        resetTestId="reset-pbd"
+        subtitle="Racers avoid overlapping using Position-Based Dynamics — a hard-constraint system used in physics simulations. Each frame, the engine mathematically pushes overlapping racers apart until all collisions are resolved. Unlike force-based systems, this guarantees zero overlap regardless of pack density. The leader (ahead on track) is displaced less than the follower — realistic racing right-of-way."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -733,102 +716,21 @@ function RaceTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Comfort Threshold
-              <InfoTooltip text="How early a racer reacts when another racer comes close. Higher = racers stay further apart, more spacious feel. Lower = racers tolerate close racing, denser packs." />
+              Constraint Iterations
+              <InfoTooltip text="How many passes the engine makes per frame to resolve collisions. Higher = more thorough resolution, especially in dense packs of 15+ racers. Lower = faster but may leave sub-pixel residuals in extreme situations. 5 handles 20 racers reliably." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="Comfort Threshold"
-              min={0.3}
-              max={0.95}
-              step={0.05}
-              value={behaviorConfig.comfortThreshold}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0 && v < 1) setBehavior('comfortThreshold', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Soft Repulsion Strength
-              <InfoTooltip text="How forcefully racers move away when crowded. Higher = visible swerve when crowded. Lower = subtle drift, racers barely react." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Soft Repulsion Strength"
-              min={0.01}
-              max={0.3}
-              step={0.01}
-              value={behaviorConfig.softRepulsionStrength}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('softRepulsionStrength', v);
-              }}
-            />
-          </div>
-        </div>
-      </SubCard>
-
-      {/* ── Block 7: Soft Avoidance ── */}
-      <SubCard
-        title="Soft Avoidance"
-        onReset={resetSoftAvoidance}
-        resetTestId="reset-soft-avoidance"
-        subtitle="When racers are about to collide, they steer around each other instead of overlapping. This block fine-tunes how they detect and avoid each other — how far ahead they look, whether they prioritize racers in front or to the side, and how strong their evasive maneuvers are. Affects the smoothness and realism of close racing."
-        disabled={!behaviorConfig.enabled}
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Avoidance Distance
-              <InfoTooltip text="How far ahead racers look to detect collision risk. Higher = early smooth steering, races look graceful. Lower = last-second corrections, looks more chaotic." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Avoidance Distance"
-              min={0.05}
-              max={1.0}
-              step={0.05}
-              value={behaviorConfig.avoidanceDistance}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('avoidanceDistance', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              T Weight
-              <InfoTooltip text="How much racers care about avoiding collisions with someone directly in front. Higher = strong reaction to racers ahead, prefers to swerve around. Lower = less concerned with what's directly ahead." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="T Weight"
-              min={0.1}
+              aria-label="PBD Iterations Per Frame"
+              min={1}
               max={10}
-              step={0.1}
-              value={behaviorConfig.tWeight}
+              step={1}
+              value={behaviorConfig.pbdIterationsPerFrame}
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0) setBehavior('tWeight', v);
+                if (v >= 1) setBehavior('pbdIterationsPerFrame', Math.round(v));
               }}
             />
           </div>
@@ -837,21 +739,21 @@ function RaceTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Y Weight
-              <InfoTooltip text="How much racers care about avoiding collisions with someone to the side. Higher = strong reaction to racers next to them. Lower = less concerned with sideways neighbors." />
+              Leader Yield Share
+              <InfoTooltip text="Fraction of the collision correction given to the leading racer (the one ahead on track). 0.2 = leader moves 20%, follower moves 80%. Lower = stronger right-of-way for leaders, more realistic. Higher = both racers move more equally." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="Y Weight"
-              min={0.1}
-              max={10}
-              step={0.1}
-              value={behaviorConfig.yWeight}
+              aria-label="Front Weight"
+              min={0.0}
+              max={0.5}
+              step={0.05}
+              value={behaviorConfig.frontWeight}
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0) setBehavior('yWeight', v);
+                if (v >= 0 && v <= 1) setBehavior('frontWeight', v);
               }}
             />
           </div>
@@ -860,21 +762,21 @@ function RaceTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Lateral Force
-              <InfoTooltip text="How forcefully racers steer sideways to avoid collisions. Higher = decisive sharp steering. Lower = gentle subtle drifts." />
+              Centerline Pull
+              <InfoTooltip text="How strongly racers drift toward the track centerline each frame. 0.02 = a racer at the edge moves ~2% closer to center per frame. Higher = racers cluster near center. Lower = racers spread out and stay where pushed." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="Lateral Force"
+              aria-label="Centerline Force"
               min={0.001}
               max={0.1}
               step={0.001}
-              value={behaviorConfig.lateralForce}
+              value={behaviorConfig.centerlineForce}
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0) setBehavior('lateralForce', v);
+                if (v >= 0) setBehavior('centerlineForce', v);
               }}
             />
           </div>
@@ -883,89 +785,66 @@ function RaceTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Max Lateral
-              <InfoTooltip text="Maximum sideways position deviation allowed during avoidance. Caps how far a racer can swerve from their lane to dodge another." />
+              Safety Margin (px)
+              <InfoTooltip text="Extra gap beyond sprite hitbox edges before the engine treats two racers as overlapping. Higher = more breathing room between racers, more spread out. Lower = racers can race very close." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="Max Lateral"
-              min={0.1}
-              max={1.0}
-              step={0.05}
-              value={behaviorConfig.maxLateral}
+              aria-label="Safety Margin Px"
+              min={0}
+              max={20}
+              step={1}
+              value={behaviorConfig.safetyMarginPx}
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0 && v <= 1) setBehavior('maxLateral', v);
+                if (v >= 0) setBehavior('safetyMarginPx', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Lateral Step (px)
+              <InfoTooltip text="Hard limit on how far a racer can move sideways in one frame. Prevents jumps: at 4px/frame and 60fps that is 240px/s lateral speed, realistic for a horse. Lower = slower, smoother lane changes. Higher = snappier reactions." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Max Lateral Step Per Frame"
+              min={1}
+              max={20}
+              step={1}
+              value={behaviorConfig.maxLateralStepPerFrame}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0) setBehavior('maxLateralStepPerFrame', v);
               }}
             />
           </div>
         </div>
       </SubCard>
 
-      {/* ── Block 8: Speed Brake ── */}
+      {/* ── Block 7: Speed Brake ── */}
       <SubCard
         title="Speed Brake"
         onReset={resetSpeedBrake}
         resetTestId="reset-speed-brake"
-        subtitle="When a racer ends up directly behind another racer with no clear way to overtake, they slow down a bit instead of rear-ending them. This block controls when the brake kicks in (how close, how directly behind) and how strongly they slow down. Prevents visual collisions in tight packs."
+        subtitle="When a racer has no clear lane to move into, they briefly slow down instead of pushing through. Controls how much speed the brake removes. At 0.95 the racer loses ~5% speed per frame the brake is active."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Adjacent Y Threshold
-              <InfoTooltip text="How sideways-aligned racers have to be for the brake to activate. Lower = only directly-behind racers brake. Higher = racers brake even when slightly off to the side." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Adjacent Y Threshold"
-              min={0.01}
-              max={0.5}
-              step={0.01}
-              value={behaviorConfig.speedBrakeYThreshold}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('speedBrakeYThreshold', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Adjacent T Threshold
-              <InfoTooltip text="How close behind another racer triggers the brake. Higher = brakes activate earlier from further behind. Lower = only very close trailing racers brake." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Adjacent T Threshold"
-              min={0.001}
-              max={0.1}
-              step={0.001}
-              value={behaviorConfig.speedBrakeTThreshold}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('speedBrakeTThreshold', v);
-              }}
-            />
-          </div>
           <div className={s.formGroup}>
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Speed Brake Factor
-              <InfoTooltip text="How much a braking racer slows down. 0.95 = -5% speed. Lower = stronger braking, racer falls back more. Higher = subtle braking, barely noticeable." />
+              <InfoTooltip text="How much a braking racer slows down. 0.95 = -5% speed per frame. Lower = stronger braking, racer falls back more. Higher = subtle braking, barely noticeable." />
             </label>
             <input
               type="number"
@@ -985,42 +864,7 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 9: Home Force ── */}
-      <SubCard
-        title="Home Force"
-        onReset={resetHomeForce}
-        resetTestId="reset-home-force"
-        subtitle="The track has a centerline that racers naturally follow. After they swerve off-line (to avoid collisions, drafting, or just by chance), this force gently pulls them back to the center. Without it, racers would drift off forever; with too much, they snap back unrealistically."
-        disabled={!behaviorConfig.enabled}
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Home Force Strength
-              <InfoTooltip text="How strongly racers return to the track centerline after deviating. Higher = quick return, tight racing lines. Lower = racers drift longer before recentering, more wandering feel." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Home Force Strength"
-              min={0.005}
-              max={0.1}
-              step={0.002}
-              value={behaviorConfig.homeForceStrength}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('homeForceStrength', v);
-              }}
-            />
-          </div>
-        </div>
-      </SubCard>
-
-      {/* Race Behavior toggle (hidden but functional — keeps the enabled flag accessible) */}
+      {/* Race Behavior toggle */}
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <label
@@ -1035,7 +879,7 @@ function RaceTuningSection() {
               aria-label="Race Behavior Enabled"
             />
             Race Behavior Enabled
-            <InfoTooltip text="When off, racers run independently with no avoidance or drafting. physicalY stays at 0 (centerline). Blocks 5–9 above are disabled when this is off." />
+            <InfoTooltip text="When off, racers run independently with no PBD anti-collision or drafting. physicalY stays at 0 (centerline). Blocks 5–7 above are disabled when this is off." />
           </label>
         </div>
       </div>

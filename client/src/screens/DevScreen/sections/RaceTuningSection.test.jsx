@@ -3,7 +3,8 @@
 // Path:        client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: PR-A3 tests — RaceTuningSection rendering and interactions.
+// Description: Tests — RaceTuningSection rendering and interactions.
+//              PBD architecture: force/slot constants removed, PBD constants added.
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -22,46 +23,26 @@ vi.mock('../../../modules/baseSpeedConfig.js', () => ({
   },
 }));
 
+const PBD_BEHAVIOR_CONFIG = {
+  enabled: true,
+  startSpreadRange: 0.95,
+  runoutZone: 0.05,
+  pbdIterationsPerFrame: 5,
+  frontWeight: 0.2,
+  centerlineForce: 0.02,
+  safetyMarginPx: 4,
+  maxLateralStepPerFrame: 4,
+  speedBrakeFactor: 0.95,
+  draftingActivationFrames: 20,
+  draftingMaxDistance: 110,
+  draftingConeAngle: 30,
+  draftingBoost: 1.1,
+};
+
 vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
-  loadRaceBehaviorConfig: vi.fn(() => ({
-    enabled: true,
-    startSpreadRange: 0.95,
-    runoutZone: 0.05,
-    homeForceStrength: 0.04,
-    comfortThreshold: 0.7,
-    softRepulsionStrength: 0.1,
-    avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
-    lateralForce: 0.01,
-    maxLateral: 0.95,
-    speedBrakeYThreshold: 0.2,
-    speedBrakeTThreshold: 0.015,
-    speedBrakeFactor: 0.95,
-    draftingMaxDistance: 110,
-    draftingConeAngle: 30,
-    draftingBoost: 1.1,
-  })),
+  loadRaceBehaviorConfig: vi.fn(() => ({ ...PBD_BEHAVIOR_CONFIG })),
   saveRaceBehaviorConfig: vi.fn(() => true),
-  DEFAULT_RACE_BEHAVIOR_CONFIG: {
-    enabled: true,
-    startSpreadRange: 0.95,
-    runoutZone: 0.05,
-    homeForceStrength: 0.04,
-    comfortThreshold: 0.7,
-    softRepulsionStrength: 0.1,
-    avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
-    lateralForce: 0.01,
-    maxLateral: 0.95,
-    speedBrakeYThreshold: 0.2,
-    speedBrakeTThreshold: 0.015,
-    speedBrakeFactor: 0.95,
-    draftingMaxDistance: 110,
-    draftingConeAngle: 30,
-    draftingBoost: 1.1,
-  },
+  DEFAULT_RACE_BEHAVIOR_CONFIG: { ...PBD_BEHAVIOR_CONFIG },
 }));
 
 vi.mock('../../../modules/rowLayoutConfig.js', () => ({
@@ -101,7 +82,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('RaceTuningSection — renders all 9 blocks', () => {
+describe('RaceTuningSection — renders all blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
@@ -111,7 +92,6 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
   it('renders Block 1: Speed Range with inputs', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Range')).toBeTruthy();
-    // Min Speed and Max Speed labels rendered inside flex label rows
     expect(screen.getAllByText('Min Speed').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Max Speed').length).toBeGreaterThan(0);
   });
@@ -140,28 +120,27 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
     expect(screen.getByTestId('drafting-summary')).toBeTruthy();
   });
 
-  it('renders Block 6: Comfort Zone', () => {
+  it('renders Block 6: PBD Anti-Collision with all inputs', () => {
     render(<RaceTuningSection />);
-    expect(screen.getByText('Comfort Zone')).toBeTruthy();
-    expect(screen.getByLabelText('Comfort Threshold')).toBeTruthy();
+    expect(screen.getByText('PBD Anti-Collision')).toBeTruthy();
+    expect(screen.getByLabelText('PBD Iterations Per Frame')).toBeTruthy();
+    expect(screen.getByLabelText('Front Weight')).toBeTruthy();
+    expect(screen.getByLabelText('Centerline Force')).toBeTruthy();
+    expect(screen.getByLabelText('Safety Margin Px')).toBeTruthy();
+    expect(screen.getByLabelText('Max Lateral Step Per Frame')).toBeTruthy();
   });
 
-  it('renders Block 7: Soft Avoidance', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByText('Soft Avoidance')).toBeTruthy();
-    expect(screen.getByLabelText('Avoidance Distance')).toBeTruthy();
-  });
-
-  it('renders Block 8: Speed Brake', () => {
+  it('renders Block 7: Speed Brake', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Brake')).toBeTruthy();
     expect(screen.getByLabelText('Speed Brake Factor')).toBeTruthy();
   });
 
-  it('renders Block 9: Home Force', () => {
+  it('does NOT render removed Force-model blocks', () => {
     render(<RaceTuningSection />);
-    expect(screen.getByText('Home Force')).toBeTruthy();
-    expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
+    expect(screen.queryByText('Comfort Zone')).toBeNull();
+    expect(screen.queryByText('Soft Avoidance')).toBeNull();
+    expect(screen.queryByText('Home Force')).toBeNull();
   });
 });
 
@@ -231,14 +210,9 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     expect(screen.getByTestId('reset-drafting')).toBeTruthy();
   });
 
-  it('renders Reset button for Comfort Zone block', () => {
+  it('renders Reset button for PBD Anti-Collision block', () => {
     render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-comfort-zone')).toBeTruthy();
-  });
-
-  it('renders Reset button for Soft Avoidance block', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-soft-avoidance')).toBeTruthy();
+    expect(screen.getByTestId('reset-pbd')).toBeTruthy();
   });
 
   it('renders Reset button for Speed Brake block', () => {
@@ -246,9 +220,11 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     expect(screen.getByTestId('reset-speed-brake')).toBeTruthy();
   });
 
-  it('renders Reset button for Home Force block', () => {
+  it('does NOT render Reset buttons for removed Force-model blocks', () => {
     render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-home-force')).toBeTruthy();
+    expect(screen.queryByTestId('reset-comfort-zone')).toBeNull();
+    expect(screen.queryByTestId('reset-soft-avoidance')).toBeNull();
+    expect(screen.queryByTestId('reset-home-force')).toBeNull();
   });
 
   it('clicking reset-speed-range restores default min/max without crash', () => {
@@ -270,6 +246,39 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     fireEvent.click(screen.getByTestId('reset-drafting'));
     const summary = screen.getByTestId('drafting-summary');
     expect(summary.textContent).toContain('110 px');
+  });
+
+  it('clicking reset-pbd does not crash', () => {
+    render(<RaceTuningSection />);
+    fireEvent.click(screen.getByTestId('reset-pbd'));
+    expect(screen.getByLabelText('PBD Iterations Per Frame').value).toBe('5');
+  });
+});
+
+describe('RaceTuningSection — PBD block shows default values', () => {
+  it('shows default pbdIterationsPerFrame=5', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('PBD Iterations Per Frame').value).toBe('5');
+  });
+
+  it('shows default frontWeight=0.2', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Front Weight').value).toBe('0.2');
+  });
+
+  it('shows default centerlineForce=0.02', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Centerline Force').value).toBe('0.02');
+  });
+
+  it('shows default safetyMarginPx=4', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Safety Margin Px').value).toBe('4');
+  });
+
+  it('shows default maxLateralStepPerFrame=4', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Max Lateral Step Per Frame').value).toBe('4');
   });
 });
 
