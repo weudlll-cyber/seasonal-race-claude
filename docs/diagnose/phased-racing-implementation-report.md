@@ -137,10 +137,13 @@ Empfohlene DevScreen-Toggles fuers Verstaendnis:
 
 ## 7. PR-Status
 
-- PR-Nummer: TBD
-- PR-URL: TBD
+- PR-Nummer: 96
+- PR-URL: https://github.com/weudlll-cyber/seasonal-race-claude/pull/96
 - Branch-Name: claude/phased-racing-logic
-- Commit-SHAs: TBD
+- Commit-SHAs:
+  - ad1707c (feat)
+  - c9b1b42 (test)
+  - 0b87c98 (docs)
 
 ## Grep-Check (bestehende Renn-Konstanten unveraendert)
 
