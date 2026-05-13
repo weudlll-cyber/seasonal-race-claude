@@ -50,6 +50,10 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.slotSearchRadiusPx).toBeGreaterThan(0);
   });
 
+  it('lateralReturnSpeed is 0.2', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.lateralReturnSpeed).toBe(0.2);
+  });
+
   it('speedBrakeFactor is between 0 and 1', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor).toBeGreaterThan(0);
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor).toBeLessThanOrEqual(1);
@@ -113,6 +117,24 @@ describe('loadRaceBehaviorConfig', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingConeAngle: 180 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when lateralReturnSpeed <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, lateralReturnSpeed: 0 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when lateralReturnSpeed > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, lateralReturnSpeed: 1.1 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('accepts lateralReturnSpeed 1.0 (boundary)', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, lateralReturnSpeed: 1.0 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg.lateralReturnSpeed).toBe(1.0);
   });
 
   it('accepts enabled: false as a valid stored value', () => {

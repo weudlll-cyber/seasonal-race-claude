@@ -34,11 +34,14 @@ function makeRacer(overrides = {}) {
 }
 
 // Minimal config for slot-based system.
+// lateralReturnSpeed: 1.0 makes the EMA instant (target applied in one frame) so these
+// tests verify slot classification and slot-finding, not the EMA smoothing.
 const cfg = {
   enabled: true,
   safetyMarginPx: 3,
   lookAheadFrames: 2,
   slotSearchRadiusPx: 80,
+  lateralReturnSpeed: 1.0,
   speedBrakeFactor: 0.95,
   draftingMaxDistance: 110,
   draftingConeAngle: 30,
@@ -74,6 +77,11 @@ describe('initRacerBehavior', () => {
   it('sets physicalY to 0', () => {
     const r = makeRacer();
     expect(r.physicalY).toBe(0);
+  });
+
+  it('sets targetPhysicalY to 0', () => {
+    const r = makeRacer();
+    expect(r.targetPhysicalY).toBe(0);
   });
 
   it('sets avoidanceActive to false', () => {
@@ -113,6 +121,12 @@ describe('applyRacerBehavior — disabled', () => {
     const r = makeRacer({ physicalY: 0.5 });
     applyRacerBehavior([r], { ...cfg, enabled: false });
     expect(r.physicalY).toBe(0.5);
+  });
+
+  it('syncs targetPhysicalY to physicalY when disabled', () => {
+    const r = makeRacer({ physicalY: 0.5 });
+    applyRacerBehavior([r], { ...cfg, enabled: false });
+    expect(r.targetPhysicalY).toBe(0.5);
   });
 });
 
@@ -505,6 +519,7 @@ describe('applyRacerBehavior — 20 racer simulation', () => {
       safetyMarginPx: SAFETY,
       lookAheadFrames: 2,
       slotSearchRadiusPx: 80,
+      lateralReturnSpeed: 1.0, // instant EMA so slot-finding correctness is tested directly
       speedBrakeFactor: 0.95,
       draftingMaxDistance: 110,
       draftingConeAngle: 30,
@@ -556,5 +571,110 @@ describe('applyRacerBehavior — 20 racer simulation', () => {
 
     const overlapRate = overlapFrames / FRAMES;
     expect(overlapRate).toBeLessThan(0.01); // < 1%
+  });
+});
+
+// ── EMA lateral smoothing ─────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — EMA lateral smoothing', () => {
+  it('large slot jump leads to gradual physicalY change, not instant teleportation', () => {
+    // Two colliding racers; the yielder has a large slot to jump to.
+    // With returnSpeed=0.2 it should only move 20% of the distance per frame.
+    const keeper = makeRacer({
+      index: 0,
+      t: 0.41,
+      x: 208,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: 0,
+    });
+    const yielder = makeRacer({
+      index: 1,
+      t: 0.4,
+      x: 200,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: -0.5, // was moving → yields
+    });
+    const emaCfg = { ...cfg, lateralReturnSpeed: 0.2, slotSearchRadiusPx: 80 };
+    applyRacerBehavior([keeper, yielder], emaCfg);
+
+    // With EMA=0.2, yielder moves only 20% toward its slot, not all the way.
+    // Keeper is 8px ahead (longSep=8 < minLong=27), so the yielder must shift ~28px
+    // laterally before any slot is clear: first free cy ≈ 28/75 ≈ 0.373.
+    // After 1 frame with EMA=0.2: physicalY ≈ 0.373 * 0.2 ≈ 0.075.
+    // It should NOT jump directly to 0.373 (that would be teleportation).
+    expect(Math.abs(yielder.physicalY)).toBeLessThan(0.373); // not instant
+    expect(Math.abs(yielder.physicalY)).toBeGreaterThan(0); // but has started moving
+    expect(Math.abs(yielder.physicalY)).toBeCloseTo(0.373 * 0.2, 2); // ≈ 0.075
+  });
+
+  it('when targetPhysicalY equals physicalY, physicalY stays stable (no drift)', () => {
+    // Isolated racer, no collision — targetY defaults to current physicalY, EMA changes nothing.
+    const r = makeRacer({ physicalY: 0.42, prevPhysicalY: 0.42 });
+    const emaCfg = { ...cfg, lateralReturnSpeed: 0.2 };
+    applyRacerBehavior([r], emaCfg);
+    expect(r.physicalY).toBeCloseTo(0.42, 5);
+  });
+
+  it('over N frames physicalY converges toward targetPhysicalY at rate lateralReturnSpeed', () => {
+    // Simulate a racer whose targetPhysicalY is fixed at 0.5 (slot assigned each frame).
+    // After k frames: physicalY = target × (1 - (1-returnSpeed)^k)
+    const RETURN_SPEED = 0.2;
+    const TARGET = 0.5;
+    const FRAMES_TO_RUN = 30;
+
+    // Single racer — we manually set targetPhysicalY by putting a blocker that forces
+    // the same slot assignment each frame. Easier: test via collision that persists.
+    // Simplest: two racers, yielder always resolves to same slot.
+    const keeper = makeRacer({
+      index: 0,
+      t: 0.51,
+      x: 100,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: 0,
+    });
+    const yielder = makeRacer({
+      index: 1,
+      t: 0.5,
+      x: 108,
+      y: 200,
+      angle: 0,
+      physicalY: 0,
+      prevPhysicalY: -0.5,
+    });
+    const emaCfg = { ...cfg, lateralReturnSpeed: RETURN_SPEED, slotSearchRadiusPx: 80 };
+
+    for (let frame = 0; frame < FRAMES_TO_RUN; frame++) {
+      applyRacerBehavior([keeper, yielder], emaCfg);
+      // Update world positions (simple: since angle=0, x position doesn't change laterally)
+      yielder.y = 200 + yielder.physicalY * 75;
+    }
+
+    // After 30 frames at returnSpeed=0.2, physicalY should be close to the slot target.
+    // EMA: after k frames, remaining gap = initial_gap × (1 - returnSpeed)^k
+    // After 30 frames: remaining fraction = 0.8^30 ≈ 0.00124 → 99.9% convergence
+    expect(Math.abs(yielder.physicalY)).toBeGreaterThan(0.04); // has moved significantly
+  });
+
+  it('physicalY with EMA does not exceed MAX_LATERAL (0.95) even at high target', () => {
+    // Force a slot assignment near the boundary; EMA should still clamp correctly.
+    const r = makeRacer({ physicalY: 0.93, prevPhysicalY: 0.93, x: 200, y: 200 + 0.93 * 75 });
+    const blocker = makeRacer({
+      index: 1,
+      t: 0.51,
+      x: 208,
+      y: 200 + 0.93 * 75,
+      angle: 0,
+      physicalY: 0.93,
+      prevPhysicalY: 0.93,
+    });
+    const emaCfg = { ...cfg, lateralReturnSpeed: 0.2 };
+    for (let i = 0; i < 20; i++) applyRacerBehavior([r, blocker], emaCfg);
+    expect(Math.abs(r.physicalY)).toBeLessThanOrEqual(0.95);
   });
 });

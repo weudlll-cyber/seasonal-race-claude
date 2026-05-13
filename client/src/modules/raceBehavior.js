@@ -6,7 +6,8 @@
 //              Collision detection in world pixel space using sprite hitboxes.
 //              Right-of-way hierarchy: line-holder > leader-of-pair > calmer lateral motion.
 //              Speed-brake reused for hybrid fallback when no free slot is found.
-//              Drafting cone unchanged.
+//              Lateral movement smoothed via EMA (targetPhysicalY → physicalY) to prevent
+//              frame-jump teleportation. Drafting cone unchanged.
 //              physicalY ∈ [-1, +1]: -1 = inner boundary, 0 = centerline, +1 = outer.
 // ============================================================
 
@@ -26,11 +27,13 @@ function normalizeAngle(a) {
 
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
- * physicalY is overwritten by computeRowPhysicalY (rowLayout.js) immediately after.
+ * physicalY and targetPhysicalY are overwritten by computeRowPhysicalY (rowLayout.js)
+ * immediately after — RaceScreen must sync targetPhysicalY = physicalY after that call.
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
   racer.physicalY = 0;
+  racer.targetPhysicalY = 0; // EMA target; RaceScreen syncs this after computeRowPhysicalY
   racer.prevPhysicalY = undefined; // set at end of first applyRacerBehavior call
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
@@ -56,6 +59,7 @@ export function initRacerBehavior(racer) {
  *   safetyMarginPx: number,
  *   lookAheadFrames: number,
  *   slotSearchRadiusPx: number,
+ *   lateralReturnSpeed: number,
  *   speedBrakeFactor: number,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number,
  *   corridorHalfWidthPx?: number
@@ -64,6 +68,7 @@ export function initRacerBehavior(racer) {
 export function applyRacerBehavior(racers, config) {
   if (!config.enabled) {
     for (const r of racers) {
+      r.targetPhysicalY = r.physicalY; // keep target in sync when behavior is disabled
       r.avoidanceActive = false;
       r.draftingBoostActive = false;
     }
@@ -249,11 +254,18 @@ export function applyRacerBehavior(racers, config) {
     }
   }
 
-  // Apply physicalY targets and save previous value for lateral-speed tracking.
+  // Apply EMA toward slot targets — prevents frame-jump teleportation (D11 pattern).
+  // lateralReturnSpeed=0.2 → ~14 frames to reach 95% of a new slot (≈233ms at 60fps).
+  // Higher than D11's avoidanceReturnSpeed=0.05 because this governs approach-to-slot
+  // (active movement), not return-to-home (relaxation). See lateral-jumps-diagnose.md §8.
+  const returnSpeed = config.lateralReturnSpeed ?? 0.2;
   for (const r of active) {
-    const newY = targetY.get(r.index) ?? r.physicalY;
+    r.targetPhysicalY = targetY.get(r.index) ?? r.physicalY;
     r.prevPhysicalY = r.physicalY;
-    r.physicalY = Math.max(-MAX_LATERAL, Math.min(MAX_LATERAL, newY));
+    r.physicalY = Math.max(
+      -MAX_LATERAL,
+      Math.min(MAX_LATERAL, r.physicalY + (r.targetPhysicalY - r.physicalY) * returnSpeed)
+    );
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────

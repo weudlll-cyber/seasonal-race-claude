@@ -221,6 +221,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   safetyMarginPx: 3,
   lookAheadFrames: 3,
   slotSearchRadiusPx: 60,
+  // Lateral EMA: fraction of (target - current) physicalY applied per frame.
+  // 0.2 → ~14 frames (233ms) to reach 95% of a new slot. Prevents teleportation.
+  lateralReturnSpeed: 0.2,
   // Speed brake — applied when hybrid fallback activates (no free slot found)
   speedBrakeFactor: 0.95,
   // Drafting / slipstream

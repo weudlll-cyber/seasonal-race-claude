@@ -391,6 +391,7 @@ export default function RaceScreen() {
           rowSize,
           behaviorConfig.startSpreadRange
         );
+        racer.targetPhysicalY = racer.physicalY; // sync EMA target to initial row position
         return racer;
       }),
     };

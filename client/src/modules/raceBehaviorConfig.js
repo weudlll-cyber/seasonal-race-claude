@@ -30,6 +30,8 @@ export function loadRaceBehaviorConfig() {
     merged.safetyMarginPx < 0 ||
     merged.lookAheadFrames < 0 ||
     merged.slotSearchRadiusPx <= 0 ||
+    merged.lateralReturnSpeed <= 0 ||
+    merged.lateralReturnSpeed > 1 ||
     merged.speedBrakeFactor <= 0 ||
     merged.speedBrakeFactor > 1 ||
     merged.draftingMaxDistance <= 0 ||
