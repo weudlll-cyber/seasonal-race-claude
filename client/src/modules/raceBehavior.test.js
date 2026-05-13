@@ -40,6 +40,11 @@ describe('initRacerBehavior', () => {
     expect(r.avoidanceActive).toBe(false);
   });
 
+  it('sets avoidanceBrakeFactor to 0', () => {
+    const r = makeRacer();
+    expect(r.avoidanceBrakeFactor).toBe(0);
+  });
+
   it('sets draftingBoostActive to false', () => {
     const r = makeRacer();
     expect(r.draftingBoostActive).toBe(false);
@@ -339,6 +344,56 @@ describe('applyRacerBehavior — speed brake', () => {
       speedBrakeYThreshold: 0.2,
     });
     expect(trailer.avoidanceActive).toBe(false);
+    expect(trailer.avoidanceBrakeFactor).toBe(0);
+  });
+
+  it('speed brake activation is scaled by antiCollisionFactor', () => {
+    const trailer = makeRacer({ index: 0, t: 0.5, x: 200, y: 200 });
+    const leader = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 });
+    trailer.physicalY = 0.05;
+    leader.physicalY = 0.05;
+    applyRacerBehavior(
+      [trailer, leader],
+      {
+        ...cfg,
+        homeForceStrength: 0,
+        avoidanceDistance: 1.0,
+        speedBrakeYThreshold: 0.2,
+        speedBrakeTThreshold: 0.02,
+      },
+      0.25
+    );
+    expect(trailer.avoidanceActive).toBe(true);
+    expect(trailer.avoidanceBrakeFactor).toBeCloseTo(0.25, 5);
+  });
+});
+
+describe('applyRacerBehavior — anti-collision factor', () => {
+  it('scales lateral anti-collision displacement by factor', () => {
+    const fullTrailer = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
+    const fullLeader = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
+    fullTrailer.physicalY = -0.1;
+    fullLeader.physicalY = 0.1;
+
+    const halfTrailer = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
+    const halfLeader = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
+    halfTrailer.physicalY = -0.1;
+    halfLeader.physicalY = 0.1;
+
+    applyRacerBehavior(
+      [fullTrailer, fullLeader],
+      { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 },
+      1
+    );
+    applyRacerBehavior(
+      [halfTrailer, halfLeader],
+      { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 },
+      0.5
+    );
+
+    const deltaFull = Math.abs(fullTrailer.physicalY - -0.1);
+    const deltaHalf = Math.abs(halfTrailer.physicalY - -0.1);
+    expect(deltaHalf).toBeCloseTo(deltaFull * 0.5, 4);
   });
 });
 

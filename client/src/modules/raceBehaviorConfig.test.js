@@ -38,6 +38,12 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled).toBe(true);
   });
 
+  it('has soft-launch defaults', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enableSoftLaunch).toBe(true);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.softLaunchDurationSeconds).toBe(3.0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.softLaunchRampMode).toBe('linear');
+  });
+
   it('has positive homeForceStrength', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
   });
@@ -109,6 +115,30 @@ describe('loadRaceBehaviorConfig', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingConeAngle: 180 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when softLaunchDurationSeconds is out of range', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      softLaunchDurationSeconds: 11,
+    });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when softLaunchRampMode is invalid', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      softLaunchRampMode: 'curve',
+    });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('accepts enableSoftLaunch=false as valid stored value', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, enableSoftLaunch: false });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg.enableSoftLaunch).toBe(false);
   });
 
   it('accepts enabled: false as a valid stored value', () => {

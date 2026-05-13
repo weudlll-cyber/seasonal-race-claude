@@ -25,6 +25,9 @@ vi.mock('../../../modules/baseSpeedConfig.js', () => ({
 vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
   loadRaceBehaviorConfig: vi.fn(() => ({
     enabled: true,
+    enableSoftLaunch: true,
+    softLaunchDurationSeconds: 3.0,
+    softLaunchRampMode: 'linear',
     startSpreadRange: 0.95,
     runoutZone: 0.05,
     homeForceStrength: 0.04,
@@ -45,6 +48,9 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
   saveRaceBehaviorConfig: vi.fn(() => true),
   DEFAULT_RACE_BEHAVIOR_CONFIG: {
     enabled: true,
+    enableSoftLaunch: true,
+    softLaunchDurationSeconds: 3.0,
+    softLaunchRampMode: 'linear',
     startSpreadRange: 0.95,
     runoutZone: 0.05,
     homeForceStrength: 0.04,
@@ -101,7 +107,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('RaceTuningSection — renders all 9 blocks', () => {
+describe('RaceTuningSection — renders all 10 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
@@ -122,43 +128,51 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
     expect(screen.getByLabelText('Start Spread Range')).toBeTruthy();
   });
 
-  it('renders Block 3: Row Start with summary', () => {
+  it('renders Block 3: Soft Launch', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Soft Launch')).toBeTruthy();
+    expect(screen.getByLabelText('Enable Soft Launch')).toBeTruthy();
+    expect(screen.getByLabelText('Soft Launch Duration (s)')).toBeTruthy();
+    expect(screen.getByLabelText('Soft Launch Ramp Mode')).toBeTruthy();
+  });
+
+  it('renders Block 4: Row Start with summary', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Row Start')).toBeTruthy();
     expect(screen.getByTestId('row-start-summary')).toBeTruthy();
   });
 
-  it('renders Block 4: Speed Re-Roll with preview', () => {
+  it('renders Block 5: Speed Re-Roll with preview', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Re-Roll')).toBeTruthy();
     expect(screen.getByTestId('reroll-preview')).toBeTruthy();
   });
 
-  it('renders Block 5: Drafting / Slipstream with summary', () => {
+  it('renders Block 6: Drafting / Slipstream with summary', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Drafting / Slipstream')).toBeTruthy();
     expect(screen.getByTestId('drafting-summary')).toBeTruthy();
   });
 
-  it('renders Block 6: Comfort Zone', () => {
+  it('renders Block 7: Comfort Zone', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Comfort Zone')).toBeTruthy();
     expect(screen.getByLabelText('Comfort Threshold')).toBeTruthy();
   });
 
-  it('renders Block 7: Soft Avoidance', () => {
+  it('renders Block 8: Soft Avoidance', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Soft Avoidance')).toBeTruthy();
     expect(screen.getByLabelText('Avoidance Distance')).toBeTruthy();
   });
 
-  it('renders Block 8: Speed Brake', () => {
+  it('renders Block 9: Speed Brake', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Brake')).toBeTruthy();
     expect(screen.getByLabelText('Speed Brake Factor')).toBeTruthy();
   });
 
-  it('renders Block 9: Home Force', () => {
+  it('renders Block 10: Home Force', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Home Force')).toBeTruthy();
     expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
@@ -219,6 +233,11 @@ describe('RaceTuningSection — per-block reset buttons', () => {
   it('renders Reset button for Row Start block', () => {
     render(<RaceTuningSection />);
     expect(screen.getByTestId('reset-row-start')).toBeTruthy();
+  });
+
+  it('renders Reset button for Soft Launch block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-soft-launch')).toBeTruthy();
   });
 
   it('renders Reset button for Speed Re-Roll block', () => {
