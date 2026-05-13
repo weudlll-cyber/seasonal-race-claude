@@ -32,6 +32,8 @@ import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import { getSpriteHitbox, fallbackHitbox } from '../../modules/spriteHitbox.js';
+import { getCachedSprite } from '../../modules/racer-types/spriteLoader.js';
 import {
   computeRacersPerRow,
   computeRowLayout,
@@ -227,7 +229,10 @@ export default function RaceScreen() {
     const BASE_SPEED_MAX = baseSpeedConfig.max;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
-    const behaviorConfig = loadRaceBehaviorConfig();
+    const behaviorConfig = {
+      ...loadRaceBehaviorConfig(),
+      corridorHalfWidthPx: geometricTrackWidthPx / 2,
+    };
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
 
@@ -370,6 +375,17 @@ export default function RaceScreen() {
           surfaceParticles: [],
         };
         initRacerBehavior(racer);
+        const _spriteUrl = racerType.config.spriteUrl;
+        const _hitbox =
+          getSpriteHitbox(
+            _spriteUrl,
+            getCachedSprite(_spriteUrl),
+            racerType.config.frameWidth,
+            racerType.config.frameHeight,
+            referenceSpriteSize
+          ) ?? fallbackHitbox(referenceSpriteSize);
+        racer.visibleWidthPx = _hitbox.visibleWidthPx;
+        racer.visibleLengthPx = _hitbox.visibleLengthPx;
         racer.physicalY = computeRowPhysicalY(
           assignment.indexInRow,
           rowSize,
