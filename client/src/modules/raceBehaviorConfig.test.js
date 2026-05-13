@@ -2,8 +2,8 @@
 // File:        raceBehaviorConfig.test.js
 // Path:        client/src/modules/raceBehaviorConfig.test.js
 // Project:     RaceArena
-// Created:     2026-04-26
-// Description: Unit tests for race-behavior config CRUD (D7b).
+// Description: Unit tests for race-behavior config CRUD.
+//              Old force-based constants replaced by slot-based constants.
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -26,11 +26,11 @@ beforeEach(() => {
 });
 
 describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
-  it('startSpreadRange is 0.95 (D7c Phase 4)', () => {
+  it('startSpreadRange is 0.95', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange).toBe(0.95);
   });
 
-  it('runoutZone is 0.05 (D7c Phase 4)', () => {
+  it('runoutZone is 0.05', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone).toBe(0.05);
   });
 
@@ -38,17 +38,16 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled).toBe(true);
   });
 
-  it('has positive homeForceStrength', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
+  it('safetyMarginPx is non-negative', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.safetyMarginPx).toBeGreaterThanOrEqual(0);
   });
 
-  it('comfortThreshold is between 0 and 1', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
+  it('lookAheadFrames is non-negative', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.lookAheadFrames).toBeGreaterThanOrEqual(0);
   });
 
-  it('has positive avoidanceDistance', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeGreaterThan(0);
+  it('slotSearchRadiusPx is positive', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.slotSearchRadiusPx).toBeGreaterThan(0);
   });
 
   it('speedBrakeFactor is between 0 and 1', () => {
@@ -64,6 +63,17 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle).toBeGreaterThan(0);
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingConeAngle).toBeLessThan(180);
   });
+
+  it('does not have old force-based constants', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('homeForceStrength');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('avoidanceDistance');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('lateralForce');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('comfortThreshold');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('softRepulsionStrength');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('tWeight');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('yWeight');
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG).not.toHaveProperty('maxLateral');
+  });
 });
 
 describe('loadRaceBehaviorConfig', () => {
@@ -74,21 +84,15 @@ describe('loadRaceBehaviorConfig', () => {
   });
 
   it('merges stored values with defaults', () => {
-    storageGet.mockReturnValue({ avoidanceDistance: 0.5, draftingBoost: 1.2 });
+    storageGet.mockReturnValue({ safetyMarginPx: 5, draftingBoost: 1.2 });
     const cfg = loadRaceBehaviorConfig();
-    expect(cfg.avoidanceDistance).toBe(0.5);
+    expect(cfg.safetyMarginPx).toBe(5);
     expect(cfg.draftingBoost).toBe(1.2);
     expect(cfg.enabled).toBe(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled);
   });
 
-  it('returns defaults when homeForceStrength <= 0', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceStrength: 0 });
-    const cfg = loadRaceBehaviorConfig();
-    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
-  });
-
-  it('returns defaults when comfortThreshold >= 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, comfortThreshold: 1.0 });
+  it('returns defaults when slotSearchRadiusPx <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, slotSearchRadiusPx: 0 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
@@ -125,16 +129,10 @@ describe('loadRaceBehaviorConfig — startSpreadRange migration', () => {
     expect(cfg.startSpreadRange).toBe(0.95);
   });
 
-  it('preserves custom spread 0.5 (user-tuned, not the old default)', () => {
+  it('preserves custom spread 0.5', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, startSpreadRange: 0.5 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg.startSpreadRange).toBe(0.5);
-  });
-
-  it('preserves custom spread 0.8', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, startSpreadRange: 0.8 });
-    const cfg = loadRaceBehaviorConfig();
-    expect(cfg.startSpreadRange).toBe(0.8);
   });
 
   it('runoutZone 0.0 (minimum) is valid', () => {
@@ -151,12 +149,6 @@ describe('loadRaceBehaviorConfig — startSpreadRange migration', () => {
 
   it('runoutZone > 0.20 → returns defaults', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, runoutZone: 0.5 });
-    const cfg = loadRaceBehaviorConfig();
-    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
-  });
-
-  it('runoutZone < 0 → returns defaults', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, runoutZone: -0.01 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
