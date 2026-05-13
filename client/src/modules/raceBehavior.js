@@ -2,12 +2,89 @@
 // File:        raceBehavior.js
 // Path:        client/src/modules/raceBehavior.js
 // Project:     RaceArena
-// Created:     2026-04-26
-// Description: Pure racer-behavior logic for D7b: lane-free avoidance and
-//              drafting on continuous physicalY in normalized track-width space.
+// Description: Sight-based preventive race AI replacing force/slot-based anti-collision.
+//              Each racer looks ahead sightHorizonFrames, picks a clear lane proactively,
+//              and commits to lane-changes for laneCommitFrames to prevent oscillation.
+//              All lateral movement is hard-capped at maxLateralStepPerFrame (px/frame),
+//              guaranteeing no visible jumps regardless of sight-logic output.
+//              Drafting cone activation smooth (draftingBoostFactor 0→1 over N frames).
 //              physicalY ∈ [-1, +1]: -1 = inner boundary, 0 = centerline, +1 = outer.
-//              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
+
+const MAX_LATERAL = 0.95;
+
+/**
+ * Normalize an angle to [-π, π].
+ */
+function normalizeAngle(a) {
+  return Math.atan2(Math.sin(a), Math.cos(a));
+}
+
+/**
+ * Forward t-gap from r to rAhead on a circular track [0, 1).
+ * Returns a value in (0, 1]. A gap of ~1 means rAhead is just behind r.
+ */
+function tGapForward(r, rAhead) {
+  let gap = rAhead.t - r.t;
+  if (gap <= 0) gap += 1;
+  return gap;
+}
+
+/**
+ * Check if a candidate physicalY is laterally clear of all given racers.
+ */
+function slotIsClear(cy, halfWidthSelf, others, corridorHalf, safetyLat) {
+  for (const o of others) {
+    const halfWidthO = (o.visibleWidthPx ?? 24) / 2 / corridorHalf;
+    const needed = halfWidthSelf + halfWidthO + safetyLat;
+    if (Math.abs(cy - o.physicalY) < needed) return false;
+  }
+  return true;
+}
+
+/**
+ * Find the nearest clear lateral slot for racer r, avoiding all given racers.
+ * Candidates radiate outward from r.physicalY, sorted center-first to prefer
+ * inner positions over wall-hugging.
+ * @returns {number|null} clear physicalY or null if none found
+ */
+function findClearLane(r, visibleAhead, corridorHalf, safetyLat) {
+  const halfWidthSelf = (r.visibleWidthPx ?? 24) / 2 / corridorHalf;
+  const stepPhys = halfWidthSelf * 2 + safetyLat; // full own-width + safety per step
+
+  const candidates = [];
+  for (let n = 1; n <= 8; n++) {
+    const dY = n * stepPhys;
+    candidates.push(r.physicalY + dY);
+    candidates.push(r.physicalY - dY);
+  }
+  // Center-first: prefer lanes closer to track center over wall positions
+  candidates.sort((a, b) => Math.abs(a) - Math.abs(b));
+
+  for (const cy of candidates) {
+    if (Math.abs(cy) > MAX_LATERAL) continue;
+    if (slotIsClear(cy, halfWidthSelf, visibleAhead, corridorHalf, safetyLat)) return cy;
+  }
+  return null;
+}
+
+/**
+ * Detect world-space hitbox overlap between two racers.
+ */
+function racersOverlap(rA, rB, safetyPx) {
+  const mid = (rA.angle + rB.angle) * 0.5;
+  const cosM = Math.cos(mid),
+    sinM = Math.sin(mid);
+  const dx = rB.x - rA.x,
+    dy = rB.y - rA.y;
+  const ls = Math.abs(dx * cosM + dy * sinM);
+  const lats = Math.abs(-dx * sinM + dy * cosM);
+  const wA = rA.visibleWidthPx ?? 24,
+    wB = rB.visibleWidthPx ?? 24;
+  const lA = rA.visibleLengthPx ?? 24,
+    lB = rB.visibleLengthPx ?? 24;
+  return ls < (lA + lB) * 0.5 + safetyPx && lats < (wA + wB) * 0.5 + safetyPx;
+}
 
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
@@ -15,40 +92,39 @@
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
-  racer.physicalY = 0;
+  racer.physicalY = racer.physicalY ?? 0;
+  racer.targetPhysicalY = racer.physicalY;
+  racer.laneCommitFrames = 0;
+  racer.draftingBoostFactor = 0; // smooth 0..1
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
 }
 
 /**
- * Normalize an angle to [-π, π].
- * @param {number} a
- * @returns {number}
- */
-function normalizeAngle(a) {
-  return Math.atan2(Math.sin(a), Math.cos(a));
-}
-
-/**
- * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
- * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
- * the current frame — drafting uses world-space positions; avoidance uses
- * anisotropic (t, physicalY) distance.
+ * Apply sight-based preventive race AI for one frame. Mutates racer state in-place.
+ *
+ * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed.
  *
  * @param {Array<{
  *   index: number, x: number, y: number, angle: number, t: number,
- *   physicalY: number, finished: boolean,
+ *   physicalY: number, targetPhysicalY: number, laneCommitFrames: number,
+ *   draftingBoostFactor: number,
+ *   visibleWidthPx?: number, visibleLengthPx?: number,
+ *   baseSpeed?: number, finished: boolean,
  *   avoidanceActive: boolean, draftingBoostActive: boolean
  * }>} racers
  * @param {{
  *   enabled: boolean,
- *   homeForceStrength: number,
- *   comfortThreshold: number, softRepulsionStrength: number,
- *   avoidanceDistance: number, tWeight: number, yWeight: number,
- *   lateralForce: number, maxLateral: number,
- *   speedBrakeYThreshold: number, speedBrakeTThreshold: number,
+ *   sightHorizonFrames: number,
+ *   safetyMarginPx: number,
+ *   laneCommitFrames: number,
+ *   overtakeAggressionDefault: number,
+ *   speedAdvantageThreshold: number,
+ *   maxLateralStepPerFrame: number,
+ *   draftingActivationFrames: number,
  *   speedBrakeFactor: number,
- *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
+ *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number,
+ *   corridorHalfWidthPx?: number
  * }} config
  */
 export function applyRacerBehavior(racers, config) {
@@ -61,112 +137,158 @@ export function applyRacerBehavior(racers, config) {
   }
 
   const active = racers.filter((r) => !r.finished);
-  for (const r of active) r.draftingBoostActive = false;
-
-  // Accumulate physicalY deltas from home force + avoidance
-  const yDeltas = new Map(active.map((r) => [r.index, 0]));
-  // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
-  const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
-  const neighborCounts = new Map(active.map((r) => [r.index, 0]));
-  const speedBrakeSet = new Set();
-
-  // ── Home force — spring toward centerline ──────────────────────────────────
   for (const r of active) {
-    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength);
+    r.avoidanceActive = false;
+    r.draftingBoostActive = false;
   }
 
-  // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
+  const corridorHalf = config.corridorHalfWidthPx ?? 75;
+  const safetyPx = config.safetyMarginPx ?? 4;
+  const safetyLat = safetyPx / corridorHalf;
+  const commitDuration = config.laneCommitFrames ?? 30;
+  const aggression = config.overtakeAggressionDefault ?? 0.5;
+  const speedAdvThresh = config.speedAdvantageThreshold ?? 0.00003;
+  const maxLatStep = (config.maxLateralStepPerFrame ?? 4) / corridorHalf;
+  const draftActivFrames = config.draftingActivationFrames ?? 20;
+  const draftActivStep = 1 / draftActivFrames;
+  const coneHalf = (config.draftingConeAngle * Math.PI) / 180 / 2;
+
+  // ── Sight-based phase logic ────────────────────────────────────────────────
+  for (const r of active) {
+    // Count down lane commitment each frame
+    if (r.laneCommitFrames > 0) r.laneCommitFrames--;
+
+    // Sight horizon in t-units: faster racers see further ahead proportionally
+    const tHorizon = (r.baseSpeed ?? 0.001045) * (config.sightHorizonFrames ?? 90);
+
+    // Visible-ahead: racers within tHorizon in front of r
+    const visibleAhead = active.filter((r2) => {
+      if (r2.index === r.index) return false;
+      const gap = tGapForward(r, r2);
+      return gap > 0 && gap < tHorizon;
+    });
+
+    const halfWidthSelf = (r.visibleWidthPx ?? 24) / 2 / corridorHalf;
+
+    // Threats: visible-ahead racers that share r's lane (lateral conflict)
+    const threats = visibleAhead.filter((r2) => {
+      const halfWidthR2 = (r2.visibleWidthPx ?? 24) / 2 / corridorHalf;
+      const needed = halfWidthSelf + halfWidthR2 + safetyLat;
+      return Math.abs(r.physicalY - r2.physicalY) < needed;
+    });
+
+    if (r.laneCommitFrames > 0) {
+      // Committed to a lane: only override if that committed target is now blocked
+      if (!slotIsClear(r.targetPhysicalY, halfWidthSelf, visibleAhead, corridorHalf, safetyLat)) {
+        r.laneCommitFrames = 0; // release and replan below
+      } else {
+        continue; // commitment intact — skip to movement step
+      }
+    }
+
+    // ── No active commitment: run phase logic ────────────────────────────────
+    if (threats.length === 0) {
+      // Phase 2: free running — hold current lane, no forced center drift
+    } else {
+      // Phase 1: threat in lane — find a clear alternative lane
+      const nearestThreat = [...threats].sort((a, b) => tGapForward(r, a) - tGapForward(r, b))[0];
+
+      const hasStraightAdvantage =
+        (r.baseSpeed ?? 0) > (nearestThreat.baseSpeed ?? 0) + speedAdvThresh;
+
+      const clearLane = findClearLane(r, visibleAhead, corridorHalf, safetyLat);
+
+      if (clearLane !== null) {
+        // Clear lane exists — switch if overtaking or if current lane is truly blocked
+        const currentLaneClear = slotIsClear(
+          r.physicalY,
+          halfWidthSelf,
+          visibleAhead,
+          corridorHalf,
+          safetyLat
+        );
+        if (!currentLaneClear || hasStraightAdvantage) {
+          r.targetPhysicalY = Math.max(-MAX_LATERAL, Math.min(MAX_LATERAL, clearLane));
+          r.laneCommitFrames = commitDuration;
+        } else {
+          // Speed advantage racer waiting for a dodge opportunity — gentle brake
+          r.avoidanceActive = true;
+        }
+      } else {
+        // All visible lanes blocked: brake and wait for longitudinal separation
+        r.avoidanceActive = true;
+      }
+    }
+  }
+
+  // ── Safety net: resolve actual hitbox overlaps with micro-nudge ───────────
+  // Should rarely fire with working sight logic. Tracks per-racer emergencies.
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
-      const rA = active[i];
-      const rB = active[j];
+      const rA = active[i],
+        rB = active[j];
+      if (!racersOverlap(rA, rB, safetyPx)) continue;
 
-      // Anisotropic distance in (t, physicalY) space
-      let dT = Math.abs(rA.t - rB.t);
-      if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
-      const dY = rA.physicalY - rB.physicalY;
-      const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
-      if (dist >= config.avoidanceDistance) continue;
+      rA.avoidanceActive = true;
+      rB.avoidanceActive = true;
 
-      // Proximity-scaled lateral force
-      const forceMag = config.lateralForce * (1 - dist / config.avoidanceDistance);
-
-      // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
-      const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
-      const trailer = aIsTrailer ? rA : rB;
-      const leader = aIsTrailer ? rB : rA;
-
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
-      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < config.speedBrakeTThreshold) {
-        speedBrakeSet.add(trailer.index);
-      }
-
-      // Push trailer away from leader's physicalY.
-      // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
-      // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
-      const yDiff = trailer.physicalY - leader.physicalY;
-      if (Math.abs(yDiff) < 1e-6) continue;
-      const pushDir = yDiff >= 0 ? 1 : -1;
-      yAvoidDeltas.set(trailer.index, yAvoidDeltas.get(trailer.index) + pushDir * forceMag);
-      neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
+      // Racer closer to wall has less room — the other one yields
+      const aYields = Math.abs(rA.physicalY) < Math.abs(rB.physicalY);
+      const yielder = aYields ? rA : rB;
+      const keeper = aYields ? rB : rA;
+      const nudgeDir = yielder.physicalY >= keeper.physicalY ? 1 : -1;
+      // Nudge strictly within maxLatStep — no jumps even in emergencies
+      const nudgePhy = Math.min(maxLatStep, safetyLat * 0.5);
+      yielder.targetPhysicalY = Math.max(
+        -MAX_LATERAL,
+        Math.min(MAX_LATERAL, yielder.physicalY + nudgeDir * nudgePhy)
+      );
     }
   }
 
-  // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).
-  // Prevents boundary-clinging at high racer counts where linear force accumulation
-  // across N neighbors would otherwise overwhelm restoring forces.
+  // ── Apply smooth lateral movement — HARD cap guarantees no visible jumps ──
   for (const r of active) {
-    const count = neighborCounts.get(r.index);
-    const avoid =
-      count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
-    yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
+    const delta = r.targetPhysicalY - r.physicalY;
+    const step = Math.sign(delta) * Math.min(Math.abs(delta), maxLatStep);
+    r.physicalY = Math.max(-MAX_LATERAL, Math.min(MAX_LATERAL, r.physicalY + step));
   }
 
-  // Apply deltas + soft repulsion + hard clamp
-  for (const r of active) {
-    let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
-
-    // Soft repulsion: grows quadratically as physicalY approaches boundary
-    const absY = Math.abs(newY);
-    if (absY >= config.comfortThreshold && absY < 1.0) {
-      const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
-      newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
-    }
-
-    // maxLateral cap + hard boundary clamp
-    const cap = Math.min(config.maxLateral, 1.0);
-    r.physicalY = Math.max(-cap, Math.min(cap, newY));
-    r.avoidanceActive = speedBrakeSet.has(r.index);
-  }
-
-  // ── Drafting — cone behind leader in world-pixel space ────────────────────
-  // Structural note (PR-A2.6 diagnosis): on tight curves the track direction rotates quickly,
-  // so the cone occasionally misses a follower that is physically in the slipstream.
-  // A full cone-geometry refactor is a separate Backlog item and is NOT done here.
-  const coneHalf = (config.draftingConeAngle * Math.PI) / 180 / 2;
+  // ── Drafting: smooth cone activation via draftingBoostFactor ─────────────
   for (let i = 0; i < active.length; i++) {
     const follower = active[i];
+    let inCone = false;
+
     for (let j = 0; j < active.length; j++) {
       if (i === j) continue;
       const leader = active[j];
-      if (leader.t <= follower.t) continue; // leader must be ahead in race progress
+      if (leader.t <= follower.t) continue;
 
-      // World-space distance between follower and leader
       const dx = follower.x - leader.x;
       const dy = follower.y - leader.y;
       const worldDist = Math.sqrt(dx * dx + dy * dy);
       if (worldDist >= config.draftingMaxDistance) continue;
 
-      // Cone check: is follower in the wake zone directly behind leader?
-      // The wake opens opposite to the leader's movement direction.
       const behindAngle = leader.angle + Math.PI;
       const followerAngle = Math.atan2(dy, dx);
       const angleDiff = Math.abs(normalizeAngle(followerAngle - behindAngle));
       if (angleDiff > coneHalf) continue;
 
-      follower.draftingBoostActive = true;
+      inCone = true;
       break;
     }
+
+    // Smooth factor: ramp up when in cone, ramp down when out
+    if (inCone) {
+      follower.draftingBoostFactor = Math.min(
+        1,
+        (follower.draftingBoostFactor ?? 0) + draftActivStep
+      );
+    } else {
+      follower.draftingBoostFactor = Math.max(
+        0,
+        (follower.draftingBoostFactor ?? 0) - draftActivStep
+      );
+    }
+    follower.draftingBoostActive = follower.draftingBoostFactor > 0.01;
   }
 }

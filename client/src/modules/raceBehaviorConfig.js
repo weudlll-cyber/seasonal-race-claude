@@ -3,7 +3,7 @@
 // Path:        client/src/modules/raceBehaviorConfig.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Storage CRUD for race-behavior tuning config (D7b).
+// Description: Storage CRUD for race-behavior tuning config — sight-model architecture.
 //              Follows the baseSpeedConfig.js pattern.
 // ============================================================
 
@@ -26,17 +26,14 @@ export function loadRaceBehaviorConfig() {
   if (
     merged.startSpreadRange <= 0 ||
     merged.startSpreadRange > 1 ||
-    merged.homeForceStrength <= 0 ||
-    merged.comfortThreshold <= 0 ||
-    merged.comfortThreshold >= 1 ||
-    merged.softRepulsionStrength <= 0 ||
-    merged.avoidanceDistance <= 0 ||
-    merged.tWeight <= 0 ||
-    merged.yWeight <= 0 ||
-    merged.lateralForce <= 0 ||
-    merged.maxLateral <= 0 ||
-    merged.speedBrakeYThreshold <= 0 ||
-    merged.speedBrakeTThreshold <= 0 ||
+    merged.sightHorizonFrames <= 0 ||
+    merged.safetyMarginPx < 0 ||
+    merged.laneCommitFrames < 0 ||
+    merged.overtakeAggressionDefault < 0 ||
+    merged.overtakeAggressionDefault > 1 ||
+    merged.speedAdvantageThreshold < 0 ||
+    merged.maxLateralStepPerFrame <= 0 ||
+    merged.draftingActivationFrames <= 0 ||
     merged.speedBrakeFactor <= 0 ||
     merged.speedBrakeFactor > 1 ||
     merged.draftingMaxDistance <= 0 ||

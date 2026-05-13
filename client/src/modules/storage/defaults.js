@@ -217,20 +217,23 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   startSpreadRange: 0.95,
   // Open-track run-out zone: fraction of path after which the finish line sits (0 = no runout)
   runoutZone: 0.05,
-  // Home force — spring toward centerline (physicalY = 0)
-  homeForceStrength: 0.04,
-  // Comfort zone & soft boundary repulsion
-  comfortThreshold: 0.7,
-  softRepulsionStrength: 0.1,
-  // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
-  avoidanceDistance: 0.35,
-  tWeight: 2.0,
-  yWeight: 1.0,
-  lateralForce: 0.01,
-  maxLateral: 0.95,
-  // Speed brake for side-by-side (adjacent) racers
-  speedBrakeYThreshold: 0.2,
-  speedBrakeTThreshold: 0.015,
+  // Sight-based preventive AI
+  // How far ahead each racer looks (frames). Faster racers see more t-distance proportionally.
+  sightHorizonFrames: 90,
+  // Minimum lateral clearance between hitboxes (px)
+  safetyMarginPx: 4,
+  // How long a lane-change commitment is held (frames). Prevents per-frame oscillation.
+  laneCommitFrames: 30,
+  // Probability factor for overtake decision when speed advantage exists (0..1)
+  overtakeAggressionDefault: 0.5,
+  // Minimum speed advantage to consider overtaking (baseSpeed units)
+  speedAdvantageThreshold: 0.00003,
+  // Hard limit on lateral physicalY change per frame (px). Guarantees no visible jumps.
+  // 4px/frame @60fps = 240px/s ≈ realistic horse lateral speed on dirt track.
+  maxLateralStepPerFrame: 4,
+  // Frames to ramp drafting boost factor from 0→1 (smooth, not binary)
+  draftingActivationFrames: 20,
+  // Speed brake — applied when avoidanceActive (all lanes blocked)
   speedBrakeFactor: 0.95,
   // Drafting / slipstream
   draftingMaxDistance: 110,
