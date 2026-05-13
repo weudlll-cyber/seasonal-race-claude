@@ -109,11 +109,11 @@ export const DEFAULT_PLAYER_GROUPS = [];
 export const DEFAULT_BRANDING = [];
 export const DEFAULT_RACE_HISTORY = [];
 
-// ±12.9% from mean (0.001045) — tight enough to prevent lap-wrap visual gaps
-// on 60s races while keeping visible drama. Old values were 0.00085/0.0012 (±17%).
+// Mean stays at 0.001045 while total min→max spread is reduced to ~17.7%
+// to reduce persistent pack clustering at high racer density.
 export const DEFAULT_BASE_SPEED_CONFIG = {
-  min: 0.00091,
-  max: 0.00118,
+  min: 0.00096,
+  max: 0.00113,
 };
 
 export const DEFAULT_ROW_LAYOUT_CONFIG = {
@@ -205,7 +205,7 @@ export const DEFAULT_CAMERA_CONFIG = {
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
-  reRollVariationPercent: 85,
+  reRollVariationPercent: 45,
   reRollTransitionDuration: 5.0,
   reRollIntervalDivisor: 15,
   reRollLastPositionPercent: 80,
@@ -233,7 +233,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   speedBrakeTThreshold: 0.015,
   speedBrakeFactor: 0.95,
   // Drafting / slipstream
-  draftingMaxDistance: 110,
+  draftingMaxDistance: 80,
   draftingConeAngle: 30,
-  draftingBoost: 1.1,
+  draftingBoost: 1.04,
 };
