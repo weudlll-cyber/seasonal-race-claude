@@ -2,12 +2,36 @@
 // File:        raceBehavior.js
 // Path:        client/src/modules/raceBehavior.js
 // Project:     RaceArena
-// Created:     2026-04-26
-// Description: Pure racer-behavior logic for D7b: lane-free avoidance and
-//              drafting on continuous physicalY in normalized track-width space.
+// Description: PBD (Position-Based Dynamics) race AI — replaces all prior
+//              force/slot/sight-based anti-collision architectures.
+//              Frame structure per tick:
+//                Step 1 — Predicted Positions: apply centerline attraction to targetPhysicalY.
+//                Step 2 — Constraint Resolution: iteratively push overlapping pairs apart,
+//                         writing corrections to targetPhysicalY (never physicalY directly).
+//                Step 3 — Smooth Movement: move physicalY toward targetPhysicalY at most
+//                         maxLateralStepPerFrame px per frame — no visible jumps.
+//                Drafting: smooth cone activation via draftingBoostFactor (0→1 over frames).
 //              physicalY ∈ [-1, +1]: -1 = inner boundary, 0 = centerline, +1 = outer.
-//              Functions mutate racer objects in-place, no React or DOM deps.
+//              Asymmetric resolution: leader (higher t) yields frontWeight fraction,
+//              follower yields (1 - frontWeight) fraction.
 // ============================================================
+
+const MAX_LATERAL = 0.95;
+
+function normalizeAngle(a) {
+  return Math.atan2(Math.sin(a), Math.cos(a));
+}
+
+/**
+ * Signed t-gap from rA to rB on circular track [0, 1).
+ * Positive means rB is ahead of rA.
+ */
+function tGapSigned(rA, rB) {
+  let gap = rB.t - rA.t;
+  if (gap > 0.5) gap -= 1;
+  if (gap < -0.5) gap += 1;
+  return gap;
+}
 
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
@@ -15,40 +39,37 @@
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
-  racer.physicalY = 0;
+  racer.physicalY = racer.physicalY ?? 0;
+  racer.targetPhysicalY = racer.physicalY;
+  racer.draftingBoostFactor = 0;
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
 }
 
 /**
- * Normalize an angle to [-π, π].
- * @param {number} a
- * @returns {number}
- */
-function normalizeAngle(a) {
-  return Math.atan2(Math.sin(a), Math.cos(a));
-}
-
-/**
- * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
- * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
- * the current frame — drafting uses world-space positions; avoidance uses
- * anisotropic (t, physicalY) distance.
+ * Apply PBD anti-collision + centerline attraction + drafting for one frame.
+ * Mutates racer state in-place.
+ *
+ * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed
+ * for the current frame — longitudinal overlap check and drafting use world positions.
  *
  * @param {Array<{
  *   index: number, x: number, y: number, angle: number, t: number,
- *   physicalY: number, finished: boolean,
- *   avoidanceActive: boolean, draftingBoostActive: boolean
+ *   physicalY: number, targetPhysicalY: number, draftingBoostFactor: number,
+ *   visibleWidthPx?: number, visibleLengthPx?: number,
+ *   finished: boolean, avoidanceActive: boolean, draftingBoostActive: boolean
  * }>} racers
  * @param {{
  *   enabled: boolean,
- *   homeForceStrength: number,
- *   comfortThreshold: number, softRepulsionStrength: number,
- *   avoidanceDistance: number, tWeight: number, yWeight: number,
- *   lateralForce: number, maxLateral: number,
- *   speedBrakeYThreshold: number, speedBrakeTThreshold: number,
+ *   pbdIterationsPerFrame: number,
+ *   frontWeight: number,
+ *   centerlineForce: number,
+ *   safetyMarginPx: number,
+ *   maxLateralStepPerFrame: number,
  *   speedBrakeFactor: number,
- *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
+ *   draftingActivationFrames: number,
+ *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number,
+ *   corridorHalfWidthPx?: number
  * }} config
  */
 export function applyRacerBehavior(racers, config) {
@@ -61,112 +82,126 @@ export function applyRacerBehavior(racers, config) {
   }
 
   const active = racers.filter((r) => !r.finished);
-  for (const r of active) r.draftingBoostActive = false;
+  const corridorHalf = config.corridorHalfWidthPx ?? 75;
+  const safetyPx = config.safetyMarginPx ?? 4;
+  const maxLatStep = (config.maxLateralStepPerFrame ?? 4) / corridorHalf;
+  const centerlineForce = config.centerlineForce ?? 0.02;
+  const frontWeight = config.frontWeight ?? 0.2;
+  const iterations = config.pbdIterationsPerFrame ?? 5;
+  const draftActivStep = 1 / (config.draftingActivationFrames ?? 20);
+  const coneHalf = ((config.draftingConeAngle ?? 30) * Math.PI) / 180 / 2;
 
-  // Accumulate physicalY deltas from home force + avoidance
-  const yDeltas = new Map(active.map((r) => [r.index, 0]));
-  // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
-  const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
-  const neighborCounts = new Map(active.map((r) => [r.index, 0]));
-  const speedBrakeSet = new Set();
-
-  // ── Home force — spring toward centerline ──────────────────────────────────
   for (const r of active) {
-    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength);
+    r.avoidanceActive = false;
+    r.draftingBoostActive = false;
   }
 
-  // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
-  for (let i = 0; i < active.length; i++) {
-    for (let j = i + 1; j < active.length; j++) {
-      const rA = active[i];
-      const rB = active[j];
+  // ── Step 1: Predicted Positions — centerline attraction ───────────────────
+  // Pull targetPhysicalY toward 0 by centerlineForce fraction each frame.
+  // This is a "wish" — PBD step 2 corrects it if overlap results.
+  for (const r of active) {
+    r.targetPhysicalY = r.targetPhysicalY * (1 - centerlineForce);
+    r.targetPhysicalY = Math.max(-MAX_LATERAL, Math.min(MAX_LATERAL, r.targetPhysicalY));
+  }
 
-      // Anisotropic distance in (t, physicalY) space
-      let dT = Math.abs(rA.t - rB.t);
-      if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
-      const dY = rA.physicalY - rB.physicalY;
-      const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
-      if (dist >= config.avoidanceDistance) continue;
+  // ── Step 2: PBD Constraint Resolution ────────────────────────────────────
+  // Iterate pbdIterationsPerFrame times. Each pass checks all pairs.
+  // Lateral overlap: targetPhysicalY difference in normalized space.
+  // Longitudinal overlap: world-space projection along track direction.
+  // Corrections go to targetPhysicalY only — physicalY is never written here.
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < active.length; i++) {
+      for (let j = i + 1; j < active.length; j++) {
+        const rA = active[i];
+        const rB = active[j];
 
-      // Proximity-scaled lateral force
-      const forceMag = config.lateralForce * (1 - dist / config.avoidanceDistance);
+        // Lateral: check predicted positions in normalized space
+        const halfWidthA = (rA.visibleWidthPx ?? 24) / 2 / corridorHalf;
+        const halfWidthB = (rB.visibleWidthPx ?? 24) / 2 / corridorHalf;
+        const minLat = halfWidthA + halfWidthB + safetyPx / corridorHalf;
 
-      // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
-      const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
-      const trailer = aIsTrailer ? rA : rB;
-      const leader = aIsTrailer ? rB : rA;
+        const latDiff = rA.targetPhysicalY - rB.targetPhysicalY;
+        if (Math.abs(latDiff) >= minLat) continue; // no lateral overlap
 
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
-      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < config.speedBrakeTThreshold) {
-        speedBrakeSet.add(trailer.index);
+        // Longitudinal: project world-space vector onto midpoint track direction
+        const midAngle = (rA.angle + rB.angle) * 0.5;
+        const cosM = Math.cos(midAngle);
+        const sinM = Math.sin(midAngle);
+        const dx = rB.x - rA.x;
+        const dy = rB.y - rA.y;
+        const longDist = Math.abs(dx * cosM + dy * sinM);
+        const minLong = (rA.visibleLengthPx ?? 24) / 2 + (rB.visibleLengthPx ?? 24) / 2 + safetyPx;
+        if (longDist >= minLong) continue; // longitudinally clear — no correction
+
+        // True hitbox overlap — asymmetric push-apart.
+        // Leader (positive tGap means rB is ahead of rA) yields frontWeight.
+        // Follower yields (1 - frontWeight).
+        const overlap = minLat - Math.abs(latDiff);
+        const tGap = tGapSigned(rA, rB); // > 0 → rB ahead of rA
+        const aIsLeader = tGap < 0;
+        const shareA = aIsLeader ? frontWeight : 1 - frontWeight;
+        const shareB = aIsLeader ? 1 - frontWeight : frontWeight;
+
+        // Push direction: positive latDiff → rA is "outer" → push rA further out, rB further in.
+        // Tiebreaker when latDiff === 0: rA goes positive, rB goes negative.
+        const pushDir = latDiff !== 0 ? Math.sign(latDiff) : 1;
+
+        rA.targetPhysicalY = Math.max(
+          -MAX_LATERAL,
+          Math.min(MAX_LATERAL, rA.targetPhysicalY + pushDir * shareA * overlap)
+        );
+        rB.targetPhysicalY = Math.max(
+          -MAX_LATERAL,
+          Math.min(MAX_LATERAL, rB.targetPhysicalY - pushDir * shareB * overlap)
+        );
       }
-
-      // Push trailer away from leader's physicalY.
-      // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
-      // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
-      const yDiff = trailer.physicalY - leader.physicalY;
-      if (Math.abs(yDiff) < 1e-6) continue;
-      const pushDir = yDiff >= 0 ? 1 : -1;
-      yAvoidDeltas.set(trailer.index, yAvoidDeltas.get(trailer.index) + pushDir * forceMag);
-      neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
     }
   }
 
-  // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).
-  // Prevents boundary-clinging at high racer counts where linear force accumulation
-  // across N neighbors would otherwise overwhelm restoring forces.
+  // ── Step 3: Smooth lateral movement — hard cap prevents visible jumps ─────
+  // physicalY follows targetPhysicalY at most maxLateralStepPerFrame px/frame.
+  // Smooth movement comes from the model; no Render-EMA (Lesson 70).
   for (const r of active) {
-    const count = neighborCounts.get(r.index);
-    const avoid =
-      count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
-    yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
+    const delta = r.targetPhysicalY - r.physicalY;
+    const step = Math.sign(delta) * Math.min(Math.abs(delta), maxLatStep);
+    r.physicalY = Math.max(-MAX_LATERAL, Math.min(MAX_LATERAL, r.physicalY + step));
   }
 
-  // Apply deltas + soft repulsion + hard clamp
-  for (const r of active) {
-    let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
-
-    // Soft repulsion: grows quadratically as physicalY approaches boundary
-    const absY = Math.abs(newY);
-    if (absY >= config.comfortThreshold && absY < 1.0) {
-      const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
-      newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
-    }
-
-    // maxLateral cap + hard boundary clamp
-    const cap = Math.min(config.maxLateral, 1.0);
-    r.physicalY = Math.max(-cap, Math.min(cap, newY));
-    r.avoidanceActive = speedBrakeSet.has(r.index);
-  }
-
-  // ── Drafting — cone behind leader in world-pixel space ────────────────────
-  // Structural note (PR-A2.6 diagnosis): on tight curves the track direction rotates quickly,
-  // so the cone occasionally misses a follower that is physically in the slipstream.
-  // A full cone-geometry refactor is a separate Backlog item and is NOT done here.
-  const coneHalf = (config.draftingConeAngle * Math.PI) / 180 / 2;
+  // ── Drafting: smooth cone activation via draftingBoostFactor ─────────────
   for (let i = 0; i < active.length; i++) {
     const follower = active[i];
+    let inCone = false;
+
     for (let j = 0; j < active.length; j++) {
       if (i === j) continue;
       const leader = active[j];
-      if (leader.t <= follower.t) continue; // leader must be ahead in race progress
+      if (leader.t <= follower.t) continue;
 
-      // World-space distance between follower and leader
       const dx = follower.x - leader.x;
       const dy = follower.y - leader.y;
       const worldDist = Math.sqrt(dx * dx + dy * dy);
       if (worldDist >= config.draftingMaxDistance) continue;
 
-      // Cone check: is follower in the wake zone directly behind leader?
-      // The wake opens opposite to the leader's movement direction.
       const behindAngle = leader.angle + Math.PI;
       const followerAngle = Math.atan2(dy, dx);
       const angleDiff = Math.abs(normalizeAngle(followerAngle - behindAngle));
       if (angleDiff > coneHalf) continue;
 
-      follower.draftingBoostActive = true;
+      inCone = true;
       break;
     }
+
+    if (inCone) {
+      follower.draftingBoostFactor = Math.min(
+        1,
+        (follower.draftingBoostFactor ?? 0) + draftActivStep
+      );
+    } else {
+      follower.draftingBoostFactor = Math.max(
+        0,
+        (follower.draftingBoostFactor ?? 0) - draftActivStep
+      );
+    }
+    follower.draftingBoostActive = follower.draftingBoostFactor > 0.01;
   }
 }

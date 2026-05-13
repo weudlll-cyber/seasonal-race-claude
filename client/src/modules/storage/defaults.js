@@ -217,21 +217,24 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   startSpreadRange: 0.95,
   // Open-track run-out zone: fraction of path after which the finish line sits (0 = no runout)
   runoutZone: 0.05,
-  // Home force — spring toward centerline (physicalY = 0)
-  homeForceStrength: 0.04,
-  // Comfort zone & soft boundary repulsion
-  comfortThreshold: 0.7,
-  softRepulsionStrength: 0.1,
-  // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
-  avoidanceDistance: 0.35,
-  tWeight: 2.0,
-  yWeight: 1.0,
-  lateralForce: 0.01,
-  maxLateral: 0.95,
-  // Speed brake for side-by-side (adjacent) racers
-  speedBrakeYThreshold: 0.2,
-  speedBrakeTThreshold: 0.015,
+  // PBD anti-collision — constraint iterations per frame (5 resolves dense 20-racer packs)
+  pbdIterationsPerFrame: 5,
+  // Asymmetric resolution weight for the leading racer (higher t = further along track).
+  // Leader moves frontWeight fraction of correction; follower moves (1 - frontWeight).
+  // 0.2 = leader yields 20%, follower yields 80% — realistic race right-of-way.
+  frontWeight: 0.2,
+  // Centerline attraction strength per frame (fraction of current offset pulled toward Y=0).
+  // 0.02 = racer at boundary (physicalY=1) moves ~2% per frame toward center.
+  centerlineForce: 0.02,
+  // Minimum lateral + longitudinal clearance between hitboxes (px)
+  safetyMarginPx: 4,
+  // Hard limit on lateral physicalY change per frame (px). Guarantees no visible jumps.
+  // 4px/frame @60fps = 240px/s — realistic horse lateral speed on dirt track.
+  maxLateralStepPerFrame: 4,
+  // Speed brake — kept for fallback signalling (avoidanceActive flag)
   speedBrakeFactor: 0.95,
+  // Frames to ramp drafting boost factor from 0→1 (smooth, not binary)
+  draftingActivationFrames: 20,
   // Drafting / slipstream
   draftingMaxDistance: 110,
   draftingConeAngle: 30,
