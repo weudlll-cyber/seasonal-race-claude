@@ -20,18 +20,26 @@ beforeEach(() => {
 });
 
 describe('DEFAULT_BASE_SPEED_CONFIG', () => {
-  it('has new tighter defaults (±12.9% spread)', () => {
-    expect(DEFAULT_BASE_SPEED_CONFIG).toEqual({ min: 0.00091, max: 0.00118 });
+  it('has new tight defaults (±2.4% spread) per speed-range diagnostic PR #94', () => {
+    expect(DEFAULT_BASE_SPEED_CONFIG).toEqual({ min: 0.00102, max: 0.00107 });
   });
 
   it('min < max', () => {
     expect(DEFAULT_BASE_SPEED_CONFIG.min).toBeLessThan(DEFAULT_BASE_SPEED_CONFIG.max);
   });
 
-  it('spread is ±12-14% (tighter than old ±17%)', () => {
+  it('BASE_SPEED_MIN is 0.00102', () => {
+    expect(DEFAULT_BASE_SPEED_CONFIG.min).toBe(0.00102);
+  });
+
+  it('BASE_SPEED_MAX is 0.00107', () => {
+    expect(DEFAULT_BASE_SPEED_CONFIG.max).toBe(0.00107);
+  });
+
+  it('spread is ≤5% (diagnostic target: E[spread] ≈4.5% with 20 racers)', () => {
     const sp = spreadPercent(DEFAULT_BASE_SPEED_CONFIG.min, DEFAULT_BASE_SPEED_CONFIG.max);
-    expect(sp).toBeGreaterThan(12);
-    expect(sp).toBeLessThan(14);
+    expect(sp).toBeGreaterThan(0);
+    expect(sp).toBeLessThan(5);
   });
 });
 
@@ -66,7 +74,7 @@ describe('loadBaseSpeedConfig', () => {
   it('does not mutate DEFAULT_BASE_SPEED_CONFIG', () => {
     storageGet.mockReturnValue({ min: 0.0005 });
     loadBaseSpeedConfig();
-    expect(DEFAULT_BASE_SPEED_CONFIG.min).toBe(0.00091);
+    expect(DEFAULT_BASE_SPEED_CONFIG.min).toBe(0.00102);
   });
 
   it('custom narrow range (±5%) round-trips correctly', () => {
@@ -107,7 +115,7 @@ describe('spreadPercent', () => {
     expect(spreadPercent(0, 0.001)).toBe(0);
   });
 
-  it('default config ≈ ±12.9%', () => {
+  it('old default values (0.00091/0.00118) ≈ ±12.9% — kept as function regression', () => {
     expect(spreadPercent(0.00091, 0.00118)).toBeCloseTo(12.9, 0);
   });
 

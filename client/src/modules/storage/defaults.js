@@ -109,11 +109,11 @@ export const DEFAULT_PLAYER_GROUPS = [];
 export const DEFAULT_BRANDING = [];
 export const DEFAULT_RACE_HISTORY = [];
 
-// ±12.9% from mean (0.001045) — tight enough to prevent lap-wrap visual gaps
-// on 60s races while keeping visible drama. Old values were 0.00085/0.0012 (±17%).
+// ±2.4% from mean (0.001045) — tight range keeps 20-racer spread ≤5% (E[max-min]≈4.5%).
+// Reduced from 0.00091/0.00118 (±12.9%) per speed-range diagnostic sprint PR #94.
 export const DEFAULT_BASE_SPEED_CONFIG = {
-  min: 0.00091,
-  max: 0.00118,
+  min: 0.00102,
+  max: 0.00107,
 };
 
 export const DEFAULT_ROW_LAYOUT_CONFIG = {
@@ -209,6 +209,28 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollTransitionDuration: 5.0,
   reRollIntervalDivisor: 15,
   reRollLastPositionPercent: 80,
+};
+
+// Planner Physics — kinematic limits, safety buffers, planning horizon, objective weights.
+// These are the Class-A values from the DevScreen config audit (2026-05-13).
+// Values are at the unscaled vS_ref=200px/s baseline; computeScaledConfig scales them at race init.
+export const DEFAULT_PLANNER_TUNING_CONFIG = {
+  // Kinematic limits (calibrated at vS_ref=200 px/s)
+  aSMin: -50.0,
+  aSMax: 30.0,
+  vYMax: 30.0,
+  aYMax: 90.0,
+  // Safety buffers (pixels beyond physical bounding box)
+  safetyBufferS: 14,
+  safetyBufferY: 4,
+  // Planning horizon
+  horizonSeconds: 0.8,
+  // Objective weights for racing phase (used in _computeIntents)
+  wSpeed: 1.6,
+  wCenterline: 0.015,
+  wDraft: 0.7,
+  wSmoothY: 1.0,
+  wSmoothS: 0.6,
 };
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {

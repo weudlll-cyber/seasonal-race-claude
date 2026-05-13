@@ -31,7 +31,18 @@ import {
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import {
+  planFrame,
+  createDiagnostics,
+  DEFAULT_PLANNER_CONFIG,
+} from '../../modules/planner/constraintsPlanner.js';
+import {
+  initPlannerState,
+  syncDesiredSpeed,
+  applyHorseToRacer,
+  buildTrackModel,
+  buildDraftApi,
+} from '../../modules/planner/racerAdapter.js';
 import { getSpriteHitbox, fallbackHitbox } from '../../modules/spriteHitbox.js';
 import { getCachedSprite } from '../../modules/racer-types/spriteLoader.js';
 import {
@@ -42,6 +53,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { loadPlannerTuningConfig } from '../../modules/plannerTuningConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -374,7 +386,9 @@ export default function RaceScreen() {
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
           surfaceParticles: [],
         };
-        initRacerBehavior(racer);
+        racer.physicalY = 0;
+        racer.avoidanceActive = false;
+        racer.draftingBoostActive = false;
         const _spriteUrl = racerType.config.spriteUrl;
         const _hitbox =
           getSpriteHitbox(
@@ -396,6 +410,29 @@ export default function RaceScreen() {
     };
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
+
+    // ── Constraints-First Planner init ──────────────────────────────────────
+    // racersByHorseId maps horse.id (String(r.index)) → live racer object.
+    // The draftApi closes over this map and reads r.x/r.y (set by computePositions
+    // each frame) for world-space cone-based drafting detection.
+    const corridorHalfWidthPx = geometricTrackWidthPx / 2;
+    const plannerTrackModel = buildTrackModel({ pathLengthPx, corridorHalfWidthPx });
+    const racersByHorseId = new Map(g.current.racers.map((r) => [String(r.index), r]));
+    const draftApi = buildDraftApi(behaviorConfig, racersByHorseId);
+    const plannerTuningConfig = loadPlannerTuningConfig();
+    const plannerState = initPlannerState({
+      racers: g.current.racers,
+      pathLengthPx,
+      corridorHalfWidthPx,
+      isOpenTrack,
+      trackModel: plannerTrackModel,
+      config: { ...DEFAULT_PLANNER_CONFIG, ...plannerTuningConfig },
+      draftApi,
+      createDiagnostics,
+      race_baseSpeed,
+    });
+    // Pre-build horse lookup for O(1) per-frame access
+    const horseById = new Map(plannerState.horses.map((h) => [h.id, h]));
 
     // ── Canvas positions ────────────────────────────────────────────────────
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
@@ -889,23 +926,27 @@ export default function RaceScreen() {
               r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
             }
           }
-          // Apply D7b boost/brake flags from the previous frame
-          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
-          if (!r.finished) {
-            r.t = Math.min(r.t + r.baseSpeed * boost * brake * (dt / 16), st.finishT + 0.001);
-          } else {
-            // Run-out: finished racers keep moving but decay to a stop
-            r.runoutDecay *= 0.97;
-            r.t += r.baseSpeed * r.runoutDecay * (dt / 16);
-          }
-          // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
-          // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
-          // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
-          r.vt =
-            race_baseSpeed > 0 && !r.finished ? (r.baseSpeed * boost * brake) / race_baseSpeed : 0;
         }
-        // D4: equalize all non-finished racers to the mean delta-t
+        // ── Constraints-First Planner: sync desired speeds, plan, apply ─────
+        // (replaces old boost/brake/t-advance + applyRacerBehavior)
+        for (const r of st.racers) {
+          const horse = horseById.get(String(r.index));
+          if (horse) syncDesiredSpeed(horse, r, pathLengthPx);
+        }
+        planFrame(plannerState, dt / 1000);
+        for (const horse of plannerState.horses) {
+          const r = racersByHorseId.get(horse.id);
+          if (r)
+            applyHorseToRacer(
+              horse,
+              r,
+              pathLengthPx,
+              corridorHalfWidthPx,
+              isOpenTrack,
+              race_baseSpeed
+            );
+        }
+        // D4: equalize all non-finished racers to the mean delta-t (diagnostic mode)
         if (constSpeedActive) {
           const active = st.racers.filter((r) => !r.finished);
           if (active.length > 0) {
@@ -945,7 +986,6 @@ export default function RaceScreen() {
           d.dv01Max = Math.max(...d._dv01Buf);
           d.dv12Max = Math.max(...d._dv12Buf);
         }
-        applyRacerBehavior(st.racers, behaviorConfig);
 
         for (const r of st.racers) {
           if (r.finished) continue;

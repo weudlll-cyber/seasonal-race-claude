@@ -12,9 +12,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
 vi.mock('../../../modules/baseSpeedConfig.js', () => ({
-  loadBaseSpeedConfig: vi.fn(() => ({ min: 0.00091, max: 0.00118 })),
+  loadBaseSpeedConfig: vi.fn(() => ({ min: 0.00102, max: 0.00107 })),
   saveBaseSpeedConfig: vi.fn(),
-  DEFAULT_BASE_SPEED_CONFIG: { min: 0.00091, max: 0.00118 },
+  DEFAULT_BASE_SPEED_CONFIG: { min: 0.00102, max: 0.00107 },
   spreadPercent: (min, max) => {
     if (!min || !max || min >= max) return 0;
     const mean = (min + max) / 2;
@@ -94,6 +94,38 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+vi.mock('../../../modules/plannerTuningConfig.js', () => ({
+  loadPlannerTuningConfig: vi.fn(() => ({
+    aSMin: -50.0,
+    aSMax: 30.0,
+    vYMax: 30.0,
+    aYMax: 90.0,
+    safetyBufferS: 14,
+    safetyBufferY: 4,
+    horizonSeconds: 0.8,
+    wSpeed: 1.6,
+    wCenterline: 0.015,
+    wDraft: 0.7,
+    wSmoothY: 1.0,
+    wSmoothS: 0.6,
+  })),
+  savePlannerTuningConfig: vi.fn(),
+  DEFAULT_PLANNER_TUNING_CONFIG: {
+    aSMin: -50.0,
+    aSMax: 30.0,
+    vYMax: 30.0,
+    aYMax: 90.0,
+    safetyBufferS: 14,
+    safetyBufferY: 4,
+    horizonSeconds: 0.8,
+    wSpeed: 1.6,
+    wCenterline: 0.015,
+    wDraft: 0.7,
+    wSmoothY: 1.0,
+    wSmoothS: 0.6,
+  },
+}));
+
 import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
 import RaceTuningSection from './RaceTuningSection.jsx';
 
@@ -101,7 +133,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('RaceTuningSection — renders all 9 blocks', () => {
+describe('RaceTuningSection — renders all 10 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
@@ -286,5 +318,86 @@ describe('RaceTuningSection — reset uses DEFAULT values, not current state (re
     expect(input.value).toBe('150');
     fireEvent.click(screen.getByTestId('reset-speed-reroll'));
     expect(input.value).toBe('85');
+  });
+});
+
+describe('RaceTuningSection — Block 10: Planner Physics', () => {
+  it('renders Block 10: Planner Physics', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Planner Physics')).toBeTruthy();
+  });
+
+  it('renders Planner Physics summary testid', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('planner-physics-summary')).toBeTruthy();
+  });
+
+  it('renders slider for Max Deceleration', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Max Deceleration')).toBeTruthy();
+  });
+
+  it('renders slider for Max Acceleration', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Max Acceleration')).toBeTruthy();
+  });
+
+  it('renders slider for Max Lateral Speed', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Max Lateral Speed')).toBeTruthy();
+  });
+
+  it('renders slider for Max Lateral Accel', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Max Lateral Accel')).toBeTruthy();
+  });
+
+  it('renders slider for Longitudinal Buffer', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Longitudinal Buffer')).toBeTruthy();
+  });
+
+  it('renders slider for Lateral Buffer', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Lateral Buffer')).toBeTruthy();
+  });
+
+  it('renders slider for Planning Horizon', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Horizon Seconds')).toBeTruthy();
+  });
+
+  it('renders slider for Speed Weight', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Speed Weight')).toBeTruthy();
+  });
+
+  it('renders slider for Centerline Weight', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Centerline Weight')).toBeTruthy();
+  });
+
+  it('renders slider for Draft Weight', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByLabelText('Planner Draft Weight')).toBeTruthy();
+  });
+
+  it('renders Reset button for Planner Physics block', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('reset-planner-physics')).toBeTruthy();
+  });
+
+  it('summary shows default braking and acceleration', () => {
+    render(<RaceTuningSection />);
+    const summary = screen.getByTestId('planner-physics-summary');
+    expect(summary.textContent).toContain('-50');
+    expect(summary.textContent).toContain('+30');
+  });
+
+  it('summary shows default horizon and buffers', () => {
+    render(<RaceTuningSection />);
+    const summary = screen.getByTestId('planner-physics-summary');
+    expect(summary.textContent).toContain('14/4 px');
+    expect(summary.textContent).toContain('0.8s');
   });
 });

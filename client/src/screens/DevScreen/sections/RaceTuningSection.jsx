@@ -32,6 +32,11 @@ import {
   saveRaceDynamicsConfig,
   DEFAULT_RACE_DYNAMICS_CONFIG,
 } from '../../../modules/raceDynamicsConfig.js';
+import {
+  loadPlannerTuningConfig,
+  savePlannerTuningConfig,
+  DEFAULT_PLANNER_TUNING_CONFIG,
+} from '../../../modules/plannerTuningConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
@@ -81,6 +86,7 @@ function RaceTuningSection() {
   const [behaviorConfig, setBehaviorConfig] = useState(() => loadRaceBehaviorConfig());
   const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
   const [dynamicsConfig, setDynamicsConfig] = useState(() => loadRaceDynamicsConfig());
+  const [plannerConfig, setPlannerConfig] = useState(() => loadPlannerTuningConfig());
   const [storageError, setStorageError] = useState(null);
 
   useEffect(() => {
@@ -103,6 +109,10 @@ function RaceTuningSection() {
     saveRaceDynamicsConfig(dynamicsConfig);
   }, [dynamicsConfig]);
 
+  useEffect(() => {
+    savePlannerTuningConfig(plannerConfig);
+  }, [plannerConfig]);
+
   function setSpeed(key, val) {
     setSpeedConfig((prev) => ({ ...prev, [key]: val }));
   }
@@ -119,11 +129,16 @@ function RaceTuningSection() {
     setDynamicsConfig((prev) => ({ ...prev, [key]: val }));
   }
 
+  function setPlanner(key, val) {
+    setPlannerConfig((prev) => ({ ...prev, [key]: val }));
+  }
+
   function handleReset() {
     setSpeedConfig({ ...DEFAULT_BASE_SPEED_CONFIG });
     setBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
     setRowConfig({ ...DEFAULT_ROW_LAYOUT_CONFIG });
     setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+    setPlannerConfig({ ...DEFAULT_PLANNER_TUNING_CONFIG });
   }
 
   function resetSpeedRange() {
@@ -197,6 +212,10 @@ function RaceTuningSection() {
       ...prev,
       homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
     }));
+  }
+
+  function resetPlannerPhysics() {
+    setPlannerConfig({ ...DEFAULT_PLANNER_TUNING_CONFIG });
   }
 
   // Speed Range preview
@@ -1018,6 +1037,276 @@ function RaceTuningSection() {
             />
           </div>
         </div>
+      </SubCard>
+
+      {/* ── Block 10: Planner Physics ── */}
+      <SubCard
+        title="Planner Physics"
+        onReset={resetPlannerPhysics}
+        resetTestId="reset-planner-physics"
+        subtitle="Advanced physics limits for the collision-avoidance planner. Controls how fast racers can brake, accelerate, and dodge sideways, how much personal space they keep, how far ahead they plan, and how much weight they give to speed vs. drafting vs. centerline. Default values are calibrated for a reference speed of 200 px/s."
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Deceleration (px/s²)
+              <InfoTooltip text="How hard a racer can brake. More negative = sharper braking. Too aggressive looks abrupt; too gentle causes rear collisions. Calibrated at reference speed 200 px/s." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Max Deceleration"
+              min={-100}
+              max={-5}
+              step={5}
+              value={plannerConfig.aSMin}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v <= -5 && v >= -100) setPlanner('aSMin', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Acceleration (px/s²)
+              <InfoTooltip text="How hard a racer can accelerate forward. Higher = racers catch up faster after braking. Too high makes racing feel snappy and unnatural." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Max Acceleration"
+              min={5}
+              max={100}
+              step={5}
+              value={plannerConfig.aSMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 5 && v <= 100) setPlanner('aSMax', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Lateral Speed (px/s)
+              <InfoTooltip text="How fast a racer can move sideways. Higher = quicker lane changes and dodges. Too high creates jittery sideways movement." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Max Lateral Speed"
+              min={5}
+              max={80}
+              step={5}
+              value={plannerConfig.vYMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 5 && v <= 80) setPlanner('vYMax', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Lateral Accel (px/s²)
+              <InfoTooltip text="How quickly a racer can change their sideways speed. Higher = sharper swerves. Lower = gentle smooth lane changes." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Max Lateral Accel"
+              min={10}
+              max={200}
+              step={10}
+              value={plannerConfig.aYMax}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 10 && v <= 200) setPlanner('aYMax', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Longitudinal Buffer (px)
+              <InfoTooltip text="Extra space the planner keeps in front/behind each racer beyond their physical size. Higher = racers stay further apart front-to-back. Lower = tighter following distances, closer packs." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Longitudinal Buffer"
+              min={2}
+              max={40}
+              step={1}
+              value={plannerConfig.safetyBufferS}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 2 && v <= 40) setPlanner('safetyBufferS', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Lateral Buffer (px)
+              <InfoTooltip text="Extra space the planner keeps to the side of each racer. Higher = racers keep more lane separation. Lower = racers run tighter side-by-side." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Lateral Buffer"
+              min={0}
+              max={20}
+              step={1}
+              value={plannerConfig.safetyBufferY}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 20) setPlanner('safetyBufferY', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Planning Horizon (s)
+              <InfoTooltip text="How far ahead in time the planner computes trajectories. Higher = smoother early avoidance, racers dodge well in advance. Lower = reactive last-moment corrections, more realistic but can look abrupt." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Horizon Seconds"
+              min={0.2}
+              max={2.0}
+              step={0.1}
+              value={plannerConfig.horizonSeconds}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.2 && v <= 2.0) setPlanner('horizonSeconds', v);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Objective weights sub-section */}
+        <p
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: 'var(--color-muted)',
+            margin: '1rem 0 0.4rem',
+          }}
+        >
+          Objective Weights (Racing Phase)
+        </p>
+        <p style={{ fontSize: '0.77rem', color: 'var(--color-muted)', marginBottom: '0.6rem' }}>
+          How much each racer cares about speed vs. staying centered vs. drafting. Higher weight =
+          stronger pull toward that goal.
+        </p>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Speed Weight
+              <InfoTooltip text="How strongly each racer tries to maintain their target speed. Higher = racers push hard to hit their speed. Lower = racers are less aggressive about maintaining pace." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Speed Weight"
+              min={0}
+              max={5}
+              step={0.1}
+              value={plannerConfig.wSpeed}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 5) setPlanner('wSpeed', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Centerline Weight
+              <InfoTooltip text="How strongly racers return to the track centerline after deviating. Higher = racers hug the center strongly. Lower = racers wander freely across the track." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Centerline Weight"
+              min={0}
+              max={0.5}
+              step={0.005}
+              value={plannerConfig.wCenterline}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.5) setPlanner('wCenterline', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Draft Weight
+              <InfoTooltip text="How strongly racers seek to exploit slipstream. Higher = racers actively chase behind others for the boost. Lower = racers ignore drafting opportunities." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Planner Draft Weight"
+              min={0}
+              max={3}
+              step={0.1}
+              value={plannerConfig.wDraft}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 3) setPlanner('wDraft', v);
+              }}
+            />
+          </div>
+        </div>
+        <p
+          data-testid="planner-physics-summary"
+          style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
+        >
+          Braking: <strong>{plannerConfig.aSMin} px/s²</strong>
+          {'  ·  '}
+          Acceleration: <strong>+{plannerConfig.aSMax} px/s²</strong>
+          {'  ·  '}
+          Buffer:{' '}
+          <strong>
+            {plannerConfig.safetyBufferS}/{plannerConfig.safetyBufferY} px
+          </strong>
+          {'  ·  '}
+          Horizon: <strong>{plannerConfig.horizonSeconds}s</strong>
+          {'  ·  '}
+          Weights:{' '}
+          <strong style={{ color: 'var(--color-accent)' }}>
+            spd {plannerConfig.wSpeed} / ctr {plannerConfig.wCenterline} / dft{' '}
+            {plannerConfig.wDraft}
+          </strong>
+        </p>
       </SubCard>
 
       {/* Race Behavior toggle (hidden but functional — keeps the enabled flag accessible) */}
