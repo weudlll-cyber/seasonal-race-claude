@@ -1431,3 +1431,67 @@ Pulks, die einen ganzen Diagnose-Sprint kostete bis der Architektur-Mangel erkan
 **Take-away:** Behavior-Changes an Default-Werten sind keine kosmetische Änderung. Wenn ein
 bestehender Default eine fachliche Funktion erfüllt (selbst wenn nicht explizit dokumentiert),
 ist sein Ersatz ein Architektur-Eingriff und braucht die Regression Awareness Convention.
+
+---
+
+## Lesson 74 — Reactive Anti-Collision Architecture Has Structural Limits
+
+**Kontext:** Sowohl das Force-basierte als auch das Slot-basierte Anti-Collision-System waren reaktiv —
+sie erkannten Kollisionen oder unmittelbare Annäherungen und reagierten darauf. Beide zeigten in
+dichten Pulks dieselben strukturellen Probleme in unterschiedlicher Form:
+
+- Force-System: 99.2 % symmetrische Kraft-Cancellation in Pulks — Racer drücken sich gegenseitig
+  zurück zur Ausgangslage, keine Netto-Trennung (PR #88 Trace)
+- Slot-System: 86 % Fallback-Rate (kein freier Slot gefunden), Oscillation zwischen konkurrierenden
+  lokalen Optimal-Slots, 64 % aller Frames mit aktiven Clustern (PR #90 Trace)
+
+Drei Fix-Versuche im Slot-System (Hauptumbau PR #86, EMA-Glättung, Wall-Escape + Slot-Step ≥ minLat)
+zeigten in den Trace-Berichten (PR #88, #89, #90) quantitativ abnehmenden Grenznutzen. Jeder Fix löste
+ein spezifisches Symptom und legte ein neues frei: Micro-Oscillation wurde Macro-Oscillation (±40–130px),
+Wall-Lock wurde Squeeze-Resonanz. Die Cluster lösten sich primär durch longitudinalen Drift statt durch
+aktive Resolver-Logik — die Resolver-Logik war faktisch defekt.
+
+**Take-away:** In Many-Agent-Simulationen mit lokaler Pair-Resolution erzeugt das reaktive Grundprinzip
+Oscillationen (Slot-System) oder Cancellations (Force-System). Cross-Frame-Memory als Patch
+(Target-Commitment) maskiert das Symptom, behebt aber nicht die Ursache — der Resolver findet gültige
+aber wechselseitig inkonsistente Lösungen in jedem Frame.
+
+Wenn Trace-Daten zeigen dass Cluster sich primär durch physikalische Drift statt durch aktive Resolver-Logik
+auflösen, ist die Resolver-Logik faktisch defekt. Ein Architektur-Wechsel zu präventiv ("Vorausschau und
+frühe Reaktion") ist die korrekte Konsequenz, nicht ein weiterer Patch auf demselben Mechanismus.
+
+**Verweis:** PR #88 (Force-Diagnose), PR #89 (Slot-Klassifikations-Trace), PR #90 (Pulk-Genese-Entscheidung),
+PROJECT-PRINCIPLES.md §6, §7, Lesson 71.
+
+---
+
+## Lesson 75 — Hard Constraints Beat Soft Forces in Many-Body Anti-Collision
+
+**Kontext:** Fünf Anti-Collision-Architekturen wurden im Mai 2026 gebaut. Vier scheiterten am gleichen
+Stress-Test (20 Racer auf dirt-oval):
+
+- **Force** (vor PR #84): symmetrische Kraft-Cancellation
+- **Slot** (PR #86 + drei Fixes): lokale Pair-Resolution, Oscillation, Slot-Suche-Versagen
+- **Sicht-Modell** (PR #91): proaktive Logik unterliegt Drafting-Anziehung
+- **PBD** (PR #92): nur laterale Trennung, alle Racer auf einer Querfront bei starker Centerline-Anziehung
+
+Gemeinsamer struktureller Mangel: Anti-Collision war jeweils eine "Empfehlung" oder "Kraft" neben
+anderen Anziehungen (Drafting, Centerline, Pulk-Dynamik). Im Mehrkräfte-System konnte sie verlieren.
+
+PBD löste die Symmetrie-Cancellation durch harte Constraints, aber nur lateral. Bei 20 Racern mit
+Centerline-Anziehung führte das zu einer perfekten Querfront — strukturell anders, aber nicht besser.
+
+External Architecture Review von GitHub Copilot (PR #93) identifizierte den fehlenden Baustein:
+longitudinale Auflösung wenn lateral nicht möglich (Stauung statt Überlappung), Receding-Horizon-Planning
+mit Spacetime-Reservation, asymmetrische Priorität.
+
+**Take-away:** In Many-Agent-Simulationen mit harten Abstand-Anforderungen reichen lokale Reaktion
+(Force, Slot) und unidirektionale Constraints (PBD nur lateral) nicht aus. Die richtige Architektur
+trennt **Soft Intent** (Wünsche wie Drafting, Centerline, Forward-Speed) von **Hard Feasibility**
+(kollisionsfreie Trajektorie über Horizon) in zwei getrennte Layer. Constraints werden im Spacetime,
+nicht nur im Raum formuliert. Industriestandard in autonomer Fahrzeugplanung.
+
+Wenn vier Versuche an einer Klasse von Problem scheitern und alle das gleiche Paradigma teilen,
+ist das Paradigma der Fehler.
+
+**Verweis:** PR #84/#86/#88/#89/#90/#91/#92/#93, Lesson 71, Lesson 74, PROJECT-PRINCIPLES.md §6, §7.
