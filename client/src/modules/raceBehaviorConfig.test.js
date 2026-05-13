@@ -3,7 +3,7 @@
 // Path:        client/src/modules/raceBehaviorConfig.test.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Unit tests for race-behavior config CRUD (D7b).
+// Description: Unit tests for race-behavior config CRUD — sight-model architecture.
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -38,17 +38,31 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled).toBe(true);
   });
 
-  it('has positive homeForceStrength', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
+  it('sightHorizonFrames is positive', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.sightHorizonFrames).toBeGreaterThan(0);
   });
 
-  it('comfortThreshold is between 0 and 1', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
+  it('laneCommitFrames is non-negative', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.laneCommitFrames).toBeGreaterThanOrEqual(0);
   });
 
-  it('has positive avoidanceDistance', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeGreaterThan(0);
+  it('maxLateralStepPerFrame is positive', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralStepPerFrame).toBeGreaterThan(0);
+  });
+
+  it('draftingActivationFrames is positive', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.draftingActivationFrames).toBeGreaterThan(0);
+  });
+
+  it('overtakeAggressionDefault is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.overtakeAggressionDefault).toBeGreaterThanOrEqual(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.overtakeAggressionDefault).toBeLessThanOrEqual(1);
+  });
+
+  it('does NOT have force-model constants (homeForceStrength, comfortThreshold, avoidanceDistance)', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeUndefined();
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeUndefined();
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeUndefined();
   });
 
   it('speedBrakeFactor is between 0 and 1', () => {
@@ -74,21 +88,33 @@ describe('loadRaceBehaviorConfig', () => {
   });
 
   it('merges stored values with defaults', () => {
-    storageGet.mockReturnValue({ avoidanceDistance: 0.5, draftingBoost: 1.2 });
+    storageGet.mockReturnValue({ sightHorizonFrames: 60, draftingBoost: 1.2 });
     const cfg = loadRaceBehaviorConfig();
-    expect(cfg.avoidanceDistance).toBe(0.5);
+    expect(cfg.sightHorizonFrames).toBe(60);
     expect(cfg.draftingBoost).toBe(1.2);
     expect(cfg.enabled).toBe(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled);
   });
 
-  it('returns defaults when homeForceStrength <= 0', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceStrength: 0 });
+  it('returns defaults when sightHorizonFrames <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, sightHorizonFrames: 0 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
-  it('returns defaults when comfortThreshold >= 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, comfortThreshold: 1.0 });
+  it('returns defaults when maxLateralStepPerFrame <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, maxLateralStepPerFrame: 0 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when draftingActivationFrames <= 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, draftingActivationFrames: 0 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when overtakeAggressionDefault > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, overtakeAggressionDefault: 1.5 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });

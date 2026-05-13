@@ -391,6 +391,7 @@ export default function RaceScreen() {
           rowSize,
           behaviorConfig.startSpreadRange
         );
+        racer.targetPhysicalY = racer.physicalY;
         return racer;
       }),
     };
@@ -890,7 +891,7 @@ export default function RaceScreen() {
             }
           }
           // Apply D7b boost/brake flags from the previous frame
-          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
+          const boost = 1 + (behaviorConfig.draftingBoost - 1) * (r.draftingBoostFactor ?? 0);
           const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
           if (!r.finished) {
             r.t = Math.min(r.t + r.baseSpeed * boost * brake * (dt / 16), st.finishT + 0.001);

@@ -2,37 +2,64 @@
 // File:        raceBehavior.test.js
 // Path:        client/src/modules/raceBehavior.test.js
 // Project:     RaceArena
-// Created:     2026-04-26
-// Description: Unit tests for D7b racer-behavior logic (physicalY-based
-//              avoidance, home force, drafting cone, speed brake).
+// Description: Tests for sight-based preventive race AI.
+//              Critical invariant: physicalY delta ≤ maxLateralStepPerFrame every frame.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
+const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, corridorHalfWidthPx: 75 };
+const CORRIDOR_HALF = 75;
+const MAX_STEP = cfg.maxLateralStepPerFrame / CORRIDOR_HALF; // ≈0.0533
+
 function makeRacer(overrides = {}) {
+  const t = overrides.t ?? 0.5;
   const r = {
     index: 0,
-    t: 0.5,
-    x: 640,
+    t,
+    x: t * 1280, // straight-track proxy: ensures spatial separation by default
     y: 360,
     angle: 0,
     finished: false,
+    baseSpeed: 0.001045,
+    visibleWidthPx: 24,
+    visibleLengthPx: 24,
     ...overrides,
   };
   initRacerBehavior(r);
   return r;
 }
 
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
-
 // ── initRacerBehavior ──────────────────────────────────────────────────────
 
 describe('initRacerBehavior', () => {
-  it('sets physicalY to 0 (centerline)', () => {
+  it('sets physicalY to 0 when not previously set', () => {
     const r = makeRacer();
     expect(r.physicalY).toBe(0);
+  });
+
+  it('preserves existing physicalY', () => {
+    const r = { index: 0, t: 0.5, x: 0, y: 0, angle: 0, finished: false, physicalY: 0.4 };
+    initRacerBehavior(r);
+    expect(r.physicalY).toBe(0.4);
+  });
+
+  it('sets targetPhysicalY = physicalY', () => {
+    const r = { index: 0, t: 0.5, x: 0, y: 0, angle: 0, finished: false, physicalY: 0.3 };
+    initRacerBehavior(r);
+    expect(r.targetPhysicalY).toBe(0.3);
+  });
+
+  it('sets laneCommitFrames to 0', () => {
+    const r = makeRacer();
+    expect(r.laneCommitFrames).toBe(0);
+  });
+
+  it('sets draftingBoostFactor to 0', () => {
+    const r = makeRacer();
+    expect(r.draftingBoostFactor).toBe(0);
   });
 
   it('sets avoidanceActive to false', () => {
@@ -71,348 +98,339 @@ describe('applyRacerBehavior — disabled', () => {
   });
 });
 
-// ── Home force ──────────────────────────────────────────────────────────────
+// ── Sight horizon ──────────────────────────────────────────────────────────
 
-describe('applyRacerBehavior — home force', () => {
-  it('moves physicalY toward 0 when displaced', () => {
-    const r = makeRacer();
-    r.physicalY = 0.5;
-    applyRacerBehavior([r], cfg);
-    expect(r.physicalY).toBeLessThan(0.5);
-    expect(r.physicalY).toBeGreaterThan(0);
-  });
-
-  it('converges physicalY to near-zero over many frames', () => {
-    const r = makeRacer();
-    r.physicalY = 1.0;
-    for (let f = 0; f < 120; f++) applyRacerBehavior([r], cfg);
-    expect(Math.abs(r.physicalY)).toBeLessThan(0.15);
-  });
-
-  it('strength controls convergence rate', () => {
-    const fast = makeRacer();
-    const slow = makeRacer();
-    fast.physicalY = 0.5;
-    slow.physicalY = 0.5;
-    applyRacerBehavior([fast], { ...cfg, homeForceStrength: 0.05 });
-    applyRacerBehavior([slow], { ...cfg, homeForceStrength: 0.005 });
-    expect(fast.physicalY).toBeLessThan(slow.physicalY);
-  });
-
-  it('applies no home force when physicalY is exactly 0', () => {
-    const r = makeRacer();
-    r.physicalY = 0;
-    applyRacerBehavior([r], cfg);
-    expect(r.physicalY).toBe(0);
-  });
-});
-
-// ── Comfort zone & boundary ────────────────────────────────────────────────
-
-describe('applyRacerBehavior — comfort zone & boundary', () => {
-  it('no soft repulsion inside comfortThreshold', () => {
-    const r = makeRacer();
-    r.physicalY = cfg.comfortThreshold - 0.05; // just inside
-    const before = r.physicalY;
-    // With homeForce pulling toward 0, displacement grows unless repulsion adds extra.
-    // Run isolated to detect any repulsion contribution.
-    applyRacerBehavior([r], { ...cfg, homeForceStrength: 0, softRepulsionStrength: 999 });
-    // Without home force and inside threshold, repulsion should not fire → no change
-    expect(r.physicalY).toBeCloseTo(before, 5);
-  });
-
-  it('soft repulsion fires outside comfortThreshold', () => {
-    const r = makeRacer();
-    r.physicalY = cfg.comfortThreshold + 0.1;
-    applyRacerBehavior([r], { ...cfg, homeForceStrength: 0 });
-    // Repulsion should push physicalY toward center
-    expect(r.physicalY).toBeLessThan(cfg.comfortThreshold + 0.1);
-  });
-
-  it('soft repulsion grows as physicalY approaches 1.0', () => {
-    const near = makeRacer();
-    const far = makeRacer();
-    near.physicalY = 0.95;
-    far.physicalY = cfg.comfortThreshold + 0.01;
-    applyRacerBehavior([near], { ...cfg, homeForceStrength: 0 });
-    applyRacerBehavior([far], { ...cfg, homeForceStrength: 0 });
-    const nearDelta = 0.95 - near.physicalY;
-    const farDelta = cfg.comfortThreshold + 0.01 - far.physicalY;
-    expect(nearDelta).toBeGreaterThan(farDelta);
-  });
-
-  it('hard clamp keeps physicalY within [-1, +1]', () => {
-    const r = makeRacer();
-    r.physicalY = 2.0; // artificially beyond boundary
-    applyRacerBehavior([r], { ...cfg, homeForceStrength: 0, softRepulsionStrength: 0 });
-    expect(r.physicalY).toBeLessThanOrEqual(1.0);
-  });
-
-  it('hard clamp works on negative side', () => {
-    const r = makeRacer();
-    r.physicalY = -2.0;
-    applyRacerBehavior([r], { ...cfg, homeForceStrength: 0, softRepulsionStrength: 0 });
-    expect(r.physicalY).toBeGreaterThanOrEqual(-1.0);
-  });
-});
-
-// ── Avoidance ──────────────────────────────────────────────────────────────
-
-describe('applyRacerBehavior — avoidance', () => {
-  it('no effect when anisotropic distance exceeds avoidanceDistance', () => {
-    const r1 = makeRacer({ index: 0, t: 0.0, x: 0, y: 0 });
-    const r2 = makeRacer({ index: 1, t: 0.5, x: 0, y: 0 }); // deltaT=0.5 → large dist
+describe('applyRacerBehavior — sight horizon', () => {
+  it('racer beyond tHorizon is not a threat (no lane change)', () => {
+    // tHorizon ≈ 0.001045 * 90 ≈ 0.094; gap of 0.2 is outside
+    const r1 = makeRacer({ index: 0, t: 0.5 });
+    const r2 = makeRacer({ index: 1, t: 0.7 }); // gap = 0.2 > 0.094
     r1.physicalY = 0;
     r2.physicalY = 0;
-    applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0 });
-    expect(r1.avoidanceActive).toBe(false);
-    expect(r2.avoidanceActive).toBe(false);
-  });
-
-  it('no lateral force when both racers share the same physicalY (yDiff≈0, B2)', () => {
-    const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
-    const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
-    r1.physicalY = 0;
-    r2.physicalY = 0;
-    applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    // Neither racer should be pushed (no meaningful yDiff direction)
-    expect(r1.physicalY).toBe(0);
-    expect(r2.physicalY).toBe(0);
-  });
-
-  it('asymmetric: trailer yields, leader physicalY unchanged', () => {
-    // r1 (lower t) is trailer; r2 (higher t) is leader — start at different Y
-    const r1 = makeRacer({ index: 0, t: 0.4, x: 100, y: 200 });
-    const r2 = makeRacer({ index: 1, t: 0.41, x: 100, y: 200 });
-    r1.physicalY = -0.1; // trailer slightly below leader
-    r2.physicalY = 0.1;
-    const before2 = r2.physicalY;
-    applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    // Leader (r2) should not change (no avoidance force applied to leader)
-    expect(r2.physicalY).toBeCloseTo(before2, 5);
-    // Trailer (r1) should be pushed further negative (away from leader's Y)
-    expect(r1.physicalY).toBeLessThan(-0.1);
-  });
-
-  it('trailer is pushed away from leader physicalY', () => {
-    // trailer below leader → pushed further below (more negative)
-    const trailer = makeRacer({ index: 0, t: 0.4, x: 200, y: 200 });
-    const leader = makeRacer({ index: 1, t: 0.41, x: 200, y: 200 });
-    trailer.physicalY = -0.1; // below leader
-    leader.physicalY = 0.1;
-    applyRacerBehavior([trailer, leader], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    expect(trailer.physicalY).toBeLessThan(-0.1);
-  });
-
-  it('force magnitude scales with proximity (closer = stronger)', () => {
-    const close1 = makeRacer({ index: 0, t: 0.4, x: 0, y: 0 });
-    const close2 = makeRacer({ index: 1, t: 0.41, x: 0, y: 0 });
-    const far1 = makeRacer({ index: 0, t: 0.4, x: 0, y: 0 });
-    const far2 = makeRacer({ index: 1, t: 0.48, x: 0, y: 0 }); // larger deltaT = more distant
-    // Give each pair different physicalY so yDiff ≠ 0 (avoidance needs a direction)
-    close1.physicalY = -0.05;
-    close2.physicalY = 0.05;
-    far1.physicalY = -0.05;
-    far2.physicalY = 0.05;
-
-    applyRacerBehavior([close1, close2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    applyRacerBehavior([far1, far2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-
-    // Trailers are pushed; the closer pair should push more
-    expect(Math.abs(close1.physicalY)).toBeGreaterThan(Math.abs(far1.physicalY));
-  });
-
-  it('anisotropic distance: deltaT×tWeight > deltaY×yWeight when tWeight is high', () => {
-    // Two racers same physicalY but different t: with tWeight=10, huge t-distance
-    const r1 = makeRacer({ index: 0, t: 0.0, x: 0, y: 0 });
-    const r2 = makeRacer({ index: 1, t: 0.12, x: 0, y: 0 }); // deltaT=0.12
-    r1.physicalY = 0;
-    r2.physicalY = 0;
-    // With tWeight=10: dist = 0.12*10 = 1.2 > avoidanceDistance(0.35) → no avoidance
-    applyRacerBehavior([r1, r2], {
-      ...cfg,
-      homeForceStrength: 0,
-      tWeight: 10,
-      avoidanceDistance: 0.35,
-    });
-    expect(r1.avoidanceActive).toBe(false);
-
-    // Same pair, tWeight=0.1: dist = 0.12*0.1 = 0.012 < 0.35 → avoidance fires.
-    // Give different physicalY so the yDiff direction is defined.
-    const r3 = makeRacer({ index: 0, t: 0.0, x: 0, y: 0 });
-    const r4 = makeRacer({ index: 1, t: 0.12, x: 0, y: 0 });
-    r3.physicalY = -0.01;
-    r4.physicalY = 0.01;
-    applyRacerBehavior([r3, r4], {
-      ...cfg,
-      homeForceStrength: 0,
-      tWeight: 0.1,
-      avoidanceDistance: 0.35,
-    });
-    const moved = r3.physicalY !== 0 || r4.physicalY !== 0;
-    expect(moved).toBe(true);
-  });
-
-  it('finished racers are not affected by avoidance', () => {
-    const r1 = makeRacer({ index: 0, t: 0.5, x: 200, y: 200, finished: true });
-    const r2 = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 });
-    r1.physicalY = 0.3;
-    r2.physicalY = 0;
+    r1.targetPhysicalY = 0;
     applyRacerBehavior([r1, r2], cfg);
-    expect(r1.physicalY).toBe(0.3); // not modified
+    expect(r1.laneCommitFrames).toBe(0);
+    expect(r1.avoidanceActive).toBe(false);
   });
 
-  it('anti-stacking: force with 4 neighbors is sqrt(4)× solo force, not 4×', () => {
-    // racer 0 as trailer, 4 identical leaders equidistant in t and physicalY.
-    // All 4 leaders have the same physicalY so they don't push each other (B2 skip).
-    const solo0 = makeRacer({ index: 0, t: 0.5, x: 0, y: 0 });
-    const solo1 = makeRacer({ index: 1, t: 0.51, x: 0, y: 0 });
-    solo0.physicalY = -0.2;
-    solo1.physicalY = 0.2;
-    applyRacerBehavior([solo0, solo1], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
-    const deltaSolo = Math.abs(solo0.physicalY - -0.2);
-
-    const r0 = makeRacer({ index: 0, t: 0.5, x: 0, y: 0 });
-    const r1 = makeRacer({ index: 1, t: 0.51, x: 0, y: 0 });
-    const r2 = makeRacer({ index: 2, t: 0.51, x: 0, y: 0 });
-    const r3 = makeRacer({ index: 3, t: 0.51, x: 0, y: 0 });
-    const r4 = makeRacer({ index: 4, t: 0.51, x: 0, y: 0 });
-    r0.physicalY = -0.2;
-    r1.physicalY = r2.physicalY = r3.physicalY = r4.physicalY = 0.2;
-    applyRacerBehavior([r0, r1, r2, r3, r4], {
-      ...cfg,
-      homeForceStrength: 0,
-      avoidanceDistance: 1.0,
-    });
-    const delta5 = Math.abs(r0.physicalY - -0.2);
-
-    // Without normalization delta5 would be 4 × deltaSolo. With sqrt(4) it should be 2 ×.
-    expect(delta5).toBeCloseTo(2 * deltaSolo, 3);
+  it('racer within tHorizon in same lane is a threat → lane change committed', () => {
+    // gap = 0.05 < 0.094; same physicalY = 0 → lateral conflict
+    const r1 = makeRacer({ index: 0, t: 0.5 });
+    const r2 = makeRacer({ index: 1, t: 0.55 });
+    r1.physicalY = 0;
+    r2.physicalY = 0;
+    r1.targetPhysicalY = 0;
+    applyRacerBehavior([r1, r2], cfg);
+    // r1 should commit to a clear lane (r2 is blocking centerline)
+    expect(r1.laneCommitFrames).toBeGreaterThan(0);
+    expect(r1.targetPhysicalY).not.toBe(0);
   });
 
-  it('avoidance produces measurable spread over 60 frames in a tight pack', () => {
-    const racers = [
-      makeRacer({ index: 0, t: 0.5, x: 200, y: 200 }),
-      makeRacer({ index: 1, t: 0.501, x: 202, y: 200 }),
-      makeRacer({ index: 2, t: 0.502, x: 204, y: 200 }),
-      makeRacer({ index: 3, t: 0.503, x: 206, y: 200 }),
-    ];
-    // Stagger initial physicalY (as computeStartPhysicalY would) so avoidance has a direction
-    racers[0].physicalY = -0.03;
-    racers[1].physicalY = -0.01;
-    racers[2].physicalY = 0.01;
-    racers[3].physicalY = 0.03;
-    for (let f = 0; f < 60; f++) applyRacerBehavior(racers, cfg);
-    const spread =
-      Math.max(...racers.map((r) => r.physicalY)) - Math.min(...racers.map((r) => r.physicalY));
-    expect(spread).toBeGreaterThan(0.05);
+  it('racer behind (negative gap) is not in sight ahead', () => {
+    const r1 = makeRacer({ index: 0, t: 0.55 });
+    const r2 = makeRacer({ index: 1, t: 0.5 }); // r2 is behind r1
+    r1.physicalY = 0;
+    r2.physicalY = 0;
+    r1.targetPhysicalY = 0;
+    applyRacerBehavior([r1, r2], cfg);
+    // r1 should NOT react to r2 which is behind
+    expect(r1.laneCommitFrames).toBe(0);
+    expect(r1.avoidanceActive).toBe(false);
   });
 });
 
-// ── Speed brake ────────────────────────────────────────────────────────────
+// ── Lane commitment ────────────────────────────────────────────────────────
 
-describe('applyRacerBehavior — speed brake', () => {
-  it('sets avoidanceActive on trailer when side-by-side', () => {
-    const trailer = makeRacer({ index: 0, t: 0.5, x: 200, y: 200 });
-    const leader = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 }); // within T threshold
-    trailer.physicalY = 0.05; // within Y threshold
-    leader.physicalY = 0.05;
-    applyRacerBehavior([trailer, leader], {
-      ...cfg,
-      homeForceStrength: 0,
-      avoidanceDistance: 1.0,
-      speedBrakeYThreshold: 0.2,
-      speedBrakeTThreshold: 0.02,
-    });
-    expect(trailer.avoidanceActive).toBe(true);
+describe('applyRacerBehavior — lane commitment', () => {
+  it('commitment is held for multiple frames', () => {
+    const r1 = makeRacer({ index: 0, t: 0.5 });
+    const r2 = makeRacer({ index: 1, t: 0.55 });
+    r1.physicalY = 0;
+    r2.physicalY = 0;
+    r1.targetPhysicalY = 0;
+
+    // Frame 1: establish commitment
+    applyRacerBehavior([r1, r2], cfg);
+    const target = r1.targetPhysicalY;
+    const commit = r1.laneCommitFrames;
+    expect(commit).toBeGreaterThan(0);
+
+    // Move r2 out of the way — commitment should still hold
+    r2.physicalY = 0.9;
+    applyRacerBehavior([r1, r2], cfg);
+    expect(r1.laneCommitFrames).toBe(commit - 1);
+    expect(r1.targetPhysicalY).toBeCloseTo(target, 5);
   });
 
-  it('no speed brake when Y difference exceeds threshold', () => {
-    const trailer = makeRacer({ index: 0, t: 0.5, x: 200, y: 200 });
-    const leader = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 });
-    trailer.physicalY = -0.5; // far apart in Y
-    leader.physicalY = 0.5;
-    applyRacerBehavior([trailer, leader], {
-      ...cfg,
-      homeForceStrength: 0,
-      avoidanceDistance: 1.0,
-      speedBrakeYThreshold: 0.2,
-    });
-    expect(trailer.avoidanceActive).toBe(false);
+  it('commitment is released when committed target becomes blocked', () => {
+    const r1 = makeRacer({ index: 0, t: 0.5 });
+    const r2 = makeRacer({ index: 1, t: 0.55 });
+    const r3 = makeRacer({ index: 2, t: 0.57 }); // different t → different x → no world overlap
+    r1.physicalY = 0;
+    r2.physicalY = 0;
+    r3.physicalY = 0;
+    r1.targetPhysicalY = 0;
+
+    // Frame 1: r1 commits to a clear lane
+    applyRacerBehavior([r1, r2, r3], cfg);
+    const originalTarget = r1.targetPhysicalY;
+    expect(r1.laneCommitFrames).toBeGreaterThan(0);
+
+    // Move r3 to exactly the committed target — now it blocks the target
+    r3.physicalY = originalTarget;
+    r3.targetPhysicalY = originalTarget;
+
+    // Frame 2: target blocked → commitment released, racer replans to a different lane
+    applyRacerBehavior([r1, r2, r3], cfg);
+    expect(r1.targetPhysicalY).not.toBeCloseTo(originalTarget, 3);
+  });
+
+  it('no commitment when in free-running phase (no threats)', () => {
+    const r1 = makeRacer({ index: 0, t: 0.5 });
+    r1.physicalY = 0;
+    r1.targetPhysicalY = 0;
+    applyRacerBehavior([r1], cfg);
+    expect(r1.laneCommitFrames).toBe(0);
   });
 });
 
-// ── Drafting ──────────────────────────────────────────────────────────────
+// ── avoidanceActive when all lanes blocked ─────────────────────────────────
 
-describe('applyRacerBehavior — drafting cone', () => {
-  it('grants boost when follower is directly behind leader', () => {
-    // Leader moving right (angle=0), follower directly to the left of leader
-    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
-    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 }); // behind
-    leader.physicalY = 0;
-    follower.physicalY = 0;
-    applyRacerBehavior([leader, follower], {
-      ...cfg,
-      homeForceStrength: 0,
-      draftingMaxDistance: 200,
-      draftingConeAngle: 60,
+describe('applyRacerBehavior — all lanes blocked', () => {
+  it('sets avoidanceActive when findClearLane returns null', () => {
+    // visibleWidthPx=100 → halfWidth=50/75≈0.667 → stepPhys=1.387 > MAX_LATERAL=0.95
+    // All candidates (physicalY ± 1.387) exceed ±0.95 and are skipped → findClearLane returns null
+    const r1 = makeRacer({ index: 0, t: 0.5, visibleWidthPx: 100 });
+    const r2 = makeRacer({ index: 1, t: 0.55, visibleWidthPx: 100 });
+    r1.physicalY = 0;
+    r2.physicalY = 0;
+    r1.targetPhysicalY = 0;
+
+    applyRacerBehavior([r1, r2], cfg);
+    expect(r1.avoidanceActive).toBe(true);
+  });
+});
+
+// ── Finished racers ────────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — finished racers', () => {
+  it('finished racers are not affected by sight logic', () => {
+    const r1 = makeRacer({ index: 0, t: 0.5, finished: true });
+    const r2 = makeRacer({ index: 1, t: 0.55 });
+    r1.physicalY = 0.3;
+    r2.physicalY = 0.3;
+    r1.targetPhysicalY = 0.3;
+    applyRacerBehavior([r1, r2], cfg);
+    expect(r1.physicalY).toBe(0.3);
+    expect(r1.avoidanceActive).toBe(false);
+  });
+});
+
+// ── CRITICAL: Movement smoothness invariant ─────────────────────────────────
+
+describe('applyRacerBehavior — CRITICAL smoothness invariant', () => {
+  it('600 frames, 20 racers: no physicalY delta ever exceeds maxLateralStepPerFrame', () => {
+    const racers = Array.from({ length: 20 }, (_, i) => {
+      const r = makeRacer({
+        index: i,
+        t: i / 20,
+        x: i * 64, // 64px apart → dx=64 >> 16 → no safety net interference
+        y: 360,
+        baseSpeed: 0.001045,
+      });
+      r.physicalY = ((i % 7) - 3) * 0.12;
+      r.targetPhysicalY = r.physicalY;
+      return r;
     });
-    expect(follower.draftingBoostActive).toBe(true);
-    expect(leader.draftingBoostActive).toBe(false);
+
+    for (let f = 0; f < 600; f++) {
+      const before = racers.map((r) => r.physicalY);
+      applyRacerBehavior(racers, cfg);
+      for (let i = 0; i < racers.length; i++) {
+        const delta = Math.abs(racers[i].physicalY - before[i]);
+        // Hard invariant: no jump ever exceeds maxLateralStepPerFrame/corridorHalf
+        expect(delta).toBeLessThanOrEqual(MAX_STEP + 1e-9);
+      }
+    }
   });
 
-  it('no boost when follower is outside cone', () => {
-    // Leader moving right (angle=0), follower is to the right (ahead, not behind)
-    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
-    const follower = makeRacer({ index: 1, t: 0.48, x: 300, y: 300, angle: 0 }); // in front
-    leader.physicalY = 0;
-    follower.physicalY = 0;
-    applyRacerBehavior([leader, follower], {
-      ...cfg,
-      homeForceStrength: 0,
-      draftingMaxDistance: 200,
-      draftingConeAngle: 60,
+  it('physicalY is always within [-0.95, +0.95] after 600 frames', () => {
+    const racers = Array.from({ length: 20 }, (_, i) => {
+      const r = makeRacer({ index: i, t: i / 20, x: i * 64, y: 360 }); // x=i*64 → unique positions
+      r.physicalY = ((i % 5) - 2) * 0.3;
+      r.targetPhysicalY = r.physicalY;
+      return r;
     });
-    expect(follower.draftingBoostActive).toBe(false);
+    for (let f = 0; f < 600; f++) applyRacerBehavior(racers, cfg);
+    for (const r of racers) {
+      expect(r.physicalY).toBeGreaterThanOrEqual(-0.95);
+      expect(r.physicalY).toBeLessThanOrEqual(0.95);
+    }
   });
+});
 
-  it('no boost when follower is too far away', () => {
-    const leader = makeRacer({ index: 0, t: 0.5, x: 500, y: 300, angle: 0 });
-    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 }); // 400px away
-    leader.physicalY = 0;
-    follower.physicalY = 0;
-    applyRacerBehavior([leader, follower], {
-      ...cfg,
-      homeForceStrength: 0,
-      draftingMaxDistance: 110,
-      draftingConeAngle: 60,
-    });
-    expect(follower.draftingBoostActive).toBe(false);
-  });
+// ── Drafting — smooth ramp ─────────────────────────────────────────────────
 
-  it('no boost when follower is actually ahead of leader in t', () => {
-    const ahead = makeRacer({ index: 0, t: 0.52, x: 200, y: 300, angle: 0 });
-    const behind = makeRacer({ index: 1, t: 0.5, x: 100, y: 300, angle: 0 });
-    ahead.physicalY = 0;
-    behind.physicalY = 0;
-    applyRacerBehavior([ahead, behind], {
-      ...cfg,
-      homeForceStrength: 0,
-      draftingMaxDistance: 200,
-      draftingConeAngle: 60,
-    });
-    // "behind" is the follower but relative to "ahead" which is the leader — boost should apply
-    expect(behind.draftingBoostActive).toBe(true);
-    // "ahead" should NOT get boost (it's the leader)
-    expect(ahead.draftingBoostActive).toBe(false);
-  });
-
-  it('no boost when behavior disabled', () => {
+describe('applyRacerBehavior — drafting smooth', () => {
+  it('draftingBoostFactor increases by 1/draftingActivationFrames per frame in cone', () => {
     const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
     const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
     leader.physicalY = 0;
     follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
+    applyRacerBehavior([leader, follower], {
+      ...cfg,
+      draftingMaxDistance: 200,
+      draftingConeAngle: 60,
+    });
+    const expected = 1 / cfg.draftingActivationFrames;
+    expect(follower.draftingBoostFactor).toBeCloseTo(expected, 5);
+  });
+
+  it('draftingBoostFactor reaches 1 after full activation period in cone', () => {
+    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader.physicalY = 0;
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
+    for (let f = 0; f < cfg.draftingActivationFrames + 5; f++) {
+      applyRacerBehavior([leader, follower], {
+        ...cfg,
+        draftingMaxDistance: 200,
+        draftingConeAngle: 60,
+      });
+    }
+    expect(follower.draftingBoostFactor).toBe(1);
+    expect(follower.draftingBoostActive).toBe(true);
+  });
+
+  it('draftingBoostFactor ramps down when follower leaves cone', () => {
+    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader.physicalY = 0;
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+    follower.draftingBoostFactor = 1; // pre-set to fully active
+
+    // Move follower in front of leader (out of cone)
+    follower.x = 350;
+    applyRacerBehavior([leader, follower], {
+      ...cfg,
+      draftingMaxDistance: 200,
+      draftingConeAngle: 60,
+    });
+    expect(follower.draftingBoostFactor).toBeLessThan(1);
+  });
+
+  it('draftingBoostActive is false when factor ≤ 0.01', () => {
+    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader.physicalY = 0;
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
+    // Follower too far away → factor stays 0
+    applyRacerBehavior([leader, follower], {
+      ...cfg,
+      draftingMaxDistance: 50, // follower is 100px away → outside
+      draftingConeAngle: 60,
+    });
+    expect(follower.draftingBoostFactor).toBe(0);
+    expect(follower.draftingBoostActive).toBe(false);
+  });
+
+  it('no boost when behavior is disabled', () => {
+    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader.physicalY = 0;
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
     applyRacerBehavior([leader, follower], { ...cfg, enabled: false });
     expect(follower.draftingBoostActive).toBe(false);
+  });
+
+  it('leader does not get drafting boost', () => {
+    const leader = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const follower = makeRacer({ index: 1, t: 0.48, x: 100, y: 300, angle: 0 });
+    leader.physicalY = 0;
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
+    for (let f = 0; f < cfg.draftingActivationFrames + 2; f++) {
+      applyRacerBehavior([leader, follower], {
+        ...cfg,
+        draftingMaxDistance: 200,
+        draftingConeAngle: 60,
+      });
+    }
+    expect(leader.draftingBoostActive).toBe(false);
+  });
+});
+
+// ── Safety net ────────────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — safety net', () => {
+  it('sets avoidanceActive on both overlapping racers', () => {
+    // Place two racers at the same world position to force hitbox overlap
+    const rA = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const rB = makeRacer({ index: 1, t: 0.51, x: 200, y: 300, angle: 0 });
+    rA.physicalY = 0;
+    rB.physicalY = 0;
+    rA.targetPhysicalY = 0;
+    rB.targetPhysicalY = 0;
+
+    // Make sight horizon too short so sight logic doesn't fire (rB is 0.01 ahead)
+    // But racers overlap in world space → safety net fires
+    applyRacerBehavior([rA, rB], { ...cfg, sightHorizonFrames: 1 });
+    expect(rA.avoidanceActive).toBe(true);
+    expect(rB.avoidanceActive).toBe(true);
+  });
+
+  it('yielder nudge stays within maxLateralStepPerFrame', () => {
+    const rA = makeRacer({ index: 0, t: 0.5, x: 200, y: 300, angle: 0 });
+    const rB = makeRacer({ index: 1, t: 0.51, x: 200, y: 300, angle: 0 });
+    rA.physicalY = -0.3;
+    rB.physicalY = 0.3;
+    rA.targetPhysicalY = -0.3;
+    rB.targetPhysicalY = 0.3;
+    const beforeA = rA.physicalY;
+    const beforeB = rB.physicalY;
+
+    applyRacerBehavior([rA, rB], { ...cfg, sightHorizonFrames: 1 });
+    expect(Math.abs(rA.physicalY - beforeA)).toBeLessThanOrEqual(MAX_STEP + 1e-9);
+    expect(Math.abs(rB.physicalY - beforeB)).toBeLessThanOrEqual(MAX_STEP + 1e-9);
+  });
+});
+
+// ── Acceptance sim ────────────────────────────────────────────────────────
+
+// ── Acceptance sim ────────────────────────────────────────────────────────
+
+describe('applyRacerBehavior — acceptance sim', () => {
+  it('follower avoids blocker ahead and holds a clear lane after 50 frames', () => {
+    // One blocker ahead in t, same lane. Follower must commit and reach a clear lane.
+    const blocker = makeRacer({ index: 0, t: 0.55, angle: 0 });
+    blocker.physicalY = 0;
+    blocker.targetPhysicalY = 0;
+
+    const follower = makeRacer({ index: 1, t: 0.48, angle: 0 });
+    follower.physicalY = 0;
+    follower.targetPhysicalY = 0;
+
+    for (let f = 0; f < 50; f++) {
+      for (const r of [blocker, follower]) {
+        r.t = (r.t + r.baseSpeed) % 1;
+        r.x = r.t * 1280; // straight-track proxy
+      }
+      applyRacerBehavior([blocker, follower], cfg);
+    }
+
+    // Follower should have moved to a distinct clear lane (≥0.30 physY from origin)
+    expect(Math.abs(follower.physicalY)).toBeGreaterThan(0.3);
+    // Blocker should not have been disturbed (nothing was behind it in sight)
+    expect(blocker.physicalY).toBeCloseTo(0, 3);
   });
 });
