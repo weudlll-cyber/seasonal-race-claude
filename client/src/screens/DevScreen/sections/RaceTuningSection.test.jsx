@@ -27,16 +27,9 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     enabled: true,
     startSpreadRange: 0.95,
     runoutZone: 0.05,
-    homeForceStrength: 0.04,
-    comfortThreshold: 0.7,
-    softRepulsionStrength: 0.1,
-    avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
-    lateralForce: 0.01,
-    maxLateral: 0.95,
-    speedBrakeYThreshold: 0.2,
-    speedBrakeTThreshold: 0.015,
+    safetyMarginPx: 3,
+    lookAheadFrames: 3,
+    slotSearchRadiusPx: 60,
     speedBrakeFactor: 0.95,
     draftingMaxDistance: 110,
     draftingConeAngle: 30,
@@ -47,16 +40,9 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     enabled: true,
     startSpreadRange: 0.95,
     runoutZone: 0.05,
-    homeForceStrength: 0.04,
-    comfortThreshold: 0.7,
-    softRepulsionStrength: 0.1,
-    avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
-    lateralForce: 0.01,
-    maxLateral: 0.95,
-    speedBrakeYThreshold: 0.2,
-    speedBrakeTThreshold: 0.015,
+    safetyMarginPx: 3,
+    lookAheadFrames: 3,
+    slotSearchRadiusPx: 60,
     speedBrakeFactor: 0.95,
     draftingMaxDistance: 110,
     draftingConeAngle: 30,
@@ -101,7 +87,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('RaceTuningSection — renders all 9 blocks', () => {
+describe('RaceTuningSection — renders all 6 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
@@ -140,28 +126,10 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
     expect(screen.getByTestId('drafting-summary')).toBeTruthy();
   });
 
-  it('renders Block 6: Comfort Zone', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByText('Comfort Zone')).toBeTruthy();
-    expect(screen.getByLabelText('Comfort Threshold')).toBeTruthy();
-  });
-
-  it('renders Block 7: Soft Avoidance', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByText('Soft Avoidance')).toBeTruthy();
-    expect(screen.getByLabelText('Avoidance Distance')).toBeTruthy();
-  });
-
-  it('renders Block 8: Speed Brake', () => {
+  it('renders Block 6: Speed Brake', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Brake')).toBeTruthy();
     expect(screen.getByLabelText('Speed Brake Factor')).toBeTruthy();
-  });
-
-  it('renders Block 9: Home Force', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByText('Home Force')).toBeTruthy();
-    expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
   });
 });
 
@@ -231,24 +199,9 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     expect(screen.getByTestId('reset-drafting')).toBeTruthy();
   });
 
-  it('renders Reset button for Comfort Zone block', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-comfort-zone')).toBeTruthy();
-  });
-
-  it('renders Reset button for Soft Avoidance block', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-soft-avoidance')).toBeTruthy();
-  });
-
   it('renders Reset button for Speed Brake block', () => {
     render(<RaceTuningSection />);
     expect(screen.getByTestId('reset-speed-brake')).toBeTruthy();
-  });
-
-  it('renders Reset button for Home Force block', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-home-force')).toBeTruthy();
   });
 
   it('clicking reset-speed-range restores default min/max without crash', () => {
