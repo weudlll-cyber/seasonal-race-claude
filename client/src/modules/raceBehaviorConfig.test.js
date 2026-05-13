@@ -3,7 +3,7 @@
 // Path:        client/src/modules/raceBehaviorConfig.test.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Unit tests for race-behavior config CRUD (D7b).
+// Description: Unit tests for race-behavior config CRUD — PBD architecture.
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -30,7 +30,7 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange).toBe(0.95);
   });
 
-  it('runoutZone is 0.05 (D7c Phase 4)', () => {
+  it('runoutZone is 0.05', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone).toBe(0.05);
   });
 
@@ -38,17 +38,26 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled).toBe(true);
   });
 
-  it('has positive homeForceStrength', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
+  it('has pbdIterationsPerFrame >= 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.pbdIterationsPerFrame).toBeGreaterThanOrEqual(1);
   });
 
-  it('comfortThreshold is between 0 and 1', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeGreaterThan(0);
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
+  it('frontWeight is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.frontWeight).toBeGreaterThanOrEqual(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.frontWeight).toBeLessThanOrEqual(1);
   });
 
-  it('has positive avoidanceDistance', () => {
-    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeGreaterThan(0);
+  it('centerlineForce is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.centerlineForce).toBeGreaterThanOrEqual(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.centerlineForce).toBeLessThanOrEqual(1);
+  });
+
+  it('safetyMarginPx >= 0', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.safetyMarginPx).toBeGreaterThanOrEqual(0);
+  });
+
+  it('maxLateralStepPerFrame > 0', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralStepPerFrame).toBeGreaterThan(0);
   });
 
   it('speedBrakeFactor is between 0 and 1', () => {
@@ -74,21 +83,27 @@ describe('loadRaceBehaviorConfig', () => {
   });
 
   it('merges stored values with defaults', () => {
-    storageGet.mockReturnValue({ avoidanceDistance: 0.5, draftingBoost: 1.2 });
+    storageGet.mockReturnValue({ pbdIterationsPerFrame: 8, draftingBoost: 1.2 });
     const cfg = loadRaceBehaviorConfig();
-    expect(cfg.avoidanceDistance).toBe(0.5);
+    expect(cfg.pbdIterationsPerFrame).toBe(8);
     expect(cfg.draftingBoost).toBe(1.2);
     expect(cfg.enabled).toBe(DEFAULT_RACE_BEHAVIOR_CONFIG.enabled);
   });
 
-  it('returns defaults when homeForceStrength <= 0', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceStrength: 0 });
+  it('returns defaults when pbdIterationsPerFrame < 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, pbdIterationsPerFrame: 0 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
-  it('returns defaults when comfortThreshold >= 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, comfortThreshold: 1.0 });
+  it('returns defaults when frontWeight > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, frontWeight: 1.5 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when centerlineForce > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, centerlineForce: 1.1 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });

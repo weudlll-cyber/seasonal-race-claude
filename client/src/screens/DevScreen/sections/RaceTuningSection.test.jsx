@@ -23,27 +23,28 @@ vi.mock('../../../modules/baseSpeedConfig.js', () => ({
   },
 }));
 
-const PBD_BEHAVIOR_CONFIG = {
-  enabled: true,
-  startSpreadRange: 0.95,
-  runoutZone: 0.05,
-  pbdIterationsPerFrame: 5,
-  frontWeight: 0.2,
-  centerlineForce: 0.02,
-  safetyMarginPx: 4,
-  maxLateralStepPerFrame: 4,
-  speedBrakeFactor: 0.95,
-  draftingActivationFrames: 20,
-  draftingMaxDistance: 110,
-  draftingConeAngle: 30,
-  draftingBoost: 1.1,
-};
-
-vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
-  loadRaceBehaviorConfig: vi.fn(() => ({ ...PBD_BEHAVIOR_CONFIG })),
-  saveRaceBehaviorConfig: vi.fn(() => true),
-  DEFAULT_RACE_BEHAVIOR_CONFIG: { ...PBD_BEHAVIOR_CONFIG },
-}));
+vi.mock('../../../modules/raceBehaviorConfig.js', () => {
+  const defaults = {
+    enabled: true,
+    startSpreadRange: 0.95,
+    runoutZone: 0.05,
+    pbdIterationsPerFrame: 5,
+    frontWeight: 0.2,
+    centerlineForce: 0.02,
+    safetyMarginPx: 4,
+    maxLateralStepPerFrame: 4,
+    speedBrakeFactor: 0.95,
+    draftingActivationFrames: 20,
+    draftingMaxDistance: 110,
+    draftingConeAngle: 30,
+    draftingBoost: 1.1,
+  };
+  return {
+    loadRaceBehaviorConfig: vi.fn(() => ({ ...defaults })),
+    saveRaceBehaviorConfig: vi.fn(() => true),
+    DEFAULT_RACE_BEHAVIOR_CONFIG: { ...defaults },
+  };
+});
 
 vi.mock('../../../modules/rowLayoutConfig.js', () => ({
   loadRowLayoutConfig: vi.fn(() => ({
