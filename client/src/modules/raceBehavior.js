@@ -108,13 +108,12 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
 
 /**
  * Check whether a racer's path toward physicalY=0 is blocked by other racers.
- * Returns true (BLOCKED) if any other active racer occupies the swept corridor.
+ * Returns true (BLOCKED) if any other active racer lies within spriteSize pixels
+ * of the diagonal line segment from (r.t, r.physicalY) to (projT, projY) in
+ * pixel space — where t is scaled by pathLength and physicalY by trackWidth.
  *
- * Corridor definition:
- *   - physicalY sweep: from r.physicalY toward 0 over lookaheadFrames frames (spring)
- *   - t-range: [r.t - tHalfSpan, projectedT + tHalfSpan] where projectedT is r.t advanced
- *     by lookaheadFrames steps at r.baseSpeed (or 0 if not set)
- *   - lateral margin: half a sprite width plus a 6px safety buffer (in physicalY units)
+ * This replaces the previous bounding-box approach, which produced false
+ * positives for racers in the corners of the rectangular envelope (Decision Log #9).
  */
 function _computeBlockedMode(r, active, config, lookaheadFrames) {
   const trackWidth = getTrackWidthPx(r);
@@ -125,8 +124,18 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
   }
 
   const spriteSize = getSpriteWorldSizePx(r);
-  const lateralMargin = spriteSize > 0 ? spriteSize / trackWidth : 0;
-  const tHalfSpan = pathLength > 0 ? spriteSize / pathLength : 0;
+  if (spriteSize <= 0) {
+    r.blockerInfo = null;
+    return false;
+  }
+
+  const tHalfSpan = spriteSize / pathLength;
+
+  // Edge case: already within one sprite-width of center — path is trivially clear
+  if (Math.abs(r.physicalY) * trackWidth < spriteSize) {
+    r.blockerInfo = null;
+    return false;
+  }
 
   // Project physicalY toward center under home force over lookaheadFrames
   let projY = r.physicalY;
@@ -134,25 +143,55 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
     projY += -projY * config.homeForceStrength;
   }
 
-  // Project t-position forward (use r.baseSpeed if available, else 0)
+  // Edge case: projected position drifts further from center (e.g. homeForceStrength > 1)
+  if (Math.abs(projY) > Math.abs(r.physicalY)) {
+    r.blockerInfo = null;
+    return true;
+  }
+
+  // Project t-position forward
   const projT = r.t + (Number.isFinite(r.baseSpeed) ? r.baseSpeed * lookaheadFrames : 0);
 
-  // Bounding box of the swept corridor
-  const corridorYMin = Math.min(r.physicalY, projY) - lateralMargin;
-  const corridorYMax = Math.max(r.physicalY, projY) + lateralMargin;
-  const corridorTMin = r.t - tHalfSpan;
-  const corridorTMax = projT + tHalfSpan;
+  // Segment endpoints in pixel space (t×pathLength, physicalY×trackWidth)
+  const px1 = r.t * pathLength;
+  const py1 = r.physicalY * trackWidth;
+  const px2 = projT * pathLength;
+  const py2 = projY * trackWidth;
+  const segDx = px2 - px1;
+  const segDy = py2 - py1;
+  const segLenSq = segDx * segDx + segDy * segDy;
 
   for (const other of active) {
     if (other.index === r.index) continue;
-    // t-range check (account for closed-track wrap)
+
+    // Wrap-aware dT: shortest arc distance in t-space
     let dT = other.t - r.t;
     if (Math.abs(dT) > 0.5) dT = dT > 0 ? dT - 1 : dT + 1;
-    const otherAbsT = r.t + dT;
-    if (otherAbsT < corridorTMin || otherAbsT > corridorTMax) continue;
-    // physicalY range check
-    if (other.physicalY >= corridorYMin && other.physicalY <= corridorYMax) {
-      // Telemetry: store first blocker info on the racer for the debug overlay
+
+    // Pre-filter: skip racers outside the t-extent of the segment plus one sprite span
+    if (dT < -tHalfSpan || dT > projT - r.t + tHalfSpan) continue;
+
+    // Other racer in pixel space (t expressed relative to r.t to preserve wrap)
+    const ox = (r.t + dT) * pathLength;
+    const oy = other.physicalY * trackWidth;
+
+    // Point-to-segment distance
+    let dist;
+    if (segLenSq < 1) {
+      // Degenerate segment — compare directly to start point
+      const dx = ox - px1;
+      const dy = oy - py1;
+      dist = Math.sqrt(dx * dx + dy * dy);
+    } else {
+      const s = Math.max(0, Math.min(1, ((ox - px1) * segDx + (oy - py1) * segDy) / segLenSq));
+      const cx = px1 + s * segDx;
+      const cy = py1 + s * segDy;
+      const dx = ox - cx;
+      const dy = oy - cy;
+      dist = Math.sqrt(dx * dx + dy * dy);
+    }
+
+    if (dist < spriteSize) {
       r.blockerInfo = {
         index: other.index,
         name: other.name ?? `#${other.index}`,
