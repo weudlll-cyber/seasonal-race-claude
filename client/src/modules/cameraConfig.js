@@ -16,6 +16,10 @@
 //              followDuration / leadOutDistance with time-based leadInDuration /
 //              leadOutDuration (seconds). v4→v5 migration preserves all non-phase
 //              profile fields; phase fields reset to new defaults.
+//              Schema v6 (2026-05-15): reduces leadInDuration defaults
+//              (LEADER/COMEBACK 1.0→0.3, BATTLE 0.5→0.2) to prevent the camera
+//              arriving at a position where the leader is near the viewport edge.
+//              v5→v6 migration resets leadInDuration to new defaults.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -137,6 +141,26 @@ function migrateV4toV5(config) {
   };
 }
 
+// v5→v6: reset leadInDuration to new (reduced) defaults to prevent camera arriving with
+// the leader at the viewport edge. All other profile fields are preserved.
+function migrateV5toV6(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = {};
+  for (const state of Object.keys(defProfiles)) {
+    const old = oldProfiles[state] ?? {};
+    newProfiles[state] = {
+      ...old,
+      leadInDuration: defProfiles[state].leadInDuration,
+    };
+  }
+  return {
+    ...config,
+    cameraStateProfiles: newProfiles,
+    schemaVersion: 6,
+  };
+}
+
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
@@ -161,7 +185,7 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV3toV5(merged);
+    return migrateV5toV6(migrateV3toV5(merged));
   }
 
   if (stored.schemaVersion === 3) {
@@ -179,17 +203,33 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV3toV5(merged);
+    return migrateV5toV6(migrateV3toV5(merged));
   }
 
   if (stored.schemaVersion === 4) {
-    // v4→v5: preserve zoom/TC fields, reset pixel phase fields to new duration defaults.
-    return migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored });
+    // v4→v5→v6: preserve zoom/TC fields, reset phase fields, reduce leadInDuration.
+    return migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }));
   }
 
-  if (stored.schemaVersion !== 5) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 5) {
+    // v5→v6: reset leadInDuration to reduced defaults; other profile fields preserved.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV5toV6(merged);
+  }
 
-  // v5: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 6) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v6: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -205,5 +245,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 5 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 6 });
 }

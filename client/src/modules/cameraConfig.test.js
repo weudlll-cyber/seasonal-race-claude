@@ -48,7 +48,7 @@ describe('loadCameraConfig', () => {
     expect(() => loadCameraConfig()).not.toThrow();
   });
 
-  it('schemaVersion=2 stored config is migrated to v5 and merged with defaults', () => {
+  it('schemaVersion=2 stored config is migrated to v6 and merged with defaults', () => {
     storageGet.mockReturnValue({
       schemaVersion: 2,
       maxTargetScreenPx: 200,
@@ -66,7 +66,7 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.maxTargetScreenPx).toBe(200);
-    expect(cfg.schemaVersion).toBe(5);
+    expect(cfg.schemaVersion).toBe(6);
   });
 
   it('schemaVersion=2: respects stored spritePctOfCanvas.leader', () => {
@@ -96,20 +96,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 5', () => {
+  it('writes schemaVersion: 6', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 5 })
+      expect.objectContaining({ schemaVersion: 6 })
     );
   });
 
-  it('writes schemaVersion: 5 even when not in input config', () => {
+  it('writes schemaVersion: 6 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 5 })
+      expect.objectContaining({ schemaVersion: 6 })
     );
   });
 });
@@ -123,22 +123,22 @@ describe('loadCameraConfig — v2/v3 migration', () => {
     const cfg = loadCameraConfig();
     expect(cfg.battleMaxDurationMs).toBe(9999);
     expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(5);
+    expect(cfg.schemaVersion).toBe(6);
   });
 
-  it('v2 config without battleMaxDuration migrates to v5 and gets default battleMaxDurationMs', () => {
+  it('v2 config without battleMaxDuration migrates to v6 and gets default battleMaxDurationMs', () => {
     storageGet.mockReturnValue({
       schemaVersion: 2,
       maxTargetScreenPx: 200,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(5);
+    expect(cfg.schemaVersion).toBe(6);
     expect(cfg.maxTargetScreenPx).toBe(200);
     expect('battleMaxDuration' in cfg).toBe(false);
     expect(cfg.battleMaxDurationMs).toBe(DEFAULT_CAMERA_CONFIG.battleMaxDurationMs);
   });
 
-  it('schemaVersion=3 config with battleMaxDurationMs is migrated to v5', () => {
+  it('schemaVersion=3 config with battleMaxDurationMs is migrated to v6', () => {
     storageGet.mockReturnValue({
       schemaVersion: 3,
       battleMaxDurationMs: 8000,
@@ -146,7 +146,7 @@ describe('loadCameraConfig — v2/v3 migration', () => {
     const cfg = loadCameraConfig();
     expect(cfg.battleMaxDurationMs).toBe(8000);
     expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(5);
+    expect(cfg.schemaVersion).toBe(6);
   });
 });
 
@@ -226,5 +226,103 @@ describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () =>
     const cfg = loadCameraConfig();
     expect(cfg.entryConvergenceZoom).toBe(DEFAULT_CAMERA_CONFIG.entryConvergenceZoom);
     expect(cfg.entryConvergencePx).toBe(DEFAULT_CAMERA_CONFIG.entryConvergencePx);
+  });
+});
+
+describe('loadCameraConfig — v5→v6 migration: leadInDuration reset', () => {
+  it('v5 config with old leadInDuration=1.0 is migrated to new default 0.3', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 5,
+      cameraStateProfiles: {
+        LEADER_ZOOM: {
+          spritePct: 0.09,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 1.0,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+        },
+        BATTLE_ZOOM: {
+          spritePct: 0.14,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.5,
+          leadOutDuration: 1.0,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+        },
+        COMEBACK_ZOOM: {
+          spritePct: 0.07,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 1.0,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+        },
+        OVERVIEW: {
+          spritePct: 0.05,
+          trackingTC: 1.5,
+          entryTC: 1.5,
+          leadInDuration: 0,
+          leadOutDuration: 0,
+          innerFramePct: 0.7,
+          maxStateDuration: 4000,
+          minStateHold: 5000,
+        },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(6);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadInDuration).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.leadInDuration
+    );
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadInDuration).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.leadInDuration
+    );
+    expect(cfg.cameraStateProfiles.OVERVIEW.leadInDuration).toBe(0);
+  });
+
+  it('v5→v6 migration preserves non-leadInDuration fields (e.g. user-tuned spritePct)', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 5,
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spritePct: 0.15, leadInDuration: 1.0 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePct).toBe(0.15);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
+    );
+  });
+
+  it('v6 stored config with user-tuned leadInDuration is preserved (not reset)', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 6,
+      cameraStateProfiles: {
+        LEADER_ZOOM: {
+          spritePct: 0.09,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.8,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+        },
+      },
+    });
+    const cfg = loadCameraConfig();
+    // v6 uses deep-merge: user-tuned 0.8 survives
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(0.8);
+    expect(cfg.schemaVersion).toBe(6);
   });
 });

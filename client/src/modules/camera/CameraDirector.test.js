@@ -2220,6 +2220,28 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._transitionTargetT).not.toBeNull();
   });
 
+  it('_transition() resets _prevFocusT to null to prevent stale speed estimate on first update frame', () => {
+    // Regression guard for camera-pr102-bug-diagnosis.md Bug 1:
+    // _prevFocusT accumulates over the previous state's tracking phase. Without this reset,
+    // frame 1 of the new state computes speed = (fT_now − stale_prevFocusT) which can be
+    // many frames of racer movement, inflating leadAhead and causing _shortestTDelta to
+    // return a negative value (camera moves backward briefly before correcting forward).
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._prevFocusT = 2.38; // stale value from a previous tracking phase
+    const racers = [
+      { x: 800, y: 360, t: 0.5 },
+      { x: 700, y: 360, t: 0.4 },
+    ];
+    cd._transition(racers, 10000, {
+      raceElapsed: 10000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6000,
+    });
+    expect(cd._prevFocusT).toBeNull();
+  });
+
   it('observerPhase getter returns _observerPhase', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
     expect(cd.observerPhase).toBe('idle');

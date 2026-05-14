@@ -701,6 +701,9 @@ export class CameraDirector {
     this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
     this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
+    // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
+    // not a stale delta accumulated across the previous state's tracking phase.
+    this._prevFocusT = null;
     if (this._shape && !this._isOpenTrack) {
       // Compute focusT for all states including OVERVIEW (use leader's T for OVERVIEW so the
       // camera targets the leader's position, centering the action with followers visible).

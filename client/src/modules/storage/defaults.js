@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -142,7 +142,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       spritePct: 0.09,
       trackingTC: 0.25,
       entryTC: 0.8,
-      leadInDuration: 1.0,
+      leadInDuration: 0.3,
       leadOutDuration: 1.5,
       innerFramePct: 0.7,
       maxStateDuration: 8000,
@@ -152,7 +152,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       spritePct: 0.14,
       trackingTC: 0.25,
       entryTC: 0.8,
-      leadInDuration: 0.5,
+      leadInDuration: 0.2,
       leadOutDuration: 1.0,
       innerFramePct: 0.7,
       maxStateDuration: 8000,
@@ -162,7 +162,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       spritePct: 0.07,
       trackingTC: 0.25,
       entryTC: 0.8,
-      leadInDuration: 1.0,
+      leadInDuration: 0.3,
       leadOutDuration: 1.5,
       innerFramePct: 0.7,
       maxStateDuration: 8000,
