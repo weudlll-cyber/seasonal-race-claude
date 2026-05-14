@@ -91,6 +91,19 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
   return true;
 }
 
+function resolveNextPhysicalY(currentY, delta, config) {
+  let newY = currentY + delta;
+
+  const absY = Math.abs(newY);
+  if (absY >= config.comfortThreshold && absY < 1.0) {
+    const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
+    newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
+  }
+
+  const cap = Math.min(config.maxLateral, 1.0);
+  return Math.max(-cap, Math.min(cap, newY));
+}
+
 /**
  * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
  * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
@@ -123,6 +136,7 @@ export function applyRacerBehavior(racers, config) {
   }
 
   const active = racers.filter((r) => !r.finished);
+  const diag = config.__freeLaneDiag ?? null;
   for (const r of active) r.draftingBoostActive = false;
 
   // Accumulate physicalY deltas from home force + avoidance
@@ -133,6 +147,8 @@ export function applyRacerBehavior(racers, config) {
   const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
+  const pairDiagRows = diag ? [] : null;
+  const frameOldY = diag ? new Map(active.map((r) => [r.index, r.physicalY])) : null;
 
   // ── Home force — spring toward centerline ──────────────────────────────────
   for (const r of active) {
@@ -196,6 +212,7 @@ export function applyRacerBehavior(racers, config) {
 
           let dirA = 0;
           let dirB = 0;
+          let branch = 'none';
 
           const aBlocked = !aLeftFree && !aRightFree;
           const bBlocked = !bLeftFree && !bRightFree;
@@ -204,6 +221,7 @@ export function applyRacerBehavior(racers, config) {
             if (aLeftFree && aRightFree && bLeftFree && bRightFree) {
               dirA = aGeomDir;
               dirB = bGeomDir;
+              branch = 'both_free_geometry';
             } else {
               const aSingle = chooseSingleSideDirection(aLeftFree, aRightFree);
               const bSingle = chooseSingleSideDirection(bLeftFree, bRightFree);
@@ -211,25 +229,61 @@ export function applyRacerBehavior(racers, config) {
               if (aSingle !== 0 && bSingle !== 0) {
                 dirA = aSingle;
                 dirB = bSingle;
+                if (aSingle === -1 && bSingle === -1) branch = 'both_left_only';
+                else if (aSingle === 1 && bSingle === 1) branch = 'both_right_only';
+                else branch = 'opposite_single_sides';
               } else if (aSingle === 0 && bSingle !== 0) {
                 dirA = aGeomDir;
                 dirB = bSingle;
+                branch = 'a_geometry_b_single';
               } else if (aSingle !== 0 && bSingle === 0) {
                 dirA = aSingle;
                 dirB = bGeomDir;
+                branch = 'a_single_b_geometry';
+              } else {
+                branch = 'both_mixed_no_dir';
               }
             }
           } else if (!aBlocked) {
             dirA = chooseSingleSideDirection(aLeftFree, aRightFree) || aGeomDir;
+            branch = 'b_blocked_a_moves';
           } else if (!bBlocked) {
             dirB = chooseSingleSideDirection(bLeftFree, bRightFree) || bGeomDir;
+            branch = 'a_blocked_b_moves';
+          } else {
+            branch = 'all_blocked';
           }
 
+          const preDeltaA = dirA * forceMag;
+          const preDeltaB = dirB * forceMag;
           if (dirA !== 0) {
-            yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
+            yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + preDeltaA);
           }
           if (dirB !== 0) {
-            yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
+            yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + preDeltaB);
+          }
+
+          if (pairDiagRows) {
+            pairDiagRows.push({
+              aIndex: rA.index,
+              bIndex: rB.index,
+              aY: rA.physicalY,
+              bY: rB.physicalY,
+              dT,
+              dY,
+              tHalfSpan,
+              lateralHalfSpan,
+              fired: dirA !== 0 || dirB !== 0,
+              branch,
+              dirA,
+              dirB,
+              preDeltaA,
+              preDeltaB,
+              aLeftFree,
+              aRightFree,
+              bLeftFree,
+              bRightFree,
+            });
           }
         }
       }
@@ -257,20 +311,37 @@ export function applyRacerBehavior(racers, config) {
   }
 
   // Apply deltas + soft repulsion + hard clamp
+  const racerDiagRows = diag ? [] : null;
   for (const r of active) {
-    let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
-
-    // Soft repulsion: grows quadratically as physicalY approaches boundary
-    const absY = Math.abs(newY);
-    if (absY >= config.comfortThreshold && absY < 1.0) {
-      const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
-      newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
-    }
-
-    // maxLateral cap + hard boundary clamp
-    const cap = Math.min(config.maxLateral, 1.0);
-    r.physicalY = Math.max(-cap, Math.min(cap, newY));
+    const oldY = frameOldY ? frameOldY.get(r.index) : r.physicalY;
+    const totalDelta = yDeltas.get(r.index) ?? 0;
+    const freeLaneDelta = yFreeLaneDeltas.get(r.index) ?? 0;
+    const withFree = resolveNextPhysicalY(oldY, totalDelta, config);
+    r.physicalY = withFree;
     r.avoidanceActive = speedBrakeSet.has(r.index);
+
+    if (racerDiagRows) {
+      const withoutFree = resolveNextPhysicalY(oldY, totalDelta - freeLaneDelta, config);
+      racerDiagRows.push({
+        index: r.index,
+        oldY,
+        totalDeltaBeforeClamp: totalDelta,
+        freeLaneDeltaBeforeClamp: freeLaneDelta,
+        actualDeltaApplied: withFree - oldY,
+        freeLaneDeltaAppliedNet: withFree - withoutFree,
+      });
+    }
+  }
+
+  if (diag && typeof diag.onFrame === 'function') {
+    const firedPairs = pairDiagRows ? pairDiagRows.filter((row) => row.fired).length : 0;
+    diag.onFrame({
+      frame: Number.isFinite(diag.frame) ? diag.frame : null,
+      overlapPairCount: pairDiagRows?.length ?? 0,
+      firedPairCount: firedPairs,
+      pairs: pairDiagRows ?? [],
+      racers: racerDiagRows ?? [],
+    });
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────
