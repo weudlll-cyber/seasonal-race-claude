@@ -119,7 +119,7 @@ describe('applyRacerBehavior — home force', () => {
   });
 
   it('reduces home force by factor during active overlap', () => {
-    const a = makeLaneRacer({ index: 70, t: 0.500, physicalY: 0.5 });
+    const a = makeLaneRacer({ index: 70, t: 0.5, physicalY: 0.5 });
     const b = makeLaneRacer({ index: 71, t: 0.501, physicalY: 0.5 });
 
     applyRacerBehavior([a, b], {
@@ -135,8 +135,8 @@ describe('applyRacerBehavior — home force', () => {
   });
 
   it('keeps full home force when there is no overlap', () => {
-    const a = makeLaneRacer({ index: 72, t: 0.500, physicalY: 0.5 });
-    const b = makeLaneRacer({ index: 73, t: 0.700, physicalY: 0.5 });
+    const a = makeLaneRacer({ index: 72, t: 0.5, physicalY: 0.5 });
+    const b = makeLaneRacer({ index: 73, t: 0.7, physicalY: 0.5 });
 
     applyRacerBehavior([a, b], {
       ...cfg,
@@ -150,7 +150,7 @@ describe('applyRacerBehavior — home force', () => {
   });
 
   it('homeForceReductionOnOverlap=1.0 disables reduction (backwards-compat)', () => {
-    const a = makeLaneRacer({ index: 74, t: 0.500, physicalY: 0.5 });
+    const a = makeLaneRacer({ index: 74, t: 0.5, physicalY: 0.5 });
     const b = makeLaneRacer({ index: 75, t: 0.501, physicalY: 0.5 });
 
     applyRacerBehavior([a, b], {
@@ -165,7 +165,7 @@ describe('applyRacerBehavior — home force', () => {
   });
 
   it('homeForceReductionOnOverlap=0.0 disables home force during overlap', () => {
-    const a = makeLaneRacer({ index: 76, t: 0.500, physicalY: 0.5 });
+    const a = makeLaneRacer({ index: 76, t: 0.5, physicalY: 0.5 });
     const b = makeLaneRacer({ index: 77, t: 0.501, physicalY: 0.5 });
 
     applyRacerBehavior([a, b], {
@@ -386,7 +386,7 @@ describe('applyRacerBehavior — avoidance', () => {
 
 describe('applyRacerBehavior — free-lane separation', () => {
   it('overlap + both sides free: geometric rule separates left/right', () => {
-    const left = makeLaneRacer({ index: 10, t: 0.500, physicalY: -0.03 });
+    const left = makeLaneRacer({ index: 10, t: 0.5, physicalY: -0.03 });
     const right = makeLaneRacer({ index: 11, t: 0.501, physicalY: 0.03 });
 
     applyRacerBehavior([left, right], {
@@ -400,7 +400,7 @@ describe('applyRacerBehavior — free-lane separation', () => {
   });
 
   it('one racer has a single free side: it uses that side, other follows geometric rule', () => {
-    const a = makeLaneRacer({ index: 20, t: 0.500, physicalY: -0.03 }); // geometric-left racer
+    const a = makeLaneRacer({ index: 20, t: 0.5, physicalY: -0.03 }); // geometric-left racer
     const b = makeLaneRacer({ index: 21, t: 0.501, physicalY: 0.03 });
     // Block B's right side only.
     const rightBlocker = makeLaneRacer({ index: 22, t: 0.501, physicalY: 0.03 + 40 / 140 });
@@ -416,9 +416,9 @@ describe('applyRacerBehavior — free-lane separation', () => {
   });
 
   it('A only left free + B only right free: A goes left, B goes right', () => {
-    const a = makeLaneRacer({ index: 30, t: 0.500, physicalY: -0.03 });
+    const a = makeLaneRacer({ index: 30, t: 0.5, physicalY: -0.03 });
     const b = makeLaneRacer({ index: 31, t: 0.501, physicalY: 0.03 });
-    const blockAOnRight = makeLaneRacer({ index: 32, t: 0.500, physicalY: -0.03 + 40 / 140 });
+    const blockAOnRight = makeLaneRacer({ index: 32, t: 0.5, physicalY: -0.03 + 40 / 140 });
     const blockBOnLeft = makeLaneRacer({ index: 33, t: 0.501, physicalY: 0.03 - 40 / 140 });
 
     applyRacerBehavior([a, b, blockAOnRight, blockBOnLeft], {
@@ -432,10 +432,10 @@ describe('applyRacerBehavior — free-lane separation', () => {
   });
 
   it('all sides blocked: no additional free-lane action (force logic fallback)', () => {
-    const a = makeLaneRacer({ index: 40, t: 0.500, physicalY: 0.0 });
+    const a = makeLaneRacer({ index: 40, t: 0.5, physicalY: 0.0 });
     const b = makeLaneRacer({ index: 41, t: 0.501, physicalY: 0.0 });
-    const blockALeft = makeLaneRacer({ index: 42, t: 0.500, physicalY: -40 / 140 });
-    const blockARight = makeLaneRacer({ index: 43, t: 0.500, physicalY: 40 / 140 });
+    const blockALeft = makeLaneRacer({ index: 42, t: 0.5, physicalY: -40 / 140 });
+    const blockARight = makeLaneRacer({ index: 43, t: 0.5, physicalY: 40 / 140 });
     const blockBLeft = makeLaneRacer({ index: 44, t: 0.501, physicalY: -40 / 140 });
     const blockBRight = makeLaneRacer({ index: 45, t: 0.501, physicalY: 40 / 140 });
 
@@ -451,7 +451,7 @@ describe('applyRacerBehavior — free-lane separation', () => {
 
   it('exact same physicalY uses deterministic tie direction', () => {
     const mkPair = () => [
-      makeLaneRacer({ index: 50, name: 'Alpha', t: 0.500, physicalY: 0 }),
+      makeLaneRacer({ index: 50, name: 'Alpha', t: 0.5, physicalY: 0 }),
       makeLaneRacer({ index: 51, name: 'Beta', t: 0.501, physicalY: 0 }),
     ];
 
@@ -469,7 +469,7 @@ describe('applyRacerBehavior — free-lane separation', () => {
   });
 
   it('free-lane movement respects maxLateral clamp (no jump outside cap)', () => {
-    const a = makeLaneRacer({ index: 60, t: 0.500, physicalY: -0.94 });
+    const a = makeLaneRacer({ index: 60, t: 0.5, physicalY: -0.94 });
     const b = makeLaneRacer({ index: 61, t: 0.501, physicalY: -0.94 });
 
     applyRacerBehavior([a, b], {

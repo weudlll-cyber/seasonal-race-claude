@@ -48,8 +48,10 @@ function stablePairBit(a, b) {
 }
 
 function getSpriteWorldSizePx(racer) {
-  if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0) return racer.visibleWidthPx;
-  if (Number.isFinite(racer.spriteWorldSizePx) && racer.spriteWorldSizePx > 0) return racer.spriteWorldSizePx;
+  if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0)
+    return racer.visibleWidthPx;
+  if (Number.isFinite(racer.spriteWorldSizePx) && racer.spriteWorldSizePx > 0)
+    return racer.spriteWorldSizePx;
   return 0;
 }
 
@@ -246,8 +248,9 @@ export function applyRacerBehavior(racers, config) {
   }
 
   // ── Home force — spring toward centerline (reduced during active overlap) ─
-  const overlapFactorRaw =
-    Number.isFinite(config.homeForceReductionOnOverlap) ? config.homeForceReductionOnOverlap : 1;
+  const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
+    ? config.homeForceReductionOnOverlap
+    : 1;
   const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
   for (const r of active) {
     const factor = overlapSet.has(r.index) ? overlapFactor : 1;
