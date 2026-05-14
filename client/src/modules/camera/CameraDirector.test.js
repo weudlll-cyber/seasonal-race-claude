@@ -2163,7 +2163,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(0);
   });
 
-  it('_transition() sets _camT = focusT and _pendingLeadIn = true for LEADER_ZOOM (Design A)', () => {
+  it('_transition() sets _camT = focusT and _transitionTargetT = focusT+leadAhead for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [
@@ -2176,14 +2176,14 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    // Design A: _transition keeps _camT at focusT (racer position). Lead-in offset
-    // is applied at convergence by the convergence gate, not at transition time.
+    // T-space lerp: _camT starts at focusT; _transitionTargetT includes lead-ahead offset
+    // (speed=NOMINAL_T_PER_FRAME=0.001, FRAME_RATE=60, leadInDuration=1.0s → offset=0.06)
     expect(cd._camT).toBeCloseTo(0.5, 5);
     expect(cd._observerPhase).toBe('idle');
-    expect(cd._pendingLeadIn).toBe(true);
+    expect(cd._transitionTargetT).toBeCloseTo(0.56, 3);
   });
 
-  it('_transition() sets _camT = null for OVERVIEW (no phased pan on overview)', () => {
+  it('_transition() to OVERVIEW sets _camT = leader.t and _transitionTargetT = leader.t (no lead-ahead)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [{ x: 100, y: 360, t: 0.1 }];
@@ -2193,11 +2193,14 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
+    // OVERVIEW gets T-space lerp targeting the leader's T (no lead-ahead).
+    // _camT is released to null after convergence but stays non-null during entry.
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
-    expect(cd._camT).toBeNull();
+    expect(cd._camT).toBeCloseTo(0.1, 5);
+    expect(cd._transitionTargetT).toBeCloseTo(0.1, 5);
   });
 
-  it('_transition() resets _observerPhase to "idle" for LEADER_ZOOM on each state change (Design A)', () => {
+  it('_transition() resets _observerPhase to "idle" and sets _transitionTargetT for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd._observerPhase = 'follow';
@@ -2211,10 +2214,10 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    // Design A: observer stays 'idle' after transition; lead-in starts only at
-    // entry-phase convergence (via _pendingLeadIn flag in the convergence gate).
+    // Observer phase is always reset to 'idle' at transition;
+    // lead-in starts only at convergence (set by the convergence gate).
     expect(cd._observerPhase).toBe('idle');
-    expect(cd._pendingLeadIn).toBe(true);
+    expect(cd._transitionTargetT).not.toBeNull();
   });
 
   it('observerPhase getter returns _observerPhase', () => {
@@ -2231,24 +2234,23 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd.camT).toBeCloseTo(0.42, 5);
   });
 
-  it('convergence gate starts lead-in with _camT ahead of racer (Design A)', () => {
+  it('convergence gate: when zoom+T both converge, switches to lead-in with _camT at lead-ahead pos', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
-    // Simulate the state that _transition() produces (Design A):
-    // _camT = focusT, _pendingLeadIn = true, entrySpeedEstimate set
+    // Simulate T-space lerp having already positioned _camT at focusT+leadAhead (= 0.56).
+    // speed=0.001, FRAME_RATE=60, leadInDuration=1.0s → leadAhead=0.06, target=0.5+0.06=0.56
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'entry';
-    cd._camT = 0.5;
+    cd._camT = 0.56; // already at lead-ahead position via T-space lerp
+    cd._transitionTargetT = 0.56; // T-space converged
     cd._observerPhase = 'idle';
-    cd._pendingLeadIn = true;
-    cd._entrySpeedEstimate = 0.002; // 0.002 t/frame measured speed
     // Force zoom convergence regardless of resolveCamera's world-edge adjustments
     cd._entryConvergenceZoom = 100;
     cd.zoom = cd.targetZoom = cd._leaderZoom;
     cd.offsetX = cd.targetOffsetX = 0;
     cd.offsetY = cd.targetOffsetY = 0;
-    // One update call — convergence gate fires, lead-in is set up
+    // One update call — zoom converged + T converged → convergence gate fires
     cd.update(
       [
         { x: 800, y: 360, t: 0.5 },
@@ -2259,11 +2261,56 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       1280,
       720
     );
-    // leadInDt = 0.002 × 60 × 1.0 = 0.12; _camT = 0.5 + 0.12 = 0.62
-    expect(cd._camT).toBeCloseTo(0.62, 4);
+    // Camera is already at lead-ahead position; no jump. Convergence gate starts lead-in.
+    expect(cd._lerpPhase).toBe('tracking');
     expect(cd._observerPhase).toBe('lead-in');
-    expect(cd._pendingLeadIn).toBe(false);
     expect(cd._leadInStartTs).toBe(10100);
+    expect(cd._transitionTargetT).toBeNull();
+    // _camT should still be near the lead-ahead position (not snapped back to focusT)
+    expect(cd._camT).toBeGreaterThan(0.5);
+  });
+
+  it('T-space lerp: _camT moves along shorter track arc (0.3→0.7), stays in [0.3, 0.76]', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.3; // camera at left arc of oval
+    cd._transitionTargetT = 0.76; // focusT=0.7 + leadAhead≈0.06
+    cd._observerPhase = 'idle';
+    const raceState = { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 };
+    // Run 10 frames: _camT should move through [0.3, 0.76] without jumping through the
+    // infield shortcut (which would go 0.3 → 0.0 → 0.7, i.e., wrapping backward)
+    for (let i = 0; i < 10; i++) {
+      cd.update([{ x: 2800, y: 360, t: 0.7 }], 1000 + i * 16, raceState, 1280, 720);
+      expect(cd._camT).toBeGreaterThanOrEqual(0.3);
+      expect(cd._camT).toBeLessThanOrEqual(0.78); // allow for lead-ahead expansion
+    }
+    expect(cd._camT).toBeGreaterThan(0.3); // confirmed: moved forward
+  });
+
+  it('T-space lerp: wrap-around takes shorter arc (t=0.95→t=0.05, forward not backward)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.95; // just before start/finish line
+    cd._transitionTargetT = 1.11; // leader at t=1.05 (lap 2) + leadAhead=0.06
+    cd._observerPhase = 'idle';
+    // Leader just crossed start/finish into lap 2
+    cd.update(
+      [{ x: 1000, y: 360, t: 1.05 }],
+      1000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    // shortestTDelta(0.95, 1.11) = 0.16 → moves forward across the line
+    // NOT backward (which would give delta = -0.84 and move toward 0.0)
+    expect(cd._camT).toBeGreaterThan(0.95); // moved forward (toward 1.0+)
+    expect(cd._camT).toBeLessThan(1.11); // didn't overshoot
   });
 
   it('lead-in: stays in "lead-in" phase until leadInDuration seconds elapsed', () => {
@@ -2740,10 +2787,10 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
-    cd._camT = 0.5; // initial lead-in position
+    cd._camT = 0.5; // initial position before T-space lerp runs
+    cd._transitionTargetT = 0.524; // initial target (midpoint 0.524, will be updated by block)
     cd._lerpPhase = 'entry';
-    cd._observerPhase = 'lead-in';
-    cd._leadInStartTs = 1000;
+    cd._observerPhase = 'idle';
     const racers = [
       { x: 2100, y: 360, t: 0.525 }, // leader has moved ahead
       { x: 2092, y: 360, t: 0.523 },
@@ -2755,8 +2802,9 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
       1280,
       720
     );
-    // _camT should track midpoint (0.525+0.523)/2 = 0.524, not stay at 0.5
-    expect(cd._camT).toBeCloseTo(0.524, 5);
+    // T-space lerp moves _camT toward focusT+leadAhead — not frozen at 0.5
+    expect(cd._camT).toBeGreaterThan(0.5); // moved in right direction
+    expect(cd._camT).toBeLessThan(0.56); // one frame: partial progress only
   });
 });
 

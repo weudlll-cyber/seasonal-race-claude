@@ -49,6 +49,16 @@ const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comebac
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
+const TRANSITION_T_CONVERGENCE = 0.005; // T-units threshold for T-space lerp convergence (~20px on 4000px oval)
+
+// Shortest signed T-delta on a circular track [0,1).
+// Returns a value in (-0.5, 0.5] so the lerp always takes the shorter arc.
+function _shortestTDelta(from, to) {
+  let delta = (to - from) % 1;
+  if (delta > 0.5) delta -= 1;
+  if (delta < -0.5) delta += 1;
+  return delta;
+}
 
 /**
  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
@@ -130,10 +140,10 @@ export class CameraDirector {
     this._leadOutDistanceT = 0;
     this._prevFocusT = null;
     this._lastFocusT = 0;
-    // Design A: lead-in is deferred until entry-phase convergence (H1 fix,
-    // see camera-framing-bug-diagnosis.md). _pendingLeadIn flags that the
-    // convergence gate should place the camera ahead and start lead-in.
-    this._pendingLeadIn = false;
+    // Track-aware T-space lerp: during entry phase, _camT lerps toward _transitionTargetT
+    // along the track (avoiding the euklidisch infield shortcut — see camera-pan-path-diagnosis.md).
+    // _transitionTargetT includes the lead-ahead offset for zoom states.
+    this._transitionTargetT = null;
     this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
     this._followRingBuf = new Uint8Array(60);
     this._followRingIdx = 0;
@@ -427,10 +437,22 @@ export class CameraDirector {
       this._transitionStartOffsetX = this.offsetX;
       this._transitionStartOffsetY = this.offsetY;
     }
-    // During entry, keep _camT aligned with focusT so the pan target tracks the racer
-    // while zoom converges. Also measures inter-frame speed for lead-in placement at
-    // convergence (Design A, see camera-framing-bug-diagnosis.md H1).
-    if (this._lerpPhase === 'entry' && this._camT !== null && !this._isOpenTrack && this._shape) {
+    // dt-scaled lerp factor — hoisted before _setTargets so T-space lerp can use the same lf.
+    const lf60 = this._lerpFactorForState(this.state);
+    const lf = 1 - Math.pow(1 - lf60, (dt * FRAME_RATE) / 1000);
+
+    // Track-aware T-space lerp: during entry phase _camT follows the track toward the
+    // transition target (focusT + lead-ahead offset) instead of snapping to the racer.
+    // The pan (offsetX/Y) is then derived directly from _camT each frame — no pixel-space
+    // lerp during entry — so the camera travels along the track curve rather than taking
+    // the euklidisch shortcut through the infield (see camera-pan-path-diagnosis.md).
+    if (
+      this._lerpPhase === 'entry' &&
+      this._camT !== null &&
+      !this._isOpenTrack &&
+      this._shape &&
+      this._transitionTargetT !== null
+    ) {
       const fr = this._focusRacers(racers);
       let fT = null;
       switch (this.state) {
@@ -446,52 +468,81 @@ export class CameraDirector {
         case CAM_STATE.COMEBACK_ZOOM:
           fT = fr[Math.min(2, fr.length - 1)]?.t ?? null;
           break;
+        case CAM_STATE.OVERVIEW:
+          fT = fr[0]?.t ?? null; // leader's T — camera targets leader in OVERVIEW
+          break;
       }
       if (fT !== null) {
         if (this._prevFocusT !== null) {
           this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
         }
-        this._camT = fT;
         this._prevFocusT = fT;
+        // Update target every frame: focusT moves with the racer, lead-ahead offset scales
+        // with the measured speed so the camera lands at the right lead-ahead position.
+        const prof = this._phasedByState?.[this.state];
+        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        const leadAhead =
+          this.state !== CAM_STATE.OVERVIEW && phasedEnabled
+            ? (this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME) * FRAME_RATE * prof.leadInDuration
+            : 0;
+        this._transitionTargetT = fT + leadAhead;
+        // Lerp _camT toward _transitionTargetT along the shorter arc of the circular track.
+        this._camT += _shortestTDelta(this._camT, this._transitionTargetT) * lf;
       }
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
 
-    // dt-scaled lerp: at dt=1000/FRAME_RATE the factor equals the pre-computed lf60 value,
-    // so existing tests (which omit dt) see identical behavior.
-    const lf60 = this._lerpFactorForState(this.state);
-    const lf = 1 - Math.pow(1 - lf60, (dt * FRAME_RATE) / 1000);
     this.zoom += (this.targetZoom - this.zoom) * lf;
-    this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
-    this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+    // During entry with T-space lerp active: pan is pinned to _camT's world position (already
+    // set in targetOffsetX/Y by _setTargets). No pixel lerp — the camera path follows the track.
+    const tSpaceLerpActive =
+      this._lerpPhase === 'entry' &&
+      this._camT !== null &&
+      !this._isOpenTrack &&
+      this._shape &&
+      this._transitionTargetT !== null;
+    if (tSpaceLerpActive) {
+      this.offsetX = this.targetOffsetX;
+      this.offsetY = this.targetOffsetY;
+    } else {
+      this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
+      this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+    }
     if (this._lerpPhase === 'entry') {
       if (this._entryStartTs === null) this._entryStartTs = ts;
       this._lastEntryDeltaZoom = Math.abs(this.targetZoom - this.zoom);
       this._lastEntryDeltaX = Math.abs(this.targetOffsetX - this.offsetX);
       this._lastEntryDeltaY = Math.abs(this.targetOffsetY - this.offsetY);
-      // When phased observer is active, _camT tracks focusT (above), so targetOffsetX
-      // moves with the racers every frame — the pixel lag cannot converge to the fixed
-      // threshold regardless of zoom factor. Gate convergence on zoom only in that case.
-      const phasedActive = this._camT !== null && !this._isOpenTrack && this._shape;
+      // T-space lerp is active when _camT !== null: pan is pinned to _camT so the pixel
+      // deltas are always near zero. Gate convergence on zoom + T-space convergence only.
+      const tLerpActive = this._camT !== null && !this._isOpenTrack && this._shape;
       const zoomConverged = this._lastEntryDeltaZoom < this._entryConvergenceZoom;
-      const xConverged = phasedActive || this._lastEntryDeltaX < this._entryConvergencePx;
-      const yConverged = phasedActive || this._lastEntryDeltaY < this._entryConvergencePx;
-      if (zoomConverged && xConverged && yConverged) {
+      const xConverged = tLerpActive || this._lastEntryDeltaX < this._entryConvergencePx;
+      const yConverged = tLerpActive || this._lastEntryDeltaY < this._entryConvergencePx;
+      const tConverged =
+        this._transitionTargetT === null ||
+        Math.abs(_shortestTDelta(this._camT, this._transitionTargetT)) < TRANSITION_T_CONVERGENCE;
+      if (zoomConverged && xConverged && yConverged && tConverged) {
         this._lerpPhase = 'tracking';
         this._entryStartTs = null;
-        // Design A: place camera ahead of racer NOW (at convergence), using the
-        // inter-frame speed accumulated during entry. Camera sits at focusT+leadInDt
-        // so the racer walks INTO frame during lead-in instead of running out of it
-        // (H1 fix, see camera-framing-bug-diagnosis.md).
-        if (this._pendingLeadIn && this._camT !== null && !this._isOpenTrack && this._shape) {
-          const prof = this._phasedByState?.[this.state];
-          if (prof?.leadInDuration > 0) {
-            const speed = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
-            this._camT += speed * FRAME_RATE * prof.leadInDuration;
+        this._transitionTargetT = null; // T-space lerp complete
+        // Start phased observer from current _camT position (already at focusT+leadAhead).
+        // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
+        const prof = this._phasedByState?.[this.state];
+        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        if (phasedEnabled && this._camT !== null && !this._isOpenTrack && this._shape) {
+          if (prof.leadInDuration > 0) {
             this._observerPhase = 'lead-in';
             this._leadInStartTs = ts;
+          } else {
+            this._observerPhase = 'follow';
+            this._leadInStartTs = null;
           }
-          this._pendingLeadIn = false;
+        } else {
+          // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
+          this._camT = null;
+          this._observerPhase = 'idle';
+          this._leadInStartTs = null;
         }
       }
     } else {
@@ -645,13 +696,14 @@ export class CameraDirector {
       );
     }
 
-    // Reset observer phase and init _camT for the new state
+    // Reset phased observer and set up T-space lerp for the new state.
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
-    this._pendingLeadIn = false;
     this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
     if (this._shape && !this._isOpenTrack) {
+      // Compute focusT for all states including OVERVIEW (use leader's T for OVERVIEW so the
+      // camera targets the leader's position, centering the action with followers visible).
       let focusT = null;
       switch (nextState) {
         case CAM_STATE.LEADER_ZOOM:
@@ -666,40 +718,40 @@ export class CameraDirector {
         case CAM_STATE.COMEBACK_ZOOM:
           focusT = ordered[Math.min(2, ordered.length - 1)]?.t ?? 0;
           break;
-        default:
-          focusT = null;
+        case CAM_STATE.OVERVIEW:
+          focusT = ordered[0]?.t ?? 0; // leader's T; T-space lerp targets leader position
+          break;
       }
       if (focusT !== null) {
+        // Keep _camT from the old state (T-space lerp starts from current track position).
+        // Only initialize to focusT when coming from a state that had no _camT (e.g., OVERVIEW
+        // tracking where _camT was released to null after convergence).
+        if (this._camT === null) {
+          this._camT = focusT;
+        }
+        // Lead-ahead offset: zoom states target focusT + leadAheadOffset so the camera
+        // arrives at the lead-in start position at convergence, no jump required.
         const prof = this._phasedByState?.[nextState];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
-        if (phasedEnabled) {
-          // Design A: start at racer's current position. Lead-in is deferred until the
-          // entry-phase zoom convergence so the camera first settles on the racer, then
-          // the convergence gate places _camT ahead and starts lead-in. This prevents
-          // the racer from running out of frame during the zoom transition (H1 fix,
-          // see camera-framing-bug-diagnosis.md).
-          this._camT = focusT;
-          this._pendingLeadIn = prof.leadInDuration > 0;
-          if (prof.leadInDuration > 0) {
-            this._observerPhase = 'idle'; // will switch to 'lead-in' at convergence
-            this._leadInStartTs = null;
-          } else {
-            this._observerPhase = 'follow'; // no lead-in; go straight to follow
-            this._leadInStartTs = null;
-          }
-        } else {
-          // Phased observer disabled for this state — use regular getPanTarget
-          this._camT = null;
-          this._observerPhase = 'idle';
-          this._leadInStartTs = null;
-        }
+        const speedPerFrame = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
+        const leadAhead =
+          nextState !== CAM_STATE.OVERVIEW && phasedEnabled
+            ? speedPerFrame * FRAME_RATE * (prof.leadInDuration ?? 0)
+            : 0;
+        this._transitionTargetT = focusT + leadAhead;
+        // Observer phase is always 'idle' at transition; the convergence gate promotes it
+        // to 'lead-in' or 'follow' once zoom and T-space have both converged.
+        this._observerPhase = 'idle';
+        this._leadInStartTs = null;
       } else {
         this._camT = null;
+        this._transitionTargetT = null;
         this._observerPhase = 'idle';
         this._leadInStartTs = null;
       }
     } else {
       this._camT = null;
+      this._transitionTargetT = null;
       this._observerPhase = 'idle';
       this._leadInStartTs = null;
     }
