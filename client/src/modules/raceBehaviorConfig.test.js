@@ -99,13 +99,19 @@ describe('loadRaceBehaviorConfig', () => {
   });
 
   it('returns defaults when homeForceReductionOnOverlap > 1', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceReductionOnOverlap: 1.1 });
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      homeForceReductionOnOverlap: 1.1,
+    });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
 
   it('returns defaults when homeForceReductionOnOverlap < 0', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceReductionOnOverlap: -0.1 });
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      homeForceReductionOnOverlap: -0.1,
+    });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });
