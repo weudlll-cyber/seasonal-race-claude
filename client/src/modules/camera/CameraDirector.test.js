@@ -2046,14 +2046,16 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
   });
 
   it('lerpPhase switches to tracking when all three dimensions converge', () => {
-    // Open track: CameraDirector never touches offsetX/Y, so offsets stay at 0.
-    // Park zoom exactly at target → convergence check passes on next update.
+    // Open tracks now compute offsetX/Y via _setOpenTrackTargets (same as closed tracks).
+    // Run until convergence — zoom and offsets both need to reach their targets.
     const cd = new CameraDirector(6000, 720, true, phase2Config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd.zoom = cd._leaderZoom; // pre-converge zoom
-    // offsets stay 0 (open-track path never writes them)
-    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    cd.zoom = cd._leaderZoom; // pre-converge zoom so only offsets need to settle
+    for (let i = 0; i < 300; i++) {
+      cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+      if (cd.lerpPhase === 'tracking') break;
+    }
     expect(cd.lerpPhase).toBe('tracking');
   });
 
