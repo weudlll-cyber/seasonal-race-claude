@@ -125,35 +125,18 @@ export function applyRacerBehavior(racers, config) {
   const active = racers.filter((r) => !r.finished);
   for (const r of active) r.draftingBoostActive = false;
 
-  // DIAG (opt-in): external logger hook for per-frame force attribution.
-  let diagLogger = null;
-  let diagFrame = null;
-  if (typeof globalThis !== 'undefined' && globalThis.__FREE_LANE_FORCE_ATTRIB_TRACE) {
-    if (typeof globalThis.__FREE_LANE_FORCE_ATTRIB_LOGGER === 'function') {
-      diagLogger = globalThis.__FREE_LANE_FORCE_ATTRIB_LOGGER;
-    }
-    if (typeof globalThis.__FREE_LANE_FORCE_ATTRIB_FRAME !== 'number') {
-      globalThis.__FREE_LANE_FORCE_ATTRIB_FRAME = 0;
-    }
-    diagFrame = globalThis.__FREE_LANE_FORCE_ATTRIB_FRAME;
-  }
-
   // Accumulate physicalY deltas from home force + avoidance
   const yDeltas = new Map(active.map((r) => [r.index, 0]));
   // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
   const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
   // Additional additive free-lane separation contribution for overlap resolution.
   const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
-  const yHomeDeltas = new Map(active.map((r) => [r.index, 0]));
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
-  const overlapPartners = new Map(active.map((r) => [r.index, new Set()]));
 
   // ── Home force — spring toward centerline ──────────────────────────────────
   for (const r of active) {
-    const homeDelta = -r.physicalY * config.homeForceStrength;
-    yDeltas.set(r.index, homeDelta);
-    yHomeDeltas.set(r.index, homeDelta);
+    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength);
   }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
@@ -201,9 +184,6 @@ export function applyRacerBehavior(racers, config) {
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
 
         if (overlaps) {
-          overlapPartners.get(rA.index).add(rB.index);
-          overlapPartners.get(rB.index).add(rA.index);
-
           const cap = Math.min(config.maxLateral, 1.0);
           const aLeftFree = isSideFree(rA, rB, active, -1, lateralHalfSpan, tHalfSpan, cap);
           const aRightFree = isSideFree(rA, rB, active, 1, lateralHalfSpan, tHalfSpan, cap);
@@ -278,7 +258,6 @@ export function applyRacerBehavior(racers, config) {
 
   // Apply deltas + soft repulsion + hard clamp
   for (const r of active) {
-    const yBefore = r.physicalY;
     let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
 
     // Soft repulsion: grows quadratically as physicalY approaches boundary
@@ -292,36 +271,7 @@ export function applyRacerBehavior(racers, config) {
     const cap = Math.min(config.maxLateral, 1.0);
     r.physicalY = Math.max(-cap, Math.min(cap, newY));
     r.avoidanceActive = speedBrakeSet.has(r.index);
-
-    if (diagLogger) {
-      const homeDelta = yHomeDeltas.get(r.index) ?? 0;
-      const avoidDelta =
-        (neighborCounts.get(r.index) ?? 0) > 1
-          ? (yAvoidDeltas.get(r.index) ?? 0) / Math.sqrt(neighborCounts.get(r.index))
-          : (yAvoidDeltas.get(r.index) ?? 0);
-      const freeLaneDelta = yFreeLaneDeltas.get(r.index) ?? 0;
-      const totalPre = homeDelta + avoidDelta + freeLaneDelta;
-      const totalPost = r.physicalY - yBefore;
-      const partners = [...(overlapPartners.get(r.index) ?? new Set())].sort((a, b) => a - b);
-
-      diagLogger({
-        frame: diagFrame,
-        racerId: r.index,
-        y_before: yBefore,
-        freeLane_delta: freeLaneDelta,
-        homeForce_delta: homeDelta,
-        avoidance_delta: avoidDelta,
-        drafting_lateral_delta: 0,
-        total_delta_before_clamp: totalPre,
-        total_delta_after_clamp: totalPost,
-        y_after: r.physicalY,
-        isOverlapping: partners.length > 0,
-        pairPartnerIds: partners,
-      });
-    }
   }
-
-  if (diagLogger) globalThis.__FREE_LANE_FORCE_ATTRIB_FRAME++;
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────
   // Structural note (PR-A2.6 diagnosis): on tight curves the track direction rotates quickly,
