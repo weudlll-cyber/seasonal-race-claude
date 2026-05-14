@@ -25,6 +25,18 @@ function makeRacer(overrides = {}) {
   return r;
 }
 
+function makeLaneRacer(overrides = {}) {
+  const { physicalY, ...rest } = overrides;
+  const racer = makeRacer({
+    spriteWorldSizePx: 40,
+    geometricTrackWidthPx: 140,
+    pathLengthPx: 1200,
+    ...rest,
+  });
+  if (Number.isFinite(physicalY)) racer.physicalY = physicalY;
+  return racer;
+}
+
 const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
 
 // ── initRacerBehavior ──────────────────────────────────────────────────────
@@ -306,6 +318,110 @@ describe('applyRacerBehavior — avoidance', () => {
     const spread =
       Math.max(...racers.map((r) => r.physicalY)) - Math.min(...racers.map((r) => r.physicalY));
     expect(spread).toBeGreaterThan(0.05);
+  });
+});
+
+// ── Free-lane separation ───────────────────────────────────────────────────
+
+describe('applyRacerBehavior — free-lane separation', () => {
+  it('overlap + both sides free: geometric rule separates left/right', () => {
+    const left = makeLaneRacer({ index: 10, t: 0.500, physicalY: -0.03 });
+    const right = makeLaneRacer({ index: 11, t: 0.501, physicalY: 0.03 });
+
+    applyRacerBehavior([left, right], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+    });
+
+    expect(left.physicalY).toBeLessThan(-0.03);
+    expect(right.physicalY).toBeGreaterThan(0.03);
+  });
+
+  it('one racer has a single free side: it uses that side, other follows geometric rule', () => {
+    const a = makeLaneRacer({ index: 20, t: 0.500, physicalY: -0.03 }); // geometric-left racer
+    const b = makeLaneRacer({ index: 21, t: 0.501, physicalY: 0.03 });
+    // Block B's right side only.
+    const rightBlocker = makeLaneRacer({ index: 22, t: 0.501, physicalY: 0.03 + 40 / 140 });
+
+    applyRacerBehavior([a, b, rightBlocker], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+    });
+
+    expect(a.physicalY).toBeLessThan(-0.03);
+    expect(b.physicalY).toBeLessThan(0.03);
+  });
+
+  it('A only left free + B only right free: A goes left, B goes right', () => {
+    const a = makeLaneRacer({ index: 30, t: 0.500, physicalY: -0.03 });
+    const b = makeLaneRacer({ index: 31, t: 0.501, physicalY: 0.03 });
+    const blockAOnRight = makeLaneRacer({ index: 32, t: 0.500, physicalY: -0.03 + 40 / 140 });
+    const blockBOnLeft = makeLaneRacer({ index: 33, t: 0.501, physicalY: 0.03 - 40 / 140 });
+
+    applyRacerBehavior([a, b, blockAOnRight, blockBOnLeft], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+    });
+
+    expect(a.physicalY).toBeLessThan(-0.03);
+    expect(b.physicalY).toBeGreaterThan(0.03);
+  });
+
+  it('all sides blocked: no additional free-lane action (force logic fallback)', () => {
+    const a = makeLaneRacer({ index: 40, t: 0.500, physicalY: 0.0 });
+    const b = makeLaneRacer({ index: 41, t: 0.501, physicalY: 0.0 });
+    const blockALeft = makeLaneRacer({ index: 42, t: 0.500, physicalY: -40 / 140 });
+    const blockARight = makeLaneRacer({ index: 43, t: 0.500, physicalY: 40 / 140 });
+    const blockBLeft = makeLaneRacer({ index: 44, t: 0.501, physicalY: -40 / 140 });
+    const blockBRight = makeLaneRacer({ index: 45, t: 0.501, physicalY: 40 / 140 });
+
+    applyRacerBehavior([a, b, blockALeft, blockARight, blockBLeft, blockBRight], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+    });
+
+    expect(a.physicalY).toBe(0);
+    expect(b.physicalY).toBe(0);
+  });
+
+  it('exact same physicalY uses deterministic tie direction', () => {
+    const mkPair = () => [
+      makeLaneRacer({ index: 50, name: 'Alpha', t: 0.500, physicalY: 0 }),
+      makeLaneRacer({ index: 51, name: 'Beta', t: 0.501, physicalY: 0 }),
+    ];
+
+    const [a1, b1] = mkPair();
+    applyRacerBehavior([a1, b1], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
+    const out1 = [a1.physicalY, b1.physicalY];
+
+    const [a2, b2] = mkPair();
+    applyRacerBehavior([a2, b2], { ...cfg, homeForceStrength: 0, avoidanceDistance: 1.0 });
+    const out2 = [a2.physicalY, b2.physicalY];
+
+    expect(out1).toEqual(out2);
+    expect(Math.abs(out1[0])).toBeGreaterThan(0);
+    expect(Math.abs(out1[1])).toBeGreaterThan(0);
+  });
+
+  it('free-lane movement respects maxLateral clamp (no jump outside cap)', () => {
+    const a = makeLaneRacer({ index: 60, t: 0.500, physicalY: -0.94 });
+    const b = makeLaneRacer({ index: 61, t: 0.501, physicalY: -0.94 });
+
+    applyRacerBehavior([a, b], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      maxLateral: 0.95,
+    });
+
+    expect(a.physicalY).toBeGreaterThanOrEqual(-0.95);
+    expect(a.physicalY).toBeLessThanOrEqual(0.95);
+    expect(b.physicalY).toBeGreaterThanOrEqual(-0.95);
+    expect(b.physicalY).toBeLessThanOrEqual(0.95);
   });
 });
 

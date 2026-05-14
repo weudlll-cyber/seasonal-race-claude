@@ -80,14 +80,14 @@ vi.mock('../../../modules/rowLayoutConfig.js', () => ({
 
 vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   loadRaceDynamicsConfig: vi.fn(() => ({
-    reRollVariationPercent: 45,
+    reRollVariationPercent: 58,
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
   })),
   saveRaceDynamicsConfig: vi.fn(),
   DEFAULT_RACE_DYNAMICS_CONFIG: {
-    reRollVariationPercent: 45,
+    reRollVariationPercent: 58,
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
@@ -274,7 +274,7 @@ describe('RaceTuningSection — per-block reset buttons', () => {
 });
 
 describe('RaceTuningSection — reset uses DEFAULT values, not current state (regression)', () => {
-  it('reset-speed-reroll restores reRollVariationPercent to 45 when loaded with stored value 150', () => {
+  it('reset-speed-reroll restores reRollVariationPercent to 58 when loaded with stored value 150', () => {
     loadRaceDynamicsConfig.mockReturnValueOnce({
       reRollVariationPercent: 150,
       reRollTransitionDuration: 3.0,
@@ -285,6 +285,6 @@ describe('RaceTuningSection — reset uses DEFAULT values, not current state (re
     const input = screen.getByLabelText('Re-Roll Variation Percent');
     expect(input.value).toBe('150');
     fireEvent.click(screen.getByTestId('reset-speed-reroll'));
-    expect(input.value).toBe('45');
+    expect(input.value).toBe('58');
   });
 });
