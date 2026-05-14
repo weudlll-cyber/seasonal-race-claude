@@ -29,7 +29,9 @@ function mulberry32(seed) {
 export const BASE_SPEED = 0.00085; // t per 16 ms frame
 
 // Decision: group speed multipliers create visible gaps in ~15 s.
-const GROUP_SPEEDS = { lead: 1.025, peloton: 1.0, chase: 0.981 };
+// Fix (Phase-1 repair): spread was 4.4 % — invisible on screen. Now 16 % → groups
+// visibly separate within 5–10 s; P1–P40 gap ≥20 % of a lap after 30 s.
+const GROUP_SPEEDS = { lead: 1.08, peloton: 1.0, chase: 0.92 };
 
 // Decision: merge when centroids are within 8/1000 of a lap.
 const MERGE_THRESHOLD = 0.008;
@@ -38,10 +40,11 @@ const MERGE_THRESHOLD = 0.008;
 // Bug fix: original 0.003 was 3.5× BASE_SPEED — way too large, causing instant merge.
 const PERTURB_AMPLITUDE = BASE_SPEED * 0.05; // ≈ 0.0000425 t/frame
 
-// Decision: hero promotion — crowd racer within 0.015 t of any hero,
-// OR time-based fallback every ~12 s to prevent hero pool from draining.
-const PROMO_T_THRESHOLD = 0.015;
-const PROMO_FALLBACK_INTERVAL_MS = 12000; // forced promo if pool below MIN_HEROES+2
+// Decision: hero promotion — crowd racer within 0.025 t of any hero,
+// OR time-based fallback every ~8 s to prevent hero pool from draining.
+// Fix (Phase-1 repair): threshold was 0.015 and prob 0.3 % — too rare to fire.
+const PROMO_T_THRESHOLD = 0.025;
+const PROMO_FALLBACK_INTERVAL_MS = 8000; // forced promo if pool below MIN_HEROES+2
 
 // Hysteresis (spec §PFLICHT-DEFINITIONEN 3):
 const MIN_HERO_DURATION_MS = 5000;
@@ -53,9 +56,14 @@ const MIN_HEROES = 5; // never drop below this to keep action visible
 const DUEL_T_THRESHOLD = 0.011;
 
 // Lateral spring constants.
-const HOME_K = 0.038; // pull toward physicalY = 0
+// Fix (Phase-1 repair, round 2): HOME_K raised from 0.038 to 0.10 so the spring
+// tracks the sinusoidal target with much less attenuation (natural period ~20 frames
+// vs driving period 125–312 frames → quasi-static tracking regime).
+const HOME_K = 0.1;
 const DUEL_LATERAL_TARGET = 0.28; // side-by-side separation
-const MICRO_DRIFT_AMP = 0.17; // sinusoidal amplitude for hero micro-movement
+// Fix (Phase-1 repair): was 0.17 → only ~6 px world-space. physicalY 1.0 ≈ 75 px
+// (half corridor), so 0.65 → ~49 px target; spring tracks at ~80 % → ~39 px ≥30 px.
+const MICRO_DRIFT_AMP = 0.65;
 
 // Crowd cloud half-width (physicalY units).
 const CLOUD_Y_HALF = 0.82;
@@ -155,6 +163,8 @@ export class PackDynamicsEngine {
   restart(seed) {
     this.raceTimeMs = 0;
     this._nextFallbackPromoAt = PROMO_FALLBACK_INTERVAL_MS;
+    this.promotionCount = 0;
+    this.demotionCount = 0;
     const rng = mulberry32(seed >>> 0);
     this._rng = rng;
 
@@ -167,7 +177,7 @@ export class PackDynamicsEngine {
       {
         id: 'lead',
         label: 'Führungs-Gruppe',
-        t: 0.022,
+        t: 0.04, // larger initial gap so groups are visually separate at t=0
         speed: BASE_SPEED * GROUP_SPEEDS.lead,
         baseSpeed: BASE_SPEED * GROUP_SPEEDS.lead,
         nextPerturbAt: 4000 + rng() * 4000,
@@ -185,7 +195,7 @@ export class PackDynamicsEngine {
       {
         id: 'chase',
         label: 'Verfolger',
-        t: -0.016,
+        t: -0.03, // larger initial gap
         speed: BASE_SPEED * GROUP_SPEEDS.chase,
         baseSpeed: BASE_SPEED * GROUP_SPEEDS.chase,
         nextPerturbAt: 4000 + rng() * 4000,
@@ -252,7 +262,7 @@ export class PackDynamicsEngine {
 
         // Per-hero micro-drift phase (unique per racer)
         driftPhase: rng() * Math.PI * 2,
-        driftPeriodMs: 4500 + rng() * 3000, // 4.5–7.5 s
+        driftPeriodMs: 2000 + rng() * 3000, // 2–5 s (spec §SCHICHT-2)
       };
     });
   }
@@ -463,6 +473,7 @@ export class PackDynamicsEngine {
       r.demotedAt = ts;
       r.duelPartnerId = null;
       r.duelLateralTarget = 0;
+      this.demotionCount++;
 
       // Snap crowd fields so the racer smoothly transitions.
       const group = this.groups.find((g) => g.id === r.groupId);
@@ -488,7 +499,7 @@ export class PackDynamicsEngine {
         return Math.min(d, 1 - d) < PROMO_T_THRESHOLD;
       });
 
-      if (nearHero && this._rng() < 0.003) {
+      if (nearHero && this._rng() < 0.008) {
         this._promoteRacer(r, ts);
         heroTs.push(tPos(r.t));
         if (this.racers.filter((x) => x.isHero).length >= MAX_HEROES) return;
@@ -515,6 +526,7 @@ export class PackDynamicsEngine {
     r.demotedAt = null;
     r.duelPartnerId = null;
     r.duelLateralTarget = 0;
+    this.promotionCount++;
   }
 
   // ── Layer 3: Crowd racers ───────────────────────────────────────────────────

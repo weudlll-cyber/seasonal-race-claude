@@ -19,7 +19,7 @@ import { HORSE_COATS } from '../../modules/racer-types/HorseRacerType.js';
 import { getCoatVariants, tintSprite } from '../../modules/racer-types/spriteTinter.js';
 import { getCachedSprite, loadSprite } from '../../modules/racer-types/spriteLoader.js';
 import { POC_OVAL } from './pocOval.js';
-import { PackDynamicsEngine, tPos } from './PackDynamicsEngine.js';
+import { PackDynamicsEngine, tPos, BASE_SPEED } from './PackDynamicsEngine.js';
 
 // ─── Canvas size ──────────────────────────────────────────────────────────────
 const CW = 1280;
@@ -177,7 +177,11 @@ function drawHead(ctx, r, ts, displaySizeScale) {
 }
 
 // ─── Debug-Overlay drawing ─────────────────────────────────────────────────────
-function drawDebugOverlay(ctx, sortedRacers, groups, heroCount, raceTimeSec, seed) {
+// CORRIDOR_HALF_PX: physicalY 1.0 spans half the corridor width (≈75 px).
+// Used for displaying lateral position in world pixels.
+const CORRIDOR_HALF_PX = 75;
+
+function drawDebugOverlay(ctx, sortedRacers, groups, heroCount, raceTimeSec, seed, engine) {
   // Coloured group rings.
   for (const r of sortedRacers) {
     const groupColor = GROUP_COLORS[r.groupId] ?? '#888888';
@@ -211,23 +215,70 @@ function drawDebugOverlay(ctx, sortedRacers, groups, heroCount, raceTimeSec, see
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
 
-  // Info text box.
+  // ── Telemetry info box ─────────────────────────────────────────────────────
+
+  // Global: speed spread across groups.
+  const groupSpeeds = groups.map((g) => g.speed);
+  const maxGS = Math.max(...groupSpeeds);
+  const minGS = Math.min(...groupSpeeds);
+  const meanGS = groupSpeeds.reduce((a, b) => a + b, 0) / Math.max(groupSpeeds.length, 1);
+  const speedSpreadPct = (((maxGS - minGS) / (meanGS || BASE_SPEED)) * 100).toFixed(1);
+
+  // Global: P1–P40 standings gap (cumulative t, not modulo).
+  const tVals = sortedRacers.map((r) => r.t);
+  const standingsGapPct =
+    tVals.length > 1 ? ((Math.max(...tVals) - Math.min(...tVals)) * 100).toFixed(1) : '0.0';
+
+  const promoCount = engine?.promotionCount ?? 0;
+  const demoCount = engine?.demotionCount ?? 0;
+
+  // Per-group lines: label, speed % vs BASE_SPEED, tPos %, member count.
+  const groupLines = groups.map((g) => {
+    const label = g.id === 'lead' ? 'Ld' : g.id === 'peloton' ? 'Pl' : 'Ch';
+    const spdPct = ((g.speed / BASE_SPEED) * 100).toFixed(0);
+    const tp = (tPos(g.t) * 100).toFixed(1);
+    const n = g.members.size;
+    return `${label} t=${tp.padStart(5)}% spd=${spdPct}% n=${n}`;
+  });
+
+  // Example racers: first member of each group.
+  const exampleLines = groups.map((g) => {
+    const label = g.id === 'lead' ? 'Ld' : g.id === 'peloton' ? 'Pl' : 'Ch';
+    const ex = sortedRacers.find((r) => r.groupId === g.id);
+    if (!ex) return `${label}: —`;
+    const latPx = Math.round(ex.physicalY * CORRIDOR_HALF_PX);
+    const latStr = (latPx >= 0 ? '+' : '') + latPx + 'px';
+    const tp = (tPos(ex.t) * 100).toFixed(1);
+    const status = ex.isHero ? 'HERO ' : 'crowd';
+    return `${label} ${ex.name.padEnd(7)} t=${tp.padStart(5)}% lat=${latStr.padStart(6)} [${status}]`;
+  });
+
   const lines = [
-    `Hero-Racer: ${heroCount}`,
-    `Gruppen: ${groups.length}`,
-    `Zeit: ${raceTimeSec.toFixed(1)} s`,
-    `Seed: ${seed}`,
+    `─── Global ─────────────────────`,
+    `Heroes: ${heroCount}  Gruppen: ${groups.length}`,
+    `Zeit: ${raceTimeSec.toFixed(1)}s  Seed: ${seed}`,
+    `SpeedSpread: ${speedSpreadPct}%  (≥15% Ziel)`,
+    `P1-P40 gap: ${standingsGapPct}% Runde`,
+    `Promo: ${promoCount}  Demot: ${demoCount}`,
+    `─── Gruppen ────────────────────`,
+    ...groupLines,
+    `─── Beispiel-Racer ─────────────`,
+    ...exampleLines,
   ];
-  const boxW = 170;
-  const boxH = lines.length * 18 + 12;
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+
+  const LINE_H = 15;
+  const boxW = 310;
+  const boxH = lines.length * LINE_H + 14;
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(10, 10, boxW, boxH);
-  ctx.font = 'bold 13px monospace';
+  ctx.font = '12px monospace';
   ctx.fillStyle = '#eee';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], 18, 16 + i * 18);
+    // Highlight section headers.
+    ctx.fillStyle = lines[i].startsWith('───') ? '#ffcc44' : '#eee';
+    ctx.fillText(lines[i], 16, 14 + i * LINE_H);
   }
 }
 
@@ -308,6 +359,8 @@ export default function PocPackDynamicsScreen() {
       shapeRef.current = new EditorShape(POC_OVAL, { samples: 400 });
     }
     lastTsRef.current = null;
+    // Dev-only: expose engine on window for telemetry self-check via browser console.
+    window.__pocEngine = engineRef.current;
   }, []);
 
   // ── Restart ──────────────────────────────────────────────────────────────────
@@ -390,7 +443,8 @@ export default function PocPackDynamicsScreen() {
           engine.groups,
           engine.heroCount,
           engine.raceTimeMs / 1000,
-          st.seed
+          st.seed,
+          engine
         );
       }
 
