@@ -9,6 +9,14 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
+// Priority-system mode constants. Exported so RaceScreen can read them for the debug overlay.
+export const PRIORITY_MODE = Object.freeze({
+  NORMAL: 'NORMAL',
+  OVERLAP: 'OVERLAP',
+  COOLDOWN: 'COOLDOWN',
+  BLOCKED: 'BLOCKED',
+});
+
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
  * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
@@ -18,6 +26,11 @@ export function initRacerBehavior(racer) {
   racer.physicalY = 0;
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
+  // Priority-system fields (Phase 2). Safe to set on all racers; ignored when
+  // applyRacerBehavior is called without priorityExtras (legacy path).
+  racer.currentMode = PRIORITY_MODE.NORMAL;
+  racer.lastOverlapEndTime = -Infinity;
+  racer.currentModeFrameCount = 0;
 }
 
 /**
@@ -94,6 +107,64 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
 }
 
 /**
+ * Check whether the centerline at r's current t-position is blocked by another racer.
+ * Returns true (BLOCKED) if any other active racer is within spriteSize pixels of the
+ * target point (r.t, 0) in pixel space — checked reactively per frame, no lookahead needed.
+ *
+ * Replaces the earlier bounding-box (Decision Log #9) and line-segment approaches.
+ * Per-frame re-evaluation means a racer crossing the path mid-frame is caught next frame.
+ */
+function _computeBlockedMode(r, active) {
+  const trackWidth = getTrackWidthPx(r);
+  const pathLength = getPathLengthPx(r);
+  if (trackWidth <= 0 || pathLength <= 0) {
+    r.blockerInfo = null;
+    return false;
+  }
+
+  const spriteSize = getSpriteWorldSizePx(r);
+  if (spriteSize <= 0) {
+    r.blockerInfo = null;
+    return false;
+  }
+
+  // Edge case: already within one sprite-width of center — trivially clear
+  if (Math.abs(r.physicalY) * trackWidth < spriteSize) {
+    r.blockerInfo = null;
+    return false;
+  }
+
+  const tHalfSpan = spriteSize / pathLength;
+
+  for (const other of active) {
+    if (other.index === r.index) continue;
+
+    let dT = other.t - r.t;
+    if (Math.abs(dT) > 0.5) dT = dT > 0 ? dT - 1 : dT + 1;
+
+    if (Math.abs(dT) > tHalfSpan) continue;
+
+    // Distance from other racer to target point (r.t, physicalY=0) in pixel space
+    const dx = dT * pathLength;
+    const dy = other.physicalY * trackWidth;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < spriteSize) {
+      r.blockerInfo = {
+        index: other.index,
+        name: other.name ?? `#${other.index}`,
+        dT: Math.round(dT * pathLength),
+        dY: Math.round((other.physicalY - r.physicalY) * trackWidth),
+        otherPhysicalY: other.physicalY,
+      };
+      return true;
+    }
+  }
+  r.blockerInfo = null;
+  return false;
+}
+
+/**
  * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
  * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
  * the current frame — drafting uses world-space positions; avoidance uses
@@ -118,12 +189,16 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
  *   speedBrakeFactor: number,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
  * }} config
+ * @param {{ cooldownMs: number, currentTs: number, blockedTimeoutFrames?: number, blockedEscapeForce?: number }|undefined} priorityExtras
+ *   Optional. When provided, activates the 4-mode priority system for Home Force (Phase 2).
+ *   When omitted, falls back to the legacy homeForceReductionOnOverlap behavior.
  */
-export function applyRacerBehavior(racers, config) {
+export function applyRacerBehavior(racers, config, priorityExtras) {
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
       r.draftingBoostActive = false;
+      if (priorityExtras) r.currentMode = PRIORITY_MODE.NORMAL;
     }
     return;
   }
@@ -250,14 +325,73 @@ export function applyRacerBehavior(racers, config) {
     }
   }
 
-  // ── Home force — spring toward centerline (reduced during active overlap) ─
-  const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
-    ? config.homeForceReductionOnOverlap
-    : 1;
-  const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
-  for (const r of active) {
-    const factor = overlapSet.has(r.index) ? overlapFactor : 1;
-    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
+  // ── Priority-mode computation (Phase 2) ───────────────────────────────────
+  // When priorityExtras is provided, each racer gets a mode that controls whether
+  // Home Force contributes. When omitted (legacy), falls back to homeForceReductionOnOverlap.
+  if (priorityExtras) {
+    const { cooldownMs, currentTs } = priorityExtras;
+
+    for (const r of active) {
+      const prevMode = r.currentMode;
+      const wasOverlapping = prevMode === PRIORITY_MODE.OVERLAP;
+      const inOverlapNow = overlapSet.has(r.index);
+
+      if (inOverlapNow) {
+        // Transition INTO overlap: keep lastOverlapEndTime unchanged (not ended yet)
+        r.currentMode = PRIORITY_MODE.OVERLAP;
+      } else {
+        // Just left overlap — record the end timestamp
+        if (wasOverlapping) {
+          r.lastOverlapEndTime = currentTs;
+        }
+
+        const timeSinceOverlap = currentTs - (r.lastOverlapEndTime ?? -Infinity);
+        if (timeSinceOverlap < cooldownMs) {
+          r.currentMode = PRIORITY_MODE.COOLDOWN;
+        } else {
+          // Path-free check: is the centerline at r's current t clear of other racers?
+          r.currentMode = _computeBlockedMode(r, active)
+            ? PRIORITY_MODE.BLOCKED
+            : PRIORITY_MODE.NORMAL;
+        }
+      }
+
+      // Track consecutive frames in the same mode (used for escape hatch + telemetry)
+      r.currentModeFrameCount = r.currentMode === prevMode ? (r.currentModeFrameCount ?? 0) + 1 : 0;
+    }
+  }
+
+  // ── Home force — spring toward centerline ─────────────────────────────────
+  if (priorityExtras) {
+    // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED.
+    // Escape hatch: after blockedTimeoutFrames consecutive BLOCKED frames, apply a
+    // reduced home force (blockedEscapeForce × homeForceStrength) so racers can exit
+    // a permanently-blocked corridor in high-density racing.
+    const { blockedTimeoutFrames = 0, blockedEscapeForce = 0 } = priorityExtras;
+    for (const r of active) {
+      let homeContrib = 0;
+      if (r.currentMode === PRIORITY_MODE.NORMAL) {
+        homeContrib = -r.physicalY * config.homeForceStrength;
+      } else if (
+        r.currentMode === PRIORITY_MODE.BLOCKED &&
+        blockedTimeoutFrames > 0 &&
+        (r.currentModeFrameCount ?? 0) >= blockedTimeoutFrames
+      ) {
+        // Escape hatch: gentle pull back toward center after prolonged BLOCKED state
+        homeContrib = -r.physicalY * config.homeForceStrength * blockedEscapeForce;
+      }
+      yDeltas.set(r.index, homeContrib);
+    }
+  } else {
+    // Legacy path: homeForceReductionOnOverlap (unchanged behavior for existing tests)
+    const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
+      ? config.homeForceReductionOnOverlap
+      : 1;
+    const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
+    for (const r of active) {
+      const factor = overlapSet.has(r.index) ? overlapFactor : 1;
+      yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
+    }
   }
 
   // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).
