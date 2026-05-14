@@ -81,7 +81,10 @@ Wenn wieder zu starke Pulks:
 
 ## 7. PR-Status
 
-- PR-Nummer: TBD
-- PR-URL: TBD
+- PR-Nummer: #98
+- PR-URL: https://github.com/weudlll-cyber/seasonal-race-claude/pull/98
 - Branch-Name: claude/free-lane-separation
-- Commit-SHAs: TBD
+- Commit-SHAs:
+  - d483f81 (feat)
+  - 092d792 (test)
+  - 8bd4594 (docs)
