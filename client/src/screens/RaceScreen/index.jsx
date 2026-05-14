@@ -365,6 +365,9 @@ export default function RaceScreen() {
           x: 0,
           y: 0,
           angle: 0,
+          spriteWorldSizePx: spriteSize,
+          geometricTrackWidthPx,
+          pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
           surfaceParticles: [],

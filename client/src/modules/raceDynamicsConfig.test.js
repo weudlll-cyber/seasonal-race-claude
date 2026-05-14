@@ -29,7 +29,7 @@ beforeEach(() => {
 describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
   it('has expected default values', () => {
     expect(DEFAULT_RACE_DYNAMICS_CONFIG).toEqual({
-      reRollVariationPercent: 45,
+      reRollVariationPercent: 58,
       reRollTransitionDuration: 5.0,
       reRollIntervalDivisor: 15,
       reRollLastPositionPercent: 80,
@@ -85,7 +85,7 @@ describe('loadRaceDynamicsConfig', () => {
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     storageGet.mockReturnValue({ reRollVariationPercent: 100 });
     loadRaceDynamicsConfig();
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent).toBe(45);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent).toBe(58);
   });
 
   it('accepts valid custom values', () => {

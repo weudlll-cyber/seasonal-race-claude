@@ -196,6 +196,7 @@ function RaceTuningSection() {
     setBehaviorConfig((prev) => ({
       ...prev,
       homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
+      homeForceReductionOnOverlap: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceReductionOnOverlap,
     }));
   }
 
@@ -1014,6 +1015,29 @@ function RaceTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > 0) setBehavior('homeForceStrength', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Home Force Reduction On Overlap
+              <InfoTooltip text="How much of its normal home force a racer keeps while in geometric overlap with another racer. 1.0 = full home force (no reduction). 0.0 = home force off during overlap. Lower values give free-lane separation more room to push overlapping racers apart." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Home Force Reduction On Overlap"
+              min={0.0}
+              max={1.0}
+              step={0.05}
+              value={behaviorConfig.homeForceReductionOnOverlap}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setBehavior('homeForceReductionOnOverlap', v);
               }}
             />
           </div>
