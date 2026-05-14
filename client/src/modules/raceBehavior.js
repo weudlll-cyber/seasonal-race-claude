@@ -30,6 +30,7 @@ export function initRacerBehavior(racer) {
   // applyRacerBehavior is called without priorityExtras (legacy path).
   racer.currentMode = PRIORITY_MODE.NORMAL;
   racer.lastOverlapEndTime = -Infinity;
+  racer.currentModeFrameCount = 0;
 }
 
 /**
@@ -325,7 +326,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     const { lookaheadFrames, cooldownMs, currentTs } = priorityExtras;
 
     for (const r of active) {
-      const wasOverlapping = r.currentMode === PRIORITY_MODE.OVERLAP;
+      const prevMode = r.currentMode;
+      const wasOverlapping = prevMode === PRIORITY_MODE.OVERLAP;
       const inOverlapNow = overlapSet.has(r.index);
 
       if (inOverlapNow) {
@@ -348,15 +350,31 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             : PRIORITY_MODE.NORMAL;
         }
       }
+
+      // Track consecutive frames in the same mode (used for escape hatch + telemetry)
+      r.currentModeFrameCount = r.currentMode === prevMode ? (r.currentModeFrameCount ?? 0) + 1 : 0;
     }
   }
 
   // ── Home force — spring toward centerline ─────────────────────────────────
   if (priorityExtras) {
-    // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED
+    // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED.
+    // Escape hatch: after blockedTimeoutFrames consecutive BLOCKED frames, apply a
+    // reduced home force (blockedEscapeForce × homeForceStrength) so racers can exit
+    // a permanently-blocked corridor in high-density racing.
+    const { blockedTimeoutFrames = 0, blockedEscapeForce = 0 } = priorityExtras;
     for (const r of active) {
-      const homeContrib =
-        r.currentMode === PRIORITY_MODE.NORMAL ? -r.physicalY * config.homeForceStrength : 0;
+      let homeContrib = 0;
+      if (r.currentMode === PRIORITY_MODE.NORMAL) {
+        homeContrib = -r.physicalY * config.homeForceStrength;
+      } else if (
+        r.currentMode === PRIORITY_MODE.BLOCKED &&
+        blockedTimeoutFrames > 0 &&
+        (r.currentModeFrameCount ?? 0) >= blockedTimeoutFrames
+      ) {
+        // Escape hatch: gentle pull back toward center after prolonged BLOCKED state
+        homeContrib = -r.physicalY * config.homeForceStrength * blockedEscapeForce;
+      }
       yDeltas.set(r.index, homeContrib);
     }
   } else {

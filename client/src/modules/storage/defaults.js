@@ -216,6 +216,11 @@ export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {
   lookaheadFrames: 30,
   // Cooldown in ms after overlap ends before home force re-activates
   cooldownMs: 500,
+  // After this many consecutive BLOCKED frames, apply a reduced home force as an escape hatch.
+  // 0 = disabled (home force stays off for the entire BLOCKED duration).
+  blockedTimeoutFrames: 60,
+  // Fraction of homeForceStrength applied during the escape hatch (0 = none, 1 = full).
+  blockedEscapeForce: 0.3,
 };
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {

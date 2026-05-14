@@ -960,6 +960,8 @@ export default function RaceScreen() {
                 lookaheadFrames: priorityConfigRef.current.lookaheadFrames,
                 cooldownMs: priorityConfigRef.current.cooldownMs,
                 currentTs: ts,
+                blockedTimeoutFrames: priorityConfigRef.current.blockedTimeoutFrames,
+                blockedEscapeForce: priorityConfigRef.current.blockedEscapeForce,
               }
             : undefined
         );
@@ -1181,11 +1183,16 @@ export default function RaceScreen() {
           [PRIORITY_MODE.COOLDOWN]: '#f97316',
           [PRIORITY_MODE.BLOCKED]: '#eab308',
         };
-        // Count by mode for info box
+        // Aggregate: count and frame-count stats per mode
         const modeCounts = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
+        const modeFrameSums = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
+        const modeFrameMax = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
         for (const r of st.racers) {
           const m = r.currentMode ?? PRIORITY_MODE.NORMAL;
+          const fc = r.currentModeFrameCount ?? 0;
           modeCounts[m] = (modeCounts[m] ?? 0) + 1;
+          modeFrameSums[m] = (modeFrameSums[m] ?? 0) + fc;
+          if (fc > (modeFrameMax[m] ?? 0)) modeFrameMax[m] = fc;
         }
 
         ctx.save();
@@ -1209,29 +1216,51 @@ export default function RaceScreen() {
 
           const spriteScreenR =
             (r.spriteWorldSizePx ?? 20) * (isOpenTrack ? frameEffZoom : cam.zoom * bsX) * 0.5;
+          const ringR = Math.max(spriteScreenR, 8);
           ctx.beginPath();
-          ctx.arc(sx, sy, Math.max(spriteScreenR, 8), 0, Math.PI * 2);
+          ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
           ctx.strokeStyle = color;
           ctx.lineWidth = 2.5;
           ctx.stroke();
+
+          // Frame count label above the ring
+          const fc = r.currentModeFrameCount ?? 0;
+          ctx.font = '9px monospace';
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          ctx.fillText(fc, sx, sy - ringR - 2);
+          ctx.textAlign = 'left';
         }
 
-        // Info box — top right corner
-        const boxX = CW - 160;
+        // Info box — top right corner (wider to fit stats)
+        const boxX = CW - 210;
         const boxY = 12;
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(boxX - 6, boxY - 4, 152, 96);
+        ctx.fillStyle = 'rgba(0,0,0,0.72)';
+        ctx.fillRect(boxX - 6, boxY - 4, 202, 136);
         ctx.font = '11px monospace';
         ctx.fillStyle = '#e6edf3';
-        ctx.fillText('Priority Modes', boxX, boxY + 11);
-        ctx.fillStyle = '#888';
-        ctx.fillText(`NORMAL   ${modeCounts.NORMAL}`, boxX, boxY + 28);
-        ctx.fillStyle = '#ef4444';
-        ctx.fillText(`OVERLAP  ${modeCounts.OVERLAP}`, boxX, boxY + 44);
-        ctx.fillStyle = '#f97316';
-        ctx.fillText(`COOLDOWN ${modeCounts.COOLDOWN}`, boxX, boxY + 60);
-        ctx.fillStyle = '#eab308';
-        ctx.fillText(`BLOCKED  ${modeCounts.BLOCKED}`, boxX, boxY + 76);
+        ctx.fillText('Priority Modes  n  avg  max', boxX, boxY + 11);
+
+        function modeAvg(m) {
+          return modeCounts[m] > 0 ? Math.round(modeFrameSums[m] / modeCounts[m]) : 0;
+        }
+        const rows = [
+          { label: 'NORMAL  ', color: '#888', key: PRIORITY_MODE.NORMAL },
+          { label: 'OVERLAP ', color: '#ef4444', key: PRIORITY_MODE.OVERLAP },
+          { label: 'COOLDOWN', color: '#f97316', key: PRIORITY_MODE.COOLDOWN },
+          { label: 'BLOCKED ', color: '#eab308', key: PRIORITY_MODE.BLOCKED },
+        ];
+        rows.forEach(({ label, color, key }, i) => {
+          const n = modeCounts[key] ?? 0;
+          const avg = modeAvg(key);
+          const mx = modeFrameMax[key] ?? 0;
+          ctx.fillStyle = color;
+          ctx.fillText(
+            `${label} ${String(n).padStart(2)}  ${String(avg).padStart(4)}  ${String(mx).padStart(4)}`,
+            boxX,
+            boxY + 28 + i * 26
+          );
+        });
         ctx.restore();
       }
 

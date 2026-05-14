@@ -123,8 +123,69 @@ function PrioritySystemSection() {
             <span style={{ color: 'transparent', textShadow: '0 0 0 #444' }}>◼</span> NORMAL (none){' '}
             <span style={{ color: '#ef4444' }}>◼</span> OVERLAP{' '}
             <span style={{ color: '#f97316' }}>◼</span> COOLDOWN{' '}
-            <span style={{ color: '#eab308' }}>◼</span> BLOCKED
+            <span style={{ color: '#eab308' }}>◼</span> BLOCKED — number above ring = consecutive
+            frames in mode
           </p>
+        </div>
+      </div>
+
+      <div className={s.card}>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+          BLOCKED Escape Hatch
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          In high-density racing the path-to-center corridor is often permanently occupied, causing
+          racers to stay BLOCKED indefinitely and drift to the track edge. After the timeout below,
+          a reduced home force is applied so racers can exit the deadlock. Set timeout to 0 to
+          disable the escape hatch entirely.
+        </p>
+
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              BLOCKED Timeout (frames)
+              <InfoTooltip text="After this many consecutive frames in BLOCKED mode, the escape hatch activates and a reduced home force is applied. 0 = disabled (home force stays off for the full BLOCKED duration). At 60fps, 60 frames ≈ 1 second." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="BLOCKED Timeout Frames"
+              min={0}
+              max={180}
+              step={10}
+              value={config.blockedTimeoutFrames}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 180) set('blockedTimeoutFrames', v);
+              }}
+            />
+          </div>
+
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Escape Force (fraction)
+              <InfoTooltip text="Fraction of homeForceStrength applied during the escape hatch phase. 0.3 = 30% of normal home force. Higher values pull racers back to center more aggressively but may increase collision risk." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="BLOCKED Escape Force"
+              min={0}
+              max={1}
+              step={0.1}
+              value={config.blockedEscapeForce}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) set('blockedEscapeForce', v);
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

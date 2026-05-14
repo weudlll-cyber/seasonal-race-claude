@@ -19,7 +19,12 @@ export function loadPrioritySystemConfig() {
     !Number.isFinite(merged.lookaheadFrames) ||
     merged.lookaheadFrames < 1 ||
     !Number.isFinite(merged.cooldownMs) ||
-    merged.cooldownMs < 0
+    merged.cooldownMs < 0 ||
+    !Number.isFinite(merged.blockedTimeoutFrames) ||
+    merged.blockedTimeoutFrames < 0 ||
+    !Number.isFinite(merged.blockedEscapeForce) ||
+    merged.blockedEscapeForce < 0 ||
+    merged.blockedEscapeForce > 1
   ) {
     return { ...DEFAULT_PRIORITY_SYSTEM_CONFIG };
   }
