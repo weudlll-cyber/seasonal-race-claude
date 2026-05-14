@@ -31,7 +31,12 @@ import {
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import {
+  initRacerBehavior,
+  applyRacerBehavior,
+  PRIORITY_MODE,
+} from '../../modules/raceBehavior.js';
+import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
   computeRacersPerRow,
   computeRowLayout,
@@ -120,6 +125,9 @@ export default function RaceScreen() {
     constSpeed: false,
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
+  // Priority-system debug overlay (toggled by hotkey M)
+  const showModeOverlayRef = useRef(false);
+  const priorityConfigRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -149,6 +157,17 @@ export default function RaceScreen() {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  // ── Hotkey M: toggle priority-mode debug overlay ─────────────────────────
+  useEffect(() => {
+    function onKey(e) {
+      if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        showModeOverlayRef.current = !showModeOverlayRef.current;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // ── Load race session data ───────────────────────────────────────────────
@@ -230,6 +249,7 @@ export default function RaceScreen() {
     const behaviorConfig = loadRaceBehaviorConfig();
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
+    priorityConfigRef.current = loadPrioritySystemConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -932,7 +952,19 @@ export default function RaceScreen() {
           d.dv01Max = Math.max(...d._dv01Buf);
           d.dv12Max = Math.max(...d._dv12Buf);
         }
-        applyRacerBehavior(st.racers, behaviorConfig);
+        applyRacerBehavior(
+          st.racers,
+          behaviorConfig,
+          priorityConfigRef.current
+            ? {
+                lookaheadFrames: priorityConfigRef.current.lookaheadFrames,
+                cooldownMs: priorityConfigRef.current.cooldownMs,
+                currentTs: ts,
+                blockedTimeoutFrames: priorityConfigRef.current.blockedTimeoutFrames,
+                blockedEscapeForce: priorityConfigRef.current.blockedEscapeForce,
+              }
+            : undefined
+        );
 
         for (const r of st.racers) {
           if (r.finished) continue;
@@ -1142,6 +1174,122 @@ export default function RaceScreen() {
         drawTitle();
         drawLapInfo(st);
         drawFinalLapOverlay(ts);
+      }
+
+      // ── Priority-mode debug overlay (hotkey M) ──
+      if (showModeOverlayRef.current && st.phase === PHASE.RACING) {
+        const modeColors = {
+          [PRIORITY_MODE.OVERLAP]: '#ef4444',
+          [PRIORITY_MODE.COOLDOWN]: '#f97316',
+          [PRIORITY_MODE.BLOCKED]: '#eab308',
+        };
+        // Aggregate: count and frame-count stats per mode
+        const modeCounts = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
+        const modeFrameSums = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
+        const modeFrameMax = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
+        for (const r of st.racers) {
+          const m = r.currentMode ?? PRIORITY_MODE.NORMAL;
+          const fc = r.currentModeFrameCount ?? 0;
+          modeCounts[m] = (modeCounts[m] ?? 0) + 1;
+          modeFrameSums[m] = (modeFrameSums[m] ?? 0) + fc;
+          if (fc > (modeFrameMax[m] ?? 0)) modeFrameMax[m] = fc;
+        }
+
+        ctx.save();
+        for (const r of st.racers) {
+          if (r.finished) continue;
+          const mode = r.currentMode ?? PRIORITY_MODE.NORMAL;
+          if (mode === PRIORITY_MODE.NORMAL) continue;
+          const color = modeColors[mode];
+          if (!color) continue;
+
+          // Convert world position to screen space
+          let sx, sy;
+          if (isOpenTrack) {
+            const effZ = frameEffZoom;
+            sx = (r.x - (st.camX || 0)) * effZ;
+            sy = (r.y - (st.camY || 0)) * effZ;
+          } else {
+            sx = r.x * cam.zoom * bsX + cam.offsetX;
+            sy = r.y * cam.zoom * bsY + cam.offsetY;
+          }
+
+          const spriteScreenR =
+            (r.spriteWorldSizePx ?? 20) * (isOpenTrack ? frameEffZoom : cam.zoom * bsX) * 0.5;
+          const ringR = Math.max(spriteScreenR, 8);
+          ctx.beginPath();
+          ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          // Frame count + blocker name above the ring
+          const fc = r.currentModeFrameCount ?? 0;
+          ctx.font = '9px monospace';
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          if (mode === PRIORITY_MODE.BLOCKED && r.blockerInfo) {
+            ctx.fillText(`${fc} ←${r.blockerInfo.name}`, sx, sy - ringR - 2);
+          } else {
+            ctx.fillText(fc, sx, sy - ringR - 2);
+          }
+          ctx.textAlign = 'left';
+        }
+
+        // Info box — top right corner (wider to fit stats)
+        const boxX = CW - 210;
+        const boxY = 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.72)';
+        ctx.fillRect(boxX - 6, boxY - 4, 202, 136);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#e6edf3';
+        ctx.fillText('Priority Modes  n  avg  max', boxX, boxY + 11);
+
+        function modeAvg(m) {
+          return modeCounts[m] > 0 ? Math.round(modeFrameSums[m] / modeCounts[m]) : 0;
+        }
+        const rows = [
+          { label: 'NORMAL  ', color: '#888', key: PRIORITY_MODE.NORMAL },
+          { label: 'OVERLAP ', color: '#ef4444', key: PRIORITY_MODE.OVERLAP },
+          { label: 'COOLDOWN', color: '#f97316', key: PRIORITY_MODE.COOLDOWN },
+          { label: 'BLOCKED ', color: '#eab308', key: PRIORITY_MODE.BLOCKED },
+        ];
+        rows.forEach(({ label, color, key }, i) => {
+          const n = modeCounts[key] ?? 0;
+          const avg = modeAvg(key);
+          const mx = modeFrameMax[key] ?? 0;
+          ctx.fillStyle = color;
+          ctx.fillText(
+            `${label} ${String(n).padStart(2)}  ${String(avg).padStart(4)}  ${String(mx).padStart(4)}`,
+            boxX,
+            boxY + 28 + i * 26
+          );
+        });
+
+        // Blocker detail list — up to 5 currently BLOCKED racers
+        const blockedWithInfo = st.racers.filter(
+          (r) => r.currentMode === PRIORITY_MODE.BLOCKED && r.blockerInfo
+        );
+        if (blockedWithInfo.length > 0) {
+          const listY = boxY + 148;
+          const listH = Math.min(blockedWithInfo.length, 5) * 16 + 20;
+          ctx.fillStyle = 'rgba(0,0,0,0.72)';
+          ctx.fillRect(boxX - 6, listY - 4, 202, listH);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#eab308';
+          ctx.fillText('BLOCKED by (dT=px, dY=px):', boxX, listY + 10);
+          blockedWithInfo.slice(0, 5).forEach((r, i) => {
+            const b = r.blockerInfo;
+            const sign = b.dT >= 0 ? '+' : '';
+            ctx.fillStyle = '#c9d1d9';
+            ctx.fillText(
+              `${(r.name ?? `#${r.index}`).slice(0, 8).padEnd(8)} ← ${b.name.slice(0, 8).padEnd(8)} dT=${sign}${b.dT} dY=${b.dY >= 0 ? '+' : ''}${b.dY}`,
+              boxX,
+              listY + 24 + i * 16
+            );
+          });
+        }
+        ctx.restore();
       }
 
       // ── Phase overlays ──

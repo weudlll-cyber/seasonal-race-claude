@@ -24,6 +24,7 @@ import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
 import CameraZoomTuningSection from './sections/CameraZoomTuningSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import CameraStateHudSection from './sections/CameraStateHudSection.jsx';
+import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
 
@@ -84,6 +85,14 @@ const SECTIONS = [
     label: 'Race Tuning',
     desc: 'Physics and dynamics — speed range, re-rolls, avoidance, drafting',
     component: RaceTuningSection,
+    tier: 'advanced',
+  },
+  {
+    id: 'priority-system',
+    icon: '🎯',
+    label: 'Priority System',
+    desc: 'Home-force cooldown and lookahead for anti-collision priority logic',
+    component: PrioritySystemSection,
     tier: 'advanced',
   },
   {
