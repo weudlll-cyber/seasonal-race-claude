@@ -240,6 +240,39 @@ clean revert point if a refactor fails.
 Beispiel: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Etappe 23).
 Bestätigt in: docs/audit/audit-pre-merge.md §5.3.
 
+### DevScreen Block-Placement Convention
+
+When adding a new config field to the DevScreen (RaceTuningSection or any other section):
+
+1. Place the field in the block whose **Reset handler** covers it — not in the nearest
+   convenient `formGrid`.
+2. After adding the field, verify: does the block's reset button actually reset this field?
+   If not, either add the field to the correct handler or move the field to the right block.
+3. A test that only checks `getByLabelText('...')` is not a block-placement test — it finds
+   the element anywhere in the DOM. Write a block-level assertion if block membership matters.
+
+Rationale: Silent reset-coverage gaps — where a field appears in block A but is reset by
+block B's handler — are invisible to standard render tests and create confusing UX.
+
+Siehe LESSONS.md L72.
+
+### localStorage Staleness Convention
+
+When a PR changes a **default value** in `DEFAULT_*_CONFIG` or `DEFAULT_*`, the PR body
+must include a "localStorage Note" section stating:
+
+- Which default values changed (old → new)
+- That existing installations will retain the old value until the user clicks
+  "Reset All Defaults" in the DevScreen or clears localStorage
+- Whether the change is safe to ignore (cosmetic) or should be actively applied
+  (behavioral, regression risk)
+
+Rationale: localStorage overrides take precedence over code defaults. Silent default
+changes appear to have no effect on machines with stored values, leading to confusion
+in QA and support.
+
+Siehe docs/diagnose/relaxed-defaults-report.md; docs/diagnose/cleanup-audit-pr98.md.
+
 ### Commit-Naming Convention
 
 Commit subjects begin with a prefix followed by a colon and a brief summary. Permitted

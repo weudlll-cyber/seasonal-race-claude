@@ -1431,3 +1431,79 @@ Pulks, die einen ganzen Diagnose-Sprint kostete bis der Architektur-Mangel erkan
 **Take-away:** Behavior-Changes an Default-Werten sind keine kosmetische Änderung. Wenn ein
 bestehender Default eine fachliche Funktion erfüllt (selbst wenn nicht explizit dokumentiert),
 ist sein Ersatz ein Architektur-Eingriff und braucht die Regression Awareness Convention.
+
+---
+
+## Lesson 72 — DevScreen Block-Platzierung ist semantisch: Geister-Bindings durch falschen Block
+
+**Kontext:** PR #98 (Free-Lane Separation) fügte `homeForceReductionOnOverlap` als UI-Feld hinzu.
+Das Feld wurde im `formGrid` von Block 2 (Start Layout) platziert, aber der zugehörige
+`resetHomeForce`-Handler lag in Block 9 (Home Force). Der „Reset"-Button von Block 2 setzte
+das Feld nicht zurück — ein stiller Bug.
+
+Der Unit-Test hatte das Feld gefunden (`getByLabelText('Home Force Reduction On Overlap')`) und
+als korrekt gerendert deklariert. `getByLabelText` sucht per aria-label im gesamten DOM —
+es prüft nicht, in welchem Block das Feld sitzt. Der Test war grün, der UX-Bug unsichtbar.
+
+**Take-away:** Bei jedem neuen DevScreen-Feld drei Dinge prüfen:
+
+1. **Block-Kontext:** Liegt das Feld im semantisch richtigen Block (nicht nur im nächst-
+   passenden formGrid)?
+2. **Reset-Coverage:** Welcher Reset-Handler deckt das Feld ab? Liegt es im Block dessen
+   Reset-Button diesen Handler aufruft?
+3. **Test-Präzision:** Prüft der Test nur "rendered somewhere" oder auch "rendered in the
+   right block with the right reset behavior"?
+
+Ein `getByLabelText()`-Test allein ist kein Beweis für korrekte Block-Zugehörigkeit.
+
+**Verweis:** PR #98 Cleanup-Audit `fbc6c48`; docs/diagnose/cleanup-audit-pr98.md §4.
+
+---
+
+## Lesson 73 — Regression Awareness: Inventur vor Ersatz (Meta-Pattern)
+
+**Kontext:** Dieses Lesson schließt die Referenz PROJECT-PRINCIPLES.md §"Regression Awareness
+Convention" → LESSONS.md L73. Das Muster entstand aus L71 (Symmetric Avoidance Regression)
+und weiteren Architektur-Fehlern wo funktionierende Mechanik still ersetzt wurde.
+
+**Muster:** Immer wenn eine funktionierende Komponente durch eine neue ersetzt wird — auch
+wenn die neue "eleganter" oder "einfacher" erscheint — gilt:
+
+1. **Inventur:** Was kann die alte Komponente? Welche Edge-Cases deckt sie ab? Welche
+   User-Anforderungen erfüllt sie (auch undokumentierte)?
+2. **Anforderungs-Matching:** Kann die neue Komponente jeden einzelnen Punkt erfüllen?
+   Wo gibt es bewusste Trade-offs, und sind diese explizit akzeptiert?
+3. **Rollback-Pfad:** Branch, Commit-SHA oder Feature-Flag — explizit benannt, nicht nur
+   implizit vorhanden.
+4. **Sanity-Check vor Merge:** Ist die neue Komponente in einem Live-Race mindestens so gut
+   wie die alte? Wenn erkennbare Regression: Stopp.
+
+**Corollary:** An einer nachweislich nicht funktionierenden Komponente wird nicht beliebig
+lange weitergetuned. Nach belegter Diagnose und zwei bis drei Fix-Versuchen ohne messbare
+Verbesserung ist Architektur-Wechsel die korrekte Reaktion.
+
+**Verweis:** PROJECT-PRINCIPLES.md §"Regression Awareness Convention"; LESSONS.md L71.
+
+---
+
+## Lesson 74 — Home-Force Dominanz: Force Attribution vor visueller Diagnose
+
+**Kontext:** Nach Implementierung der Free-Lane Separation (PR #98) blieben Racer-Clusters
+teilweise persistent. Visuell sah es aus als würde Free-Lane nicht feuern oder zu schwach sein.
+Die naheliegende Reaktion wäre: `lateralForce` erhöhen oder Free-Lane-Schwellwerte anpassen.
+
+Stattdessen wurde eine Force-Attribution-Simulation durchgeführt (docs/diagnose/
+free-lane-force-attribution-summary.md). Ergebnis: Free-Lane feuerte korrekt und mit adäquater
+Magnitude — aber `homeForceStrength = 0.04` zog die Racer pro Frame stärker zurück zur Mitte
+als Free-Lane sie trennen konnte. Die "schwache Free-Lane" war eine visuelle Illusion.
+
+**Fix:** `homeForceReductionOnOverlap = 0.3` — Home-Force wird auf 30% reduziert wenn zwei
+Racer geometrisch überlappen. Damit kann Free-Lane die Trennung durchführen bevor Home-Force
+zurückzieht. Korrekte Diagnose in ~30 Minuten statt Tuning-Roulette.
+
+**Take-away:** Bei "Feature funktioniert nicht"-Beobachtungen in Force-basierten Systemen:
+zuerst Force Attribution messen, nicht Konstanten tunen. Die dominierende Kraft ist oft eine
+die man nicht auf dem Radar hat. Visuelle Beobachtung ("Racer bleiben zusammen") gibt keine
+Auskunft über die Kraft-Ursache.
+
+**Verweis:** docs/diagnose/free-lane-force-attribution-summary.md; PR #98 Commit `7459e08`.

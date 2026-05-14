@@ -102,7 +102,10 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
  * @param {Array<{
  *   index: number, x: number, y: number, angle: number, t: number,
  *   physicalY: number, finished: boolean,
- *   avoidanceActive: boolean, draftingBoostActive: boolean
+ *   avoidanceActive: boolean, draftingBoostActive: boolean,
+ *   spriteWorldSizePx?: number, visibleWidthPx?: number,
+ *   geometricTrackWidthPx?: number, trackWidthPx?: number,
+ *   pathLengthPx?: number
  * }>} racers
  * @param {{
  *   enabled: boolean,
