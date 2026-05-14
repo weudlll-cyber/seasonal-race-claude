@@ -3,8 +3,8 @@
 // Path:        client/src/screens/DevScreen/sections/PrioritySystemSection.jsx
 // Project:     RaceArena
 // Description: DevScreen block for the Priority System (Phase 2).
-//              Controls lookaheadFrames and cooldownMs for the 4-mode
-//              home-force priority logic in raceBehavior.js.
+//              Controls cooldownMs, blockedTimeoutFrames, and blockedEscapeForce for
+//              the 4-mode home-force priority logic in raceBehavior.js.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -59,33 +59,10 @@ function PrioritySystemSection() {
 
       <div className={s.card}>
         <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>
-          Path Lookahead
+          Overlap Cooldown
         </div>
 
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Lookahead Frames
-              <InfoTooltip text="How many frames ahead the path-clear corridor check looks when deciding if home force is safe to apply. Higher = more conservative, blocks home force earlier when another racer is on the converging path. Lower = more reactive, home force kicks in sooner." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Lookahead Frames"
-              min={10}
-              max={60}
-              step={5}
-              value={config.lookaheadFrames}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 10 && v <= 60) set('lookaheadFrames', v);
-              }}
-            />
-          </div>
-
           <div className={s.formGroup}>
             <label
               className={s.label}

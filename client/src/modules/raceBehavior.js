@@ -107,15 +107,14 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
 }
 
 /**
- * Check whether a racer's path toward physicalY=0 is blocked by other racers.
- * Returns true (BLOCKED) if any other active racer lies within spriteSize pixels
- * of the diagonal line segment from (r.t, r.physicalY) to (projT, projY) in
- * pixel space — where t is scaled by pathLength and physicalY by trackWidth.
+ * Check whether the centerline at r's current t-position is blocked by another racer.
+ * Returns true (BLOCKED) if any other active racer is within spriteSize pixels of the
+ * target point (r.t, 0) in pixel space — checked reactively per frame, no lookahead needed.
  *
- * This replaces the previous bounding-box approach, which produced false
- * positives for racers in the corners of the rectangular envelope (Decision Log #9).
+ * Replaces the earlier bounding-box (Decision Log #9) and line-segment approaches.
+ * Per-frame re-evaluation means a racer crossing the path mid-frame is caught next frame.
  */
-function _computeBlockedMode(r, active, config, lookaheadFrames) {
+function _computeBlockedMode(r, active) {
   const trackWidth = getTrackWidthPx(r);
   const pathLength = getPathLengthPx(r);
   if (trackWidth <= 0 || pathLength <= 0) {
@@ -129,67 +128,26 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
     return false;
   }
 
-  const tHalfSpan = spriteSize / pathLength;
-
-  // Edge case: already within one sprite-width of center — path is trivially clear
+  // Edge case: already within one sprite-width of center — trivially clear
   if (Math.abs(r.physicalY) * trackWidth < spriteSize) {
     r.blockerInfo = null;
     return false;
   }
 
-  // Project physicalY toward center under home force over lookaheadFrames
-  let projY = r.physicalY;
-  for (let f = 0; f < lookaheadFrames; f++) {
-    projY += -projY * config.homeForceStrength;
-  }
-
-  // Edge case: projected position drifts further from center (e.g. homeForceStrength > 1)
-  if (Math.abs(projY) > Math.abs(r.physicalY)) {
-    r.blockerInfo = null;
-    return true;
-  }
-
-  // Project t-position forward
-  const projT = r.t + (Number.isFinite(r.baseSpeed) ? r.baseSpeed * lookaheadFrames : 0);
-
-  // Segment endpoints in pixel space (t×pathLength, physicalY×trackWidth)
-  const px1 = r.t * pathLength;
-  const py1 = r.physicalY * trackWidth;
-  const px2 = projT * pathLength;
-  const py2 = projY * trackWidth;
-  const segDx = px2 - px1;
-  const segDy = py2 - py1;
-  const segLenSq = segDx * segDx + segDy * segDy;
+  const tHalfSpan = spriteSize / pathLength;
 
   for (const other of active) {
     if (other.index === r.index) continue;
 
-    // Wrap-aware dT: shortest arc distance in t-space
     let dT = other.t - r.t;
     if (Math.abs(dT) > 0.5) dT = dT > 0 ? dT - 1 : dT + 1;
 
-    // Pre-filter: skip racers outside the t-extent of the segment plus one sprite span
-    if (dT < -tHalfSpan || dT > projT - r.t + tHalfSpan) continue;
+    if (Math.abs(dT) > tHalfSpan) continue;
 
-    // Other racer in pixel space (t expressed relative to r.t to preserve wrap)
-    const ox = (r.t + dT) * pathLength;
-    const oy = other.physicalY * trackWidth;
-
-    // Point-to-segment distance
-    let dist;
-    if (segLenSq < 1) {
-      // Degenerate segment — compare directly to start point
-      const dx = ox - px1;
-      const dy = oy - py1;
-      dist = Math.sqrt(dx * dx + dy * dy);
-    } else {
-      const s = Math.max(0, Math.min(1, ((ox - px1) * segDx + (oy - py1) * segDy) / segLenSq));
-      const cx = px1 + s * segDx;
-      const cy = py1 + s * segDy;
-      const dx = ox - cx;
-      const dy = oy - cy;
-      dist = Math.sqrt(dx * dx + dy * dy);
-    }
+    // Distance from other racer to target point (r.t, physicalY=0) in pixel space
+    const dx = dT * pathLength;
+    const dy = other.physicalY * trackWidth;
+    const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < spriteSize) {
       r.blockerInfo = {
@@ -231,7 +189,7 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
  *   speedBrakeFactor: number,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
  * }} config
- * @param {{ lookaheadFrames: number, cooldownMs: number, currentTs: number }|undefined} priorityExtras
+ * @param {{ cooldownMs: number, currentTs: number, blockedTimeoutFrames?: number, blockedEscapeForce?: number }|undefined} priorityExtras
  *   Optional. When provided, activates the 4-mode priority system for Home Force (Phase 2).
  *   When omitted, falls back to the legacy homeForceReductionOnOverlap behavior.
  */
@@ -371,7 +329,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // When priorityExtras is provided, each racer gets a mode that controls whether
   // Home Force contributes. When omitted (legacy), falls back to homeForceReductionOnOverlap.
   if (priorityExtras) {
-    const { lookaheadFrames, cooldownMs, currentTs } = priorityExtras;
+    const { cooldownMs, currentTs } = priorityExtras;
 
     for (const r of active) {
       const prevMode = r.currentMode;
@@ -391,9 +349,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         if (timeSinceOverlap < cooldownMs) {
           r.currentMode = PRIORITY_MODE.COOLDOWN;
         } else {
-          // Path-free check: project racer's physicalY toward 0 over lookaheadFrames,
-          // check if the swept corridor is clear of other racers.
-          r.currentMode = _computeBlockedMode(r, active, config, lookaheadFrames)
+          // Path-free check: is the centerline at r's current t clear of other racers?
+          r.currentMode = _computeBlockedMode(r, active)
             ? PRIORITY_MODE.BLOCKED
             : PRIORITY_MODE.NORMAL;
         }
