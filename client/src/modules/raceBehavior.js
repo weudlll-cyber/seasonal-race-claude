@@ -29,6 +29,68 @@ function normalizeAngle(a) {
   return Math.atan2(Math.sin(a), Math.cos(a));
 }
 
+function shortestArcDeltaT(a, b) {
+  let dT = Math.abs(a - b);
+  if (dT > 0.5) dT = 1 - dT;
+  return dT;
+}
+
+function stablePairBit(a, b) {
+  const aId = String(a.name ?? a.id ?? a.index ?? '0');
+  const bId = String(b.name ?? b.id ?? b.index ?? '0');
+  const key = aId < bId ? `${aId}|${bId}` : `${bId}|${aId}`;
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) & 1;
+}
+
+function getSpriteWorldSizePx(racer) {
+  if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0) return racer.visibleWidthPx;
+  if (Number.isFinite(racer.spriteWorldSizePx) && racer.spriteWorldSizePx > 0) return racer.spriteWorldSizePx;
+  return 0;
+}
+
+function getTrackWidthPx(racer) {
+  if (Number.isFinite(racer.trackWidthPx) && racer.trackWidthPx > 0) return racer.trackWidthPx;
+  if (Number.isFinite(racer.geometricTrackWidthPx) && racer.geometricTrackWidthPx > 0)
+    return racer.geometricTrackWidthPx;
+  return 0;
+}
+
+function getPathLengthPx(racer) {
+  if (Number.isFinite(racer.pathLengthPx) && racer.pathLengthPx > 0) return racer.pathLengthPx;
+  return 0;
+}
+
+function chooseGeometricDirection(self, other, tieBitForSelf) {
+  if (self.physicalY < other.physicalY) return -1;
+  if (self.physicalY > other.physicalY) return 1;
+  return tieBitForSelf === 0 ? -1 : 1;
+}
+
+function chooseSingleSideDirection(canLeft, canRight) {
+  if (canLeft && !canRight) return -1;
+  if (!canLeft && canRight) return 1;
+  return 0;
+}
+
+function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan, cap) {
+  const targetY = racer.physicalY + dir * lateralHalfSpan;
+  if (targetY < -cap || targetY > cap) return false;
+
+  for (const other of active) {
+    if (other.index === racer.index || other.index === counterpart.index) continue;
+    const dT = shortestArcDeltaT(racer.t, other.t);
+    if (dT > tHalfSpan) continue;
+    if (Math.abs(other.physicalY - targetY) < lateralHalfSpan) return false;
+  }
+
+  return true;
+}
+
 /**
  * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
  * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
@@ -67,6 +129,8 @@ export function applyRacerBehavior(racers, config) {
   const yDeltas = new Map(active.map((r) => [r.index, 0]));
   // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
   const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
+  // Additional additive free-lane separation contribution for overlap resolution.
+  const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
 
@@ -102,6 +166,74 @@ export function applyRacerBehavior(racers, config) {
         speedBrakeSet.add(trailer.index);
       }
 
+      // Free-lane separation: when racers overlap, add deterministic, smooth lateral
+      // impulses based on local left/right free-space checks.
+      const sizeA = getSpriteWorldSizePx(rA);
+      const sizeB = getSpriteWorldSizePx(rB);
+      const spriteWorldSize = Math.max(sizeA, sizeB);
+      const trackWidthA = getTrackWidthPx(rA);
+      const trackWidthB = getTrackWidthPx(rB);
+      const trackWidth = Math.max(trackWidthA, trackWidthB);
+      const pathLengthA = getPathLengthPx(rA);
+      const pathLengthB = getPathLengthPx(rB);
+      const pathLength = Math.max(pathLengthA, pathLengthB);
+
+      if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
+        const lateralHalfSpan = spriteWorldSize / trackWidth;
+        const tHalfSpan = spriteWorldSize / pathLength;
+        const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
+
+        if (overlaps) {
+          const cap = Math.min(config.maxLateral, 1.0);
+          const aLeftFree = isSideFree(rA, rB, active, -1, lateralHalfSpan, tHalfSpan, cap);
+          const aRightFree = isSideFree(rA, rB, active, 1, lateralHalfSpan, tHalfSpan, cap);
+          const bLeftFree = isSideFree(rB, rA, active, -1, lateralHalfSpan, tHalfSpan, cap);
+          const bRightFree = isSideFree(rB, rA, active, 1, lateralHalfSpan, tHalfSpan, cap);
+
+          const tieBit = stablePairBit(rA, rB);
+          const aGeomDir = chooseGeometricDirection(rA, rB, tieBit);
+          const bGeomDir = chooseGeometricDirection(rB, rA, tieBit ^ 1);
+
+          let dirA = 0;
+          let dirB = 0;
+
+          const aBlocked = !aLeftFree && !aRightFree;
+          const bBlocked = !bLeftFree && !bRightFree;
+
+          if (!aBlocked && !bBlocked) {
+            if (aLeftFree && aRightFree && bLeftFree && bRightFree) {
+              dirA = aGeomDir;
+              dirB = bGeomDir;
+            } else {
+              const aSingle = chooseSingleSideDirection(aLeftFree, aRightFree);
+              const bSingle = chooseSingleSideDirection(bLeftFree, bRightFree);
+
+              if (aSingle !== 0 && bSingle !== 0) {
+                dirA = aSingle;
+                dirB = bSingle;
+              } else if (aSingle === 0 && bSingle !== 0) {
+                dirA = aGeomDir;
+                dirB = bSingle;
+              } else if (aSingle !== 0 && bSingle === 0) {
+                dirA = aSingle;
+                dirB = bGeomDir;
+              }
+            }
+          } else if (!aBlocked) {
+            dirA = chooseSingleSideDirection(aLeftFree, aRightFree) || aGeomDir;
+          } else if (!bBlocked) {
+            dirB = chooseSingleSideDirection(bLeftFree, bRightFree) || bGeomDir;
+          }
+
+          if (dirA !== 0) {
+            yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
+          }
+          if (dirB !== 0) {
+            yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
+          }
+        }
+      }
+
       // Push trailer away from leader's physicalY.
       // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
       // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
@@ -121,6 +253,7 @@ export function applyRacerBehavior(racers, config) {
     const avoid =
       count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
     yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
+    yDeltas.set(r.index, yDeltas.get(r.index) + yFreeLaneDeltas.get(r.index));
   }
 
   // Apply deltas + soft repulsion + hard clamp

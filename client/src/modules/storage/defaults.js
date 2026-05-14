@@ -205,7 +205,7 @@ export const DEFAULT_CAMERA_CONFIG = {
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
-  reRollVariationPercent: 45,
+  reRollVariationPercent: 58,
   reRollTransitionDuration: 5.0,
   reRollIntervalDivisor: 15,
   reRollLastPositionPercent: 80,
