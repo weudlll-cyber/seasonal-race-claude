@@ -119,7 +119,10 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
 function _computeBlockedMode(r, active, config, lookaheadFrames) {
   const trackWidth = getTrackWidthPx(r);
   const pathLength = getPathLengthPx(r);
-  if (trackWidth <= 0 || pathLength <= 0) return false;
+  if (trackWidth <= 0 || pathLength <= 0) {
+    r.blockerInfo = null;
+    return false;
+  }
 
   const spriteSize = getSpriteWorldSizePx(r);
   const lateralMargin = spriteSize > 0 ? spriteSize / trackWidth : 0;
@@ -149,9 +152,18 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
     if (otherAbsT < corridorTMin || otherAbsT > corridorTMax) continue;
     // physicalY range check
     if (other.physicalY >= corridorYMin && other.physicalY <= corridorYMax) {
+      // Telemetry: store first blocker info on the racer for the debug overlay
+      r.blockerInfo = {
+        index: other.index,
+        name: other.name ?? `#${other.index}`,
+        dT: Math.round(dT * pathLength),
+        dY: Math.round((other.physicalY - r.physicalY) * trackWidth),
+        otherPhysicalY: other.physicalY,
+      };
       return true;
     }
   }
+  r.blockerInfo = null;
   return false;
 }
 

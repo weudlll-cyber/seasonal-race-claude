@@ -1223,12 +1223,16 @@ export default function RaceScreen() {
           ctx.lineWidth = 2.5;
           ctx.stroke();
 
-          // Frame count label above the ring
+          // Frame count + blocker name above the ring
           const fc = r.currentModeFrameCount ?? 0;
           ctx.font = '9px monospace';
           ctx.fillStyle = color;
           ctx.textAlign = 'center';
-          ctx.fillText(fc, sx, sy - ringR - 2);
+          if (mode === PRIORITY_MODE.BLOCKED && r.blockerInfo) {
+            ctx.fillText(`${fc} ←${r.blockerInfo.name}`, sx, sy - ringR - 2);
+          } else {
+            ctx.fillText(fc, sx, sy - ringR - 2);
+          }
           ctx.textAlign = 'left';
         }
 
@@ -1261,6 +1265,30 @@ export default function RaceScreen() {
             boxY + 28 + i * 26
           );
         });
+
+        // Blocker detail list — up to 5 currently BLOCKED racers
+        const blockedWithInfo = st.racers.filter(
+          (r) => r.currentMode === PRIORITY_MODE.BLOCKED && r.blockerInfo
+        );
+        if (blockedWithInfo.length > 0) {
+          const listY = boxY + 148;
+          const listH = Math.min(blockedWithInfo.length, 5) * 16 + 20;
+          ctx.fillStyle = 'rgba(0,0,0,0.72)';
+          ctx.fillRect(boxX - 6, listY - 4, 202, listH);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#eab308';
+          ctx.fillText('BLOCKED by (dT=px, dY=px):', boxX, listY + 10);
+          blockedWithInfo.slice(0, 5).forEach((r, i) => {
+            const b = r.blockerInfo;
+            const sign = b.dT >= 0 ? '+' : '';
+            ctx.fillStyle = '#c9d1d9';
+            ctx.fillText(
+              `${(r.name ?? `#${r.index}`).slice(0, 8).padEnd(8)} ← ${b.name.slice(0, 8).padEnd(8)} dT=${sign}${b.dT} dY=${b.dY >= 0 ? '+' : ''}${b.dY}`,
+              boxX,
+              listY + 24 + i * 16
+            );
+          });
+        }
         ctx.restore();
       }
 
