@@ -12,6 +12,7 @@ import DevScreen from './screens/DevScreen/DevScreen.jsx';
 import RaceScreen from './screens/RaceScreen/index.jsx';
 import ResultScreen from './screens/ResultScreen/index.jsx';
 import TrackEditor from './screens/TrackEditor/TrackEditor.jsx';
+import PocPackDynamics from './screens/PocPackDynamics/index.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
 import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
@@ -42,6 +43,7 @@ function App() {
           <Route path="/results" element={<ResultScreen />} />
           <Route path="/dev" element={<DevScreen />} />
           <Route path="/track-editor" element={<TrackEditor />} />
+          <Route path="/poc-pack-dynamics" element={<PocPackDynamics />} />
         </Routes>
       </TransitionProvider>
     </BrowserRouter>
