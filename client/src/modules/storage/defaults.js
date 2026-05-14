@@ -211,6 +211,13 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollLastPositionPercent: 80,
 };
 
+export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {
+  // Lookahead: number of frames the path-clear corridor is projected into the future
+  lookaheadFrames: 30,
+  // Cooldown in ms after overlap ends before home force re-activates
+  cooldownMs: 500,
+};
+
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
   // Start layout — initial lateral spread at race start
