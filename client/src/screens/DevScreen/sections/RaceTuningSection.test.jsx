@@ -28,6 +28,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     startSpreadRange: 0.95,
     runoutZone: 0.05,
     homeForceStrength: 0.04,
+    homeForceReductionOnOverlap: 0.3,
     comfortThreshold: 0.7,
     softRepulsionStrength: 0.1,
     avoidanceDistance: 0.35,
@@ -48,6 +49,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     startSpreadRange: 0.95,
     runoutZone: 0.05,
     homeForceStrength: 0.04,
+    homeForceReductionOnOverlap: 0.3,
     comfortThreshold: 0.7,
     softRepulsionStrength: 0.1,
     avoidanceDistance: 0.35,
@@ -162,6 +164,7 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Home Force')).toBeTruthy();
     expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
+    expect(screen.getByLabelText('Home Force Reduction On Overlap')).toBeTruthy();
   });
 });
 

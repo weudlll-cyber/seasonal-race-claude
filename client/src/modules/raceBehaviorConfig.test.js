@@ -42,6 +42,11 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength).toBeGreaterThan(0);
   });
 
+  it('homeForceReductionOnOverlap is between 0 and 1', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceReductionOnOverlap).toBeGreaterThanOrEqual(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceReductionOnOverlap).toBeLessThanOrEqual(1);
+  });
+
   it('comfortThreshold is between 0 and 1', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeGreaterThan(0);
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
@@ -89,6 +94,18 @@ describe('loadRaceBehaviorConfig', () => {
 
   it('returns defaults when comfortThreshold >= 1', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, comfortThreshold: 1.0 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when homeForceReductionOnOverlap > 1', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceReductionOnOverlap: 1.1 });
+    const cfg = loadRaceBehaviorConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
+  });
+
+  it('returns defaults when homeForceReductionOnOverlap < 0', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, homeForceReductionOnOverlap: -0.1 });
     const cfg = loadRaceBehaviorConfig();
     expect(cfg).toEqual(DEFAULT_RACE_BEHAVIOR_CONFIG);
   });

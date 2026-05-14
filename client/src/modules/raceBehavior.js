@@ -105,6 +105,7 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
  * @param {{
  *   enabled: boolean,
  *   homeForceStrength: number,
+ *   homeForceReductionOnOverlap: number,
  *   comfortThreshold: number, softRepulsionStrength: number,
  *   avoidanceDistance: number, tWeight: number, yWeight: number,
  *   lateralForce: number, maxLateral: number,
@@ -131,13 +132,9 @@ export function applyRacerBehavior(racers, config) {
   const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
   // Additional additive free-lane separation contribution for overlap resolution.
   const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
+  const overlapSet = new Set();
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
-
-  // ── Home force — spring toward centerline ──────────────────────────────────
-  for (const r of active) {
-    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength);
-  }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
@@ -184,6 +181,9 @@ export function applyRacerBehavior(racers, config) {
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
 
         if (overlaps) {
+          overlapSet.add(rA.index);
+          overlapSet.add(rB.index);
+
           const cap = Math.min(config.maxLateral, 1.0);
           const aLeftFree = isSideFree(rA, rB, active, -1, lateralHalfSpan, tHalfSpan, cap);
           const aRightFree = isSideFree(rA, rB, active, 1, lateralHalfSpan, tHalfSpan, cap);
@@ -243,6 +243,15 @@ export function applyRacerBehavior(racers, config) {
       yAvoidDeltas.set(trailer.index, yAvoidDeltas.get(trailer.index) + pushDir * forceMag);
       neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
     }
+  }
+
+  // ── Home force — spring toward centerline (reduced during active overlap) ─
+  const overlapFactorRaw =
+    Number.isFinite(config.homeForceReductionOnOverlap) ? config.homeForceReductionOnOverlap : 1;
+  const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
+  for (const r of active) {
+    const factor = overlapSet.has(r.index) ? overlapFactor : 1;
+    yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
   }
 
   // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).

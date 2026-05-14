@@ -117,6 +117,67 @@ describe('applyRacerBehavior — home force', () => {
     applyRacerBehavior([r], cfg);
     expect(r.physicalY).toBe(0);
   });
+
+  it('reduces home force by factor during active overlap', () => {
+    const a = makeLaneRacer({ index: 70, t: 0.500, physicalY: 0.5 });
+    const b = makeLaneRacer({ index: 71, t: 0.501, physicalY: 0.5 });
+
+    applyRacerBehavior([a, b], {
+      ...cfg,
+      homeForceStrength: 0.04,
+      homeForceReductionOnOverlap: 0.3,
+      avoidanceDistance: 1.0,
+      lateralForce: 0,
+    });
+
+    // Full home delta would be -0.02; reduced by 0.3 => -0.006
+    expect(a.physicalY).toBeCloseTo(0.494, 6);
+  });
+
+  it('keeps full home force when there is no overlap', () => {
+    const a = makeLaneRacer({ index: 72, t: 0.500, physicalY: 0.5 });
+    const b = makeLaneRacer({ index: 73, t: 0.700, physicalY: 0.5 });
+
+    applyRacerBehavior([a, b], {
+      ...cfg,
+      homeForceStrength: 0.04,
+      homeForceReductionOnOverlap: 0.3,
+      avoidanceDistance: 1.0,
+      lateralForce: 0,
+    });
+
+    expect(a.physicalY).toBeCloseTo(0.48, 6);
+  });
+
+  it('homeForceReductionOnOverlap=1.0 disables reduction (backwards-compat)', () => {
+    const a = makeLaneRacer({ index: 74, t: 0.500, physicalY: 0.5 });
+    const b = makeLaneRacer({ index: 75, t: 0.501, physicalY: 0.5 });
+
+    applyRacerBehavior([a, b], {
+      ...cfg,
+      homeForceStrength: 0.04,
+      homeForceReductionOnOverlap: 1.0,
+      avoidanceDistance: 1.0,
+      lateralForce: 0,
+    });
+
+    expect(a.physicalY).toBeCloseTo(0.48, 6);
+  });
+
+  it('homeForceReductionOnOverlap=0.0 disables home force during overlap', () => {
+    const a = makeLaneRacer({ index: 76, t: 0.500, physicalY: 0.5 });
+    const b = makeLaneRacer({ index: 77, t: 0.501, physicalY: 0.5 });
+
+    applyRacerBehavior([a, b], {
+      ...cfg,
+      homeForceStrength: 0.04,
+      homeForceReductionOnOverlap: 0.0,
+      avoidanceDistance: 1.0,
+      lateralForce: 0,
+    });
+
+    expect(a.physicalY).toBeCloseTo(0.5, 6);
+  });
 });
 
 // ── Comfort zone & boundary ────────────────────────────────────────────────

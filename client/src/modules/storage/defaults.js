@@ -219,6 +219,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   runoutZone: 0.05,
   // Home force — spring toward centerline (physicalY = 0)
   homeForceStrength: 0.04,
+  // While a racer is in geometric overlap, reduce home force so free-lane can separate.
+  // 1.0 = no reduction, 0.0 = home force off during overlap.
+  homeForceReductionOnOverlap: 0.3,
   // Comfort zone & soft boundary repulsion
   comfortThreshold: 0.7,
   softRepulsionStrength: 0.1,
