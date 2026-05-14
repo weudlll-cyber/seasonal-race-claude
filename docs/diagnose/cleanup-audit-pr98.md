@@ -141,7 +141,13 @@ Alle anderen InfoTooltips im selben File sind auf Englisch. Dieser Text wurde of
 
 ## Schritt 7 — Security-Check
 
-_(Wird in separatem Schritt ausgeführt — Ergebnisse werden hier nachgetragen.)_
+**npm audit:** `found 0 vulnerabilities`
+
+**Secrets-Grep** (API Keys, Tokens, Passwörter, Credentials in client/src/): Keine Funde.
+
+**`.env`-Dateien committed:** Keine.
+
+**Ergebnis:** Security-Check bestanden — keine Findings.
 
 ---
 
