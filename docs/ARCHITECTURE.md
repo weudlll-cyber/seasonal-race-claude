@@ -272,12 +272,13 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 **Force pipeline (applied once per frame after world positions are computed):**
 
-1. **Home force** — `Δy = -physicalY × homeForceStrength` (spring toward centerline)
+1. **Home force** — `Δy = -physicalY × homeForceStrength × factor`, where `factor = homeForceReductionOnOverlap` (default 0.3) when the racer is in geometric overlap, or 1.0 otherwise. Reduction lets free-lane separation dominate during collisions instead of being overridden by the restoring spring.
 2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields; leader holds. Force magnitude scales with proximity. Forces are accumulated separately per racer and divided by `sqrt(neighborCount)` before applying (anti-stacking normalization — prevents boundary-clinging at 20+ racers where linear accumulation would overwhelm restoring forces).
-3. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
-4. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
-5. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
-6. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
+3. **Free-lane separation** — additive impulse applied when two racers are in geometric overlap (`|ΔT| ≤ spriteSize/pathLength` AND `|ΔY| ≤ spriteSize/trackWidth`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas.
+4. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
+5. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
+6. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
+7. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 

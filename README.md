@@ -20,7 +20,7 @@ RaceArena lets an event organiser configure racers, draw tracks, set effects, an
 
 - **Track Editor** — draw inner/outer boundary curves on a background image (Center Mode and Boundary Mode), save to localStorage
 - **Track Effects** — up to 3 simultaneous animated effects per track (rain, stars, bubbles, fireflies, dust, mud, wave); live preview in editor
-- **Race Engine** — client-side physics, multi-lap + open-course support, collision avoidance
+- **Race Engine** — client-side physics, multi-lap + open-course support; force-based lane separation (home force, avoidance, free-lane separation, speed brake, drafting)
 - **Camera Director** — TV-style state machine (OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM); pulk-based battle trigger (≥3 racers within 200 px); time-based lead-in / lead-out phases; per-state zoom tuning in Dev Panel; Tier-2 diagnostic HUD; picture-in-picture minimap
 - **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, race history, system backup/restore
 - **Preset Thumbnails** — rendered preview cards in SetupScreen track selector
