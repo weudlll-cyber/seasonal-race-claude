@@ -122,10 +122,7 @@ function _computeBlockedMode(r, active, config, lookaheadFrames) {
   if (trackWidth <= 0 || pathLength <= 0) return false;
 
   const spriteSize = getSpriteWorldSizePx(r);
-  const halfSprite = spriteSize > 0 ? spriteSize / trackWidth : 0;
-  const CORRIDOR_BUFFER_PX = 6;
-  const corridorBuffer = trackWidth > 0 ? CORRIDOR_BUFFER_PX / trackWidth : 0;
-  const lateralMargin = halfSprite + corridorBuffer;
+  const lateralMargin = spriteSize > 0 ? spriteSize / trackWidth : 0;
   const tHalfSpan = pathLength > 0 ? spriteSize / pathLength : 0;
 
   // Project physicalY toward center under home force over lookaheadFrames
