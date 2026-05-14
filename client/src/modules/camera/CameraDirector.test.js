@@ -2163,7 +2163,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(0);
   });
 
-  it('_transition() initialises _camT at focusT + leadInDt for LEADER_ZOOM', () => {
+  it('_transition() sets _camT = focusT and _pendingLeadIn = true for LEADER_ZOOM (Design A)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [
@@ -2176,10 +2176,11 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    // _prevFocusT is null → speedPerFrame = NOMINAL_T_PER_FRAME = 0.001
-    // leadInDt = 0.001 × 60 × 1.0 = 0.06; focusT = 0.5 → _camT = 0.56
-    expect(cd._camT).toBeCloseTo(0.56, 5);
-    expect(cd._observerPhase).toBe('lead-in');
+    // Design A: _transition keeps _camT at focusT (racer position). Lead-in offset
+    // is applied at convergence by the convergence gate, not at transition time.
+    expect(cd._camT).toBeCloseTo(0.5, 5);
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._pendingLeadIn).toBe(true);
   });
 
   it('_transition() sets _camT = null for OVERVIEW (no phased pan on overview)', () => {
@@ -2196,7 +2197,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._camT).toBeNull();
   });
 
-  it('_transition() resets _observerPhase to "lead-in" for LEADER_ZOOM on each state change', () => {
+  it('_transition() resets _observerPhase to "idle" for LEADER_ZOOM on each state change (Design A)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd._observerPhase = 'follow';
@@ -2210,7 +2211,10 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    expect(cd._observerPhase).toBe('lead-in');
+    // Design A: observer stays 'idle' after transition; lead-in starts only at
+    // entry-phase convergence (via _pendingLeadIn flag in the convergence gate).
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._pendingLeadIn).toBe(true);
   });
 
   it('observerPhase getter returns _observerPhase', () => {
@@ -2225,6 +2229,41 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd.camT).toBeNull();
     cd._camT = 0.42;
     expect(cd.camT).toBeCloseTo(0.42, 5);
+  });
+
+  it('convergence gate starts lead-in with _camT ahead of racer (Design A)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // Simulate the state that _transition() produces (Design A):
+    // _camT = focusT, _pendingLeadIn = true, entrySpeedEstimate set
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.5;
+    cd._observerPhase = 'idle';
+    cd._pendingLeadIn = true;
+    cd._entrySpeedEstimate = 0.002; // 0.002 t/frame measured speed
+    // Force zoom convergence regardless of resolveCamera's world-edge adjustments
+    cd._entryConvergenceZoom = 100;
+    cd.zoom = cd.targetZoom = cd._leaderZoom;
+    cd.offsetX = cd.targetOffsetX = 0;
+    cd.offsetY = cd.targetOffsetY = 0;
+    // One update call — convergence gate fires, lead-in is set up
+    cd.update(
+      [
+        { x: 800, y: 360, t: 0.5 },
+        { x: 700, y: 360, t: 0.4 },
+      ],
+      10100,
+      { raceElapsed: 10100, finishedCount: 0, winner: null, finishT: 6000 },
+      1280,
+      720
+    );
+    // leadInDt = 0.002 × 60 × 1.0 = 0.12; _camT = 0.5 + 0.12 = 0.62
+    expect(cd._camT).toBeCloseTo(0.62, 4);
+    expect(cd._observerPhase).toBe('lead-in');
+    expect(cd._pendingLeadIn).toBe(false);
+    expect(cd._leadInStartTs).toBe(10100);
   });
 
   it('lead-in: stays in "lead-in" phase until leadInDuration seconds elapsed', () => {
@@ -2619,8 +2658,9 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     cd.stateEnteredAt = 0;
     cd._camT = 0.5;
     cd._lerpPhase = 'entry';
-    cd._observerPhase = 'lead-in';
-    cd._leadInStartTs = 0; // set at transition time
+    cd._observerPhase = 'idle';
+    cd._leadInStartTs = 0;
+    cd._pendingLeadIn = true; // Design A: lead-in fires at convergence, not at transition
     const racers = [
       { x: 2000, y: 360, t: 0.5 },
       { x: 1992, y: 360, t: 0.498 },

@@ -130,6 +130,11 @@ export class CameraDirector {
     this._leadOutDistanceT = 0;
     this._prevFocusT = null;
     this._lastFocusT = 0;
+    // Design A: lead-in is deferred until entry-phase convergence (H1 fix,
+    // see camera-framing-bug-diagnosis.md). _pendingLeadIn flags that the
+    // convergence gate should place the camera ahead and start lead-in.
+    this._pendingLeadIn = false;
+    this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
     this._followRingBuf = new Uint8Array(60);
     this._followRingIdx = 0;
     // Diagnostic: how often _transition() fires per 60-frame window
@@ -422,10 +427,9 @@ export class CameraDirector {
       this._transitionStartOffsetX = this.offsetX;
       this._transitionStartOffsetY = this.offsetY;
     }
-    // During entry, keep _camT aligned with focusT so the pan target doesn't freeze.
-    // Without this, _camT sits at the initial lead-in position while racers move ahead;
-    // targetOffsetX (computed from this.zoom which is still lerping) then keeps the
-    // pan delta above the pixel threshold permanently regardless of zoom factor (H-E).
+    // During entry, keep _camT aligned with focusT so the pan target tracks the racer
+    // while zoom converges. Also measures inter-frame speed for lead-in placement at
+    // convergence (Design A, see camera-framing-bug-diagnosis.md H1).
     if (this._lerpPhase === 'entry' && this._camT !== null && !this._isOpenTrack && this._shape) {
       const fr = this._focusRacers(racers);
       let fT = null;
@@ -444,6 +448,9 @@ export class CameraDirector {
           break;
       }
       if (fT !== null) {
+        if (this._prevFocusT !== null) {
+          this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
+        }
         this._camT = fT;
         this._prevFocusT = fT;
       }
@@ -471,8 +478,21 @@ export class CameraDirector {
       const yConverged = phasedActive || this._lastEntryDeltaY < this._entryConvergencePx;
       if (zoomConverged && xConverged && yConverged) {
         this._lerpPhase = 'tracking';
-        this._leadInStartTs = ts; // reset so lead-in gets its full duration from tracking-start
         this._entryStartTs = null;
+        // Design A: place camera ahead of racer NOW (at convergence), using the
+        // inter-frame speed accumulated during entry. Camera sits at focusT+leadInDt
+        // so the racer walks INTO frame during lead-in instead of running out of it
+        // (H1 fix, see camera-framing-bug-diagnosis.md).
+        if (this._pendingLeadIn && this._camT !== null && !this._isOpenTrack && this._shape) {
+          const prof = this._phasedByState?.[this.state];
+          if (prof?.leadInDuration > 0) {
+            const speed = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
+            this._camT += speed * FRAME_RATE * prof.leadInDuration;
+            this._observerPhase = 'lead-in';
+            this._leadInStartTs = ts;
+          }
+          this._pendingLeadIn = false;
+        }
       }
     } else {
       this._entryStartTs = null;
@@ -629,6 +649,8 @@ export class CameraDirector {
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
+    this._pendingLeadIn = false;
+    this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
     if (this._shape && !this._isOpenTrack) {
       let focusT = null;
       switch (nextState) {
@@ -651,18 +673,18 @@ export class CameraDirector {
         const prof = this._phasedByState?.[nextState];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
         if (phasedEnabled) {
-          // Place camera leadInDuration seconds ahead of the racer using measured speed
-          const speedPerFrame =
-            this._prevFocusT !== null
-              ? Math.max(0, focusT - this._prevFocusT)
-              : NOMINAL_T_PER_FRAME;
-          const leadInDt = speedPerFrame * FRAME_RATE * prof.leadInDuration;
-          this._camT = focusT + leadInDt;
+          // Design A: start at racer's current position. Lead-in is deferred until the
+          // entry-phase zoom convergence so the camera first settles on the racer, then
+          // the convergence gate places _camT ahead and starts lead-in. This prevents
+          // the racer from running out of frame during the zoom transition (H1 fix,
+          // see camera-framing-bug-diagnosis.md).
+          this._camT = focusT;
+          this._pendingLeadIn = prof.leadInDuration > 0;
           if (prof.leadInDuration > 0) {
-            this._observerPhase = 'lead-in';
-            this._leadInStartTs = ts;
+            this._observerPhase = 'idle'; // will switch to 'lead-in' at convergence
+            this._leadInStartTs = null;
           } else {
-            this._observerPhase = 'follow';
+            this._observerPhase = 'follow'; // no lead-in; go straight to follow
             this._leadInStartTs = null;
           }
         } else {
