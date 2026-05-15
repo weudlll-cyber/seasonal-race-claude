@@ -26,6 +26,10 @@ function CameraStateHudSection() {
     setConfig((prev) => ({ ...prev, showCameraDiagnostics: e.target.checked }));
   }
 
+  function toggleFrameLog(e) {
+    setConfig((prev) => ({ ...prev, enableFrameLog: e.target.checked }));
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
@@ -79,6 +83,34 @@ function CameraStateHudSection() {
           />
           <span style={{ fontWeight: 600 }}>Show camera diagnostics</span>
           <InfoTooltip text="Temporary diagnostic tool: shows worldW, refPx, live cam.zoom, and computed finalPx in a bottom-left overlay. Logs every camera state transition with reason, gap01, and leaderProgress to the browser console. Remove after diagnosis." />
+        </label>
+      </div>
+
+      <div className={s.card}>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Records every frame&apos;s pan/zoom/T values into a 600-frame ring buffer (≈10 s @ 60
+          fps). Use the <strong>Export Log</strong> button that appears on the race screen to
+          download a JSON file for jitter post-analysis. Default off — has minor per-frame
+          allocation overhead.
+        </p>
+
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="cam-frame-log-toggle"
+            checked={config.enableFrameLog ?? false}
+            onChange={toggleFrameLog}
+          />
+          <span style={{ fontWeight: 600 }}>Enable frame log</span>
+          <InfoTooltip text="Activates the per-frame camera ring buffer. When enabled, an Export Log button appears on the race screen — click it after observing jitter to download the log for CC analysis. Drop the downloaded file in client/tmp/camera-logs/ and share the path with CC." />
         </label>
       </div>
     </div>

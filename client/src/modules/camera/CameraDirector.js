@@ -3,7 +3,7 @@
 // Path:        client/src/modules/camera/CameraDirector.js
 // Project:     RaceArena
 // Created:     2026-04-22
-// Description: TV-style camera state machine for closed-track races.
+// Description: TV-style camera state machine for both open and closed track races.
 //              Switches between OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM /
 //              COMEBACK_ZOOM states, lerp-smoothed zoom and pan.
 // ============================================================
@@ -45,10 +45,25 @@ const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
-const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
+// Pixel defaults used when no config (or no cameraStateProfiles) is provided.
+// Values match Math.round(legacyPct × 720): 0.08→58, 0.12→86, 0.065→47.
+const DEFAULT_SPRITE_PX = { leader: 58, battle: 86, comeback: 47 };
+// Legacy percent fallback used only when config has spritePctOfCanvas but no profiles.
+const DEFAULT_SPRITE_PCT = { leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
+const TRANSITION_T_CONVERGENCE = 0.005; // T-units threshold for T-space lerp convergence (~20px on 4000px oval)
+const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
+
+// Shortest signed T-delta on a circular track [0,1).
+// Returns a value in (-0.5, 0.5] so the lerp always takes the shorter arc.
+function _shortestTDelta(from, to) {
+  let delta = (to - from) % 1;
+  if (delta > 0.5) delta -= 1;
+  if (delta < -0.5) delta += 1;
+  return delta;
+}
 
 /**
  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
@@ -73,8 +88,8 @@ export class CameraDirector {
    *   or double-scaling artifacts (true on closed).
    * @param {object|null} [config=null]
    *   Optional camera tuning config (from cameraConfig.js). Drives the inverse-zoom
-   *   path via spritePctOfCanvas. When spritePctOfCanvas is missing, DEFAULT_SPRITE_PCT
-   *   is used. Call updateConfig() for live-apply without re-construction.
+   *   path via cameraStateProfiles.spritePx (v7+) or legacy spritePctOfCanvas.
+   *   Call updateConfig() for live-apply without re-construction.
    * @param {number} [referenceSpriteSize=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
    *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
@@ -130,6 +145,11 @@ export class CameraDirector {
     this._leadOutDistanceT = 0;
     this._prevFocusT = null;
     this._lastFocusT = 0;
+    // Track-aware T-space lerp: during entry phase, _camT lerps toward _transitionTargetT
+    // along the track (avoiding the euklidisch infield shortcut — see camera-pan-path-diagnosis.md).
+    // _transitionTargetT includes the lead-ahead offset for zoom states.
+    this._transitionTargetT = null;
+    this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
     this._followRingBuf = new Uint8Array(60);
     this._followRingIdx = 0;
     // Diagnostic: how often _transition() fires per 60-frame window
@@ -145,6 +165,17 @@ export class CameraDirector {
     this._battleDiagFrameCount = 0;
     this._battleDiagSnapshots = [];
     this._battleDiagFrozen = false;
+    // Frame-log ring buffer — enabled per config.enableFrameLog (default OFF).
+    // Records ~28 fields per frame; 600 frames ≈ 10 s @ 60 fps.
+    this._diagEnabled = false;
+    this._diagRingBuf = new Array(DIAG_RING_SIZE);
+    this._diagRingIdx = 0;
+    this._diagFrameIdx = 0;
+    this._diagPrevOffsetX = null;
+    this._diagPrevOffsetY = null;
+    this._diagPrevZoom = null;
+    // prevFocusT as it was at the START of the current frame (before overwrite).
+    this._diagPrevFocusT = null;
   }
 
   /**
@@ -194,14 +225,14 @@ export class CameraDirector {
   /**
    * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
    *
-   * Each zoom level is computed so sprites render at the configured fraction of canvas
-   * height (spritePctOfCanvas). When config lacks spritePctOfCanvas, DEFAULT_SPRITE_PCT
-   * is used. When referenceSpriteSize is 0, a 36px fallback is used with a console warning.
-   * Cross-track invariant: same pct → same screen pixels on any track width.
+   * v7+: each zoom level is computed from spritePx (world pixels) stored in
+   * cameraStateProfiles. When the legacy spritePctOfCanvas path is used (v2/v3 configs
+   * without profiles), the percent value is multiplied by CANVAS_H_REF to get the
+   * equivalent screen-pixel target — preserving cross-track invariance.
    *
    * Edge case: if effectiveOverviewPx already exceeds a state's target (e.g. large sprites
    * on a narrow open track), the safety net in _computeZoomForTargetSize clamps zoom to
-   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise pct values
+   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise spritePx
    * or reduce sprite displaySize.
    *
    * @param {object|null} config
@@ -214,23 +245,29 @@ export class CameraDirector {
       );
     }
 
-    // Prefer per-state profiles; fall back to legacy spritePctOfCanvas for old configs / tests.
     const profiles = config?.cameraStateProfiles;
-    let pct;
     if (profiles) {
-      pct = {
-        leader: profiles.LEADER_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.leader,
-        battle: profiles.BATTLE_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.battle,
-        comeback: profiles.COMEBACK_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.comeback,
+      // v7 path: spritePx is the direct target in world/screen pixels (canvas-resolution-independent).
+      const sizePx = {
+        leader: profiles.LEADER_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.leader,
+        battle: profiles.BATTLE_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.battle,
+        comeback: profiles.COMEBACK_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.comeback,
       };
+      this._leaderZoom = this._computeZoomForTargetSize(sizePx.leader);
+      this._battleZoom = this._computeZoomForTargetSize(sizePx.battle);
+      this._comebackZoom = this._computeZoomForTargetSize(sizePx.comeback);
+    } else if (config?.spritePctOfCanvas) {
+      // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
+      const rawPct = config.spritePctOfCanvas;
+      this._leaderZoom = this._computeZoomForTargetSize(rawPct.leader * CANVAS_H_REF);
+      this._battleZoom = this._computeZoomForTargetSize(rawPct.battle * CANVAS_H_REF);
+      this._comebackZoom = this._computeZoomForTargetSize(rawPct.comeback * CANVAS_H_REF);
     } else {
-      const rawPct = config?.spritePctOfCanvas ?? DEFAULT_SPRITE_PCT;
-      pct = { leader: rawPct.leader, battle: rawPct.battle, comeback: rawPct.comeback };
+      // No config at all: use pixel defaults directly.
+      this._leaderZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.leader);
+      this._battleZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.battle);
+      this._comebackZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.comeback);
     }
-
-    this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
-    this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
-    this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
   }
 
@@ -247,6 +284,7 @@ export class CameraDirector {
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
+    this._diagEnabled = config?.enableFrameLog ?? false;
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -382,6 +420,13 @@ export class CameraDirector {
     return map[state] ?? this._lfOverview;
   }
 
+  // Signed T-delta for track-parameter lerp.
+  // Closed tracks: shortest circular arc via _shortestTDelta.
+  // Open tracks: linear delta (no wrap-around — the track ends at t=1).
+  _tDelta(from, to) {
+    return this._isOpenTrack ? to - from : _shortestTDelta(from, to);
+  }
+
   // Main update — call once per frame during RACING.
   // raceState: { raceElapsed, finishedCount, winner, finishT }
   // dt: frame duration in ms (optional — defaults to 1000/60 for backward compat with tests).
@@ -422,11 +467,21 @@ export class CameraDirector {
       this._transitionStartOffsetX = this.offsetX;
       this._transitionStartOffsetY = this.offsetY;
     }
-    // During entry, keep _camT aligned with focusT so the pan target doesn't freeze.
-    // Without this, _camT sits at the initial lead-in position while racers move ahead;
-    // targetOffsetX (computed from this.zoom which is still lerping) then keeps the
-    // pan delta above the pixel threshold permanently regardless of zoom factor (H-E).
-    if (this._lerpPhase === 'entry' && this._camT !== null && !this._isOpenTrack && this._shape) {
+    // dt-scaled lerp factor — hoisted before _setTargets so T-space lerp can use the same lf.
+    const lf60 = this._lerpFactorForState(this.state);
+    const lf = 1 - Math.pow(1 - lf60, (dt * FRAME_RATE) / 1000);
+
+    // Track-aware T-space lerp: during entry phase _camT follows the track toward the
+    // transition target (focusT + lead-ahead offset) instead of snapping to the racer.
+    // The pan (offsetX/Y) is then derived directly from _camT each frame — no pixel-space
+    // lerp during entry — so the camera travels along the track curve rather than taking
+    // the euklidisch shortcut through the infield (see camera-pan-path-diagnosis.md).
+    if (
+      this._lerpPhase === 'entry' &&
+      this._camT !== null &&
+      this._shape &&
+      this._transitionTargetT !== null
+    ) {
       const fr = this._focusRacers(racers);
       let fT = null;
       switch (this.state) {
@@ -442,37 +497,86 @@ export class CameraDirector {
         case CAM_STATE.COMEBACK_ZOOM:
           fT = fr[Math.min(2, fr.length - 1)]?.t ?? null;
           break;
+        case CAM_STATE.OVERVIEW:
+          fT = fr[0]?.t ?? null; // leader's T — camera targets leader in OVERVIEW
+          break;
       }
       if (fT !== null) {
-        this._camT = fT;
+        this._diagPrevFocusT = this._prevFocusT; // capture before overwrite (frame log)
+        if (this._prevFocusT !== null) {
+          this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
+        }
         this._prevFocusT = fT;
+        // Update target every frame: focusT moves with the racer, lead-ahead offset scales
+        // with the measured speed so the camera lands at the right lead-ahead position.
+        const prof = this._phasedByState?.[this.state];
+        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        const leadAhead =
+          this.state !== CAM_STATE.OVERVIEW && phasedEnabled
+            ? (this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME) * FRAME_RATE * prof.leadInDuration
+            : 0;
+        // Open tracks: clamp target to [0,1] (no circular wrap-around beyond track end).
+        const rawTarget = fT + leadAhead;
+        this._transitionTargetT = this._isOpenTrack
+          ? Math.max(0, Math.min(1, rawTarget))
+          : rawTarget;
+        // Lerp _camT toward _transitionTargetT. Closed: shortest circular arc. Open: linear.
+        this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
       }
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
 
-    // dt-scaled lerp: at dt=1000/FRAME_RATE the factor equals the pre-computed lf60 value,
-    // so existing tests (which omit dt) see identical behavior.
-    const lf60 = this._lerpFactorForState(this.state);
-    const lf = 1 - Math.pow(1 - lf60, (dt * FRAME_RATE) / 1000);
     this.zoom += (this.targetZoom - this.zoom) * lf;
-    this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
-    this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+    // During entry with T-space lerp active: pan is pinned to _camT's world position (already
+    // set in targetOffsetX/Y by _setTargets). No pixel lerp — the camera path follows the track.
+    const tSpaceLerpActive =
+      this._lerpPhase === 'entry' &&
+      this._camT !== null &&
+      this._shape &&
+      this._transitionTargetT !== null;
+    if (tSpaceLerpActive) {
+      this.offsetX = this.targetOffsetX;
+      this.offsetY = this.targetOffsetY;
+    } else {
+      this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
+      this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+    }
     if (this._lerpPhase === 'entry') {
       if (this._entryStartTs === null) this._entryStartTs = ts;
       this._lastEntryDeltaZoom = Math.abs(this.targetZoom - this.zoom);
       this._lastEntryDeltaX = Math.abs(this.targetOffsetX - this.offsetX);
       this._lastEntryDeltaY = Math.abs(this.targetOffsetY - this.offsetY);
-      // When phased observer is active, _camT tracks focusT (above), so targetOffsetX
-      // moves with the racers every frame — the pixel lag cannot converge to the fixed
-      // threshold regardless of zoom factor. Gate convergence on zoom only in that case.
-      const phasedActive = this._camT !== null && !this._isOpenTrack && this._shape;
+      // T-space lerp is active when _camT !== null: pan is pinned to _camT so the pixel
+      // deltas are always near zero. Gate convergence on zoom + T-space convergence only.
+      const tLerpActive = this._camT !== null && this._shape;
       const zoomConverged = this._lastEntryDeltaZoom < this._entryConvergenceZoom;
-      const xConverged = phasedActive || this._lastEntryDeltaX < this._entryConvergencePx;
-      const yConverged = phasedActive || this._lastEntryDeltaY < this._entryConvergencePx;
-      if (zoomConverged && xConverged && yConverged) {
+      const xConverged = tLerpActive || this._lastEntryDeltaX < this._entryConvergencePx;
+      const yConverged = tLerpActive || this._lastEntryDeltaY < this._entryConvergencePx;
+      const tConverged =
+        this._transitionTargetT === null ||
+        Math.abs(this._tDelta(this._camT, this._transitionTargetT)) < TRANSITION_T_CONVERGENCE;
+      if (zoomConverged && xConverged && yConverged && tConverged) {
         this._lerpPhase = 'tracking';
-        this._leadInStartTs = ts; // reset so lead-in gets its full duration from tracking-start
         this._entryStartTs = null;
+        this._transitionTargetT = null; // T-space lerp complete
+        // Start phased observer from current _camT position (already at focusT+leadAhead).
+        // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
+        const prof = this._phasedByState?.[this.state];
+        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        if (phasedEnabled && this._camT !== null && this._shape) {
+          if (prof.leadInDuration > 0) {
+            this._observerPhase = 'lead-in';
+            this._leadInStartTs = ts;
+          } else {
+            this._observerPhase = 'follow';
+            this._leadInStartTs = null;
+          }
+        } else {
+          // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
+          this._camT = null;
+          this._observerPhase = 'idle';
+          this._leadInStartTs = null;
+        }
       }
     } else {
       this._entryStartTs = null;
@@ -482,7 +586,7 @@ export class CameraDirector {
     }
     this._lastTs = ts;
     const focusRacersForPhased = this._focusRacers(racers);
-    if (!this._isOpenTrack && this._camT !== null && this._shape) {
+    if (this._camT !== null && this._shape) {
       this._computePhasedPanTarget(focusRacersForPhased, canvasW, canvasH, dt, ts);
     }
     this._followRingBuf[this._followRingIdx % 60] = this._observerPhase === 'follow' ? 1 : 0;
@@ -511,6 +615,7 @@ export class CameraDirector {
       }
       if (f >= 60) this._battleDiagFrozen = true;
     }
+    if (this._diagEnabled) this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned);
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -625,11 +730,17 @@ export class CameraDirector {
       );
     }
 
-    // Reset observer phase and init _camT for the new state
+    // Reset phased observer and set up T-space lerp for the new state.
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
-    if (this._shape && !this._isOpenTrack) {
+    this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
+    // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
+    // not a stale delta accumulated across the previous state's tracking phase.
+    this._prevFocusT = null;
+    if (this._shape) {
+      // Compute focusT for all states including OVERVIEW (use leader's T for OVERVIEW so the
+      // camera targets the leader's position, centering the action with followers visible).
       let focusT = null;
       switch (nextState) {
         case CAM_STATE.LEADER_ZOOM:
@@ -644,40 +755,44 @@ export class CameraDirector {
         case CAM_STATE.COMEBACK_ZOOM:
           focusT = ordered[Math.min(2, ordered.length - 1)]?.t ?? 0;
           break;
-        default:
-          focusT = null;
+        case CAM_STATE.OVERVIEW:
+          focusT = ordered[0]?.t ?? 0; // leader's T; T-space lerp targets leader position
+          break;
       }
       if (focusT !== null) {
+        // Keep _camT from the old state (T-space lerp starts from current track position).
+        // Only initialize to focusT when coming from a state that had no _camT (e.g., OVERVIEW
+        // tracking where _camT was released to null after convergence).
+        if (this._camT === null) {
+          this._camT = focusT;
+        }
+        // Lead-ahead offset: zoom states target focusT + leadAheadOffset so the camera
+        // arrives at the lead-in start position at convergence, no jump required.
         const prof = this._phasedByState?.[nextState];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
-        if (phasedEnabled) {
-          // Place camera leadInDuration seconds ahead of the racer using measured speed
-          const speedPerFrame =
-            this._prevFocusT !== null
-              ? Math.max(0, focusT - this._prevFocusT)
-              : NOMINAL_T_PER_FRAME;
-          const leadInDt = speedPerFrame * FRAME_RATE * prof.leadInDuration;
-          this._camT = focusT + leadInDt;
-          if (prof.leadInDuration > 0) {
-            this._observerPhase = 'lead-in';
-            this._leadInStartTs = ts;
-          } else {
-            this._observerPhase = 'follow';
-            this._leadInStartTs = null;
-          }
-        } else {
-          // Phased observer disabled for this state — use regular getPanTarget
-          this._camT = null;
-          this._observerPhase = 'idle';
-          this._leadInStartTs = null;
-        }
+        const speedPerFrame = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
+        const leadAhead =
+          nextState !== CAM_STATE.OVERVIEW && phasedEnabled
+            ? speedPerFrame * FRAME_RATE * (prof.leadInDuration ?? 0)
+            : 0;
+        // Open tracks: clamp initial target to [0,1] — no circular wrap-around.
+        const rawTarget = focusT + leadAhead;
+        this._transitionTargetT = this._isOpenTrack
+          ? Math.max(0, Math.min(1, rawTarget))
+          : rawTarget;
+        // Observer phase is always 'idle' at transition; the convergence gate promotes it
+        // to 'lead-in' or 'follow' once zoom and T-space have both converged.
+        this._observerPhase = 'idle';
+        this._leadInStartTs = null;
       } else {
         this._camT = null;
+        this._transitionTargetT = null;
         this._observerPhase = 'idle';
         this._leadInStartTs = null;
       }
     } else {
       this._camT = null;
+      this._transitionTargetT = null;
       this._observerPhase = 'idle';
       this._leadInStartTs = null;
     }
@@ -761,6 +876,43 @@ export class CameraDirector {
     this._lastResolvedPanTarget = panResolved;
   }
 
+  /**
+   * Coordinated pan+zoom target computation for open-track zoom states.
+   * Mirror of _setClosedTrackTargets but uses OPEN_TRACK_BASE_ZOOM instead of bsX.
+   * Open tracks apply uniform zoom (cam.zoom × BASE_ZOOM), so Y offset is also uniform.
+   * @param {{ x: number, y: number }} target  World-space pan target
+   * @param {number} stateZoom  cam.zoom for this state (not effective zoom)
+   * @param {{ width: number, height: number }} frameSize
+   */
+  _setOpenTrackTargets(target, stateZoom, frameSize) {
+    const BASE = OPEN_TRACK_BASE_ZOOM;
+    const minEffZoom = this.overviewZoom * BASE;
+    const stateEffZoom = stateZoom * BASE;
+
+    const zoomResolved = resolveCamera({
+      targetWorld: target,
+      desiredEffZoom: stateEffZoom,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom,
+    });
+    this.targetZoom = zoomResolved.effectiveZoom / BASE;
+
+    const currEffZoom = Math.max(this.zoom * BASE, minEffZoom);
+    const panResolved = resolveCamera({
+      targetWorld: target,
+      desiredEffZoom: currEffZoom,
+      worldBounds: this._worldBounds,
+      frameSize,
+      innerFramePct: this._innerFramePct,
+      minEffZoom,
+    });
+    this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
+    this.targetOffsetY = -panResolved.camY * panResolved.effectiveZoom;
+    this._lastResolvedPanTarget = panResolved;
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
@@ -777,7 +929,10 @@ export class CameraDirector {
               : focusRacers
             : focusRacers;
         this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
-        if (!this._isOpenTrack) {
+        if (this._isOpenTrack) {
+          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
+          this._setOpenTrackTargets(target, this.overviewZoom, frameSize);
+        } else {
           const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
           const resolved = resolveCamera({
             targetWorld: target,
@@ -797,7 +952,13 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
-        if (!this._isOpenTrack) {
+        if (this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
+              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+          if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
+        } else {
           const panTarget =
             this._camT !== null && this._shape
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
@@ -816,7 +977,13 @@ export class CameraDirector {
 
       case CAM_STATE.BATTLE_ZOOM: {
         this.targetZoom = this._battleZoom;
-        if (!this._isOpenTrack) {
+        if (this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
+              : getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+          if (panTarget) this._setOpenTrackTargets(panTarget, this._battleZoom, frameSize);
+        } else {
           const panTarget =
             this._camT !== null && this._shape
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
@@ -835,7 +1002,13 @@ export class CameraDirector {
 
       case CAM_STATE.COMEBACK_ZOOM: {
         this.targetZoom = this._comebackZoom;
-        if (!this._isOpenTrack) {
+        if (this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape
+              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
+              : getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
+          if (panTarget) this._setOpenTrackTargets(panTarget, this._comebackZoom, frameSize);
+        } else {
           const panTarget =
             this._camT !== null && this._shape
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
@@ -855,11 +1028,11 @@ export class CameraDirector {
   }
 
   /**
-   * Phased observer: time-based lead-in / follow / lead-out for closed-track zoom states.
+   * Phased observer: time-based lead-in / follow / lead-out for zoom states (both track types).
    * Lead-in: fixed point ahead of racer for leadInDuration seconds after state start.
    * Follow: pin camera exactly to racer (Δ ≈ 0, no lerp lag).
    * Lead-out: EMA deceleration to near-stop, triggered leadOutDuration seconds before state end.
-   * Only acts when _lerpPhase === 'tracking'. Only called on closed tracks with a shape.
+   * Only acts when _lerpPhase === 'tracking'. Only called when _camT and _shape are non-null.
    */
   _computePhasedPanTarget(focusRacers, canvasW, canvasH, dt = 1000 / FRAME_RATE, ts = 0) {
     if (this._lerpPhase !== 'tracking') return;
@@ -945,7 +1118,10 @@ export class CameraDirector {
 
     // Follow: pin camera to racer (Δ ≈ 0, no lerp lag)
     this._camT = focusT;
-    const tNorm = ((this._camT % 1) + 1) % 1;
+    // Open: clamp to [0,1]; closed: wrap circularly.
+    const tNorm = this._isOpenTrack
+      ? Math.max(0, Math.min(1, this._camT))
+      : ((this._camT % 1) + 1) % 1;
     const camPos = this._shape.getPosition(tNorm, 0);
     if (!camPos) {
       this._prevFocusT = focusT;
@@ -959,20 +1135,34 @@ export class CameraDirector {
           ? this._battleZoom
           : this._comebackZoom;
     const frameSize = { width: canvasW, height: canvasH };
-    const resolved = resolveCamera({
-      targetWorld: camPos,
-      desiredEffZoom: stateZoom * this._bsX,
-      worldBounds: this._worldBounds,
-      frameSize,
-      innerFramePct: this._innerFramePct,
-      minEffZoom: this._bsX,
-    });
-    this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-    this.offsetY = this.targetOffsetY = this._closedOffsetY(
-      camPos.y,
-      resolved.effectiveZoom,
-      canvasH
-    );
+    if (this._isOpenTrack) {
+      const BASE = OPEN_TRACK_BASE_ZOOM;
+      const resolved = resolveCamera({
+        targetWorld: camPos,
+        desiredEffZoom: stateZoom * BASE,
+        worldBounds: this._worldBounds,
+        frameSize,
+        innerFramePct: this._innerFramePct,
+        minEffZoom: this.overviewZoom * BASE,
+      });
+      this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+      this.offsetY = this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
+    } else {
+      const resolved = resolveCamera({
+        targetWorld: camPos,
+        desiredEffZoom: stateZoom * this._bsX,
+        worldBounds: this._worldBounds,
+        frameSize,
+        innerFramePct: this._innerFramePct,
+        minEffZoom: this._bsX,
+      });
+      this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+      this.offsetY = this.targetOffsetY = this._closedOffsetY(
+        camPos.y,
+        resolved.effectiveZoom,
+        canvasH
+      );
+    }
 
     this._prevFocusT = focusT;
   }
@@ -1095,5 +1285,132 @@ export class CameraDirector {
     this._battleDiagFrameCount = 0;
     this._battleDiagSnapshots = [];
     this._battleDiagFrozen = false;
+  }
+
+  // ── Frame-log diagnostics ─────────────────────────────────────────────────
+
+  /** Whether frame logging is currently active. */
+  get diagEnabled() {
+    return this._diagEnabled;
+  }
+
+  /** Total frames recorded since construction (monotonic, never resets). */
+  get diagFrameCount() {
+    return this._diagFrameIdx;
+  }
+
+  /**
+   * Record one frame into the ring buffer. Called at the very end of update()
+   * when _diagEnabled is true. The final offsetX/Y/zoom values are already set.
+   */
+  _recordDiagFrame(ts, dt, lf, tSpaceLerpActive, transitionFired) {
+    const dox = this._diagPrevOffsetX !== null ? this.offsetX - this._diagPrevOffsetX : 0;
+    const doy = this._diagPrevOffsetY !== null ? this.offsetY - this._diagPrevOffsetY : 0;
+    const dz = this._diagPrevZoom !== null ? this.zoom - this._diagPrevZoom : 0;
+    this._diagRingBuf[this._diagRingIdx] = {
+      fi: this._diagFrameIdx,
+      ts,
+      dt,
+      st: this.state,
+      lp: this._lerpPhase,
+      op: this._observerPhase,
+      ox: this.offsetX,
+      oy: this.offsetY,
+      z: this.zoom,
+      tax: this.targetOffsetX,
+      tay: this.targetOffsetY,
+      tz: this.targetZoom,
+      dox,
+      doy,
+      dz,
+      lf,
+      ts2: tSpaceLerpActive ? 1 : 0,
+      tf: transitionFired ? 1 : 0,
+      ct: this._camT,
+      fot: this._lastFocusT,
+      pft: this._diagPrevFocusT,
+      ttt: this._transitionTargetT,
+      ese: this._entrySpeedEstimate,
+      edx: this._lastEntryDeltaX,
+      edy: this._lastEntryDeltaY,
+      edz: this._lastEntryDeltaZoom,
+    };
+    this._diagPrevOffsetX = this.offsetX;
+    this._diagPrevOffsetY = this.offsetY;
+    this._diagPrevZoom = this.zoom;
+    this._diagRingIdx = (this._diagRingIdx + 1) % DIAG_RING_SIZE;
+    this._diagFrameIdx++;
+  }
+
+  /**
+   * Serialise the ring buffer to a self-documented JSON string.
+   * Frames are returned in chronological order (oldest first).
+   * @returns {string}  JSON ready for file download or clipboard paste.
+   */
+  exportDiagLog() {
+    const buffered = Math.min(this._diagFrameIdx, DIAG_RING_SIZE);
+    // When the buffer has wrapped, the oldest entry is at the current write head.
+    const startIdx = this._diagFrameIdx >= DIAG_RING_SIZE ? this._diagRingIdx : 0;
+    const frames = [];
+    for (let i = 0; i < buffered; i++) {
+      frames.push(this._diagRingBuf[(startIdx + i) % DIAG_RING_SIZE]);
+    }
+    return JSON.stringify(
+      {
+        meta: {
+          exportedAt: new Date().toISOString(),
+          totalFrames: this._diagFrameIdx,
+          bufferedFrames: buffered,
+          ringSize: DIAG_RING_SIZE,
+          fieldLegend: {
+            fi: 'frameIndex (monotonic)',
+            ts: 'timestamp ms',
+            dt: 'frame duration ms',
+            st: 'camState',
+            lp: 'lerpPhase: entry|tracking',
+            op: 'observerPhase: idle|lead-in|follow|lead-out',
+            ox: 'offsetX px',
+            oy: 'offsetY px',
+            z: 'zoom',
+            tax: 'targetOffsetX px',
+            tay: 'targetOffsetY px',
+            tz: 'targetZoom',
+            dox: 'deltaOffsetX from previous frame (px) — key jitter metric',
+            doy: 'deltaOffsetY from previous frame (px)',
+            dz: 'deltaZoom from previous frame',
+            lf: 'lerp factor used this frame (dt-scaled)',
+            ts2: 'tSpaceLerpActive: 1=T-space pin, 0=pixel lerp',
+            tf: 'transitionFired this frame: 1=yes',
+            ct: 'camT (track param 0–1, null if not in T-space)',
+            fot: 'lastFocusT — focus racer track param this frame',
+            pft: 'prevFocusT before this frame (null after state change)',
+            ttt: 'transitionTargetT (T-space convergence goal, null when tracking)',
+            ese: 'entrySpeedEstimate in T/frame',
+            edx: 'entryConvergence deltaX px (0 when tracking)',
+            edy: 'entryConvergence deltaY px (0 when tracking)',
+            edz: 'entryConvergence deltaZoom (0 when tracking)',
+          },
+        },
+        frames,
+      },
+      null,
+      0
+    );
+  }
+
+  /**
+   * Returns the last N frames' {dox, doy, tf} from the ring buffer, newest-last.
+   * Used by the mini jitter graph overlay.
+   * @param {number} [n=30]
+   */
+  getRecentDeltas(n = 30) {
+    const size = Math.min(this._diagFrameIdx, DIAG_RING_SIZE, n);
+    const result = [];
+    const newestIdx = (this._diagRingIdx - 1 + DIAG_RING_SIZE) % DIAG_RING_SIZE;
+    for (let i = size - 1; i >= 0; i--) {
+      const entry = this._diagRingBuf[(newestIdx - i + DIAG_RING_SIZE) % DIAG_RING_SIZE];
+      if (entry) result.push({ dox: entry.dox, doy: entry.doy, tf: entry.tf });
+    }
+    return result;
   }
 }

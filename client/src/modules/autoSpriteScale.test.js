@@ -133,35 +133,36 @@ describe('saveAutoScaleConfig', () => {
   });
 });
 
-describe('getEffectiveMinTargetScreenPx — scale-invariant floor (Block Y)', () => {
-  it('0.05 × 720 = 36px (default config, default canvas)', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 0.05, 720)).toBe(36);
+describe('getEffectiveMinTargetScreenPx — world-pixel floor (Block Y)', () => {
+  it('36px world-pixel floor returns 36 (default OVERVIEW.spritePx)', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
   });
 
-  it('0.10 × 720 = 72px', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 0.1, 720)).toBe(72);
+  it('72px world-pixel floor returns 72', () => {
+    expect(getEffectiveMinTargetScreenPx(undefined, 72)).toBe(72);
   });
 
-  it('scale-invariant: 0.05 × 800 = 40px (proportional to canvas height)', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 0.05, 800)).toBe(40);
+  it('floor is resolution-independent: same value regardless of canvas size', () => {
+    // spritePx=36 always returns 36, unlike old pct×canvasH which gave 36 or 40 depending on canvas
+    expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
   });
 
   it('type override (absolute px) wins when set', () => {
-    expect(getEffectiveMinTargetScreenPx(48, 0.05, 720)).toBe(48);
+    expect(getEffectiveMinTargetScreenPx(48, 36)).toBe(48);
   });
 
-  it('null type override falls back to pct-based floor', () => {
-    expect(getEffectiveMinTargetScreenPx(null, 0.05, 720)).toBe(36);
+  it('null type override falls back to world-pixel floor', () => {
+    expect(getEffectiveMinTargetScreenPx(null, 36)).toBe(36);
   });
 
   it('type override 0 (explicit zero) is respected', () => {
-    expect(getEffectiveMinTargetScreenPx(0, 0.05, 720)).toBe(0);
+    expect(getEffectiveMinTargetScreenPx(0, 36)).toBe(0);
   });
 });
 
 describe('getEffectiveMinTargetScreenPx — floor in computeRenderDisplayScale (Block Y)', () => {
   it('closed-track: floor 36px — screenPx ≥ 36 for realistic effZoom range', () => {
-    const floor36 = getEffectiveMinTargetScreenPx(undefined, 0.05, 720);
+    const floor36 = getEffectiveMinTargetScreenPx(undefined, 36);
     for (const effZoom of [0.5, 0.8, 1.0, 1.5, 2.0]) {
       const result = computeRenderDisplayScale(40, 0.65, effZoom, floor36);
       const screenPx = 40 * result * effZoom;
@@ -172,7 +173,7 @@ describe('getEffectiveMinTargetScreenPx — floor in computeRenderDisplayScale (
   it('open-track: effZoom ≈ 0.32 (6000px world) — floor 36 clamps render to 36px', () => {
     // 6000px world: overviewZoom = 1280/6000 ≈ 0.213; with openTrackBaseZoom=1.5 → 0.32
     const openEffZoom = 1.5 * (1280 / 6000);
-    const floor36 = getEffectiveMinTargetScreenPx(undefined, 0.05, 720);
+    const floor36 = getEffectiveMinTargetScreenPx(undefined, 36);
     const dss = 1.44; // river-run at N=10 from diagnostic
     const result = computeRenderDisplayScale(40, dss, openEffZoom, floor36);
     const screenPx = 40 * result * openEffZoom;
