@@ -58,6 +58,7 @@ import {
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
+import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -140,6 +141,7 @@ export default function RaceScreen() {
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
+  const enableFrameLog = cameraConfig.enableFrameLog ?? false;
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -1324,6 +1326,7 @@ export default function RaceScreen() {
             leaderDiagRef={leaderDiagRef}
             visible={showCameraDiagnostics}
           />
+          <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
         </div>
 
         <aside className="race-hud">

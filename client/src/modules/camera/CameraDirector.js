@@ -54,6 +54,7 @@ const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
 const TRANSITION_T_CONVERGENCE = 0.005; // T-units threshold for T-space lerp convergence (~20px on 4000px oval)
+const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
 
 // Shortest signed T-delta on a circular track [0,1).
 // Returns a value in (-0.5, 0.5] so the lerp always takes the shorter arc.
@@ -164,6 +165,17 @@ export class CameraDirector {
     this._battleDiagFrameCount = 0;
     this._battleDiagSnapshots = [];
     this._battleDiagFrozen = false;
+    // Frame-log ring buffer — enabled per config.enableFrameLog (default OFF).
+    // Records ~28 fields per frame; 600 frames ≈ 10 s @ 60 fps.
+    this._diagEnabled = false;
+    this._diagRingBuf = new Array(DIAG_RING_SIZE);
+    this._diagRingIdx = 0;
+    this._diagFrameIdx = 0;
+    this._diagPrevOffsetX = null;
+    this._diagPrevOffsetY = null;
+    this._diagPrevZoom = null;
+    // prevFocusT as it was at the START of the current frame (before overwrite).
+    this._diagPrevFocusT = null;
   }
 
   /**
@@ -272,6 +284,7 @@ export class CameraDirector {
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
+    this._diagEnabled = config?.enableFrameLog ?? false;
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -489,6 +502,7 @@ export class CameraDirector {
           break;
       }
       if (fT !== null) {
+        this._diagPrevFocusT = this._prevFocusT; // capture before overwrite (frame log)
         if (this._prevFocusT !== null) {
           this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
         }
@@ -601,6 +615,7 @@ export class CameraDirector {
       }
       if (f >= 60) this._battleDiagFrozen = true;
     }
+    if (this._diagEnabled) this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned);
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -1270,5 +1285,132 @@ export class CameraDirector {
     this._battleDiagFrameCount = 0;
     this._battleDiagSnapshots = [];
     this._battleDiagFrozen = false;
+  }
+
+  // ── Frame-log diagnostics ─────────────────────────────────────────────────
+
+  /** Whether frame logging is currently active. */
+  get diagEnabled() {
+    return this._diagEnabled;
+  }
+
+  /** Total frames recorded since construction (monotonic, never resets). */
+  get diagFrameCount() {
+    return this._diagFrameIdx;
+  }
+
+  /**
+   * Record one frame into the ring buffer. Called at the very end of update()
+   * when _diagEnabled is true. The final offsetX/Y/zoom values are already set.
+   */
+  _recordDiagFrame(ts, dt, lf, tSpaceLerpActive, transitionFired) {
+    const dox = this._diagPrevOffsetX !== null ? this.offsetX - this._diagPrevOffsetX : 0;
+    const doy = this._diagPrevOffsetY !== null ? this.offsetY - this._diagPrevOffsetY : 0;
+    const dz = this._diagPrevZoom !== null ? this.zoom - this._diagPrevZoom : 0;
+    this._diagRingBuf[this._diagRingIdx] = {
+      fi: this._diagFrameIdx,
+      ts,
+      dt,
+      st: this.state,
+      lp: this._lerpPhase,
+      op: this._observerPhase,
+      ox: this.offsetX,
+      oy: this.offsetY,
+      z: this.zoom,
+      tax: this.targetOffsetX,
+      tay: this.targetOffsetY,
+      tz: this.targetZoom,
+      dox,
+      doy,
+      dz,
+      lf,
+      ts2: tSpaceLerpActive ? 1 : 0,
+      tf: transitionFired ? 1 : 0,
+      ct: this._camT,
+      fot: this._lastFocusT,
+      pft: this._diagPrevFocusT,
+      ttt: this._transitionTargetT,
+      ese: this._entrySpeedEstimate,
+      edx: this._lastEntryDeltaX,
+      edy: this._lastEntryDeltaY,
+      edz: this._lastEntryDeltaZoom,
+    };
+    this._diagPrevOffsetX = this.offsetX;
+    this._diagPrevOffsetY = this.offsetY;
+    this._diagPrevZoom = this.zoom;
+    this._diagRingIdx = (this._diagRingIdx + 1) % DIAG_RING_SIZE;
+    this._diagFrameIdx++;
+  }
+
+  /**
+   * Serialise the ring buffer to a self-documented JSON string.
+   * Frames are returned in chronological order (oldest first).
+   * @returns {string}  JSON ready for file download or clipboard paste.
+   */
+  exportDiagLog() {
+    const buffered = Math.min(this._diagFrameIdx, DIAG_RING_SIZE);
+    // When the buffer has wrapped, the oldest entry is at the current write head.
+    const startIdx = this._diagFrameIdx >= DIAG_RING_SIZE ? this._diagRingIdx : 0;
+    const frames = [];
+    for (let i = 0; i < buffered; i++) {
+      frames.push(this._diagRingBuf[(startIdx + i) % DIAG_RING_SIZE]);
+    }
+    return JSON.stringify(
+      {
+        meta: {
+          exportedAt: new Date().toISOString(),
+          totalFrames: this._diagFrameIdx,
+          bufferedFrames: buffered,
+          ringSize: DIAG_RING_SIZE,
+          fieldLegend: {
+            fi: 'frameIndex (monotonic)',
+            ts: 'timestamp ms',
+            dt: 'frame duration ms',
+            st: 'camState',
+            lp: 'lerpPhase: entry|tracking',
+            op: 'observerPhase: idle|lead-in|follow|lead-out',
+            ox: 'offsetX px',
+            oy: 'offsetY px',
+            z: 'zoom',
+            tax: 'targetOffsetX px',
+            tay: 'targetOffsetY px',
+            tz: 'targetZoom',
+            dox: 'deltaOffsetX from previous frame (px) — key jitter metric',
+            doy: 'deltaOffsetY from previous frame (px)',
+            dz: 'deltaZoom from previous frame',
+            lf: 'lerp factor used this frame (dt-scaled)',
+            ts2: 'tSpaceLerpActive: 1=T-space pin, 0=pixel lerp',
+            tf: 'transitionFired this frame: 1=yes',
+            ct: 'camT (track param 0–1, null if not in T-space)',
+            fot: 'lastFocusT — focus racer track param this frame',
+            pft: 'prevFocusT before this frame (null after state change)',
+            ttt: 'transitionTargetT (T-space convergence goal, null when tracking)',
+            ese: 'entrySpeedEstimate in T/frame',
+            edx: 'entryConvergence deltaX px (0 when tracking)',
+            edy: 'entryConvergence deltaY px (0 when tracking)',
+            edz: 'entryConvergence deltaZoom (0 when tracking)',
+          },
+        },
+        frames,
+      },
+      null,
+      0
+    );
+  }
+
+  /**
+   * Returns the last N frames' {dox, doy, tf} from the ring buffer, newest-last.
+   * Used by the mini jitter graph overlay.
+   * @param {number} [n=30]
+   */
+  getRecentDeltas(n = 30) {
+    const size = Math.min(this._diagFrameIdx, DIAG_RING_SIZE, n);
+    const result = [];
+    const newestIdx = (this._diagRingIdx - 1 + DIAG_RING_SIZE) % DIAG_RING_SIZE;
+    for (let i = size - 1; i >= 0; i--) {
+      const entry = this._diagRingBuf[(newestIdx - i + DIAG_RING_SIZE) % DIAG_RING_SIZE];
+      if (entry) result.push({ dox: entry.dox, doy: entry.doy, tf: entry.tf });
+    }
+    return result;
   }
 }
