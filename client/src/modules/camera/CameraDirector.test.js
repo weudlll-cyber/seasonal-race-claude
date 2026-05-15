@@ -3320,3 +3320,101 @@ describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
     expect(result.y).toBeCloseTo(100);
   });
 });
+
+// ── Lead-Ahead toggle ─────────────────────────────────────────────────────────
+
+describe('CameraDirector — leadAheadEnabled toggle', () => {
+  const mockShape = {
+    getCenterPoint: () => ({ x: 640, y: 360 }),
+    getPosition: (t) => ({ x: t * 1280, y: 360 }),
+    isOpen: false,
+  };
+
+  function makeLeadAheadConfig(leadAheadEnabled) {
+    return {
+      cameraStateProfiles: {
+        OVERVIEW: {
+          spritePx: 36,
+          trackingTC: 1.5,
+          entryTC: 1.5,
+          leadInDuration: 0,
+          leadOutDuration: 0,
+          innerFramePct: 0.7,
+          maxStateDuration: 4000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 10000,
+        },
+        LEADER_ZOOM: {
+          spritePx: 65,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+        BATTLE_ZOOM: {
+          spritePx: 101,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.2,
+          leadOutDuration: 1.0,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+        COMEBACK_ZOOM: {
+          spritePx: 50,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+      },
+      transitionTConvergence: 0.03,
+      entryConvergenceZoom: 0.05,
+      entryConvergencePx: 10,
+    };
+  }
+
+  // NOMINAL_T_PER_FRAME (0.001) is reset in _transition(); LEADER leadInDuration = 0.3s.
+  // Expected lead-ahead when ON: 0.001 × 60 × 0.3 = 0.018
+  const NOMINAL_T_PER_FRAME = 0.001;
+  const LEADER_LEAD_IN = 0.3;
+  const FRAME_RATE = 60;
+
+  it('leadAheadEnabled: false — _transitionTargetT equals focusT (no lead-ahead offset)', () => {
+    const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(false), 36, mockShape);
+    cd._camT = null;
+    const racer = { t: 0.4, x: 512, y: 360, finished: false };
+    // Post-start-hold window → LEADER_ZOOM
+    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    cd._transition([racer], 10000, raceState);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // With lead-ahead OFF, target must equal focusT exactly
+    expect(cd._transitionTargetT).toBeCloseTo(0.4, 5);
+  });
+
+  it('leadAheadEnabled: true — _transitionTargetT > focusT (lead-ahead offset applied)', () => {
+    const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(true), 36, mockShape);
+    cd._camT = null;
+    const racer = { t: 0.4, x: 512, y: 360, finished: false };
+    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    cd._transition([racer], 10000, raceState);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // With lead-ahead ON: target = focusT + NOMINAL_T_PER_FRAME × 60 × 0.3
+    const expectedOffset = NOMINAL_T_PER_FRAME * FRAME_RATE * LEADER_LEAD_IN;
+    expect(cd._transitionTargetT).toBeCloseTo(0.4 + expectedOffset, 5);
+    expect(cd._transitionTargetT).toBeGreaterThan(0.4);
+  });
+});

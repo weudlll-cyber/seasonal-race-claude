@@ -309,6 +309,12 @@ export class CameraDirector {
     this._transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
     this._overviewOffsetPx =
       config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
+    // Per-state lead-ahead toggle. Default true for old configs without profiles (backward compat).
+    // v10+ configs inject false for LEADER/BATTLE/COMEBACK; OVERVIEW never uses lead-ahead.
+    this._leadAheadEnabledByState = {};
+    for (const s of Object.values(CAM_STATE)) {
+      this._leadAheadEnabledByState[s] = config?.cameraStateProfiles?.[s]?.leadAheadEnabled ?? true;
+    }
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -541,8 +547,9 @@ export class CameraDirector {
         // with the measured speed so the camera lands at the right lead-ahead position.
         const prof = this._phasedByState?.[this.state];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+        const leadAheadOn = this._leadAheadEnabledByState?.[this.state] ?? true;
         const leadAhead =
-          this.state !== CAM_STATE.OVERVIEW && phasedEnabled
+          this.state !== CAM_STATE.OVERVIEW && phasedEnabled && leadAheadOn
             ? (this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME) * FRAME_RATE * prof.leadInDuration
             : 0;
         // Open tracks: clamp target to [0,1] (no circular wrap-around beyond track end).
@@ -599,7 +606,8 @@ export class CameraDirector {
         const prof = this._phasedByState?.[this.state];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
         if (phasedEnabled && this._camT !== null && this._shape) {
-          if (prof.leadInDuration > 0) {
+          const _leadAheadOnForState = this._leadAheadEnabledByState?.[this.state] ?? true;
+          if (prof.leadInDuration > 0 && _leadAheadOnForState) {
             this._observerPhase = 'lead-in';
             this._leadInStartTs = ts;
           } else {
@@ -806,8 +814,9 @@ export class CameraDirector {
         const prof = this._phasedByState?.[nextState];
         const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
         const speedPerFrame = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
+        const _leadAheadOnForNext = this._leadAheadEnabledByState?.[nextState] ?? true;
         const leadAhead =
-          nextState !== CAM_STATE.OVERVIEW && phasedEnabled
+          nextState !== CAM_STATE.OVERVIEW && phasedEnabled && _leadAheadOnForNext
             ? speedPerFrame * FRAME_RATE * (prof.leadInDuration ?? 0)
             : 0;
         // Open tracks: clamp initial target to [0,1] — no circular wrap-around.
@@ -1152,10 +1161,12 @@ export class CameraDirector {
       return;
     }
 
-    // Lead-in: time-based — switch to follow after leadInDuration seconds from state start
+    // Lead-in: time-based — switch to follow after leadInDuration seconds from state start.
+    // Also skip immediately if leadAheadEnabled is OFF for this state.
     if (this._observerPhase === 'lead-in') {
+      const _leadAheadOn = this._leadAheadEnabledByState?.[this.state] ?? true;
       const elapsed = ts - (this._leadInStartTs ?? ts);
-      if (elapsed >= prof.leadInDuration * 1000) {
+      if (!_leadAheadOn || elapsed >= prof.leadInDuration * 1000) {
         this._observerPhase = 'follow';
       } else {
         // Camera stays at the lead-in position initialised in _transition()
