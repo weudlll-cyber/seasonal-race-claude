@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -140,6 +140,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       innerFramePct: 0.7,
       maxStateDuration: 4000,
       minStateHold: 5000,
+      maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
     },
     LEADER_ZOOM: {
       spritePx: 65,
@@ -150,6 +151,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       innerFramePct: 0.7,
       maxStateDuration: 8000,
       minStateHold: 5000,
+      maxEntryDurationMs: 5000,
     },
     BATTLE_ZOOM: {
       spritePx: 101,
@@ -160,6 +162,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       innerFramePct: 0.7,
       maxStateDuration: 8000,
       minStateHold: 5000,
+      maxEntryDurationMs: 5000,
     },
     COMEBACK_ZOOM: {
       spritePx: 50,
@@ -170,13 +173,17 @@ export const DEFAULT_CAMERA_CONFIG = {
       innerFramePct: 0.7,
       maxStateDuration: 8000,
       minStateHold: 5000,
+      maxEntryDurationMs: 5000,
     },
   },
   // Entry-convergence thresholds: when camera is within these values of its target after
   // a state transition, the lerpPhase switches from 'entry' (entryTC) to 'tracking' (trackingTC).
-  // Used in Phase 3; Phase 1 initialises them so the schema is stable.
   entryConvergenceZoom: 0.05,
   entryConvergencePx: 10,
+  // T-space convergence threshold (in track-parameter units). The steady-state gap between
+  // camT and ttt is ese/lf ≈ 0.026 at typical racer speeds; threshold must exceed this to
+  // allow convergence while the leader is moving. Raised from 0.005 (never-converge) to 0.03.
+  transitionTConvergence: 0.03,
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
