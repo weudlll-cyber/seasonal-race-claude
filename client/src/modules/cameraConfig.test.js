@@ -103,20 +103,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 7', () => {
+  it('writes schemaVersion: 8', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 7 })
+      expect.objectContaining({ schemaVersion: 8 })
     );
   });
 
-  it('writes schemaVersion: 7 even when not in input config', () => {
+  it('writes schemaVersion: 8 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 7 })
+      expect.objectContaining({ schemaVersion: 8 })
     );
   });
 });
@@ -418,7 +418,7 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
     expect(cfg.schemaVersion).toBe(7);
   });
 
-  it('v7 stored config with user-tuned spritePx is preserved (no further migration)', () => {
+  it('v7 stored config is migrated to v8, user-tuned spritePx is preserved', () => {
     storageGet.mockReturnValue({
       schemaVersion: 7,
       cameraStateProfiles: {
@@ -436,6 +436,6 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(80);
-    expect(cfg.schemaVersion).toBe(7);
+    expect(cfg.schemaVersion).toBe(8);
   });
 });

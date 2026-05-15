@@ -2118,6 +2118,183 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
   });
 });
 
+// ── Convergence fix: threshold and timeout paths ─────────────────────────────
+
+// Straight shape so tToWorld() is linear and predictable in these tests.
+function makeLinearShape(trackLen = 4000) {
+  return {
+    getTotalLength: () => trackLen,
+    getPosition: (t, _lateral) => ({ x: t * trackLen, y: 360 }),
+  };
+}
+
+// Racers that continuously advance their T position each call, simulating a moving leader.
+function makeMovingRacers(count = 4, speedPerFrame = 0.002) {
+  let t = 0.1;
+  return {
+    next() {
+      t += speedPerFrame;
+      return Array.from({ length: count }, (_, i) => ({ x: t * 4000, y: 360, t: t - i * 0.01 }));
+    },
+  };
+}
+
+describe('CameraDirector — convergence fix: threshold and timeout', () => {
+  it('threshold path: camera converges to tracking with moving leader when transitionTConvergence > ese/lf', () => {
+    // Use a large transitionTConvergence (0.05) that covers the steady-state gap.
+    // The leader moves at ~0.002 T/frame; lf_entry for entryTC=0.8 ≈ 0.047; gap ≈ 0.043.
+    // With threshold 0.05 > 0.043, camera should converge via threshold path.
+    const shape = makeLinearShape(4000);
+    const config = {
+      ...profileConfig,
+      transitionTConvergence: 0.05,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          entryTC: 0.8,
+          trackingTC: 0.25,
+          leadInDuration: 0.3,
+          maxEntryDurationMs: 30000, // timeout far in future — threshold must win
+        },
+      },
+    };
+    const cd = new CameraDirector(4000, 720, false, config, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom; // pre-converge zoom
+    const moving = makeMovingRacers(4, 0.002);
+    const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+
+    let convergedReason = null;
+    for (let i = 0; i < 600; i++) {
+      const ts = i * (1000 / 60);
+      cd.update(moving.next(), ts, raceState, 1280, 720);
+      // _diagConvergenceReason is reset after _recordDiagFrame; capture it from lerpPhase switch
+      if (cd.lerpPhase === 'tracking') {
+        // Check the ring buffer for the cr field on this frame (diagEnabled is false by default)
+        // Instead, verify the phase switched and that timeout didn't fire (timeout > 30s >> current ts)
+        convergedReason = 'threshold'; // timeout would only fire at 30000ms, we're under that
+        break;
+      }
+    }
+    expect(cd.lerpPhase).toBe('tracking');
+    expect(convergedReason).toBe('threshold');
+  });
+
+  it('timeout path: camera forces tracking after maxEntryDurationMs when threshold is impossibly tight', () => {
+    // transitionTConvergence=0.001 is far below steady-state gap (~0.043 at speed 0.002) — threshold
+    // can never fire while the leader moves. maxEntryDurationMs=300ms forces tracking after ~18 frames.
+    // We set _camT and _transitionTargetT directly so tSpaceLerpActive=true (xConverged/yConverged
+    // are bypassed) and only zoom + timeout gate the transition.
+    const shape = makeLinearShape(4000);
+    const config = {
+      ...profileConfig,
+      transitionTConvergence: 0.001, // impossibly tight
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          entryTC: 0.8,
+          trackingTC: 0.25,
+          leadInDuration: 0.3,
+          maxEntryDurationMs: 300, // fires after ~18 frames at 16.67ms/frame
+        },
+      },
+    };
+    const cd = new CameraDirector(4000, 720, false, config, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom; // pre-converge zoom
+    // Prime T-space lerp so tSpaceLerpActive=true (bypasses xConverged/yConverged gates)
+    cd._camT = 0.3;
+    cd._transitionTargetT = 0.35; // gap=0.05 >> threshold 0.001 → tConverged always false
+    const moving = makeMovingRacers(4, 0.002);
+    const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+
+    for (let i = 0; i < 60; i++) {
+      cd.update(moving.next(), i * (1000 / 60), raceState, 1280, 720);
+      if (cd.lerpPhase === 'tracking') break;
+    }
+    expect(cd.lerpPhase).toBe('tracking');
+  });
+
+  it('convergenceReason "threshold" is logged in _diagConvergenceReason on the transition frame', () => {
+    const shape = makeLinearShape(4000);
+    const config = {
+      ...profileConfig,
+      enableFrameLog: true,
+      transitionTConvergence: 0.05,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          entryTC: 0.8,
+          leadInDuration: 0,
+          maxEntryDurationMs: 30000,
+        },
+      },
+    };
+    const cd = new CameraDirector(4000, 720, false, config, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom;
+    const moving = makeMovingRacers(4, 0.002);
+    const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+
+    let crFound = null;
+    for (let i = 0; i < 600; i++) {
+      // Peek at _diagConvergenceReason BEFORE update resets it via _recordDiagFrame
+      cd.update(moving.next(), i * (1000 / 60), raceState, 1280, 720);
+      // After update: if we just switched to tracking, the ring buf entry has cr set.
+      if (cd.lerpPhase === 'tracking') {
+        // Read the most-recently-written ring buffer entry
+        const lastIdx = (cd._diagRingIdx - 1 + 600) % 600;
+        crFound = cd._diagRingBuf[lastIdx]?.cr;
+        break;
+      }
+    }
+    expect(crFound).toBe('threshold');
+  });
+
+  it('convergenceReason "timeout" is logged when time-fallback fires', () => {
+    const shape = makeLinearShape(4000);
+    const config = {
+      ...profileConfig,
+      enableFrameLog: true,
+      transitionTConvergence: 0.001, // impossibly tight
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          maxEntryDurationMs: 300,
+        },
+      },
+    };
+    const cd = new CameraDirector(4000, 720, false, config, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.zoom = cd._leaderZoom;
+    cd._camT = 0.3;
+    cd._transitionTargetT = 0.35; // gap >> threshold → tConverged always false
+    const moving = makeMovingRacers(4, 0.002);
+    const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+
+    let crFound = null;
+    for (let i = 0; i < 60; i++) {
+      cd.update(moving.next(), i * (1000 / 60), raceState, 1280, 720);
+      if (cd.lerpPhase === 'tracking') {
+        const lastIdx = (cd._diagRingIdx - 1 + 600) % 600;
+        crFound = cd._diagRingBuf[lastIdx]?.cr;
+        break;
+      }
+    }
+    expect(crFound).toBe('timeout');
+  });
+});
+
 // ── Etappe 6: Observer Phase (Lead-In / Mitlaufen / Lead-Out) ────────────────
 
 const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };

@@ -95,6 +95,15 @@ const PROFILE_FIELDS = [
     step: 500,
     tip: (v) => `Minimum time locked in this state before any switch. ${v}ms.`,
   },
+  {
+    key: 'maxEntryDurationMs',
+    label: 'Max entry duration (ms)',
+    min: 500,
+    max: 30000,
+    step: 500,
+    tip: (v) =>
+      `Time-based fallback: forces entry→tracking after this many ms, even if T-space gap is above threshold. ${v}ms.`,
+  },
 ];
 
 function StateProfileBlock({ stateName, profile, defaults, onChangeField, onReset }) {
@@ -212,6 +221,7 @@ function CameraZoomTuningSection() {
       ),
       entryConvergenceZoom: DEFAULT_CAMERA_CONFIG.entryConvergenceZoom,
       entryConvergencePx: DEFAULT_CAMERA_CONFIG.entryConvergencePx,
+      transitionTConvergence: DEFAULT_CAMERA_CONFIG.transitionTConvergence,
       battlePulkThresholdPx: DEFAULT_CAMERA_CONFIG.battlePulkThresholdPx,
       battleMinDurationMs: DEFAULT_CAMERA_CONFIG.battleMinDurationMs,
       endgameThreshold: DEFAULT_CAMERA_CONFIG.endgameThreshold,
@@ -324,6 +334,29 @@ function CameraZoomTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 1 && v <= 100) set('entryConvergencePx', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              T-space convergence threshold
+              <InfoTooltip
+                text={`Camera exits entry phase when |camT − targetT| drops below this value (track-param units). Steady-state gap ≈ ese/lf ≈ 0.026; threshold must exceed this to converge while the leader is moving. Current: ${(config.transitionTConvergence ?? 0.03).toFixed(3)}.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0.005}
+              max={0.2}
+              step={0.005}
+              value={config.transitionTConvergence ?? 0.03}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.005 && v <= 0.2) set('transitionTConvergence', v);
               }}
             />
           </div>
