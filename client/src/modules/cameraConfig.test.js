@@ -103,21 +103,35 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 11', () => {
+  it('writes schemaVersion: 12', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 11 })
+      expect.objectContaining({ schemaVersion: 12 })
     );
   });
 
-  it('writes schemaVersion: 11 even when not in input config', () => {
+  it('writes schemaVersion: 12 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 11 })
+      expect.objectContaining({ schemaVersion: 12 })
     );
+  });
+});
+
+describe('loadCameraConfig — v11→v12 migration', () => {
+  it('v11 config gains countdownStartZoomSpritePx and countdownDurationMs at defaults', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 11,
+      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+      postStartHoldMs: 7000,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(12);
+    expect(cfg.countdownStartZoomSpritePx).toBe(DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx);
+    expect(cfg.countdownDurationMs).toBe(DEFAULT_CAMERA_CONFIG.countdownDurationMs);
   });
 });
 
@@ -461,7 +475,7 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.schemaVersion).toBe(12);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadAheadEnabled).toBe(false);
@@ -533,7 +547,7 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.schemaVersion).toBe(12);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
@@ -558,7 +572,7 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.schemaVersion).toBe(12);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
   });
 
@@ -577,7 +591,7 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.schemaVersion).toBe(12);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(90);
   });

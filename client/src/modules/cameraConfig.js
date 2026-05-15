@@ -43,6 +43,10 @@
 //              BATTLE_ZOOM, COMEBACK_ZOOM). Default false — lead-out causes a "camera stops,
 //              racer runs away" effect that the entry-phase of the next state already covers.
 //              v10→v11 migration injects leadOutEnabled: false into those states.
+//              Schema v12 (2026-05-15): adds countdown camera phase config — two new global
+//              fields: countdownStartZoomSpritePx (sprite size at countdown start; clamped to
+//              min zoom = whole track visible) and countdownDurationMs (countdown duration in ms,
+//              default 4000). v11→v12 migration injects both fields at their defaults.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -207,6 +211,18 @@ function migrateV9toV10(config) {
     };
   }
   return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 10 };
+}
+
+// v11→v12: add countdownStartZoomSpritePx and countdownDurationMs at their defaults.
+// All existing fields pass through unchanged.
+function migrateV11toV12(config) {
+  return {
+    ...config,
+    countdownStartZoomSpritePx:
+      config.countdownStartZoomSpritePx ?? DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx,
+    countdownDurationMs: config.countdownDurationMs ?? DEFAULT_CAMERA_CONFIG.countdownDurationMs,
+    schemaVersion: 12,
+  };
 }
 
 // v10→v11: add leadOutEnabled: false to LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM profiles.
@@ -402,7 +418,7 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 9) {
-    // v9→v10→v11: deep-merge profiles, then inject leadAheadEnabled, then leadOutEnabled.
+    // v9→v10→v11→v12: deep-merge profiles, then inject leadAheadEnabled, leadOutEnabled, countdown fields.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -414,11 +430,11 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV10toV11(migrateV9toV10(merged));
+    return migrateV11toV12(migrateV10toV11(migrateV9toV10(merged)));
   }
 
   if (stored.schemaVersion === 10) {
-    // v10→v11: deep-merge profiles, then inject leadOutEnabled into LEADER/BATTLE/COMEBACK.
+    // v10→v11→v12: deep-merge profiles, then inject leadOutEnabled, then countdown fields.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -430,12 +446,28 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV10toV11(merged);
+    return migrateV11toV12(migrateV10toV11(merged));
   }
 
-  if (stored.schemaVersion !== 11) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 11) {
+    // v11→v12: deep-merge profiles, then inject countdown camera fields.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV11toV12(merged);
+  }
 
-  // v11: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 12) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v12: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -451,5 +483,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 11 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 12 });
 }

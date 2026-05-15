@@ -3727,3 +3727,38 @@ describe('CameraDirector — lead-out toggle', () => {
     expect(cd._leadOutEnabledByState[CAM_STATE.BATTLE_ZOOM]).toBe(true);
   });
 });
+
+// ── COUNTDOWN camera phase ────────────────────────────────────────────────────
+
+describe('CameraDirector.updateCountdown', () => {
+  const countdownRacers = Array.from({ length: 6 }, (_, i) => ({ x: 100 + i * 20, y: 360, t: 0 }));
+
+  it('COUNTDOWN phase: camera starts in OVERVIEW state and first update() keeps OVERVIEW', () => {
+    const cd = new CameraDirector(1280, 720, false, null, 36);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    // Simulate countdown frames
+    for (let i = 0; i < 60; i++) {
+      cd.updateCountdown(countdownRacers, 1000 + i * 16, i * 16, 4000, 1280, 720);
+    }
+    // First RACING update — raceElapsed=0 so start-phase priority keeps OVERVIEW
+    const raceState = { raceElapsed: 0, finishedCount: 0, winner: null, finishT: 1 };
+    cd.update(countdownRacers, 5000, raceState, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('COUNTDOWN zoom at t=0 equals countdownStartZoom (min zoom = whole track visible)', () => {
+    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cam = cd.updateCountdown(countdownRacers, 1000, 0, 4000, 1280, 720);
+    // countdownStartZoom for spritePx=1 is clamped to minimum (1.0 for 1280px closed track)
+    expect(cam.zoom).toBeCloseTo(cd._countdownStartZoom, 5);
+  });
+
+  it('COUNTDOWN zoom at t=duration equals overviewStateZoom — seamless OVERVIEW transition', () => {
+    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cam = cd.updateCountdown(countdownRacers, 5000, 4000, 4000, 1280, 720);
+    // At full progress=1, ease-out(1)=1 → zoom must equal _overviewStateZoom exactly
+    expect(cam.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
+    // And the director's live zoom matches so the first RACING update sees no jump
+    expect(cd.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
+  });
+});

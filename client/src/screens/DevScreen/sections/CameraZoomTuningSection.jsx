@@ -275,6 +275,66 @@ function CameraZoomTuningSection() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Countdown Phase */}
+      <div className={s.card}>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+          Countdown Phase
+        </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Camera zooms from start-zoom (whole track visible) to OVERVIEW zoom during the pre-race
+          countdown. End-zoom is coupled to OVERVIEW&apos;s sprite size and cannot be set
+          separately.
+        </p>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Start zoom — sprite size (px)
+              <InfoTooltip
+                text={`Sprite height at the beginning of the countdown (same world-pixel unit as per-state sprite sizes). Very small values (≤ sprite size at overview) are clamped to the minimum zoom — whole track visible. Current: ${config.countdownStartZoomSpritePx ?? 1}px.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={1}
+              max={200}
+              step={1}
+              value={config.countdownStartZoomSpritePx ?? 1}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 1 && v <= 200) set('countdownStartZoomSpritePx', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Countdown duration (ms)
+              <InfoTooltip
+                text={`Duration of the pre-race countdown in milliseconds. Also controls when RACING begins. Default 4000ms = "3 2 1 GO!" at 1s per number. Current: ${config.countdownDurationMs ?? 4000}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={1000}
+              max={8000}
+              step={500}
+              value={config.countdownDurationMs ?? 4000}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 1000 && v <= 8000) set('countdownDurationMs', v);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.2rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Camera Behavior</span>
