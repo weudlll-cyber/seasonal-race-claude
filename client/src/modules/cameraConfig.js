@@ -47,6 +47,9 @@
 //              fields: countdownStartZoomSpritePx (sprite size at countdown start; clamped to
 //              min zoom = whole track visible) and countdownDurationMs (countdown duration in ms,
 //              default 4000). v11→v12 migration injects both fields at their defaults.
+//              Schema v13 (2026-05-16): adds state-overlay narrative text config — two new global
+//              fields: stateOverlayEnabled (bool, default true) and stateOverlayDurationMs (int,
+//              default 3500ms). v12→v13 migration injects both fields at their defaults.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -222,6 +225,18 @@ function migrateV11toV12(config) {
       config.countdownStartZoomSpritePx ?? DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx,
     countdownDurationMs: config.countdownDurationMs ?? DEFAULT_CAMERA_CONFIG.countdownDurationMs,
     schemaVersion: 12,
+  };
+}
+
+// v12→v13: add stateOverlayEnabled and stateOverlayDurationMs at their defaults.
+// All existing fields pass through unchanged.
+function migrateV12toV13(config) {
+  return {
+    ...config,
+    stateOverlayEnabled: config.stateOverlayEnabled ?? DEFAULT_CAMERA_CONFIG.stateOverlayEnabled,
+    stateOverlayDurationMs:
+      config.stateOverlayDurationMs ?? DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs,
+    schemaVersion: 13,
   };
 }
 
@@ -465,9 +480,25 @@ export function loadCameraConfig() {
     return migrateV11toV12(merged);
   }
 
-  if (stored.schemaVersion !== 12) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 12) {
+    // v12→v13: deep-merge profiles, then inject stateOverlay fields.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV12toV13(merged);
+  }
 
-  // v12: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 13) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v13: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -483,5 +514,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 12 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 13 });
 }

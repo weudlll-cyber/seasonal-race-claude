@@ -30,8 +30,71 @@ function CameraStateHudSection() {
     setConfig((prev) => ({ ...prev, enableFrameLog: e.target.checked }));
   }
 
+  function toggleStateOverlay(e) {
+    setConfig((prev) => ({ ...prev, stateOverlayEnabled: e.target.checked }));
+  }
+
+  function handleOverlayDuration(e) {
+    const v = parseInt(e.target.value, 10);
+    if (!Number.isFinite(v) || v < 500 || v > 10000) return;
+    setConfig((prev) => ({ ...prev, stateOverlayDurationMs: v }));
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* ── State overlay text ── */}
+      <div className={s.card}>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Shows a short narrative text at the bottom of the screen during the first seconds of
+          OVERVIEW, BATTLE, and COMEBACK camera states — e.g. &ldquo;Aktuell führt Max&rdquo;. Text
+          is randomly chosen from a pool and avoids repeating the same template twice in a row for
+          the same state.
+        </p>
+
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.75rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="state-overlay-toggle"
+            checked={config.stateOverlayEnabled ?? true}
+            onChange={toggleStateOverlay}
+          />
+          <span style={{ fontWeight: 600 }}>Einblende-Texte aktivieren</span>
+          <InfoTooltip text="Blendet kurze kontextuelle Texte (z.B. 'Aktuell führt Max') beim Eintritt in OVERVIEW, BATTLE und COMEBACK ein. Nach der konfigurierten Dauer wird der Text weich ausgeblendet. Bei vorzeitigem State-Wechsel verschwindet der Text sofort." />
+        </label>
+
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            fontSize: '0.88rem',
+          }}
+        >
+          <span style={{ minWidth: '10rem' }}>Einblende-Dauer (ms)</span>
+          <input
+            type="number"
+            data-testid="state-overlay-duration"
+            min={500}
+            max={10000}
+            step={100}
+            value={config.stateOverlayDurationMs ?? 3500}
+            onChange={handleOverlayDuration}
+            style={{ width: '5rem' }}
+          />
+          <InfoTooltip text="Dauer in Millisekunden, wie lange der Einblende-Text sichtbar bleibt (500–10000 ms). Default: 3500 ms." />
+        </label>
+      </div>
+
+      {/* ── Camera state HUD indicator ── */}
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Shows the current camera state (OVERVIEW, FOLLOWING LEADER, BATTLE, etc.) as a small

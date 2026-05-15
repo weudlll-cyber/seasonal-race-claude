@@ -1,0 +1,36 @@
+/* StateOverlay.css — narrative text banner for camera-state transitions */
+
+.state-overlay {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* Pill shape */
+  padding: 6px 18px;
+  border-radius: 20px;
+
+  /* Semi-transparent backdrop — race action visible behind */
+  background: rgba(4, 8, 22, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+
+  /* Text */
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+
+  pointer-events: none;
+  user-select: none;
+  z-index: 15;
+
+  /* Soft drop-shadow for legibility over bright track sections */
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  transition: opacity 300ms ease;
+}
