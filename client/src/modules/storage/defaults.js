@@ -208,6 +208,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
   overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
+  // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
+  countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
+  countdownDurationMs: 4000, // matches the default race countdown duration
   // Legacy fields kept for v3→v4 migration reads. CameraDirector no longer reads these.
   spritePctOfCanvas: {
     overview: 0.05,

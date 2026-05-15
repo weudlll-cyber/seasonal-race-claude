@@ -632,20 +632,29 @@ export default function RaceScreen() {
     }
 
     function drawCountdownOverlay(elapsed) {
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(0, 0, CW, CH);
       const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
       const color = CD_COLORS[n] ?? '#fff';
       const text = n > 0 ? String(n) : 'GO!';
-      const fSize = n > 0 ? 220 : 160;
-      const shrink = 1 - ((elapsed % 1000) / 1000) * 0.12;
+      const fSize = n > 0 ? 56 : 44;
+      const shrink = 1 - ((elapsed % 1000) / 1000) * 0.1;
+      // Semi-transparent background pill behind the number for legibility.
+      const padX = 14,
+        padY = 8;
+      const anchorX = CW - 18;
+      const anchorY = 18;
       ctx.save();
-      ctx.translate(CW / 2, CH / 2);
+      ctx.translate(anchorX, anchorY + fSize / 2);
       ctx.scale(shrink, shrink);
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.font = `bold ${fSize}px sans-serif`;
-      ctx.shadowBlur = 70;
+      // Measure text for background pill
+      const tw = ctx.measureText(text).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.roundRect(-(tw + padX * 2), -(fSize / 2 + padY), tw + padX * 2, fSize + padY * 2, 8);
+      ctx.fill();
+      ctx.shadowBlur = 18;
       ctx.shadowColor = color;
       ctx.fillStyle = color;
       ctx.fillText(text, 0, 0);
@@ -848,7 +857,7 @@ export default function RaceScreen() {
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
         computePositions();
-        if (ts - st.countdownStart >= 4000) {
+        if (ts - st.countdownStart >= (cameraConfigRef.current.countdownDurationMs ?? 4000)) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
           // Convert per-racer nextRollTime from relative offset to absolute timestamp
@@ -1073,7 +1082,16 @@ export default function RaceScreen() {
       const cam =
         st.phase === PHASE.RACING
           ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H, dt)
-          : { zoom: 1, offsetX: 0, offsetY: 0 };
+          : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
+            ? camDirRef.current.updateCountdown(
+                st.racers,
+                ts,
+                ts - st.countdownStart,
+                cameraConfigRef.current.countdownDurationMs ?? 4000,
+                CANVAS_W,
+                CANVAS_H
+              )
+            : { zoom: 1, offsetX: 0, offsetY: 0 };
 
       // Sync camera HUD state — only triggers React re-render on actual state change
       const newHudState = camDirRef.current.hudState;
