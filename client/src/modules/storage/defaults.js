@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 8,
+  schemaVersion: 10,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -141,6 +141,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 4000,
       minStateHold: 5000,
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
+      overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
       spritePx: 65,
@@ -152,6 +153,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 8000,
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
+      leadAheadEnabled: false, // OFF by default so user sees centered behavior first
     },
     BATTLE_ZOOM: {
       spritePx: 101,
@@ -163,6 +165,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 8000,
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
+      leadAheadEnabled: false,
     },
     COMEBACK_ZOOM: {
       spritePx: 50,
@@ -174,6 +177,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 8000,
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
+      leadAheadEnabled: false,
     },
   },
   // Entry-convergence thresholds: when camera is within these values of its target after

@@ -2559,17 +2559,32 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._camT).toBeCloseTo(0.53, 5);
   });
 
-  it('follow: offsetX === targetOffsetX (no lerp lag)', () => {
+  it('follow: offsetX NOT overwritten — targetOffsetX set, pixel-lerp applies (PR #109: no hard-pin jump)', () => {
+    // follow-Phase ist nun Pixel-Lerp statt Hard-Pin, minimaler Lag von ~7px ist akzeptiert.
+    // Previously this.offsetX = this.targetOffsetX = resolved caused a 248px spike at the
+    // convergence frame. Fix: only targetOffsetX is set; pixel-lerp closes the gap from next frame.
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
     cd._camT = 0.5;
+    // Simulate T-space pin value at old _camT — intentionally behind focusT position
+    const preCallOffsetX = -700;
+    const preCallOffsetY = 0;
+    cd.offsetX = preCallOffsetX;
+    cd.offsetY = preCallOffsetY;
     cd._observerPhase = 'follow';
     cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 10500);
-    expect(cd.offsetX).toBe(cd.targetOffsetX);
-    expect(cd.offsetY).toBe(cd.targetOffsetY);
+    // _camT must snap to focusT (so _setTargets tracks racer from next frame)
+    expect(cd._camT).toBeCloseTo(0.51, 5);
+    // targetOffsetX must be updated (finite, resolved from focusT)
+    expect(isFinite(cd.targetOffsetX)).toBe(true);
+    // offsetX must NOT be overwritten — pixel-lerp handles it from the next frame
+    expect(cd.offsetX).toBe(preCallOffsetX);
+    expect(cd.offsetY).toBe(preCallOffsetY);
+    // There is a gap for pixel-lerp to close (not already at target)
+    expect(Math.abs(cd.targetOffsetX - cd.offsetX)).toBeGreaterThan(0);
   });
 
   it('lead-out triggered when remainingMs <= leadOutDuration * 1000', () => {
@@ -3216,5 +3231,287 @@ describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => 
       720
     );
     expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM); // exited
+  });
+});
+
+// ── OVERVIEW radial offset ────────────────────────────────────────────────────
+
+describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
+  function makeCD(offsetPx = 150) {
+    const mockShape = {
+      getCenterPoint: () => ({ x: 640, y: 360 }),
+      getPosition: () => ({ x: 640, y: 360 }),
+      isOpen: false,
+    };
+    return new CameraDirector(
+      1280,
+      720,
+      false,
+      {
+        cameraStateProfiles: {
+          OVERVIEW: {
+            spritePx: 36,
+            trackingTC: 1.5,
+            entryTC: 1.5,
+            leadInDuration: 0,
+            leadOutDuration: 0,
+            innerFramePct: 0.7,
+            maxStateDuration: 4000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 10000,
+            overviewOffsetPx: offsetPx,
+          },
+          LEADER_ZOOM: {
+            spritePx: 65,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.3,
+            leadOutDuration: 1.5,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+          BATTLE_ZOOM: {
+            spritePx: 101,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.2,
+            leadOutDuration: 1.0,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+          COMEBACK_ZOOM: {
+            spritePx: 50,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.3,
+            leadOutDuration: 1.5,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+        },
+        entryConvergenceZoom: 0.05,
+        entryConvergencePx: 10,
+        transitionTConvergence: 0.03,
+      },
+      36,
+      mockShape
+    );
+  }
+
+  it('leader above center: pan target shifts toward center (downward), showing field below', () => {
+    const cd = makeCD(150);
+    // Leader (640,100), center (640,360): dy = 100-360 = -260, scale = 150/260
+    // result.y = 100 - (-260)*(150/260) = 100+150 = 250
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
+    expect(result.x).toBeCloseTo(640);
+    expect(result.y).toBeCloseTo(250);
+  });
+
+  it('leader right of center: pan target shifts leftward, showing field to the left', () => {
+    const cd = makeCD(100);
+    // Leader (900,360), center (640,360): dx = 260, scale = 100/260
+    // result.x = 900 - 260*(100/260) = 900-100 = 800
+    const result = cd._applyOverviewRadialOffset({ x: 900, y: 360 });
+    expect(result.x).toBeCloseTo(800);
+    expect(result.y).toBeCloseTo(360);
+  });
+
+  it('leader at track center: returns position unchanged (no radial direction)', () => {
+    const cd = makeCD(150);
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 360 });
+    expect(result).toEqual({ x: 640, y: 360 });
+  });
+
+  it('overviewOffsetPx=0: pan target unchanged (leader stays centered)', () => {
+    const cd = makeCD(0);
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
+    expect(result.x).toBeCloseTo(640);
+    expect(result.y).toBeCloseTo(100);
+  });
+});
+
+// ── Lead-Ahead toggle ─────────────────────────────────────────────────────────
+
+describe('CameraDirector — leadAheadEnabled toggle', () => {
+  const mockShape = {
+    getCenterPoint: () => ({ x: 640, y: 360 }),
+    getPosition: (t) => ({ x: t * 1280, y: 360 }),
+    isOpen: false,
+  };
+
+  function makeLeadAheadConfig(leadAheadEnabled) {
+    return {
+      cameraStateProfiles: {
+        OVERVIEW: {
+          spritePx: 36,
+          trackingTC: 1.5,
+          entryTC: 1.5,
+          leadInDuration: 0,
+          leadOutDuration: 0,
+          innerFramePct: 0.7,
+          maxStateDuration: 4000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 10000,
+        },
+        LEADER_ZOOM: {
+          spritePx: 65,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+        BATTLE_ZOOM: {
+          spritePx: 101,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.2,
+          leadOutDuration: 1.0,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+        COMEBACK_ZOOM: {
+          spritePx: 50,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled,
+        },
+      },
+      transitionTConvergence: 0.03,
+      entryConvergenceZoom: 0.05,
+      entryConvergencePx: 10,
+    };
+  }
+
+  // NOMINAL_T_PER_FRAME (0.001) is reset in _transition(); LEADER leadInDuration = 0.3s.
+  // Expected lead-ahead when ON: 0.001 × 60 × 0.3 = 0.018
+  const NOMINAL_T_PER_FRAME = 0.001;
+  const LEADER_LEAD_IN = 0.3;
+  const FRAME_RATE = 60;
+
+  it('leadAheadEnabled: false — _transitionTargetT equals focusT (no lead-ahead offset)', () => {
+    const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(false), 36, mockShape);
+    cd._camT = null;
+    const racer = { t: 0.4, x: 512, y: 360, finished: false };
+    // Post-start-hold window → LEADER_ZOOM
+    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    cd._transition([racer], 10000, raceState);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // With lead-ahead OFF, target must equal focusT exactly
+    expect(cd._transitionTargetT).toBeCloseTo(0.4, 5);
+  });
+
+  it('leadAheadEnabled: true — _transitionTargetT > focusT (lead-ahead offset applied)', () => {
+    const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(true), 36, mockShape);
+    cd._camT = null;
+    const racer = { t: 0.4, x: 512, y: 360, finished: false };
+    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    cd._transition([racer], 10000, raceState);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // With lead-ahead ON: target = focusT + NOMINAL_T_PER_FRAME × 60 × 0.3
+    const expectedOffset = NOMINAL_T_PER_FRAME * FRAME_RATE * LEADER_LEAD_IN;
+    expect(cd._transitionTargetT).toBeCloseTo(0.4 + expectedOffset, 5);
+    expect(cd._transitionTargetT).toBeGreaterThan(0.4);
+  });
+});
+
+// ── Convergence-jump fix (PR #109) ────────────────────────────────────────────
+
+describe('CameraDirector — convergence-jump fix', () => {
+  // leadInDuration=0 → convergence gate goes directly to 'follow' (not 'lead-in'),
+  // which is the scenario that previously produced the hard-pin spike.
+  // leadOutDuration=1.5 → phasedEnabled=true so _computePhasedPanTarget runs in tracking mode.
+  const WORLD_W = 1280;
+  const jumpFixShape = makeShape(WORLD_W);
+  const jumpFixConfig = {
+    ...profileConfig,
+    cameraStateProfiles: {
+      ...profileConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+        leadInDuration: 0,
+        leadOutDuration: 1.5,
+      },
+    },
+    transitionTConvergence: 0.03,
+  };
+
+  it('convergence frame: no spike — offsetX delta bounded by T-space lerp step, not full T-gap', () => {
+    // Before fix: dox on convergence frame = full T-gap × worldPx (up to 248px).
+    // After fix: dox = only the T-space lerp step for that frame (a fraction of the gap).
+    const cd = new CameraDirector(WORLD_W, 720, false, jumpFixConfig, 36, jumpFixShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const ts0 = 10000;
+    cd.stateEnteredAt = ts0;
+    cd._lerpPhase = 'entry';
+    cd._entryStartTs = ts0;
+    cd._observerPhase = 'idle';
+    const focusT = 0.3; // x = 0.3 × 1280 = 384px, within world bounds
+    cd._camT = focusT - 0.025; // T-gap = 0.025 < convergence threshold 0.03
+    cd._transitionTargetT = focusT;
+    cd.zoom = cd.targetZoom = cd._leaderZoom; // zoom already converged
+    const racer = [{ t: focusT, x: focusT * WORLD_W, y: 360, finished: false }];
+    const raceState = { raceElapsed: ts0 + 100, finishedCount: 0, winner: null, finishT: 2.0 };
+
+    const prevOffsetX = cd.offsetX;
+    cd.update(racer, ts0 + 100, raceState, WORLD_W, 720);
+
+    expect(cd._lerpPhase).toBe('tracking'); // convergence fired as expected
+    const dox = Math.abs(cd.offsetX - prevOffsetX);
+    // dox must be well below what the full T-snap would have produced (0.025 × 1280 = 32px).
+    // T-space lerp step: 0.025 × lf_entry × 1280 ≈ 0.025 × 0.14 × 1280 ≈ 4.5px.
+    expect(dox).toBeLessThan(0.025 * WORLD_W); // < 32px (the pre-fix snap magnitude)
+  });
+
+  it('after convergence, pixel-lerp closes remaining offsetX gap within a few tracking frames', () => {
+    // Verifies the gap between offsetX (T-space pin position) and targetOffsetX (racer position)
+    // shrinks smoothly via pixel-lerp — not left open, not snapped in one frame.
+    const cd = new CameraDirector(WORLD_W, 720, false, jumpFixConfig, 36, jumpFixShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const ts0 = 10000;
+    cd.stateEnteredAt = ts0;
+    cd._lerpPhase = 'tracking';
+    const focusT = 0.5; // x = 0.5 × 1280 = 640px
+    cd._camT = focusT;
+    cd.zoom = cd.targetZoom = cd._leaderZoom;
+    cd._observerPhase = 'follow';
+    const racer = [{ t: focusT, x: focusT * WORLD_W, y: 360, finished: false }];
+
+    // Populate targetOffsetX from the racer position
+    cd._computePhasedPanTarget(racer, WORLD_W, 720, 1000 / 60, ts0 + 100);
+    const targetAtFocusT = cd.targetOffsetX;
+
+    // Simulate the convergence gap: offsetX is 100px behind targetOffsetX
+    const GAP = 100;
+    cd.offsetX = targetAtFocusT - GAP;
+    cd.targetOffsetX = targetAtFocusT;
+
+    const raceState = { raceElapsed: ts0 + 100, finishedCount: 0, winner: null, finishT: 2.0 };
+    for (let i = 1; i <= 5; i++) {
+      cd.update(racer, ts0 + 100 + i * 17, raceState, WORLD_W, 720);
+    }
+
+    const gapAfter = Math.abs(cd.targetOffsetX - cd.offsetX);
+    // At least 40% of the gap must close in 5 frames (trackingTC=0.25s → lf≈0.14/frame)
+    expect(gapAfter).toBeLessThan(GAP * 0.6);
   });
 });
