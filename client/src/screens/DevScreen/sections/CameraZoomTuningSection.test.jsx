@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const defaultProfiles = {
   OVERVIEW: {
-    spritePct: 0.05,
+    spritePx: 36,
     trackingTC: 1.5,
     entryTC: 1.5,
     leadInDuration: 0,
@@ -13,7 +13,7 @@ const defaultProfiles = {
     minStateHold: 5000,
   },
   LEADER_ZOOM: {
-    spritePct: 0.08,
+    spritePx: 58,
     trackingTC: 0.3,
     entryTC: 0.3,
     leadInDuration: 0,
@@ -23,7 +23,7 @@ const defaultProfiles = {
     minStateHold: 5000,
   },
   BATTLE_ZOOM: {
-    spritePct: 0.12,
+    spritePx: 86,
     trackingTC: 0.3,
     entryTC: 0.3,
     leadInDuration: 0,
@@ -33,7 +33,7 @@ const defaultProfiles = {
     minStateHold: 5000,
   },
   COMEBACK_ZOOM: {
-    spritePct: 0.065,
+    spritePx: 47,
     trackingTC: 0.3,
     entryTC: 0.3,
     leadInDuration: 0,
@@ -48,10 +48,10 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
   loadCameraConfig: vi.fn(() => freshConfig()),
   saveCameraConfig: vi.fn(),
   DEFAULT_CAMERA_CONFIG: {
-    schemaVersion: 4,
+    schemaVersion: 7,
     cameraStateProfiles: {
       OVERVIEW: {
-        spritePct: 0.05,
+        spritePx: 36,
         trackingTC: 1.5,
         entryTC: 1.5,
         leadInDuration: 0,
@@ -61,7 +61,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         minStateHold: 5000,
       },
       LEADER_ZOOM: {
-        spritePct: 0.08,
+        spritePx: 58,
         trackingTC: 0.3,
         entryTC: 0.3,
         leadInDuration: 0,
@@ -71,7 +71,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         minStateHold: 5000,
       },
       BATTLE_ZOOM: {
-        spritePct: 0.12,
+        spritePx: 86,
         trackingTC: 0.3,
         entryTC: 0.3,
         leadInDuration: 0,
@@ -81,7 +81,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
         minStateHold: 5000,
       },
       COMEBACK_ZOOM: {
-        spritePct: 0.065,
+        spritePx: 47,
         trackingTC: 0.3,
         entryTC: 0.3,
         leadInDuration: 0,
@@ -227,28 +227,28 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText('Periodic OVERVIEW — Max Interval')).toBeTruthy();
   });
 
-  it('shows OVERVIEW spritePct value 0.05', () => {
+  it('shows OVERVIEW spritePx value 36', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.05')).toBe(true);
+    expect(inputs.some((i) => i.value === '36')).toBe(true);
   });
 
-  it('shows LEADER_ZOOM spritePct value 0.08', () => {
+  it('shows LEADER_ZOOM spritePx value 58', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.08')).toBe(true);
+    expect(inputs.some((i) => i.value === '58')).toBe(true);
   });
 
-  it('shows BATTLE_ZOOM spritePct value 0.12', () => {
+  it('shows BATTLE_ZOOM spritePx value 86', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.12')).toBe(true);
+    expect(inputs.some((i) => i.value === '86')).toBe(true);
   });
 
-  it('shows COMEBACK_ZOOM spritePct value 0.065', () => {
+  it('shows COMEBACK_ZOOM spritePx value 47', () => {
     render(<CameraZoomTuningSection />);
     const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.065')).toBe(true);
+    expect(inputs.some((i) => i.value === '47')).toBe(true);
   });
 
   it('shows OVERVIEW trackingTC value 1.5', () => {
@@ -330,22 +330,22 @@ describe('CameraZoomTuningSection — reset all (start from non-default values)'
     loadCameraConfig.mockReturnValue(
       freshConfig({
         cameraStateProfiles: {
-          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePct: 0.07, trackingTC: 2.0, entryTC: 2.0 },
+          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePx: 50, trackingTC: 2.0, entryTC: 2.0 },
           LEADER_ZOOM: {
             ...defaultProfiles.LEADER_ZOOM,
-            spritePct: 0.1,
+            spritePx: 72,
             trackingTC: 1.0,
             entryTC: 1.0,
           },
           BATTLE_ZOOM: {
             ...defaultProfiles.BATTLE_ZOOM,
-            spritePct: 0.15,
+            spritePx: 108,
             trackingTC: 0.8,
             entryTC: 0.8,
           },
           COMEBACK_ZOOM: {
             ...defaultProfiles.COMEBACK_ZOOM,
-            spritePct: 0.09,
+            spritePx: 65,
             trackingTC: 0.5,
             entryTC: 0.5,
           },
@@ -366,11 +366,11 @@ describe('CameraZoomTuningSection — reset all (start from non-default values)'
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         cameraStateProfiles: expect.objectContaining({
-          OVERVIEW: expect.objectContaining({ spritePct: 0.05, trackingTC: 1.5, entryTC: 1.5 }),
-          LEADER_ZOOM: expect.objectContaining({ spritePct: 0.08, trackingTC: 0.3, entryTC: 0.3 }),
-          BATTLE_ZOOM: expect.objectContaining({ spritePct: 0.12, trackingTC: 0.3, entryTC: 0.3 }),
+          OVERVIEW: expect.objectContaining({ spritePx: 36, trackingTC: 1.5, entryTC: 1.5 }),
+          LEADER_ZOOM: expect.objectContaining({ spritePx: 58, trackingTC: 0.3, entryTC: 0.3 }),
+          BATTLE_ZOOM: expect.objectContaining({ spritePx: 86, trackingTC: 0.3, entryTC: 0.3 }),
           COMEBACK_ZOOM: expect.objectContaining({
-            spritePct: 0.065,
+            spritePx: 47,
             trackingTC: 0.3,
             entryTC: 0.3,
           }),
@@ -403,8 +403,8 @@ describe('CameraZoomTuningSection — per-state reset', () => {
     loadCameraConfig.mockReturnValue(
       freshConfig({
         cameraStateProfiles: {
-          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePct: 0.09, trackingTC: 2.0 },
-          LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM, spritePct: 0.1 },
+          OVERVIEW: { ...defaultProfiles.OVERVIEW, spritePx: 65, trackingTC: 2.0 },
+          LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM, spritePx: 72 },
           BATTLE_ZOOM: { ...defaultProfiles.BATTLE_ZOOM },
           COMEBACK_ZOOM: { ...defaultProfiles.COMEBACK_ZOOM },
         },
@@ -416,8 +416,8 @@ describe('CameraZoomTuningSection — per-state reset', () => {
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         cameraStateProfiles: expect.objectContaining({
-          OVERVIEW: expect.objectContaining({ spritePct: 0.05, trackingTC: 1.5 }),
-          LEADER_ZOOM: expect.objectContaining({ spritePct: 0.1 }), // unchanged
+          OVERVIEW: expect.objectContaining({ spritePx: 36, trackingTC: 1.5 }),
+          LEADER_ZOOM: expect.objectContaining({ spritePx: 72 }), // unchanged
         }),
       })
     );

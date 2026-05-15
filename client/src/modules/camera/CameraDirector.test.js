@@ -243,8 +243,8 @@ describe('CameraDirector — bbox clamping', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
-    // 36px fallback → _leaderZoom = 0.08*720/36 = 1.6 (bsX=1 on 1280px world)
-    const leaderZoom = (0.08 * 720) / 36; // 1.6
+    // No config → DEFAULT_SPRITE_PX.leader=58; 36px fallback. _leaderZoom = 58/36 (bsX=1 on 1280px world)
+    const leaderZoom = 58 / 36;
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
@@ -266,18 +266,18 @@ describe('CameraDirector — bbox clamping', () => {
 // ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
 
 describe('CameraDirector — adaptive zoom (B-16)', () => {
-  it('default 1280-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1) ≈ 1.6', () => {
+  it('default 1280-wide world: leaderZoom uses DEFAULT_SPRITE_PX → 58/(36×1) ≈ 1.611', () => {
     const cd = new CameraDirector(1280, 720);
-    // No referenceSpriteSize → 36px fallback. bsX=1280/1280=1.
-    // leaderZoom = 0.08*720 / (36*1) = 57.6/36 = 1.6
-    expect(cd._leaderZoom).toBeCloseTo(1.6, 3);
+    // No config, no referenceSpriteSize → 36px fallback. bsX=1280/1280=1.
+    // leaderZoom = DEFAULT_SPRITE_PX.leader / (36*1) = 58/36 ≈ 1.611
+    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3);
   });
 
-  it('open-track 4000-wide world: leaderZoom uses 36px fallback → 0.08×720/(36×1.5) ≈ 1.067', () => {
+  it('open-track 4000-wide world: leaderZoom uses DEFAULT_SPRITE_PX → 58/(36×1.5) ≈ 1.074', () => {
     const cd = new CameraDirector(4000, 720, true);
-    // Open-track: cam.zoom = targetPx / (baseSize × OPEN_BASE) = 57.6/54 ≈ 1.067
+    // Open-track: cam.zoom = targetPx / (baseSize × OPEN_BASE) = 58/54 ≈ 1.074
     // (worldW does not appear — open-track zoom is track-width-independent by design)
-    expect(cd._leaderZoom).toBeCloseTo(57.6 / 54, 3);
+    expect(cd._leaderZoom).toBeCloseTo(58 / 54, 3);
   });
 
   it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
@@ -372,12 +372,12 @@ describe('CameraDirector — top-3 focus', () => {
 // ── CameraDirector — zoom ordering (inverse logic) ───────────────────────────
 
 describe('CameraDirector — zoom ordering (inverse logic)', () => {
-  it('1280-track: 36px fallback → leaderZoom 1.6, battleZoom 2.4, comebackZoom 1.3', () => {
+  it('1280-track: 36px fallback → leaderZoom ≈1.611, battleZoom ≈2.389, comebackZoom ≈1.306', () => {
     const cd = new CameraDirector(1280, 720);
-    // No referenceSpriteSize → 36px fallback + DEFAULT_SPRITE_PCT, bsX=1.0
-    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
-    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
-    expect(cd._comebackZoom).toBeCloseTo((0.065 * 720) / 36, 3); // 1.3
+    // No config → DEFAULT_SPRITE_PX (58, 86, 47). No referenceSpriteSize → 36px fallback. bsX=1.0
+    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3); // ≈1.611
+    expect(cd._battleZoom).toBeCloseTo(86 / 36, 3); // ≈2.389
+    expect(cd._comebackZoom).toBeCloseTo(47 / 36, 3); // ≈1.306
   });
 
   it('battleZoom > leaderZoom on any track (battle pct > leader pct)', () => {
@@ -748,7 +748,7 @@ describe('estimatedSecondsPerLap', () => {
 
 // ── CameraDirector — configurable zoom multipliers ────────────────────────────
 
-// Base config shared by battle-trigger tests — includes spritePctOfCanvas so no fallback warning.
+// Base config shared by battle-trigger tests — v2 format with spritePctOfCanvas (legacy path).
 const pctConfig = {
   schemaVersion: 2,
   spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
@@ -760,7 +760,7 @@ const pctConfig = {
   endgameThreshold: 0.85,
 };
 
-describe('CameraDirector — spritePctOfCanvas config', () => {
+describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
   it('with referenceSpriteSize=50: _leaderZoom = 0.08×720 / 50 ≈ 1.152 (closed bsX=1)', () => {
     const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 50, 3);
@@ -781,10 +781,11 @@ describe('CameraDirector — spritePctOfCanvas config', () => {
     expect(cd._battleZoom).toBe(5.0);
   });
 
-  it('no config passed: DEFAULT_SPRITE_PCT + 36px fallback gives predictable zoom values', () => {
+  it('no config passed: DEFAULT_SPRITE_PX + 36px fallback gives predictable zoom values', () => {
+    // When config=null, falls through to pixel defaults (58px leader, 86px battle).
     const cd = new CameraDirector(1280, 720);
-    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3); // 1.6
-    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4
+    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3); // DEFAULT_SPRITE_PX.leader / FALLBACK_REF
+    expect(cd._battleZoom).toBeCloseTo(86 / 36, 3); // DEFAULT_SPRITE_PX.battle / FALLBACK_REF
   });
 
   it('open track OVERVIEW targetZoom is overviewZoom regardless of spritePctOfCanvas', () => {
@@ -1511,15 +1512,16 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
     expect(OPEN_TRACK_BASE_ZOOM).toBe(1.5);
   });
 
-  it('inverse path activates when referenceSpriteSize > 0 and spritePctOfCanvas present', () => {
+  it('legacy spritePctOfCanvas path: referenceSpriteSize > 0 gives correct zoom', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
-    // With baseSize=50, bsX=1, leader=0.08*720=57.6: _leaderZoom=57.6/50=1.152
+    // Legacy path (no cameraStateProfiles): leader=0.08×720=57.6 → zoom=57.6/50=1.152
     expect(cd._leaderZoom).toBeCloseTo(57.6 / 50, 3);
   });
 
-  it('referenceSpriteSize=0 uses 36px default, NOT multiplier ratios', () => {
+  it('referenceSpriteSize=0 uses 36px default with legacy spritePctOfCanvas path', () => {
+    // inverseConfig has spritePctOfCanvas (legacy path) but no cameraStateProfiles.
+    // 36px fallback + leader pct 0.08: 0.08×720/36 = 1.6 (≠ old LEADER_ZOOM_RATIO=1.4)
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 0);
-    // 36px fallback + leader pct 0.08: 0.08*720/36 = 1.6 (≠ old LEADER_ZOOM_RATIO=1.4)
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
     expect(cd._leaderZoom).not.toBeCloseTo(1.4, 1); // confirm it is NOT the old multiplier value
   });
@@ -1534,7 +1536,7 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
     expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
   });
 
-  it('live-apply: spritePctOfCanvas.leader 0.08→0.12 changes _leaderZoom after updateConfig()', () => {
+  it('live-apply: legacy spritePctOfCanvas.leader 0.08→0.12 changes _leaderZoom after updateConfig()', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
     const zoomBefore = cd._leaderZoom;
     cd.updateConfig({
@@ -1542,7 +1544,7 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.12 },
     });
     expect(cd._leaderZoom).toBeGreaterThan(zoomBefore);
-    // new _leaderZoom: 0.12*720/50 = 1.728
+    // legacy path: 0.12×720/50 = 1.728
     expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 50, 3);
   });
 });
@@ -1825,7 +1827,7 @@ describe('tcToLerpFactor (Phase 1 helper)', () => {
 const profileConfig = {
   cameraStateProfiles: {
     OVERVIEW: {
-      spritePct: 0.05,
+      spritePx: 36,
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0,
@@ -1835,7 +1837,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     LEADER_ZOOM: {
-      spritePct: 0.09,
+      spritePx: 65,
       trackingTC: 0.25,
       entryTC: 0.25,
       leadInDuration: 0,
@@ -1845,7 +1847,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     BATTLE_ZOOM: {
-      spritePct: 0.14,
+      spritePx: 101,
       trackingTC: 0.35,
       entryTC: 0.35,
       leadInDuration: 0,
@@ -1855,7 +1857,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     COMEBACK_ZOOM: {
-      spritePct: 0.07,
+      spritePx: 50,
       trackingTC: 0.3,
       entryTC: 0.3,
       leadInDuration: 0,
@@ -1877,15 +1879,15 @@ const profileConfig = {
 };
 
 describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
-  it('_leaderZoom computed from profiles.LEADER_ZOOM.spritePct (0.09)', () => {
+  it('_leaderZoom computed from profiles.LEADER_ZOOM.spritePx (65)', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
-    // 0.09 × 720 / 50 = 1.296 on closed 1280px track (bsX=1)
-    expect(cd._leaderZoom).toBeCloseTo((0.09 * 720) / 50, 3);
+    // 65px / 50 = 1.3 on closed 1280px track (bsX=1)
+    expect(cd._leaderZoom).toBeCloseTo(65 / 50, 3);
   });
 
-  it('_battleZoom computed from profiles.BATTLE_ZOOM.spritePct (0.14)', () => {
+  it('_battleZoom computed from profiles.BATTLE_ZOOM.spritePx (101)', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
-    expect(cd._battleZoom).toBeCloseTo((0.14 * 720) / 50, 3);
+    expect(cd._battleZoom).toBeCloseTo(101 / 50, 3);
   });
 
   it('_tcLeader comes from profiles.LEADER_ZOOM.trackingTC (0.25)', () => {
@@ -1913,12 +1915,13 @@ describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
       ...profileConfig,
       cameraStateProfiles: {
         ...profileConfig.cameraStateProfiles,
-        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, spritePct: 0.15 },
+        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, spritePx: 108 },
       },
     };
     cd.updateConfig(updated);
     expect(cd._leaderZoom).toBeGreaterThan(before);
-    expect(cd._leaderZoom).toBeCloseTo((0.15 * 720) / 50, 3);
+    // 108px / 50 = 2.16
+    expect(cd._leaderZoom).toBeCloseTo(108 / 50, 3);
   });
 
   it('updateConfig() with updated profiles changes _tcBattle and _lfBattle', () => {
@@ -2046,14 +2049,16 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
   });
 
   it('lerpPhase switches to tracking when all three dimensions converge', () => {
-    // Open track: CameraDirector never touches offsetX/Y, so offsets stay at 0.
-    // Park zoom exactly at target → convergence check passes on next update.
+    // Open tracks now compute offsetX/Y via _setOpenTrackTargets (same as closed tracks).
+    // Run until convergence — zoom and offsets both need to reach their targets.
     const cd = new CameraDirector(6000, 720, true, phase2Config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    cd.zoom = cd._leaderZoom; // pre-converge zoom
-    // offsets stay 0 (open-track path never writes them)
-    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    cd.zoom = cd._leaderZoom; // pre-converge zoom so only offsets need to settle
+    for (let i = 0; i < 300; i++) {
+      cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+      if (cd.lerpPhase === 'tracking') break;
+    }
     expect(cd.lerpPhase).toBe('tracking');
   });
 
@@ -2163,7 +2168,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._phasedByState[CAM_STATE.LEADER_ZOOM].leadOutDuration).toBe(0);
   });
 
-  it('_transition() initialises _camT at focusT + leadInDt for LEADER_ZOOM', () => {
+  it('_transition() sets _camT = focusT and _transitionTargetT = focusT+leadAhead for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [
@@ -2176,13 +2181,14 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    // _prevFocusT is null → speedPerFrame = NOMINAL_T_PER_FRAME = 0.001
-    // leadInDt = 0.001 × 60 × 1.0 = 0.06; focusT = 0.5 → _camT = 0.56
-    expect(cd._camT).toBeCloseTo(0.56, 5);
-    expect(cd._observerPhase).toBe('lead-in');
+    // T-space lerp: _camT starts at focusT; _transitionTargetT includes lead-ahead offset
+    // (speed=NOMINAL_T_PER_FRAME=0.001, FRAME_RATE=60, leadInDuration=1.0s → offset=0.06)
+    expect(cd._camT).toBeCloseTo(0.5, 5);
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._transitionTargetT).toBeCloseTo(0.56, 3);
   });
 
-  it('_transition() sets _camT = null for OVERVIEW (no phased pan on overview)', () => {
+  it('_transition() to OVERVIEW sets _camT = leader.t and _transitionTargetT = leader.t (no lead-ahead)', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     const racers = [{ x: 100, y: 360, t: 0.1 }];
@@ -2192,11 +2198,14 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
+    // OVERVIEW gets T-space lerp targeting the leader's T (no lead-ahead).
+    // _camT is released to null after convergence but stays non-null during entry.
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
-    expect(cd._camT).toBeNull();
+    expect(cd._camT).toBeCloseTo(0.1, 5);
+    expect(cd._transitionTargetT).toBeCloseTo(0.1, 5);
   });
 
-  it('_transition() resets _observerPhase to "lead-in" for LEADER_ZOOM on each state change', () => {
+  it('_transition() resets _observerPhase to "idle" and sets _transitionTargetT for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd._observerPhase = 'follow';
@@ -2210,7 +2219,32 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
       winner: null,
       finishT: 6000,
     });
-    expect(cd._observerPhase).toBe('lead-in');
+    // Observer phase is always reset to 'idle' at transition;
+    // lead-in starts only at convergence (set by the convergence gate).
+    expect(cd._observerPhase).toBe('idle');
+    expect(cd._transitionTargetT).not.toBeNull();
+  });
+
+  it('_transition() resets _prevFocusT to null to prevent stale speed estimate on first update frame', () => {
+    // Regression guard for camera-pr102-bug-diagnosis.md Bug 1:
+    // _prevFocusT accumulates over the previous state's tracking phase. Without this reset,
+    // frame 1 of the new state computes speed = (fT_now − stale_prevFocusT) which can be
+    // many frames of racer movement, inflating leadAhead and causing _shortestTDelta to
+    // return a negative value (camera moves backward briefly before correcting forward).
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd._prevFocusT = 2.38; // stale value from a previous tracking phase
+    const racers = [
+      { x: 800, y: 360, t: 0.5 },
+      { x: 700, y: 360, t: 0.4 },
+    ];
+    cd._transition(racers, 10000, {
+      raceElapsed: 10000,
+      finishedCount: 0,
+      winner: null,
+      finishT: 6000,
+    });
+    expect(cd._prevFocusT).toBeNull();
   });
 
   it('observerPhase getter returns _observerPhase', () => {
@@ -2225,6 +2259,85 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd.camT).toBeNull();
     cd._camT = 0.42;
     expect(cd.camT).toBeCloseTo(0.42, 5);
+  });
+
+  it('convergence gate: when zoom+T both converge, switches to lead-in with _camT at lead-ahead pos', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    // Simulate T-space lerp having already positioned _camT at focusT+leadAhead (= 0.56).
+    // speed=0.001, FRAME_RATE=60, leadInDuration=1.0s → leadAhead=0.06, target=0.5+0.06=0.56
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.56; // already at lead-ahead position via T-space lerp
+    cd._transitionTargetT = 0.56; // T-space converged
+    cd._observerPhase = 'idle';
+    // Force zoom convergence regardless of resolveCamera's world-edge adjustments
+    cd._entryConvergenceZoom = 100;
+    cd.zoom = cd.targetZoom = cd._leaderZoom;
+    cd.offsetX = cd.targetOffsetX = 0;
+    cd.offsetY = cd.targetOffsetY = 0;
+    // One update call — zoom converged + T converged → convergence gate fires
+    cd.update(
+      [
+        { x: 800, y: 360, t: 0.5 },
+        { x: 700, y: 360, t: 0.4 },
+      ],
+      10100,
+      { raceElapsed: 10100, finishedCount: 0, winner: null, finishT: 6000 },
+      1280,
+      720
+    );
+    // Camera is already at lead-ahead position; no jump. Convergence gate starts lead-in.
+    expect(cd._lerpPhase).toBe('tracking');
+    expect(cd._observerPhase).toBe('lead-in');
+    expect(cd._leadInStartTs).toBe(10100);
+    expect(cd._transitionTargetT).toBeNull();
+    // _camT should still be near the lead-ahead position (not snapped back to focusT)
+    expect(cd._camT).toBeGreaterThan(0.5);
+  });
+
+  it('T-space lerp: _camT moves along shorter track arc (0.3→0.7), stays in [0.3, 0.76]', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.3; // camera at left arc of oval
+    cd._transitionTargetT = 0.76; // focusT=0.7 + leadAhead≈0.06
+    cd._observerPhase = 'idle';
+    const raceState = { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 };
+    // Run 10 frames: _camT should move through [0.3, 0.76] without jumping through the
+    // infield shortcut (which would go 0.3 → 0.0 → 0.7, i.e., wrapping backward)
+    for (let i = 0; i < 10; i++) {
+      cd.update([{ x: 2800, y: 360, t: 0.7 }], 1000 + i * 16, raceState, 1280, 720);
+      expect(cd._camT).toBeGreaterThanOrEqual(0.3);
+      expect(cd._camT).toBeLessThanOrEqual(0.78); // allow for lead-ahead expansion
+    }
+    expect(cd._camT).toBeGreaterThan(0.3); // confirmed: moved forward
+  });
+
+  it('T-space lerp: wrap-around takes shorter arc (t=0.95→t=0.05, forward not backward)', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._lerpPhase = 'entry';
+    cd._camT = 0.95; // just before start/finish line
+    cd._transitionTargetT = 1.11; // leader at t=1.05 (lap 2) + leadAhead=0.06
+    cd._observerPhase = 'idle';
+    // Leader just crossed start/finish into lap 2
+    cd.update(
+      [{ x: 1000, y: 360, t: 1.05 }],
+      1000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 },
+      1280,
+      720
+    );
+    // shortestTDelta(0.95, 1.11) = 0.16 → moves forward across the line
+    // NOT backward (which would give delta = -0.84 and move toward 0.0)
+    expect(cd._camT).toBeGreaterThan(0.95); // moved forward (toward 1.0+)
+    expect(cd._camT).toBeLessThan(1.11); // didn't overshoot
   });
 
   it('lead-in: stays in "lead-in" phase until leadInDuration seconds elapsed', () => {
@@ -2572,15 +2685,15 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     expect(reachedTracking).toBe(true);
   });
 
-  it('BATTLE_ZOOM with high spritePct (large zoom): still converges to tracking', () => {
-    // Simulate a user having dialed spritePct up to 0.25 in the dev screen.
+  it('BATTLE_ZOOM with high spritePx (large zoom): still converges to tracking', () => {
+    // Simulate a user having dialed spritePx up to 180px (≈0.25×720) in the dev screen.
     // Needs 3 close racers so _isPulk=true → early exit doesn't fire before convergence.
     const shape = makeShape(4000);
     const highZoomConfig = {
       ...phasedConfig,
       cameraStateProfiles: {
         ...phasedConfig.cameraStateProfiles,
-        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, spritePct: 0.25 },
+        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, spritePx: 180 },
       },
     };
     const cd = new CameraDirector(1280, 720, false, highZoomConfig, 36, shape);
@@ -2619,8 +2732,9 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     cd.stateEnteredAt = 0;
     cd._camT = 0.5;
     cd._lerpPhase = 'entry';
-    cd._observerPhase = 'lead-in';
-    cd._leadInStartTs = 0; // set at transition time
+    cd._observerPhase = 'idle';
+    cd._leadInStartTs = 0;
+    cd._pendingLeadIn = true; // Design A: lead-in fires at convergence, not at transition
     const racers = [
       { x: 2000, y: 360, t: 0.5 },
       { x: 1992, y: 360, t: 0.498 },
@@ -2700,10 +2814,10 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
-    cd._camT = 0.5; // initial lead-in position
+    cd._camT = 0.5; // initial position before T-space lerp runs
+    cd._transitionTargetT = 0.524; // initial target (midpoint 0.524, will be updated by block)
     cd._lerpPhase = 'entry';
-    cd._observerPhase = 'lead-in';
-    cd._leadInStartTs = 1000;
+    cd._observerPhase = 'idle';
     const racers = [
       { x: 2100, y: 360, t: 0.525 }, // leader has moved ahead
       { x: 2092, y: 360, t: 0.523 },
@@ -2715,8 +2829,9 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
       1280,
       720
     );
-    // _camT should track midpoint (0.525+0.523)/2 = 0.524, not stay at 0.5
-    expect(cd._camT).toBeCloseTo(0.524, 5);
+    // T-space lerp moves _camT toward focusT+leadAhead — not frozen at 0.5
+    expect(cd._camT).toBeGreaterThan(0.5); // moved in right direction
+    expect(cd._camT).toBeLessThan(0.56); // one frame: partial progress only
   });
 });
 
