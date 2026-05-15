@@ -3515,3 +3515,120 @@ describe('CameraDirector — convergence-jump fix', () => {
     expect(gapAfter).toBeLessThan(GAP * 0.6);
   });
 });
+
+// ── Lead-in → follow observer phase snap fix (Phänomen 4) ────────────────────
+//
+// When the lead-in phase ends (elapsed >= leadInDuration), the old code fell
+// through to the follow branch which executed `this._camT = focusT`, snapping
+// _camT from the lead-ahead anchor to the racer position. On a curved track
+// this translates to a large pixel-space jump on the very next frame (the
+// pixel-lerp tries to close the sudden targetOffsetX gap). The fix returns
+// early on the transition frame so _camT stays at the lead-ahead anchor;
+// pixel-lerp closes the gap smoothly from frame N+2 onward — analogous to
+// the PR #109 convergence-frame fix in the entry → tracking path.
+
+describe('CameraDirector — lead-in → follow snap fix (Phänomen 4)', () => {
+  // Curved open track: y = 360 + 500*sin(30π*t).
+  // At t≈0.5 the sine term changes rapidly (~47 000 px/unit-T), so a 0.03T
+  // gap between the lead-ahead anchor and the racer produces ~60 px of Y
+  // movement through one pixel-lerp step without the fix — large enough to
+  // detect reliably.
+  function makeCurvedOpenShape(trackLen) {
+    return {
+      getTotalLength: () => trackLen,
+      getPosition: (t) => ({
+        x: t * trackLen,
+        y: 360 + 500 * Math.sin(30 * Math.PI * t),
+      }),
+    };
+  }
+
+  const TRACK_LEN = 1280;
+  const LEAD_AHEAD_T = 0.5;
+  const FOCUS_T = 0.53;
+  const LEAD_IN_DURATION_S = 0.5; // seconds
+
+  const snapConfig = {
+    ...profileConfig,
+    enableFrameLog: true,
+    cameraStateProfiles: {
+      ...profileConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+        trackingTC: 0.25,
+        leadInDuration: LEAD_IN_DURATION_S,
+        maxStateDuration: 30000,
+        minStateHold: 30000,
+      },
+    },
+  };
+
+  function makeSnapTestCD() {
+    const shape = makeCurvedOpenShape(TRACK_LEN);
+    const cd = new CameraDirector(TRACK_LEN, 720, true, snapConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    // Zoom fully converged so pixel-lerp uses a stable lerpFactor
+    cd.zoom = cd.targetZoom = cd._leaderZoom;
+    cd._lerpPhase = 'tracking';
+    cd._observerPhase = 'follow';
+    cd._camT = LEAD_AHEAD_T;
+    cd._transitionTargetT = null;
+    cd._prevFocusT = LEAD_AHEAD_T;
+
+    // Prime offsetX at the lead-ahead pixel position
+    const racersAtLeadAhead = [
+      { t: LEAD_AHEAD_T, x: LEAD_AHEAD_T * TRACK_LEN, y: 360, finished: false },
+    ];
+    cd._computePhasedPanTarget(racersAtLeadAhead, 1280, 720, 17, 1);
+    cd.offsetX = cd.targetOffsetX;
+    cd.offsetY = cd.targetOffsetY;
+
+    // Switch to lead-in with a deliberate T-gap between anchor and racer
+    cd._observerPhase = 'lead-in';
+    cd._leadInStartTs = 0;
+    cd._prevFocusT = FOCUS_T - 0.001;
+    return cd;
+  }
+
+  const racers = [
+    {
+      t: FOCUS_T,
+      x: FOCUS_T * TRACK_LEN,
+      y: 360 + 500 * Math.sin(30 * Math.PI * FOCUS_T),
+      finished: false,
+    },
+    { t: FOCUS_T - 0.01, x: (FOCUS_T - 0.01) * TRACK_LEN, y: 360, finished: false },
+  ];
+  const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 2.0 };
+
+  it('_camT is NOT snapped to focusT on the lead-in → follow transition frame', () => {
+    const cd = makeSnapTestCD();
+    // ts=600ms > leadInDuration*1000=500ms → transition fires this frame
+    cd.update(racers, 600, raceState, 1280, 720);
+    expect(cd._observerPhase).toBe('follow');
+    // _camT must remain at the lead-ahead anchor, not at FOCUS_T
+    expect(cd._camT).toBeCloseTo(LEAD_AHEAD_T, 4);
+  });
+
+  it('pixel movement on the transition frame and first follow frame stay within per-frame range', () => {
+    const cd = makeSnapTestCD();
+    const oxBefore = cd.offsetX;
+    const oyBefore = cd.offsetY;
+
+    // Transition frame
+    cd.update(racers, 600, raceState, 1280, 720);
+    const deltaN = Math.hypot(cd.offsetX - oxBefore, cd.offsetY - oyBefore);
+
+    // First genuine follow frame
+    const oxN = cd.offsetX;
+    const oyN = cd.offsetY;
+    cd.update(racers, 617, raceState, 1280, 720);
+    const deltaN1 = Math.hypot(cd.offsetX - oxN, cd.offsetY - oyN);
+
+    // Without fix: deltaN1 ≈ 60px (T-snap causes pixel-lerp to chase a jumped target).
+    // With fix: both frames produce near-zero movement (≪ 50px).
+    expect(deltaN).toBeLessThan(50);
+    expect(deltaN1).toBeLessThan(50);
+  });
+});
