@@ -1168,6 +1168,11 @@ export class CameraDirector {
       const elapsed = ts - (this._leadInStartTs ?? ts);
       if (!_leadAheadOn || elapsed >= prof.leadInDuration * 1000) {
         this._observerPhase = 'follow';
+        // Don't run follow code on the transition frame: _camT stays at the lead-in
+        // anchor so targetOffsetX doesn't jump. Pixel-lerp closes the gap from the
+        // next frame onward — analogous to the PR #109 convergence-jump fix.
+        this._prevFocusT = focusT;
+        return;
       } else {
         // Camera stays at the lead-in position initialised in _transition()
         this._prevFocusT = focusT;
