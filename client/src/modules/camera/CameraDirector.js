@@ -290,6 +290,10 @@ export class CameraDirector {
       this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
     }
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    // Countdown start zoom: typically clamped to overviewZoom (whole track visible).
+    this._countdownStartZoom = this._computeZoomForTargetSize(
+      config?.countdownStartZoomSpritePx ?? 1
+    );
   }
 
   /**
@@ -1240,6 +1244,78 @@ export class CameraDirector {
     }
 
     this._prevFocusT = focusT;
+  }
+
+  /**
+   * Camera update for the pre-race countdown phase.
+   * Zooms from countdownStartZoom toward OVERVIEW zoom (ease-out cubic) and centres
+   * on the geometric centroid of all racers (the start pulk).
+   * Sets this.zoom/offsetX/offsetY directly so CameraDirector is ready for the first
+   * RACING update() call without a visible jump.
+   *
+   * @param {Array<{x:number,y:number}>} racers  All racers with world positions.
+   * @param {number} ts  Current timestamp (used to keep stateEnteredAt in sync).
+   * @param {number} countdownElapsed  ms since countdown start (0 … countdownDurationMs).
+   * @param {number} countdownDurationMs  Total duration of the countdown in ms.
+   * @param {number} canvasW  Canvas width in pixels.
+   * @param {number} canvasH  Canvas height in pixels.
+   * @returns {{ zoom: number, offsetX: number, offsetY: number }}
+   */
+  updateCountdown(racers, ts, countdownElapsed, countdownDurationMs, canvasW, canvasH) {
+    const duration = Math.max(1, countdownDurationMs);
+    const progress = Math.min(1, Math.max(0, countdownElapsed / duration));
+    // Ease-out cubic: starts fast, arrives smoothly — no hard stop at transition to OVERVIEW.
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    const targetZoom =
+      this._countdownStartZoom + (this._overviewStateZoom - this._countdownStartZoom) * eased;
+    this.zoom = targetZoom;
+    this.targetZoom = targetZoom;
+
+    // Pan to pulk centroid (mean world position of all racers).
+    let cx = (this._worldBounds.minX + this._worldBounds.maxX) / 2;
+    let cy = (this._worldBounds.minY + this._worldBounds.maxY) / 2;
+    if (racers && racers.length > 0) {
+      cx = racers.reduce((s, r) => s + (r.x ?? cx), 0) / racers.length;
+      cy = racers.reduce((s, r) => s + (r.y ?? cy), 0) / racers.length;
+    }
+
+    if (this._isOpenTrack) {
+      const effZoom = targetZoom * OPEN_TRACK_BASE_ZOOM;
+      const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoom);
+      const camX = Math.max(
+        this._worldBounds.minX,
+        Math.min(camXMax, cx - canvasW / (2 * effZoom))
+      );
+      this.offsetX = -camX * effZoom;
+      const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoom);
+      const camY = Math.max(
+        this._worldBounds.minY,
+        Math.min(camYMax, cy - canvasH / (2 * effZoom))
+      );
+      this.offsetY = -camY * effZoom;
+    } else {
+      const effZoomX = targetZoom * this._bsX;
+      const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoomX);
+      const camX = Math.max(
+        this._worldBounds.minX,
+        Math.min(camXMax, cx - canvasW / (2 * effZoomX))
+      );
+      this.offsetX = -camX * effZoomX;
+      const effZoomY = targetZoom * this._bsY;
+      const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoomY);
+      const camY = Math.max(
+        this._worldBounds.minY,
+        Math.min(camYMax, cy - canvasH / (2 * effZoomY))
+      );
+      this.offsetY = -camY * effZoomY;
+    }
+    this.targetOffsetX = this.offsetX;
+    this.targetOffsetY = this.offsetY;
+    // Keep stateEnteredAt current so the first RACING update() sees a small stateAge.
+    this.stateEnteredAt = ts;
+
+    return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
   /**
