@@ -32,6 +32,13 @@
 //              state gap ese/lf ≈ 0.026 was above the old threshold). Also adds
 //              maxEntryDurationMs per state as a time-based fallback, and the global
 //              transitionTConvergence field. v7→v8 migration adds new fields with defaults.
+//              Schema v9 (2026-05-15): adds overviewOffsetPx to the OVERVIEW profile. The
+//              camera shifts toward the field so the leader appears at the outer viewport
+//              edge with the pack behind (radial offset from track center). Default 150 px.
+//              v8→v9 migration injects overviewOffsetPx into the existing OVERVIEW profile.
+//              Schema v10 (2026-05-15): adds leadAheadEnabled boolean per state (LEADER_ZOOM,
+//              BATTLE_ZOOM, COMEBACK_ZOOM). Default false so the user sees centered behavior
+//              on upgrade. v9→v10 migration injects leadAheadEnabled: false into those states.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -182,6 +189,35 @@ function migrateV5toV6(config) {
   };
 }
 
+// v9→v10: add leadAheadEnabled: false to LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM profiles.
+// OVERVIEW is excluded — it never uses lead-ahead (leadInDuration: 0).
+function migrateV9toV10(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = { ...oldProfiles };
+  for (const state of ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM']) {
+    const oldState = oldProfiles[state] ?? defProfiles[state];
+    newProfiles[state] = {
+      ...oldState,
+      leadAheadEnabled: oldState.leadAheadEnabled ?? false,
+    };
+  }
+  return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 10 };
+}
+
+// v8→v9: add overviewOffsetPx to the OVERVIEW profile. All other fields pass through unchanged.
+function migrateV8toV9(config) {
+  const defOVERVIEW = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = { ...oldProfiles };
+  const oldOVERVIEW = oldProfiles.OVERVIEW ?? {};
+  newProfiles.OVERVIEW = {
+    ...oldOVERVIEW,
+    overviewOffsetPx: oldOVERVIEW.overviewOffsetPx ?? defOVERVIEW.overviewOffsetPx,
+  };
+  return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 9 };
+}
+
 // v7→v8: add transitionTConvergence global and maxEntryDurationMs per state.
 // All other fields pass through unchanged — no behavior change for existing tuned configs
 // since the new fields are injected at their new defaults.
@@ -329,9 +365,41 @@ export function loadCameraConfig() {
     return migrateV7toV8(merged);
   }
 
-  if (stored.schemaVersion !== 8) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 8) {
+    // v8→v9: deep-merge profiles, then inject overviewOffsetPx into OVERVIEW.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV8toV9(merged);
+  }
 
-  // v8: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion === 9) {
+    // v9→v10: deep-merge profiles, then inject leadAheadEnabled into LEADER/BATTLE/COMEBACK.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV9toV10(merged);
+  }
+
+  if (stored.schemaVersion !== 10) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v10: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -347,5 +415,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 8 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 10 });
 }

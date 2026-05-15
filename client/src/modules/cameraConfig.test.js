@@ -103,20 +103,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 8', () => {
+  it('writes schemaVersion: 10', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 8 })
+      expect.objectContaining({ schemaVersion: 10 })
     );
   });
 
-  it('writes schemaVersion: 8 even when not in input config', () => {
+  it('writes schemaVersion: 10 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 8 })
+      expect.objectContaining({ schemaVersion: 10 })
     );
   });
 });
@@ -437,5 +437,63 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
     const cfg = loadCameraConfig();
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(80);
     expect(cfg.schemaVersion).toBe(8);
+  });
+
+  it('v9 stored config is migrated to v10, leadAheadEnabled injected into LEADER/BATTLE/COMEBACK', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 9,
+      cameraStateProfiles: {
+        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
+        LEADER_ZOOM: {
+          spritePx: 80,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          // no leadAheadEnabled — should be injected as false
+        },
+        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
+        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(10);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadAheadEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadAheadEnabled).toBe(false);
+    // User-tuned spritePx preserved
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(80);
+  });
+
+  it('v8 stored config is migrated to v9, overviewOffsetPx injected into OVERVIEW profile', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 8,
+      cameraStateProfiles: {
+        OVERVIEW: {
+          spritePx: 36,
+          trackingTC: 1.5,
+          entryTC: 1.5,
+          leadInDuration: 0,
+          leadOutDuration: 0,
+          innerFramePct: 0.7,
+          maxStateDuration: 4000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 10000,
+          // no overviewOffsetPx — should be injected by migration
+        },
+        LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM },
+        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
+        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(9);
+    expect(cfg.cameraStateProfiles.OVERVIEW.overviewOffsetPx).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.overviewOffsetPx
+    );
   });
 });

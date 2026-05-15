@@ -104,6 +104,24 @@ const PROFILE_FIELDS = [
     tip: (v) =>
       `Time-based fallback: forces entry→tracking after this many ms, even if T-space gap is above threshold. ${v}ms.`,
   },
+  {
+    key: 'overviewOffsetPx',
+    label: 'Overview radial offset (px)',
+    min: 0,
+    max: 400,
+    step: 10,
+    onlyFor: 'OVERVIEW',
+    tip: (v) =>
+      `Camera shifts toward field so leader appears at outer viewport edge. 0 = centered (like LEADER). ${v}px.`,
+  },
+  {
+    key: 'leadAheadEnabled',
+    label: 'Lead-Ahead aktiv',
+    type: 'boolean',
+    onlyFor: ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'],
+    tip: (v) =>
+      `Wenn aktiv: Kamera zeigt Track vor dem Racer (führt ins Bild rein). Bei OFF sitzt der Racer zentriert. Aktuell: ${v ? 'ON' : 'OFF'}.`,
+  },
 ];
 
 function StateProfileBlock({ stateName, profile, defaults, onChangeField, onReset }) {
@@ -144,7 +162,11 @@ function StateProfileBlock({ stateName, profile, defaults, onChangeField, onRese
         </button>
       </summary>
       <div className={s.formGrid} style={{ marginTop: '0.4rem', marginBottom: '0.4rem' }}>
-        {PROFILE_FIELDS.map(({ key, label, min, max, step, tip }) => {
+        {PROFILE_FIELDS.filter(
+          ({ onlyFor }) =>
+            !onlyFor ||
+            (Array.isArray(onlyFor) ? onlyFor.includes(stateName) : onlyFor === stateName)
+        ).map(({ key, label, min, max, step, tip, type }) => {
           const val = profile[key] ?? defaults[key];
           return (
             <div key={key} className={s.formGroup}>
@@ -155,18 +177,26 @@ function StateProfileBlock({ stateName, profile, defaults, onChangeField, onRese
                 {label}
                 <InfoTooltip text={tip(val, STATE_LABELS[stateName])} />
               </label>
-              <input
-                type="number"
-                className={s.input}
-                min={min}
-                max={max}
-                step={step}
-                value={val}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (v >= min && v <= max) onChangeField(stateName, key, v);
-                }}
-              />
+              {type === 'boolean' ? (
+                <input
+                  type="checkbox"
+                  checked={!!val}
+                  onChange={(e) => onChangeField(stateName, key, e.target.checked)}
+                />
+              ) : (
+                <input
+                  type="number"
+                  className={s.input}
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={val}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (v >= min && v <= max) onChangeField(stateName, key, v);
+                  }}
+                />
+              )}
             </div>
           );
         })}
