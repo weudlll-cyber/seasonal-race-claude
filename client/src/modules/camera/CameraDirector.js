@@ -165,9 +165,8 @@ export class CameraDirector {
     this._battleDiagFrameCount = 0;
     this._battleDiagSnapshots = [];
     this._battleDiagFrozen = false;
-    // Frame-log ring buffer — enabled per config.enableFrameLog (default OFF).
+    // Frame-log ring buffer — enabled per config.enableFrameLog (set by _computeTimingConfig above).
     // Records ~28 fields per frame; 600 frames ≈ 10 s @ 60 fps.
-    this._diagEnabled = false;
     this._diagRingBuf = new Array(DIAG_RING_SIZE);
     this._diagRingIdx = 0;
     this._diagFrameIdx = 0;
