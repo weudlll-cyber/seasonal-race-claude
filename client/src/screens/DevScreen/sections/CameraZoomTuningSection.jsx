@@ -122,6 +122,14 @@ const PROFILE_FIELDS = [
     tip: (v) =>
       `Wenn aktiv: Kamera zeigt Track vor dem Racer (führt ins Bild rein). Bei OFF sitzt der Racer zentriert. Aktuell: ${v ? 'ON' : 'OFF'}.`,
   },
+  {
+    key: 'leadOutEnabled',
+    label: 'Lead-Out aktiv',
+    type: 'boolean',
+    onlyFor: ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'],
+    tip: (v) =>
+      `Wenn aktiv: Kamera verlangsamt sich exponentiell in den letzten leadOutDuration Sekunden vor State-Ende (Racer läuft weiter). Bei OFF folgt die Kamera dem Racer bis zum Wechsel. Aktuell: ${v ? 'ON' : 'OFF'}.`,
+  },
 ];
 
 function StateProfileBlock({ stateName, profile, defaults, onChangeField, onReset }) {

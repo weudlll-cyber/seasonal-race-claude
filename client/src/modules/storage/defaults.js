@@ -154,6 +154,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false, // OFF by default so user sees centered behavior first
+      leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
       spritePx: 101,
@@ -166,6 +167,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false,
+      leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
       spritePx: 50,
@@ -178,6 +180,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false,
+      leadOutEnabled: false,
     },
   },
   // Entry-convergence thresholds: when camera is within these values of its target after

@@ -3632,3 +3632,98 @@ describe('CameraDirector — lead-in → follow snap fix (Phänomen 4)', () => {
     expect(deltaN1).toBeLessThan(50);
   });
 });
+
+// ── Lead-out toggle (Phänomen: Kamera bleibt stehen, Racer läuft weiter) ─────
+//
+// leadOutEnabled: false → trigger block is bypassed; _observerPhase stays
+//   'follow' until the state transition — camera continues tracking the racer.
+// leadOutEnabled: true  → existing lead-out behavior is unchanged (analog to
+//   the existing lead-out tests in the Etappe 9 block above).
+
+describe('CameraDirector — lead-out toggle', () => {
+  // phasedConfig has LEADER_ZOOM: leadOutDuration=1.5, BATTLE_ZOOM: leadOutDuration=1.0.
+  // effectiveDuration = max(maxStateDuration=4000, minStateHold=5000) = 5000.
+  // stateEnteredAt=10000 → stateEndTime=15000; lead-out fires at ts >= 13500.
+
+  const leadOutOffConfig = {
+    ...phasedConfig,
+    cameraStateProfiles: {
+      ...phasedConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...phasedConfig.cameraStateProfiles.LEADER_ZOOM,
+        leadOutEnabled: false,
+      },
+    },
+  };
+
+  const leadOutOnConfig = {
+    ...phasedConfig,
+    cameraStateProfiles: {
+      ...phasedConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...phasedConfig.cameraStateProfiles.LEADER_ZOOM,
+        leadOutEnabled: true,
+      },
+    },
+  };
+
+  it('toggle OFF: observerPhase stays "follow" even when remainingMs <= leadOutDuration * 1000', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, leadOutOffConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    // ts=13600: remaining=1400ms ≤ 1500ms — would trigger lead-out if enabled
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13600);
+    expect(cd._observerPhase).toBe('follow');
+  });
+
+  it('toggle OFF: camera continues following racer through the lead-out window', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, leadOutOffConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    // Call multiple times deep inside what would be the lead-out window
+    for (let i = 0; i < 5; i++) {
+      cd._computePhasedPanTarget(
+        [{ x: 2040, y: 360, t: 0.51 }],
+        1280,
+        720,
+        1000 / 60,
+        14000 + i * 17
+      );
+    }
+    // _camT must track focusT (=0.51) because follow branch ran every frame
+    expect(cd._camT).toBeCloseTo(0.51, 5);
+    expect(cd._observerPhase).toBe('follow');
+  });
+
+  it('toggle ON: lead-out triggers normally — behavior identical to current master', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, leadOutOnConfig, 36, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 10000;
+    cd._lerpPhase = 'tracking';
+    cd._camT = 0.5;
+    cd._observerPhase = 'follow';
+    // ts=13000: remaining=2000ms > 1500ms → still follow
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13000);
+    expect(cd._observerPhase).toBe('follow');
+    // ts=13600: remaining=1400ms ≤ 1500ms → lead-out fires
+    cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 13600);
+    expect(cd._observerPhase).toBe('lead-out');
+  });
+
+  it('_leadOutEnabledByState initialized from config profiles', () => {
+    const shape = makeShape(4000);
+    const cd = new CameraDirector(1280, 720, false, leadOutOffConfig, 36, shape);
+    expect(cd._leadOutEnabledByState[CAM_STATE.LEADER_ZOOM]).toBe(false);
+    // BATTLE_ZOOM has no explicit leadOutEnabled in leadOutOffConfig → defaults to true (backward compat)
+    expect(cd._leadOutEnabledByState[CAM_STATE.BATTLE_ZOOM]).toBe(true);
+  });
+});

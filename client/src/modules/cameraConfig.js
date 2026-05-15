@@ -39,6 +39,10 @@
 //              Schema v10 (2026-05-15): adds leadAheadEnabled boolean per state (LEADER_ZOOM,
 //              BATTLE_ZOOM, COMEBACK_ZOOM). Default false so the user sees centered behavior
 //              on upgrade. v9→v10 migration injects leadAheadEnabled: false into those states.
+//              Schema v11 (2026-05-15): adds leadOutEnabled boolean per state (LEADER_ZOOM,
+//              BATTLE_ZOOM, COMEBACK_ZOOM). Default false — lead-out causes a "camera stops,
+//              racer runs away" effect that the entry-phase of the next state already covers.
+//              v10→v11 migration injects leadOutEnabled: false into those states.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -203,6 +207,22 @@ function migrateV9toV10(config) {
     };
   }
   return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 10 };
+}
+
+// v10→v11: add leadOutEnabled: false to LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM profiles.
+// OVERVIEW is excluded — it has leadOutDuration: 0 so lead-out is never active there.
+function migrateV10toV11(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = { ...oldProfiles };
+  for (const state of ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM']) {
+    const oldState = oldProfiles[state] ?? defProfiles[state];
+    newProfiles[state] = {
+      ...oldState,
+      leadOutEnabled: oldState.leadOutEnabled ?? false,
+    };
+  }
+  return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 11 };
 }
 
 // v8→v9: add overviewOffsetPx to the OVERVIEW profile. All other fields pass through unchanged.
@@ -382,7 +402,7 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 9) {
-    // v9→v10: deep-merge profiles, then inject leadAheadEnabled into LEADER/BATTLE/COMEBACK.
+    // v9→v10→v11: deep-merge profiles, then inject leadAheadEnabled, then leadOutEnabled.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -394,12 +414,28 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV9toV10(merged);
+    return migrateV10toV11(migrateV9toV10(merged));
   }
 
-  if (stored.schemaVersion !== 10) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 10) {
+    // v10→v11: deep-merge profiles, then inject leadOutEnabled into LEADER/BATTLE/COMEBACK.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV10toV11(merged);
+  }
 
-  // v10: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 11) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v11: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -415,5 +451,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 10 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 11 });
 }

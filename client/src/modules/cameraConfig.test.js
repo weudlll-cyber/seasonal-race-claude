@@ -103,20 +103,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 10', () => {
+  it('writes schemaVersion: 11', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 10 })
+      expect.objectContaining({ schemaVersion: 11 })
     );
   });
 
-  it('writes schemaVersion: 10 even when not in input config', () => {
+  it('writes schemaVersion: 11 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 10 })
+      expect.objectContaining({ schemaVersion: 11 })
     );
   });
 });
@@ -439,7 +439,7 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
     expect(cfg.schemaVersion).toBe(8);
   });
 
-  it('v9 stored config is migrated to v10, leadAheadEnabled injected into LEADER/BATTLE/COMEBACK', () => {
+  it('v9 stored config is migrated to v11, leadAheadEnabled and leadOutEnabled injected into LEADER/BATTLE/COMEBACK', () => {
     storageGet.mockReturnValue({
       schemaVersion: 9,
       cameraStateProfiles: {
@@ -454,17 +454,20 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
           maxStateDuration: 8000,
           minStateHold: 5000,
           maxEntryDurationMs: 5000,
-          // no leadAheadEnabled — should be injected as false
+          // no leadAheadEnabled or leadOutEnabled — both should be injected as false
         },
         BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
         COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(10);
+    expect(cfg.schemaVersion).toBe(11);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadAheadEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
     // User-tuned spritePx preserved
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(80);
   });
@@ -495,5 +498,87 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spritePx', () => {
     expect(cfg.cameraStateProfiles.OVERVIEW.overviewOffsetPx).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.overviewOffsetPx
     );
+  });
+});
+
+// ── v10 → v11 migration: leadOutEnabled ──────────────────────────────────────
+
+describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
+  it('v10 config without leadOutEnabled gets it injected as false for LEADER/BATTLE/COMEBACK', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 10,
+      cameraStateProfiles: {
+        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
+        LEADER_ZOOM: {
+          spritePx: 75,
+          trackingTC: 0.25,
+          entryTC: 0.8,
+          leadInDuration: 0.3,
+          leadOutDuration: 1.5,
+          innerFramePct: 0.7,
+          maxStateDuration: 8000,
+          minStateHold: 5000,
+          maxEntryDurationMs: 5000,
+          leadAheadEnabled: true, // user had turned it on
+          // no leadOutEnabled — should be injected as false
+        },
+        BATTLE_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM,
+          leadAheadEnabled: false,
+        },
+        COMEBACK_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM,
+          leadAheadEnabled: false,
+        },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
+    // Existing user-tuned values preserved
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(true);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(75);
+    // OVERVIEW is not touched
+    expect('leadOutEnabled' in cfg.cameraStateProfiles.OVERVIEW).toBe(false);
+  });
+
+  it('v10 config with leadOutEnabled: true already set keeps it as true', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 10,
+      cameraStateProfiles: {
+        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
+        LEADER_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+          leadOutEnabled: true, // user explicitly enabled it
+        },
+        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
+        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
+  });
+
+  it('v11 pass-through: schemaVersion 11 config is returned with merged profiles, no re-migration', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 11,
+      cameraStateProfiles: {
+        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
+        LEADER_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+          leadOutEnabled: true,
+          spritePx: 90,
+        },
+        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
+        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(11);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(90);
   });
 });
