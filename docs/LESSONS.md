@@ -1507,3 +1507,22 @@ die man nicht auf dem Radar hat. Visuelle Beobachtung ("Racer bleiben zusammen")
 Auskunft über die Kraft-Ursache.
 
 **Verweis:** docs/diagnose/free-lane-force-attribution-summary.md; PR #98 Commit `7459e08`.
+
+---
+
+## Lesson 75 — PR-Merge-Routine: AUDIT.md statt Zeilen-Referenz
+
+**Kontext:** Frühere Merge-Prompts enthielten die Anweisung „L106-L108 in AUDIT.md anpassen" —
+eine fragile Zeilen-Referenz, die nach jedem Merge obsolet wird.
+
+**Erkenntnis:** Zeilen-Nummern in Prompts veralten sofort. Die korrekte Formulierung beschreibt
+die inhaltliche Aufgabe, nicht den Ort: „AUDIT.md aktualisieren".
+
+**Workflow für jeden squash-merge auf master:**
+1. Tests auf master laufen lassen — Gesamt-Count + Anzahl Failures erfassen.
+2. Test-Count-Historie in AUDIT.md: letzten Eintrag ggf. korrigieren (Branch-Count ≠ Master-Count möglich), Master-HEAD-SHA aktualisieren.
+3. Falls Branch-HEAD-Zeile vorhanden: entfernen oder auf Master umschreiben.
+4. Commit: `docs: update AUDIT.md — PR #NNN squash-merge (schema vX, NNN tests)`.
+
+**Konsequenz:** Merge-Prompts nennen ab sofort nur noch „AUDIT.md aktualisieren" — kein
+Zeilenbezug mehr.
