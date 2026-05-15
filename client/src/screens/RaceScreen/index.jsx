@@ -136,8 +136,8 @@ export default function RaceScreen() {
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [finishTState, setFinishTState] = useState(1);
-  const [camState, setCamState] = useState('OVERVIEW');
-  const prevHudStateRef = useRef('OVERVIEW');
+  const [camState, setCamState] = useState(null);
+  const prevHudStateRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig, setCameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);

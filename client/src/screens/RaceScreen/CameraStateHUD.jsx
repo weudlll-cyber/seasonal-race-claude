@@ -71,7 +71,7 @@ export default function CameraStateHUD({ camState, visible }) {
     return () => clearTimeout(timerRef.current);
   }, [camState, displayState]);
 
-  if (!visible) return null;
+  if (!visible || !displayState) return null;
 
   const cfg = STATE_CONFIG[displayState] ?? STATE_CONFIG.OVERVIEW;
   const stateKey = displayState.toLowerCase().replace(/_/g, '-');

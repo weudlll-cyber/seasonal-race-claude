@@ -132,4 +132,16 @@ describe('selectOverlayText', () => {
     const r = selectOverlayText('OVERVIEW', { leader: 'Solo' }, { OVERVIEW: -1 });
     expect(r).not.toBeNull();
   });
+
+  it('race-start scenario: first OVERVIEW entry after null→OVERVIEW transition picks a text', () => {
+    // Regression test for the bug where camState/prevHudStateRef started as 'OVERVIEW',
+    // preventing the first real OVERVIEW entry from being detected as a state change.
+    // Fix: both initialised to null, so null→'OVERVIEW' is a genuine transition.
+    // This test simulates what RaceScreen does when that transition fires:
+    // selectOverlayText('OVERVIEW', { leader: 'Max' }, {}) — no prior state, fresh race.
+    const result = selectOverlayText('OVERVIEW', { leader: 'Max' }, {});
+    expect(result).not.toBeNull();
+    expect(result.text).toContain('Max');
+    expect(result.text).not.toMatch(/\{[^}]+\}/); // no unresolved placeholders
+  });
 });
