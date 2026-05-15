@@ -1180,7 +1180,10 @@ export class CameraDirector {
       return;
     }
 
-    // Follow: pin camera to racer (Δ ≈ 0, no lerp lag)
+    // Follow: _camT tracks racer exactly each frame so _setTargets always targets the racer.
+    // targetOffsetX/Y are updated here; offsetX/Y are NOT overwritten — pixel-lerp closes
+    // any remaining gap (e.g. the convergence-frame T-space distance) smoothly over the next
+    // few frames. Hard-pinning offsetX here caused the visible jump on the convergence frame.
     this._camT = focusT;
     // Open: clamp to [0,1]; closed: wrap circularly.
     const tNorm = this._isOpenTrack
@@ -1209,8 +1212,8 @@ export class CameraDirector {
         innerFramePct: this._innerFramePct,
         minEffZoom: this.overviewZoom * BASE,
       });
-      this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-      this.offsetY = this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
+      this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+      this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
     } else {
       const resolved = resolveCamera({
         targetWorld: camPos,
@@ -1220,12 +1223,8 @@ export class CameraDirector {
         innerFramePct: this._innerFramePct,
         minEffZoom: this._bsX,
       });
-      this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-      this.offsetY = this.targetOffsetY = this._closedOffsetY(
-        camPos.y,
-        resolved.effectiveZoom,
-        canvasH
-      );
+      this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
+      this.targetOffsetY = this._closedOffsetY(camPos.y, resolved.effectiveZoom, canvasH);
     }
 
     this._prevFocusT = focusT;

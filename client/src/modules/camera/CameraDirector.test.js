@@ -2559,17 +2559,32 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     expect(cd._camT).toBeCloseTo(0.53, 5);
   });
 
-  it('follow: offsetX === targetOffsetX (no lerp lag)', () => {
+  it('follow: offsetX NOT overwritten — targetOffsetX set, pixel-lerp applies (PR #109: no hard-pin jump)', () => {
+    // follow-Phase ist nun Pixel-Lerp statt Hard-Pin, minimaler Lag von ~7px ist akzeptiert.
+    // Previously this.offsetX = this.targetOffsetX = resolved caused a 248px spike at the
+    // convergence frame. Fix: only targetOffsetX is set; pixel-lerp closes the gap from next frame.
     const shape = makeShape(4000);
     const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
     cd._camT = 0.5;
+    // Simulate T-space pin value at old _camT — intentionally behind focusT position
+    const preCallOffsetX = -700;
+    const preCallOffsetY = 0;
+    cd.offsetX = preCallOffsetX;
+    cd.offsetY = preCallOffsetY;
     cd._observerPhase = 'follow';
     cd._computePhasedPanTarget([{ x: 2040, y: 360, t: 0.51 }], 1280, 720, 1000 / 60, 10500);
-    expect(cd.offsetX).toBe(cd.targetOffsetX);
-    expect(cd.offsetY).toBe(cd.targetOffsetY);
+    // _camT must snap to focusT (so _setTargets tracks racer from next frame)
+    expect(cd._camT).toBeCloseTo(0.51, 5);
+    // targetOffsetX must be updated (finite, resolved from focusT)
+    expect(isFinite(cd.targetOffsetX)).toBe(true);
+    // offsetX must NOT be overwritten — pixel-lerp handles it from the next frame
+    expect(cd.offsetX).toBe(preCallOffsetX);
+    expect(cd.offsetY).toBe(preCallOffsetY);
+    // There is a gap for pixel-lerp to close (not already at target)
+    expect(Math.abs(cd.targetOffsetX - cd.offsetX)).toBeGreaterThan(0);
   });
 
   it('lead-out triggered when remainingMs <= leadOutDuration * 1000', () => {
@@ -3416,5 +3431,87 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
     const expectedOffset = NOMINAL_T_PER_FRAME * FRAME_RATE * LEADER_LEAD_IN;
     expect(cd._transitionTargetT).toBeCloseTo(0.4 + expectedOffset, 5);
     expect(cd._transitionTargetT).toBeGreaterThan(0.4);
+  });
+});
+
+// ── Convergence-jump fix (PR #109) ────────────────────────────────────────────
+
+describe('CameraDirector — convergence-jump fix', () => {
+  // leadInDuration=0 → convergence gate goes directly to 'follow' (not 'lead-in'),
+  // which is the scenario that previously produced the hard-pin spike.
+  // leadOutDuration=1.5 → phasedEnabled=true so _computePhasedPanTarget runs in tracking mode.
+  const WORLD_W = 1280;
+  const jumpFixShape = makeShape(WORLD_W);
+  const jumpFixConfig = {
+    ...profileConfig,
+    cameraStateProfiles: {
+      ...profileConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+        leadInDuration: 0,
+        leadOutDuration: 1.5,
+      },
+    },
+    transitionTConvergence: 0.03,
+  };
+
+  it('convergence frame: no spike — offsetX delta bounded by T-space lerp step, not full T-gap', () => {
+    // Before fix: dox on convergence frame = full T-gap × worldPx (up to 248px).
+    // After fix: dox = only the T-space lerp step for that frame (a fraction of the gap).
+    const cd = new CameraDirector(WORLD_W, 720, false, jumpFixConfig, 36, jumpFixShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const ts0 = 10000;
+    cd.stateEnteredAt = ts0;
+    cd._lerpPhase = 'entry';
+    cd._entryStartTs = ts0;
+    cd._observerPhase = 'idle';
+    const focusT = 0.3; // x = 0.3 × 1280 = 384px, within world bounds
+    cd._camT = focusT - 0.025; // T-gap = 0.025 < convergence threshold 0.03
+    cd._transitionTargetT = focusT;
+    cd.zoom = cd.targetZoom = cd._leaderZoom; // zoom already converged
+    const racer = [{ t: focusT, x: focusT * WORLD_W, y: 360, finished: false }];
+    const raceState = { raceElapsed: ts0 + 100, finishedCount: 0, winner: null, finishT: 2.0 };
+
+    const prevOffsetX = cd.offsetX;
+    cd.update(racer, ts0 + 100, raceState, WORLD_W, 720);
+
+    expect(cd._lerpPhase).toBe('tracking'); // convergence fired as expected
+    const dox = Math.abs(cd.offsetX - prevOffsetX);
+    // dox must be well below what the full T-snap would have produced (0.025 × 1280 = 32px).
+    // T-space lerp step: 0.025 × lf_entry × 1280 ≈ 0.025 × 0.14 × 1280 ≈ 4.5px.
+    expect(dox).toBeLessThan(0.025 * WORLD_W); // < 32px (the pre-fix snap magnitude)
+  });
+
+  it('after convergence, pixel-lerp closes remaining offsetX gap within a few tracking frames', () => {
+    // Verifies the gap between offsetX (T-space pin position) and targetOffsetX (racer position)
+    // shrinks smoothly via pixel-lerp — not left open, not snapped in one frame.
+    const cd = new CameraDirector(WORLD_W, 720, false, jumpFixConfig, 36, jumpFixShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const ts0 = 10000;
+    cd.stateEnteredAt = ts0;
+    cd._lerpPhase = 'tracking';
+    const focusT = 0.5; // x = 0.5 × 1280 = 640px
+    cd._camT = focusT;
+    cd.zoom = cd.targetZoom = cd._leaderZoom;
+    cd._observerPhase = 'follow';
+    const racer = [{ t: focusT, x: focusT * WORLD_W, y: 360, finished: false }];
+
+    // Populate targetOffsetX from the racer position
+    cd._computePhasedPanTarget(racer, WORLD_W, 720, 1000 / 60, ts0 + 100);
+    const targetAtFocusT = cd.targetOffsetX;
+
+    // Simulate the convergence gap: offsetX is 100px behind targetOffsetX
+    const GAP = 100;
+    cd.offsetX = targetAtFocusT - GAP;
+    cd.targetOffsetX = targetAtFocusT;
+
+    const raceState = { raceElapsed: ts0 + 100, finishedCount: 0, winner: null, finishT: 2.0 };
+    for (let i = 1; i <= 5; i++) {
+      cd.update(racer, ts0 + 100 + i * 17, raceState, WORLD_W, 720);
+    }
+
+    const gapAfter = Math.abs(cd.targetOffsetX - cd.offsetX);
+    // At least 40% of the gap must close in 5 frames (trackingTC=0.25s → lf≈0.14/frame)
+    expect(gapAfter).toBeLessThan(GAP * 0.6);
   });
 });
