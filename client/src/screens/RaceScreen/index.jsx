@@ -1101,8 +1101,7 @@ export default function RaceScreen() {
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          cameraConfigRef.current.spritePctOfCanvas?.overview ?? 0.05,
-          CANVAS_H
+          cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spritePx ?? 36
         ),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,

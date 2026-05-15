@@ -123,13 +123,16 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 5,
+  schemaVersion: 7,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
+  // spritePx: target sprite height in world pixels (same coord system as track corridor ≈150px).
+  // Derived from the v6 defaults: OVERVIEW=0.05×720=36, LEADER=0.09×720≈65, BATTLE=0.14×720≈101,
+  // COMEBACK=0.07×720=50. Canvas-resolution-independent — identical proportion on Open and Closed tracks.
   cameraStateProfiles: {
     OVERVIEW: {
-      spritePct: 0.05,
+      spritePx: 36,
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
@@ -139,7 +142,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
     },
     LEADER_ZOOM: {
-      spritePct: 0.09,
+      spritePx: 65,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -149,7 +152,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
     },
     BATTLE_ZOOM: {
-      spritePct: 0.14,
+      spritePx: 101,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -159,7 +162,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       minStateHold: 5000,
     },
     COMEBACK_ZOOM: {
-      spritePct: 0.07,
+      spritePx: 50,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,

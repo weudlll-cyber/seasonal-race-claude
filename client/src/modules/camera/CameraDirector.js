@@ -45,7 +45,11 @@ const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
-const DEFAULT_SPRITE_PCT = { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 };
+// Pixel defaults used when no config (or no cameraStateProfiles) is provided.
+// Values match Math.round(legacyPct × 720): 0.08→58, 0.12→86, 0.065→47.
+const DEFAULT_SPRITE_PX = { leader: 58, battle: 86, comeback: 47 };
+// Legacy percent fallback used only when config has spritePctOfCanvas but no profiles.
+const DEFAULT_SPRITE_PCT = { leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
@@ -83,8 +87,8 @@ export class CameraDirector {
    *   or double-scaling artifacts (true on closed).
    * @param {object|null} [config=null]
    *   Optional camera tuning config (from cameraConfig.js). Drives the inverse-zoom
-   *   path via spritePctOfCanvas. When spritePctOfCanvas is missing, DEFAULT_SPRITE_PCT
-   *   is used. Call updateConfig() for live-apply without re-construction.
+   *   path via cameraStateProfiles.spritePx (v7+) or legacy spritePctOfCanvas.
+   *   Call updateConfig() for live-apply without re-construction.
    * @param {number} [referenceSpriteSize=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
    *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
@@ -209,14 +213,14 @@ export class CameraDirector {
   /**
    * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
    *
-   * Each zoom level is computed so sprites render at the configured fraction of canvas
-   * height (spritePctOfCanvas). When config lacks spritePctOfCanvas, DEFAULT_SPRITE_PCT
-   * is used. When referenceSpriteSize is 0, a 36px fallback is used with a console warning.
-   * Cross-track invariant: same pct → same screen pixels on any track width.
+   * v7+: each zoom level is computed from spritePx (world pixels) stored in
+   * cameraStateProfiles. When the legacy spritePctOfCanvas path is used (v2/v3 configs
+   * without profiles), the percent value is multiplied by CANVAS_H_REF to get the
+   * equivalent screen-pixel target — preserving cross-track invariance.
    *
    * Edge case: if effectiveOverviewPx already exceeds a state's target (e.g. large sprites
    * on a narrow open track), the safety net in _computeZoomForTargetSize clamps zoom to
-   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise pct values
+   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise spritePx
    * or reduce sprite displaySize.
    *
    * @param {object|null} config
@@ -229,23 +233,29 @@ export class CameraDirector {
       );
     }
 
-    // Prefer per-state profiles; fall back to legacy spritePctOfCanvas for old configs / tests.
     const profiles = config?.cameraStateProfiles;
-    let pct;
     if (profiles) {
-      pct = {
-        leader: profiles.LEADER_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.leader,
-        battle: profiles.BATTLE_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.battle,
-        comeback: profiles.COMEBACK_ZOOM?.spritePct ?? DEFAULT_SPRITE_PCT.comeback,
+      // v7 path: spritePx is the direct target in world/screen pixels (canvas-resolution-independent).
+      const sizePx = {
+        leader: profiles.LEADER_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.leader,
+        battle: profiles.BATTLE_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.battle,
+        comeback: profiles.COMEBACK_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.comeback,
       };
+      this._leaderZoom = this._computeZoomForTargetSize(sizePx.leader);
+      this._battleZoom = this._computeZoomForTargetSize(sizePx.battle);
+      this._comebackZoom = this._computeZoomForTargetSize(sizePx.comeback);
+    } else if (config?.spritePctOfCanvas) {
+      // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
+      const rawPct = config.spritePctOfCanvas;
+      this._leaderZoom = this._computeZoomForTargetSize(rawPct.leader * CANVAS_H_REF);
+      this._battleZoom = this._computeZoomForTargetSize(rawPct.battle * CANVAS_H_REF);
+      this._comebackZoom = this._computeZoomForTargetSize(rawPct.comeback * CANVAS_H_REF);
     } else {
-      const rawPct = config?.spritePctOfCanvas ?? DEFAULT_SPRITE_PCT;
-      pct = { leader: rawPct.leader, battle: rawPct.battle, comeback: rawPct.comeback };
+      // No config at all: use pixel defaults directly.
+      this._leaderZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.leader);
+      this._battleZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.battle);
+      this._comebackZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.comeback);
     }
-
-    this._leaderZoom = this._computeZoomForTargetSize(pct.leader * CANVAS_H_REF);
-    this._battleZoom = this._computeZoomForTargetSize(pct.battle * CANVAS_H_REF);
-    this._comebackZoom = this._computeZoomForTargetSize(pct.comeback * CANVAS_H_REF);
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
   }
 

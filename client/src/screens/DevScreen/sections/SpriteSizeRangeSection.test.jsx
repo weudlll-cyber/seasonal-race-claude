@@ -3,8 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../modules/cameraConfig.js', () => ({
   loadCameraConfig: vi.fn(() => ({
-    schemaVersion: 2,
-    spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+    schemaVersion: 7,
+    cameraStateProfiles: {
+      OVERVIEW: { spritePx: 36 },
+      LEADER_ZOOM: { spritePx: 65 },
+      BATTLE_ZOOM: { spritePx: 101 },
+      COMEBACK_ZOOM: { spritePx: 50 },
+    },
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
@@ -14,8 +19,13 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
   })),
   saveCameraConfig: vi.fn(),
   DEFAULT_CAMERA_CONFIG: {
-    schemaVersion: 2,
-    spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+    schemaVersion: 7,
+    cameraStateProfiles: {
+      OVERVIEW: { spritePx: 36 },
+      LEADER_ZOOM: { spritePx: 65 },
+      BATTLE_ZOOM: { spritePx: 101 },
+      COMEBACK_ZOOM: { spritePx: 50 },
+    },
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
@@ -30,8 +40,13 @@ import SpriteSizeRangeSection from './SpriteSizeRangeSection.jsx';
 
 function freshConfig(overrides = {}) {
   return {
-    schemaVersion: 2,
-    spritePctOfCanvas: { overview: 0.05, leader: 0.08, battle: 0.12, comeback: 0.065 },
+    schemaVersion: 7,
+    cameraStateProfiles: {
+      OVERVIEW: { spritePx: 36 },
+      LEADER_ZOOM: { spritePx: 65 },
+      BATTLE_ZOOM: { spritePx: 101 },
+      COMEBACK_ZOOM: { spritePx: 50 },
+    },
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
@@ -96,15 +111,20 @@ describe('SpriteSizeRangeSection — reset (L58: start from non-default values)'
     );
   });
 
-  it('reset does NOT change spritePctOfCanvas', () => {
-    const customPct = { overview: 0.07, leader: 0.1, battle: 0.15, comeback: 0.08 };
+  it('reset does NOT change cameraStateProfiles', () => {
+    const customProfiles = {
+      OVERVIEW: { spritePx: 50 },
+      LEADER_ZOOM: { spritePx: 80 },
+      BATTLE_ZOOM: { spritePx: 120 },
+      COMEBACK_ZOOM: { spritePx: 60 },
+    };
     loadCameraConfig.mockReturnValue(
-      freshConfig({ maxTargetScreenPx: 200, spritePctOfCanvas: customPct })
+      freshConfig({ maxTargetScreenPx: 200, cameraStateProfiles: customProfiles })
     );
     render(<SpriteSizeRangeSection />);
     fireEvent.click(screen.getByTestId('reset-sprite-size-cap'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ spritePctOfCanvas: customPct })
+      expect.objectContaining({ cameraStateProfiles: customProfiles })
     );
   });
 

@@ -20,6 +20,13 @@
 //              (LEADER/COMEBACK 1.0→0.3, BATTLE 0.5→0.2) to prevent the camera
 //              arriving at a position where the leader is near the viewport edge.
 //              v5→v6 migration resets leadInDuration to new defaults.
+//              Schema v7 (2026-05-15): sprite size expressed in world pixels (spritePx)
+//              instead of fraction of canvas height (spritePct). This decouples sprite
+//              proportion from canvas resolution, giving identical sprite/track ratios
+//              on Open and Closed tracks.
+//              v6→v7 migration: spritePx = Math.round(spritePct × 720), using dirt-oval
+//              canvas height (720px) as the reference so existing dirt-oval setups are
+//              visually unchanged after the upgrade.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -42,9 +49,14 @@ function normalizeCameraTransitionSeconds(config) {
   }
 }
 
+// Reference canvas height used for converting legacy spritePctOfCanvas → spritePx.
+// Dirt-oval uses 720px, so this conversion is lossless for the standard test setup.
+const LEGACY_CANVAS_H_REF = 720;
+
 // Build a cameraStateProfiles object from legacy spritePctOfCanvas / cameraTransitionSeconds
 // fields present on a v2/v3 config.  Preserves any user-tuned per-state values.
 // Phase fields (leadInDuration, leadOutDuration) always use v5 defaults.
+// Outputs spritePx (world pixels) directly — no further conversion needed in migrateV6toV7.
 function buildProfilesFromLegacy(config) {
   const sp = config.spritePctOfCanvas ?? {};
   const tc =
@@ -56,9 +68,11 @@ function buildProfilesFromLegacy(config) {
   const globalMin = config.minStateHoldMs ?? 5000;
   const def = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
 
+  const toPx = (pct, defPx) => (pct != null ? Math.round(pct * LEGACY_CANVAS_H_REF) : defPx);
+
   return {
     OVERVIEW: {
-      spritePct: sp.overview ?? def.OVERVIEW.spritePct,
+      spritePx: toPx(sp.overview, def.OVERVIEW.spritePx),
       trackingTC: tc.overview ?? def.OVERVIEW.trackingTC,
       entryTC: tc.overview ?? def.OVERVIEW.entryTC,
       innerFramePct,
@@ -68,7 +82,7 @@ function buildProfilesFromLegacy(config) {
       leadOutDuration: def.OVERVIEW.leadOutDuration,
     },
     LEADER_ZOOM: {
-      spritePct: sp.leader ?? def.LEADER_ZOOM.spritePct,
+      spritePx: toPx(sp.leader, def.LEADER_ZOOM.spritePx),
       trackingTC: tc.leader ?? def.LEADER_ZOOM.trackingTC,
       entryTC: tc.leader ?? def.LEADER_ZOOM.entryTC,
       innerFramePct,
@@ -78,7 +92,7 @@ function buildProfilesFromLegacy(config) {
       leadOutDuration: def.LEADER_ZOOM.leadOutDuration,
     },
     BATTLE_ZOOM: {
-      spritePct: sp.battle ?? def.BATTLE_ZOOM.spritePct,
+      spritePx: toPx(sp.battle, def.BATTLE_ZOOM.spritePx),
       trackingTC: tc.battle ?? def.BATTLE_ZOOM.trackingTC,
       entryTC: tc.battle ?? def.BATTLE_ZOOM.entryTC,
       innerFramePct,
@@ -89,7 +103,7 @@ function buildProfilesFromLegacy(config) {
       leadOutDuration: def.BATTLE_ZOOM.leadOutDuration,
     },
     COMEBACK_ZOOM: {
-      spritePct: sp.comeback ?? def.COMEBACK_ZOOM.spritePct,
+      spritePx: toPx(sp.comeback, def.COMEBACK_ZOOM.spritePx),
       trackingTC: tc.comeback ?? def.COMEBACK_ZOOM.trackingTC,
       entryTC: tc.comeback ?? def.COMEBACK_ZOOM.entryTC,
       innerFramePct,
@@ -116,6 +130,7 @@ function migrateV3toV5(config) {
 }
 
 // v4→v5: preserve non-phase profile fields; reset phase fields to new duration-based defaults.
+// spritePct (fraction) is carried forward as-is; migrateV6toV7 will convert it to spritePx.
 function migrateV4toV5(config) {
   const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
   const oldProfiles = config.cameraStateProfiles ?? {};
@@ -123,7 +138,7 @@ function migrateV4toV5(config) {
   for (const state of Object.keys(defProfiles)) {
     const old = oldProfiles[state] ?? {};
     newProfiles[state] = {
-      spritePct: old.spritePct ?? defProfiles[state].spritePct,
+      spritePct: old.spritePct, // preserved as fraction; migrateV6toV7 converts to spritePx
       trackingTC: old.trackingTC ?? defProfiles[state].trackingTC,
       entryTC: old.entryTC ?? defProfiles[state].entryTC,
       innerFramePct: old.innerFramePct ?? defProfiles[state].innerFramePct,
@@ -142,7 +157,8 @@ function migrateV4toV5(config) {
 }
 
 // v5→v6: reset leadInDuration to new (reduced) defaults to prevent camera arriving with
-// the leader at the viewport edge. All other profile fields are preserved.
+// the leader at the viewport edge. All other profile fields (including spritePct) are preserved.
+// spritePct is still a fraction here; migrateV6toV7 converts it to spritePx.
 function migrateV5toV6(config) {
   const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
   const oldProfiles = config.cameraStateProfiles ?? {};
@@ -161,6 +177,28 @@ function migrateV5toV6(config) {
   };
 }
 
+// v6→v7: convert spritePct (fraction of canvas height) to spritePx (world pixels).
+// Uses dirt-oval canvas height (720px) as the reference so existing dirt-oval setups are
+// visually unchanged. Configs already carrying spritePx (e.g. from buildProfilesFromLegacy)
+// are passed through unchanged.
+function migrateV6toV7(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = {};
+  for (const state of Object.keys(defProfiles)) {
+    const old = oldProfiles[state] ?? {};
+    const { spritePct, ...rest } = old;
+    const spritePx =
+      old.spritePx != null
+        ? old.spritePx
+        : spritePct != null
+          ? Math.round(spritePct * LEGACY_CANVAS_H_REF)
+          : defProfiles[state].spritePx;
+    newProfiles[state] = { ...rest, spritePx };
+  }
+  return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 7 };
+}
+
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
@@ -176,60 +214,80 @@ export function loadCameraConfig() {
     // v2/v3 configs never had cameraStateProfiles; strip the default so
     // migrateV3toV5 always calls buildProfilesFromLegacy instead of short-circuiting.
     delete merged.cameraStateProfiles;
+    // Only pass through explicitly stored spritePctOfCanvas keys so that unset keys
+    // fall back to DEFAULT_CAMERA_CONFIG.cameraStateProfiles pixel defaults in buildProfilesFromLegacy.
     if (patched.spritePctOfCanvas) {
-      merged.spritePctOfCanvas = {
-        ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas,
-        ...patched.spritePctOfCanvas,
-      };
+      merged.spritePctOfCanvas = patched.spritePctOfCanvas;
     } else {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV5toV6(migrateV3toV5(merged));
+    // buildProfilesFromLegacy already outputs spritePx; migrateV6toV7 is a no-op for those.
+    return migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)));
   }
 
   if (stored.schemaVersion === 3) {
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     // Strip default profiles so buildProfilesFromLegacy constructs them from legacy fields.
     delete merged.cameraStateProfiles;
+    // Only pass through explicitly stored spritePctOfCanvas keys so that unset keys
+    // fall back to DEFAULT_CAMERA_CONFIG.cameraStateProfiles pixel defaults in buildProfilesFromLegacy.
     if (stored.spritePctOfCanvas) {
-      merged.spritePctOfCanvas = {
-        ...DEFAULT_CAMERA_CONFIG.spritePctOfCanvas,
-        ...stored.spritePctOfCanvas,
-      };
+      merged.spritePctOfCanvas = stored.spritePctOfCanvas;
     } else {
       // User never stored spritePctOfCanvas — remove default so buildProfilesFromLegacy
-      // falls through to profile defaults for each field via the `?? def.STATE.spritePct` chain.
+      // falls through to profile defaults for each field.
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV5toV6(migrateV3toV5(merged));
+    return migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)));
   }
 
   if (stored.schemaVersion === 4) {
-    // v4→v5→v6: preserve zoom/TC fields, reset phase fields, reduce leadInDuration.
-    return migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }));
+    // v4→v5→v6→v7: preserve zoom/TC fields, reset phase fields, reduce leadInDuration,
+    // then convert spritePct→spritePx.
+    return migrateV6toV7(migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored })));
   }
 
   if (stored.schemaVersion === 5) {
-    // v5→v6: reset leadInDuration to reduced defaults; other profile fields preserved.
+    // v5→v6→v7: reset leadInDuration; convert spritePct→spritePx.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
       merged.cameraStateProfiles = {};
       for (const state of Object.keys(defProfiles)) {
+        // Strip spritePx from defaults so stored spritePct is not shadowed by migrateV6toV7.
+        const { spritePx: _defPx, ...defWithout } = defProfiles[state];
         merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
+          ...defWithout,
           ...(stored.cameraStateProfiles[state] ?? {}),
         };
       }
     }
-    return migrateV5toV6(merged);
+    return migrateV6toV7(migrateV5toV6(merged));
   }
 
-  if (stored.schemaVersion !== 6) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 6) {
+    // v6→v7: deep-merge profiles (preserving user-tuned fields), then convert spritePct→spritePx.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        // Strip spritePx from defaults so stored spritePct is not shadowed by migrateV6toV7.
+        const { spritePx: _defPx, ...defWithout } = defProfiles[state];
+        merged.cameraStateProfiles[state] = {
+          ...defWithout,
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV6toV7(merged);
+  }
 
-  // v6: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 7) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v7: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -245,5 +303,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 6 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 7 });
 }
