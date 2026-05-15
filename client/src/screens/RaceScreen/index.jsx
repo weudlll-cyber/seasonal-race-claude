@@ -159,9 +159,15 @@ export default function RaceScreen() {
   }, [cameraConfig]);
 
   // ── State-overlay: select and display text on cam-state entry ───────────
+  // Depends on both camState and phase so the effect re-fires on the
+  // COUNTDOWN→RACING transition even when camState is already 'OVERVIEW'
+  // (CameraDirector starts in OVERVIEW before the race begins).
   useEffect(() => {
     clearTimeout(overlayTimerRef.current);
     setOverlayText(null);
+
+    // Never show text outside of the active race
+    if (phase !== PHASE.RACING) return;
 
     const cfg = cameraConfigRef.current;
     if (!(cfg.stateOverlayEnabled ?? true)) return;
@@ -189,7 +195,7 @@ export default function RaceScreen() {
     overlayTimerRef.current = setTimeout(() => setOverlayText(null), duration);
 
     return () => clearTimeout(overlayTimerRef.current);
-  }, [camState]);
+  }, [camState, phase]);
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
