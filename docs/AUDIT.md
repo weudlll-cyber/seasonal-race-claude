@@ -159,9 +159,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.6 — Race Dynamics (feat/pr-a2.6-race-dynamics). 3 Commits: (1) speedFactor/speedBonusMult-Trennung — spreadFactor + speedBonusMult als separate Felder, re-roll berührt nur spreadFactor (numerisch äquivalent zu vorher); (2) Periodischer spreadFactor Re-Roll: rollCount=max(2,⌊duration/15⌋), rollInterval≈12s, Variation ±85% of SPREAD_RANGE (Variant B), easeInOutCubic-Transition 5000ms, letzter Roll bei 80% — draftingBoost unverändert 1.10, Cone-Geometrie-Kommentar; (3) Doc-Updates ARCHITECTURE/LESSONS/BACKLOG/ROADMAP/AUDIT. +33 unit Tests (reRoll.test.js). ESLint: 0 Errors, 0 Warnings. |
 | 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.9 — Repo-Hygiene (chore/pr-a2.9-repo-hygiene). 5 Debug-Screenshots aus Repo-Root entfernt (modal-*.png). @testing-library/user-event aus devDependencies entfernt (unused). .gitignore bestätigt (audit-temp/ + diagnosis/ bereits abgedeckt). Flaky Test fix: reRoll.test.js Math.random-Spy für deterministischen Uniqueness-Test (war bei voller Suite nicht immer grün). Audit-Falsch-Positiv: services/api.js NICHT gelöscht — grep-Pattern fehlte .js-Extension, Datei hat 2 aktive Imports. Background-PNG-Komprimierung zurückgestellt (user decision). 0 neue Tests. |
+| 2026-05-16 | **1788 unit** | feat: countdown camera phase — zoom-in + dezenter Countdown-Text (schema v12) (PR #112, squash `d71a83d`). Neue `updateCountdown()`-Methode in CameraDirector: ease-out-cubic Zoom von `countdownStartZoomSpritePx` → `_overviewStateZoom`, Pulk-Centroid-Pan mit World-Bounds-Clamp. Countdown-Text: 220px Mitte → 56px Top-Right-Badge. Schema v11→v12 Migration: +`countdownStartZoomSpritePx`, +`countdownDurationMs`. DevScreen: neues "Countdown Phase"-Panel. +4 unit (3 updateCountdown + 1 v11→v12 Migration). TrackEditor.effects.test.jsx failure pre-existing (nicht von diesem PR). |
 
-**Aktueller Branch-HEAD:** `chore/pr-a2.9-repo-hygiene`
-**Master-HEAD:** `228be94` (PR #69 feat/pr-a2.6-race-dynamics, merge-commit 2026-05-04)
+**Aktueller Branch-HEAD:** `master`
+**Master-HEAD:** `d71a83d` (PR #112 feat/countdown-phase, squash-merge 2026-05-16)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
