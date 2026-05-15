@@ -59,6 +59,8 @@ import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
+import StateOverlay from './StateOverlay.jsx';
+import { selectOverlayText } from '../../modules/stateOverlayTemplates.js';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -134,14 +136,19 @@ export default function RaceScreen() {
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [finishTState, setFinishTState] = useState(1);
-  const [camState, setCamState] = useState('OVERVIEW');
-  const prevHudStateRef = useRef('OVERVIEW');
+  const [camState, setCamState] = useState(null);
+  const prevHudStateRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig, setCameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
+
+  // ── State-overlay narrative text ─────────────────────────────────────────
+  const [overlayText, setOverlayText] = useState(null);
+  const overlayTimerRef = useRef(null);
+  const overlayLastIndexRef = useRef({});
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -150,6 +157,45 @@ export default function RaceScreen() {
       camDirRef.current.updateConfig(cameraConfig);
     }
   }, [cameraConfig]);
+
+  // ── State-overlay: select and display text on cam-state entry ───────────
+  // Depends on both camState and phase so the effect re-fires on the
+  // COUNTDOWN→RACING transition even when camState is already 'OVERVIEW'
+  // (CameraDirector starts in OVERVIEW before the race begins).
+  useEffect(() => {
+    clearTimeout(overlayTimerRef.current);
+    setOverlayText(null);
+
+    // Never show text outside of the active race
+    if (phase !== PHASE.RACING) return;
+
+    const cfg = cameraConfigRef.current;
+    if (!(cfg.stateOverlayEnabled ?? true)) return;
+    if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'].includes(camState)) return;
+
+    const vars = {};
+    if (camState === 'OVERVIEW') {
+      const racers = g.current?.racers ?? [];
+      if (racers.length > 0) {
+        const leader = racers.reduce((a, b) => (b.t > a.t ? b : a));
+        if (leader?.name) vars.leader = leader.name;
+      }
+    }
+    // BATTLE_ZOOM vars ({position}, {count}) and COMEBACK_ZOOM vars ({racer}) are
+    // provided by future specs — until then, no template can be satisfied and
+    // the component simply stays hidden.
+
+    const result = selectOverlayText(camState, vars, overlayLastIndexRef.current);
+    if (!result) return;
+
+    overlayLastIndexRef.current = { ...overlayLastIndexRef.current, [camState]: result.index };
+    setOverlayText(result.text);
+
+    const duration = cfg.stateOverlayDurationMs ?? 3500;
+    overlayTimerRef.current = setTimeout(() => setOverlayText(null), duration);
+
+    return () => clearTimeout(overlayTimerRef.current);
+  }, [camState, phase]);
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1338,6 +1384,7 @@ export default function RaceScreen() {
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
+          <StateOverlay text={overlayText} />
           <CameraDiagnosticsHUD
             cameraRef={camDirRef}
             diagRef={diagDataRef}

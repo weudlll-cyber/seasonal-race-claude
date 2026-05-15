@@ -103,20 +103,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 12', () => {
+  it('writes schemaVersion: 13', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 12 })
+      expect.objectContaining({ schemaVersion: 13 })
     );
   });
 
-  it('writes schemaVersion: 12 even when not in input config', () => {
+  it('writes schemaVersion: 13 even when not in input config', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 12 })
+      expect.objectContaining({ schemaVersion: 13 })
     );
   });
 });
@@ -129,6 +129,7 @@ describe('loadCameraConfig — v11→v12 migration', () => {
       postStartHoldMs: 7000,
     });
     const cfg = loadCameraConfig();
+    // v11 chains through v12 only (v12→v13 is applied when v12 is stored directly)
     expect(cfg.schemaVersion).toBe(12);
     expect(cfg.countdownStartZoomSpritePx).toBe(DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx);
     expect(cfg.countdownDurationMs).toBe(DEFAULT_CAMERA_CONFIG.countdownDurationMs);
@@ -594,5 +595,49 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
     expect(cfg.schemaVersion).toBe(12);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spritePx).toBe(90);
+  });
+});
+
+describe('loadCameraConfig — v12→v13 migration', () => {
+  it('v12 config gains stateOverlayEnabled and stateOverlayDurationMs at defaults', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 12,
+      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+      postStartHoldMs: 7000,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(13);
+    expect(cfg.stateOverlayEnabled).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayEnabled);
+    expect(cfg.stateOverlayDurationMs).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs);
+  });
+
+  it('v12 config preserves an explicitly stored stateOverlayEnabled: false', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 12,
+      stateOverlayEnabled: false,
+      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(13);
+    expect(cfg.stateOverlayEnabled).toBe(false);
+  });
+
+  it('v12 config preserves an explicitly stored stateOverlayDurationMs', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 12,
+      stateOverlayDurationMs: 5000,
+      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.stateOverlayDurationMs).toBe(5000);
+  });
+
+  it('fresh DEFAULT_CAMERA_CONFIG has schemaVersion 13 and stateOverlay fields', () => {
+    // Verify the defaults themselves are correct for a brand-new installation.
+    storageGet.mockReturnValue(null);
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(13);
+    expect(cfg.stateOverlayEnabled).toBe(true);
+    expect(cfg.stateOverlayDurationMs).toBe(3500);
   });
 });

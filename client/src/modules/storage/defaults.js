@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 10,
+  schemaVersion: 13,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -211,6 +211,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
   countdownDurationMs: 4000, // matches the default race countdown duration
+  // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
+  stateOverlayEnabled: true,
+  stateOverlayDurationMs: 3500,
   // Legacy fields kept for v3→v4 migration reads. CameraDirector no longer reads these.
   spritePctOfCanvas: {
     overview: 0.05,
