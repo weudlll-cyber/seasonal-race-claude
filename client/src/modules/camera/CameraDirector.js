@@ -53,7 +53,18 @@ const DEFAULT_SPRITE_PCT = { leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
-const TRANSITION_T_CONVERGENCE = 0.005; // T-units threshold for T-space lerp convergence (~20px on 4000px oval)
+// Default T-space convergence threshold. Raised from 0.005 to 0.03 so the camera exits entry
+// phase while the leader is moving: steady-state gap = ese/lf ≈ 0.026 at typical speeds, which
+// was above the old threshold (camera never converged). Configurable via transitionTConvergence.
+const TRANSITION_T_CONVERGENCE = 0.03;
+// Per-state fallback max entry duration (ms) when not set in cameraStateProfiles.
+// Formula: ≈ 3.45 × entryTC × 2 (safety factor). OVERVIEW uses TC=1.5s, others TC=0.8s.
+const DEFAULT_MAX_ENTRY_DURATION_MS = {
+  OVERVIEW: 10000,
+  LEADER_ZOOM: 5000,
+  BATTLE_ZOOM: 5000,
+  COMEBACK_ZOOM: 5000,
+};
 const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
 
 // Shortest signed T-delta on a circular track [0,1).
@@ -175,6 +186,8 @@ export class CameraDirector {
     this._diagPrevZoom = null;
     // prevFocusT as it was at the START of the current frame (before overwrite).
     this._diagPrevFocusT = null;
+    // Set to 'threshold'|'timeout' on the frame where entry→tracking fires; null all other frames.
+    this._diagConvergenceReason = null;
   }
 
   /**
@@ -284,6 +297,7 @@ export class CameraDirector {
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
     this._diagEnabled = config?.enableFrameLog ?? false;
+    this._transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -291,6 +305,12 @@ export class CameraDirector {
 
     // Per-state values: prefer cameraStateProfiles, fall back to legacy flat fields.
     const profiles = config?.cameraStateProfiles;
+
+    this._maxEntryDurationByState = {};
+    for (const s of Object.values(CAM_STATE)) {
+      this._maxEntryDurationByState[s] =
+        profiles?.[s]?.maxEntryDurationMs ?? DEFAULT_MAX_ENTRY_DURATION_MS[s] ?? 10000;
+    }
 
     if (profiles) {
       const profTc = (key, fallback) => profiles[key]?.trackingTC ?? fallback;
@@ -553,8 +573,13 @@ export class CameraDirector {
       const yConverged = tLerpActive || this._lastEntryDeltaY < this._entryConvergencePx;
       const tConverged =
         this._transitionTargetT === null ||
-        Math.abs(this._tDelta(this._camT, this._transitionTargetT)) < TRANSITION_T_CONVERGENCE;
-      if (zoomConverged && xConverged && yConverged && tConverged) {
+        Math.abs(this._tDelta(this._camT, this._transitionTargetT)) < this._transitionTConvergence;
+      // Time-based fallback: force tracking after maxEntryDurationMs regardless of gap.
+      const elapsedEntryMs = ts - this._entryStartTs;
+      const maxEntryMs = this._maxEntryDurationByState[this.state] ?? 10000;
+      const timedOut = elapsedEntryMs >= maxEntryMs;
+      if (zoomConverged && xConverged && yConverged && (tConverged || timedOut)) {
+        this._diagConvergenceReason = tConverged ? 'threshold' : 'timeout';
         this._lerpPhase = 'tracking';
         this._entryStartTs = null;
         this._transitionTargetT = null; // T-space lerp complete
@@ -1333,7 +1358,9 @@ export class CameraDirector {
       edx: this._lastEntryDeltaX,
       edy: this._lastEntryDeltaY,
       edz: this._lastEntryDeltaZoom,
+      cr: this._diagConvergenceReason,
     };
+    this._diagConvergenceReason = null; // consumed — only set on the transition frame
     this._diagPrevOffsetX = this.offsetX;
     this._diagPrevOffsetY = this.offsetY;
     this._diagPrevZoom = this.zoom;
@@ -1388,6 +1415,7 @@ export class CameraDirector {
             edx: 'entryConvergence deltaX px (0 when tracking)',
             edy: 'entryConvergence deltaY px (0 when tracking)',
             edz: 'entryConvergence deltaZoom (0 when tracking)',
+            cr: 'convergenceReason: "threshold"|"timeout" on entry→tracking frame, null otherwise',
           },
         },
         frames,

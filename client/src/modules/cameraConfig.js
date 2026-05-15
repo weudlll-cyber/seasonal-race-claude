@@ -27,6 +27,11 @@
 //              v6→v7 migration: spritePx = Math.round(spritePct × 720), using dirt-oval
 //              canvas height (720px) as the reference so existing dirt-oval setups are
 //              visually unchanged after the upgrade.
+//              Schema v8 (2026-05-15): T-space convergence threshold raised from 0.005 to
+//              0.03 so the camera can exit entry phase while the leader is moving (steady-
+//              state gap ese/lf ≈ 0.026 was above the old threshold). Also adds
+//              maxEntryDurationMs per state as a time-based fallback, and the global
+//              transitionTConvergence field. v7→v8 migration adds new fields with defaults.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -177,6 +182,29 @@ function migrateV5toV6(config) {
   };
 }
 
+// v7→v8: add transitionTConvergence global and maxEntryDurationMs per state.
+// All other fields pass through unchanged — no behavior change for existing tuned configs
+// since the new fields are injected at their new defaults.
+function migrateV7toV8(config) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const oldProfiles = config.cameraStateProfiles ?? {};
+  const newProfiles = {};
+  for (const state of Object.keys(defProfiles)) {
+    const old = oldProfiles[state] ?? {};
+    newProfiles[state] = {
+      ...old,
+      maxEntryDurationMs: old.maxEntryDurationMs ?? defProfiles[state].maxEntryDurationMs,
+    };
+  }
+  return {
+    ...config,
+    cameraStateProfiles: newProfiles,
+    transitionTConvergence:
+      config.transitionTConvergence ?? DEFAULT_CAMERA_CONFIG.transitionTConvergence,
+    schemaVersion: 8,
+  };
+}
+
 // v6→v7: convert spritePct (fraction of canvas height) to spritePx (world pixels).
 // Uses dirt-oval canvas height (720px) as the reference so existing dirt-oval setups are
 // visually unchanged. Configs already carrying spritePx (e.g. from buildProfilesFromLegacy)
@@ -285,9 +313,25 @@ export function loadCameraConfig() {
     return migrateV6toV7(merged);
   }
 
-  if (stored.schemaVersion !== 7) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 7) {
+    // v7→v8: deep-merge profiles (preserving user-tuned fields), then add new v8 fields.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV7toV8(merged);
+  }
 
-  // v7: merge top-level fields, then deep-merge cameraStateProfiles
+  if (stored.schemaVersion !== 8) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v8: merge top-level fields, then deep-merge cameraStateProfiles
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -303,5 +347,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 7 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 8 });
 }
