@@ -315,6 +315,12 @@ export class CameraDirector {
     for (const s of Object.values(CAM_STATE)) {
       this._leadAheadEnabledByState[s] = config?.cameraStateProfiles?.[s]?.leadAheadEnabled ?? true;
     }
+    // Per-state lead-out toggle. Default true for old configs without profiles (backward compat).
+    // v11+ configs inject false for LEADER/BATTLE/COMEBACK; OVERVIEW has leadOutDuration: 0.
+    this._leadOutEnabledByState = {};
+    for (const s of Object.values(CAM_STATE)) {
+      this._leadOutEnabledByState[s] = config?.cameraStateProfiles?.[s]?.leadOutEnabled ?? true;
+    }
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -1139,6 +1145,7 @@ export class CameraDirector {
     if (
       this._observerPhase !== 'lead-out' &&
       prof.leadOutDuration > 0 &&
+      (this._leadOutEnabledByState?.[this.state] ?? true) &&
       remainingMs >= 0 &&
       remainingMs <= prof.leadOutDuration * 1000
     ) {
