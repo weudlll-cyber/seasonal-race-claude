@@ -83,20 +83,19 @@ export function computeRenderDisplayScale(
 /**
  * Resolve the effective minTargetScreenPx for a single racer type.
  *
- * Scale-invariant floor: uses a percentage of canvas height so the floor stays
- * proportional on large-world tracks (e.g. 6000px) where overviewZoom is ~0.21 and
- * an absolute pixel floor like 32px would clamp sprites almost constantly.
+ * minSpritePx is expressed in world pixels (same coordinate system as the track corridor),
+ * making the floor canvas-resolution-independent. Identical sprite/track proportions result
+ * on Open and Closed tracks regardless of their canvas dimensions.
  *
  * If a per-type absolute override is set it wins directly (backwards-compatible).
  *
- * @param {number|undefined} typeOverridePx       Per-type absolute override (from racerType.config.minTargetScreenPx)
- * @param {number}           minSpritePctOfCanvas  Fraction of canvas height (e.g. 0.05 = 5%)
- * @param {number}           canvasH               Canvas height in pixels (e.g. CANVAS_H = 720)
+ * @param {number|undefined} typeOverridePx  Per-type absolute override (from racerType.config.minTargetScreenPx)
+ * @param {number}           minSpritePx     Floor in world pixels (e.g. OVERVIEW.spritePx from cameraConfig)
  * @returns {number}  Effective floor in screen pixels
  */
-export function getEffectiveMinTargetScreenPx(typeOverridePx, minSpritePctOfCanvas, canvasH) {
+export function getEffectiveMinTargetScreenPx(typeOverridePx, minSpritePx) {
   if (typeOverridePx != null) return typeOverridePx;
-  return minSpritePctOfCanvas * canvasH;
+  return minSpritePx;
 }
 
 /**

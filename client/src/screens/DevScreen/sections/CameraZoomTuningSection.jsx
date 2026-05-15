@@ -28,12 +28,12 @@ const STATE_LABELS = {
 
 const PROFILE_FIELDS = [
   {
-    key: 'spritePct',
-    label: 'Sprite size (% of canvas)',
-    min: 0.01,
-    max: 0.3,
-    step: 0.005,
-    tip: (v, n) => `Target sprite height as fraction of canvas in ${n}. ${(v * 100).toFixed(1)}%.`,
+    key: 'spritePx',
+    label: 'Sprite size (px)',
+    min: 5,
+    max: 200,
+    step: 1,
+    tip: (v, n) => `Target sprite height in world pixels in ${n}. ${v}px (track corridor ≈150px).`,
   },
   {
     key: 'trackingTC',

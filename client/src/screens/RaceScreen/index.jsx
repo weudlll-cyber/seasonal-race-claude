@@ -19,8 +19,6 @@ import {
   OPEN_TRACK_BASE_ZOOM,
 } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
-import { getPanTarget } from '../../modules/camera/panTarget.js';
-import { resolveCamera } from '../../modules/camera/resolveCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
   lapsFromDuration,
@@ -60,6 +58,7 @@ import {
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
+import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -78,7 +77,6 @@ const CANVAS_H = 720;
 // Keep legacy aliases used throughout this file
 const CW = CANVAS_W;
 const CH = CANVAS_H;
-const FOCUS_GROUP_SIZE = 3; // top-N racers by position for camera panning
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -143,6 +141,7 @@ export default function RaceScreen() {
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
+  const enableFrameLog = cameraConfig.enableFrameLog ?? false;
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -337,8 +336,6 @@ export default function RaceScreen() {
       burstParticles: [],
       maxLaps,
       finishT,
-      camX: 0,
-      camY: 0,
       finalLapStartTs: null,
       racers: raceData.racers.map((r, i) => {
         const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
@@ -543,19 +540,17 @@ export default function RaceScreen() {
       dot(leader.x, leader.y - tagOffY, '#ffd700'); // GELB — nameTag anchor
 
       const ezoomY = isOpenTrack ? ezoom : cam.zoom * bsY;
-      const camWorldX = isOpenTrack
-        ? CANVAS_W / 2 / ezoom + (st.camX || 0)
-        : (CANVAS_W / 2 - cam.offsetX) / ezoom;
-      const camWorldY = isOpenTrack
-        ? CANVAS_H / 2 / ezoom + (st.camY || 0)
-        : (CANVAS_H / 2 - cam.offsetY) / ezoomY;
+      // Camera centre in world space: derived from cam.offsetX/Y for both track types.
+      // Relationship: offsetX = -topLeftX * effZoom → topLeftX = -offsetX/effZoom
+      //               camCentreX = topLeftX + canvasW/2/effZoom = (canvasW/2 - offsetX)/effZoom
+      const camWorldX = (CANVAS_W / 2 - cam.offsetX) / ezoom;
+      const camWorldY = (CANVAS_H / 2 - cam.offsetY) / ezoomY;
       dot(camWorldX, camWorldY, '#cc44ff'); // LILA — camera centre (= screen centre under current transform)
 
       const ld = leaderDiagRef.current;
       if (!ld.frozen) {
-        const scrX = isOpenTrack
-          ? (leader.x - (st.camX || 0)) * ezoom
-          : leader.x * ezoom + cam.offsetX;
+        // Screen X: world_x * effZoom + offsetX (unified formula for both track types)
+        const scrX = leader.x * ezoom + cam.offsetX;
         ld.snapshots.push({
           f: ld.snapshots.length + 1,
           rx: leader.x,
@@ -1108,8 +1103,7 @@ export default function RaceScreen() {
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          cameraConfigRef.current.spritePctOfCanvas?.overview ?? 0.05,
-          CANVAS_H
+          cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spritePx ?? 36
         ),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,
@@ -1117,60 +1111,33 @@ export default function RaceScreen() {
         )
       );
 
+      // Pan and zoom are now computed by CameraDirector for both open and closed tracks.
+      // cam.offsetX/offsetY are the canvas-space offsets; the scale differs by track topology.
+      ctx.save();
+      ctx.translate(cam.offsetX, cam.offsetY);
       if (isOpenTrack) {
         const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
-        const target = getPanTarget(camDirRef.current.state, focusRacers, shapeRef.current);
-        const resolved = resolveCamera({
-          targetWorld: target,
-          desiredEffZoom: effZoom,
-          worldBounds: { maxX: worldWidth, maxY: worldHeight },
-          frameSize: { width: CANVAS_W, height: CANVAS_H },
-          innerFramePct: cameraConfigRef.current.targetInnerFramePct ?? 0.7,
-          minEffZoom: effectiveZoom(camDirRef.current.overviewZoom, OPEN_TRACK_BASE_ZOOM),
-        });
-        st.camX = isFinite(st.camX) ? st.camX + (resolved.camX - st.camX) * 0.05 : resolved.camX;
-        st.camY = isFinite(st.camY) ? st.camY + (resolved.camY - st.camY) * 0.05 : resolved.camY;
-      }
-
-      if (isOpenTrack) {
-        ctx.save();
-        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        // screen = (world - cam) * effZoom: world origin maps to (-camX*effZoom, -camY*effZoom)
-        ctx.translate(-(st.camX || 0) * effZoom, -(st.camY || 0) * effZoom);
         ctx.scale(effZoom, effZoom);
-        drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
-        for (const inst of effectsRef.current) {
-          ctx.save();
-          inst.render(ctx);
-          ctx.restore();
-        }
-        drawEditorTrackSurface(ctx, shape);
-        drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
-        if (st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
-        drawParticles();
-        drawSurfaceTrails();
-        drawRacers(frameDisplayScale, frameEffZoom);
-        drawBattleDiagMarkers(cam, frameEffZoom);
+      } else {
+        ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
+      }
+      drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
+      for (const inst of effectsRef.current) {
+        ctx.save();
+        inst.render(ctx);
         ctx.restore();
+      }
+      drawEditorTrackSurface(ctx, shape);
+      drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
+      if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
+      drawParticles();
+      drawSurfaceTrails();
+      drawRacers(frameDisplayScale, frameEffZoom);
+      drawBattleDiagMarkers(cam, frameEffZoom);
+      ctx.restore();
+      if (isOpenTrack) {
         drawTitleOpen();
       } else {
-        ctx.save();
-        ctx.translate(cam.offsetX, cam.offsetY);
-        ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
-        drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
-        for (const inst of effectsRef.current) {
-          ctx.save();
-          inst.render(ctx);
-          ctx.restore();
-        }
-        drawEditorTrackSurface(ctx, shape);
-        drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
-        drawParticles();
-        drawSurfaceTrails();
-        drawRacers(frameDisplayScale, frameEffZoom);
-        drawBattleDiagMarkers(cam, frameEffZoom);
-        ctx.restore();
         drawTitle();
         drawLapInfo(st);
         drawFinalLapOverlay(ts);
@@ -1203,19 +1170,13 @@ export default function RaceScreen() {
           const color = modeColors[mode];
           if (!color) continue;
 
-          // Convert world position to screen space
-          let sx, sy;
-          if (isOpenTrack) {
-            const effZ = frameEffZoom;
-            sx = (r.x - (st.camX || 0)) * effZ;
-            sy = (r.y - (st.camY || 0)) * effZ;
-          } else {
-            sx = r.x * cam.zoom * bsX + cam.offsetX;
-            sy = r.y * cam.zoom * bsY + cam.offsetY;
-          }
+          // Convert world position to screen space: world_x * effZoom + offsetX (both track types)
+          const effZx = frameEffZoom; // cam.zoom×BASE_ZOOM (open) or cam.zoom×bsX (closed)
+          const effZy = isOpenTrack ? effZx : cam.zoom * bsY;
+          const sx = r.x * effZx + cam.offsetX;
+          const sy = r.y * effZy + cam.offsetY;
 
-          const spriteScreenR =
-            (r.spriteWorldSizePx ?? 20) * (isOpenTrack ? frameEffZoom : cam.zoom * bsX) * 0.5;
+          const spriteScreenR = (r.spriteWorldSizePx ?? 20) * effZx * 0.5;
           const ringR = Math.max(spriteScreenR, 8);
           ctx.beginPath();
           ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
@@ -1365,6 +1326,7 @@ export default function RaceScreen() {
             leaderDiagRef={leaderDiagRef}
             visible={showCameraDiagnostics}
           />
+          <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
         </div>
 
         <aside className="race-hud">
