@@ -123,7 +123,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 8,
+  schemaVersion: 9,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -141,6 +141,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 4000,
       minStateHold: 5000,
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
+      overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
       spritePx: 65,

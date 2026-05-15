@@ -3218,3 +3218,105 @@ describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => 
     expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM); // exited
   });
 });
+
+// ── OVERVIEW radial offset ────────────────────────────────────────────────────
+
+describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
+  function makeCD(offsetPx = 150) {
+    const mockShape = {
+      getCenterPoint: () => ({ x: 640, y: 360 }),
+      getPosition: () => ({ x: 640, y: 360 }),
+      isOpen: false,
+    };
+    return new CameraDirector(
+      1280,
+      720,
+      false,
+      {
+        cameraStateProfiles: {
+          OVERVIEW: {
+            spritePx: 36,
+            trackingTC: 1.5,
+            entryTC: 1.5,
+            leadInDuration: 0,
+            leadOutDuration: 0,
+            innerFramePct: 0.7,
+            maxStateDuration: 4000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 10000,
+            overviewOffsetPx: offsetPx,
+          },
+          LEADER_ZOOM: {
+            spritePx: 65,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.3,
+            leadOutDuration: 1.5,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+          BATTLE_ZOOM: {
+            spritePx: 101,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.2,
+            leadOutDuration: 1.0,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+          COMEBACK_ZOOM: {
+            spritePx: 50,
+            trackingTC: 0.25,
+            entryTC: 0.8,
+            leadInDuration: 0.3,
+            leadOutDuration: 1.5,
+            innerFramePct: 0.7,
+            maxStateDuration: 8000,
+            minStateHold: 5000,
+            maxEntryDurationMs: 5000,
+          },
+        },
+        entryConvergenceZoom: 0.05,
+        entryConvergencePx: 10,
+        transitionTConvergence: 0.03,
+      },
+      36,
+      mockShape
+    );
+  }
+
+  it('leader above center: pan target shifts toward center (downward), showing field below', () => {
+    const cd = makeCD(150);
+    // Leader (640,100), center (640,360): dy = 100-360 = -260, scale = 150/260
+    // result.y = 100 - (-260)*(150/260) = 100+150 = 250
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
+    expect(result.x).toBeCloseTo(640);
+    expect(result.y).toBeCloseTo(250);
+  });
+
+  it('leader right of center: pan target shifts leftward, showing field to the left', () => {
+    const cd = makeCD(100);
+    // Leader (900,360), center (640,360): dx = 260, scale = 100/260
+    // result.x = 900 - 260*(100/260) = 900-100 = 800
+    const result = cd._applyOverviewRadialOffset({ x: 900, y: 360 });
+    expect(result.x).toBeCloseTo(800);
+    expect(result.y).toBeCloseTo(360);
+  });
+
+  it('leader at track center: returns position unchanged (no radial direction)', () => {
+    const cd = makeCD(150);
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 360 });
+    expect(result).toEqual({ x: 640, y: 360 });
+  });
+
+  it('overviewOffsetPx=0: pan target unchanged (leader stays centered)', () => {
+    const cd = makeCD(0);
+    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
+    expect(result.x).toBeCloseTo(640);
+    expect(result.y).toBeCloseTo(100);
+  });
+});

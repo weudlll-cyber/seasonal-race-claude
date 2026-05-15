@@ -48,6 +48,8 @@ const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is n
 // Pixel defaults used when no config (or no cameraStateProfiles) is provided.
 // Values match Math.round(legacyPct × 720): 0.08→58, 0.12→86, 0.065→47.
 const DEFAULT_SPRITE_PX = { leader: 58, battle: 86, comeback: 47 };
+// World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
+const DEFAULT_OVERVIEW_OFFSET_PX = 150;
 // Legacy percent fallback used only when config has spritePctOfCanvas but no profiles.
 const DEFAULT_SPRITE_PCT = { leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
@@ -268,17 +270,24 @@ export class CameraDirector {
       this._leaderZoom = this._computeZoomForTargetSize(sizePx.leader);
       this._battleZoom = this._computeZoomForTargetSize(sizePx.battle);
       this._comebackZoom = this._computeZoomForTargetSize(sizePx.comeback);
+      this._overviewStateZoom = this._computeZoomForTargetSize(
+        profiles.OVERVIEW?.spritePx ?? FALLBACK_REFERENCE_SPRITE_SIZE
+      );
     } else if (config?.spritePctOfCanvas) {
       // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
       const rawPct = config.spritePctOfCanvas;
       this._leaderZoom = this._computeZoomForTargetSize(rawPct.leader * CANVAS_H_REF);
       this._battleZoom = this._computeZoomForTargetSize(rawPct.battle * CANVAS_H_REF);
       this._comebackZoom = this._computeZoomForTargetSize(rawPct.comeback * CANVAS_H_REF);
+      // OVERVIEW zoom: preserve full-world defaults for legacy configs.
+      this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
     } else {
       // No config at all: use pixel defaults directly.
       this._leaderZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.leader);
       this._battleZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.battle);
       this._comebackZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.comeback);
+      // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
+      this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
     }
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
   }
@@ -298,6 +307,8 @@ export class CameraDirector {
     this._showDiagnostics = config?.showCameraDiagnostics ?? false;
     this._diagEnabled = config?.enableFrameLog ?? false;
     this._transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
+    this._overviewOffsetPx =
+      config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
     this._overviewCooldownMin = config?.overviewCooldownMin ?? OVERVIEW_COOLDOWN_MIN;
     this._overviewCooldownMax = config?.overviewCooldownMax ?? OVERVIEW_COOLDOWN_MAX;
     // Deterministic initial value (mean) so tests see consistent behavior before first re-roll
@@ -937,6 +948,29 @@ export class CameraDirector {
     this._lastResolvedPanTarget = panResolved;
   }
 
+  /**
+   * Compute the OVERVIEW pan target with radial offset applied.
+   * The camera center is shifted from the leader toward the track center by
+   * overviewOffsetPx world pixels, so the leader appears at the outer viewport
+   * edge with the pack visible behind.
+   * @param {{ x: number, y: number }} leaderPos  Leader world-coordinate position.
+   * @returns {{ x: number, y: number }}
+   */
+  _applyOverviewRadialOffset(leaderPos) {
+    const center = this._shape
+      ? this._shape.getCenterPoint()
+      : {
+          x: (this._worldBounds.minX + this._worldBounds.maxX) / 2,
+          y: (this._worldBounds.minY + this._worldBounds.maxY) / 2,
+        };
+    const dx = leaderPos.x - center.x;
+    const dy = leaderPos.y - center.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return leaderPos; // leader at track center — no meaningful radial direction
+    const scale = this._overviewOffsetPx / len;
+    return { x: leaderPos.x - dx * scale, y: leaderPos.y - dy * scale };
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
@@ -944,32 +978,27 @@ export class CameraDirector {
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
-        // During start phase, pan to the full-field centroid so no racer is cropped.
-        // After start phase, follow only the top-N.
-        const panSrc =
-          raceState && raceState.raceElapsed < START_PHASE_DURATION
-            ? racers.length
-              ? racers
-              : focusRacers
-            : focusRacers;
-        this.targetZoom = this._isOpenTrack ? this.overviewZoom : 1;
+        const isStartPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
+        // During start phase: centroid of full field so no racer is cropped.
+        // After start phase: follow leader with radial offset toward field.
+        const basePanTarget = isStartPhase
+          ? getPanTarget(CAM_STATE.OVERVIEW, racers.length ? racers : focusRacers, this._shape)
+          : focusRacers.length > 0
+            ? { x: focusRacers[0].x, y: focusRacers[0].y }
+            : { x: 0, y: 0 };
+        const target =
+          !isStartPhase && this._overviewOffsetPx > 0
+            ? this._applyOverviewRadialOffset(basePanTarget)
+            : basePanTarget;
         if (this._isOpenTrack) {
-          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
-          this._setOpenTrackTargets(target, this.overviewZoom, frameSize);
+          this._setOpenTrackTargets(target, this._overviewStateZoom, frameSize);
         } else {
-          const target = getPanTarget(CAM_STATE.OVERVIEW, panSrc, this._shape);
-          const resolved = resolveCamera({
-            targetWorld: target,
-            desiredEffZoom: minEffZoom,
-            worldBounds: this._worldBounds,
+          this._setClosedTrackTargets(
+            target,
+            this._overviewStateZoom * this._bsX,
             frameSize,
-            innerFramePct: this._innerFramePct,
-            minEffZoom,
-          });
-          this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-          this.targetOffsetY = this._closedOffsetY(target.y, resolved.effectiveZoom, canvasH);
-          this.targetZoom = resolved.effectiveZoom / this._bsX;
-          this._lastResolvedPanTarget = resolved;
+            canvasH
+          );
         }
         break;
       }
