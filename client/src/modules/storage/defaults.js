@@ -235,6 +235,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollLastPositionPercent: 80,
 };
 
+export const DEFAULT_FRAME_TIMING_CONFIG = {
+  dtSmoothingAlpha: 0.7,
+};
+
 export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {
   // Lookahead: number of frames the path-clear corridor is projected into the future
   lookaheadFrames: 30,

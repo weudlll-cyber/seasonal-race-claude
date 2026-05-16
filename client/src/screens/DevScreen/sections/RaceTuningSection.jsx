@@ -32,6 +32,11 @@ import {
   saveRaceDynamicsConfig,
   DEFAULT_RACE_DYNAMICS_CONFIG,
 } from '../../../modules/raceDynamicsConfig.js';
+import {
+  loadFrameTimingConfig,
+  saveFrameTimingConfig,
+  DEFAULT_FRAME_TIMING_CONFIG,
+} from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
@@ -81,6 +86,7 @@ function RaceTuningSection() {
   const [behaviorConfig, setBehaviorConfig] = useState(() => loadRaceBehaviorConfig());
   const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
   const [dynamicsConfig, setDynamicsConfig] = useState(() => loadRaceDynamicsConfig());
+  const [frameTimingConfig, setFrameTimingConfig] = useState(() => loadFrameTimingConfig());
   const [storageError, setStorageError] = useState(null);
 
   useEffect(() => {
@@ -103,6 +109,10 @@ function RaceTuningSection() {
     saveRaceDynamicsConfig(dynamicsConfig);
   }, [dynamicsConfig]);
 
+  useEffect(() => {
+    saveFrameTimingConfig(frameTimingConfig);
+  }, [frameTimingConfig]);
+
   function setSpeed(key, val) {
     setSpeedConfig((prev) => ({ ...prev, [key]: val }));
   }
@@ -119,11 +129,20 @@ function RaceTuningSection() {
     setDynamicsConfig((prev) => ({ ...prev, [key]: val }));
   }
 
+  function setFrameTiming(key, val) {
+    setFrameTimingConfig((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function resetFrameTiming() {
+    setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
+  }
+
   function handleReset() {
     setSpeedConfig({ ...DEFAULT_BASE_SPEED_CONFIG });
     setBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
     setRowConfig({ ...DEFAULT_ROW_LAYOUT_CONFIG });
     setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+    setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
 
   function resetSpeedRange() {
@@ -1041,6 +1060,61 @@ function RaceTuningSection() {
               }}
             />
           </div>
+        </div>
+      </SubCard>
+
+      {/* ── Block 10: Frame Timing ── */}
+      <SubCard
+        title="Frame Timing"
+        onReset={resetFrameTiming}
+        resetTestId="reset-frame-timing"
+        subtitle="Controls how browser frame-time variation is smoothed before being applied to camera movement and visual effects. Physics is always fixed at 16ms steps and is not affected by this setting."
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              dt-Smoothing (EMA-Alpha)
+              <InfoTooltip text="Glättet Browser-Frame-Zeitschwankungen für Kamera und Effekte. 0.0 = kein Glätten (rohes dt wird direkt verwendet). 0.95 = sehr starke Glättung. Höher = sanftere Kamera, aber langsamere Reaktion auf echte Frame-Rate-Änderungen. Physik ist nicht betroffen — sie läuft immer in 16ms-Schritten. Nimmt erst beim nächsten Renn-Start Wirkung." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={0.95}
+              step={0.01}
+              value={frameTimingConfig.dtSmoothingAlpha}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.95) setFrameTiming('dtSmoothingAlpha', v);
+              }}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            marginTop: '0.75rem',
+            padding: '0.75rem',
+            background: '#0d0d0f',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+            Current alpha:{' '}
+            <strong style={{ color: 'var(--color-accent)' }}>
+              {frameTimingConfig.dtSmoothingAlpha.toFixed(2)}
+            </strong>
+            {'  ·  '}
+            {frameTimingConfig.dtSmoothingAlpha === 0
+              ? 'No smoothing — raw frame dt used directly'
+              : frameTimingConfig.dtSmoothingAlpha < 0.5
+                ? 'Light smoothing — fast response'
+                : frameTimingConfig.dtSmoothingAlpha < 0.8
+                  ? 'Moderate smoothing — balanced (recommended)'
+                  : 'Strong smoothing — very stable camera, slow adaptation'}
+          </p>
         </div>
       </SubCard>
 

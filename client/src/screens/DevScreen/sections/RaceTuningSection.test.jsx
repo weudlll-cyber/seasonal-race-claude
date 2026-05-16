@@ -96,6 +96,12 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+vi.mock('../../../modules/frameTimingConfig.js', () => ({
+  loadFrameTimingConfig: vi.fn(() => ({ dtSmoothingAlpha: 0.7 })),
+  saveFrameTimingConfig: vi.fn(),
+  DEFAULT_FRAME_TIMING_CONFIG: { dtSmoothingAlpha: 0.7 },
+}));
+
 import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
 import RaceTuningSection from './RaceTuningSection.jsx';
 

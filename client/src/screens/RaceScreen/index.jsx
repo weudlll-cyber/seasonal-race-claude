@@ -43,6 +43,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
@@ -97,6 +98,11 @@ const CD_COLORS = ['#00ff55', '#33ff88', '#ffcc00', '#ff3333'];
 const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
 const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
+
+// Fixed physics timestep in ms. Physics advances in discrete FIXED_DT steps
+// regardless of browser frame rate, eliminating the 2:1 speed oscillation seen
+// when rAF alternates between 16ms and 33ms frames.
+const FIXED_DT = 16;
 
 const tPos = (t) => ((t % 1) + 1) % 1;
 
@@ -294,6 +300,7 @@ export default function RaceScreen() {
     const behaviorConfig = loadRaceBehaviorConfig();
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
+    const frameTimingConfig = loadFrameTimingConfig();
     priorityConfigRef.current = loadPrioritySystemConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
@@ -377,6 +384,9 @@ export default function RaceScreen() {
       countdownStart: null,
       raceStart: null,
       lastTs: null,
+      physicsAccum: 0,
+      physicsTs: 0,
+      smoothDt: 16,
       finishedCount: 0,
       dustParticles: [],
       burstParticles: [],
@@ -893,9 +903,16 @@ export default function RaceScreen() {
     function loop(ts) {
       const st = g.current;
       const shape = shapeRef.current;
-      const dt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
+      const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
       st.lastTs = ts;
-      for (const inst of effectsRef.current) inst.update(dt);
+
+      // EMA smoothing for cosmetic updates (camera lerp, track effects).
+      // Physics uses FIXED_DT instead — smoothDt never enters the physics accumulator.
+      st.smoothDt =
+        frameTimingConfig.dtSmoothingAlpha * st.smoothDt +
+        (1 - frameTimingConfig.dtSmoothingAlpha) * rawDt;
+      const smoothDt = st.smoothDt;
+      for (const inst of effectsRef.current) inst.update(smoothDt);
 
       ctx.clearRect(0, 0, CW, CH);
 
@@ -906,77 +923,159 @@ export default function RaceScreen() {
         if (ts - st.countdownStart >= (cameraConfigRef.current.countdownDurationMs ?? 4000)) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
-          // Convert per-racer nextRollTime from relative offset to absolute timestamp
-          for (const r of st.racers) r.nextRollTime += ts;
+          // physicsTs starts at 0 when racing begins; nextRollTime is already a
+          // relative offset from physicsTs=0 so no addition is needed here.
+          st.physicsTs = 0;
+          st.physicsAccum = 0;
           setPhase(PHASE.RACING);
         }
       } else if (st.phase === PHASE.RACING) {
-        // Re-Roll: spreadFactor changes are only allowed before lastPositionPercent% of targetDuration.
+        // Re-Roll config constants (read once per rAF, shared across all physics steps).
+        // lastRollDeadline is relative to physicsTs which starts at 0 at RACING entry.
         const lastRollDeadline =
-          st.raceStart + targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+          targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
         const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
-        // D4: snapshot t before updates so constSpeed can equalize deltas
+        // D4: snapshot t before all physics steps so constSpeed can equalize deltas
         for (const r of st.racers) r._diagLogPrevT = r.t;
         if (constSpeedActive) {
           for (const r of st.racers) r._diagPrevT = r.t;
         }
-        for (const r of st.racers) {
-          // ── Per-racer spreadFactor re-roll + smooth transition ─────────────────
-          if (!r.finished) {
-            if (ts >= r.nextRollTime && ts < lastRollDeadline) {
-              const newTarget = Math.max(
-                BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                Math.min(
-                  BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                  r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
-                )
-              );
-              r.spreadFactorPrev = r.spreadFactor;
-              r.spreadFactorTarget = newTarget;
-              r.transitionStartTime = ts;
-              const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
-              r.nextRollTime = ts + rollInterval + jOff;
+
+        // ── Fixed-timestep physics accumulator ───────────────────────────────
+        // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
+        // long frames (50ms) yield 3 steps, short frames (12ms) yield 0.
+        // Remainder carries over so no physics time is lost between frames.
+        st.physicsAccum += rawDt;
+        while (st.physicsAccum >= FIXED_DT) {
+          st.physicsTs += FIXED_DT;
+          const physicsTs = st.physicsTs;
+
+          for (const r of st.racers) {
+            // ── Per-racer spreadFactor re-roll + smooth transition ────────────
+            if (!r.finished) {
+              if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
+                const newTarget = Math.max(
+                  BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                  Math.min(
+                    BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                    r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
+                  )
+                );
+                r.spreadFactorPrev = r.spreadFactor;
+                r.spreadFactorTarget = newTarget;
+                r.transitionStartTime = physicsTs;
+                const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+                r.nextRollTime = physicsTs + rollInterval + jOff;
+              }
+              const elapsed = physicsTs - r.transitionStartTime;
+              if (elapsed < r.transitionDuration) {
+                const tProg = elapsed / r.transitionDuration;
+                r.spreadFactor =
+                  r.spreadFactorPrev +
+                  (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(tProg);
+                r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
+              }
             }
-            const elapsed = ts - r.transitionStartTime;
-            if (elapsed < r.transitionDuration) {
-              const tProg = elapsed / r.transitionDuration;
-              r.spreadFactor =
-                r.spreadFactorPrev +
-                (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(tProg);
-              r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
+            // Apply D7b boost/brake flags from the previous step
+            const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
+            const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
+            if (!r.finished) {
+              // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
+              r.t = Math.min(r.t + r.baseSpeed * boost * brake, st.finishT + 0.001);
+            } else {
+              // Run-out: finished racers keep moving but decay to a stop
+              r.runoutDecay *= 0.97;
+              r.t += r.baseSpeed * r.runoutDecay;
+            }
+            // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
+            // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
+            // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
+            r.vt =
+              race_baseSpeed > 0 && !r.finished
+                ? (r.baseSpeed * boost * brake) / race_baseSpeed
+                : 0;
+          }
+          // D4: equalize all non-finished racers to the mean delta-t
+          if (constSpeedActive) {
+            const active = st.racers.filter((r) => !r.finished);
+            if (active.length > 0) {
+              const meanDt =
+                active.reduce((s, r) => s + (r.t - (r._diagPrevT ?? r.t)), 0) / active.length;
+              for (const r of active) {
+                r.t = (r._diagPrevT ?? r.t) + meanDt;
+                r.vt = race_baseSpeed > 0 ? meanDt / race_baseSpeed : 0;
+              }
             }
           }
-          // Apply D7b boost/brake flags from the previous frame
-          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
-          if (!r.finished) {
-            r.t = Math.min(r.t + r.baseSpeed * boost * brake * (dt / 16), st.finishT + 0.001);
-          } else {
-            // Run-out: finished racers keep moving but decay to a stop
-            r.runoutDecay *= 0.97;
-            r.t += r.baseSpeed * r.runoutDecay * (dt / 16);
+          computePositions();
+          applyRacerBehavior(
+            st.racers,
+            behaviorConfig,
+            priorityConfigRef.current
+              ? {
+                  lookaheadFrames: priorityConfigRef.current.lookaheadFrames,
+                  cooldownMs: priorityConfigRef.current.cooldownMs,
+                  currentTs: physicsTs,
+                  blockedTimeoutFrames: priorityConfigRef.current.blockedTimeoutFrames,
+                  blockedEscapeForce: priorityConfigRef.current.blockedEscapeForce,
+                }
+              : undefined
+          );
+
+          for (const r of st.racers) {
+            if (r.finished) continue;
+            if (r.t >= st.finishT) {
+              r.finished = true;
+              r.finishRank = ++st.finishedCount;
+              emitBurst(r.x, r.y);
+            }
+            r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
-          // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
-          // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
-          // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
-          r.vt =
-            race_baseSpeed > 0 && !r.finished ? (r.baseSpeed * boost * brake) / race_baseSpeed : 0;
+
+          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary
+          if (Math.round(physicsTs / 100) !== Math.round((physicsTs - FIXED_DT) / 100)) {
+            setScoreboard(
+              [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
+            );
+          }
+
+          if (st.finishedCount >= nRacers) {
+            st.phase = PHASE.FINISHED;
+            setPhase(PHASE.FINISHED);
+            const byRank = st.racers
+              .filter((r) => r.finished)
+              .sort((a, b) => a.finishRank - b.finishRank);
+            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+            sessionStorage.setItem(
+              'raceResults',
+              JSON.stringify({
+                finishOrder: [...byRank, ...rest].map((r) => ({
+                  name: r.name,
+                  icon: r.icon,
+                  color: r.color,
+                  index: r.index,
+                  lap: r.lap ?? 1,
+                  progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
+                })),
+                elapsedTime: Math.round((ts - st.raceStart) / 1000),
+                race: raceData,
+              })
+            );
+            setTimeout(() => fadeNavigate('/results'), 2000);
+          }
+
+          // Final lap detection — ts (browser time) used so visual overlay timing is correct
+          if (!isOpenTrack && st.maxLaps > 1 && !st.finalLapStartTs) {
+            const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+            if (Math.floor(leader.t) >= st.maxLaps - 1) st.finalLapStartTs = ts;
+          }
+
+          st.physicsAccum -= FIXED_DT;
         }
-        // D4: equalize all non-finished racers to the mean delta-t
-        if (constSpeedActive) {
-          const active = st.racers.filter((r) => !r.finished);
-          if (active.length > 0) {
-            const meanDt =
-              active.reduce((s, r) => s + (r.t - (r._diagPrevT ?? r.t)), 0) / active.length;
-            for (const r of active) {
-              r.t = (r._diagPrevT ?? r.t) + meanDt;
-              r.vt = race_baseSpeed > 0 ? meanDt / (dt / 16) / race_baseSpeed : 0;
-            }
-          }
-        }
-        computePositions();
-        // D1: per-racer pixel speed and smoothed Δv between top-3
+        // ── End physics accumulator ──────────────────────────────────────────
+
+        // D1: per-racer pixel speed and smoothed Δv between top-3 (once per rAF, uses rawDt)
         {
           const ordered = [...st.racers].sort((a, b) => b.t - a.t);
           for (const r of st.racers) {
@@ -1005,33 +1104,10 @@ export default function RaceScreen() {
           d.dv01Max = Math.max(...d._dv01Buf);
           d.dv12Max = Math.max(...d._dv12Buf);
         }
-        applyRacerBehavior(
-          st.racers,
-          behaviorConfig,
-          priorityConfigRef.current
-            ? {
-                lookaheadFrames: priorityConfigRef.current.lookaheadFrames,
-                cooldownMs: priorityConfigRef.current.cooldownMs,
-                currentTs: ts,
-                blockedTimeoutFrames: priorityConfigRef.current.blockedTimeoutFrames,
-                blockedEscapeForce: priorityConfigRef.current.blockedEscapeForce,
-              }
-            : undefined
-        );
-
-        for (const r of st.racers) {
-          if (r.finished) continue;
-          if (r.t >= st.finishT) {
-            r.finished = true;
-            r.finishRank = ++st.finishedCount;
-            emitBurst(r.x, r.y);
-          }
-          r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
-        }
 
         const rt = racerTypeRef.current;
-        // dt is in ms; generators expect dt in frames (1 = one frame at 60fps)
-        const dtFrames = dt / 16;
+        // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps)
+        const dtFrames = rawDt / 16;
         for (const r of st.racers) {
           if (!r.finished) {
             const spawnX = r.x;
@@ -1070,43 +1146,6 @@ export default function RaceScreen() {
             r: p.r * 0.97,
           }))
           .filter((p) => p.alpha > 0);
-
-        if (Math.round(ts / 100) !== Math.round((ts - dt) / 100)) {
-          setScoreboard(
-            [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
-          );
-        }
-
-        if (st.finishedCount >= nRacers) {
-          st.phase = PHASE.FINISHED;
-          setPhase(PHASE.FINISHED);
-          const byRank = st.racers
-            .filter((r) => r.finished)
-            .sort((a, b) => a.finishRank - b.finishRank);
-          const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
-          sessionStorage.setItem(
-            'raceResults',
-            JSON.stringify({
-              finishOrder: [...byRank, ...rest].map((r) => ({
-                name: r.name,
-                icon: r.icon,
-                color: r.color,
-                index: r.index,
-                lap: r.lap ?? 1,
-                progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
-              })),
-              elapsedTime: Math.round((ts - st.raceStart) / 1000),
-              race: raceData,
-            })
-          );
-          setTimeout(() => fadeNavigate('/results'), 2000);
-        }
-
-        // Final lap detection (announce when leader enters last lap)
-        if (!isOpenTrack && st.maxLaps > 1 && !st.finalLapStartTs) {
-          const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-          if (Math.floor(leader.t) >= st.maxLaps - 1) st.finalLapStartTs = ts;
-        }
       } else {
         // FINISHED — keep burst particles alive
         computePositions();
@@ -1130,7 +1169,7 @@ export default function RaceScreen() {
       };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H, dt)
+          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
           : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
             ? camDirRef.current.updateCountdown(
                 st.racers,
