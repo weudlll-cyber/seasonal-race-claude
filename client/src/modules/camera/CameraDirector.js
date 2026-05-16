@@ -668,7 +668,8 @@ export class CameraDirector {
       }
       if (f >= 60) this._battleDiagFrozen = true;
     }
-    if (this._diagEnabled) this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned);
+    if (this._diagEnabled)
+      this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned, racers);
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -1454,7 +1455,7 @@ export class CameraDirector {
    * Record one frame into the ring buffer. Called at the very end of update()
    * when _diagEnabled is true. The final offsetX/Y/zoom values are already set.
    */
-  _recordDiagFrame(ts, dt, lf, tSpaceLerpActive, transitionFired) {
+  _recordDiagFrame(ts, dt, lf, tSpaceLerpActive, transitionFired, racers) {
     const dox = this._diagPrevOffsetX !== null ? this.offsetX - this._diagPrevOffsetX : 0;
     const doy = this._diagPrevOffsetY !== null ? this.offsetY - this._diagPrevOffsetY : 0;
     const dz = this._diagPrevZoom !== null ? this.zoom - this._diagPrevZoom : 0;
@@ -1486,6 +1487,18 @@ export class CameraDirector {
       edy: this._lastEntryDeltaY,
       edz: this._lastEntryDeltaZoom,
       cr: this._diagConvergenceReason,
+      rc: racers
+        ? racers.map((r) => ({
+            n: r.name ?? r.id ?? '?',
+            t: typeof r.t === 'number' ? +r.t.toFixed(6) : r.t,
+            x: typeof r.x === 'number' ? +r.x.toFixed(2) : r.x,
+            y: typeof r.y === 'number' ? +r.y.toFixed(2) : r.y,
+            dx: typeof r._diagDx === 'number' ? +r._diagDx.toFixed(3) : 0,
+            dy: typeof r._diagDy === 'number' ? +r._diagDy.toFixed(3) : 0,
+            dt: typeof r._diagLogPrevT === 'number' ? +(r.t - r._diagLogPrevT).toFixed(6) : 0,
+            sp: typeof r._diagSpeed === 'number' ? +r._diagSpeed.toFixed(3) : 0,
+          }))
+        : undefined,
     };
     this._diagConvergenceReason = null; // consumed — only set on the transition frame
     this._diagPrevOffsetX = this.offsetX;
@@ -1543,6 +1556,7 @@ export class CameraDirector {
             edy: 'entryConvergence deltaY px (0 when tracking)',
             edz: 'entryConvergence deltaZoom (0 when tracking)',
             cr: 'convergenceReason: "threshold"|"timeout" on entry→tracking frame, null otherwise',
+            rc: 'racers snapshot — array of {n,t,x,y,dx,dy,dt,sp} per racer: n=name, t=path-progress 0–1, x/y=world-px, dx/dy=Δpx from prev frame, dt=Δt from prev frame, sp=pixel-speed',
           },
         },
         frames,

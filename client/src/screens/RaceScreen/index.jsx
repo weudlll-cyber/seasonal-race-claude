@@ -917,6 +917,7 @@ export default function RaceScreen() {
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
         const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
         // D4: snapshot t before updates so constSpeed can equalize deltas
+        for (const r of st.racers) r._diagLogPrevT = r.t;
         if (constSpeedActive) {
           for (const r of st.racers) r._diagPrevT = r.t;
         }
@@ -982,6 +983,8 @@ export default function RaceScreen() {
             const dx = r.x - (r._diagPrevX ?? r.x);
             const dy = r.y - (r._diagPrevY ?? r.y);
             r._diagSpeed = Math.sqrt(dx * dx + dy * dy);
+            r._diagDx = dx;
+            r._diagDy = dy;
             r._diagPrevX = r.x;
             r._diagPrevY = r.y;
           }

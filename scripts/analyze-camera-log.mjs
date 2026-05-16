@@ -160,12 +160,162 @@ export function analyzeLog(frames, opts = {}) {
   return { jumps, summary };
 }
 
+/**
+ * Analyse per-racer movement for unexpected jumps in pixel position (dx, dy)
+ * and path progress (dt) using Method B (rolling-median outlier detection).
+ *
+ * @param {object[]} frames  Parsed frame entries from the exported JSON.
+ *   Each frame must contain an `rc` array of racer snapshots
+ *   with fields: n (name), dx, dy, dt.  Frames without `rc` are skipped.
+ * @param {object}   [opts]
+ * @param {number}   [opts.racer_dx_factor=5]
+ *   Flag a frame if |racer.dx| > factor × rolling median of last 10 |dx| values.
+ * @param {number}   [opts.racer_dy_factor=5]
+ *   Flag a frame if |racer.dy| > factor × rolling median of last 10 |dy| values.
+ * @param {number}   [opts.racer_dt_factor=8]
+ *   Flag a frame if |racer.dt| > factor × rolling median of last 10 |dt| values.
+ *   Higher default because t advances very uniformly; only large deviations matter.
+ * @param {number}   [opts.context=5]
+ *   Number of frames before/after a flagged frame to include in report.
+ * @returns {{ jumps: RacerJumpReport[], summary: string }}
+ */
+export function analyzeRacerJumps(frames, opts = {}) {
+  const dxFactor = opts.racer_dx_factor ?? 5;
+  const dyFactor = opts.racer_dy_factor ?? 5;
+  const dtFactor = opts.racer_dt_factor ?? 8;
+  const context  = opts.context        ?? 5;
+
+  if (!Array.isArray(frames) || frames.length === 0) {
+    return { jumps: [], summary: 'No frames to analyse.' };
+  }
+
+  // Collect all racer names from rc arrays
+  const racerNames = new Set();
+  for (const f of frames) {
+    if (Array.isArray(f.rc)) {
+      for (const r of f.rc) {
+        if (r.n != null) racerNames.add(r.n);
+      }
+    }
+  }
+
+  if (racerNames.size === 0) {
+    return { jumps: [], summary: 'No racer data (rc) found in frames — log recorded without racer snapshots.' };
+  }
+
+  const jumps = [];
+
+  for (const name of racerNames) {
+    // Extract frames where this racer appears, preserving global frame index
+    const racerEntries = [];
+    for (let i = 0; i < frames.length; i++) {
+      const f = frames[i];
+      const rc = Array.isArray(f.rc) ? f.rc.find((r) => r.n === name) : undefined;
+      if (rc) racerEntries.push({ globalIdx: i, fi: f.fi, ts: f.ts, st: f.st, rc });
+    }
+
+    for (const axis of ['dx', 'dy', 'dt']) {
+      const factor = axis === 'dt' ? dtFactor : axis === 'dx' ? dxFactor : dyFactor;
+      const recentAbs = [];
+
+      for (let i = 0; i < racerEntries.length; i++) {
+        const entry = racerEntries[i];
+        const val    = entry.rc[axis] ?? 0;
+        const absVal = Math.abs(val);
+
+        if (recentAbs.length >= 3) {
+          const sorted = [...recentAbs].sort((a, b) => a - b);
+          const median = sorted[Math.floor(sorted.length / 2)];
+          if (absVal > factor * Math.max(0.001, median)) {
+            // Context: pull from the global frames array
+            const ctxStart  = Math.max(0, entry.globalIdx - context);
+            const ctxEnd    = Math.min(frames.length - 1, entry.globalIdx + context);
+            const ctxFrames = frames.slice(ctxStart, ctxEnd + 1).map((cf) => ({
+              fi: cf.fi,
+              ts: cf.ts,
+              st: cf.st,
+              rc: Array.isArray(cf.rc)
+                ? cf.rc.find((r) => r.n === name) ?? null
+                : null,
+            }));
+
+            jumps.push({
+              frameIdx:    entry.fi,
+              ts:          entry.ts,
+              racer:       name,
+              axis:        axis.toUpperCase(),
+              value:       +val.toFixed(3),
+              median:      +median.toFixed(3),
+              factor:      +(absVal / Math.max(0.001, median)).toFixed(2),
+              state:       entry.st,
+              context:     ctxFrames,
+              flaggedIndex: entry.globalIdx - ctxStart,
+            });
+          }
+        }
+
+        recentAbs.push(absVal);
+        if (recentAbs.length > 10) recentAbs.shift();
+      }
+    }
+  }
+
+  // Sort chronologically, then by racer name
+  jumps.sort((a, b) => a.frameIdx - b.frameIdx || a.racer.localeCompare(b.racer));
+
+  const summary =
+    jumps.length === 0
+      ? `No racer jumps detected in ${frames.length} frames (${racerNames.size} racers).`
+      : [
+          `Found ${jumps.length} racer jump(s) across ${racerNames.size} racer(s) in ${frames.length} frames.`,
+          '',
+          'Racer jump summary:',
+          ...jumps.map(
+            (j, idx) =>
+              `  [${idx + 1}] frame #${j.frameIdx}  racer=${j.racer}  axis=${j.axis}` +
+              `  val=${j.value}  (${j.factor}×median=${j.median})  state=${j.state}`
+          ),
+        ].join('\n');
+
+  return { jumps, summary };
+}
+
 // ── CLI entry point ───────────────────────────────────────────────────────────
 
+/**
+ * Parse --key=value flags from argv, returning a map of key→parsed value.
+ * Numeric values are converted; others remain strings.
+ */
+function parseFlags(argv) {
+  const flags = {};
+  for (const arg of argv) {
+    const m = arg.match(/^--([^=]+)=(.+)$/);
+    if (m) {
+      const num = Number(m[2]);
+      flags[m[1]] = Number.isFinite(num) ? num : m[2];
+    }
+  }
+  return flags;
+}
+
 function main() {
-  const arg = process.argv[2];
+  const positional = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  const flags      = parseFlags(process.argv.slice(2));
+
+  const arg = positional[0];
   if (!arg) {
-    console.error('Usage: node scripts/analyze-camera-log.mjs <path-to-log.json>');
+    console.error('Usage: node scripts/analyze-camera-log.mjs <path-to-log.json> [options]');
+    console.error('');
+    console.error('Camera jump options:');
+    console.error('  --lerp_threshold=8    Method A: lerp residual threshold in px (default 8)');
+    console.error('  --median_factor=5     Method B: rolling-median multiplier (default 5)');
+    console.error('');
+    console.error('Racer jump options:');
+    console.error('  --racer_dx_factor=5   ΔX outlier factor per racer (default 5)');
+    console.error('  --racer_dy_factor=5   ΔY outlier factor per racer (default 5)');
+    console.error('  --racer_dt_factor=8   Δt outlier factor per racer (default 8)');
+    console.error('');
+    console.error('  --context=5           Context frames around each flagged frame (default 5)');
     console.error('');
     console.error('Export a log from the race screen (enableFrameLog toggle in DevScreen)');
     console.error('and drop the downloaded file in client/tmp/camera-logs/');
@@ -204,15 +354,16 @@ function main() {
     console.log('');
   }
 
-  const { jumps, summary } = analyzeLog(frames);
+  // ── Camera jump analysis ──────────────────────────────────────────────────
+  const { jumps: camJumps, summary: camSummary } = analyzeLog(frames, flags);
 
-  console.log('=== Jump Analysis ===');
-  console.log(summary);
+  console.log('=== Camera Jump Analysis ===');
+  console.log(camSummary);
 
-  if (jumps.length > 0) {
-    console.log('\n=== Detailed Jump Reports ===');
-    for (const [idx, j] of jumps.entries()) {
-      console.log(`\n─── Jump ${idx + 1}/${jumps.length} — frame #${j.frameIdx} ───`);
+  if (camJumps.length > 0) {
+    console.log('\n=== Detailed Camera Jump Reports ===');
+    for (const [idx, j] of camJumps.entries()) {
+      console.log(`\n─── Camera Jump ${idx + 1}/${camJumps.length} — frame #${j.frameIdx} ───`);
       console.log(`  State:        ${j.state} / lerpPhase=${j.lerpPhase} / obs=${j.observerPhase}`);
       console.log(`  deltaOffsetX: ${j.dox} px    deltaOffsetY: ${j.doy} px`);
       if (j.camTDelta !== null) {
@@ -249,7 +400,7 @@ function main() {
         );
       }
     }
-    console.log('\n=== Interpretation Guide ===');
+    console.log('\n=== Camera Interpretation Guide ===');
     console.log('• Method A (lerp residual): actual move ≫ expected from lerp formula');
     console.log('  → Likely cause: T-space→pixel-space switch, target snap, or stale prevFocusT');
     console.log('• Method B (median outlier): spike vs. rolling median, no transition');
@@ -257,6 +408,50 @@ function main() {
     console.log('• Large ΔcamT alongside large Δoffset: may be normal tToWorld() curvature at corners');
     console.log('• lp=entry + ts2=1 + large dox: camera is T-space pinned — check if camT itself jumped');
     console.log('• lp=entry→tracking transition frame: pixel-lerp target may snap; one-frame artefact');
+  }
+
+  // ── Racer jump analysis ───────────────────────────────────────────────────
+  const hasRacerData = frames.some((f) => Array.isArray(f.rc) && f.rc.length > 0);
+  if (!hasRacerData) {
+    console.log('\n(No racer data in this log — recorded with an older version of the frame logger.)');
+    return;
+  }
+
+  console.log('\n=== Racer Jump Analysis ===');
+  const { jumps: racerJumps, summary: racerSummary } = analyzeRacerJumps(frames, flags);
+  console.log(racerSummary);
+
+  if (racerJumps.length > 0) {
+    console.log('\n=== Detailed Racer Jump Reports ===');
+    for (const [idx, j] of racerJumps.entries()) {
+      console.log(`\n─── Racer Jump ${idx + 1}/${racerJumps.length} — frame #${j.frameIdx} — ${j.racer} ───`);
+      console.log(`  Axis:   ${j.axis}   value=${j.value}   factor=${j.factor}×median(${j.median})   state=${j.state}`);
+      console.log(`  Context (${j.context.length} frames, flagged=[${j.flaggedIndex}]):`);
+      const header = '    fi       ts       st               t         x         y        dx       dy       dt       sp';
+      console.log(header);
+      for (const [ci, cf] of j.context.entries()) {
+        const marker = ci === j.flaggedIndex ? '>>>' : '   ';
+        const rc = cf.rc;
+        console.log(
+          `  ${marker}` +
+          String(cf.fi ?? '').padStart(6) +
+          String((cf.ts ?? '').toFixed?.(0) ?? '').padStart(9) +
+          ` ${String(cf.st ?? '').padEnd(16)}` +
+          String((rc?.t  ?? '').toFixed?.(5) ?? 'null').padStart(9) +
+          String((rc?.x  ?? '').toFixed?.(1) ?? 'null').padStart(10) +
+          String((rc?.y  ?? '').toFixed?.(1) ?? 'null').padStart(10) +
+          String((rc?.dx ?? '').toFixed?.(2) ?? 'null').padStart(9) +
+          String((rc?.dy ?? '').toFixed?.(2) ?? 'null').padStart(9) +
+          String((rc?.dt ?? '').toFixed?.(5) ?? 'null').padStart(9) +
+          String((rc?.sp ?? '').toFixed?.(2) ?? 'null').padStart(9)
+        );
+      }
+    }
+    console.log('\n=== Racer Interpretation Guide ===');
+    console.log('• Large dx/dy spike: racer teleported in pixel space — check getPosition() or t-wrap logic');
+    console.log('• Large dt spike: sudden t-value jump — check speed-bonus, re-roll, or constSpeed logic');
+    console.log('• Correlate racer jumps with camera state (st) — if camera also jumped, shared cause likely');
+    console.log('• Multiple racers same frame: likely a global state change (re-roll, lap-wrap, race-start)');
   }
 }
 
