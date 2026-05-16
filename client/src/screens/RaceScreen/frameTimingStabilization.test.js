@@ -391,3 +391,340 @@ describe('dtSmoothingAlpha slider effect', () => {
     expect(steadyState).toBeLessThan(28);
   });
 });
+
+// ── Test 5: Render-Interpolation (Variant B1) ─────────────────────────────────
+
+// Mirrors the lerp helper and renderAlpha computation from RaceScreen/index.jsx.
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function computeRenderAlpha(physicsAccum) {
+  return Math.min(1, physicsAccum / FIXED_DT);
+}
+
+describe('Render interpolation — lerp formula', () => {
+  it('alpha=0 returns prev value', () => {
+    expect(lerp(10, 20, 0)).toBe(10);
+    expect(lerp(-5, 5, 0)).toBe(-5);
+  });
+
+  it('alpha=1 returns curr value', () => {
+    expect(lerp(10, 20, 1)).toBe(20);
+    expect(lerp(-5, 5, 1)).toBe(5);
+  });
+
+  it('alpha=0.5 returns midpoint', () => {
+    expect(lerp(10, 20, 0.5)).toBe(15);
+    expect(lerp(0, 100, 0.5)).toBe(50);
+    expect(lerp(-10, 10, 0.5)).toBe(0);
+  });
+
+  it('alpha=0.25 interpolates correctly', () => {
+    expect(lerp(0, 40, 0.25)).toBeCloseTo(10, 10);
+    expect(lerp(100, 200, 0.25)).toBeCloseTo(125, 10);
+  });
+});
+
+describe('Render interpolation — shadow fields after accumulator run', () => {
+  it('_prevX/_prevY/_prevAngle are captured before physics step and differ from post-step values', () => {
+    // Simulate what index.jsx does: snapshot _prev, then run physics step.
+    const racer = { t: 0, x: 100, y: 200, angle: 0.5, baseSpeed: 0.01 };
+
+    // B1 snapshot (mirrors: for (const r of st.racers) { r._prevX = r.x; ... })
+    racer._prevX = racer.x;
+    racer._prevY = racer.y;
+    racer._prevAngle = racer.angle;
+
+    // Simulate one physics step changing position
+    racer.t += racer.baseSpeed;
+    racer.x = racer.t * 500; // simplified position update
+    racer.y = racer.t * 300;
+    racer.angle = racer.t * Math.PI;
+
+    // _prev must reflect pre-step values
+    expect(racer._prevX).toBe(100);
+    expect(racer._prevY).toBe(200);
+    expect(racer._prevAngle).toBe(0.5);
+
+    // current values must have changed
+    expect(racer.x).not.toBe(racer._prevX);
+    expect(racer.y).not.toBe(racer._prevY);
+  });
+
+  it('_prevX fallback ?? r.x is safe when _prevX is undefined (first frame)', () => {
+    const racer = { x: 42, y: 99, angle: 1.2 };
+    // No _prevX set yet — simulates first RACING frame before any snapshot
+    const alpha = 0.4;
+    const renderX = lerp(racer._prevX ?? racer.x, racer.x, alpha);
+    const renderY = lerp(racer._prevY ?? racer.y, racer.y, alpha);
+    // lerp(curr, curr, alpha) = curr regardless of alpha
+    expect(renderX).toBe(42);
+    expect(renderY).toBe(99);
+  });
+});
+
+describe('Render interpolation — renderAlpha stays in [0, 1]', () => {
+  it('physicsAccum=0 gives renderAlpha=0', () => {
+    expect(computeRenderAlpha(0)).toBe(0);
+  });
+
+  it('physicsAccum just under FIXED_DT gives renderAlpha close to 1', () => {
+    const alpha = computeRenderAlpha(FIXED_DT - 0.001);
+    expect(alpha).toBeGreaterThan(0.99);
+    expect(alpha).toBeLessThanOrEqual(1);
+  });
+
+  it('physicsAccum=FIXED_DT/2 gives renderAlpha=0.5', () => {
+    expect(computeRenderAlpha(FIXED_DT / 2)).toBeCloseTo(0.5, 10);
+  });
+
+  it('physicsAccum clamped to 1 even if somehow exceeds FIXED_DT', () => {
+    // Guard: Math.min(1, accum/FIXED_DT) ensures alpha never exceeds 1
+    expect(computeRenderAlpha(FIXED_DT * 2)).toBe(1);
+    expect(computeRenderAlpha(999)).toBe(1);
+  });
+});
+
+describe('Render interpolation — toggle disables interpolation', () => {
+  it('interpolationEnabled=false uses direct r.x regardless of alpha and _prev', () => {
+    const racer = { x: 80, y: 60, angle: 0.3, _prevX: 10, _prevY: 10, _prevAngle: 0 };
+    const renderAlpha = 0.5;
+    const interpolationEnabled = false;
+
+    const renderX = interpolationEnabled
+      ? lerp(racer._prevX ?? racer.x, racer.x, renderAlpha)
+      : racer.x;
+    const renderY = interpolationEnabled
+      ? lerp(racer._prevY ?? racer.y, racer.y, renderAlpha)
+      : racer.y;
+    const renderAngle = interpolationEnabled
+      ? lerp(racer._prevAngle ?? racer.angle, racer.angle, renderAlpha)
+      : racer.angle;
+
+    // Must return current physics values unchanged
+    expect(renderX).toBe(80);
+    expect(renderY).toBe(60);
+    expect(renderAngle).toBe(0.3);
+  });
+
+  it('interpolationEnabled=true interpolates between _prev and current', () => {
+    const racer = { x: 80, y: 60, angle: 0.4, _prevX: 40, _prevY: 20, _prevAngle: 0.2 };
+    const renderAlpha = 0.5;
+    const interpolationEnabled = true;
+
+    const renderX = interpolationEnabled
+      ? lerp(racer._prevX ?? racer.x, racer.x, renderAlpha)
+      : racer.x;
+    const renderY = interpolationEnabled
+      ? lerp(racer._prevY ?? racer.y, racer.y, renderAlpha)
+      : racer.y;
+    const renderAngle = interpolationEnabled
+      ? lerp(racer._prevAngle ?? racer.angle, racer.angle, renderAlpha)
+      : racer.angle;
+
+    // lerp(40, 80, 0.5) = 60
+    expect(renderX).toBeCloseTo(60, 10);
+    // lerp(20, 60, 0.5) = 40
+    expect(renderY).toBeCloseTo(40, 10);
+    // lerp(0.2, 0.4, 0.5) = 0.3
+    expect(renderAngle).toBeCloseTo(0.3, 10);
+  });
+});
+
+// ── Per-step snapshot invariant ────────────────────────────────────────────────
+// Mirrors the accumulator loop in index.jsx with the B1 fix:
+// _prev snapshot taken INSIDE the while loop before each step.
+// Each step: snapshot _prev = curr, then advance x by stepSize.
+function runAccumulatorWithPerStepSnapshot(racer, rawDtSequence, stepSize) {
+  let physicsAccum = 0;
+  for (const rawDt of rawDtSequence) {
+    physicsAccum += rawDt;
+    while (physicsAccum >= FIXED_DT) {
+      // B1 fix: snapshot per-step
+      racer._prevX = racer.x;
+      racer._prevY = racer.y;
+      racer.x += stepSize;
+      racer.y += stepSize;
+      physicsAccum -= FIXED_DT;
+    }
+  }
+  return { physicsAccum, racer };
+}
+
+// Buggy per-rAF snapshot (for comparison): _prev taken once before the whole loop.
+function runAccumulatorWithPerRafSnapshot(racer, rawDtSequence, stepSize) {
+  let physicsAccum = 0;
+  for (const rawDt of rawDtSequence) {
+    // Buggy: snapshot before the loop, not inside it
+    racer._prevX = racer.x;
+    racer._prevY = racer.y;
+    physicsAccum += rawDt;
+    while (physicsAccum >= FIXED_DT) {
+      racer.x += stepSize;
+      racer.y += stepSize;
+      physicsAccum -= FIXED_DT;
+    }
+  }
+  return { physicsAccum, racer };
+}
+
+describe('Render interpolation — per-step snapshot invariant (B1 fix)', () => {
+  const STEP = 10; // pixels per physics step
+
+  it('per-step: _prev is exactly 1 step behind curr after a 1-step frame', () => {
+    const racer = { x: 0, y: 0 };
+    const { physicsAccum } = runAccumulatorWithPerStepSnapshot(racer, [16], STEP);
+    // After 1 step: prev=0, curr=10
+    expect(racer._prevX).toBe(0);
+    expect(racer.x).toBe(10);
+    // Gap is exactly 1 step
+    expect(racer.x - racer._prevX).toBeCloseTo(STEP, 10);
+    const alpha = computeRenderAlpha(physicsAccum);
+    const renderX = lerp(racer._prevX, racer.x, alpha);
+    // renderX must be between prev and curr
+    expect(renderX).toBeGreaterThanOrEqual(racer._prevX);
+    expect(renderX).toBeLessThanOrEqual(racer.x);
+  });
+
+  it('per-step: _prev is exactly 1 step behind curr after a 2-step frame', () => {
+    const racer = { x: 0, y: 0 };
+    // rawDt=33ms → 2 steps fire (physicsAccum=33→17→1)
+    const { physicsAccum } = runAccumulatorWithPerStepSnapshot(racer, [33], STEP);
+    // After step 1: prev=0, curr=10; after step 2: prev=10, curr=20
+    expect(racer._prevX).toBe(10); // exactly 1 step behind
+    expect(racer.x).toBe(20);
+    expect(racer.x - racer._prevX).toBeCloseTo(STEP, 10);
+    const alpha = computeRenderAlpha(physicsAccum);
+    const renderX = lerp(racer._prevX, racer.x, alpha);
+    expect(renderX).toBeGreaterThanOrEqual(racer._prevX);
+    expect(renderX).toBeLessThanOrEqual(racer.x);
+  });
+
+  it('buggy per-rAF: _prev is 2 steps behind curr after a 2-step frame', () => {
+    const racer = { x: 0, y: 0 };
+    runAccumulatorWithPerRafSnapshot(racer, [33], STEP);
+    // Buggy: prev=0 (before both steps), curr=20 (2 steps ahead) → gap=2*STEP
+    expect(racer._prevX).toBe(0);
+    expect(racer.x).toBe(20);
+    expect(racer.x - racer._prevX).toBeCloseTo(2 * STEP, 10);
+  });
+
+  it('per-step: renderX gap never exceeds 1 step across a 60fps sequence with occasional 2-step frames', () => {
+    // 60fps at 60Hz generates a 2-step frame every ~24 frames due to 0.67ms drift.
+    // Per-step snapshot: gap must always equal exactly STEP regardless.
+    const racer = { x: 0, y: 0 };
+    const rawDts = Array.from({ length: 48 }, (_, i) => (i % 24 === 23 ? 33 : 16));
+
+    let physicsAccum = 0;
+    let maxGap = 0;
+    for (const rawDt of rawDts) {
+      physicsAccum += rawDt;
+      while (physicsAccum >= FIXED_DT) {
+        racer._prevX = racer.x;
+        racer.x += STEP;
+        physicsAccum -= FIXED_DT;
+      }
+      const gap = racer.x - racer._prevX;
+      if (gap > maxGap) maxGap = gap;
+    }
+    // Per-step snapshot: gap is always exactly 1 step
+    expect(maxGap).toBeCloseTo(STEP, 10);
+  });
+});
+
+// ── Pattern A: lerpAngle (shortest-arc) ───────────────────────────────────────
+describe('Pattern A — lerpAngle shortest-arc interpolation', () => {
+  // Mirror of the lerpAngle helper in index.jsx
+  function lerpAngle(a, b, t) {
+    let diff = b - a;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    return a + diff * t;
+  }
+
+  it('lerpAngle midpoint between 0 and π/2 is π/4', () => {
+    expect(lerpAngle(0, Math.PI / 2, 0.5)).toBeCloseTo(Math.PI / 4, 10);
+  });
+
+  it('lerpAngle takes short arc across track seam: lerp(-π, π, 0.5) resolves to ±π not 0', () => {
+    // Plain lerp(-π, π, 0.5) = 0 — the long way around (backward sprite).
+    // lerpAngle normalises diff to 0 (shortest arc is zero rotation) → result = -π.
+    const result = lerpAngle(-Math.PI, Math.PI, 0.5);
+    // Both ±π represent the same angle; either is the correct short-arc answer.
+    expect(Math.abs(Math.abs(result) - Math.PI)).toBeCloseTo(0, 10);
+  });
+
+  it('lerpAngle uses sin/cos consistency: lerp result matches expected unit-circle position', () => {
+    // Verify that lerpAngle(a, b, t) places the sprite on the correct arc.
+    // Angles a=π/6, b=5π/6 — midpoint by shortest arc = π/2.
+    const a = Math.PI / 6;
+    const b = (5 * Math.PI) / 6;
+    const mid = lerpAngle(a, b, 0.5);
+    // sin(π/2)=1, cos(π/2)=0
+    expect(Math.sin(mid)).toBeCloseTo(Math.sin(Math.PI / 2), 10);
+    expect(Math.cos(mid)).toBeCloseTo(Math.cos(Math.PI / 2), 10);
+  });
+
+  it('renderRacers whitelist: only t, x, y, angle are interpolated — all other fields pass through unchanged', () => {
+    // renderRacers must spread the racer object so identity fields (id, name, color, …)
+    // are never modified. This guards against accidentally lerp-ing physics state.
+    const LERP = (a, b, t) => a + (b - a) * t;
+
+    const racer = {
+      id: 'r1',
+      name: 'Alice',
+      color: '#ff0000',
+      t: 0.8,
+      x: 100,
+      y: 50,
+      angle: 0.5,
+      _prevT: 0.7,
+      _prevX: 90,
+      _prevY: 45,
+      _prevAngle: 0.4,
+      baseSpeed: 0.001,
+      finished: false,
+    };
+    const alpha = 0.5;
+
+    // Simulate renderRacers map (same logic as index.jsx)
+    const rendered = {
+      ...racer,
+      t: LERP(racer._prevT, racer.t, alpha),
+      x: LERP(racer._prevX, racer.x, alpha),
+      y: LERP(racer._prevY, racer.y, alpha),
+      angle: lerpAngle(racer._prevAngle, racer.angle, alpha),
+    };
+
+    // Interpolated fields
+    expect(rendered.t).toBeCloseTo(0.75, 10);
+    expect(rendered.x).toBeCloseTo(95, 10);
+    expect(rendered.y).toBeCloseTo(47.5, 10);
+
+    // Pass-through fields must be byte-identical (not lerped)
+    expect(rendered.id).toBe('r1');
+    expect(rendered.name).toBe('Alice');
+    expect(rendered.color).toBe('#ff0000');
+    expect(rendered.baseSpeed).toBe(0.001);
+    expect(rendered.finished).toBe(false);
+  });
+
+  it('_prevT snapshot: per-step _prevT is exactly 1 physics step behind t', () => {
+    // Mirrors the per-step snapshot block: r._prevT = r.t before each physics step.
+    const STEP_T = 0.001; // per-step t increment
+    const racer = { t: 0 };
+
+    let physicsAccum = 0;
+    const rawDts = [16, 16, 33, 16]; // one 2-step frame in sequence
+
+    for (const rawDt of rawDts) {
+      physicsAccum += rawDt;
+      while (physicsAccum >= FIXED_DT) {
+        racer._prevT = racer.t;
+        racer.t += STEP_T;
+        physicsAccum -= FIXED_DT;
+      }
+    }
+    // After the loop _prevT must be exactly 1 step behind t
+    expect(racer.t - racer._prevT).toBeCloseTo(STEP_T, 10);
+  });
+});

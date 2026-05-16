@@ -237,6 +237,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {
   dtSmoothingAlpha: 0.7,
+  renderInterpolation: true,
 };
 
 export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {

@@ -22,6 +22,9 @@ export function loadFrameTimingConfig() {
   ) {
     return { ...DEFAULT_FRAME_TIMING_CONFIG };
   }
+  if (typeof merged.renderInterpolation !== 'boolean') {
+    merged.renderInterpolation = DEFAULT_FRAME_TIMING_CONFIG.renderInterpolation;
+  }
   return merged;
 }
 

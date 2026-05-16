@@ -457,6 +457,17 @@ export default function RaceScreen() {
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
+    // ── Linear interpolation helpers (used for render interpolation) ────────
+    const lerp = (a, b, t) => a + (b - a) * t;
+    // Shortest-arc angle lerp — prevents wrap bug at track seam (t=0/t=1 on closed tracks)
+    // where plain lerp(-π, π, 0.5) = 0 (wrong); this returns ±π (correct shorter arc).
+    const lerpAngle = (a, b, t) => {
+      let diff = b - a;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      return a + diff * t;
+    };
+
     // ── Canvas positions ────────────────────────────────────────────────────
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
@@ -535,7 +546,7 @@ export default function RaceScreen() {
       }
     }
 
-    function drawRacers(effectiveScale, ezoom) {
+    function drawRacers(effectiveScale, ezoom, renderAlpha, interpolationEnabled) {
       const st = g.current;
       const rt = racerTypeRef.current;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
@@ -547,7 +558,13 @@ export default function RaceScreen() {
           cameraConfigRef.current.tagVisibleMaxCount
         )
       );
+      const doInterp = interpolationEnabled && st.phase === PHASE.RACING;
       for (const r of st.racers) {
+        const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
+        const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
+        const renderAngle = doInterp
+          ? lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha)
+          : r.angle;
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
           ctx.globalAlpha = frac * 0.4;
@@ -557,22 +574,34 @@ export default function RaceScreen() {
           ctx.fill();
         }
         ctx.globalAlpha = 1;
-        rt.drawRacer(ctx, r.x, r.y, r.angle, r, r === leader, st.lastTs ?? 0, effectiveScale);
+        rt.drawRacer(
+          ctx,
+          renderX,
+          renderY,
+          renderAngle,
+          r,
+          r === leader,
+          st.lastTs ?? 0,
+          effectiveScale
+        );
         if (tagSet.has(r)) {
-          drawNameTag(r.x, r.y, r.name, r === leader, ezoom);
+          drawNameTag(renderX, renderY, r.name, r === leader, ezoom);
         }
-        r.trail.push({ x: r.x, y: r.y });
+        r.trail.push({ x: renderX, y: renderY });
         if (r.trail.length > 10) r.trail.shift();
       }
     }
 
     // Battle-diag: coloured world-space markers on the leader + 20-frame snapshot table.
     // Markers are drawn AFTER drawRacers so they appear on top of all sprites.
-    function drawBattleDiagMarkers(cam, ezoom) {
+    function drawBattleDiagMarkers(cam, ezoom, renderAlpha, interpolationEnabled) {
       if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
       const st = g.current;
       if (!st?.racers?.length) return;
       const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
+      const doInterp = interpolationEnabled && st.phase === PHASE.RACING;
+      const leaderRX = doInterp ? lerp(leader._prevX ?? leader.x, leader.x, renderAlpha) : leader.x;
+      const leaderRY = doInterp ? lerp(leader._prevY ?? leader.y, leader.y, renderAlpha) : leader.y;
       const mr = 5 / ezoom;
       const lw = 2 / ezoom;
       const dot = (wx, wy, color) => {
@@ -591,9 +620,9 @@ export default function RaceScreen() {
         ctx.restore();
       };
 
-      dot(leader.x, leader.y, '#ff4444'); // ROT  — world pos
+      dot(leaderRX, leaderRY, '#ff4444'); // ROT  — render pos
       const tagOffY = Math.max(12, Math.round(22 / ezoom));
-      dot(leader.x, leader.y - tagOffY, '#ffd700'); // GELB — nameTag anchor
+      dot(leaderRX, leaderRY - tagOffY, '#ffd700'); // GELB — nameTag anchor
 
       const ezoomY = isOpenTrack ? ezoom : cam.zoom * bsY;
       // Camera centre in world space: derived from cam.offsetX/Y for both track types.
@@ -606,11 +635,11 @@ export default function RaceScreen() {
       const ld = leaderDiagRef.current;
       if (!ld.frozen) {
         // Screen X: world_x * effZoom + offsetX (unified formula for both track types)
-        const scrX = leader.x * ezoom + cam.offsetX;
+        const scrX = leaderRX * ezoom + cam.offsetX;
         ld.snapshots.push({
           f: ld.snapshots.length + 1,
           rx: leader.x,
-          drawX: leader.x,
+          drawX: leaderRX,
           scrX,
           tagX: scrX,
           camX: camWorldX,
@@ -904,6 +933,9 @@ export default function RaceScreen() {
       const st = g.current;
       const shape = shapeRef.current;
       const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
+      // Render-interpolation alpha: set in RACING branch after accumulator.
+      // 0 for non-RACING phases → lerp falls back to current value.
+      let renderAlpha = 0;
       st.lastTs = ts;
 
       // EMA smoothing for cosmetic updates (camera lerp, track effects).
@@ -941,7 +973,6 @@ export default function RaceScreen() {
         if (constSpeedActive) {
           for (const r of st.racers) r._diagPrevT = r.t;
         }
-
         // ── Fixed-timestep physics accumulator ───────────────────────────────
         // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
         // long frames (50ms) yield 3 steps, short frames (12ms) yield 0.
@@ -950,6 +981,16 @@ export default function RaceScreen() {
         while (st.physicsAccum >= FIXED_DT) {
           st.physicsTs += FIXED_DT;
           const physicsTs = st.physicsTs;
+
+          // B1: snapshot per-step so _prev is always exactly 1 step behind curr.
+          // Must be inside the loop — per-rAF snapshot causes freeze+snap on 2-step frames:
+          // _prev would be 2 steps behind while alpha≈0, then the next frame jumps ~2S.
+          for (const r of st.racers) {
+            r._prevT = r.t;
+            r._prevX = r.x;
+            r._prevY = r.y;
+            r._prevAngle = r.angle;
+          }
 
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
@@ -1075,6 +1116,10 @@ export default function RaceScreen() {
         }
         // ── End physics accumulator ──────────────────────────────────────────
 
+        // Fraction of next physics step already elapsed in wall time.
+        // physicsAccum is always in [0, FIXED_DT) after the loop.
+        renderAlpha = Math.min(1, st.physicsAccum / FIXED_DT);
+
         // D1: per-racer pixel speed and smoothed Δv between top-3 (once per rAF, uses rawDt)
         {
           const ordered = [...st.racers].sort((a, b) => b.t - a.t);
@@ -1161,6 +1206,20 @@ export default function RaceScreen() {
       }
 
       // ── Camera update ──
+      // Pattern A: camera receives interpolated racer positions (renderRacers) so it
+      // tracks the same world position as the sprites. Without this, the camera jumps
+      // with physics steps while sprites stay 1 step behind → sprite-camera desync.
+      // COUNTDOWN uses st.racers directly (no physics steps, no interpolation needed).
+      const renderRacers =
+        frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING
+          ? st.racers.map((r) => ({
+              ...r,
+              t: lerp(r._prevT ?? r.t, r.t, renderAlpha),
+              x: lerp(r._prevX ?? r.x, r.x, renderAlpha),
+              y: lerp(r._prevY ?? r.y, r.y, renderAlpha),
+              angle: lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha),
+            }))
+          : st.racers;
       const raceState = {
         raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
         finishedCount: st.finishedCount,
@@ -1169,7 +1228,7 @@ export default function RaceScreen() {
       };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(st.racers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
+          ? camDirRef.current.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
           : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
             ? camDirRef.current.updateCountdown(
                 st.racers,
@@ -1238,8 +1297,13 @@ export default function RaceScreen() {
       if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
       drawParticles();
       drawSurfaceTrails();
-      drawRacers(frameDisplayScale, frameEffZoom);
-      drawBattleDiagMarkers(cam, frameEffZoom);
+      drawRacers(
+        frameDisplayScale,
+        frameEffZoom,
+        renderAlpha,
+        frameTimingConfig.renderInterpolation
+      );
+      drawBattleDiagMarkers(cam, frameEffZoom, renderAlpha, frameTimingConfig.renderInterpolation);
       ctx.restore();
       if (isOpenTrack) {
         drawTitleOpen();
@@ -1279,8 +1343,14 @@ export default function RaceScreen() {
           // Convert world position to screen space: world_x * effZoom + offsetX (both track types)
           const effZx = frameEffZoom; // cam.zoom×BASE_ZOOM (open) or cam.zoom×bsX (closed)
           const effZy = isOpenTrack ? effZx : cam.zoom * bsY;
-          const sx = r.x * effZx + cam.offsetX;
-          const sy = r.y * effZy + cam.offsetY;
+          const rox = frameTimingConfig.renderInterpolation
+            ? lerp(r._prevX ?? r.x, r.x, renderAlpha)
+            : r.x;
+          const roy = frameTimingConfig.renderInterpolation
+            ? lerp(r._prevY ?? r.y, r.y, renderAlpha)
+            : r.y;
+          const sx = rox * effZx + cam.offsetX;
+          const sy = roy * effZy + cam.offsetY;
 
           const spriteScreenR = (r.spriteWorldSizePx ?? 20) * effZx * 0.5;
           const ringR = Math.max(spriteScreenR, 8);

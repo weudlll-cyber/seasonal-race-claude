@@ -1116,6 +1116,22 @@ function RaceTuningSection() {
                   : 'Strong smoothing — very stable camera, slow adaptation'}
           </p>
         </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Render Interpolation"
+              checked={frameTimingConfig.renderInterpolation ?? true}
+              onChange={(e) => setFrameTiming('renderInterpolation', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Render Interpolation
+            <InfoTooltip text="Glättet Sprite- und Kamera-Bewegung zwischen Physik-Schritten. Eliminiert rhythmische Hüpfer bei variabler Browser-Frame-Rate. Aus = Vorher-Verhalten ohne Interpolation (Vergleichs-Modus). Wirkt sofort." />
+          </label>
+        </div>
       </SubCard>
 
       {/* Race Behavior toggle (hidden but functional — keeps the enabled flag accessible) */}
