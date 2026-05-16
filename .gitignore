@@ -16,3 +16,4 @@ diagnosis/
 server/data/**/*.json.tmp
 server/data/tracks-backups/
 client/tmp/camera-logs/*.json
+/poc-*.png

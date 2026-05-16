@@ -1526,3 +1526,112 @@ die inhaltliche Aufgabe, nicht den Ort: „AUDIT.md aktualisieren".
 
 **Konsequenz:** Merge-Prompts nennen ab sofort nur noch „AUDIT.md aktualisieren" — kein
 Zeilenbezug mehr.
+
+---
+
+## Lesson 76 — Global trifft nicht selektiv: Reichweite von Symptom und Hypothese müssen übereinstimmen
+
+**Kontext:** Im Rahmen der Bolt-Avoidance-Diagnose (2026-05-16) war das beobachtete Phänomen
+selektiv — nur bestimmte Racer-Konstellationen, nur unter bestimmten Bedingungen. Eine
+zwischenzeitliche Frame-Timing-Hypothese wurde erwogen, aber sofort durch die User-Frage
+„warum nicht alle Racer?" gestoppt. Frame-Timing-Probleme betreffen global alle Racer
+gleich — ein globales System kann kein selektives Symptom erzeugen.
+
+**Erkenntnis:** Wenn ein Symptom selektiv ist (nur bestimmte Racer, nur bestimmte Bedingungen,
+nur bestimmte Tracks), muss die Ursache ebenfalls selektiv sein. Eine globale Ursache kann kein
+selektives Symptom erklären. Wenn Hypothese und Symptom unterschiedliche Reichweiten haben,
+stimmt die Hypothese nicht — unabhängig davon wie plausibel sie isoliert betrachtet wirkt.
+
+**Konsequenz:** Vor jeder Diagnose: explizit fragen „Trifft dieses Symptom global (alle Racer,
+alle Tracks) oder selektiv (bestimmte Konstellationen)?" und nur Hypothesen prüfen die dieselbe
+Reichweite haben. Reichweiten-Mismatch ist ein sofortiges Ausschlusskriterium.
+
+---
+
+## Lesson 77 — Mathematisch korrekter Fix ≠ visuell wirksam: Browser-Test ist Pflicht, nicht Optional
+
+**Kontext:** PR #117 (Avoidance-Track-Skalierung, 2026-05-16) war konzeptionell korrekt und
+alle Tests waren grün. Der Browser-Test zeigte jedoch keine spürbare Verbesserung des
+beobachteten Symptoms. Spätere Diagnose zeigte: die eigentliche Ursache lag in der
+Frame-Timing-Architektur, nicht in der Avoidance-Skalierung.
+
+**Erkenntnis:** Code-Korrektheit und Test-Suite-Grün sind notwendige, aber nicht hinreichende
+Bedingungen für einen erfolgreichen Fix. Ein Fix kann mathematisch korrekt sein, alle Tests
+bestehen, und trotzdem das beobachtete visuelle Symptom nicht beheben — weil die Diagnose
+unvollständig war. „Richtig fühlt sich die Lösung an" + Tests grün + keine visuelle Wirkung
+= Warnsignal dass die zugrunde liegende Diagnose falsch war.
+
+**Konsequenz:** Browser-Test mit echtem Racebetrieb ist kein optionaler Nachschritt, sondern
+Pflicht-Verifikation. Falls ein Fix visuell keine Wirkung zeigt: Diagnose neu öffnen, nicht
+Parameter tunen.
+
+---
+
+## Lesson 78 — Bei mehreren erfolglosen Iterationen zurücktreten: Architektur-Review statt weiterer Patch
+
+**Kontext:** Die Sprite-Interpolation (Branch feat/render-interpolation) wurde in zwei Iterationen
+angegangen: zunächst per-rAF-Snapshot (außerhalb der Accumulator-Schleife), dann per-Step-
+Snapshot (innerhalb). Beide Varianten reduzierten das Ruckeln, eliminierten es aber nicht.
+Nach diesen beiden Iterationen ohne vollständige Lösung forderte der User einen
+Architektur-Review — kein weiteres Patch-Experiment.
+
+**Erkenntnis:** Nach 2–3 erfolglosen Patch-Versuchen ist das Signal für Architektur-Review,
+nicht für weitere Patches. Statistisch ist der nächste Versuch wieder erfolglos — die
+zugrundeliegende Modell-Annahme stimmt nicht. Die korrekte Reaktion: einen Schritt zurücktreten,
+das Gesamtbild neu denken, die Annahmen explizit aufschreiben und prüfen.
+
+Im Frame-Timing-Fall war die falsche Annahme: „Sprite-Interpolation allein reicht." Die korrekte
+Erkenntnis: Kamera und Sprite müssen synchron interpolieren (Pattern A). Das war keine
+Iteration auf der alten Annahme, sondern ein Annahmen-Wechsel.
+
+**Konsequenz:** Nach zwei bis drei erfolglosen Fix-Versuchen: explizit in den Architektur-Review-
+Modus wechseln. Symptom, bisherige Annahmen und bisherige Fixes aufschreiben — oft wird dabei
+der Annahmen-Fehler sichtbar, ohne weiteres Debugging.
+
+**Verweis:** L73 (Regression Awareness — an nicht funktionierenden Komponenten nicht beliebig
+weitertunen).
+
+---
+
+## Lesson 79 — Zweite Meinung bei großen Architektur-Entscheidungen: Konvergenz als starkes Signal
+
+**Kontext:** Vor der Pattern-A-Implementation (Render-State-Interpolation, 2026-05-16) wurde
+dieselbe Architektur-Frage beiden verfügbaren KI-Systemen gestellt: Claude Code und Copilot —
+unabhängig voneinander, mit identischem Kontext. Beide empfahlen Pattern A ohne Kenntnis der
+jeweils anderen Antwort. Bei der anschließenden Spec-Review fand Copilot außerdem drei
+HIGH-Priorität-Verbesserungen, die in die finale Spec einflossen (Whitelist-Test-Ansatz,
+sin/cos-Vergleich für lerpAngle, konkrete Steady-State-Kategorisierung).
+
+**Erkenntnis:** Vor irreversiblen oder aufwändigen Architektur-Entscheidungen lohnt sich
+eine unabhängige zweite Meinung. Konvergenz zweier unabhängiger Stimmen auf dieselbe Lösung
+ist ein starkes Signal — verschiedene Argumentationspfade, gleiche Schlussfolgerung. Divergenz
+ist kein Problem, sondern wertvoller Anlass zum Hinterfragen bevor implementiert wird. Auch die
+Spec selbst profitiert von einer zweiten Prüfung: eine externe Stimme findet Präzisierungsbedarf
+den man selbst übersieht.
+
+**Konsequenz:** Bei Entscheidungen mit hohem Umkehr-Aufwand (neue Architektur-Schicht,
+Paradigmenwechsel, >1 Tag Implementation): zweite Meinung einholen bevor Spec geschrieben wird.
+Die Investition ist gering, das Risiko-Reduktionspotenzial hoch.
+
+---
+
+## Lesson 80 — Den eigentlichen Wunsch hinterfragen: „minimal-invasiv" ist kein Erfolgsmaß
+
+**Kontext:** Beim Übergang von B1 (Sprite-Interpolation allein) zu Pattern A (Sprite + Kamera
+synchron) wurde dem User zunächst angeboten: „Kamera auch interpoliert?" als optionale
+Erweiterung — als ob das ein Add-on wäre. Faktisch war es architektonisch zwingend: der Spalt
+zwischen Sprite-Position (interpoliert) und Kamera-Position (Physics-raw) war die Hauptursache
+des verbleibenden Ruckelns. „Optional" war die falsche Kategorisierung.
+
+**Erkenntnis:** „Minimal-invasiv" ist nicht automatisch „richtig". Die Tendenz, Lösungen als
+kleiner als nötig zu präsentieren, kann dazu führen dass der User eine halbfertige Lösung
+wählt — nicht weil er sie will, sondern weil der Aufwand des vollständigen Wegs unterschätzt
+oder versteckt wurde. Wenn eine Projektarchitektur „sicher, sauber, wartbar" als Grundwert hat,
+kann die saubere Lösung wichtiger sein als die schnelle.
+
+**Konsequenz:** Bei Architektur-Entscheidungen den eigentlichen Wunsch explizit erfragen:
+„Was ist das Ziel?" statt „Was ist der minimale Eingriff?". Wenn eine Lösung architektonisch
+zwingend ist, klar benennen — nicht als Option verkleiden. User entscheidet dann bewusst,
+nicht durch ein verzerrtes Aufwand-Bild.
+
+**Verweis:** L78 (Architektur-Review statt Patch-Iteration); L79 (Zweite Meinung).

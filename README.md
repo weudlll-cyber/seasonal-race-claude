@@ -22,7 +22,8 @@ RaceArena lets an event organiser configure racers, draw tracks, set effects, an
 - **Track Effects** — up to 3 simultaneous animated effects per track (rain, stars, bubbles, fireflies, dust, mud, wave); live preview in editor
 - **Race Engine** — client-side physics, multi-lap + open-course support; force-based lane separation (home force, avoidance, free-lane separation, speed brake, drafting)
 - **Camera Director** — TV-style state machine (OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM); pulk-based battle trigger (≥3 racers within 200 px); time-based lead-in / lead-out phases; per-state zoom tuning in Dev Panel; Tier-2 diagnostic HUD; picture-in-picture minimap
-- **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, race history, system backup/restore
+- **Frame-Timing Engine** — fixed-timestep physics accumulator (FIXED_DT=16ms), EMA dt-smoothing for camera, and render-state interpolation (Pattern A / "Fix Your Timestep") for smooth motion at variable FPS
+- **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, race history, system backup/restore; Frame Timing tuning (dtSmoothingAlpha, renderInterpolation toggle)
 - **Preset Thumbnails** — rendered preview cards in SetupScreen track selector
 
 ## Project Structure
@@ -46,7 +47,7 @@ App runs at `http://localhost:3000`.
 ## Local Backend (Phase L)
 
 ```bash
-docker-compose up          # starts server on port 4000
+docker compose up          # starts server on port 4000
 cd client && npm run dev   # starts frontend on port 3000 (separate terminal)
 ```
 

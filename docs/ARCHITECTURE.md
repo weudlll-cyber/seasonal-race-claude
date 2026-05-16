@@ -284,6 +284,66 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 All parameters are tunable in the Dev Screen → **Race Tuning** section (PR-A3: formerly the standalone "Race Behavior" section, now consolidated with Base Speed, Row Start, and Re-Roll into one 9-block section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
 
+## Frame-Timing Architecture (PR #118 + PR #119)
+
+Three interlocking mechanisms stabilise the race at variable browser FPS (typically 30–60 Hz on throttled hardware).
+
+### Fixed-Timestep Physics Accumulator (Variant A — PR #118)
+
+Physics advances in discrete `FIXED_DT = 16 ms` steps regardless of browser frame rate, eliminating the 2:1 speed oscillation that occurred when `requestAnimationFrame` alternated between 16 ms and 33 ms frames.
+
+```
+rawDt    = min(ts - lastTs, 50)          // capped at 50 ms to prevent spiral-of-death
+physicsAccum += rawDt
+while (physicsAccum >= FIXED_DT):
+    physicsTs += FIXED_DT
+    [snapshot _prevT/_prevX/_prevY/_prevAngle per racer]
+    [apply physics: spreadFactor, applyRacerBehavior, computePositions]
+    physicsAccum -= FIXED_DT
+renderAlpha = physicsAccum / FIXED_DT    // fraction of next step already elapsed
+```
+
+Key properties:
+- A 50 ms frame fires 3 physics steps; a 5 ms catch-up frame fires 0. Total physics time is never lost.
+- `physicsTs` is the authoritative race clock — independent of display FPS.
+- Re-roll timestamps use `physicsTs`-relative offsets, not wall-time, so race duration is deterministic.
+
+### EMA dt-Smoothing (Variant C — PR #118)
+
+A separate smoothed delta-time (`smoothDt`) is used for cosmetic-only updates (camera lerp factor, track effects, minimap). The physics accumulator always uses raw `rawDt`.
+
+```
+smoothDt = alpha × smoothDt + (1 - alpha) × rawDt   // alpha = 0.7 default
+```
+
+`dtSmoothingAlpha` is tunable in Dev Screen → Race Tuning → Frame Timing. Range `[0, 0.95]`.
+
+### Render-State Interpolation / Pattern A (PR #119)
+
+Sprites and camera both interpolate between the previous and current physics step using `renderAlpha`:
+
+```
+renderRacers = racers.map(r => ({
+    ...r,
+    t:     lerp(r._prevT,     r.t,     renderAlpha),
+    x:     lerp(r._prevX,     r.x,     renderAlpha),
+    y:     lerp(r._prevY,     r.y,     renderAlpha),
+    angle: lerpAngle(r._prevAngle, r.angle, renderAlpha),   // shortest-arc
+}))
+```
+
+`renderRacers` is passed to both `drawRacers()` and `CameraDirector.update()`. This keeps sprites and camera in sync — on 0-step frames both stay still; on 3-step frames both jump identically. Before PR #119, the camera tracked raw physics positions (jump on every step) while sprites were interpolated (1 step behind) → visible sprite-camera desync at 38 fps.
+
+The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each physics step** (inside the while loop), so `_prev` is always exactly one step behind `curr` regardless of how many steps fire per frame.
+
+`lerpAngle` uses shortest-arc normalisation to prevent the track-seam wrap bug: at `t = 0/1` on closed tracks, plain `lerp(-π, π, 0.5) = 0` (sprite pointing backward); `lerpAngle` returns `±π` (correct shorter arc).
+
+`renderInterpolation` toggle (Dev Screen → Race Tuning → Frame Timing) enables/disables Pattern A for A/B comparison. Defaults to `true`.
+
+**Implementation:** `client/src/screens/RaceScreen/index.jsx` (physics accumulator, renderRacers map, drawRacers).
+**Config:** `client/src/modules/frameTimingConfig.js` + `DEFAULT_FRAME_TIMING_CONFIG` in `storage/defaults.js`.
+**Tests:** `frameTimingStabilization.test.js` (20 Variant-A/C tests + 5 Pattern-A tests = 25 total).
+
 ## Camera System
 
 The race camera lives in `modules/camera/` and supports four director modes:
@@ -294,6 +354,8 @@ The race camera lives in `modules/camera/` and supports four director modes:
 - **COMEBACK_ZOOM** — tracks the furthest-behind racer
 
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
+
+`CameraDirector.update()` receives `renderRacers` (interpolated racer positions, see Frame-Timing Architecture above) for the RACING phase. COUNTDOWN uses raw `st.racers` (no physics accumulator active during countdown). The steady-state pixel-space lerp in `CameraDirector` (tracking phase, `offsetX += (targetOffsetX - offsetX) × lf`) naturally tracks interpolated targets once `renderRacers` is passed as input.
 
 ## Visual Racer Effects System (Phase VRE)
 

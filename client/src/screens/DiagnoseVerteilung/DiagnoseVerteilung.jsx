@@ -6,6 +6,8 @@
 //              Runs 50 headless race simulations and reports the empirical
 //              distribution of "racers nebeneinander" after 4 seconds RACING time.
 //              Part of Phase-1 inventory measurement (feature/priority-system).
+//              Internal diagnose tool — accessible only via direct URL. Not linked
+//              from main UI. Intentionally kept; do not delete.
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';

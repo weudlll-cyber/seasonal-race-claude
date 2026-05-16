@@ -43,6 +43,9 @@ function App() {
           <Route path="/results" element={<ResultScreen />} />
           <Route path="/dev" element={<DevScreen />} />
           <Route path="/track-editor" element={<TrackEditor />} />
+          {/* INTERNAL: URL-only diagnose route. Nicht UI-verlinkt — Zugriff bewusst nur über
+              /diagnose-verteilung in der Adresszeile. Headless-Simulator zur Verteilungs-
+              Analyse. Nicht löschen. */}
           <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
         </Routes>
       </TransitionProvider>
