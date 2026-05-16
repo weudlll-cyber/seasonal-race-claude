@@ -593,3 +593,43 @@ describe('applyRacerBehavior — drafting cone', () => {
     expect(follower.draftingBoostActive).toBe(false);
   });
 });
+
+// ── applyRacerBehavior — track-relative lateralForce scaling ─────────────
+
+describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
+  // Two close racers in avoidance range (dT=0, dY=0.2 → dist=0.2 < avoidanceDistance=0.35).
+  // homeForce off; spriteWorldSizePx absent so free-lane separation does not fire.
+  // Avoidance delta = rA.physicalY_after - 0.1
+  function avoidDelta(trackW) {
+    const rA = makeRacer({
+      index: 0,
+      t: 0.5,
+      ...(trackW > 0 && { geometricTrackWidthPx: trackW }),
+    });
+    rA.physicalY = 0.1;
+    const rB = makeRacer({
+      index: 1,
+      t: 0.5,
+      ...(trackW > 0 && { geometricTrackWidthPx: trackW }),
+    });
+    rB.physicalY = -0.1;
+    applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0 });
+    return rA.physicalY - 0.1;
+  }
+
+  it('scale = 1.0 at reference width (98 px) — same as no track-width info', () => {
+    expect(avoidDelta(98)).toBe(avoidDelta(0));
+  });
+
+  it('scale = 0.5 when track width is double the reference (196 px)', () => {
+    expect(avoidDelta(196)).toBeCloseTo(avoidDelta(98) * 0.5, 10);
+  });
+
+  it('scale clamped to 0.1 for very wide tracks — both 1000 px and 2000 px give the same delta', () => {
+    expect(avoidDelta(1000)).toBeCloseTo(avoidDelta(2000), 10);
+  });
+
+  it('scale clamped to 3.0 for very narrow tracks — both 10 px and 20 px give the same delta', () => {
+    expect(avoidDelta(10)).toBeCloseTo(avoidDelta(20), 10);
+  });
+});

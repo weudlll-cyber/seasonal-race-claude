@@ -17,6 +17,10 @@ export const PRIORITY_MODE = Object.freeze({
   BLOCKED: 'BLOCKED',
 });
 
+// Dirt Oval track width in px — the baseline where lateralForce is visually calibrated.
+// Wider tracks divide lateralForce by the ratio; narrower tracks multiply it (clamped 0.1–3.0).
+const REFERENCE_TRACK_WIDTH = 98;
+
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
  * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
@@ -229,6 +233,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
       if (dist >= config.avoidanceDistance) continue;
 
+      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
+      // so the pixel-space force is consistent across all track widths.
+      const pairTrackWidth = Math.max(getTrackWidthPx(rA), getTrackWidthPx(rB));
+      const lateralScale =
+        pairTrackWidth > 0
+          ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTrackWidth))
+          : 1.0;
+
       // Proximity-scaled lateral force
       const forceMag = config.lateralForce * (1 - dist / config.avoidanceDistance);
 
@@ -320,7 +332,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const yDiff = trailer.physicalY - leader.physicalY;
       if (Math.abs(yDiff) < 1e-6) continue;
       const pushDir = yDiff >= 0 ? 1 : -1;
-      yAvoidDeltas.set(trailer.index, yAvoidDeltas.get(trailer.index) + pushDir * forceMag);
+      yAvoidDeltas.set(
+        trailer.index,
+        yAvoidDeltas.get(trailer.index) + pushDir * forceMag * lateralScale
+      );
       neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
     }
   }
