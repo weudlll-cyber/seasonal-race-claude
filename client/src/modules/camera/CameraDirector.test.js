@@ -3762,3 +3762,148 @@ describe('CameraDirector.updateCountdown', () => {
     expect(cd.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
   });
 });
+
+// ── T-Space Zoom-Mismatch Fix (pre/post-lerp zoom consistency) ───────────────
+//
+// These tests verify that during T-Space-Snap entry mode the camera's rendered
+// center in world coordinates equals camT's world position (no pre/post-lerp
+// zoom mismatch), and that variable frame duration does not produce dox spikes.
+//
+// Setup helper: linear open track, LEADER_ZOOM entry with T-Space primed.
+// The shape maps t → world x = t * trackLen so the expected camera center is
+// always exactly shape.getPosition(_camT).x.
+
+function makeTSpaceOpenCD(trackLen = 4000) {
+  const shape = {
+    getTotalLength: () => trackLen,
+    getPosition: (t, _) => ({ x: t * trackLen, y: 360 }),
+  };
+  // Large transitionTConvergence so threshold never fires during the test window.
+  // Small maxEntryDurationMs (2000ms >> test duration) keeps entry phase alive.
+  const cfg = {
+    ...profileConfig,
+    transitionTConvergence: 100,
+    cameraStateProfiles: {
+      ...profileConfig.cameraStateProfiles,
+      LEADER_ZOOM: {
+        ...profileConfig.cameraStateProfiles.LEADER_ZOOM,
+        entryTC: 0.35,
+        leadInDuration: 0,
+        maxEntryDurationMs: 2000,
+      },
+    },
+  };
+  const cd = new CameraDirector(trackLen, 720, true, cfg, 36, shape);
+  cd.state = CAM_STATE.LEADER_ZOOM;
+  cd.stateEnteredAt = 0;
+  // Start zoom below the leader target so zoom is actively lerping during the test.
+  cd.zoom = cd.overviewZoom;
+  // Prime T-Space: camT in mid-track, target slightly ahead.
+  cd._camT = 0.5;
+  cd._transitionTargetT = 0.52;
+  cd._lerpPhase = 'entry';
+  return { cd, shape, trackLen };
+}
+
+describe('CameraDirector — T-Space zoom-mismatch fix', () => {
+  it('Test 1 — rendered camera center tracks camT world position (< 1 px error) across variable dt', () => {
+    // With the fix, targetOffsetX is computed with the post-lerp zoom, so
+    // offsetX = -camX × effZoom is consistent with the zoom used to render.
+    // The rendered center (canvas_center − offsetX) / effZoom must equal
+    // shape.getPosition(camT).x to within floating-point precision.
+    const { cd, shape, trackLen } = makeTSpaceOpenCD();
+    const racers = [
+      { x: 0.5 * trackLen, y: 360, t: 0.5 },
+      { x: 0.48 * trackLen, y: 360, t: 0.48 },
+    ];
+    const raceState = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1 };
+    // Mix of normal (16.67ms) and slow (50ms) frames to expose dt-driven mismatch.
+    const dtSeq = [16.67, 16.67, 50, 16.67, 16.67, 50, 16.67, 16.67, 16.67, 50];
+    let ts = 0;
+
+    for (const dt of dtSeq) {
+      ts += dt;
+      const cam = cd.update(racers, ts, raceState, 1280, 720);
+      if (cd.lerpPhase !== 'entry') break; // safety: stop if convergence fired early
+
+      const effZoom = cam.zoom * OPEN_TRACK_BASE_ZOOM;
+      const renderedCenterX = (640 - cam.offsetX) / effZoom;
+      const camTWorldX = shape.getPosition(cd._camT, 0).x;
+
+      expect(Math.abs(renderedCenterX - camTWorldX)).toBeLessThan(1);
+    }
+  });
+
+  it('Test 2 — dox explained solely by zoom-in (pan contribution ≈ 0 during T-Space entry)', () => {
+    // dox should equal approximately −worldX × Δ(effZoom) (zoom contribution only).
+    // The pan contribution (−effZoom × ΔworldX) stays near zero because camT barely
+    // advances per frame; any residual beyond the zoom term is the pan contribution.
+    const { cd, shape, trackLen } = makeTSpaceOpenCD();
+    const racers = [
+      { x: 0.5 * trackLen, y: 360, t: 0.5 },
+      { x: 0.48 * trackLen, y: 360, t: 0.48 },
+    ];
+    const raceState = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1 };
+
+    let prevOffsetX = null;
+    let prevZoom = null;
+    let ts = 0;
+
+    for (let i = 0; i < 12; i++) {
+      const dt = i % 3 === 0 ? 50 : 16.67; // every third frame is slow
+      ts += dt;
+      const cam = cd.update(racers, ts, raceState, 1280, 720);
+      if (cd.lerpPhase !== 'entry') break;
+
+      if (prevOffsetX !== null) {
+        const dox = cam.offsetX - prevOffsetX;
+        const effZoomNew = cam.zoom * OPEN_TRACK_BASE_ZOOM;
+        const effZoomOld = prevZoom * OPEN_TRACK_BASE_ZOOM;
+        const worldX = (640 - cam.offsetX) / effZoomNew;
+        // Zoom contribution: −worldX × Δ(effZoom)
+        const zoomContribution = -worldX * (effZoomNew - effZoomOld);
+        // Pan contribution: dox minus the zoom term — should be near zero
+        const panContribution = dox - zoomContribution;
+        expect(Math.abs(panContribution)).toBeLessThan(2);
+      }
+
+      prevOffsetX = cam.offsetX;
+      prevZoom = cam.zoom;
+    }
+  });
+
+  it('Test 3 — variable dt (8 ms to 50 ms) does not produce outsized dox spikes', () => {
+    // Without the fix, slow frames (lf ≈ 0.134) produce dox ≈ −camX × Δ(effZoom) where
+    // Δ(effZoom) = lf × Δzoom_gap × BASE. With the fix, the spike is bounded because
+    // targetOffsetX is computed with the already-lerped zoom. The natural zoom-in motion
+    // per frame must not exceed worldX × effZoom × lf60_entry × 3 in absolute value.
+    const { cd, trackLen } = makeTSpaceOpenCD();
+    const lf60 = tcToLerpFactor(0.35); // entryTC matches config above
+    const racers = [
+      { x: 0.5 * trackLen, y: 360, t: 0.5 },
+      { x: 0.48 * trackLen, y: 360, t: 0.48 },
+    ];
+    const raceState = { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1 };
+    const dtSeq = [8, 50, 8, 50, 8, 50, 8, 8, 50, 8, 8, 50];
+
+    let prevOffsetX = null;
+    let ts = 0;
+
+    for (const dt of dtSeq) {
+      ts += dt;
+      const cam = cd.update(racers, ts, raceState, 1280, 720);
+      if (cd.lerpPhase !== 'entry') break;
+
+      if (prevOffsetX !== null) {
+        const dox = Math.abs(cam.offsetX - prevOffsetX);
+        const effZoom = cam.zoom * OPEN_TRACK_BASE_ZOOM;
+        // World x ≈ canvas_center position (camera center in world coords)
+        const worldX = (640 - cam.offsetX) / effZoom;
+        const maxAllowed = Math.abs(worldX) * effZoom * lf60 * 3;
+        expect(dox).toBeLessThan(maxAllowed + 5); // +5 px tolerance for rounding
+      }
+
+      prevOffsetX = cam.offsetX;
+    }
+  });
+});

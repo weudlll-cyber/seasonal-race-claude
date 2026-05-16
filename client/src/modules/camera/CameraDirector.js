@@ -571,16 +571,25 @@ export class CameraDirector {
         this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
       }
     }
-    this._setTargets(racers, canvasW, canvasH, raceState);
-
-    this.zoom += (this.targetZoom - this.zoom) * lf;
     // During entry with T-space lerp active: pan is pinned to _camT's world position (already
     // set in targetOffsetX/Y by _setTargets). No pixel lerp — the camera path follows the track.
+    // The zoom lerp is applied BEFORE _setTargets so that targetOffsetX is computed with the
+    // post-lerp zoom. Without this, targetOffsetX uses the pre-lerp zoom while the renderer uses
+    // the post-lerp zoom, creating a per-frame mismatch (∝ camX × Δzoom) that produces visible
+    // camera jumps when dt is variable. Fix applies to both open and closed tracks.
     const tSpaceLerpActive =
       this._lerpPhase === 'entry' &&
       this._camT !== null &&
       this._shape &&
       this._transitionTargetT !== null;
+    if (tSpaceLerpActive) {
+      this.zoom += (this.targetZoom - this.zoom) * lf;
+    }
+    this._setTargets(racers, canvasW, canvasH, raceState);
+
+    if (!tSpaceLerpActive) {
+      this.zoom += (this.targetZoom - this.zoom) * lf;
+    }
     if (tSpaceLerpActive) {
       this.offsetX = this.targetOffsetX;
       this.offsetY = this.targetOffsetY;
