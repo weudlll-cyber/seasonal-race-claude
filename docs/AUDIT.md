@@ -169,8 +169,9 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-16 | **1867 unit** | PR — Pattern A komplett: Render-State-Interpolation für Sprite UND Kamera. Schließt "Fix Your Timestep" (Glenn Fiedler) für Sprite/Camera-Layer ab. Eliminiert variable-FPS-Artefakte (Multi-Step-Hüpfer und Sprite-Camera-Desync). Vom User visuell verifiziert ("sooo smooth"). lerpAngle-Helper (Shortest-Arc, verhindert Track-Seam-Wrap-Bug), r._prevT im Per-Step-Snapshot-Block, renderRacers-Map vor CameraDirector.update() — Kamera und Sprites targeten jetzt identische interpolierte Positionen. COUNTDOWN nutzt st.racers direkt (kein Akkumulator aktiv). DevScreen-Tooltip: "Sprite- und Kamera-Bewegung". +5 unit (lerpAngle, renderRacers-Whitelist, _prevT-Snapshot). Backup-Tag: `pre-render-interpolation`. Squash `91e526d`. |
 
 | 2026-05-16 | **1867 unit** | PR — Codebase-Audit 2026-05-16: 8 Bereiche durchleuchtet, Doku-Aktualisierungen (ARCHITECTURE/README/LESSONS L76-L80), Repo-Hygiene (Diagnose-MDs nach docs/diagnose/, poc-*.png gitignored), DiagnoseVerteilung als URL-only-Route klargestellt. Kein Logik-Code-Change. Folge-Aufgaben: ESLint-Cleanup (Cluster B), loop()-Refactoring (Cluster C) — beide BACKLOG. Squash `d5dc1ec`. |
+| 2026-05-17 | **1910 unit** | feat: fairness simulation tool + speedBonusMult formula fix (feat/fairness-simulation → master). sim-fairness.mjs (7200-Rennen, 144 Kombinationen, Chi²); computeSpeedBonus finishT-kalibriert (epsilon-guard, finite-checks, 7-Parameter); Closed-Tracks 71/72 BESTANDEN; L81, ARCHITECTURE.md, AUDIT.md PR-Bericht. +14 unit (finite-checks ×5, open-track ×3, correctness-properties ×6). Squash `2955f85`. |
 
-**Master-HEAD:** `d5dc1ec` (chore: codebase audit 2026-05-16, 2026-05-16)
+**Master-HEAD:** `2955f85` (feat: fairness simulation tool + speedBonusMult formula fix, 2026-05-17)
 **ESLint-Warnings:** 0
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
