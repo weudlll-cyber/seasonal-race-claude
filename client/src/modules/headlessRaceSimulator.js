@@ -157,7 +157,10 @@ export function simulateRace({
       assignment.rowIndex,
       rowGapPx,
       pathLengthPx,
-      rowConfig.speedBonusFactor
+      rowConfig.speedBonusFactor,
+      finishT,
+      false,
+      rowLayout.totalRows
     );
     // Closed track: tStart = -(rowIndex * deltaT_per_row)
     const tStart = -(assignment.rowIndex * deltaT_per_row);

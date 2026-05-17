@@ -69,19 +69,56 @@ export function computeRowPhysicalY(indexInRow, rowSize, spreadRange) {
   return -spreadRange + (2 * spreadRange * indexInRow) / (rowSize - 1);
 }
 
+// Minimum row0Distance below which the speed bonus guard returns 0.
+// Prevents division explosion when the assembly area nearly reaches the finish line.
+const SPEED_BONUS_EPSILON = 1e-9;
+
 /**
  * Compute speed bonus for a racer in rowIndex to compensate their physical start distance.
- * Row 0 gets no bonus. Rear rows get a bonus proportional to their t-space offset.
+ * Row 0 gets no bonus. Rear rows get a finishT-calibrated bonus so every row
+ * reaches the finish line in the same expected time.
  *
- * @param {number} rowIndex - 0 = front row (no bonus)
- * @param {number} rowGapPx - world-pixel gap between consecutive rows
- * @param {number} pathLengthPx - total track path length in world pixels
- * @param {number} speedBonusFactor - 1.0 = full compensation, 0 = none
+ * Formula derivation:
+ *   tOffset      = rowGapPx / pathLengthPx
+ *   row0Distance = finishT                         (closed)
+ *                  finishT − totalRows × tOffset   (open — front row already advanced)
+ *   bonus_N      = N × tOffset / row0Distance × speedBonusFactor
+ *
+ * At finishT = 1.0 (closed) the formula reduces to the legacy value N × tOffset,
+ * so existing finishT = 1.0 call-sites produce identical results.
+ *
+ * @param {number}  rowIndex        - 0 = front row (no bonus)
+ * @param {number}  rowGapPx        - world-pixel gap between consecutive rows
+ * @param {number}  pathLengthPx    - total track path length in world pixels
+ * @param {number}  speedBonusFactor - 1.0 = full compensation, 0 = none
+ * @param {number}  finishT         - t-space finish line (laps for closed; ≤ 0.95 for open)
+ * @param {boolean} isOpen          - true for open tracks (assembly area ahead of t = 0)
+ * @param {number}  totalRows       - total start rows in this race layout
  * @returns {number} fractional bonus — apply as effectiveBaseSpeed = baseSpeed × (1 + bonus)
  */
-export function computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor) {
-  if (rowIndex === 0 || pathLengthPx <= 0) return 0;
-  return ((rowIndex * rowGapPx) / pathLengthPx) * speedBonusFactor;
+export function computeSpeedBonus(
+  rowIndex,
+  rowGapPx,
+  pathLengthPx,
+  speedBonusFactor,
+  finishT,
+  isOpen,
+  totalRows
+) {
+  if (rowIndex === 0) return 0;
+  if (
+    !isFinite(rowGapPx) ||
+    !isFinite(pathLengthPx) ||
+    !isFinite(speedBonusFactor) ||
+    !isFinite(finishT) ||
+    !isFinite(totalRows)
+  )
+    return 0;
+  if (pathLengthPx <= 0) return 0;
+  const tOffset = rowGapPx / pathLengthPx;
+  const row0Distance = isOpen ? finishT - totalRows * tOffset : finishT;
+  if (row0Distance < SPEED_BONUS_EPSILON) return 0;
+  return ((rowIndex * tOffset) / row0Distance) * speedBonusFactor;
 }
 
 /**

@@ -165,41 +165,179 @@ describe('computeRowPhysicalY', () => {
 });
 
 // ── computeSpeedBonus ─────────────────────────────────────────────────────
+// All tests supply finishT, isOpen, totalRows (new required params from Phase 1B fix).
+// Closed-track tests use finishT=1.0 so the formula equals the legacy value N×tOffset,
+// making these both backwards-compat regressions and correctness checks.
 
-describe('computeSpeedBonus', () => {
+describe('computeSpeedBonus — closed track (finishT = 1.0)', () => {
   it('row 0 always returns 0 regardless of factor', () => {
-    expect(computeSpeedBonus(0, 100, 5000, 1.0)).toBe(0);
-    expect(computeSpeedBonus(0, 100, 5000, 0)).toBe(0);
+    expect(computeSpeedBonus(0, 100, 5000, 1.0, 1.0, false, 1)).toBe(0);
+    expect(computeSpeedBonus(0, 100, 5000, 0, 1.0, false, 1)).toBe(0);
   });
 
-  it('row 1 with factor 1.0 = exact distance compensation', () => {
+  it('row 1 with factor 1.0 and finishT=1.0: bonus = rowGapPx / pathLengthPx', () => {
     const rowGapPx = 100;
     const pathLengthPx = 5000;
-    // bonus = rowGapPx / pathLengthPx = 100/5000 = 0.02
-    expect(computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0)).toBeCloseTo(0.02, 6);
+    // finishT=1.0 → row0Distance=1.0 → bonus = 100/5000 = 0.02
+    expect(computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0, 1.0, false, 1)).toBeCloseTo(0.02, 6);
   });
 
   it('row 2 = 2× row 1 bonus', () => {
     const rowGapPx = 100;
     const pathLengthPx = 5000;
-    const b1 = computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0);
-    const b2 = computeSpeedBonus(2, rowGapPx, pathLengthPx, 1.0);
+    const b1 = computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0, 1.0, false, 1);
+    const b2 = computeSpeedBonus(2, rowGapPx, pathLengthPx, 1.0, 1.0, false, 1);
     expect(b2).toBeCloseTo(2 * b1, 6);
   });
 
   it('factor 0 → no compensation for any row', () => {
-    expect(computeSpeedBonus(1, 100, 5000, 0)).toBe(0);
-    expect(computeSpeedBonus(3, 100, 5000, 0)).toBe(0);
+    expect(computeSpeedBonus(1, 100, 5000, 0, 1.0, false, 1)).toBe(0);
+    expect(computeSpeedBonus(3, 100, 5000, 0, 1.0, false, 1)).toBe(0);
   });
 
   it('factor 0.5 → half compensation', () => {
-    const full = computeSpeedBonus(2, 100, 5000, 1.0);
-    const half = computeSpeedBonus(2, 100, 5000, 0.5);
+    const full = computeSpeedBonus(2, 100, 5000, 1.0, 1.0, false, 1);
+    const half = computeSpeedBonus(2, 100, 5000, 0.5, 1.0, false, 1);
     expect(half).toBeCloseTo(full / 2, 6);
   });
 
   it('pathLengthPx = 0 → returns 0 (no division by zero)', () => {
-    expect(computeSpeedBonus(1, 100, 0, 1.0)).toBe(0);
+    expect(computeSpeedBonus(1, 100, 0, 1.0, 1.0, false, 1)).toBe(0);
+  });
+});
+
+// ── computeSpeedBonus — finite checks (HIGH auflage) ──────────────────────
+
+describe('computeSpeedBonus — finite checks', () => {
+  it('NaN in rowGapPx → returns 0', () => {
+    expect(computeSpeedBonus(1, NaN, 5000, 1.0, 1.0, false, 1)).toBe(0);
+  });
+  it('Infinity in pathLengthPx → returns 0', () => {
+    expect(computeSpeedBonus(1, 100, Infinity, 1.0, 1.0, false, 1)).toBe(0);
+  });
+  it('NaN in finishT → returns 0', () => {
+    expect(computeSpeedBonus(1, 100, 5000, 1.0, NaN, false, 1)).toBe(0);
+  });
+  it('Infinity in speedBonusFactor → returns 0', () => {
+    expect(computeSpeedBonus(1, 100, 5000, Infinity, 1.0, false, 1)).toBe(0);
+  });
+  it('NaN in totalRows → returns 0', () => {
+    expect(computeSpeedBonus(1, 100, 5000, 1.0, 1.0, false, NaN)).toBe(0);
+  });
+});
+
+// ── computeSpeedBonus — open track formula (HIGH auflage) ─────────────────
+
+describe('computeSpeedBonus — open track formula', () => {
+  it('standard open track: bonus = N × tOffset / row0Distance (Weltall numbers)', () => {
+    // Weltall: pathLen=15986, rowGap=75 (50px×1.5), finishT=0.95, totalRows=2
+    const rowGapPx = 75,
+      pathLengthPx = 15986,
+      finishT = 0.95,
+      totalRows = 2;
+    const tOffset = rowGapPx / pathLengthPx;
+    const row0Distance = finishT - totalRows * tOffset;
+    const bonus1 = computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0, finishT, true, totalRows);
+    expect(bonus1).toBeCloseTo(tOffset / row0Distance, 8);
+    expect(bonus1).toBeGreaterThan(tOffset); // exceeds old-formula value since row0Distance < 1
+  });
+
+  it('open track: row0Distance < EPSILON → returns 0 (epsilon guard)', () => {
+    // tOffset = 10/100 = 0.1; totalRows=3 → assemblyArea = 0.3
+    // finishT barely above 0.3 → row0Distance ≈ 1e-10 < EPSILON (1e-9)
+    const finishT = 0.3 + 1e-10;
+    expect(computeSpeedBonus(1, 10, 100, 1.0, finishT, true, 3)).toBe(0);
+  });
+
+  it('open vs closed: same geometry yields different bonus values when finishT < 1', () => {
+    const rowGapPx = 60,
+      pathLengthPx = 6000,
+      finishT = 0.95,
+      totalRows = 3;
+    const tOffset = rowGapPx / pathLengthPx;
+    const bonusClosed = computeSpeedBonus(
+      1,
+      rowGapPx,
+      pathLengthPx,
+      1.0,
+      finishT,
+      false,
+      totalRows
+    );
+    const bonusOpen = computeSpeedBonus(1, rowGapPx, pathLengthPx, 1.0, finishT, true, totalRows);
+    // closed: row0Distance = finishT = 0.95
+    expect(bonusClosed).toBeCloseTo(tOffset / finishT, 8);
+    // open: row0Distance = finishT - totalRows*tOffset < finishT → larger bonus
+    const row0Dist = finishT - totalRows * tOffset;
+    expect(bonusOpen).toBeCloseTo(tOffset / row0Dist, 8);
+    expect(bonusOpen).toBeGreaterThan(bonusClosed);
+  });
+});
+
+// ── computeSpeedBonus — correctness properties (MEDIUM auflagen) ──────────
+
+describe('computeSpeedBonus — correctness properties', () => {
+  it('monotonie: higher rowIndex → weakly larger bonus (closed, multiple finishT)', () => {
+    for (const finishT of [0.5, 1.0, 2.0, 5.0]) {
+      let prev = 0;
+      for (let N = 0; N <= 5; N++) {
+        const bonus = computeSpeedBonus(N, 100, 5000, 1.0, finishT, false, 1);
+        expect(bonus).toBeGreaterThanOrEqual(prev);
+        prev = bonus;
+      }
+    }
+  });
+
+  it('skalierungs-invarianz closed: bonus = N × tOffset / finishT for finishT = 1, 2, 5, 10', () => {
+    const rowGapPx = 100,
+      pathLengthPx = 5000,
+      N = 2;
+    const tOffset = rowGapPx / pathLengthPx;
+    for (const finishT of [1, 2, 5, 10]) {
+      const bonus = computeSpeedBonus(N, rowGapPx, pathLengthPx, 1.0, finishT, false, 1);
+      expect(bonus).toBeCloseTo((N * tOffset) / finishT, 8);
+    }
+  });
+
+  it('finishT=1.0 closed: new formula equals legacy formula N×tOffset (backward compat)', () => {
+    const rowGapPx = 100,
+      pathLengthPx = 5000,
+      N = 2;
+    const legacy = (N * rowGapPx) / pathLengthPx;
+    expect(computeSpeedBonus(N, rowGapPx, pathLengthPx, 1.0, 1.0, false, 1)).toBeCloseTo(legacy, 8);
+  });
+
+  it('finishT=2.0 closed: new formula gives half of legacy', () => {
+    const rowGapPx = 100,
+      pathLengthPx = 5000,
+      N = 2;
+    const legacy = (N * rowGapPx) / pathLengthPx;
+    expect(computeSpeedBonus(N, rowGapPx, pathLengthPx, 1.0, 2.0, false, 1)).toBeCloseTo(
+      legacy / 2,
+      8
+    );
+  });
+
+  it('finishT=5.0 closed: new formula gives one-fifth of legacy', () => {
+    const rowGapPx = 100,
+      pathLengthPx = 5000,
+      N = 2;
+    const legacy = (N * rowGapPx) / pathLengthPx;
+    expect(computeSpeedBonus(N, rowGapPx, pathLengthPx, 1.0, 5.0, false, 1)).toBeCloseTo(
+      legacy / 5,
+      8
+    );
+  });
+
+  it('finishT=10.0 closed: new formula gives one-tenth of legacy', () => {
+    const rowGapPx = 100,
+      pathLengthPx = 5000,
+      N = 2;
+    const legacy = (N * rowGapPx) / pathLengthPx;
+    expect(computeSpeedBonus(N, rowGapPx, pathLengthPx, 1.0, 10.0, false, 1)).toBeCloseTo(
+      legacy / 10,
+      8
+    );
   });
 });
 

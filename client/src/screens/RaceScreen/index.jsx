@@ -400,7 +400,10 @@ export default function RaceScreen() {
           assignment.rowIndex,
           rowGapPx,
           pathLengthPx,
-          rowConfig.speedBonusFactor
+          rowConfig.speedBonusFactor,
+          finishT,
+          isOpenTrack,
+          rowLayout.totalRows
         );
         // Closed tracks: negative t wraps correctly via modulo in _idx.
         // Open tracks: offset each row forward from t=0 so all rows start within the path.

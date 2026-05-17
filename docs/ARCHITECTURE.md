@@ -169,9 +169,9 @@ racer init map.
    - *Open tracks*: Row k at `t = (totalRows − k) × rowGapPx / pathLengthPx`. All rows start
      at t > 0 within the path (assembly area). Front row at `totalRows × deltaT`, last row at
      `1 × deltaT`. No clamping needed.
-7. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — fractional bonus
-   applied to `baseSpeed` for rear rows. Factor 1.0 = exact distance compensation = pole neutral.
-   Applies on both closed and open tracks.
+7. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)` —
+   finishT-calibrated fractional bonus applied to `baseSpeed` for rear rows. Factor 1.0 = exact
+   distance compensation = pole neutral. Formula differs by track type (see speedBonus section).
 8. `computeMaxRacersDefault(pathLengthPx, racersPerRow, rowGapPx, maxCapacityFactor)` — auto-capacity
    for a track based on path length, pre-computed racersPerRow, and row gap.
 
@@ -220,12 +220,34 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMul
   into the T argument so it cancels out in each racer's actual finish time.
 
 **speedBonus (rowLayout.js) — Back-Row Positional Compensation:**
-`computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` returns a fractional
-bonus applied as `speedBonusMult = 1 + speedBonus`. Row 0 (Front-Row) gets `speedBonus = 0`.
-Rear rows (rowIndex 1, 2, …) get a bonus proportional to `rowIndex × rowGapPx / pathLengthPx`
-to compensate the spatial start disadvantage of being `rowIndex × rowGapPx` pixels behind the
-finish line. Mechanism is positions-based and temporally invariant — **not changed by the
-Re-Roll mechanism**.
+`computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)`
+returns a fractional bonus applied as `speedBonusMult = 1 + speedBonus`. Row 0 (Front-Row) gets
+`speedBonus = 0`. Rear rows (rowIndex N, N ≥ 1) get a finishT-calibrated bonus so every row
+reaches the finish line in the same expected time. Formula:
+
+```
+tOffset      = rowGapPx / pathLengthPx
+row0Distance = finishT                       (closed track)
+             = finishT − totalRows × tOffset (open track: front row already advanced)
+
+bonus_N = N × tOffset / row0Distance × speedBonusFactor
+```
+
+**Open-track geometry assumption:** For open tracks the entire field is placed ahead of t = 0
+(in the "assembly area"). Row 0 (front) starts at `totalRows × tOffset`, Row N at
+`(totalRows − N) × tOffset`. Row 0 must therefore travel `finishT − totalRows × tOffset` to reach
+the finish. This `row0Distance` is the divisor in the bonus formula.
+
+**Why not just `N × tOffset`?** The legacy formula `N × tOffset × speedBonusFactor` (pre-Phase-1B)
+equals the correct formula only when `row0Distance = 1.0` (i.e. `finishT = 1.0`, closed track,
+single lap). For multi-lap races (finishT = 2–10+) the bonus was proportionally too large → Rear-Bias.
+For open tracks (finishT ≈ 0.95, `row0Distance` slightly < 1) it was 5% too small → Front-Bias.
+For slow racers on short durations (`finishT < 1`) it was proportionally too small → Front-Bias.
+
+**Guard:** If `row0Distance < 1e-9` (epsilon guard) the function returns 0 to prevent division
+explosion when the assembly area nearly reaches the finish line. All non-finite inputs also return 0.
+
+Mechanism is positional and deterministic — **not changed by the Re-Roll mechanism**.
 
 **Race-Duration-Garantie (Klarstellung):** The `targetDuration` formula calibrates the
 **median racer** (spreadFactor = 1.0) to finish at `targetDuration × expectedMinSpreadFactor`

@@ -368,7 +368,7 @@ function runSimulation(track, seed, burstIndex, burstLen) {
   const racers = Array.from({ length: nRacers }, (_, i) => {
     const assignment   = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
     const rowSize      = rowSizeByRow.get(assignment.rowIndex) ?? 1;
-    const speedBonus   = computeSpeedBonus(assignment.rowIndex, rowGapPx, pathLengthPx, rowConfig.speedBonusFactor);
+    const speedBonus   = computeSpeedBonus(assignment.rowIndex, rowGapPx, pathLengthPx, rowConfig.speedBonusFactor, finishT, isOpen, rowLayout.totalRows);
     const tStart       = isOpen
       ? (rowLayout.totalRows - assignment.rowIndex) * deltaT_per_row
       : -(assignment.rowIndex * deltaT_per_row);

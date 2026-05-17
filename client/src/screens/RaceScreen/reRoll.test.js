@@ -224,38 +224,49 @@ describe('speedBonusMult — back-row compensation is independent of spreadFacto
   const rowGapPx = 39;
   const pathLengthPx = 5000;
   const factor = 1.0;
+  const finishT = 1.0; // closed track, 1-lap — new required param
+  const isOpen = false;
+  const totalRows = 4;
 
   it('front row (rowIndex=0): speedBonusMult = 1.0', () => {
-    expect(1 + computeSpeedBonus(0, rowGapPx, pathLengthPx, factor)).toBe(1.0);
+    expect(
+      1 + computeSpeedBonus(0, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows)
+    ).toBe(1.0);
   });
 
   it('row 1 speedBonusMult > 1.0 (positional compensation)', () => {
-    expect(1 + computeSpeedBonus(1, rowGapPx, pathLengthPx, factor)).toBeGreaterThan(1.0);
+    expect(
+      1 + computeSpeedBonus(1, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows)
+    ).toBeGreaterThan(1.0);
   });
 
   it('row 2 speedBonusMult > row 1 speedBonusMult', () => {
-    const m1 = 1 + computeSpeedBonus(1, rowGapPx, pathLengthPx, factor);
-    const m2 = 1 + computeSpeedBonus(2, rowGapPx, pathLengthPx, factor);
+    const m1 = 1 + computeSpeedBonus(1, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows);
+    const m2 = 1 + computeSpeedBonus(2, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows);
     expect(m2).toBeGreaterThan(m1);
   });
 
   it('speedBonusMult is determined solely by rowIndex — changes in spreadFactor have no effect', () => {
     const rowIndex = 2;
-    const mult = 1 + computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, factor);
+    const mult =
+      1 + computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows);
     for (let i = 0; i < 10; i++) {
       // Varying spreadFactor (re-roll simulation) — mult stays constant
-      expect(1 + computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, factor)).toBe(mult);
+      expect(
+        1 + computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows)
+      ).toBe(mult);
     }
   });
 
   it('speedBonusMult for each row is unchanged across 10 simulated re-rolls', () => {
     const rows = [0, 1, 2, 3];
     const initialMults = rows.map(
-      (ri) => 1 + computeSpeedBonus(ri, rowGapPx, pathLengthPx, factor)
+      (ri) => 1 + computeSpeedBonus(ri, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows)
     );
     for (let roll = 0; roll < 10; roll++) {
       const currentMults = rows.map(
-        (ri) => 1 + computeSpeedBonus(ri, rowGapPx, pathLengthPx, factor)
+        (ri) =>
+          1 + computeSpeedBonus(ri, rowGapPx, pathLengthPx, factor, finishT, isOpen, totalRows)
       );
       expect(currentMults).toEqual(initialMults);
     }

@@ -1635,3 +1635,41 @@ zwingend ist, klar benennen — nicht als Option verkleiden. User entscheidet da
 nicht durch ein verzerrtes Aufwand-Bild.
 
 **Verweis:** L78 (Architektur-Review statt Patch-Iteration); L79 (Zweite Meinung).
+
+---
+
+## Lesson 81 — Kompensationsformeln müssen zur Renngeometrie passen, nicht zur Einheitsmessung (Phase 1B / feat/fairness-simulation)
+
+**Kontext:** Die `computeSpeedBonus`-Formel in `rowLayout.js` lautete seit D7c:
+```
+bonus = rowIndex × rowGapPx / pathLengthPx × speedBonusFactor
+      = N × tOffset × speedBonusFactor
+```
+Diese Formel kompensiert den räumlichen Startnachteil einer hinteren Reihe — aber nur exakt bei
+`finishT = 1.0`. Bei Multi-Lap-Strecken (finishT = 2–10+) war der Bonus 2–10× zu groß (Rear-Bias);
+bei offenen Strecken und langsamen Racern mit kurzer Zieldistanz war er zu klein (Front-Bias).
+Die Simulation `sim-fairness.mjs` deckte das auf: alle 144 Track×Racer×Dauer-Kombinationen
+schlugen fehl, teils mit Row-0-Win-Rates von 0% oder 100%.
+
+**Erkenntnis:** Eine Distanz-Kompensationsformel muss zur *tatsächlichen Zieldistanz* normiert
+sein, nicht zur Tracklänge. Der korrekte Kompensationsfaktor ist:
+
+```
+bonus_N = N × tOffset / row0Distance × speedBonusFactor
+
+row0Distance (geschlossen) = finishT
+row0Distance (offen)       = finishT − totalRows × tOffset
+```
+
+Bei `finishT = 1.0` (geschlossen) stimmt die alte Formel zufällig. Das war die einzige Geometrie
+für die sie ausgiebig getestet wurde.
+
+**Konsequenz:** Kompensationsformeln aus dem t-Raum ableiten und gegen mehrere finishT-Werte
+validieren — nicht nur gegen den Einheitsfall. Statistische Simulation ist der einzige zuverlässige
+Weg um solche systematischen Fehler sichtbar zu machen: visuelle Tests und Unit-Tests können
+den Fehler bei finishT=1.0 nicht detektieren. Neue Signatur:
+```javascript
+computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)
+```
+
+**Verweis:** feat/fairness-simulation, Phase-1A-Analyse (Mathematik-Herleitung), sim-fairness.mjs.

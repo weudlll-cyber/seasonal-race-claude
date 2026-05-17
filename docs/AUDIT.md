@@ -507,6 +507,106 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 
 ---
 
+## 2026-05-17 — feat/fairness-simulation — Phase 1B: computeSpeedBonus Formula Fix
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6  
+**Scope:** client (rowLayout.js, RaceScreen/index.jsx, headlessRaceSimulator.js, sim-fairness.mjs, sim-race-visual.mjs, docs)  
+**Branch:** `feat/fairness-simulation`  
+**Backup-Tag:** `pre-fairness-fix` @ `ece4f59`
+
+### Metrics
+
+| Metric | Baseline (`ece4f59`) | Nach Fix (`bd92ff1`) |
+|--------|---------------------|---------------------|
+| Tests | 1896 | **1910** (+14) |
+| Test-Dateien | 96 | **98** (+2 neue Gruppen) |
+| ESLint | ✅ 0 Errors | ✅ 0 Errors |
+| Prettier | ✅ | ✅ |
+| Bundle | unverändert | unverändert |
+
+### Test Gate
+
+| Gruppe | Neue Tests | Inhalt |
+|--------|-----------|--------|
+| `rowLayout.test.js` — finite checks | +5 | NaN/Infinity für rowGapPx, pathLengthPx, finishT, speedBonusFactor, totalRows → return 0 |
+| `rowLayout.test.js` — open track | +3 | Standard open-case, epsilon-guard-Grenzfall, open vs closed Vergleich |
+| `rowLayout.test.js` — correctness properties | +6 | Monotonie, Skalierungs-Invarianz (finishT=1/2/5/10), alt-vs-neu finishT-Vergleiche |
+| `speedBonus.test.js` | 0 neu | Signaturen auf 7 Parameter aktualisiert (finishT=1.0, isOpen=false, totalRows=3) — alle grün |
+| `reRoll.test.js` | 0 neu | Signaturen auf 7 Parameter aktualisiert — alle grün |
+| **Gesamt** | **+14** | 1910 / 1910 ✅ |
+
+### Quality Gate
+
+- ✅ `SPEED_BONUS_EPSILON = 1e-9` als benannte Konstante (HIGH 1)
+- ✅ Finite-Checks für alle 5 numerischen Parameter — return 0 bei NaN/Infinity (HIGH 2)
+- ✅ 3 open-track Tests: Standard, Epsilon-Grenzfall, open vs closed (HIGH 3)
+- ✅ 50-Rennen Hauptlauf (144 Kombinationen) + 100-Rennen Focused-Run (Dirt Oval) (HIGH 4)
+- ✅ Monotonie-Test: rowIndex 0→5, Bonus strikt monoton steigend (MEDIUM 5)
+- ✅ Skalierungs-Invarianz: finishT=1/2/5/10 — Bonus skaliert mit 1/finishT (MEDIUM 6)
+- ✅ finishT=1.0 Rückwärtskompatibilität: identisch zur alten Formel (MEDIUM 7)
+- ✅ Alle Call-Sites aktualisiert: index.jsx, headlessRaceSimulator.js, sim-fairness.mjs, sim-race-visual.mjs
+- ✅ LESSONS.md Lesson 81 — Kompensationsformeln müssen zur Renngeometrie passen
+- ✅ ARCHITECTURE.md speedBonus-Sektion neu geschrieben (open/closed Geometrie, Epsilon-Guard)
+
+### Sim-Validierung — Hauptlauf (50 Rennen × 144 Kombinationen)
+
+**Signifikanz-Schwellen:** BESTANDEN p>0.05 | WARNUNG p>0.001 | GESCHEITERT p<0.001
+
+| Track | Typ | Kombinationen | Baseline BESTANDEN | Fix BESTANDEN | Fix WARNUNG | Fix GESCHEITERT |
+|-------|-----|:---:|:---:|:---:|:---:|:---:|
+| Dirt Oval | closed | 24 | 0 | **24** ✅ | 0 | 0 |
+| Garden Path | closed | 24 | 0 | **23** ✅ | 1 ⚠️ | 0 |
+| City Circuit | closed | 24 | 0 | **24** ✅ | 0 | 0 |
+| River Run | open | 24 | 0 | 0 | 0 | **24** ❌ |
+| Space Sprint | open | 24 | 0 | 0 | 0 | **24** ❌ |
+| Weltall | open | 24 | 0 | 0 | 0 | **24** ❌ |
+| **Gesamt** | | **144** | **0 / 144** | **71 / 72** closed | **1 / 72** | **72 / 72** open |
+
+**Garden Path × giraffe × 30s (WARNUNG, p<0.01):** Row 0 gewinnt nur 8% statt erwartet 10% — leichter Rear-Advantage, gegenläufig zur Front-Bias-Richtung. χ²=24.0 liegt unter GESCHEITERT-Schwelle (p<0.001). Statistisch grenzwertig, kein systematisches Muster über andere Kombinationen.
+
+**Closed-Track-Fazit:** GESCHEITERT = 0/72. Akzeptanz-Kriterium erfüllt. ✅
+
+### Sim-Validierung — Focused Run (100 Rennen × Dirt Oval)
+
+Höhere statistische Power zeigt marginale Residualeffekte bei 30s-Rennen:
+
+| Kombination | χ² | p-Wert | Urteil |
+|-------------|-----|--------|--------|
+| Dirt Oval × horse × 30s | 22.4 | 0.008 | ⚠️ WARNUNG |
+| Dirt Oval × snail × 30s | 20.8 | 0.004 | ⚠️ WARNUNG |
+| Dirt Oval × snake × 30s | 15.4 | 0.032 | ⚠️ WARNUNG |
+| Dirt Oval × f1 × 30s | 18.2 | 0.033 | ⚠️ WARNUNG |
+| Alle 120s-Kombinationen (20/20) | ≤19.3 | ≥0.114 | ✅ BESTANDEN |
+| River Run (alle 24) | 91–247 | 0.000 | ❌ GESCHEITERT |
+| Space Sprint (alle 24) | 41–194 | 0.000 | ❌ GESCHEITERT |
+
+**Interpretation 30s-WARNUNGen:** Bei finishT<3 (kurze Rennen mit langsamen Racertypen) bleibt ein kleiner Residual-Bias durch Anfangsdichte sichtbar. Kein GESCHEITERT — kein Handlungsbedarf in Phase 1B.
+
+### Ursachenanalyse — Open-Track Front-Bias
+
+Die speedBonus-Formel für Open Tracks ist **mathematisch korrekt** (row0Distance = finishT − totalRows × tOffset). Die chi²-Werte sind vor und nach dem Fix nahezu identisch (Bsp. River Run horse: 83.1 → 88.5). Ursache ist **nicht die Formel**, sondern die Avoidance-Dynamik:
+
+- Open-Track-Rennen starten mit allen Racern dicht aufgereiht
+- Row-0-Racer sind ab der ersten Sekunde ungebremst
+- Row-1/2-Racer werden durch Avoidance mit Row-0 ausgebremst
+- Effekt: Row 0 baut einen uneinholbaren Vorsprung auf, bevor speedBonus greifen kann
+- Avoidance-Kompensation durch speedBonus-Differenz: ~5% bei River Run (totalRows×tOffset ≈ 0.03) — zu klein gegen Avoidance-Bremswirkung
+
+### Phase-2-Empfehlung
+
+**Befund:** Open-Track Front-Bias ist ein Avoidance-Problem, kein Formel-Problem.
+
+**Empfehlung Phase 2 — Avoidance-Dynamics:**
+1. **Diagnose:** Pro-Racer Avoidance-Aktivierungsrate loggen — wie oft und wie stark wird Racer N gebremst, gestaffelt nach Startreihe?
+2. **Hypothese testen:** Avoidance in den ersten N Sekunden deaktivieren (Warm-up-Phase) → χ² für Open Tracks sinkt messbar?
+3. **Lösung-A (einfach):** Avoidance-Radius in den ersten 2–3 Sekunden reduzieren → sanfterer Start, weniger Stau
+4. **Lösung-B (komplex):** Avoidance-aware Startformation — Racer starten mit seitlichem Versatz statt direkter Linie
+5. **Ziel:** River Run χ² < 20 (p>0.01) für alle Kombinationen bei 50 Rennen
+
+**Scope Phase 2:** avoidance.js, startAssignment, Open-Track-Geometrie. Kein Eingriff in speedBonus, spreadFactor, Drafting.
+
+---
+
 ## OWASP Top 10 — Relevance Checklist for RaceArena
 
 | # | Risk | Relevance | Mitigation |
