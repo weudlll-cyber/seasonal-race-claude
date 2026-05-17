@@ -12,7 +12,7 @@ import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
 export { DEFAULT_RACE_BEHAVIOR_CONFIG };
 
-// ── Start-phase brake ramp ─────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -38,6 +38,32 @@ export function computeEffectiveBrakeFactor(config, isOpen, raceElapsedMs) {
   if (!isOpen || !(config.avoidanceWarmupMs > 0)) return config.speedBrakeFactor;
   const brakeScale = easeInOutCubic(Math.min(1, raceElapsedMs / config.avoidanceWarmupMs));
   return 1.0 - brakeScale * (1.0 - config.speedBrakeFactor);
+}
+
+// ── Start-phase follower boost ─────────────────────────────────────────────────
+
+/**
+ * Return the follower speed multiplier for this frame.
+ *
+ * On closed tracks, Row-0, or when followerBoostDurationMs=0 / followerBoostMult=1.0:
+ * returns 1.0 (no boost).
+ *
+ * On open tracks for Row-1+ during the boost window: returns a value decreasing from
+ * followerBoostMult (at t=0) to 1.0 (at t=followerBoostDurationMs), shaped by
+ * easeInOutCubic so the decay is smooth rather than linear.
+ *
+ * @param {object}  config          behaviorConfig (followerBoostMult, followerBoostDurationMs)
+ * @param {boolean} isOpen          true for open tracks
+ * @param {number}  startRowIndex   the row this racer started in (0 = front row)
+ * @param {number}  raceElapsedMs   ms since race start
+ * @returns {number}
+ */
+export function computeFollowerBoostMult(config, isOpen, startRowIndex, raceElapsedMs) {
+  if (!isOpen || startRowIndex === 0 || !(config.followerBoostDurationMs > 0)) return 1.0;
+  const mult = config.followerBoostMult;
+  if (!(mult > 1.0)) return 1.0;
+  const rampProgress = easeInOutCubic(Math.min(1, raceElapsedMs / config.followerBoostDurationMs));
+  return mult + rampProgress * (1.0 - mult);
 }
 
 // Old default before D7c Phase 4 — migrate stored 0.7 → 0.95
@@ -76,7 +102,10 @@ export function loadRaceBehaviorConfig() {
     merged.runoutZone < 0 ||
     merged.runoutZone > 0.2 ||
     !isFinite(merged.avoidanceWarmupMs) ||
-    merged.avoidanceWarmupMs < 0
+    merged.avoidanceWarmupMs < 0 ||
+    merged.followerBoostMult < 1 ||
+    !isFinite(merged.followerBoostDurationMs) ||
+    merged.followerBoostDurationMs < 0
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

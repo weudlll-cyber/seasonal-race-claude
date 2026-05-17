@@ -285,4 +285,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Start-phase brake ramp: on open tracks, speedBrakeFactor is eased in over this window (ms).
   // 0 = no ramp (full braking from frame 1). Has no effect on closed tracks.
   avoidanceWarmupMs: 3000,
+  // Start-phase follower boost: on open tracks, all Row-1+ racers receive a temporary speed
+  // multiplier that decays from followerBoostMult to 1.0 over followerBoostDurationMs.
+  // 1.0 = no effect. Has no effect on closed tracks or Row-0.
+  followerBoostMult: 1.15,
+  followerBoostDurationMs: 3000,
 };

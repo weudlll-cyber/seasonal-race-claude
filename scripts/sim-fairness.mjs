@@ -40,9 +40,12 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const N_RACES = Number(argVal('races', '50'));
+const N_RACES  = Number(argVal('races', '50'));
 const N_RACERS = Number(argVal('racers', '40'));
-const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
+const OUT_DIR  = join(ROOT, argVal('out', 'client/tmp'));
+const FOLLOWER_MULT_OVERRIDE     = argVal('followerMult', null);
+const FOLLOWER_DURATION_OVERRIDE = argVal('followerDurationMs', null);
+const WARMUP_MS_OVERRIDE         = argVal('warmupMs', null);
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
@@ -60,7 +63,7 @@ import {
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
-import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
+import { computeEffectiveBrakeFactor, computeFollowerBoostMult } from '../client/src/modules/raceBehaviorConfig.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -159,6 +162,9 @@ export function runSingleRace({
     const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+    if (FOLLOWER_MULT_OVERRIDE     !== null) behaviorConfig.followerBoostMult        = Number(FOLLOWER_MULT_OVERRIDE);
+    if (FOLLOWER_DURATION_OVERRIDE !== null) behaviorConfig.followerBoostDurationMs  = Number(FOLLOWER_DURATION_OVERRIDE);
+    if (WARMUP_MS_OVERRIDE         !== null) behaviorConfig.avoidanceWarmupMs        = Number(WARMUP_MS_OVERRIDE);
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
 
@@ -290,9 +296,10 @@ export function runSingleRace({
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       for (const r of racers) {
         if (!r.finished) {
-          const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
-          r.t += r.baseSpeed * boost * brake * (DT / 16);
+          const boost        = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
+          const brake        = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
+          const followerMult = computeFollowerBoostMult(behaviorConfig, isOpen, r.startRowIndex, raceTs);
+          r.t += r.baseSpeed * boost * brake * followerMult * (DT / 16);
         }
       }
 

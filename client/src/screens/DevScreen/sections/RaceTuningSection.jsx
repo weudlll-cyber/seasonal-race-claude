@@ -212,6 +212,14 @@ function RaceTuningSection() {
     }));
   }
 
+  function resetFollowerBoost() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      followerBoostMult: DEFAULT_RACE_BEHAVIOR_CONFIG.followerBoostMult,
+      followerBoostDurationMs: DEFAULT_RACE_BEHAVIOR_CONFIG.followerBoostDurationMs,
+    }));
+  }
+
   function resetHomeForce() {
     setBehaviorConfig((prev) => ({
       ...prev,
@@ -1029,7 +1037,65 @@ function RaceTuningSection() {
         </div>
       </SubCard>
 
-      {/* ── Block 9: Home Force ── */}
+      {/* ── Block 9: Follower Boost ── */}
+      <SubCard
+        title="Follower Boost"
+        onReset={resetFollowerBoost}
+        resetTestId="reset-follower-boost"
+        subtitle="Open tracks only. All non-front-row racers (Row 1 and above) receive a temporary speed boost at race start that decays to nothing over the boost window. Helps back rows close the structural gap created by the front row starting further along the track. Has no effect on closed tracks or Row 0."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Follower Boost Multiplier
+              <InfoTooltip text="Open tracks only. Start-phase speed multiplier for Row-1+ racers (Row 0 is unaffected). 1.15 = 15% speed boost at t=0, decaying to 0% by the end of the boost window. 1.0 = disabled." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Follower Boost Multiplier"
+              min={1.0}
+              max={1.4}
+              step={0.01}
+              value={behaviorConfig.followerBoostMult}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 1.0 && v <= 1.4) setBehavior('followerBoostMult', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Follower Boost Duration (ms)
+              <InfoTooltip text="Open tracks only. How long the follower boost lasts in milliseconds. The boost starts at followerBoostMult and decays to 1.0 (no effect) over this window. 0 = disabled." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Follower Boost Duration Ms"
+              min={0}
+              max={8000}
+              step={100}
+              value={behaviorConfig.followerBoostDurationMs}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0) setBehavior('followerBoostDurationMs', v);
+              }}
+            />
+          </div>
+        </div>
+      </SubCard>
+
+      {/* ── Block 10: Home Force ── */}
       <SubCard
         title="Home Force"
         onReset={resetHomeForce}

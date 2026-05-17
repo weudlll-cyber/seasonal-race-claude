@@ -27,6 +27,7 @@ import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
 import {
   loadRaceBehaviorConfig,
   computeEffectiveBrakeFactor,
+  computeFollowerBoostMult,
 } from '../../modules/raceBehaviorConfig.js';
 import {
   initRacerBehavior,
@@ -420,6 +421,7 @@ export default function RaceScreen() {
         const racer = {
           ...r,
           index: i,
+          startRowIndex: assignment.rowIndex,
           t: tStart,
           lap: 1,
           icon: trackEmoji ?? r.icon,
@@ -1029,9 +1031,15 @@ export default function RaceScreen() {
               physicsTs
             );
             const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
+            const followerMult = computeFollowerBoostMult(
+              behaviorConfig,
+              isOpenTrack,
+              r.startRowIndex,
+              physicsTs
+            );
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
-              r.t = Math.min(r.t + r.baseSpeed * boost * brake, st.finishT + 0.001);
+              r.t = Math.min(r.t + r.baseSpeed * boost * brake * followerMult, st.finishT + 0.001);
             } else {
               // Run-out: finished racers keep moving but decay to a stop
               r.runoutDecay *= 0.97;
@@ -1042,7 +1050,7 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake) / race_baseSpeed
+                ? (r.baseSpeed * boost * brake * followerMult) / race_baseSpeed
                 : 0;
           }
           // D4: equalize all non-finished racers to the mean delta-t
