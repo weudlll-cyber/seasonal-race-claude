@@ -50,8 +50,6 @@ const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is n
 const DEFAULT_SPRITE_PX = { leader: 58, battle: 86, comeback: 47 };
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
 const DEFAULT_OVERVIEW_OFFSET_PX = 150;
-// Legacy percent fallback used only when config has spritePctOfCanvas but no profiles.
-const DEFAULT_SPRITE_PCT = { leader: 0.08, battle: 0.12, comeback: 0.065 };
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
@@ -1003,7 +1001,6 @@ export class CameraDirector {
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
-    const minEffZoom = this._bsX;
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {

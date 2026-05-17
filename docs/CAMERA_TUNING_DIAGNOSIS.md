@@ -286,7 +286,7 @@ Defaults (`leaderZoomMultiplier=1.8`, `battleZoomMultiplier=2.5`, `comebackZoomM
 
 ### H4 — Pan-target fix (Low)
 
-In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo leader) instead of the top-3 centroid. BATTLE_ZOOM and COMEBACK_ZOOM retain the centroid of top-3. `CAM_STATE` imported into `RaceScreen/index.jsx` for the state check.
+In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo leader) instead of the top-3 centroid. BATTLE_ZOOM and COMEBACK_ZOOM retain the centroid of top-3.
 
 ### Test coverage added
 

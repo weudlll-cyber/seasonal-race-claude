@@ -8,7 +8,7 @@
 //              component to avoid the browser-module graph.
 // ============================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // ── Shared constants (mirrored from RaceScreen/index.jsx) ─────────────────────
 const FIXED_DT = 16; // ms — fixed physics timestep
@@ -88,9 +88,6 @@ describe('Fixed-timestep determinism', () => {
     // With a common total time, the step counts should be equal (or differ by at most 1
     // due to accumulator state, since the accumulator tracks fractional ms between frames).
     // The key property: any sequence with the same total ms yields the same step count.
-    const commonMs = Math.min(uniformSum, altSum);
-    const expectedSteps = Math.floor(commonMs / FIXED_DT);
-
     const racers1 = [{ t: 0, baseSpeed: BASE_SPEED }];
     const racers2 = [{ t: 0, baseSpeed: BASE_SPEED }];
 

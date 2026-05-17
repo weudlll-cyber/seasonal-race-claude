@@ -2297,8 +2297,6 @@ describe('CameraDirector — convergence fix: threshold and timeout', () => {
 
 // ── Etappe 6: Observer Phase (Lead-In / Mitlaufen / Lead-Out) ────────────────
 
-const raceStateIdle = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 6000 };
-
 // Minimal shape stub: straight track from x=0 to x=trackLen at y=360.
 // getTotalLength() returns trackLen; getPosition(t, _) returns {x: t*trackLen, y: 360}.
 function makeShape(trackLen = 4000) {
@@ -3030,8 +3028,6 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 // ── Etappe 13: Pulk-Bedingung für BATTLE_ZOOM ─────────────────────────────────
 
 describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => {
-  const rs15 = { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 6 };
-
   // ── _isPulk unit tests ────────────────────────────────────────────────────
 
   it('_isPulk: < 3 racers → false', () => {
@@ -3838,7 +3834,7 @@ describe('CameraDirector — T-Space zoom-mismatch fix', () => {
     // dox should equal approximately −worldX × Δ(effZoom) (zoom contribution only).
     // The pan contribution (−effZoom × ΔworldX) stays near zero because camT barely
     // advances per frame; any residual beyond the zoom term is the pan contribution.
-    const { cd, shape, trackLen } = makeTSpaceOpenCD();
+    const { cd, trackLen } = makeTSpaceOpenCD();
     const racers = [
       { x: 0.5 * trackLen, y: 360, t: 0.5 },
       { x: 0.48 * trackLen, y: 360, t: 0.48 },

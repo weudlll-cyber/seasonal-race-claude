@@ -3,11 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { resolve, dirname } from 'path';
 import { EditorShape } from '../track-editor/EditorShape.js';
-import {
-  computeAutoScaleFactor,
-  computeRenderDisplayScale,
-  getEffectiveMinTargetScreenPx,
-} from '../autoSpriteScale.js';
+import { computeAutoScaleFactor, getEffectiveMinTargetScreenPx } from '../autoSpriteScale.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GEO_DIR = resolve(__dirname, '../../../../server/data/tracks');
@@ -88,7 +84,6 @@ describe('diagnostic: track corridor widths and auto-scale', () => {
 describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5)', () => {
   it('prints full pipeline for Garden Path (closed) and River Run (open)', () => {
     const CANVAS_W = 1280;
-    const CANVAS_H = 720;
     const N = 5;
     const MIN_ZOOM = 0.15;
     const MAX_ZOOM = 2.5;

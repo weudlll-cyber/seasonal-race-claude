@@ -13,11 +13,7 @@ import { validateActiveRace } from './raceSession.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
-import {
-  CameraDirector,
-  CAM_STATE,
-  OPEN_TRACK_BASE_ZOOM,
-} from '../../modules/camera/CameraDirector.js';
+import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
@@ -106,7 +102,7 @@ const FIXED_DT = 16;
 
 const tPos = (t) => ((t % 1) + 1) % 1;
 
-export function easeInOutCubic(t) {
+function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
@@ -145,7 +141,7 @@ export default function RaceScreen() {
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
-  const [cameraConfig, setCameraConfig] = useState(() => loadCameraConfig());
+  const [cameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;

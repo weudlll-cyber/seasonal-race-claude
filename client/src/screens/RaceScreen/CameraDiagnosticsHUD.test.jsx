@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 
 // Minimal CameraDirector stub — only has the fields the HUD reads.
@@ -65,7 +65,6 @@ describe('CameraDiagnosticsHUD — undefined-safety (toFixed regression)', () =>
   });
 
   it('renders without crashing when all props are fully populated', () => {
-    const { refs } = { refs: makeRefs() };
     expect(() =>
       render(
         <CameraDiagnosticsHUD

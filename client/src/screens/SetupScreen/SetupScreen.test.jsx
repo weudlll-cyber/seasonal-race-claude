@@ -415,7 +415,6 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
     fireEvent.click(trackCard);
 
     const slider = screen.getByTestId('closed-track-duration-slider');
-    const initialValue = slider.value;
 
     // Move duration slider manually
     fireEvent.change(slider, { target: { value: String(Number(slider.max)) } });
