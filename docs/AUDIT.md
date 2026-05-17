@@ -170,9 +170,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-16 | **1867 unit** | PR — Codebase-Audit 2026-05-16: 8 Bereiche durchleuchtet, Doku-Aktualisierungen (ARCHITECTURE/README/LESSONS L76-L80), Repo-Hygiene (Diagnose-MDs nach docs/diagnose/, poc-*.png gitignored), DiagnoseVerteilung als URL-only-Route klargestellt. Kein Logik-Code-Change. Folge-Aufgaben: ESLint-Cleanup (Cluster B), loop()-Refactoring (Cluster C) — beide BACKLOG. Squash `d5dc1ec`. |
 | 2026-05-17 | **1910 unit** | feat: fairness simulation tool + speedBonusMult formula fix (feat/fairness-simulation → master). sim-fairness.mjs (7200-Rennen, 144 Kombinationen, Chi²); computeSpeedBonus finishT-kalibriert (epsilon-guard, finite-checks, 7-Parameter); Closed-Tracks 71/72 BESTANDEN; L81, ARCHITECTURE.md, AUDIT.md PR-Bericht. +14 unit (finite-checks ×5, open-track ×3, correctness-properties ×6). Squash `2955f85`. |
+| 2026-05-17 | **1910 unit** | chore: ESLint Cleanup Cluster B (chore/eslint-cleanup-cluster-b → master). Dead code D1/D2 (CameraDirector, RaceScreen), Unused vars U1-U3 (6 Dateien), Docs-Alignment. ESLint 72→57 Warnings (net -15; Basis-Erhöhung durch Phase-1B-Merge erklärt 52→57-Delta). Keine neuen Tests. Squash `4641cb6`. |
 
-**Master-HEAD:** `2955f85` (feat: fairness simulation tool + speedBonusMult formula fix, 2026-05-17)
-**ESLint-Warnings:** 0
+**Master-HEAD:** `4641cb6` (chore: ESLint cleanup Cluster B, 2026-05-17)
+**ESLint-Warnings:** 57
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
 ---
