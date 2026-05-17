@@ -28,7 +28,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 
 vi.mock('../../../modules/storage/defaults.js', () => ({
   DEFAULT_PLAYER_GROUPS: [],
-  DEFAULT_RACE_DEFAULTS: { maxPlayers: 20 },
+  DEFAULT_RACE_DEFAULTS: { maxPlayers: 20, maxPlayersClosed: 40, maxPlayersOpen: 100 },
 }));
 
 vi.mock('../../../modules/utils/RandomHelper.js', () => ({

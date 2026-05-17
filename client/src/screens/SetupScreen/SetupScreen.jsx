@@ -411,7 +411,11 @@ function SetupScreen() {
               <PlayerSetup
                 players={players}
                 onChange={setPlayers}
-                maxPlayers={raceDefaults.maxPlayers ?? 20}
+                maxPlayers={
+                  trackIsOpen
+                    ? (raceDefaults.maxPlayersOpen ?? 100)
+                    : (raceDefaults.maxPlayersClosed ?? 40)
+                }
               />
             </>
           )}

@@ -98,6 +98,8 @@ export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
   winners: 3,
   maxPlayers: 20,
+  maxPlayersClosed: 40,
+  maxPlayersOpen: 100,
   countdownDuration: 3,
   autoAdvance: false,
   autoAdvanceDelay: 5,

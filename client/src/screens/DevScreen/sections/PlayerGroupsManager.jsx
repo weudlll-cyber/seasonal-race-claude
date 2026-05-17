@@ -21,7 +21,7 @@ const BLANK_FORM = { name: '', playersText: '' };
 function PlayerGroupsManager() {
   const [groups, setGroups] = useStorage(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
-  const maxPlayers = raceDefaults.maxPlayers ?? 20;
+  const maxPlayers = raceDefaults.maxPlayersOpen ?? 100;
   const [form, setForm] = useState(BLANK_FORM);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);

@@ -98,32 +98,50 @@ function RaceDefaults() {
           </div>
         </div>
 
-        {/* Max Players */}
+        {/* Max Players — Closed Tracks */}
         <div className={s.formGroup}>
           <label
             className={s.label}
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            Max Players per Race
-            <InfoTooltip text="Maximum number of racers allowed in a single race. More racers = more excitement but also more visual chaos at the start. 20 is a good upper limit for most tracks." />
+            Max Players — Closed Tracks
+            <InfoTooltip text="Hard cap on how many player names the game operator may enter for closed-loop tracks (oval, circuit, etc.). Track geometry limits meaningful capacity; 40 is a safe ceiling." />
           </label>
-          <div className={s.stepper}>
-            <button
-              className={s.stepperBtn}
-              disabled={defaults.maxPlayers <= 1}
-              onClick={() => set({ maxPlayers: defaults.maxPlayers - 1 })}
-            >
-              −
-            </button>
-            <span className={s.stepperValue}>{defaults.maxPlayers ?? 20}</span>
-            <button
-              className={s.stepperBtn}
-              disabled={(defaults.maxPlayers ?? 20) >= 30}
-              onClick={() => set({ maxPlayers: (defaults.maxPlayers ?? 20) + 1 })}
-            >
-              +
-            </button>
-          </div>
+          <input
+            type="number"
+            className={s.input}
+            min={1}
+            max={100}
+            step={1}
+            value={defaults.maxPlayersClosed ?? 40}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isInteger(v) && v >= 1 && v <= 100) set({ maxPlayersClosed: v });
+            }}
+          />
+        </div>
+
+        {/* Max Players — Open Tracks */}
+        <div className={s.formGroup}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Max Players — Open Tracks
+            <InfoTooltip text="Hard cap on how many player names the game operator may enter for open (point-to-point) tracks. Open tracks accommodate larger fields; 100 is the validated ceiling." />
+          </label>
+          <input
+            type="number"
+            className={s.input}
+            min={1}
+            max={100}
+            step={1}
+            value={defaults.maxPlayersOpen ?? 100}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isInteger(v) && v >= 1 && v <= 100) set({ maxPlayersOpen: v });
+            }}
+          />
         </div>
 
         {/* Countdown */}
