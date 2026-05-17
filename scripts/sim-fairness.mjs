@@ -60,6 +60,7 @@ import {
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
+import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -248,6 +249,11 @@ export function runSingleRace({
     let raceTs        = 0;
     let finishedCount = 0;
 
+    // Mixing-quota: fraction of Row-1 racers that have overtaken at least one Row-0
+    // racer in t-space by the time avoidanceWarmupMs elapses.
+    let mixingQuota    = null;
+    let warmupMeasured = false;
+
     computePositions();
 
     while (finishedCount < nRacers && raceTs < maxTime) {
@@ -281,12 +287,23 @@ export function runSingleRace({
       }
 
       // Advance t (mirrors index.jsx RACING loop — DT/16 calibration matches REFERENCE_FPS=62.5)
+      const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive     ? behaviorConfig.speedBrakeFactor : 1.0;
+          const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
           r.t += r.baseSpeed * boost * brake * (DT / 16);
         }
+      }
+
+      // Mixing-quota snapshot: taken at the first frame at or after avoidanceWarmupMs
+      if (!warmupMeasured && isOpen && raceTs >= behaviorConfig.avoidanceWarmupMs) {
+        const row0Ts   = racers.filter((r) => r.startRowIndex === 0 && !r.finished).map((r) => r.t);
+        const row1     = racers.filter((r) => r.startRowIndex === 1);
+        const minRow0T = row0Ts.length > 0 ? Math.min(...row0Ts) : Infinity;
+        const mixed    = row1.filter((r) => r.t > minRow0T).length;
+        mixingQuota    = row1.length > 0 ? mixed / row1.length : null;
+        warmupMeasured = true;
       }
 
       computePositions();
@@ -309,7 +326,7 @@ export function runSingleRace({
       dnf[k].finishRank = finishedCount + 1 + k;
     }
 
-    return racers.map((r) => ({
+    const results = racers.map((r) => ({
       racerIndex:    r.index,
       startRowIndex: r.startRowIndex,
       indexInRow:    r.indexInRow,
@@ -317,6 +334,9 @@ export function runSingleRace({
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
     }));
+    // Attach mixing-quota as a non-iterable property so for..of / .length are unaffected.
+    results.mixingQuota = mixingQuota;
+    return results;
   } finally {
     Math.random = savedRandom;
   }
@@ -503,6 +523,29 @@ function buildReport(allResults, runDate) {
     lines.push('');
   }
 
+  // ── Mixing-Quote (nur Open Tracks) ──
+  const openResults = allResults.filter((r) => r.isOpen && r.avgMixingQuota != null);
+  if (openResults.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Mixing-Quote — Open Tracks (t-Space-Mixing-Validierung)');
+    lines.push('');
+    lines.push(
+      'Anteil der Row-1-Racer die bei Ablauf von `avoidanceWarmupMs` mindestens einen Row-0-Racer ' +
+      'im t-Raum überholt haben. Zielbereich: **60–95 %**.'
+    );
+    lines.push('');
+    lines.push('| Track | Racer | Dist | Mixing-Quote | Bewertung |');
+    lines.push('|-------|-------|------|-------------|-----------|');
+    for (const res of openResults) {
+      const q     = res.avgMixingQuota;
+      const pct   = fmtPct(q);
+      const label = q < 0.60 ? '⚠️ Zu wenig Mixing' : q > 0.95 ? '⚠️ Zu viel Mixing' : '✅ OK';
+      lines.push(`| ${res.trackName} | ${res.racerType} | ${res.durationSec}s | ${pct} | ${label} |`);
+    }
+    lines.push('');
+  }
+
   // ── Gesamtauswertung ──
   lines.push('---');
   lines.push('');
@@ -668,7 +711,8 @@ if (isMain) {
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  `
         );
 
-        const raceResults = [];
+        const raceResults   = [];
+        const mixingQuotas  = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           const seed   = raceIdx + 1;
           const result = runSingleRace({
@@ -684,6 +728,7 @@ if (isMain) {
             nRacers: N_RACERS,
           });
           raceResults.push(result);
+          if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
 
           // Collect raw data
           for (const r of result) {
@@ -701,7 +746,10 @@ if (isMain) {
         }
 
         const stats = computeFairnessStats(raceResults, totalRows);
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, stats });
+        const avgMixingQuota = mixingQuotas.length > 0
+          ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
+          : null;
+        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota });
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);

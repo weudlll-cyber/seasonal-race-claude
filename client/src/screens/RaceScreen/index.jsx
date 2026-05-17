@@ -24,7 +24,10 @@ import {
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
-import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import {
+  loadRaceBehaviorConfig,
+  computeEffectiveBrakeFactor,
+} from '../../modules/raceBehaviorConfig.js';
 import {
   initRacerBehavior,
   applyRacerBehavior,
@@ -1017,9 +1020,15 @@ export default function RaceScreen() {
                 r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
               }
             }
-            // Apply D7b boost/brake flags from the previous step
+            // Apply D7b boost/brake flags from the previous step.
+            // On open tracks, speedBrakeFactor is eased in over avoidanceWarmupMs (ramp).
             const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-            const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
+            const effectiveBrakeFactor = computeEffectiveBrakeFactor(
+              behaviorConfig,
+              isOpenTrack,
+              physicsTs
+            );
+            const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(r.t + r.baseSpeed * boost * brake, st.finishT + 0.001);

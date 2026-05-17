@@ -280,4 +280,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   draftingMaxDistance: 80,
   draftingConeAngle: 30,
   draftingBoost: 1.04,
+  // Start-phase brake ramp: on open tracks, speedBrakeFactor is eased in over this window (ms).
+  // 0 = no ramp (full braking from frame 1). Has no effect on closed tracks.
+  avoidanceWarmupMs: 3000,
 };
