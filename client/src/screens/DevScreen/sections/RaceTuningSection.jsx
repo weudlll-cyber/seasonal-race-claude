@@ -208,6 +208,7 @@ function RaceTuningSection() {
       speedBrakeYThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeYThreshold,
       speedBrakeTThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTThreshold,
       speedBrakeFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
+      avoidanceWarmupMs: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs,
     }));
   }
 
@@ -999,6 +1000,29 @@ function RaceTuningSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v > 0 && v <= 1) setBehavior('speedBrakeFactor', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Avoidance Warmup (ms)
+              <InfoTooltip text="Open tracks only. Eases in the speed-brake over this many milliseconds from race start, giving rear-row racers a window to overtake in t-space. 0 = no ramp (full braking immediately). 3000 = 3-second ease-in." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Avoidance Warmup Ms"
+              min={0}
+              max={8000}
+              step={100}
+              value={behaviorConfig.avoidanceWarmupMs}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0) setBehavior('avoidanceWarmupMs', v);
               }}
             />
           </div>

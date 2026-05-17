@@ -41,54 +41,54 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 | Dirt Oval | motorbike | 120s | 8 | 12.5% | 12.0% | 8.0% | 13.3% | 1.2 | n.s. | ✅ Fair |
 | Dirt Oval | plane | 30s | 10 | 10.0% | 16.0% | 18.0% | 8.3% | 8.0 | n.s. | ✅ Fair |
 | Dirt Oval | plane | 120s | 10 | 10.0% | 8.0% | 12.0% | 10.0% | 2.0 | n.s. | ✅ Fair |
-| River Run | horse | 30s | 3 | 33.3% | 94.0% | 2.0% | 4.0% | 82.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | horse | 120s | 3 | 33.3% | 94.0% | 2.0% | 4.0% | 82.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | duck | 30s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | duck | 120s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | snail | 30s | 3 | 33.3% | 78.0% | 12.0% | 10.0% | 44.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | snail | 120s | 3 | 33.3% | 78.0% | 20.0% | 2.0% | 47.3 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | horse | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | horse | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | duck | 30s | 3 | 33.3% | 98.0% | 0.0% | 2.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | duck | 120s | 3 | 33.3% | 98.0% | 0.0% | 2.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | snail | 30s | 3 | 33.3% | 86.0% | 14.0% | 0.0% | 63.9 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | snail | 120s | 3 | 33.3% | 86.0% | 10.0% | 4.0% | 62.7 | *** (p<0.001) | ⚠️ Front-Bias |
 | River Run | elephant | 30s | 3 | 33.3% | 86.0% | 10.0% | 4.0% | 62.7 | *** (p<0.001) | ⚠️ Front-Bias |
 | River Run | elephant | 120s | 3 | 33.3% | 86.0% | 10.0% | 4.0% | 62.7 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | giraffe | 30s | 4 | 25.0% | 84.0% | 10.0% | 3.0% | 93.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | giraffe | 120s | 4 | 25.0% | 84.0% | 10.0% | 3.0% | 93.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | snake | 30s | 3 | 33.3% | 94.0% | 4.0% | 2.0% | 82.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | snake | 120s | 3 | 33.3% | 94.0% | 4.0% | 2.0% | 82.8 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | dragon | 30s | 4 | 25.0% | 82.0% | 12.0% | 3.0% | 88.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | dragon | 120s | 4 | 25.0% | 82.0% | 12.0% | 3.0% | 88.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | f1 | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | f1 | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | rocket | 30s | 3 | 33.3% | 92.0% | 8.0% | 0.0% | 77.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | rocket | 120s | 3 | 33.3% | 92.0% | 8.0% | 0.0% | 77.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | buggy | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | buggy | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | motorbike | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | motorbike | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | plane | 30s | 3 | 33.3% | 92.0% | 8.0% | 0.0% | 77.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| River Run | plane | 120s | 3 | 33.3% | 92.0% | 8.0% | 0.0% | 77.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | horse | 30s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | horse | 120s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | duck | 30s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | duck | 120s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | snail | 30s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | snail | 120s | 2 | 50.0% | 82.0% | 18.0% | — | 20.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | elephant | 30s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | elephant | 120s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | giraffe | 30s | 3 | 33.3% | 90.0% | 8.0% | 2.0% | 72.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | giraffe | 120s | 3 | 33.3% | 90.0% | 8.0% | 2.0% | 72.5 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | snake | 30s | 2 | 50.0% | 96.0% | 4.0% | — | 42.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | snake | 120s | 2 | 50.0% | 96.0% | 4.0% | — | 42.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | dragon | 30s | 3 | 33.3% | 88.0% | 12.0% | 0.0% | 68.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | dragon | 120s | 3 | 33.3% | 88.0% | 12.0% | 0.0% | 68.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | f1 | 30s | 2 | 50.0% | 84.0% | 16.0% | — | 23.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | f1 | 120s | 2 | 50.0% | 84.0% | 16.0% | — | 23.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | rocket | 30s | 2 | 50.0% | 80.0% | 20.0% | — | 18.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | rocket | 120s | 2 | 50.0% | 80.0% | 20.0% | — | 18.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | buggy | 30s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | buggy | 120s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | motorbike | 30s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | motorbike | 120s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | plane | 30s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Space Sprint | plane | 120s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | giraffe | 30s | 4 | 25.0% | 92.0% | 4.0% | 2.0% | 119.9 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | giraffe | 120s | 4 | 25.0% | 92.0% | 4.0% | 2.0% | 119.9 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | snake | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | snake | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | dragon | 30s | 4 | 25.0% | 90.0% | 8.0% | 1.0% | 113.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | dragon | 120s | 4 | 25.0% | 90.0% | 8.0% | 1.0% | 113.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | f1 | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | f1 | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | rocket | 30s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | rocket | 120s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | buggy | 30s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | buggy | 120s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | motorbike | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | motorbike | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | plane | 30s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| River Run | plane | 120s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | horse | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | horse | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | duck | 30s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | duck | 120s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | snail | 30s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | snail | 120s | 2 | 50.0% | 86.0% | 14.0% | — | 25.9 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | elephant | 30s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | elephant | 120s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | giraffe | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | giraffe | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | snake | 30s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | snake | 120s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | dragon | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | dragon | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | f1 | 30s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | f1 | 120s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | rocket | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | rocket | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | buggy | 30s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | buggy | 120s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | motorbike | 30s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | motorbike | 120s | 2 | 50.0% | 100.0% | 0.0% | — | 50.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | plane | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Space Sprint | plane | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
 | Garden Path | horse | 30s | 10 | 10.0% | 8.0% | 12.0% | 10.0% | 7.2 | n.s. | ✅ Fair |
 | Garden Path | horse | 120s | 10 | 10.0% | 8.0% | 4.0% | 11.0% | 8.0 | n.s. | ✅ Fair |
 | Garden Path | duck | 30s | 8 | 12.5% | 16.0% | 16.0% | 11.3% | 8.2 | n.s. | ✅ Fair |
@@ -137,30 +137,30 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 | City Circuit | motorbike | 120s | 8 | 12.5% | 8.0% | 14.0% | 13.0% | 5.7 | n.s. | ✅ Fair |
 | City Circuit | plane | 30s | 10 | 10.0% | 8.0% | 16.0% | 9.5% | 6.0 | n.s. | ✅ Fair |
 | City Circuit | plane | 120s | 10 | 10.0% | 6.0% | 6.0% | 11.0% | 4.8 | n.s. | ✅ Fair |
-| Weltall | horse | 30s | 3 | 33.3% | 88.0% | 12.0% | 0.0% | 68.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | horse | 120s | 3 | 33.3% | 88.0% | 12.0% | 0.0% | 68.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | duck | 30s | 2 | 50.0% | 94.0% | 6.0% | — | 38.7 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | duck | 120s | 2 | 50.0% | 94.0% | 6.0% | — | 38.7 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | horse | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | horse | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | duck | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | duck | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
 | Weltall | snail | 30s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | snail | 120s | 2 | 50.0% | 84.0% | 16.0% | — | 23.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | elephant | 30s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | elephant | 120s | 3 | 33.3% | 94.0% | 6.0% | 0.0% | 83.1 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | giraffe | 30s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | giraffe | 120s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | snake | 30s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | snake | 120s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | dragon | 30s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | dragon | 120s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | f1 | 30s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | f1 | 120s | 2 | 50.0% | 88.0% | 12.0% | — | 28.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | rocket | 30s | 3 | 33.3% | 86.0% | 14.0% | 0.0% | 63.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | rocket | 120s | 3 | 33.3% | 86.0% | 14.0% | 0.0% | 63.9 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | buggy | 30s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | buggy | 120s | 2 | 50.0% | 92.0% | 8.0% | — | 35.3 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | motorbike | 30s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | motorbike | 120s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | plane | 30s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
-| Weltall | plane | 120s | 3 | 33.3% | 90.0% | 10.0% | 0.0% | 73.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | snail | 120s | 2 | 50.0% | 90.0% | 10.0% | — | 32.0 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | elephant | 30s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | elephant | 120s | 3 | 33.3% | 96.0% | 2.0% | 2.0% | 88.4 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | giraffe | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | giraffe | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | snake | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | snake | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | dragon | 30s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | dragon | 120s | 3 | 33.3% | 96.0% | 4.0% | 0.0% | 88.5 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | f1 | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | f1 | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | rocket | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | rocket | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | buggy | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | buggy | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | motorbike | 30s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | motorbike | 120s | 2 | 50.0% | 98.0% | 2.0% | — | 46.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | plane | 30s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
+| Weltall | plane | 120s | 3 | 33.3% | 98.0% | 2.0% | 0.0% | 94.1 | *** (p<0.001) | ⚠️ Front-Bias |
 
 ---
 
@@ -651,78 +651,78 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 82.84 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.5 | 12.0 |
-| Row 1 | 1 | 2.0% | -31.3% | 20.7 | 11.3 |
-| Row 2 | 2 | 4.0% | -29.3% | 20.1 | 11.2 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.1 | 12.1 |
+| Row 1 | 2 | 4.0% | -29.3% | 21.0 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.2 |
 
 ### River Run × horse × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 82.84 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.5 | 12.0 |
-| Row 1 | 1 | 2.0% | -31.3% | 20.7 | 11.3 |
-| Row 2 | 2 | 4.0% | -29.3% | 20.1 | 11.2 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.1 | 12.1 |
+| Row 1 | 2 | 4.0% | -29.3% | 21.0 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.2 |
 
 ### River Run × duck × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.36 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.7 | 11.9 |
-| Row 1 | 1 | 2.0% | -31.3% | 20.4 | 11.3 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.0 | 11.1 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 0 | 0.0% | -33.3% | 20.6 | 11.3 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.5 | 11.0 |
 
 ### River Run × duck × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.36 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.7 | 11.9 |
-| Row 1 | 1 | 2.0% | -31.3% | 20.4 | 11.3 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.0 | 11.1 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 0 | 0.0% | -33.3% | 20.6 | 11.3 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.5 | 11.0 |
 
 ### River Run × snail × 30s
 
 - **finishT:** 0.6371 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 44.92 — *** (p<0.001)
+- **Chi²(2):** 63.88 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 39 | 78.0% | +44.7% | 20.6 | 11.8 |
-| Row 1 | 6 | 12.0% | -21.3% | 20.5 | 11.4 |
-| Row 2 | 5 | 10.0% | -23.3% | 20.1 | 11.4 |
+| Row 0 | 43 | 86.0% | +52.7% | 20.5 | 11.8 |
+| Row 1 | 7 | 14.0% | -19.3% | 20.5 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.2 |
 
 ### River Run × snail × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 47.32 — *** (p<0.001)
+- **Chi²(2):** 62.68 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 39 | 78.0% | +44.7% | 20.5 | 11.7 |
-| Row 1 | 10 | 20.0% | -13.3% | 20.6 | 11.4 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.2 | 11.5 |
+| Row 0 | 43 | 86.0% | +52.7% | 20.3 | 11.8 |
+| Row 1 | 5 | 10.0% | -23.3% | 20.8 | 11.3 |
+| Row 2 | 2 | 4.0% | -29.3% | 20.2 | 11.3 |
 
 ### River Run × elephant × 30s
 
@@ -733,9 +733,9 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 43 | 86.0% | +52.7% | 20.5 | 12.0 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.6 | 11.3 |
-| Row 2 | 2 | 4.0% | -29.3% | 20.4 | 11.3 |
+| Row 0 | 43 | 86.0% | +52.7% | 20.2 | 12.2 |
+| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.3 |
+| Row 2 | 2 | 4.0% | -29.3% | 20.7 | 11.1 |
 
 ### River Run × elephant × 120s
 
@@ -746,515 +746,515 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 43 | 86.0% | +52.7% | 20.5 | 12.0 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.6 | 11.3 |
-| Row 2 | 2 | 4.0% | -29.3% | 20.4 | 11.3 |
+| Row 0 | 43 | 86.0% | +52.7% | 20.2 | 12.2 |
+| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.3 |
+| Row 2 | 2 | 4.0% | -29.3% | 20.7 | 11.1 |
 
 ### River Run × giraffe × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 4 à max. 10 Racer
 - **Erwartete Win-Rate (fair):** 25.0%
-- **Chi²(3):** 93.84 — *** (p<0.001)
+- **Chi²(3):** 119.92 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 42 | 84.0% | +59.0% | 20.2 | 12.1 |
-| Row 1 | 5 | 10.0% | -15.0% | 20.7 | 11.1 |
-| Row 2 | 3 | 6.0% | -19.0% | 20.5 | 11.4 |
-| Row 3 | 0 | 0.0% | -25.0% | 21.1 | 12.0 |
+| Row 0 | 46 | 92.0% | +67.0% | 19.9 | 12.3 |
+| Row 1 | 2 | 4.0% | -21.0% | 20.9 | 11.1 |
+| Row 2 | 2 | 4.0% | -21.0% | 20.7 | 11.2 |
+| Row 3 | 0 | 0.0% | -25.0% | 21.7 | 11.9 |
 
 ### River Run × giraffe × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 4 à max. 10 Racer
 - **Erwartete Win-Rate (fair):** 25.0%
-- **Chi²(3):** 93.84 — *** (p<0.001)
+- **Chi²(3):** 119.92 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 42 | 84.0% | +59.0% | 20.2 | 12.1 |
-| Row 1 | 5 | 10.0% | -15.0% | 20.7 | 11.1 |
-| Row 2 | 3 | 6.0% | -19.0% | 20.5 | 11.4 |
-| Row 3 | 0 | 0.0% | -25.0% | 21.1 | 12.0 |
+| Row 0 | 46 | 92.0% | +67.0% | 19.9 | 12.3 |
+| Row 1 | 2 | 4.0% | -21.0% | 20.9 | 11.1 |
+| Row 2 | 2 | 4.0% | -21.0% | 20.7 | 11.2 |
+| Row 3 | 0 | 0.0% | -25.0% | 21.7 | 11.9 |
 
 ### River Run × snake × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 82.84 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.7 | 11.8 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.4 | 11.4 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.1 | 11.3 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.6 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.0 |
 
 ### River Run × snake × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 82.84 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.7 | 11.8 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.4 | 11.4 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.1 | 11.3 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.6 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.0 |
 
 ### River Run × dragon × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 4 à max. 10 Racer
 - **Erwartete Win-Rate (fair):** 25.0%
-- **Chi²(3):** 88.08 — *** (p<0.001)
+- **Chi²(3):** 113.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 41 | 82.0% | +57.0% | 20.2 | 12.2 |
-| Row 1 | 6 | 12.0% | -13.0% | 20.7 | 11.0 |
-| Row 2 | 3 | 6.0% | -19.0% | 20.2 | 11.4 |
-| Row 3 | 0 | 0.0% | -25.0% | 21.8 | 11.5 |
+| Row 0 | 45 | 90.0% | +65.0% | 19.6 | 12.4 |
+| Row 1 | 4 | 8.0% | -17.0% | 21.0 | 10.8 |
+| Row 2 | 1 | 2.0% | -23.0% | 20.4 | 11.4 |
+| Row 3 | 0 | 0.0% | -25.0% | 21.8 | 11.4 |
 
 ### River Run × dragon × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 4 à max. 10 Racer
 - **Erwartete Win-Rate (fair):** 25.0%
-- **Chi²(3):** 88.08 — *** (p<0.001)
+- **Chi²(3):** 113.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 41 | 82.0% | +57.0% | 20.2 | 12.2 |
-| Row 1 | 6 | 12.0% | -13.0% | 20.7 | 11.0 |
-| Row 2 | 3 | 6.0% | -19.0% | 20.2 | 11.4 |
-| Row 3 | 0 | 0.0% | -25.0% | 21.8 | 11.5 |
+| Row 0 | 45 | 90.0% | +65.0% | 19.6 | 12.4 |
+| Row 1 | 4 | 8.0% | -17.0% | 21.0 | 10.8 |
+| Row 2 | 1 | 2.0% | -23.0% | 20.4 | 11.4 |
+| Row 3 | 0 | 0.0% | -25.0% | 21.8 | 11.4 |
 
 ### River Run × f1 × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.5 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.8 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 19.9 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.3 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.8 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.1 | 11.0 |
 
 ### River Run × f1 × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.5 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.8 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 19.9 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.3 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.8 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.1 | 11.0 |
 
 ### River Run × rocket × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 77.92 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +58.7% | 20.5 | 12.0 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.7 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.2 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.0 | 12.1 |
+| Row 1 | 3 | 6.0% | -27.3% | 21.0 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.1 |
 
 ### River Run × rocket × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 77.92 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +58.7% | 20.5 | 12.0 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.7 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.2 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.0 | 12.1 |
+| Row 1 | 3 | 6.0% | -27.3% | 21.0 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.1 |
 
 ### River Run × buggy × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.6 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.7 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.1 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.2 | 12.0 |
+| Row 1 | 3 | 6.0% | -27.3% | 20.9 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 10.9 |
 
 ### River Run × buggy × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.6 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.7 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.1 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.2 | 12.0 |
+| Row 1 | 3 | 6.0% | -27.3% | 20.9 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 10.9 |
 
 ### River Run × motorbike × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.7 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.5 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.6 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 10.9 |
 
 ### River Run × motorbike × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 88.48 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +62.7% | 20.7 | 11.9 |
-| Row 1 | 2 | 4.0% | -29.3% | 20.5 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.6 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 10.9 |
 
 ### River Run × plane × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 77.92 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +58.7% | 20.4 | 11.9 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.8 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.4 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.0 | 12.1 |
+| Row 1 | 3 | 6.0% | -27.3% | 21.0 | 11.1 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.3 |
 
 ### River Run × plane × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 77.92 — *** (p<0.001)
+- **Chi²(2):** 83.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +58.7% | 20.4 | 11.9 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.8 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.4 |
+| Row 0 | 47 | 94.0% | +60.7% | 20.0 | 12.1 |
+| Row 1 | 3 | 6.0% | -27.3% | 21.0 | 11.1 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.3 |
 
 ### Space Sprint × horse × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.7 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.0 | 11.3 |
 
 ### Space Sprint × horse × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.7 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.0 | 11.3 |
 
 ### Space Sprint × duck × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.6 |
-| Row 1 | 4 | 8.0% | -42.0% | 19.9 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.4 |
 
 ### Space Sprint × duck × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.6 |
-| Row 1 | 4 | 8.0% | -42.0% | 19.9 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.4 |
 
 ### Space Sprint × snail × 30s
 
 - **finishT:** 0.6371 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 35.28 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 20.9 | 11.8 |
-| Row 1 | 6 | 12.0% | -38.0% | 19.9 | 11.2 |
+| Row 0 | 46 | 92.0% | +42.0% | 20.8 | 11.8 |
+| Row 1 | 4 | 8.0% | -42.0% | 20.0 | 11.2 |
 
 ### Space Sprint × snail × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 20.48 — *** (p<0.001)
+- **Chi²(1):** 25.92 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 41 | 82.0% | +32.0% | 20.9 | 11.7 |
-| Row 1 | 9 | 18.0% | -32.0% | 20.0 | 11.3 |
+| Row 0 | 43 | 86.0% | +36.0% | 20.8 | 11.7 |
+| Row 1 | 7 | 14.0% | -36.0% | 20.1 | 11.3 |
 
 ### Space Sprint × elephant × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.7 | 11.7 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.3 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.9 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.6 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.2 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.1 | 12.0 |
 
 ### Space Sprint × elephant × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.7 | 11.7 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.3 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.9 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.6 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.2 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.1 | 12.0 |
 
 ### Space Sprint × giraffe × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 72.52 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.5 | 11.7 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.4 | 11.5 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.8 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.3 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.9 | 11.0 |
 
 ### Space Sprint × giraffe × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 72.52 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.5 | 11.7 |
-| Row 1 | 4 | 8.0% | -25.3% | 20.4 | 11.5 |
-| Row 2 | 1 | 2.0% | -31.3% | 20.8 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.3 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.9 | 11.0 |
 
 ### Space Sprint × snake × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 42.32 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +46.0% | 20.8 | 11.6 |
-| Row 1 | 2 | 4.0% | -46.0% | 20.0 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.8 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.1 | 11.3 |
 
 ### Space Sprint × snake × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 42.32 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 48 | 96.0% | +46.0% | 20.8 | 11.6 |
-| Row 1 | 2 | 4.0% | -46.0% | 20.0 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.8 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.1 | 11.3 |
 
 ### Space Sprint × dragon × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 68.32 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +54.7% | 20.6 | 11.8 |
-| Row 1 | 6 | 12.0% | -21.3% | 20.4 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.7 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.2 | 11.9 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.7 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.8 | 11.1 |
 
 ### Space Sprint × dragon × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 68.32 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +54.7% | 20.6 | 11.8 |
-| Row 1 | 6 | 12.0% | -21.3% | 20.4 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.7 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.2 | 11.9 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.7 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.8 | 11.1 |
 
 ### Space Sprint × f1 × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 23.12 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 42 | 84.0% | +34.0% | 21.1 | 11.6 |
-| Row 1 | 8 | 16.0% | -34.0% | 19.8 | 11.5 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.3 |
 
 ### Space Sprint × f1 × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 23.12 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 42 | 84.0% | +34.0% | 21.1 | 11.6 |
-| Row 1 | 8 | 16.0% | -34.0% | 19.8 | 11.5 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.3 |
 
 ### Space Sprint × rocket × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 18.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 40 | 80.0% | +30.0% | 21.1 | 11.5 |
-| Row 1 | 10 | 20.0% | -30.0% | 19.8 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.3 |
 
 ### Space Sprint × rocket × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 18.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 40 | 80.0% | +30.0% | 21.1 | 11.5 |
-| Row 1 | 10 | 20.0% | -30.0% | 19.8 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.3 |
 
 ### Space Sprint × buggy × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 21.1 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 19.8 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.3 |
 
 ### Space Sprint × buggy × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 21.1 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 19.8 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.9 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.0 | 11.3 |
 
 ### Space Sprint × motorbike × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.6 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.8 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.1 | 11.3 |
 
 ### Space Sprint × motorbike × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 50.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.6 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 50 | 100.0% | +50.0% | 20.8 | 11.7 |
+| Row 1 | 0 | 0.0% | -50.0% | 20.1 | 11.3 |
 
 ### Space Sprint × plane × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 20.9 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 20.1 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Space Sprint × plane × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 20.9 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 20.1 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Garden Path × horse × 30s
 
@@ -2197,50 +2197,50 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 68.32 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +54.7% | 20.9 | 11.6 |
-| Row 1 | 6 | 12.0% | -21.3% | 20.1 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.7 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.3 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.2 |
 
 ### Weltall × horse × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 68.32 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +54.7% | 20.9 | 11.6 |
-| Row 1 | 6 | 12.0% | -21.3% | 20.1 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.0 | 11.2 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.7 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.3 | 11.3 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.2 |
 
 ### Weltall × duck × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 38.72 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +44.0% | 21.0 | 11.7 |
-| Row 1 | 3 | 6.0% | -44.0% | 19.9 | 11.3 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.0 | 11.3 |
 
 ### Weltall × duck × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 38.72 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +44.0% | 21.0 | 11.7 |
-| Row 1 | 3 | 6.0% | -44.0% | 19.9 | 11.3 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.0 | 11.3 |
 
 ### Weltall × snail × 30s
 
@@ -2251,327 +2251,246 @@ Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 20.9 | 11.7 |
-| Row 1 | 6 | 12.0% | -38.0% | 20.0 | 11.3 |
+| Row 0 | 44 | 88.0% | +38.0% | 20.8 | 11.8 |
+| Row 1 | 6 | 12.0% | -38.0% | 20.2 | 11.2 |
 
 ### Weltall × snail × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 23.12 — *** (p<0.001)
+- **Chi²(1):** 32.00 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 42 | 84.0% | +34.0% | 20.7 | 11.6 |
-| Row 1 | 8 | 16.0% | -34.0% | 20.2 | 11.4 |
+| Row 0 | 45 | 90.0% | +40.0% | 20.7 | 11.7 |
+| Row 1 | 5 | 10.0% | -40.0% | 20.3 | 11.4 |
 
 ### Weltall × elephant × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 83.08 — *** (p<0.001)
+- **Chi²(2):** 88.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.6 | 11.8 |
-| Row 1 | 3 | 6.0% | -27.3% | 20.4 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.6 | 11.3 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.3 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.7 | 11.1 |
 
 ### Weltall × elephant × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 83.08 — *** (p<0.001)
+- **Chi²(2):** 88.36 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 47 | 94.0% | +60.7% | 20.6 | 11.8 |
-| Row 1 | 3 | 6.0% | -27.3% | 20.4 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.6 | 11.3 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.4 | 12.0 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.3 |
+| Row 2 | 1 | 2.0% | -31.3% | 20.7 | 11.1 |
 
 ### Weltall × giraffe × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.4 | 11.9 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.4 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.2 | 12.0 |
+| Row 1 | 2 | 4.0% | -29.3% | 21.0 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.3 |
 
 ### Weltall × giraffe × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.4 | 11.9 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.3 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.3 | 11.4 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.2 | 12.0 |
+| Row 1 | 2 | 4.0% | -29.3% | 21.0 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.2 | 11.3 |
 
 ### Weltall × snake × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.7 |
-| Row 1 | 4 | 8.0% | -42.0% | 20.0 | 11.3 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.9 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.2 |
 
 ### Weltall × snake × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.7 |
-| Row 1 | 4 | 8.0% | -42.0% | 20.0 | 11.3 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.9 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.2 |
 
 ### Weltall × dragon × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.4 | 11.9 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.3 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.0 | 12.1 |
+| Row 1 | 2 | 4.0% | -29.3% | 20.9 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.2 |
 
 ### Weltall × dragon × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 88.48 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.4 | 11.9 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.7 | 11.4 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.3 |
+| Row 0 | 48 | 96.0% | +62.7% | 20.0 | 12.1 |
+| Row 1 | 2 | 4.0% | -29.3% | 20.9 | 11.2 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 11.2 |
 
 ### Weltall × f1 × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 21.0 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 20.0 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Weltall × f1 × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 28.88 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 44 | 88.0% | +38.0% | 21.0 | 11.6 |
-| Row 1 | 6 | 12.0% | -38.0% | 20.0 | 11.5 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Weltall × rocket × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 63.88 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 43 | 86.0% | +52.7% | 20.9 | 11.6 |
-| Row 1 | 7 | 14.0% | -19.3% | 20.2 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 19.9 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.6 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.4 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 10.9 |
 
 ### Weltall × rocket × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 63.88 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 43 | 86.0% | +52.7% | 20.9 | 11.6 |
-| Row 1 | 7 | 14.0% | -19.3% | 20.2 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 19.9 | 11.0 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.6 | 11.8 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.4 | 11.4 |
+| Row 2 | 0 | 0.0% | -33.3% | 20.5 | 10.9 |
 
 ### Weltall × buggy × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.6 |
-| Row 1 | 4 | 8.0% | -42.0% | 20.0 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Weltall × buggy × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 35.28 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 46 | 92.0% | +42.0% | 21.0 | 11.6 |
-| Row 1 | 4 | 8.0% | -42.0% | 20.0 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.8 | 11.8 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.2 | 11.3 |
 
 ### Weltall × motorbike × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.7 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.3 |
 
 ### Weltall × motorbike × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 2 à max. 20 Racer
 - **Erwartete Win-Rate (fair):** 50.0%
-- **Chi²(1):** 32.00 — *** (p<0.001)
+- **Chi²(1):** 46.08 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +40.0% | 21.0 | 11.7 |
-| Row 1 | 5 | 10.0% | -40.0% | 19.9 | 11.4 |
+| Row 0 | 49 | 98.0% | +48.0% | 20.9 | 11.7 |
+| Row 1 | 1 | 2.0% | -48.0% | 20.1 | 11.3 |
 
 ### Weltall × plane × 30s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.7 | 11.7 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.3 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.3 |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 11.7 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.5 |
+| Row 2 | 0 | 0.0% | -33.3% | 21.0 | 11.1 |
 
 ### Weltall × plane × 120s
 
 - **finishT:** 0.9500 (Ziellinie in t-Raum)
 - **Reihen:** 3 à max. 14 Racer
 - **Erwartete Win-Rate (fair):** 33.3%
-- **Chi²(2):** 73.00 — *** (p<0.001)
+- **Chi²(2):** 94.12 — *** (p<0.001)
 
 | Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |
 |-------|-------|----------|------------|--------|--------|
-| Row 0 | 45 | 90.0% | +56.7% | 20.7 | 11.7 |
-| Row 1 | 5 | 10.0% | -23.3% | 20.3 | 11.5 |
-| Row 2 | 0 | 0.0% | -33.3% | 20.4 | 11.3 |
-
----
-
-## Mixing-Quote — Open Tracks (t-Space-Mixing-Validierung)
-
-Anteil der Row-1-Racer die bei Ablauf von `avoidanceWarmupMs` mindestens einen Row-0-Racer im t-Raum überholt haben. Zielbereich: **60–95 %**.
-
-| Track | Racer | Dist | Mixing-Quote | Bewertung |
-|-------|-------|------|-------------|-----------|
-| River Run | horse | 30s | 79.1% | ✅ OK |
-| River Run | horse | 120s | 79.1% | ✅ OK |
-| River Run | duck | 30s | 77.5% | ✅ OK |
-| River Run | duck | 120s | 77.5% | ✅ OK |
-| River Run | snail | 30s | 35.2% | ⚠️ Zu wenig Mixing |
-| River Run | snail | 120s | 32.6% | ⚠️ Zu wenig Mixing |
-| River Run | elephant | 30s | 60.0% | ✅ OK |
-| River Run | elephant | 120s | 60.0% | ✅ OK |
-| River Run | giraffe | 30s | 71.1% | ✅ OK |
-| River Run | giraffe | 120s | 71.1% | ✅ OK |
-| River Run | snake | 30s | 73.5% | ✅ OK |
-| River Run | snake | 120s | 73.5% | ✅ OK |
-| River Run | dragon | 30s | 76.3% | ✅ OK |
-| River Run | dragon | 120s | 76.3% | ✅ OK |
-| River Run | f1 | 30s | 82.5% | ✅ OK |
-| River Run | f1 | 120s | 82.5% | ✅ OK |
-| River Run | rocket | 30s | 83.9% | ✅ OK |
-| River Run | rocket | 120s | 83.9% | ✅ OK |
-| River Run | buggy | 30s | 77.3% | ✅ OK |
-| River Run | buggy | 120s | 77.3% | ✅ OK |
-| River Run | motorbike | 30s | 81.9% | ✅ OK |
-| River Run | motorbike | 120s | 81.9% | ✅ OK |
-| River Run | plane | 30s | 81.7% | ✅ OK |
-| River Run | plane | 120s | 81.7% | ✅ OK |
-| Space Sprint | horse | 30s | 93.6% | ✅ OK |
-| Space Sprint | horse | 120s | 93.6% | ✅ OK |
-| Space Sprint | duck | 30s | 92.9% | ✅ OK |
-| Space Sprint | duck | 120s | 92.9% | ✅ OK |
-| Space Sprint | snail | 30s | 81.3% | ✅ OK |
-| Space Sprint | snail | 120s | 81.0% | ✅ OK |
-| Space Sprint | elephant | 30s | 85.9% | ✅ OK |
-| Space Sprint | elephant | 120s | 85.9% | ✅ OK |
-| Space Sprint | giraffe | 30s | 88.7% | ✅ OK |
-| Space Sprint | giraffe | 120s | 88.7% | ✅ OK |
-| Space Sprint | snake | 30s | 91.2% | ✅ OK |
-| Space Sprint | snake | 120s | 91.2% | ✅ OK |
-| Space Sprint | dragon | 30s | 89.9% | ✅ OK |
-| Space Sprint | dragon | 120s | 89.9% | ✅ OK |
-| Space Sprint | f1 | 30s | 94.3% | ✅ OK |
-| Space Sprint | f1 | 120s | 94.3% | ✅ OK |
-| Space Sprint | rocket | 30s | 94.5% | ✅ OK |
-| Space Sprint | rocket | 120s | 94.5% | ✅ OK |
-| Space Sprint | buggy | 30s | 93.3% | ✅ OK |
-| Space Sprint | buggy | 120s | 93.3% | ✅ OK |
-| Space Sprint | motorbike | 30s | 94.1% | ✅ OK |
-| Space Sprint | motorbike | 120s | 94.1% | ✅ OK |
-| Space Sprint | plane | 30s | 93.7% | ✅ OK |
-| Space Sprint | plane | 120s | 93.7% | ✅ OK |
-| Weltall | horse | 30s | 90.2% | ✅ OK |
-| Weltall | horse | 120s | 90.2% | ✅ OK |
-| Weltall | duck | 30s | 91.4% | ✅ OK |
-| Weltall | duck | 120s | 91.4% | ✅ OK |
-| Weltall | snail | 30s | 77.9% | ✅ OK |
-| Weltall | snail | 120s | 76.9% | ✅ OK |
-| Weltall | elephant | 30s | 81.9% | ✅ OK |
-| Weltall | elephant | 120s | 81.9% | ✅ OK |
-| Weltall | giraffe | 30s | 85.9% | ✅ OK |
-| Weltall | giraffe | 120s | 85.9% | ✅ OK |
-| Weltall | snake | 30s | 90.3% | ✅ OK |
-| Weltall | snake | 120s | 90.3% | ✅ OK |
-| Weltall | dragon | 30s | 88.0% | ✅ OK |
-| Weltall | dragon | 120s | 88.0% | ✅ OK |
-| Weltall | f1 | 30s | 93.7% | ✅ OK |
-| Weltall | f1 | 120s | 93.7% | ✅ OK |
-| Weltall | rocket | 30s | 92.4% | ✅ OK |
-| Weltall | rocket | 120s | 92.4% | ✅ OK |
-| Weltall | buggy | 30s | 92.2% | ✅ OK |
-| Weltall | buggy | 120s | 92.2% | ✅ OK |
-| Weltall | motorbike | 30s | 93.7% | ✅ OK |
-| Weltall | motorbike | 120s | 93.7% | ✅ OK |
-| Weltall | plane | 30s | 89.7% | ✅ OK |
-| Weltall | plane | 120s | 89.7% | ✅ OK |
+| Row 0 | 49 | 98.0% | +64.7% | 20.4 | 11.7 |
+| Row 1 | 1 | 2.0% | -31.3% | 20.5 | 11.5 |
+| Row 2 | 0 | 0.0% | -33.3% | 21.0 | 11.1 |
 
 ---
 
@@ -2583,79 +2502,79 @@ Anteil der Row-1-Racer die bei Ablauf von `avoidanceWarmupMs` mindestens einen R
 
 **Kombinationen mit signifikantem Ungleichgewicht (p < 0.05):**
 
-- **River Run × horse × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **River Run × horse × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **River Run × duck × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × duck × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × snail × 30s:** Row 0 zu oft (78.0% statt 33.3%) — *** (p<0.001)
-- **River Run × snail × 120s:** Row 0 zu oft (78.0% statt 33.3%) — *** (p<0.001)
+- **River Run × horse × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **River Run × horse × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **River Run × duck × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × duck × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × snail × 30s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
+- **River Run × snail × 120s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
 - **River Run × elephant × 30s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
 - **River Run × elephant × 120s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
-- **River Run × giraffe × 30s:** Row 0 zu oft (84.0% statt 25.0%) — *** (p<0.001)
-- **River Run × giraffe × 120s:** Row 0 zu oft (84.0% statt 25.0%) — *** (p<0.001)
-- **River Run × snake × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **River Run × snake × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **River Run × dragon × 30s:** Row 0 zu oft (82.0% statt 25.0%) — *** (p<0.001)
-- **River Run × dragon × 120s:** Row 0 zu oft (82.0% statt 25.0%) — *** (p<0.001)
-- **River Run × f1 × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × f1 × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × rocket × 30s:** Row 0 zu oft (92.0% statt 33.3%) — *** (p<0.001)
-- **River Run × rocket × 120s:** Row 0 zu oft (92.0% statt 33.3%) — *** (p<0.001)
-- **River Run × buggy × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × buggy × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × motorbike × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × motorbike × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
-- **River Run × plane × 30s:** Row 0 zu oft (92.0% statt 33.3%) — *** (p<0.001)
-- **River Run × plane × 120s:** Row 0 zu oft (92.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × horse × 30s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × horse × 120s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × duck × 30s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × duck × 120s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × snail × 30s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × snail × 120s:** Row 0 zu oft (82.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × elephant × 30s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × elephant × 120s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × giraffe × 30s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × giraffe × 120s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × snake × 30s:** Row 0 zu oft (96.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × snake × 120s:** Row 0 zu oft (96.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × dragon × 30s:** Row 0 zu oft (88.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × dragon × 120s:** Row 0 zu oft (88.0% statt 33.3%) — *** (p<0.001)
-- **Space Sprint × f1 × 30s:** Row 0 zu oft (84.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × f1 × 120s:** Row 0 zu oft (84.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × rocket × 30s:** Row 0 zu oft (80.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × rocket × 120s:** Row 0 zu oft (80.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × buggy × 30s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × buggy × 120s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × motorbike × 30s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × motorbike × 120s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × plane × 30s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Space Sprint × plane × 120s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
+- **River Run × giraffe × 30s:** Row 0 zu oft (92.0% statt 25.0%) — *** (p<0.001)
+- **River Run × giraffe × 120s:** Row 0 zu oft (92.0% statt 25.0%) — *** (p<0.001)
+- **River Run × snake × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × snake × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × dragon × 30s:** Row 0 zu oft (90.0% statt 25.0%) — *** (p<0.001)
+- **River Run × dragon × 120s:** Row 0 zu oft (90.0% statt 25.0%) — *** (p<0.001)
+- **River Run × f1 × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × f1 × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × rocket × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **River Run × rocket × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **River Run × buggy × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **River Run × buggy × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **River Run × motorbike × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × motorbike × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **River Run × plane × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **River Run × plane × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × horse × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × horse × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × duck × 30s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × duck × 120s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × snail × 30s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × snail × 120s:** Row 0 zu oft (86.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × elephant × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × elephant × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × giraffe × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × giraffe × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × snake × 30s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × snake × 120s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × dragon × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × dragon × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Space Sprint × f1 × 30s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × f1 × 120s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × rocket × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × rocket × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × buggy × 30s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × buggy × 120s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × motorbike × 30s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × motorbike × 120s:** Row 0 zu oft (100.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × plane × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Space Sprint × plane × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
 - **Garden Path × giraffe × 30s:** Row 0 zu selten (8.0% statt 10.0%) — ** (p<0.01)
-- **Weltall × horse × 30s:** Row 0 zu oft (88.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × horse × 120s:** Row 0 zu oft (88.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × duck × 30s:** Row 0 zu oft (94.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × duck × 120s:** Row 0 zu oft (94.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × horse × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × horse × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × duck × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × duck × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
 - **Weltall × snail × 30s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × snail × 120s:** Row 0 zu oft (84.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × elephant × 30s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × elephant × 120s:** Row 0 zu oft (94.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × giraffe × 30s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × giraffe × 120s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × snake × 30s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × snake × 120s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × dragon × 30s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × dragon × 120s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × f1 × 30s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × f1 × 120s:** Row 0 zu oft (88.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × rocket × 30s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × rocket × 120s:** Row 0 zu oft (86.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × buggy × 30s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × buggy × 120s:** Row 0 zu oft (92.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × motorbike × 30s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × motorbike × 120s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
-- **Weltall × plane × 30s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
-- **Weltall × plane × 120s:** Row 0 zu oft (90.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × snail × 120s:** Row 0 zu oft (90.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × elephant × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × elephant × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × giraffe × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × giraffe × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × snake × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × snake × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × dragon × 30s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × dragon × 120s:** Row 0 zu oft (96.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × f1 × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × f1 × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × rocket × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × rocket × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × buggy × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × buggy × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × motorbike × 30s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × motorbike × 120s:** Row 0 zu oft (98.0% statt 50.0%) — *** (p<0.001)
+- **Weltall × plane × 30s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
+- **Weltall × plane × 120s:** Row 0 zu oft (98.0% statt 33.3%) — *** (p<0.001)
 
 ---
 
