@@ -430,12 +430,23 @@ function sigLabel(p) {
 }
 function fairLabel(p, rowStats) {
   if (p >= 0.05) return '✅ Fair';
-  // Is front row over- or under-performing?
   const row0Rate = rowStats[0]?.winRate ?? 0;
   const expected = 1 / rowStats.length;
   if (row0Rate > expected + 0.05) return '⚠️ Front-Bias';
   if (row0Rate < expected - 0.05) return '⚠️ Rear-Bias';
   return '⚠️ Unequal';
+}
+
+// 1.5× gate: every row's win rate must be in [0.5 × E, 1.5 × E]
+function gate15Pass(rowStats) {
+  const expected = 1 / rowStats.length;
+  return rowStats.every((rs) => rs.winRate >= 0.5 * expected && rs.winRate <= 1.5 * expected);
+}
+
+function gate15RowLabel(winRate, expected) {
+  if (winRate > 1.5 * expected) return `❌ ${fmtPct(winRate)} (>${fmtPct(1.5 * expected)})`;
+  if (winRate < 0.5 * expected) return `❌ ${fmtPct(winRate)} (<${fmtPct(0.5 * expected)})`;
+  return `✅ ${fmtPct(winRate)}`;
 }
 
 function buildReport(allResults, runDate) {
@@ -459,20 +470,23 @@ function buildReport(allResults, runDate) {
   lines.push('Erwartete Win-Rate bei perfekter Fairness: **1 / Anzahl Reihen**.  ');
   lines.push('Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.  ');
   lines.push('`⚠️ Front-Bias` = Row 0 gewinnt zu oft; `⚠️ Rear-Bias` = Row 0 gewinnt zu selten.  ');
+  lines.push('**1.5×-Gate:** alle Reihen im Bereich [0.5×E, 1.5×E] — ✅ = bestanden, ❌ = überschritten.  ');
   lines.push('');
 
   lines.push(
     '| Track | Racer | Dist | Reihen | Erwart. | ' +
-    'R0 WinRate | R1 WinRate | R2+ WinRate | χ² | p-Wert | Urteil |'
+    'R0 WinRate | R1 WinRate | R2+ WinRate | χ² | p-Wert | chi²-Urteil | 1.5×-Gate |'
   );
   lines.push(
     '|-------|-------|------|--------|---------|' +
-    '-----------|------------|-------------|-----|--------|--------|'
+    '-----------|------------|-------------|-----|--------|-------------|-----------|'
   );
 
   const FAIR_THRESHOLD = 0.05;
-  const unfairCombos = [];
-  const fairCombos   = [];
+  const unfairCombos  = [];
+  const fairCombos    = [];
+  const gate15Combos  = [];
+  const gate15Fail    = [];
 
   for (const res of allResults) {
     const { trackId, trackName, racerType, durationSec, stats } = res;
@@ -485,17 +499,22 @@ function buildReport(allResults, runDate) {
       ? rRest.reduce((s, r) => s + r.wins, 0) / (N_RACES * rRest.length || 1)
       : '—';
 
-    const verdict = fairLabel(pValue, rowStats);
+    const verdict  = fairLabel(pValue, rowStats);
+    const gatePasses = gate15Pass(rowStats);
+    const gateLabel  = gatePasses ? '✅ Pass' : '❌ Fail';
+
     lines.push(
       `| ${trackName} | ${racerType} | ${durationSec}s | ${totalRows} | ${fmtPct(expected)} | ` +
       `${r0 ? fmtPct(r0.winRate) : '—'} | ` +
       `${r1 ? fmtPct(r1.winRate) : '—'} | ` +
       `${typeof restWinRate === 'number' ? fmtPct(restWinRate) : restWinRate} | ` +
-      `${fmtN(chiSq, 1)} | ${sigLabel(pValue)} | ${verdict} |`
+      `${fmtN(chiSq, 1)} | ${sigLabel(pValue)} | ${verdict} | ${gateLabel} |`
     );
 
     if (pValue < FAIR_THRESHOLD) unfairCombos.push(res);
     else fairCombos.push(res);
+    if (gatePasses) gate15Combos.push(res);
+    else gate15Fail.push(res);
   }
   lines.push('');
 
@@ -518,13 +537,14 @@ function buildReport(allResults, runDate) {
     lines.push(`- **Chi²(${df}):** ${fmtN(chiSq, 2)} — ${sigLabel(pValue)}`);
     lines.push('');
 
-    lines.push('| Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |');
-    lines.push('|-------|-------|----------|------------|--------|--------|');
+    lines.push('| Reihe | Siege | Win-Rate | 1.5×-Gate | Δ Erwartet | Ø Rang | σ Rang |');
+    lines.push('|-------|-------|----------|-----------|------------|--------|--------|');
     for (const rs of rowStats) {
       const delta = rs.winRate - expected;
       const sign  = delta >= 0 ? '+' : '';
       lines.push(
         `| Row ${rs.rowIndex} | ${rs.wins} | ${fmtPct(rs.winRate)} | ` +
+        `${gate15RowLabel(rs.winRate, expected)} | ` +
         `${sign}${fmtPct(delta)} | ${fmtN(rs.avgRank, 1)} | ${fmtN(rs.stdRank, 1)} |`
       );
     }
@@ -560,14 +580,38 @@ function buildReport(allResults, runDate) {
   lines.push('## Gesamtauswertung');
   lines.push('');
   lines.push(`**Getestete Kombinationen:** ${allResults.length}  `);
-  lines.push(`**Davon statistisch fair (p≥0.05):** ${fairCombos.length}  `);
-  lines.push(`**Davon statistisch unfair (p<0.05):** ${unfairCombos.length}  `);
+  lines.push(`**1.5×-Gate bestanden:** ${gate15Combos.length}/${allResults.length} (Ziel ≥62/72 Open-Track-Kombos)  `);
+  lines.push(`**1.5×-Gate gescheitert:** ${gate15Fail.length}  `);
+  lines.push(`**Davon statistisch fair (p≥0.05, diagnostisch):** ${fairCombos.length}  `);
+  lines.push(`**Davon statistisch unfair (p<0.05, diagnostisch):** ${unfairCombos.length}  `);
   lines.push('');
 
-  if (unfairCombos.length === 0) {
-    lines.push('**Befund:** Keine Kombination zeigt statistisch signifikante Unfairness. ✅');
+  // 1.5× gate failures
+  if (gate15Fail.length === 0) {
+    lines.push('**1.5×-Gate:** Alle Kombinationen bestanden. ✅');
   } else {
-    lines.push('**Kombinationen mit signifikantem Ungleichgewicht (p < 0.05):**');
+    lines.push(`**1.5×-Gate-Fehlschläge (${gate15Fail.length}):**`);
+    lines.push('');
+    for (const res of gate15Fail) {
+      const { trackName, racerType, durationSec, stats } = res;
+      const { rowStats } = stats;
+      const expected = 1 / rowStats.length;
+      const violations = rowStats
+        .filter((rs) => rs.winRate > 1.5 * expected || rs.winRate < 0.5 * expected)
+        .map((rs) => {
+          const dir = rs.winRate > 1.5 * expected ? `>${fmtPct(1.5 * expected)}` : `<${fmtPct(0.5 * expected)}`;
+          return `Row${rs.rowIndex}=${fmtPct(rs.winRate)} ${dir}`;
+        });
+      lines.push(`- **${trackName} × ${racerType} × ${durationSec}s:** ${violations.join(', ')}`);
+    }
+  }
+  lines.push('');
+
+  // chi² failures (diagnostic)
+  if (unfairCombos.length === 0) {
+    lines.push('**chi²-Diagnose:** Keine Kombination zeigt statistisch signifikante Unfairness (p≥0.05). ✅');
+  } else {
+    lines.push(`**chi²-Diagnose — Ungleichgewicht (p<0.05, ${unfairCombos.length} Kombos):**`);
     lines.push('');
     for (const res of unfairCombos) {
       const { trackName, racerType, durationSec, stats } = res;
@@ -782,17 +826,22 @@ if (isMain) {
   console.log(`Bericht → ${mdPath}`);
 
   // Print quick summary
-  const unfair = allResults.filter((r) => r.stats.pValue < 0.05);
+  const unfair   = allResults.filter((r) => r.stats.pValue < 0.05);
+  const gateFail = allResults.filter((r) => !gate15Pass(r.stats.rowStats));
   console.log(`\n=== Zusammenfassung ===`);
   console.log(`Kombinationen gesamt : ${allResults.length}`);
-  console.log(`Fair (p≥0.05)        : ${allResults.length - unfair.length}`);
+  console.log(`1.5×-Gate bestanden  : ${allResults.length - gateFail.length}  ← Hauptkriterium`);
+  console.log(`1.5×-Gate gescheitert: ${gateFail.length}`);
+  console.log(`Fair (p≥0.05, diag.) : ${allResults.length - unfair.length}`);
   console.log(`Unfair (p<0.05)      : ${unfair.length}`);
-  if (unfair.length > 0) {
-    console.log('\nUnfaire Kombinationen:');
-    for (const r of unfair) {
-      const r0 = r.stats.rowStats[0];
+  if (gateFail.length > 0) {
+    console.log('\n1.5×-Gate-Fehlschläge:');
+    for (const r of gateFail) {
       const exp = 1 / r.stats.totalRows;
-      console.log(`  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  Row0=${fmtPct(r0?.winRate ?? 0)} (erw. ${fmtPct(exp)})  p=${r.stats.pValue.toFixed(3)}`);
+      const violations = r.stats.rowStats
+        .filter((rs) => rs.winRate > 1.5 * exp || rs.winRate < 0.5 * exp)
+        .map((rs) => `Row${rs.rowIndex}=${fmtPct(rs.winRate)}`);
+      console.log(`  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  [${violations.join(', ')}]  erw. ${fmtPct(exp)}`);
     }
   }
 }
