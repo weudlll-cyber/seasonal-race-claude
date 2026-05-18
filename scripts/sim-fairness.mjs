@@ -18,8 +18,8 @@
 //              - No PNG output, no camera, no rendering — pure physics.
 //
 // Usage:
-//   node scripts/sim-fairness.mjs [--races=50] [--racers=40]
-//                                  [--out=client/tmp]
+//   node scripts/sim-fairness.mjs [--races=50] [--racers=40] [--out=client/tmp]
+//                                  [--rowGapMult=1.5] [--speedBrakeFactor=0.95]
 //
 // Output:
 //   <out>/fairness-data.json   — machine-readable raw data
@@ -40,9 +40,13 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const N_RACES = Number(argVal('races', '50'));
+const N_RACES  = Number(argVal('races', '50'));
 const N_RACERS = Number(argVal('racers', '40'));
-const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
+const OUT_DIR  = join(ROOT, argVal('out', 'client/tmp'));
+
+// Phase-2D diagnostic overrides (null = use default from config)
+const ROW_GAP_MULT_OVERRIDE    = argVal('rowGapMult', null);
+const SPEED_BRAKE_OVERRIDE     = argVal('speedBrakeFactor', null);
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
@@ -161,6 +165,10 @@ export function runSingleRace({
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
+
+    // Phase-2D diagnostic overrides
+    if (ROW_GAP_MULT_OVERRIDE   !== null) rowConfig.rowGapMultiplier      = Number(ROW_GAP_MULT_OVERRIDE);
+    if (SPEED_BRAKE_OVERRIDE    !== null) behaviorConfig.speedBrakeFactor = Number(SPEED_BRAKE_OVERRIDE);
 
     // N-calibrated natural base speed — independent of finishT.
     // Mirrors the formula in sim-race-visual.mjs and index.jsx.
