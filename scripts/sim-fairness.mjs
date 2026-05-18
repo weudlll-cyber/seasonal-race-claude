@@ -44,6 +44,12 @@ const N_RACES = Number(argVal('races', '50'));
 const N_RACERS = Number(argVal('racers', '40'));
 const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
 
+// Phase-2F: Normalized-T Avoidance override (open tracks only)
+const NORMALIZED_T_AVOIDANCE = argVal('normalizedTAvoidance', null) === 'true';
+// permanent=true (default): use normalized-T for the entire race.
+// permanent=false: only during raceTs < avoidanceWarmupMs, then revert to absolute-t.
+const NORMALIZED_T_PERMANENT = argVal('normalizedTPermanent', 'true') !== 'false';
+
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
@@ -77,6 +83,38 @@ export function makePRNG(seed) {
 // ── Speed transition easing (mirrors index.jsx) ───────────────────────────────
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// ── Phase-2F: Normalized-T brake override ────────────────────────────────────
+// Replaces r.avoidanceActive set by applyRacerBehavior() with a recomputed flag
+// that uses progress-from-start (r.t - r.tStart) instead of absolute r.t for
+// the leader/trailer determination. Open-track only (closed tracks unchanged).
+//
+// Effect at race start: all racers have progress≈0, so no racer has structural
+// leader-immunity based on start position. Row-0 can be braked when tied.
+// As the race runs and overtaking happens, the ordering naturally reflects
+// true race progress rather than initial stagger.
+function applyNormalizedTBrake(racers, config) {
+  for (const r of racers) r.avoidanceActive = false;
+
+  for (let i = 0; i < racers.length; i++) {
+    const rA = racers[i];
+    if (rA.finished) continue;
+    for (let j = i + 1; j < racers.length; j++) {
+      const rB = racers[j];
+      if (rB.finished) continue;
+
+      const dT = Math.abs(rA.t - rB.t);
+      const dY = Math.abs(rA.physicalY - rB.physicalY);
+      if (dY >= config.speedBrakeYThreshold || dT >= config.speedBrakeTThreshold) continue;
+
+      const progressA   = rA.t - rA.tStart;
+      const progressB   = rB.t - rB.tStart;
+      const aIsTrailer  = progressA < progressB || (progressA === progressB && rA.index < rB.index);
+      const trailer     = aIsTrailer ? rA : rB;
+      trailer.avoidanceActive = true;
+    }
+  }
 }
 
 // ── Racer type configs ────────────────────────────────────────────────────────
@@ -226,6 +264,7 @@ export function runSingleRace({
         spriteWorldSizePx:      displaySize,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
+        tStart,
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -308,6 +347,11 @@ export function runSingleRace({
 
       computePositions();
       applyRacerBehavior(racers, behaviorConfig, undefined);
+      if (NORMALIZED_T_AVOIDANCE && isOpen) {
+        if (NORMALIZED_T_PERMANENT || raceTs < behaviorConfig.avoidanceWarmupMs) {
+          applyNormalizedTBrake(racers, behaviorConfig);
+        }
+      }
 
       // Finish check
       for (const r of racers) {
@@ -441,6 +485,9 @@ function buildReport(allResults, runDate) {
   lines.push(`**Distanz-Varianten:** 30s / 120s  `);
   lines.push(`**Catch-Up (speedBonusFactor):** ${DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor}  `);
   lines.push(`**PRNG:** mulberry32, Seeds 1–${N_RACES}  `);
+  if (NORMALIZED_T_AVOIDANCE) {
+    lines.push(`**[Phase-2F] normalizedTAvoidance:** aktiv | permanent: ${NORMALIZED_T_PERMANENT}  `);
+  }
   lines.push('');
   lines.push('---');
   lines.push('');
@@ -663,7 +710,11 @@ if (isMain) {
     `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
     `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
   );
-  console.log(`Output                 : ${OUT_DIR}\n`);
+  console.log(`Output                 : ${OUT_DIR}`);
+  if (NORMALIZED_T_AVOIDANCE) {
+    console.log(`⚠️  Phase-2F override aktiv: normalizedTAvoidance=true permanent=${NORMALIZED_T_PERMANENT}`);
+  }
+  console.log('');
 
   mkdirSync(OUT_DIR, { recursive: true });
 
