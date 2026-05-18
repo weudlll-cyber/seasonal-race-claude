@@ -44,6 +44,14 @@ const N_RACES = Number(argVal('races', '50'));
 const N_RACERS = Number(argVal('racers', '40'));
 const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
 
+// Phase-2E diagnostic overrides (null/false = use default behavior)
+const GRADIENT_BRAKE           = argVal('gradientBrake', null) === 'true';
+const SYMMETRIC_BRAKE_MS       = Number(argVal('symmetricBrakeMs', '0'));
+const SPEED_BONUS_FACTOR_OVR   = argVal('speedBonusFactor', null);
+const REROLL_BIAS              = argVal('rerollBias', null) === 'true';
+const REROLL_BIAS_STRENGTH     = Number(argVal('rerollBiasStrength', '0.5'));
+const USE_GRADIENT_SYSTEM      = GRADIENT_BRAKE || SYMMETRIC_BRAKE_MS > 0;
+
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
@@ -77,6 +85,41 @@ export function makePRNG(seed) {
 // ── Speed transition easing (mirrors index.jsx) ───────────────────────────────
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// ── Phase-2E: Gradient & Symmetric Brake helper ───────────────────────────────
+// Called after applyRacerBehavior() each frame. Sets r.avoidanceBrakeStrength ∈ [0,1]
+// on every racer (0 = no brake, 1 = full speedBrakeFactor).
+// GRADIENT_BRAKE: strength = tFrac × yFrac (float) instead of binary.
+// symmetricMs > 0: during the first N ms, both leader AND trailer are braked.
+function applyGradientBrakeStrengths(racers, config, raceTs, symmetricMs) {
+  for (const r of racers) r.avoidanceBrakeStrength = 0;
+
+  for (let i = 0; i < racers.length; i++) {
+    const rA = racers[i];
+    if (rA.finished) continue;
+    for (let j = i + 1; j < racers.length; j++) {
+      const rB = racers[j];
+      if (rB.finished) continue;
+
+      const dT = Math.abs(rA.t - rB.t);
+      const dY = Math.abs(rA.physicalY - rB.physicalY);
+      if (dY >= config.speedBrakeYThreshold || dT >= config.speedBrakeTThreshold) continue;
+
+      const tFrac   = Math.max(0, 1 - dT / config.speedBrakeTThreshold);
+      const yFrac   = Math.max(0, 1 - dY / config.speedBrakeYThreshold);
+      const strength = tFrac * yFrac;
+
+      const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
+      const trailer    = aIsTrailer ? rA : rB;
+      const leader     = aIsTrailer ? rB : rA;
+
+      trailer.avoidanceBrakeStrength = Math.max(trailer.avoidanceBrakeStrength, strength);
+      if (symmetricMs > 0 && raceTs < symmetricMs) {
+        leader.avoidanceBrakeStrength = Math.max(leader.avoidanceBrakeStrength, strength);
+      }
+    }
+  }
 }
 
 // ── Racer type configs ────────────────────────────────────────────────────────
@@ -161,6 +204,7 @@ export function runSingleRace({
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
+    if (SPEED_BONUS_FACTOR_OVR !== null) rowConfig.speedBonusFactor = Number(SPEED_BONUS_FACTOR_OVR);
 
     // N-calibrated natural base speed — independent of finishT.
     // Mirrors the formula in sim-race-visual.mjs and index.jsx.
@@ -226,6 +270,9 @@ export function runSingleRace({
         spriteWorldSizePx:      displaySize,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
+        tStart,
+        targetSpreadFactor:     null,
+        avoidanceBrakeStrength: 0,
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -233,6 +280,21 @@ export function runSingleRace({
       );
       return r;
     });
+
+    // Pre-race: assign target spread factors for Re-Roll-Bias (Sim 2)
+    if (REROLL_BIAS) {
+      const sfMin = BASE_SPEED_MIN / BASE_SPEED_MEAN;
+      const sfMax = BASE_SPEED_MAX / BASE_SPEED_MEAN;
+      const fairPerm = Array.from({ length: nRacers }, (_, i) => i);
+      for (let i = fairPerm.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [fairPerm[i], fairPerm[j]] = [fairPerm[j], fairPerm[i]];
+      }
+      for (const r of racers) {
+        const rankFrac = nRacers > 1 ? fairPerm[r.index] / (nRacers - 1) : 0;
+        r.targetSpreadFactor = sfMax * (1 - rankFrac) + sfMin * rankFrac;
+      }
+    }
 
     // World position helper
     const tPos = (t) => ((t % 1) + 1) % 1;
@@ -265,13 +327,17 @@ export function runSingleRace({
         if (raceTs >= r.nextRollTime && raceTs < lastRollDeadline) {
           const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
           const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
-          const newTarget   = Math.max(
+          let newTarget = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
             Math.min(
               BASE_SPEED_MAX / BASE_SPEED_MEAN,
               r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
             )
           );
+          if (REROLL_BIAS && r.targetSpreadFactor != null) {
+            newTarget = newTarget * (1 - REROLL_BIAS_STRENGTH) + r.targetSpreadFactor * REROLL_BIAS_STRENGTH;
+            newTarget = Math.max(BASE_SPEED_MIN / BASE_SPEED_MEAN, Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, newTarget));
+          }
           r.spreadFactorPrev    = r.spreadFactor;
           r.spreadFactorTarget  = newTarget;
           r.transitionStartTime = raceTs;
@@ -291,7 +357,13 @@ export function runSingleRace({
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
+          let brake;
+          if (USE_GRADIENT_SYSTEM) {
+            // gradient strength ∈ [0,1]: 0 = no brake, 1 = full effectiveBrakeFactor
+            brake = 1.0 - (r.avoidanceBrakeStrength ?? 0) * (1.0 - effectiveBrakeFactor);
+          } else {
+            brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
+          }
           r.t += r.baseSpeed * boost * brake * (DT / 16);
         }
       }
@@ -308,6 +380,7 @@ export function runSingleRace({
 
       computePositions();
       applyRacerBehavior(racers, behaviorConfig, undefined);
+      if (USE_GRADIENT_SYSTEM) applyGradientBrakeStrengths(racers, behaviorConfig, raceTs, SYMMETRIC_BRAKE_MS);
 
       // Finish check
       for (const r of racers) {
@@ -439,8 +512,17 @@ function buildReport(allResults, runDate) {
   lines.push(`**Rennen pro Kombination:** ${N_RACES}  `);
   lines.push(`**Teilnehmer pro Rennen:** ${N_RACERS}  `);
   lines.push(`**Distanz-Varianten:** 30s / 120s  `);
-  lines.push(`**Catch-Up (speedBonusFactor):** ${DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor}  `);
+  const sfLabel = SPEED_BONUS_FACTOR_OVR !== null
+    ? `${SPEED_BONUS_FACTOR_OVR} ⚠️ OVERRIDE`
+    : String(DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor);
+  lines.push(`**Catch-Up (speedBonusFactor):** ${sfLabel}  `);
   lines.push(`**PRNG:** mulberry32, Seeds 1–${N_RACES}  `);
+  if (USE_GRADIENT_SYSTEM) {
+    lines.push(`**[Phase-2E] gradientBrake:** ${GRADIENT_BRAKE} | symmetricBrakeMs: ${SYMMETRIC_BRAKE_MS}  `);
+  }
+  if (REROLL_BIAS) {
+    lines.push(`**[Phase-2E] rerollBias:** aktiv | strength: ${REROLL_BIAS_STRENGTH}  `);
+  }
   lines.push('');
   lines.push('---');
   lines.push('');
@@ -663,7 +745,15 @@ if (isMain) {
     `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
     `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
   );
-  console.log(`Output                 : ${OUT_DIR}\n`);
+  console.log(`Output                 : ${OUT_DIR}`);
+  if (USE_GRADIENT_SYSTEM || REROLL_BIAS || SPEED_BONUS_FACTOR_OVR !== null) {
+    console.log('⚠️  Phase-2E overrides aktiv:');
+    if (GRADIENT_BRAKE)                  console.log(`   gradientBrake        : true`);
+    if (SYMMETRIC_BRAKE_MS > 0)          console.log(`   symmetricBrakeMs     : ${SYMMETRIC_BRAKE_MS}`);
+    if (SPEED_BONUS_FACTOR_OVR !== null) console.log(`   speedBonusFactor     : ${SPEED_BONUS_FACTOR_OVR}`);
+    if (REROLL_BIAS)                     console.log(`   rerollBias           : true (strength=${REROLL_BIAS_STRENGTH})`);
+  }
+  console.log('');
 
   mkdirSync(OUT_DIR, { recursive: true });
 
