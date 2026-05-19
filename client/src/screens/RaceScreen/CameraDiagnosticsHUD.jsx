@@ -63,6 +63,8 @@ export default function CameraDiagnosticsHUD({
     rpSfMean: 1,
     rpTmMin: 1,
     rpTmMax: 1,
+    rpBbMin: 1,
+    rpBbMax: 1,
     rpRows: 0,
     rpRacersPerRow: 0,
     rpNRacers: 0,
@@ -124,6 +126,8 @@ export default function CameraDiagnosticsHUD({
         rpSfMean: diag.rpSfMean ?? 1,
         rpTmMin: diag.rpTmMin ?? 1,
         rpTmMax: diag.rpTmMax ?? 1,
+        rpBbMin: diag.rpBbMin ?? 1,
+        rpBbMax: diag.rpBbMax ?? 1,
         rpRows: diag.rpRows ?? 0,
         rpRacersPerRow: diag.rpRacersPerRow ?? 0,
         rpNRacers: diag.rpNRacers ?? 0,
@@ -198,6 +202,8 @@ export default function CameraDiagnosticsHUD({
     rpSfMean,
     rpTmMin,
     rpTmMax,
+    rpBbMin,
+    rpBbMax,
     rpRows,
     rpRacersPerRow,
     rpNRacers,
@@ -446,6 +452,14 @@ export default function CameraDiagnosticsHUD({
               tm:{' '}
               <span style={{ color: rpTmMax - rpTmMin > 0.05 ? '#4cff91' : '#ffd700' }}>
                 {rpTmMin.toFixed(3)}–{rpTmMax.toFixed(3)}
+              </span>
+            </div>
+          )}
+          {rpPhase !== 'OUTCOME' && rpPhase !== 'FINAL' && rpPhase !== '—' && (
+            <div>
+              bb:{' '}
+              <span style={{ color: rpBbMax - rpBbMin > 0.005 ? '#4cff91' : '#ffd700' }}>
+                {rpBbMin.toFixed(3)}–{rpBbMax.toFixed(3)}
               </span>
             </div>
           )}
