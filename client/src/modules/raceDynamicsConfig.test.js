@@ -34,7 +34,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       reRollIntervalDivisor: 15,
       reRollLastPositionPercent: 80,
       trajectoryTransitionDuration: 1.5,
-      racePlanBonusStrengthMultiplier: 1.0,
+      racePlanBonusStrengthMultiplier: 2.0,
     });
   });
 
