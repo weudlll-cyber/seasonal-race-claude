@@ -21,6 +21,7 @@ import {
   lapProgress,
   currentLap,
   REFERENCE_FPS,
+  computeSpeedScaleFactor,
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
@@ -347,12 +348,17 @@ export default function RaceScreen() {
     const referenceSpriteSize = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
-    // Open tracks: finish line is fixed at (1 - runoutZone); race speed comes from targetDuration.
+    const targetDuration = raceData.targetDuration ?? 60;
+    // Open tracks: finish line set to the distance a mean racer covers in targetDuration at natural speed.
+    // ssf scales t-space speed for track length so physical traversal time is comparable across tracks.
     // Closed tracks: finish line is the target lap count.
+    const ssf = isOpenTrack ? computeSpeedScaleFactor(geometry.pathLengthPx ?? 0) : 1;
     const finishT = isOpenTrack
-      ? 1.0 - behaviorConfig.runoutZone
+      ? Math.min(
+          (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS * targetDuration) / ssf,
+          1 - behaviorConfig.runoutZone
+        )
       : (raceData.targetLaps ?? lapsFromDuration(duration));
-    const targetDuration = raceData.targetDuration ?? finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
     // N-calibrated expected-minimum spread: E[min_n] = spreadMin + (spreadMax - spreadMin) / (n+1).
     // Ensures the expected last finisher arrives at targetDuration regardless of player count.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
