@@ -195,8 +195,6 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
   });
 
   it('P-controller arithmetic: winner at last rank → clamped to maxMult', () => {
-    // M2v2: rankError = currentRank - sollRank; winner (sollRank=1) at rank n
-    // rankError/nActive = (n-1)/n ≈ 1 → rawMult = 1 + 8*1 = 9 → clamped to maxMult
     const ctrl = createTrajectoryController(plan);
     const { transEnd, midSwitch } = plan._phases;
     const outcomeMs = (transEnd + midSwitch) / 2;
@@ -217,8 +215,6 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
   });
 
   it('P-controller arithmetic: racer with last sollRank at rank 1 → clamped to minMult', () => {
-    // M2v2: racer with sollRank=n at currentRank=1
-    // rankError = 1-n → very negative → clamped to minMult
     const ctrl = createTrajectoryController(plan);
     const { transEnd, midSwitch } = plan._phases;
     const outcomeMs = (transEnd + midSwitch) / 2;

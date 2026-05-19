@@ -205,7 +205,6 @@ export function createTrajectoryController(racePlan) {
    */
   function update(racers, elapsedMs) {
     for (const r of racers) r.trajectoryMult = 1.0;
-
     if (getPhase(elapsedMs) !== 'OUTCOME') return;
 
     // Sort non-finished racers by t descending; stable tiebreak: lower index = higher rank
