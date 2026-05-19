@@ -51,8 +51,10 @@ const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
 // --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
 //             n=0 (default): non-deterministic (Math.random()), exploration only
 // --race-plan=true|false  (default false): activate Race Plan controller
+// --bonusMult=<x>  Bereichs-Bonus strength multiplier (default 1.0 = original values)
 const GLOBAL_SEED      = Number(argVal('seed', '0'));
 const RACE_PLAN_ACTIVE = argVal('race-plan', 'false') === 'true';
+const BONUS_MULT       = Number(argVal('bonusMult', '1.0'));
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -1533,7 +1535,7 @@ if (isMain) {
             const planRacers = comboRowLayout.assignments.map(
               (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
             );
-            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {}, seed);
+            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, { bonusStrengthMultiplier: BONUS_MULT }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerSollRank;
           }
