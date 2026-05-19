@@ -53,7 +53,7 @@ const DEFAULT_CORRIDOR_CONFIG = {
 };
 
 const DEFAULT_CONTROLLER_PARAMS = {
-  gain: 8.0,
+  gain: 2.0,
   maxMult: 1.1,
   minMult: 0.85,
 };
