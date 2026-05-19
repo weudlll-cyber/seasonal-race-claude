@@ -98,7 +98,7 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
+import { REFERENCE_FPS, computeSpeedScaleFactor } from '../client/src/modules/camera/lapUtils.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -1499,7 +1499,11 @@ if (isMain) {
 
       for (const durationSec of DURATION_VARIANTS) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
-        const finishT = computeFinishT(race_baseSpeed, speedMultiplier, durationSec, isOpen);
+        // Open tracks: natural speed = BASE_SPEED_MEAN / ssf so traversal time is track-length-invariant.
+        // Closed tracks: N-calibrated global race_baseSpeed unchanged.
+        const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
+        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed;
+        const finishT = computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen);
 
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
         // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
