@@ -129,6 +129,19 @@ export default function RaceScreen() {
     _dv12Buf: new Array(60).fill(0),
     _dvBufIdx: 0,
     constSpeed: false,
+    // Race-Plan diagnostics (written per physics step when racePlanEnabled)
+    rpEnabled: false,
+    rpPhase: '—',
+    rpTs: 0,
+    rpReRollActive: false,
+    rpSfMin: 1,
+    rpSfMax: 1,
+    rpSfMean: 1,
+    rpTmMin: 1,
+    rpTmMax: 1,
+    rpRows: 0,
+    rpRacersPerRow: 0,
+    rpNRacers: 0,
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
   // Priority-system debug overlay (toggled by hotkey M)
@@ -474,6 +487,11 @@ export default function RaceScreen() {
         `[RacePlan] active — seed=${racePlanSeed} winner=#${plan.winnerRacerId} pulk=[${plan.pulkRacerIds}]`
       );
     }
+    // Initialise Race-Plan diag fields (geometry snapshot at race start)
+    diagDataRef.current.rpEnabled = racePlanEnabled;
+    diagDataRef.current.rpRows = rowLayout.totalRows;
+    diagDataRef.current.rpRacersPerRow = racersPerRowValue;
+    diagDataRef.current.rpNRacers = nRacers;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
@@ -1150,6 +1168,36 @@ export default function RaceScreen() {
           if (!isOpenTrack && st.maxLaps > 1 && !st.finalLapStartTs) {
             const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
             if (Math.floor(leader.t) >= st.maxLaps - 1) st.finalLapStartTs = ts;
+          }
+
+          // Race-Plan per-step diagnostics → diagDataRef (polled by CameraDiagnosticsHUD)
+          if (racePlanController) {
+            const activeR = st.racers.filter((r) => !r.finished);
+            if (activeR.length > 0) {
+              let sfMin = Infinity,
+                sfMax = -Infinity,
+                sfSum = 0;
+              let tmMin = Infinity,
+                tmMax = -Infinity;
+              for (const r of activeR) {
+                const sf = r.spreadFactor ?? 1;
+                const tm = r.trajectoryMult ?? 1;
+                if (sf < sfMin) sfMin = sf;
+                if (sf > sfMax) sfMax = sf;
+                sfSum += sf;
+                if (tm < tmMin) tmMin = tm;
+                if (tm > tmMax) tmMax = tm;
+              }
+              const d = diagDataRef.current;
+              d.rpPhase = racePlanController.getPhase(physicsTs);
+              d.rpTs = physicsTs;
+              d.rpReRollActive = physicsTs < lastRollDeadline;
+              d.rpSfMin = sfMin;
+              d.rpSfMax = sfMax;
+              d.rpSfMean = sfSum / activeR.length;
+              d.rpTmMin = tmMin;
+              d.rpTmMax = tmMax;
+            }
           }
 
           st.physicsAccum -= FIXED_DT;

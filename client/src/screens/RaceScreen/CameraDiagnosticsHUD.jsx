@@ -48,6 +48,18 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
     dv01Max: 0,
     dv12Max: 0,
     constSpeed: false,
+    rpEnabled: false,
+    rpPhase: '—',
+    rpTs: 0,
+    rpReRollActive: false,
+    rpSfMin: 1,
+    rpSfMax: 1,
+    rpSfMean: 1,
+    rpTmMin: 1,
+    rpTmMax: 1,
+    rpRows: 0,
+    rpRacersPerRow: 0,
+    rpNRacers: 0,
     transitionCount60f: 0,
     entryElapsedMs: 0,
     entryDeltaZoom: 0,
@@ -97,6 +109,18 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
         dv01Max: diag.dv01Max ?? 0,
         dv12Max: diag.dv12Max ?? 0,
         constSpeed: diag.constSpeed ?? false,
+        rpEnabled: diag.rpEnabled ?? false,
+        rpPhase: diag.rpPhase ?? '—',
+        rpTs: diag.rpTs ?? 0,
+        rpReRollActive: diag.rpReRollActive ?? false,
+        rpSfMin: diag.rpSfMin ?? 1,
+        rpSfMax: diag.rpSfMax ?? 1,
+        rpSfMean: diag.rpSfMean ?? 1,
+        rpTmMin: diag.rpTmMin ?? 1,
+        rpTmMax: diag.rpTmMax ?? 1,
+        rpRows: diag.rpRows ?? 0,
+        rpRacersPerRow: diag.rpRacersPerRow ?? 0,
+        rpNRacers: diag.rpNRacers ?? 0,
         transitionCount60f: dir.transitionCount60f ?? 0,
         entryElapsedMs: dir.entryElapsedMs ?? 0,
         entryDeltaZoom: dir.lastEntryDeltaZoom ?? 0,
@@ -159,6 +183,18 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
     dv01Max,
     dv12Max,
     constSpeed,
+    rpEnabled,
+    rpPhase,
+    rpTs,
+    rpReRollActive,
+    rpSfMin,
+    rpSfMax,
+    rpSfMean,
+    rpTmMin,
+    rpTmMax,
+    rpRows,
+    rpRacersPerRow,
+    rpNRacers,
     transitionCount60f,
     entryElapsedMs,
     entryDeltaZoom,
@@ -340,6 +376,68 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
         <div>zoom: {(zoom ?? 1).toFixed(4)}</div>
         <div style={{ color: '#ffd700' }}>finalPx: {(finalPx ?? 0).toFixed(1)}px</div>
       </div>
+      {rpEnabled && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            background: 'rgba(0,0,0,0.72)',
+            color: '#b0e0ff',
+            fontFamily: 'monospace',
+            fontSize: '0.72rem',
+            lineHeight: 1.5,
+            padding: '5px 8px',
+            borderRadius: 4,
+            border: '1px solid rgba(80,200,255,0.4)',
+            pointerEvents: 'none',
+            zIndex: 30,
+            minWidth: 220,
+          }}
+          data-testid="race-plan-diag-hud"
+        >
+          <div style={{ color: '#4fc3f7', fontWeight: 700, marginBottom: 2 }}>RP DIAG</div>
+          <div>
+            phase:{' '}
+            <span
+              style={{
+                color:
+                  rpPhase === 'OUTCOME' ? '#4cff91' : rpPhase === 'FINAL' ? '#ffd700' : '#b0e0ff',
+                fontWeight: 700,
+              }}
+            >
+              {rpPhase}
+            </span>
+            {'  t='}
+            {(rpTs / 1000).toFixed(1)}s
+          </div>
+          <div>
+            reRolls:{' '}
+            <span style={{ color: rpReRollActive ? '#4cff91' : '#ff6b35', fontWeight: 700 }}>
+              {rpReRollActive ? 'ACTIVE' : 'FROZEN'}
+            </span>
+          </div>
+          <div style={{ color: '#aaa' }}>
+            rows:{rpRows} rpr:{rpRacersPerRow} n:{rpNRacers}
+          </div>
+          <div>
+            sf:{' '}
+            <span style={{ color: rpSfMax - rpSfMin > 0.05 ? '#4cff91' : '#ffd700' }}>
+              {rpSfMin.toFixed(3)}–{rpSfMax.toFixed(3)}
+            </span>
+            {'  μ='}
+            {rpSfMean.toFixed(3)}
+          </div>
+          {rpPhase === 'OUTCOME' && (
+            <div>
+              tm:{' '}
+              <span style={{ color: rpTmMax - rpTmMin > 0.05 ? '#4cff91' : '#ffd700' }}>
+                {rpTmMin.toFixed(3)}–{rpTmMax.toFixed(3)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
       {battleSnapshots.length > 0 && (
         <div
           style={{
