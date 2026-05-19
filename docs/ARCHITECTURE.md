@@ -288,6 +288,70 @@ the transition. `speedBonusMult` is **never touched** by re-rolls.
 **Removed (PR-A2):** `speedScaleFactor` / `SpeedScaleSection` / `DEFAULT_SPEED_SCALE_CONFIG` —
 superseded by the duration-driven approach above.
 
+## Race Plan System (Phase 3A)
+
+The Race Plan gives each racer a target finishing area (Bereich) and nudges their speed toward it throughout the race. It is a **soft guidance layer** — trajectory control influences speed but cannot override physics (avoidance, home force). Final positions emerge from the interaction of Race Plan guidance and physics.
+
+### Bereich Assignment (`createRacePlan`)
+
+At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a Soll-Bereich (target area):
+
+| Bereich | Target place | Base bonus delta |
+|---|---|---|
+| B1 | 1–5 (top 7%) | +0.03 |
+| B2 | 6–15 (next 14%) | +0.02 |
+| B3 | 16–25 (mid 14%) | +0.01 |
+| B4 | 26–40 (mid 21%) | 0.00 |
+| B5 | 41–N (bottom 44%) | −0.01 |
+
+The winner racer (`winnerRacerId`) is pre-selected from the pulk (racer cluster around median rank). A seeded PRNG provides deterministic results for the same race setup.
+
+### bereichsBonusMult (Physics-Loop)
+
+`bereichsBonusMult` is computed per racer each physics step: `1.0 + BASE_DELTA × bonusStrengthMultiplier`. It scales `effectiveSpeed` multiplicatively. After a racer crosses the finish line (`OUTCOME` phase), `bereichsBonusMult` fades from its current value to 1.0 over 1500 ms using `easeInOutCubic` — preventing abrupt speed changes at the finish.
+
+`racePlanBonusStrengthMultiplier` (default 2.0) is tunable in Dev Screen → Race Tuning → "Race Plan Bonus" and is persisted in `raceDynamicsConfig`.
+
+### Trajectory Controller (`createTrajectoryController`)
+
+A P-controller updates `trajectoryMult ∈ [0.85, 1.10]` each physics step:
+
+```
+error = (sollRank − currentRank) / totalRacers   // positive if racer is behind target
+trajectoryMult += gain × error × FIXED_DT / 1000
+trajectoryMult = clamp(trajectoryMult, 0.85, 1.10)
+```
+
+`effectiveSpeed = baseSpeed × spreadFactor × bereichsBonusMult × trajectoryMult`
+
+The window [0.85, 1.10] was chosen empirically: wider windows cause "Cobra-Sprint" overshoot (racers race past target area); narrower windows lose corrective power.
+
+### Dynamic Finish Line (Open Tracks)
+
+For open tracks, `finishT` is computed from race physics rather than being a fixed fraction:
+
+```
+ssf = clamp(pathLengthPx / 2000, 0.5, 10)        // speed scale factor
+finishT = BASE_SPEED_MEAN × ssf × FPS × durationSec / ssf
+        = min(BASE_SPEED_MEAN × FPS × durationSec, 1 − runoutZone)
+```
+
+This ensures the fastest racer reaches the finish line at approximately `targetDuration` seconds regardless of track length.
+
+### Symmetric Start Rows
+
+Racers are distributed bottom-up, center-out: Row 0 occupies the middle positions, subsequent rows alternate outward. With `N=70` racers and `totalRows=3`: Row 0 occupies positions 24–46 (the middle band), Row 1 and Row 2 fill positions 0–23 and 47–69 respectively. This replaces a top-down layout that gave Row 0 a structural head-start.
+
+### Fairness Simulation Parity
+
+`scripts/sim-fairness.mjs` mirrors the Race Plan logic using `--race-plan=true` and `--bonusMult=<x>`. Every mechanics change must be reflected in both the browser and the sim (Sim-Browser Parity Rule, commit `b9c96d0`). See `reference_sim_fairness_flags.md` in project memory for exact CLI flags.
+
+**Key files:**
+- `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
+- `screens/RaceScreen/index.jsx` — Race Plan activation, `bereichsBonusMult` in physics loop, fade logic
+- `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
+- `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
+
 ## Race Behavior System (D7b — lane-free)
 
 Racer lateral movement is governed by `modules/raceBehavior.js`. All racers share a continuous `physicalY ∈ [-1.0, +1.0]` in normalized track-width space (0 = centerline, ±1 = boundary). `initRacerBehavior` sets every racer to `physicalY = 0` at race start.
