@@ -124,9 +124,9 @@ function evaluateRun(label, rawData, durationSec) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 const datasets = [
-  { label: 'S1', dir: 'diag-r70-s1' },
-  { label: 'S2', dir: 'diag-r70-s2' },
-  { label: 'S3', dir: 'diag-r70-s3' },
+  { label: 'T1', dir: 'tune1-s1' },
+  { label: 'T2', dir: 'tune1-s2' },
+  { label: 'T3', dir: 'tune1-s3' },
 ];
 
 const summary = [];
