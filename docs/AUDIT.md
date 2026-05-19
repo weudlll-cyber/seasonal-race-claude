@@ -175,7 +175,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-17 | **1932 unit** | feat: track-type-specific maxPlayers cap — Open 100, Closed 40 (PR #115, squash `7619ead`). Zwei neue Config-Keys `maxPlayersOpen: 100` / `maxPlayersClosed: 40` in `DEFAULT_RACE_DEFAULTS`; `SetupScreen` nutzt bereits berechnetes `trackIsOpen` für korrekte Limit-Übergabe; `PlayerGroupsManager` nutzt Open-Ceiling (track-agnostisch); `RaceDefaults`-Stepper durch zwei Number-Inputs ersetzt. Alter Key `maxPlayers: 20` bleibt als Fallback. Browser-Test: 100 Racer × Space Sprint — Start, Rennen (77 s), Ergebnis-Screen ohne Crash, 0 neue Console-Errors. O(n²)-Avoidance-Loops (4950 Paare bei 100 Racern) laufen im Playwright-Test ohne sichtbare Frame-Drops; Performance auf Low-End-Hardware ungetestet — separate Spec falls nötig. Keine neuen Tests. Backup-Tag: `pre-maxplayers-track-specific`. |
 
+| 2026-05-19 | **1987 unit** | feat: Phase 3A — Race Plan + Bereichs-Bonus + Trajectory-Controller (feat/phase-3a, 31 Commits). racePlanner.js (Bereichszuordnung, P-Controller, Bonus-Fade); symmetrische Startreihen; natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks; bereichsBonusMult in Physics-Loop; 5 HUD-Overlays (RP DIAG); racePlanBonusStrengthMultiplier DevPanel + Sim; computeAutoScaleFactor Sim-Parität. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (User-validiert). +77 unit. Backup-Tag: `backup/pre-phase-3a`. |
+
 **Master-HEAD:** `7619ead` (feat: track-type-specific maxPlayers cap — Open 100, Closed 40, PR #115, 2026-05-17)
+**Branch feat/phase-3a HEAD:** `b221a24` (chore(defaults): Phase 3A Abschluss — validierte Defaults setzen)
 **ESLint-Warnings:** 57
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
@@ -628,6 +631,75 @@ Die speedBonus-Formel für Open Tracks ist **mathematisch korrekt** (row0Distanc
 | A10 | SSRF | **Low** — no outbound HTTP from client | Client calls own API only; no user-supplied URLs |
 
 > Last reviewed: 2026-04-19. Review schedule: after every significant feature sprint.
+
+---
+
+## 2026-05-19 — Phase 3A: Race Plan + Bereichs-Bonus + Abschluss-Defaults
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (racePlanner.js, RaceScreen, DevScreen, sim-fairness.mjs, storage defaults)
+**Branch:** `feat/phase-3a`
+**Backup-Tag:** `backup/pre-phase-3a`
+
+### Was implementiert wurde
+
+| Feature | Dateien | Commits (Auswahl) |
+|---|---|---|
+| racePlanner.js Modul + Unit-Tests | racePlanner.js, racePlanner.test.js | `39ae61b` |
+| Race Plan Basis (Bereichszuordnung, Bereichs-Bonus, Trajectory-Controller) | racePlanner.js, RaceScreen/index.jsx | `965a6a7`, `78bac9a` |
+| Trajectory-Fenster → [0.85, 1.1] (Cobra-Fix) | racePlanner.js | `7a3ae6e` |
+| Symmetrische Startreihen (Row 0 mittig, alternierend) | rowLayout.js | `b7c5f28` |
+| Natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks | RaceScreen/index.jsx, sim-fairness.mjs | `128455e`, `d4d7d09` |
+| bereichsBonusMult in Physics-Loop (fadeout nach OUTCOME) | RaceScreen/index.jsx | `78bac9a` |
+| RP DIAG HUD-Panel (5 Overlays, separate Toggles) | CameraDiagnosticsHUD.jsx | `b9c96d0`, `52960f9` |
+| racePlanBonusStrengthMultiplier (DevPanel + Sim) | defaults.js, RaceTuningSection.jsx, sim-fairness.mjs | `b5f0ddd`, `4346959` |
+| computeAutoScaleFactor im Sim (Sim-Browser-Parität) | sim-fairness.mjs | `ab6f0b1` |
+| Validierte Defaults gesetzt | defaults.js | `b221a24` |
+
+### Phase-3A-Befunde
+
+| Befund | Beschreibung | Behandlung |
+|---|---|---|
+| **Befund 1** — Sim-Browser-Geometrie-Diskrepanz | `computeAutoScaleFactor` fehlte im Sim → Racer-Positionen wichen von Browser ab | Gefixt in `ab6f0b1` |
+| **Befund 2** — Re-Roll-Spreizung unsichtbar | DevPanel-Settings waren versehentlich auf sehr niedrige Werte gesetzt → Re-Roll-Effekt erschien wirkungslos | DevPanel-Werte zurückgesetzt |
+| **Befund 3** — Cobra-Sprint-Effekt | trajectoryMult-Spanne [0.70, 1.30] zu aggressiv → Racer "schossen" an Zielbereiche vorbei | Fenster auf [0.85, 1.10] reduziert (`7a3ae6e`) |
+| **Befund 4** — Avoidance-Übermaß | `avoidanceDistance=0.35` zu groß bei 70 Racern → B1-Racer erreichten Zielbereich nicht mehr | `avoidanceDistance` → 0.15; `racePlanBonusStrengthMultiplier` → 2.0 als Kompensation |
+
+### Sim-Browser-Parität-Regel (Commit `b9c96d0`)
+
+Jede Mechanik-Änderung muss synchron in `sim-fairness.mjs` gespiegelt werden. Der Sim ist Vorhersage-Werkzeug, kein Sandbox — Abweichungen zwischen Sim und Browser invalidieren Fairness-Aussagen. Dauerhafte Disziplin, dokumentiert in MEMORY.
+
+### Sim-Ergebnisse — Abschluss-Smoke (Phase 3A Defaults: avoidanceDistance=0.15, bonusMult=2.0)
+
+dragon @ 70 Racer, Space Sprint, seed=1, N=50 Rennen je Kombination, `--race-plan=true --bonusMult=2.0`
+
+| Duration | finishT | χ² | p-Wert | Urteil |
+|---|---|---|---|---|
+| 30s | 0.218 | 2.6–8.7 (zwei Läufe) | 0.013–0.274 | grenzwertig — kurze Rennen, finishT sehr niedrig |
+| 120s | 0.872 | 0.3–0.6 | 0.752–0.844 | ✅ Fair (beide Läufe) |
+
+**Vergleich Baseline vs. Race Plan (dragon 120s):**
+
+| Modus | χ² | p-Wert | Urteil |
+|---|---|---|---|
+| Baseline (kein Race Plan) | 10.5 | 0.006 | ❌ Front-Bias |
+| Race Plan + bonusMult=2.0 | 0.3–0.6 | 0.752–0.844 | ✅ Fair |
+
+30s-Ergebnis schwankt zwischen den Läufen (mögliche Nicht-Determinismus-Quelle untersuchen). 120s ist stabil fair in beiden unabhängigen Läufen. Phase-3A-Ziel für 120s-Rennen erreicht.
+
+### Metrics
+
+| Metric | Wert |
+|--------|------|
+| Tests vor Phase 3A | 1910 |
+| Tests nach Phase 3A | **1987** (+77) |
+| ESLint | ✅ 0 Errors |
+| Commits auf Branch | 31 (seit `backup/pre-phase-3a`) |
+
+### User-Sichtcheck (2026-05-19)
+
+Konfiguration: avoidanceDistance=0.15, racePlanBonusStrengthMultiplier=2.0, dragon × 70 Racer × Space Sprint × 60s × seed=1.
+**Ergebnis: "3a fertig ist gut so wie es ist"** — Phase 3A konzeptuell abgeschlossen.
 
 ---
 
