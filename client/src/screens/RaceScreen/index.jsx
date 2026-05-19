@@ -527,9 +527,6 @@ export default function RaceScreen() {
           [...plan._racerSollRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
         ),
       };
-      console.log(
-        `[RacePlan] active — seed=${racePlanSeed} winner=#${plan.winnerRacerId} pulk=[${plan.pulkRacerIds}]`
-      );
     }
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
