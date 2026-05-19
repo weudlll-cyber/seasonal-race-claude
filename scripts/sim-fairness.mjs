@@ -1535,7 +1535,7 @@ if (isMain) {
     console.log('\nUnfaire Kombinationen:');
     for (const r of unfair) {
       const r0 = r.stats.rowStats[0];
-      const exp = 1 / r.stats.totalRows;
+      const exp = r0?.expectedWinRate ?? (1 / r.stats.totalRows);
       console.log(`  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  Row0=${fmtPct(r0?.winRate ?? 0)} (erw. ${fmtPct(exp)})  p=${r.stats.pValue.toFixed(3)}`);
     }
   }
