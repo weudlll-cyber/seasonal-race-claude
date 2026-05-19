@@ -1336,6 +1336,13 @@ if (isMain) {
           pulkTriggersOutOfWindow: raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersOutOfWindow ?? 0), 0) / raceResults.length,
           winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
           planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
+          pulkBiasEventCount:     raceResults.reduce((s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0), 0) / raceResults.length,
+          racersInCorridorFraction: raceResults.reduce((s, r) => s + (r.naturalness?.racersInCorridorFraction ?? 0), 0) / raceResults.length,
+          corridorViolationMean:  raceResults.reduce((s, r) => s + (r.naturalness?.corridorViolationMean ?? 0), 0) / raceResults.length,
+          corridorViolationMax:   Math.max(...raceResults.map((r) => r.naturalness?.corridorViolationMax ?? 0)),
+          bidirectionalBoostFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBoostFraction ?? 0), 0) / raceResults.length,
+          bidirectionalBrakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBrakeFraction ?? 0), 0) / raceResults.length,
+          racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
 
@@ -1379,6 +1386,16 @@ if (isMain) {
               `  pulk=${(avgNaturalness.pulkTimeFraction * 100).toFixed(1)}%` +
               `  pulkTrig=[${avgNaturalness.pulkTriggersInWindow.toFixed(1)}in/${avgNaturalness.pulkTriggersOutOfWindow.toFixed(1)}out]`
             );
+            if (RACE_PLAN_ACTIVE) {
+              console.log(
+                `     M2v2: corridor=${(avgNaturalness.racersInCorridorFraction * 100).toFixed(1)}%` +
+                `  viol=Ø${avgNaturalness.corridorViolationMean.toFixed(1)}/max${avgNaturalness.corridorViolationMax.toFixed(0)}` +
+                `  boost=${(avgNaturalness.bidirectionalBoostFraction * 100).toFixed(1)}%` +
+                `  brake=${(avgNaturalness.bidirectionalBrakeFraction * 100).toFixed(1)}%` +
+                `  blocked=${(avgNaturalness.racersBlockedInOutcome * 100).toFixed(1)}%` +
+                `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%`
+              );
+            }
           }
           // per_racer: per-row bonus distribution at race end (all rows > 0)
           if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {

@@ -2,7 +2,7 @@
 // File:        racePlanner.js
 // Path:        client/src/modules/racePlanner.js
 // Project:     RaceArena
-// Description: Race Plan / Trajectory Generator — Phase 3A Pilot
+// Description: Race Plan / Trajectory Generator — Phase 3A M2v2
 //              Pure JS, no DOM/React dependencies.
 //              Works in Node.js (scripts/sim-fairness.mjs) and browser.
 //
@@ -27,11 +27,17 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// ── Phase 3A pilot defaults ───────────────────────────────────────────────────
-// Winner row probability for dragon@r70 Space Sprint (5 rows).
-// 4-row aggregate 28/25/24/23 → Row 3+4 each get half of the 23% rear block.
-// ±2pp per row allowed without further approval (Spec §A).
-const DEFAULT_WINNER_ROW_PROB = [0.28, 0.25, 0.24, 0.12, 0.11];
+// Returns [lo, hi] rank bounds for the Bereich containing the given sollRank.
+// Bereich 1: 1-5, B2: 6-15, B3: 16-25, B4: 26-40, B5: 41+
+function getBereichBounds(sollRank) {
+  if (sollRank <= 5) return [1, 5];
+  if (sollRank <= 15) return [6, 15];
+  if (sollRank <= 25) return [16, 25];
+  if (sollRank <= 40) return [26, 40];
+  return [41, Infinity];
+}
+
+// ── Phase 3A M2v2 defaults ────────────────────────────────────────────────────
 
 const DEFAULT_PHASE_FRACTIONS = {
   pulkStart: 0.25,
@@ -42,8 +48,8 @@ const DEFAULT_PHASE_FRACTIONS = {
 };
 
 const DEFAULT_CORRIDOR_CONFIG = {
-  topMarginFraction: 0.4, // min lead over rank+1 as fraction of tGap
-  bottomMarginFraction: 1.5, // max lead before controller stops accelerating
+  topMarginFraction: 0.4,
+  bottomMarginFraction: 1.5,
 };
 
 const DEFAULT_CONTROLLER_PARAMS = {
@@ -52,14 +58,17 @@ const DEFAULT_CONTROLLER_PARAMS = {
   minMult: 0.85,
 };
 
-const DEFAULT_PULK_TARGET_SPREAD = 0.005; // ±t-space spread within pulk
-const DEFAULT_STOCHASTIC_NOISE = 0.0008; // ±per step, prevents locked-on look
-const DEFAULT_PULK_BIAS_GAIN = 2.0; // planBias coefficient in bias formula
+const DEFAULT_PULK_TARGET_SPREAD = 0.005;
+const DEFAULT_STOCHASTIC_NOISE = 0.0008;
+const DEFAULT_PULK_BIAS_GAIN = 2.0;
 
 // ── createRacePlan ────────────────────────────────────────────────────────────
 
 /**
  * Create a deterministic Race Plan for one race.
+ *
+ * M2v2: assigns a random sollRank (1..n) to every racer regardless of start row.
+ * The racer with sollRank=1 is the designated winner.
  *
  * @param {Array<{index:number, startRowIndex:number}>} racers
  * @param {number}  finishT          t-space finish line
@@ -74,7 +83,21 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const phaseFractions = { ...DEFAULT_PHASE_FRACTIONS, ...(config.phaseFractions ?? {}) };
   const corridorConfig = { ...DEFAULT_CORRIDOR_CONFIG, ...(config.corridorConfig ?? {}) };
   const controllerParams = { ...DEFAULT_CONTROLLER_PARAMS, ...(config.controllerParams ?? {}) };
-  const winnerRowProb = config.winnerRowProb ?? DEFAULT_WINNER_ROW_PROB;
+
+  // M2v2: assign random sollRank 1..n to each racer via Fisher-Yates shuffle
+  const n = racers.length;
+  const rankPool = Array.from({ length: n }, (_, i) => i + 1);
+  for (let i = rankPool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [rankPool[i], rankPool[j]] = [rankPool[j], rankPool[i]];
+  }
+  const racerSollRank = new Map();
+  for (let i = 0; i < racers.length; i++) {
+    racerSollRank.set(racers[i].index, rankPool[i]);
+  }
+  // Winner = racer with sollRank=1 (used for reporting, not for steering)
+  const winnerEntry = [...racerSollRank.entries()].find(([, rank]) => rank === 1);
+  const winnerRacerId = winnerEntry[0];
 
   // Group racers by startRowIndex
   const byRow = new Map();
@@ -83,27 +106,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     if (!byRow.has(row)) byRow.set(row, []);
     byRow.get(row).push(r);
   }
-  const totalRows =
-    racers.length > 0 ? Math.max(...racers.map((r) => r.startRowIndex ?? 0)) + 1 : 1;
-
-  // Sample winner row from distribution (normalised in case totalRows < 5)
-  const probs = winnerRowProb.slice(0, totalRows);
-  const probSum = probs.reduce((s, p) => s + p, 0);
-  let winnerRow = totalRows - 1;
-  let cumul = 0;
-  const roll = rng();
-  for (let i = 0; i < probs.length; i++) {
-    cumul += probs[i] / probSum;
-    if (roll < cumul) {
-      winnerRow = i;
-      break;
-    }
-  }
-
-  // Pick one random racer from the winner row (fallback: all racers)
-  const winnerPool = byRow.get(winnerRow) ?? racers;
-  const winnerRacer = winnerPool[Math.floor(rng() * winnerPool.length)];
-  const winnerRacerId = winnerRacer.index;
 
   // Select 3 pulk racers from middle field (rows 1–3 preferred), never the winner
   const middleField = racers.filter((r) => {
@@ -113,7 +115,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const pulkPool =
     middleField.length >= 3 ? middleField : racers.filter((r) => r.index !== winnerRacerId);
 
-  // Fisher-Yates shuffle with seeded RNG
+  // Fisher-Yates shuffle for pulk selection (uses same rng, advancing state)
   const shuffled = [...pulkPool];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -122,7 +124,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const pulkRacerIds = shuffled.slice(0, 3).map((r) => r.index);
 
   // Absolute phase boundaries in ms
-  // postStartHoldMs: absolute minimum for pulkStart (camera/avoidance warmup constraint)
   const postStartHoldMs = config.postStartHoldMs ?? 0;
   const phases = {
     pulkStart: Math.max(postStartHoldMs, phaseFractions.pulkStart * targetDurationMs),
@@ -145,6 +146,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
+    _racerSollRank: racerSollRank,
   };
 }
 
@@ -152,6 +154,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 
 /**
  * Create a stateful Trajectory Controller from a Race Plan.
+ *
+ * M2v2: bidirectional P-controller for ALL racers in OUTCOME phase.
+ * Each racer is pushed toward their assigned sollRank.
  *
  * Usage:
  *   const ctrl = createTrajectoryController(plan);
@@ -166,16 +171,22 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 export function createTrajectoryController(racePlan) {
   const plan = racePlan;
   const { gain, maxMult, minMult } = plan.controllerParams;
-  const { pulkStart, pulkEnd, transEnd, corrEnd, midSwitch } = plan._phases;
+  const { pulkStart, pulkEnd, transEnd, corrEnd } = plan._phases;
 
-  // Use a separate seed offset so controller noise differs from plan selection
   const rng = plan.seed > 0 ? mulberry32(plan.seed + 0x9e3779b9) : Math.random;
 
-  // Telemetry counters (reset-able via collectTelemetry)
+  // Per-race telemetry counters (reset via collectTelemetry)
   let _winnerBlockedInOutcome = 0;
-  let _totalOutcomeSteps = 0;
+  let _winnerStepCount = 0;
   let _pulkBiasDeltaSum = 0;
   let _pulkBiasEventCount = 0;
+  let _racerStepCount = 0;
+  let _racersInCorridorCount = 0;
+  let _corridorViolationSum = 0;
+  let _corridorViolationMax = 0;
+  let _bidirectionalBoostCount = 0;
+  let _bidirectionalBrakeCount = 0;
+  let _racersBlockedCount = 0;
 
   function getPhase(elapsedMs) {
     if (elapsedMs < pulkStart) return 'PRE_PULK';
@@ -187,7 +198,7 @@ export function createTrajectoryController(racePlan) {
 
   /**
    * Controller-Pass: sets r.trajectoryMult on every racer.
-   * Only the winner receives a non-1.0 value in OUTCOME phase.
+   * In OUTCOME phase every racer gets a bidirectional correction toward their sollRank.
    *
    * @param {Array}  racers    live racer objects (must have .index, .t, .finished, .avoidanceActive)
    * @param {number} elapsedMs physicsTs in ms from race start
@@ -197,61 +208,49 @@ export function createTrajectoryController(racePlan) {
 
     if (getPhase(elapsedMs) !== 'OUTCOME') return;
 
-    const winner = racers.find((r) => r.index === plan.winnerRacerId && !r.finished);
-    if (!winner) return;
-
-    _totalOutcomeSteps++;
-    if (winner.avoidanceActive) _winnerBlockedInOutcome++;
-
     // Sort non-finished racers by t descending; stable tiebreak: lower index = higher rank
     const active = racers
       .filter((r) => !r.finished)
       .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
 
-    if (active.length === 0) return;
+    const nActive = active.length;
+    if (nActive === 0) return;
 
-    const winnerRank = active.findIndex((r) => r.index === plan.winnerRacerId) + 1;
+    const NOISE_THRESH = plan._stochasticNoise;
 
-    // Mid-OUTCOME: aim for rank 3, no intervention when rank ≤ 2, corridor ≤ rank 5
-    // Late-OUTCOME: aim for rank 2, no intervention when rank ≤ 1, corridor ≤ rank 3
-    const isMid = elapsedMs < midSwitch;
-    const noInterventionRank = isMid ? 2 : 1;
-    const targetRank = isMid ? 3 : 2;
+    for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
+      const r = active[rankIdx];
+      const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
+      const sollRank = plan._racerSollRank.get(r.index) ?? currentRank;
 
-    const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
+      // positive rankError = racer currently ranked worse than target → boost
+      const rankError = currentRank - sollRank;
+      const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
+      r.trajectoryMult = clamp(1.0 + gain * (rankError / nActive) + noise, minMult, maxMult);
 
-    if (winnerRank <= noInterventionRank) {
-      // Already ahead of corridor centre — stochastic noise only
-      winner.trajectoryMult = clamp(1.0 + noise, minMult, maxMult);
-      return;
+      // Telemetry
+      _racerStepCount++;
+      _corridorViolationSum += Math.abs(rankError);
+      if (Math.abs(rankError) > _corridorViolationMax) _corridorViolationMax = Math.abs(rankError);
+
+      const [bereichLo, bereichHi] = getBereichBounds(sollRank);
+      if (currentRank >= bereichLo && currentRank <= bereichHi) _racersInCorridorCount++;
+
+      if (r.trajectoryMult > 1.0 + NOISE_THRESH) _bidirectionalBoostCount++;
+      else if (r.trajectoryMult < 1.0 - NOISE_THRESH) _bidirectionalBrakeCount++;
+
+      if (r.avoidanceActive) _racersBlockedCount++;
+
+      if (r.index === plan.winnerRacerId) {
+        _winnerStepCount++;
+        if (r.avoidanceActive) _winnerBlockedInOutcome++;
+      }
     }
-
-    // Target t = position of racer at targetRank (0-indexed)
-    const targetIdx = Math.min(targetRank - 1, active.length - 1);
-    const tTarget = active[targetIdx].t;
-    const tError = tTarget - winner.t; // positive = winner is behind target
-
-    // corridorBottomMargin: stop accelerating if winner already leads by > margin × tGap
-    // tGap = gap between adjacent racers near targetIdx (reference spacing)
-    const refA = active[Math.min(targetIdx, active.length - 2)];
-    const refB = active[Math.min(targetIdx + 1, active.length - 1)];
-    const tGap = refA && refB ? Math.max(Math.abs(refA.t - refB.t), 1e-6) : 1e-4;
-    if (tError < -(plan.corridorConfig.bottomMarginFraction * tGap)) {
-      // Winner too far ahead of corridor — let physics coast, just add noise
-      winner.trajectoryMult = clamp(1.0 + noise, minMult, maxMult);
-      return;
-    }
-
-    // P-controller: push winner toward tTarget
-    winner.trajectoryMult = clamp(1.0 + gain * tError + noise, minMult, maxMult);
   }
 
   /**
    * Pulk-phase re-roll bias.
    * Called during the re-roll event (Pass 1) for pulk racers instead of the plain random draw.
-   *
-   * Bias formula: biasedTarget = rawSample + pulkBiasGain × normalisedTError
-   * where normalisedTError = (pulkCenter.t - racer.t) / finishT
    *
    * @param {number} racerIndex
    * @param {number} rawSample   pre-clamp random draw from the re-roll engine
@@ -268,7 +267,6 @@ export function createTrajectoryController(racePlan) {
     const thisRacer = racers.find((r) => r.index === racerIndex);
     if (!thisRacer || thisRacer.finished) return rawSample;
 
-    // Pulk centre = mean t of all non-finished pulk racers
     const pulkLive = racers.filter((r) => plan.pulkRacerIds.includes(r.index) && !r.finished);
     if (pulkLive.length === 0) return rawSample;
 
@@ -283,22 +281,37 @@ export function createTrajectoryController(racePlan) {
   }
 
   /**
-   * Collect per-race naturalness telemetry for Naturalness-Gate evaluation.
+   * Collect per-race naturalness telemetry for gate evaluation.
    * Resets counters after collection (call once per race, at race end).
    *
-   * @returns {{ winnerBlockedFractionInOutcome, planBiasDeltaMean, pulkBiasEventCount }}
+   * @returns {object} telemetry snapshot
    */
   function collectTelemetry() {
     const tel = {
       winnerBlockedFractionInOutcome:
-        _totalOutcomeSteps > 0 ? _winnerBlockedInOutcome / _totalOutcomeSteps : 0,
+        _winnerStepCount > 0 ? _winnerBlockedInOutcome / _winnerStepCount : 0,
       planBiasDeltaMean: _pulkBiasEventCount > 0 ? _pulkBiasDeltaSum / _pulkBiasEventCount : 0,
       pulkBiasEventCount: _pulkBiasEventCount,
+      racersInCorridorFraction: _racerStepCount > 0 ? _racersInCorridorCount / _racerStepCount : 0,
+      corridorViolationMean: _racerStepCount > 0 ? _corridorViolationSum / _racerStepCount : 0,
+      corridorViolationMax: _corridorViolationMax,
+      bidirectionalBoostFraction:
+        _racerStepCount > 0 ? _bidirectionalBoostCount / _racerStepCount : 0,
+      bidirectionalBrakeFraction:
+        _racerStepCount > 0 ? _bidirectionalBrakeCount / _racerStepCount : 0,
+      racersBlockedInOutcome: _racerStepCount > 0 ? _racersBlockedCount / _racerStepCount : 0,
     };
     _winnerBlockedInOutcome = 0;
-    _totalOutcomeSteps = 0;
+    _winnerStepCount = 0;
     _pulkBiasDeltaSum = 0;
     _pulkBiasEventCount = 0;
+    _racerStepCount = 0;
+    _racersInCorridorCount = 0;
+    _corridorViolationSum = 0;
+    _corridorViolationMax = 0;
+    _bidirectionalBoostCount = 0;
+    _bidirectionalBrakeCount = 0;
+    _racersBlockedCount = 0;
     return tel;
   }
 

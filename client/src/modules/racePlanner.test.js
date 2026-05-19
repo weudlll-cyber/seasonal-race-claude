@@ -54,6 +54,21 @@ describe('createRacePlan', () => {
     expect(plan.seed).toBe(7);
   });
 
+  it('_racerSollRank is a complete permutation of 1..n', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._racerSollRank).toBeInstanceOf(Map);
+    expect(plan._racerSollRank.size).toBe(BASE_RACERS.length);
+    const ranks = [...plan._racerSollRank.values()].sort((a, b) => a - b);
+    expect(ranks).toEqual(Array.from({ length: BASE_RACERS.length }, (_, i) => i + 1));
+  });
+
+  it('winnerRacerId has sollRank=1', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, seed);
+      expect(plan._racerSollRank.get(plan.winnerRacerId)).toBe(1);
+    }
+  });
+
   it('winner is always a valid racer index', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, seed);
@@ -159,56 +174,89 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
 
   it('clamps trajectoryMult to [minMult, maxMult] in OUTCOME phase', () => {
     const ctrl = createTrajectoryController(plan);
-    const outcomeMs = plan._phases.transEnd + 1000; // just after TRANSITION
+    const outcomeMs = plan._phases.transEnd + 1000;
     const { winnerRacerId } = plan;
 
-    // Place winner far behind (large positive tError) — expects maxMult
+    // winner (sollRank=1) placed last → large positive rankError → clamped to maxMult
     const racers = BASE_RACERS.map((r) => ({
       ...r,
       t: r.index === winnerRacerId ? 0.1 : 0.5,
+      finished: false,
+      avoidanceActive: false,
       trajectoryMult: 1.0,
     }));
     ctrl.update(racers, outcomeMs);
 
     const winner = racers.find((r) => r.index === winnerRacerId);
-    // With GAIN=8, tError≈0.4 → rawMult=4.2 → clamped to 1.20
     expect(winner.trajectoryMult).toBeLessThanOrEqual(
       plan.controllerParams.maxMult + plan._stochasticNoise + 0.001
     );
     expect(winner.trajectoryMult).toBeGreaterThanOrEqual(plan.controllerParams.minMult - 0.001);
   });
 
-  it('P-controller arithmetic: GAIN=8, tError=0.05 → clamp(1.4, 0.85, 1.20) = 1.20 (approx)', () => {
-    // White-box test for the formula: mult = clamp(1 + gain*tError + noise, min, max)
-    // With tError=0.05, gain=8: rawMult = 1.4 → clamped to 1.20
-    // We allow ±stochasticNoise tolerance
+  it('P-controller arithmetic: winner at last rank → clamped to maxMult', () => {
+    // M2v2: rankError = currentRank - sollRank; winner (sollRank=1) at rank n
+    // rankError/nActive = (n-1)/n ≈ 1 → rawMult = 1 + 8*1 = 9 → clamped to maxMult
     const ctrl = createTrajectoryController(plan);
     const { transEnd, midSwitch } = plan._phases;
-    const outcomeMs = (transEnd + midSwitch) / 2; // mid-OUTCOME
+    const outcomeMs = (transEnd + midSwitch) / 2;
 
-    const winner = racers_withWinnerBehindByTError(plan, BASE_RACERS, 0.05, outcomeMs);
-    ctrl.update(winner.racers, outcomeMs);
-    const w = winner.racers.find((r) => r.index === plan.winnerRacerId);
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: r.index === plan.winnerRacerId ? 0.1 : 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+    }));
+    ctrl.update(racers, outcomeMs);
+    const w = racers.find((r) => r.index === plan.winnerRacerId);
 
     const NOISE_TOL = plan._stochasticNoise + 0.002;
     expect(w.trajectoryMult).toBeLessThanOrEqual(plan.controllerParams.maxMult + NOISE_TOL);
     expect(w.trajectoryMult).toBeGreaterThan(plan.controllerParams.maxMult - NOISE_TOL);
   });
 
-  it('no intervention (mult≈1.0) when winner is already rank 1 in mid-OUTCOME', () => {
+  it('P-controller arithmetic: racer with last sollRank at rank 1 → clamped to minMult', () => {
+    // M2v2: racer with sollRank=n at currentRank=1
+    // rankError = 1-n → very negative → clamped to minMult
+    const ctrl = createTrajectoryController(plan);
+    const { transEnd, midSwitch } = plan._phases;
+    const outcomeMs = (transEnd + midSwitch) / 2;
+
+    const n = BASE_RACERS.length;
+    const lastSollRankId = [...plan._racerSollRank.entries()].find(([, r]) => r === n)[0];
+
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: r.index === lastSollRankId ? 0.9 : 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+    }));
+    ctrl.update(racers, outcomeMs);
+    const w = racers.find((r) => r.index === lastSollRankId);
+
+    const NOISE_TOL = plan._stochasticNoise + 0.002;
+    expect(w.trajectoryMult).toBeGreaterThanOrEqual(plan.controllerParams.minMult - NOISE_TOL);
+    expect(w.trajectoryMult).toBeLessThan(plan.controllerParams.minMult + NOISE_TOL);
+  });
+
+  it('no intervention (mult≈1.0) when winner (sollRank=1) is already at rank 1', () => {
     const ctrl = createTrajectoryController(plan);
     const { transEnd } = plan._phases;
     const outcomeMs = transEnd + 1000;
 
-    // Place winner at rank 1 (highest t)
+    // Place winner at rank 1 (highest t) — sollRank=1, currentRank=1, rankError=0
     const racers = BASE_RACERS.map((r) => ({
       ...r,
       t: r.index === plan.winnerRacerId ? 0.9 : 0.5,
+      finished: false,
+      avoidanceActive: false,
       trajectoryMult: 1.0,
     }));
     ctrl.update(racers, outcomeMs);
     const w = racers.find((r) => r.index === plan.winnerRacerId);
-    // Rank ≤ noInterventionRank (2) → only stochastic noise
+    // rankError=0 → 1.0 + noise only
     const NOISE_TOL = plan._stochasticNoise + 0.001;
     expect(w.trajectoryMult).toBeGreaterThanOrEqual(1.0 - NOISE_TOL);
     expect(w.trajectoryMult).toBeLessThanOrEqual(1.0 + NOISE_TOL);
@@ -316,6 +364,12 @@ describe('createTrajectoryController — collectTelemetry', () => {
     expect(tel.winnerBlockedFractionInOutcome).toBe(0);
     expect(tel.planBiasDeltaMean).toBe(0);
     expect(tel.pulkBiasEventCount).toBe(0);
+    expect(tel.racersInCorridorFraction).toBe(0);
+    expect(tel.corridorViolationMean).toBe(0);
+    expect(tel.corridorViolationMax).toBe(0);
+    expect(tel.bidirectionalBoostFraction).toBe(0);
+    expect(tel.bidirectionalBrakeFraction).toBe(0);
+    expect(tel.racersBlockedInOutcome).toBe(0);
   });
 
   it('resets counters after collection', () => {
@@ -336,20 +390,3 @@ describe('createTrajectoryController — collectTelemetry', () => {
     expect(tel2.winnerBlockedFractionInOutcome).toBe(0);
   });
 });
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-function racers_withWinnerBehindByTError(plan, baseRacers, tError, outcomeMs) {
-  // Find rank 3 target at outcomeMs (mid-OUTCOME): simulate a field where rank 3 is at 0.5
-  // and winner is at 0.5 - tError
-  const targetT = 0.5;
-  const winnerT = targetT - tError;
-  const racers = baseRacers.map((r, i) => ({
-    ...r,
-    t: r.index === plan.winnerRacerId ? winnerT : targetT - i * 0.001, // spread others near 0.5
-    finished: false,
-    avoidanceActive: false,
-    trajectoryMult: 1.0,
-  }));
-  return { racers };
-}
