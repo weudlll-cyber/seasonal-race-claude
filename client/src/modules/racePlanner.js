@@ -55,7 +55,7 @@ const DEFAULT_CORRIDOR_CONFIG = {
 const DEFAULT_CONTROLLER_PARAMS = {
   gain: 8.0,
   maxMult: 1.2,
-  minMult: 0.85,
+  minMult: 0.7,
 };
 
 const DEFAULT_PULK_TARGET_SPREAD = 0.005;
