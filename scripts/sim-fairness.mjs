@@ -106,6 +106,7 @@ import {
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
+import { createRacePlan, createTrajectoryController } from '../client/src/modules/racePlanner.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -1270,6 +1271,15 @@ if (isMain) {
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
           const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
+          // Phase-3A: create Race Plan + TrajectoryController for this race when active
+          let racePlanController = null;
+          if (RACE_PLAN_ACTIVE) {
+            const planRacers = computeRowLayout(N_RACERS, racersPerRow).assignments.map(
+              (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
+            );
+            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {}, seed);
+            racePlanController = createTrajectoryController(plan);
+          }
           const result = runSingleRace({
             shape,
             pathLengthPx,
@@ -1283,6 +1293,7 @@ if (isMain) {
             nRacers: N_RACERS,
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {},
+            racePlanController,
           });
           raceResults.push(result);
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
