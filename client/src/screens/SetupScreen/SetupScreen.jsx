@@ -563,6 +563,18 @@ function SetupScreen() {
                             </span>
                             <span>Max: {openTrackSliderRange.max}s</span>
                           </div>
+                          {effectiveOpenTrackDuration < 60 && (
+                            <div
+                              data-testid="race-plan-inactive-warning"
+                              style={{
+                                fontSize: '0.72rem',
+                                color: 'var(--color-warning, #f5a623)',
+                                marginTop: '0.25rem',
+                              }}
+                            >
+                              ⚠️ Race Plan inactive below 60s on open tracks
+                            </div>
+                          )}
                         </>
                       ) : (
                         <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>

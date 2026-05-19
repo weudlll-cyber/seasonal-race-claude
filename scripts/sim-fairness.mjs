@@ -769,9 +769,10 @@ export function runSingleRace({
  *
  * @param {Array<Array<{startRowIndex,finalRank}>>} raceResults  one entry per race
  * @param {number} totalRows
+ * @param {number[]|null} rowSizes  racer count per row; if null, uniform distribution assumed
  * @returns {{ nRaces, totalRows, rowStats, chiSq, df, pValue }}
  */
-export function computeFairnessStats(raceResults, totalRows) {
+export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
   const nRaces     = raceResults.length;
   const winsByRow  = new Array(totalRows).fill(0);
   const ranksByRow = Array.from({ length: totalRows }, () => []);
@@ -784,6 +785,12 @@ export function computeFairnessStats(raceResults, totalRows) {
     }
   }
 
+  // Weighted expected wins: proportional to row size; fall back to uniform if no sizes given
+  const totalRacers = rowSizes ? rowSizes.reduce((s, v) => s + v, 0) : totalRows;
+  const expectedWinsByRow = Array.from({ length: totalRows }, (_, i) =>
+    rowSizes ? nRaces * rowSizes[i] / totalRacers : nRaces / totalRows
+  );
+
   const rowStats = Array.from({ length: totalRows }, (_, rowIdx) => {
     const ranks   = ranksByRow[rowIdx];
     const n       = ranks.length;
@@ -794,16 +801,19 @@ export function computeFairnessStats(raceResults, totalRows) {
     return {
       rowIndex: rowIdx,
       wins,
-      winRate:  wins / nRaces,
+      winRate:         wins / nRaces,
+      expectedWinRate: expectedWinsByRow[rowIdx] / nRaces,
       n,
       avgRank,
       stdRank:  Math.sqrt(variance),
     };
   });
 
-  // Chi-square goodness-of-fit: H0 = all rows equally likely to win
-  const expected = nRaces / totalRows;
-  const chiSq    = winsByRow.reduce((s, obs) => s + (obs - expected) ** 2 / expected, 0);
+  // Chi-square goodness-of-fit with weighted expectations
+  const chiSq = winsByRow.reduce((s, obs, i) => {
+    const exp = expectedWinsByRow[i];
+    return exp > 0 ? s + (obs - exp) ** 2 / exp : s;
+  }, 0);
   const df       = totalRows - 1;
   const pValue   = chiSqPValue(chiSq, df);
 
@@ -843,9 +853,8 @@ function sigLabel(p) {
 }
 function fairLabel(p, rowStats) {
   if (p >= 0.05) return '✅ Fair';
-  // Is front row over- or under-performing?
   const row0Rate = rowStats[0]?.winRate ?? 0;
-  const expected = 1 / rowStats.length;
+  const expected = rowStats[0]?.expectedWinRate ?? (1 / rowStats.length);
   if (row0Rate > expected + 0.05) return '⚠️ Front-Bias';
   if (row0Rate < expected - 0.05) return '⚠️ Rear-Bias';
   return '⚠️ Unequal';
@@ -890,7 +899,6 @@ function buildReport(allResults, runDate) {
   for (const res of allResults) {
     const { trackId, trackName, racerType, durationSec, stats } = res;
     const { totalRows, rowStats, chiSq, pValue } = stats;
-    const expected = 1 / totalRows;
     const r0 = rowStats[0];
     const r1 = rowStats[1];
     const rRest = rowStats.slice(2);
@@ -898,9 +906,11 @@ function buildReport(allResults, runDate) {
       ? rRest.reduce((s, r) => s + r.wins, 0) / (N_RACES * rRest.length || 1)
       : '—';
 
+    // Show R0 weighted expected in overview (uniform expected is the same for all rows when equal)
+    const r0Expected = r0?.expectedWinRate ?? (1 / totalRows);
     const verdict = fairLabel(pValue, rowStats);
     lines.push(
-      `| ${trackName} | ${racerType} | ${durationSec}s | ${totalRows} | ${fmtPct(expected)} | ` +
+      `| ${trackName} | ${racerType} | ${durationSec}s | ${totalRows} | ${fmtPct(r0Expected)} | ` +
       `${r0 ? fmtPct(r0.winRate) : '—'} | ` +
       `${r1 ? fmtPct(r1.winRate) : '—'} | ` +
       `${typeof restWinRate === 'number' ? fmtPct(restWinRate) : restWinRate} | ` +
@@ -921,23 +931,21 @@ function buildReport(allResults, runDate) {
   for (const res of allResults) {
     const { trackId, trackName, racerType, durationSec, finishT, stats } = res;
     const { nRaces, totalRows, rowStats, chiSq, df, pValue } = stats;
-    const expected = 1 / totalRows;
 
     lines.push(`### ${trackName} × ${racerType} × ${durationSec}s`);
     lines.push('');
     lines.push(`- **finishT:** ${finishT.toFixed(4)} (Ziellinie in t-Raum)`);
-    lines.push(`- **Reihen:** ${totalRows} à max. ${Math.ceil(N_RACERS / totalRows)} Racer`);
-    lines.push(`- **Erwartete Win-Rate (fair):** ${fmtPct(expected)}`);
+    lines.push(`- **Reihen:** ${totalRows} (gewichtete Erwartung nach Reihengröße)`);
     lines.push(`- **Chi²(${df}):** ${fmtN(chiSq, 2)} — ${sigLabel(pValue)}`);
     lines.push('');
 
-    lines.push('| Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |');
-    lines.push('|-------|-------|----------|------------|--------|--------|');
+    lines.push('| Reihe | Siege | Win-Rate | Erwartet (gew.) | Δ Erwartet | Ø Rang | σ Rang |');
+    lines.push('|-------|-------|----------|-----------------|------------|--------|--------|');
     for (const rs of rowStats) {
-      const delta = rs.winRate - expected;
+      const delta = rs.winRate - rs.expectedWinRate;
       const sign  = delta >= 0 ? '+' : '';
       lines.push(
-        `| Row ${rs.rowIndex} | ${rs.wins} | ${fmtPct(rs.winRate)} | ` +
+        `| Row ${rs.rowIndex} | ${rs.wins} | ${fmtPct(rs.winRate)} | ${fmtPct(rs.expectedWinRate)} | ` +
         `${sign}${fmtPct(delta)} | ${fmtN(rs.avgRank, 1)} | ${fmtN(rs.stdRank, 1)} |`
       );
     }
@@ -986,9 +994,9 @@ function buildReport(allResults, runDate) {
       const { trackName, racerType, durationSec, stats } = res;
       const { rowStats, pValue } = stats;
       const r0Rate = rowStats[0]?.winRate ?? 0;
-      const expRate = 1 / rowStats.length;
-      const bias = r0Rate > expRate ? `Row 0 zu oft (${fmtPct(r0Rate)} statt ${fmtPct(expRate)})` :
-                   r0Rate < expRate ? `Row 0 zu selten (${fmtPct(r0Rate)} statt ${fmtPct(expRate)})` :
+      const expRate = rowStats[0]?.expectedWinRate ?? (1 / rowStats.length);
+      const bias = r0Rate > expRate ? `Row 0 zu oft (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})` :
+                   r0Rate < expRate ? `Row 0 zu selten (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})` :
                    'mittlere Reihen bevorzugt';
       lines.push(`- **${trackName} × ${racerType} × ${durationSec}s:** ${bias} — ${sigLabel(pValue)}`);
     }
@@ -1004,11 +1012,13 @@ function buildReport(allResults, runDate) {
   // Analyze patterns
   const frontBias = unfairCombos.filter((r) => {
     const rs = r.stats.rowStats;
-    return (rs[0]?.winRate ?? 0) > 1 / rs.length + 0.05;
+    const exp = rs[0]?.expectedWinRate ?? (1 / rs.length);
+    return (rs[0]?.winRate ?? 0) > exp + 0.05;
   });
   const rearBias = unfairCombos.filter((r) => {
     const rs = r.stats.rowStats;
-    return (rs[0]?.winRate ?? 0) < 1 / rs.length - 0.05;
+    const exp = rs[0]?.expectedWinRate ?? (1 / rs.length);
+    return (rs[0]?.winRate ?? 0) < exp - 0.05;
   });
   const shortUnfair = unfairCombos.filter((r) => r.durationSec === 30);
   const longUnfair  = unfairCombos.filter((r) => r.durationSec === 120);
@@ -1254,12 +1264,15 @@ if (isMain) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
         const finishT = computeFinishT(race_baseSpeed, speedMultiplier, durationSec, isOpen);
 
-        // Compute row count for this track/racer combo (for stats aggregation)
+        // Compute row count and sizes for this track/racer combo (deterministic, seed-independent)
         const rowGapPx     = displaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
         const effectiveWidth = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
         const racersPerRow = computeRacersPerRow(effectiveWidth, displaySize);
-        // Estimate totalRows from layout (deterministic, seed-independent for count)
         const totalRows = Math.ceil(N_RACERS / Math.max(1, racersPerRow));
+        const comboRowLayout = computeRowLayout(N_RACERS, racersPerRow);
+        const rowSizes = Array.from({ length: totalRows }, (_, i) =>
+          comboRowLayout.assignments.filter((a) => a.rowIndex === i).length
+        );
 
         process.stdout.write(
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  `
@@ -1273,12 +1286,14 @@ if (isMain) {
           const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
           // Phase-3A: create Race Plan + TrajectoryController for this race when active
           let racePlanController = null;
+          let raceSollRankMap = null;
           if (RACE_PLAN_ACTIVE) {
-            const planRacers = computeRowLayout(N_RACERS, racersPerRow).assignments.map(
+            const planRacers = comboRowLayout.assignments.map(
               (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
             );
             const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {}, seed);
             racePlanController = createTrajectoryController(plan);
+            raceSollRankMap = plan._racerSollRank;
           }
           const result = runSingleRace({
             shape,
@@ -1308,6 +1323,10 @@ if (isMain) {
 
           // Collect raw data
           for (const r of result) {
+            const sollRank = raceSollRankMap?.get(r.racerIndex) ?? null;
+            const sollBereich = sollRank != null ? (
+              sollRank <= 5 ? 1 : sollRank <= 15 ? 2 : sollRank <= 25 ? 3 : sollRank <= 40 ? 4 : 5
+            ) : null;
             rawData.push({
               trackId,
               trackName,
@@ -1316,12 +1335,14 @@ if (isMain) {
               finishT,
               seed,
               raceIdx,
+              sollRank,
+              sollBereich,
               ...r,
             });
           }
         }
 
-        const stats = computeFairnessStats(raceResults, totalRows);
+        const stats = computeFairnessStats(raceResults, totalRows, rowSizes);
         const avgMixingQuota = mixingQuotas.length > 0
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
@@ -1349,14 +1370,21 @@ if (isMain) {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);
 
-        // 1.5× gate: pass if every row win-rate is within [expected/1.5, expected×1.5]
+        // 1.5× gate: each row win-rate within [expectedWinRate/1.5, expectedWinRate×1.5]
+        // Rows with expectedWins < 3 are excluded (too small for meaningful gate check at N=50)
         if (isOpen) {
-          const expected1_5 = 1 / totalRows;
-          const gatePass = stats.rowStats.every(
-            (rs) => rs.winRate >= expected1_5 / 1.5 && rs.winRate <= expected1_5 * 1.5
+          const gateRows = stats.rowStats.filter((rs) => rs.expectedWinRate * stats.nRaces >= 3);
+          const gatePass = gateRows.every(
+            (rs) => rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5
           );
-          const rateStr = stats.rowStats.map((rs) => `R${rs.rowIndex}=${(rs.winRate * 100).toFixed(0)}%`).join(' ');
-          console.log(`     1.5×-Gate: ${gatePass ? '✅ PASS' : '❌ FAIL'}  (${rateStr}  erw.=${(expected1_5 * 100).toFixed(1)}%)`);
+          const rateStr = stats.rowStats
+            .map((rs) => {
+              const expectedWins = rs.expectedWinRate * stats.nRaces;
+              const tag = expectedWins < 3 ? '(skip)' : (rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5 ? '✓' : '✗');
+              return `R${rs.rowIndex}=${(rs.winRate * 100).toFixed(0)}%(e${(rs.expectedWinRate * 100).toFixed(0)}%)${tag}`;
+            })
+            .join(' ');
+          console.log(`     1.5×-Gate: ${gatePass ? '✅ PASS' : '❌ FAIL'}  (${rateStr})`);
         }
 
         // Lite stats: avoidance activity and lateral dynamics
