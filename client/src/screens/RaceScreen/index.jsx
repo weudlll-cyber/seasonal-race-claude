@@ -162,6 +162,7 @@ export default function RaceScreen() {
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
+  const showRpDiag = cameraConfig.showRpDiag ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
@@ -1601,6 +1602,7 @@ export default function RaceScreen() {
             diagRef={diagDataRef}
             leaderDiagRef={leaderDiagRef}
             visible={showCameraDiagnostics}
+            showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
         </div>

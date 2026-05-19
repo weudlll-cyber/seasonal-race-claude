@@ -18,7 +18,13 @@ const POLL_MS = 100; // update 10× per second
  * @param {object}  cameraRef  React ref pointing to the live CameraDirector instance.
  * @param {boolean} visible    Whether the HUD should render
  */
-export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef, visible }) {
+export default function CameraDiagnosticsHUD({
+  cameraRef,
+  diagRef,
+  leaderDiagRef,
+  visible,
+  showRpDiag,
+}) {
   const [snapshot, setSnapshot] = useState({
     zoom: 1,
     refPx: 0,
@@ -75,7 +81,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible && !showRpDiag) return;
     intervalRef.current = setInterval(() => {
       const dir = cameraRef?.current;
       if (!dir) return;
@@ -135,7 +141,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
       });
     }, POLL_MS);
     return () => clearInterval(intervalRef.current);
-  }, [visible, cameraRef, diagRef, leaderDiagRef]);
+  }, [visible, showRpDiag, cameraRef, diagRef, leaderDiagRef]);
 
   useEffect(() => {
     if (!visible) return;
@@ -152,7 +158,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
     return () => window.removeEventListener('keydown', onKey);
   }, [visible, cameraRef, leaderDiagRef]);
 
-  if (!visible) return null;
+  if (!visible && !showRpDiag) return null;
 
   const {
     zoom,
@@ -227,156 +233,163 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
 
   return (
     <>
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 10,
-          left: 10,
-          background: 'rgba(0,0,0,0.72)',
-          color: '#b0e0ff',
-          fontFamily: 'monospace',
-          fontSize: '0.72rem',
-          lineHeight: 1.5,
-          padding: '5px 8px',
-          borderRadius: 4,
-          border: '1px solid rgba(100,180,255,0.3)',
-          pointerEvents: 'none',
-          zIndex: 30,
-          minWidth: 200,
-        }}
-        data-testid="camera-diagnostics-hud"
-      >
+      {visible && (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            color: '#60aaff',
-            fontWeight: 700,
-            marginBottom: 2,
+            position: 'absolute',
+            bottom: 10,
+            left: 10,
+            background: 'rgba(0,0,0,0.72)',
+            color: '#b0e0ff',
+            fontFamily: 'monospace',
+            fontSize: '0.72rem',
+            lineHeight: 1.5,
+            padding: '5px 8px',
+            borderRadius: 4,
+            border: '1px solid rgba(100,180,255,0.3)',
+            pointerEvents: 'none',
+            zIndex: 30,
+            minWidth: 200,
           }}
+          data-testid="camera-diagnostics-hud"
         >
-          🔍 CAM DIAG
-          {transitioning && (
-            <span style={{ color: '#ffd700', fontSize: '0.65rem', fontWeight: 700 }}>
-              ↔ TRANSITIONING
-            </span>
-          )}
-        </div>
-        <div>
-          state: <span style={{ color: '#ffd700' }}>{hudState}</span> | TC:{' '}
-          <span style={{ color: '#b0e0ff' }}>{(currentTc ?? 0).toFixed(1)}s</span>
-        </div>
-        <div>
-          phase:{' '}
-          <span style={{ color: lerpPhase === 'entry' ? '#ff6b35' : '#4cff91' }}>{lerpPhase}</span>
-        </div>
-        <div style={{ color: lagColor }}>
-          lag: ({(lagX ?? 0).toFixed(0)}, {(lagY ?? 0).toFixed(0)}) px
-        </div>
-        <div
-          style={{
-            color:
-              observerPhase === 'follow'
-                ? '#4cff91'
-                : observerPhase === 'lead-in'
-                  ? '#ffd700'
-                  : 'rgba(176,224,255,0.4)',
-          }}
-        >
-          obs: <span style={{ fontWeight: 700 }}>{observerPhase}</span> | camT:{' '}
-          {camT != null ? (camT ?? 0).toFixed(3) : 'null'} | focusT: {(lastFocusT ?? 0).toFixed(3)}
-        </div>
-        <div>
-          follow%:{' '}
-          <span
-            style={{ color: followPct > 0.9 ? '#4cff91' : followPct > 0.3 ? '#ffd700' : '#b0e0ff' }}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: '#60aaff',
+              fontWeight: 700,
+              marginBottom: 2,
+            }}
           >
-            {Math.round(followPct * 100)}%
-          </span>{' '}
-          (last 60f)
-        </div>
-        <div
-          style={{
-            color:
-              transitionCount60f > 5 ? '#ff6b35' : transitionCount60f > 1 ? '#ffd700' : '#b0e0ff',
-          }}
-        >
-          transitions/60f: {transitionCount60f}
-        </div>
-        {lerpPhase === 'entry' && (
-          <>
-            <div>
-              entry-conv:{' '}
-              <span
-                style={{ color: (entryDeltaZoom ?? 0) > entryThreshZoom ? '#ff6b35' : '#4cff91' }}
-              >
-                ΔZ={(entryDeltaZoom ?? 0).toFixed(3)}/{entryThreshZoom}
-              </span>{' '}
-              <span style={{ color: (entryDeltaX ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
-                ΔX={(entryDeltaX ?? 0).toFixed(0)}
-              </span>{' '}
-              <span style={{ color: (entryDeltaY ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
-                ΔY={(entryDeltaY ?? 0).toFixed(0)}/{entryThreshPx}px
+            🔍 CAM DIAG
+            {transitioning && (
+              <span style={{ color: '#ffd700', fontSize: '0.65rem', fontWeight: 700 }}>
+                ↔ TRANSITIONING
               </span>
-            </div>
-            <div>entry-elapsed: {(entryElapsedMs ?? 0).toFixed(0)}ms</div>
-          </>
-        )}
-        <div>
-          Δv: r0-r1:{' '}
-          <span style={{ color: Math.abs(dv01 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
-            {(dv01 ?? 0).toFixed(1)}
-          </span>
-          {' (max '}
-          <span
+            )}
+          </div>
+          <div>
+            state: <span style={{ color: '#ffd700' }}>{hudState}</span> | TC:{' '}
+            <span style={{ color: '#b0e0ff' }}>{(currentTc ?? 0).toFixed(1)}s</span>
+          </div>
+          <div>
+            phase:{' '}
+            <span style={{ color: lerpPhase === 'entry' ? '#ff6b35' : '#4cff91' }}>
+              {lerpPhase}
+            </span>
+          </div>
+          <div style={{ color: lagColor }}>
+            lag: ({(lagX ?? 0).toFixed(0)}, {(lagY ?? 0).toFixed(0)}) px
+          </div>
+          <div
             style={{
               color:
-                (dv01Max ?? 0) < 0.5 ? '#4cff91' : (dv01Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+                observerPhase === 'follow'
+                  ? '#4cff91'
+                  : observerPhase === 'lead-in'
+                    ? '#ffd700'
+                    : 'rgba(176,224,255,0.4)',
             }}
           >
-            {(dv01Max ?? 0).toFixed(1)}
-          </span>
-          {') | r1-r2: '}
-          <span style={{ color: Math.abs(dv12 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
-            {(dv12 ?? 0).toFixed(1)}
-          </span>
-          {' (max '}
-          <span
+            obs: <span style={{ fontWeight: 700 }}>{observerPhase}</span> | camT:{' '}
+            {camT != null ? (camT ?? 0).toFixed(3) : 'null'} | focusT:{' '}
+            {(lastFocusT ?? 0).toFixed(3)}
+          </div>
+          <div>
+            follow%:{' '}
+            <span
+              style={{
+                color: followPct > 0.9 ? '#4cff91' : followPct > 0.3 ? '#ffd700' : '#b0e0ff',
+              }}
+            >
+              {Math.round(followPct * 100)}%
+            </span>{' '}
+            (last 60f)
+          </div>
+          <div
             style={{
               color:
-                (dv12Max ?? 0) < 0.5 ? '#4cff91' : (dv12Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+                transitionCount60f > 5 ? '#ff6b35' : transitionCount60f > 1 ? '#ffd700' : '#b0e0ff',
             }}
           >
-            {(dv12Max ?? 0).toFixed(1)}
-          </span>
-          {') px/f'}
+            transitions/60f: {transitionCount60f}
+          </div>
+          {lerpPhase === 'entry' && (
+            <>
+              <div>
+                entry-conv:{' '}
+                <span
+                  style={{ color: (entryDeltaZoom ?? 0) > entryThreshZoom ? '#ff6b35' : '#4cff91' }}
+                >
+                  ΔZ={(entryDeltaZoom ?? 0).toFixed(3)}/{entryThreshZoom}
+                </span>{' '}
+                <span style={{ color: (entryDeltaX ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
+                  ΔX={(entryDeltaX ?? 0).toFixed(0)}
+                </span>{' '}
+                <span style={{ color: (entryDeltaY ?? 0) > entryThreshPx ? '#ff6b35' : '#4cff91' }}>
+                  ΔY={(entryDeltaY ?? 0).toFixed(0)}/{entryThreshPx}px
+                </span>
+              </div>
+              <div>entry-elapsed: {(entryElapsedMs ?? 0).toFixed(0)}ms</div>
+            </>
+          )}
+          <div>
+            Δv: r0-r1:{' '}
+            <span style={{ color: Math.abs(dv01 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
+              {(dv01 ?? 0).toFixed(1)}
+            </span>
+            {' (max '}
+            <span
+              style={{
+                color:
+                  (dv01Max ?? 0) < 0.5 ? '#4cff91' : (dv01Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+              }}
+            >
+              {(dv01Max ?? 0).toFixed(1)}
+            </span>
+            {') | r1-r2: '}
+            <span style={{ color: Math.abs(dv12 ?? 0) < 0.05 ? '#4cff91' : '#ffd700' }}>
+              {(dv12 ?? 0).toFixed(1)}
+            </span>
+            {' (max '}
+            <span
+              style={{
+                color:
+                  (dv12Max ?? 0) < 0.5 ? '#4cff91' : (dv12Max ?? 0) < 1.5 ? '#ffd700' : '#ff6b35',
+              }}
+            >
+              {(dv12Max ?? 0).toFixed(1)}
+            </span>
+            {') px/f'}
+          </div>
+          {constSpeed && <div style={{ color: '#ff6bff', fontWeight: 700 }}>[CONST SPEED]</div>}
+          <div style={{ color: '#9be' }}>
+            cam: ({camWorldX}, {camWorldY})
+          </div>
+          <div style={{ color: '#9be' }}>
+            tgt: ({tgtWorldX}, {tgtWorldY})
+          </div>
+          <div style={{ color: '#fad' }}>
+            Δ: ({tgtWorldX - camWorldX}, {tgtWorldY - camWorldY})
+          </div>
+          <div>
+            pan: {((panProgress ?? 1) * 100).toFixed(0)}% | zoom:{' '}
+            {((zoomProgress ?? 1) * 100).toFixed(0)}%{' '}
+            <span style={{ color: targetVisible ? '#4cff91' : '#ff6b35' }}>
+              {targetVisible ? '✓' : '✗'} target
+            </span>
+          </div>
+          <div>
+            worldW: {worldW}px | {isOpen ? 'open' : 'closed'}
+          </div>
+          <div>refPx: {(refPx ?? 0).toFixed(1)}px</div>
+          <div>zoom: {(zoom ?? 1).toFixed(4)}</div>
+          <div style={{ color: '#ffd700' }}>finalPx: {(finalPx ?? 0).toFixed(1)}px</div>
         </div>
-        {constSpeed && <div style={{ color: '#ff6bff', fontWeight: 700 }}>[CONST SPEED]</div>}
-        <div style={{ color: '#9be' }}>
-          cam: ({camWorldX}, {camWorldY})
-        </div>
-        <div style={{ color: '#9be' }}>
-          tgt: ({tgtWorldX}, {tgtWorldY})
-        </div>
-        <div style={{ color: '#fad' }}>
-          Δ: ({tgtWorldX - camWorldX}, {tgtWorldY - camWorldY})
-        </div>
-        <div>
-          pan: {((panProgress ?? 1) * 100).toFixed(0)}% | zoom:{' '}
-          {((zoomProgress ?? 1) * 100).toFixed(0)}%{' '}
-          <span style={{ color: targetVisible ? '#4cff91' : '#ff6b35' }}>
-            {targetVisible ? '✓' : '✗'} target
-          </span>
-        </div>
-        <div>
-          worldW: {worldW}px | {isOpen ? 'open' : 'closed'}
-        </div>
-        <div>refPx: {(refPx ?? 0).toFixed(1)}px</div>
-        <div>zoom: {(zoom ?? 1).toFixed(4)}</div>
-        <div style={{ color: '#ffd700' }}>finalPx: {(finalPx ?? 0).toFixed(1)}px</div>
-      </div>
-      {rpEnabled && (
+      )}
+      {showRpDiag && rpEnabled && (
         <div
           style={{
             position: 'absolute',
@@ -438,7 +451,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           )}
         </div>
       )}
-      {battleSnapshots.length > 0 && (
+      {visible && battleSnapshots.length > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -477,7 +490,7 @@ export default function CameraDiagnosticsHUD({ cameraRef, diagRef, leaderDiagRef
           ))}
         </div>
       )}
-      {leaderSnapshots.length > 0 && (
+      {visible && leaderSnapshots.length > 0 && (
         <div
           style={{
             position: 'absolute',

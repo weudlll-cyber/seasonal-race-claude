@@ -26,6 +26,10 @@ function CameraStateHudSection() {
     setConfig((prev) => ({ ...prev, showCameraDiagnostics: e.target.checked }));
   }
 
+  function toggleRpDiag(e) {
+    setConfig((prev) => ({ ...prev, showRpDiag: e.target.checked }));
+  }
+
   function toggleFrameLog(e) {
     setConfig((prev) => ({ ...prev, enableFrameLog: e.target.checked }));
   }
@@ -146,6 +150,33 @@ function CameraStateHudSection() {
           />
           <span style={{ fontWeight: 600 }}>Show camera diagnostics</span>
           <InfoTooltip text="Temporary diagnostic tool: shows worldW, refPx, live cam.zoom, and computed finalPx in a bottom-left overlay. Logs every camera state transition with reason, gap01, and leaderProgress to the browser console. Remove after diagnosis." />
+        </label>
+      </div>
+
+      <div className={s.card}>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Race-Plan diagnostic overlay (top-right corner of the race canvas). Shows live phase,
+          elapsed time, re-roll status (ACTIVE / FROZEN), spreadFactor min/max/mean, and
+          trajectoryMult range during the OUTCOME phase. Only appears when Race Plan is active.
+        </p>
+
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="rp-diag-toggle"
+            checked={config.showRpDiag ?? false}
+            onChange={toggleRpDiag}
+          />
+          <span style={{ fontWeight: 600 }}>Show Race Plan diagnostics</span>
+          <InfoTooltip text="Zeigt ein kleines Panel oben rechts im Renn-Canvas: Phase (PRE_PULK/PULK/TRANSITION/OUTCOME/FINAL), Laufzeit, Re-Roll-Status, spreadFactor-Spanne und im OUTCOME auch trajectoryMult-Spanne. Nur sichtbar wenn Race Plan aktiv ist." />
         </label>
       </div>
 
