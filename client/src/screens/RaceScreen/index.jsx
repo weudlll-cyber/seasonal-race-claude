@@ -58,6 +58,7 @@ import {
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
+import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import StateOverlay from './StateOverlay.jsx';
 import { selectOverlayText } from '../../modules/stateOverlayTemplates.js';
@@ -142,6 +143,8 @@ export default function RaceScreen() {
     rpRows: 0,
     rpRacersPerRow: 0,
     rpNRacers: 0,
+    rpB1Racers: [],
+    rpTop10: [],
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
   // Priority-system debug overlay (toggled by hotkey M)
@@ -163,6 +166,8 @@ export default function RaceScreen() {
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
   const showRpDiag = cameraConfig.showRpDiag ?? false;
+  const showRpWinnerList = cameraConfig.showRpWinnerList ?? false;
+  const showTop10SpeedMonitor = cameraConfig.showTop10SpeedMonitor ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
@@ -473,10 +478,16 @@ export default function RaceScreen() {
       }),
     };
 
+    // ── Config flags for canvas-loop use ────────────────────────────────────
+    const showRpMinimapBadgesCfg = cameraConfigRef.current.showRpMinimapBadges ?? false;
+    const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
+
     // ── Race Plan controller ─────────────────────────────────────────────────
     const racePlanEnabled = isOpenTrack && !!raceData.racePlanEnabled && targetDuration >= 60;
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
+    let rpPlanInfo = null;
+    const speedRings = new Map();
     if (racePlanEnabled) {
       const planRacers = g.current.racers.map((r) => ({
         index: r.index,
@@ -484,6 +495,12 @@ export default function RaceScreen() {
       }));
       const plan = createRacePlan(planRacers, finishT, targetDuration * 1000, {}, racePlanSeed);
       racePlanController = createTrajectoryController(plan);
+      rpPlanInfo = {
+        sollRanks: plan._racerSollRank,
+        b1Indices: new Set(
+          [...plan._racerSollRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
+        ),
+      };
       console.log(
         `[RacePlan] active — seed=${racePlanSeed} winner=#${plan.winnerRacerId} pulk=[${plan.pulkRacerIds}]`
       );
@@ -624,7 +641,10 @@ export default function RaceScreen() {
           effectiveScale
         );
         if (tagSet.has(r)) {
-          drawNameTag(renderX, renderY, r.name, r === leader, ezoom);
+          const tagName = showRpStartRowCfg
+            ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+            : r.name;
+          drawNameTag(renderX, renderY, tagName, r === leader, ezoom);
         }
         r.trail.push({ x: renderX, y: renderY });
         if (r.trail.length > 10) r.trail.shift();
@@ -1188,6 +1208,14 @@ export default function RaceScreen() {
                 sfSum += sf;
                 if (tm < tmMin) tmMin = tm;
                 if (tm > tmMax) tmMax = tm;
+                // Speed ring buffer (5 s @ 16 ms/step = 313 slots)
+                let ring = speedRings.get(r.index);
+                if (!ring) {
+                  ring = { buf: new Float32Array(313).fill(1.0), idx: 0 };
+                  speedRings.set(r.index, ring);
+                }
+                ring.buf[ring.idx % 313] = tm;
+                ring.idx++;
               }
               const d = diagDataRef.current;
               d.rpPhase = racePlanController.getPhase(physicsTs);
@@ -1198,6 +1226,55 @@ export default function RaceScreen() {
               d.rpSfMean = sfSum / activeR.length;
               d.rpTmMin = tmMin;
               d.rpTmMax = tmMax;
+
+              // B1 winner list (sollRank 1–5)
+              if (rpPlanInfo) {
+                const ranked = [...activeR].sort((a, b) => b.t - a.t);
+                const rankByIdx = new Map(ranked.map((r, i) => [r.index, i + 1]));
+                const b1Racers = [];
+                for (const [racerIdx, sollRank] of rpPlanInfo.sollRanks) {
+                  if (!rpPlanInfo.b1Indices.has(racerIdx)) continue;
+                  const racer = st.racers.find((r) => r.index === racerIdx && !r.finished);
+                  if (!racer) continue;
+                  b1Racers.push({
+                    index: racerIdx,
+                    name: racer.name,
+                    sollRank,
+                    currentRank: rankByIdx.get(racerIdx) ?? 0,
+                    delta: (rankByIdx.get(racerIdx) ?? 0) - sollRank,
+                    startRow: assignmentByRacer.get(racerIdx)?.rowIndex ?? 0,
+                  });
+                }
+                b1Racers.sort((a, b) => a.sollRank - b.sollRank);
+                d.rpB1Racers = b1Racers;
+              }
+
+              // Top-10 speed monitor
+              const top10 = [...activeR].sort((a, b) => b.t - a.t).slice(0, 10);
+              d.rpTop10 = top10.map((r, i) => {
+                const ring = speedRings.get(r.index);
+                let tmMin5s = r.trajectoryMult ?? 1;
+                let tmMax5s = r.trajectoryMult ?? 1;
+                if (ring && ring.idx > 0) {
+                  const filled = Math.min(ring.idx, 313);
+                  let mn = Infinity,
+                    mx = -Infinity;
+                  for (let j = 0; j < filled; j++) {
+                    if (ring.buf[j] < mn) mn = ring.buf[j];
+                    if (ring.buf[j] > mx) mx = ring.buf[j];
+                  }
+                  tmMin5s = mn;
+                  tmMax5s = mx;
+                }
+                return {
+                  rank: i + 1,
+                  name: r.name,
+                  tm: r.trajectoryMult ?? 1.0,
+                  tmMin5s,
+                  tmMax5s,
+                  isOscillating: tmMax5s - tmMin5s > 0.18,
+                };
+              });
             }
           }
 
@@ -1539,7 +1616,9 @@ export default function RaceScreen() {
       // ── PiP minimap (RACING and FINISHED only) ──
       if (st.phase !== PHASE.COUNTDOWN) {
         const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
-        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH);
+        const minimapHighlights =
+          showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
+        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH, minimapHighlights);
       }
 
       rafRef.current = requestAnimationFrame(loop);
@@ -1605,6 +1684,11 @@ export default function RaceScreen() {
             showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
+          <RacePlanHUD
+            diagRef={diagDataRef}
+            showWinnerList={showRpWinnerList}
+            showSpeedMonitor={showTop10SpeedMonitor}
+          />
         </div>
 
         <aside className="race-hud">

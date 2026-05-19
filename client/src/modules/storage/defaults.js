@@ -198,6 +198,10 @@ export const DEFAULT_CAMERA_CONFIG = {
   showCameraStateHud: true,
   showCameraDiagnostics: false,
   showRpDiag: false,
+  showRpWinnerList: false,
+  showRpMinimapBadges: false,
+  showRpStartRow: false,
+  showTop10SpeedMonitor: false,
   enableFrameLog: false, // frame-by-frame ring buffer for jitter post-analysis (default OFF)
   battleGapThreshold: 0.05,
   endgameThreshold: 0.85,

@@ -19,12 +19,21 @@ const TRACK_SAMPLES = 80;
  * Renders a picture-in-picture minimap in the bottom-left corner of the canvas.
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ getBoundingBox, getEdgePoints, isOpen }} shape
- * @param {Array<{x:number, y:number, color:string}>} racers
+ * @param {Array<{x:number, y:number, color:string, index:number}>} racers
  * @param {number} leaderIndex  Index of the leading racer in the racers array
  * @param {number} canvasW
  * @param {number} canvasH
+ * @param {Set<number>|null} [highlightIndices]  Optional set of racer indices to badge with a ring
  */
-export function renderMinimap(ctx, shape, racers, leaderIndex, canvasW, canvasH) {
+export function renderMinimap(
+  ctx,
+  shape,
+  racers,
+  leaderIndex,
+  canvasW,
+  canvasH,
+  highlightIndices = null
+) {
   const bx = MINIMAP_MARGIN;
   const by = canvasH - MINIMAP_H - MINIMAP_MARGIN;
 
@@ -93,11 +102,12 @@ export function renderMinimap(ctx, shape, racers, leaderIndex, canvasW, canvasH)
   for (let i = 0; i < racers.length; i++) {
     const r = racers[i];
     const isLeader = i === leaderIndex;
+    const isBadged = highlightIndices != null && highlightIndices.has(r.index);
     const mapX = toMx(r.x);
     const mapY = toMy(r.y);
 
     ctx.beginPath();
-    ctx.arc(mapX, mapY, isLeader ? 5 : 3, 0, Math.PI * 2);
+    ctx.arc(mapX, mapY, isLeader ? 5 : isBadged ? 4 : 3, 0, Math.PI * 2);
     ctx.fillStyle = r.color ?? '#fff';
     ctx.fill();
 
@@ -106,6 +116,12 @@ export function renderMinimap(ctx, shape, racers, leaderIndex, canvasW, canvasH)
       ctx.arc(mapX, mapY, 5, 0, Math.PI * 2);
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
+      ctx.stroke();
+    } else if (isBadged) {
+      ctx.beginPath();
+      ctx.arc(mapX, mapY, 7, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
   }
