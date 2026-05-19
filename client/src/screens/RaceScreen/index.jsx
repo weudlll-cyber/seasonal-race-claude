@@ -72,6 +72,7 @@ import {
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
+import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -446,6 +447,7 @@ export default function RaceScreen() {
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
           surfaceParticles: [],
+          trajectoryMult: 1.0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -456,6 +458,22 @@ export default function RaceScreen() {
         return racer;
       }),
     };
+
+    // ── Race Plan controller ─────────────────────────────────────────────────
+    const racePlanEnabled = isOpenTrack && !!raceData.racePlanEnabled && targetDuration >= 60;
+    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    let racePlanController = null;
+    if (racePlanEnabled) {
+      const planRacers = g.current.racers.map((r) => ({
+        index: r.index,
+        startRowIndex: assignmentByRacer.get(r.index)?.rowIndex ?? 0,
+      }));
+      const plan = createRacePlan(planRacers, finishT, targetDuration * 1000, {}, racePlanSeed);
+      racePlanController = createTrajectoryController(plan);
+      console.log(
+        `[RacePlan] active — seed=${racePlanSeed} winner=#${plan.winnerRacerId} pulk=[${plan.pulkRacerIds}]`
+      );
+    }
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
@@ -994,16 +1012,27 @@ export default function RaceScreen() {
             r._prevAngle = r.angle;
           }
 
+          // Controller-Pass: rank racers by current t, assign trajectoryMult to each.
+          if (racePlanController) racePlanController.update(st.racers, physicsTs);
+
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
               if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
+                const rawSample = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+                const biasedSample = racePlanController
+                  ? racePlanController.computePulkBiasedTarget(
+                      r.index,
+                      rawSample,
+                      BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                      BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                      st.racers,
+                      physicsTs
+                    )
+                  : rawSample;
                 const newTarget = Math.max(
                   BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                  Math.min(
-                    BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                    r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
-                  )
+                  Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedSample)
                 );
                 r.spreadFactorPrev = r.spreadFactor;
                 r.spreadFactorTarget = newTarget;
@@ -1031,7 +1060,10 @@ export default function RaceScreen() {
             const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
-              r.t = Math.min(r.t + r.baseSpeed * boost * brake, st.finishT + 0.001);
+              r.t = Math.min(
+                r.t + r.baseSpeed * boost * brake * r.trajectoryMult,
+                st.finishT + 0.001
+              );
             } else {
               // Run-out: finished racers keep moving but decay to a stop
               r.runoutDecay *= 0.97;
@@ -1042,7 +1074,7 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake) / race_baseSpeed
+                ? (r.baseSpeed * boost * brake * r.trajectoryMult) / race_baseSpeed
                 : 0;
           }
           // D4: equalize all non-finished racers to the mean delta-t
@@ -1442,6 +1474,17 @@ export default function RaceScreen() {
         drawCountdownOverlay(ts - st.countdownStart);
       } else if (st.phase === PHASE.FINISHED) {
         drawFinishedOverlay();
+      }
+
+      // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────
+      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(CW - 172, 8, 164, 22);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CW - 168, 24);
+        ctx.restore();
       }
 
       // ── PiP minimap (RACING and FINISHED only) ──
