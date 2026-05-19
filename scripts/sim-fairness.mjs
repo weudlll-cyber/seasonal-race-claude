@@ -198,6 +198,7 @@ export function runSingleRace({
   nRacers,
   diagnosticMode = false,
   behaviorConfigOverrides = {},
+  racePlanController = null,   // Phase-3A: TrajectoryController instance or null
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -296,6 +297,7 @@ export function runSingleRace({
         v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
         v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
         rerollCount:              0, // total speed re-rolls fired for this racer
+        trajectoryMult:           1.0, // Phase-3A: set by controller pass; 1.0 when Race Plan inactive
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -411,18 +413,25 @@ export function runSingleRace({
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
-      // Speed re-rolls
+      // ── Pass 1: re-rolls + spreadFactor transitions + baseSpeed update ─────────
+      const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
+      const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
       for (const r of racers) {
         if (r.finished) continue;
         if (raceTs >= r.nextRollTime && raceTs < lastRollDeadline) {
-          const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
-          const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
+          const rawTarget   = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+          // Phase-3A: pulk-bias hook (active when Race Plan is running, wired in E-Step 5)
+          const biasedTarget = racePlanController
+            ? racePlanController.computePulkBiasedTarget(
+                r.index, rawTarget,
+                BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                racers, raceTs
+              )
+            : rawTarget;
           const newTarget   = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
-            Math.min(
-              BASE_SPEED_MAX / BASE_SPEED_MEAN,
-              r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
-            )
+            Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedTarget)
           );
           r.spreadFactorPrev    = r.spreadFactor;
           r.spreadFactorTarget  = newTarget;
@@ -449,7 +458,14 @@ export function runSingleRace({
         }
       }
 
-      // Advance t (mirrors index.jsx RACING loop — DT/16 calibration matches REFERENCE_FPS=62.5)
+      // ── Controller-Pass: write r.trajectoryMult (Race Plan only) ─────────────
+      if (racePlanController) {
+        racePlanController.update(racers, raceTs);
+      } else {
+        for (const r of racers) r.trajectoryMult = 1.0;
+      }
+
+      // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
       let tefMeanT0 = 0;
@@ -464,9 +480,6 @@ export function runSingleRace({
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
           // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
-          // baseSpeed was computed with initialSpeedBonusMult (= TEF_BASE_BONUS for rear rows).
-          // tefMult = targetBonusMult / initialSpeedBonusMult, where targetBonusMult interpolates
-          // from initialSpeedBonusMult (full gap) to 1.0 (gap fully closed / overtaken).
           let tefMult = 1.0;
           if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
             const curGap   = tefMeanT0 - r.t;
@@ -474,7 +487,8 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
-          r.t += r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * (DT / 16);
+          // trajectoryMult = 1.0 when Race Plan inactive; controlled by plan in OUTCOME phase
+          r.t += r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * (DT / 16);
         }
       }
 
