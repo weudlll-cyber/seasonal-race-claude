@@ -40,9 +40,47 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const N_RACES = Number(argVal('races', '50'));
-const N_RACERS = Number(argVal('racers', '40'));
-const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
+const N_RACES       = Number(argVal('races', '50'));
+const N_RACERS      = Number(argVal('racers', '40'));
+const OUT_DIR       = join(ROOT, argVal('out', 'client/tmp'));
+const TRACK_FILTER  = argVal('track', null);   // e.g. --track=river-run
+const RACER_FILTER  = argVal('racer', null);   // e.g. --racer=horse
+const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
+
+// ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
+const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
+const TEF_ALPHA              = Number(argVal('tefAlpha', '0.03'));
+const TEF_MAX_GAP            = Number(argVal('tefMaxGap', '0.015'));
+const TEF_OPEN_ONLY          = argVal('tefIsOpenOnly', 'true') !== 'false';
+// v3: aggressive base bonus override for rear rows; TEF modulates it toward 1.0 as gap closes
+const TEF_BASE_BONUS_OVERRIDE = argVal('tefBaseBonusOverride', null);
+const TEF_BASE_BONUS          = TEF_BASE_BONUS_OVERRIDE !== null ? Number(TEF_BASE_BONUS_OVERRIDE) : null;
+
+// ── Phase-2K v4: threshold-based bonus with smooth re-roll-style transitions ──
+const V4_ACTIVE        = argVal('v4ThresholdActive', null) === 'true';
+const V4_INITIAL_BOOST = Number(argVal('v4InitialBoost', '1.20'));
+// Overtake-fraction thresholds (percent) at which bonus steps down
+const V4_THRESHOLDS    = argVal('v4Thresholds', '20,40,60,80').split(',').map(Number);
+// speedBonusMult value active in each band (length = V4_THRESHOLDS.length + 1)
+const V4_BOOST_SCHEDULE = argVal('v4BoostSchedule', '1.20,1.15,1.10,1.05,1.0').split(',').map(Number);
+// 'physical_overtake': require lateral proximity before t-crossing counts as overtake
+// 'legacy': original t_value_compare (lax — for reference only)
+const V4_METRIC_TYPE       = argVal('v4MetricType', 'physical_overtake');
+const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
+// Row-differentiated thresholds (per_racer mode); fall back to V4_THRESHOLDS if not specified
+// v4RowRestThresholds applies to Row 2 and all deeper rows; v4Row2Thresholds is a legacy alias.
+const V4_ROW1_THRESHOLDS_RAW    = argVal('v4Row1Thresholds', null);
+const V4_ROW_REST_THRESHOLDS_RAW = argVal('v4RowRestThresholds', null) ?? argVal('v4Row2Thresholds', null);
+const V4_ROW1_THRESHOLDS  = V4_ROW1_THRESHOLDS_RAW    ? V4_ROW1_THRESHOLDS_RAW.split(',').map(Number)    : V4_THRESHOLDS;
+const V4_ROW2_THRESHOLDS  = V4_ROW_REST_THRESHOLDS_RAW ? V4_ROW_REST_THRESHOLDS_RAW.split(',').map(Number) : V4_THRESHOLDS;
+
+// ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
+const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
+const WARMUP_MS_OVERRIDE = WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
+
+// ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
+const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
+const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
@@ -82,23 +120,25 @@ function easeInOutCubic(t) {
 // ── Racer type configs ────────────────────────────────────────────────────────
 // speedMultiplier and displaySize sourced from the respective *RacerType.js files.
 // displaySize affects racersPerRow (track capacity) and avoidance pixel distances.
+// surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
 export const RACER_CONFIGS = {
-  horse:     { speedMultiplier: 1.00, displaySize: 40 },
-  duck:      { speedMultiplier: 0.85, displaySize: 36 },
-  snail:     { speedMultiplier: 0.30, displaySize: 35 },
-  elephant:  { speedMultiplier: 0.60, displaySize: 44 },
-  giraffe:   { speedMultiplier: 0.90, displaySize: 48 },
-  snake:     { speedMultiplier: 0.75, displaySize: 36 },
-  dragon:    { speedMultiplier: 1.10, displaySize: 50 },
-  f1:        { speedMultiplier: 1.20, displaySize: 38 },
-  rocket:    { speedMultiplier: 1.25, displaySize: 40 },
-  buggy:     { speedMultiplier: 0.95, displaySize: 38 },
-  motorbike: { speedMultiplier: 1.05, displaySize: 36 },
-  plane:     { speedMultiplier: 1.15, displaySize: 42 },
+  horse:     { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
+  duck:      { speedMultiplier: 0.85, displaySize: 36, surfaceClasses: ['water', 'grass'] },
+  snail:     { speedMultiplier: 0.30, displaySize: 35, surfaceClasses: ['grass'] },
+  elephant:  { speedMultiplier: 0.60, displaySize: 44, surfaceClasses: ['sand', 'earth', 'grass'] },
+  giraffe:   { speedMultiplier: 0.90, displaySize: 48, surfaceClasses: ['sand', 'earth', 'grass'] },
+  snake:     { speedMultiplier: 0.75, displaySize: 36, surfaceClasses: ['sand', 'earth', 'grass'] },
+  dragon:    { speedMultiplier: 1.10, displaySize: 50, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
+  f1:        { speedMultiplier: 1.20, displaySize: 38, surfaceClasses: ['asphalt'] },
+  rocket:    { speedMultiplier: 1.25, displaySize: 40, surfaceClasses: ['air', 'water'] },
+  buggy:     { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
+  motorbike: { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
+  plane:     { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
 };
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
-export const DURATION_VARIANTS = [30, 120];
+// --dur overrides to a single arbitrary duration (enables e.g. --dur=60 / --dur=90)
+export const DURATION_VARIANTS = DUR_FILTER ? [Number(DUR_FILTER)] : [30, 120];
 
 // ── Compute adjusted finishT ──────────────────────────────────────────────────
 /**
@@ -149,6 +189,8 @@ export function runSingleRace({
   targetSeconds,
   seed,
   nRacers,
+  diagnosticMode = false,
+  behaviorConfigOverrides = {},
 }) {
   const rng = makePRNG(seed);
   const savedRandom = Math.random;
@@ -158,16 +200,20 @@ export function runSingleRace({
     const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
     const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
-    const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+    const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
 
-    // N-calibrated natural base speed — independent of finishT.
-    // Mirrors the formula in sim-race-visual.mjs and index.jsx.
+    // N-calibrated base speed — mirrors index.jsx computeRaceBaseSpeed formula.
+    // Open tracks: speed derived from finishT/targetSeconds so physical race lasts exactly
+    // targetSeconds; re-roll schedule (keyed to targetSeconds) then fires the correct count.
+    // Closed tracks: natural formula kept unchanged (finishT already encodes targetSeconds).
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
     const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
     const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-    const race_baseSpeed  = BASE_SPEED_MEAN / expectedMinSF;
+    const race_baseSpeed  = isOpen
+      ? finishT / (REFERENCE_FPS * targetSeconds * expectedMinSF * speedMultiplier)
+      : BASE_SPEED_MEAN / expectedMinSF;
 
     // Row layout
     const rowGapPx       = displaySize * rowConfig.rowGapMultiplier;
@@ -201,13 +247,22 @@ export function runSingleRace({
         ? (rowLayout.totalRows - assignment.rowIndex) * deltaT
         : -(assignment.rowIndex * deltaT);
       const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
-      const speedBonusMult = 1 + speedBonus;
+      const isRearRowOpen = isOpen && assignment.rowIndex > 0;
+      const speedBonusMult =
+        (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && isRearRowOpen)
+          ? TEF_BASE_BONUS
+          : (V4_ACTIVE && isRearRowOpen)
+            ? V4_INITIAL_BOOST
+            : (1 + speedBonus);
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
-        index:               i,
-        name:                `R${i + 1}`,
-        t:                   tStart,
+        index:                 i,
+        name:                  `R${i + 1}`,
+        t:                     tStart,
+        tStart,
+        initialSpeedBonusMult: speedBonusMult,
+        initialGap:            0,
         spreadFactor,
         speedBonusMult,
         baseSpeed:           race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
@@ -226,6 +281,15 @@ export function runSingleRace({
         spriteWorldSizePx:      displaySize,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
+        // v4: per-racer bonus-level transition state (mirrors re-roll transition)
+        v4BonusMult:              1.0,
+        v4BonusMultPrev:          1.0,
+        v4BonusMultTarget:        1.0,
+        v4BonusTransitionStart:   -Infinity,
+        v4BonusTransitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
+        v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
+        v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
+        rerollCount:              0, // total speed re-rolls fired for this racer
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -254,7 +318,89 @@ export function runSingleRace({
     let mixingQuota    = null;
     let warmupMeasured = false;
 
+    // TEF: compute per-racer initialGap = how far behind Row-0's start each racer begins
+    if (TEF_ACTIVE && (!TEF_OPEN_ONLY || isOpen)) {
+      const tStartRow0 = Math.max(...racers.map((r) => r.tStart));
+      for (const r of racers) {
+        r.initialGap = Math.max(0, tStartRow0 - r.tStart);
+      }
+    }
+
+    // v4: per-race overtaking state
+    const v4Row1Total    = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1).length : 0;
+    const v4Row1Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1) : [];
+    const v4Row0Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 0) : [];
+    // per_racer: each row compares against ALL rows that started ahead of it (correct for Row 3+)
+    const v4FrontPoolByRow = (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') ? (() => {
+      const map = new Map();
+      const maxRow = Math.max(0, ...racers.map((r) => r.startRowIndex));
+      for (let ri = 1; ri <= maxRow; ri++) {
+        map.set(ri, racers.filter((r) => r.startRowIndex < ri));
+      }
+      return map;
+    })() : null;
+    // legacy alias kept for physical_overtake metric
+    const v4FrontRacers  = V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer'
+      ? racers.filter((r) => r.startRowIndex === 0 || r.startRowIndex === 1) : [];
+    const v4HasOvertaken = new Set(); // racerIndex of Row-1 racers that have completed ≥1 overtake
+    // physical_overtake metric: track pairs that were "near and behind" (prerequisite for an overtake)
+    const v4WasNearBehind = new Set(); // keys "r1idx:r0idx" — pair was once laterally close while r1 behind
+    const v4OvertakePairs = new Set(); // keys "r1idx:r0idx" — completed overtakes
+    let   v4NextThreshIdx = 0;
+    const v4ThreshLog     = []; // { threshold, timeS, fromBonus, toBonus }
+
     computePositions();
+
+    // ── Diagnostic snapshot state ─────────────────────────────────────────────
+    const diagSnapshots = [];
+    let diagSnapIdx = 0;
+    const DIAG_SNAP_MS   = diagnosticMode ? DIAG_SNAP_TIMES_S.map((s) => s * 1000) : [];
+    let diagIntLateralPushes = 0;
+    let diagIntBrakeActs     = 0;
+    let diagIntOvertakes     = 0;
+    let diagLastOvertakeCount = 0;
+
+    function diagTakeSnapshot(nominalTimeS, actualTimeMs) {
+      const snap = {
+        timeS: nominalTimeS, actualTimeMs,
+        interval: { lateralPushes: diagIntLateralPushes, brakeActivations: diagIntBrakeActs, newOvertakes: diagIntOvertakes },
+        racers: racers.map((r) => ({
+          idx: r.index, row: r.startRowIndex,
+          t: +r.t.toFixed(6), physY: +r.physicalY.toFixed(4),
+          speed: +r.baseSpeed.toFixed(6), avoidance: r.avoidanceActive,
+          v4Mult: +(r.v4BonusMult ?? 1).toFixed(4),
+        })),
+        brakeZonePairs: [],
+        closePairs: [],
+      };
+      for (let a = 0; a < racers.length; a++) {
+        for (let b = a + 1; b < racers.length; b++) {
+          const ra = racers[a], rb = racers[b];
+          const dT = rb.t - ra.t;
+          const dY = Math.abs(ra.physicalY - rb.physicalY);
+          if (dT > 0 && dT < 0.015 && dY < 0.2)  snap.brakeZonePairs.push({ follower: ra.index, followerRow: ra.startRowIndex, leader: rb.index, leaderRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
+          if (dT < 0 && -dT < 0.015 && dY < 0.2) snap.brakeZonePairs.push({ follower: rb.index, followerRow: rb.startRowIndex, leader: ra.index, leaderRow: ra.startRowIndex, dT: +(-dT).toFixed(5), dY: +dY.toFixed(4) });
+          if (Math.abs(dT) < 0.005 && dY < 0.3)  snap.closePairs.push({ a: ra.index, aRow: ra.startRowIndex, b: rb.index, bRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
+        }
+      }
+      diagSnapshots.push(snap);
+      diagIntLateralPushes = 0;
+      diagIntBrakeActs     = 0;
+      diagIntOvertakes     = 0;
+    }
+
+    if (diagnosticMode) {
+      diagTakeSnapshot(0.0, 0);
+      diagSnapIdx = 1; // t=0 already captured
+    }
+
+    // ── Lightweight per-race stats (always collected, low overhead) ───────────
+    let liteRow1BrakeFrames = 0;  // racer-frames where startRowIndex=1 AND avoidanceActive
+    let liteRow0BrakeFrames = 0;  // racer-frames where startRowIndex=0 AND avoidanceActive
+    let liteRow2BrakeFrames = 0;  // racer-frames where startRowIndex=2 AND avoidanceActive
+    let liteLateralMoves    = 0;  // racer-frames where |physicalY delta| > 1e-4
+    const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
+    let litePrevPhysY       = null;
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -277,6 +423,7 @@ export function runSingleRace({
           r.transitionStartTime = raceTs;
           const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
           r.nextRollTime = raceTs + rollInterval + jOff;
+          r.rerollCount++;
         }
         const elapsed = raceTs - r.transitionStartTime;
         if (elapsed < r.transitionDuration) {
@@ -284,15 +431,44 @@ export function runSingleRace({
           r.spreadFactor = r.spreadFactorPrev + (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(prog);
           r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
         }
+
+        // v4: smooth bonus-level transition triggered by threshold crossing
+        if (V4_ACTIVE && isOpen && r.startRowIndex > 0) {
+          const v4El = raceTs - r.v4BonusTransitionStart;
+          if (v4El >= 0 && v4El < r.v4BonusTransitionDuration) {
+            r.v4BonusMult = r.v4BonusMultPrev + (r.v4BonusMultTarget - r.v4BonusMultPrev) * easeInOutCubic(v4El / r.v4BonusTransitionDuration);
+          } else if (v4El >= r.v4BonusTransitionDuration) {
+            r.v4BonusMult = r.v4BonusMultTarget;
+          }
+        }
       }
 
       // Advance t (mirrors index.jsx RACING loop — DT/16 calibration matches REFERENCE_FPS=62.5)
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
+      // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
+      let tefMeanT0 = 0;
+      if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen)) {
+        const row0Live = racers.filter((q) => q.startRowIndex === 0 && !q.finished);
+        tefMeanT0 = row0Live.length > 0
+          ? row0Live.reduce((s, q) => s + q.t, 0) / row0Live.length
+          : 0;
+      }
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
-          r.t += r.baseSpeed * boost * brake * (DT / 16);
+          // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
+          // baseSpeed was computed with initialSpeedBonusMult (= TEF_BASE_BONUS for rear rows).
+          // tefMult = targetBonusMult / initialSpeedBonusMult, where targetBonusMult interpolates
+          // from initialSpeedBonusMult (full gap) to 1.0 (gap fully closed / overtaken).
+          let tefMult = 1.0;
+          if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
+            const curGap   = tefMeanT0 - r.t;
+            const gapRatio = Math.max(0, Math.min(1, curGap / r.initialGap));
+            const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
+            tefMult = targetBonusMult / r.initialSpeedBonusMult;
+          }
+          r.t += r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * (DT / 16);
         }
       }
 
@@ -306,8 +482,125 @@ export function runSingleRace({
         warmupMeasured = true;
       }
 
+      // v4: overtake detection + threshold check
+      if (V4_ACTIVE && isOpen && v4Row1Total > 0) {
+        if (V4_METRIC_TYPE === 'physical_overtake') {
+          // Physical overtake: r1 must have been laterally close and behind r0 before crossing ahead.
+          for (const r1 of v4Row1Racers) {
+            if (r1.finished) continue;
+            for (const r0 of v4Row0Racers) {
+              if (r0.finished) continue;
+              const key = `${r1.index}:${r0.index}`;
+              if (v4OvertakePairs.has(key)) continue; // already counted
+              const dY = Math.abs(r1.physicalY - r0.physicalY);
+              if (!v4WasNearBehind.has(key)) {
+                // Check whether this pair is now "near and behind" (prerequisite phase)
+                if (dY < V4_LATERAL_PROXIMITY && r1.t < r0.t) {
+                  v4WasNearBehind.add(key);
+                }
+              } else {
+                // Prerequisite met — did r1 now cross ahead in t?
+                if (r1.t > r0.t) {
+                  v4OvertakePairs.add(key);
+                  v4HasOvertaken.add(r1.index);
+                }
+              }
+            }
+          }
+        } else if (V4_METRIC_TYPE === 'per_racer') {
+          // Per-racer metric: each non-Row-0 racer independently tracks its own overtake fraction
+          // and triggers its own bonus reduction (ratchet — never reverts).
+          for (const r of racers) {
+            if (r.finished || r.startRowIndex === 0) continue;
+            const racerThresholds = r.startRowIndex === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+            if (r.v4RacerThreshIdx >= racerThresholds.length) continue;
+            const frontPool  = v4FrontPoolByRow?.get(r.startRowIndex) ?? v4Row0Racers;
+            const totalFront = frontPool.length;
+            if (totalFront === 0) continue;
+            const aheadCount = frontPool.reduce((n, f) => n + (f.t < r.t ? 1 : 0), 0);
+            const fraction   = aheadCount / totalFront;
+            while (r.v4RacerThreshIdx < racerThresholds.length && fraction >= racerThresholds[r.v4RacerThreshIdx] / 100) {
+              const toBonus = V4_BOOST_SCHEDULE[Math.min(r.v4RacerThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
+              r.v4BonusMultPrev        = r.v4BonusMult;
+              r.v4BonusMultTarget      = toBonus / V4_INITIAL_BOOST;
+              r.v4BonusTransitionStart = raceTs;
+              r.v4RacerThreshTimes.push(raceTs);
+              r.v4RacerThreshIdx++;
+            }
+          }
+        } else {
+          // Legacy metric: r1.t > min(Row-0 t) — lax, t-value only
+          const row0Live = v4Row0Racers.filter((r) => !r.finished);
+          if (row0Live.length > 0) {
+            const minRow0T = Math.min(...row0Live.map((r) => r.t));
+            for (const r1 of v4Row1Racers) {
+              if (!r1.finished && r1.t > minRow0T) v4HasOvertaken.add(r1.index);
+            }
+          }
+        }
+
+        // Trigger global threshold step-downs (skipped for per_racer which handles this per-racer)
+        if (V4_METRIC_TYPE !== 'per_racer' && v4NextThreshIdx < V4_THRESHOLDS.length) {
+          const fraction = v4Row1Total > 0 ? v4HasOvertaken.size / v4Row1Total : 0;
+          while (v4NextThreshIdx < V4_THRESHOLDS.length && fraction >= V4_THRESHOLDS[v4NextThreshIdx] / 100) {
+            const fromBonus = V4_BOOST_SCHEDULE[v4NextThreshIdx];
+            const toBonus   = V4_BOOST_SCHEDULE[Math.min(v4NextThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
+            v4ThreshLog.push({ threshold: V4_THRESHOLDS[v4NextThreshIdx], timeS: raceTs / 1000, fromBonus, toBonus });
+            const newTarget = toBonus / V4_INITIAL_BOOST;
+            for (const r of racers) {
+              if (r.startRowIndex > 0 && !r.finished) {
+                r.v4BonusMultPrev        = r.v4BonusMult;
+                r.v4BonusMultTarget      = newTarget;
+                r.v4BonusTransitionStart = raceTs;
+              }
+            }
+            v4NextThreshIdx++;
+          }
+        }
+      }
+
+      // Diagnostic: save pre-frame state for lateral-push and brake-activation counting
+      let diagPrevPhysY, diagPrevAvoidance;
+      if (diagnosticMode) {
+        diagPrevPhysY     = racers.map((r) => r.physicalY);
+        diagPrevAvoidance = racers.map((r) => r.avoidanceActive);
+      }
       computePositions();
       applyRacerBehavior(racers, behaviorConfig, undefined);
+      // Lite stats: always-on, low-overhead per-frame counters
+      {
+        for (let ri = 0; ri < racers.length; ri++) {
+          const r = racers[ri];
+          if (r.avoidanceActive && r.startRowIndex === 1) liteRow1BrakeFrames++;
+          if (r.avoidanceActive && r.startRowIndex === 0) liteRow0BrakeFrames++;
+          if (r.avoidanceActive && r.startRowIndex === 2) liteRow2BrakeFrames++;
+          if (litePrevPhysY && Math.abs(r.physicalY - litePrevPhysY[ri]) > 1e-4) liteLateralMoves++;
+        }
+        if (!litePrevPhysY) litePrevPhysY = new Array(racers.length);
+        for (let ri = 0; ri < racers.length; ri++) litePrevPhysY[ri] = racers[ri].physicalY;
+        if (isOpen) {
+          const row0Live = racers.filter((r) => r.startRowIndex === 0 && !r.finished);
+          if (row0Live.length > 0) {
+            const minRow0T = Math.min(...row0Live.map((r) => r.t));
+            for (const r of racers) {
+              if (r.startRowIndex === 1 && !r.finished && r.t > minRow0T) liteRow1EverAhead.add(r.index);
+            }
+          }
+        }
+      }
+      // Diagnostic: post-frame counting + snapshot check
+      if (diagnosticMode) {
+        for (let ri = 0; ri < racers.length; ri++) {
+          if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4) diagIntLateralPushes++;
+          if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)       diagIntBrakeActs++;
+        }
+        diagIntOvertakes     += v4OvertakePairs.size - diagLastOvertakeCount;
+        diagLastOvertakeCount = v4OvertakePairs.size;
+        while (diagSnapIdx < DIAG_SNAP_MS.length && raceTs >= DIAG_SNAP_MS[diagSnapIdx]) {
+          diagTakeSnapshot(DIAG_SNAP_TIMES_S[diagSnapIdx], raceTs);
+          diagSnapIdx++;
+        }
+      }
 
       // Finish check
       for (const r of racers) {
@@ -334,8 +627,23 @@ export function runSingleRace({
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
     }));
-    // Attach mixing-quota as a non-iterable property so for..of / .length are unaffected.
-    results.mixingQuota = mixingQuota;
+    // Attach mixing-quota and v4 diagnostics as non-iterable properties.
+    results.mixingQuota     = mixingQuota;
+    results.v4ThreshLog     = v4ThreshLog;
+    results.v4OvertakeCount = v4HasOvertaken.size;     // Row-1 racers with ≥1 physical overtake
+    results.v4NearBehindCount = v4WasNearBehind.size;  // pairs that entered near-behind state
+    results.v4PairOvertakes = v4OvertakePairs.size;    // total completed pair-overtakes
+    results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
+    results.liteRow1BrakeFrames = liteRow1BrakeFrames;
+    results.liteRow0BrakeFrames = liteRow0BrakeFrames;
+    results.liteRow2BrakeFrames = liteRow2BrakeFrames;
+    results.liteLateralMoves    = liteLateralMoves;
+    results.v4PerRacerEndStats  = (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer')
+      ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
+      : null;
+    results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
+    results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
     return results;
   } finally {
     Math.random = savedRandom;
@@ -643,6 +951,72 @@ function buildReport(allResults, runDate) {
   return lines.join('\n');
 }
 
+// ── Diagnostic printer ───────────────────────────────────────────────────────
+function printDiagnosticReport(diagSnapshots, trackName, racerType, durationSec, seed) {
+  const lines = [];
+  lines.push(`\n${'='.repeat(70)}`);
+  lines.push(`Phase-2K v4 — Frame-by-Frame Diagnostic`);
+  lines.push(`Track: ${trackName} | Racer: ${racerType} | Duration: ${durationSec}s | Seed: ${seed}`);
+  lines.push('='.repeat(70));
+
+  for (const snap of diagSnapshots) {
+    lines.push(`\n── Snapshot t=${snap.timeS.toFixed(3)}s (actual: ${snap.actualTimeMs.toFixed(0)}ms) ──`);
+    // Interval stats
+    lines.push(
+      `   Interval: ${snap.interval.lateralPushes} lateral pushes | ` +
+      `${snap.interval.brakeActivations} brake activations | ` +
+      `${snap.interval.newOvertakes} new v4 overtakes`
+    );
+    // Per-row summary
+    const rows = new Map();
+    for (const r of snap.racers) {
+      if (!rows.has(r.row)) rows.set(r.row, []);
+      rows.get(r.row).push(r);
+    }
+    for (const [rowIdx, racersInRow] of [...rows.entries()].sort((a, b) => a[0] - b[0])) {
+      const ts     = racersInRow.map((r) => r.t);
+      const avd    = racersInRow.filter((r) => r.avoidance).length;
+      const v4Mults = racersInRow.map((r) => r.v4Mult).filter((m) => m !== 1.0);
+      const v4Str  = v4Mults.length > 0 ? ` | v4Mult=${v4Mults[0].toFixed(4)}` : '';
+      lines.push(
+        `   Row ${rowIdx} (${racersInRow.length} racers): ` +
+        `t=[${Math.min(...ts).toFixed(4)}, ${Math.max(...ts).toFixed(4)}]` +
+        `${v4Str} | avoidance: ${avd}/${racersInRow.length}`
+      );
+    }
+    // Brake-zone pairs grouped by row combination
+    const bz = snap.brakeZonePairs;
+    if (bz.length === 0) {
+      lines.push(`   Brake-zone pairs (dT<0.015 AND |dY|<0.2): 0`);
+    } else {
+      const rowComboCount = new Map();
+      for (const p of bz) {
+        const key = `R${p.followerRow}→R${p.leaderRow}`;
+        rowComboCount.set(key, (rowComboCount.get(key) ?? 0) + 1);
+      }
+      const comboStr = [...rowComboCount.entries()].map(([k, v]) => `${k}: ${v}`).join(', ');
+      lines.push(`   Brake-zone pairs: ${bz.length} (${comboStr})`);
+      // Show top 5 by dT (smallest gap = most likely to brake)
+      const top = [...bz].sort((a, b) => a.dT - b.dT).slice(0, 5);
+      for (const p of top) {
+        lines.push(`     R${p.follower}(Row${p.followerRow}) → R${p.leader}(Row${p.leaderRow})  dT=${p.dT.toFixed(5)}  dY=${p.dY.toFixed(4)}`);
+      }
+    }
+    // Close pairs (|dT|<0.005 AND |dY|<0.3)
+    const cp = snap.closePairs;
+    if (cp.length === 0) {
+      lines.push(`   Close pairs (|dT|<0.005 AND |dY|<0.3): 0`);
+    } else {
+      lines.push(`   Close pairs: ${cp.length}`);
+      for (const p of cp.slice(0, 5)) {
+        lines.push(`     R${p.a}(Row${p.aRow}) ↔ R${p.b}(Row${p.bRow})  dT=${p.dT.toFixed(5)}  dY=${p.dY.toFixed(4)}`);
+      }
+    }
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const isMain =
   typeof process !== 'undefined' &&
@@ -663,7 +1037,31 @@ if (isMain) {
     `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
     `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
   );
-  console.log(`Output                 : ${OUT_DIR}\n`);
+  console.log(`Output                 : ${OUT_DIR}`);
+  if (TEF_ACTIVE) {
+    console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
+    if (TEF_BASE_BONUS !== null) {
+      console.log(`   v3: baseBonusOverride=${TEF_BASE_BONUS} für Rear-Rows, moduliert via tStart-Gap`);
+    } else {
+      console.log(`   v2: speedBonusMult wird bei Re-Rolls auf Basis tStart-Gap moduliert`);
+    }
+  }
+  if (WARMUP_MS_OVERRIDE !== null) {
+    console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
+  }
+  if (V4_ACTIVE) {
+    console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${V4_INITIAL_BOOST} openOnly=true`);
+    console.log(`   Metrik: ${V4_METRIC_TYPE}${V4_METRIC_TYPE === 'physical_overtake' ? ` (lateralProximity=${V4_LATERAL_PROXIMITY})` : ''}`);
+    if (V4_METRIC_TYPE === 'per_racer' && (V4_ROW1_THRESHOLDS_RAW || V4_ROW_REST_THRESHOLDS_RAW)) {
+      console.log(`   Row-1-Schwellen: ${V4_ROW1_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
+      console.log(`   Row-2+-Schwellen: ${V4_ROW2_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
+    } else {
+      console.log(`   Schwellen: ${V4_THRESHOLDS.map((t) => t + '%').join(' → ')} Überholungen`);
+    }
+    console.log(`   Bonus-Schedule: ${V4_BOOST_SCHEDULE.join(' → ')}`);
+    console.log(`   Übergänge: easeInOutCubic über ${DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration}s (wie Re-Roll)`);
+  }
+  console.log('');
 
   mkdirSync(OUT_DIR, { recursive: true });
 
@@ -680,6 +1078,7 @@ if (isMain) {
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
+    if (TRACK_FILTER && trackId !== TRACK_FILTER) continue;
     const trackPath = join(trackDataDir, `${trackId}.json`);
     if (!existsSync(trackPath)) {
       console.warn(`  [SKIP] Track nicht gefunden: ${trackPath}`);
@@ -694,10 +1093,16 @@ if (isMain) {
 
     console.log(`── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`);
 
+    const trackSurfaces = track.surfaceClasses ?? [];
     for (const [racerType, cfg] of Object.entries(RACER_CONFIGS)) {
+      if (RACER_FILTER && racerType !== RACER_FILTER) continue;
+      // Skip racers incompatible with this track's surface (empty surfaceClasses = no restriction)
+      if (cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
+          !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s))) continue;
       const { speedMultiplier, displaySize } = cfg;
 
       for (const durationSec of DURATION_VARIANTS) {
+        if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
         const finishT = computeFinishT(race_baseSpeed, speedMultiplier, durationSec, isOpen);
 
         // Compute row count for this track/racer combo (for stats aggregation)
@@ -713,6 +1118,7 @@ if (isMain) {
 
         const raceResults   = [];
         const mixingQuotas  = [];
+        const v4ThreshLogs  = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           const seed   = raceIdx + 1;
           const result = runSingleRace({
@@ -726,9 +1132,19 @@ if (isMain) {
             targetSeconds: durationSec,
             seed,
             nRacers: N_RACERS,
+            diagnosticMode: DIAG_MODE,
+            behaviorConfigOverrides: WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {},
           });
           raceResults.push(result);
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
+          if (result.v4ThreshLog != null) v4ThreshLogs.push(result.v4ThreshLog);
+          if (DIAG_MODE && result.diagSnapshots) {
+            const diagText = printDiagnosticReport(result.diagSnapshots, trackName, racerType, durationSec, seed);
+            console.log(diagText);
+            const diagPath = join(OUT_DIR, `diag-${trackId}-${racerType}-${durationSec}s-seed${seed}.json`);
+            writeFileSync(diagPath, JSON.stringify({ trackId, trackName, racerType, durationSec, seed, snapshots: result.diagSnapshots }, null, 2));
+            console.log(`Diagnostic JSON → ${diagPath}`);
+          }
 
           // Collect raw data
           for (const r of result) {
@@ -753,6 +1169,115 @@ if (isMain) {
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);
+
+        // 1.5× gate: pass if every row win-rate is within [expected/1.5, expected×1.5]
+        if (isOpen) {
+          const expected1_5 = 1 / totalRows;
+          const gatePass = stats.rowStats.every(
+            (rs) => rs.winRate >= expected1_5 / 1.5 && rs.winRate <= expected1_5 * 1.5
+          );
+          const rateStr = stats.rowStats.map((rs) => `R${rs.rowIndex}=${(rs.winRate * 100).toFixed(0)}%`).join(' ');
+          console.log(`     1.5×-Gate: ${gatePass ? '✅ PASS' : '❌ FAIL'}  (${rateStr}  erw.=${(expected1_5 * 100).toFixed(1)}%)`);
+        }
+
+        // Lite stats: avoidance activity and lateral dynamics
+        if (isOpen && raceResults.length > 0) {
+          const avgRow1Brake    = raceResults.reduce((s, r) => s + (r.liteRow1BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgRow0Brake    = raceResults.reduce((s, r) => s + (r.liteRow0BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgRow2Brake    = raceResults.reduce((s, r) => s + (r.liteRow2BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgLateralMoves = raceResults.reduce((s, r) => s + (r.liteLateralMoves ?? 0), 0) / raceResults.length;
+          const avgRow1EverAhead = raceResults.reduce((s, r) => s + (r.liteRow1EverAheadCount ?? 0), 0) / raceResults.length;
+          const rowSize0 = Math.ceil(N_RACERS / totalRows);
+          const avgRerolls  = raceResults.reduce((s, r) => s + (r.avgRerollsPerRacer ?? 0), 0) / raceResults.length;
+          const avgPhysDur  = raceResults.reduce((s, r) => s + (r.physicalDurationS ?? 0), 0) / raceResults.length;
+          console.log(
+            `     Avoidance: R0=${avgRow0Brake.toFixed(0)}Ø  R1=${avgRow1Brake.toFixed(0)}Ø  R2=${avgRow2Brake.toFixed(0)}Ø` +
+            `  Lateral=${avgLateralMoves.toFixed(0)}Ø  R1≥1×vorne=${avgRow1EverAhead.toFixed(1)}/${rowSize0}Ø`
+          );
+          console.log(
+            `     Re-Rolls: Ø ${avgRerolls.toFixed(1)} pro Racer  Physische Renndauer: Ø ${avgPhysDur.toFixed(1)}s` +
+            `  (target=${durationSec}s)`
+          );
+          // per_racer: per-row bonus distribution at race end (all rows > 0)
+          if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {
+            const allRowIndices = [...new Set(
+              raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
+            )].sort((a, b) => a - b);
+            for (const rowIdx of allRowIndices) {
+              const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+              const all = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
+              if (all.length === 0) continue;
+              const full    = all.filter((s) => s.threshIdx === 0).length;
+              const partial = all.filter((s) => s.threshIdx > 0 && s.threshIdx < rowThresholds.length).length;
+              const none    = all.filter((s) => s.threshIdx >= rowThresholds.length).length;
+              const tot     = all.length;
+              console.log(
+                `     Row-${rowIdx} Bonus-End (N=${tot}): ` +
+                `voll=${(full/tot*100).toFixed(0)}% (${full})  ` +
+                `teilw=${(partial/tot*100).toFixed(0)}% (${partial})  ` +
+                `kein=${(none/tot*100).toFixed(0)}% (${none})`
+              );
+            }
+          }
+        }
+
+        // v4 diagnostics: per-threshold average crossing time + physical overtake counts
+        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer' && v4ThreshLogs.length > 0) {
+          // Physical overtake summary
+          const avgOvertakes   = raceResults.reduce((s, r) => s + (r.v4OvertakeCount   ?? 0), 0) / N_RACES;
+          const avgNearBehind  = raceResults.reduce((s, r) => s + (r.v4NearBehindCount ?? 0), 0) / N_RACES;
+          const avgPairOvt     = raceResults.reduce((s, r) => s + (r.v4PairOvertakes   ?? 0), 0) / N_RACES;
+          console.log(
+            `     v4 Physik (Ø pro Rennen): ${avgOvertakes.toFixed(1)} Row-1 mit Überholung, ` +
+            `${avgPairOvt.toFixed(1)} Paar-Überholungen, ${avgNearBehind.toFixed(1)} near-behind-Paare`
+          );
+          // Threshold timing
+          for (const thresh of V4_THRESHOLDS) {
+            const times = v4ThreshLogs
+              .map((log) => log.find((e) => e.threshold === thresh)?.timeS)
+              .filter((t) => t != null);
+            if (times.length > 0) {
+              const avg = times.reduce((s, v) => s + v, 0) / times.length;
+              const entry = v4ThreshLogs.find((log) => log.find((e) => e.threshold === thresh))
+                ?.find((e) => e.threshold === thresh);
+              console.log(
+                `     v4 ${thresh}%-Schwelle: Ø ${avg.toFixed(1)}s ` +
+                `(${times.length}/${N_RACES} Rennen) ` +
+                `${entry ? entry.fromBonus + ' → ' + entry.toBonus : ''}`
+              );
+            } else {
+              console.log(`     v4 ${thresh}%-Schwelle: nie erreicht`);
+            }
+          }
+        }
+        // per_racer: individual threshold timing per row (all rows > 0)
+        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') {
+          const allRowIdxs = [...new Set(
+            raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
+          )].sort((a, b) => a - b);
+          for (const rowIdx of allRowIdxs) {
+            const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+            for (let ti = 0; ti < rowThresholds.length; ti++) {
+              const thresh   = rowThresholds[ti];
+              const allStats = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
+              const total    = allStats.length;
+              const times    = allStats
+                .filter((s) => s.threshTimes && s.threshTimes.length > ti)
+                .map((s) => s.threshTimes[ti] / 1000);
+              if (times.length > 0) {
+                const avg = times.reduce((s, v) => s + v, 0) / times.length;
+                const min = Math.min(...times);
+                const max = Math.max(...times);
+                console.log(
+                  `     v4 per_racer Row-${rowIdx} ${thresh}%: Ø ${avg.toFixed(1)}s ` +
+                  `(${times.length}/${total} Racer) min=${min.toFixed(1)}s max=${max.toFixed(1)}s`
+                );
+              } else {
+                console.log(`     v4 per_racer Row-${rowIdx} ${thresh}%: nie erreicht`);
+              }
+            }
+          }
+        }
       }
     }
     console.log('');
