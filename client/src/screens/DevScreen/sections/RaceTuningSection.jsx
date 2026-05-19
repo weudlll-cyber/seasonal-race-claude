@@ -171,7 +171,21 @@ function RaceTuningSection() {
   }
 
   function resetSpeedReRoll() {
-    setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      reRollVariationPercent: DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent,
+      reRollTransitionDuration: DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration,
+      reRollIntervalDivisor: DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor,
+      reRollLastPositionPercent: DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent,
+      trajectoryTransitionDuration: DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration,
+    }));
+  }
+
+  function resetRacePlanBonus() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      racePlanBonusStrengthMultiplier: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier,
+    }));
   }
 
   function resetDrafting() {
@@ -568,6 +582,28 @@ function RaceTuningSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
+              Trajectory Transition Duration (s)
+              <InfoTooltip text="How smoothly Race Plan changes speed (controller transitions). Lower = snappier corrections, higher = gentler but slower rank adjustments." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Trajectory Transition Duration"
+              min={0.5}
+              max={5.0}
+              step={0.5}
+              value={dynamicsConfig.trajectoryTransitionDuration}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.5 && v <= 5.0) setDynamics('trajectoryTransitionDuration', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
               Re-Roll Frequency (÷ interval)
               <InfoTooltip text="Roughly how many seconds between re-rolls. Lower = more frequent shifts, very chaotic races. Higher = fewer shifts, calmer races." />
             </label>
@@ -646,6 +682,55 @@ function RaceTuningSection() {
             Transition: <strong>{dynamicsConfig.reRollTransitionDuration}s</strong>
           </p>
         </div>
+      </SubCard>
+
+      {/* ── Block 4b: Race Plan Bonus ── */}
+      <SubCard
+        title="Race Plan Bonus"
+        onReset={resetRacePlanBonus}
+        resetTestId="reset-race-plan-bonus"
+        subtitle="Scales the Race Plan area bonuses. At 1.0 the default values apply (B1=+3%). At 2.0 the bonus doubles (B1=+6%). Useful when avoidance is tight and B1 racers can't reach their target area."
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Race Plan Bonus Strength
+              <InfoTooltip text="Multiplier for Race Plan area bonuses. 1.0=default (B1=+3%), 2.0=double (B1=+6%), 0.5=half (B1=+1.5%)" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan Bonus Strength Multiplier"
+              min={0.5}
+              max={3.0}
+              step={0.1}
+              value={dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.5 && v <= 3.0) setDynamics('racePlanBonusStrengthMultiplier', v);
+              }}
+            />
+          </div>
+        </div>
+        <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}>
+          At{' '}
+          <strong style={{ color: 'var(--color-accent)' }}>
+            {(dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0).toFixed(1)}×
+          </strong>
+          {': '}
+          B1={' '}
+          <strong>
+            {(1.0 + 0.03 * (dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0)).toFixed(3)}
+          </strong>
+          {'  '}
+          B5={' '}
+          <strong>
+            {(1.0 - 0.01 * (dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0)).toFixed(3)}
+          </strong>
+        </p>
       </SubCard>
 
       {/* ── Block 5: Drafting / Slipstream ── */}

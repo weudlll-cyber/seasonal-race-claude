@@ -66,16 +66,21 @@ const DEFAULT_PULK_TARGET_SPREAD = 0.005;
 const DEFAULT_STOCHASTIC_NOISE = 0.0008;
 const DEFAULT_PULK_BIAS_GAIN = 2.0;
 
-// Bereichs-Bonus: constant speed multiplier per soll-Bereich, active from race start until OUTCOME.
-// Fades to 1.0 over _bereichsBonusFadeDuration ms at OUTCOME entry so the P-controller takes over cleanly.
-const DEFAULT_BEREICHS_BONUS = {
-  B1: 1.03,
-  B2: 1.02,
-  B3: 1.01,
-  B4: 1.0,
-  B5: 0.99,
-};
+// Base deltas for the Bereichs-Bonus. multiplier=1.0 reproduces the original values.
+// bonus = 1.0 + (BASE_DELTA × multiplier). Range 0.5–3.0 is sane for the multiplier.
+const BEREICHS_BONUS_BASE_DELTAS = { B1: 0.03, B2: 0.02, B3: 0.01, B4: 0.0, B5: -0.01 };
 const DEFAULT_BEREICHS_BONUS_FADE_MS = 1500;
+
+function computeBereichsBonusMap(multiplier) {
+  const m = multiplier ?? 1.0;
+  return {
+    B1: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B1 * m,
+    B2: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B2 * m,
+    B3: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B3 * m,
+    B4: 1.0,
+    B5: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B5 * m,
+  };
+}
 
 function getBereichsBonus(sollRank, bonusMap) {
   if (sollRank <= 5) return bonusMap.B1;
@@ -156,8 +161,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     midSwitch: phaseFractions.midToLateSwitchFraction * targetDurationMs,
   };
 
-  // Bereichs-Bonus: one constant multiplier per racer based on their soll-Bereich
-  const bereichsBonusMap = config.bereichsBonusByBereich ?? DEFAULT_BEREICHS_BONUS;
+  // Bereichs-Bonus: one constant multiplier per racer based on their soll-Bereich.
+  // bereichsBonusByBereich in config takes precedence; otherwise scale by bonusStrengthMultiplier.
+  const bereichsBonusMap =
+    config.bereichsBonusByBereich ?? computeBereichsBonusMap(config.bonusStrengthMultiplier ?? 1.0);
   const racerBereichsBonus = new Map();
   for (const [racerIdx, sollRank] of racerSollRank) {
     racerBereichsBonus.set(racerIdx, getBereichsBonus(sollRank, bereichsBonusMap));

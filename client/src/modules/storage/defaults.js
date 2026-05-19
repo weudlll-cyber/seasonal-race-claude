@@ -240,6 +240,9 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollTransitionDuration: 5.0,
   reRollIntervalDivisor: 15,
   reRollLastPositionPercent: 80,
+  trajectoryTransitionDuration: 1.5,
+  // Race Plan area bonus strength: 1.0 = default (B1=+3%), 2.0 = double (B1=+6%). Range 0.5–3.0.
+  racePlanBonusStrengthMultiplier: 1.0,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

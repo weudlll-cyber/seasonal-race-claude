@@ -513,7 +513,13 @@ export default function RaceScreen() {
         index: r.index,
         startRowIndex: assignmentByRacer.get(r.index)?.rowIndex ?? 0,
       }));
-      const plan = createRacePlan(planRacers, finishT, targetDuration * 1000, {}, racePlanSeed);
+      const plan = createRacePlan(
+        planRacers,
+        finishT,
+        targetDuration * 1000,
+        { bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0 },
+        racePlanSeed
+      );
       racePlanController = createTrajectoryController(plan);
       rpPlanInfo = {
         sollRanks: plan._racerSollRank,
@@ -530,6 +536,7 @@ export default function RaceScreen() {
     diagDataRef.current.rpRows = rowLayout.totalRows;
     diagDataRef.current.rpRacersPerRow = rowLayout.racersPerRow;
     diagDataRef.current.rpNRacers = nRacers;
+    diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 

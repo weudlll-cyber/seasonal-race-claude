@@ -65,6 +65,7 @@ export default function CameraDiagnosticsHUD({
     rpTmMax: 1,
     rpBbMin: 1,
     rpBbMax: 1,
+    rpBonusMult: 1,
     rpRows: 0,
     rpRacersPerRow: 0,
     rpNRacers: 0,
@@ -128,6 +129,7 @@ export default function CameraDiagnosticsHUD({
         rpTmMax: diag.rpTmMax ?? 1,
         rpBbMin: diag.rpBbMin ?? 1,
         rpBbMax: diag.rpBbMax ?? 1,
+        rpBonusMult: diag.rpBonusMult ?? 1,
         rpRows: diag.rpRows ?? 0,
         rpRacersPerRow: diag.rpRacersPerRow ?? 0,
         rpNRacers: diag.rpNRacers ?? 0,
@@ -204,6 +206,7 @@ export default function CameraDiagnosticsHUD({
     rpTmMax,
     rpBbMin,
     rpBbMax,
+    rpBonusMult,
     rpRows,
     rpRacersPerRow,
     rpNRacers,
@@ -438,6 +441,12 @@ export default function CameraDiagnosticsHUD({
           </div>
           <div style={{ color: '#aaa' }}>
             rows:{rpRows} rpr:{rpRacersPerRow} n:{rpNRacers}
+          </div>
+          <div style={{ color: '#aaa' }}>
+            mult:{' '}
+            <span style={{ color: rpBonusMult !== 1.0 ? '#4cff91' : '#ffd700' }}>
+              {rpBonusMult.toFixed(1)}
+            </span>
           </div>
           <div>
             sf:{' '}
