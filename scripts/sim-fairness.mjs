@@ -425,6 +425,9 @@ export function runSingleRace({
     const natPrevEffSpeed        = new Map(); // racerIndex → prev effective speed
     const natPrevT               = new Map(); // racerIndex → t before Pass-2
     let natJerkSum = 0, natJerkMax = 0, natJerkSteps = 0, natJerkHighCount = 0;
+    // Δ5s ring buffers: track trajectoryMult during OUTCOME; detect controller oscillation
+    const TM_RING_SIZE = 313; // ≈5s at 16ms/step
+    const tmRings = new Map(); // racerIndex → { buf: Float32Array, idx: number }
     let natOvertakeCount = 0, natNaturalOvertakeCount = 0;
     let natPulkFrames = 0, natStableFrames = 0;
     let natPulkWasActive = false;
@@ -483,6 +486,20 @@ export function runSingleRace({
         racePlanController.update(racers, raceTs);
       } else {
         for (const r of racers) r.trajectoryMult = 1.0;
+      }
+
+      // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
+      if (racePlanController && racePlanController.getPhase(raceTs) === 'OUTCOME') {
+        for (const r of racers) {
+          if (r.finished) continue;
+          let ring = tmRings.get(r.index);
+          if (!ring) {
+            ring = { buf: new Float32Array(TM_RING_SIZE).fill(1.0), idx: 0 };
+            tmRings.set(r.index, ring);
+          }
+          ring.buf[ring.idx % TM_RING_SIZE] = r.trajectoryMult;
+          ring.idx++;
+        }
       }
 
       // ── Jerk metric: computed in stable phase, after baseSpeed/trajectoryMult set ──
@@ -742,6 +759,24 @@ export function runSingleRace({
       ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
       : null;
     results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    // Phase-3A: Δ5s per-racer oscillation metric
+    let tmDelta5sMax = 0;
+    let tmOscillatingCount = 0;
+    if (racePlanController && tmRings.size > 0) {
+      for (const [, ring] of tmRings) {
+        const filled = Math.min(ring.idx, TM_RING_SIZE);
+        if (filled < 2) continue;
+        let mn = Infinity, mx = -Infinity;
+        for (let j = 0; j < filled; j++) {
+          if (ring.buf[j] < mn) mn = ring.buf[j];
+          if (ring.buf[j] > mx) mx = ring.buf[j];
+        }
+        const delta = mx - mn;
+        if (delta > tmDelta5sMax) tmDelta5sMax = delta;
+        if (delta > 0.15) tmOscillatingCount++;
+      }
+    }
+
     // Phase-3A: Naturalness metrics
     results.naturalness = {
       meanJerk:               natJerkSteps > 0 ? natJerkSum  / natJerkSteps : 0,
@@ -757,6 +792,9 @@ export function runSingleRace({
         planBiasDeltaMean: 0,
         pulkBiasEventCount: 0,
       }),
+      // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
+      tmDelta5sMax,
+      tmOscillatingCount,
     };
     results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
     results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
@@ -1552,6 +1590,8 @@ if (isMain) {
           bidirectionalBoostFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBoostFraction ?? 0), 0) / raceResults.length,
           bidirectionalBrakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBrakeFraction ?? 0), 0) / raceResults.length,
           racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
+          tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
+          tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
 
@@ -1609,7 +1649,9 @@ if (isMain) {
                 `  boost=${(avgNaturalness.bidirectionalBoostFraction * 100).toFixed(1)}%` +
                 `  brake=${(avgNaturalness.bidirectionalBrakeFraction * 100).toFixed(1)}%` +
                 `  blocked=${(avgNaturalness.racersBlockedInOutcome * 100).toFixed(1)}%` +
-                `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%`
+                `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%` +
+                `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
+                `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
               );
             }
           }
