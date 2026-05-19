@@ -164,15 +164,21 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
     for (const r of racers) expect(r.trajectoryMult).toBe(1.0);
   });
 
-  it('sets trajectoryMult=1.0 on all racers in TRANSITION phase', () => {
+  it('sets trajectoryMultTarget=1.0 on all racers in TRANSITION phase', () => {
     const ctrl = createTrajectoryController(plan);
-    const racers = BASE_RACERS.map((r) => ({ ...r, trajectoryMult: 1.0 }));
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+    }));
     const transMs = plan._phases.transEnd - 1000; // just before transition end
     ctrl.update(racers, transMs);
-    for (const r of racers) expect(r.trajectoryMult).toBe(1.0);
+    for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
   });
 
-  it('clamps trajectoryMult to [minMult, maxMult] in OUTCOME phase', () => {
+  it('clamps trajectoryMultTarget to [minMult, maxMult] in OUTCOME phase', () => {
     const ctrl = createTrajectoryController(plan);
     const outcomeMs = plan._phases.transEnd + 1000;
     const { winnerRacerId } = plan;
@@ -184,17 +190,22 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
       finished: false,
       avoidanceActive: false,
       trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
     }));
     ctrl.update(racers, outcomeMs);
 
     const winner = racers.find((r) => r.index === winnerRacerId);
-    expect(winner.trajectoryMult).toBeLessThanOrEqual(
+    expect(winner.trajectoryMultTarget).toBeLessThanOrEqual(
       plan.controllerParams.maxMult + plan._stochasticNoise + 0.001
     );
-    expect(winner.trajectoryMult).toBeGreaterThanOrEqual(plan.controllerParams.minMult - 0.001);
+    expect(winner.trajectoryMultTarget).toBeGreaterThanOrEqual(
+      plan.controllerParams.minMult - 0.001
+    );
   });
 
-  it('P-controller arithmetic: winner at last rank → clamped to maxMult', () => {
+  it('P-controller arithmetic: winner at last rank → target clamped to maxMult', () => {
     const ctrl = createTrajectoryController(plan);
     const { transEnd, midSwitch } = plan._phases;
     const outcomeMs = (transEnd + midSwitch) / 2;
@@ -205,16 +216,19 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
       finished: false,
       avoidanceActive: false,
       trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
     }));
     ctrl.update(racers, outcomeMs);
     const w = racers.find((r) => r.index === plan.winnerRacerId);
 
     const NOISE_TOL = plan._stochasticNoise + 0.002;
-    expect(w.trajectoryMult).toBeLessThanOrEqual(plan.controllerParams.maxMult + NOISE_TOL);
-    expect(w.trajectoryMult).toBeGreaterThan(plan.controllerParams.maxMult - NOISE_TOL);
+    expect(w.trajectoryMultTarget).toBeLessThanOrEqual(plan.controllerParams.maxMult + NOISE_TOL);
+    expect(w.trajectoryMultTarget).toBeGreaterThan(plan.controllerParams.maxMult - NOISE_TOL);
   });
 
-  it('P-controller arithmetic: racer with last sollRank at rank 1 → clamped to minMult', () => {
+  it('P-controller arithmetic: racer with last sollRank at rank 1 → target clamped to minMult', () => {
     const ctrl = createTrajectoryController(plan);
     const { transEnd, midSwitch } = plan._phases;
     const outcomeMs = (transEnd + midSwitch) / 2;
@@ -228,16 +242,21 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
       finished: false,
       avoidanceActive: false,
       trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
     }));
     ctrl.update(racers, outcomeMs);
     const w = racers.find((r) => r.index === lastSollRankId);
 
     const NOISE_TOL = plan._stochasticNoise + 0.002;
-    expect(w.trajectoryMult).toBeGreaterThanOrEqual(plan.controllerParams.minMult - NOISE_TOL);
-    expect(w.trajectoryMult).toBeLessThan(plan.controllerParams.minMult + NOISE_TOL);
+    expect(w.trajectoryMultTarget).toBeGreaterThanOrEqual(
+      plan.controllerParams.minMult - NOISE_TOL
+    );
+    expect(w.trajectoryMultTarget).toBeLessThan(plan.controllerParams.minMult + NOISE_TOL);
   });
 
-  it('no intervention (mult≈1.0) when winner (sollRank=1) is already at rank 1', () => {
+  it('no intervention (target≈1.0) when winner (sollRank=1) is already at rank 1', () => {
     const ctrl = createTrajectoryController(plan);
     const { transEnd } = plan._phases;
     const outcomeMs = transEnd + 1000;
@@ -249,13 +268,143 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
       finished: false,
       avoidanceActive: false,
       trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      bereichsBonusMult: 1.0,
     }));
     ctrl.update(racers, outcomeMs);
     const w = racers.find((r) => r.index === plan.winnerRacerId);
-    // rankError=0 → 1.0 + noise only
+    // rankError=0 → target = 1.0 + noise only
     const NOISE_TOL = plan._stochasticNoise + 0.001;
-    expect(w.trajectoryMult).toBeGreaterThanOrEqual(1.0 - NOISE_TOL);
-    expect(w.trajectoryMult).toBeLessThanOrEqual(1.0 + NOISE_TOL);
+    expect(w.trajectoryMultTarget).toBeGreaterThanOrEqual(1.0 - NOISE_TOL);
+    expect(w.trajectoryMultTarget).toBeLessThanOrEqual(1.0 + NOISE_TOL);
+  });
+});
+
+// ── createRacePlan — bereichsBonus assignment ─────────────────────────────────
+
+describe('createRacePlan — bereichsBonus', () => {
+  it('assigns _racerBereichsBonus for every racer', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._racerBereichsBonus).toBeInstanceOf(Map);
+    expect(plan._racerBereichsBonus.size).toBe(BASE_RACERS.length);
+  });
+
+  it('B1 racers (sollRank 1-5) get bonus 1.03', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    for (const [racerIdx, sollRank] of plan._racerSollRank) {
+      if (sollRank <= 5) {
+        expect(plan._racerBereichsBonus.get(racerIdx)).toBe(1.03);
+      }
+    }
+  });
+
+  it('B5 racers (sollRank 41+) get bonus 0.99', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    for (const [racerIdx, sollRank] of plan._racerSollRank) {
+      if (sollRank > 40) {
+        expect(plan._racerBereichsBonus.get(racerIdx)).toBe(0.99);
+      }
+    }
+  });
+
+  it('uses custom bereichsBonusByBereich from config', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bereichsBonusByBereich: { B1: 1.05, B2: 1.04, B3: 1.03, B4: 1.0, B5: 0.97 } },
+      BASE_SEED
+    );
+    for (const [racerIdx, sollRank] of plan._racerSollRank) {
+      if (sollRank <= 5) {
+        expect(plan._racerBereichsBonus.get(racerIdx)).toBe(1.05);
+      }
+    }
+  });
+
+  it('stores _bereichsBonusFadeDuration default 1500ms', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._bereichsBonusFadeDuration).toBe(1500);
+  });
+});
+
+// ── createTrajectoryController — bereichsBonusMult ───────────────────────────
+
+describe('createTrajectoryController — bereichsBonusMult', () => {
+  let plan;
+
+  beforeEach(() => {
+    plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+  });
+
+  function makeRacers() {
+    return BASE_RACERS.map((r) => ({
+      ...r,
+      t: 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      bereichsBonusMult: 1.0,
+    }));
+  }
+
+  it('sets full bereichsBonusMult in PRE_PULK phase', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    ctrl.update(racers, plan._phases.pulkStart - 1000); // before PULK
+    for (const r of racers) {
+      const expected = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+      expect(r.bereichsBonusMult).toBeCloseTo(expected, 5);
+    }
+  });
+
+  it('sets full bereichsBonusMult in TRANSITION phase', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    ctrl.update(racers, plan._phases.transEnd - 1000); // just before OUTCOME
+    for (const r of racers) {
+      const expected = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+      expect(r.bereichsBonusMult).toBeCloseTo(expected, 5);
+    }
+  });
+
+  it('bereichsBonusMult = 1.0 for B4 racers in all phases', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    ctrl.update(racers, plan._phases.pulkStart - 500);
+    for (const r of racers) {
+      const sollRank = plan._racerSollRank.get(r.index);
+      if (sollRank > 25 && sollRank <= 40) {
+        expect(r.bereichsBonusMult).toBeCloseTo(1.0, 5);
+      }
+    }
+  });
+
+  it('fades bereichsBonusMult toward 1.0 at OUTCOME entry', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    const halfFade = plan._phases.transEnd + plan._bereichsBonusFadeDuration / 2;
+    ctrl.update(racers, halfFade);
+    for (const r of racers) {
+      const origBonus = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+      // At halfway through fade: value should be between 1.0 and origBonus
+      expect(r.bereichsBonusMult).toBeGreaterThanOrEqual(Math.min(1.0, origBonus) - 0.001);
+      expect(r.bereichsBonusMult).toBeLessThanOrEqual(Math.max(1.0, origBonus) + 0.001);
+    }
+  });
+
+  it('bereichsBonusMult = 1.0 after fade completes in OUTCOME', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    ctrl.update(racers, plan._phases.transEnd + plan._bereichsBonusFadeDuration + 100);
+    for (const r of racers) {
+      expect(r.bereichsBonusMult).toBeCloseTo(1.0, 5);
+    }
   });
 });
 

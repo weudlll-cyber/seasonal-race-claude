@@ -11,6 +11,10 @@
 //   createTrajectoryController(racePlan) → TrajectoryController
 // ============================================================
 
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 function mulberry32(seed) {
   let s = seed >>> 0;
@@ -61,6 +65,25 @@ const DEFAULT_CONTROLLER_PARAMS = {
 const DEFAULT_PULK_TARGET_SPREAD = 0.005;
 const DEFAULT_STOCHASTIC_NOISE = 0.0008;
 const DEFAULT_PULK_BIAS_GAIN = 2.0;
+
+// Bereichs-Bonus: constant speed multiplier per soll-Bereich, active from race start until OUTCOME.
+// Fades to 1.0 over _bereichsBonusFadeDuration ms at OUTCOME entry so the P-controller takes over cleanly.
+const DEFAULT_BEREICHS_BONUS = {
+  B1: 1.03,
+  B2: 1.02,
+  B3: 1.01,
+  B4: 1.0,
+  B5: 0.99,
+};
+const DEFAULT_BEREICHS_BONUS_FADE_MS = 1500;
+
+function getBereichsBonus(sollRank, bonusMap) {
+  if (sollRank <= 5) return bonusMap.B1;
+  if (sollRank <= 15) return bonusMap.B2;
+  if (sollRank <= 25) return bonusMap.B3;
+  if (sollRank <= 40) return bonusMap.B4;
+  return bonusMap.B5;
+}
 
 // ── createRacePlan ────────────────────────────────────────────────────────────
 
@@ -133,6 +156,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     midSwitch: phaseFractions.midToLateSwitchFraction * targetDurationMs,
   };
 
+  // Bereichs-Bonus: one constant multiplier per racer based on their soll-Bereich
+  const bereichsBonusMap = config.bereichsBonusByBereich ?? DEFAULT_BEREICHS_BONUS;
+  const racerBereichsBonus = new Map();
+  for (const [racerIdx, sollRank] of racerSollRank) {
+    racerBereichsBonus.set(racerIdx, getBereichsBonus(sollRank, bereichsBonusMap));
+  }
+
   return {
     seed,
     winnerRacerId,
@@ -147,6 +177,8 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
     _racerSollRank: racerSollRank,
+    _racerBereichsBonus: racerBereichsBonus,
+    _bereichsBonusFadeDuration: config.bereichsBonusFadeDuration ?? DEFAULT_BEREICHS_BONUS_FADE_MS,
   };
 }
 
@@ -163,7 +195,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  *   // Each physics step:
  *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
  *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * dt
+ *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult * dt
  *
  * @param {object} racePlan  output of createRacePlan
  * @returns {object} TrajectoryController
@@ -203,19 +235,51 @@ export function createTrajectoryController(racePlan) {
    * @param {Array}  racers    live racer objects (must have .index, .t, .finished, .avoidanceActive)
    * @param {number} elapsedMs physicsTs in ms from race start
    */
+  function _setTarget(r, newTarget, elapsedMs) {
+    if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > 0.001) {
+      r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
+      r.trajectoryMultTarget = newTarget;
+      r.trajectoryMultTransStart = elapsedMs;
+    }
+  }
+
   function update(racers, elapsedMs) {
-    for (const r of racers) r.trajectoryMult = 1.0;
-    if (getPhase(elapsedMs) !== 'OUTCOME') return;
+    // ── bereichsBonusMult: full pre-OUTCOME, easeInOutCubic fade at OUTCOME entry ──
+    if (elapsedMs < transEnd) {
+      for (const r of racers) {
+        r.bereichsBonusMult = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+      }
+    } else {
+      const elapsedFade = elapsedMs - transEnd;
+      const easedProgress = easeInOutCubic(
+        Math.min(1.0, elapsedFade / plan._bereichsBonusFadeDuration)
+      );
+      for (const r of racers) {
+        const origBonus = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+        r.bereichsBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
+      }
+    }
+
+    // ── trajectoryMult P-controller ───────────────────────────────────────────
+    if (getPhase(elapsedMs) !== 'OUTCOME') {
+      for (const r of racers) _setTarget(r, 1.0, elapsedMs);
+      return;
+    }
 
     // Sort non-finished racers by t descending; stable tiebreak: lower index = higher rank
     const active = racers
       .filter((r) => !r.finished)
       .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
 
+    for (const r of racers) {
+      if (r.finished) _setTarget(r, 1.0, elapsedMs);
+    }
+
     const nActive = active.length;
     if (nActive === 0) return;
 
     const NOISE_THRESH = plan._stochasticNoise;
+    const tm = (r) => r.trajectoryMult ?? 1.0;
 
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
@@ -225,9 +289,10 @@ export function createTrajectoryController(racePlan) {
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - sollRank;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      r.trajectoryMult = clamp(1.0 + gain * (rankError / nActive) + noise, minMult, maxMult);
+      const rawTarget = clamp(1.0 + gain * (rankError / nActive) + noise, minMult, maxMult);
+      _setTarget(r, rawTarget, elapsedMs);
 
-      // Telemetry
+      // Telemetry uses r.trajectoryMult — the smoothed value from the previous physics step
       _racerStepCount++;
       _corridorViolationSum += Math.abs(rankError);
       if (Math.abs(rankError) > _corridorViolationMax) _corridorViolationMax = Math.abs(rankError);
@@ -235,8 +300,8 @@ export function createTrajectoryController(racePlan) {
       const [bereichLo, bereichHi] = getBereichBounds(sollRank);
       if (currentRank >= bereichLo && currentRank <= bereichHi) _racersInCorridorCount++;
 
-      if (r.trajectoryMult > 1.0 + NOISE_THRESH) _bidirectionalBoostCount++;
-      else if (r.trajectoryMult < 1.0 - NOISE_THRESH) _bidirectionalBrakeCount++;
+      if (tm(r) > 1.0 + NOISE_THRESH) _bidirectionalBoostCount++;
+      else if (tm(r) < 1.0 - NOISE_THRESH) _bidirectionalBrakeCount++;
 
       if (r.avoidanceActive) _racersBlockedCount++;
 
