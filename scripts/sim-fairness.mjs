@@ -410,6 +410,22 @@ export function runSingleRace({
     const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
     let litePrevPhysY       = null;
 
+    // ── Phase-3A: Naturalness metrics state ──────────────────────────────────
+    const JERK_BASESPEED_EPSILON = 1e-5;
+    const JERK_HIGH_THRESHOLD    = 0.05; // calibrated post-baseline; ≈ 95th-pct jerk
+    const stablePhaseStartMs     = Math.max(0, 0.25 * targetSeconds * 1000);
+    const stablePhaseEndMs       = 0.95 * targetSeconds * 1000;
+    const PULK_T_THRESHOLD       = pathLengthPx > 0 ? 200 / pathLengthPx : 0.01;
+    const pulkWindowStartMs      = 0.25 * targetSeconds * 1000;
+    const pulkWindowEndMs        = 0.50 * targetSeconds * 1000;
+    const natPrevEffSpeed        = new Map(); // racerIndex → prev effective speed
+    const natPrevT               = new Map(); // racerIndex → t before Pass-2
+    let natJerkSum = 0, natJerkMax = 0, natJerkSteps = 0, natJerkHighCount = 0;
+    let natOvertakeCount = 0, natNaturalOvertakeCount = 0;
+    let natPulkFrames = 0, natStableFrames = 0;
+    let natPulkWasActive = false;
+    let natPulkTriggersInWindow = 0, natPulkTriggersOutOfWindow = 0;
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -465,6 +481,26 @@ export function runSingleRace({
         for (const r of racers) r.trajectoryMult = 1.0;
       }
 
+      // ── Jerk metric: computed in stable phase, after baseSpeed/trajectoryMult set ──
+      if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs) {
+        natStableFrames++;
+        for (const r of racers) {
+          if (r.finished) continue;
+          const effSpeed = r.baseSpeed * r.trajectoryMult;
+          const prev     = natPrevEffSpeed.get(r.index);
+          if (prev !== undefined) {
+            const jerkStep = Math.abs(effSpeed - prev) / DT / Math.max(r.baseSpeed, JERK_BASESPEED_EPSILON);
+            natJerkSum += jerkStep;
+            natJerkMax  = Math.max(natJerkMax, jerkStep);
+            natJerkSteps++;
+            if (jerkStep > JERK_HIGH_THRESHOLD) natJerkHighCount++;
+          }
+          natPrevEffSpeed.set(r.index, effSpeed);
+        }
+      }
+      // Save pre-Pass-2 t values for overtake detection
+      for (const r of racers) natPrevT.set(r.index, r.t);
+
       // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
@@ -490,6 +526,46 @@ export function runSingleRace({
           // trajectoryMult = 1.0 when Race Plan inactive; controlled by plan in OUTCOME phase
           r.t += r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * (DT / 16);
         }
+      }
+
+      // ── Post-Pass-2: overtake detection + pulk state ─────────────────────────
+      if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs) {
+        // Overtake detection (O(n²), stable phase only)
+        const refGap = finishT > 0 ? finishT / nRacers : 0.001;
+        for (let a = 0; a < racers.length - 1; a++) {
+          const ra = racers[a];
+          if (ra.finished) continue;
+          const raPrev = natPrevT.get(ra.index) ?? ra.t;
+          for (let b = a + 1; b < racers.length; b++) {
+            const rb = racers[b];
+            if (rb.finished) continue;
+            const rbPrev = natPrevT.get(rb.index) ?? rb.t;
+            // ra overtook rb
+            if (raPrev <= rbPrev && ra.t > rb.t) {
+              natOvertakeCount++;
+              if (rbPrev - raPrev <= refGap * 0.3) natNaturalOvertakeCount++;
+            }
+            // rb overtook ra
+            else if (rbPrev <= raPrev && rb.t > ra.t) {
+              natOvertakeCount++;
+              if (raPrev - rbPrev <= refGap * 0.3) natNaturalOvertakeCount++;
+            }
+          }
+        }
+      }
+      // Pulk state (any time — window check uses absolute ms)
+      {
+        const active = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+        let isPulk = false;
+        for (let i = 0; i + 2 < active.length; i++) {
+          if (active[i].t - active[i + 2].t <= PULK_T_THRESHOLD) { isPulk = true; break; }
+        }
+        if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs && isPulk) natPulkFrames++;
+        if (!natPulkWasActive && isPulk) {
+          if (raceTs >= pulkWindowStartMs && raceTs <= pulkWindowEndMs) natPulkTriggersInWindow++;
+          else natPulkTriggersOutOfWindow++;
+        }
+        natPulkWasActive = isPulk;
       }
 
       // Mixing-quota snapshot: taken at the first frame at or after avoidanceWarmupMs
@@ -662,6 +738,22 @@ export function runSingleRace({
       ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
       : null;
     results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    // Phase-3A: Naturalness metrics
+    results.naturalness = {
+      meanJerk:               natJerkSteps > 0 ? natJerkSum  / natJerkSteps : 0,
+      maxJerkSpike:           natJerkMax,
+      jerkFraction_high:      natJerkSteps > 0 ? natJerkHighCount / natJerkSteps : 0,
+      naturalOvertakeFraction: natOvertakeCount > 0 ? natNaturalOvertakeCount / natOvertakeCount : 1,
+      pulkTimeFraction:        natStableFrames > 0 ? natPulkFrames / natStableFrames : 0,
+      pulkTriggersInWindow:   natPulkTriggersInWindow,
+      pulkTriggersOutOfWindow: natPulkTriggersOutOfWindow,
+      // From controller telemetry (0 when Race Plan inactive)
+      ...(racePlanController ? racePlanController.collectTelemetry() : {
+        winnerBlockedFractionInOutcome: 0,
+        planBiasDeltaMean: 0,
+        pulkBiasEventCount: 0,
+      }),
+    };
     results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
     results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
     return results;
@@ -968,6 +1060,40 @@ function buildReport(allResults, runDate) {
   lines.push('*Hinweis: Dieser Abschnitt enthält ausschließlich statistische Beurteilungen, keine Code-Empfehlungen.*');
   lines.push('');
 
+  // ── Phase-3A: Naturalness section (Open Tracks only) ──
+  const openWithNat = allResults.filter((r) => r.isOpen && r.avgNaturalness);
+  if (openWithNat.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Phase-3A — Naturalness-Metriken (Open Tracks)');
+    lines.push('');
+    lines.push(
+      'Stabile Phase: 25%–95% der targetDuration. ' +
+      'Jerk: |Δ(effSpeed)/DT| / max(baseSpeed, ε). ' +
+      'naturalOvt: Anteil Überholungen mit tDiff ≤ 30% des Referenzabstands.'
+    );
+    lines.push('');
+    lines.push(
+      '| Track | Racer | Dist | meanJerk | maxJerk | jerkHigh% | natOvt% | pulkTime% | pulkTrigIn | pulkTrigOut |'
+    );
+    lines.push(
+      '|-------|-------|------|----------|---------|-----------|---------|-----------|-----------|-------------|'
+    );
+    for (const res of openWithNat) {
+      const n = res.avgNaturalness;
+      lines.push(
+        `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s` +
+        ` | ${n.meanJerk.toFixed(4)} | ${n.maxJerkSpike.toFixed(4)}` +
+        ` | ${(n.jerkFraction_high * 100).toFixed(1)}%` +
+        ` | ${(n.naturalOvertakeFraction * 100).toFixed(1)}%` +
+        ` | ${(n.pulkTimeFraction * 100).toFixed(1)}%` +
+        ` | ${n.pulkTriggersInWindow.toFixed(2)}` +
+        ` | ${n.pulkTriggersOutOfWindow.toFixed(2)} |`
+      );
+    }
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
@@ -1188,7 +1314,19 @@ if (isMain) {
         const avgMixingQuota = mixingQuotas.length > 0
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota });
+        // Aggregate naturalness metrics over all races in this combo
+        const avgNaturalness = raceResults.length > 0 ? {
+          meanJerk:               raceResults.reduce((s, r) => s + (r.naturalness?.meanJerk ?? 0), 0) / raceResults.length,
+          maxJerkSpike:           Math.max(...raceResults.map((r) => r.naturalness?.maxJerkSpike ?? 0)),
+          jerkFraction_high:      raceResults.reduce((s, r) => s + (r.naturalness?.jerkFraction_high ?? 0), 0) / raceResults.length,
+          naturalOvertakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.naturalOvertakeFraction ?? 0), 0) / raceResults.length,
+          pulkTimeFraction:       raceResults.reduce((s, r) => s + (r.naturalness?.pulkTimeFraction ?? 0), 0) / raceResults.length,
+          pulkTriggersInWindow:   raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersInWindow ?? 0), 0) / raceResults.length,
+          pulkTriggersOutOfWindow: raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersOutOfWindow ?? 0), 0) / raceResults.length,
+          winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
+          planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
+        } : null;
+        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);
@@ -1221,6 +1359,16 @@ if (isMain) {
             `     Re-Rolls: Ø ${avgRerolls.toFixed(1)} pro Racer  Physische Renndauer: Ø ${avgPhysDur.toFixed(1)}s` +
             `  (target=${durationSec}s)`
           );
+          // Phase-3A: Naturalness metrics summary
+          if (avgNaturalness) {
+            console.log(
+              `     Naturalness: jerk=${avgNaturalness.meanJerk.toFixed(4)}Ø  max=${avgNaturalness.maxJerkSpike.toFixed(4)}` +
+              `  highFrac=${(avgNaturalness.jerkFraction_high * 100).toFixed(1)}%` +
+              `  natOvt=${(avgNaturalness.naturalOvertakeFraction * 100).toFixed(1)}%` +
+              `  pulk=${(avgNaturalness.pulkTimeFraction * 100).toFixed(1)}%` +
+              `  pulkTrig=[${avgNaturalness.pulkTriggersInWindow.toFixed(1)}in/${avgNaturalness.pulkTriggersOutOfWindow.toFixed(1)}out]`
+            );
+          }
           // per_racer: per-row bonus distribution at race end (all rows > 0)
           if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {
             const allRowIndices = [...new Set(
