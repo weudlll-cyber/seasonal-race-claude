@@ -47,6 +47,13 @@ const TRACK_FILTER  = argVal('track', null);   // e.g. --track=river-run
 const RACER_FILTER  = argVal('racer', null);   // e.g. --racer=horse
 const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
 
+// ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
+// --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
+//             n=0 (default): non-deterministic (Math.random()), exploration only
+// --race-plan=true|false  (default false): activate Race Plan controller
+const GLOBAL_SEED      = Number(argVal('seed', '0'));
+const RACE_PLAN_ACTIVE = argVal('race-plan', 'false') === 'true';
+
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
 const TEF_ALPHA              = Number(argVal('tefAlpha', '0.03'));
@@ -192,9 +199,8 @@ export function runSingleRace({
   diagnosticMode = false,
   behaviorConfigOverrides = {},
 }) {
-  const rng = makePRNG(seed);
   const savedRandom = Math.random;
-  Math.random = rng;
+  if (seed > 0) Math.random = makePRNG(seed);
 
   try {
     const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
@@ -1038,6 +1044,8 @@ if (isMain) {
     `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
   );
   console.log(`Output                 : ${OUT_DIR}`);
+  console.log(`Seed                   : ${GLOBAL_SEED > 0 ? GLOBAL_SEED + ' (deterministisch)' : '0 (Math.random, Exploration)'}`);
+  console.log(`Race Plan              : ${RACE_PLAN_ACTIVE ? '✅ aktiv' : '❌ inaktiv (Baseline-Modus)'}`);
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
@@ -1120,7 +1128,8 @@ if (isMain) {
         const mixingQuotas  = [];
         const v4ThreshLogs  = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
-          const seed   = raceIdx + 1;
+          // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
+          const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
           const result = runSingleRace({
             shape,
             pathLengthPx,
