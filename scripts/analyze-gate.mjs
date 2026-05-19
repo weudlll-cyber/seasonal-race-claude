@@ -126,6 +126,7 @@ function evaluateRun(label, rawData, durationSec) {
 const datasets = [
   { label: 'S1', dir: 'diag-r70-s1' },
   { label: 'S2', dir: 'diag-r70-s2' },
+  { label: 'S3', dir: 'diag-r70-s3' },
 ];
 
 const summary = [];
@@ -159,5 +160,16 @@ for (const r of summary) {
   );
 }
 console.log('─'.repeat(54));
+
+// ── Aggregate: 120s runs across all seeds ─────────────────────────────────────
+const runs120 = summary.filter((r) => r.durationSec === 120);
+if (runs120.length >= 2) {
+  console.log(`\n── Aggregat: 120s (${runs120.length} Seeds) ──`);
+  const allPass120 = runs120.every((r) => r.pValue >= 0.05 && r.gatePass);
+  const passCount  = runs120.filter((r) => r.pValue >= 0.05 && r.gatePass).length;
+  console.log(`Bestanden: ${passCount}/${runs120.length}`);
+  console.log(`3A Sim-Erfolg: ${allPass120 ? '✅ JA — alle 120s Seeds bestehen χ²+Gate' : `❌ NEIN — ${runs120.length - passCount} Seed(s) nicht bestanden`}`);
+}
+
 const allPass = summary.every((r) => r.pValue >= 0.05 && r.gatePass);
-console.log(`\nGesamturteil: ${allPass ? '✅ Alle Läufe bestanden' : '⚠️ Mindestens ein Lauf nicht bestanden'}`);
+console.log(`\nGesamturteil (alle Läufe inkl. 30s): ${allPass ? '✅ Alle bestanden' : '⚠️ Mindestens ein Lauf nicht bestanden'}`);
