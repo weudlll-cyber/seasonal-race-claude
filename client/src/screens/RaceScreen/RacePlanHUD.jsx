@@ -49,7 +49,6 @@ export default function RacePlanHUD({ diagRef, showWinnerList, showSpeedMonitor 
   if (!snap.rpEnabled) return null;
 
   const panelBase = {
-    position: 'absolute',
     background: 'rgba(0,0,0,0.76)',
     color: '#b0e0ff',
     fontFamily: 'monospace',
@@ -58,18 +57,31 @@ export default function RacePlanHUD({ diagRef, showWinnerList, showSpeedMonitor 
     padding: '5px 8px',
     borderRadius: 4,
     pointerEvents: 'none',
-    zIndex: 31,
     minWidth: 200,
   };
 
+  const hasAnyPanel =
+    (showWinnerList && snap.rpB1Racers.length > 0) || (showSpeedMonitor && snap.rpTop10.length > 0);
+
+  if (!hasAnyPanel) return null;
+
   return (
-    <>
+    <div
+      style={{
+        position: 'absolute',
+        top: 40,
+        left: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        pointerEvents: 'none',
+        zIndex: 31,
+      }}
+    >
       {showWinnerList && snap.rpB1Racers.length > 0 && (
         <div
           style={{
             ...panelBase,
-            top: 40,
-            left: 8,
             border: '1px solid rgba(80,200,80,0.4)',
           }}
           data-testid="rp-winner-list-hud"
@@ -93,11 +105,6 @@ export default function RacePlanHUD({ diagRef, showWinnerList, showSpeedMonitor 
         <div
           style={{
             ...panelBase,
-            top:
-              showWinnerList && snap.rpB1Racers.length > 0
-                ? 40 + 22 + snap.rpB1Racers.length * 16 + 20
-                : 40,
-            left: 8,
             border: '1px solid rgba(255,180,50,0.4)',
           }}
           data-testid="rp-speed-monitor-hud"
@@ -123,6 +130,6 @@ export default function RacePlanHUD({ diagRef, showWinnerList, showSpeedMonitor 
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }
