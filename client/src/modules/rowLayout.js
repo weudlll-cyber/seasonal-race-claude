@@ -122,6 +122,94 @@ export function computeSpeedBonus(
 }
 
 /**
+ * Compute bottom-up racer layout: minimum rows at minScale sprite size, then distribute
+ * racers evenly, then back-compute the sprite size from the widest row.
+ *
+ * Returns the max racers-per-row (widest row), the resulting sprite size in world pixels,
+ * the row count, and the even per-row breakdown as an array.
+ *
+ * @param {number} effectiveWidth   Effective track width (geometricWidth × startSpreadRange)
+ * @param {number} nRacers          Number of racers
+ * @param {number} displaySize      Base sprite size in world pixels (before scaling)
+ * @param {{minScale:number, maxScale:number}} config  Auto-scale config bounds
+ * @returns {{ rowCount:number, racersPerRow:number, spriteSize:number, layout:number[] }}
+ */
+export function computeRacerLayout(effectiveWidth, nRacers, displaySize, config) {
+  const { minScale, maxScale } = config;
+  if (!nRacers || !effectiveWidth || !displaySize) {
+    return {
+      rowCount: 1,
+      racersPerRow: Math.max(1, nRacers),
+      spriteSize: displaySize * (minScale || 0.65),
+      layout: [nRacers],
+    };
+  }
+
+  const minSpriteSize = displaySize * minScale;
+  const maxSpriteSize = displaySize * maxScale;
+
+  // Step 1: minimum rows needed when sprites are at minimum size
+  const maxRPRatMin = Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, minSpriteSize)));
+  const rowCount = Math.max(1, Math.ceil(nRacers / maxRPRatMin));
+
+  // Step 2: widest row in even distribution determines sprite size
+  const racersPerRow = Math.ceil(nRacers / rowCount);
+
+  // Step 3: back-compute sprite size from racersPerRow, cap at maxScale
+  const targetSpriteSize = (2 * effectiveWidth) / racersPerRow;
+  const spriteSize = Math.min(targetSpriteSize, maxSpriteSize);
+
+  // Step 4: build even layout array — first bigCount rows have racersPerRow, rest have one fewer
+  const smallRPR = Math.floor(nRacers / rowCount);
+  const bigCount = nRacers - smallRPR * rowCount;
+  const layout = Array.from({ length: rowCount }, (_, i) =>
+    i < bigCount ? racersPerRow : smallRPR
+  );
+
+  return { rowCount, racersPerRow, spriteSize, layout };
+}
+
+/**
+ * Compute multi-row layout with even distribution across rows.
+ * Racer indices are shuffled so grid position is random (not rank-ordered).
+ * The first ceil(nRacers/rowCount) racers per row go to the "big" rows; the rest
+ * to "small" rows — producing at most 1-racer difference between any two rows.
+ *
+ * @param {number} racerCount
+ * @param {number} rowCount  Pre-computed via computeRacerLayout()
+ * @returns {{
+ *   racersPerRow: number,
+ *   totalRows: number,
+ *   assignments: Array<{ racerIndex: number, rowIndex: number, indexInRow: number }>
+ * }}
+ */
+export function computeEvenRowLayout(racerCount, rowCount) {
+  const rows = Math.max(1, rowCount);
+  const bigRPR = Math.ceil(racerCount / rows);
+  const smallRPR = Math.floor(racerCount / rows);
+  const bigCount = racerCount - smallRPR * rows; // rows with bigRPR
+
+  const indices = Array.from({ length: racerCount }, (_, i) => i);
+  shuffle(indices);
+
+  const bigSection = bigCount * bigRPR;
+  const assignments = indices.map((racerIndex, position) => {
+    let rowIndex, indexInRow;
+    if (position < bigSection) {
+      rowIndex = Math.floor(position / bigRPR);
+      indexInRow = position % bigRPR;
+    } else {
+      const p = position - bigSection;
+      rowIndex = bigCount + (smallRPR > 0 ? Math.floor(p / smallRPR) : 0);
+      indexInRow = smallRPR > 0 ? p % smallRPR : 0;
+    }
+    return { racerIndex, rowIndex, indexInRow };
+  });
+
+  return { racersPerRow: bigRPR, totalRows: rows, assignments };
+}
+
+/**
  * Compute the auto-default maxRacers for a track.
  * Caps the rearmost row at maxCapacityFactor × pathLengthPx behind the start.
  *

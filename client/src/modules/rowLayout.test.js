@@ -13,6 +13,8 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
   computeMaxRacersDefault,
+  computeEvenRowLayout,
+  computeRacerLayout,
 } from './rowLayout.js';
 
 // ── computeRacersPerRow ────────────────────────────────────────────────────
@@ -391,6 +393,150 @@ describe('open-track assembly area: tStart formula', () => {
     expect(finishT).toBeCloseTo(0.95, 5);
     expect(finishT).toBeGreaterThan(0);
     expect(finishT).toBeLessThan(1);
+  });
+});
+
+// ── computeEvenRowLayout ───────────────────────────────────────────────────
+
+describe('computeEvenRowLayout', () => {
+  it('70 racers, 3 rows → 24+23+23 distribution', () => {
+    const { racersPerRow, totalRows, assignments } = computeEvenRowLayout(70, 3);
+    expect(totalRows).toBe(3);
+    expect(racersPerRow).toBe(24); // ceil(70/3)
+    const sizes = [0, 1, 2].map((r) => assignments.filter((a) => a.rowIndex === r).length);
+    expect(sizes[0]).toBe(24);
+    expect(sizes[1]).toBe(23);
+    expect(sizes[2]).toBe(23);
+    expect(assignments).toHaveLength(70);
+  });
+
+  it('40 racers, 2 rows → 20+20', () => {
+    const { racersPerRow, totalRows, assignments } = computeEvenRowLayout(40, 2);
+    expect(totalRows).toBe(2);
+    expect(racersPerRow).toBe(20);
+    const sizes = [0, 1].map((r) => assignments.filter((a) => a.rowIndex === r).length);
+    expect(sizes[0]).toBe(20);
+    expect(sizes[1]).toBe(20);
+  });
+
+  it('100 racers, 4 rows → 25+25+25+25', () => {
+    const { totalRows, assignments } = computeEvenRowLayout(100, 4);
+    expect(totalRows).toBe(4);
+    const sizes = [0, 1, 2, 3].map((r) => assignments.filter((a) => a.rowIndex === r).length);
+    expect(sizes).toEqual([25, 25, 25, 25]);
+  });
+
+  it('each racerIndex appears exactly once', () => {
+    const { assignments } = computeEvenRowLayout(70, 3);
+    const seen = new Set(assignments.map((a) => a.racerIndex));
+    expect(seen.size).toBe(70);
+    for (let i = 0; i < 70; i++) expect(seen.has(i)).toBe(true);
+  });
+
+  it('indexInRow values within each row form consecutive 0..n-1 range', () => {
+    const { assignments } = computeEvenRowLayout(70, 3);
+    const rowMap = new Map();
+    for (const a of assignments) {
+      if (!rowMap.has(a.rowIndex)) rowMap.set(a.rowIndex, []);
+      rowMap.get(a.rowIndex).push(a.indexInRow);
+    }
+    for (const [, indices] of rowMap) {
+      indices.sort((a, b) => a - b);
+      for (let i = 0; i < indices.length; i++) expect(indices[i]).toBe(i);
+    }
+  });
+
+  it('1 row → all racers in row 0', () => {
+    const { totalRows, assignments } = computeEvenRowLayout(10, 1);
+    expect(totalRows).toBe(1);
+    expect(assignments.every((a) => a.rowIndex === 0)).toBe(true);
+  });
+
+  it('rowCount = 0 is clamped to 1', () => {
+    const { totalRows } = computeEvenRowLayout(5, 0);
+    expect(totalRows).toBe(1);
+  });
+
+  it('total racer count preserved', () => {
+    for (const [n, r] of [
+      [9, 1],
+      [21, 1],
+      [50, 2],
+      [70, 3],
+      [100, 4],
+    ]) {
+      const { assignments } = computeEvenRowLayout(n, r);
+      expect(assignments).toHaveLength(n);
+    }
+  });
+});
+
+// ── computeRacerLayout ─────────────────────────────────────────────────────
+
+describe('computeRacerLayout', () => {
+  const cfg = { minScale: 0.65, maxScale: 2.5 };
+
+  it('Space Sprint (effectiveWidth≈426.55, dragon displaySize=50): 70 racers → 3 rows, rpr=24', () => {
+    // minSprite=32.5, maxRPRatMin=floor(853.1/32.5)=26, minRows=ceil(70/26)=3
+    // rpr=ceil(70/3)=24, targetSprite=853.1/24≈35.5
+    const { rowCount, racersPerRow, spriteSize, layout } = computeRacerLayout(426.55, 70, 50, cfg);
+    expect(rowCount).toBe(3);
+    expect(racersPerRow).toBe(24);
+    expect(spriteSize).toBeCloseTo((2 * 426.55) / 24, 2);
+    expect(spriteSize).toBeLessThanOrEqual(50 * 2.5);
+    expect(layout).toEqual([24, 23, 23]);
+  });
+
+  it('40 racers → 2 rows, layout [20, 20]', () => {
+    // minRows=ceil(40/26)=2, rpr=ceil(40/2)=20, sprite=853.1/20≈42.66
+    const { rowCount, racersPerRow, layout } = computeRacerLayout(426.55, 40, 50, cfg);
+    expect(rowCount).toBe(2);
+    expect(racersPerRow).toBe(20);
+    expect(layout).toEqual([20, 20]);
+  });
+
+  it('100 racers → 4 rows, layout [25,25,25,25]', () => {
+    const { rowCount, layout } = computeRacerLayout(426.55, 100, 50, cfg);
+    expect(rowCount).toBe(4);
+    expect(layout).toEqual([25, 25, 25, 25]);
+  });
+
+  it('few racers (≤ maxRPRatMin) → 1 row, spriteSize capped at maxScale', () => {
+    // 9 racers, minRPRatMin=26 → 1 row; targetSprite=853.1/9≈94.8 < maxSprite=125
+    const { rowCount, spriteSize } = computeRacerLayout(426.55, 9, 50, cfg);
+    expect(rowCount).toBe(1);
+    expect(spriteSize).toBeCloseTo((2 * 426.55) / 9, 1);
+    expect(spriteSize).toBeLessThanOrEqual(50 * 2.5);
+  });
+
+  it('spriteSize never exceeds displaySize × maxScale', () => {
+    const { spriteSize } = computeRacerLayout(10000, 1, 50, cfg);
+    expect(spriteSize).toBeLessThanOrEqual(50 * 2.5 + 0.001);
+  });
+
+  it('spriteSize is always at least as large as displaySize × minScale', () => {
+    // The back-computed sprite from an even layout is always ≥ minSprite
+    // (we used minSprite to compute minRows → target sprite fills more space)
+    const { spriteSize } = computeRacerLayout(426.55, 70, 50, cfg);
+    expect(spriteSize).toBeGreaterThanOrEqual(50 * 0.65 - 0.001);
+  });
+
+  it('layout sums to nRacers', () => {
+    for (const n of [9, 21, 40, 50, 70, 100]) {
+      const { layout } = computeRacerLayout(426.55, n, 50, cfg);
+      expect(layout.reduce((s, v) => s + v, 0)).toBe(n);
+    }
+  });
+
+  it('nRacers=0 → returns rowCount=1 without throwing', () => {
+    const { rowCount } = computeRacerLayout(426.55, 0, 50, cfg);
+    expect(rowCount).toBe(1);
+  });
+
+  it('wider track → larger spriteSize (more room per row)', () => {
+    const narrow = computeRacerLayout(200, 40, 50, cfg);
+    const wide = computeRacerLayout(500, 40, 50, cfg);
+    expect(wide.spriteSize).toBeGreaterThan(narrow.spriteSize);
   });
 });
 

@@ -35,8 +35,8 @@ import {
 } from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
-  computeRacersPerRow,
-  computeRowLayout,
+  computeRacerLayout,
+  computeEvenRowLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../../modules/rowLayout.js';
@@ -50,7 +50,6 @@ import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import {
   loadAutoScaleConfig,
-  computeAutoScaleFactor,
   computeRenderDisplayScale,
   getEffectiveMinTargetScreenPx,
   getEffectiveMaxTargetScreenPx,
@@ -327,6 +326,7 @@ export default function RaceScreen() {
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
+    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -334,7 +334,14 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
+        // Bottom-up: min rows at minScale sprite, then even distribution, then back-compute size
+        const racerLayout = computeRacerLayout(
+          effectiveWidth,
+          nRacers,
+          displaySize,
+          autoScaleConfig
+        );
+        displaySizeScale = racerLayout.spriteSize / displaySize;
       }
     }
     const referenceSpriteSize = displaySize * displaySizeScale;
@@ -368,15 +375,18 @@ export default function RaceScreen() {
     );
     setFinishTState(finishT);
 
-    // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
+    // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     const spriteSize = displaySize * displaySizeScale;
     const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
-    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
-    const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
-    const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
+    // rowCount: min rows at current sprite size; racers distributed evenly across them
+    const rowCount = Math.max(
+      1,
+      Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, spriteSize))))
+    );
+    const rowLayout = computeEvenRowLayout(nRacers, rowCount);
 
     // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of targetDuration.
     const rollCount = Math.max(
@@ -512,7 +522,7 @@ export default function RaceScreen() {
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
     diagDataRef.current.rpRows = rowLayout.totalRows;
-    diagDataRef.current.rpRacersPerRow = racersPerRowValue;
+    diagDataRef.current.rpRacersPerRow = rowLayout.racersPerRow;
     diagDataRef.current.rpNRacers = nRacers;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
