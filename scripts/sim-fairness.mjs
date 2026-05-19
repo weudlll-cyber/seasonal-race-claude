@@ -851,6 +851,164 @@ function sigLabel(p) {
   if (p < 0.05)  return '* (p<0.05)';
   return 'n.s.';
 }
+// ── Diagnostic tables A-E (race-plan mode only) ───────────────────────────────
+/**
+ * Build Markdown tables A-E from rawData rows for one combo.
+ * Only called when sollBereich is present (RACE_PLAN_ACTIVE).
+ *
+ * @param {object[]} rawRows  rawData filtered for one trackId×racerType×durationSec
+ * @param {object[]} rowStats computeFairnessStats rowStats (for row count/expected)
+ * @returns {string[]} markdown lines
+ */
+function buildDiagnosticTables(rawRows, rowStats) {
+  if (!rawRows || rawRows.length === 0) return [];
+
+  const lines = [];
+  const nRacers = Math.max(...rawRows.map((r) => r.finalRank));
+  const nRaces = new Set(rawRows.map((r) => `${r.seed}-${r.raceIdx}`)).size;
+
+  // Row sizes: inferred from any single race's distribution
+  const firstKey = rawRows[0].seed + '-' + rawRows[0].raceIdx;
+  const firstRace = rawRows.filter((r) => r.seed + '-' + r.raceIdx === firstKey);
+  const rowSizeMap = new Map();
+  for (const r of firstRace) rowSizeMap.set(r.startRowIndex, (rowSizeMap.get(r.startRowIndex) ?? 0) + 1);
+  const totalRows = (Math.max(...rowSizeMap.keys()) + 1);
+  const rowSizes = Array.from({ length: totalRows }, (_, i) => rowSizeMap.get(i) ?? 0);
+
+  const bereichBounds = [[1, 5], [6, 15], [16, 25], [26, 40], [41, nRacers]];
+  const rankGroups = [
+    { label: '1', lo: 1, hi: 1 }, { label: '2', lo: 2, hi: 2 },
+    { label: '3', lo: 3, hi: 3 }, { label: '4', lo: 4, hi: 4 },
+    { label: '5', lo: 5, hi: 5 }, { label: '6–10', lo: 6, hi: 10 },
+    { label: '11–15', lo: 11, hi: 15 }, { label: '16–25', lo: 16, hi: 25 },
+    { label: '26–40', lo: 26, hi: 40 }, { label: `41–${nRacers}`, lo: 41, hi: nRacers },
+  ];
+
+  const p2 = (n, d) => (d > 0 ? (n / d * 100).toFixed(1) + '%' : '—');
+  const cnt = (rows, lo, hi, key, val) =>
+    rows.filter((r) => r.finalRank >= lo && r.finalRank <= hi && r[key] === val).length;
+
+  // ── Table A ─────────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('#### A — Bereichstreue');
+  lines.push('');
+  lines.push('| Soll-Bereich | Zugewiesen | Treffer | Quote |');
+  lines.push('|---|---|---|---|');
+  for (let b = 1; b <= 5; b++) {
+    const [lo, hi] = bereichBounds[b - 1];
+    const grp = rawRows.filter((r) => r.sollBereich === b);
+    const hits = grp.filter((r) => r.finalRank >= lo && r.finalRank <= hi).length;
+    lines.push(`| B${b} (Pl. ${lo}–${hi}) | ${grp.length} | ${hits} | ${p2(hits, grp.length)} |`);
+  }
+
+  // ── Table B.1 ───────────────────────────────────────────────────────────────
+  const rowHdrs = rowStats.map((rs) => `Row ${rs.rowIndex} (${rowSizes[rs.rowIndex] ?? '?'}R)`);
+  lines.push('');
+  lines.push('#### B.1 — End-Platz-Gruppen × Start-Reihe');
+  lines.push('');
+  lines.push(`| End-Platz | ${rowHdrs.join(' | ')} | Gesamt |`);
+  lines.push(`|---|${rowHdrs.map(() => '---|').join('')}---|`);
+  for (const g of rankGroups) {
+    const total = rawRows.filter((r) => r.finalRank >= g.lo && r.finalRank <= g.hi).length;
+    const cols = rowStats.map((rs) => {
+      const n = cnt(rawRows, g.lo, g.hi, 'startRowIndex', rs.rowIndex);
+      return `${n} (${p2(n, total)})`;
+    });
+    lines.push(`| ${g.label} | ${cols.join(' | ')} | ${total} |`);
+  }
+  const expRowHdr = rowStats.map((rs) => `${p2(rs.expectedWinRate * nRaces, nRaces)}`).join(' | ');
+  lines.push(`| *(erw. je Pl.1)* | ${expRowHdr} | — |`);
+
+  // ── Table B.2 ───────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('#### B.2 — End-Platz-Gruppen × Soll-Bereich');
+  lines.push('');
+  lines.push('| End-Platz | Soll B1 | Soll B2 | Soll B3 | Soll B4 | Soll B5 | Gesamt |');
+  lines.push('|---|---|---|---|---|---|---|');
+  for (const g of rankGroups) {
+    const total = rawRows.filter((r) => r.finalRank >= g.lo && r.finalRank <= g.hi).length;
+    const cols = [1, 2, 3, 4, 5].map((b) => {
+      const n = cnt(rawRows, g.lo, g.hi, 'sollBereich', b);
+      return `${n} (${p2(n, total)})`;
+    });
+    lines.push(`| ${g.label} | ${cols.join(' | ')} | ${total} |`);
+  }
+
+  // ── Table C — B1 mismatch ───────────────────────────────────────────────────
+  const b1Rows = rawRows.filter((r) => r.sollBereich === 1);
+  const b1Total = b1Rows.length;
+  lines.push('');
+  lines.push('#### C — Mismatch Soll-Bereich 1 (Wo landen B1-Racer die ihr Soll verfehlen?)');
+  lines.push('');
+  lines.push('| Tatsächlich gelandet | Anzahl | Anteil |');
+  lines.push('|---|---|---|');
+  const cBuckets = [
+    { label: 'Pl. 1–5 ✅ Soll erreicht', lo: 1, hi: 5 },
+    { label: 'Pl. 6–10', lo: 6, hi: 10 },
+    { label: 'Pl. 11–15', lo: 11, hi: 15 },
+    { label: 'Pl. 16–25', lo: 16, hi: 25 },
+    { label: 'Pl. 26–40', lo: 26, hi: 40 },
+    { label: `Pl. 41–${nRacers} ❌ schwerer Miss`, lo: 41, hi: nRacers },
+  ];
+  for (const b of cBuckets) {
+    const n = b1Rows.filter((r) => r.finalRank >= b.lo && r.finalRank <= b.hi).length;
+    lines.push(`| ${b.label} | ${n} | ${p2(n, b1Total)} |`);
+  }
+  // Per-row hit rates for B1
+  lines.push('');
+  lines.push('Trefferquote B1 nach Start-Reihe:');
+  lines.push('');
+  const b1RowCols = rowStats.map((rs) => `Row ${rs.rowIndex}`).join(' | ');
+  lines.push(`| Metrik | ${b1RowCols} |`);
+  lines.push(`|---|${rowStats.map(() => '---|').join('')}`);
+  const b1HitRow = rowStats.map((rs) => {
+    const grp = b1Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const hits = grp.filter((r) => r.finalRank >= 1 && r.finalRank <= 5).length;
+    return `${hits}/${grp.length} (${p2(hits, grp.length)})`;
+  }).join(' | ');
+  const b1MissHeavyRow = rowStats.map((rs) => {
+    const grp = b1Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const heavy = grp.filter((r) => r.finalRank >= 41).length;
+    return `${heavy} (${p2(heavy, grp.length)})`;
+  }).join(' | ');
+  lines.push(`| Treffer (Pl. 1–5) | ${b1HitRow} |`);
+  lines.push(`| Schwerer Miss (Pl. 41+) | ${b1MissHeavyRow} |`);
+
+  // ── Table D — B5 brake leak ──────────────────────────────────────────────────
+  const b5Rows = rawRows.filter((r) => r.sollBereich === 5);
+  const b5Total = b5Rows.length;
+  lines.push('');
+  lines.push('#### D — Brems-Leck Soll-Bereich 5 (Row-0-Diagnose: entkommen trotz Bremsen?)');
+  lines.push('');
+  lines.push('| Tatsächlich gelandet | Anzahl | Anteil |');
+  lines.push('|---|---|---|');
+  const dBuckets = [
+    { label: `Pl. 41–${nRacers} ✅ Soll erreicht`, lo: 41, hi: nRacers },
+    { label: 'Pl. 26–40', lo: 26, hi: 40 },
+    { label: 'Pl. 16–25', lo: 16, hi: 25 },
+    { label: 'Pl. 6–15', lo: 6, hi: 15 },
+    { label: 'Pl. 1–5 ❌ Brems-Leck', lo: 1, hi: 5 },
+  ];
+  for (const b of dBuckets) {
+    const n = b5Rows.filter((r) => r.finalRank >= b.lo && r.finalRank <= b.hi).length;
+    lines.push(`| ${b.label} | ${n} | ${p2(n, b5Total)} |`);
+  }
+  // Per-row escape-to-top-5 rate (the critical Row0 leak metric)
+  lines.push('');
+  lines.push('Brems-Leck Top-5 nach Start-Reihe:');
+  lines.push('');
+  lines.push(`| Metrik | ${b1RowCols} |`);
+  lines.push(`|---|${rowStats.map(() => '---|').join('')}`);
+  const b5LeakRow = rowStats.map((rs) => {
+    const grp = b5Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const leaks = grp.filter((r) => r.finalRank <= 5).length;
+    return `${leaks}/${grp.length} (${p2(leaks, grp.length)})`;
+  }).join(' | ');
+  lines.push(`| Top-5 trotz B5-Ziel | ${b5LeakRow} |`);
+
+  return lines;
+}
+
 function fairLabel(p, rowStats) {
   if (p >= 0.05) return '✅ Fair';
   const row0Rate = rowStats[0]?.winRate ?? 0;
@@ -860,7 +1018,7 @@ function fairLabel(p, rowStats) {
   return '⚠️ Unequal';
 }
 
-function buildReport(allResults, runDate) {
+function buildReport(allResults, rawData, runDate) {
   const lines = [];
 
   lines.push('# RaceArena — Fairness Simulation Report');
@@ -950,6 +1108,30 @@ function buildReport(allResults, runDate) {
       );
     }
     lines.push('');
+
+    // Diagnostic tables A-E (only when race-plan sollBereich data is available)
+    const comboRaw = rawData
+      ? rawData.filter(
+          (r) =>
+            r.trackId === trackId &&
+            r.racerType === racerType &&
+            r.durationSec === durationSec &&
+            r.sollBereich != null
+        )
+      : [];
+    if (comboRaw.length > 0) {
+      lines.push('');
+      lines.push('#### E — 1.5×-Gate Aggregat (gewichtet)');
+      lines.push('');
+      const gateRows = rowStats.filter((rs) => rs.expectedWinRate * nRaces >= 3);
+      const gatePass = gateRows.every(
+        (rs) => rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5
+      );
+      lines.push(`Gate-Status: **${gatePass ? '✅ PASS' : '❌ FAIL'}** | χ²(${df}) = ${fmtN(chiSq, 2)} | ${sigLabel(pValue)}`);
+      lines.push('');
+      lines.push(...buildDiagnosticTables(comboRaw, rowStats));
+      lines.push('');
+    }
   }
 
   // ── Mixing-Quote (nur Open Tracks) ──
@@ -1520,7 +1702,7 @@ if (isMain) {
 
   // Write Markdown report
   const runDate = new Date().toISOString().slice(0, 10);
-  const report  = buildReport(allResults, runDate);
+  const report  = buildReport(allResults, rawData, runDate);
   const mdPath  = join(OUT_DIR, 'fairness-report.md');
   writeFileSync(mdPath, report);
   console.log(`Bericht → ${mdPath}`);
