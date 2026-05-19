@@ -301,7 +301,11 @@ export function runSingleRace({
         v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
         v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
         rerollCount:              0, // total speed re-rolls fired for this racer
-        trajectoryMult:           1.0, // Phase-3A: set by controller pass; 1.0 when Race Plan inactive
+        trajectoryMult:           1.0, // Phase-3A: smoothed by easeInOutCubic transition; 1.0 when Race Plan inactive
+        trajectoryMultTarget:     1.0,
+        trajectoryMultPrev:       1.0,
+        trajectoryMultTransStart: 0,
+        bereichsBonusMult:        1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -481,9 +485,20 @@ export function runSingleRace({
         }
       }
 
-      // ── Controller-Pass: write r.trajectoryMult (Race Plan only) ─────────────
+      // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
       if (racePlanController) {
         racePlanController.update(racers, raceTs);
+        // easeInOutCubic transition — mirrors index.jsx pattern, same parameters
+        const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
+        for (const r of racers) {
+          const elapsed = raceTs - r.trajectoryMultTransStart;
+          r.trajectoryMult =
+            elapsed < TT_DUR_MS
+              ? r.trajectoryMultPrev +
+                (r.trajectoryMultTarget - r.trajectoryMultPrev) *
+                  easeInOutCubic(elapsed / TT_DUR_MS)
+              : r.trajectoryMultTarget;
+        }
       } else {
         for (const r of racers) r.trajectoryMult = 1.0;
       }
@@ -544,8 +559,9 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
-          // trajectoryMult = 1.0 when Race Plan inactive; controlled by plan in OUTCOME phase
-          r.t += r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * (DT / 16);
+          // trajectoryMult + bereichsBonusMult: both 1.0 when Race Plan inactive
+          r.t +=
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.bereichsBonusMult * (DT / 16);
         }
       }
 

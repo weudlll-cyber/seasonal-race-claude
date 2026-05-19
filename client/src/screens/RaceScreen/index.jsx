@@ -467,6 +467,10 @@ export default function RaceScreen() {
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
           surfaceParticles: [],
           trajectoryMult: 1.0,
+          trajectoryMultTarget: 1.0,
+          trajectoryMultPrev: 1.0,
+          trajectoryMultTransStart: 0,
+          bereichsBonusMult: 1.0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -1051,8 +1055,22 @@ export default function RaceScreen() {
             r._prevAngle = r.angle;
           }
 
-          // Controller-Pass: rank racers by current t, assign trajectoryMult to each.
+          // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
           if (racePlanController) racePlanController.update(st.racers, physicsTs);
+
+          // ── trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern) ──
+          if (racePlanController) {
+            const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
+            for (const r of st.racers) {
+              const elapsed = physicsTs - r.trajectoryMultTransStart;
+              r.trajectoryMult =
+                elapsed < TT_DUR_MS
+                  ? r.trajectoryMultPrev +
+                    (r.trajectoryMultTarget - r.trajectoryMultPrev) *
+                      easeInOutCubic(elapsed / TT_DUR_MS)
+                  : r.trajectoryMultTarget;
+            }
+          }
 
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
@@ -1100,7 +1118,7 @@ export default function RaceScreen() {
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
-                r.t + r.baseSpeed * boost * brake * r.trajectoryMult,
+                r.t + r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult,
                 st.finishT + 0.001
               );
             } else {
@@ -1113,7 +1131,8 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake * r.trajectoryMult) / race_baseSpeed
+                ? (r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult) /
+                  race_baseSpeed
                 : 0;
           }
           // D4: equalize all non-finished racers to the mean delta-t
@@ -1226,6 +1245,15 @@ export default function RaceScreen() {
               d.rpSfMean = sfSum / activeR.length;
               d.rpTmMin = tmMin;
               d.rpTmMax = tmMax;
+              let bbMin = Infinity,
+                bbMax = -Infinity;
+              for (const r of activeR) {
+                const bb = r.bereichsBonusMult ?? 1;
+                if (bb < bbMin) bbMin = bb;
+                if (bb > bbMax) bbMax = bb;
+              }
+              d.rpBbMin = bbMin;
+              d.rpBbMax = bbMax;
 
               // B1 winner list (sollRank 1–5)
               if (rpPlanInfo) {
