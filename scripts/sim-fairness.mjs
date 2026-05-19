@@ -93,10 +93,10 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
 import {
-  computeRowLayout,
+  computeEvenRowLayout,
+  computeRacerLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
-  computeRacersPerRow,
 } from '../client/src/modules/rowLayout.js';
 import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
 import {
@@ -107,7 +107,7 @@ import {
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController } from '../client/src/modules/racePlanner.js';
-import { computeAutoScaleFactor, DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
+import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -224,14 +224,12 @@ export function runSingleRace({
       ? finishT / (REFERENCE_FPS * targetSeconds * expectedMinSF * speedMultiplier)
       : BASE_SPEED_MEAN / expectedMinSF;
 
-    // Row layout — effectiveDisplaySize mirrors browser's computeAutoScaleFactor path
-    const autoScaleFactor     = computeAutoScaleFactor(geometricTrackWidth, nRacers, DEFAULT_AUTO_SCALE_CONFIG);
-    const effectiveDisplaySize = displaySize * autoScaleFactor;
+    // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
+    const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
+    const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
     const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-    const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
-    const racersPerRow        = computeRacersPerRow(effectiveWidth, effectiveDisplaySize);
-    const rowLayout           = computeRowLayout(nRacers, racersPerRow);
+    const rowLayout           = computeEvenRowLayout(nRacers, rowCount);
 
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -1504,17 +1502,15 @@ if (isMain) {
         const finishT = computeFinishT(race_baseSpeed, speedMultiplier, durationSec, isOpen);
 
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
-        // effectiveDisplaySize mirrors browser: displaySize × computeAutoScaleFactor(trackWidth, nRacers).
-        const comboAutoScale       = computeAutoScaleFactor(geometricTrackWidth, N_RACERS, DEFAULT_AUTO_SCALE_CONFIG);
-        const comboEffDisplaySize  = displaySize * comboAutoScale;
-        const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
+        // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
         const effectiveWidth       = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
-        const racersPerRow         = computeRacersPerRow(effectiveWidth, comboEffDisplaySize);
-        const totalRows            = Math.ceil(N_RACERS / Math.max(1, racersPerRow));
-        const comboRowLayout       = computeRowLayout(N_RACERS, racersPerRow);
-        const rowSizes             = Array.from({ length: totalRows }, (_, i) =>
-          comboRowLayout.assignments.filter((a) => a.rowIndex === i).length
-        );
+        const comboLayout          = computeRacerLayout(effectiveWidth, N_RACERS, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+        const comboEffDisplaySize  = comboLayout.spriteSize;
+        const comboAutoScale       = comboEffDisplaySize / displaySize;
+        const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
+        const totalRows            = comboLayout.rowCount;
+        const rowSizes             = comboLayout.layout;
+        const comboRowLayout       = computeEvenRowLayout(N_RACERS, totalRows);
 
         process.stdout.write(
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
