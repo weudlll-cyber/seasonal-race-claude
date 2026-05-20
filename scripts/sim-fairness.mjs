@@ -40,20 +40,67 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const N_RACES = Number(argVal('races', '50'));
-const N_RACERS = Number(argVal('racers', '40'));
-const OUT_DIR = join(ROOT, argVal('out', 'client/tmp'));
+const N_RACES       = Number(argVal('races', '50'));
+const N_RACERS      = Number(argVal('racers', '40'));
+const OUT_DIR       = join(ROOT, argVal('out', 'client/tmp'));
+const TRACK_FILTER  = argVal('track', null);   // e.g. --track=river-run
+const RACER_FILTER  = argVal('racer', null);   // e.g. --racer=horse
+const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
+
+// ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
+// --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
+//             n=0 (default): non-deterministic (Math.random()), exploration only
+// --race-plan=true|false  (default false): activate Race Plan controller
+// --bonusMult=<x>  Bereichs-Bonus strength multiplier (default 1.0 = original values)
+const GLOBAL_SEED      = Number(argVal('seed', '0'));
+const RACE_PLAN_ACTIVE = argVal('race-plan', 'false') === 'true';
+const BONUS_MULT       = Number(argVal('bonusMult', '1.0'));
+
+// ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
+const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
+const TEF_ALPHA              = Number(argVal('tefAlpha', '0.03'));
+const TEF_MAX_GAP            = Number(argVal('tefMaxGap', '0.015'));
+const TEF_OPEN_ONLY          = argVal('tefIsOpenOnly', 'true') !== 'false';
+// v3: aggressive base bonus override for rear rows; TEF modulates it toward 1.0 as gap closes
+const TEF_BASE_BONUS_OVERRIDE = argVal('tefBaseBonusOverride', null);
+const TEF_BASE_BONUS          = TEF_BASE_BONUS_OVERRIDE !== null ? Number(TEF_BASE_BONUS_OVERRIDE) : null;
+
+// ── Phase-2K v4: threshold-based bonus with smooth re-roll-style transitions ──
+const V4_ACTIVE        = argVal('v4ThresholdActive', null) === 'true';
+const V4_INITIAL_BOOST = Number(argVal('v4InitialBoost', '1.20'));
+// Overtake-fraction thresholds (percent) at which bonus steps down
+const V4_THRESHOLDS    = argVal('v4Thresholds', '20,40,60,80').split(',').map(Number);
+// speedBonusMult value active in each band (length = V4_THRESHOLDS.length + 1)
+const V4_BOOST_SCHEDULE = argVal('v4BoostSchedule', '1.20,1.15,1.10,1.05,1.0').split(',').map(Number);
+// 'physical_overtake': require lateral proximity before t-crossing counts as overtake
+// 'legacy': original t_value_compare (lax — for reference only)
+const V4_METRIC_TYPE       = argVal('v4MetricType', 'physical_overtake');
+const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
+// Row-differentiated thresholds (per_racer mode); fall back to V4_THRESHOLDS if not specified
+// v4RowRestThresholds applies to Row 2 and all deeper rows; v4Row2Thresholds is a legacy alias.
+const V4_ROW1_THRESHOLDS_RAW    = argVal('v4Row1Thresholds', null);
+const V4_ROW_REST_THRESHOLDS_RAW = argVal('v4RowRestThresholds', null) ?? argVal('v4Row2Thresholds', null);
+const V4_ROW1_THRESHOLDS  = V4_ROW1_THRESHOLDS_RAW    ? V4_ROW1_THRESHOLDS_RAW.split(',').map(Number)    : V4_THRESHOLDS;
+const V4_ROW2_THRESHOLDS  = V4_ROW_REST_THRESHOLDS_RAW ? V4_ROW_REST_THRESHOLDS_RAW.split(',').map(Number) : V4_THRESHOLDS;
+
+// ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
+const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
+const WARMUP_MS_OVERRIDE = WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
+
+// ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
+const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
+const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
 import {
-  computeRowLayout,
+  computeEvenRowLayout,
+  computeRacerLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
-  computeRacersPerRow,
 } from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
+import { REFERENCE_FPS, computeSpeedScaleFactor } from '../client/src/modules/camera/lapUtils.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -61,6 +108,8 @@ import {
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
+import { createRacePlan, createTrajectoryController } from '../client/src/modules/racePlanner.js';
+import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -82,23 +131,25 @@ function easeInOutCubic(t) {
 // ── Racer type configs ────────────────────────────────────────────────────────
 // speedMultiplier and displaySize sourced from the respective *RacerType.js files.
 // displaySize affects racersPerRow (track capacity) and avoidance pixel distances.
+// surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
 export const RACER_CONFIGS = {
-  horse:     { speedMultiplier: 1.00, displaySize: 40 },
-  duck:      { speedMultiplier: 0.85, displaySize: 36 },
-  snail:     { speedMultiplier: 0.30, displaySize: 35 },
-  elephant:  { speedMultiplier: 0.60, displaySize: 44 },
-  giraffe:   { speedMultiplier: 0.90, displaySize: 48 },
-  snake:     { speedMultiplier: 0.75, displaySize: 36 },
-  dragon:    { speedMultiplier: 1.10, displaySize: 50 },
-  f1:        { speedMultiplier: 1.20, displaySize: 38 },
-  rocket:    { speedMultiplier: 1.25, displaySize: 40 },
-  buggy:     { speedMultiplier: 0.95, displaySize: 38 },
-  motorbike: { speedMultiplier: 1.05, displaySize: 36 },
-  plane:     { speedMultiplier: 1.15, displaySize: 42 },
+  horse:     { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
+  duck:      { speedMultiplier: 0.85, displaySize: 36, surfaceClasses: ['water', 'grass'] },
+  snail:     { speedMultiplier: 0.30, displaySize: 35, surfaceClasses: ['grass'] },
+  elephant:  { speedMultiplier: 0.60, displaySize: 44, surfaceClasses: ['sand', 'earth', 'grass'] },
+  giraffe:   { speedMultiplier: 0.90, displaySize: 48, surfaceClasses: ['sand', 'earth', 'grass'] },
+  snake:     { speedMultiplier: 0.75, displaySize: 36, surfaceClasses: ['sand', 'earth', 'grass'] },
+  dragon:    { speedMultiplier: 1.10, displaySize: 50, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
+  f1:        { speedMultiplier: 1.20, displaySize: 38, surfaceClasses: ['asphalt'] },
+  rocket:    { speedMultiplier: 1.25, displaySize: 40, surfaceClasses: ['air', 'water'] },
+  buggy:     { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
+  motorbike: { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
+  plane:     { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
 };
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
-export const DURATION_VARIANTS = [30, 120];
+// --dur overrides to a single arbitrary duration (enables e.g. --dur=60 / --dur=90)
+export const DURATION_VARIANTS = DUR_FILTER ? [Number(DUR_FILTER)] : [30, 120];
 
 // ── Compute adjusted finishT ──────────────────────────────────────────────────
 /**
@@ -149,32 +200,38 @@ export function runSingleRace({
   targetSeconds,
   seed,
   nRacers,
+  diagnosticMode = false,
+  behaviorConfigOverrides = {},
+  racePlanController = null,   // Phase-3A: TrajectoryController instance or null
 }) {
-  const rng = makePRNG(seed);
   const savedRandom = Math.random;
-  Math.random = rng;
+  if (seed > 0) Math.random = makePRNG(seed);
 
   try {
     const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
     const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
-    const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+    const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
 
-    // N-calibrated natural base speed — independent of finishT.
-    // Mirrors the formula in sim-race-visual.mjs and index.jsx.
+    // N-calibrated base speed — mirrors index.jsx computeRaceBaseSpeed formula.
+    // Open tracks: speed derived from finishT/targetSeconds so physical race lasts exactly
+    // targetSeconds; re-roll schedule (keyed to targetSeconds) then fires the correct count.
+    // Closed tracks: natural formula kept unchanged (finishT already encodes targetSeconds).
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
     const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
     const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-    const race_baseSpeed  = BASE_SPEED_MEAN / expectedMinSF;
+    const race_baseSpeed  = isOpen
+      ? finishT / (REFERENCE_FPS * targetSeconds * expectedMinSF * speedMultiplier)
+      : BASE_SPEED_MEAN / expectedMinSF;
 
-    // Row layout
-    const rowGapPx       = displaySize * rowConfig.rowGapMultiplier;
-    const deltaT         = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-    const effectiveWidth = geometricTrackWidth * behaviorConfig.startSpreadRange;
-    const racersPerRow   = computeRacersPerRow(effectiveWidth, displaySize);
-    const rowLayout      = computeRowLayout(nRacers, racersPerRow);
+    // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
+    const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
+    const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+    const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
+    const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
+    const rowLayout           = computeEvenRowLayout(nRacers, rowCount);
 
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -201,13 +258,22 @@ export function runSingleRace({
         ? (rowLayout.totalRows - assignment.rowIndex) * deltaT
         : -(assignment.rowIndex * deltaT);
       const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
-      const speedBonusMult = 1 + speedBonus;
+      const isRearRowOpen = isOpen && assignment.rowIndex > 0;
+      const speedBonusMult =
+        (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && isRearRowOpen)
+          ? TEF_BASE_BONUS
+          : (V4_ACTIVE && isRearRowOpen)
+            ? V4_INITIAL_BOOST
+            : (1 + speedBonus);
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
-        index:               i,
-        name:                `R${i + 1}`,
-        t:                   tStart,
+        index:                 i,
+        name:                  `R${i + 1}`,
+        t:                     tStart,
+        tStart,
+        initialSpeedBonusMult: speedBonusMult,
+        initialGap:            0,
         spreadFactor,
         speedBonusMult,
         baseSpeed:           race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
@@ -223,9 +289,23 @@ export function runSingleRace({
         indexInRow:          assignment.indexInRow,
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
-        spriteWorldSizePx:      displaySize,
+        spriteWorldSizePx:      effectiveDisplaySize,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
+        // v4: per-racer bonus-level transition state (mirrors re-roll transition)
+        v4BonusMult:              1.0,
+        v4BonusMultPrev:          1.0,
+        v4BonusMultTarget:        1.0,
+        v4BonusTransitionStart:   -Infinity,
+        v4BonusTransitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
+        v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
+        v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
+        rerollCount:              0, // total speed re-rolls fired for this racer
+        trajectoryMult:           1.0, // Phase-3A: smoothed by easeInOutCubic transition; 1.0 when Race Plan inactive
+        trajectoryMultTarget:     1.0,
+        trajectoryMultPrev:       1.0,
+        trajectoryMultTransStart: 0,
+        bereichsBonusMult:        1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -254,29 +334,138 @@ export function runSingleRace({
     let mixingQuota    = null;
     let warmupMeasured = false;
 
+    // TEF: compute per-racer initialGap = how far behind Row-0's start each racer begins
+    if (TEF_ACTIVE && (!TEF_OPEN_ONLY || isOpen)) {
+      const tStartRow0 = Math.max(...racers.map((r) => r.tStart));
+      for (const r of racers) {
+        r.initialGap = Math.max(0, tStartRow0 - r.tStart);
+      }
+    }
+
+    // v4: per-race overtaking state
+    const v4Row1Total    = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1).length : 0;
+    const v4Row1Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1) : [];
+    const v4Row0Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 0) : [];
+    // per_racer: each row compares against ALL rows that started ahead of it (correct for Row 3+)
+    const v4FrontPoolByRow = (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') ? (() => {
+      const map = new Map();
+      const maxRow = Math.max(0, ...racers.map((r) => r.startRowIndex));
+      for (let ri = 1; ri <= maxRow; ri++) {
+        map.set(ri, racers.filter((r) => r.startRowIndex < ri));
+      }
+      return map;
+    })() : null;
+    // legacy alias kept for physical_overtake metric
+    const v4FrontRacers  = V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer'
+      ? racers.filter((r) => r.startRowIndex === 0 || r.startRowIndex === 1) : [];
+    const v4HasOvertaken = new Set(); // racerIndex of Row-1 racers that have completed ≥1 overtake
+    // physical_overtake metric: track pairs that were "near and behind" (prerequisite for an overtake)
+    const v4WasNearBehind = new Set(); // keys "r1idx:r0idx" — pair was once laterally close while r1 behind
+    const v4OvertakePairs = new Set(); // keys "r1idx:r0idx" — completed overtakes
+    let   v4NextThreshIdx = 0;
+    const v4ThreshLog     = []; // { threshold, timeS, fromBonus, toBonus }
+
     computePositions();
+
+    // ── Diagnostic snapshot state ─────────────────────────────────────────────
+    const diagSnapshots = [];
+    let diagSnapIdx = 0;
+    const DIAG_SNAP_MS   = diagnosticMode ? DIAG_SNAP_TIMES_S.map((s) => s * 1000) : [];
+    let diagIntLateralPushes = 0;
+    let diagIntBrakeActs     = 0;
+    let diagIntOvertakes     = 0;
+    let diagLastOvertakeCount = 0;
+
+    function diagTakeSnapshot(nominalTimeS, actualTimeMs) {
+      const snap = {
+        timeS: nominalTimeS, actualTimeMs,
+        interval: { lateralPushes: diagIntLateralPushes, brakeActivations: diagIntBrakeActs, newOvertakes: diagIntOvertakes },
+        racers: racers.map((r) => ({
+          idx: r.index, row: r.startRowIndex,
+          t: +r.t.toFixed(6), physY: +r.physicalY.toFixed(4),
+          speed: +r.baseSpeed.toFixed(6), avoidance: r.avoidanceActive,
+          v4Mult: +(r.v4BonusMult ?? 1).toFixed(4),
+        })),
+        brakeZonePairs: [],
+        closePairs: [],
+      };
+      for (let a = 0; a < racers.length; a++) {
+        for (let b = a + 1; b < racers.length; b++) {
+          const ra = racers[a], rb = racers[b];
+          const dT = rb.t - ra.t;
+          const dY = Math.abs(ra.physicalY - rb.physicalY);
+          if (dT > 0 && dT < 0.015 && dY < 0.2)  snap.brakeZonePairs.push({ follower: ra.index, followerRow: ra.startRowIndex, leader: rb.index, leaderRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
+          if (dT < 0 && -dT < 0.015 && dY < 0.2) snap.brakeZonePairs.push({ follower: rb.index, followerRow: rb.startRowIndex, leader: ra.index, leaderRow: ra.startRowIndex, dT: +(-dT).toFixed(5), dY: +dY.toFixed(4) });
+          if (Math.abs(dT) < 0.005 && dY < 0.3)  snap.closePairs.push({ a: ra.index, aRow: ra.startRowIndex, b: rb.index, bRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
+        }
+      }
+      diagSnapshots.push(snap);
+      diagIntLateralPushes = 0;
+      diagIntBrakeActs     = 0;
+      diagIntOvertakes     = 0;
+    }
+
+    if (diagnosticMode) {
+      diagTakeSnapshot(0.0, 0);
+      diagSnapIdx = 1; // t=0 already captured
+    }
+
+    // ── Lightweight per-race stats (always collected, low overhead) ───────────
+    let liteRow1BrakeFrames = 0;  // racer-frames where startRowIndex=1 AND avoidanceActive
+    let liteRow0BrakeFrames = 0;  // racer-frames where startRowIndex=0 AND avoidanceActive
+    let liteRow2BrakeFrames = 0;  // racer-frames where startRowIndex=2 AND avoidanceActive
+    let liteLateralMoves    = 0;  // racer-frames where |physicalY delta| > 1e-4
+    const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
+    let litePrevPhysY       = null;
+
+    // ── Phase-3A: Naturalness metrics state ──────────────────────────────────
+    const JERK_BASESPEED_EPSILON = 1e-5;
+    const JERK_HIGH_THRESHOLD    = 0.05; // calibrated post-baseline; ≈ 95th-pct jerk
+    const stablePhaseStartMs     = Math.max(0, 0.25 * targetSeconds * 1000);
+    const stablePhaseEndMs       = 0.95 * targetSeconds * 1000;
+    const PULK_T_THRESHOLD       = pathLengthPx > 0 ? 200 / pathLengthPx : 0.01;
+    const pulkWindowStartMs      = 0.25 * targetSeconds * 1000;
+    const pulkWindowEndMs        = 0.50 * targetSeconds * 1000;
+    const natPrevEffSpeed        = new Map(); // racerIndex → prev effective speed
+    const natPrevT               = new Map(); // racerIndex → t before Pass-2
+    let natJerkSum = 0, natJerkMax = 0, natJerkSteps = 0, natJerkHighCount = 0;
+    // Δ5s ring buffers: track trajectoryMult during OUTCOME; detect controller oscillation
+    const TM_RING_SIZE = 313; // ≈5s at 16ms/step
+    const tmRings = new Map(); // racerIndex → { buf: Float32Array, idx: number }
+    let natOvertakeCount = 0, natNaturalOvertakeCount = 0;
+    let natPulkFrames = 0, natStableFrames = 0;
+    let natPulkWasActive = false;
+    let natPulkTriggersInWindow = 0, natPulkTriggersOutOfWindow = 0;
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
-      // Speed re-rolls
+      // ── Pass 1: re-rolls + spreadFactor transitions + baseSpeed update ─────────
+      const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
+      const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
       for (const r of racers) {
         if (r.finished) continue;
         if (raceTs >= r.nextRollTime && raceTs < lastRollDeadline) {
-          const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
-          const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
+          const rawTarget   = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+          // Phase-3A: pulk-bias hook (active when Race Plan is running, wired in E-Step 5)
+          const biasedTarget = racePlanController
+            ? racePlanController.computePulkBiasedTarget(
+                r.index, rawTarget,
+                BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                racers, raceTs
+              )
+            : rawTarget;
           const newTarget   = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
-            Math.min(
-              BASE_SPEED_MAX / BASE_SPEED_MEAN,
-              r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
-            )
+            Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedTarget)
           );
           r.spreadFactorPrev    = r.spreadFactor;
           r.spreadFactorTarget  = newTarget;
           r.transitionStartTime = raceTs;
           const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
           r.nextRollTime = raceTs + rollInterval + jOff;
+          r.rerollCount++;
         }
         const elapsed = raceTs - r.transitionStartTime;
         if (elapsed < r.transitionDuration) {
@@ -284,16 +473,136 @@ export function runSingleRace({
           r.spreadFactor = r.spreadFactorPrev + (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(prog);
           r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
         }
+
+        // v4: smooth bonus-level transition triggered by threshold crossing
+        if (V4_ACTIVE && isOpen && r.startRowIndex > 0) {
+          const v4El = raceTs - r.v4BonusTransitionStart;
+          if (v4El >= 0 && v4El < r.v4BonusTransitionDuration) {
+            r.v4BonusMult = r.v4BonusMultPrev + (r.v4BonusMultTarget - r.v4BonusMultPrev) * easeInOutCubic(v4El / r.v4BonusTransitionDuration);
+          } else if (v4El >= r.v4BonusTransitionDuration) {
+            r.v4BonusMult = r.v4BonusMultTarget;
+          }
+        }
       }
 
-      // Advance t (mirrors index.jsx RACING loop — DT/16 calibration matches REFERENCE_FPS=62.5)
+      // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
+      if (racePlanController) {
+        racePlanController.update(racers, raceTs);
+        // easeInOutCubic transition — mirrors index.jsx pattern, same parameters
+        const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
+        for (const r of racers) {
+          const elapsed = raceTs - r.trajectoryMultTransStart;
+          r.trajectoryMult =
+            elapsed < TT_DUR_MS
+              ? r.trajectoryMultPrev +
+                (r.trajectoryMultTarget - r.trajectoryMultPrev) *
+                  easeInOutCubic(elapsed / TT_DUR_MS)
+              : r.trajectoryMultTarget;
+        }
+      } else {
+        for (const r of racers) r.trajectoryMult = 1.0;
+      }
+
+      // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
+      if (racePlanController && racePlanController.getPhase(raceTs) === 'OUTCOME') {
+        for (const r of racers) {
+          if (r.finished) continue;
+          let ring = tmRings.get(r.index);
+          if (!ring) {
+            ring = { buf: new Float32Array(TM_RING_SIZE).fill(1.0), idx: 0 };
+            tmRings.set(r.index, ring);
+          }
+          ring.buf[ring.idx % TM_RING_SIZE] = r.trajectoryMult;
+          ring.idx++;
+        }
+      }
+
+      // ── Jerk metric: computed in stable phase, after baseSpeed/trajectoryMult set ──
+      if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs) {
+        natStableFrames++;
+        for (const r of racers) {
+          if (r.finished) continue;
+          const effSpeed = r.baseSpeed * r.trajectoryMult;
+          const prev     = natPrevEffSpeed.get(r.index);
+          if (prev !== undefined) {
+            const jerkStep = Math.abs(effSpeed - prev) / DT / Math.max(r.baseSpeed, JERK_BASESPEED_EPSILON);
+            natJerkSum += jerkStep;
+            natJerkMax  = Math.max(natJerkMax, jerkStep);
+            natJerkSteps++;
+            if (jerkStep > JERK_HIGH_THRESHOLD) natJerkHighCount++;
+          }
+          natPrevEffSpeed.set(r.index, effSpeed);
+        }
+      }
+      // Save pre-Pass-2 t values for overtake detection
+      for (const r of racers) natPrevT.set(r.index, r.t);
+
+      // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
+      // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
+      let tefMeanT0 = 0;
+      if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen)) {
+        const row0Live = racers.filter((q) => q.startRowIndex === 0 && !q.finished);
+        tefMeanT0 = row0Live.length > 0
+          ? row0Live.reduce((s, q) => s + q.t, 0) / row0Live.length
+          : 0;
+      }
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
           const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
-          r.t += r.baseSpeed * boost * brake * (DT / 16);
+          // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
+          let tefMult = 1.0;
+          if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
+            const curGap   = tefMeanT0 - r.t;
+            const gapRatio = Math.max(0, Math.min(1, curGap / r.initialGap));
+            const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
+            tefMult = targetBonusMult / r.initialSpeedBonusMult;
+          }
+          // trajectoryMult + bereichsBonusMult: both 1.0 when Race Plan inactive
+          r.t +=
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.bereichsBonusMult * (DT / 16);
         }
+      }
+
+      // ── Post-Pass-2: overtake detection + pulk state ─────────────────────────
+      if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs) {
+        // Overtake detection (O(n²), stable phase only)
+        const refGap = finishT > 0 ? finishT / nRacers : 0.001;
+        for (let a = 0; a < racers.length - 1; a++) {
+          const ra = racers[a];
+          if (ra.finished) continue;
+          const raPrev = natPrevT.get(ra.index) ?? ra.t;
+          for (let b = a + 1; b < racers.length; b++) {
+            const rb = racers[b];
+            if (rb.finished) continue;
+            const rbPrev = natPrevT.get(rb.index) ?? rb.t;
+            // ra overtook rb
+            if (raPrev <= rbPrev && ra.t > rb.t) {
+              natOvertakeCount++;
+              if (rbPrev - raPrev <= refGap * 0.3) natNaturalOvertakeCount++;
+            }
+            // rb overtook ra
+            else if (rbPrev <= raPrev && rb.t > ra.t) {
+              natOvertakeCount++;
+              if (raPrev - rbPrev <= refGap * 0.3) natNaturalOvertakeCount++;
+            }
+          }
+        }
+      }
+      // Pulk state (any time — window check uses absolute ms)
+      {
+        const active = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+        let isPulk = false;
+        for (let i = 0; i + 2 < active.length; i++) {
+          if (active[i].t - active[i + 2].t <= PULK_T_THRESHOLD) { isPulk = true; break; }
+        }
+        if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs && isPulk) natPulkFrames++;
+        if (!natPulkWasActive && isPulk) {
+          if (raceTs >= pulkWindowStartMs && raceTs <= pulkWindowEndMs) natPulkTriggersInWindow++;
+          else natPulkTriggersOutOfWindow++;
+        }
+        natPulkWasActive = isPulk;
       }
 
       // Mixing-quota snapshot: taken at the first frame at or after avoidanceWarmupMs
@@ -306,8 +615,125 @@ export function runSingleRace({
         warmupMeasured = true;
       }
 
+      // v4: overtake detection + threshold check
+      if (V4_ACTIVE && isOpen && v4Row1Total > 0) {
+        if (V4_METRIC_TYPE === 'physical_overtake') {
+          // Physical overtake: r1 must have been laterally close and behind r0 before crossing ahead.
+          for (const r1 of v4Row1Racers) {
+            if (r1.finished) continue;
+            for (const r0 of v4Row0Racers) {
+              if (r0.finished) continue;
+              const key = `${r1.index}:${r0.index}`;
+              if (v4OvertakePairs.has(key)) continue; // already counted
+              const dY = Math.abs(r1.physicalY - r0.physicalY);
+              if (!v4WasNearBehind.has(key)) {
+                // Check whether this pair is now "near and behind" (prerequisite phase)
+                if (dY < V4_LATERAL_PROXIMITY && r1.t < r0.t) {
+                  v4WasNearBehind.add(key);
+                }
+              } else {
+                // Prerequisite met — did r1 now cross ahead in t?
+                if (r1.t > r0.t) {
+                  v4OvertakePairs.add(key);
+                  v4HasOvertaken.add(r1.index);
+                }
+              }
+            }
+          }
+        } else if (V4_METRIC_TYPE === 'per_racer') {
+          // Per-racer metric: each non-Row-0 racer independently tracks its own overtake fraction
+          // and triggers its own bonus reduction (ratchet — never reverts).
+          for (const r of racers) {
+            if (r.finished || r.startRowIndex === 0) continue;
+            const racerThresholds = r.startRowIndex === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+            if (r.v4RacerThreshIdx >= racerThresholds.length) continue;
+            const frontPool  = v4FrontPoolByRow?.get(r.startRowIndex) ?? v4Row0Racers;
+            const totalFront = frontPool.length;
+            if (totalFront === 0) continue;
+            const aheadCount = frontPool.reduce((n, f) => n + (f.t < r.t ? 1 : 0), 0);
+            const fraction   = aheadCount / totalFront;
+            while (r.v4RacerThreshIdx < racerThresholds.length && fraction >= racerThresholds[r.v4RacerThreshIdx] / 100) {
+              const toBonus = V4_BOOST_SCHEDULE[Math.min(r.v4RacerThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
+              r.v4BonusMultPrev        = r.v4BonusMult;
+              r.v4BonusMultTarget      = toBonus / V4_INITIAL_BOOST;
+              r.v4BonusTransitionStart = raceTs;
+              r.v4RacerThreshTimes.push(raceTs);
+              r.v4RacerThreshIdx++;
+            }
+          }
+        } else {
+          // Legacy metric: r1.t > min(Row-0 t) — lax, t-value only
+          const row0Live = v4Row0Racers.filter((r) => !r.finished);
+          if (row0Live.length > 0) {
+            const minRow0T = Math.min(...row0Live.map((r) => r.t));
+            for (const r1 of v4Row1Racers) {
+              if (!r1.finished && r1.t > minRow0T) v4HasOvertaken.add(r1.index);
+            }
+          }
+        }
+
+        // Trigger global threshold step-downs (skipped for per_racer which handles this per-racer)
+        if (V4_METRIC_TYPE !== 'per_racer' && v4NextThreshIdx < V4_THRESHOLDS.length) {
+          const fraction = v4Row1Total > 0 ? v4HasOvertaken.size / v4Row1Total : 0;
+          while (v4NextThreshIdx < V4_THRESHOLDS.length && fraction >= V4_THRESHOLDS[v4NextThreshIdx] / 100) {
+            const fromBonus = V4_BOOST_SCHEDULE[v4NextThreshIdx];
+            const toBonus   = V4_BOOST_SCHEDULE[Math.min(v4NextThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
+            v4ThreshLog.push({ threshold: V4_THRESHOLDS[v4NextThreshIdx], timeS: raceTs / 1000, fromBonus, toBonus });
+            const newTarget = toBonus / V4_INITIAL_BOOST;
+            for (const r of racers) {
+              if (r.startRowIndex > 0 && !r.finished) {
+                r.v4BonusMultPrev        = r.v4BonusMult;
+                r.v4BonusMultTarget      = newTarget;
+                r.v4BonusTransitionStart = raceTs;
+              }
+            }
+            v4NextThreshIdx++;
+          }
+        }
+      }
+
+      // Diagnostic: save pre-frame state for lateral-push and brake-activation counting
+      let diagPrevPhysY, diagPrevAvoidance;
+      if (diagnosticMode) {
+        diagPrevPhysY     = racers.map((r) => r.physicalY);
+        diagPrevAvoidance = racers.map((r) => r.avoidanceActive);
+      }
       computePositions();
       applyRacerBehavior(racers, behaviorConfig, undefined);
+      // Lite stats: always-on, low-overhead per-frame counters
+      {
+        for (let ri = 0; ri < racers.length; ri++) {
+          const r = racers[ri];
+          if (r.avoidanceActive && r.startRowIndex === 1) liteRow1BrakeFrames++;
+          if (r.avoidanceActive && r.startRowIndex === 0) liteRow0BrakeFrames++;
+          if (r.avoidanceActive && r.startRowIndex === 2) liteRow2BrakeFrames++;
+          if (litePrevPhysY && Math.abs(r.physicalY - litePrevPhysY[ri]) > 1e-4) liteLateralMoves++;
+        }
+        if (!litePrevPhysY) litePrevPhysY = new Array(racers.length);
+        for (let ri = 0; ri < racers.length; ri++) litePrevPhysY[ri] = racers[ri].physicalY;
+        if (isOpen) {
+          const row0Live = racers.filter((r) => r.startRowIndex === 0 && !r.finished);
+          if (row0Live.length > 0) {
+            const minRow0T = Math.min(...row0Live.map((r) => r.t));
+            for (const r of racers) {
+              if (r.startRowIndex === 1 && !r.finished && r.t > minRow0T) liteRow1EverAhead.add(r.index);
+            }
+          }
+        }
+      }
+      // Diagnostic: post-frame counting + snapshot check
+      if (diagnosticMode) {
+        for (let ri = 0; ri < racers.length; ri++) {
+          if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4) diagIntLateralPushes++;
+          if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)       diagIntBrakeActs++;
+        }
+        diagIntOvertakes     += v4OvertakePairs.size - diagLastOvertakeCount;
+        diagLastOvertakeCount = v4OvertakePairs.size;
+        while (diagSnapIdx < DIAG_SNAP_MS.length && raceTs >= DIAG_SNAP_MS[diagSnapIdx]) {
+          diagTakeSnapshot(DIAG_SNAP_TIMES_S[diagSnapIdx], raceTs);
+          diagSnapIdx++;
+        }
+      }
 
       // Finish check
       for (const r of racers) {
@@ -334,8 +760,60 @@ export function runSingleRace({
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
     }));
-    // Attach mixing-quota as a non-iterable property so for..of / .length are unaffected.
-    results.mixingQuota = mixingQuota;
+    // Attach mixing-quota and v4 diagnostics as non-iterable properties.
+    results.mixingQuota     = mixingQuota;
+    results.v4ThreshLog     = v4ThreshLog;
+    results.v4OvertakeCount = v4HasOvertaken.size;     // Row-1 racers with ≥1 physical overtake
+    results.v4NearBehindCount = v4WasNearBehind.size;  // pairs that entered near-behind state
+    results.v4PairOvertakes = v4OvertakePairs.size;    // total completed pair-overtakes
+    results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
+    results.liteRow1BrakeFrames = liteRow1BrakeFrames;
+    results.liteRow0BrakeFrames = liteRow0BrakeFrames;
+    results.liteRow2BrakeFrames = liteRow2BrakeFrames;
+    results.liteLateralMoves    = liteLateralMoves;
+    results.v4PerRacerEndStats  = (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer')
+      ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
+      : null;
+    results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    // Phase-3A: Δ5s per-racer oscillation metric
+    let tmDelta5sMax = 0;
+    let tmOscillatingCount = 0;
+    if (racePlanController && tmRings.size > 0) {
+      for (const [, ring] of tmRings) {
+        const filled = Math.min(ring.idx, TM_RING_SIZE);
+        if (filled < 2) continue;
+        let mn = Infinity, mx = -Infinity;
+        for (let j = 0; j < filled; j++) {
+          if (ring.buf[j] < mn) mn = ring.buf[j];
+          if (ring.buf[j] > mx) mx = ring.buf[j];
+        }
+        const delta = mx - mn;
+        if (delta > tmDelta5sMax) tmDelta5sMax = delta;
+        if (delta > 0.15) tmOscillatingCount++;
+      }
+    }
+
+    // Phase-3A: Naturalness metrics
+    results.naturalness = {
+      meanJerk:               natJerkSteps > 0 ? natJerkSum  / natJerkSteps : 0,
+      maxJerkSpike:           natJerkMax,
+      jerkFraction_high:      natJerkSteps > 0 ? natJerkHighCount / natJerkSteps : 0,
+      naturalOvertakeFraction: natOvertakeCount > 0 ? natNaturalOvertakeCount / natOvertakeCount : 1,
+      pulkTimeFraction:        natStableFrames > 0 ? natPulkFrames / natStableFrames : 0,
+      pulkTriggersInWindow:   natPulkTriggersInWindow,
+      pulkTriggersOutOfWindow: natPulkTriggersOutOfWindow,
+      // From controller telemetry (0 when Race Plan inactive)
+      ...(racePlanController ? racePlanController.collectTelemetry() : {
+        winnerBlockedFractionInOutcome: 0,
+        planBiasDeltaMean: 0,
+        pulkBiasEventCount: 0,
+      }),
+      // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
+      tmDelta5sMax,
+      tmOscillatingCount,
+    };
+    results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
+    results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
     return results;
   } finally {
     Math.random = savedRandom;
@@ -348,9 +826,10 @@ export function runSingleRace({
  *
  * @param {Array<Array<{startRowIndex,finalRank}>>} raceResults  one entry per race
  * @param {number} totalRows
+ * @param {number[]|null} rowSizes  racer count per row; if null, uniform distribution assumed
  * @returns {{ nRaces, totalRows, rowStats, chiSq, df, pValue }}
  */
-export function computeFairnessStats(raceResults, totalRows) {
+export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
   const nRaces     = raceResults.length;
   const winsByRow  = new Array(totalRows).fill(0);
   const ranksByRow = Array.from({ length: totalRows }, () => []);
@@ -363,6 +842,12 @@ export function computeFairnessStats(raceResults, totalRows) {
     }
   }
 
+  // Weighted expected wins: proportional to row size; fall back to uniform if no sizes given
+  const totalRacers = rowSizes ? rowSizes.reduce((s, v) => s + v, 0) : totalRows;
+  const expectedWinsByRow = Array.from({ length: totalRows }, (_, i) =>
+    rowSizes ? nRaces * rowSizes[i] / totalRacers : nRaces / totalRows
+  );
+
   const rowStats = Array.from({ length: totalRows }, (_, rowIdx) => {
     const ranks   = ranksByRow[rowIdx];
     const n       = ranks.length;
@@ -373,16 +858,19 @@ export function computeFairnessStats(raceResults, totalRows) {
     return {
       rowIndex: rowIdx,
       wins,
-      winRate:  wins / nRaces,
+      winRate:         wins / nRaces,
+      expectedWinRate: expectedWinsByRow[rowIdx] / nRaces,
       n,
       avgRank,
       stdRank:  Math.sqrt(variance),
     };
   });
 
-  // Chi-square goodness-of-fit: H0 = all rows equally likely to win
-  const expected = nRaces / totalRows;
-  const chiSq    = winsByRow.reduce((s, obs) => s + (obs - expected) ** 2 / expected, 0);
+  // Chi-square goodness-of-fit with weighted expectations
+  const chiSq = winsByRow.reduce((s, obs, i) => {
+    const exp = expectedWinsByRow[i];
+    return exp > 0 ? s + (obs - exp) ** 2 / exp : s;
+  }, 0);
   const df       = totalRows - 1;
   const pValue   = chiSqPValue(chiSq, df);
 
@@ -420,17 +908,174 @@ function sigLabel(p) {
   if (p < 0.05)  return '* (p<0.05)';
   return 'n.s.';
 }
+// ── Diagnostic tables A-E (race-plan mode only) ───────────────────────────────
+/**
+ * Build Markdown tables A-E from rawData rows for one combo.
+ * Only called when sollBereich is present (RACE_PLAN_ACTIVE).
+ *
+ * @param {object[]} rawRows  rawData filtered for one trackId×racerType×durationSec
+ * @param {object[]} rowStats computeFairnessStats rowStats (for row count/expected)
+ * @returns {string[]} markdown lines
+ */
+function buildDiagnosticTables(rawRows, rowStats) {
+  if (!rawRows || rawRows.length === 0) return [];
+
+  const lines = [];
+  const nRacers = Math.max(...rawRows.map((r) => r.finalRank));
+  const nRaces = new Set(rawRows.map((r) => `${r.seed}-${r.raceIdx}`)).size;
+
+  // Row sizes: inferred from any single race's distribution
+  const firstKey = rawRows[0].seed + '-' + rawRows[0].raceIdx;
+  const firstRace = rawRows.filter((r) => r.seed + '-' + r.raceIdx === firstKey);
+  const rowSizeMap = new Map();
+  for (const r of firstRace) rowSizeMap.set(r.startRowIndex, (rowSizeMap.get(r.startRowIndex) ?? 0) + 1);
+  const totalRows = (Math.max(...rowSizeMap.keys()) + 1);
+  const rowSizes = Array.from({ length: totalRows }, (_, i) => rowSizeMap.get(i) ?? 0);
+
+  const bereichBounds = [[1, 5], [6, 15], [16, 25], [26, 40], [41, nRacers]];
+  const rankGroups = [
+    { label: '1', lo: 1, hi: 1 }, { label: '2', lo: 2, hi: 2 },
+    { label: '3', lo: 3, hi: 3 }, { label: '4', lo: 4, hi: 4 },
+    { label: '5', lo: 5, hi: 5 }, { label: '6–10', lo: 6, hi: 10 },
+    { label: '11–15', lo: 11, hi: 15 }, { label: '16–25', lo: 16, hi: 25 },
+    { label: '26–40', lo: 26, hi: 40 }, { label: `41–${nRacers}`, lo: 41, hi: nRacers },
+  ];
+
+  const p2 = (n, d) => (d > 0 ? (n / d * 100).toFixed(1) + '%' : '—');
+  const cnt = (rows, lo, hi, key, val) =>
+    rows.filter((r) => r.finalRank >= lo && r.finalRank <= hi && r[key] === val).length;
+
+  // ── Table A ─────────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('#### A — Bereichstreue');
+  lines.push('');
+  lines.push('| Soll-Bereich | Zugewiesen | Treffer | Quote |');
+  lines.push('|---|---|---|---|');
+  for (let b = 1; b <= 5; b++) {
+    const [lo, hi] = bereichBounds[b - 1];
+    const grp = rawRows.filter((r) => r.sollBereich === b);
+    const hits = grp.filter((r) => r.finalRank >= lo && r.finalRank <= hi).length;
+    lines.push(`| B${b} (Pl. ${lo}–${hi}) | ${grp.length} | ${hits} | ${p2(hits, grp.length)} |`);
+  }
+
+  // ── Table B.1 ───────────────────────────────────────────────────────────────
+  const rowHdrs = rowStats.map((rs) => `Row ${rs.rowIndex} (${rowSizes[rs.rowIndex] ?? '?'}R)`);
+  lines.push('');
+  lines.push('#### B.1 — End-Platz-Gruppen × Start-Reihe');
+  lines.push('');
+  lines.push(`| End-Platz | ${rowHdrs.join(' | ')} | Gesamt |`);
+  lines.push(`|---|${rowHdrs.map(() => '---|').join('')}---|`);
+  for (const g of rankGroups) {
+    const total = rawRows.filter((r) => r.finalRank >= g.lo && r.finalRank <= g.hi).length;
+    const cols = rowStats.map((rs) => {
+      const n = cnt(rawRows, g.lo, g.hi, 'startRowIndex', rs.rowIndex);
+      return `${n} (${p2(n, total)})`;
+    });
+    lines.push(`| ${g.label} | ${cols.join(' | ')} | ${total} |`);
+  }
+  const expRowHdr = rowStats.map((rs) => `${p2(rs.expectedWinRate * nRaces, nRaces)}`).join(' | ');
+  lines.push(`| *(erw. je Pl.1)* | ${expRowHdr} | — |`);
+
+  // ── Table B.2 ───────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('#### B.2 — End-Platz-Gruppen × Soll-Bereich');
+  lines.push('');
+  lines.push('| End-Platz | Soll B1 | Soll B2 | Soll B3 | Soll B4 | Soll B5 | Gesamt |');
+  lines.push('|---|---|---|---|---|---|---|');
+  for (const g of rankGroups) {
+    const total = rawRows.filter((r) => r.finalRank >= g.lo && r.finalRank <= g.hi).length;
+    const cols = [1, 2, 3, 4, 5].map((b) => {
+      const n = cnt(rawRows, g.lo, g.hi, 'sollBereich', b);
+      return `${n} (${p2(n, total)})`;
+    });
+    lines.push(`| ${g.label} | ${cols.join(' | ')} | ${total} |`);
+  }
+
+  // ── Table C — B1 mismatch ───────────────────────────────────────────────────
+  const b1Rows = rawRows.filter((r) => r.sollBereich === 1);
+  const b1Total = b1Rows.length;
+  lines.push('');
+  lines.push('#### C — Mismatch Soll-Bereich 1 (Wo landen B1-Racer die ihr Soll verfehlen?)');
+  lines.push('');
+  lines.push('| Tatsächlich gelandet | Anzahl | Anteil |');
+  lines.push('|---|---|---|');
+  const cBuckets = [
+    { label: 'Pl. 1–5 ✅ Soll erreicht', lo: 1, hi: 5 },
+    { label: 'Pl. 6–10', lo: 6, hi: 10 },
+    { label: 'Pl. 11–15', lo: 11, hi: 15 },
+    { label: 'Pl. 16–25', lo: 16, hi: 25 },
+    { label: 'Pl. 26–40', lo: 26, hi: 40 },
+    { label: `Pl. 41–${nRacers} ❌ schwerer Miss`, lo: 41, hi: nRacers },
+  ];
+  for (const b of cBuckets) {
+    const n = b1Rows.filter((r) => r.finalRank >= b.lo && r.finalRank <= b.hi).length;
+    lines.push(`| ${b.label} | ${n} | ${p2(n, b1Total)} |`);
+  }
+  // Per-row hit rates for B1
+  lines.push('');
+  lines.push('Trefferquote B1 nach Start-Reihe:');
+  lines.push('');
+  const b1RowCols = rowStats.map((rs) => `Row ${rs.rowIndex}`).join(' | ');
+  lines.push(`| Metrik | ${b1RowCols} |`);
+  lines.push(`|---|${rowStats.map(() => '---|').join('')}`);
+  const b1HitRow = rowStats.map((rs) => {
+    const grp = b1Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const hits = grp.filter((r) => r.finalRank >= 1 && r.finalRank <= 5).length;
+    return `${hits}/${grp.length} (${p2(hits, grp.length)})`;
+  }).join(' | ');
+  const b1MissHeavyRow = rowStats.map((rs) => {
+    const grp = b1Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const heavy = grp.filter((r) => r.finalRank >= 41).length;
+    return `${heavy} (${p2(heavy, grp.length)})`;
+  }).join(' | ');
+  lines.push(`| Treffer (Pl. 1–5) | ${b1HitRow} |`);
+  lines.push(`| Schwerer Miss (Pl. 41+) | ${b1MissHeavyRow} |`);
+
+  // ── Table D — B5 brake leak ──────────────────────────────────────────────────
+  const b5Rows = rawRows.filter((r) => r.sollBereich === 5);
+  const b5Total = b5Rows.length;
+  lines.push('');
+  lines.push('#### D — Brems-Leck Soll-Bereich 5 (Row-0-Diagnose: entkommen trotz Bremsen?)');
+  lines.push('');
+  lines.push('| Tatsächlich gelandet | Anzahl | Anteil |');
+  lines.push('|---|---|---|');
+  const dBuckets = [
+    { label: `Pl. 41–${nRacers} ✅ Soll erreicht`, lo: 41, hi: nRacers },
+    { label: 'Pl. 26–40', lo: 26, hi: 40 },
+    { label: 'Pl. 16–25', lo: 16, hi: 25 },
+    { label: 'Pl. 6–15', lo: 6, hi: 15 },
+    { label: 'Pl. 1–5 ❌ Brems-Leck', lo: 1, hi: 5 },
+  ];
+  for (const b of dBuckets) {
+    const n = b5Rows.filter((r) => r.finalRank >= b.lo && r.finalRank <= b.hi).length;
+    lines.push(`| ${b.label} | ${n} | ${p2(n, b5Total)} |`);
+  }
+  // Per-row escape-to-top-5 rate (the critical Row0 leak metric)
+  lines.push('');
+  lines.push('Brems-Leck Top-5 nach Start-Reihe:');
+  lines.push('');
+  lines.push(`| Metrik | ${b1RowCols} |`);
+  lines.push(`|---|${rowStats.map(() => '---|').join('')}`);
+  const b5LeakRow = rowStats.map((rs) => {
+    const grp = b5Rows.filter((r) => r.startRowIndex === rs.rowIndex);
+    const leaks = grp.filter((r) => r.finalRank <= 5).length;
+    return `${leaks}/${grp.length} (${p2(leaks, grp.length)})`;
+  }).join(' | ');
+  lines.push(`| Top-5 trotz B5-Ziel | ${b5LeakRow} |`);
+
+  return lines;
+}
+
 function fairLabel(p, rowStats) {
   if (p >= 0.05) return '✅ Fair';
-  // Is front row over- or under-performing?
   const row0Rate = rowStats[0]?.winRate ?? 0;
-  const expected = 1 / rowStats.length;
+  const expected = rowStats[0]?.expectedWinRate ?? (1 / rowStats.length);
   if (row0Rate > expected + 0.05) return '⚠️ Front-Bias';
   if (row0Rate < expected - 0.05) return '⚠️ Rear-Bias';
   return '⚠️ Unequal';
 }
 
-function buildReport(allResults, runDate) {
+function buildReport(allResults, rawData, runDate) {
   const lines = [];
 
   lines.push('# RaceArena — Fairness Simulation Report');
@@ -469,7 +1114,6 @@ function buildReport(allResults, runDate) {
   for (const res of allResults) {
     const { trackId, trackName, racerType, durationSec, stats } = res;
     const { totalRows, rowStats, chiSq, pValue } = stats;
-    const expected = 1 / totalRows;
     const r0 = rowStats[0];
     const r1 = rowStats[1];
     const rRest = rowStats.slice(2);
@@ -477,9 +1121,11 @@ function buildReport(allResults, runDate) {
       ? rRest.reduce((s, r) => s + r.wins, 0) / (N_RACES * rRest.length || 1)
       : '—';
 
+    // Show R0 weighted expected in overview (uniform expected is the same for all rows when equal)
+    const r0Expected = r0?.expectedWinRate ?? (1 / totalRows);
     const verdict = fairLabel(pValue, rowStats);
     lines.push(
-      `| ${trackName} | ${racerType} | ${durationSec}s | ${totalRows} | ${fmtPct(expected)} | ` +
+      `| ${trackName} | ${racerType} | ${durationSec}s | ${totalRows} | ${fmtPct(r0Expected)} | ` +
       `${r0 ? fmtPct(r0.winRate) : '—'} | ` +
       `${r1 ? fmtPct(r1.winRate) : '—'} | ` +
       `${typeof restWinRate === 'number' ? fmtPct(restWinRate) : restWinRate} | ` +
@@ -500,27 +1146,49 @@ function buildReport(allResults, runDate) {
   for (const res of allResults) {
     const { trackId, trackName, racerType, durationSec, finishT, stats } = res;
     const { nRaces, totalRows, rowStats, chiSq, df, pValue } = stats;
-    const expected = 1 / totalRows;
 
     lines.push(`### ${trackName} × ${racerType} × ${durationSec}s`);
     lines.push('');
     lines.push(`- **finishT:** ${finishT.toFixed(4)} (Ziellinie in t-Raum)`);
-    lines.push(`- **Reihen:** ${totalRows} à max. ${Math.ceil(N_RACERS / totalRows)} Racer`);
-    lines.push(`- **Erwartete Win-Rate (fair):** ${fmtPct(expected)}`);
+    lines.push(`- **Reihen:** ${totalRows} (gewichtete Erwartung nach Reihengröße)`);
     lines.push(`- **Chi²(${df}):** ${fmtN(chiSq, 2)} — ${sigLabel(pValue)}`);
     lines.push('');
 
-    lines.push('| Reihe | Siege | Win-Rate | Δ Erwartet | Ø Rang | σ Rang |');
-    lines.push('|-------|-------|----------|------------|--------|--------|');
+    lines.push('| Reihe | Siege | Win-Rate | Erwartet (gew.) | Δ Erwartet | Ø Rang | σ Rang |');
+    lines.push('|-------|-------|----------|-----------------|------------|--------|--------|');
     for (const rs of rowStats) {
-      const delta = rs.winRate - expected;
+      const delta = rs.winRate - rs.expectedWinRate;
       const sign  = delta >= 0 ? '+' : '';
       lines.push(
-        `| Row ${rs.rowIndex} | ${rs.wins} | ${fmtPct(rs.winRate)} | ` +
+        `| Row ${rs.rowIndex} | ${rs.wins} | ${fmtPct(rs.winRate)} | ${fmtPct(rs.expectedWinRate)} | ` +
         `${sign}${fmtPct(delta)} | ${fmtN(rs.avgRank, 1)} | ${fmtN(rs.stdRank, 1)} |`
       );
     }
     lines.push('');
+
+    // Diagnostic tables A-E (only when race-plan sollBereich data is available)
+    const comboRaw = rawData
+      ? rawData.filter(
+          (r) =>
+            r.trackId === trackId &&
+            r.racerType === racerType &&
+            r.durationSec === durationSec &&
+            r.sollBereich != null
+        )
+      : [];
+    if (comboRaw.length > 0) {
+      lines.push('');
+      lines.push('#### E — 1.5×-Gate Aggregat (gewichtet)');
+      lines.push('');
+      const gateRows = rowStats.filter((rs) => rs.expectedWinRate * nRaces >= 3);
+      const gatePass = gateRows.every(
+        (rs) => rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5
+      );
+      lines.push(`Gate-Status: **${gatePass ? '✅ PASS' : '❌ FAIL'}** | χ²(${df}) = ${fmtN(chiSq, 2)} | ${sigLabel(pValue)}`);
+      lines.push('');
+      lines.push(...buildDiagnosticTables(comboRaw, rowStats));
+      lines.push('');
+    }
   }
 
   // ── Mixing-Quote (nur Open Tracks) ──
@@ -565,9 +1233,9 @@ function buildReport(allResults, runDate) {
       const { trackName, racerType, durationSec, stats } = res;
       const { rowStats, pValue } = stats;
       const r0Rate = rowStats[0]?.winRate ?? 0;
-      const expRate = 1 / rowStats.length;
-      const bias = r0Rate > expRate ? `Row 0 zu oft (${fmtPct(r0Rate)} statt ${fmtPct(expRate)})` :
-                   r0Rate < expRate ? `Row 0 zu selten (${fmtPct(r0Rate)} statt ${fmtPct(expRate)})` :
+      const expRate = rowStats[0]?.expectedWinRate ?? (1 / rowStats.length);
+      const bias = r0Rate > expRate ? `Row 0 zu oft (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})` :
+                   r0Rate < expRate ? `Row 0 zu selten (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})` :
                    'mittlere Reihen bevorzugt';
       lines.push(`- **${trackName} × ${racerType} × ${durationSec}s:** ${bias} — ${sigLabel(pValue)}`);
     }
@@ -583,11 +1251,13 @@ function buildReport(allResults, runDate) {
   // Analyze patterns
   const frontBias = unfairCombos.filter((r) => {
     const rs = r.stats.rowStats;
-    return (rs[0]?.winRate ?? 0) > 1 / rs.length + 0.05;
+    const exp = rs[0]?.expectedWinRate ?? (1 / rs.length);
+    return (rs[0]?.winRate ?? 0) > exp + 0.05;
   });
   const rearBias = unfairCombos.filter((r) => {
     const rs = r.stats.rowStats;
-    return (rs[0]?.winRate ?? 0) < 1 / rs.length - 0.05;
+    const exp = rs[0]?.expectedWinRate ?? (1 / rs.length);
+    return (rs[0]?.winRate ?? 0) < exp - 0.05;
   });
   const shortUnfair = unfairCombos.filter((r) => r.durationSec === 30);
   const longUnfair  = unfairCombos.filter((r) => r.durationSec === 120);
@@ -640,6 +1310,106 @@ function buildReport(allResults, runDate) {
   lines.push('*Hinweis: Dieser Abschnitt enthält ausschließlich statistische Beurteilungen, keine Code-Empfehlungen.*');
   lines.push('');
 
+  // ── Phase-3A: Naturalness section (Open Tracks only) ──
+  const openWithNat = allResults.filter((r) => r.isOpen && r.avgNaturalness);
+  if (openWithNat.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Phase-3A — Naturalness-Metriken (Open Tracks)');
+    lines.push('');
+    lines.push(
+      'Stabile Phase: 25%–95% der targetDuration. ' +
+      'Jerk: |Δ(effSpeed)/DT| / max(baseSpeed, ε). ' +
+      'naturalOvt: Anteil Überholungen mit tDiff ≤ 30% des Referenzabstands.'
+    );
+    lines.push('');
+    lines.push(
+      '| Track | Racer | Dist | meanJerk | maxJerk | jerkHigh% | natOvt% | pulkTime% | pulkTrigIn | pulkTrigOut |'
+    );
+    lines.push(
+      '|-------|-------|------|----------|---------|-----------|---------|-----------|-----------|-------------|'
+    );
+    for (const res of openWithNat) {
+      const n = res.avgNaturalness;
+      lines.push(
+        `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s` +
+        ` | ${n.meanJerk.toFixed(4)} | ${n.maxJerkSpike.toFixed(4)}` +
+        ` | ${(n.jerkFraction_high * 100).toFixed(1)}%` +
+        ` | ${(n.naturalOvertakeFraction * 100).toFixed(1)}%` +
+        ` | ${(n.pulkTimeFraction * 100).toFixed(1)}%` +
+        ` | ${n.pulkTriggersInWindow.toFixed(2)}` +
+        ` | ${n.pulkTriggersOutOfWindow.toFixed(2)} |`
+      );
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+// ── Diagnostic printer ───────────────────────────────────────────────────────
+function printDiagnosticReport(diagSnapshots, trackName, racerType, durationSec, seed) {
+  const lines = [];
+  lines.push(`\n${'='.repeat(70)}`);
+  lines.push(`Phase-2K v4 — Frame-by-Frame Diagnostic`);
+  lines.push(`Track: ${trackName} | Racer: ${racerType} | Duration: ${durationSec}s | Seed: ${seed}`);
+  lines.push('='.repeat(70));
+
+  for (const snap of diagSnapshots) {
+    lines.push(`\n── Snapshot t=${snap.timeS.toFixed(3)}s (actual: ${snap.actualTimeMs.toFixed(0)}ms) ──`);
+    // Interval stats
+    lines.push(
+      `   Interval: ${snap.interval.lateralPushes} lateral pushes | ` +
+      `${snap.interval.brakeActivations} brake activations | ` +
+      `${snap.interval.newOvertakes} new v4 overtakes`
+    );
+    // Per-row summary
+    const rows = new Map();
+    for (const r of snap.racers) {
+      if (!rows.has(r.row)) rows.set(r.row, []);
+      rows.get(r.row).push(r);
+    }
+    for (const [rowIdx, racersInRow] of [...rows.entries()].sort((a, b) => a[0] - b[0])) {
+      const ts     = racersInRow.map((r) => r.t);
+      const avd    = racersInRow.filter((r) => r.avoidance).length;
+      const v4Mults = racersInRow.map((r) => r.v4Mult).filter((m) => m !== 1.0);
+      const v4Str  = v4Mults.length > 0 ? ` | v4Mult=${v4Mults[0].toFixed(4)}` : '';
+      lines.push(
+        `   Row ${rowIdx} (${racersInRow.length} racers): ` +
+        `t=[${Math.min(...ts).toFixed(4)}, ${Math.max(...ts).toFixed(4)}]` +
+        `${v4Str} | avoidance: ${avd}/${racersInRow.length}`
+      );
+    }
+    // Brake-zone pairs grouped by row combination
+    const bz = snap.brakeZonePairs;
+    if (bz.length === 0) {
+      lines.push(`   Brake-zone pairs (dT<0.015 AND |dY|<0.2): 0`);
+    } else {
+      const rowComboCount = new Map();
+      for (const p of bz) {
+        const key = `R${p.followerRow}→R${p.leaderRow}`;
+        rowComboCount.set(key, (rowComboCount.get(key) ?? 0) + 1);
+      }
+      const comboStr = [...rowComboCount.entries()].map(([k, v]) => `${k}: ${v}`).join(', ');
+      lines.push(`   Brake-zone pairs: ${bz.length} (${comboStr})`);
+      // Show top 5 by dT (smallest gap = most likely to brake)
+      const top = [...bz].sort((a, b) => a.dT - b.dT).slice(0, 5);
+      for (const p of top) {
+        lines.push(`     R${p.follower}(Row${p.followerRow}) → R${p.leader}(Row${p.leaderRow})  dT=${p.dT.toFixed(5)}  dY=${p.dY.toFixed(4)}`);
+      }
+    }
+    // Close pairs (|dT|<0.005 AND |dY|<0.3)
+    const cp = snap.closePairs;
+    if (cp.length === 0) {
+      lines.push(`   Close pairs (|dT|<0.005 AND |dY|<0.3): 0`);
+    } else {
+      lines.push(`   Close pairs: ${cp.length}`);
+      for (const p of cp.slice(0, 5)) {
+        lines.push(`     R${p.a}(Row${p.aRow}) ↔ R${p.b}(Row${p.bRow})  dT=${p.dT.toFixed(5)}  dY=${p.dY.toFixed(4)}`);
+      }
+    }
+  }
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -663,7 +1433,33 @@ if (isMain) {
     `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
     `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
   );
-  console.log(`Output                 : ${OUT_DIR}\n`);
+  console.log(`Output                 : ${OUT_DIR}`);
+  console.log(`Seed                   : ${GLOBAL_SEED > 0 ? GLOBAL_SEED + ' (deterministisch)' : '0 (Math.random, Exploration)'}`);
+  console.log(`Race Plan              : ${RACE_PLAN_ACTIVE ? '✅ aktiv' : '❌ inaktiv (Baseline-Modus)'}`);
+  if (TEF_ACTIVE) {
+    console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
+    if (TEF_BASE_BONUS !== null) {
+      console.log(`   v3: baseBonusOverride=${TEF_BASE_BONUS} für Rear-Rows, moduliert via tStart-Gap`);
+    } else {
+      console.log(`   v2: speedBonusMult wird bei Re-Rolls auf Basis tStart-Gap moduliert`);
+    }
+  }
+  if (WARMUP_MS_OVERRIDE !== null) {
+    console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
+  }
+  if (V4_ACTIVE) {
+    console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${V4_INITIAL_BOOST} openOnly=true`);
+    console.log(`   Metrik: ${V4_METRIC_TYPE}${V4_METRIC_TYPE === 'physical_overtake' ? ` (lateralProximity=${V4_LATERAL_PROXIMITY})` : ''}`);
+    if (V4_METRIC_TYPE === 'per_racer' && (V4_ROW1_THRESHOLDS_RAW || V4_ROW_REST_THRESHOLDS_RAW)) {
+      console.log(`   Row-1-Schwellen: ${V4_ROW1_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
+      console.log(`   Row-2+-Schwellen: ${V4_ROW2_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
+    } else {
+      console.log(`   Schwellen: ${V4_THRESHOLDS.map((t) => t + '%').join(' → ')} Überholungen`);
+    }
+    console.log(`   Bonus-Schedule: ${V4_BOOST_SCHEDULE.join(' → ')}`);
+    console.log(`   Übergänge: easeInOutCubic über ${DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration}s (wie Re-Roll)`);
+  }
+  console.log('');
 
   mkdirSync(OUT_DIR, { recursive: true });
 
@@ -680,6 +1476,7 @@ if (isMain) {
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
+    if (TRACK_FILTER && trackId !== TRACK_FILTER) continue;
     const trackPath = join(trackDataDir, `${trackId}.json`);
     if (!existsSync(trackPath)) {
       console.warn(`  [SKIP] Track nicht gefunden: ${trackPath}`);
@@ -694,27 +1491,54 @@ if (isMain) {
 
     console.log(`── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`);
 
+    const trackSurfaces = track.surfaceClasses ?? [];
     for (const [racerType, cfg] of Object.entries(RACER_CONFIGS)) {
+      if (RACER_FILTER && racerType !== RACER_FILTER) continue;
+      // Skip racers incompatible with this track's surface (empty surfaceClasses = no restriction)
+      if (cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
+          !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s))) continue;
       const { speedMultiplier, displaySize } = cfg;
 
       for (const durationSec of DURATION_VARIANTS) {
-        const finishT = computeFinishT(race_baseSpeed, speedMultiplier, durationSec, isOpen);
+        if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
+        // Open tracks: natural speed = BASE_SPEED_MEAN / ssf so traversal time is track-length-invariant.
+        // Closed tracks: N-calibrated global race_baseSpeed unchanged.
+        const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
+        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed;
+        const finishT = computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen);
 
-        // Compute row count for this track/racer combo (for stats aggregation)
-        const rowGapPx     = displaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
-        const effectiveWidth = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
-        const racersPerRow = computeRacersPerRow(effectiveWidth, displaySize);
-        // Estimate totalRows from layout (deterministic, seed-independent for count)
-        const totalRows = Math.ceil(N_RACERS / Math.max(1, racersPerRow));
+        // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
+        // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
+        const effectiveWidth       = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
+        const comboLayout          = computeRacerLayout(effectiveWidth, N_RACERS, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+        const comboEffDisplaySize  = comboLayout.spriteSize;
+        const comboAutoScale       = comboEffDisplaySize / displaySize;
+        const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
+        const totalRows            = comboLayout.rowCount;
+        const rowSizes             = comboLayout.layout;
+        const comboRowLayout       = computeEvenRowLayout(N_RACERS, totalRows);
 
         process.stdout.write(
-          `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  `
+          `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
         );
 
         const raceResults   = [];
         const mixingQuotas  = [];
+        const v4ThreshLogs  = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
-          const seed   = raceIdx + 1;
+          // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
+          const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
+          // Phase-3A: create Race Plan + TrajectoryController for this race when active
+          let racePlanController = null;
+          let raceSollRankMap = null;
+          if (RACE_PLAN_ACTIVE) {
+            const planRacers = comboRowLayout.assignments.map(
+              (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
+            );
+            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, { bonusStrengthMultiplier: BONUS_MULT }, seed);
+            racePlanController = createTrajectoryController(plan);
+            raceSollRankMap = plan._racerSollRank;
+          }
           const result = runSingleRace({
             shape,
             pathLengthPx,
@@ -726,12 +1550,27 @@ if (isMain) {
             targetSeconds: durationSec,
             seed,
             nRacers: N_RACERS,
+            diagnosticMode: DIAG_MODE,
+            behaviorConfigOverrides: WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {},
+            racePlanController,
           });
           raceResults.push(result);
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
+          if (result.v4ThreshLog != null) v4ThreshLogs.push(result.v4ThreshLog);
+          if (DIAG_MODE && result.diagSnapshots) {
+            const diagText = printDiagnosticReport(result.diagSnapshots, trackName, racerType, durationSec, seed);
+            console.log(diagText);
+            const diagPath = join(OUT_DIR, `diag-${trackId}-${racerType}-${durationSec}s-seed${seed}.json`);
+            writeFileSync(diagPath, JSON.stringify({ trackId, trackName, racerType, durationSec, seed, snapshots: result.diagSnapshots }, null, 2));
+            console.log(`Diagnostic JSON → ${diagPath}`);
+          }
 
           // Collect raw data
           for (const r of result) {
+            const sollRank = raceSollRankMap?.get(r.racerIndex) ?? null;
+            const sollBereich = sollRank != null ? (
+              sollRank <= 5 ? 1 : sollRank <= 15 ? 2 : sollRank <= 25 ? 3 : sollRank <= 40 ? 4 : 5
+            ) : null;
             rawData.push({
               trackId,
               trackName,
@@ -740,19 +1579,180 @@ if (isMain) {
               finishT,
               seed,
               raceIdx,
+              sollRank,
+              sollBereich,
               ...r,
             });
           }
         }
 
-        const stats = computeFairnessStats(raceResults, totalRows);
+        const stats = computeFairnessStats(raceResults, totalRows, rowSizes);
         const avgMixingQuota = mixingQuotas.length > 0
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota });
+        // Aggregate naturalness metrics over all races in this combo
+        const avgNaturalness = raceResults.length > 0 ? {
+          meanJerk:               raceResults.reduce((s, r) => s + (r.naturalness?.meanJerk ?? 0), 0) / raceResults.length,
+          maxJerkSpike:           Math.max(...raceResults.map((r) => r.naturalness?.maxJerkSpike ?? 0)),
+          jerkFraction_high:      raceResults.reduce((s, r) => s + (r.naturalness?.jerkFraction_high ?? 0), 0) / raceResults.length,
+          naturalOvertakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.naturalOvertakeFraction ?? 0), 0) / raceResults.length,
+          pulkTimeFraction:       raceResults.reduce((s, r) => s + (r.naturalness?.pulkTimeFraction ?? 0), 0) / raceResults.length,
+          pulkTriggersInWindow:   raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersInWindow ?? 0), 0) / raceResults.length,
+          pulkTriggersOutOfWindow: raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersOutOfWindow ?? 0), 0) / raceResults.length,
+          winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
+          planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
+          pulkBiasEventCount:     raceResults.reduce((s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0), 0) / raceResults.length,
+          racersInCorridorFraction: raceResults.reduce((s, r) => s + (r.naturalness?.racersInCorridorFraction ?? 0), 0) / raceResults.length,
+          corridorViolationMean:  raceResults.reduce((s, r) => s + (r.naturalness?.corridorViolationMean ?? 0), 0) / raceResults.length,
+          corridorViolationMax:   Math.max(...raceResults.map((r) => r.naturalness?.corridorViolationMax ?? 0)),
+          bidirectionalBoostFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBoostFraction ?? 0), 0) / raceResults.length,
+          bidirectionalBrakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBrakeFraction ?? 0), 0) / raceResults.length,
+          racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
+          tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
+          tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
+        } : null;
+        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);
+
+        // 1.5× gate: each row win-rate within [expectedWinRate/1.5, expectedWinRate×1.5]
+        // Rows with expectedWins < 3 are excluded (too small for meaningful gate check at N=50)
+        if (isOpen) {
+          const gateRows = stats.rowStats.filter((rs) => rs.expectedWinRate * stats.nRaces >= 3);
+          const gatePass = gateRows.every(
+            (rs) => rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5
+          );
+          const rateStr = stats.rowStats
+            .map((rs) => {
+              const expectedWins = rs.expectedWinRate * stats.nRaces;
+              const tag = expectedWins < 3 ? '(skip)' : (rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5 ? '✓' : '✗');
+              return `R${rs.rowIndex}=${(rs.winRate * 100).toFixed(0)}%(e${(rs.expectedWinRate * 100).toFixed(0)}%)${tag}`;
+            })
+            .join(' ');
+          console.log(`     1.5×-Gate: ${gatePass ? '✅ PASS' : '❌ FAIL'}  (${rateStr})`);
+        }
+
+        // Lite stats: avoidance activity and lateral dynamics
+        if (isOpen && raceResults.length > 0) {
+          const avgRow1Brake    = raceResults.reduce((s, r) => s + (r.liteRow1BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgRow0Brake    = raceResults.reduce((s, r) => s + (r.liteRow0BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgRow2Brake    = raceResults.reduce((s, r) => s + (r.liteRow2BrakeFrames ?? 0), 0) / raceResults.length;
+          const avgLateralMoves = raceResults.reduce((s, r) => s + (r.liteLateralMoves ?? 0), 0) / raceResults.length;
+          const avgRow1EverAhead = raceResults.reduce((s, r) => s + (r.liteRow1EverAheadCount ?? 0), 0) / raceResults.length;
+          const rowSize0 = Math.ceil(N_RACERS / totalRows);
+          const avgRerolls  = raceResults.reduce((s, r) => s + (r.avgRerollsPerRacer ?? 0), 0) / raceResults.length;
+          const avgPhysDur  = raceResults.reduce((s, r) => s + (r.physicalDurationS ?? 0), 0) / raceResults.length;
+          console.log(
+            `     Avoidance: R0=${avgRow0Brake.toFixed(0)}Ø  R1=${avgRow1Brake.toFixed(0)}Ø  R2=${avgRow2Brake.toFixed(0)}Ø` +
+            `  Lateral=${avgLateralMoves.toFixed(0)}Ø  R1≥1×vorne=${avgRow1EverAhead.toFixed(1)}/${rowSize0}Ø`
+          );
+          console.log(
+            `     Re-Rolls: Ø ${avgRerolls.toFixed(1)} pro Racer  Physische Renndauer: Ø ${avgPhysDur.toFixed(1)}s` +
+            `  (target=${durationSec}s)`
+          );
+          // Phase-3A: Naturalness metrics summary
+          if (avgNaturalness) {
+            console.log(
+              `     Naturalness: jerk=${avgNaturalness.meanJerk.toFixed(4)}Ø  max=${avgNaturalness.maxJerkSpike.toFixed(4)}` +
+              `  highFrac=${(avgNaturalness.jerkFraction_high * 100).toFixed(1)}%` +
+              `  natOvt=${(avgNaturalness.naturalOvertakeFraction * 100).toFixed(1)}%` +
+              `  pulk=${(avgNaturalness.pulkTimeFraction * 100).toFixed(1)}%` +
+              `  pulkTrig=[${avgNaturalness.pulkTriggersInWindow.toFixed(1)}in/${avgNaturalness.pulkTriggersOutOfWindow.toFixed(1)}out]`
+            );
+            if (RACE_PLAN_ACTIVE) {
+              console.log(
+                `     M2v2: corridor=${(avgNaturalness.racersInCorridorFraction * 100).toFixed(1)}%` +
+                `  viol=Ø${avgNaturalness.corridorViolationMean.toFixed(1)}/max${avgNaturalness.corridorViolationMax.toFixed(0)}` +
+                `  boost=${(avgNaturalness.bidirectionalBoostFraction * 100).toFixed(1)}%` +
+                `  brake=${(avgNaturalness.bidirectionalBrakeFraction * 100).toFixed(1)}%` +
+                `  blocked=${(avgNaturalness.racersBlockedInOutcome * 100).toFixed(1)}%` +
+                `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%` +
+                `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
+                `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
+              );
+            }
+          }
+          // per_racer: per-row bonus distribution at race end (all rows > 0)
+          if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {
+            const allRowIndices = [...new Set(
+              raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
+            )].sort((a, b) => a - b);
+            for (const rowIdx of allRowIndices) {
+              const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+              const all = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
+              if (all.length === 0) continue;
+              const full    = all.filter((s) => s.threshIdx === 0).length;
+              const partial = all.filter((s) => s.threshIdx > 0 && s.threshIdx < rowThresholds.length).length;
+              const none    = all.filter((s) => s.threshIdx >= rowThresholds.length).length;
+              const tot     = all.length;
+              console.log(
+                `     Row-${rowIdx} Bonus-End (N=${tot}): ` +
+                `voll=${(full/tot*100).toFixed(0)}% (${full})  ` +
+                `teilw=${(partial/tot*100).toFixed(0)}% (${partial})  ` +
+                `kein=${(none/tot*100).toFixed(0)}% (${none})`
+              );
+            }
+          }
+        }
+
+        // v4 diagnostics: per-threshold average crossing time + physical overtake counts
+        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer' && v4ThreshLogs.length > 0) {
+          // Physical overtake summary
+          const avgOvertakes   = raceResults.reduce((s, r) => s + (r.v4OvertakeCount   ?? 0), 0) / N_RACES;
+          const avgNearBehind  = raceResults.reduce((s, r) => s + (r.v4NearBehindCount ?? 0), 0) / N_RACES;
+          const avgPairOvt     = raceResults.reduce((s, r) => s + (r.v4PairOvertakes   ?? 0), 0) / N_RACES;
+          console.log(
+            `     v4 Physik (Ø pro Rennen): ${avgOvertakes.toFixed(1)} Row-1 mit Überholung, ` +
+            `${avgPairOvt.toFixed(1)} Paar-Überholungen, ${avgNearBehind.toFixed(1)} near-behind-Paare`
+          );
+          // Threshold timing
+          for (const thresh of V4_THRESHOLDS) {
+            const times = v4ThreshLogs
+              .map((log) => log.find((e) => e.threshold === thresh)?.timeS)
+              .filter((t) => t != null);
+            if (times.length > 0) {
+              const avg = times.reduce((s, v) => s + v, 0) / times.length;
+              const entry = v4ThreshLogs.find((log) => log.find((e) => e.threshold === thresh))
+                ?.find((e) => e.threshold === thresh);
+              console.log(
+                `     v4 ${thresh}%-Schwelle: Ø ${avg.toFixed(1)}s ` +
+                `(${times.length}/${N_RACES} Rennen) ` +
+                `${entry ? entry.fromBonus + ' → ' + entry.toBonus : ''}`
+              );
+            } else {
+              console.log(`     v4 ${thresh}%-Schwelle: nie erreicht`);
+            }
+          }
+        }
+        // per_racer: individual threshold timing per row (all rows > 0)
+        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') {
+          const allRowIdxs = [...new Set(
+            raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
+          )].sort((a, b) => a - b);
+          for (const rowIdx of allRowIdxs) {
+            const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+            for (let ti = 0; ti < rowThresholds.length; ti++) {
+              const thresh   = rowThresholds[ti];
+              const allStats = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
+              const total    = allStats.length;
+              const times    = allStats
+                .filter((s) => s.threshTimes && s.threshTimes.length > ti)
+                .map((s) => s.threshTimes[ti] / 1000);
+              if (times.length > 0) {
+                const avg = times.reduce((s, v) => s + v, 0) / times.length;
+                const min = Math.min(...times);
+                const max = Math.max(...times);
+                console.log(
+                  `     v4 per_racer Row-${rowIdx} ${thresh}%: Ø ${avg.toFixed(1)}s ` +
+                  `(${times.length}/${total} Racer) min=${min.toFixed(1)}s max=${max.toFixed(1)}s`
+                );
+              } else {
+                console.log(`     v4 per_racer Row-${rowIdx} ${thresh}%: nie erreicht`);
+              }
+            }
+          }
+        }
       }
     }
     console.log('');
@@ -768,7 +1768,7 @@ if (isMain) {
 
   // Write Markdown report
   const runDate = new Date().toISOString().slice(0, 10);
-  const report  = buildReport(allResults, runDate);
+  const report  = buildReport(allResults, rawData, runDate);
   const mdPath  = join(OUT_DIR, 'fairness-report.md');
   writeFileSync(mdPath, report);
   console.log(`Bericht → ${mdPath}`);
@@ -783,7 +1783,7 @@ if (isMain) {
     console.log('\nUnfaire Kombinationen:');
     for (const r of unfair) {
       const r0 = r.stats.rowStats[0];
-      const exp = 1 / r.stats.totalRows;
+      const exp = r0?.expectedWinRate ?? (1 / r.stats.totalRows);
       console.log(`  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  Row0=${fmtPct(r0?.winRate ?? 0)} (erw. ${fmtPct(exp)})  p=${r.stats.pValue.toFixed(3)}`);
     }
   }

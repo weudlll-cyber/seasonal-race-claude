@@ -52,6 +52,20 @@ function _computeSpeedScaleFactor(pathLengthPx) {
 
 const OPEN_TRACK_DURATION_MIN = 30;
 
+/**
+ * Speed scale factor for an open track: longer tracks scale the t-space speed
+ * down so all tracks have comparable physical traversal times.
+ * ssf = clamp(pathLengthPx / REFERENCE_PATH_LENGTH, 0.5, 10)
+ *
+ * Used by openTrackDurationRange (slider max) and the race engine (dynamic finishT).
+ *
+ * @param {number} pathLengthPx
+ * @returns {number}
+ */
+export function computeSpeedScaleFactor(pathLengthPx) {
+  return _computeSpeedScaleFactor(pathLengthPx);
+}
+
 // Slider range [min, max] for the open-track duration picker.
 // max = natural traversal time of the track given its path length and mean base speed,
 // accounting for runoutZone.

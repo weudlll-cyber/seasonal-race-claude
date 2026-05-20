@@ -21,6 +21,7 @@ import {
   lapProgress,
   currentLap,
   REFERENCE_FPS,
+  computeSpeedScaleFactor,
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
@@ -35,8 +36,8 @@ import {
 } from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
-  computeRacersPerRow,
-  computeRowLayout,
+  computeRacerLayout,
+  computeEvenRowLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../../modules/rowLayout.js';
@@ -50,7 +51,6 @@ import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import {
   loadAutoScaleConfig,
-  computeAutoScaleFactor,
   computeRenderDisplayScale,
   getEffectiveMinTargetScreenPx,
   getEffectiveMaxTargetScreenPx,
@@ -58,6 +58,7 @@ import {
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
+import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import StateOverlay from './StateOverlay.jsx';
 import { selectOverlayText } from '../../modules/stateOverlayTemplates.js';
@@ -72,6 +73,7 @@ import {
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
+import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -128,6 +130,21 @@ export default function RaceScreen() {
     _dv12Buf: new Array(60).fill(0),
     _dvBufIdx: 0,
     constSpeed: false,
+    // Race-Plan diagnostics (written per physics step when racePlanEnabled)
+    rpEnabled: false,
+    rpPhase: '—',
+    rpTs: 0,
+    rpReRollActive: false,
+    rpSfMin: 1,
+    rpSfMax: 1,
+    rpSfMean: 1,
+    rpTmMin: 1,
+    rpTmMax: 1,
+    rpRows: 0,
+    rpRacersPerRow: 0,
+    rpNRacers: 0,
+    rpB1Racers: [],
+    rpTop10: [],
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
   // Priority-system debug overlay (toggled by hotkey M)
@@ -148,6 +165,9 @@ export default function RaceScreen() {
   const cameraConfigRef = useRef(cameraConfig);
   const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
   const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
+  const showRpDiag = cameraConfig.showRpDiag ?? false;
+  const showRpWinnerList = cameraConfig.showRpWinnerList ?? false;
+  const showTop10SpeedMonitor = cameraConfig.showTop10SpeedMonitor ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
@@ -307,6 +327,7 @@ export default function RaceScreen() {
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
+    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -314,18 +335,30 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        displaySizeScale = computeAutoScaleFactor(geometricTrackWidthPx, nRacers, autoScaleConfig);
+        // Bottom-up: min rows at minScale sprite, then even distribution, then back-compute size
+        const racerLayout = computeRacerLayout(
+          effectiveWidth,
+          nRacers,
+          displaySize,
+          autoScaleConfig
+        );
+        displaySizeScale = racerLayout.spriteSize / displaySize;
       }
     }
     const referenceSpriteSize = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
-    // Open tracks: finish line is fixed at (1 - runoutZone); race speed comes from targetDuration.
+    const targetDuration = raceData.targetDuration ?? 60;
+    // Open tracks: finish line set to the distance a mean racer covers in targetDuration at natural speed.
+    // ssf scales t-space speed for track length so physical traversal time is comparable across tracks.
     // Closed tracks: finish line is the target lap count.
+    const ssf = isOpenTrack ? computeSpeedScaleFactor(geometry.pathLengthPx ?? 0) : 1;
     const finishT = isOpenTrack
-      ? 1.0 - behaviorConfig.runoutZone
+      ? Math.min(
+          (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS * targetDuration) / ssf,
+          1 - behaviorConfig.runoutZone
+        )
       : (raceData.targetLaps ?? lapsFromDuration(duration));
-    const targetDuration = raceData.targetDuration ?? finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
     // N-calibrated expected-minimum spread: E[min_n] = spreadMin + (spreadMax - spreadMin) / (n+1).
     // Ensures the expected last finisher arrives at targetDuration regardless of player count.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
@@ -348,15 +381,18 @@ export default function RaceScreen() {
     );
     setFinishTState(finishT);
 
-    // D7c row-start layout: shuffle racers into rows, compute t-offsets and speed bonuses
+    // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     const spriteSize = displaySize * displaySizeScale;
     const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
-    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
-    const racersPerRowValue = computeRacersPerRow(effectiveWidth, spriteSize);
-    const rowLayout = computeRowLayout(nRacers, racersPerRowValue);
+    // rowCount: min rows at current sprite size; racers distributed evenly across them
+    const rowCount = Math.max(
+      1,
+      Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, spriteSize))))
+    );
+    const rowLayout = computeEvenRowLayout(nRacers, rowCount);
 
     // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of targetDuration.
     const rollCount = Math.max(
@@ -446,6 +482,11 @@ export default function RaceScreen() {
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
           surfaceParticles: [],
+          trajectoryMult: 1.0,
+          trajectoryMultTarget: 1.0,
+          trajectoryMultPrev: 1.0,
+          trajectoryMultTransStart: 0,
+          bereichsBonusMult: 1.0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -456,6 +497,43 @@ export default function RaceScreen() {
         return racer;
       }),
     };
+
+    // ── Config flags for canvas-loop use ────────────────────────────────────
+    const showRpMinimapBadgesCfg = cameraConfigRef.current.showRpMinimapBadges ?? false;
+    const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
+
+    // ── Race Plan controller ─────────────────────────────────────────────────
+    const racePlanEnabled = isOpenTrack && !!raceData.racePlanEnabled && targetDuration >= 60;
+    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    let racePlanController = null;
+    let rpPlanInfo = null;
+    const speedRings = new Map();
+    if (racePlanEnabled) {
+      const planRacers = g.current.racers.map((r) => ({
+        index: r.index,
+        startRowIndex: assignmentByRacer.get(r.index)?.rowIndex ?? 0,
+      }));
+      const plan = createRacePlan(
+        planRacers,
+        finishT,
+        targetDuration * 1000,
+        { bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0 },
+        racePlanSeed
+      );
+      racePlanController = createTrajectoryController(plan);
+      rpPlanInfo = {
+        sollRanks: plan._racerSollRank,
+        b1Indices: new Set(
+          [...plan._racerSollRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
+        ),
+      };
+    }
+    // Initialise Race-Plan diag fields (geometry snapshot at race start)
+    diagDataRef.current.rpEnabled = racePlanEnabled;
+    diagDataRef.current.rpRows = rowLayout.totalRows;
+    diagDataRef.current.rpRacersPerRow = rowLayout.racersPerRow;
+    diagDataRef.current.rpNRacers = nRacers;
+    diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
@@ -587,7 +665,10 @@ export default function RaceScreen() {
           effectiveScale
         );
         if (tagSet.has(r)) {
-          drawNameTag(renderX, renderY, r.name, r === leader, ezoom);
+          const tagName = showRpStartRowCfg
+            ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+            : r.name;
+          drawNameTag(renderX, renderY, tagName, r === leader, ezoom);
         }
         r.trail.push({ x: renderX, y: renderY });
         if (r.trail.length > 10) r.trail.shift();
@@ -994,16 +1075,41 @@ export default function RaceScreen() {
             r._prevAngle = r.angle;
           }
 
+          // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
+          if (racePlanController) racePlanController.update(st.racers, physicsTs);
+
+          // ── trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern) ──
+          if (racePlanController) {
+            const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
+            for (const r of st.racers) {
+              const elapsed = physicsTs - r.trajectoryMultTransStart;
+              r.trajectoryMult =
+                elapsed < TT_DUR_MS
+                  ? r.trajectoryMultPrev +
+                    (r.trajectoryMultTarget - r.trajectoryMultPrev) *
+                      easeInOutCubic(elapsed / TT_DUR_MS)
+                  : r.trajectoryMultTarget;
+            }
+          }
+
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
               if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
+                const rawSample = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+                const biasedSample = racePlanController
+                  ? racePlanController.computePulkBiasedTarget(
+                      r.index,
+                      rawSample,
+                      BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                      BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                      st.racers,
+                      physicsTs
+                    )
+                  : rawSample;
                 const newTarget = Math.max(
                   BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                  Math.min(
-                    BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                    r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth
-                  )
+                  Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedSample)
                 );
                 r.spreadFactorPrev = r.spreadFactor;
                 r.spreadFactorTarget = newTarget;
@@ -1031,7 +1137,10 @@ export default function RaceScreen() {
             const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
-              r.t = Math.min(r.t + r.baseSpeed * boost * brake, st.finishT + 0.001);
+              r.t = Math.min(
+                r.t + r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult,
+                st.finishT + 0.001
+              );
             } else {
               // Run-out: finished racers keep moving but decay to a stop
               r.runoutDecay *= 0.97;
@@ -1042,7 +1151,8 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake) / race_baseSpeed
+                ? (r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult) /
+                  race_baseSpeed
                 : 0;
           }
           // D4: equalize all non-finished racers to the mean delta-t
@@ -1118,6 +1228,102 @@ export default function RaceScreen() {
           if (!isOpenTrack && st.maxLaps > 1 && !st.finalLapStartTs) {
             const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
             if (Math.floor(leader.t) >= st.maxLaps - 1) st.finalLapStartTs = ts;
+          }
+
+          // Race-Plan per-step diagnostics → diagDataRef (polled by CameraDiagnosticsHUD)
+          if (racePlanController) {
+            const activeR = st.racers.filter((r) => !r.finished);
+            if (activeR.length > 0) {
+              let sfMin = Infinity,
+                sfMax = -Infinity,
+                sfSum = 0;
+              let tmMin = Infinity,
+                tmMax = -Infinity;
+              for (const r of activeR) {
+                const sf = r.spreadFactor ?? 1;
+                const tm = r.trajectoryMult ?? 1;
+                if (sf < sfMin) sfMin = sf;
+                if (sf > sfMax) sfMax = sf;
+                sfSum += sf;
+                if (tm < tmMin) tmMin = tm;
+                if (tm > tmMax) tmMax = tm;
+                // Speed ring buffer (5 s @ 16 ms/step = 313 slots)
+                let ring = speedRings.get(r.index);
+                if (!ring) {
+                  ring = { buf: new Float32Array(313).fill(1.0), idx: 0 };
+                  speedRings.set(r.index, ring);
+                }
+                ring.buf[ring.idx % 313] = tm;
+                ring.idx++;
+              }
+              const d = diagDataRef.current;
+              d.rpPhase = racePlanController.getPhase(physicsTs);
+              d.rpTs = physicsTs;
+              d.rpReRollActive = physicsTs < lastRollDeadline;
+              d.rpSfMin = sfMin;
+              d.rpSfMax = sfMax;
+              d.rpSfMean = sfSum / activeR.length;
+              d.rpTmMin = tmMin;
+              d.rpTmMax = tmMax;
+              let bbMin = Infinity,
+                bbMax = -Infinity;
+              for (const r of activeR) {
+                const bb = r.bereichsBonusMult ?? 1;
+                if (bb < bbMin) bbMin = bb;
+                if (bb > bbMax) bbMax = bb;
+              }
+              d.rpBbMin = bbMin;
+              d.rpBbMax = bbMax;
+
+              // B1 winner list (sollRank 1–5)
+              if (rpPlanInfo) {
+                const ranked = [...activeR].sort((a, b) => b.t - a.t);
+                const rankByIdx = new Map(ranked.map((r, i) => [r.index, i + 1]));
+                const b1Racers = [];
+                for (const [racerIdx, sollRank] of rpPlanInfo.sollRanks) {
+                  if (!rpPlanInfo.b1Indices.has(racerIdx)) continue;
+                  const racer = st.racers.find((r) => r.index === racerIdx && !r.finished);
+                  if (!racer) continue;
+                  b1Racers.push({
+                    index: racerIdx,
+                    name: racer.name,
+                    sollRank,
+                    currentRank: rankByIdx.get(racerIdx) ?? 0,
+                    delta: (rankByIdx.get(racerIdx) ?? 0) - sollRank,
+                    startRow: assignmentByRacer.get(racerIdx)?.rowIndex ?? 0,
+                  });
+                }
+                b1Racers.sort((a, b) => a.sollRank - b.sollRank);
+                d.rpB1Racers = b1Racers;
+              }
+
+              // Top-10 speed monitor
+              const top10 = [...activeR].sort((a, b) => b.t - a.t).slice(0, 10);
+              d.rpTop10 = top10.map((r, i) => {
+                const ring = speedRings.get(r.index);
+                let tmMin5s = r.trajectoryMult ?? 1;
+                let tmMax5s = r.trajectoryMult ?? 1;
+                if (ring && ring.idx > 0) {
+                  const filled = Math.min(ring.idx, 313);
+                  let mn = Infinity,
+                    mx = -Infinity;
+                  for (let j = 0; j < filled; j++) {
+                    if (ring.buf[j] < mn) mn = ring.buf[j];
+                    if (ring.buf[j] > mx) mx = ring.buf[j];
+                  }
+                  tmMin5s = mn;
+                  tmMax5s = mx;
+                }
+                return {
+                  rank: i + 1,
+                  name: r.name,
+                  tm: r.trajectoryMult ?? 1.0,
+                  tmMin5s,
+                  tmMax5s,
+                  isOscillating: tmMax5s - tmMin5s > 0.18,
+                };
+              });
+            }
           }
 
           st.physicsAccum -= FIXED_DT;
@@ -1444,10 +1650,23 @@ export default function RaceScreen() {
         drawFinishedOverlay();
       }
 
+      // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────
+      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(CW - 172, 8, 164, 22);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CW - 168, 24);
+        ctx.restore();
+      }
+
       // ── PiP minimap (RACING and FINISHED only) ──
       if (st.phase !== PHASE.COUNTDOWN) {
         const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
-        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH);
+        const minimapHighlights =
+          showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
+        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH, minimapHighlights);
       }
 
       rafRef.current = requestAnimationFrame(loop);
@@ -1510,8 +1729,14 @@ export default function RaceScreen() {
             diagRef={diagDataRef}
             leaderDiagRef={leaderDiagRef}
             visible={showCameraDiagnostics}
+            showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
+          <RacePlanHUD
+            diagRef={diagDataRef}
+            showWinnerList={showRpWinnerList}
+            showSpeedMonitor={showTop10SpeedMonitor}
+          />
         </div>
 
         <aside className="race-hud">

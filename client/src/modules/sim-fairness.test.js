@@ -286,7 +286,7 @@ describe('RACER_CONFIGS', () => {
   });
 
   it('all speedMultipliers are positive', () => {
-    for (const [id, cfg] of Object.entries(RACER_CONFIGS)) {
+    for (const [_id, cfg] of Object.entries(RACER_CONFIGS)) {
       expect(cfg.speedMultiplier).toBeGreaterThan(0);
     }
   });

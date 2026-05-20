@@ -59,8 +59,57 @@ const QUICK_TEST_NAMES = [
   'Surge',
   'Dash',
   'Nova',
+  'Mercury',
+  'Orbit',
+  'Quasar',
+  'Pixel',
+  'Vortex',
+  'Hawk',
+  'Raptor',
+  'Maverick',
+  'Phantom',
+  'Shadow',
+  'Phoenix',
+  'Titan',
+  'Atlas',
+  'Falcon',
+  'Eagle',
+  'Sparrow',
+  'Raven',
+  'Swift',
+  'Breeze',
+  'Gale',
+  'Cosmos',
+  'Nebula',
+  'Pulsar',
+  'Zenith',
+  'Meridian',
+  'Vector',
+  'Delta',
+  'Echo',
+  'Foxtrot',
+  'Gamma',
+  'Onyx',
+  'Jade',
+  'Topaz',
+  'Amber',
+  'Obsidian',
+  'Garnet',
+  'Cobalt',
+  'Crimson',
+  'Azure',
+  'Verdant',
+  'Lynx',
+  'Puma',
+  'Jaguar',
+  'Cheetah',
+  'Ocelot',
+  'Panther',
+  'Cougar',
+  'Viper',
+  'Cobra',
+  'Mamba',
 ];
-const QUICK_TEST_TARGET = 20;
 
 function SetupScreen() {
   const navigate = useNavigate();
@@ -261,6 +310,8 @@ function SetupScreen() {
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
+  const [quickTestCount, setQuickTestCount] = useState(20);
+  const [quickTestSeed, setQuickTestSeed] = useState(1);
 
   function handleStartRace() {
     const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
@@ -283,6 +334,8 @@ function SetupScreen() {
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
       targetDuration: trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
+      racePlanEnabled: trackIsOpen && effectiveOpenTrackDuration >= 60,
+      racePlanSeed: 0,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -300,7 +353,7 @@ function SetupScreen() {
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     const effectiveTypeId = racerTypeOverride ?? defaultTypeId;
 
-    const needed = Math.max(0, QUICK_TEST_TARGET - players.length);
+    const needed = Math.max(0, quickTestCount - players.length);
     const existingNames = new Set(players.map((p) => p.name));
     const fillNames = QUICK_TEST_NAMES.filter((n) => !existingNames.has(n)).slice(0, needed);
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
@@ -326,6 +379,8 @@ function SetupScreen() {
       targetLaps: quickIsOpen ? undefined : quickLaps,
       targetDuration: quickIsOpen ? raceDefaults.duration : quickClosedDuration,
       trackSurfaceClasses: track.surfaceClasses ?? [],
+      racePlanEnabled: quickIsOpen && raceDefaults.duration >= 60,
+      racePlanSeed: quickTestSeed,
       timestamp: new Date().toISOString(),
     };
 
@@ -563,6 +618,18 @@ function SetupScreen() {
                             </span>
                             <span>Max: {openTrackSliderRange.max}s</span>
                           </div>
+                          {effectiveOpenTrackDuration < 60 && (
+                            <div
+                              data-testid="race-plan-inactive-warning"
+                              style={{
+                                fontSize: '0.72rem',
+                                color: 'var(--color-warning, #f5a623)',
+                                marginTop: '0.25rem',
+                              }}
+                            >
+                              ⚠️ Race Plan inactive below 60s on open tracks
+                            </div>
+                          )}
                         </>
                       ) : (
                         <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
@@ -778,17 +845,79 @@ function SetupScreen() {
                   </button>
                 ))}
               </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: '#aaa',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  N:
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={quickTestCount}
+                    onChange={(e) =>
+                      setQuickTestCount(Math.max(1, Math.min(100, Number(e.target.value) || 1)))
+                    }
+                    style={{
+                      width: '46px',
+                      fontSize: '11px',
+                      padding: '1px 4px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '3px',
+                      color: 'inherit',
+                      textAlign: 'right',
+                    }}
+                  />
+                </label>
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: '#aaa',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  Seed:
+                  <input
+                    type="number"
+                    min={0}
+                    max={9999}
+                    value={quickTestSeed}
+                    onChange={(e) =>
+                      setQuickTestSeed(Math.max(0, Math.min(9999, Number(e.target.value) || 0)))
+                    }
+                    style={{
+                      width: '52px',
+                      fontSize: '11px',
+                      padding: '1px 4px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '3px',
+                      color: 'inherit',
+                      textAlign: 'right',
+                    }}
+                  />
+                </label>
+              </div>
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
                 disabled={!quickTrack?.geometryId}
                 title={
                   quickTrack?.geometryId
-                    ? 'Auto-fill to 20 test players and start race'
+                    ? `Auto-fill to ${quickTestCount} test players and start race`
                     : 'Draw a track in the Track Editor first'
                 }
               >
-                ⚡ Quick Test (20)
+                ⚡ Quick Test ({quickTestCount})
               </button>
             </div>
             <button

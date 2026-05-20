@@ -33,6 +33,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       reRollTransitionDuration: 5.0,
       reRollIntervalDivisor: 15,
       reRollLastPositionPercent: 80,
+      trajectoryTransitionDuration: 1.5,
+      racePlanBonusStrengthMultiplier: 2.0,
     });
   });
 
@@ -70,6 +72,14 @@ describe('loadRaceDynamicsConfig', () => {
     storageGet.mockReturnValue({
       ...DEFAULT_RACE_DYNAMICS_CONFIG,
       reRollTransitionDuration: -1,
+    });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when trajectoryTransitionDuration is 0', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      trajectoryTransitionDuration: 0,
     });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });

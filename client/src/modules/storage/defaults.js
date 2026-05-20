@@ -197,6 +197,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
+  showRpDiag: false,
+  showRpWinnerList: false,
+  showRpMinimapBadges: false,
+  showRpStartRow: false,
+  showTop10SpeedMonitor: false,
   enableFrameLog: false, // frame-by-frame ring buffer for jitter post-analysis (default OFF)
   battleGapThreshold: 0.05,
   endgameThreshold: 0.85,
@@ -235,6 +240,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   reRollTransitionDuration: 5.0,
   reRollIntervalDivisor: 15,
   reRollLastPositionPercent: 80,
+  trajectoryTransitionDuration: 1.5,
+  // Race Plan area bonus strength: validated at 2.0 (B1=+6%, B5=-2%). Range 0.5–3.0.
+  // 2.0 compensates for tighter avoidanceDistance (0.15) so B1 racers reliably reach their area.
+  racePlanBonusStrengthMultiplier: 2.0,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {
@@ -269,7 +278,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   comfortThreshold: 0.7,
   softRepulsionStrength: 0.1,
   // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
-  avoidanceDistance: 0.35,
+  avoidanceDistance: 0.15,
   tWeight: 2.0,
   yWeight: 1.0,
   lateralForce: 0.01,
