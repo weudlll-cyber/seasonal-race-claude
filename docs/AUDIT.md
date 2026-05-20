@@ -175,11 +175,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-17 | **1932 unit** | feat: track-type-specific maxPlayers cap — Open 100, Closed 40 (PR #115, squash `7619ead`). Zwei neue Config-Keys `maxPlayersOpen: 100` / `maxPlayersClosed: 40` in `DEFAULT_RACE_DEFAULTS`; `SetupScreen` nutzt bereits berechnetes `trackIsOpen` für korrekte Limit-Übergabe; `PlayerGroupsManager` nutzt Open-Ceiling (track-agnostisch); `RaceDefaults`-Stepper durch zwei Number-Inputs ersetzt. Alter Key `maxPlayers: 20` bleibt als Fallback. Browser-Test: 100 Racer × Space Sprint — Start, Rennen (77 s), Ergebnis-Screen ohne Crash, 0 neue Console-Errors. O(n²)-Avoidance-Loops (4950 Paare bei 100 Racern) laufen im Playwright-Test ohne sichtbare Frame-Drops; Performance auf Low-End-Hardware ungetestet — separate Spec falls nötig. Keine neuen Tests. Backup-Tag: `pre-maxplayers-track-specific`. |
 
-| 2026-05-19 | **1987 unit** | feat: Phase 3A — Race Plan + Bereichs-Bonus + Trajectory-Controller (feat/phase-3a, 31 Commits). racePlanner.js (Bereichszuordnung, P-Controller, Bonus-Fade); symmetrische Startreihen; natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks; bereichsBonusMult in Physics-Loop; 5 HUD-Overlays (RP DIAG); racePlanBonusStrengthMultiplier DevPanel + Sim; computeAutoScaleFactor Sim-Parität. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (User-validiert). +77 unit. Backup-Tag: `backup/pre-phase-3a`. |
+| 2026-05-20 | **1987 unit** | feat: Phase 3A — Race Plan + Bereichs-Bonus + Trajectory-Controller (PR #120, squash `596a1b2`). racePlanner.js (Bereichszuordnung B1-B5, P-Controller trajectoryMult [0.85,1.10], Bonus-Fade); symmetrische Startreihen (bottom-up); natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks (ssf-basiert); bereichsBonusMult in Physics-Loop; 5 HUD-Overlays (RP DIAG + B1-Liste + Speed-Monitor + Minimap-Badges + Startreihen); racePlanBonusStrengthMultiplier DevPanel + Sim-CLI-Arg; computeAutoScaleFactor Sim-Parität. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (User-Sichtcheck + Sim-Smoke 120s: χ²=0.3–0.6 ✅). +77 unit. Backup-Tag: `backup/pre-phase-3a`. |
 
-**Master-HEAD:** `7619ead` (feat: track-type-specific maxPlayers cap — Open 100, Closed 40, PR #115, 2026-05-17)
-**Branch feat/phase-3a HEAD:** `b221a24` (chore(defaults): Phase 3A Abschluss — validierte Defaults setzen)
-**ESLint-Warnings:** 57
+**Master-HEAD:** `596a1b2` (Phase 3A: Race Plan + Bereichs-Bonus-Mechanik, PR #120, squash-merge 2026-05-20)
+**Tests:** 1987 unit — 1987/1987 ✅
+**ESLint-Warnings:** 52
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
 ---
