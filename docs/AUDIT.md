@@ -177,8 +177,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-20 | **1987 unit** | feat: Phase 3A — Race Plan + Bereichs-Bonus + Trajectory-Controller (PR #120, squash `596a1b2`). racePlanner.js (Bereichszuordnung B1-B5, P-Controller trajectoryMult [0.85,1.10], Bonus-Fade); symmetrische Startreihen (bottom-up); natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks (ssf-basiert); bereichsBonusMult in Physics-Loop; 5 HUD-Overlays (RP DIAG + B1-Liste + Speed-Monitor + Minimap-Badges + Startreihen); racePlanBonusStrengthMultiplier DevPanel + Sim-CLI-Arg; computeAutoScaleFactor Sim-Parität. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (User-Sichtcheck + Sim-Smoke 120s: χ²=0.3–0.6 ✅). +77 unit. Backup-Tag: `backup/pre-phase-3a`. |
 
-**Master-HEAD:** `596a1b2` (Phase 3A: Race Plan + Bereichs-Bonus-Mechanik, PR #120, squash-merge 2026-05-20)
-**Tests:** 1987 unit — 1987/1987 ✅
+| 2026-05-22 | **1986/1987 unit** | fix: Open Track — Ranking, Ziellinie, Spurwechsel-Wackeln (squash `8b7f8f6`). Fix 1: Scoreboard-Sort auf Open Tracks nach projizierter Weltposition (r.x/r.y · fwdDir) statt reinem t-Wert — visuell führender Racer korrekt im HUD. Fix 2: Ziellinie senkrecht zur primären Fahrtrichtung gezeichnet (center ± openTrackHW entlang lokalem Perp); Stripe-Tiefe entlang Fwd-Vektor. Fix 3: physicalY-Offset als reine Lateralbewegung: center-Point + Projektion von getPosition(t, physicalY/2) auf lokalen Perp-Vektor — kein Forward-Leak durch Spline-Kurvengeometrie; r.angle = lokale Track-Tangente pro Racer. Nur RaceScreen/index.jsx, Closed Tracks unverändert. 1 pre-existing Failure (raceDynamicsConfig.test.js — trajectoryTransitionDuration=0 Guard, kein Zusammenhang mit diesem Fix). Backup-Tag: `backup/pre-fix-open-track-ranking`. |
+
+**Master-HEAD:** `8b7f8f6` (fix: Open Track — Ranking, Ziellinie, Spurwechsel-Wackeln, squash-merge 2026-05-22)
+**Tests:** 1986/1987 unit — 1 pre-existing failure (raceDynamicsConfig.test.js, unverändert seit e7ca4bd)
 **ESLint-Warnings:** 52
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
