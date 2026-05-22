@@ -333,6 +333,66 @@ describe('SpriteRacerType — drawRacer', () => {
     rt.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
     expect(colors).not.toContain('#ffd700');
   });
+
+  it('isComeback=true sets #00dd55 as strokeStyle (green comeback ring)', () => {
+    const colors = [];
+    const ctx = makeCtx();
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get() {
+        return this._s ?? '';
+      },
+      set(v) {
+        this._s = v;
+        colors.push(v);
+      },
+      configurable: true,
+    });
+    rt.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0, 1, true);
+    expect(colors).toContain('#00dd55');
+  });
+
+  it('isComeback=true calls ellipse with leaderEllipseRx and leaderEllipseRy', () => {
+    const ctx = makeCtx();
+    rt.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0, 1, true);
+    const ellipseCall = ctx.ellipse.mock.calls[0];
+    expect(ellipseCall[2]).toBe(16); // leaderEllipseRx
+    expect(ellipseCall[3]).toBe(10); // leaderEllipseRy
+  });
+
+  it('isLeader takes priority over isComeback (gold ring, not green)', () => {
+    const colors = [];
+    const ctx = makeCtx();
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get() {
+        return this._s ?? '';
+      },
+      set(v) {
+        this._s = v;
+        colors.push(v);
+      },
+      configurable: true,
+    });
+    rt.drawRacer(ctx, 0, 0, 0, MOCK_RACER, true, 0, 1, true);
+    expect(colors).toContain('#ffd700');
+    expect(colors).not.toContain('#00dd55');
+  });
+
+  it('isComeback=false (default) draws no comeback ring', () => {
+    const colors = [];
+    const ctx = makeCtx();
+    Object.defineProperty(ctx, 'strokeStyle', {
+      get() {
+        return this._s ?? '';
+      },
+      set(v) {
+        this._s = v;
+        colors.push(v);
+      },
+      configurable: true,
+    });
+    rt.drawRacer(ctx, 0, 0, 0, MOCK_RACER, false, 0);
+    expect(colors).not.toContain('#00dd55');
+  });
 });
 
 describe('SpriteRacerType — _drawBody', () => {

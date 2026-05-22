@@ -56,6 +56,12 @@ const GLOBAL_SEED      = Number(argVal('seed', '0'));
 const RACE_PLAN_ACTIVE = argVal('race-plan', 'false') === 'true';
 const BONUS_MULT       = Number(argVal('bonusMult', '1.0'));
 
+// ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
+const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
+const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
+const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
+const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
+
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
 const TEF_ALPHA              = Number(argVal('tefAlpha', '0.03'));
@@ -203,6 +209,7 @@ export function runSingleRace({
   diagnosticMode = false,
   behaviorConfigOverrides = {},
   racePlanController = null,   // Phase-3A: TrajectoryController instance or null
+  comebackAnalysisConfig = null,  // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -410,6 +417,16 @@ export function runSingleRace({
       diagSnapIdx = 1; // t=0 already captured
     }
 
+    // ── Phase-3B: COMEBACK rank tracking state ────────────────────────────────
+    const cbCfg            = comebackAnalysisConfig;
+    const cbRankHistory    = cbCfg ? new Map() : null; // b1Idx → [{ts, rank}]
+    const cbLastTriggerTs  = cbCfg ? new Map() : null; // b1Idx → last trigger raceTs (ms)
+    let   cbOutcomeStartMs = null;
+    let   cbOutcomeEndMs   = null;
+    let   cbEndgameStartMs = null;
+    const cbTriggers       = cbCfg ? [] : null;
+    const cbMaxGainByRacer = cbCfg ? new Map() : null;
+
     // ── Lightweight per-race stats (always collected, low overhead) ───────────
     let liteRow1BrakeFrames = 0;  // racer-frames where startRowIndex=1 AND avoidanceActive
     let liteRow0BrakeFrames = 0;  // racer-frames where startRowIndex=0 AND avoidanceActive
@@ -603,6 +620,50 @@ export function runSingleRace({
           else natPulkTriggersOutOfWindow++;
         }
         natPulkWasActive = isPulk;
+      }
+
+      // Phase-3B: COMEBACK rank tracking (during OUTCOME phase)
+      if (cbCfg && racePlanController) {
+        const phase     = racePlanController.getPhase(raceTs);
+        const isOutcome = phase === 'OUTCOME';
+
+        if (isOutcome && cbOutcomeStartMs === null)                              cbOutcomeStartMs = raceTs;
+        if (!isOutcome && cbOutcomeStartMs !== null && cbOutcomeEndMs === null)  cbOutcomeEndMs   = raceTs;
+
+        if (cbEndgameStartMs === null) {
+          let leaderT = -Infinity;
+          for (const r of racers) { if (!r.finished && r.t > leaderT) leaderT = r.t; }
+          if (finishT > 0 && leaderT / finishT >= cbCfg.endgameThresh) cbEndgameStartMs = raceTs;
+        }
+
+        if (isOutcome) {
+          const active  = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+          const rankMap = new Map(active.map((r, i) => [r.index, i + 1]));
+          const windowMs = cbCfg.windowSec * 1000;
+          const cutoff   = raceTs - windowMs;
+
+          for (const b1Idx of cbCfg.b1Indices) {
+            const racer = racers[b1Idx];
+            if (!racer || racer.finished) continue;
+            const currentRank = rankMap.get(b1Idx) ?? 999;
+            if (!cbRankHistory.has(b1Idx)) cbRankHistory.set(b1Idx, []);
+            const hist = cbRankHistory.get(b1Idx);
+            hist.push({ ts: raceTs, rank: currentRank });
+            while (hist.length > 1 && hist[0].ts < cutoff) hist.shift();
+
+            if (hist.length >= 2) {
+              const gain = hist[0].rank - currentRank; // positive = positions gained
+              if (gain > (cbMaxGainByRacer.get(b1Idx) ?? 0)) cbMaxGainByRacer.set(b1Idx, gain);
+              if (gain >= cbCfg.minPositions) {
+                const lastTs = cbLastTriggerTs.get(b1Idx) ?? -Infinity;
+                if (raceTs - lastTs > windowMs) {
+                  cbTriggers.push({ ts: raceTs / 1000, racerIdx: b1Idx, name: racer.name, gain });
+                  cbLastTriggerTs.set(b1Idx, raceTs);
+                }
+              }
+            }
+          }
+        }
       }
 
       // Mixing-quota snapshot: taken at the first frame at or after avoidanceWarmupMs
@@ -814,6 +875,29 @@ export function runSingleRace({
     };
     results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
     results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
+
+    // Phase-3B: COMEBACK analysis result
+    if (cbCfg) {
+      const finalTs = raceTs;
+      const effectiveOutcomeEndMs = cbEndgameStartMs !== null
+        ? Math.min(cbEndgameStartMs, cbOutcomeEndMs ?? finalTs)
+        : (cbOutcomeEndMs ?? finalTs);
+      const outcomeDurS   = cbOutcomeStartMs != null ? ((cbOutcomeEndMs   ?? finalTs) - cbOutcomeStartMs) / 1000 : 0;
+      const effectiveDurS = cbOutcomeStartMs != null ? (effectiveOutcomeEndMs - cbOutcomeStartMs) / 1000          : 0;
+      results.comebackDiag = {
+        outcomeStartS:  cbOutcomeStartMs != null ? cbOutcomeStartMs / 1000 : null,
+        outcomeEndS:    cbOutcomeEndMs   != null ? cbOutcomeEndMs   / 1000 : null,
+        outcomeDurS:    Math.max(0, outcomeDurS),
+        endgameStartS:  cbEndgameStartMs != null ? cbEndgameStartMs / 1000 : null,
+        effectiveDurS:  Math.max(0, effectiveDurS),
+        triggerCount:   cbTriggers.length,
+        triggers:       cbTriggers,
+        allMaxGains:    [...cbMaxGainByRacer.values()],
+      };
+    } else {
+      results.comebackDiag = null;
+    }
+
     return results;
   } finally {
     Math.random = savedRandom;
@@ -1413,6 +1497,81 @@ function printDiagnosticReport(diagSnapshots, trackName, racerType, durationSec,
   return lines.join('\n');
 }
 
+// ── Phase-3B: COMEBACK analysis report ────────────────────────────────────────
+function printComebackReport(raceResults, { trackName, racerType, durationSec, minPositions, windowSec, endgameThresh }) {
+  const diags = raceResults.map((r) => r.comebackDiag).filter(Boolean);
+  if (diags.length === 0) return;
+
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log(`Phase-3B — COMEBACK Analyse: ${trackName} × ${racerType} × ${durationSec}s`);
+  console.log(`  Bedingung: OUTCOME-Phase + ≥${minPositions} Plätze in ${windowSec}s  |  Endgame: >${(endgameThresh * 100).toFixed(0)}% finishT`);
+  console.log('═'.repeat(70));
+
+  for (let i = 0; i < raceResults.length; i++) {
+    const d    = diags[i];
+    const seed = raceResults[i]._seed ?? (i + 1);
+    const outStart = d.outcomeStartS != null ? d.outcomeStartS.toFixed(1) + 's' : '—';
+    const outEnd   = d.outcomeEndS   != null ? d.outcomeEndS.toFixed(1)   + 's' : `>${durationSec}s`;
+    const egStr    = d.endgameStartS != null ? d.endgameStartS.toFixed(1) + 's' : 'nie';
+    console.log(`\nSeed ${seed}:`);
+    console.log(`  OUTCOME:           ${outStart} – ${outEnd}  (${d.outcomeDurS.toFixed(1)}s)`);
+    console.log(`  Endgame (>${(endgameThresh * 100).toFixed(0)}%): ${egStr}  → effektives Fenster: ${d.effectiveDurS.toFixed(1)}s`);
+    console.log(`  COMEBACK-Trigger:  ${d.triggerCount}`);
+    for (const t of d.triggers) {
+      console.log(`    t=${t.ts.toFixed(1)}s  ${t.name.padEnd(6)}  +${t.gain} Plätze`);
+    }
+    if (d.allMaxGains.length > 0) {
+      const mn = Math.min(...d.allMaxGains);
+      const mx = Math.max(...d.allMaxGains);
+      const av = d.allMaxGains.reduce((s, v) => s + v, 0) / d.allMaxGains.length;
+      console.log(`  Max-Platzgewinn B1 (${windowSec}s-Fenster): min=${mn}  max=${mx}  avg=${av.toFixed(1)}`);
+    } else {
+      console.log(`  Max-Platzgewinn B1: keine Daten`);
+    }
+  }
+
+  // Aggregate
+  if (diags.length > 1) {
+    console.log(`\n── Aggregat (${diags.length} Rennen) ──`);
+    const avgOutDur   = diags.reduce((s, d) => s + d.outcomeDurS,   0) / diags.length;
+    const avgEffDur   = diags.reduce((s, d) => s + d.effectiveDurS, 0) / diags.length;
+    const avgTriggers = diags.reduce((s, d) => s + d.triggerCount,  0) / diags.length;
+    const zeroTrig    = diags.filter((d) => d.triggerCount === 0).length;
+    const allMaxGains = diags.flatMap((d) => d.allMaxGains);
+    console.log(`  OUTCOME Dauer:       Ø ${avgOutDur.toFixed(1)}s`);
+    console.log(`  Effektives Fenster:  Ø ${avgEffDur.toFixed(1)}s`);
+    console.log(`  COMEBACK-Trigger:    Ø ${avgTriggers.toFixed(1)}/Rennen  (${zeroTrig}/${diags.length} ohne Trigger)`);
+    if (allMaxGains.length > 0) {
+      const mn   = Math.min(...allMaxGains);
+      const mx   = Math.max(...allMaxGains);
+      const av   = allMaxGains.reduce((s, v) => s + v, 0) / allMaxGains.length;
+      const n1   = allMaxGains.filter((g) => g >= 1).length;
+      const n2   = allMaxGains.filter((g) => g >= 2).length;
+      const n3   = allMaxGains.filter((g) => g >= 3).length;
+      const tot  = allMaxGains.length;
+      console.log(`  Max-Platzgewinn B1:  min=${mn}  max=${mx}  avg=${av.toFixed(1)}  (${tot} Racer×Rennen)`);
+      console.log(`  Davon ≥1 Platz: ${n1}/${tot} (${(n1/tot*100).toFixed(0)}%)`);
+      console.log(`  Davon ≥2 Plätze: ${n2}/${tot} (${(n2/tot*100).toFixed(0)}%)`);
+      console.log(`  Davon ≥3 Plätze: ${n3}/${tot} (${(n3/tot*100).toFixed(0)}%)`);
+      // Slider recommendations
+      console.log(`\n── Slider-Empfehlungen ──`);
+      const rec = n3/tot >= 0.3 ? 3 : n2/tot >= 0.3 ? 2 : 1;
+      console.log(`  comebackMinPositionsGained: empfohlen ${rec} (≥30%-Schwelle)`);
+      if (avgEffDur < 8 && windowSec > 3) {
+        console.log(`  comebackWindowSec: ggf. auf ≤${Math.max(2, Math.floor(avgEffDur / 2))}s senken (effektives Fenster nur ${avgEffDur.toFixed(1)}s)`);
+      } else {
+        console.log(`  comebackWindowSec: ${windowSec}s passt (effektives Fenster ${avgEffDur.toFixed(1)}s)`);
+      }
+      if (avgTriggers < 0.5) {
+        console.log(`  ⚠️  Sehr wenige Trigger (Ø ${avgTriggers.toFixed(1)}) — minPositionsGained auf ${rec} oder Fenster vergrößern`);
+      } else {
+        console.log(`  ✅ Ø ${avgTriggers.toFixed(1)} Trigger/Rennen — COMEBACK-Event wird feuern`);
+      }
+    }
+  }
+  console.log('');
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const isMain =
   typeof process !== 'undefined' &&
@@ -1446,6 +1605,10 @@ if (isMain) {
   }
   if (WARMUP_MS_OVERRIDE !== null) {
     console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
+  }
+  if (COMEBACK_ANALYSIS) {
+    if (!RACE_PLAN_ACTIVE) console.warn('⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen');
+    console.log(`Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`);
   }
   if (V4_ACTIVE) {
     console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${V4_INITIAL_BOOST} openOnly=true`);
@@ -1531,6 +1694,7 @@ if (isMain) {
           // Phase-3A: create Race Plan + TrajectoryController for this race when active
           let racePlanController = null;
           let raceSollRankMap = null;
+          let b1Indices = new Set();
           if (RACE_PLAN_ACTIVE) {
             const planRacers = comboRowLayout.assignments.map(
               (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
@@ -1538,6 +1702,11 @@ if (isMain) {
             const plan = createRacePlan(planRacers, finishT, durationSec * 1000, { bonusStrengthMultiplier: BONUS_MULT }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerSollRank;
+            if (COMEBACK_ANALYSIS) {
+              for (const [idx, sr] of raceSollRankMap) {
+                if (sr <= 5) b1Indices.add(idx);
+              }
+            }
           }
           const result = runSingleRace({
             shape,
@@ -1553,8 +1722,12 @@ if (isMain) {
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {},
             racePlanController,
+            comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
+              ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
+              : null,
           });
           raceResults.push(result);
+          if (COMEBACK_ANALYSIS) result._seed = seed;
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
           if (result.v4ThreshLog != null) v4ThreshLogs.push(result.v4ThreshLog);
           if (DIAG_MODE && result.diagSnapshots) {
@@ -1612,6 +1785,11 @@ if (isMain) {
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
+
+        // Phase-3B: COMEBACK analysis report (printed per combo when flag active)
+        if (COMEBACK_ANALYSIS && raceResults.some((r) => r.comebackDiag)) {
+          printComebackReport(raceResults, { trackName, racerType, durationSec, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH });
+        }
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
         console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);

@@ -24,24 +24,47 @@ export const OVERLAY_TEMPLATES = {
     '{leader} still in front',
   ],
   BATTLE_ZOOM: [
-    'Battle for P{position} — {count} racers',
-    '{count} racers fighting for P{position}',
-    'Tight pack at P{position}',
-    'Who takes P{position}? — {count} contenders',
-    'Close racing for position {position}',
-    'Packed together: {count} at P{position}',
-    'No way through — pack at P{position}',
-    'Thrilling: {count} racers for P{position}',
+    'BATTLE FOR POSITION {position}!',
+    '{count} RACERS — ONE SPOT!',
+    'WHO TAKES {position}?',
+    'Three-way fight for position {position}!',
+    '{count} racers scrapping for spot {position}!',
+    'Nobody giving up position {position}!',
+    'BATTLE — P{position}',
+    '{count}-way battle, position {position}',
+    "Somebody's losing position {position} today.",
+    'Position {position} — not settled yet.',
+    'P{position} up for grabs — {count} takers!',
+    'This is what racing looks like — P{position}!',
+    'Not an inch of room — P{position} on the line',
+    "{count} racers, one position. Something's gotta give.",
+    'Pure wheel-to-wheel — fighting for P{position}',
   ],
   COMEBACK_ZOOM: [
-    'Comeback! {racer} climbs the ranks',
-    '{racer} fights their way forward',
-    'Charging back: {racer}',
-    '{racer} works through the field',
-    "{racer} won't give up",
-    'Back in it: {racer}',
-    '{racer} surges through',
-    'Strong ride: {racer} makes up ground',
+    'COMEBACK! {name} pushing through the field!',
+    '{name} is on the move!',
+    '{name} charging back — watch out!',
+    'Positions gained: {name} surges forward',
+    '{name} clawing back into contention',
+    "Somebody forgot to tell {name} it's over.",
+    '{name} works through the pack',
+    'The comeback is real — {name}!',
+    'Back in the fight: {name}',
+    "Don't write off {name} just yet.",
+    '{name} reclaims ground — lap by lap',
+    'Strong push from {name} — ranks falling fast',
+  ],
+  LEAD_CHANGE: [
+    '{newLeader} takes the lead from {previousLeader}!',
+    'LEAD CHANGE! {newLeader} passes {previousLeader}!',
+    '{previousLeader} overtaken! {newLeader} hits the front!',
+    '{newLeader} blows past {previousLeader}!',
+    'New leader: {newLeader}. {previousLeader} drops back.',
+    '{newLeader} surges ahead — {previousLeader} loses the lead!',
+    '{previousLeader} out — {newLeader} is in front!',
+    '{previousLeader} out, {newLeader} in — this race just changed!',
+    'Watch out — {newLeader} has taken over from {previousLeader}!',
+    '{newLeader} pushes past {previousLeader} — can they hold it?',
   ],
 };
 
@@ -86,6 +109,34 @@ export function selectOverlayText(stateKey, variables = {}, lastIndexByState = {
   // Anti-repeat: exclude the previously used index when alternatives exist
   const lastIdx = lastIndexByState[stateKey] ?? -1;
   const candidates = usable.length > 1 ? usable.filter(({ i }) => i !== lastIdx) : usable;
+
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  return { text: resolveTemplate(pick.tmpl, variables), index: pick.i };
+}
+
+/**
+ * Selects a random template for `stateKey`, excluding ALL indices already used
+ * in the current race (per-race no-repeat). Falls back to any usable template
+ * when every template has been exhausted.
+ *
+ * @param {string} stateKey    - CAM_STATE value (e.g. 'BATTLE_ZOOM')
+ * @param {Object} variables   - Variable bindings, e.g. { position: 3, count: 3 }
+ * @param {Set<number>} usedSet - Set of template indices already shown this race
+ * @returns {{ text: string, index: number } | null}
+ */
+export function selectOverlayTextNoRepeat(stateKey, variables = {}, usedSet = new Set()) {
+  const pool = OVERLAY_TEMPLATES[stateKey];
+  if (!pool || pool.length === 0) return null;
+
+  const usable = pool
+    .map((tmpl, i) => ({ tmpl, i }))
+    .filter(({ tmpl }) => hasAllVars(tmpl, variables));
+
+  if (usable.length === 0) return null;
+
+  // Prefer templates not yet shown this race; fall back to full usable pool when exhausted
+  const fresh = usable.filter(({ i }) => !usedSet.has(i));
+  const candidates = fresh.length > 0 ? fresh : usable;
 
   const pick = candidates[Math.floor(Math.random() * candidates.length)];
   return { text: resolveTemplate(pick.tmpl, variables), index: pick.i };

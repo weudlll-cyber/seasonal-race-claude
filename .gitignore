@@ -15,10 +15,6 @@ audit-temp/
 diagnosis/
 server/data/**/*.json.tmp
 server/data/tracks-backups/
-client/tmp/camera-logs/*.json
-client/tmp/fairness-data.json
-client/tmp/diag_frames*/
-client/tmp/sim-frames/
-client/tmp/recordings/
-client/tmp/open-focus/
+client/tmp/
+/race-*.png
 /poc-*.png

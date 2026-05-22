@@ -151,7 +151,7 @@ export class SpriteRacerType {
     ctx.restore();
   }
 
-  drawRacer(ctx, x, y, angle, racer, isLeader, frame, displaySizeScale = 1) {
+  drawRacer(ctx, x, y, angle, racer, isLeader, frame, displaySizeScale = 1, isComeback = false) {
     const cfg = this.config;
     ctx.save();
     ctx.translate(x, y);
@@ -163,6 +163,15 @@ export class SpriteRacerType {
       ctx.lineWidth = 3;
       ctx.shadowBlur = 12;
       ctx.shadowColor = cfg.leaderRingColor;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else if (isComeback) {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, cfg.leaderEllipseRx, cfg.leaderEllipseRy, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00dd55';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#00dd55';
       ctx.stroke();
       ctx.shadowBlur = 0;
     }

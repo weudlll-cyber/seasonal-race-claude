@@ -61,7 +61,13 @@ import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import StateOverlay from './StateOverlay.jsx';
-import { selectOverlayText } from '../../modules/stateOverlayTemplates.js';
+import BattleDiagHUD from './BattleDiagHUD.jsx';
+import ComebackDiagHUD from './ComebackDiagHUD.jsx';
+import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
+import {
+  selectOverlayText,
+  selectOverlayTextNoRepeat,
+} from '../../modules/stateOverlayTemplates.js';
 import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -169,11 +175,20 @@ export default function RaceScreen() {
   const showRpWinnerList = cameraConfig.showRpWinnerList ?? false;
   const showTop10SpeedMonitor = cameraConfig.showTop10SpeedMonitor ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
+  const showBattleDiag = cameraConfig.showBattleDiag ?? false;
+  const showComebackDiag = cameraConfig.showComebackDiag ?? false;
+  const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
   const [overlayText, setOverlayText] = useState(null);
   const overlayTimerRef = useRef(null);
+  // Per-race no-repeat tracking: Set<number> of used template indices per state key.
+  // Reset at race start via phase transition. OVERVIEW/COMEBACK use last-index anti-repeat;
+  // BATTLE_ZOOM uses the full Set to prevent any repeat within one race.
   const overlayLastIndexRef = useRef({});
+  const overlayUsedBattleIndicesRef = useRef(new Set());
+  const overlayUsedComebackIndicesRef = useRef(new Set());
+  const overlayUsedLeadChangeIndicesRef = useRef(new Set());
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -196,24 +211,64 @@ export default function RaceScreen() {
 
     const cfg = cameraConfigRef.current;
     if (!(cfg.stateOverlayEnabled ?? true)) return;
-    if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'].includes(camState)) return;
+    if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'].includes(camState)) return;
 
     const vars = {};
+    const racers = g.current?.racers ?? [];
     if (camState === 'OVERVIEW') {
-      const racers = g.current?.racers ?? [];
       if (racers.length > 0) {
         const leader = racers.reduce((a, b) => (b.t > a.t ? b : a));
         if (leader?.name) vars.leader = leader.name;
       }
+    } else if (camState === 'BATTLE_ZOOM') {
+      // Derive {position} (rank of frontmost battle racer) and {count} (group size).
+      const dir = camDirRef.current;
+      if (dir && racers.length > 0) {
+        const battleData = dir.getBattleDiagData(racers);
+        const sorted = [...racers].sort((a, b) => b.t - a.t);
+        if (battleData.lockedRacer) {
+          const pos = sorted.indexOf(battleData.lockedRacer) + 1;
+          if (pos > 0) vars.position = pos;
+        } else {
+          vars.position = 1;
+        }
+        vars.count = Math.max(battleData.groupRacers.length, 3);
+      }
+    } else if (camState === 'COMEBACK_ZOOM') {
+      // Derive {name} from the locked comeback racer.
+      const dir = camDirRef.current;
+      if (dir) {
+        const cbData = dir.getComebackDiagData(racers, performance.now());
+        if (cbData.lockedRacer?.name) vars.name = cbData.lockedRacer.name;
+      }
+    } else if (camState === 'LEAD_CHANGE') {
+      // Derive {newLeader} and {previousLeader} from lead-change data.
+      const dir = camDirRef.current;
+      if (dir) {
+        const lcData = dir.getLeadChangeDiagData();
+        if (lcData.newLeader) vars.newLeader = lcData.newLeader;
+        if (lcData.previousLeader) vars.previousLeader = lcData.previousLeader;
+      }
     }
-    // BATTLE_ZOOM vars ({position}, {count}) and COMEBACK_ZOOM vars ({racer}) are
-    // provided by future specs — until then, no template can be satisfied and
-    // the component simply stays hidden.
 
-    const result = selectOverlayText(camState, vars, overlayLastIndexRef.current);
+    let result;
+    if (camState === 'BATTLE_ZOOM') {
+      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedBattleIndicesRef.current);
+      if (result) overlayUsedBattleIndicesRef.current.add(result.index);
+    } else if (camState === 'COMEBACK_ZOOM') {
+      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedComebackIndicesRef.current);
+      if (result) overlayUsedComebackIndicesRef.current.add(result.index);
+    } else if (camState === 'LEAD_CHANGE') {
+      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedLeadChangeIndicesRef.current);
+      if (result) overlayUsedLeadChangeIndicesRef.current.add(result.index);
+    } else {
+      result = selectOverlayText(camState, vars, overlayLastIndexRef.current);
+      if (result) {
+        overlayLastIndexRef.current = { ...overlayLastIndexRef.current, [camState]: result.index };
+      }
+    }
     if (!result) return;
 
-    overlayLastIndexRef.current = { ...overlayLastIndexRef.current, [camState]: result.index };
     setOverlayText(result.text);
 
     const duration = cfg.stateOverlayDurationMs ?? 3500;
@@ -414,6 +469,10 @@ export default function RaceScreen() {
     }
     const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
 
+    overlayUsedBattleIndicesRef.current.clear();
+    overlayUsedComebackIndicesRef.current.clear();
+    overlayUsedLeadChangeIndicesRef.current.clear();
+
     g.current = {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
@@ -422,6 +481,11 @@ export default function RaceScreen() {
       physicsAccum: 0,
       physicsTs: 0,
       smoothDt: 16,
+      slowmoFadeProgress: 0,
+      slowmoActive: false,
+      slowmoStartWallTs: 0,
+      slowmoTs: null,
+      focusFadeProgress: 0,
       finishedCount: 0,
       dustParticles: [],
       burstParticles: [],
@@ -528,6 +592,11 @@ export default function RaceScreen() {
         ),
       };
     }
+    // Inject B1-racer set into CameraDirector for COMEBACK detection
+    if (racePlanEnabled && rpPlanInfo?.b1Indices) {
+      camDirRef.current.updateRacePlan(rpPlanInfo.b1Indices);
+    }
+
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
     diagDataRef.current.rpRows = rowLayout.totalRows;
@@ -634,7 +703,7 @@ export default function RaceScreen() {
     // ezoom: total canvas effective zoom (cam.zoom×bsX for closed, BASE×cam.zoom for open).
     // Labels and trail are drawn in world coordinates under the ctx transform, so they must
     // be sized as worldPx = targetScreenPx / ezoom to appear constant on screen.
-    function drawNameTag(px, py, name, isLeader, ezoom) {
+    function drawNameTag(px, py, name, isLeader, isComeback, ezoom) {
       const inv = 1 / ezoom;
       const fontPx = Math.max(8, Math.round(11 * inv));
       const bgH = Math.max(6, Math.round(13 * inv));
@@ -646,7 +715,7 @@ export default function RaceScreen() {
       ctx.fillRect(px - nameW / 2, nameY - bgH, nameW, bgH);
       ctx.textBaseline = 'bottom';
       ctx.textAlign = 'center';
-      ctx.fillStyle = isLeader ? '#ffd700' : '#eee';
+      ctx.fillStyle = isLeader ? '#ffd700' : isComeback ? '#00dd55' : '#eee';
       ctx.fillText(name, px, nameY);
       if (isLeader && g.current.phase === PHASE.RACING) {
         ctx.font = `${Math.max(10, Math.round(14 * inv))}px serif`;
@@ -668,7 +737,23 @@ export default function RaceScreen() {
         )
       );
       const doInterp = interpolationEnabled && st.phase === PHASE.RACING;
-      for (const r of st.racers) {
+
+      // COMEBACK highlight: green ring + always-visible nametag on locked racer during COMEBACK_ZOOM.
+      const isInComeback = camDirRef.current?.hudState === 'COMEBACK_ZOOM';
+      const comebackLockedIdx = isInComeback ? camDirRef.current?.comebackLockedRacerIndex : null;
+      const comebackRacer =
+        comebackLockedIdx != null ? st.racers.find((r) => r.index === comebackLockedIdx) : null;
+
+      // BATTLE focus: darken non-group racers when focusFadeProgress > 0.
+      // Uses live _detectPulkGroup() for the current cluster — no frozen entry snapshot.
+      const focusFactor = st.focusFadeProgress ?? 0;
+      const livePulkGroup =
+        focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
+      const battleGroupIndices = livePulkGroup
+        ? new Set(livePulkGroup.map((r) => r.index).filter((i) => i != null))
+        : null;
+
+      function paintRacer(r, dimAlpha = 1) {
         const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
         const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
         const renderAngle = doInterp
@@ -676,13 +761,14 @@ export default function RaceScreen() {
           : r.angle;
         for (let i = 0; i < r.trail.length; i++) {
           const frac = (i + 1) / r.trail.length;
-          ctx.globalAlpha = frac * 0.4;
+          ctx.globalAlpha = frac * 0.4 * dimAlpha;
           ctx.fillStyle = r.color;
           ctx.beginPath();
           ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = dimAlpha;
+        const rIsComeback = r === comebackRacer;
         rt.drawRacer(
           ctx,
           renderX,
@@ -690,17 +776,28 @@ export default function RaceScreen() {
           renderAngle,
           r,
           r === leader,
-          st.lastTs ?? 0,
-          effectiveScale
+          st.slowmoTs ?? st.lastTs ?? 0,
+          effectiveScale,
+          rIsComeback
         );
-        if (tagSet.has(r)) {
+        if (tagSet.has(r) || rIsComeback) {
           const tagName = showRpStartRowCfg
             ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
             : r.name;
-          drawNameTag(renderX, renderY, tagName, r === leader, ezoom);
+          drawNameTag(renderX, renderY, tagName, r === leader, rIsComeback && r !== leader, ezoom);
         }
         r.trail.push({ x: renderX, y: renderY });
         if (r.trail.length > 10) r.trail.shift();
+      }
+
+      if (focusFactor > 0 && battleGroupIndices && battleGroupIndices.size > 0) {
+        const dark = (cameraConfigRef.current.battleFocusDarkening ?? 0.4) * focusFactor;
+        for (const r of st.racers) {
+          paintRacer(r, battleGroupIndices.has(r.index) ? 1 : 1 - dark);
+        }
+        ctx.globalAlpha = 1;
+      } else {
+        for (const r of st.racers) paintRacer(r);
       }
     }
 
@@ -1097,11 +1194,39 @@ export default function RaceScreen() {
         if (constSpeedActive) {
           for (const r of st.racers) r._diagPrevT = r.t;
         }
-        // ── Fixed-timestep physics accumulator ───────────────────────────────
-        // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
-        // long frames (50ms) yield 3 steps, short frames (12ms) yield 0.
-        // Remainder carries over so no physics time is lost between frames.
-        st.physicsAccum += rawDt;
+        // ── BATTLE slowmo ────────────────────────────────────────────────────
+        // Slows down physics (and sprite animation) during BATTLE_ZOOM.
+        // Camera path (smoothDt) is intentionally unaffected.
+        {
+          const isBattleZoom = camDirRef.current?.hudState === 'BATTLE_ZOOM';
+          const smFactor = cameraConfigRef.current.battleSlowmoFactor ?? 0.5;
+          const smMinDurMs = (cameraConfigRef.current.battleSlowmoMinDuration ?? 2.0) * 1000;
+          const smFadeDurMs = (cameraConfigRef.current.battleSlowmoFadeDuration ?? 0.3) * 1000;
+          if (isBattleZoom && !st.slowmoActive) {
+            st.slowmoActive = true;
+            st.slowmoStartWallTs = ts;
+          }
+          if (!isBattleZoom && st.slowmoActive && ts - st.slowmoStartWallTs >= smMinDurMs) {
+            st.slowmoActive = false;
+          }
+          const fadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
+          st.slowmoFadeProgress = st.slowmoActive
+            ? Math.min(1, st.slowmoFadeProgress + fadeStep)
+            : Math.max(0, st.slowmoFadeProgress - fadeStep);
+          const effectiveSlowmoFactor = 1.0 - (1.0 - smFactor) * st.slowmoFadeProgress;
+          // ── BATTLE focus fade (same duration as slowmo fade) ─────────────────
+          const focusFadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
+          st.focusFadeProgress = isBattleZoom
+            ? Math.min(1, st.focusFadeProgress + focusFadeStep)
+            : Math.max(0, st.focusFadeProgress - focusFadeStep);
+          if (st.slowmoTs === null) st.slowmoTs = ts;
+          st.slowmoTs += rawDt * effectiveSlowmoFactor;
+          // ── Fixed-timestep physics accumulator ─────────────────────────────
+          // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
+          // long frames (50ms) yield 3 steps, short frames (12ms) yield 0.
+          // Remainder carries over so no physics time is lost between frames.
+          st.physicsAccum += rawDt * effectiveSlowmoFactor;
+        }
         while (st.physicsAccum >= FIXED_DT) {
           st.physicsTs += FIXED_DT;
           const physicsTs = st.physicsTs;
@@ -1500,6 +1625,8 @@ export default function RaceScreen() {
         finishedCount: st.finishedCount,
         winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
+        isOutcomePhase: diagDataRef.current.rpPhase === 'OUTCOME',
+        physicsRacers: st.racers,
       };
       const cam =
         st.phase === PHASE.RACING
@@ -1793,6 +1920,9 @@ export default function RaceScreen() {
             showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
+          <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
+          <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
+          <LeadChangeDiagHUD cameraRef={camDirRef} visible={showLeadChangeDiag} />
           <RacePlanHUD
             diagRef={diagDataRef}
             showWinnerList={showRpWinnerList}

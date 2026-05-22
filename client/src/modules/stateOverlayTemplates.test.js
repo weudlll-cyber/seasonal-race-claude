@@ -4,6 +4,7 @@ import {
   hasAllVars,
   resolveTemplate,
   selectOverlayText,
+  selectOverlayTextNoRepeat,
 } from './stateOverlayTemplates.js';
 
 // ── hasAllVars ────────────────────────────────────────────────────────────
@@ -87,9 +88,9 @@ describe('selectOverlayText', () => {
   });
 
   it('skips templates with missing vars but picks one that has all vars available', () => {
-    // COMEBACK_ZOOM templates all need {racer}. Provide it for some, omit others.
-    // Since every template in COMEBACK_ZOOM needs {racer}, if we pass it we get a result.
-    const result = selectOverlayText('COMEBACK_ZOOM', { racer: 'Felix' });
+    // COMEBACK_ZOOM templates all need {name}. Provide it for some, omit others.
+    // Since every template in COMEBACK_ZOOM needs {name}, if we pass it we get a result.
+    const result = selectOverlayText('COMEBACK_ZOOM', { name: 'Felix' });
     expect(result).not.toBeNull();
     expect(result.text).toContain('Felix');
   });
@@ -115,7 +116,7 @@ describe('selectOverlayText', () => {
   it('anti-repeat is per-state: different states do not share last-used tracking', () => {
     const lastByState = { OVERVIEW: 0 };
     // COMEBACK_ZOOM is not in lastByState, so no restriction applies
-    const r = selectOverlayText('COMEBACK_ZOOM', { racer: 'Leo' }, lastByState);
+    const r = selectOverlayText('COMEBACK_ZOOM', { name: 'Leo' }, lastByState);
     expect(r).not.toBeNull();
   });
 
@@ -143,5 +144,109 @@ describe('selectOverlayText', () => {
     expect(result).not.toBeNull();
     expect(result.text).toContain('Max');
     expect(result.text).not.toMatch(/\{[^}]+\}/); // no unresolved placeholders
+  });
+});
+
+// ── selectOverlayTextNoRepeat ─────────────────────────────────────────────
+
+describe('selectOverlayTextNoRepeat', () => {
+  const battleVars = { position: 3, count: 3 };
+
+  it('returns a valid BATTLE_ZOOM template when vars are provided', () => {
+    const result = selectOverlayTextNoRepeat('BATTLE_ZOOM', battleVars, new Set());
+    expect(result).not.toBeNull();
+    expect(result.text).not.toMatch(/\{[^}]+\}/);
+    expect(typeof result.index).toBe('number');
+  });
+
+  it('returns null when no template can satisfy the variables', () => {
+    expect(selectOverlayTextNoRepeat('BATTLE_ZOOM', {}, new Set())).toBeNull();
+  });
+
+  it('never repeats an already-used index when alternatives exist', () => {
+    const used = new Set();
+    const picked = new Set();
+    const poolSize = OVERLAY_TEMPLATES.BATTLE_ZOOM.length;
+    // Draw as many times as there are templates; each pick should be fresh
+    for (let i = 0; i < poolSize; i++) {
+      const r = selectOverlayTextNoRepeat('BATTLE_ZOOM', battleVars, used);
+      expect(r).not.toBeNull();
+      expect(used.has(r.index)).toBe(false);
+      used.add(r.index);
+      picked.add(r.index);
+    }
+    // All templates should have been used after poolSize draws
+    expect(picked.size).toBe(poolSize);
+  });
+
+  it('falls back to any usable template when all have been exhausted', () => {
+    // Fill the used set with all valid indices
+    const pool = OVERLAY_TEMPLATES.BATTLE_ZOOM;
+    const allIndices = new Set(pool.map((_, i) => i));
+    // Should still return something (the full fallback pool)
+    const result = selectOverlayTextNoRepeat('BATTLE_ZOOM', battleVars, allIndices);
+    expect(result).not.toBeNull();
+  });
+
+  it('returns null for unknown state key', () => {
+    expect(selectOverlayTextNoRepeat('NONEXISTENT', {}, new Set())).toBeNull();
+  });
+});
+
+// ── Phase 3C: LEAD_CHANGE template pool ──────────────────────────────────
+
+describe('Phase 3C — LEAD_CHANGE template pool', () => {
+  it('has ≥8 templates', () => {
+    expect(OVERLAY_TEMPLATES.LEAD_CHANGE.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('every template requires {newLeader} and {previousLeader}', () => {
+    for (const tmpl of OVERLAY_TEMPLATES.LEAD_CHANGE) {
+      expect(tmpl).toMatch(/\{newLeader\}/);
+      expect(tmpl).toMatch(/\{previousLeader\}/);
+    }
+  });
+
+  it('all templates resolve without leftover placeholders when both vars provided', () => {
+    const vars = { newLeader: 'Bob', previousLeader: 'Alice' };
+    for (const tmpl of OVERLAY_TEMPLATES.LEAD_CHANGE) {
+      const resolved = resolveTemplate(tmpl, vars);
+      expect(resolved).not.toMatch(/\{[^}]+\}/);
+    }
+  });
+
+  it('selectOverlayTextNoRepeat returns a result with {newLeader} and {previousLeader}', () => {
+    const result = selectOverlayTextNoRepeat(
+      'LEAD_CHANGE',
+      { newLeader: 'Max', previousLeader: 'Anna' },
+      new Set()
+    );
+    expect(result).not.toBeNull();
+    expect(result.text).toContain('Max');
+    expect(result.text).toContain('Anna');
+    expect(result.text).not.toMatch(/\{[^}]+\}/);
+  });
+});
+
+// ── Phase 3B: BATTLE_ZOOM template pool ──────────────────────────────────
+
+describe('Phase 3B — BATTLE_ZOOM template pool', () => {
+  it('has 15 templates (10 spec + 5 CC additions)', () => {
+    expect(OVERLAY_TEMPLATES.BATTLE_ZOOM).toHaveLength(15);
+  });
+
+  it('every template requires {position} and/or {count} — yields null with empty vars', () => {
+    expect(selectOverlayText('BATTLE_ZOOM', {})).toBeNull();
+  });
+
+  it('all templates resolve without leftover placeholders when both vars provided', () => {
+    const vars = { position: 2, count: 4 };
+    const pool = OVERLAY_TEMPLATES.BATTLE_ZOOM;
+    for (const tmpl of pool) {
+      const resolved = tmpl
+        .replace(/\{position\}/g, String(vars.position))
+        .replace(/\{count\}/g, String(vars.count));
+      expect(resolved).not.toMatch(/\{[^}]+\}/);
+    }
   });
 });

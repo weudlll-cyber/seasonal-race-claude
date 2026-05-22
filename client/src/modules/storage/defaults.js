@@ -184,6 +184,19 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadAheadEnabled: false,
       leadOutEnabled: false,
     },
+    LEAD_CHANGE: {
+      spritePx: 65,
+      trackingTC: 0.25,
+      entryTC: 0.8,
+      leadInDuration: 0.3,
+      leadOutDuration: 1.5,
+      innerFramePct: 0.7,
+      maxStateDuration: 8000,
+      minStateHold: 1500,
+      maxEntryDurationMs: 5000,
+      leadAheadEnabled: false,
+      leadOutEnabled: false,
+    },
   },
   // Entry-convergence thresholds: when camera is within these values of its target after
   // a state transition, the lerpPhase switches from 'entry' (entryTC) to 'tracking' (trackingTC).
@@ -203,18 +216,54 @@ export const DEFAULT_CAMERA_CONFIG = {
   showRpStartRow: false,
   showTop10SpeedMonitor: false,
   enableFrameLog: false, // frame-by-frame ring buffer for jitter post-analysis (default OFF)
+  showBattleDiag: false,
+  showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
+  showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
   battleGapThreshold: 0.05,
   endgameThreshold: 0.85,
   // Pulk condition: BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance.
   // Replaces the old battleGapThreshold (arc-length fraction) — pixel distance is tunable in Dev Panel.
   battlePulkThresholdPx: 200,
+  // Isolation threshold: no non-group racer may be closer than this to any group member.
+  // 0 = disabled (default). Suggested value: 1.5 × battlePulkThresholdPx = 300.
+  battleIsolationThresholdPx: 0,
+  // Maximum number of racers that can form the battle group (3–6). Greedy expansion adds
+  // adjacent-rank racers until the group reaches this cap or no more qualify.
+  battleMaxGroupSize: 6,
   // Minimum time BATTLE stays active after entry even if the pulk dissolves sooner.
   battleMinDurationMs: 3000,
+  // BATTLE slowmo: physics (not camera) slows down during BATTLE_ZOOM.
+  // battleSlowmoFactor: 1.0 = normal speed, 0.5 = half speed.
+  // battleSlowmoMinDuration: minimum seconds slowmo holds after BATTLE ends.
+  // battleSlowmoFadeDuration: seconds for fade-in / fade-out of the effect.
+  battleSlowmoFactor: 0.5,
+  battleSlowmoMinDuration: 2.0,
+  battleSlowmoFadeDuration: 0.3,
+  // BATTLE focus: non-group racers are desaturated and darkened during BATTLE_ZOOM.
+  // Fade-in/out uses the same duration as battleSlowmoFadeDuration.
+  battleFocusDarkening: 0.4, // 0 = no change, 1 = fully black
+  // COMEBACK camera tuning
+  comebackMinPositionsGained: 3, // minimum rank-places gained within the window to trigger
+  comebackWindowSec: 5, // seconds of rank history to evaluate (1–10)
+  comebackMinDuration: 3, // seconds camera stays on the comeback racer (1–5)
+  // LEAD_CHANGE camera tuning
+  leadChangeMinGap: 0.002, // minimum T-space gap between P1 and P2 for a stable lead read
+  leadChangeDebounceMs: 800, // ms the new leader must hold before change is confirmed
+  leadChangeMinDuration: 1.5, // seconds camera stays in LEAD_CHANGE state (1–5)
   // Timing tunables (global — not per-state)
   postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
-  overviewCooldownMin: 15000, // min ms after leaving OVERVIEW before it can recur
-  overviewCooldownMax: 25000, // max ms — jittered each exit for TV-style variety
+  comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
+  leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
+  overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
+  // Regie (weighted random director) — candidate pool weights (0.0–1.0)
+  battleWeight: 0.8,
+  leadChangeWeight: 0.7,
+  comebackWeight: 0.6,
+  overviewWeight: 0.3,
+  // OVERVIEW scheduler: race-length-aware fire timing
+  overviewTargetCount: 2, // target number of OVERVIEW cuts per race
+  overviewStartDelay: 15, // seconds into the race before first OVERVIEW is eligible
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
   countdownDurationMs: 4000, // matches the default race countdown duration

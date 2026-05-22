@@ -19,6 +19,7 @@ export function loadRaceDynamicsConfig() {
   if (
     merged.reRollVariationPercent <= 0 ||
     merged.reRollTransitionDuration <= 0 ||
+    merged.trajectoryTransitionDuration <= 0 ||
     merged.reRollIntervalDivisor <= 0 ||
     merged.reRollLastPositionPercent <= 0 ||
     merged.reRollLastPositionPercent > 100 ||
