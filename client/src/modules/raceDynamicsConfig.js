@@ -21,7 +21,8 @@ export function loadRaceDynamicsConfig() {
     merged.reRollTransitionDuration <= 0 ||
     merged.reRollIntervalDivisor <= 0 ||
     merged.reRollLastPositionPercent <= 0 ||
-    merged.reRollLastPositionPercent > 100
+    merged.reRollLastPositionPercent > 100 ||
+    merged.trajectoryTransitionDuration <= 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }
