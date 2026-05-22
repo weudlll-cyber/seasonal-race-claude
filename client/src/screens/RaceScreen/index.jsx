@@ -549,16 +549,45 @@ export default function RaceScreen() {
     };
 
     // ── Canvas positions ────────────────────────────────────────────────────
+    // Open-track geometry: computed once at race start, shared by Fixes 1/2/3.
+    // Primary track direction sampled at midpoint (t=0.5); avoids start/end edge artefacts.
+    // openTrackHW = half the median cross-section width (inner→outer = full width).
+    // Perp = cross-track unit vector (⊥ to forward); Fwd = forward unit vector.
+    const openTrackAngle = isOpenTrack ? shapeRef.current.getPosition(0.5, 0).angle : 0;
+    const openTrackHW = isOpenTrack ? shapeRef.current.getActualTrackWidth() / 2 : 0;
+    const openTrackPerpCos = Math.cos(openTrackAngle + Math.PI / 2);
+    const openTrackPerpSin = Math.sin(openTrackAngle + Math.PI / 2);
+    const openTrackFwdCos = Math.cos(openTrackAngle);
+    const openTrackFwdSin = Math.sin(openTrackAngle);
+
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
       const st = g.current;
       const shape = shapeRef.current;
       for (const r of st.racers) {
         const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        const pos = shape.getPosition(t, r.physicalY / 2);
-        r.x = pos.x;
-        r.y = pos.y;
-        r.angle = pos.angle;
+        if (isOpenTrack) {
+          // Fix 3: Eliminate forward-shift wackeln caused by the inner↔outer spline
+          // cross-section not being perfectly perpendicular to the track tangent.
+          // Strategy: use the original getPosition call for the boundary point (preserves
+          // correct track-width scale and stays within bounds), then project the
+          // center→boundary vector onto the LOCAL perpendicular at this t, discarding
+          // any forward component. r.angle is the local tangent so each racer points
+          // correctly along the track at their own position.
+          const center = shape.getPosition(t, 0);
+          const lateral = shape.getPosition(t, r.physicalY / 2);
+          const perpCos = Math.cos(center.angle + Math.PI / 2);
+          const perpSin = Math.sin(center.angle + Math.PI / 2);
+          const lateralDist = (lateral.x - center.x) * perpCos + (lateral.y - center.y) * perpSin;
+          r.x = center.x + perpCos * lateralDist;
+          r.y = center.y + perpSin * lateralDist;
+          r.angle = center.angle;
+        } else {
+          const pos = shape.getPosition(t, r.physicalY / 2);
+          r.x = pos.x;
+          r.y = pos.y;
+          r.angle = pos.angle;
+        }
       }
     }
 
@@ -965,8 +994,20 @@ export default function RaceScreen() {
 
     // Finish-line marker for open tracks at finishT position
     function drawOpenTrackFinishLine(shape, ft) {
-      const pOuter = shape.getPosition(ft, 1.0);
-      const pInner = shape.getPosition(ft, -1.0);
+      // Fix 2: Force the finish line perpendicular to the primary track axis.
+      // getPosition(ft, ±1.0) gives inner/outer at the same t-fraction, but the
+      // line between them follows the spline cross-section which may be diagonal
+      // when inner and outer splines diverge. Instead, compute pInner/pOuter as
+      // symmetric offsets from the centre along the constant cross-track direction.
+      const center = shape.getPosition(ft, 0);
+      const pInner = {
+        x: center.x - openTrackPerpCos * openTrackHW,
+        y: center.y - openTrackPerpSin * openTrackHW,
+      };
+      const pOuter = {
+        x: center.x + openTrackPerpCos * openTrackHW,
+        y: center.y + openTrackPerpSin * openTrackHW,
+      };
       const dx = pOuter.x - pInner.x,
         dy = pOuter.y - pInner.y;
       const segments = 8;
@@ -979,15 +1020,15 @@ export default function RaceScreen() {
         ctx.beginPath();
         ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
         ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
-        const perp = pInner.angle + Math.PI / 2;
+        // Stripe depth runs along the forward direction (⊥ to the finish line).
         const hw = 7;
         ctx.lineTo(
-          pInner.x + dx * f1 + Math.cos(perp) * hw,
-          pInner.y + dy * f1 + Math.sin(perp) * hw
+          pInner.x + dx * f1 + openTrackFwdCos * hw,
+          pInner.y + dy * f1 + openTrackFwdSin * hw
         );
         ctx.lineTo(
-          pInner.x + dx * f0 + Math.cos(perp) * hw,
-          pInner.y + dy * f0 + Math.sin(perp) * hw
+          pInner.x + dx * f0 + openTrackFwdCos * hw,
+          pInner.y + dy * f0 + openTrackFwdSin * hw
         );
         ctx.closePath();
         ctx.fill();
@@ -1195,7 +1236,18 @@ export default function RaceScreen() {
           // Scoreboard: update when physicsTs crosses a 100ms bucket boundary
           if (Math.round(physicsTs / 100) !== Math.round((physicsTs - FIXED_DT) / 100)) {
             setScoreboard(
-              [...st.racers].sort((a, b) => b.t - a.t).map((r, i) => ({ ...r, rank: i + 1 }))
+              // Fix 1: On open tracks sort by projected world position (r.x/r.y already
+              // updated by computePositions above) so the HUD leader matches the visual.
+              [...st.racers]
+                .sort(
+                  isOpenTrack
+                    ? (a, b) =>
+                        b.x * openTrackFwdCos +
+                        b.y * openTrackFwdSin -
+                        (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
+                    : (a, b) => b.t - a.t
+                )
+                .map((r, i) => ({ ...r, rank: i + 1 }))
             );
           }
 
@@ -1205,7 +1257,16 @@ export default function RaceScreen() {
             const byRank = st.racers
               .filter((r) => r.finished)
               .sort((a, b) => a.finishRank - b.finishRank);
-            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+            const rest = st.racers
+              .filter((r) => !r.finished)
+              .sort(
+                isOpenTrack
+                  ? (a, b) =>
+                      b.x * openTrackFwdCos +
+                      b.y * openTrackFwdSin -
+                      (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
+                  : (a, b) => b.t - a.t
+              );
             sessionStorage.setItem(
               'raceResults',
               JSON.stringify({
