@@ -180,9 +180,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-22 | **1986/1987 unit** | fix: Open Track — Ranking, Ziellinie, Spurwechsel-Wackeln (squash `8b7f8f6`). Fix 1: Scoreboard-Sort auf Open Tracks nach projizierter Weltposition (r.x/r.y · fwdDir) statt reinem t-Wert — visuell führender Racer korrekt im HUD. Fix 2: Ziellinie senkrecht zur primären Fahrtrichtung gezeichnet (center ± openTrackHW entlang lokalem Perp); Stripe-Tiefe entlang Fwd-Vektor. Fix 3: physicalY-Offset als reine Lateralbewegung: center-Point + Projektion von getPosition(t, physicalY/2) auf lokalen Perp-Vektor — kein Forward-Leak durch Spline-Kurvengeometrie; r.angle = lokale Track-Tangente pro Racer. Nur RaceScreen/index.jsx, Closed Tracks unverändert. 1 pre-existing Failure (raceDynamicsConfig.test.js — trajectoryTransitionDuration=0 Guard, kein Zusammenhang mit diesem Fix). Backup-Tag: `backup/pre-fix-open-track-ranking`. |
 
 | 2026-05-22 | **1987 unit** | fix(raceDynamicsConfig): trajectoryTransitionDuration <= 0 Validation Guard (direct commit `980ce76`). Guard war in Commit 48c21a3 versprochen aber nie in die if-Condition geschrieben worden — eine Zeile ergänzt. 1987/1987 ✅ (pre-existing failure behoben). |
+| 2026-05-23 | **2041 unit** | feat(phase-3b): BATTLE, COMEBACK, LEAD_CHANGE, Regie-Phase + Fixes (squash `07bea7b`). BATTLE_ZOOM Isolation+Greedy-Expansion+Zentroid; COMEBACK_ZOOM grüner Ring; LEAD_CHANGE_ZOOM Führungswechsel-State; Regie-System gewichteter Kandidaten-Pool + OVERVIEW-Scheduler; OVERVIEW Zoom-Fix (_overviewStateZoom=overviewZoom auf Open Tracks); OVERVIEW Pan-Sprung (entry-phase nutzt shape.getPosition(_camT)); ctx.filter→globalAlpha (GPU-Acceleration); Overlay-Sets-Clear (Race-Reset-Bug). 3 neue HUD-Komponenten (BattleDiagHUD, ComebackDiagHUD, LeadChangeDiagHUD). +54 unit. Master-HEAD: `07bea7b`. |
 
-**Master-HEAD:** `980ce76` (fix: trajectoryTransitionDuration guard, 2026-05-22)
-**Tests:** 1987/1987 ✅
+**Master-HEAD:** `07bea7b` (feat: phase-3b battle/comeback/lead-change, 2026-05-23)
+**Tests:** 2041/2041 ✅
 **ESLint-Warnings:** 52
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 

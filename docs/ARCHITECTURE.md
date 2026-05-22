@@ -29,7 +29,7 @@ seasonal-race-claude/
 │       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
 │       ├── modules/                # Domain logic, independent of React
-│       │   ├── camera/             # CameraDirector (state machine: OVERVIEW/LEADER/BATTLE/COMEBACK), Minimap, lapUtils, panTarget, openTrackCamera
+│       │   ├── camera/             # CameraDirector (state machine: OVERVIEW/LEADER/BATTLE/COMEBACK/LEAD_CHANGE), Minimap, lapUtils, panTarget, openTrackCamera
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
 │       │   │   ├── SpriteRacerType.js  # Config-driven base class for all sprite-based racer types (D3.5)
 │       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
@@ -432,12 +432,21 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 ## Camera System
 
-The race camera lives in `modules/camera/` and supports four director modes:
+The race camera lives in `modules/camera/` and supports five director modes:
 
-- **OVERVIEW** — wide shot showing the full track
-- **LEADER_ZOOM** — follows the leading racer at 2× zoom
-- **BATTLE_ZOOM** — centres on the closest racing pair
-- **COMEBACK_ZOOM** — tracks the furthest-behind racer
+- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spritePx — see Lesson 83).
+- **LEADER_ZOOM** — follows the leading racer at elevated zoom
+- **BATTLE_ZOOM** — centres on the Greedy-Expansion cluster of racers in close proximity. Isolation phase (brief fixed window) → Expansion phase (grow cluster by proximity). Camera position uses a frozen group snapshot (`_frozenBattleGroup`) so the view stays stable as racers reorder; visual highlights use the live group (Lesson 85).
+- **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86).
+- **LEAD_CHANGE_ZOOM** — activates when the race leader changes; frames the new and former leader briefly before handing off to LEADER_ZOOM.
+
+### Regie-System (Phase 3B)
+
+The director chooses the next camera state from a **weighted candidate pool**. Each state contributes a candidate with a weight derived from recency, race tension, and cooldown timers. The highest-weight candidate wins.
+
+**OVERVIEW-Scheduler:** OVERVIEW is injected periodically as a forced candidate with a configurable cooldown window `[overviewCooldownMin, overviewCooldownMax]`. This guarantees occasional wide shots without requiring OVERVIEW to outcompete other candidates on weight alone.
+
+**Entry-phase T-space lerp:** During `_lerpPhase === 'entry'` all states (including OVERVIEW) use `shape.getPosition(_camT)` as the pan target to avoid a hard snap on frame 1 (Lesson 84). `tSpaceLerpActive = true` in this phase means `offsetX = targetOffsetX` (no pixel lerp), so a wrong pan target causes an instant camera jump.
 
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
 

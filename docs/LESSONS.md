@@ -1673,3 +1673,64 @@ computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, i
 ```
 
 **Verweis:** feat/fairness-simulation, Phase-1A-Analyse (Mathematik-Herleitung), sim-fairness.mjs.
+
+---
+
+## Lesson 82 — spritePx-Slider ist absolut, aber referenceSpriteSize ist racer-count-abhängig
+
+**Kontext:** Phase 3B Diagnose — `spritePx`-Slider im Dev-Screen setzt einen absoluten Pixel-Zielwert für Racer-Sprites in LEADER/BATTLE/COMEBACK-States. `_computeZoomForTargetSize(spritePx)` dividiert durch `_referenceSpriteSize = displaySize × displaySizeScale`. `displaySizeScale` ist racer-count-abhängig (mehr Racer → kleinere Sprites → niedrigerer displaySizeScale → höherer rawZoom). Ein absoluter spritePx-Wert ergibt bei 10 Racern einen anderen Zoom als bei 70 Racern.
+
+**Erkenntnis:** Ein absoluter Pixel-Zielwert ist keine stabile Kalibriergröße wenn die Basis (referenceSpriteSize) dynamisch ist. Der User dreht den Slider auf 40px und bekommt bei 10 Racern deutlich mehr Zoom als bei 70 Racern — obwohl 40px in beiden Fällen identisch aussieht.
+
+**Konsequenz:** Für einen stabilen Zoom-Tuning-Parameter über verschiedene Racer-Counts muss ein relativer Faktor verwendet werden: `spriteScale = spritePx / referenceSpriteSize`. Dann ist der Tuning-Parameter racer-count-unabhängig. Migrationsaufwand: neuer Config-Key (`spriteScale`) + Umrechnung in `_computeZoomForTargetSize`. Eigenständige chore: `chore/sprite-scale-relative`.
+
+---
+
+## Lesson 83 — `_overviewStateZoom` auf Open Tracks muss = `overviewZoom` sein
+
+**Kontext:** Phase 3B OVERVIEW Zoom-Fix. `_overviewStateZoom` wurde via `_computeZoomForTargetSize(spritePx)` berechnet — auch auf Open Tracks. Das ergab einen Zoom-Wert höher als `overviewZoom` (da spritePx einen Zoom > OVERVIEW-Basiswert verlangte). Bei State-Wechsel nach OVERVIEW: `this.zoom = this._overviewStateZoom` → OVERVIEW war sichtbar zu nah (Sprites zu groß, weniger Track sichtbar) verglichen mit dem Race-Start-OVERVIEW bei dem `overviewZoom` direkt gesetzt wird.
+
+**Erkenntnis:** Auf Open Tracks ist `overviewZoom` der definierte "voller Track sichtbar"-Wert. Jeder Zoom über `overviewZoom` zeigt nur einen Ausschnitt und widerspricht dem OVERVIEW-Konzept. `_computeZoomForTargetSize` ist für LEADER/BATTLE/COMEBACK korrekt (dort soll ein Racer eine bestimmte Bildschirmgröße haben), aber nicht für OVERVIEW.
+
+**Konsequenz:** In allen drei Pfaden von `_computeZoomLevels()` gilt für Open Tracks: `this._overviewStateZoom = this.overviewZoom` (direkter Wert, keine Berechnung). Nur für Closed Tracks wird `_computeZoomForTargetSize` aufgerufen. Entsprechende Guard-Bedingung:
+```js
+this._overviewStateZoom = this._isOpenTrack
+  ? this.overviewZoom
+  : this._computeZoomForTargetSize(profiles.OVERVIEW?.spritePx ?? FALLBACK_REFERENCE_SPRITE_SIZE);
+```
+
+---
+
+## Lesson 84 — `tSpaceLerpActive` + falscher Pan-Target = harter Snap beim State-Wechsel
+
+**Kontext:** Phase 3B OVERVIEW Pan-Sprung-Fix. Wenn `_lerpPhase === 'entry'` und `_camT !== null` und `_shape !== null`, ist `tSpaceLerpActive = true`. In diesem Modus setzt der Renderer `offsetX = targetOffsetX` direkt (kein Lerp) um die T-Space-Interpolation zu unterstützen. OVERVIEW's `_setTargets()` lieferte in diesem Fall `focusRacers[0].x/y` als Pan-Target — die Weltposition des führenden Racers. Da `tSpaceLerpActive = true`, wurde dieser Wert sofort (ohne Lerp) als Canvas-Offset gesetzt → Kamera springt in Frame 1 des OVERVIEW-Eintritts direkt auf den Leader.
+
+**Erkenntnis:** Jeder Camera-State der während der Entry-Phase `_setTargets()` aufruft, muss prüfen ob T-Space-Lerp aktiv ist und in diesem Fall `shape.getPosition(_camT)` als Pan-Target verwenden. LEADER/BATTLE/COMEBACK taten das bereits; OVERVIEW tat es nicht. Das Ergebnis ist ein visuell störender Kamera-Sprung am ersten Frame jedes OVERVIEW-Eintritts.
+
+**Safety:** `_camT !== null`-Guard ist essenziell — beim Race-Start ist `_camT = null` (kein `_transition()` aufgerufen), sodass der Fix ausschließlich bei echten Mid-Race-Übergängen greift.
+
+**Konsequenz:** In `_setTargets()` OVERVIEW-Case: Early-Return wenn `_lerpPhase === 'entry' && _camT !== null && _shape`, mit `shape.getPosition(_camT)` als Pan-Target (Open/Closed trackspezifisch). Danach normaler OVERVIEW-Ablauf für nicht-Entry-Frames.
+
+---
+
+## Lesson 85 — Battle-Gruppe einfrieren für Kamera-Lock, Live-Gruppe für visuelle Effekte
+
+**Kontext:** Phase 3B BATTLE_ZOOM-Implementation. Die Kamera soll auf eine Gruppe von Racern in einem Duell fixiert bleiben, auch wenn sich die Rennreihenfolge innerhalb der Gruppe ändert. Dafür wird die Battle-Gruppe beim State-Eintritt eingefroren (`_frozenBattleGroup`). Gleichzeitig müssen visuelle Fokus-Effekte (Highlight-Ring, Comeback-Ring) die aktuellen Duell-Teilnehmer reflektieren — nicht die eingefrorene Gruppe vom State-Eintritt.
+
+**Erkenntnis:** Zwei semantisch verschiedene Gruppen sind nötig:
+- **Frozen Group** (für Kamera-Zentroid-Berechnung): Wird beim BATTLE_ZOOM-Eintritt gesetzt und bleibt konstant. Verhindert Kamera-Drift wenn Racer aus der Gruppe herausfallen.
+- **Live Group** (für visuelle Highlights): Wird jeden Frame neu aus der aktuellen Rennposition berechnet. Zeigt an welche Racer sich tatsächlich in einem Duell befinden.
+
+Werden beide Gruppen vermischt (z.B. frozen group für Highlights), können Racer-Highlights auf falsche Racer zeigen oder verschwinden obwohl das Duell noch läuft.
+
+**Konsequenz:** BATTLE_ZOOM und COMEBACK_ZOOM halten explizit zwei Racer-Mengen: `_frozenBattleGroup` für die Kamera-Position (einmalig beim State-Eintritt gesetzt), `_liveBattleGroup` oder dynamisch berechnete Gruppe für Highlight-Rendering.
+
+---
+
+## Lesson 86 — `ctx.filter` deaktiviert GPU-Compositing — `globalAlpha` verwenden
+
+**Kontext:** Phase 3B COMEBACK_ZOOM grüner Ring. Die ursprüngliche Implementation nutzte `ctx.filter = 'opacity(0.6)'` für einen halbtransparenten Highlight-Effekt. `ctx.filter` ist eine CSS-Level-Eigenschaft des Canvas-Rendering-Contexts; Browser implementieren sie durch Software-Compositing (CPU-side) anstatt GPU-beschleunigter Compositing-Operationen. Bei einem Race-Loop mit 60 FPS und potenziell mehreren gefilterten Draws pro Frame ist das ein messbarer Performance-Einbruch.
+
+**Erkenntnis:** `ctx.filter` erzwingt immer Software-Rendering für den betroffenen Draw-Call. `globalAlpha` dagegen ist ein nativer Canvas-Parameter der GPU-beschleunigt composited wird. Für reine Transparenz-Effekte (Opacity) ist `globalAlpha` immer die korrekte Wahl.
+
+**Konsequenz:** Niemals `ctx.filter = 'opacity(X)'` für Transparenz verwenden — immer `ctx.globalAlpha = X` mit explizitem Reset auf `1.0` nach dem Draw. Andere `ctx.filter`-Werte (blur, brightness, etc.) haben keine `globalAlpha`-Alternative und sind in Performance-kritischen rAF-Loops zu vermeiden oder auf seltene Frames zu beschränken.

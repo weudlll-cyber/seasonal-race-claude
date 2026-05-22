@@ -207,9 +207,21 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
 | ✅ **D7b-fix B4** | #98 | Free-Lane Separation + Home-Force-Reduktion. Additive Impulse-Logik bei geometrischem Overlap: `isSideFree()` prüft links/rechts-Raum gegen alle anderen aktiven Racer; deterministische Richtungswahl via `stablePairBit` bei exakt gleicher physicalY. `homeForceReductionOnOverlap: 0.3` — Home-Force auf 30% reduziert während geometrischem Overlap, damit Free-Lane die Trennung durchführen kann. Geometrie-Metadaten (spriteWorldSizePx, geometricTrackWidthPx, pathLengthPx) von RaceScreen an Racer übergeben. `reRollVariationPercent: 45 → 58`. 13 neue Unit-Tests. 94 files / 1741 tests. |
 
 | ✅ **Priority System** | #100 | 4-Mode Home-Force-Priority-System (Phase 2). OVERLAP / COOLDOWN / BLOCKED / NORMAL — Home Force nur in NORMAL aktiv, damit Free-Lane und Avoidance Kollisionen zuerst lösen. `priorityExtras`-Param in `applyRacerBehavior`; Legacy-Pfad (`homeForceReductionOnOverlap`) bleibt für Tests. Escape Hatch: nach `blockedTimeoutFrames` (default 60) konsekutiven BLOCKED-Frames greift `blockedEscapeForce × homeForceStrength` (default 30%). M-Overlay: farbige Ringe, Frame-Count, Avg/Max-Stats, Blocker-Detail-Panel. DevScreen: PrioritySystemSection mit cooldownMs, blockedTimeoutFrames, blockedEscapeForce. **BLOCKED-Check-Iterationen:** (1) Bounding-Box (false positives — Decision Log #9) → (2) Liniensegment-Distanz (zu restriktiv, Racer mit Vorwärtsbewegung auf dem Pfad blockieren fälschlich) → (3) **Zielpunkt-Check** (final): prüft nur Punkt (r.t, physicalY=0), Distanz < spriteSize → BLOCKED; reaktiv pro Frame, kein Lookahead nötig. `lookaheadFrames` aus DevScreen entfernt. |
+| ✅ **Phase 3B** | squash `07bea7b` | BATTLE_ZOOM (Isolation+Greedy-Expansion+Zentroid), COMEBACK_ZOOM (grüner Ring, globalAlpha), LEAD_CHANGE_ZOOM (Führungswechsel). Regie-System: gewichteter Kandidaten-Pool + OVERVIEW-Scheduler. Fixes: OVERVIEW Zoom-Fix (L83), OVERVIEW Pan-Sprung (L84), ctx.filter→globalAlpha (L86), Overlay-Sets-Clear. 3 neue HUD-Komponenten. +54 unit. 2041/2041 ✅. Master-HEAD `07bea7b`. |
 
 - **B-6** (speedMultiplier-Bug) — subsumed by D9. War als separater Fix geplant,
   vollständig durch D9-Refactor behoben (PR #19).
+
+---
+
+## Phase 3B — Offene Folge-Punkte
+
+| Item | Priorität | Beschreibung |
+|---|---|---|
+| **chore/sprite-scale-relative** | Niedrig | spritePx-Slider auf relativen Faktor umstellen: `spriteScale = spritePx / referenceSpriteSize`. Aktuell ist spritePx absolut — bei anderer Racer-Anzahl ergibt derselbe Wert anderen Zoom (L82). Migration: neuer Config-Key `spriteScale`, Umrechnung in `_computeZoomForTargetSize`. Eigene Branch. |
+| **COMEBACK vs LEADER_ZOOM Priorität** | Mittel | COMEBACK_ZOOM aktiviert auch wenn ein Racer nur leicht zurückliegt. Grenzwert-Kalibrierung: Wie weit hinten muss ein Racer sein um COMEBACK zu rechtfertigen? Messung in echten Races: Wie oft wird COMEBACK aktiviert vs LEADER_ZOOM verdrängt? |
+| **Sim-Parität Open Track Ranking** | Mittel | Open Track Ranking (projizierte Weltposition) ist in sim-fairness.mjs noch nicht gespiegelt. Sim nutzt noch reinen t-Wert für Standings. Für korrekte Fairness-Aussagen auf Open Tracks muss die Sim-Rangliste mit der Browser-Rangliste übereinstimmen (Sim-Browser Parity Rule). |
+| **spritePx DevScreen Info-Anzeige** | Niedrig | DevScreen-Slider für spritePx zeigt keinen Kontext (was ist referenceSpriteSize für die aktuelle Racer-Anzahl?). Nützlich: Info-Text unter dem Slider mit aktuellem `referenceSpriteSize`-Wert und resultierendem Zoom. Besonders hilfreich bis chore/sprite-scale-relative umgesetzt ist. |
 
 ---
 
