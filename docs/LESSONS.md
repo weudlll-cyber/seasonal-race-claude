@@ -1696,7 +1696,7 @@ computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, i
 ```js
 this._overviewStateZoom = this._isOpenTrack
   ? this.overviewZoom
-  : this._computeZoomForTargetSize(profiles.OVERVIEW?.spritePx ?? FALLBACK_REFERENCE_SPRITE_SIZE);
+  : this._computeZoomForTargetSize(profiles.OVERVIEW?.spriteScale ?? 1.0, FALLBACK_REFERENCE_SPRITE_SIZE);
 ```
 
 ---
@@ -1734,3 +1734,21 @@ Werden beide Gruppen vermischt (z.B. frozen group für Highlights), können Race
 **Erkenntnis:** `ctx.filter` erzwingt immer Software-Rendering für den betroffenen Draw-Call. `globalAlpha` dagegen ist ein nativer Canvas-Parameter der GPU-beschleunigt composited wird. Für reine Transparenz-Effekte (Opacity) ist `globalAlpha` immer die korrekte Wahl.
 
 **Konsequenz:** Niemals `ctx.filter = 'opacity(X)'` für Transparenz verwenden — immer `ctx.globalAlpha = X` mit explizitem Reset auf `1.0` nach dem Draw. Andere `ctx.filter`-Werte (blur, brightness, etc.) haben keine `globalAlpha`-Alternative und sind in Performance-kritischen rAF-Loops zu vermeiden oder auf seltene Frames zu beschränken.
+
+---
+
+## Lesson 87 — Fehlender STATE_CONFIG-Eintrag ahmt echten Camera-State-Bug nach
+
+**Kontext:** Phase 3C Diagnose (chore/sprite-scale-relative). Im Browser wurde beobachtet: Das Kamera-Status-Badge zeigte "OVERVIEW" (grau, breiter Text) obwohl die Kamera erkennbar in einem LEADER-Level-Zoom war. Das Transition-Log zeigte den letzten Eintrag als `LDR→LC` (LEAD_CHANGE). Das Badge zeigte also den falschen State — es zeigte OVERVIEW statt LEAD CHANGE.
+
+Root Cause: `CameraStateHUD.STATE_CONFIG` enthielt keinen Eintrag für `LEAD_CHANGE`. Die Fallback-Logik `STATE_CONFIG[displayState] ?? STATE_CONFIG.OVERVIEW` lieferte für `displayState = 'LEAD_CHANGE'` das gesamte OVERVIEW-Styling — inklusive Label "OVERVIEW", grauer Farbe und Tooltip. Die CameraDirector-State-Machine war korrekt in LEAD_CHANGE; nur das Badge renderte falsch.
+
+**Erkenntnis:** Ein fehlendes Konfigurations-Objekt mit einem `??`-Fallback produziert keine Fehlermeldung — es rendert stillschweigend den Fallback-Zustand. Das sieht für den Beobachter aus wie ein echter State-Machine-Bug (falsche State-Anzeige) obwohl die Ursache im Rendering-Layer liegt, nicht in der State-Machine.
+
+Der Diagnose-Pfad führte deshalb zunächst in die falsche Richtung: Untersuchung von `this.state`-Zuweisungen im CameraDirector (es gibt nur zwei Stellen: Konstruktor + `_transition()`), Überprüfung der `hudState`-Getter-Logik, Transition-Log-Analyse. Erst als das Log `LDR→LC` zeigte ohne entsprechenden OVERVIEW-Eintrag war klar: der Bug liegt im Badge-Rendering, nicht im Director.
+
+Die User-Beobachtung war der entscheidende Hinweis: "OVERVIEW badge bei tight zoom" — Zoom und State passten semantisch nicht zusammen. Die Diagnose-Tools (Transition-Log-Panel) bestätigten dann schnell die Ursache.
+
+**Konsequenz:** Bei Komponenten die über `STATE_CONFIG[key] ?? fallback` rendern: sicherstellen dass für jeden möglichen State-Wert ein Konfigurations-Eintrag existiert. Tests müssen alle möglichen Input-Werte abdecken — nicht nur die zum Zeitpunkt der Implementierung bekannten. Ein Test-Case pro State in `STATE_CASES` (label + CSS-Klasse + tooltip) verhindert dass ein neu hinzugefügter Camera-State im Badge-Fallback landet.
+
+**Verweis:** `CameraStateHUD.jsx`, `CameraStateHUD.test.jsx` — LEAD_CHANGE-Eintrag ergänzt, STATE_CASES von 5 auf 6 erweitert. Phase 3C (chore/sprite-scale-relative, squash `6a9dcfc`).

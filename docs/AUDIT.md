@@ -182,9 +182,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-05-22 | **1987 unit** | fix(raceDynamicsConfig): trajectoryTransitionDuration <= 0 Validation Guard (direct commit `980ce76`). Guard war in Commit 48c21a3 versprochen aber nie in die if-Condition geschrieben worden — eine Zeile ergänzt. 1987/1987 ✅ (pre-existing failure behoben). |
 | 2026-05-23 | **2041 unit** | feat(phase-3b): BATTLE, COMEBACK, LEAD_CHANGE, Regie-Phase + Fixes (squash `07bea7b`). BATTLE_ZOOM Isolation+Greedy-Expansion+Zentroid; COMEBACK_ZOOM grüner Ring; LEAD_CHANGE_ZOOM Führungswechsel-State; Regie-System gewichteter Kandidaten-Pool + OVERVIEW-Scheduler; OVERVIEW Zoom-Fix (_overviewStateZoom=overviewZoom auf Open Tracks); OVERVIEW Pan-Sprung (entry-phase nutzt shape.getPosition(_camT)); ctx.filter→globalAlpha (GPU-Acceleration); Overlay-Sets-Clear (Race-Reset-Bug). 3 neue HUD-Komponenten (BattleDiagHUD, ComebackDiagHUD, LeadChangeDiagHUD). +54 unit. Master-HEAD: `07bea7b`. |
 
-**Master-HEAD:** `07bea7b` (feat: phase-3b battle/comeback/lead-change, 2026-05-23)
-**Tests:** 2041/2041 ✅
-**ESLint-Warnings:** 52
+| 2026-05-24 | **2048 unit** | feat: Phase 3C — spritePx → spriteScale, Schema v14 (chore/sprite-scale-relative → master, squash `6a9dcfc`). `spriteScale` (relativer Faktor, 1.0 = natural density-scaled size) ersetzt `spritePx` (absoluter World-Pixel-Wert) in allen cameraStateProfiles. Defaults v14: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. `_computeZoomLevels` nutzt spriteScale für alle States; Migration v1–v13→v14 (spritePx/36→spriteScale). **Bugs gefunden + gefixt:** (1) Floor-Bug: `getEffectiveMinTargetScreenPx` bekam 0 als `minSpritePx`-Floor → kein Sprite-Floor auf Open Tracks; (2) LEAD_CHANGE fehlte in `CameraStateHUD STATE_CONFIG` → Fallback auf OVERVIEW-Styling ("OVERVIEW"-Badge bei LEAD_CHANGE-State); (3) CameraZoomTuningSection.test.jsx-Mocks und Assertions auf v14-Werte aktualisiert. Diagnose-Scaffolding vollständig entfernt (_overviewSnapDiag, _lastTransitionLog, _pushTransitionLog, beide HUD-Panels). +7 Tests (6 CameraStateHUD LEAD_CHANGE + 3 CameraZoomTuningSection). |
+
+**Master-HEAD:** `6a9dcfc` (feat: Phase 3C — spritePx → spriteScale, Schema v14, 2026-05-24)
+**Tests:** 2048/2048 ✅
+**ESLint-Warnings:** ~52 (unverändert)
 **Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
 
 ---

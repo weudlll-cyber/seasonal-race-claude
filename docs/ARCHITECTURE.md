@@ -434,7 +434,7 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 The race camera lives in `modules/camera/` and supports five director modes:
 
-- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spritePx — see Lesson 83).
+- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spriteScale — see Lesson 83).
 - **LEADER_ZOOM** — follows the leading racer at elevated zoom
 - **BATTLE_ZOOM** — centres on the Greedy-Expansion cluster of racers in close proximity. Isolation phase (brief fixed window) → Expansion phase (grow cluster by proximity). Camera position uses a frozen group snapshot (`_frozenBattleGroup`) so the view stays stable as racers reorder; visual highlights use the live group (Lesson 85).
 - **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86).
@@ -451,6 +451,27 @@ The director chooses the next camera state from a **weighted candidate pool**. E
 All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
 
 `CameraDirector.update()` receives `renderRacers` (interpolated racer positions, see Frame-Timing Architecture above) for the RACING phase. COUNTDOWN uses raw `st.racers` (no physics accumulator active during countdown). The steady-state pixel-space lerp in `CameraDirector` (tracking phase, `offsetX += (targetOffsetX - offsetX) × lf`) naturally tracks interpolated targets once `renderRacers` is passed as input.
+
+### Zoom-Kalibrierung per State (Schema v14 — Phase 3C)
+
+Camera zoom per state is configured via `spriteScale` — a dimensionless relative factor replacing the former absolute `spritePx` value (Schema v14, migration `chore/sprite-scale-relative`).
+
+```
+zoom = spriteScale × FALLBACK_REFERENCE_SPRITE_SIZE / (bsX × displaySize)
+
+Where:
+  spriteScale                  — tunable per state (default: OVERVIEW 1.00, LEADER 1.81,
+                                   BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81)
+  FALLBACK_REFERENCE_SPRITE_SIZE — 36 px anchor point (calibrated for a reference track density)
+  bsX                          — canvas-to-world scale (CANVAS_W / worldW)
+  displaySize                  — effective sprite display size in world pixels
+```
+
+`spriteScale = 1.0` produces the same screen size as the natural auto-scaled density result for the current racer count. Values > 1.0 zoom in; values < 1.0 zoom out relative to that baseline.
+
+This replaces the old absolute `spritePx` field which was racer-count-dependent: the same pixel value produced different zooms at 10 vs. 70 racers because `displaySize × displaySizeScale` (the denominator) shifts with racer count (see Lesson 82, Lesson 87).
+
+Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → Camera Zoom Tuning section. Schema version: 14.
 
 ## Visual Racer Effects System (Phase VRE)
 
