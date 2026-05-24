@@ -221,9 +221,8 @@ describe('CameraDirector — bbox clamping', () => {
   });
 
   it('BATTLE_ZOOM with racers near right edge (x=1085): no black border on either side', () => {
-    // referenceSpriteSize=50 → _battleZoom = 0.12*720/50 = 1.728. bsX=1 on 1280px world.
-    // resolveCamera: camXMax = 1280 - 1280/1.728 = 539.3. Target centered at camX=539.3.
-    // Right world edge: (1280-539.3)*1.728 = 1280 → exactly at canvas right, no black border.
+    // DEFAULT_SPRITE_SCALE.battle = 2.81; bsX=1 → _battleZoom=2.81 on 1280px world.
+    // resolveCamera clamps camX to keep world within canvas → no black borders.
     const cd = new CameraDirector(1280, 720, false, null, 50);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
@@ -243,8 +242,8 @@ describe('CameraDirector — bbox clamping', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
-    // No config → DEFAULT_SPRITE_PX.leader=58; 36px fallback. _leaderZoom = 58/36 (bsX=1 on 1280px world)
-    const leaderZoom = 58 / 36;
+    // No config → DEFAULT_SPRITE_SCALE.leader = 1.81; bsX=1 → _leaderZoom = 1.81.
+    const leaderZoom = 1.81;
     expect(cd.offsetX).toBeCloseTo(640 - 640 * leaderZoom, 0);
   });
 
@@ -266,18 +265,18 @@ describe('CameraDirector — bbox clamping', () => {
 // ── CameraDirector — adaptive zoom (B-16) ────────────────────────────────────
 
 describe('CameraDirector — adaptive zoom (B-16)', () => {
-  it('default 1280-wide world: leaderZoom uses DEFAULT_SPRITE_PX → 58/(36×1) ≈ 1.611', () => {
+  it('default 1280-wide world: leaderZoom uses DEFAULT_SPRITE_SCALE = 1.81', () => {
     const cd = new CameraDirector(1280, 720);
-    // No config, no referenceSpriteSize → 36px fallback. bsX=1280/1280=1.
-    // leaderZoom = DEFAULT_SPRITE_PX.leader / (36*1) = 58/36 ≈ 1.611
-    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3);
+    // No config → DEFAULT_SPRITE_SCALE.leader = 1.81. bsX=1280/1280=1.
+    // leaderZoom = DEFAULT_SPRITE_SCALE.leader / bsX = 1.81
+    expect(cd._leaderZoom).toBeCloseTo(1.81, 3);
   });
 
-  it('open-track 4000-wide world: leaderZoom uses DEFAULT_SPRITE_PX → 58/(36×1.5) ≈ 1.074', () => {
+  it('open-track 4000-wide world: leaderZoom uses DEFAULT_SPRITE_SCALE → 1.81/1.5 ≈ 1.207', () => {
     const cd = new CameraDirector(4000, 720, true);
-    // Open-track: cam.zoom = targetPx / (baseSize × OPEN_BASE) = 58/54 ≈ 1.074
+    // Open-track: cam.zoom = spriteScale / OPEN_BASE = 1.81/1.5 ≈ 1.207
     // (worldW does not appear — open-track zoom is track-width-independent by design)
-    expect(cd._leaderZoom).toBeCloseTo(58 / 54, 3);
+    expect(cd._leaderZoom).toBeCloseTo(1.81 / 1.5, 3);
   });
 
   it('battleZoom > leaderZoom (battle shows a tighter field)', () => {
@@ -372,12 +371,12 @@ describe('CameraDirector — top-3 focus', () => {
 // ── CameraDirector — zoom ordering (inverse logic) ───────────────────────────
 
 describe('CameraDirector — zoom ordering (inverse logic)', () => {
-  it('1280-track: 36px fallback → leaderZoom ≈1.611, battleZoom ≈2.389, comebackZoom ≈1.306', () => {
+  it('1280-track: DEFAULT_SPRITE_SCALE → leaderZoom=1.81, battleZoom=2.81, comebackZoom=1.39', () => {
     const cd = new CameraDirector(1280, 720);
-    // No config → DEFAULT_SPRITE_PX (58, 86, 47). No referenceSpriteSize → 36px fallback. bsX=1.0
-    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3); // ≈1.611
-    expect(cd._battleZoom).toBeCloseTo(86 / 36, 3); // ≈2.389
-    expect(cd._comebackZoom).toBeCloseTo(47 / 36, 3); // ≈1.306
+    // No config → DEFAULT_SPRITE_SCALE (1.81, 2.81, 1.39). bsX=1.0 on 1280px track.
+    expect(cd._leaderZoom).toBeCloseTo(1.81, 3);
+    expect(cd._battleZoom).toBeCloseTo(2.81, 3);
+    expect(cd._comebackZoom).toBeCloseTo(1.39, 3);
   });
 
   it('battleZoom > leaderZoom on any track (battle pct > leader pct)', () => {
@@ -776,14 +775,15 @@ const pctConfig = {
 };
 
 describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
-  it('with referenceSpriteSize=50: _leaderZoom = 0.08×720 / 50 ≈ 1.152 (closed bsX=1)', () => {
+  it('leader pct=0.08 → spriteScale=0.08×720/36=1.6, closed bsX=1 → zoom=1.6', () => {
     const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
-    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 50, 3);
+    // referenceSpriteSize no longer used; spriteScale = pct × 720 / 36
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
   });
 
-  it('with referenceSpriteSize=50: _battleZoom = 0.12×720 / 50 ≈ 1.728 (closed bsX=1)', () => {
+  it('battle pct=0.12 → spriteScale=0.12×720/36=2.4, closed bsX=1 → zoom=2.4', () => {
     const cd = new CameraDirector(1280, 720, false, pctConfig, 50);
-    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 50, 3);
+    expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3);
   });
 
   it('extreme battle pct (0.95) clamps _battleZoom to MAX_INVERSE_ZOOM (5.0)', () => {
@@ -796,11 +796,11 @@ describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
     expect(cd._battleZoom).toBe(5.0);
   });
 
-  it('no config passed: DEFAULT_SPRITE_PX + 36px fallback gives predictable zoom values', () => {
-    // When config=null, falls through to pixel defaults (58px leader, 86px battle).
+  it('no config passed: DEFAULT_SPRITE_SCALE gives predictable zoom values', () => {
+    // When config=null, falls through to DEFAULT_SPRITE_SCALE (v14 values: 1.81, 2.81).
     const cd = new CameraDirector(1280, 720);
-    expect(cd._leaderZoom).toBeCloseTo(58 / 36, 3); // DEFAULT_SPRITE_PX.leader / FALLBACK_REF
-    expect(cd._battleZoom).toBeCloseTo(86 / 36, 3); // DEFAULT_SPRITE_PX.battle / FALLBACK_REF
+    expect(cd._leaderZoom).toBeCloseTo(1.81, 3); // DEFAULT_SPRITE_SCALE.leader / bsX=1
+    expect(cd._battleZoom).toBeCloseTo(2.81, 3); // DEFAULT_SPRITE_SCALE.battle / bsX=1
   });
 
   it('open track OVERVIEW targetZoom is overviewZoom regardless of spritePctOfCanvas', () => {
@@ -819,7 +819,7 @@ describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
       spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, leader: 0.12 },
     });
     expect(cd._leaderZoom).toBeGreaterThan(before);
-    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 50, 3); // 1.728
+    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 36, 3); // 2.4 (new formula: pct×720/FALLBACK_RSS)
   });
 
   it('live-apply: reduced spritePct takes effect on next _transition()', () => {
@@ -1396,8 +1396,9 @@ describe('Effective render-zoom — hierarchy ordering', () => {
 });
 
 // ── CameraDirector — inverse zoom logic (Round 3) ────────────────────────────
-// Tests for _computeZoomForTargetSize and the spritePctOfCanvas config path.
-// When referenceSpriteSize=0, a 36px internal default is used with a console warning.
+// Tests for _computeZoomForSpriteScale and the spritePctOfCanvas config path.
+// zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open) — referenceSpriteSize
+// cancels out of the formula and is no longer used in zoom computation (L82).
 
 const inverseConfig = {
   schemaVersion: 2,
@@ -1410,51 +1411,57 @@ const inverseConfig = {
   endgameThreshold: 0.85,
 };
 
-describe('CameraDirector — _computeZoomForTargetSize (Round 3)', () => {
-  it('closed-track: targetSize=58, baseSize=36, bsX=0.83 → cam.zoom ≈ 1.94', () => {
+describe('CameraDirector — _computeZoomForSpriteScale (Round 3)', () => {
+  it('closed-track: spriteScale=58/36, bsX=0.83 → cam.zoom ≈ 1.94', () => {
     // worldW that gives bsX≈0.83: CANVAS_W/worldW=0.83 → worldW≈1542
     const worldW = Math.round(1280 / 0.83);
     const cd = new CameraDirector(worldW, 720, false, inverseConfig, 36);
-    const expected = 58 / (36 * (1280 / worldW));
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(1.94, 1);
+    const spriteScale = 58 / 36;
+    const expected = spriteScale / (1280 / worldW);
+    expect(cd._computeZoomForSpriteScale(spriteScale)).toBeCloseTo(expected, 2);
+    expect(cd._computeZoomForSpriteScale(spriteScale)).toBeCloseTo(1.94, 1);
   });
 
-  it('open-track: targetSize=58, baseSize=50, OPEN_BASE=1.5 → cam.zoom ≈ 0.77', () => {
+  it('open-track: spriteScale=58/36, OPEN_BASE=1.5 → cam.zoom ≈ 1.07', () => {
     const cd = new CameraDirector(6000, 720, true, inverseConfig, 50);
-    const expected = 58 / (50 * OPEN_TRACK_BASE_ZOOM);
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(expected, 2);
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(0.773, 2);
+    const spriteScale = 58 / 36;
+    const expected = spriteScale / OPEN_TRACK_BASE_ZOOM;
+    expect(cd._computeZoomForSpriteScale(spriteScale)).toBeCloseTo(expected, 2);
+    expect(cd._computeZoomForSpriteScale(spriteScale)).toBeCloseTo(1.074, 2);
   });
 
-  it('safety net closed — very small targetSize clamps cam.zoom to 1.0', () => {
+  it('safety net closed — very small spriteScale clamps cam.zoom to 1.0', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
-    // targetSize=1px: would give cam.zoom=1/50=0.02, clamped to 1.0
-    expect(cd._computeZoomForTargetSize(1)).toBe(1.0);
+    // spriteScale=1/36≈0.028: zoom = 0.028/1 = 0.028, clamped to 1.0
+    expect(cd._computeZoomForSpriteScale(1 / 36)).toBe(1.0);
   });
 
-  it('safety net open — very small targetSize clamps cam.zoom to overviewZoom', () => {
+  it('safety net open — very small spriteScale clamps cam.zoom to overviewZoom', () => {
     const cd = new CameraDirector(6000, 720, true, inverseConfig, 50);
-    // targetSize=1px: cam.zoom = 1/(50*1.5) = 0.013, clamped to overviewZoom≈0.213
-    expect(cd._computeZoomForTargetSize(1)).toBeCloseTo(1280 / 6000, 3);
+    // spriteScale=1/36: zoom = (1/36)/1.5 ≈ 0.018, clamped to overviewZoom=1280/6000≈0.213
+    expect(cd._computeZoomForSpriteScale(1 / 36)).toBeCloseTo(1280 / 6000, 3);
   });
 
-  it('safety net upper — very large targetSize clamps cam.zoom to 5.0', () => {
+  it('safety net upper — very large spriteScale clamps cam.zoom to 5.0', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
-    // targetSize=10000px: would give cam.zoom=200, clamped to 5.0
-    expect(cd._computeZoomForTargetSize(10000)).toBe(5.0);
+    // spriteScale=200: zoom = 200/1 = 200, clamped to 5.0
+    expect(cd._computeZoomForSpriteScale(200)).toBe(5.0);
   });
 
-  it('referenceSpriteSize=0: uses 36px default, closed → zoom = 58/(36×bsX)', () => {
-    const cd = new CameraDirector(1280, 720, false, inverseConfig, 0);
-    // bsX = 1280/1280 = 1.0 → expected = 58/36 ≈ 1.611
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / 36, 2);
+  it('result is independent of referenceSpriteSize — closed track', () => {
+    const s0 = new CameraDirector(1280, 720, false, inverseConfig, 0);
+    const s50 = new CameraDirector(1280, 720, false, inverseConfig, 50);
+    // referenceSpriteSize no longer used in formula; both give identical zoom
+    expect(s0._computeZoomForSpriteScale(58 / 36)).toBeCloseTo(58 / 36, 4);
+    expect(s50._computeZoomForSpriteScale(58 / 36)).toBeCloseTo(58 / 36, 4);
   });
 
-  it('referenceSpriteSize=0: uses 36px default, open → zoom = 58/(36×OPEN_BASE)', () => {
-    const cd = new CameraDirector(6000, 720, true, inverseConfig, 0);
-    // expected = 58/(36×1.5) ≈ 1.074; safety net min = overviewZoom≈0.213 → not clamped
-    expect(cd._computeZoomForTargetSize(58)).toBeCloseTo(58 / (36 * OPEN_TRACK_BASE_ZOOM), 2);
+  it('result is independent of referenceSpriteSize — open track', () => {
+    const s0 = new CameraDirector(6000, 720, true, inverseConfig, 0);
+    const s50 = new CameraDirector(6000, 720, true, inverseConfig, 50);
+    const expected = 58 / 36 / OPEN_TRACK_BASE_ZOOM;
+    expect(s0._computeZoomForSpriteScale(58 / 36)).toBeCloseTo(expected, 4);
+    expect(s50._computeZoomForSpriteScale(58 / 36)).toBeCloseTo(expected, 4);
   });
 });
 
@@ -1468,18 +1475,18 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
     expect(OPEN_TRACK_BASE_ZOOM).toBe(1.5);
   });
 
-  it('legacy spritePctOfCanvas path: referenceSpriteSize > 0 gives correct zoom', () => {
+  it('legacy spritePctOfCanvas path: leader=0.08 → spriteScale=0.08×720/36=1.6 → zoom=1.6', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
-    // Legacy path (no cameraStateProfiles): leader=0.08×720=57.6 → zoom=57.6/50=1.152
-    expect(cd._leaderZoom).toBeCloseTo(57.6 / 50, 3);
+    // Legacy path: spriteScale = pct × 720 / 36 = 0.08 × 720 / 36 = 1.6; bsX=1 → zoom=1.6
+    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
   });
 
-  it('referenceSpriteSize=0 uses 36px default with legacy spritePctOfCanvas path', () => {
-    // inverseConfig has spritePctOfCanvas (legacy path) but no cameraStateProfiles.
-    // 36px fallback + leader pct 0.08: 0.08×720/36 = 1.6 (≠ old LEADER_ZOOM_RATIO=1.4)
-    const cd = new CameraDirector(1280, 720, false, inverseConfig, 0);
-    expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
-    expect(cd._leaderZoom).not.toBeCloseTo(1.4, 1); // confirm it is NOT the old multiplier value
+  it('referenceSpriteSize has no effect on zoom (formula uses spriteScale / bsX only)', () => {
+    // Both instances use legacy pctOfCanvas; zoom is identical regardless of referenceSpriteSize.
+    const cd0 = new CameraDirector(1280, 720, false, inverseConfig, 0);
+    const cd50 = new CameraDirector(1280, 720, false, inverseConfig, 50);
+    expect(cd0._leaderZoom).toBeCloseTo(cd50._leaderZoom, 5);
+    expect(cd0._leaderZoom).not.toBeCloseTo(1.4, 1); // confirm it is NOT the old multiplier value
   });
 
   it('battleZoom > leaderZoom with inverse logic (battle pct > leader pct)', () => {
@@ -1500,8 +1507,8 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.12 },
     });
     expect(cd._leaderZoom).toBeGreaterThan(zoomBefore);
-    // legacy path: 0.12×720/50 = 1.728
-    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 50, 3);
+    // legacy path: 0.12×720/36 = 2.4 (FALLBACK_REFERENCE_SPRITE_SIZE=36, referenceSpriteSize not used)
+    expect(cd._leaderZoom).toBeCloseTo((0.12 * 720) / 36, 3);
   });
 });
 
@@ -1512,7 +1519,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
   it('closed 1280px and open 6000px give same leader screenPx for same targetPct', () => {
     const baseSize = 50;
     const targetPct = inverseConfig.spritePctOfCanvas.leader; // 0.08
-    const targetPx = targetPct * 720; // 57.6
+    // New formula: screenPx = baseSize × spriteScale = baseSize × pct×720/36
+    const targetPx = (baseSize * targetPct * 720) / 36; // 50×0.08×720/36=80
 
     const cdClosed = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
     const cdOpen = new CameraDirector(6000, 720, true, inverseConfig, baseSize);
@@ -1558,7 +1566,8 @@ describe('CameraDirector — cross-track scale invariance (Round 3, L62)', () =>
 
   it('closed track: same spritePct on 1280px and 2560px worlds gives same screenPx', () => {
     const baseSize = 50;
-    const targetPx = inverseConfig.spritePctOfCanvas.leader * 720;
+    // New formula: screenPx = baseSize × spriteScale = baseSize × pct×720/36
+    const targetPx = (baseSize * inverseConfig.spritePctOfCanvas.leader * 720) / 36;
 
     const cd1280 = new CameraDirector(1280, 720, false, inverseConfig, baseSize);
     const cd2560 = new CameraDirector(2560, 720, false, inverseConfig, baseSize);
@@ -1783,7 +1792,7 @@ describe('tcToLerpFactor (Phase 1 helper)', () => {
 const profileConfig = {
   cameraStateProfiles: {
     OVERVIEW: {
-      spritePx: 36,
+      spriteScale: 1.0,
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0,
@@ -1793,7 +1802,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     LEADER_ZOOM: {
-      spritePx: 65,
+      spriteScale: 65 / 36,
       trackingTC: 0.25,
       entryTC: 0.25,
       leadInDuration: 0,
@@ -1803,7 +1812,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     BATTLE_ZOOM: {
-      spritePx: 101,
+      spriteScale: 101 / 36,
       trackingTC: 0.35,
       entryTC: 0.35,
       leadInDuration: 0,
@@ -1813,7 +1822,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     COMEBACK_ZOOM: {
-      spritePx: 50,
+      spriteScale: 50 / 36,
       trackingTC: 0.3,
       entryTC: 0.3,
       leadInDuration: 0,
@@ -1834,15 +1843,15 @@ const profileConfig = {
 };
 
 describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
-  it('_leaderZoom computed from profiles.LEADER_ZOOM.spritePx (65)', () => {
+  it('_leaderZoom computed from profiles.LEADER_ZOOM.spriteScale (65/36)', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
-    // 65px / 50 = 1.3 on closed 1280px track (bsX=1)
-    expect(cd._leaderZoom).toBeCloseTo(65 / 50, 3);
+    // spriteScale = 65/36; closed 1280px track bsX=1 → zoom = spriteScale / 1 = 65/36
+    expect(cd._leaderZoom).toBeCloseTo(65 / 36, 3);
   });
 
-  it('_battleZoom computed from profiles.BATTLE_ZOOM.spritePx (101)', () => {
+  it('_battleZoom computed from profiles.BATTLE_ZOOM.spriteScale (101/36)', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
-    expect(cd._battleZoom).toBeCloseTo(101 / 50, 3);
+    expect(cd._battleZoom).toBeCloseTo(101 / 36, 3);
   });
 
   it('_tcLeader comes from profiles.LEADER_ZOOM.trackingTC (0.25)', () => {
@@ -1870,13 +1879,13 @@ describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
       ...profileConfig,
       cameraStateProfiles: {
         ...profileConfig.cameraStateProfiles,
-        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, spritePx: 108 },
+        LEADER_ZOOM: { ...profileConfig.cameraStateProfiles.LEADER_ZOOM, spriteScale: 108 / 36 },
       },
     };
     cd.updateConfig(updated);
     expect(cd._leaderZoom).toBeGreaterThan(before);
-    // 108px / 50 = 2.16
-    expect(cd._leaderZoom).toBeCloseTo(108 / 50, 3);
+    // spriteScale = 108/36 = 3.0; bsX=1 on 1280px world → zoom = 3.0
+    expect(cd._leaderZoom).toBeCloseTo(108 / 36, 3);
   });
 
   it('updateConfig() with updated profiles changes _tcBattle and _lfBattle', () => {
@@ -2842,15 +2851,15 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
     expect(reachedTracking).toBe(true);
   });
 
-  it('BATTLE_ZOOM with high spritePx (large zoom): still converges to tracking', () => {
-    // Simulate a user having dialed spritePx up to 180px (≈0.25×720) in the dev screen.
+  it('BATTLE_ZOOM with high spriteScale (large zoom): still converges to tracking', () => {
+    // Simulate a user having dialed spriteScale up to 5.0 (= 180px/36 old equivalent) in the dev screen.
     // Needs 3 close racers so _isPulk=true → early exit doesn't fire before convergence.
     const shape = makeShape(4000);
     const highZoomConfig = {
       ...phasedConfig,
       cameraStateProfiles: {
         ...phasedConfig.cameraStateProfiles,
-        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, spritePx: 180 },
+        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, spriteScale: 180 / 36 },
       },
     };
     const cd = new CameraDirector(1280, 720, false, highZoomConfig, 36, shape);
@@ -3582,7 +3591,7 @@ describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
       {
         cameraStateProfiles: {
           OVERVIEW: {
-            spritePx: 36,
+            spriteScale: 1.0,
             trackingTC: 1.5,
             entryTC: 1.5,
             leadInDuration: 0,
@@ -3594,7 +3603,7 @@ describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
             overviewOffsetPx: offsetPx,
           },
           LEADER_ZOOM: {
-            spritePx: 65,
+            spriteScale: 65 / 36,
             trackingTC: 0.25,
             entryTC: 0.8,
             leadInDuration: 0.3,
@@ -3605,7 +3614,7 @@ describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
             maxEntryDurationMs: 5000,
           },
           BATTLE_ZOOM: {
-            spritePx: 101,
+            spriteScale: 101 / 36,
             trackingTC: 0.25,
             entryTC: 0.8,
             leadInDuration: 0.2,
@@ -3616,7 +3625,7 @@ describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
             maxEntryDurationMs: 5000,
           },
           COMEBACK_ZOOM: {
-            spritePx: 50,
+            spriteScale: 50 / 36,
             trackingTC: 0.25,
             entryTC: 0.8,
             leadInDuration: 0.3,
@@ -3681,7 +3690,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
     return {
       cameraStateProfiles: {
         OVERVIEW: {
-          spritePx: 36,
+          spriteScale: 1.0,
           trackingTC: 1.5,
           entryTC: 1.5,
           leadInDuration: 0,
@@ -3692,7 +3701,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           maxEntryDurationMs: 10000,
         },
         LEADER_ZOOM: {
-          spritePx: 65,
+          spriteScale: 65 / 36,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.3,
@@ -3704,7 +3713,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           leadAheadEnabled,
         },
         BATTLE_ZOOM: {
-          spritePx: 101,
+          spriteScale: 101 / 36,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.2,
@@ -3716,7 +3725,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           leadAheadEnabled,
         },
         COMEBACK_ZOOM: {
-          spritePx: 50,
+          spriteScale: 50 / 36,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.3,
@@ -4081,7 +4090,7 @@ describe('CameraDirector.updateCountdown', () => {
   it('COUNTDOWN zoom at t=0 equals countdownStartZoom (min zoom = whole track visible)', () => {
     const cd = new CameraDirector(1280, 720, false, null, 36);
     const cam = cd.updateCountdown(countdownRacers, 1000, 0, 4000, 1280, 720);
-    // countdownStartZoom for spritePx=1 is clamped to minimum (1.0 for 1280px closed track)
+    // countdownStartZoom for spriteScale=1/36 is clamped to minimum (1.0 for 1280px closed track)
     expect(cam.zoom).toBeCloseTo(cd._countdownStartZoom, 5);
   });
 

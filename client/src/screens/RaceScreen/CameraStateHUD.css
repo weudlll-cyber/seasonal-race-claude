@@ -87,3 +87,8 @@
 .cam-state-hud--leader-zoom {
   border-left: 2px solid #ffd700;
 }
+
+/* LEAD CHANGE: subtle left border accent */
+.cam-state-hud--lead-change {
+  border-left: 2px solid #c084fc;
+}

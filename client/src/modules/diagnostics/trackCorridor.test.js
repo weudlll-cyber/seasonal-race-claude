@@ -78,7 +78,7 @@ describe('diagnostic: track corridor widths and auto-scale', () => {
 //   CANVAS_W = 1280, CANVAS_H = 720
 //   leaderZoomMultiplier = 1.8  (DEFAULT_CAMERA_CONFIG)
 //   openTrackBaseZoom    = 1.5  (DEFAULT_CAMERA_CONFIG)
-//   OVERVIEW.spritePx    = 36   (DEFAULT_CAMERA_CONFIG.cameraStateProfiles) → floor = 36 px
+//   OVERVIEW.spriteScale = 1.0  (DEFAULT_CAMERA_CONFIG.cameraStateProfiles) → floor ≈ 1 px (scale-based)
 //   displaySize(snail)   = 35   (SnailRacerType.config.displaySize)
 //   displaySize(duck)    = 36   (DuckRacerType.config.displaySize)
 describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5)', () => {
@@ -89,7 +89,8 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     const MAX_ZOOM = 2.5;
     const LEADER_MULTIPLIER = 1.8; // DEFAULT_CAMERA_CONFIG.leaderZoomMultiplier
     const OPEN_BASE_ZOOM = 1.5; // DEFAULT_CAMERA_CONFIG.openTrackBaseZoom
-    const MIN_SPRITE_PX = 36; // DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spritePx
+    const OVERVIEW_SPRITE_SCALE = 1.0; // DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spriteScale
+    const FALLBACK_REF_SIZE = 36; // RaceScreen multiplies spriteScale by this to get the px floor
 
     const geoGarden = loadGeo('garden-path.json');
     const geoRiver = loadGeo('river-run.json');
@@ -130,8 +131,11 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     const propGarden = displaySizeGarden * dssGarden * frameEffGarden;
     const propRiver = displaySizeRiver * dssRiver * frameEffRiver;
 
-    // Effective floor (world-pixel floor from OVERVIEW profile)
-    const floorPx = getEffectiveMinTargetScreenPx(undefined, MIN_SPRITE_PX);
+    // Effective floor: RaceScreen passes spriteScale × FALLBACK_REF_SIZE to getEffectiveMinTargetScreenPx.
+    const floorPx = getEffectiveMinTargetScreenPx(
+      undefined,
+      OVERVIEW_SPRITE_SCALE * FALLBACK_REF_SIZE
+    );
 
     // Final render pixels = max(propScreenPx, floor), clamped by max if set
     const finalGarden = Math.max(propGarden, floorPx);
@@ -184,7 +188,7 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
       `| proportionalScreenPx (LEADER)     | ${propGarden.toFixed(2).padEnd(20)} | ${propRiver.toFixed(2).padEnd(16)} |`
     );
     console.log(
-      `| Floor (OVERVIEW spritePx=${MIN_SPRITE_PX})         | ${String(floorPx + ' px').padEnd(20)} | ${String(floorPx + ' px').padEnd(16)} |`
+      `| Floor (spriteScale=${OVERVIEW_SPRITE_SCALE}×${FALLBACK_REF_SIZE}=${floorPx}px)  | ${String(floorPx + ' px').padEnd(20)} | ${String(floorPx + ' px').padEnd(16)} |`
     );
     console.log(
       `| Floor active in LEADER?           | ${String(propGarden < floorPx).padEnd(20)} | ${String(propRiver < floorPx).padEnd(16)} |`
@@ -233,7 +237,9 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     );
     console.log(`  → B NOT confirmed in LEADER. Floor IS active in OVERVIEW for both.`);
     console.log(`\nHyp C — call-site bug in getEffectiveMinTargetScreenPx:`);
-    console.log(`  Floor value returned: ${floorPx} px (= OVERVIEW spritePx ${MIN_SPRITE_PX})`);
+    console.log(
+      `  Floor value returned: ${floorPx} (= OVERVIEW spriteScale ${OVERVIEW_SPRITE_SCALE})`
+    );
     console.log(`  RaceScreen call matches signature (typeOverridePx, minSpritePx).`);
     console.log(
       `  → C: No evidence of wrong-args bug from static analysis. Needs browser test to confirm.`
@@ -254,7 +260,7 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     console.log('');
 
     // Structural assertions — floor and final values must be sensible
-    expect(floorPx).toBe(36); // 5% × 720
+    expect(floorPx).toBe(OVERVIEW_SPRITE_SCALE * FALLBACK_REF_SIZE); // = 36 px
     expect(finalGarden).toBeGreaterThanOrEqual(floorPx);
     expect(finalRiver).toBeGreaterThanOrEqual(floorPx);
     // Both tracks should produce similar absolute pixel sizes (within 20% of each other)

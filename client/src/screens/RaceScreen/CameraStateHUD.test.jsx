@@ -15,10 +15,11 @@ const STATE_CASES = [
   { state: 'LEADER_ZOOM', label: 'FOLLOWING LEADER', tooltip: 'Camera follows the front-runner' },
   { state: 'BATTLE_ZOOM', label: 'BATTLE', tooltip: 'Top racers are neck and neck' },
   { state: 'COMEBACK_ZOOM', label: 'COMEBACK', tooltip: 'Watching a racer fight back' },
+  { state: 'LEAD_CHANGE', label: 'LEAD CHANGE', tooltip: 'The leader has changed!' },
   { state: 'FINISH', label: 'FINISH', tooltip: 'A winner has crossed the line!' },
 ];
 
-describe('CameraStateHUD — label rendering for all 5 states', () => {
+describe('CameraStateHUD — label rendering for all 6 states', () => {
   it.each(STATE_CASES)('state $state shows label "$label"', ({ state, label }) => {
     render(<CameraStateHUD camState={state} visible={true} />);
     expect(screen.getByText(label)).toBeTruthy();

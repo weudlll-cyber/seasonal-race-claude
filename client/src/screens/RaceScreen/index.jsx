@@ -13,7 +13,11 @@ import { validateActiveRace } from './raceSession.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
-import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
+import {
+  CameraDirector,
+  OPEN_TRACK_BASE_ZOOM,
+  FALLBACK_REFERENCE_SPRITE_SIZE,
+} from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
@@ -1670,7 +1674,8 @@ export default function RaceScreen() {
         frameEffZoom,
         getEffectiveMinTargetScreenPx(
           racerTypeRef.current?.config?.minTargetScreenPx,
-          cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spritePx ?? 36
+          (cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spriteScale ?? 1.0) *
+            FALLBACK_REFERENCE_SPRITE_SIZE
         ),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,

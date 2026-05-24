@@ -45,10 +45,16 @@ const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
-const FALLBACK_REFERENCE_SPRITE_SIZE = 36; // used when referenceSpriteSize is not provided
-// Pixel defaults used when no config (or no cameraStateProfiles) is provided.
-// Values match Math.round(legacyPct × 720): 0.08→58, 0.12→86, 0.065→47.
-const DEFAULT_SPRITE_PX = { leader: 58, battle: 86, comeback: 47 };
+// migration divisor for legacy/countdown conversion; exported so RaceScreen can compute the
+// sprite-size floor as spriteScale × FALLBACK_REFERENCE_SPRITE_SIZE (= px equivalent).
+export const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
+// Scale defaults used when no config (or no cameraStateProfiles) is provided.
+// Match DEFAULT_CAMERA_CONFIG values (v14): LEADER=1.81, BATTLE=2.81, COMEBACK=1.39.
+const DEFAULT_SPRITE_SCALE = {
+  leader: 1.81,
+  battle: 2.81,
+  comeback: 1.39,
+};
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
 const DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const DEFAULT_INNER_FRAME_PCT = 0.7;
@@ -101,7 +107,7 @@ export class CameraDirector {
    *   or double-scaling artifacts (true on closed).
    * @param {object|null} [config=null]
    *   Optional camera tuning config (from cameraConfig.js). Drives the inverse-zoom
-   *   path via cameraStateProfiles.spritePx (v7+) or legacy spritePctOfCanvas.
+   *   path via cameraStateProfiles.spriteScale (v14+) or legacy spritePctOfCanvas.
    *   Call updateConfig() for live-apply without re-construction.
    * @param {number} [referenceSpriteSize=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
@@ -237,33 +243,26 @@ export class CameraDirector {
   }
 
   /**
-   * Compute cam.zoom so that a sprite of _referenceSpriteSize renders at targetSizePx
-   * screen pixels in the current camera state.
+   * Compute cam.zoom from a spriteScale factor.
    *
-   * Inverse logic:
-   *   Closed: screenPx = baseSize × cam.zoom × bsX  →  cam.zoom = targetPx / (baseSize × bsX)
-   *   Open:   screenPx = baseSize × cam.zoom × BASE  →  cam.zoom = targetPx / (baseSize × BASE)
+   * spriteScale = 1.0 means sprites render at their natural density-scaled size.
+   * referenceSpriteSize cancels out of the formula (L82):
+   *   Closed: zoom = spriteScale / bsX   (bsX = CANVAS_W / worldW)
+   *   Open:   zoom = spriteScale / OPEN_TRACK_BASE_ZOOM
    *
-   * This guarantees cross-track invariance: the same targetSizePx produces the same
-   * on-screen sprite size regardless of worldW (L62 proof).
+   * Safety nets: result is clamped to [minZoom, MAX_INVERSE_ZOOM] where minZoom
+   * equals 1.0 for closed tracks or overviewZoom for open tracks.
    *
-   * Safety nets (L60): result is clamped to [minZoom, MAX_INVERSE_ZOOM] where minZoom
-   * equals 1.0 for closed tracks or overviewZoom for open tracks — so zoom states
-   * never show less world context than OVERVIEW.
-   *
-   * @param {number} targetSizePx  Desired sprite size in screen pixels
-   * @returns {number}             cam.zoom to assign to this state
+   * @param {number} spriteScale  Relative scale factor (1.0 = natural size)
+   * @returns {number}            cam.zoom to assign to this state
    */
-  _computeZoomForTargetSize(targetSizePx) {
-    const baseSize =
-      this._referenceSpriteSize > 0 ? this._referenceSpriteSize : FALLBACK_REFERENCE_SPRITE_SIZE;
-
+  _computeZoomForSpriteScale(spriteScale) {
     let rawZoom;
     if (this._isOpenTrack) {
-      rawZoom = targetSizePx / (baseSize * OPEN_TRACK_BASE_ZOOM);
+      rawZoom = spriteScale / OPEN_TRACK_BASE_ZOOM;
     } else {
       const bsX = CANVAS_W / this._worldW;
-      rawZoom = targetSizePx / (baseSize * bsX);
+      rawZoom = spriteScale / bsX;
     }
 
     const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
@@ -273,62 +272,51 @@ export class CameraDirector {
   /**
    * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
    *
-   * v7+: each zoom level is computed from spritePx (world pixels) stored in
-   * cameraStateProfiles. When the legacy spritePctOfCanvas path is used (v2/v3 configs
-   * without profiles), the percent value is multiplied by CANVAS_H_REF to get the
-   * equivalent screen-pixel target — preserving cross-track invariance.
+   * v14+: each zoom level is computed from spriteScale (relative factor) stored in
+   * cameraStateProfiles. zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open).
+   * referenceSpriteSize cancels out — zoom is racer-count-independent (L82).
    *
-   * Edge case: if effectiveOverviewPx already exceeds a state's target (e.g. large sprites
-   * on a narrow open track), the safety net in _computeZoomForTargetSize clamps zoom to
-   * overviewZoom — that state appears visually identical to OVERVIEW. Fix: raise spritePx
-   * or reduce sprite displaySize.
+   * Legacy spritePctOfCanvas path: pct × CANVAS_H_REF / FALLBACK_REFERENCE_SPRITE_SIZE gives
+   * the equivalent spriteScale, preserving cross-track invariance for old configs.
    *
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
-    if (!this._referenceSpriteSize || this._referenceSpriteSize <= 0) {
-      console.warn(
-        `[CameraDirector] referenceSpriteSize not set — using internal default ${FALLBACK_REFERENCE_SPRITE_SIZE}px. ` +
-          'Pass displaySize × displaySizeScale to the constructor.'
-      );
-    }
-
     const profiles = config?.cameraStateProfiles;
     if (profiles) {
-      // v7 path: spritePx is the direct target in world/screen pixels (canvas-resolution-independent).
-      const sizePx = {
-        leader: profiles.LEADER_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.leader,
-        battle: profiles.BATTLE_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.battle,
-        comeback: profiles.COMEBACK_ZOOM?.spritePx ?? DEFAULT_SPRITE_PX.comeback,
+      // v14 path: spriteScale is the relative zoom factor.
+      const scale = {
+        leader: profiles.LEADER_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
+        battle: profiles.BATTLE_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.battle,
+        comeback: profiles.COMEBACK_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.comeback,
       };
-      this._leaderZoom = this._computeZoomForTargetSize(sizePx.leader);
-      this._battleZoom = this._computeZoomForTargetSize(sizePx.battle);
-      this._comebackZoom = this._computeZoomForTargetSize(sizePx.comeback);
+      this._leaderZoom = this._computeZoomForSpriteScale(scale.leader);
+      this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
+      this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
       this._overviewStateZoom = this._isOpenTrack
         ? this.overviewZoom
-        : this._computeZoomForTargetSize(
-            profiles.OVERVIEW?.spritePx ?? FALLBACK_REFERENCE_SPRITE_SIZE
-          );
+        : this._computeZoomForSpriteScale(profiles.OVERVIEW?.spriteScale ?? 1.0);
     } else if (config?.spritePctOfCanvas) {
       // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
       const rawPct = config.spritePctOfCanvas;
-      this._leaderZoom = this._computeZoomForTargetSize(rawPct.leader * CANVAS_H_REF);
-      this._battleZoom = this._computeZoomForTargetSize(rawPct.battle * CANVAS_H_REF);
-      this._comebackZoom = this._computeZoomForTargetSize(rawPct.comeback * CANVAS_H_REF);
+      const toScale = (pct) => (pct * CANVAS_H_REF) / FALLBACK_REFERENCE_SPRITE_SIZE;
+      this._leaderZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
+      this._battleZoom = this._computeZoomForSpriteScale(toScale(rawPct.battle));
+      this._comebackZoom = this._computeZoomForSpriteScale(toScale(rawPct.comeback));
       // OVERVIEW zoom: preserve full-world defaults for legacy configs.
       this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
     } else {
-      // No config at all: use pixel defaults directly.
-      this._leaderZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.leader);
-      this._battleZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.battle);
-      this._comebackZoom = this._computeZoomForTargetSize(DEFAULT_SPRITE_PX.comeback);
+      // No config at all: use scale defaults.
+      this._leaderZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
+      this._battleZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.battle);
+      this._comebackZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.comeback);
       // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
       this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
     }
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    // Countdown start zoom: typically clamped to overviewZoom (whole track visible).
-    this._countdownStartZoom = this._computeZoomForTargetSize(
-      config?.countdownStartZoomSpritePx ?? 1
+    // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
+    this._countdownStartZoom = this._computeZoomForSpriteScale(
+      (config?.countdownStartZoomSpritePx ?? 1) / FALLBACK_REFERENCE_SPRITE_SIZE
     );
   }
 

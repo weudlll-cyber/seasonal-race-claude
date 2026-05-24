@@ -90,7 +90,7 @@ export function computeRenderDisplayScale(
  * If a per-type absolute override is set it wins directly (backwards-compatible).
  *
  * @param {number|undefined} typeOverridePx  Per-type absolute override (from racerType.config.minTargetScreenPx)
- * @param {number}           minSpritePx     Floor in world pixels (e.g. OVERVIEW.spritePx from cameraConfig)
+ * @param {number}           minSpritePx     Floor value (e.g. OVERVIEW.spriteScale from cameraConfig, v14+)
  * @returns {number}  Effective floor in screen pixels
  */
 export function getEffectiveMinTargetScreenPx(typeOverridePx, minSpritePx) {

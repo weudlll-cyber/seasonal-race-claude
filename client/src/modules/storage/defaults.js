@@ -125,16 +125,16 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 13,
+  schemaVersion: 14,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
-  // spritePx: target sprite height in world pixels (same coord system as track corridor ≈150px).
-  // Derived from the v6 defaults: OVERVIEW=0.05×720=36, LEADER=0.09×720≈65, BATTLE=0.14×720≈101,
-  // COMEBACK=0.07×720=50. Canvas-resolution-independent — identical proportion on Open and Closed tracks.
+  // spriteScale: relative zoom factor — 1.0 = sprite at natural density-scaled size.
+  // Derived from v7 spritePx defaults (÷36): OVERVIEW=36/36=1.0, LEADER=65/36≈1.81,
+  // BATTLE=101/36≈2.81, COMEBACK=50/36≈1.39. Racer-count-independent (L82, L83).
   cameraStateProfiles: {
     OVERVIEW: {
-      spritePx: 36,
+      spriteScale: 1.0,
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
@@ -146,7 +146,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
-      spritePx: 65,
+      spriteScale: 1.81,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -159,7 +159,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
-      spritePx: 101,
+      spriteScale: 2.81,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -172,7 +172,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
-      spritePx: 50,
+      spriteScale: 1.39,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -185,7 +185,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     LEAD_CHANGE: {
-      spritePx: 65,
+      spriteScale: 1.81,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,

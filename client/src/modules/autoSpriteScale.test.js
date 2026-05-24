@@ -134,7 +134,7 @@ describe('saveAutoScaleConfig', () => {
 });
 
 describe('getEffectiveMinTargetScreenPx — world-pixel floor (Block Y)', () => {
-  it('36px world-pixel floor returns 36 (default OVERVIEW.spritePx)', () => {
+  it('floor value 36 returns 36 (generic pass-through test)', () => {
     expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
   });
 
@@ -143,7 +143,7 @@ describe('getEffectiveMinTargetScreenPx — world-pixel floor (Block Y)', () => 
   });
 
   it('floor is resolution-independent: same value regardless of canvas size', () => {
-    // spritePx=36 always returns 36, unlike old pct×canvasH which gave 36 or 40 depending on canvas
+    // floor value always passes through unchanged, unlike old pct×canvasH which varied by canvas size
     expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
   });
 

@@ -41,6 +41,13 @@ const STATE_CONFIG = {
     glow: 'rgba(0,200,230,0.40)',
     tooltip: 'Watching a racer fight back',
   },
+  LEAD_CHANGE: {
+    label: 'LEAD CHANGE',
+    icon: '⚡',
+    color: '#c084fc',
+    glow: 'rgba(192,132,252,0.45)',
+    tooltip: 'The leader has changed!',
+  },
   FINISH: {
     label: 'FINISH',
     icon: '🏆',

@@ -28,12 +28,13 @@ const STATE_LABELS = {
 
 const PROFILE_FIELDS = [
   {
-    key: 'spritePx',
-    label: 'Sprite size (px)',
-    min: 5,
-    max: 200,
-    step: 1,
-    tip: (v, n) => `Target sprite height in world pixels in ${n}. ${v}px (track corridor ≈150px).`,
+    key: 'spriteScale',
+    label: 'Sprite scale (×)',
+    min: 0.5,
+    max: 5.0,
+    step: 0.05,
+    tip: (v, n) =>
+      `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large. Racer-count-independent.`,
   },
   {
     key: 'trackingTC',
