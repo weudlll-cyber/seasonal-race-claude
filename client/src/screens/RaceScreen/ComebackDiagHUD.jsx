@@ -68,6 +68,16 @@ export default function ComebackDiagHUD({ cameraRef, racersRef, visible }) {
         Cam locked:{' '}
         <span style={{ color: LOCKED_COLOR }}>{diag.lockedRacer ? lockedName : '—'}</span>
       </div>
+      <div>
+        Phase gate:{' '}
+        <span style={diag.isOutcomePhaseActive ? LABEL_ACTIVE : LABEL_INACTIVE}>
+          {diag.isOutcomePhaseActive ? '✓ open' : '✗ closed'}
+        </span>{' '}
+        <span style={{ color: '#666' }}>
+          ({(diag.leaderProgress ?? 0).toFixed(2)} /{' '}
+          {(diag.outcomePhaseThreshold ?? 0.75).toFixed(2)})
+        </span>
+      </div>
       <div
         style={{
           color: '#555',
@@ -82,37 +92,44 @@ export default function ComebackDiagHUD({ cameraRef, racersRef, visible }) {
         </span>
       </div>
       {hasB1Data ? (
-        diag.b1Data.map((entry) => (
-          <div key={entry.index} style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
-            <span
-              style={{
-                color: entry.qualifies ? QUALIFY_COLOR : NO_QUALIFY_COLOR,
-                fontWeight: entry.qualifies ? 700 : 400,
-                minWidth: '8px',
-              }}
-            >
-              {entry.qualifies ? '▲' : '·'}
-            </span>
-            <span
-              style={{
-                color: '#ddd',
-                minWidth: '60px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: '80px',
-              }}
-            >
-              {entry.name}
-            </span>
-            <span style={{ color: '#aaa' }}>#{entry.currentRank ?? '?'}</span>
-            {entry.rankAtWindowStart != null && (
-              <span style={{ color: entry.positionsGained > 0 ? QUALIFY_COLOR : '#666' }}>
-                (+{entry.positionsGained} from #{entry.rankAtWindowStart})
+        diag.b1Data.map((entry) => {
+          const allOk = entry.gainOk && entry.startGapOk && entry.currentRankOk;
+          const failures = [];
+          if (!entry.gainOk) failures.push('gain✗');
+          if (!entry.startGapOk) failures.push('gap✗');
+          if (!entry.currentRankOk) failures.push('rank✗');
+          return (
+            <div key={entry.index} style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
+              <span
+                style={{
+                  color: allOk ? QUALIFY_COLOR : NO_QUALIFY_COLOR,
+                  fontWeight: allOk ? 700 : 400,
+                  minWidth: '8px',
+                }}
+              >
+                {allOk ? '✓' : failures.join(' ')}
               </span>
-            )}
-          </div>
-        ))
+              <span
+                style={{
+                  color: '#ddd',
+                  minWidth: '60px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '80px',
+                }}
+              >
+                {entry.name}
+              </span>
+              <span style={{ color: '#aaa' }}>#{entry.currentRank ?? '?'}</span>
+              {entry.rankAtWindowStart != null && (
+                <span style={{ color: entry.positionsGained > 0 ? QUALIFY_COLOR : '#666' }}>
+                  (+{entry.positionsGained} from #{entry.rankAtWindowStart})
+                </span>
+              )}
+            </div>
+          );
+        })
       ) : (
         <div style={{ color: '#555' }}>no B1 data (race plan off?)</div>
       )}

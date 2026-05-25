@@ -142,6 +142,8 @@ export class CameraDirector {
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this._inFinishDrama = false;
+    this._inFinishMode = false;
+    this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
@@ -158,6 +160,7 @@ export class CameraDirector {
     this._lerpPhase = 'entry';
     this._camT = null;
     this._observerPhase = 'idle';
+    this._leadChangeSnapPending = false;
     this._leadInStartTs = null;
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
@@ -198,6 +201,11 @@ export class CameraDirector {
     // Camera lock for the current COMEBACK_ZOOM episode.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
+    // Cached per-frame values for getComebackDiagData() — updated every update() call.
+    this._diagLeaderProgress = 0;
+    this._diagIsExternalOutcomePhase = false;
+    this._activeStateMinHoldMs = null; // null = use _minStateHoldByState; 0 = immediately interruptible (same-state repeat)
+    this._prevCommittedState = null; // null on first call so constructor-state is never treated as a repeat
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
     this._currentLeaderName = null;
@@ -293,9 +301,9 @@ export class CameraDirector {
       this._leaderZoom = this._computeZoomForSpriteScale(scale.leader);
       this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
       this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
-      this._overviewStateZoom = this._isOpenTrack
-        ? this.overviewZoom
-        : this._computeZoomForSpriteScale(profiles.OVERVIEW?.spriteScale ?? 1.0);
+      this._overviewStateZoom = this._computeZoomForSpriteScale(
+        profiles.OVERVIEW?.spriteScale ?? 1.0
+      );
     } else if (config?.spritePctOfCanvas) {
       // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
       const rawPct = config.spritePctOfCanvas;
@@ -332,6 +340,8 @@ export class CameraDirector {
     this._battleMinDurationMs = config?.battleMinDurationMs ?? BATTLE_MIN_DURATION_MS;
     this._battleIsolationThresholdPx = config?.battleIsolationThresholdPx ?? 0;
     this._battleMaxGroupSize = Math.max(3, Math.min(6, config?.battleMaxGroupSize ?? 6));
+    this._battleMaxGroupRankSpan = config?.battleMaxGroupRankSpan ?? 5;
+    this._battleMinTopN = config?.battleMinTopN ?? 10;
     this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
     this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
     this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
@@ -491,9 +501,12 @@ export class CameraDirector {
     this._entryConvergencePx = config?.entryConvergencePx ?? 10;
 
     // COMEBACK-specific config
-    this._comebackMinPositionsGained = config?.comebackMinPositionsGained ?? 3;
-    this._comebackWindowSec = config?.comebackWindowSec ?? 5;
+    this._comebackMinPositionsGained = config?.comebackMinPositionsGained ?? 2;
+    this._comebackWindowSec = config?.comebackWindowSec ?? 4;
     this._comebackMinDuration = config?.comebackMinDuration ?? 3;
+    this._outcomePhaseThreshold = config?.outcomePhaseThreshold ?? 0.75;
+    this._comebackMinStartGap = config?.comebackMinStartGap ?? 0.4;
+    this._comebackMaxCurrentRankPct = config?.comebackMaxCurrentRankPct ?? 0.1;
     // Override COMEBACK_ZOOM minStateHold with comebackMinDuration when explicitly configured.
     if (config?.comebackMinDuration != null) {
       this._minStateHoldByState[CAM_STATE.COMEBACK_ZOOM] = this._comebackMinDuration * 1000;
@@ -506,6 +519,12 @@ export class CameraDirector {
     if (config?.leadChangeMinDuration != null) {
       this._minStateHoldByState[CAM_STATE.LEAD_CHANGE] = this._leadChangeMinDuration * 1000;
     }
+    // Finish sequence config
+    this._finishDramaDurationMs = config?.finishDramaDurationMs ?? FINISH_DRAMA_DURATION;
+    this._finishOverviewZoomOutDurationMs = config?.finishOverviewZoomOutDurationMs ?? 3000;
+    this._finishPauseMs = config?.finishPauseMs ?? 2500;
+    this._finishOverviewPanBlend = config?.finishOverviewPanBlend ?? 0.5;
+    this._finishOverviewLookbackPx = config?.finishOverviewLookbackPx ?? 300;
     // Per-state cooldowns (Regie)
     this._comebackCooldownMs = config?.comebackCooldownMs ?? 10000;
     this._leadChangeCooldownMs = config?.leadChangeCooldownMs ?? 5000;
@@ -625,6 +644,14 @@ export class CameraDirector {
         }
       }
       if (!earliestInWindow) continue;
+      // Start-rank filter: racer must have been far enough back at window start
+      const N = sorted.length;
+      const normDivisor = Math.max(N - 1, 1);
+      const startGapNorm = (earliestInWindow.rank - 1) / normDivisor;
+      if (startGapNorm < this._comebackMinStartGap) continue;
+      // Current-rank filter: racer must not already be in the lead group
+      const currentRankNorm = (currentRank - 1) / normDivisor;
+      if (currentRankNorm < this._comebackMaxCurrentRankPct) continue;
       const gain = earliestInWindow.rank - currentRank; // positive = moved forward
       if (gain >= minGain && gain > bestGain) {
         bestGain = gain;
@@ -709,6 +736,10 @@ export class CameraDirector {
     const windowMs = (this._comebackWindowSec ?? 5) * 1000;
     const cutoff = ts - windowMs;
     const minGain = this._comebackMinPositionsGained ?? 3;
+    const minStartGap = this._comebackMinStartGap ?? 0.25;
+    const maxCurrentRankPct = this._comebackMaxCurrentRankPct ?? 0.2;
+    const N = sorted.length;
+    const normDivisor = Math.max(N - 1, 1);
     const b1Data = [];
     if (this._b1Indices) {
       for (const idx of this._b1Indices) {
@@ -724,12 +755,18 @@ export class CameraDirector {
         }
         const gain =
           earliestInWindow != null && currentRank != null ? earliestInWindow.rank - currentRank : 0;
+        const startGapNorm =
+          earliestInWindow != null ? (earliestInWindow.rank - 1) / normDivisor : 0;
+        const currentRankNorm = currentRank != null ? (currentRank - 1) / normDivisor : 0;
         b1Data.push({
           index: idx,
           name: racer?.name ?? racer?.id ?? '?',
           currentRank,
           rankAtWindowStart: earliestInWindow?.rank ?? null,
           positionsGained: gain,
+          gainOk: gain >= minGain,
+          startGapOk: earliestInWindow != null && startGapNorm >= minStartGap,
+          currentRankOk: currentRank != null && currentRankNorm >= maxCurrentRankPct,
           qualifies: gain >= minGain,
         });
       }
@@ -737,12 +774,17 @@ export class CameraDirector {
     const lockedRacer = racers
       ? this._findByIndex(racers, this._comebackLockedRacerIndex, this._comebackLockedRacer)
       : this._comebackLockedRacer;
+    const threshold = this._outcomePhaseThreshold ?? 0.75;
+    const progress = this._diagLeaderProgress ?? 0;
     return {
       active: this.state === CAM_STATE.COMEBACK_ZOOM,
       lockedRacer,
       b1Data,
       windowSec: this._comebackWindowSec ?? 5,
       minPositionsGained: minGain,
+      outcomePhaseThreshold: threshold,
+      leaderProgress: progress,
+      isOutcomePhaseActive: !!(this._diagIsExternalOutcomePhase || progress > threshold),
     };
   }
 
@@ -765,12 +807,28 @@ export class CameraDirector {
   update(racers, ts, raceState, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
     this._updateRankHistory(racers, ts);
     this._updateLeaderTracking(raceState?.physicsRacers ?? racers, ts);
+    // Cache leaderProgress and external outcome-phase flag for getComebackDiagData().
+    if (racers && racers.length > 0 && raceState?.finishT > 0) {
+      let maxT = 0;
+      for (const r of racers) if (r.t > maxT) maxT = r.t;
+      this._diagLeaderProgress = maxT / raceState.finishT;
+    } else {
+      this._diagLeaderProgress = 0;
+    }
+    this._diagIsExternalOutcomePhase = !!raceState?.isOutcomePhase;
     const stateAge = ts - this.stateEnteredAt;
     const stateCap = this._maxStateDurationByState[this.state] ?? this._maxStateDuration;
-    const minHold = this._minStateHoldByState[this.state] ?? this._minStateHoldMs;
+    const minHold =
+      this._activeStateMinHoldMs != null
+        ? this._activeStateMinHoldMs
+        : (this._minStateHoldByState[this.state] ?? this._minStateHoldMs);
     // Finish-drama is exempt from minStateHoldMs: when the 1500ms pulse expires, transition
     // immediately regardless of how long the state has been held.
     const finishDramaExpired = this._inFinishDrama && ts >= this._finishMomentExpiry;
+    // Force immediate transition on first finish detection — bypasses minHold/stateCap so no
+    // state (COMEBACK, BATTLE, etc.) can block the drama pulse from starting.
+    const forceFinishDrama =
+      raceState.finishedCount > 0 && !this._inFinishMode && this._finishMomentExpiry === null;
     const prevState = this.state;
     let _diagTransitioned = false;
     // Early BATTLE exit: leave when the original group disperses after battleMinDurationMs.
@@ -789,12 +847,31 @@ export class CameraDirector {
       this._transition(racers, ts, raceState);
       _diagTransitioned = true;
     }
+    // P2-drift exit: a locked group member moved into P1/P2 — exit after minHold (no hard-cut).
+    if (
+      !_diagTransitioned &&
+      this.state === CAM_STATE.BATTLE_ZOOM &&
+      stateAge >= this._battleMinDurationMs &&
+      this._isBattleGroupP2Drifted(racers)
+    ) {
+      this._lastBattleExitTs = ts;
+      this._battleLockedRacer = null;
+      this._battleLockedRacerIndex = null;
+      this._battleGroupRacers = [];
+      this._battleGroupRacerIndices = [];
+      this._battleLockT = null;
+      this._transition(racers, ts, raceState);
+      _diagTransitioned = true;
+    }
     // Early LEAD_CHANGE interrupt: confirmed leader change while in LEADER_ZOOM.
     if (!_diagTransitioned && this.state === CAM_STATE.LEADER_ZOOM && this._leadChangePending) {
       this._transition(racers, ts, raceState);
       _diagTransitioned = true;
     }
-    if (!_diagTransitioned && (stateAge >= Math.max(minHold, stateCap) || finishDramaExpired)) {
+    // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
+    // until a different state is detected — no stateCap blocker.
+    const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
+    if (!_diagTransitioned && (stateAge >= holdGate || finishDramaExpired || forceFinishDrama)) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
@@ -853,7 +930,10 @@ export class CameraDirector {
           fT = fr[0]?.t ?? null;
           break;
         case CAM_STATE.OVERVIEW:
-          fT = fr[0]?.t ?? null; // leader's T — camera targets leader in OVERVIEW
+          // FINISH_OVERVIEW: _camT is anchored to lookbackT (set in _transition).
+          // Skip T-space tracking so the leader's runout movement does not overwrite
+          // _transitionTargetT and pull the camera past the finish line.
+          fT = this._inFinishMode ? null : (fr[0]?.t ?? null);
           break;
       }
       if (fT !== null) {
@@ -878,6 +958,11 @@ export class CameraDirector {
           : rawTarget;
         // Lerp _camT toward _transitionTargetT. Closed: shortest circular arc. Open: linear.
         this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
+      } else if (this._inFinishMode && this._camT !== null && this._transitionTargetT !== null) {
+        // FINISH_OVERVIEW: _transitionTargetT is fixed at lookbackT (set in _transition, not
+        // overwritten because fT=null). Still lerp _camT toward it so the pan glides from the
+        // winner's position to the lookback point in parallel with the zoom-out.
+        this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
       }
     }
     // During entry with T-space lerp active: pan is pinned to _camT's world position (already
@@ -895,6 +980,14 @@ export class CameraDirector {
       this.zoom += (this.targetZoom - this.zoom) * lf;
     }
     this._setTargets(racers, canvasW, canvasH, raceState);
+
+    // LEAD_CHANGE hard-cut: snap offsetX/Y synchronously with the zoom snap so the
+    // zoomed-in frame shows the correct racer from frame 0, not the previous position.
+    if (this._leadChangeSnapPending) {
+      this._leadChangeSnapPending = false;
+      this.offsetX = this.targetOffsetX;
+      this.offsetY = this.targetOffsetY;
+    }
 
     if (!tSpaceLerpActive) {
       this.zoom += (this.targetZoom - this.zoom) * lf;
@@ -1019,17 +1112,22 @@ export class CameraDirector {
     let nextState;
     let reason;
 
-    // Priority 1: Finish override — drama pulse on first finish, then OVERVIEW
+    // Priority 1: Finish override — drama pulse on first finish, then FINISH_OVERVIEW mode
     if (raceState.finishedCount > 0) {
+      if (this._inFinishMode) {
+        return; // finishMode is absolute — no further transitions allowed
+      }
       if (this._finishMomentExpiry === null) {
-        this._finishMomentExpiry = ts + FINISH_DRAMA_DURATION;
+        this._finishMomentExpiry = ts + this._finishDramaDurationMs;
         this._inFinishDrama = true;
         nextState = CAM_STATE.LEADER_ZOOM;
         reason = 'finish: drama pulse on first finish';
       } else if (ts >= this._finishMomentExpiry) {
         this._inFinishDrama = false;
+        this._inFinishMode = true;
+        this._finishModeStartTs = ts;
         nextState = CAM_STATE.OVERVIEW;
-        reason = 'finish: drama expired → OVERVIEW';
+        reason = 'finish: drama expired → FINISH_OVERVIEW';
       } else {
         return; // drama still active, no state change
       }
@@ -1081,7 +1179,8 @@ export class CameraDirector {
 
       const comebackCooledDown = ts - this._lastComebackExitTs >= this._comebackCooldownMs;
       let _comebackRacer = null;
-      if (raceState?.isOutcomePhase && comebackCooledDown) {
+      const _internalOutcomePhase = leaderProgress > this._outcomePhaseThreshold;
+      if ((raceState?.isOutcomePhase || _internalOutcomePhase) && comebackCooledDown) {
         _comebackRacer = this._detectComebackRacer(racers, ts);
         if (_comebackRacer) {
           candidates.push({
@@ -1119,29 +1218,65 @@ export class CameraDirector {
     }
 
     // Commit state transition
+    // isRepeat: true only when the same state is chosen as last time AND a full entry has
+    // already occurred (null on first call so constructor-state never counts as a repeat).
+    const isRepeat = nextState === this._prevCommittedState;
     this.state = nextState;
-    this.stateEnteredAt = ts;
-    this._lerpPhase = 'entry';
-    this._entryStartTs = null; // reset; update() picks up fresh ts on first entry-phase frame
-    if (nextState === CAM_STATE.BATTLE_ZOOM) {
-      this._battleDiagFrameCount = 0;
-      this._battleDiagSnapshots = [];
-      this._battleDiagFrozen = false;
-      // Lock camera on the frontmost racer of the detected battle group for the entire battle.
-      const group = this._detectPulkGroup(racers);
-      if (group && group.length > 0) {
-        this._battleLockedRacer = group[0]; // group[0] has highest t (frontmost) — DiagHUD only
-        this._battleLockedRacerIndex = group[0].index ?? null;
-        this._battleGroupRacers = group;
-        this._battleGroupRacerIndices = group.map((r) => r.index ?? null);
-        // Q4: centroid T for camera pan — set at entry, stays fixed through BATTLE
-        this._battleLockT = group.reduce((sum, r) => sum + r.t, 0) / group.length;
-      } else {
-        this._battleLockedRacer = null;
-        this._battleLockedRacerIndex = null;
-        this._battleGroupRacers = [];
-        this._battleGroupRacerIndices = [];
-        this._battleLockT = null;
+    // Same-state repeat: set holdGate=0 so _transition() fires every frame and any new
+    // event can immediately switch away. Non-repeat: store configured minHold for new state.
+    this._activeStateMinHoldMs = isRepeat
+      ? 0
+      : (this._minStateHoldByState[nextState] ?? this._minStateHoldMs);
+
+    if (!isRepeat) {
+      this.stateEnteredAt = ts;
+      this._lerpPhase = 'entry';
+      this._entryStartTs = null; // reset; update() picks up fresh ts on first entry-phase frame
+      if (nextState === CAM_STATE.BATTLE_ZOOM) {
+        this._battleDiagFrameCount = 0;
+        this._battleDiagSnapshots = [];
+        this._battleDiagFrozen = false;
+        // Lock camera on the frontmost racer of the detected battle group for the entire battle.
+        const group = this._detectPulkGroup(racers);
+        if (group && group.length > 0) {
+          this._battleLockedRacer = group[0]; // group[0] has highest t (frontmost) — DiagHUD only
+          this._battleLockedRacerIndex = group[0].index ?? null;
+          this._battleGroupRacers = group;
+          this._battleGroupRacerIndices = group.map((r) => r.index ?? null);
+          // Q4: centroid T for camera pan — set at entry, stays fixed through BATTLE
+          this._battleLockT = group.reduce((sum, r) => sum + r.t, 0) / group.length;
+        } else {
+          this._battleLockedRacer = null;
+          this._battleLockedRacerIndex = null;
+          this._battleGroupRacers = [];
+          this._battleGroupRacerIndices = [];
+          this._battleLockT = null;
+        }
+      }
+
+      // Commit LEAD_CHANGE: save names for overlay text, hard cut (no entry lerp)
+      if (nextState === CAM_STATE.LEAD_CHANGE) {
+        this._leadChangeNewLeaderName = this._currentLeaderName;
+        this._leadChangePrevLeaderName = this._prevLeaderName;
+        this._lastLeadChangeTs = ts;
+        // Hard cut: skip entry lerp — camera snaps to leader zoom immediately
+        this._lerpPhase = 'tracking';
+        this.zoom = this._leaderZoom;
+        this.targetZoom = this._leaderZoom;
+      }
+
+      // OVERVIEW: normally snap zoom immediately to avoid slow lerp down from previous zoom state.
+      // Exception: in finishMode the zoom-out is intentionally gradual — skip the hard-cut and
+      // temporarily override the entry TC to achieve the configured zoom-out duration.
+      if (nextState === CAM_STATE.OVERVIEW) {
+        if (!this._inFinishMode) {
+          this.zoom = this._overviewStateZoom;
+          this.targetZoom = this._overviewStateZoom;
+        } else {
+          // finishMode smooth zoom-out: derive TC from configured duration (90% convergence ≈ 3.45×TC).
+          const tc = Math.max(0.1, this._finishOverviewZoomOutDurationMs / 3450);
+          this._lfEntryByState[CAM_STATE.OVERVIEW] = tcToLerpFactor(tc);
+        }
       }
     }
 
@@ -1160,24 +1295,8 @@ export class CameraDirector {
       this._comebackLockedRacerIndex = null;
     }
 
-    // Commit LEAD_CHANGE: save names for overlay text, hard cut (no entry lerp), always clear pending
-    if (nextState === CAM_STATE.LEAD_CHANGE) {
-      this._leadChangeNewLeaderName = this._currentLeaderName;
-      this._leadChangePrevLeaderName = this._prevLeaderName;
-      this._lastLeadChangeTs = ts;
-      // Hard cut: skip entry lerp — camera snaps to leader zoom immediately
-      this._lerpPhase = 'tracking';
-      this.zoom = this._leaderZoom;
-      this.targetZoom = this._leaderZoom;
-    }
+    // always clear; was consumed (or suppressed) in this _transition() call
     this._leadChangePending = false;
-
-    // OVERVIEW: snap zoom to target immediately — avoid slow lerp down from previous zoom state.
-    // Pan still lerps smoothly via T-space entry phase; only zoom is hard-cut.
-    if (nextState === CAM_STATE.OVERVIEW) {
-      this.zoom = this._overviewStateZoom;
-      this.targetZoom = this._overviewStateZoom;
-    }
 
     // Track battle exit for cooldown (natural exits — forced exits handled in update())
     if (prevState === CAM_STATE.BATTLE_ZOOM && nextState !== CAM_STATE.BATTLE_ZOOM) {
@@ -1194,82 +1313,115 @@ export class CameraDirector {
       );
     }
 
-    // Reset phased observer and set up T-space lerp for the new state.
-    this._leadOutStartCamT = null;
-    this._leadOutStartTs = null;
-    this._leadOutDistanceT = 0;
-    this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
-    // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
-    // not a stale delta accumulated across the previous state's tracking phase.
-    this._prevFocusT = null;
-    if (this._shape) {
-      // Compute focusT for all states including OVERVIEW (use leader's T for OVERVIEW so the
-      // camera targets the leader's position, centering the action with followers visible).
-      let focusT = null;
-      switch (nextState) {
-        case CAM_STATE.LEADER_ZOOM:
-          focusT = ordered[0]?.t ?? 0;
-          break;
-        case CAM_STATE.BATTLE_ZOOM: {
-          // Q4: use centroid T of battle group. Falls back to frontmost when no lock captured.
-          focusT = this._battleLockT ?? ordered[0]?.t ?? 0;
-          break;
+    if (!isRepeat) {
+      // Reset phased observer and set up T-space lerp for the new state.
+      this._leadOutStartCamT = null;
+      this._leadOutStartTs = null;
+      this._leadOutDistanceT = 0;
+      this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
+      // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
+      // not a stale delta accumulated across the previous state's tracking phase.
+      this._prevFocusT = null;
+      if (this._shape) {
+        // Compute focusT for all states including OVERVIEW (use leader's T for OVERVIEW so the
+        // camera targets the leader's position, centering the action with followers visible).
+        let focusT = null;
+        switch (nextState) {
+          case CAM_STATE.LEADER_ZOOM:
+            focusT = ordered[0]?.t ?? 0;
+            break;
+          case CAM_STATE.BATTLE_ZOOM: {
+            // Q4: use centroid T of battle group. Falls back to frontmost when no lock captured.
+            focusT = this._battleLockT ?? ordered[0]?.t ?? 0;
+            break;
+          }
+          case CAM_STATE.COMEBACK_ZOOM: {
+            const lockedCB = this._comebackLockedRacer;
+            focusT = lockedCB?.t ?? ordered[Math.min(2, ordered.length - 1)]?.t ?? 0;
+            break;
+          }
+          case CAM_STATE.LEAD_CHANGE:
+            focusT = ordered[0]?.t ?? 0; // focus on the new leader
+            break;
+          case CAM_STATE.OVERVIEW:
+            focusT = ordered[0]?.t ?? 0; // leader's T; T-space lerp targets leader position
+            break;
         }
-        case CAM_STATE.COMEBACK_ZOOM: {
-          const lockedCB = this._comebackLockedRacer;
-          focusT = lockedCB?.t ?? ordered[Math.min(2, ordered.length - 1)]?.t ?? 0;
-          break;
+        if (focusT !== null) {
+          // Keep _camT from the old state (T-space lerp starts from current track position).
+          // Only initialize to focusT when coming from a state that had no _camT (e.g., OVERVIEW
+          // tracking where _camT was released to null after convergence).
+          if (this._camT === null) {
+            this._camT = focusT;
+          }
+          // Lead-ahead offset: zoom states target focusT + leadAheadOffset so the camera
+          // arrives at the lead-in start position at convergence, no jump required.
+          const prof = this._phasedByState?.[nextState];
+          const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+          const speedPerFrame = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
+          const _leadAheadOnForNext = this._leadAheadEnabledByState?.[nextState] ?? true;
+          const leadAhead =
+            nextState !== CAM_STATE.OVERVIEW && phasedEnabled && _leadAheadOnForNext
+              ? speedPerFrame * FRAME_RATE * (prof.leadInDuration ?? 0)
+              : 0;
+          // Open tracks: clamp initial target to [0,1] — no circular wrap-around.
+          const rawTarget = focusT + leadAhead;
+          this._transitionTargetT = this._isOpenTrack
+            ? Math.max(0, Math.min(1, rawTarget))
+            : rawTarget;
+          // Observer phase is always 'idle' at transition; the convergence gate promotes it
+          // to 'lead-in' or 'follow' once zoom and T-space have both converged.
+          this._observerPhase = 'idle';
+          this._leadInStartTs = null;
+        } else {
+          this._camT = null;
+          this._transitionTargetT = null;
+          this._observerPhase = 'idle';
+          this._leadInStartTs = null;
         }
-        case CAM_STATE.LEAD_CHANGE:
-          focusT = ordered[0]?.t ?? 0; // focus on the new leader
-          break;
-        case CAM_STATE.OVERVIEW:
-          focusT = ordered[0]?.t ?? 0; // leader's T; T-space lerp targets leader position
-          break;
-      }
-      if (focusT !== null) {
-        // Keep _camT from the old state (T-space lerp starts from current track position).
-        // Only initialize to focusT when coming from a state that had no _camT (e.g., OVERVIEW
-        // tracking where _camT was released to null after convergence).
-        if (this._camT === null) {
-          this._camT = focusT;
-        }
-        // Lead-ahead offset: zoom states target focusT + leadAheadOffset so the camera
-        // arrives at the lead-in start position at convergence, no jump required.
-        const prof = this._phasedByState?.[nextState];
-        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
-        const speedPerFrame = this._entrySpeedEstimate ?? NOMINAL_T_PER_FRAME;
-        const _leadAheadOnForNext = this._leadAheadEnabledByState?.[nextState] ?? true;
-        const leadAhead =
-          nextState !== CAM_STATE.OVERVIEW && phasedEnabled && _leadAheadOnForNext
-            ? speedPerFrame * FRAME_RATE * (prof.leadInDuration ?? 0)
-            : 0;
-        // Open tracks: clamp initial target to [0,1] — no circular wrap-around.
-        const rawTarget = focusT + leadAhead;
-        this._transitionTargetT = this._isOpenTrack
-          ? Math.max(0, Math.min(1, rawTarget))
-          : rawTarget;
-        // Observer phase is always 'idle' at transition; the convergence gate promotes it
-        // to 'lead-in' or 'follow' once zoom and T-space have both converged.
-        this._observerPhase = 'idle';
-        this._leadInStartTs = null;
       } else {
         this._camT = null;
         this._transitionTargetT = null;
         this._observerPhase = 'idle';
         this._leadInStartTs = null;
       }
-    } else {
-      this._camT = null;
-      this._transitionTargetT = null;
-      this._observerPhase = 'idle';
-      this._leadInStartTs = null;
+
+      // FINISH_OVERVIEW entry: set _transitionTargetT to the lookback point before the finish
+      // line. _camT is intentionally left at the winner's current T so the entry-phase T-lerp
+      // smoothly pans from the winner's position to lookbackT in parallel with the zoom-out.
+      // (Previously _camT was also snapped to lookbackT here, causing a hard-cut on frame 1.)
+      if (
+        nextState === CAM_STATE.OVERVIEW &&
+        this._inFinishMode &&
+        raceState?.finishT > 0 &&
+        this._shape
+      ) {
+        const normT = this._isOpenTrack
+          ? Math.min(1, raceState.finishT)
+          : ((raceState.finishT % 1) + 1) % 1;
+        const pathLen = this._shape.getTotalLength?.() ?? 0;
+        const lookbackFrac = pathLen > 0 ? this._finishOverviewLookbackPx / pathLen : 0;
+        const lookbackT = this._isOpenTrack
+          ? Math.max(0, normT - lookbackFrac)
+          : (((normT - lookbackFrac) % 1) + 1) % 1;
+        this._transitionTargetT = lookbackT;
+      }
+
+      // LEAD_CHANGE hard cut: snap _camT to new leader and flag pan snap in update().
+      // Without this, _setTargets runs on frame 0 with stale _camT from the previous state
+      // (since _computePhasedPanTarget runs after _setTargets), causing a 1-frame wrong position.
+      // Note: focusT is scoped inside the _shape block above, so re-derive from ordered here.
+      if (nextState === CAM_STATE.LEAD_CHANGE && this._shape) {
+        this._observerPhase = 'follow';
+        const newLeaderT = ordered[0]?.t ?? null;
+        if (newLeaderT !== null) {
+          this._camT = newLeaderT;
+        }
+        this._leadChangeSnapPending = true;
+      }
     }
 
-    // LEAD_CHANGE hard cut: skip convergence gate — immediately follow the new leader
-    if (nextState === CAM_STATE.LEAD_CHANGE && this._shape) {
-      this._observerPhase = 'follow';
-    }
+    this._prevCommittedState = nextState;
   }
 
   // Returns the top-N racers by position — the set the camera focuses on.
@@ -1278,13 +1430,14 @@ export class CameraDirector {
   }
 
   /**
-   * Finds the first group of ≥3 racers that simultaneously satisfy all three BATTLE conditions:
+   * Finds the first group of ≥3 racers that simultaneously satisfy all BATTLE conditions:
    *   1. Spatial    — all pairwise euclidean distances < battlePulkThresholdPx
    *   2. Temporal   — all pairwise |t_i − t_j| < battlePulkThresholdT (similar projected ETA)
    *   3. Positional — frontmost group racer at rank 3 or worse (P1/P2 are LEADER territory);
-   *                   rank span of the group ≤ 3 places (no top-10 cap — rank 11+ can battle)
+   *                   seed-triple rank span ≤ 3; frontmost rank ≤ battleMinTopN
+   *   4. Expansion  — greedy expansion capped at battleMaxGroupRankSpan total rank span
    *
-   * Returns the triple sorted frontmost-first (highest t), or null when no group qualifies.
+   * Returns the group sorted frontmost-first (highest t), or null when no group qualifies.
    * @param {Array<{x:number, y:number, t:number}>} racers  Full racer list, any order.
    * @returns {Array|null}
    */
@@ -1297,8 +1450,11 @@ export class CameraDirector {
     const tThr = this._battlePulkThresholdT;
     const isoThr2 = this._battleIsolationThresholdPx * this._battleIsolationThresholdPx;
     const maxSize = this._battleMaxGroupSize ?? 6;
-    // i >= 2: frontmost battle racer must be at rank 3 or worse (P1/P2 are LEADER territory)
-    for (let i = 2; i < n - 2; i++) {
+    const maxRankSpan = this._battleMaxGroupRankSpan ?? 5;
+    // i >= 2: frontmost battle racer must be at rank 3 or worse (P1/P2 are LEADER territory).
+    // i < battleMinTopN: frontmost must be in the configured top-N (default top-10).
+    const minTopN = this._battleMinTopN ?? 10;
+    for (let i = 2; i < n - 2 && i < minTopN; i++) {
       for (let j = i + 1; j < n && j - i <= 3; j++) {
         for (let k = j + 1; k < n && k - i <= 3; k++) {
           const ri = sorted[i],
@@ -1315,12 +1471,19 @@ export class CameraDirector {
           if ((ri.x - rj.x) ** 2 + (ri.y - rj.y) ** 2 >= thr2) continue;
           if ((ri.x - rk.x) ** 2 + (ri.y - rk.y) ** 2 >= thr2) continue;
           if ((rj.x - rk.x) ** 2 + (rj.y - rk.y) ** 2 >= thr2) continue;
-          // Q2: greedy expansion — add adjacent-rank racers (index >= 2, not P1/P2) up to maxSize
+          // Q2: greedy expansion — add adjacent-rank racers (index >= 2, not P1/P2) up to maxSize.
+          // Track rank span: reject candidates that would push (maxIdx - minIdx) > maxRankSpan.
           const group = [ri, rj, rk];
           const groupSet = new Set([i, j, k]);
+          let minGroupIdx = i; // seed frontmost always has best rank (i <= j <= k)
+          let maxGroupIdx = k;
           for (let e = 2; e < n && group.length < maxSize; e++) {
             if (groupSet.has(e)) continue;
             const re = sorted[e];
+            // Rank-span guard: check before spatial/temporal (cheaper)
+            const candMin = Math.min(minGroupIdx, e);
+            const candMax = Math.max(maxGroupIdx, e);
+            if (candMax - candMin > maxRankSpan) continue;
             let fits = true;
             for (const gm of group) {
               if (Math.abs(gm.t - re.t) > tThr || (gm.x - re.x) ** 2 + (gm.y - re.y) ** 2 >= thr2) {
@@ -1331,6 +1494,8 @@ export class CameraDirector {
             if (fits) {
               group.push(re);
               groupSet.add(e);
+              minGroupIdx = candMin;
+              maxGroupIdx = candMax;
             }
           }
           // Q1: isolation check — skip when threshold is 0 (disabled)
@@ -1390,6 +1555,20 @@ export class CameraDirector {
       }
     }
     return true;
+  }
+
+  /**
+   * Returns true when any member of the locked BATTLE group has drifted into P1 or P2
+   * since the group was formed. Used as an additional early-exit trigger in update().
+   * @param {Array} racers  Current full racer list.
+   * @returns {boolean}
+   */
+  _isBattleGroupP2Drifted(racers) {
+    if (!racers || !this._battleGroupRacerIndices?.length) return false;
+    const sorted = [...racers].sort((a, b) => b.t - a.t);
+    const p12Set = new Set([sorted[0]?.index, sorted[1]?.index].filter((v) => v != null));
+    if (p12Set.size === 0) return false;
+    return this._battleGroupRacerIndices.some((idx) => idx != null && p12Set.has(idx));
   }
 
   /**
@@ -1569,6 +1748,34 @@ export class CameraDirector {
             }
           }
           break;
+        }
+        // finishMode: center camera on a fixed point finishOverviewLookbackPx before the finish
+        // line. Using the winner's live position as anchor caused the camera to drift forward
+        // with the runout movement — this approach keeps the target stationary so the
+        // approach section to the finish stays visible throughout FINISH_OVERVIEW.
+        if (this._inFinishMode && this._shape && raceState?.finishT > 0) {
+          const normT = this._isOpenTrack
+            ? Math.min(1, raceState.finishT)
+            : ((raceState.finishT % 1) + 1) % 1;
+          const pathLen = this._shape.getTotalLength?.() ?? 0;
+          const lookbackFrac = pathLen > 0 ? this._finishOverviewLookbackPx / pathLen : 0;
+          const lookbackT = this._isOpenTrack
+            ? Math.max(0, normT - lookbackFrac)
+            : (((normT - lookbackFrac) % 1) + 1) % 1;
+          const target = this._shape.getPosition(lookbackT, 0);
+          if (target) {
+            if (this._isOpenTrack) {
+              this._setOpenTrackTargets(target, this._overviewStateZoom, frameSize);
+            } else {
+              this._setClosedTrackTargets(
+                target,
+                this._overviewStateZoom * this._bsX,
+                frameSize,
+                canvasH
+              );
+            }
+            break;
+          }
         }
         const isStartPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
         // During start phase: centroid of full field so no racer is cropped.
@@ -1960,10 +2167,17 @@ export class CameraDirector {
 
   /**
    * Display state for the camera HUD.
-   * Returns 'FINISH' during the finish drama window, otherwise this.state.
+   * Returns 'FINISH' during the drama pulse, 'FINISH_OVERVIEW' during finishMode, otherwise this.state.
    */
   get hudState() {
-    return this._inFinishDrama ? 'FINISH' : this.state;
+    if (this._inFinishDrama) return 'FINISH';
+    if (this._inFinishMode) return 'FINISH_OVERVIEW';
+    return this.state;
+  }
+
+  /** Pause in ms after all racers finish before the leaderboard is shown. Read by RaceScreen. */
+  get finishPauseMs() {
+    return this._finishPauseMs;
   }
 
   /**

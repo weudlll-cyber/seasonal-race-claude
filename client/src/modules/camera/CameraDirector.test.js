@@ -730,6 +730,40 @@ describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
   });
 });
 
+// ── CameraDirector — OVERVIEW spriteScale on open tracks (v14 path) ───────────
+// Phase 3D fix: _overviewStateZoom on open tracks now uses _computeZoomForSpriteScale
+// instead of being hardcoded to overviewZoom. OVERVIEW spriteScale slider now has effect.
+
+describe('CameraDirector — OVERVIEW spriteScale on open tracks (v14 path)', () => {
+  const v14OpenConfig = (overviewScale) => ({
+    cameraStateProfiles: {
+      OVERVIEW: { spriteScale: overviewScale, trackingTC: 1.5, entryTC: 1.5 },
+    },
+  });
+
+  it('spriteScale=1.0, worldW=1280: floor-clamped to overviewZoom=1.0 (no behavioral change)', () => {
+    // rawZoom = 1.0 / OPEN_TRACK_BASE_ZOOM = 0.667 < overviewZoom=1.0 → clamped
+    const cd = new CameraDirector(1280, 720, true, v14OpenConfig(1.0));
+    expect(cd._overviewStateZoom).toBeCloseTo(1, 3);
+    expect(cd._overviewStateZoom).toBeCloseTo(cd.overviewZoom, 3);
+  });
+
+  it('spriteScale=2.0, worldW=1280: zoom-in above overviewZoom — slider now has effect', () => {
+    // rawZoom = 2.0 / OPEN_TRACK_BASE_ZOOM ≈ 1.333 > overviewZoom=1.0 → not clamped
+    const cd = new CameraDirector(1280, 720, true, v14OpenConfig(2.0));
+    expect(cd._overviewStateZoom).toBeCloseTo(2.0 / OPEN_TRACK_BASE_ZOOM, 3);
+    expect(cd._overviewStateZoom).toBeGreaterThan(cd.overviewZoom);
+  });
+
+  it('spriteScale=2.0: targetZoom reflects _overviewStateZoom after update()', () => {
+    const cd = new CameraDirector(1280, 720, true, v14OpenConfig(2.0));
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 1000;
+    cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
+    expect(cd.targetZoom).toBeCloseTo(2.0 / OPEN_TRACK_BASE_ZOOM, 3);
+  });
+});
+
 // ── estimatedSecondsPerLap ────────────────────────────────────────────────────
 
 describe('estimatedSecondsPerLap', () => {
@@ -3060,9 +3094,8 @@ describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => 
     expect(wide._isPulk(racers)).toBe(true);
   });
 
-  it('_isPulk: P1/P2 block BATTLE; rank 3+ fires; no top-10 cap (rank 11+ can battle)', () => {
+  it('_isPulk: P1/P2 block BATTLE (frontmost in group must be P3+)', () => {
     const cd = new CameraDirector();
-
     // Close group at ranks 1/2/3 → BATTLE blocked (frontmost is P1 = rank 1)
     const closeAtTop = [
       { x: 500, y: 300, t: 0.9 }, // P1
@@ -3070,12 +3103,29 @@ describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => 
       { x: 520, y: 300, t: 0.88 }, // P3
     ];
     expect(cd._isPulk(closeAtTop)).toBe(false);
+  });
 
-    // Close group at ranks 11/12/13 with 10 spread-out leaders → BATTLE fires (no top-10 cap)
+  it('_isPulk: group at ranks 11/12/13 blocked by default battleMinTopN=10', () => {
+    const cd = new CameraDirector(); // battleMinTopN defaults to 10
     const leaders = Array.from({ length: 10 }, (_, i) => ({
       x: i * 300,
       y: 0,
-      t: 1 - i * 0.05, // t: 1.0 … 0.55, spread 300px apart — no spatial pulk among them
+      t: 1 - i * 0.05, // spread 300px apart — no spatial pulk
+    }));
+    const tail = [
+      { x: 100, y: 0, t: 0.45 }, // rank 11
+      { x: 102, y: 0, t: 0.44 }, // rank 12
+      { x: 104, y: 0, t: 0.43 }, // rank 13
+    ];
+    expect(cd._isPulk([...leaders, ...tail])).toBe(false);
+  });
+
+  it('_isPulk: group at ranks 11/12/13 passes when battleMinTopN=15', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinTopN: 15 });
+    const leaders = Array.from({ length: 10 }, (_, i) => ({
+      x: i * 300,
+      y: 0,
+      t: 1 - i * 0.05,
     }));
     const tail = [
       { x: 100, y: 0, t: 0.45 }, // rank 11
@@ -4612,5 +4662,740 @@ describe('CameraDirector — Q4: centroid camera', () => {
     );
     expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
     expect(cd._battleLockT).toBeNull();
+  });
+});
+
+// ── BATTLE Pulk-Qualität: Problem A/B/C fixes ─────────────────────────────────
+
+describe('CameraDirector — BATTLE Pulk quality (rank-span, minTopN, P2-drift)', () => {
+  // ── Problem B: battleMaxGroupRankSpan ────────────────────────────────────────
+
+  it('battleMaxGroupRankSpan: expansion blocked when adding racer would exceed span', () => {
+    // P1/P2 leaders far away, P3–P8 close spatially (span=5 with default), P9 close but span=6
+    // With default span=5: group should NOT include P9. With span=7: it should.
+    const makeRacers = () => [
+      { x: 9000, y: 300, t: 0.9 }, // P1 — leader
+      { x: 8500, y: 300, t: 0.85 }, // P2 — leader
+      { x: 500, y: 300, t: 0.5 }, // P3 — seed frontmost (i=2)
+      { x: 510, y: 300, t: 0.49 }, // P4
+      { x: 520, y: 300, t: 0.48 }, // P5
+      { x: 530, y: 300, t: 0.47 }, // P6
+      { x: 540, y: 300, t: 0.46 }, // P7
+      { x: 550, y: 300, t: 0.45 }, // P8 — span from P3 = 5 (indices 2..7)
+      { x: 560, y: 300, t: 0.44 }, // P9 — span would be 6 (indices 2..8)
+    ];
+
+    const cdDefault = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 5 });
+    const groupDefault = cdDefault._detectPulkGroup(makeRacers());
+    expect(groupDefault).not.toBeNull();
+    // P9 (index 8) must not be in the group — span would be 8-2=6 > 5
+    const indicesDefault = groupDefault.map((r) => makeRacers().findIndex((rr) => rr === r));
+    expect(Math.max(...indicesDefault) - Math.min(...indicesDefault)).toBeLessThanOrEqual(5);
+
+    const cdWide = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 7 });
+    const groupWide = cdWide._detectPulkGroup(makeRacers());
+    expect(groupWide).not.toBeNull();
+    // P9 may now be included (span 6 ≤ 7)
+    expect(groupWide.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('battleMaxGroupRankSpan=2: only tight seed triple can form (no wide expansion)', () => {
+    // With span=2: only P3/P4/P5 qualify (indices 2,3,4 — span=2). P6+ blocked.
+    const racers = [
+      { x: 9000, y: 300, t: 0.9 }, // P1
+      { x: 8500, y: 300, t: 0.85 }, // P2
+      { x: 500, y: 300, t: 0.5 }, // P3
+      { x: 510, y: 300, t: 0.49 }, // P4
+      { x: 520, y: 300, t: 0.48 }, // P5
+      { x: 530, y: 300, t: 0.47 }, // P6 — blocked by span=2 (would make span=3)
+    ];
+    const cd = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 2 });
+    const group = cd._detectPulkGroup(racers);
+    expect(group).not.toBeNull();
+    expect(group.length).toBe(3); // only P3/P4/P5
+  });
+
+  // ── Problem C: battleMinTopN ─────────────────────────────────────────────────
+
+  it('battleMinTopN: rejects group when frontmost member is outside top-N', () => {
+    // 8 leaders far apart, P9/P10/P11 close → frontmost is P9 (index=8) ≥ minTopN=8
+    const leaders = Array.from({ length: 8 }, (_, i) => ({
+      x: i * 500,
+      y: 0,
+      t: 1 - i * 0.05,
+    }));
+    const battle = [
+      { x: 100, y: 0, t: 0.55 }, // P9
+      { x: 102, y: 0, t: 0.54 }, // P10
+      { x: 104, y: 0, t: 0.53 }, // P11
+    ];
+    const cd = new CameraDirector(1280, 720, false, { battleMinTopN: 8 });
+    expect(cd._isPulk([...leaders, ...battle])).toBe(false);
+  });
+
+  it('battleMinTopN=12: accepts group at ranks 9/10/11 (frontmost P9 < 12)', () => {
+    const leaders = Array.from({ length: 8 }, (_, i) => ({
+      x: i * 500,
+      y: 0,
+      t: 1 - i * 0.05,
+    }));
+    const battle = [
+      { x: 100, y: 0, t: 0.55 }, // P9
+      { x: 102, y: 0, t: 0.54 }, // P10
+      { x: 104, y: 0, t: 0.53 }, // P11
+    ];
+    const cd = new CameraDirector(1280, 720, false, { battleMinTopN: 12 });
+    expect(cd._isPulk([...leaders, ...battle])).toBe(true);
+  });
+
+  // ── Problem A: _isBattleGroupP2Drifted ───────────────────────────────────────
+
+  it('_isBattleGroupP2Drifted: false when no locked group stored', () => {
+    const cd = new CameraDirector();
+    const racers = [
+      { x: 100, y: 0, t: 0.9, index: 0 },
+      { x: 200, y: 0, t: 0.8, index: 1 },
+    ];
+    expect(cd._isBattleGroupP2Drifted(racers)).toBe(false);
+  });
+
+  it('_isBattleGroupP2Drifted: false when locked group members are P3+', () => {
+    const cd = new CameraDirector();
+    cd._battleGroupRacerIndices = [2, 3, 4]; // P3/P4/P5 at lock time
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 0 }, // P1
+      { x: 800, y: 0, t: 0.8, index: 1 }, // P2
+      { x: 500, y: 0, t: 0.5, index: 2 }, // P3 — in locked group, still P3
+      { x: 490, y: 0, t: 0.49, index: 3 }, // P4
+      { x: 480, y: 0, t: 0.48, index: 4 }, // P5
+    ];
+    expect(cd._isBattleGroupP2Drifted(racers)).toBe(false);
+  });
+
+  it('_isBattleGroupP2Drifted: true when locked group member drifted to P2', () => {
+    const cd = new CameraDirector();
+    cd._battleGroupRacerIndices = [2, 3, 4]; // locked at P3/P4/P5
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 0 }, // P1
+      { x: 820, y: 0, t: 0.82, index: 2 }, // P2 now — was locked as group member
+      { x: 500, y: 0, t: 0.5, index: 1 }, // P3
+      { x: 490, y: 0, t: 0.49, index: 3 }, // P4
+      { x: 480, y: 0, t: 0.48, index: 4 }, // P5
+    ];
+    expect(cd._isBattleGroupP2Drifted(racers)).toBe(true);
+  });
+
+  it('_isBattleGroupP2Drifted: true when locked group member drifted to P1', () => {
+    const cd = new CameraDirector();
+    cd._battleGroupRacerIndices = [3, 4, 5];
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 3 }, // P1 now — was locked as group member
+      { x: 800, y: 0, t: 0.8, index: 0 }, // P2
+      { x: 500, y: 0, t: 0.5, index: 4 }, // P3
+      { x: 490, y: 0, t: 0.49, index: 5 }, // P4
+    ];
+    expect(cd._isBattleGroupP2Drifted(racers)).toBe(true);
+  });
+
+  // ── Problem A: P2-drift exit in update() ─────────────────────────────────────
+
+  it('P2-drift: BATTLE does not exit before battleMinDurationMs even when drifted', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._battleGroupRacerIndices = [2, 3, 4];
+    // Racer index=2 is now P2 (drifted), but stateAge=1000 < 3000
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 0, finished: false }, // P1
+      { x: 820, y: 0, t: 0.82, index: 2, finished: false }, // P2 — drifted group member
+      { x: 500, y: 0, t: 0.5, index: 1, finished: false }, // P3
+      { x: 490, y: 0, t: 0.49, index: 3, finished: false }, // P4
+      { x: 480, y: 0, t: 0.48, index: 4, finished: false }, // P5
+    ];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('P2-drift: BATTLE exits after battleMinDurationMs when a group member reaches P2', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._battleGroupRacerIndices = [2, 3, 4];
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 0, finished: false }, // P1
+      { x: 820, y: 0, t: 0.82, index: 2, finished: false }, // P2 — drifted group member
+      { x: 500, y: 0, t: 0.5, index: 1, finished: false }, // P3
+      { x: 490, y: 0, t: 0.49, index: 3, finished: false }, // P4
+      { x: 480, y: 0, t: 0.48, index: 4, finished: false }, // P5
+    ];
+    // stateAge=3001 >= 3000 and group member is P2 → should exit
+    cd.update(
+      racers,
+      3001,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
+  });
+
+  it('P2-drift: BATTLE does not exit when no group member is in P1/P2', () => {
+    // Group still at P3/P4/P5 after minHold — should NOT trigger P2-drift exit
+    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 1000 });
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd._battleGroupRacerIndices = [2, 3, 4];
+    const racers = [
+      { x: 900, y: 0, t: 0.9, index: 0, finished: false }, // P1
+      { x: 800, y: 0, t: 0.8, index: 1, finished: false }, // P2
+      { x: 500, y: 0, t: 0.5, index: 2, finished: false }, // P3 — group, still P3
+      { x: 490, y: 0, t: 0.49, index: 3, finished: false }, // P4
+      { x: 480, y: 0, t: 0.48, index: 4, finished: false }, // P5
+    ];
+    cd.update(
+      racers,
+      2000,
+      { raceElapsed: 15000, finishedCount: 0, winner: null, finishT: 1 },
+      1280,
+      720
+    );
+    // May stay in BATTLE (pulk still valid) or transition via other rules — just not P2-drift
+    // The key assertion: _isBattleGroupP2Drifted returns false for this setup
+    expect(cd._isBattleGroupP2Drifted(racers)).toBe(false);
+  });
+});
+
+// ── getComebackDiagData — new phase-gate fields ───────────────────────────────
+
+describe('getComebackDiagData — outcomePhaseThreshold / leaderProgress / isOutcomePhaseActive', () => {
+  const makeRacer = (t, idx) => ({ t, x: t * 1000, y: 360, index: idx, finished: false });
+
+  it('outcomePhaseThreshold reflects the configured value', () => {
+    const cd = new CameraDirector(1280, 720, false, { outcomePhaseThreshold: 0.6 });
+    const diag = cd.getComebackDiagData([], 0);
+    expect(diag.outcomePhaseThreshold).toBeCloseTo(0.6, 3);
+  });
+
+  it('default outcomePhaseThreshold is 0.75', () => {
+    const cd = new CameraDirector(1280, 720, false);
+    const diag = cd.getComebackDiagData([], 0);
+    expect(diag.outcomePhaseThreshold).toBeCloseTo(0.75, 3);
+  });
+
+  it('leaderProgress is 0 before first update()', () => {
+    const cd = new CameraDirector(1280, 720, false);
+    const diag = cd.getComebackDiagData([], 0);
+    expect(diag.leaderProgress).toBe(0);
+  });
+
+  it('leaderProgress = leader.t / finishT after update()', () => {
+    const cd = new CameraDirector(1280, 720, false);
+    const racers = [makeRacer(0.8, 0), makeRacer(0.5, 1), makeRacer(0.3, 2)];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    const diag = cd.getComebackDiagData(racers, 1000);
+    expect(diag.leaderProgress).toBeCloseTo(0.8, 3);
+  });
+
+  it('isOutcomePhaseActive: false when leaderProgress < threshold', () => {
+    const cd = new CameraDirector(1280, 720, false, { outcomePhaseThreshold: 0.75 });
+    const racers = [makeRacer(0.5, 0), makeRacer(0.3, 1), makeRacer(0.1, 2)];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    const diag = cd.getComebackDiagData(racers, 1000);
+    expect(diag.isOutcomePhaseActive).toBe(false);
+  });
+
+  it('isOutcomePhaseActive: true when leaderProgress > threshold', () => {
+    const cd = new CameraDirector(1280, 720, false, { outcomePhaseThreshold: 0.75 });
+    const racers = [makeRacer(0.82, 0), makeRacer(0.5, 1), makeRacer(0.3, 2)];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    const diag = cd.getComebackDiagData(racers, 1000);
+    expect(diag.isOutcomePhaseActive).toBe(true);
+  });
+
+  it('isOutcomePhaseActive: true via external isOutcomePhase flag even if leaderProgress is low', () => {
+    const cd = new CameraDirector(1280, 720, false, { outcomePhaseThreshold: 0.75 });
+    const racers = [makeRacer(0.4, 0), makeRacer(0.3, 1), makeRacer(0.2, 2)];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0, isOutcomePhase: true },
+      1280,
+      720
+    );
+    const diag = cd.getComebackDiagData(racers, 1000);
+    expect(diag.isOutcomePhaseActive).toBe(true);
+    expect(diag.leaderProgress).toBeCloseTo(0.4, 3);
+  });
+});
+
+describe('CameraDirector — same-state repeat: immediately interruptible', () => {
+  const makeRacer = (t, idx) => ({ t, x: t * 1000, y: 360, index: idx, finished: false });
+  const rs = (raceElapsed = 5000) => ({
+    raceElapsed,
+    finishedCount: 0,
+    winner: null,
+    finishT: 1.0,
+  });
+
+  it('_activeStateMinHoldMs is 0 after LEADER_ZOOM → LEADER_ZOOM repeat', () => {
+    // _prevCommittedState starts as null, so a non-repeat must happen first to prime it.
+    // Step 1 (ts=10001): constructor OVERVIEW → LEADER_ZOOM (non-repeat), stateEnteredAt=10001
+    // Step 2 (ts=20002): LEADER_ZOOM → LEADER_ZOOM (repeat), _activeStateMinHoldMs=0
+    const cd = new CameraDirector(1280, 720, false, { minStateHoldMs: 10000 });
+    const racers = [makeRacer(0.5, 0), makeRacer(0.4, 1), makeRacer(0.3, 2)];
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 10001, rs(), 1280, 720); // OVERVIEW→LEADER_ZOOM (non-repeat)
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd._activeStateMinHoldMs).toBe(10000); // normal value after non-repeat
+    // stateEnteredAt=10001; next holdGate=10000 fires when stateAge≥10000 → ts≥20001
+    cd.update(racers, 20002, rs(), 1280, 720); // LEADER_ZOOM→LEADER_ZOOM (repeat)
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd._activeStateMinHoldMs).toBe(0);
+  });
+
+  it('_activeStateMinHoldMs is set to configured value after a different-state transition', () => {
+    // Constructor starts in OVERVIEW; raceElapsed=5000 → priority 2.1 → LEADER_ZOOM (different)
+    const cd = new CameraDirector(1280, 720, false, { minStateHoldMs: 10000 });
+    const racers = [makeRacer(0.5, 0), makeRacer(0.4, 1), makeRacer(0.3, 2)];
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 10001, rs(), 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd._activeStateMinHoldMs).toBe(10000);
+  });
+
+  it('same-state repeat: state switches immediately on next frame when a new event occurs', () => {
+    // Step 1: OVERVIEW→LEADER_ZOOM (non-repeat, primes _prevCommittedState)
+    // Step 2: LEADER_ZOOM→LEADER_ZOOM repeat (_activeStateMinHoldMs=0, holdGate=0)
+    // Step 3: 1ms later, raceElapsed=500 → start-phase priority → OVERVIEW fires immediately
+    const cd = new CameraDirector(1280, 720, false, { minStateHoldMs: 10000 });
+    const racers = [makeRacer(0.5, 0), makeRacer(0.4, 1), makeRacer(0.3, 2)];
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 10001, rs(), 1280, 720); // non-repeat → LEADER_ZOOM
+    cd.update(racers, 20002, rs(), 1280, 720); // repeat → LEADER_ZOOM, _activeStateMinHoldMs=0
+    expect(cd._activeStateMinHoldMs).toBe(0);
+    cd.update(racers, 20003, rs(500 /* raceElapsed < 3000 = start phase */), 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('stateEnteredAt is NOT reset on a same-state repeat', () => {
+    // After non-repeat at ts=10001, stateEnteredAt=10001.
+    // On repeat at ts=20002, stateEnteredAt must stay 10001 (camera animation undisturbed).
+    const cd = new CameraDirector(1280, 720, false, { minStateHoldMs: 10000 });
+    const racers = [makeRacer(0.5, 0), makeRacer(0.4, 1), makeRacer(0.3, 2)];
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 10001, rs(), 1280, 720); // OVERVIEW→LEADER_ZOOM non-repeat
+    expect(cd.stateEnteredAt).toBe(10001);
+    cd.update(racers, 20002, rs(), 1280, 720); // LEADER_ZOOM→LEADER_ZOOM repeat
+    expect(cd.stateEnteredAt).toBe(10001); // NOT pushed to 20002
+    cd.update(racers, 20003, rs(), 1280, 720); // another repeat
+    expect(cd.stateEnteredAt).toBe(10001); // stays
+  });
+});
+
+// ── FINISH_OVERVIEW lookback ──────────────────────────────────────────────────
+//
+// Tests for the _inFinishMode lookback in the OVERVIEW _setTargets path.
+// Open track (worldW=6000): effectiveZoom = overviewZoom × BASE_ZOOM = 1280/6000 × 1.5 ≈ 0.32
+// camXMax = 6000 − 1280/0.32 = 2000 — room for pan to vary with the lookback position.
+//
+// Pan math (worldW=6000, effectiveZoom=0.32, CANVAS_W=1280):
+//   targetOffsetX = −camX × effZoom
+//   idealCamX     = target.x − CANVAS_W/(2 × effZoom) = target.x − 2000
+//   camX          = clamp(idealCamX, 0, 2000)
+//
+// Shape mock returns { x: t * WORLD_W, y: 360 } and getTotalLength()=WORLD_W.
+// lookbackFrac = lookbackPx / WORLD_W; lookbackT = finishT − lookbackFrac.
+// finishT=0.8 → normT=0.8 → finishPos.x=4800
+// lookbackPx=480 → frac=0.08 → lookbackT=0.72 → target.x=4320 → idealCamX=2320 → camX=2000 → offsetX=−640
+// lookbackPx=0   → frac=0.00 → lookbackT=0.80 → target.x=4800 → idealCamX=2800 → camX=2000 → offsetX=−640
+// To get unclamped pan, use a small lookback with finishT set closer to center:
+//   finishT=0.5, lookbackPx=600 → frac=0.1 → target.x=2400 → idealCamX=400 → camX=400 → offsetX=−128
+
+describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const FINISH_T = 0.8;
+  const LEADER_X = 1000;
+  const LEADER_Y = 360;
+
+  const BASE_ZOOM = 1.5;
+  const effZoom = (CANVAS_W / WORLD_W) * BASE_ZOOM; // ≈ 0.32
+  const halfViewport = CANVAS_W / (2 * effZoom); // = 2000
+  const camXMax = WORLD_W - CANVAS_W / effZoom; // = 2000
+
+  function expectedOffsetX(targetX) {
+    const idealCamX = targetX - halfViewport;
+    const camX = Math.max(0, Math.min(camXMax, idealCamX));
+    return -camX * effZoom;
+  }
+
+  // Shape returns t-dependent position so lookbackT can be verified.
+  // getTotalLength returns WORLD_W so that lookbackFrac = lookbackPx / WORLD_W.
+  function makeShape() {
+    return {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t, _offset) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+  }
+
+  function makeCD(lookbackPx) {
+    return new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { finishOverviewLookbackPx: lookbackPx },
+      36,
+      makeShape()
+    );
+  }
+
+  function putInFinishOverview(cd) {
+    const racers = [
+      { t: FINISH_T, x: LEADER_X, y: LEADER_Y, finished: true, index: 0 },
+      { t: 0.5, x: 2000, y: LEADER_Y, finished: false, index: 1 },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: FINISH_T };
+    cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H);
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, CANVAS_W, CANVAS_H);
+    return racers;
+  }
+
+  it('config round-trip: finishOverviewPanBlend is stored from config', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishOverviewPanBlend: 0.75 });
+    expect(cd._finishOverviewPanBlend).toBe(0.75);
+  });
+
+  it('config round-trip: finishOverviewPanBlend defaults to 0.5', () => {
+    const cd = new CameraDirector();
+    expect(cd._finishOverviewPanBlend).toBe(0.5);
+  });
+
+  it('config round-trip: finishOverviewLookbackPx is stored from config', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishOverviewLookbackPx: 450 });
+    expect(cd._finishOverviewLookbackPx).toBe(450);
+  });
+
+  it('config round-trip: finishOverviewLookbackPx defaults to 300', () => {
+    const cd = new CameraDirector();
+    expect(cd._finishOverviewLookbackPx).toBe(300);
+  });
+
+  it('lookback: camera target is at finishT − lookback position (unclamped range)', () => {
+    // Use finishT=0.5, lookbackPx=600 → lookbackFrac=600/6000=0.1 → lookbackT=0.4
+    // → target.x=2400 → idealCamX=400 → camX=400 → offsetX=−128
+    const shape = {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t, _offset) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { finishOverviewLookbackPx: 600 },
+      36,
+      shape
+    );
+    const FT = 0.5;
+    const racers = [
+      { t: FT, x: FT * WORLD_W, y: 360, finished: true, index: 0 },
+      { t: 0.3, x: 1800, y: 360, finished: false, index: 1 },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: FT };
+    cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H);
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, CANVAS_W, CANVAS_H);
+    cd._lerpPhase = 'tracking';
+    cd._camT = null;
+    cd.zoom = cd.overviewZoom;
+    cd.stateEnteredAt = 2900;
+    cd.update(racers, 3100, { ...rs, raceElapsed: 12100 }, CANVAS_W, CANVAS_H);
+    // lookbackFrac = 600/6000 = 0.1 → lookbackT = 0.5 − 0.1 = 0.4 → target.x = 0.4 × 6000 = 2400
+    expect(cd.targetOffsetX).toBeCloseTo(expectedOffsetX(0.4 * WORLD_W), 1);
+  });
+
+  it('lookback=0: camera centers exactly on the finish line', () => {
+    // finishT=0.5, lookbackPx=0 → lookbackFrac=0 → target.x = 0.5 × 6000 = 3000 → idealCamX=1000 → offsetX=−320
+    const shape = {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t, _offset) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { finishOverviewLookbackPx: 0 },
+      36,
+      shape
+    );
+    const FT = 0.5;
+    const racers = [
+      { t: FT, x: FT * WORLD_W, y: 360, finished: true, index: 0 },
+      { t: 0.3, x: 1800, y: 360, finished: false, index: 1 },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: FT };
+    cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H);
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, CANVAS_W, CANVAS_H);
+    cd._lerpPhase = 'tracking';
+    cd._camT = null;
+    cd.zoom = cd.overviewZoom;
+    cd.stateEnteredAt = 2900;
+    cd.update(racers, 3100, { ...rs, raceElapsed: 12100 }, CANVAS_W, CANVAS_H);
+    expect(cd.targetOffsetX).toBeCloseTo(expectedOffsetX(FT * WORLD_W), 1);
+  });
+
+  it('no drift: camera target does not change when winner moves in runout', () => {
+    // The target is derived from finishT (fixed), not from the winner's runout position.
+    const cd = makeCD(480); // 480px = 0.08 × 6000
+    const racers = putInFinishOverview(cd);
+    cd._lerpPhase = 'tracking';
+    cd._camT = null;
+    cd.zoom = cd.overviewZoom;
+    cd.stateEnteredAt = 2900;
+    const rs = { raceElapsed: 12100, finishedCount: 1, finishT: FINISH_T };
+    cd.update(racers, 3100, rs, CANVAS_W, CANVAS_H);
+    const offsetX1 = cd.targetOffsetX;
+    // Simulate winner moving further in runout
+    racers[0] = { ...racers[0], t: FINISH_T + 0.05, x: (FINISH_T + 0.05) * WORLD_W };
+    cd.update(racers, 3117, { ...rs, raceElapsed: 12117 }, CANVAS_W, CANVAS_H);
+    expect(cd.targetOffsetX).toBeCloseTo(offsetX1, 1);
+  });
+
+  it('no shape: falls through to normal OVERVIEW tracking without throwing', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishOverviewLookbackPx: 480 }, 36, null);
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true, index: 0 },
+      { t: 0.7, x: 400, y: 300, finished: false, index: 1 },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: 1.0 };
+    cd.update(racers, 1000, rs, 1280, 720);
+    cd.stateEnteredAt = 0;
+    expect(() => cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, 1280, 720)).not.toThrow();
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+
+  it('closed track: lookback wraps correctly around start/finish line', () => {
+    const shape = {
+      getTotalLength: () => 1280,
+      getPosition: (t, _offset) => ({ x: t * 1280, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: 640, y: 360 }),
+    };
+    // lookbackPx=102 → lookbackFrac=102/1280≈0.08 → wraps back from finish (t=1.0)
+    const cd = new CameraDirector(1280, 720, false, { finishOverviewLookbackPx: 102 }, 36, shape);
+    const racers = [
+      { t: 1.0, x: 640, y: 360, finished: true, index: 0 },
+      { t: 0.7, x: 400, y: 300, finished: false, index: 1 },
+    ];
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: 1.0 };
+    cd.update(racers, 1000, rs, 1280, 720);
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, 1280, 720);
+    cd._lerpPhase = 'tracking';
+    cd._camT = null;
+    cd.stateEnteredAt = 2900;
+    expect(() => cd.update(racers, 3100, { ...rs, raceElapsed: 12100 }, 1280, 720)).not.toThrow();
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._inFinishMode).toBe(true);
+  });
+
+  // ── Entry-phase smooth-pan tests ─────────────────────────────────────────────
+  // The smooth-pan fix: _transitionTargetT is set to lookbackT in _transition() but
+  // _camT is left at the winner's current T. The T-lerp then glides _camT from the
+  // winner's position toward lookbackT in parallel with the zoom-out.
+  //
+  // Three-frame setup to control dt on the FINISH_OVERVIEW transition frame:
+  //   Frame 1 (ts=1000): triggers _inFinishMode + LEADER_ZOOM drama
+  //                       _finishMomentExpiry = 1000 + 1500 = 2500
+  //   Frame 2 (ts=2400): dt=1400ms — drama not expired (2400 < 2500) → stays LEADER_ZOOM
+  //   Frame 3 (ts=2600): dt=200ms — drama expired (2600 >= 2500) → FINISH_OVERVIEW fires
+  function setupSmoothPan() {
+    const RUNOUT_T = FINISH_T + 0.05; // 0.85
+    const LOOKBACK_T = FINISH_T - 480 / WORLD_W; // 0.72
+    const racers = [
+      { t: RUNOUT_T, x: RUNOUT_T * WORLD_W, y: LEADER_Y, finished: true, index: 0 },
+      { t: 0.5, x: 2000, y: LEADER_Y, finished: false, index: 1 },
+    ];
+    const cd = makeCD(480); // lookbackFrac = 480/6000 = 0.08 → lookbackT = 0.72
+    const rs = { raceElapsed: 10000, finishedCount: 1, finishT: FINISH_T };
+    cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H); // _finishMomentExpiry = 2500
+    cd.update(racers, 2400, { ...rs, raceElapsed: 11400 }, CANVAS_W, CANVAS_H); // stays LEADER_ZOOM
+    // Set zoom to leaderZoom so the FINISH_OVERVIEW zoom convergence doesn't immediately fire
+    cd.zoom = cd._leaderZoom;
+    cd.targetZoom = cd._leaderZoom;
+    cd.update(racers, 2600, { ...rs, raceElapsed: 11600 }, CANVAS_W, CANVAS_H); // FINISH_OVERVIEW
+    return { cd, racers, rs, RUNOUT_T, LOOKBACK_T };
+  }
+
+  it('entry smooth: _transitionTargetT is set to lookbackT at FINISH_OVERVIEW entry', () => {
+    const { cd } = setupSmoothPan();
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._inFinishMode).toBe(true);
+    expect(cd._lerpPhase).toBe('entry');
+    // lookbackFrac = 480/6000 = 0.08 → lookbackT = 0.72
+    expect(cd._transitionTargetT).toBeCloseTo(0.72, 3);
+  });
+
+  it('entry smooth: _camT starts near winner.t, has not jumped instantly to lookbackT', () => {
+    // With the fix, _camT = winner.t at transition, _transitionTargetT = lookbackT.
+    // After one 400ms dt frame the lerp has moved _camT partway — still above lookbackT+0.03,
+    // proving the camera is gliding rather than cutting. (Without the fix _camT would be 0.72.)
+    const { cd, LOOKBACK_T, RUNOUT_T } = setupSmoothPan();
+    expect(cd._lerpPhase).toBe('entry');
+    expect(cd._camT).toBeGreaterThan(LOOKBACK_T + 0.03); // not yet in lookback convergence zone
+    expect(cd._camT).toBeLessThan(RUNOUT_T); // has started moving from winner position
+  });
+
+  it('entry smooth: _camT continues moving toward lookbackT on subsequent frames', () => {
+    const { cd, racers, rs, LOOKBACK_T } = setupSmoothPan();
+    expect(cd._lerpPhase).toBe('entry');
+    const camTAfterTransition = cd._camT;
+    // One more 16ms frame — _camT should advance toward lookbackT
+    cd.update(racers, 1616, { ...rs, raceElapsed: 11616 }, CANVAS_W, CANVAS_H);
+    expect(cd._camT).toBeLessThan(camTAfterTransition); // moved toward lookbackT (decreasing T)
+    expect(cd._camT).toBeGreaterThan(LOOKBACK_T); // has not overshot the target
+  });
+});
+
+// ── LEAD_CHANGE pan snap ──────────────────────────────────────────────────────
+//
+// Tests for the synchronized zoom+pan hard-cut at LEAD_CHANGE entry.
+// Previously the zoom snapped immediately but pan lagged (up to ~0.75 s),
+// causing the zoomed-in frame to show the wrong position.
+// Fix: _camT is snapped to new leader at _transition() time, and
+//      offsetX/Y are snapped to targetOffsetX/Y in update() immediately after _setTargets().
+
+describe('CameraDirector — LEAD_CHANGE pan snap', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+
+  function makeShape() {
+    return {
+      getPosition: (t, _offset) => ({ x: Math.max(0, Math.min(1, t)) * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+      getClosestT: (x, _y) => x / WORLD_W,
+    };
+  }
+
+  function makeCD() {
+    return new CameraDirector(WORLD_W, CANVAS_H, true, {}, 36, makeShape());
+  }
+
+  it('_leadChangeSnapPending initialises to false', () => {
+    const cd = makeCD();
+    expect(cd._leadChangeSnapPending).toBe(false);
+  });
+
+  it('_camT is snapped to new leader T at LEAD_CHANGE entry (endgame path)', () => {
+    // Use leaderProgress > endgameThreshold (0.9) for a deterministic LEAD_CHANGE selection
+    // that bypasses the post-start hold and random candidate pool.
+    const cd = makeCD();
+    const FINISH_T = 0.9;
+    const LEADER_T = 0.85; // leaderProgress = 0.85/0.9 ≈ 0.944 > 0.90 → endgame path
+    const racers = [
+      { t: LEADER_T, x: LEADER_T * WORLD_W, y: 360, index: 0 },
+      { t: LEADER_T - 0.02, x: (LEADER_T - 0.02) * WORLD_W, y: 360, index: 1 },
+    ];
+    const rs = { raceElapsed: 15000, finishedCount: 0, finishT: FINISH_T };
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._lerpPhase = 'tracking';
+    cd._camT = LEADER_T - 0.02; // stale — previous leader's T
+    cd.stateEnteredAt = 0;
+    // Arm a confirmed lead change so endgame path selects LEAD_CHANGE
+    cd._leadChangePending = true;
+    cd._currentLeaderIndex = 0;
+    cd._currentLeaderName = 'R0';
+    cd._prevLeaderIndex = 1;
+    cd._prevLeaderName = 'R1';
+    cd.update(racers, 15100, rs, CANVAS_W, CANVAS_H);
+    expect(cd.state).toBe(CAM_STATE.LEAD_CHANGE);
+    // _camT must be at new leader's T, not the stale old-leader value
+    expect(cd._camT).toBeCloseTo(LEADER_T, 3);
+  });
+
+  it('offsetX/Y snap to targetOffsetX/Y on the LEAD_CHANGE entry frame', () => {
+    // Test the update() snap mechanism directly — set _leadChangeSnapPending without going
+    // through _transition() so the test is independent of state-machine routing.
+    const cd = makeCD();
+    const LEADER_T = 0.5;
+    cd.state = CAM_STATE.LEAD_CHANGE;
+    cd._lerpPhase = 'tracking';
+    cd._camT = LEADER_T;
+    cd._leadChangeSnapPending = true;
+    cd.zoom = cd._leaderZoom;
+    cd.targetZoom = cd._leaderZoom;
+    cd._prevCommittedState = CAM_STATE.LEAD_CHANGE;
+    // Simulate previous state's offset (far from new leader)
+    cd.offsetX = -999;
+    cd.offsetY = -888;
+    const racers = [
+      { t: LEADER_T, x: LEADER_T * WORLD_W, y: 360, index: 0 },
+      { t: LEADER_T - 0.05, x: (LEADER_T - 0.05) * WORLD_W, y: 360, index: 1 },
+    ];
+    // stateEnteredAt = ts − 100 ms so the hold gate (minStateHold=5000) is not met
+    cd.stateEnteredAt = 15000;
+    cd.update(
+      racers,
+      15100,
+      { raceElapsed: 15000, finishedCount: 0, finishT: 0.9 },
+      CANVAS_W,
+      CANVAS_H
+    );
+    expect(cd.offsetX).toBeCloseTo(cd.targetOffsetX, 1);
+    expect(cd.offsetY).toBeCloseTo(cd.targetOffsetY, 1);
+  });
+
+  it('_leadChangeSnapPending is cleared after the first update()', () => {
+    const cd = makeCD();
+    const LEADER_T = 0.5;
+    cd.state = CAM_STATE.LEAD_CHANGE;
+    cd._lerpPhase = 'tracking';
+    cd._camT = LEADER_T;
+    cd._leadChangeSnapPending = true;
+    cd.zoom = cd._leaderZoom;
+    cd.targetZoom = cd._leaderZoom;
+    cd._prevCommittedState = CAM_STATE.LEAD_CHANGE;
+    const racers = [
+      { t: LEADER_T, x: LEADER_T * WORLD_W, y: 360, index: 0 },
+      { t: LEADER_T - 0.05, x: (LEADER_T - 0.05) * WORLD_W, y: 360, index: 1 },
+    ];
+    cd.stateEnteredAt = 15000;
+    cd.update(
+      racers,
+      15100,
+      { raceElapsed: 15000, finishedCount: 0, finishT: 0.9 },
+      CANVAS_W,
+      CANVAS_H
+    );
+    expect(cd._leadChangeSnapPending).toBe(false);
   });
 });

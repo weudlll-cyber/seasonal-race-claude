@@ -152,10 +152,10 @@ describe('DevScreen tier toggle — active section fallback', () => {
 });
 
 describe('DevScreen — new Tier-2 camera sections visibility', () => {
-  it('All view shows Sprite Size Range, Camera Zoom Tuning, Name Tag Visibility', () => {
+  it('All view shows Sprite Size Range, Camera Advanced, Name Tag Visibility', () => {
     renderDevScreen();
     expect(screen.getByText('Sprite Size Range')).toBeTruthy();
-    expect(screen.getByText('Camera Zoom Tuning')).toBeTruthy();
+    expect(screen.getByText('Camera Advanced')).toBeTruthy();
     expect(screen.getByText('Name Tag Visibility')).toBeTruthy();
   });
 
@@ -163,7 +163,7 @@ describe('DevScreen — new Tier-2 camera sections visibility', () => {
     renderDevScreen();
     fireEvent.click(screen.getByText('Operator'));
     expect(screen.queryByText('Sprite Size Range')).toBeNull();
-    expect(screen.queryByText('Camera Zoom Tuning')).toBeNull();
+    expect(screen.queryByText('Camera Advanced')).toBeNull();
     expect(screen.queryByText('Name Tag Visibility')).toBeNull();
   });
 
@@ -172,9 +172,9 @@ describe('DevScreen — new Tier-2 camera sections visibility', () => {
     const text = document.body.textContent;
     const raceTuningIdx = text.indexOf('Race Tuning');
     const spriteSizeIdx = text.indexOf('Sprite Size Range');
-    const cameraZoomIdx = text.indexOf('Camera Zoom Tuning');
+    const cameraAdvancedIdx = text.indexOf('Camera Advanced');
     expect(spriteSizeIdx).toBeGreaterThan(raceTuningIdx);
-    expect(cameraZoomIdx).toBeGreaterThan(spriteSizeIdx);
+    expect(cameraAdvancedIdx).toBeGreaterThan(spriteSizeIdx);
   });
 });
 

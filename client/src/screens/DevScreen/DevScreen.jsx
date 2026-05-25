@@ -21,9 +21,8 @@ import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import RaceTuningSection from './sections/RaceTuningSection.jsx';
 import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
-import CameraZoomTuningSection from './sections/CameraZoomTuningSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
-import CameraStateHudSection from './sections/CameraStateHudSection.jsx';
+import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
 import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
@@ -104,11 +103,11 @@ const SECTIONS = [
     tier: 'advanced',
   },
   {
-    id: 'camera-zoom',
+    id: 'camera-advanced',
     icon: '🎥',
-    label: 'Camera Zoom Tuning',
-    desc: 'Sprite size per camera state and timing rules for state transitions. Hover any field for details.',
-    component: CameraZoomTuningSection,
+    label: 'Camera Advanced',
+    desc: 'Alle Kamera-Regler in Renn-Ablauf-Reihenfolge: Start → BATTLE → Regie → LEAD_CHANGE → COMEBACK → Slowmo → Endgame → Finish → Zoom-Profile.',
+    component: CameraAdvancedSection,
     tier: 'advanced',
   },
   {
@@ -117,14 +116,6 @@ const SECTIONS = [
     label: 'Name Tag Visibility',
     desc: 'How many name tags appear during the race',
     component: NameTagVisibilitySection,
-    tier: 'advanced',
-  },
-  {
-    id: 'cam-state-hud',
-    icon: '📺',
-    label: 'Camera State HUD',
-    desc: 'Show / hide the camera-state indicator overlay on the race screen',
-    component: CameraStateHudSection,
     tier: 'advanced',
   },
   {

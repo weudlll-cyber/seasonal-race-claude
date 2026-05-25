@@ -220,13 +220,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
   battleGapThreshold: 0.05,
-  endgameThreshold: 0.85,
+  endgameThreshold: 0.9,
   // Pulk condition: BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance.
   // Replaces the old battleGapThreshold (arc-length fraction) — pixel distance is tunable in Dev Panel.
   battlePulkThresholdPx: 200,
   // Isolation threshold: no non-group racer may be closer than this to any group member.
   // 0 = disabled (default). Suggested value: 1.5 × battlePulkThresholdPx = 300.
-  battleIsolationThresholdPx: 0,
+  battleIsolationThresholdPx: 300,
   // Maximum number of racers that can form the battle group (3–6). Greedy expansion adds
   // adjacent-rank racers until the group reaches this cap or no more qualify.
   battleMaxGroupSize: 6,
@@ -242,10 +242,30 @@ export const DEFAULT_CAMERA_CONFIG = {
   // BATTLE focus: non-group racers are desaturated and darkened during BATTLE_ZOOM.
   // Fade-in/out uses the same duration as battleSlowmoFadeDuration.
   battleFocusDarkening: 0.4, // 0 = no change, 1 = fully black
+  // BATTLE group quality filters
+  // Max rank-span for greedy expansion: highest minus lowest sorted index in the group.
+  // Seed-triple span is already capped at 3 (k-i<=3); this cap applies to expansion only.
+  // Default 5 → group can span P3–P8 when seed starts at P3.
+  battleMaxGroupRankSpan: 5,
+  // Top-N requirement: frontmost group member must be at rank ≤ battleMinTopN (absolute).
+  // Prevents battles among the back half of the field when the whole top is spread out.
+  // Default 10 → at least one member in top-10.
+  battleMinTopN: 10,
   // COMEBACK camera tuning
-  comebackMinPositionsGained: 3, // minimum rank-places gained within the window to trigger
-  comebackWindowSec: 5, // seconds of rank history to evaluate (1–10)
+  comebackMinPositionsGained: 2, // minimum rank-places gained within the window to trigger
+  comebackWindowSec: 4, // seconds of rank history to evaluate (1–10)
   comebackMinDuration: 3, // seconds camera stays on the comeback racer (1–5)
+  // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
+  // independently of the external isOutcomePhase flag from RaceScreen.
+  outcomePhaseThreshold: 0.65,
+  // COMEBACK start-rank filter: racer must have been at least this far back (as fraction of
+  // field) at the start of the observation window. Prevents triggering for racers already
+  // near the front. E.g. 0.40 = must have been in the bottom 60% of the field.
+  comebackMinStartGap: 0.25,
+  // COMEBACK current-rank filter: racer must not currently be better than this fraction of
+  // the field. Prevents triggering for racers already in the lead group.
+  // E.g. 0.10 = must currently be outside the top 10% (i.e. not P1–P4 in a 40-racer field).
+  comebackMaxCurrentRankPct: 0.2,
   // LEAD_CHANGE camera tuning
   leadChangeMinGap: 0.002, // minimum T-space gap between P1 and P2 for a stable lead read
   leadChangeDebounceMs: 800, // ms the new leader must hold before change is confirmed
@@ -264,6 +284,12 @@ export const DEFAULT_CAMERA_CONFIG = {
   // OVERVIEW scheduler: race-length-aware fire timing
   overviewTargetCount: 2, // target number of OVERVIEW cuts per race
   overviewStartDelay: 15, // seconds into the race before first OVERVIEW is eligible
+  // Finish sequence: drama pulse duration (was hardcoded), smooth zoom-out, and pause before leaderboard.
+  finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
+  finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
+  finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
+  finishOverviewPanBlend: 0.5, // 0 = camera centered on leader, 1 = centered on finish line
+  finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
   countdownDurationMs: 4000, // matches the default race countdown duration
