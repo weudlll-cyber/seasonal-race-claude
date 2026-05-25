@@ -333,14 +333,13 @@ Additionally: Space (Custom Track) already present.
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
 
-- **RaceScreen/index.jsx split** (Q-7) — >1000 LOC. Will be addressed with the camera phase: RaceScreen is the main work area there. Prerequisite for later race features.
-- **TrackEditor.jsx split** (Q-6) — >1200 LOC. Prerequisite for Surface Zones (track editor must accommodate zone drawing tool). Standalone PR before Surface Zones.
+- ✅ **RaceScreen/index.jsx split** (Q-7) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted `drawing/` modules: `overlayRendering.js`, `particleRendering.js`, `racerRendering.js`, `priorityModeOverlay.js`, `battleDiagRendering.js`. Camera modules: `CameraDirectorDiag.js`, `cameraTimingComputation.js`.
+- ✅ **TrackEditor.jsx split** (Q-6) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted: `TrackEditorToolbar.jsx` (224 lines), `TrackEditorSaveBar.jsx` (116 lines), `useViewport.js` (138 lines), `useTrackIO.js` (206 lines).
 - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
 - **Q-19 — TrackEditor.effects.test.jsx flaky** — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
 
-- **Q-6** — TrackEditor.jsx split refactor. Pre-existing, standalone PR.
-- **Q-7** — RaceScreen/index.jsx split refactor. After D9 grown to **1032 LOC** —
-  refactor priority increased. Pre-existing, standalone PR.
+- ✅ **Q-6** — TrackEditor.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
+- ✅ **Q-7** — RaceScreen/index.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
 - **Q-8** — Watch list: TrackManager.jsx (535 LOC) and BrandingProfiles.jsx (330 LOC).
   Consider refactor at next extension.
 - **Q-9** — Watch: `racer-types/index.js` growing to 286 LOC — candidate for splitting
@@ -518,14 +517,12 @@ Additionally: Space (Custom Track) already present.
   version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
   avoid accumulating migration debt. Estimated effort: 1–2 days (route definitions + React API).
 
-- **Q-31** — Long files — updated watch list after Phase-4-Merge *(Post-Phase-4 audit 2026-05-06, Severity: LOW — information)*
-  Line counts after Phase-4-Merge (`8eb16e0`). No immediate action — split at next feature-touch
-  opportunity; Q-6 and Q-7 already planned for TrackEditor and RaceScreen.
-  - `TrackEditor/TrackEditor.jsx`: **1447 lines** (was ~1200, Q-6)
-  - `RaceScreen/index.jsx`: **1179 lines** (was ~1032, Q-7)
-  - `DevScreen/sections/RaceTuningSection.jsx`: **1046 lines** (new — added to watch list)
-  - `SetupScreen/SetupScreen.jsx`: **809 lines** (new — added to watch list)
-  - `DevScreen/sections/TrackManager.jsx`: **727 lines** (was 535, Q-8)
+- **Q-31** — Long files — updated watch list after chore/hygiene-i18n-audit (2026-05-25, squash `e180a6b`). Q-6 and Q-7 resolved ✅.
+  - ✅ `TrackEditor/TrackEditor.jsx`: split → `TrackEditorToolbar.jsx` (224), `TrackEditorSaveBar.jsx` (116), `useViewport.js` (138), `useTrackIO.js` (206) (Q-6 done)
+  - ✅ `RaceScreen/index.jsx`: drawing modules extracted to `drawing/` (5 modules) + `camera/` (2 modules) (Q-7 done)
+  - ✅ `DevScreen/sections/RaceTuningSection.jsx`: 1269 → **44 lines** (thin coordinator); logic split into `BehaviorTuningSection.jsx` (610), `DynamicsTuningSection.jsx` (607), `SubCard.jsx` (41)
+  - `SetupScreen/SetupScreen.jsx`: **~809 lines** — watch list (no split yet)
+  - `DevScreen/sections/TrackManager.jsx`: **~727 lines** — watch list, Q-8
 
 ### Phase V (Verification Sprint)
 

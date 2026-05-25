@@ -17,9 +17,28 @@ seasonal-race-claude/
 │       ├── screens/                # Route-level full-page views
 │       │   ├── SetupScreen/        # Pre-race config (players, track, settings)
 │       │   ├── RaceScreen/         # Live race canvas + camera director
+│       │   │   ├── index.jsx       # Main component (1460 lines, hygiene sprint)
+│       │   │   └── drawing/        # Extracted canvas draw modules (hygiene sprint)
+│       │   │       ├── overlayRendering.js     # Title, lap info, countdown, finish overlays
+│       │   │       ├── particleRendering.js    # Dust/burst particles, surface trails
+│       │   │       ├── racerRendering.js       # Racer sprites, name tags
+│       │   │       ├── priorityModeOverlay.js  # Priority mode debug rings + info box
+│       │   │       ├── battleDiagRendering.js  # Battle diagnostics world-space markers
+│       │   │       └── trackRendering.js       # Track surface (pre-existing)
 │       │   ├── ResultScreen/       # Post-race podium and history
 │       │   ├── DevScreen/          # Developer / admin panel (10 sections, 2-tier Operator/Advanced)
+│       │   │   └── sections/
+│       │   │       ├── RaceTuningSection.jsx       # Thin coordinator (44 lines) — renders below two
+│       │   │       ├── BehaviorTuningSection.jsx   # behaviorConfig: avoidance, drafting, home force
+│       │   │       ├── DynamicsTuningSection.jsx   # speedConfig, rowConfig, dynamicsConfig, frameTiming
+│       │   │       ├── SubCard.jsx                 # Shared SubCard wrapper (extracted from RaceTuning)
+│       │   │       └── PrioritySystemSection.jsx   # Priority system (standalone, pre-existing)
 │       │   └── TrackEditor/        # Visual track drawing tool
+│       │       ├── TrackEditor.jsx         # Main component (1040 lines, hygiene sprint)
+│       │       ├── TrackEditorToolbar.jsx  # Extracted toolbar component
+│       │       ├── TrackEditorSaveBar.jsx  # Extracted save bar component
+│       │       ├── useViewport.js          # Zoom/pan viewport hook
+│       │       └── useTrackIO.js           # Server save/delete/background I/O hook
 │       ├── components/             # Reusable UI building blocks
 │       │   ├── Button/
 │       │   ├── Modal/
@@ -29,7 +48,11 @@ seasonal-race-claude/
 │       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
 │       ├── modules/                # Domain logic, independent of React
-│       │   ├── camera/             # CameraDirector (state machine: OVERVIEW/LEADER/BATTLE/COMEBACK/LEAD_CHANGE), Minimap, lapUtils, panTarget, openTrackCamera
+│       │   ├── camera/             # CameraDirector + diagnostics + timing
+│       │   │   ├── CameraDirector.js            # State machine: OVERVIEW/LEADER/BATTLE/COMEBACK/LEAD_CHANGE
+│       │   │   ├── CameraDirectorDiag.js        # Extracted diagnostics (frame log, jump detection)
+│       │   │   ├── cameraTimingComputation.js   # Extracted timing/zoom computation helpers
+│       │   │   └── (lapUtils, panTarget, openTrackCamera, …)
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
 │       │   │   ├── SpriteRacerType.js  # Config-driven base class for all sprite-based racer types (D3.5)
 │       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
@@ -108,7 +131,7 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **EditorShape linear interpolation (Stage 26)** — `EditorShape.getPosition()` uses `Math.floor()` + fractional blend between adjacent precomputed samples instead of the former `Math.round()` nearest-neighbour lookup. At 500 samples on a ~2000 px oval at zoom 4×, `Math.round()` caused ~20 px visible racer jumps per frame; linear interpolation eliminates this. Angles are precomputed once in `_precomputeAngles()` and interpolated with shortest-path wrap.
 - **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdPx` (default 200 px) of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` (default 3000 ms) prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
-- **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are inlined in `RaceScreen/index.jsx`. `drawEditorTrackSurface` now only renders the finish line — solid boundary lines and lane fill were removed in the Race Track Lights PR. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
+- **RaceScreen draw-function extraction (hygiene sprint, 2026-05-25)** — All non-trivial canvas draw functions have been extracted from `RaceScreen/index.jsx` into `RaceScreen/drawing/` modules: `overlayRendering.js` (title/lap/countdown/finish overlays), `particleRendering.js` (dust, bursts, surface trails), `racerRendering.js` (sprites, name tags), `priorityModeOverlay.js` (priority debug), `battleDiagRendering.js` (battle diagnostics). `index.jsx` dropped from 1853 → 1460 lines. `drawEditorTrackSurface` remains in the pre-existing `drawing/trackRendering.js` (finish-line only since the Race Track Lights PR).
 - **Track Lights** — Small glowing dots along both boundaries replace the solid cyan boundary lines. Light positions are cached once at race init via `sampleBoundaryAtInterval` (30 px spacing, ~400 points total for typical tracks). Per-frame, only brightness is recomputed per style (`steady`, `sequence`, `sync_pulse`, `random_flash`). Implementation: `client/src/modules/trackLights.js`. Configuration stored as `trackLights` on track geometry; editable in Track Editor; server-migration sets themed defaults on first startup.
 - **Sprite-based racers, not procedural primitives** — Issue D started with procedural Canvas drawing for racer bodies. Three iterations confirmed that anatomical detail (horse vs duck vs snail) at 22-26 px scale cannot be made readable with primitives. Racer types now use PNG sprite sheets with frame-based animation and offscreen-canvas tinting for color variants. Per-racer assets live under `client/public/assets/racers/` with credits in `CREDITS.md`.
 

@@ -1766,3 +1766,23 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Consequence:** `_transition()` is for one-time setup logic (setting states, defining targets), not for immediate position assignments that should be smoothly animated. For smooth movements: save target, add lerp branch in the update loop.
 
 **Reference:** `CameraDirector.js` `_transition()` FINISH_OVERVIEW block, OVERVIEW T-lerp branch in `_setTargets()`. Phase 3D.
+
+---
+
+## Lesson 90 — Read the Import Graph Before Planning a File Split
+
+**Context:** RaceTuningSection.jsx (1269 lines) was planned to be split into three components: `BehaviorTuningSection`, `DynamicsTuningSection`, and `PrioritySystemSection`. Reading `DevScreen.jsx` imports before writing any code revealed that `PrioritySystemSection.jsx` already existed as a standalone file — already imported directly by `DevScreen.jsx`. Only two new components were actually needed.
+
+**Insight:** When a task says "split file X into components A, B, C", the LOC of the monolithic file gives a false picture of what remains to be done. A component that already exists and is already imported by the parent is already extracted — invisible from the line count of the file being split.
+
+**Consequence:** Before any split task: read the import list of the surrounding module (the parent that renders all sub-components). Any standalone file already imported is already extracted. Map what exists before planning what to create.
+
+---
+
+## Lesson 91 — `forwardRef` + `useImperativeHandle` for Coordinator-to-Child Imperative Calls
+
+**Context:** RaceTuningSection's "Reset All Defaults" button needed to trigger resets in two self-contained sub-components (`BehaviorTuningSection`, `DynamicsTuningSection`) without lifting all state into the coordinator. Each sub-component owned its own `useState` and was fully self-contained.
+
+**Insight:** When a coordinator needs to call a method on a self-contained child (imperative call like `resetAll()`), `forwardRef` + `useImperativeHandle` is the clean solution: each sub-component exposes exactly the methods the coordinator needs via a ref, without leaking internal state upward. The coordinator holds refs (`dynamicsRef`, `behaviorRef`) and calls `ref.current?.resetAll()` on button click.
+
+**Consequence:** For coordinator-to-child imperative calls (reset, focus, scroll), prefer `forwardRef` + `useImperativeHandle` over prop callbacks or state lifting. The ref API is intentionally minimal — expose only what the coordinator needs.
