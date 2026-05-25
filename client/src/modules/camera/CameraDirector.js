@@ -720,7 +720,7 @@ export class CameraDirector {
         if (this._prevFocusT !== null) {
           this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
         }
-        this._prevFocusT = fT;
+        this._prevFocusT = fT; // first write this frame; _computePhasedPanTarget reads it at the lead-out transition (~line 1833) then overwrites at every exit
         // Update target every frame: focusT moves with the racer, lead-ahead offset scales
         // with the measured speed so the camera lands at the right lead-ahead position.
         const prof = this._phasedByState?.[this.state];
@@ -1630,13 +1630,13 @@ export class CameraDirector {
         this.targetZoom = this._leaderZoom;
         if (this._isOpenTrack) {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
               : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
         } else {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
               : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           if (panTarget) {
@@ -1665,13 +1665,13 @@ export class CameraDirector {
             : getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
         if (this._isOpenTrack) {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
               : battleFallback;
           if (panTarget) this._setOpenTrackTargets(panTarget, this._battleZoom, frameSize);
         } else {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
               : battleFallback;
           if (panTarget) {
@@ -1700,13 +1700,13 @@ export class CameraDirector {
           : getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
         if (this._isOpenTrack) {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
               : comebackFallback;
           if (panTarget) this._setOpenTrackTargets(panTarget, this._comebackZoom, frameSize);
         } else {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
               : comebackFallback;
           if (panTarget) {
@@ -1725,13 +1725,13 @@ export class CameraDirector {
         this.targetZoom = this._leaderZoom;
         if (this._isOpenTrack) {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
               : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
         } else {
           const panTarget =
-            this._camT !== null && this._shape
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
               : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
           if (panTarget) {
@@ -1751,9 +1751,10 @@ export class CameraDirector {
   /**
    * Phased observer: time-based lead-in / follow / lead-out for zoom states (both track types).
    * Lead-in: fixed point ahead of racer for leadInDuration seconds after state start.
-   * Follow: pin camera exactly to racer (Δ ≈ 0, no lerp lag).
+   * Follow: advances _camT to racer T so _setTargets targets the racer's world position.
    * Lead-out: EMA deceleration to near-stop, triggered leadOutDuration seconds before state end.
    * Only acts when _lerpPhase === 'tracking'. Only called when _camT and _shape are non-null.
+   * targetOffsetX/Y are owned exclusively by _setTargets — this function does not write them.
    */
   _computePhasedPanTarget(
     focusRacers,
@@ -1827,7 +1828,9 @@ export class CameraDirector {
       this._observerPhase = 'lead-out';
       this._leadOutStartCamT = this._camT;
       this._leadOutStartTs = ts;
-      // Camera moves at ~half racer speed during lead-out, decelerating via EMA
+      // Camera moves at ~half racer speed during lead-out, decelerating via EMA.
+      // _prevFocusT here is update()'s first write this frame (~line 723); _computePhasedPanTarget
+      // has not yet written it on this code path — all its writes come at the exits below.
       const speed =
         this._prevFocusT !== null ? Math.max(0, focusT - this._prevFocusT) : NOMINAL_T_PER_FRAME;
       this._leadOutDistanceT = speed * FRAME_RATE * prof.leadOutDuration * 0.5;
@@ -1839,7 +1842,7 @@ export class CameraDirector {
         const decayDt = 1 - Math.pow(1 - LEAD_OUT_DECAY, (dt * FRAME_RATE) / 1000);
         this._camT += (leadOutTargetT - this._camT) * decayDt;
       }
-      this._prevFocusT = focusT;
+      this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
       return;
     }
 
@@ -1867,54 +1870,11 @@ export class CameraDirector {
       return;
     }
 
-    // Follow: _camT tracks racer exactly each frame so _setTargets always targets the racer.
-    // targetOffsetX/Y are updated here; offsetX/Y are NOT overwritten — pixel-lerp closes
-    // any remaining gap (e.g. the convergence-frame T-space distance) smoothly over the next
-    // few frames. Hard-pinning offsetX here caused the visible jump on the convergence frame.
+    // Follow: advance _camT to the racer's T so _setTargets targets the racer's world position
+    // next frame. targetOffsetX/Y are owned exclusively by _setTargets; pixel-lerp closes any
+    // remaining gap smoothly — no hard-pin here (would cause a visible jump on the follow frame).
     this._camT = focusT;
-    // Open: clamp to [0,1]; closed: wrap circularly.
-    const tNorm = this._isOpenTrack
-      ? Math.max(0, Math.min(1, this._camT))
-      : ((this._camT % 1) + 1) % 1;
-    const camPos = this._shape.getPosition(tNorm, 0);
-    if (!camPos) {
-      this._prevFocusT = focusT;
-      return;
-    }
-
-    const stateZoom =
-      this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE
-        ? this._leaderZoom
-        : this.state === CAM_STATE.BATTLE_ZOOM
-          ? this._battleZoom
-          : this._comebackZoom;
-    const frameSize = { width: canvasW, height: canvasH };
-    if (this._isOpenTrack) {
-      const BASE = OPEN_TRACK_BASE_ZOOM;
-      const resolved = resolveCamera({
-        targetWorld: camPos,
-        desiredEffZoom: stateZoom * BASE,
-        worldBounds: this._worldBounds,
-        frameSize,
-        innerFramePct: this._innerFramePct,
-        minEffZoom: this.overviewZoom * BASE,
-      });
-      this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-      this.targetOffsetY = -resolved.camY * resolved.effectiveZoom;
-    } else {
-      const resolved = resolveCamera({
-        targetWorld: camPos,
-        desiredEffZoom: stateZoom * this._bsX,
-        worldBounds: this._worldBounds,
-        frameSize,
-        innerFramePct: this._innerFramePct,
-        minEffZoom: this._bsX,
-      });
-      this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
-      this.targetOffsetY = this._closedOffsetY(camPos.y, resolved.effectiveZoom, canvasH);
-    }
-
-    this._prevFocusT = focusT;
+    this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
   }
 
   /**

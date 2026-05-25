@@ -220,6 +220,7 @@ Additionally: Space (Custom Track) already present.
 |---|---|---|
 | ✅ **chore/sprite-scale-relative** | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
 | ✅ **Phase 3D** | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items. |
+| ✅ **Camera centering architecture** | Done 2026-05-26 | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `docs/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅. |
 | **COMEBACK vs LEADER_ZOOM priority** | Medium | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM? |
 | **Sim parity open track ranking** | Medium | Open track ranking (projected world position) is not yet mirrored in sim-fairness.mjs. Sim still uses raw t-value for standings. For correct fairness statements on open tracks, the sim standings must match the browser standings (sim-browser parity rule). |
 

@@ -711,6 +711,43 @@ Konfiguration: avoidanceDistance=0.15, racePlanBonusStrengthMultiplier=2.0, drag
 
 ---
 
+## 2026-05-26 — Camera Centering Architecture Refactor
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (`CameraDirector.js`, `CameraDirector.test.js`, `docs/`)
+**Branch:** master (direct)
+**Backup tag:** `backup/camera-centering-architecture`
+
+### What Was Changed
+
+| Component | Change |
+|---|---|
+| `_setTargets` | Now sole owner of `targetOffsetX/Y`. During `_observerPhase === 'follow'`, uses racer world position instead of track centerline `shape.getPosition(_camT, 0)` for all four phasedEnabled states |
+| `_computePhasedPanTarget` | Converted to state-controller only — removed `focusPosOverride`, `focusOffset`, and the 44-line follow-phase camPos/targetOffsetX/Y write block. Now only advances `_camT` and manages phase transitions |
+| Per-state follow-phase pan | LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE: camera now centers on actual racer world position during follow phase (not track centerline) |
+| `_prevFocusT` ownership | Split-ownership execution-order dependency documented with inline comments at write site in `update()`, read site in lead-out transition, and both follow-path exit writes |
+| `docs/camera-target-architecture.md` | New architecture document: intended vs. actual responsibilities, per-frame execution order diagram, per-state effective driver table, double-write variable analysis, recommended clean architecture |
+| `LESSONS.md` | Lesson 37 added: shared lerp-input variables need a single declared owner; silent overwrites not caught by unit tests |
+
+### Root Cause Addressed
+
+Both `_setTargets` and `_computePhasedPanTarget` wrote `targetOffsetX/Y`. Because `_computePhasedPanTarget` runs AFTER the lerp step in `update()`, its writes were overwritten by `_setTargets` at the start of the next frame before the lerp could consume them. Two prior fix attempts (physicalY lane offset; direct world-position override in `_computePhasedPanTarget`) were both silently inert for this structural reason. Fix: make `_setTargets` the single authoritative writer, reading `_observerPhase` to switch between T-space anchor (lead-in/lead-out) and racer world position (follow).
+
+### Codebase Audit Results
+
+Full shared-variable ownership audit across CameraDirector.js, RaceScreen/index.jsx, racePlanner.js, raceBehavior.js. **No High-severity findings.** One Medium-severity finding (`_prevFocusT` split ownership) addressed with inline comments. All other findings Low/Intentional (frozen `cameraConfig` at mount, 1-step `physicalY` lag, `_prevT`/`_diagPrevT` separation, correct temporal ordering throughout physics loop).
+
+### Metrics
+
+| Metric | Value |
+|---|---|
+| Tests | **2134 / 2134** ✅ |
+| ESLint | 0 errors |
+| Net change (`CameraDirector.js`) | 74 lines removed / 39 lines added |
+| Backup tag | `backup/camera-centering-architecture` |
+
+---
+
 ## Bewusst akzeptierte Befunde (Stand 2026-05-01)
 
 | Befund | Severity | Akzeptiert weil | Wann adressieren |

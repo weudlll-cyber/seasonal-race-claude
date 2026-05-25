@@ -623,6 +623,16 @@ to debug because code and routes look correct — the error lies in the deployme
 
 **Consequence:** When a function exports `create()` as a factory that returns an emitter: always call per consumer, never share the result. Documented in `trailResolver.js` in the JSDoc. Test `line-generator emitters maintain independent position state per instance` verifies this behavior explicitly.
 
+## Lesson 37 — Shared Variable Ownership: Verify Execution Order Before Adding a Writer (Camera refactor)
+
+**Context:** `_setTargets` and `_computePhasedPanTarget` both wrote `targetOffsetX/Y` in `CameraDirector`. The intent was for `_computePhasedPanTarget` to override `_setTargets`'s centerline value during the follow phase. In practice `_setTargets` ran first, the lerp consumed that value, then `_computePhasedPanTarget` wrote its override — which was immediately overwritten by `_setTargets` on the next frame before the lerp could consume it. Two separate fix attempts (physicalY lane offset, then direct world position override) were both silently inert for the same structural reason. The problem was only diagnosed via architectural review.
+
+**Insight:** When two functions write the same variable, the frame-by-frame execution order determines which write the lerp actually consumes. Unit tests pass green for both writes: they test that each function *sets* the variable, not that the *lerp reads the right frame's value*. This class of bug is invisible to unit tests and only manifests as visual drift in the browser.
+
+**Consequence:** Before adding a second writer to any shared variable (targetOffsetX, targetZoom, any lerp input): (1) draw the per-frame execution order explicitly; (2) identify which write survives into the lerp. If two functions write the same variable, make one the authoritative owner and remove the write from the other. Architecture reviews must verify execution order of all writers to shared lerp inputs — silent overwrites are not caught by unit tests.
+
+---
+
 ## Lesson 36 — Performance Smoke Tests Need Different Thresholds for Dev and CI (VRE-4)
 
 **Symptom:** Performance test runs locally in ~5ms and is green. On CI (GitHub Actions) the same test runs in ~74ms and fails — even though there is no regression case.
