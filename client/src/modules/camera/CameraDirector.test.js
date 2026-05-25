@@ -5107,6 +5107,23 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     expect(cd._finishOverviewLookbackPx).toBe(300);
   });
 
+  it('finishPauseMs getter: returns configured value', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishPauseMs: 4000 });
+    expect(cd.finishPauseMs).toBe(4000);
+  });
+
+  it('finishPauseMs getter: defaults to 2500', () => {
+    const cd = new CameraDirector();
+    expect(cd.finishPauseMs).toBe(2500);
+  });
+
+  it('finishPauseMs is live-applied via updateConfig', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishPauseMs: 1000 });
+    expect(cd.finishPauseMs).toBe(1000);
+    cd.updateConfig({ finishPauseMs: 6000 });
+    expect(cd.finishPauseMs).toBe(6000);
+  });
+
   it('lookback: camera target is at finishT − lookback position (unclamped range)', () => {
     // Use finishT=0.5, lookbackPx=600 → lookbackFrac=600/6000=0.1 → lookbackT=0.4
     // → target.x=2400 → idealCamX=400 → camX=400 → offsetX=−128

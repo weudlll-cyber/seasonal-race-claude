@@ -1411,7 +1411,7 @@ export default function RaceScreen() {
                 race: raceData,
               })
             );
-            setTimeout(() => fadeNavigate('/results'), 2000);
+            setTimeout(() => fadeNavigate('/results'), camDirRef.current?.finishPauseMs ?? 2500);
           }
 
           // Final lap detection — ts (browser time) used so visual overlay timing is correct
