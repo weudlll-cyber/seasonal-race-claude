@@ -434,17 +434,21 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 The race camera lives in `modules/camera/` and supports five director modes:
 
-- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spriteScale — see Lesson 83).
+- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spriteScale — see Lesson 83). After the first finisher crosses the line, OVERVIEW enters **FINISH_OVERVIEW mode**: smooth zoom-out + T-space pan to `finishOverviewLookbackPx` (300 world-px, L88) before the finish line. `_camT` stays at winner.t on entry; `_transitionTargetT = lookbackT`; a dedicated `else if` branch lerps `_camT` toward it in parallel with the zoom-out (L89). The mode waits until all racers have finished.
 - **LEADER_ZOOM** — follows the leading racer at elevated zoom
-- **BATTLE_ZOOM** — centres on the Greedy-Expansion cluster of racers in close proximity. Isolation phase (brief fixed window) → Expansion phase (grow cluster by proximity). Camera position uses a frozen group snapshot (`_frozenBattleGroup`) so the view stays stable as racers reorder; visual highlights use the live group (Lesson 85).
-- **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86).
-- **LEAD_CHANGE_ZOOM** — activates when the race leader changes; frames the new and former leader briefly before handing off to LEADER_ZOOM.
+- **BATTLE_ZOOM** — centres on the Greedy-Expansion cluster of racers in close proximity. Isolation phase (brief fixed window) → Expansion phase (grow cluster by proximity). Camera position uses a frozen group snapshot (`_frozenBattleGroup`) so the view stays stable as racers reorder; visual highlights use the live group (Lesson 85). Guards: top-10 racers only, rank span ≤ 5, isolation zone `battleIsolationPx: 300`. P2-drift exit: if the second-place racer drifts > `battleGapThreshold` from 3rd, the cluster dissolves and BATTLE exits.
+- **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86). Tuned thresholds (Phase 3D): `outcomePhaseThreshold: 0.65`, `comebackMinStartGap: 0.25`, `comebackMaxCurrentRankPct: 0.20`. DIAG shows gainOk / startGapOk / currentRankOk per B1 racer, plus phase gate + leaderProgress.
+- **LEAD_CHANGE_ZOOM** — activates when the race leader changes; frames the new and former leader briefly before handing off to LEADER_ZOOM. Pan-snap fix on entry: `_camT` set to leader.t at transition point to avoid jump artifact.
 
 ### Regie-System (Phase 3B)
 
 The director chooses the next camera state from a **weighted candidate pool**. Each state contributes a candidate with a weight derived from recency, race tension, and cooldown timers. The highest-weight candidate wins.
 
 **OVERVIEW-Scheduler:** OVERVIEW is injected periodically as a forced candidate with a configurable cooldown window `[overviewCooldownMin, overviewCooldownMax]`. This guarantees occasional wide shots without requiring OVERVIEW to outcompete other candidates on weight alone.
+
+**Same-state repeat rule (Phase 3D):** If the highest-weight candidate is the same state that is currently active, the transition is immediately interruptible — no minimum dwell time enforced for same-to-same transitions.
+
+**Endgame threshold (Phase 3D):** Leader progress must exceed 90% (was 85%) before the FINISH_OVERVIEW drama fires.
 
 **Entry-phase T-space lerp:** During `_lerpPhase === 'entry'` all states (including OVERVIEW) use `shape.getPosition(_camT)` as the pan target to avoid a hard snap on frame 1 (Lesson 84). `tSpaceLerpActive = true` in this phase means `offsetX = targetOffsetX` (no pixel lerp), so a wrong pan target causes an instant camera jump.
 
@@ -471,7 +475,7 @@ Where:
 
 This replaces the old absolute `spritePx` field which was racer-count-dependent: the same pixel value produced different zooms at 10 vs. 70 racers because `displaySize × displaySizeScale` (the denominator) shifts with racer count (see Lesson 82, Lesson 87).
 
-Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → Camera Zoom Tuning section. Schema version: 14.
+Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → **Camera Advanced** section (Phase 3D: `CameraZoomTuningSection` + `CameraStateHudSection` merged into `CameraAdvancedSection`). Schema version: 14.
 
 ## Visual Racer Effects System (Phase VRE)
 

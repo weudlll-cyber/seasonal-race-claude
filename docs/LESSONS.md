@@ -1752,3 +1752,37 @@ Die User-Beobachtung war der entscheidende Hinweis: "OVERVIEW badge bei tight zo
 **Konsequenz:** Bei Komponenten die über `STATE_CONFIG[key] ?? fallback` rendern: sicherstellen dass für jeden möglichen State-Wert ein Konfigurations-Eintrag existiert. Tests müssen alle möglichen Input-Werte abdecken — nicht nur die zum Zeitpunkt der Implementierung bekannten. Ein Test-Case pro State in `STATE_CASES` (label + CSS-Klasse + tooltip) verhindert dass ein neu hinzugefügter Camera-State im Badge-Fallback landet.
 
 **Verweis:** `CameraStateHUD.jsx`, `CameraStateHUD.test.jsx` — LEAD_CHANGE-Eintrag ergänzt, STATE_CASES von 5 auf 6 erweitert. Phase 3C (chore/sprite-scale-relative, squash `6a9dcfc`).
+
+---
+
+## Lesson 88 — T-Space Lookback ist streckenabhängig
+
+**Kontext:** Phase 3D (FINISH_OVERVIEW). Der `finishOverviewLookback`-Parameter war in T-Space definiert (0.08). Auf Space Sprint mit einer Pfadlänge von ~19772px entspricht 0.08 T-Space ≈ 1582px — fast das gesamte linke Drittel der Strecke. Auf einer kurzen geschlossenen Strecke (~3750px Pfadlänge) wären dieselben 0.08 T nur ~300px. Der Lookback-Bereich war nicht streckenunabhängig.
+
+**Ursache:** T-Space-Parameter skalieren linear mit der Streckenlänge. Ein Operator der auf Space Sprint 0.08 einstellt bekommt auf einer anderen Strecke einen komplett anderen visuellen Effekt — die Kamera schaut auf Space Sprint viel zu weit zurück und auf kurzen Strecken zu wenig.
+
+**Fix:** `finishOverviewLookbackPx: 300` (Weltpixel). Formel: `lookbackFrac = lookbackPx / pathLen`; dann `lookbackT = normT − lookbackFrac`. `shape.getTotalLength()` liefert die streckenspezifische Pfadlänge zur Laufzeit.
+
+**Konsequenz:** Immer prüfen ob ein Parameter in T-Space oder Weltpixeln sinnvoll ist. Wenn der visuelle Effekt eine physische Distanz ist (z.B. "wie weit vor der Ziellinie"), dann ist Weltpixel die richtige Einheit — streckenunabhängig, intuitiv für Operator-Tuning.
+
+**Verweis:** `CameraDirector.js` `_finishOverviewLookbackPx`, `_transition()` + `_setTargets()`, `defaults.js` `finishOverviewLookbackPx: 300`. Phase 3D.
+
+---
+
+## Lesson 89 — `_camT = target` in `_transition()` → harter Cut, nicht sanfter Pan
+
+**Kontext:** Phase 3D (FINISH_OVERVIEW). In `_transition()` wurde `this._camT = lookbackT` gesetzt. Da `_camT` den aktuellen T-Wert für T-Space-Lerp darstellt, wurde damit der Pan-Startpunkt sofort auf das Ziel gesetzt — delta = 0, kein Lerp-Schritt, Kamera springt hart.
+
+**Ursache:** Der T-Lerp arbeitet als `_camT += tDelta(_camT, _transitionTargetT) × lf`. Wenn `_camT` bereits gleich `_transitionTargetT` ist, gibt es keinen Delta und keinen Lerp-Schritt. `_transition()` legt mit `_camT = lookbackT` start = destination fest, wodurch die Entry-Phase sofort "konvergiert" ist.
+
+**Fix:** In `_transition()` nur `_transitionTargetT = lookbackT` setzen, `_camT` an winner.t belassen. Eigenen `else if`-Branch in der OVERVIEW-T-Lerp-Sektion ergänzen der `_camT` schrittweise Richtung `_transitionTargetT` bewegt — parallel zum Zoom-Out mit derselben Zeitkonstante:
+
+```js
+} else if (this._inFinishMode && this._camT !== null && this._transitionTargetT !== null) {
+  this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
+}
+```
+
+**Konsequenz:** `_transition()` ist für einmalige Setup-Logik (Zustände setzen, Ziele festlegen), nicht für sofortige Positionszuweisungen die sanft animiert werden sollen. Für sanfte Bewegungen: Ziel speichern, Lerp-Branch im Update-Loop ergänzen.
+
+**Verweis:** `CameraDirector.js` `_transition()` FINISH_OVERVIEW-Block, OVERVIEW-T-Lerp-Branch in `_setTargets()`. Phase 3D.

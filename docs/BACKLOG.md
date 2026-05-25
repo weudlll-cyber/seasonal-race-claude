@@ -219,9 +219,19 @@ Zusätzlich: Weltall (Custom-Track) bereits vorhanden.
 | Item | Priorität | Beschreibung |
 |---|---|---|
 | ✅ **chore/sprite-scale-relative** | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (Schema v14). Relativer Faktor, racer-count-unabhängig (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Neben-Fix: LEAD_CHANGE fehlte in `CameraStateHUD.STATE_CONFIG` — Fallback `?? OVERVIEW` zeigte falsches Badge (L87). |
+| ✅ **Phase 3D** | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK-Fixes. Siehe Phase 3D — Offene Folge-Punkte. |
 | **COMEBACK vs LEADER_ZOOM Priorität** | Mittel | COMEBACK_ZOOM aktiviert auch wenn ein Racer nur leicht zurückliegt. Grenzwert-Kalibrierung: Wie weit hinten muss ein Racer sein um COMEBACK zu rechtfertigen? Messung in echten Races: Wie oft wird COMEBACK aktiviert vs LEADER_ZOOM verdrängt? |
 | **Sim-Parität Open Track Ranking** | Mittel | Open Track Ranking (projizierte Weltposition) ist in sim-fairness.mjs noch nicht gespiegelt. Sim nutzt noch reinen t-Wert für Standings. Für korrekte Fairness-Aussagen auf Open Tracks muss die Sim-Rangliste mit der Browser-Rangliste übereinstimmen (Sim-Browser Parity Rule). |
-| **spritePx DevScreen Info-Anzeige** | Niedrig | DevScreen-Slider für spritePx zeigt keinen Kontext (was ist referenceSpriteSize für die aktuelle Racer-Anzahl?). Nützlich: Info-Text unter dem Slider mit aktuellem `referenceSpriteSize`-Wert und resultierendem Zoom. Besonders hilfreich bis chore/sprite-scale-relative umgesetzt ist. |
+
+---
+
+## Phase 3D — Offene Folge-Punkte
+
+| Item | Priorität | Beschreibung |
+|---|---|---|
+| **FINISH_OVERVIEW Timing-Kalibrierung** | Mittel | `finishOverviewLookbackPx` (300) und `finishOverviewZoomOutDurationMs` sind Startdefaults. In echten Races prüfen: Ist der Leader bei Pan-Ende am Bildrand sichtbar? Ist der Zoom-Out-Speed passend? Ggf. anpassen. |
+| **COMEBACK Frequenz-Analyse** | Mittel | Nach den Threshold-Lockerungen (outcomePhaseThreshold 0.75→0.65, comebackMinStartGap 0.40→0.25) prüfen: Wie oft aktiviert COMEBACK jetzt? Zu häufig = Operator-Irritation. Sim-Parität für COMEBACK-Trigger noch nicht gegeben. |
+| **BATTLE Rank-Span empirisch validieren** | Niedrig | `battleMaxRankSpan: 5` ist ein Startdefault. In 20-Racer-Races mit echten Pulk-Situationen messen ob Rang-Span-5 korrekt filtert oder zu restriktiv ist. |
 
 ---
 
