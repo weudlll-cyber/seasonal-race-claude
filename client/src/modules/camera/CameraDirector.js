@@ -10,6 +10,8 @@
 
 import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
+import { diagMixin } from './CameraDirectorDiag.js';
+import { computeTimingFromConfig } from './cameraTimingComputation.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -168,7 +170,7 @@ export class CameraDirector {
     this._prevFocusT = null;
     this._lastFocusT = 0;
     // Track-aware T-space lerp: during entry phase, _camT lerps toward _transitionTargetT
-    // along the track (avoiding the euklidisch infield shortcut — see camera-pan-path-diagnosis.md).
+    // along the track (avoiding the euclidean infield shortcut — see camera-pan-path-diagnosis.md).
     // _transitionTargetT includes the lead-ahead offset for zoom states.
     this._transitionTargetT = null;
     this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
@@ -217,10 +219,10 @@ export class CameraDirector {
     this._leadCandidateIndex = null;
     this._leadCandidateSince = null;
     this._lastLeadChangeTs = -Infinity;
-    // Regie: per-state exit timestamps for individual cooldowns
+    // Director: per-state exit timestamps for individual cooldowns
     this._lastComebackExitTs = -Infinity;
     this._lastLeadChangeExitTs = -Infinity;
-    // Regie: OVERVIEW scheduler — race-elapsed target for next allowed OVERVIEW fire
+    // Director: OVERVIEW scheduler — race-elapsed target for next allowed OVERVIEW fire
     this._overviewScheduleNext = null;
     // Diagnostic: BATTLE-DIAG frozen snapshot panel
     this._battleDiagFrameCount = 0;
@@ -229,6 +231,7 @@ export class CameraDirector {
     // Frame-log ring buffer — enabled per config.enableFrameLog (set by _computeTimingConfig above).
     // Records ~28 fields per frame; 600 frames ≈ 10 s @ 60 fps.
     this._diagRingBuf = new Array(DIAG_RING_SIZE);
+    this._diagRingSize = DIAG_RING_SIZE;
     this._diagRingIdx = 0;
     this._diagFrameIdx = 0;
     this._diagPrevOffsetX = null;
@@ -334,211 +337,80 @@ export class CameraDirector {
    * @param {object|null} config
    */
   _computeTimingConfig(config) {
-    // Global tunables (not per-state)
-    this._battlePulkThresholdPx = config?.battlePulkThresholdPx ?? BATTLE_PULK_THRESHOLD_PX;
-    this._battlePulkThresholdT = config?.battlePulkThresholdT ?? BATTLE_PULK_THRESHOLD_T;
-    this._battleMinDurationMs = config?.battleMinDurationMs ?? BATTLE_MIN_DURATION_MS;
-    this._battleIsolationThresholdPx = config?.battleIsolationThresholdPx ?? 0;
-    this._battleMaxGroupSize = Math.max(3, Math.min(6, config?.battleMaxGroupSize ?? 6));
-    this._battleMaxGroupRankSpan = config?.battleMaxGroupRankSpan ?? 5;
-    this._battleMinTopN = config?.battleMinTopN ?? 10;
-    this._endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
-    this._postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
-    this._battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
-    this._showDiagnostics = config?.showCameraDiagnostics ?? false;
-    this._diagEnabled = config?.enableFrameLog ?? false;
-    this._transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
-    this._overviewOffsetPx =
-      config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
-    // Per-state lead-ahead toggle. Default true for old configs without profiles (backward compat).
-    // v10+ configs inject false for LEADER/BATTLE/COMEBACK; OVERVIEW never uses lead-ahead.
-    this._leadAheadEnabledByState = {};
-    for (const s of Object.values(CAM_STATE)) {
-      this._leadAheadEnabledByState[s] = config?.cameraStateProfiles?.[s]?.leadAheadEnabled ?? true;
-    }
-    // Per-state lead-out toggle. Default true for old configs without profiles (backward compat).
-    // v11+ configs inject false for LEADER/BATTLE/COMEBACK; OVERVIEW has leadOutDuration: 0.
-    this._leadOutEnabledByState = {};
-    for (const s of Object.values(CAM_STATE)) {
-      this._leadOutEnabledByState[s] = config?.cameraStateProfiles?.[s]?.leadOutEnabled ?? true;
-    }
-    this._overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
-
-    // Per-state values: prefer cameraStateProfiles, fall back to legacy flat fields.
-    const profiles = config?.cameraStateProfiles;
-
-    this._maxEntryDurationByState = {};
-    for (const s of Object.values(CAM_STATE)) {
-      this._maxEntryDurationByState[s] =
-        profiles?.[s]?.maxEntryDurationMs ?? DEFAULT_MAX_ENTRY_DURATION_MS[s] ?? 10000;
-    }
-
-    if (profiles) {
-      const profTc = (key, fallback) => profiles[key]?.trackingTC ?? fallback;
-      const profMin = (key) => profiles[key]?.minStateHold ?? MIN_STATE_HOLD_MS;
-      const profMax = (key, fallback) => profiles[key]?.maxStateDuration ?? fallback;
-
-      this._tcOverview = profTc('OVERVIEW', TC_OVERVIEW);
-      this._tcLeader = profTc('LEADER_ZOOM', TC_LEADER);
-      this._tcBattle = profTc('BATTLE_ZOOM', TC_BATTLE);
-      this._tcComeback = profTc('COMEBACK_ZOOM', TC_COMEBACK);
-
-      // Flat props kept for test and external compat
-      this._minStateHoldMs = profMin('OVERVIEW');
-      this._battleMaxDurationMs = profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION);
-      this._maxStateDuration = profMax('OVERVIEW', MAX_STATE_DURATION);
-
-      this._minStateHoldByState = {
-        [CAM_STATE.OVERVIEW]: profMin('OVERVIEW'),
-        [CAM_STATE.LEADER_ZOOM]: profMin('LEADER_ZOOM'),
-        [CAM_STATE.BATTLE_ZOOM]: profMin('BATTLE_ZOOM'),
-        [CAM_STATE.COMEBACK_ZOOM]: profMin('COMEBACK_ZOOM'),
-        [CAM_STATE.LEAD_CHANGE]: profMin('LEAD_CHANGE'),
-      };
-      this._maxStateDurationByState = {
-        [CAM_STATE.OVERVIEW]: profMax('OVERVIEW', MAX_STATE_DURATION),
-        [CAM_STATE.LEADER_ZOOM]: profMax('LEADER_ZOOM', MAX_STATE_DURATION),
-        [CAM_STATE.BATTLE_ZOOM]: profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION),
-        [CAM_STATE.COMEBACK_ZOOM]: profMax('COMEBACK_ZOOM', MAX_STATE_DURATION),
-        [CAM_STATE.LEAD_CHANGE]: profMax('LEAD_CHANGE', MAX_STATE_DURATION),
-      };
-      const profEntryTc = (key, fallback) => profiles[key]?.entryTC ?? fallback;
-      this._tcLeadChange = profTc('LEAD_CHANGE', TC_LEADER);
-      this._tcEntryOverview = profEntryTc('OVERVIEW', this._tcOverview);
-      this._tcEntryLeader = profEntryTc('LEADER_ZOOM', this._tcLeader);
-      this._tcEntryBattle = profEntryTc('BATTLE_ZOOM', this._tcBattle);
-      this._tcEntryComeback = profEntryTc('COMEBACK_ZOOM', this._tcComeback);
-      this._tcEntryLeadChange = profEntryTc('LEAD_CHANGE', this._tcLeadChange);
-      // Per-state phased observer config
-      this._phasedByState = {};
-      for (const s of Object.values(CAM_STATE)) {
-        this._phasedByState[s] = {
-          leadInDuration: profiles[s]?.leadInDuration ?? 0,
-          leadOutDuration: profiles[s]?.leadOutDuration ?? 0,
-        };
-      }
-    } else {
-      // Legacy flat-field path: no profiles — old config format or no config at all.
-      this._maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
-      this._battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
-      this._minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
-
-      const rawTc = config?.cameraTransitionSeconds;
-      if (rawTc && typeof rawTc === 'object') {
-        this._tcOverview = rawTc.overview ?? TC_OVERVIEW;
-        this._tcLeader = rawTc.leader ?? TC_LEADER;
-        this._tcBattle = rawTc.battle ?? TC_BATTLE;
-        this._tcComeback = rawTc.comeback ?? TC_COMEBACK;
-      } else {
-        // Scalar (old format or fallback): apply to OVERVIEW only; zoom states use new defaults.
-        const s = typeof rawTc === 'number' ? rawTc : TC_OVERVIEW;
-        this._tcOverview = s;
-        this._tcLeader = TC_LEADER;
-        this._tcBattle = TC_BATTLE;
-        this._tcComeback = TC_COMEBACK;
-      }
-
-      this._minStateHoldByState = {
-        [CAM_STATE.OVERVIEW]: this._minStateHoldMs,
-        [CAM_STATE.LEADER_ZOOM]: this._minStateHoldMs,
-        [CAM_STATE.BATTLE_ZOOM]: this._minStateHoldMs,
-        [CAM_STATE.COMEBACK_ZOOM]: this._minStateHoldMs,
-        [CAM_STATE.LEAD_CHANGE]: this._minStateHoldMs,
-      };
-      this._maxStateDurationByState = {
-        [CAM_STATE.OVERVIEW]: this._maxStateDuration,
-        [CAM_STATE.LEADER_ZOOM]: this._maxStateDuration,
-        [CAM_STATE.BATTLE_ZOOM]: this._battleMaxDurationMs,
-        [CAM_STATE.COMEBACK_ZOOM]: this._maxStateDuration,
-        [CAM_STATE.LEAD_CHANGE]: this._maxStateDuration,
-      };
-      this._tcLeadChange = this._tcLeader;
-      // Legacy: entryTC = trackingTC (no distinction in old format)
-      this._tcEntryOverview = this._tcOverview;
-      this._tcEntryLeader = this._tcLeader;
-      this._tcEntryBattle = this._tcBattle;
-      this._tcEntryComeback = this._tcComeback;
-      this._tcEntryLeadChange = this._tcLeader;
-      // Legacy: phased observer disabled
-      this._phasedByState = Object.fromEntries(
-        Object.values(CAM_STATE).map((s) => [s, { leadInDuration: 0, leadOutDuration: 0 }])
-      );
-    }
-
-    // Common: compute lf values and tc lookup map from the resolved TCs.
-    this._tcByState = {
-      [CAM_STATE.OVERVIEW]: this._tcOverview,
-      [CAM_STATE.LEADER_ZOOM]: this._tcLeader,
-      [CAM_STATE.BATTLE_ZOOM]: this._tcBattle,
-      [CAM_STATE.COMEBACK_ZOOM]: this._tcComeback,
-      [CAM_STATE.LEAD_CHANGE]: this._tcLeadChange,
-    };
-    this._lfOverview = tcToLerpFactor(this._tcOverview);
-    this._lfLeader = tcToLerpFactor(this._tcLeader);
-    this._lfBattle = tcToLerpFactor(this._tcBattle);
-    this._lfComeback = tcToLerpFactor(this._tcComeback);
-    this._lfLeadChange = tcToLerpFactor(this._tcLeadChange);
-    this._lfByState = {
-      [CAM_STATE.OVERVIEW]: this._lfOverview,
-      [CAM_STATE.LEADER_ZOOM]: this._lfLeader,
-      [CAM_STATE.BATTLE_ZOOM]: this._lfBattle,
-      [CAM_STATE.COMEBACK_ZOOM]: this._lfComeback,
-      [CAM_STATE.LEAD_CHANGE]: this._lfLeadChange,
-    };
-    this._lfEntryOverview = tcToLerpFactor(this._tcEntryOverview);
-    this._lfEntryLeader = tcToLerpFactor(this._tcEntryLeader);
-    this._lfEntryBattle = tcToLerpFactor(this._tcEntryBattle);
-    this._lfEntryComeback = tcToLerpFactor(this._tcEntryComeback);
-    this._lfEntryLeadChange = tcToLerpFactor(this._tcEntryLeadChange);
-    this._lfEntryByState = {
-      [CAM_STATE.OVERVIEW]: this._lfEntryOverview,
-      [CAM_STATE.LEADER_ZOOM]: this._lfEntryLeader,
-      [CAM_STATE.BATTLE_ZOOM]: this._lfEntryBattle,
-      [CAM_STATE.COMEBACK_ZOOM]: this._lfEntryComeback,
-      [CAM_STATE.LEAD_CHANGE]: this._lfEntryLeadChange,
-    };
-    this._entryConvergenceZoom = config?.entryConvergenceZoom ?? 0.05;
-    this._entryConvergencePx = config?.entryConvergencePx ?? 10;
-
-    // COMEBACK-specific config
-    this._comebackMinPositionsGained = config?.comebackMinPositionsGained ?? 2;
-    this._comebackWindowSec = config?.comebackWindowSec ?? 4;
-    this._comebackMinDuration = config?.comebackMinDuration ?? 3;
-    this._outcomePhaseThreshold = config?.outcomePhaseThreshold ?? 0.75;
-    this._comebackMinStartGap = config?.comebackMinStartGap ?? 0.4;
-    this._comebackMaxCurrentRankPct = config?.comebackMaxCurrentRankPct ?? 0.1;
-    // Override COMEBACK_ZOOM minStateHold with comebackMinDuration when explicitly configured.
-    if (config?.comebackMinDuration != null) {
-      this._minStateHoldByState[CAM_STATE.COMEBACK_ZOOM] = this._comebackMinDuration * 1000;
-    }
-    // LEAD_CHANGE-specific config
-    this._leadChangeMinGap = config?.leadChangeMinGap ?? 0.002;
-    this._leadChangeDebounceMs = config?.leadChangeDebounceMs ?? 800;
-    this._leadChangeMinDuration = config?.leadChangeMinDuration ?? 1.5;
-    // Override LEAD_CHANGE minStateHold with leadChangeMinDuration when explicitly configured.
-    if (config?.leadChangeMinDuration != null) {
-      this._minStateHoldByState[CAM_STATE.LEAD_CHANGE] = this._leadChangeMinDuration * 1000;
-    }
-    // Finish sequence config
-    this._finishDramaDurationMs = config?.finishDramaDurationMs ?? FINISH_DRAMA_DURATION;
-    this._finishOverviewZoomOutDurationMs = config?.finishOverviewZoomOutDurationMs ?? 3000;
-    this._finishPauseMs = config?.finishPauseMs ?? 2500;
-    this._finishOverviewPanBlend = config?.finishOverviewPanBlend ?? 0.5;
-    this._finishOverviewLookbackPx = config?.finishOverviewLookbackPx ?? 300;
-    // Per-state cooldowns (Regie)
-    this._comebackCooldownMs = config?.comebackCooldownMs ?? 10000;
-    this._leadChangeCooldownMs = config?.leadChangeCooldownMs ?? 5000;
-    // Regie: weighted random candidate pool weights
-    this._battleWeight = config?.battleWeight ?? 0.8;
-    this._leadChangeWeight = config?.leadChangeWeight ?? 0.7;
-    this._comebackWeight = config?.comebackWeight ?? 0.6;
-    this._overviewWeight = config?.overviewWeight ?? 0.3;
-    // Regie: OVERVIEW scheduler
-    this._overviewTargetCount = config?.overviewTargetCount ?? 2;
-    this._overviewStartDelay = config?.overviewStartDelay ?? 15;
+    const t = computeTimingFromConfig(config);
+    this._battlePulkThresholdPx = t.battlePulkThresholdPx;
+    this._battlePulkThresholdT = t.battlePulkThresholdT;
+    this._battleMinDurationMs = t.battleMinDurationMs;
+    this._battleIsolationThresholdPx = t.battleIsolationThresholdPx;
+    this._battleMaxGroupSize = t.battleMaxGroupSize;
+    this._battleMaxGroupRankSpan = t.battleMaxGroupRankSpan;
+    this._battleMinTopN = t.battleMinTopN;
+    this._endgameThreshold = t.endgameThreshold;
+    this._postStartHoldMs = t.postStartHoldMs;
+    this._battleCooldownMs = t.battleCooldownMs;
+    this._showDiagnostics = t.showDiagnostics;
+    this._diagEnabled = t.diagEnabled;
+    this._transitionTConvergence = t.transitionTConvergence;
+    this._overviewOffsetPx = t.overviewOffsetPx;
+    this._overviewCooldownMs = t.overviewCooldownMs;
+    this._leadAheadEnabledByState = t.leadAheadEnabledByState;
+    this._leadOutEnabledByState = t.leadOutEnabledByState;
+    this._maxEntryDurationByState = t.maxEntryDurationByState;
+    this._tcOverview = t.tcOverview;
+    this._tcLeader = t.tcLeader;
+    this._tcBattle = t.tcBattle;
+    this._tcComeback = t.tcComeback;
+    this._tcLeadChange = t.tcLeadChange;
+    this._tcEntryOverview = t.tcEntryOverview;
+    this._tcEntryLeader = t.tcEntryLeader;
+    this._tcEntryBattle = t.tcEntryBattle;
+    this._tcEntryComeback = t.tcEntryComeback;
+    this._tcEntryLeadChange = t.tcEntryLeadChange;
+    this._minStateHoldMs = t.minStateHoldMs;
+    this._battleMaxDurationMs = t.battleMaxDurationMs;
+    this._maxStateDuration = t.maxStateDuration;
+    this._minStateHoldByState = t.minStateHoldByState;
+    this._maxStateDurationByState = t.maxStateDurationByState;
+    this._phasedByState = t.phasedByState;
+    this._tcByState = t.tcByState;
+    this._lfOverview = t.lfOverview;
+    this._lfLeader = t.lfLeader;
+    this._lfBattle = t.lfBattle;
+    this._lfComeback = t.lfComeback;
+    this._lfLeadChange = t.lfLeadChange;
+    this._lfByState = t.lfByState;
+    this._lfEntryOverview = t.lfEntryOverview;
+    this._lfEntryLeader = t.lfEntryLeader;
+    this._lfEntryBattle = t.lfEntryBattle;
+    this._lfEntryComeback = t.lfEntryComeback;
+    this._lfEntryLeadChange = t.lfEntryLeadChange;
+    this._lfEntryByState = t.lfEntryByState;
+    this._entryConvergenceZoom = t.entryConvergenceZoom;
+    this._entryConvergencePx = t.entryConvergencePx;
+    this._comebackMinPositionsGained = t.comebackMinPositionsGained;
+    this._comebackWindowSec = t.comebackWindowSec;
+    this._comebackMinDuration = t.comebackMinDuration;
+    this._outcomePhaseThreshold = t.outcomePhaseThreshold;
+    this._comebackMinStartGap = t.comebackMinStartGap;
+    this._comebackMaxCurrentRankPct = t.comebackMaxCurrentRankPct;
+    this._leadChangeMinGap = t.leadChangeMinGap;
+    this._leadChangeDebounceMs = t.leadChangeDebounceMs;
+    this._leadChangeMinDuration = t.leadChangeMinDuration;
+    this._finishDramaDurationMs = t.finishDramaDurationMs;
+    this._finishOverviewZoomOutDurationMs = t.finishOverviewZoomOutDurationMs;
+    this._finishPauseMs = t.finishPauseMs;
+    this._finishOverviewLookbackPx = t.finishOverviewLookbackPx;
+    this._comebackCooldownMs = t.comebackCooldownMs;
+    this._leadChangeCooldownMs = t.leadChangeCooldownMs;
+    this._battleWeight = t.battleWeight;
+    this._leadChangeWeight = t.leadChangeWeight;
+    this._comebackWeight = t.comebackWeight;
+    this._overviewWeight = t.overviewWeight;
+    this._overviewTargetCount = t.overviewTargetCount;
+    this._overviewStartDelay = t.overviewStartDelay;
   }
 
-  // ── Regie helpers ─────────────────────────────────────────────────────────
+  // ── Director helpers ──────────────────────────────────────────────────────
 
   _weightedRandomPick(candidates) {
     if (candidates.length === 0) return null;
@@ -578,7 +450,7 @@ export class CameraDirector {
   /**
    * Inject the B1-racer set for COMEBACK detection. Call once after race start when Race Plan is
    * active. Pass null (or omit) to disable COMEBACK detection (race plan off or closed track).
-   * @param {Set<number>|null} b1Indices  Set of racer indices with sollRank ≤ 5.
+   * @param {Set<number>|null} b1Indices  Set of racer indices with targetRank ≤ 5.
    */
   updateRacePlan(b1Indices) {
     this._b1Indices = b1Indices instanceof Set ? b1Indices : null;
@@ -708,86 +580,6 @@ export class CameraDirector {
     }
   }
 
-  /**
-   * Live LEAD_CHANGE diagnostics for the DevPanel LeadChangeDiagHUD.
-   * @returns {object}
-   */
-  getLeadChangeDiagData() {
-    return {
-      active: this.state === CAM_STATE.LEAD_CHANGE,
-      newLeader: this._leadChangeNewLeaderName,
-      previousLeader: this._leadChangePrevLeaderName,
-      currentLeader: this._currentLeaderName,
-      pendingChange: this._leadChangePending,
-      minGap: this._leadChangeMinGap,
-      debounceMs: this._leadChangeDebounceMs,
-    };
-  }
-
-  /**
-   * Live COMEBACK diagnostics for the DevPanel ComebackDiagHUD.
-   * @param {Array} racers  Full live racer list.
-   * @param {number} ts  Current timestamp in ms.
-   * @returns {object}
-   */
-  getComebackDiagData(racers, ts) {
-    const sorted = racers ? [...racers].sort((a, b) => b.t - a.t) : [];
-    const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const cutoff = ts - windowMs;
-    const minGain = this._comebackMinPositionsGained ?? 3;
-    const minStartGap = this._comebackMinStartGap ?? 0.25;
-    const maxCurrentRankPct = this._comebackMaxCurrentRankPct ?? 0.2;
-    const N = sorted.length;
-    const normDivisor = Math.max(N - 1, 1);
-    const b1Data = [];
-    if (this._b1Indices) {
-      for (const idx of this._b1Indices) {
-        const racer = sorted.find((r) => r.index === idx);
-        const currentRank = currentRankByIndex.get(idx) ?? null;
-        const hist = this._rankHistory.get(idx) ?? [];
-        let earliestInWindow = null;
-        for (let i = 0; i < hist.length; i++) {
-          if (hist[i].ts >= cutoff) {
-            earliestInWindow = hist[i];
-            break;
-          }
-        }
-        const gain =
-          earliestInWindow != null && currentRank != null ? earliestInWindow.rank - currentRank : 0;
-        const startGapNorm =
-          earliestInWindow != null ? (earliestInWindow.rank - 1) / normDivisor : 0;
-        const currentRankNorm = currentRank != null ? (currentRank - 1) / normDivisor : 0;
-        b1Data.push({
-          index: idx,
-          name: racer?.name ?? racer?.id ?? '?',
-          currentRank,
-          rankAtWindowStart: earliestInWindow?.rank ?? null,
-          positionsGained: gain,
-          gainOk: gain >= minGain,
-          startGapOk: earliestInWindow != null && startGapNorm >= minStartGap,
-          currentRankOk: currentRank != null && currentRankNorm >= maxCurrentRankPct,
-          qualifies: gain >= minGain,
-        });
-      }
-    }
-    const lockedRacer = racers
-      ? this._findByIndex(racers, this._comebackLockedRacerIndex, this._comebackLockedRacer)
-      : this._comebackLockedRacer;
-    const threshold = this._outcomePhaseThreshold ?? 0.75;
-    const progress = this._diagLeaderProgress ?? 0;
-    return {
-      active: this.state === CAM_STATE.COMEBACK_ZOOM,
-      lockedRacer,
-      b1Data,
-      windowSec: this._comebackWindowSec ?? 5,
-      minPositionsGained: minGain,
-      outcomePhaseThreshold: threshold,
-      leaderProgress: progress,
-      isOutcomePhaseActive: !!(this._diagIsExternalOutcomePhase || progress > threshold),
-    };
-  }
-
   _lerpFactorForState(state) {
     const map = this._lerpPhase === 'entry' ? this._lfEntryByState : this._lfByState;
     return map[state] ?? this._lfOverview;
@@ -832,19 +624,12 @@ export class CameraDirector {
     const prevState = this.state;
     let _diagTransitioned = false;
     // Early BATTLE exit: leave when the original group disperses after battleMinDurationMs.
-    // _lastBattleExitTs is set here so the cooldown blocks immediate re-entry.
     if (
       this.state === CAM_STATE.BATTLE_ZOOM &&
       stateAge >= this._battleMinDurationMs &&
       !this._isOriginalGroupStillValid(racers)
     ) {
-      this._lastBattleExitTs = ts;
-      this._battleLockedRacer = null;
-      this._battleLockedRacerIndex = null;
-      this._battleGroupRacers = [];
-      this._battleGroupRacerIndices = [];
-      this._battleLockT = null;
-      this._transition(racers, ts, raceState);
+      this._exitBattle(ts, racers, raceState);
       _diagTransitioned = true;
     }
     // P2-drift exit: a locked group member moved into P1/P2 — exit after minHold (no hard-cut).
@@ -854,13 +639,7 @@ export class CameraDirector {
       stateAge >= this._battleMinDurationMs &&
       this._isBattleGroupP2Drifted(racers)
     ) {
-      this._lastBattleExitTs = ts;
-      this._battleLockedRacer = null;
-      this._battleLockedRacerIndex = null;
-      this._battleGroupRacers = [];
-      this._battleGroupRacerIndices = [];
-      this._battleLockT = null;
-      this._transition(racers, ts, raceState);
+      this._exitBattle(ts, racers, raceState);
       _diagTransitioned = true;
     }
     // Early LEAD_CHANGE interrupt: confirmed leader change while in LEADER_ZOOM.
@@ -895,7 +674,7 @@ export class CameraDirector {
     // transition target (focusT + lead-ahead offset) instead of snapping to the racer.
     // The pan (offsetX/Y) is then derived directly from _camT each frame — no pixel-space
     // lerp during entry — so the camera travels along the track curve rather than taking
-    // the euklidisch shortcut through the infield (see camera-pan-path-diagnosis.md).
+    // the euclidean shortcut through the infield (see camera-pan-path-diagnosis.md).
     if (
       this._lerpPhase === 'entry' &&
       this._camT !== null &&
@@ -1084,64 +863,62 @@ export class CameraDirector {
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
-  _transition(racers, ts, raceState) {
-    const prevState = this.state;
-    const prevEnteredAt = this.stateEnteredAt;
-
-    // Record exit timestamps for per-state cooldowns
-    if (prevState === CAM_STATE.OVERVIEW) {
-      this._lastOverviewExitTs = ts;
-    }
-    if (prevState === CAM_STATE.COMEBACK_ZOOM) {
-      this._lastComebackExitTs = ts;
-    }
-    if (prevState === CAM_STATE.LEAD_CHANGE) {
-      this._lastLeadChangeExitTs = ts;
-    }
-
+  /**
+   * Priority chain: determines the next camera state given current race context.
+   * Returns { nextState, reason, data } or null when the transition should be suppressed
+   * (finish-mode lock, or drama still active).
+   * Side effects: may mutate finish-mode flags and schedule next OVERVIEW.
+   * Does NOT mutate _comebackLockedRacer — that is handled by the caller via data.comebackRacer.
+   */
+  _pickNextState(racers, ts, raceState) {
     const ordered = [...racers].sort((a, b) => b.t - a.t);
     const leader = ordered[0];
     const leaderProgress = leader && raceState.finishT > 0 ? leader.t / raceState.finishT : 0;
-    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
     // Pulk condition: ≥3 of top-10 within battlePulkThresholdPx of each other.
     // Hysteresis is provided by battleMinDurationMs (state stays active once entered).
     const hasBattle = this._isPulk(racers);
     const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
 
-    // Determine next state via priority chain
-    let nextState;
-    let reason;
-
     // Priority 1: Finish override — drama pulse on first finish, then FINISH_OVERVIEW mode
     if (raceState.finishedCount > 0) {
-      if (this._inFinishMode) {
-        return; // finishMode is absolute — no further transitions allowed
-      }
+      if (this._inFinishMode) return null; // finishMode is absolute — no further transitions allowed
       if (this._finishMomentExpiry === null) {
         this._finishMomentExpiry = ts + this._finishDramaDurationMs;
         this._inFinishDrama = true;
-        nextState = CAM_STATE.LEADER_ZOOM;
-        reason = 'finish: drama pulse on first finish';
+        return {
+          nextState: CAM_STATE.LEADER_ZOOM,
+          reason: 'finish: drama pulse on first finish',
+          data: {},
+        };
       } else if (ts >= this._finishMomentExpiry) {
         this._inFinishDrama = false;
         this._inFinishMode = true;
         this._finishModeStartTs = ts;
-        nextState = CAM_STATE.OVERVIEW;
-        reason = 'finish: drama expired → FINISH_OVERVIEW';
+        return {
+          nextState: CAM_STATE.OVERVIEW,
+          reason: 'finish: drama expired → FINISH_OVERVIEW',
+          data: {},
+        };
       } else {
-        return; // drama still active, no state change
+        return null; // drama still active, no state change
       }
     }
     // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
     else if (raceState.raceElapsed < START_PHASE_DURATION) {
-      nextState = CAM_STATE.OVERVIEW;
-      reason = 'start-phase: raceElapsed < 3000ms';
+      return {
+        nextState: CAM_STATE.OVERVIEW,
+        reason: 'start-phase: raceElapsed < 3000ms',
+        data: {},
+      };
     }
     // Priority 2.1: Post-start hold — force LEADER for postStartHoldMs after start phase.
     // Prevents BATTLE from firing on natural cluster gaps at race start.
     else if (raceState.raceElapsed < START_PHASE_DURATION + this._postStartHoldMs) {
-      nextState = CAM_STATE.LEADER_ZOOM;
-      reason = `post-start-hold: raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s`;
+      return {
+        nextState: CAM_STATE.LEADER_ZOOM,
+        reason: `post-start-hold: raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s`,
+        data: {},
+      };
     }
     // Priority 2.5: Endgame — leader past threshold → LEADER, bypasses cooldown.
     // Exception: LEAD_CHANGE is allowed through — a lead swap near the finish line
@@ -1149,11 +926,17 @@ export class CameraDirector {
     else if (leaderProgress > this._endgameThreshold) {
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
       if (this._leadChangePending && lcCooledDown) {
-        nextState = CAM_STATE.LEAD_CHANGE;
-        reason = `lead-change: endgame exception (progress=${leaderProgress.toFixed(2)})`;
+        return {
+          nextState: CAM_STATE.LEAD_CHANGE,
+          reason: `lead-change: endgame exception (progress=${leaderProgress.toFixed(2)})`,
+          data: {},
+        };
       } else {
-        nextState = CAM_STATE.LEADER_ZOOM;
-        reason = `endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`;
+        return {
+          nextState: CAM_STATE.LEADER_ZOOM,
+          reason: `endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`,
+          data: {},
+        };
       }
     }
     // Candidate pool: weighted random selection from all currently eligible events
@@ -1202,19 +985,49 @@ export class CameraDirector {
 
       const pick = this._weightedRandomPick(candidates);
       if (pick) {
-        nextState = pick.state;
-        reason = pick.reason;
-        if (pick.state === CAM_STATE.COMEBACK_ZOOM && pick.data?.comebackRacer) {
-          this._comebackLockedRacer = pick.data.comebackRacer;
-          this._comebackLockedRacerIndex = pick.data.comebackRacer.index ?? null;
-        }
         if (pick.state === CAM_STATE.OVERVIEW) {
           this._scheduleNextOverview(ts, raceState, leader);
         }
+        return { nextState: pick.state, reason: pick.reason, data: pick.data ?? {} };
       } else {
-        nextState = CAM_STATE.LEADER_ZOOM;
-        reason = 'leader: default (no active candidates)';
+        return {
+          nextState: CAM_STATE.LEADER_ZOOM,
+          reason: 'leader: default (no active candidates)',
+          data: {},
+        };
       }
+    }
+  }
+
+  _transition(racers, ts, raceState) {
+    const prevState = this.state;
+    const prevEnteredAt = this.stateEnteredAt;
+
+    // Record exit timestamps for per-state cooldowns
+    if (prevState === CAM_STATE.OVERVIEW) {
+      this._lastOverviewExitTs = ts;
+    }
+    if (prevState === CAM_STATE.COMEBACK_ZOOM) {
+      this._lastComebackExitTs = ts;
+    }
+    if (prevState === CAM_STATE.LEAD_CHANGE) {
+      this._lastLeadChangeExitTs = ts;
+    }
+
+    const ordered = [...racers].sort((a, b) => b.t - a.t);
+    const leaderProgress =
+      ordered[0] && raceState.finishT > 0 ? ordered[0].t / raceState.finishT : 0;
+    const gap01 = ordered.length >= 2 ? Math.abs(ordered[0].t - ordered[1].t) : 0;
+
+    const picked = this._pickNextState(racers, ts, raceState);
+    if (picked === null) return;
+
+    const { nextState, reason, data } = picked;
+
+    // Commit COMEBACK camera lock — received via data from _pickNextState
+    if (nextState === CAM_STATE.COMEBACK_ZOOM && data.comebackRacer) {
+      this._comebackLockedRacer = data.comebackRacer;
+      this._comebackLockedRacerIndex = data.comebackRacer.index ?? null;
     }
 
     // Commit state transition
@@ -1528,6 +1341,17 @@ export class CameraDirector {
    */
   _isPulk(racers) {
     return this._detectPulkGroup(racers) !== null;
+  }
+
+  /** Clears all BATTLE lock state and triggers a transition out of BATTLE_ZOOM. */
+  _exitBattle(ts, racers, raceState) {
+    this._lastBattleExitTs = ts;
+    this._battleLockedRacer = null;
+    this._battleLockedRacerIndex = null;
+    this._battleGroupRacers = [];
+    this._battleGroupRacerIndices = [];
+    this._battleLockT = null;
+    this._transition(racers, ts, raceState);
   }
 
   /**
@@ -2180,377 +2004,12 @@ export class CameraDirector {
     return this._finishPauseMs;
   }
 
-  /**
-   * Checks whether the entry-time battle group (_battleGroupRacers) still satisfies all three
-   * BATTLE conditions with current racer positions (spatial, temporal, positional span ≤ 3).
-   * Returns false when the group is empty, any member is not found in racers, or any condition fails.
-   * @param {Array} racers  Full live racer list.
-   * @returns {boolean}
-   */
-  _isEntryGroupStillValid(racers) {
-    if (!this._battleGroupRacers?.length || this._battleGroupRacers.length < 3 || !racers)
-      return false;
-    const group = this._findGroupRacers(racers);
-    if (group.length < 3) return false;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    // group members come from the same racers array, so === identity holds here
-    const indices = group.map((gr) => sorted.findIndex((r) => r === gr));
-    if (indices.some((idx) => idx === -1)) return false;
-    const minIdx = Math.min(...indices);
-    const maxIdx = Math.max(...indices);
-    // Positional: frontmost at rank 3+ (index ≥ 2) AND rank span ≤ 3
-    if (minIdx < 2 || maxIdx - minIdx > 3) return false;
-    // Temporal + spatial: check all pairs (same thresholds as _detectPulkGroup)
-    const thr2 = this._battlePulkThresholdPx * this._battlePulkThresholdPx;
-    const tThr = this._battlePulkThresholdT;
-    for (let a = 0; a < group.length; a++) {
-      for (let b = a + 1; b < group.length; b++) {
-        const ra = group[a],
-          rb = group[b];
-        if (Math.abs(ra.t - rb.t) > tThr) return false;
-        if ((ra.x - rb.x) ** 2 + (ra.y - rb.y) ** 2 >= thr2) return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Live BATTLE diagnostics for the DevPanel BattleDiagHUD.
-   * @returns {{
-   *   active: boolean,
-   *   lockedRacer: object|null,
-   *   groupRacers: object[],
-   *   groupRacerRanks: (number|null)[],
-   *   originalGroupValid: boolean,
-   *   currentGroupRacers: object[],
-   *   isPulkNow: boolean
-   * }}
-   */
-  getBattleDiagData(racers) {
-    const currentGroup = racers ? this._detectPulkGroup(racers) : null;
-    const groupRacers = racers ? this._findGroupRacers(racers) : (this._battleGroupRacers ?? []);
-    let groupRacerRanks = [];
-    if (racers && groupRacers.length > 0) {
-      const sorted = [...racers].sort((a, b) => b.t - a.t);
-      groupRacerRanks = groupRacers.map((gr) => {
-        const idx = sorted.findIndex((r) => r === gr);
-        return idx === -1 ? null : idx + 1;
-      });
-    }
-    const lockedRacer = racers
-      ? this._findByIndex(racers, this._battleLockedRacerIndex, this._battleLockedRacer)
-      : this._battleLockedRacer;
-
-    // Pairwise spatial/temporal distances for the entry group (live positions).
-    const groupPairwiseSpatial = [];
-    const groupPairwiseTemporal = [];
-    for (let a = 0; a < groupRacers.length; a++) {
-      for (let b = a + 1; b < groupRacers.length; b++) {
-        const ra = groupRacers[a],
-          rb = groupRacers[b];
-        const nameA = ra?.name ?? ra?.id ?? '?';
-        const nameB = rb?.name ?? rb?.id ?? '?';
-        if (ra && rb) {
-          const dist = Math.round(Math.sqrt((ra.x - rb.x) ** 2 + (ra.y - rb.y) ** 2));
-          const dt = +Math.abs(ra.t - rb.t).toFixed(4);
-          groupPairwiseSpatial.push({ a: nameA, b: nameB, dist });
-          groupPairwiseTemporal.push({ a: nameA, b: nameB, dt });
-        }
-      }
-    }
-
-    // Q1: isolation check for DiagHUD display
-    let isGroupIsolated = true;
-    if (racers && groupRacers.length > 0 && this._battleIsolationThresholdPx > 0) {
-      const isoThr2 = this._battleIsolationThresholdPx * this._battleIsolationThresholdPx;
-      const groupSet = new Set(groupRacers.map((r) => r));
-      for (const ro of racers) {
-        if (groupSet.has(ro)) continue;
-        for (const gm of groupRacers) {
-          if ((gm.x - ro.x) ** 2 + (gm.y - ro.y) ** 2 < isoThr2) {
-            isGroupIsolated = false;
-            break;
-          }
-        }
-        if (!isGroupIsolated) break;
-      }
-    }
-
-    return {
-      active: this.state === CAM_STATE.BATTLE_ZOOM,
-      lockedRacer,
-      groupRacers,
-      groupRacerRanks,
-      groupSize: groupRacers.length,
-      originalGroupValid: racers ? this._isOriginalGroupStillValid(racers) : false,
-      currentGroupRacers: currentGroup ?? [],
-      isPulkNow: currentGroup !== null,
-      isGroupIsolated,
-      isolationThresholdPx: this._battleIsolationThresholdPx,
-      groupPairwiseSpatial,
-      groupPairwiseTemporal,
-      spatialThreshold: this._battlePulkThresholdPx,
-      temporalThreshold: this._battlePulkThresholdT,
-    };
-  }
-
-  /** TC (seconds) for the current state — readable by the diagnostics HUD. */
-  get currentTc() {
-    return this._tcByState?.[this.state] ?? this._tcOverview;
-  }
-
-  /** Current lerp phase: 'entry' (slow, smooth) or 'tracking' (fast, sticky). */
-  get lerpPhase() {
-    return this._lerpPhase;
-  }
-
-  /** Camera's current track parameter. Null until first state transition with a shape. */
-  get camT() {
-    return this._camT;
-  }
-
   /** Stable index of the racer locked during COMEBACK_ZOOM. Null when not in COMEBACK_ZOOM. */
   get comebackLockedRacerIndex() {
     return this._comebackLockedRacerIndex;
   }
-
-  /** Current observer phase: 'idle' | 'lead-in' | 'follow' | 'lead-out'. */
-  get observerPhase() {
-    return this._observerPhase;
-  }
-
-  /** Last computed focus-racer t value (informational, for HUD). */
-  get lastFocusT() {
-    return this._lastFocusT;
-  }
-
-  /** Fraction of the last 60 frames spent in 'follow' phase (0.0–1.0). */
-  get followPct() {
-    let count = 0;
-    for (let i = 0; i < 60; i++) count += this._followRingBuf[i];
-    const total = Math.min(this._followRingIdx, 60);
-    return total > 0 ? count / total : 0;
-  }
-
-  /** True when zoom has not yet converged to its target (within 0.1%). */
-  get transitioning() {
-    return Math.abs(this.zoom - this.targetZoom) > this.targetZoom * 0.001;
-  }
-
-  /**
-   * 0–1 fraction of pan travel completed since the last state transition.
-   * Returns 1 when at rest or when start equals target (no movement needed).
-   */
-  get panProgress() {
-    const dx = this.targetOffsetX - this._transitionStartOffsetX;
-    const dy = this.targetOffsetY - this._transitionStartOffsetY;
-    const total = Math.sqrt(dx * dx + dy * dy);
-    if (total < 0.5) return 1;
-    const cx = this.offsetX - this._transitionStartOffsetX;
-    const cy = this.offsetY - this._transitionStartOffsetY;
-    return Math.min(1, Math.sqrt(cx * cx + cy * cy) / total);
-  }
-
-  /**
-   * 0–1 fraction of zoom travel completed since the last state transition.
-   * Returns 1 when at rest or when start equals target.
-   */
-  get zoomProgress() {
-    const total = Math.abs(this.targetZoom - this._transitionStartZoom);
-    if (total < 0.0001) return 1;
-    return Math.min(1, Math.abs(this.zoom - this._transitionStartZoom) / total);
-  }
-
-  /** Whether the last pan-resolved target landed inside the inner frame. */
-  get targetInFrame() {
-    return this._lastResolvedPanTarget?.targetInInnerFrame ?? true;
-  }
-
-  /** How many times _transition() was called in the last 60 frames. */
-  get transitionCount60f() {
-    let count = 0;
-    for (let i = 0; i < 60; i++) count += this._transitionRingBuf[i];
-    return count;
-  }
-
-  /** Zoom delta at the last entry-phase convergence check (0 while tracking). */
-  get lastEntryDeltaZoom() {
-    return this._lastEntryDeltaZoom;
-  }
-
-  /** X pan delta in px at the last entry-phase convergence check (0 while tracking). */
-  get lastEntryDeltaX() {
-    return this._lastEntryDeltaX;
-  }
-
-  /** Y pan delta in px at the last entry-phase convergence check (0 while tracking). */
-  get lastEntryDeltaY() {
-    return this._lastEntryDeltaY;
-  }
-
-  /** Ms elapsed since the current entry phase started (0 when tracking). */
-  get entryElapsedMs() {
-    if (this._lerpPhase !== 'entry' || this._entryStartTs === null) return 0;
-    return (this._lastTs ?? 0) - this._entryStartTs;
-  }
-
-  /** BATTLE-DIAG: snapshots at frames 1, 15, 30, 45, 60 of the current BATTLE_ZOOM episode. */
-  get battleDiagSnapshots() {
-    return this._battleDiagSnapshots;
-  }
-
-  /** True once 60 frames have been collected and the BATTLE-DIAG panel is frozen. */
-  get battleDiagFrozen() {
-    return this._battleDiagFrozen;
-  }
-
-  /** Reset the BATTLE-DIAG snapshot panel (called from HUD 'R' key). */
-  resetBattleDiag() {
-    this._battleDiagFrameCount = 0;
-    this._battleDiagSnapshots = [];
-    this._battleDiagFrozen = false;
-  }
-
-  // ── Frame-log diagnostics ─────────────────────────────────────────────────
-
-  /** Whether frame logging is currently active. */
-  get diagEnabled() {
-    return this._diagEnabled;
-  }
-
-  /** Total frames recorded since construction (monotonic, never resets). */
-  get diagFrameCount() {
-    return this._diagFrameIdx;
-  }
-
-  /**
-   * Record one frame into the ring buffer. Called at the very end of update()
-   * when _diagEnabled is true. The final offsetX/Y/zoom values are already set.
-   */
-  _recordDiagFrame(ts, dt, lf, tSpaceLerpActive, transitionFired, racers) {
-    const dox = this._diagPrevOffsetX !== null ? this.offsetX - this._diagPrevOffsetX : 0;
-    const doy = this._diagPrevOffsetY !== null ? this.offsetY - this._diagPrevOffsetY : 0;
-    const dz = this._diagPrevZoom !== null ? this.zoom - this._diagPrevZoom : 0;
-    this._diagRingBuf[this._diagRingIdx] = {
-      fi: this._diagFrameIdx,
-      ts,
-      dt,
-      st: this.state,
-      lp: this._lerpPhase,
-      op: this._observerPhase,
-      ox: this.offsetX,
-      oy: this.offsetY,
-      z: this.zoom,
-      tax: this.targetOffsetX,
-      tay: this.targetOffsetY,
-      tz: this.targetZoom,
-      dox,
-      doy,
-      dz,
-      lf,
-      ts2: tSpaceLerpActive ? 1 : 0,
-      tf: transitionFired ? 1 : 0,
-      ct: this._camT,
-      fot: this._lastFocusT,
-      pft: this._diagPrevFocusT,
-      ttt: this._transitionTargetT,
-      ese: this._entrySpeedEstimate,
-      edx: this._lastEntryDeltaX,
-      edy: this._lastEntryDeltaY,
-      edz: this._lastEntryDeltaZoom,
-      cr: this._diagConvergenceReason,
-      rc: racers
-        ? racers.map((r) => ({
-            n: r.name ?? r.id ?? '?',
-            t: typeof r.t === 'number' ? +r.t.toFixed(6) : r.t,
-            x: typeof r.x === 'number' ? +r.x.toFixed(2) : r.x,
-            y: typeof r.y === 'number' ? +r.y.toFixed(2) : r.y,
-            dx: typeof r._diagDx === 'number' ? +r._diagDx.toFixed(3) : 0,
-            dy: typeof r._diagDy === 'number' ? +r._diagDy.toFixed(3) : 0,
-            dt: typeof r._diagLogPrevT === 'number' ? +(r.t - r._diagLogPrevT).toFixed(6) : 0,
-            sp: typeof r._diagSpeed === 'number' ? +r._diagSpeed.toFixed(3) : 0,
-          }))
-        : undefined,
-    };
-    this._diagConvergenceReason = null; // consumed — only set on the transition frame
-    this._diagPrevOffsetX = this.offsetX;
-    this._diagPrevOffsetY = this.offsetY;
-    this._diagPrevZoom = this.zoom;
-    this._diagRingIdx = (this._diagRingIdx + 1) % DIAG_RING_SIZE;
-    this._diagFrameIdx++;
-  }
-
-  /**
-   * Serialise the ring buffer to a self-documented JSON string.
-   * Frames are returned in chronological order (oldest first).
-   * @returns {string}  JSON ready for file download or clipboard paste.
-   */
-  exportDiagLog() {
-    const buffered = Math.min(this._diagFrameIdx, DIAG_RING_SIZE);
-    // When the buffer has wrapped, the oldest entry is at the current write head.
-    const startIdx = this._diagFrameIdx >= DIAG_RING_SIZE ? this._diagRingIdx : 0;
-    const frames = [];
-    for (let i = 0; i < buffered; i++) {
-      frames.push(this._diagRingBuf[(startIdx + i) % DIAG_RING_SIZE]);
-    }
-    return JSON.stringify(
-      {
-        meta: {
-          exportedAt: new Date().toISOString(),
-          totalFrames: this._diagFrameIdx,
-          bufferedFrames: buffered,
-          ringSize: DIAG_RING_SIZE,
-          fieldLegend: {
-            fi: 'frameIndex (monotonic)',
-            ts: 'timestamp ms',
-            dt: 'frame duration ms',
-            st: 'camState',
-            lp: 'lerpPhase: entry|tracking',
-            op: 'observerPhase: idle|lead-in|follow|lead-out',
-            ox: 'offsetX px',
-            oy: 'offsetY px',
-            z: 'zoom',
-            tax: 'targetOffsetX px',
-            tay: 'targetOffsetY px',
-            tz: 'targetZoom',
-            dox: 'deltaOffsetX from previous frame (px) — key jitter metric',
-            doy: 'deltaOffsetY from previous frame (px)',
-            dz: 'deltaZoom from previous frame',
-            lf: 'lerp factor used this frame (dt-scaled)',
-            ts2: 'tSpaceLerpActive: 1=T-space pin, 0=pixel lerp',
-            tf: 'transitionFired this frame: 1=yes',
-            ct: 'camT (track param 0–1, null if not in T-space)',
-            fot: 'lastFocusT — focus racer track param this frame',
-            pft: 'prevFocusT before this frame (null after state change)',
-            ttt: 'transitionTargetT (T-space convergence goal, null when tracking)',
-            ese: 'entrySpeedEstimate in T/frame',
-            edx: 'entryConvergence deltaX px (0 when tracking)',
-            edy: 'entryConvergence deltaY px (0 when tracking)',
-            edz: 'entryConvergence deltaZoom (0 when tracking)',
-            cr: 'convergenceReason: "threshold"|"timeout" on entry→tracking frame, null otherwise',
-            rc: 'racers snapshot — array of {n,t,x,y,dx,dy,dt,sp} per racer: n=name, t=path-progress 0–1, x/y=world-px, dx/dy=Δpx from prev frame, dt=Δt from prev frame, sp=pixel-speed',
-          },
-        },
-        frames,
-      },
-      null,
-      0
-    );
-  }
-
-  /**
-   * Returns the last N frames' {dox, doy, tf} from the ring buffer, newest-last.
-   * Used by the mini jitter graph overlay.
-   * @param {number} [n=30]
-   */
-  getRecentDeltas(n = 30) {
-    const size = Math.min(this._diagFrameIdx, DIAG_RING_SIZE, n);
-    const result = [];
-    const newestIdx = (this._diagRingIdx - 1 + DIAG_RING_SIZE) % DIAG_RING_SIZE;
-    for (let i = size - 1; i >= 0; i--) {
-      const entry = this._diagRingBuf[(newestIdx - i + DIAG_RING_SIZE) % DIAG_RING_SIZE];
-      if (entry) result.push({ dox: entry.dox, doy: entry.doy, tf: entry.tf });
-    }
-    return result;
-  }
 }
+
+// Install diagnostics methods and getters via mixin (CameraDirectorDiag.js does not import from
+// this file, so there is no circular dependency).
+Object.defineProperties(CameraDirector.prototype, Object.getOwnPropertyDescriptors(diagMixin));

@@ -13,7 +13,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
   })),
@@ -29,7 +29,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
   },
@@ -50,7 +50,7 @@ function freshConfig(overrides = {}) {
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.1,
+
     maxStateDuration: 4000,
     endgameThreshold: 0.85,
     ...overrides,
@@ -125,17 +125,6 @@ describe('SpriteSizeRangeSection — reset (L58: start from non-default values)'
     fireEvent.click(screen.getByTestId('reset-sprite-size-cap'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({ cameraStateProfiles: customProfiles })
-    );
-  });
-
-  it('reset does NOT change battleGapThreshold', () => {
-    loadCameraConfig.mockReturnValue(
-      freshConfig({ maxTargetScreenPx: 200, battleGapThreshold: 0.05 })
-    );
-    render(<SpriteSizeRangeSection />);
-    fireEvent.click(screen.getByTestId('reset-sprite-size-cap'));
-    expect(saveCameraConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ battleGapThreshold: 0.05 })
     );
   });
 });

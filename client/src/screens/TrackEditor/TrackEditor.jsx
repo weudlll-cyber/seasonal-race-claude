@@ -1,29 +1,19 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
-import { listTracks, getTrack, deleteTrack } from '../../modules/track-editor/trackStorage.js';
+import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { findPointAtPosition, findSegmentNearPoint } from './trackEditorHelpers.js';
 import { drawStaticScene } from './trackEditorDraw.js';
-import {
-  buildTrackFromEditorState,
-  validateEditorState,
-  extractEffects,
-  extractTrackLights,
-} from './trackEditorSave.js';
+import { extractEffects, extractTrackLights } from './trackEditorSave.js';
 import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';
 import { useHistory } from './useHistory.js';
+import { useViewport } from './useViewport.js';
+import { useTrackIO } from './useTrackIO.js';
+import { API_BASE_URL } from '../../services/api.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
-import { cacheTrackGeometry, removeCachedTrackData } from '../../modules/storage/trackLoader.js';
-import {
-  createTrackOnServer,
-  updateTrackOnServer,
-  deleteTrackFromServer,
-  uploadTrackBackground,
-  removeTrackBackground,
-} from '../../services/trackApi.js';
-import { API_BASE_URL } from '../../services/api.js';
-import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
+import TrackEditorToolbar from './TrackEditorToolbar.jsx';
+import TrackEditorSaveBar from './TrackEditorSaveBar.jsx';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
@@ -56,13 +46,24 @@ export default function TrackEditor() {
   const hasDraggedRef = useRef(false);
   const preDragSnapshotRef = useRef(null);
 
-  // ── pan tracking refs ─────────────────────────────────────────────────────
-  const isPanningRef = useRef(false);
-  const panStartRef = useRef({ screenX: 0, screenY: 0, panX: 0, panY: 0 });
-  const didPanRef = useRef(false);
-
-  // ── viewport transform ref (always-current, used in wheel + rAF) ─────────
-  const viewTransformRef = useRef({ zoom: 1.0, panX: 0, panY: 0, worldW: 1280, worldH: 720 });
+  // ── viewport (zoom, pan, world size) ─────────────────────────────────────
+  const {
+    viewZoom,
+    viewPanX,
+    viewPanY,
+    editorWorldW,
+    editorWorldH,
+    viewTransformRef,
+    isPanningRef,
+    panStartRef,
+    didPanRef,
+    setViewPanX,
+    setViewPanY,
+    handleFitToScreen,
+    getCanvasCoords,
+    setWorldSize,
+    resetViewport,
+  } = useViewport(canvasRef);
 
   // ── effect preview refs ────────────────────────────────────────────────────
   const effectInstanceRef = useRef(null);
@@ -97,31 +98,30 @@ export default function TrackEditor() {
   const [effects, setEffects] = useState([]);
   const [trackLights, setTrackLights] = useState(DEFAULT_TRACK_LIGHTS);
 
-  // ── viewport state ────────────────────────────────────────────────────────
-  const [viewZoom, setViewZoom] = useState(1.0);
-  const [viewPanX, setViewPanX] = useState(0);
-  const [viewPanY, setViewPanY] = useState(0);
-  const [editorWorldW, setEditorWorldW] = useState(1280);
-  const [editorWorldH, setEditorWorldH] = useState(720);
+  // ── server I/O (save / load / delete) ────────────────────────────────────
+  const {
+    loadedGeometryId,
+    setLoadedGeometryId,
+    loadedServerId,
+    setLoadedServerId,
+    localTracks,
+    saveLabel,
+    isSaving,
+    serverError,
+    setServerError,
+    handleSave: _ioHandleSave,
+    handleRemoveBackground: _ioHandleRemoveBg,
+    handleDelete: _ioHandleDelete,
+  } = useTrackIO({ serverTracksCtl, saveTimerRef });
 
   // ── non-versioned state ───────────────────────────────────────────────────
   const [bgReady, setBgReady] = useState(false);
   const [selectedPointIndex, setSelectedPointIndex] = useState(-1);
   const [isDragging, setIsDragging] = useState(false);
-  // loadedGeometryId — geometry ID in localStorage cache (null for unsaved new tracks)
-  const [loadedGeometryId, setLoadedGeometryId] = useState(null);
-  // loadedServerId — server track ID (null for local/new tracks; set after first server save)
-  const [loadedServerId, setLoadedServerId] = useState(null);
-  // localTracks — localStorage-only tracks (for Load dropdown; refreshed after save/delete)
-  const [localTracks, setLocalTracks] = useState(() => listTracks());
-  const [saveLabel, setSaveLabel] = useState('Save');
-  const [isSaving, setIsSaving] = useState(false);
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
-  // serverError — shown when server is unreachable, with Retry button
-  const [serverError, setServerError] = useState(null);
   // backgroundFile — set when user picks a new local image; cleared after upload
   const [backgroundFile, setBackgroundFile] = useState(null);
 
@@ -135,17 +135,6 @@ export default function TrackEditor() {
       ...serverTracksCtl.tracks.map((t) => ({ id: t.geometryId, name: t.name, serverId: t.id })),
     ];
   }, [localTracks, serverTracksCtl.tracks]);
-
-  // ── keep viewTransformRef in sync with state ──────────────────────────────
-  useEffect(() => {
-    viewTransformRef.current = {
-      zoom: viewZoom,
-      panX: viewPanX,
-      panY: viewPanY,
-      worldW: editorWorldW,
-      worldH: editorWorldH,
-    };
-  }, [viewZoom, viewPanX, viewPanY, editorWorldW, editorWorldH]);
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -368,47 +357,6 @@ export default function TrackEditor() {
     };
   }, []);
 
-  // Wheel zoom-to-cursor — uses { passive: false } so we can preventDefault
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const canvasX = (e.clientX - rect.left) * (CW / rect.width);
-    const canvasY = (e.clientY - rect.top) * (CH / rect.height);
-
-    const { zoom, panX, panY, worldW, worldH } = viewTransformRef.current;
-    const bsX = CW / worldW;
-    const bsY = CH / worldH;
-
-    // World coordinate currently under the cursor
-    const worldX = canvasX / (zoom * bsX) + panX;
-    const worldY = canvasY / (zoom * bsY) + panY;
-
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    const newZoom = Math.max(0.1, Math.min(10, zoom * factor));
-
-    // Reposition pan so the world point under cursor stays fixed
-    const newPanX = worldX - canvasX / (newZoom * bsX);
-    const newPanY = worldY - canvasY / (newZoom * bsY);
-
-    // Update ref immediately (rAF loop reads this)
-    viewTransformRef.current.zoom = newZoom;
-    viewTransformRef.current.panX = newPanX;
-    viewTransformRef.current.panY = newPanY;
-
-    setViewZoom(newZoom);
-    setViewPanX(newPanX);
-    setViewPanY(newPanY);
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
-
   // Canvas render effect — mirrors state into renderStateRef and draws with viewport transform.
   useEffect(() => {
     renderStateRef.current = {
@@ -519,23 +467,6 @@ export default function TrackEditor() {
       lastTimeRef.current = null;
     };
   }, [effectsJson]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── canvas coordinate helpers ─────────────────────────────────────────────
-
-  function getCanvasCoords(e) {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    const canvasX = (e.clientX - rect.left) * (CW / rect.width);
-    const canvasY = (e.clientY - rect.top) * (CH / rect.height);
-    const { zoom, panX, panY, worldW, worldH } = viewTransformRef.current;
-    const bsX = CW / worldW;
-    const bsY = CH / worldH;
-    return {
-      x: Math.round(canvasX / (zoom * bsX) + panX),
-      y: Math.round(canvasY / (zoom * bsY) + panY),
-    };
-  }
 
   // ── pointer handlers ──────────────────────────────────────────────────────
 
@@ -724,17 +655,6 @@ export default function TrackEditor() {
     markDirty();
   }
 
-  // ── viewport helpers ──────────────────────────────────────────────────────
-
-  function handleFitToScreen() {
-    viewTransformRef.current.zoom = 1.0;
-    viewTransformRef.current.panX = 0;
-    viewTransformRef.current.panY = 0;
-    setViewZoom(1.0);
-    setViewPanX(0);
-    setViewPanY(0);
-  }
-
   // ── effect config ─────────────────────────────────────────────────────────
 
   function handleEffectsChange(nextEffects) {
@@ -811,10 +731,7 @@ export default function TrackEditor() {
         setBgUploadError(null);
         pushHistory(getSnapshot());
         setBackgroundImage(dataUrl);
-        setEditorWorldW(w);
-        setEditorWorldH(h);
-        viewTransformRef.current.worldW = w;
-        viewTransformRef.current.worldH = h;
+        setWorldSize(w, h);
         markDirty();
       };
       img.onerror = () => setBgUploadError('Image could not be loaded.');
@@ -845,18 +762,7 @@ export default function TrackEditor() {
     setServerError(null);
     resetHistory();
 
-    const ww = track.worldWidth ?? 1280;
-    const wh = track.worldHeight ?? 720;
-    setEditorWorldW(ww);
-    setEditorWorldH(wh);
-    viewTransformRef.current.worldW = ww;
-    viewTransformRef.current.worldH = wh;
-    viewTransformRef.current.zoom = 1.0;
-    viewTransformRef.current.panX = 0;
-    viewTransformRef.current.panY = 0;
-    setViewZoom(1.0);
-    setViewPanX(0);
-    setViewPanY(0);
+    resetViewport(track.worldWidth ?? 1280, track.worldHeight ?? 720);
 
     if (track.sourceMode === 'center') {
       setMode('center');
@@ -875,86 +781,29 @@ export default function TrackEditor() {
   }
 
   async function handleSave() {
-    setSaveAttempted(true);
-    // In load mode the track already exists — background is optional for a geometry-only edit.
-    if (loadedServerId === null && !backgroundImage && !backgroundFile) {
-      setSaveError('Background image is required. Please upload an image first.');
-      return;
-    }
-    const error = validateEditorState({
+    await _ioHandleSave({
       mode,
       centerPoints,
+      centerWidth,
       innerPoints,
       outerPoints,
       closed,
-      name: trackName.trim(),
-    });
-    if (error) {
-      setSaveError(error.message);
-      return;
-    }
-    setSaveError(null);
-    setServerError(null);
-    setIsSaving(true);
-
-    try {
-      // Build geometry — strip backgroundImage from JSON sent to server
-      const { backgroundImage: _bgUrl, ...trackJson } = buildTrackFromEditorState({
-        mode,
-        centerPoints,
-        centerWidth,
-        innerPoints,
-        outerPoints,
-        closed,
-        name: trackName.trim(),
-        backgroundImage,
-        effects,
-        trackLights,
-        worldWidth: editorWorldW,
-        worldHeight: editorWorldH,
-      });
-
-      let savedServerId = loadedServerId;
-      let savedGeometryId = loadedGeometryId;
-
-      if (savedServerId) {
-        // For first-time geometry save (loadedGeometryId is null), generate a new geometry ID
-        // and include it in the PUT body so the server stores the link.
-        const geometryIdForBody = savedGeometryId ?? `custom-${crypto.randomUUID()}`;
-        await updateTrackOnServer(savedServerId, { ...trackJson, geometryId: geometryIdForBody });
-        if (!savedGeometryId) {
-          savedGeometryId = geometryIdForBody;
-          setLoadedGeometryId(geometryIdForBody);
-        }
-      } else {
-        const created = await createTrackOnServer(trackJson);
-        savedServerId = created.id;
-        savedGeometryId = created.geometryId;
-        setLoadedServerId(created.id);
-        setLoadedGeometryId(created.geometryId);
-      }
-
-      if (backgroundFile) {
-        await uploadTrackBackground(savedServerId, backgroundFile);
+      trackName,
+      backgroundImage,
+      backgroundFile,
+      effects,
+      trackLights,
+      editorWorldW,
+      editorWorldH,
+      setSaveAttempted,
+      setSaveError,
+      setIsDirty,
+      resetHistory,
+      onBgUploaded: (url) => {
+        setBackgroundImage(url);
         setBackgroundFile(null);
-        setBackgroundImage(`${API_BASE_URL}/api/tracks/${savedServerId}/background`);
-      }
-
-      // Refresh geometry cache so race engine / thumbnails see updated data
-      await cacheTrackGeometry({ id: savedServerId, geometryId: savedGeometryId });
-      await serverTracksCtl.refresh();
-      setLocalTracks(listTracks());
-
-      setIsDirty(false);
-      resetHistory();
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      setSaveLabel('Saved ✓');
-      saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
-    } catch (err) {
-      setServerError(err.message || 'Server nicht erreichbar.');
-    } finally {
-      setIsSaving(false);
-    }
+      },
+    });
   }
 
   function handleLoad(e) {
@@ -966,42 +815,12 @@ export default function TrackEditor() {
     loadTrackData(track, entry?.serverId ?? null);
   }
 
-  async function handleRemoveBackground() {
-    if (loadedServerId) {
-      setIsSaving(true);
-      try {
-        await removeTrackBackground(loadedServerId);
-      } catch (err) {
-        setServerError(err.message || 'Background entfernen fehlgeschlagen.');
-        return;
-      } finally {
-        setIsSaving(false);
-      }
-    }
-    setBackgroundImage(null);
-    setBackgroundFile(null);
+  function handleRemoveBackground() {
+    _ioHandleRemoveBg(backgroundFile, setBackgroundImage, setBackgroundFile);
   }
 
-  async function handleDelete() {
-    if (!loadedServerId && !loadedGeometryId) return;
-    if (
-      !window.confirm(
-        `Delete track "${trackName}" and its background image permanently? This cannot be undone.`
-      )
-    )
-      return;
-
-    setIsSaving(true);
-    try {
-      if (loadedServerId) {
-        await deleteTrackFromServer(loadedServerId);
-        removeCachedTrackData(loadedGeometryId, loadedServerId);
-        await serverTracksCtl.refresh();
-      } else if (loadedGeometryId) {
-        deleteTrack(loadedGeometryId);
-      }
-      setLocalTracks(listTracks());
-
+  function handleDelete() {
+    _ioHandleDelete(trackName, () => {
       setCenterPoints([]);
       setInnerPoints([]);
       setOuterPoints([]);
@@ -1010,8 +829,6 @@ export default function TrackEditor() {
       setBackgroundFile(null);
       setBgUploadError(null);
       setEffects([]);
-      setLoadedGeometryId(null);
-      setLoadedServerId(null);
       setBoundarySwitchConfirmed(false);
       setSelectedPointIndex(-1);
       setIsDirty(false);
@@ -1019,11 +836,112 @@ export default function TrackEditor() {
       setSaveError(null);
       setServerError(null);
       resetHistory();
-    } catch (err) {
-      setServerError(err.message || 'Delete fehlgeschlagen.');
-    } finally {
-      setIsSaving(false);
+    });
+  }
+
+  // ── toolbar / save-bar event handlers ────────────────────────────────────
+
+  function handleModeCenterClick() {
+    if (mode === 'center') return;
+    pushHistory(getSnapshot());
+    setMode('center');
+    setSelectedPointIndex(-1);
+    markDirty();
+  }
+
+  function handleBoundaryInnerClick() {
+    if (activeBoundary === 'inner') return;
+    pushHistory(getSnapshot());
+    setActiveBoundary('inner');
+    setSelectedPointIndex(-1);
+  }
+
+  function handleBoundaryOuterClick() {
+    if (activeBoundary === 'outer') return;
+    pushHistory(getSnapshot());
+    setActiveBoundary('outer');
+    setSelectedPointIndex(-1);
+  }
+
+  function handleClosedLoopClick() {
+    if (closed) return;
+    pushHistory(getSnapshot());
+    setClosed(true);
+    markDirty();
+  }
+
+  function handleOpenCourseClick() {
+    if (!closed) return;
+    pushHistory(getSnapshot());
+    setClosed(false);
+    markDirty();
+  }
+
+  function handleWidthChange(value) {
+    if (!sliderHistoryTimerRef.current) {
+      preSliderSnapshotRef.current = getSnapshot();
+    } else {
+      clearTimeout(sliderHistoryTimerRef.current);
     }
+    setCenterWidth(value);
+    markDirty();
+    sliderHistoryTimerRef.current = setTimeout(() => {
+      if (preSliderSnapshotRef.current) {
+        pushHistory(preSliderSnapshotRef.current);
+        preSliderSnapshotRef.current = null;
+      }
+      sliderHistoryTimerRef.current = null;
+    }, SLIDER_DEBOUNCE_MS);
+  }
+
+  function handleWidthBlur() {
+    if (sliderHistoryTimerRef.current) {
+      clearTimeout(sliderHistoryTimerRef.current);
+      sliderHistoryTimerRef.current = null;
+      if (preSliderSnapshotRef.current) {
+        pushHistory(preSliderSnapshotRef.current);
+        preSliderSnapshotRef.current = null;
+      }
+    }
+  }
+
+  function handleLightsStyleChange(value) {
+    pushHistory(getSnapshot());
+    setTrackLights((prev) => ({ ...prev, style: value }));
+    markDirty();
+  }
+
+  function handleNameChange(value) {
+    if (!nameHistoryTimerRef.current) {
+      preNameSnapshotRef.current = getSnapshot();
+    } else {
+      clearTimeout(nameHistoryTimerRef.current);
+    }
+    setTrackName(value);
+    markDirty();
+    nameHistoryTimerRef.current = setTimeout(() => {
+      if (preNameSnapshotRef.current) {
+        pushHistory(preNameSnapshotRef.current);
+        preNameSnapshotRef.current = null;
+      }
+      nameHistoryTimerRef.current = null;
+    }, NAME_DEBOUNCE_MS);
+  }
+
+  function handleNameBlur() {
+    if (nameHistoryTimerRef.current) {
+      clearTimeout(nameHistoryTimerRef.current);
+      nameHistoryTimerRef.current = null;
+      if (preNameSnapshotRef.current) {
+        pushHistory(preNameSnapshotRef.current);
+        preNameSnapshotRef.current = null;
+      }
+    }
+  }
+
+  function handleRetry() {
+    setServerError(null);
+    handleSave();
   }
 
   // ── derived labels ────────────────────────────────────────────────────────
@@ -1063,368 +981,60 @@ export default function TrackEditor() {
         <div className={s.headerCounter}>{counterLabel}</div>
       </div>
 
-      <div className={s.toolbar}>
-        <div className={s.toolbarRow}>
-          <div className={s.modeGroup}>
-            <button
-              className={`${s.modeBtn} ${mode === 'center' ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                if (mode === 'center') return;
-                pushHistory(getSnapshot());
-                setMode('center');
-                setSelectedPointIndex(-1);
-                markDirty();
-              }}
-            >
-              Center
-            </button>
-            <button
-              className={`${s.modeBtn} ${mode === 'boundary' ? s.modeBtnActive : ''}`}
-              onClick={handleSwitchToBoundary}
-            >
-              Boundary
-            </button>
-          </div>
+      <TrackEditorToolbar
+        mode={mode}
+        activeBoundary={activeBoundary}
+        closed={closed}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        centerWidth={centerWidth}
+        editorWorldW={editorWorldW}
+        editorWorldH={editorWorldH}
+        viewZoom={viewZoom}
+        effects={effects}
+        trackLights={trackLights}
+        onModeCenter={handleModeCenterClick}
+        onModeBoundary={handleSwitchToBoundary}
+        onBoundaryInner={handleBoundaryInnerClick}
+        onBoundaryOuter={handleBoundaryOuterClick}
+        onClosedLoop={handleClosedLoopClick}
+        onOpenCourse={handleOpenCourseClick}
+        onReverse={handleReverse}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onWidthChange={handleWidthChange}
+        onWidthBlur={handleWidthBlur}
+        onEffectsChange={handleEffectsChange}
+        onLightsChange={handleTrackLightsChange}
+        onLightsStyleChange={handleLightsStyleChange}
+        onFitToScreen={handleFitToScreen}
+      />
 
-          {mode === 'boundary' && (
-            <div className={s.modeGroup}>
-              <button
-                className={`${s.modeBtn} ${activeBoundary === 'inner' ? s.modeBtnActive : ''}`}
-                onClick={() => {
-                  if (activeBoundary === 'inner') return;
-                  pushHistory(getSnapshot());
-                  setActiveBoundary('inner');
-                  setSelectedPointIndex(-1);
-                }}
-              >
-                Inner
-              </button>
-              <button
-                className={`${s.modeBtn} ${activeBoundary === 'outer' ? s.modeBtnActive : ''}`}
-                onClick={() => {
-                  if (activeBoundary === 'outer') return;
-                  pushHistory(getSnapshot());
-                  setActiveBoundary('outer');
-                  setSelectedPointIndex(-1);
-                }}
-              >
-                Outer
-              </button>
-            </div>
-          )}
-
-          <div className={s.modeGroup}>
-            <button
-              className={`${s.modeBtn} ${closed ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                if (closed) return;
-                pushHistory(getSnapshot());
-                setClosed(true);
-                markDirty();
-              }}
-            >
-              Closed Loop
-            </button>
-            <button
-              className={`${s.modeBtn} ${!closed ? s.modeBtnActive : ''}`}
-              onClick={() => {
-                if (!closed) return;
-                pushHistory(getSnapshot());
-                setClosed(false);
-                markDirty();
-              }}
-            >
-              Open Course
-            </button>
-          </div>
-
-          <button className={s.reverseBtn} disabled={closed} onClick={handleReverse}>
-            Reverse Direction
-          </button>
-
-          <button
-            className={s.historyBtn}
-            disabled={!canUndo}
-            onClick={handleUndo}
-            title="Undo (Ctrl+Z)"
-          >
-            ↶ Undo
-          </button>
-          <button
-            className={s.historyBtn}
-            disabled={!canRedo}
-            onClick={handleRedo}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            ↷ Redo
-          </button>
-        </div>
-
-        {mode === 'center' && (
-          <div className={s.toolbarRow}>
-            <label className={s.sliderLabel}>
-              Lane Width: {centerWidth} px
-              <input
-                type="range"
-                min={20}
-                max={300}
-                step={1}
-                value={centerWidth}
-                className={s.slider}
-                onChange={(e) => {
-                  if (!sliderHistoryTimerRef.current) {
-                    preSliderSnapshotRef.current = getSnapshot();
-                  } else {
-                    clearTimeout(sliderHistoryTimerRef.current);
-                  }
-                  setCenterWidth(Number(e.target.value));
-                  markDirty();
-                  sliderHistoryTimerRef.current = setTimeout(() => {
-                    if (preSliderSnapshotRef.current) {
-                      pushHistory(preSliderSnapshotRef.current);
-                      preSliderSnapshotRef.current = null;
-                    }
-                    sliderHistoryTimerRef.current = null;
-                  }, SLIDER_DEBOUNCE_MS);
-                }}
-                onBlur={() => {
-                  if (sliderHistoryTimerRef.current) {
-                    clearTimeout(sliderHistoryTimerRef.current);
-                    sliderHistoryTimerRef.current = null;
-                    if (preSliderSnapshotRef.current) {
-                      pushHistory(preSliderSnapshotRef.current);
-                      preSliderSnapshotRef.current = null;
-                    }
-                  }
-                }}
-              />
-            </label>
-          </div>
-        )}
-        <div className={s.toolbarRow}>
-          <span className={s.sliderLabel}>Effects:</span>
-          <EffectConfig effects={effects} onChange={handleEffectsChange} max={3} />
-        </div>
-
-        {/* Track Lights */}
-        <div
-          className={s.toolbarRow}
-          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}
-        >
-          <span className={s.sliderLabel} style={{ fontWeight: 600 }}>
-            Track Lights
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
-              Color
-            </label>
-            <input
-              type="color"
-              value={trackLights.color}
-              onChange={(e) => handleTrackLightsChange({ color: e.target.value })}
-              style={{
-                width: 32,
-                height: 24,
-                padding: 0,
-                border: 'none',
-                cursor: 'pointer',
-                background: 'none',
-              }}
-              title="Boundary light color"
-            />
-            <span
-              style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontFamily: 'monospace' }}
-            >
-              {trackLights.color}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)', minWidth: '2.5rem' }}>
-              Style
-            </label>
-            <select
-              data-testid="track-lights-style"
-              value={trackLights.style}
-              onChange={(e) => {
-                pushHistory(getSnapshot());
-                setTrackLights((prev) => ({ ...prev, style: e.target.value }));
-                markDirty();
-              }}
-              style={{ fontSize: '0.8rem' }}
-            >
-              <option value="steady">Steady</option>
-              <option value="sequence">Sequence</option>
-              <option value="sync_pulse">Sync Pulse</option>
-              <option value="random_flash">Random Flash</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label
-              style={{
-                fontSize: '0.78rem',
-                color: 'var(--color-muted)',
-                minWidth: '2.5rem',
-                opacity: trackLights.style === 'steady' ? 0.4 : 1,
-              }}
-            >
-              Speed
-            </label>
-            <input
-              data-testid="track-lights-speed"
-              type="range"
-              min={0.1}
-              max={3.0}
-              step={0.1}
-              value={trackLights.speed}
-              disabled={trackLights.style === 'steady'}
-              onChange={(e) => handleTrackLightsChange({ speed: parseFloat(e.target.value) })}
-              style={{ width: 180 }}
-              title="Animation speed (disabled for Steady)"
-            />
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--color-muted)',
-                minWidth: '2rem',
-                opacity: trackLights.style === 'steady' ? 0.4 : 1,
-              }}
-            >
-              {trackLights.speed.toFixed(1)}×
-            </span>
-          </div>
-        </div>
-
-        {/* Viewport controls */}
-        <div className={s.toolbarRow}>
-          <span className={s.sliderLabel}>
-            Track Size: {editorWorldW}×{editorWorldH} px
-          </span>
-          <button
-            className={s.historyBtn}
-            onClick={handleFitToScreen}
-            title="Reset zoom and pan to fit the full world"
-          >
-            ⊡ Fit
-          </button>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.25rem' }}>
-            {Math.round(viewZoom * 100)}%
-          </span>
-        </div>
-      </div>
-
-      <div className={s.saveBar} ref={saveBarRef}>
-        <div className={s.saveBarRow}>
-          {isLoadMode ? null : (
-            <input
-              type="text"
-              className={`${s.nameInput}${saveAttempted && !trackName.trim() ? ` ${s.nameInputError}` : ''}`}
-              placeholder="Track name…"
-              value={trackName}
-              data-testid="track-name-input"
-              onChange={(e) => {
-                if (!nameHistoryTimerRef.current) {
-                  preNameSnapshotRef.current = getSnapshot();
-                } else {
-                  clearTimeout(nameHistoryTimerRef.current);
-                }
-                setTrackName(e.target.value);
-                markDirty();
-                nameHistoryTimerRef.current = setTimeout(() => {
-                  if (preNameSnapshotRef.current) {
-                    pushHistory(preNameSnapshotRef.current);
-                    preNameSnapshotRef.current = null;
-                  }
-                  nameHistoryTimerRef.current = null;
-                }, NAME_DEBOUNCE_MS);
-              }}
-              onBlur={() => {
-                if (nameHistoryTimerRef.current) {
-                  clearTimeout(nameHistoryTimerRef.current);
-                  nameHistoryTimerRef.current = null;
-                  if (preNameSnapshotRef.current) {
-                    pushHistory(preNameSnapshotRef.current);
-                    preNameSnapshotRef.current = null;
-                  }
-                }
-              }}
-            />
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleBgUpload}
-          />
-          <button
-            type="button"
-            className={`${s.bgUploadBtn}${!isLoadMode && !backgroundImage && !backgroundFile ? ` ${s.bgUploadBtnRequired}` : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-            title={
-              backgroundImage || backgroundFile
-                ? 'Change background image'
-                : isLoadMode
-                  ? 'Upload background image (optional)'
-                  : 'Upload background image (required)'
-            }
-          >
-            {backgroundImage || backgroundFile
-              ? `🖼 ${backgroundFile ? backgroundFile.name : backgroundImage.startsWith('data:') ? 'Image uploaded' : backgroundImage.split('/').pop()}`
-              : isLoadMode
-                ? '📷 No image'
-                : '📷 No image · required'}
-          </button>
-          {(backgroundImage || backgroundFile) && (
-            <button
-              type="button"
-              className={s.bgRemoveBtn}
-              disabled={isSaving}
-              onClick={handleRemoveBackground}
-              data-testid="remove-background-btn"
-              title="Remove background image"
-            >
-              Remove background
-            </button>
-          )}
-          <button className={s.saveBtn} disabled={saveDisabled} onClick={handleSave}>
-            {isSaving ? 'Saving…' : saveLabel}
-          </button>
-          <select className={s.loadSelect} value="" onChange={handleLoad}>
-            <option value="" disabled>
-              Load track…
-            </option>
-            {allSavedTracks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <button className={s.deleteBtn} disabled={!hasLoaded || isSaving} onClick={handleDelete}>
-            Delete
-          </button>
-        </div>
-        {bgUploadError && <p className={s.saveError}>{bgUploadError}</p>}
-        {saveError && <p className={s.saveError}>{saveError}</p>}
-        {serverError && (
-          <div
-            className={s.saveError}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}
-          >
-            <span>{serverError}</span>
-            <button
-              type="button"
-              className={s.saveBtn}
-              style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }}
-              onClick={() => {
-                setServerError(null);
-                handleSave();
-              }}
-            >
-              Erneut versuchen
-            </button>
-          </div>
-        )}
-      </div>
+      <TrackEditorSaveBar
+        barRef={saveBarRef}
+        isLoadMode={isLoadMode}
+        trackName={trackName}
+        backgroundImage={backgroundImage}
+        backgroundFile={backgroundFile}
+        allSavedTracks={allSavedTracks}
+        saveDisabled={saveDisabled}
+        saveLabel={saveLabel}
+        isSaving={isSaving}
+        saveAttempted={saveAttempted}
+        bgUploadError={bgUploadError}
+        saveError={saveError}
+        serverError={serverError}
+        hasLoaded={hasLoaded}
+        fileInputRef={fileInputRef}
+        onNameChange={handleNameChange}
+        onNameBlur={handleNameBlur}
+        onBgUpload={handleBgUpload}
+        onRemoveBg={handleRemoveBackground}
+        onSave={handleSave}
+        onLoad={handleLoad}
+        onDelete={handleDelete}
+        onRetry={handleRetry}
+      />
 
       <div className={s.main}>
         <div className={s.canvasWrapper} ref={wrapperRef} tabIndex={0} onKeyDown={handleKeyDown}>

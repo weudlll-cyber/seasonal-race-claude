@@ -88,11 +88,11 @@ export default function RacePlanHUD({ diagRef, showWinnerList, showSpeedMonitor 
         >
           <div style={{ color: '#4cff91', fontWeight: 700, marginBottom: 2 }}>B1 WINNER LIST</div>
           <div style={{ color: '#666', fontSize: '0.60rem', marginBottom: 3, whiteSpace: 'pre' }}>
-            {'Name         Soll Jetzt   Δ  Row'}
+            {'Name         Target Now   Δ  Row'}
           </div>
           {snap.rpB1Racers.map((r) => (
             <div key={r.index} style={{ color: deltaColor(r.delta), whiteSpace: 'pre' }}>
-              {r.name.padEnd(12).slice(0, 12)} {'#' + r.sollRank}
+              {r.name.padEnd(12).slice(0, 12)} {'#' + r.targetRank}
               {' → '}
               {'#' + String(r.currentRank).padStart(2)} {(r.delta >= 0 ? '+' : '') + r.delta}
               {'  '}

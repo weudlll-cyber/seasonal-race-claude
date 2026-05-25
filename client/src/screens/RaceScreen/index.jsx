@@ -10,7 +10,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { validateActiveRace } from './raceSession.js';
-import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
+import {
+  drawEditorBackground,
+  drawEditorTrackSurface,
+  drawOpenTrackFinishLine,
+} from './drawing/trackRendering.js';
+import {
+  drawTitle,
+  drawTitleOpen,
+  drawLapInfo,
+  drawFinalLapOverlay,
+  drawCountdownOverlay,
+  drawFinishedOverlay,
+} from './drawing/overlayRendering.js';
+import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
+import { drawRacers } from './drawing/racerRendering.js';
+import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
+import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
 import {
@@ -72,7 +88,6 @@ import {
   selectOverlayText,
   selectOverlayTextNoRepeat,
 } from '../../modules/stateOverlayTemplates.js';
-import { visibleTagRacers } from './nameTagVisibility.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
   DEFAULT_TRACK_LIGHTS,
@@ -105,7 +120,6 @@ const RACER_COLORS = [
   '#ef9a9a',
 ];
 
-const CD_COLORS = ['#00ff55', '#33ff88', '#ffcc00', '#ff3333'];
 const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
 const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
@@ -554,7 +568,7 @@ export default function RaceScreen() {
           trajectoryMultTarget: 1.0,
           trajectoryMultPrev: 1.0,
           trajectoryMultTransStart: 0,
-          bereichsBonusMult: 1.0,
+          areaBonusMult: 1.0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -590,9 +604,9 @@ export default function RaceScreen() {
       );
       racePlanController = createTrajectoryController(plan);
       rpPlanInfo = {
-        sollRanks: plan._racerSollRank,
+        targetRanks: plan._racerTargetRank,
         b1Indices: new Set(
-          [...plan._racerSollRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
+          [...plan._racerTargetRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
         ),
       };
     }
@@ -660,495 +674,6 @@ export default function RaceScreen() {
           r.x = pos.x;
           r.y = pos.y;
           r.angle = pos.angle;
-        }
-      }
-    }
-
-    // ── Burst particles ─────────────────────────────────────────────────────
-    function emitBurst(x, y) {
-      const colors = ['#ffd700', '#ff6b35', '#ff3388', '#00ffcc', '#fff', '#ff0', '#0ff'];
-      for (let i = 0; i < 45; i++) {
-        const a = (i / 45) * Math.PI * 2 + Math.random() * 0.4;
-        const spd = 2 + Math.random() * 7;
-        g.current.burstParticles.push({
-          x,
-          y,
-          vx: Math.cos(a) * spd,
-          vy: Math.sin(a) * spd,
-          alpha: 1,
-          r: 2 + Math.random() * 4,
-          color: colors[Math.floor(Math.random() * colors.length)],
-        });
-      }
-    }
-
-    // ── Draw helpers ────────────────────────────────────────────────────────
-    function drawParticles() {
-      for (const p of g.current.dustParticles) {
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color ?? '#d4b880';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      for (const p of g.current.burstParticles) {
-        ctx.globalAlpha = p.alpha;
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = p.color;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // ezoom: total canvas effective zoom (cam.zoom×bsX for closed, BASE×cam.zoom for open).
-    // Labels and trail are drawn in world coordinates under the ctx transform, so they must
-    // be sized as worldPx = targetScreenPx / ezoom to appear constant on screen.
-    function drawNameTag(px, py, name, isLeader, isComeback, ezoom) {
-      const inv = 1 / ezoom;
-      const fontPx = Math.max(8, Math.round(11 * inv));
-      const bgH = Math.max(6, Math.round(13 * inv));
-      const offsetY = Math.max(12, Math.round(22 * inv));
-      const nameY = py - offsetY;
-      ctx.font = `bold ${fontPx}px sans-serif`;
-      const nameW = ctx.measureText(name).width + Math.round(8 * inv);
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(px - nameW / 2, nameY - bgH, nameW, bgH);
-      ctx.textBaseline = 'bottom';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = isLeader ? '#ffd700' : isComeback ? '#00dd55' : '#eee';
-      ctx.fillText(name, px, nameY);
-      if (isLeader && g.current.phase === PHASE.RACING) {
-        ctx.font = `${Math.max(10, Math.round(14 * inv))}px serif`;
-        ctx.textBaseline = 'bottom';
-        ctx.fillText('👑', px, nameY - bgH);
-      }
-    }
-
-    function drawRacers(effectiveScale, ezoom, renderAlpha, interpolationEnabled) {
-      const st = g.current;
-      const rt = racerTypeRef.current;
-      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-      const inv = 1 / ezoom;
-      const tagSet = new Set(
-        visibleTagRacers(
-          st.racers,
-          st.phase === PHASE.RACING,
-          cameraConfigRef.current.tagVisibleMaxCount
-        )
-      );
-      const doInterp = interpolationEnabled && st.phase === PHASE.RACING;
-
-      // COMEBACK highlight: green ring + always-visible nametag on locked racer during COMEBACK_ZOOM.
-      const isInComeback = camDirRef.current?.hudState === 'COMEBACK_ZOOM';
-      const comebackLockedIdx = isInComeback ? camDirRef.current?.comebackLockedRacerIndex : null;
-      const comebackRacer =
-        comebackLockedIdx != null ? st.racers.find((r) => r.index === comebackLockedIdx) : null;
-
-      // BATTLE focus: darken non-group racers when focusFadeProgress > 0.
-      // Uses live _detectPulkGroup() for the current cluster — no frozen entry snapshot.
-      const focusFactor = st.focusFadeProgress ?? 0;
-      const livePulkGroup =
-        focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
-      const battleGroupIndices = livePulkGroup
-        ? new Set(livePulkGroup.map((r) => r.index).filter((i) => i != null))
-        : null;
-
-      function paintRacer(r, dimAlpha = 1) {
-        const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
-        const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
-        const renderAngle = doInterp
-          ? lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha)
-          : r.angle;
-        for (let i = 0; i < r.trail.length; i++) {
-          const frac = (i + 1) / r.trail.length;
-          ctx.globalAlpha = frac * 0.4 * dimAlpha;
-          ctx.fillStyle = r.color;
-          ctx.beginPath();
-          ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = dimAlpha;
-        const rIsComeback = r === comebackRacer;
-        rt.drawRacer(
-          ctx,
-          renderX,
-          renderY,
-          renderAngle,
-          r,
-          r === leader,
-          st.slowmoTs ?? st.lastTs ?? 0,
-          effectiveScale,
-          rIsComeback
-        );
-        if (tagSet.has(r) || rIsComeback) {
-          const tagName = showRpStartRowCfg
-            ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-            : r.name;
-          drawNameTag(renderX, renderY, tagName, r === leader, rIsComeback && r !== leader, ezoom);
-        }
-        r.trail.push({ x: renderX, y: renderY });
-        if (r.trail.length > 10) r.trail.shift();
-      }
-
-      if (focusFactor > 0 && battleGroupIndices && battleGroupIndices.size > 0) {
-        const dark = (cameraConfigRef.current.battleFocusDarkening ?? 0.4) * focusFactor;
-        for (const r of st.racers) {
-          paintRacer(r, battleGroupIndices.has(r.index) ? 1 : 1 - dark);
-        }
-        ctx.globalAlpha = 1;
-      } else {
-        for (const r of st.racers) paintRacer(r);
-      }
-    }
-
-    // Battle-diag: coloured world-space markers on the leader + 20-frame snapshot table.
-    // Markers are drawn AFTER drawRacers so they appear on top of all sprites.
-    function drawBattleDiagMarkers(cam, ezoom, renderAlpha, interpolationEnabled) {
-      if (camDirRef.current?.hudState !== 'BATTLE_ZOOM') return;
-      const st = g.current;
-      if (!st?.racers?.length) return;
-      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-      const doInterp = interpolationEnabled && st.phase === PHASE.RACING;
-      const leaderRX = doInterp ? lerp(leader._prevX ?? leader.x, leader.x, renderAlpha) : leader.x;
-      const leaderRY = doInterp ? lerp(leader._prevY ?? leader.y, leader.y, renderAlpha) : leader.y;
-      const mr = 5 / ezoom;
-      const lw = 2 / ezoom;
-      const dot = (wx, wy, color) => {
-        ctx.save();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.arc(wx, wy, mr, 0, Math.PI * 2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(wx, wy, lw, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.restore();
-      };
-
-      dot(leaderRX, leaderRY, '#ff4444'); // ROT  — render pos
-      const tagOffY = Math.max(12, Math.round(22 / ezoom));
-      dot(leaderRX, leaderRY - tagOffY, '#ffd700'); // GELB — nameTag anchor
-
-      const ezoomY = isOpenTrack ? ezoom : cam.zoom * bsY;
-      // Camera centre in world space: derived from cam.offsetX/Y for both track types.
-      // Relationship: offsetX = -topLeftX * effZoom → topLeftX = -offsetX/effZoom
-      //               camCentreX = topLeftX + canvasW/2/effZoom = (canvasW/2 - offsetX)/effZoom
-      const camWorldX = (CANVAS_W / 2 - cam.offsetX) / ezoom;
-      const camWorldY = (CANVAS_H / 2 - cam.offsetY) / ezoomY;
-      dot(camWorldX, camWorldY, '#cc44ff'); // LILA — camera centre (= screen centre under current transform)
-
-      const ld = leaderDiagRef.current;
-      if (!ld.frozen) {
-        // Screen X: world_x * effZoom + offsetX (unified formula for both track types)
-        const scrX = leaderRX * ezoom + cam.offsetX;
-        ld.snapshots.push({
-          f: ld.snapshots.length + 1,
-          rx: leader.x,
-          drawX: leaderRX,
-          scrX,
-          tagX: scrX,
-          camX: camWorldX,
-        });
-        if (ld.snapshots.length >= 20) ld.frozen = true;
-      }
-    }
-
-    // Title for closed tracks — positioned above the track using getEdgePoints
-    function drawTitle() {
-      const topY = Math.min(...shapeRef.current.getEdgePoints(30).outer.map((p) => p.y));
-      const titleY = 58 + (topY - 58) / 2;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = '#ffd700';
-      ctx.fillText(
-        `🏆  ${raceData.eventName || 'Race'}  ·  ${raceData.trackName || ''}`,
-        CW / 2,
-        titleY
-      );
-      ctx.shadowBlur = 0;
-    }
-
-    // Title for open tracks — fixed at top of screen (no getEdgePoints needed)
-    function drawTitleOpen() {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffd700';
-      ctx.fillText(
-        `🏆  ${raceData.eventName || 'Race'}  ·  ${raceData.trackName || ''}`,
-        CW / 2,
-        38
-      );
-      ctx.shadowBlur = 0;
-    }
-
-    function drawLapInfo(st) {
-      if (st.maxLaps <= 1) return;
-      const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
-      const lapNum = currentLap(leader.t, st.maxLaps);
-      const text = `LAP ${lapNum} / ${st.maxLaps}`;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'top';
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = '#0088ff';
-      ctx.fillText(text, CW - 14, 66);
-      ctx.shadowBlur = 0;
-    }
-
-    function drawFinalLapOverlay(ts) {
-      const st = g.current;
-      if (!st.finalLapStartTs) return;
-      const age = ts - st.finalLapStartTs;
-      if (age > 3000) return;
-      const alpha = age < 500 ? age / 500 : age > 2500 ? 1 - (age - 2500) / 500 : 1;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 52px sans-serif';
-      ctx.fillStyle = '#ff4400';
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#ff6600';
-      ctx.fillText('FINAL LAP!', CW / 2, CH / 2 - 80);
-      ctx.shadowBlur = 0;
-      ctx.restore();
-    }
-
-    function drawCountdownOverlay(elapsed) {
-      const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
-      const color = CD_COLORS[n] ?? '#fff';
-      const text = n > 0 ? String(n) : 'GO!';
-      const fSize = n > 0 ? 56 : 44;
-      const shrink = 1 - ((elapsed % 1000) / 1000) * 0.1;
-      // Semi-transparent background pill behind the number for legibility.
-      const padX = 14,
-        padY = 8;
-      const anchorX = CW - 18;
-      const anchorY = 18;
-      ctx.save();
-      ctx.translate(anchorX, anchorY + fSize / 2);
-      ctx.scale(shrink, shrink);
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.font = `bold ${fSize}px sans-serif`;
-      // Measure text for background pill
-      const tw = ctx.measureText(text).width;
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.beginPath();
-      ctx.roundRect(-(tw + padX * 2), -(fSize / 2 + padY), tw + padX * 2, fSize + padY * 2, 8);
-      ctx.fill();
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = color;
-      ctx.fillStyle = color;
-      ctx.fillText(text, 0, 0);
-      ctx.shadowBlur = 0;
-      ctx.restore();
-      setCountdown(n);
-    }
-
-    function drawFinishedOverlay() {
-      ctx.fillStyle = 'rgba(0,0,0,0.48)';
-      ctx.fillRect(0, 0, CW, CH);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 80px sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.shadowBlur = 45;
-      ctx.shadowColor = '#ffd700';
-      ctx.fillText('RACE FINISHED!', CW / 2, CH / 2 - 20);
-      ctx.shadowBlur = 0;
-      ctx.font = '26px sans-serif';
-      ctx.fillStyle = '#bbb';
-      ctx.fillText('Loading results…', CW / 2, CH / 2 + 58);
-    }
-
-    // ── Editor track rendering (replaces environment classes) ────────────────
-    function drawEditorBackground(ctx, frame, bgPath, ww = CANVAS_W, wh = CANVAS_H) {
-      const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
-      if (bgImg) {
-        ctx.drawImage(bgImg, 0, 0, ww, wh);
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.fillRect(0, 0, ww, wh);
-      } else {
-        const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
-        const grad = ctx.createLinearGradient(0, 0, ww, wh);
-        grad.addColorStop(0, '#0a0414');
-        grad.addColorStop(0.5, `hsl(248,${20 + pulse * 10}%,${8 + pulse * 3}%)`);
-        grad.addColorStop(1, '#0a0414');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, ww, wh);
-      }
-      const stars = [
-        [80, 35],
-        [180, 18],
-        [310, 48],
-        [470, 12],
-        [620, 42],
-        [770, 22],
-        [920, 55],
-        [1060, 15],
-        [1190, 38],
-        [40, 62],
-        [390, 68],
-        [730, 70],
-        [1100, 50],
-      ];
-      for (const [sx, sy] of stars) {
-        ctx.globalAlpha = 0.3 + 0.4 * Math.abs(Math.sin(frame * 0.001 + sx * 0.05));
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(sx * (ww / CANVAS_W), sy, 1.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(14,7,2,0.92)';
-      ctx.fillRect(0, 0, ww, 58);
-      // Crowd members span full world width
-      const crowdCount = Math.max(60, Math.ceil((ww / CANVAS_W) * 60));
-      for (let i = 0; i < crowdCount; i++) {
-        const cx = (i * 137.5) % ww;
-        const phase = i * 0.41;
-        const size = 6 + (i % 4);
-        const bob = Math.sin(frame * 0.003 + phase) * 2;
-        ctx.fillStyle = `hsl(${20 + ((size * 7) % 30)},30%,${18 + (size % 4) * 3}%)`;
-        ctx.beginPath();
-        ctx.ellipse(cx, 50 + bob, size * 0.6, size, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.strokeStyle = 'rgba(200,130,40,0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 58);
-      ctx.lineTo(ww, 58);
-      ctx.stroke();
-      const sunX = ww * 0.9,
-        sunY = 28,
-        sunR = 18;
-      const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 3);
-      sg.addColorStop(0, 'rgba(255,220,80,0.55)');
-      sg.addColorStop(0.4, 'rgba(255,160,30,0.2)');
-      sg.addColorStop(1, 'rgba(255,100,0,0)');
-      ctx.fillStyle = sg;
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, sunR * 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,240,140,0.9)';
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, sunR * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function drawEditorTrackSurface(ctx, shape) {
-      // Boundary lines and lane fill removed — replaced by track-light dots.
-      // Only the finish line is drawn here.
-      const pOuter = shape.getPosition(0, 1.0);
-      const pInner = shape.getPosition(0, -1.0);
-      const dx = pOuter.x - pInner.x,
-        dy = pOuter.y - pInner.y;
-      const segments = 8;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffd700';
-      for (let i = 0; i < segments; i++) {
-        const f0 = i / segments,
-          f1 = (i + 1) / segments;
-        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
-        ctx.beginPath();
-        ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
-        ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
-        const perp = pInner.angle + Math.PI / 2;
-        const hw = 7;
-        ctx.lineTo(
-          pInner.x + dx * f1 + Math.cos(perp) * hw,
-          pInner.y + dy * f1 + Math.sin(perp) * hw
-        );
-        ctx.lineTo(
-          pInner.x + dx * f0 + Math.cos(perp) * hw,
-          pInner.y + dy * f0 + Math.sin(perp) * hw
-        );
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
-      const midX = (pOuter.x + pInner.x) / 2,
-        midY = (pOuter.y + pInner.y) / 2;
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText('FINISH', midX, midY - 8);
-    }
-
-    // Finish-line marker for open tracks at finishT position
-    function drawOpenTrackFinishLine(shape, ft) {
-      // Fix 2: Force the finish line perpendicular to the primary track axis.
-      // getPosition(ft, ±1.0) gives inner/outer at the same t-fraction, but the
-      // line between them follows the spline cross-section which may be diagonal
-      // when inner and outer splines diverge. Instead, compute pInner/pOuter as
-      // symmetric offsets from the centre along the constant cross-track direction.
-      const center = shape.getPosition(ft, 0);
-      const pInner = {
-        x: center.x - openTrackPerpCos * openTrackHW,
-        y: center.y - openTrackPerpSin * openTrackHW,
-      };
-      const pOuter = {
-        x: center.x + openTrackPerpCos * openTrackHW,
-        y: center.y + openTrackPerpSin * openTrackHW,
-      };
-      const dx = pOuter.x - pInner.x,
-        dy = pOuter.y - pInner.y;
-      const segments = 8;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ffd700';
-      for (let i = 0; i < segments; i++) {
-        const f0 = i / segments,
-          f1 = (i + 1) / segments;
-        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
-        ctx.beginPath();
-        ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
-        ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
-        // Stripe depth runs along the forward direction (⊥ to the finish line).
-        const hw = 7;
-        ctx.lineTo(
-          pInner.x + dx * f1 + openTrackFwdCos * hw,
-          pInner.y + dy * f1 + openTrackFwdSin * hw
-        );
-        ctx.lineTo(
-          pInner.x + dx * f0 + openTrackFwdCos * hw,
-          pInner.y + dy * f0 + openTrackFwdSin * hw
-        );
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
-      const midX = (pOuter.x + pInner.x) / 2,
-        midY = (pOuter.y + pInner.y) / 2;
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText('FINISH', midX, midY - 8);
-    }
-
-    // Render per-racer surface-class particles (world coords, inside camera transform).
-    function drawSurfaceTrails() {
-      for (const r of g.current.racers) {
-        if (r.surfaceEmitter && r.surfaceParticles.length > 0) {
-          r.surfaceEmitter.render(ctx, r.surfaceParticles);
         }
       }
     }
@@ -1308,7 +833,7 @@ export default function RaceScreen() {
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
-                r.t + r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult,
+                r.t + r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult,
                 st.finishT + 0.001
               );
             } else {
@@ -1321,7 +846,7 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult) /
+                ? (r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult) /
                   race_baseSpeed
                 : 0;
           }
@@ -1357,7 +882,7 @@ export default function RaceScreen() {
             if (r.t >= st.finishT) {
               r.finished = true;
               r.finishRank = ++st.finishedCount;
-              emitBurst(r.x, r.y);
+              emitBurst(st.burstParticles, r.x, r.y);
             }
             r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
@@ -1458,32 +983,32 @@ export default function RaceScreen() {
               let bbMin = Infinity,
                 bbMax = -Infinity;
               for (const r of activeR) {
-                const bb = r.bereichsBonusMult ?? 1;
+                const bb = r.areaBonusMult ?? 1;
                 if (bb < bbMin) bbMin = bb;
                 if (bb > bbMax) bbMax = bb;
               }
               d.rpBbMin = bbMin;
               d.rpBbMax = bbMax;
 
-              // B1 winner list (sollRank 1–5)
+              // B1 winner list (targetRank 1–5)
               if (rpPlanInfo) {
                 const ranked = [...activeR].sort((a, b) => b.t - a.t);
                 const rankByIdx = new Map(ranked.map((r, i) => [r.index, i + 1]));
                 const b1Racers = [];
-                for (const [racerIdx, sollRank] of rpPlanInfo.sollRanks) {
+                for (const [racerIdx, targetRank] of rpPlanInfo.targetRanks) {
                   if (!rpPlanInfo.b1Indices.has(racerIdx)) continue;
                   const racer = st.racers.find((r) => r.index === racerIdx && !r.finished);
                   if (!racer) continue;
                   b1Racers.push({
                     index: racerIdx,
                     name: racer.name,
-                    sollRank,
+                    targetRank,
                     currentRank: rankByIdx.get(racerIdx) ?? 0,
-                    delta: (rankByIdx.get(racerIdx) ?? 0) - sollRank,
+                    delta: (rankByIdx.get(racerIdx) ?? 0) - targetRank,
                     startRow: assignmentByRacer.get(racerIdx)?.rowIndex ?? 0,
                   });
                 }
-                b1Racers.sort((a, b) => a.sollRank - b.sollRank);
+                b1Racers.sort((a, b) => a.targetRank - b.targetRank);
                 d.rpB1Racers = b1Racers;
               }
 
@@ -1701,146 +1226,79 @@ export default function RaceScreen() {
       }
       drawEditorTrackSurface(ctx, shape);
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
-      if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(shape, st.finishT);
-      drawParticles();
-      drawSurfaceTrails();
+      if (isOpenTrack && st.finishT < 1)
+        drawOpenTrackFinishLine(
+          ctx,
+          shape,
+          st.finishT,
+          openTrackPerpCos,
+          openTrackPerpSin,
+          openTrackHW,
+          openTrackFwdCos,
+          openTrackFwdSin
+        );
+      drawParticles(ctx, st.dustParticles, st.burstParticles);
+      drawSurfaceTrails(ctx, st.racers);
+      const focusFactor = st.focusFadeProgress ?? 0;
+      const livePulkGroup =
+        focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
       drawRacers(
+        ctx,
+        st,
+        racerTypeRef.current,
+        cameraConfigRef.current.tagVisibleMaxCount,
+        cameraConfigRef.current.battleFocusDarkening,
+        camDirRef.current?.hudState ?? null,
+        camDirRef.current?.comebackLockedRacerIndex ?? null,
+        focusFactor,
+        livePulkGroup,
+        showRpStartRowCfg,
+        assignmentByRacer,
         frameDisplayScale,
         frameEffZoom,
         renderAlpha,
         frameTimingConfig.renderInterpolation
       );
-      drawBattleDiagMarkers(cam, frameEffZoom, renderAlpha, frameTimingConfig.renderInterpolation);
+      drawBattleDiagMarkers(
+        ctx,
+        st,
+        camDirRef.current?.hudState ?? null,
+        cam,
+        frameEffZoom,
+        renderAlpha,
+        frameTimingConfig.renderInterpolation,
+        isOpenTrack,
+        bsY,
+        leaderDiagRef.current
+      );
       ctx.restore();
       if (isOpenTrack) {
-        drawTitleOpen();
+        drawTitleOpen(ctx, raceData);
       } else {
-        drawTitle();
-        drawLapInfo(st);
-        drawFinalLapOverlay(ts);
+        drawTitle(ctx, shape, raceData);
+        drawLapInfo(ctx, st.racers, st.maxLaps);
+        drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
       }
 
       // ── Priority-mode debug overlay (hotkey M) ──
       if (showModeOverlayRef.current && st.phase === PHASE.RACING) {
-        const modeColors = {
-          [PRIORITY_MODE.OVERLAP]: '#ef4444',
-          [PRIORITY_MODE.COOLDOWN]: '#f97316',
-          [PRIORITY_MODE.BLOCKED]: '#eab308',
-        };
-        // Aggregate: count and frame-count stats per mode
-        const modeCounts = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
-        const modeFrameSums = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
-        const modeFrameMax = { NORMAL: 0, OVERLAP: 0, COOLDOWN: 0, BLOCKED: 0 };
-        for (const r of st.racers) {
-          const m = r.currentMode ?? PRIORITY_MODE.NORMAL;
-          const fc = r.currentModeFrameCount ?? 0;
-          modeCounts[m] = (modeCounts[m] ?? 0) + 1;
-          modeFrameSums[m] = (modeFrameSums[m] ?? 0) + fc;
-          if (fc > (modeFrameMax[m] ?? 0)) modeFrameMax[m] = fc;
-        }
-
-        ctx.save();
-        for (const r of st.racers) {
-          if (r.finished) continue;
-          const mode = r.currentMode ?? PRIORITY_MODE.NORMAL;
-          if (mode === PRIORITY_MODE.NORMAL) continue;
-          const color = modeColors[mode];
-          if (!color) continue;
-
-          // Convert world position to screen space: world_x * effZoom + offsetX (both track types)
-          const effZx = frameEffZoom; // cam.zoom×BASE_ZOOM (open) or cam.zoom×bsX (closed)
-          const effZy = isOpenTrack ? effZx : cam.zoom * bsY;
-          const rox = frameTimingConfig.renderInterpolation
-            ? lerp(r._prevX ?? r.x, r.x, renderAlpha)
-            : r.x;
-          const roy = frameTimingConfig.renderInterpolation
-            ? lerp(r._prevY ?? r.y, r.y, renderAlpha)
-            : r.y;
-          const sx = rox * effZx + cam.offsetX;
-          const sy = roy * effZy + cam.offsetY;
-
-          const spriteScreenR = (r.spriteWorldSizePx ?? 20) * effZx * 0.5;
-          const ringR = Math.max(spriteScreenR, 8);
-          ctx.beginPath();
-          ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
-
-          // Frame count + blocker name above the ring
-          const fc = r.currentModeFrameCount ?? 0;
-          ctx.font = '9px monospace';
-          ctx.fillStyle = color;
-          ctx.textAlign = 'center';
-          if (mode === PRIORITY_MODE.BLOCKED && r.blockerInfo) {
-            ctx.fillText(`${fc} ←${r.blockerInfo.name}`, sx, sy - ringR - 2);
-          } else {
-            ctx.fillText(fc, sx, sy - ringR - 2);
-          }
-          ctx.textAlign = 'left';
-        }
-
-        // Info box — top right corner (wider to fit stats)
-        const boxX = CW - 210;
-        const boxY = 12;
-        ctx.fillStyle = 'rgba(0,0,0,0.72)';
-        ctx.fillRect(boxX - 6, boxY - 4, 202, 136);
-        ctx.font = '11px monospace';
-        ctx.fillStyle = '#e6edf3';
-        ctx.fillText('Priority Modes  n  avg  max', boxX, boxY + 11);
-
-        function modeAvg(m) {
-          return modeCounts[m] > 0 ? Math.round(modeFrameSums[m] / modeCounts[m]) : 0;
-        }
-        const rows = [
-          { label: 'NORMAL  ', color: '#888', key: PRIORITY_MODE.NORMAL },
-          { label: 'OVERLAP ', color: '#ef4444', key: PRIORITY_MODE.OVERLAP },
-          { label: 'COOLDOWN', color: '#f97316', key: PRIORITY_MODE.COOLDOWN },
-          { label: 'BLOCKED ', color: '#eab308', key: PRIORITY_MODE.BLOCKED },
-        ];
-        rows.forEach(({ label, color, key }, i) => {
-          const n = modeCounts[key] ?? 0;
-          const avg = modeAvg(key);
-          const mx = modeFrameMax[key] ?? 0;
-          ctx.fillStyle = color;
-          ctx.fillText(
-            `${label} ${String(n).padStart(2)}  ${String(avg).padStart(4)}  ${String(mx).padStart(4)}`,
-            boxX,
-            boxY + 28 + i * 26
-          );
-        });
-
-        // Blocker detail list — up to 5 currently BLOCKED racers
-        const blockedWithInfo = st.racers.filter(
-          (r) => r.currentMode === PRIORITY_MODE.BLOCKED && r.blockerInfo
+        drawPriorityModeOverlay(
+          ctx,
+          st.racers,
+          frameEffZoom,
+          isOpenTrack,
+          cam,
+          bsY,
+          frameTimingConfig.renderInterpolation,
+          renderAlpha
         );
-        if (blockedWithInfo.length > 0) {
-          const listY = boxY + 148;
-          const listH = Math.min(blockedWithInfo.length, 5) * 16 + 20;
-          ctx.fillStyle = 'rgba(0,0,0,0.72)';
-          ctx.fillRect(boxX - 6, listY - 4, 202, listH);
-          ctx.font = '10px monospace';
-          ctx.fillStyle = '#eab308';
-          ctx.fillText('BLOCKED by (dT=px, dY=px):', boxX, listY + 10);
-          blockedWithInfo.slice(0, 5).forEach((r, i) => {
-            const b = r.blockerInfo;
-            const sign = b.dT >= 0 ? '+' : '';
-            ctx.fillStyle = '#c9d1d9';
-            ctx.fillText(
-              `${(r.name ?? `#${r.index}`).slice(0, 8).padEnd(8)} ← ${b.name.slice(0, 8).padEnd(8)} dT=${sign}${b.dT} dY=${b.dY >= 0 ? '+' : ''}${b.dY}`,
-              boxX,
-              listY + 24 + i * 16
-            );
-          });
-        }
-        ctx.restore();
       }
 
       // ── Phase overlays ──
       if (st.phase === PHASE.COUNTDOWN) {
-        drawCountdownOverlay(ts - st.countdownStart);
+        setCountdown(drawCountdownOverlay(ctx, ts - st.countdownStart));
       } else if (st.phase === PHASE.FINISHED) {
-        drawFinishedOverlay();
+        drawFinishedOverlay(ctx);
       }
 
       // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────

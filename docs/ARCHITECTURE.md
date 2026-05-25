@@ -105,7 +105,7 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **modules/ are framework-agnostic** — no React imports in `modules/`; screens own the component tree, modules own the logic.
 - **Track Editor (Phase 2.5)** — Tracks are authored visually on top of background images. Geometry is stored as inner/outer boundary curves (Catmull-Rom interpolated). See `docs/TRACK_EDITOR.md`.
 - **Spline Sampling — arc-length uniform (PR-A2.5)** — `catmullRomSpline` defaults to `parameterization: 'arclength'`. A dense T-table (5× requested samples, min 1000) is built per call; binary search maps target arc-lengths to T-values. Racers advance at constant pixel velocity regardless of editor-point distribution. Pass `parameterization: 'parameter'` for legacy T-uniform behaviour.
-- **EditorShape linear interpolation (Etappe 26)** — `EditorShape.getPosition()` uses `Math.floor()` + fractional blend between adjacent precomputed samples instead of the former `Math.round()` nearest-neighbour lookup. At 500 samples on a ~2000 px oval at zoom 4×, `Math.round()` caused ~20 px visible racer jumps per frame; linear interpolation eliminates this. Angles are precomputed once in `_precomputeAngles()` and interpolated with shortest-path wrap.
+- **EditorShape linear interpolation (Stage 26)** — `EditorShape.getPosition()` uses `Math.floor()` + fractional blend between adjacent precomputed samples instead of the former `Math.round()` nearest-neighbour lookup. At 500 samples on a ~2000 px oval at zoom 4×, `Math.round()` caused ~20 px visible racer jumps per frame; linear interpolation eliminates this. Angles are precomputed once in `_precomputeAngles()` and interpolated with shortest-path wrap.
 - **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdPx` (default 200 px) of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` (default 3000 ms) prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
 - **Inline draw helpers in RaceScreen** — `drawEditorBackground` and `drawEditorTrackSurface` are inlined in `RaceScreen/index.jsx`. `drawEditorTrackSurface` now only renders the finish line — solid boundary lines and lane fill were removed in the Race Track Lights PR. Candidate for extraction into a `modules/track-renderer/` module in a future polish sprint (PP-2 in the Phase 2.5 hygiene report).
@@ -249,7 +249,7 @@ explosion when the assembly area nearly reaches the finish line. All non-finite 
 
 Mechanism is positional and deterministic — **not changed by the Re-Roll mechanism**.
 
-**Race-Duration-Garantie (Klarstellung):** The `targetDuration` formula calibrates the
+**Race-Duration Guarantee (Clarification):** The `targetDuration` formula calibrates the
 **median racer** (spreadFactor = 1.0) to finish at `targetDuration × expectedMinSpreadFactor`
 (≈ 87% of targetDuration). The actual **race end** — when the last finisher crosses — can
 deviate by ±6–8% (1σ) from `targetDuration` due to the intrinsic stochastic spread of N draws
@@ -290,13 +290,13 @@ superseded by the duration-driven approach above.
 
 ## Race Plan System (Phase 3A)
 
-The Race Plan gives each racer a target finishing area (Bereich) and nudges their speed toward it throughout the race. It is a **soft guidance layer** — trajectory control influences speed but cannot override physics (avoidance, home force). Final positions emerge from the interaction of Race Plan guidance and physics.
+The Race Plan gives each racer a target finishing area and nudges their speed toward it throughout the race. It is a **soft guidance layer** — trajectory control influences speed but cannot override physics (avoidance, home force). Final positions emerge from the interaction of Race Plan guidance and physics.
 
-### Bereich Assignment (`createRacePlan`)
+### Area Assignment (`createRacePlan`)
 
-At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a Soll-Bereich (target area):
+At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a target area:
 
-| Bereich | Target place | Base bonus delta |
+| Area | Target place | Base bonus delta |
 |---|---|---|
 | B1 | 1–5 (top 7%) | +0.03 |
 | B2 | 6–15 (next 14%) | +0.02 |
@@ -440,7 +440,7 @@ The race camera lives in `modules/camera/` and supports five director modes:
 - **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86). Tuned thresholds (Phase 3D): `outcomePhaseThreshold: 0.65`, `comebackMinStartGap: 0.25`, `comebackMaxCurrentRankPct: 0.20`. DIAG shows gainOk / startGapOk / currentRankOk per B1 racer, plus phase gate + leaderProgress.
 - **LEAD_CHANGE_ZOOM** — activates when the race leader changes; frames the new and former leader briefly before handing off to LEADER_ZOOM. Pan-snap fix on entry: `_camT` set to leader.t at transition point to avoid jump artifact.
 
-### Regie-System (Phase 3B)
+### Director System (Phase 3B)
 
 The director chooses the next camera state from a **weighted candidate pool**. Each state contributes a candidate with a weight derived from recency, race tension, and cooldown timers. The highest-weight candidate wins.
 
@@ -456,7 +456,7 @@ All modes apply a single world-space affine transform (translate + scale) before
 
 `CameraDirector.update()` receives `renderRacers` (interpolated racer positions, see Frame-Timing Architecture above) for the RACING phase. COUNTDOWN uses raw `st.racers` (no physics accumulator active during countdown). The steady-state pixel-space lerp in `CameraDirector` (tracking phase, `offsetX += (targetOffsetX - offsetX) × lf`) naturally tracks interpolated targets once `renderRacers` is passed as input.
 
-### Zoom-Kalibrierung per State (Schema v14 — Phase 3C)
+### Zoom Calibration per State (Schema v14 — Phase 3C)
 
 Camera zoom per state is configured via `spriteScale` — a dimensionless relative factor replacing the former absolute `spritePx` value (Schema v14, migration `chore/sprite-scale-relative`).
 
@@ -508,13 +508,13 @@ A Surface Class references one generator and configures its parameters (color, s
 |---|---|---|
 | `asphalt` | Asphalt | `particle` |
 | `sand` | Sand | `cloud` |
-| `earth` | Erde | `cloud` |
-| `mud` | Schlamm | `splash` |
-| `grass` | Gras | `particle` |
-| `snow` | Schnee | `cloud` |
-| `ice` | Eis | `line` |
-| `water` | Wasser | `splash` |
-| `air` | Luft | `particle` |
+| `earth` | Earth | `cloud` |
+| `mud` | Mud | `splash` |
+| `grass` | Grass | `particle` |
+| `snow` | Snow | `cloud` |
+| `ice` | Ice | `line` |
+| `water` | Water | `splash` |
+| `air` | Air | `particle` |
 
 Default classes are code constants (single source of truth, analogous to racer types). Custom classes and default overrides are stored in the backend.
 
@@ -535,18 +535,18 @@ RaceScreen init: resolveTrailEmitter(racerType, trackSurfaceClasses)
 
 **rAF loop (per unfinished racer):**
 - `r.surfaceEmitter` present → `spawn(x, y, speed, angle)` + `update(particles, dt/16)` on per-racer particle list
-- `r.surfaceEmitter` is null (no match) → `rt.getTrailParticles(...)` → global `dustParticles` pool (Heimat-Trail, unchanged)
+- `r.surfaceEmitter` is null (no match) → `rt.getTrailParticles(...)` → global `dustParticles` pool (native trail, unchanged)
 
 **Render (inside camera transform, world space):**
 - `drawSurfaceTrails()` calls `r.surfaceEmitter.render(ctx, r.surfaceParticles)` per racer
-- `drawParticles()` renders global `dustParticles` (Heimat-Trail path)
+- `drawParticles()` renders global `dustParticles` (native trail path)
 
-**Heimat-Trail Fallback:** If no class from the racer type's `surfaceClasses` list intersects the current track's `surfaceClasses`, the racer falls back to its static `trailFactory` (current behavior, unchanged).
+**native trail Fallback:** If no class from the racer type's `surfaceClasses` list intersects the current track's `surfaceClasses`, the racer falls back to its static `trailFactory` (current behavior, unchanged).
 
 **Key files:**
 - `modules/surface-effects/trailResolver.js` — `resolveTrailEmitter(racerType, trackSurfaceClasses)`
 - `screens/SetupScreen/SetupScreen.jsx` — writes `trackSurfaceClasses` into `activeRace`
-- `screens/RaceScreen/index.jsx` — consumes emitter per racer; falls back to Heimat-Trail
+- `screens/RaceScreen/index.jsx` — consumes emitter per racer; falls back to native trail
 
 ### Setup Filter
 
@@ -570,7 +570,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 | ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
 | ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
 | ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 12 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
-| ✅ VRE-4 — Race Integration | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; Heimat-Trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen. |
+| ✅ VRE-4 — Race Integration | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; native trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen. |
 
 ### Future: Surface Zones
 
@@ -632,7 +632,7 @@ seasonal-race-claude/
 
 **Frontend write strategy (L.5):**
 - `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
-- TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Erneut versuchen" button
+- TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Retry" button
 - TrackManager: Save (server track) → `updateTrackOnServer` + `refresh`; Save (local track) → `setTracks` (localStorage); Delete (server) → `deleteTrackFromServer` + `removeCachedTrackData`; Geometry edit → `/track-editor?load=<serverId>`
 - **Rule:** Every mutation flow that touches a server track (identified via `serverTrackIds.has(id)`) must call the corresponding API function (`updateTrackOnServer` / `deleteTrackFromServer`) and call `refresh()` afterwards. Writing only to `localStorage` via `setTracks()` is insufficient — the `useServerTracks` fetch overwrites local state on next render.
 - **PUT validation is partial:** `validateTrackBodyForUpdate` only validates fields actually present in the request body. Geometry fields (`closed`, `centerPoints`, `innerPoints`, `outerPoints`) are optional in PUT — if omitted they are merged from the existing track. POST uses `validateTrackBodyForCreate` which is strict (all geometry fields required). This allows TrackManager to send metadata-only PUTs without re-sending the full geometry.

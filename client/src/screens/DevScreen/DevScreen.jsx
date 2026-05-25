@@ -106,7 +106,7 @@ const SECTIONS = [
     id: 'camera-advanced',
     icon: '🎥',
     label: 'Camera Advanced',
-    desc: 'Alle Kamera-Regler in Renn-Ablauf-Reihenfolge: Start → BATTLE → Regie → LEAD_CHANGE → COMEBACK → Slowmo → Endgame → Finish → Zoom-Profile.',
+    desc: 'All camera controls in race-timeline order: Start → BATTLE → Director → LEAD_CHANGE → COMEBACK → Slowmo → Endgame → Finish → Zoom Profiles.',
     component: CameraAdvancedSection,
     tier: 'advanced',
   },

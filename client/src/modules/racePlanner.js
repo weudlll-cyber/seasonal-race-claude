@@ -31,13 +31,13 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// Returns [lo, hi] rank bounds for the Bereich containing the given sollRank.
-// Bereich 1: 1-5, B2: 6-15, B3: 16-25, B4: 26-40, B5: 41+
-function getBereichBounds(sollRank) {
-  if (sollRank <= 5) return [1, 5];
-  if (sollRank <= 15) return [6, 15];
-  if (sollRank <= 25) return [16, 25];
-  if (sollRank <= 40) return [26, 40];
+// Returns [lo, hi] rank bounds for the area containing the given targetRank.
+// Area 1: 1-5, B2: 6-15, B3: 16-25, B4: 26-40, B5: 41+
+function getAreaBounds(targetRank) {
+  if (targetRank <= 5) return [1, 5];
+  if (targetRank <= 15) return [6, 15];
+  if (targetRank <= 25) return [16, 25];
+  if (targetRank <= 40) return [26, 40];
   return [41, Infinity];
 }
 
@@ -66,27 +66,27 @@ const DEFAULT_PULK_TARGET_SPREAD = 0.005;
 const DEFAULT_STOCHASTIC_NOISE = 0.0008;
 const DEFAULT_PULK_BIAS_GAIN = 2.0;
 
-// Base deltas for the Bereichs-Bonus. multiplier=1.0 reproduces the original values.
+// Base deltas for the area bonus. multiplier=1.0 reproduces the original values.
 // bonus = 1.0 + (BASE_DELTA × multiplier). Range 0.5–3.0 is sane for the multiplier.
-const BEREICHS_BONUS_BASE_DELTAS = { B1: 0.03, B2: 0.02, B3: 0.01, B4: 0.0, B5: -0.01 };
-const DEFAULT_BEREICHS_BONUS_FADE_MS = 1500;
+const AREA_BONUS_BASE_DELTAS = { B1: 0.03, B2: 0.02, B3: 0.01, B4: 0.0, B5: -0.01 };
+const DEFAULT_AREA_BONUS_FADE_MS = 1500;
 
-function computeBereichsBonusMap(multiplier) {
+function computeAreaBonusMap(multiplier) {
   const m = multiplier ?? 1.0;
   return {
-    B1: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B1 * m,
-    B2: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B2 * m,
-    B3: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B3 * m,
+    B1: 1.0 + AREA_BONUS_BASE_DELTAS.B1 * m,
+    B2: 1.0 + AREA_BONUS_BASE_DELTAS.B2 * m,
+    B3: 1.0 + AREA_BONUS_BASE_DELTAS.B3 * m,
     B4: 1.0,
-    B5: 1.0 + BEREICHS_BONUS_BASE_DELTAS.B5 * m,
+    B5: 1.0 + AREA_BONUS_BASE_DELTAS.B5 * m,
   };
 }
 
-function getBereichsBonus(sollRank, bonusMap) {
-  if (sollRank <= 5) return bonusMap.B1;
-  if (sollRank <= 15) return bonusMap.B2;
-  if (sollRank <= 25) return bonusMap.B3;
-  if (sollRank <= 40) return bonusMap.B4;
+function getAreaBonus(targetRank, bonusMap) {
+  if (targetRank <= 5) return bonusMap.B1;
+  if (targetRank <= 15) return bonusMap.B2;
+  if (targetRank <= 25) return bonusMap.B3;
+  if (targetRank <= 40) return bonusMap.B4;
   return bonusMap.B5;
 }
 
@@ -95,8 +95,8 @@ function getBereichsBonus(sollRank, bonusMap) {
 /**
  * Create a deterministic Race Plan for one race.
  *
- * M2v2: assigns a random sollRank (1..n) to every racer regardless of start row.
- * The racer with sollRank=1 is the designated winner.
+ * M2v2: assigns a random targetRank (1..n) to every racer regardless of start row.
+ * The racer with targetRank=1 is the designated winner.
  *
  * @param {Array<{index:number, startRowIndex:number}>} racers
  * @param {number}  finishT          t-space finish line
@@ -112,19 +112,19 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const corridorConfig = { ...DEFAULT_CORRIDOR_CONFIG, ...(config.corridorConfig ?? {}) };
   const controllerParams = { ...DEFAULT_CONTROLLER_PARAMS, ...(config.controllerParams ?? {}) };
 
-  // M2v2: assign random sollRank 1..n to each racer via Fisher-Yates shuffle
+  // M2v2: assign random targetRank 1..n to each racer via Fisher-Yates shuffle
   const n = racers.length;
   const rankPool = Array.from({ length: n }, (_, i) => i + 1);
   for (let i = rankPool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [rankPool[i], rankPool[j]] = [rankPool[j], rankPool[i]];
   }
-  const racerSollRank = new Map();
+  const racerTargetRank = new Map();
   for (let i = 0; i < racers.length; i++) {
-    racerSollRank.set(racers[i].index, rankPool[i]);
+    racerTargetRank.set(racers[i].index, rankPool[i]);
   }
-  // Winner = racer with sollRank=1 (used for reporting, not for steering)
-  const winnerEntry = [...racerSollRank.entries()].find(([, rank]) => rank === 1);
+  // Winner = racer with targetRank=1 (used for reporting, not for steering)
+  const winnerEntry = [...racerTargetRank.entries()].find(([, rank]) => rank === 1);
   const winnerRacerId = winnerEntry[0];
 
   // Group racers by startRowIndex
@@ -161,13 +161,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     midSwitch: phaseFractions.midToLateSwitchFraction * targetDurationMs,
   };
 
-  // Bereichs-Bonus: one constant multiplier per racer based on their soll-Bereich.
-  // bereichsBonusByBereich in config takes precedence; otherwise scale by bonusStrengthMultiplier.
-  const bereichsBonusMap =
-    config.bereichsBonusByBereich ?? computeBereichsBonusMap(config.bonusStrengthMultiplier ?? 1.0);
-  const racerBereichsBonus = new Map();
-  for (const [racerIdx, sollRank] of racerSollRank) {
-    racerBereichsBonus.set(racerIdx, getBereichsBonus(sollRank, bereichsBonusMap));
+  // Area bonus: one constant multiplier per racer based on their target area.
+  // areaBonusByArea in config takes precedence; otherwise scale by bonusStrengthMultiplier.
+  const areaBonusMap =
+    config.areaBonusByArea ?? computeAreaBonusMap(config.bonusStrengthMultiplier ?? 1.0);
+  const racerAreaBonus = new Map();
+  for (const [racerIdx, targetRank] of racerTargetRank) {
+    racerAreaBonus.set(racerIdx, getAreaBonus(targetRank, areaBonusMap));
   }
 
   return {
@@ -183,9 +183,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
-    _racerSollRank: racerSollRank,
-    _racerBereichsBonus: racerBereichsBonus,
-    _bereichsBonusFadeDuration: config.bereichsBonusFadeDuration ?? DEFAULT_BEREICHS_BONUS_FADE_MS,
+    _racerTargetRank: racerTargetRank,
+    _racerAreaBonus: racerAreaBonus,
+    _areaBonusFadeDuration: config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
   };
 }
 
@@ -195,14 +195,14 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  * Create a stateful Trajectory Controller from a Race Plan.
  *
  * M2v2: bidirectional P-controller for ALL racers in OUTCOME phase.
- * Each racer is pushed toward their assigned sollRank.
+ * Each racer is pushed toward their assigned targetRank.
  *
  * Usage:
  *   const ctrl = createTrajectoryController(plan);
  *   // Each physics step:
  *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
  *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.bereichsBonusMult * dt
+ *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * dt
  *
  * @param {object} racePlan  output of createRacePlan
  * @returns {object} TrajectoryController
@@ -237,7 +237,7 @@ export function createTrajectoryController(racePlan) {
 
   /**
    * Controller-Pass: sets r.trajectoryMult on every racer.
-   * In OUTCOME phase every racer gets a bidirectional correction toward their sollRank.
+   * In OUTCOME phase every racer gets a bidirectional correction toward their targetRank.
    *
    * @param {Array}  racers    live racer objects (must have .index, .t, .finished, .avoidanceActive)
    * @param {number} elapsedMs physicsTs in ms from race start
@@ -251,19 +251,19 @@ export function createTrajectoryController(racePlan) {
   }
 
   function update(racers, elapsedMs) {
-    // ── bereichsBonusMult: full pre-OUTCOME, easeInOutCubic fade at OUTCOME entry ──
+    // ── areaBonusMult: full pre-OUTCOME, easeInOutCubic fade at OUTCOME entry ──
     if (elapsedMs < transEnd) {
       for (const r of racers) {
-        r.bereichsBonusMult = plan._racerBereichsBonus.get(r.index) ?? 1.0;
+        r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
       }
     } else {
       const elapsedFade = elapsedMs - transEnd;
       const easedProgress = easeInOutCubic(
-        Math.min(1.0, elapsedFade / plan._bereichsBonusFadeDuration)
+        Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration)
       );
       for (const r of racers) {
-        const origBonus = plan._racerBereichsBonus.get(r.index) ?? 1.0;
-        r.bereichsBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
+        const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
+        r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
       }
     }
 
@@ -291,10 +291,10 @@ export function createTrajectoryController(racePlan) {
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
-      const sollRank = plan._racerSollRank.get(r.index) ?? currentRank;
+      const targetRank = plan._racerTargetRank.get(r.index) ?? currentRank;
 
       // positive rankError = racer currently ranked worse than target → boost
-      const rankError = currentRank - sollRank;
+      const rankError = currentRank - targetRank;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
       const rawTarget = clamp(1.0 + gain * (rankError / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
@@ -304,8 +304,8 @@ export function createTrajectoryController(racePlan) {
       _corridorViolationSum += Math.abs(rankError);
       if (Math.abs(rankError) > _corridorViolationMax) _corridorViolationMax = Math.abs(rankError);
 
-      const [bereichLo, bereichHi] = getBereichBounds(sollRank);
-      if (currentRank >= bereichLo && currentRank <= bereichHi) _racersInCorridorCount++;
+      const [areaLo, areaHi] = getAreaBounds(targetRank);
+      if (currentRank >= areaLo && currentRank <= areaHi) _racersInCorridorCount++;
 
       if (tm(r) > 1.0 + NOISE_THRESH) _bidirectionalBoostCount++;
       else if (tm(r) < 1.0 - NOISE_THRESH) _bidirectionalBrakeCount++;

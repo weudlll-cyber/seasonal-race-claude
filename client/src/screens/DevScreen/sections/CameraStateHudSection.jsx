@@ -204,9 +204,9 @@ function CameraStateHudSection() {
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Shows a short narrative text at the bottom of the screen during the first seconds of
-          OVERVIEW, BATTLE, and COMEBACK camera states — e.g. &ldquo;Aktuell führt Max&rdquo;. Text
-          is randomly chosen from a pool and avoids repeating the same template twice in a row for
-          the same state.
+          OVERVIEW, BATTLE, and COMEBACK camera states — e.g. &ldquo;Currently leading: Max&rdquo;.
+          Text is randomly chosen from a pool and avoids repeating the same template twice in a row
+          for the same state.
         </p>
 
         <label
@@ -225,8 +225,8 @@ function CameraStateHudSection() {
             checked={config.stateOverlayEnabled ?? true}
             onChange={toggleStateOverlay}
           />
-          <span style={{ fontWeight: 600 }}>Einblende-Texte aktivieren</span>
-          <InfoTooltip text="Blendet kurze kontextuelle Texte (z.B. 'Aktuell führt Max') beim Eintritt in OVERVIEW, BATTLE und COMEBACK ein. Nach der konfigurierten Dauer wird der Text weich ausgeblendet. Bei vorzeitigem State-Wechsel verschwindet der Text sofort." />
+          <span style={{ fontWeight: 600 }}>Enable overlay texts</span>
+          <InfoTooltip text="Shows short contextual overlay texts (e.g. 'Currently leading: Max') on entry into OVERVIEW, BATTLE, and COMEBACK. Fades out after the configured duration. Disappears immediately on early state change." />
         </label>
 
         <label
@@ -237,7 +237,7 @@ function CameraStateHudSection() {
             fontSize: '0.88rem',
           }}
         >
-          <span style={{ minWidth: '10rem' }}>Einblende-Dauer (ms)</span>
+          <span style={{ minWidth: '10rem' }}>Overlay duration (ms)</span>
           <input
             type="number"
             data-testid="state-overlay-duration"
@@ -248,7 +248,7 @@ function CameraStateHudSection() {
             onChange={handleOverlayDuration}
             style={{ width: '5rem' }}
           />
-          <InfoTooltip text="Dauer in Millisekunden, wie lange der Einblende-Text sichtbar bleibt (500–10000 ms). Default: 3500 ms." />
+          <InfoTooltip text="Duration in milliseconds the overlay text remains visible (500–10000 ms). Default: 3500 ms." />
         </label>
       </div>
 
@@ -330,14 +330,14 @@ function CameraStateHudSection() {
             onChange={toggleRpDiag}
           />
           <span style={{ fontWeight: 600 }}>Show Race Plan diagnostics</span>
-          <InfoTooltip text="Zeigt ein kleines Panel oben rechts im Renn-Canvas: Phase (PRE_PULK/PULK/TRANSITION/OUTCOME/FINAL), Laufzeit, Re-Roll-Status, spreadFactor-Spanne und im OUTCOME auch trajectoryMult-Spanne. Nur sichtbar wenn Race Plan aktiv ist." />
+          <InfoTooltip text="Shows a small panel top-right in the race canvas: phase (PRE_PULK/PULK/TRANSITION/OUTCOME/FINAL), elapsed time, re-roll status, spreadFactor range, and in OUTCOME also trajectoryMult range. Only visible when Race Plan is active." />
         </label>
       </div>
 
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          B1-Gewinnerliste: zeigt die 5 geplanten Top-Finisher (sollRank 1–5) mit ihrem aktuellen
-          Rang und der Abweichung (Delta). Nur sichtbar wenn Race Plan aktiv ist.
+          B1 winner list: shows the 5 planned top finishers (targetRank 1–5) with their current rank
+          and delta. Only visible when Race Plan is active.
         </p>
         <label
           style={{
@@ -355,14 +355,14 @@ function CameraStateHudSection() {
             onChange={toggleRpWinnerList}
           />
           <span style={{ fontWeight: 600 }}>Show B1 Winner List</span>
-          <InfoTooltip text="Zeigt ein Panel oben links mit den 5 Race-Plan-Favoriten (sollRank 1–5): Name, Sollrang, aktueller Rang, Delta. Grün = ≤1 Platz Abweichung, Gelb = ≤5, Rot = >5. Nur wenn Race Plan aktiv." />
+          <InfoTooltip text="Shows a panel top-left with the 5 race-plan favourites (targetRank 1–5): name, target rank, current rank, delta. Green = ≤1 position off, Yellow = ≤5, Red = >5. Only when Race Plan is active." />
         </label>
       </div>
 
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Minimap-Badges: markiert die 5 Race-Plan-Favoriten (sollRank 1–5) auf der Minimap mit
-          einem goldenen Ring.
+          Minimap badges: marks the 5 race-plan favourites (targetRank 1–5) on the minimap with a
+          gold ring.
         </p>
         <label
           style={{
@@ -380,14 +380,14 @@ function CameraStateHudSection() {
             onChange={toggleRpMinimapBadges}
           />
           <span style={{ fontWeight: 600 }}>Show Minimap Badges</span>
-          <InfoTooltip text="Zeichnet einen goldenen Ring um die 5 Race-Plan-Favoriten (sollRank 1–5) in der Minimap. Erleichtert das visuelle Tracking der geplanten Top-Finisher während des Rennens." />
+          <InfoTooltip text="Draws a gold ring around the 5 race-plan favourites (targetRank 1–5) in the minimap. Makes it easy to visually track the planned top finishers during the race." />
         </label>
       </div>
 
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Startreihen-Label: ergänzt den Namen-Tag jedes Rennfahrers um seine Startreihe (z.B.
-          &ldquo;Max (R2)&rdquo;). Hilfreich um Start-Row-Effekte visuell zu prüfen.
+          Start-row label: appends the start row to every racer&apos;s name tag (e.g. &ldquo;Max
+          (R2)&rdquo;). Useful for visually verifying start-row effects.
         </p>
         <label
           style={{
@@ -405,15 +405,14 @@ function CameraStateHudSection() {
             onChange={toggleRpStartRow}
           />
           <span style={{ fontWeight: 600 }}>Show Start-Row in Name Tags</span>
-          <InfoTooltip text="Hängt die Startreihe an den Namen-Tag an (z.B. 'Max (R2)'). Sichtbar bei allen Name-Tags die ohnehin eingeblendet werden. Zum Prüfen ob Reihen-Bonus und Startreihen-Effekte korrekt wirken." />
+          <InfoTooltip text="Appends the start row to the name tag (e.g. 'Max (R2)'). Visible on all name tags that are already shown. Use to verify that row bonus and start-row effects work correctly." />
         </label>
       </div>
 
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Top-10-Geschwindigkeitsmonitor: zeigt für die Top-10 Fahrer den aktuellen
-          trajectoryMult-Wert sowie Min/Max der letzten 5 Sekunden. Warnsymbol bei Oszillation (Δ
-          &gt; 0.18).
+          Top-10 speed monitor: shows the current trajectoryMult value for the top-10 racers, plus
+          min/max over the last 5 seconds. Warning indicator on oscillation (&Delta; &gt; 0.18).
         </p>
         <label
           style={{
@@ -431,7 +430,7 @@ function CameraStateHudSection() {
             onChange={toggleTop10SpeedMonitor}
           />
           <span style={{ fontWeight: 600 }}>Show Top-10 Speed Monitor</span>
-          <InfoTooltip text="Panel oben links (unterhalb Winner-List): Top-10 Fahrer mit Name, aktuellem trajectoryMult, Min/Max der letzten 5s und Delta. Rot bei Oszillation (Δ>0.18), Gelb bei Δ>0.10, Grün sonst. Nur wenn Race Plan aktiv." />
+          <InfoTooltip text="Panel top-left (below winner list): top-10 racers with name, current trajectoryMult, min/max over last 5 s, and delta. Red on oscillation (Δ>0.18), yellow at Δ>0.10, green otherwise. Only when Race Plan is active." />
         </label>
       </div>
 
@@ -465,8 +464,8 @@ function CameraStateHudSection() {
 
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          BATTLE-Diagnose: zeigt live an wann ein BATTLE-Event erkannt wird, welche Racer beteiligt
-          sind, und auf welchen Racer die Kamera aktuell gelockt ist. Default off.
+          BATTLE diagnostics: shows live when a BATTLE event is detected, which racers are involved,
+          and which racer the camera is locked on. Default off.
         </p>
 
         <label
@@ -485,15 +484,15 @@ function CameraStateHudSection() {
             onChange={toggleBattleDiag}
           />
           <span style={{ fontWeight: 600 }}>Show BATTLE diagnostics</span>
-          <InfoTooltip text="Zeigt ein Panel unten links im Renn-Canvas: BATTLE Status (ACTIVE/idle), beteiligte Racer, und auf welchen Racer die Kamera gelockt ist. Auch zeigt ob der Pulk aktuell noch besteht (Pulk now ✓/✗). Nur für Diagnose — default off." />
+          <InfoTooltip text="Shows a panel bottom-left in the race canvas: BATTLE status (ACTIVE/idle), involved racers, and which racer the camera is locked on. Also shows whether the pulk is still active (Pulk now ✓/✗). For diagnostics only — default off." />
         </label>
       </div>
 
-      {/* ── COMEBACK Kamera ── */}
+      {/* ── COMEBACK camera ── */}
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          COMEBACK-Kamera: Erkennt B1-Racer (sollRank 1–5) die in der OUTCOME-Phase aktiv Plätze
-          gutmachen. Benötigt Race Plan (nur Open-Track ≥ 60 s). BATTLE hat Vorrang.
+          COMEBACK camera: detects B1 racers (targetRank 1–5) actively gaining positions in the
+          OUTCOME phase. Requires Race Plan (open track ≥ 60 s only). BATTLE takes priority.
         </p>
 
         <label
@@ -513,14 +512,14 @@ function CameraStateHudSection() {
             onChange={toggleComebackDiag}
           />
           <span style={{ fontWeight: 600 }}>Show COMEBACK diagnostics</span>
-          <InfoTooltip text="Zeigt ein Panel im Renn-Canvas: OUTCOME-Phase, B1-Racer mit aktuellem Rang und Rang-Gewinn im Zeitfenster, aktiv gesperrter Comeback-Racer. Default off." />
+          <InfoTooltip text="Shows a panel in the race canvas: OUTCOME phase, B1 racers with current rank and rank gain in the time window, actively locked comeback racer. Default off." />
         </label>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Min. Platzgewinn</span>
+            <span style={{ minWidth: '14rem' }}>Min. positions gained</span>
             <input
               type="range"
               data-testid="comeback-min-positions"
@@ -534,13 +533,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.comebackMinPositionsGained ?? 3}
             </span>
-            <InfoTooltip text="Mindest-Platzgewinn innerhalb des Zeitfensters um COMEBACK auszulösen. Default 3." />
+            <InfoTooltip text="Minimum positions gained within the time window to trigger COMEBACK. Default 3." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Zeitfenster (s)</span>
+            <span style={{ minWidth: '14rem' }}>Time window (s)</span>
             <input
               type="range"
               data-testid="comeback-window-sec"
@@ -554,13 +553,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.comebackWindowSec ?? 5).toFixed(1)}s
             </span>
-            <InfoTooltip text="Zeitfenster in Sekunden für die Rang-Messung. Platzgewinn = Rang vor N Sekunden minus aktueller Rang. Default 5 s." />
+            <InfoTooltip text="Time window in seconds for rank measurement. Positions gained = rank N seconds ago minus current rank. Default 5 s." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Min. Beobachtungsdauer (s)</span>
+            <span style={{ minWidth: '14rem' }}>Min. observation duration (s)</span>
             <input
               type="range"
               data-testid="comeback-min-duration"
@@ -574,16 +573,16 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.comebackMinDuration ?? 3).toFixed(1)}s
             </span>
-            <InfoTooltip text="Mindestdauer in Sekunden, die die Kamera nach COMEBACK-Eintritt auf dem Racer bleibt. Default 3 s." />
+            <InfoTooltip text="Minimum duration in seconds the camera stays on the racer after COMEBACK entry. Default 3 s." />
           </label>
         </div>
       </div>
 
-      {/* ── LEAD_CHANGE Kamera ── */}
+      {/* ── LEAD_CHANGE camera ── */}
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          LEAD_CHANGE-Kamera: erkennt stabile Führungswechsel (Doppel-Hysterese: Abstand + Debounce)
-          und wechselt kurz vom LEADER_ZOOM in die LEAD_CHANGE-Ansicht. BATTLE hat Vorrang.
+          LEAD_CHANGE camera: detects stable lead changes (double hysteresis: gap + debounce) and
+          briefly switches from LEADER_ZOOM to LEAD_CHANGE view. BATTLE takes priority.
         </p>
 
         <label
@@ -603,14 +602,14 @@ function CameraStateHudSection() {
             onChange={toggleLeadChangeDiag}
           />
           <span style={{ fontWeight: 600 }}>Show LEAD_CHANGE diagnostics</span>
-          <InfoTooltip text="Zeigt ein Panel im Renn-Canvas: aktueller und vorheriger Anführer, Pending-Status, minGap und Debounce-Einstellungen. Default off." />
+          <InfoTooltip text="Shows a panel in the race canvas: current and previous leader, pending status, minGap and debounce settings. Default off." />
         </label>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Min. Abstand (T-Space)</span>
+            <span style={{ minWidth: '14rem' }}>Min. gap (T-space)</span>
             <input
               type="range"
               data-testid="lead-change-min-gap"
@@ -624,7 +623,7 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.leadChangeMinGap ?? 0.002).toFixed(3)}
             </span>
-            <InfoTooltip text="Mindest-T-Space-Abstand zwischen P1 und P2 für einen stabilen Führungslesewert. Zu klein = Flackern, zu groß = Wechsel wird spät erkannt. Default 0.002." />
+            <InfoTooltip text="Minimum T-space gap between P1 and P2 for a stable lead reading. Too small = flicker, too large = change detected late. Default 0.002." />
           </label>
 
           <label
@@ -644,13 +643,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.leadChangeDebounceMs ?? 800}ms
             </span>
-            <InfoTooltip text="Dauer in ms, die der neue Anführer die Führung halten muss bevor der Wechsel als bestätigt gilt. Verhindert Flackern bei knappen Duellen. Default 800 ms." />
+            <InfoTooltip text="Duration in ms the new leader must hold the lead before the change is confirmed. Prevents flicker in close duels. Default 800 ms." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Min. Beobachtungsdauer (s)</span>
+            <span style={{ minWidth: '14rem' }}>Min. observation duration (s)</span>
             <input
               type="range"
               data-testid="lead-change-min-duration"
@@ -664,25 +663,24 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.leadChangeMinDuration ?? 1.5).toFixed(1)}s
             </span>
-            <InfoTooltip text="Mindestdauer in Sekunden, die die Kamera nach LEAD_CHANGE-Eintritt auf dem neuen Anführer bleibt. Default 1.5 s." />
+            <InfoTooltip text="Minimum duration in seconds the camera stays on the new leader after LEAD_CHANGE entry. Default 1.5 s." />
           </label>
         </div>
       </div>
 
-      {/* ── Regie: Zufalls-Regisseur ── */}
+      {/* ── Director: weighted random selection ── */}
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Regie: Kandidaten-Pool mit gewichtetem Zufalls-Regisseur. Alle aktiven Events (BATTLE,
-          LEAD_CHANGE, COMEBACK, OVERVIEW) werden mit ihren Gewichten in einen Pool gelegt; der
-          Regisseur wählt probabilistisch aus. Pflicht-States (Start, Endgame, Finish) bleiben
-          unverändert.
+          Director: candidate pool with weighted random selection. All active events (BATTLE,
+          LEAD_CHANGE, COMEBACK, OVERVIEW) enter the pool with their weights; the director selects
+          probabilistically. Mandatory states (Start, Endgame, Finish) are unaffected.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>BATTLE-Gewicht</span>
+            <span style={{ minWidth: '14rem' }}>BATTLE weight</span>
             <input
               type="range"
               data-testid="regie-battle-weight"
@@ -696,13 +694,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.battleWeight ?? 0.8).toFixed(2)}
             </span>
-            <InfoTooltip text="Selektionsgewicht für BATTLE_ZOOM im Kandidaten-Pool. Höher = wird öfter gewählt wenn gleichzeitig andere Events aktiv sind. Default 0.80." />
+            <InfoTooltip text="Selection weight for BATTLE_ZOOM in the candidate pool. Higher = chosen more often when other events are active simultaneously. Default 0.80." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>LEAD_CHANGE-Gewicht</span>
+            <span style={{ minWidth: '14rem' }}>LEAD_CHANGE weight</span>
             <input
               type="range"
               data-testid="regie-lead-change-weight"
@@ -716,13 +714,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.leadChangeWeight ?? 0.7).toFixed(2)}
             </span>
-            <InfoTooltip text="Selektionsgewicht für LEAD_CHANGE im Kandidaten-Pool. Default 0.70." />
+            <InfoTooltip text="Selection weight for LEAD_CHANGE in the candidate pool. Default 0.70." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>COMEBACK-Gewicht</span>
+            <span style={{ minWidth: '14rem' }}>COMEBACK weight</span>
             <input
               type="range"
               data-testid="regie-comeback-weight"
@@ -736,13 +734,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.comebackWeight ?? 0.6).toFixed(2)}
             </span>
-            <InfoTooltip text="Selektionsgewicht für COMEBACK_ZOOM im Kandidaten-Pool. Default 0.60." />
+            <InfoTooltip text="Selection weight for COMEBACK_ZOOM in the candidate pool. Default 0.60." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>OVERVIEW-Gewicht</span>
+            <span style={{ minWidth: '14rem' }}>OVERVIEW weight</span>
             <input
               type="range"
               data-testid="regie-overview-weight"
@@ -756,13 +754,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.overviewWeight ?? 0.3).toFixed(2)}
             </span>
-            <InfoTooltip text="Selektionsgewicht für OVERVIEW im Kandidaten-Pool. Default 0.30." />
+            <InfoTooltip text="Selection weight for OVERVIEW in the candidate pool. Default 0.30." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>COMEBACK-Cooldown (ms)</span>
+            <span style={{ minWidth: '14rem' }}>COMEBACK cooldown (ms)</span>
             <input
               type="range"
               data-testid="regie-comeback-cooldown-ms"
@@ -776,13 +774,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {((config.comebackCooldownMs ?? 10000) / 1000).toFixed(0)}s
             </span>
-            <InfoTooltip text="Mindest-Pause in ms nach dem Verlassen von COMEBACK_ZOOM bevor COMEBACK wieder im Pool erscheint. Default 10 000 ms." />
+            <InfoTooltip text="Minimum pause in ms after leaving COMEBACK_ZOOM before COMEBACK re-enters the pool. Default 10 000 ms." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>LEAD_CHANGE-Cooldown (ms)</span>
+            <span style={{ minWidth: '14rem' }}>LEAD_CHANGE cooldown (ms)</span>
             <input
               type="range"
               data-testid="regie-lead-change-cooldown-ms"
@@ -796,13 +794,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {((config.leadChangeCooldownMs ?? 5000) / 1000).toFixed(0)}s
             </span>
-            <InfoTooltip text="Mindest-Pause in ms nach dem Verlassen von LEAD_CHANGE bevor LEAD_CHANGE wieder im Pool erscheint. Default 5 000 ms." />
+            <InfoTooltip text="Minimum pause in ms after leaving LEAD_CHANGE before LEAD_CHANGE re-enters the pool. Default 5 000 ms." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>OVERVIEW-Cooldown (ms)</span>
+            <span style={{ minWidth: '14rem' }}>OVERVIEW cooldown (ms)</span>
             <input
               type="range"
               data-testid="regie-overview-cooldown-ms"
@@ -816,13 +814,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {((config.overviewCooldownMs ?? 15000) / 1000).toFixed(0)}s
             </span>
-            <InfoTooltip text="Mindest-Pause in ms nach dem Verlassen von OVERVIEW bevor OVERVIEW wieder im Pool erscheint. Default 15 000 ms." />
+            <InfoTooltip text="Minimum pause in ms after leaving OVERVIEW before OVERVIEW re-enters the pool. Default 15 000 ms." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>OVERVIEW-Ziel-Anzahl</span>
+            <span style={{ minWidth: '14rem' }}>OVERVIEW target count</span>
             <input
               type="range"
               data-testid="regie-overview-target-count"
@@ -836,13 +834,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.overviewTargetCount ?? 2}
             </span>
-            <InfoTooltip text="Ziel-Anzahl von OVERVIEW-Schnitten pro Rennen. Der Scheduler verteilt das Intervall gleichmäßig über die geschätzte Renndauer. Default 2." />
+            <InfoTooltip text="Target number of OVERVIEW cuts per race. The scheduler distributes the interval evenly over the estimated race duration. Default 2." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>OVERVIEW-Startverzögerung (s)</span>
+            <span style={{ minWidth: '14rem' }}>OVERVIEW start delay (s)</span>
             <input
               type="range"
               data-testid="regie-overview-start-delay"
@@ -856,24 +854,23 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.overviewStartDelay ?? 15}s
             </span>
-            <InfoTooltip text="Sekunden nach Rennstart, bevor OVERVIEW das erste Mal im Pool erscheinen darf. Default 15 s." />
+            <InfoTooltip text="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s." />
           </label>
         </div>
       </div>
 
-      {/* ── BATTLE Slowmotion ── */}
+      {/* ── BATTLE slowmotion ── */}
       <div className={s.card}>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          BATTLE-Slowmotion: verlangsamt die Physik (Racer-Bewegung, Re-Rolls, Trajectory) während
-          BATTLE_ZOOM aktiv ist. Die Kamera bleibt auf normaler Geschwindigkeit. Sprite-Animationen
-          (Flügelschlag) verlangsamen ebenfalls.
+          BATTLE slowmotion: slows physics (racer movement, re-rolls, trajectory) while BATTLE_ZOOM
+          is active. The camera stays at normal speed. Sprite animations (wing flap) slow down too.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Slowmo-Faktor</span>
+            <span style={{ minWidth: '14rem' }}>Slowmo factor</span>
             <input
               type="range"
               data-testid="battle-slowmo-factor"
@@ -887,13 +884,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.battleSlowmoFactor ?? 0.5).toFixed(2)}
             </span>
-            <InfoTooltip text="Physik-Geschwindigkeit während BATTLE_ZOOM. 1.0 = normal, 0.5 = halb so schnell, 0.2 = sehr langsam. Default 0.5." />
+            <InfoTooltip text="Physics speed during BATTLE_ZOOM. 1.0 = normal, 0.5 = half speed, 0.2 = very slow. Default 0.5." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Mindest-Dauer (s)</span>
+            <span style={{ minWidth: '14rem' }}>Min. duration (s)</span>
             <input
               type="range"
               data-testid="battle-slowmo-min-duration"
@@ -907,13 +904,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.battleSlowmoMinDuration ?? 2.0).toFixed(1)}s
             </span>
-            <InfoTooltip text="Mindestdauer in Sekunden, die der Slowmo-Effekt nach Ende von BATTLE_ZOOM noch anhält bevor er ausblendet. Default 2.0s." />
+            <InfoTooltip text="Minimum duration in seconds the slowmo effect persists after BATTLE_ZOOM ends before fading out. Default 2.0s." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Fade-Dauer (s)</span>
+            <span style={{ minWidth: '14rem' }}>Fade duration (s)</span>
             <input
               type="range"
               data-testid="battle-slowmo-fade-duration"
@@ -927,13 +924,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.battleSlowmoFadeDuration ?? 0.3).toFixed(2)}s
             </span>
-            <InfoTooltip text="Dauer des Ein- und Ausblendens des Slowmo-Effekts in Sekunden. 0 = sofortiger Wechsel. Default 0.3s." />
+            <InfoTooltip text="Duration of slowmo effect fade-in and fade-out in seconds. 0 = instant switch. Default 0.3s." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Fokus-Abdunkelung</span>
+            <span style={{ minWidth: '14rem' }}>Focus darkening</span>
             <input
               type="range"
               data-testid="battle-focus-darkening"
@@ -947,7 +944,7 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {(config.battleFocusDarkening ?? 0.4).toFixed(2)}
             </span>
-            <InfoTooltip text="Abdunkelung (brightness) der Nicht-BATTLE-Racer während BATTLE_ZOOM. 0 = kein Effekt, 1 = komplett schwarz. Blendet synchron mit Slowmo ein/aus. Default 0.4." />
+            <InfoTooltip text="Dimming (brightness) of non-BATTLE racers during BATTLE_ZOOM. 0 = no effect, 1 = completely black. Fades in/out synchronised with slowmo. Default 0.4." />
           </label>
 
           <label
@@ -967,13 +964,13 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.battleIsolationThresholdPx ?? 0}px
             </span>
-            <InfoTooltip text="Mindestabstand (px) zwischen jedem Gruppen-Racer und jedem Nicht-Gruppen-Racer. 0 = deaktiviert (Standard). Empfehlung: 1.5 × Pulk-Threshold (z.B. 300px)." />
+            <InfoTooltip text="Minimum gap (px) between each group racer and each non-group racer. 0 = disabled (default). Recommendation: 1.5 × pulk threshold (e.g. 300 px)." />
           </label>
 
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '14rem' }}>Max. Gruppengröße</span>
+            <span style={{ minWidth: '14rem' }}>Max. group size</span>
             <input
               type="range"
               data-testid="battle-max-group-size"
@@ -987,7 +984,7 @@ function CameraStateHudSection() {
             <span style={{ minWidth: '2.5rem', fontVariantNumeric: 'tabular-nums' }}>
               {config.battleMaxGroupSize ?? 6}
             </span>
-            <InfoTooltip text="Maximale Anzahl Racer in der BATTLE-Gruppe (3–6). Die Gruppe kann kleiner sein wenn nicht genug Racer die Kriterien erfüllen. Default 6." />
+            <InfoTooltip text="Maximum number of racers in the BATTLE group (3–6). The group can be smaller if not enough racers meet the criteria. Default 6." />
           </label>
         </div>
       </div>

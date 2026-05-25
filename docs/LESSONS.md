@@ -1,690 +1,677 @@
-# LESSONS.md — Erkenntnisse aus der Entwicklung
+# LESSONS.md — Insights from Development
 
-Lessons die in der Vergangenheit gelernt wurden und für künftige Phasen relevant sind.
-Wird ergänzt nach jeder größeren Phase oder bei wichtigen Erkenntnissen.
-
----
-
-## Lesson 1 — UI-Drift trotz grüner Tests (PR #16)
-
-**Kontext:** D3.5.3 stellte die Code-Registry auf 12 Types um. Alle Tests passierten.
-Die UI (RacerManager im Dev-Screen) las aber weiter aus der alten 5-Type-localStorage-Liste —
-vollständig unbemerkt bis zum visuellen Smoke-Test.
-
-**Erkenntnis:** Code-Tests decken nicht ab, ob UI-Komponenten ihre Daten aus der korrekten
-Quelle lesen. Eine Komponente kann Daten aus einer obsoleten Quelle rendern während alle
-zugehörigen Unit-Tests grün bleiben.
-
-**Konsequenz:** Bei großen Daten-Modell-Änderungen (neuer Storage-Key, neues API, andere
-Source of Truth) UI-Layer explizit mit-spezifizieren und visuell verifizieren.
-CC-Smoke-Test-Convention als direkte Folge etabliert.
+Lessons learned in the past that are relevant for future phases.
+Updated after each major phase or upon important insights.
 
 ---
 
-## Lesson 2 — Migration-Sweep muss alle Felder abdecken (PR #17)
+## Lesson 1 — UI Drift Despite Green Tests (PR #16)
 
-**Kontext:** Track-Configs hatten `defaultRacerTypeId`, `racerTypeId`, `racerId` und `icon`
-parallel — alle potenziell mit dem alten 'car'-Wert. Die ursprüngliche `migrateCarToBuggy()`
-IIFE patched nur `defaultRacerTypeId`. Bei City Circuit (localStorage-Eintrag mit
-`racerTypeId: 'car'`) zeigte die SetupScreen-Merge-Logik `racerTypeId: 'car'` →
-`getRacerType('car')` → Fallback Horse → falsches Emoji. Bug fiel erst beim Playwright-
-Smoke-Test auf, obwohl die Migration "complete" aussah.
+**Context:** D3.5.3 switched the code registry to 12 types. All tests passed.
+But the UI (RacerManager in the Dev Screen) continued reading from the old 5-type localStorage list —
+completely unnoticed until the visual smoke test.
 
-**Erkenntnis:** Storage-Migrationen müssen alle semantisch gleichwertigen Felder abdecken,
-nicht nur das offensichtlich benannte. Cosmetics (icon, emoji) die aus denselben IDs abgeleitet
-werden gehören ebenfalls zum Sweep.
+**Insight:** Code tests do not cover whether UI components read their data from the correct
+source. A component can render data from an obsolete source while all associated unit tests remain green.
 
-**Konsequenz:** Vor jeder Storage-Migration Code-Sweep über alle ID-Felder und davon
-abgeleitete Cosmetics machen, nicht nur das offensichtlich benannte.
+**Consequence:** For large data model changes (new storage key, new API, different source of truth),
+explicitly specify the UI layer and verify it visually.
+CC Smoke Test Convention established as a direct result.
 
 ---
 
-## Lesson 3 — Sprite-Perspektive vor Implementation prüfen (D3.5.3 Drachen)
+## Lesson 2 — Migration Sweep Must Cover All Fields (PR #17)
 
-**Kontext:** Erste Drachen-Sprite-Generation war 3/4-Front-Perspektive statt top-down
-(konsistent mit allen anderen Types in der App). Diskrepanz zur App-Konvention erst beim
-visuellen Vergleich entdeckt.
+**Context:** Track configs had `defaultRacerTypeId`, `racerTypeId`, `racerId`, and `icon`
+in parallel — all potentially with the old 'car' value. The original `migrateCarToBuggy()`
+IIFE only patched `defaultRacerTypeId`. For City Circuit (localStorage entry with
+`racerTypeId: 'car'`), the SetupScreen merge logic showed `racerTypeId: 'car'` →
+`getRacerType('car')` → fallback Horse → wrong emoji. The bug only surfaced during the Playwright
+smoke test, even though the migration appeared "complete".
 
-**Erkenntnis:** AI-generierte oder externe Sprites können stilistisch und perspektivisch
-inkonsistent mit der App-Konvention sein. Das ist nicht durch Code-Tests erkennbar.
+**Insight:** Storage migrations must cover all semantically equivalent fields,
+not just the obviously named one. Cosmetics (icon, emoji) derived from the same IDs
+also belong to the sweep.
 
-**Konsequenz:** Bei AI-generierten oder externen Sprites Stil/Perspektive visuell
-verifizieren bevor implementieren. Bei Sprite-Reviews: top-down, Größe ca. 128px,
-Bewegungsrichtung nach rechts, transparenter Hintergrund.
-
----
-
-## Lesson 4 — Spec-Schreibstil disziplinieren
-
-**Kontext:** Frühe Specs hatten zu viel Implementation-Detail (konkrete Variablennamen,
-Schleifenstrukturen, spezifische Algorithmus-Umsetzungen). Das schränkte Claude Code
-unnötig ein und führte zu suboptimalen Lösungen wo Claude Code einen besseren Ansatz
-gewählt hätte.
-
-**Erkenntnis:** Claude Code ist näher am Code-Stack und trifft bessere Entscheidungen
-über interne Implementation. Strategischer Claude kennt besser Was und Warum, Claude
-Code kennt besser Wie.
-
-**Konsequenz:** Spec-Schreibstil-Convention etabliert — strategischer Claude beschreibt
-Was+Warum (Anforderungen, API-Signaturen, Storage-Schemas, Test-Erwartungen). Implementation
-(das Wie) überlässt strategischer Claude an Claude Code. Code-Beispiele in Specs nur wenn
-Schnittstellen oder APIs definiert werden, nicht als Implementations-Vorgabe für interne
-Logik.
+**Consequence:** Before every storage migration, do a code sweep over all ID fields and
+derived cosmetics, not just the obviously named one.
 
 ---
 
-## Lesson 5 — Pre-existing-vs-PR-verursacht trennen (PR #17 Quality-Gate)
+## Lesson 3 — Check Sprite Perspective Before Implementation (D3.5.3 Dragon)
 
-**Kontext:** Quality-Gate auf PR #17 fand pre-existing tech debts: TrackEditor.jsx (1006 LOC)
-und RaceScreen/index.jsx (886 LOC) — beide weit über dem 400-LOC-Threshold. Diese als
-Merge-Blocker zu behandeln wäre falsch gewesen, da PR #17 diese Probleme nicht eingeführt hat.
+**Context:** The first dragon sprite generation was in 3/4-front perspective instead of top-down
+(consistent with all other types in the app). The discrepancy from the app convention was only
+discovered during visual comparison.
 
-**Erkenntnis:** Quality-Gate-Findings müssen nach Herkunft getrennt werden. Pre-existing
-Probleme sind valide Tech-Debt, aber kein Grund eine unabhängige PR zu blockieren.
+**Insight:** AI-generated or external sprites can be stylistically and perspectively
+inconsistent with the app convention. This is not detectable through code tests.
 
-**Konsequenz:** Quality-Gate-Reports trennen "durch diese PR eingeführt" und "pre-existing".
-Pre-existing Findings als eigene Phase getrackt (hier: Phase Q-6, Q-7). Merge-Entscheidung
-basiert primär auf PR-eingeführten Findings.
-
----
-
-## Lesson 6 — Schema-Wechsel: neuer Key besser als umfunktionieren (PR #17)
-
-**Kontext:** Ursprüngliche Spec für B-7 sagte den bestehenden `racearena:racerTypes` Key
-umzufunktionieren (vom Array zur Override-Map). Claude Code wählte stattdessen einen neuen
-Key `racearena:racerTypeOverrides`. Das war sauberer: klare Trennung Legacy vs Neu, Migrations-
-IIFE konnte den alten Key lesen und direkt konvertieren, neuer Key hat immer nur den neuen
-semantischen Inhalt.
-
-**Erkenntnis:** Wenn ein Storage-Key semantisch umfunktioniert wird (anderer Inhalt, anderes
-Format), ist ein neuer Key fast immer sauberer. Der alte Key wird zum klaren Legacy-Marker
-für Migration.
-
-**Konsequenz:** Bei künftigen Storage-Schema-Änderungen neuen Key als Default, alter Key
-wird Legacy. Migrations-IIFE liest alten Key, schreibt neuen Key, entfernt alten Key.
+**Consequence:** For AI-generated or external sprites, visually verify style/perspective
+before implementing. For sprite reviews: top-down, approximately 128px size,
+movement direction to the right, transparent background.
 
 ---
 
-## Lesson 7 — Quality-Gate-Findings können falsch-positiv sein (PR #17 Cleanup)
+## Lesson 4 — Discipline the Spec Writing Style
 
-**Kontext:** Quality-Gate-Finding "SystemSettings JSON.parse ohne try/catch" stimmte nicht —
-die Inspektion des Codes zeigte, dass try/catch bereits vorhanden war (Zeile 47-54).
-Der automatisierte Grep hatte nur die `JSON.parse`-Zeile gefunden, nicht die umgebende
-try/catch-Struktur.
+**Context:** Early specs had too much implementation detail (concrete variable names,
+loop structures, specific algorithm implementations). This unnecessarily constrained Claude Code
+and led to suboptimal solutions where Claude Code would have chosen a better approach.
 
-**Erkenntnis:** Quality-Gate-Reports sind Hinweise, keine absoluten Wahrheiten. Grepping
-auf Pattern-Ebene kann den Kontext (umgebender try/catch-Block) übersehen.
+**Insight:** Claude Code is closer to the code stack and makes better decisions
+about internal implementation. Strategic Claude knows better What and Why, Claude
+Code knows better How.
 
-**Konsequenz:** Findings beim Fixen immer im Kontext prüfen. Korrektur ehrlich melden
-wenn Finding sich als falsch-positiv herausstellt. Das erhöht Vertrauen in zukünftige
-Reports.
-
----
-
-## Lesson 8 — Test-Framework-Integration braucht Exclude-Patterns (PR #19)
-
-**Kontext:** Bei der Einführung von Playwright in PR #19 wurde das `e2e/`-Pattern nicht in
-`vitest.config.js` ausgeschlossen. Vitest versuchte den Playwright-Spec zu
-importieren — `npm test` schlug rot fehl, obwohl 628 Unit-Tests und 22
-e2e-Tests einzeln grün waren. Erst Quality-Gate hat das aufgedeckt.
-
-**Erkenntnis:** Vitest matcht standardmäßig alle `*.spec.*`-Dateien — inkl. Playwright-Specs
-die vollkommen andere Globals (`test.describe`, `page`) erwarten. Die Fehler erscheinen
-erst beim Versuch den Spec zu importieren, nicht beim Schreiben.
-
-**Konsequenz:** Bei Integration eines neuen Test-Frameworks: explizit
-`exclude`-Patterns in den anderen Test-Configs ergänzen. Beim Hinzufügen
-einer neuen Test-Verzeichnis-Struktur (`e2e/`, `integration/`, etc.):
-Code-Sweep über alle Test-Configs, sicherstellen dass keiner versucht den
-falschen Verzeichnis-Inhalt zu laden.
+**Consequence:** Spec writing style convention established — strategic Claude describes
+What+Why (requirements, API signatures, storage schemas, test expectations). Implementation
+(the How) is left to Claude Code by strategic Claude. Code examples in specs only when
+interfaces or APIs are being defined, not as implementation guidance for internal logic.
 
 ---
 
-## Lesson 9 — Konstanten-Extraktion ist nur halb-fertig wenn nicht alle Konsumenten umgestellt werden (PR #19)
+## Lesson 5 — Separate Pre-existing vs. PR-caused Issues (PR #17 Quality Gate)
 
-**Kontext:** D9 hat Konstanten in `lapUtils.js` exportiert (`BASE_SPEED_MIN`, `BASE_SPEED_MAX`,
-`REFERENCE_FPS`) damit UI-Estimates und Race-Engine dieselben Werte verwenden.
-RaceScreen importierte sie aber nicht und duplizierte die Werte direkt im Code.
-Numerisch identisch zum Zeitpunkt — aber wenn die Konstanten getunt würden,
-wäre stilles Drift entstanden.
+**Context:** The Quality Gate on PR #17 found pre-existing tech debts: TrackEditor.jsx (1006 LOC)
+and RaceScreen/index.jsx (886 LOC) — both well above the 400-LOC threshold. Treating these as
+merge blockers would have been wrong, since PR #17 did not introduce these problems.
 
-**Erkenntnis:** Konstanten-Extraktion in eine Shared-Datei ist erst vollständig wenn alle
-Konsumenten — bestehende und neue — tatsächlich importieren. Numerische Gleichheit im
-Moment der Extraktion schützt nicht vor künftigem Drift.
+**Insight:** Quality Gate findings must be separated by origin. Pre-existing
+problems are valid tech debt, but not a reason to block an independent PR.
 
-**Konsequenz:** Wenn Konstanten in eine Shared-Datei extrahiert werden:
-Code-Sweep über alle Stellen wo der gleiche Wert vorkommt, alle Konsumenten
-auf den Import umstellen. Nicht nur die "neuen" Konsumenten — auch die
-bestehenden. Tests sollten die Symmetrie absichern.
+**Consequence:** Quality Gate reports separate "introduced by this PR" and "pre-existing".
+Pre-existing findings tracked as their own phase (here: Phase Q-6, Q-7). Merge decision
+is based primarily on PR-introduced findings.
 
 ---
 
-## Lesson 10 — File-Header-Convention auch für Test-Infrastruktur (PR #19)
+## Lesson 6 — Schema Change: New Key Is Better Than Repurposing (PR #17)
 
-**Kontext:** `playwright.config.js` und `e2e/d9-smoke.spec.js` wurden zunächst ohne den
-Standard-Projekt-File-Header geschrieben. Test-Infrastruktur ist auch Repo-Code
-und sollte denselben Konventionen folgen wie Source-Files.
+**Context:** The original spec for B-7 said to repurpose the existing `racearena:racerTypes` key
+(from array to override map). Claude Code instead chose a new key `racearena:racerTypeOverrides`.
+That was cleaner: clear separation legacy vs. new, migration IIFE could read the old key and
+directly convert, new key always only has the new semantic content.
 
-**Erkenntnis:** Der Reflex "das ist nur eine Config / ein Test" führt dazu dass neue
-Infrastruktur-Files die im Rest des Repos etablierten Konventionen nicht erben. Das
-fällt erst beim Quality-Gate auf, nicht beim Schreiben.
+**Insight:** When a storage key is semantically repurposed (different content, different
+format), a new key is almost always cleaner. The old key becomes the clear legacy marker
+for migration.
 
-**Konsequenz:** Bei Erstellung neuer Files (egal ob Source, Config, oder Test):
-Standard-Header anwenden. Quality-Gate-Check für File-Headers gilt für alle
-`.js`/`.jsx`/`.config.*` Files, nicht nur Source.
-
----
-
-## Lesson 11 — UX-Verifikation als zusätzliche Smoke-Test-Schicht (PR #21)
-
-**Kontext:** D3.5.5 hatte umfangreichen UI-Impact (Edit-Modal, 6 Felder, Tooltips, Override-
-Indikatoren, Validation). Neben dem normalen Smoke-Test (`d355-smoke.spec.js`, 14 Tests) wurde
-eine separate UX-Verifikations-Spec (`d3-5-5-ux-verification.spec.js`, 21 Tests) erstellt.
-Sie deckte Verhaltens-Aspekte ab die normale Smoke-Tests nicht prüfen: Tooltip-Inhalte,
-Override-Indikator-Sichtbarkeit, Validation-Recovery, Modal-Layout-Konsistenz auf verschiedenen
-Viewports, State-Isolation zwischen Modal-Aufrufen. Alle 21/21 grün.
-
-**Erkenntnis:** Funktionale Smoke-Tests (öffnet Modal? schreibt localStorage?) decken nicht ab,
-ob die UX korrekt ist: ob Badges erscheinen/verschwinden, ob Fehler-Messages nach Korrektur
-weggeräumt werden, ob Buttons korrekt disabled sind. Diese Schicht braucht eigene Tests.
-
-**Konsequenz:** Bei UI-schweren Phasen separate UX-Verifikations-Spec erwägen
-(`*-ux-verification.spec.js`). Spec wird permanent behalten als Regressions-Schutz.
-Convention-Erweiterung der CC-Smoke-Test-Convention (→ PROJECT-PRINCIPLES.md).
+**Consequence:** For future storage schema changes, new key as default; old key becomes legacy.
+Migration IIFE reads old key, writes new key, removes old key.
 
 ---
 
-## Lesson 12 — CI-Wartezeit beim Auto-Merge-Workflow (PR #21)
+## Lesson 7 — Quality Gate Findings Can Be False Positives (PR #17 Cleanup)
 
-**Kontext:** Beim Merge von PR #21 zeigte `gh pr merge` zunächst Fehler
-`Pull Request is not mergeable (mergePullRequest)`. Status via `gh pr view` war
-`mergeStateStatus: UNSTABLE` weil GitHub Actions CI-Run für den letzten Commit noch
-nicht abgeschlossen war. Korrektur: `gh run watch` für Wartezeit, dann erneuter
-`gh pr merge` — erfolgreich.
+**Context:** Quality Gate finding "SystemSettings JSON.parse without try/catch" was incorrect —
+inspection of the code showed that try/catch was already present (lines 47-54).
+The automated grep had only found the `JSON.parse` line, not the surrounding
+try/catch structure.
 
-**Erkenntnis:** GitHub betrachtet eine PR als "not mergeable" wenn CI noch pending ist,
-auch wenn kein Branch-Protection-Requirement auf grünen CI besteht. `UNSTABLE` ≠ `BLOCKED`.
-Kurzes Warten auf CI-Completion löst das Problem.
+**Insight:** Quality Gate reports are hints, not absolute truths. Grepping
+at the pattern level can miss the context (surrounding try/catch block).
 
-**Konsequenz:** Auto-Merge-Prompts sollten `gh pr checks` oder kurze CI-Wartezeit einplanen.
-Workflow: nach Push warten bis CI grün, dann `gh pr merge`. Bei `UNSTABLE`:
+**Consequence:** Always check findings in context when fixing. Honestly report
+when a finding turns out to be a false positive. This increases trust in future reports.
+
+---
+
+## Lesson 8 — Test Framework Integration Needs Exclude Patterns (PR #19)
+
+**Context:** When Playwright was introduced in PR #19, the `e2e/` pattern was not excluded in
+`vitest.config.js`. Vitest tried to import the Playwright spec —
+`npm test` failed red, even though 628 unit tests and 22 e2e tests were individually green.
+Only the Quality Gate revealed this.
+
+**Insight:** Vitest matches all `*.spec.*` files by default — including Playwright specs
+that expect completely different globals (`test.describe`, `page`). The errors appear
+only when attempting to import the spec, not when writing it.
+
+**Consequence:** When integrating a new test framework: explicitly add
+`exclude` patterns in the other test configs. When adding
+a new test directory structure (`e2e/`, `integration/`, etc.):
+code sweep over all test configs, ensuring none tries to load the
+wrong directory content.
+
+---
+
+## Lesson 9 — Constants Extraction Is Only Half-done When Not All Consumers Are Updated (PR #19)
+
+**Context:** D9 exported constants in `lapUtils.js` (`BASE_SPEED_MIN`, `BASE_SPEED_MAX`,
+`REFERENCE_FPS`) so that UI estimates and the race engine use the same values.
+RaceScreen did not import them, however, and duplicated the values directly in code.
+Numerically identical at the time — but if the constants were tuned,
+silent drift would have occurred.
+
+**Insight:** Constants extraction to a shared file is only complete when all
+consumers — existing and new — actually import. Numerical equality at the
+moment of extraction does not protect against future drift.
+
+**Consequence:** When extracting constants to a shared file:
+code sweep over all places where the same value appears, switch all consumers
+to the import. Not just the "new" consumers — also the existing ones. Tests should ensure the symmetry.
+
+---
+
+## Lesson 10 — File Header Convention Also for Test Infrastructure (PR #19)
+
+**Context:** `playwright.config.js` and `e2e/d9-smoke.spec.js` were initially written without the
+standard project file header. Test infrastructure is also repo code
+and should follow the same conventions as source files.
+
+**Insight:** The reflex "it's just a config / a test" causes new
+infrastructure files not to inherit the conventions established in the rest of the repo. This
+only surfaces at the Quality Gate, not when writing.
+
+**Consequence:** When creating new files (regardless of whether source, config, or test):
+apply standard header. Quality Gate check for file headers applies to all
+`.js`/`.jsx`/`.config.*` files, not just source.
+
+---
+
+## Lesson 11 — UX Verification as an Additional Smoke Test Layer (PR #21)
+
+**Context:** D3.5.5 had extensive UI impact (edit modal, 6 fields, tooltips, override
+indicators, validation). In addition to the normal smoke test (`d355-smoke.spec.js`, 14 tests), a
+separate UX verification spec (`d3-5-5-ux-verification.spec.js`, 21 tests) was created.
+It covered behavioral aspects that normal smoke tests don't check: tooltip contents,
+override indicator visibility, validation recovery, modal layout consistency on different
+viewports, state isolation between modal invocations. All 21/21 green.
+
+**Insight:** Functional smoke tests (does it open the modal? does it write to localStorage?) don't cover
+whether the UX is correct: whether badges appear/disappear, whether error messages are cleared after
+correction, whether buttons are correctly disabled. This layer needs its own tests.
+
+**Consequence:** For UI-heavy phases, consider a separate UX verification spec
+(`*-ux-verification.spec.js`). Spec is kept permanently as regression protection.
+Convention extension of the CC Smoke Test Convention (→ PROJECT-PRINCIPLES.md).
+
+---
+
+## Lesson 12 — CI Wait Time in the Auto-Merge Workflow (PR #21)
+
+**Context:** When merging PR #21, `gh pr merge` initially showed the error
+`Pull Request is not mergeable (mergePullRequest)`. Status via `gh pr view` was
+`mergeStateStatus: UNSTABLE` because the GitHub Actions CI run for the last commit had not yet
+completed. Fix: `gh run watch` to wait, then re-running `gh pr merge` — successful.
+
+**Insight:** GitHub considers a PR "not mergeable" when CI is still pending,
+even if there is no branch protection requirement for green CI. `UNSTABLE` ≠ `BLOCKED`.
+Briefly waiting for CI completion resolves the problem.
+
+**Consequence:** Auto-merge prompts should plan for `gh pr checks` or a brief CI wait time.
+Workflow: after push, wait until CI is green, then `gh pr merge`. For `UNSTABLE`:
 `gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')`.
 
 ---
 
-## Lesson 13 — Pre-Sets können einen echten Bug verschleiern (D10)
+## Lesson 13 — Pre-Sets Can Mask a Real Bug (D10)
 
-**Kontext:** Bei D10 (Track-Größen-Variabilität) wurden zunächst Pre-Set-Buttons
-(HD/FHD/QHD/4K) für `worldWidth` und `worldHeight` implementiert. Das funktionierte
-technisch, aber der User-Einwand "warum sollte ich überhaupt ein Format wählen?" deckte
-auf: tatsächliche Bild-Dimensionen (1168×784, 1536×1024) passten niemals zu Pre-Set-Werten
-— der Code arbeitete also mit fundamental falschen worldWidth/Height-Werten gegenüber den
-echten Bildern.
+**Context:** In D10 (track size variability), pre-set buttons
+(HD/FHD/QHD/4K) for `worldWidth` and `worldHeight` were initially implemented. This worked
+technically, but the user's objection "why would I even need to choose a format?" revealed:
+actual image dimensions (1168×784, 1536×1024) never matched pre-set values
+— the code was therefore working with fundamentally wrong worldWidth/Height values compared to the
+actual images.
 
-Erst beim Bild-First-Workflow-Fix wurde sichtbar dass Dimensionen eine Eigenschaft des
-Bildes sind, nicht eine Setting des Tracks.
+Only when the image-first workflow fix was applied did it become visible that dimensions are a property of the
+image, not a track setting.
 
-**Erkenntnis:** Wenn UI vom User Werte verlangt die aus einem Asset abgeleitet werden
-könnten (Bild-Dimensionen, File-Größen, etc.), lieber automatisch ableiten statt
-User-Wahl. User hat sonst keine sinnvolle Wahl-Basis und wählt vermutlich falsch.
+**Insight:** When the UI asks the user for values that could be derived from an asset
+(image dimensions, file sizes, etc.), it is better to derive them automatically rather than
+let the user choose. The user otherwise has no meaningful basis for the choice and will probably choose wrong.
 
-**Konsequenz:** Bei UI-Designs die Werte erfragen die aus vorhandenen Assets ableitbar
-sind: automatisch ableiten. Pre-Sets die "ungefähr passen" verschleiern den eigentlichen
-Bug (falsche Werte) und geben dem User eine sinnlose Wahl.
+**Consequence:** For UI designs that ask for values that can be derived from existing assets:
+derive automatically. Pre-sets that "roughly fit" mask the actual bug (wrong values)
+and give the user a meaningless choice.
 
 ---
 
-## Lesson 14 — User-Bauchgefühl wertvoller als Spec-Antizipation (D10 Post-Test)
+## Lesson 14 — User Gut Feeling Is More Valuable Than Spec Anticipation (D10 Post-Test)
 
-**Kontext:** Strategischer Claude hatte in der D10-Spec Pre-Set-Buttons als pragmatische
-Lösung vorgesehen, ohne zu hinterfragen ob die Werte zu echten Bildern passen. Erst der
-User-Einwand "warum überhaupt ein Format auswählen" hat das Design-Problem aufgedeckt
+**Context:** Strategic Claude had planned pre-set buttons in the D10 spec as a pragmatic
+solution, without questioning whether the values match actual images. Only the
+user's objection "why choose a format at all" revealed the design problem
 (→ Lesson 13).
 
-Ähnlich bei B-16/B-17: User-Test mit großem Track hat zwei kritische Probleme aufgedeckt
-(Camera bleibt still, Race-Speed wirkt zu schnell) die in der D10-Spec nicht antizipiert
-wurden. Track-Größen-Änderungen haben Auswirkungen auf Camera-Heuristiken und
-Speed-Empfindung die nur durch praktischen Test sichtbar werden.
+Similarly with B-16/B-17: user test with a large track revealed two critical problems
+(camera stays still, race speed feels too fast) that were not anticipated in the D10 spec.
+Track size changes have effects on camera heuristics and
+speed perception that only become visible through practical testing.
 
-**Erkenntnis:** Bei UX-Designs immer aus User-Sicht hinterfragen, auch wenn die
-Implementation funktional korrekt ist. User-Browser-Tests sind eine eigene Verifikations-
-Schicht die systematische Tests nicht ersetzen können: sie decken Probleme auf die in
-Specs übersehen wurden, weil Specs logisch denken, User aber intuitiv reagieren.
+**Insight:** For UX designs always question from the user's perspective, even if the
+implementation is functionally correct. User browser tests are a distinct verification
+layer that systematic tests cannot replace: they reveal problems overlooked in
+specs, because specs think logically, but users react intuitively.
 
-**Konsequenz:** Nach jeder größeren Phase User-Browser-Test einplanen, nicht nur
-automatisierte Tests als Verifikation zählen. Wenn User-Einwand "warum X?" kommt:
-zuerst fragen ob X überhaupt nötig ist statt X zu rechtfertigen.
-
----
-
-## Lesson 15 — E2E-Selector-Drift: Tests veralten wenn UI-Text sich ändert (PR #27)
-
-**Kontext:** Nach B-Wave (PR #25) wurden in b-wave-smoke und b1617-smoke 7 pre-existing
-Selector-Fehler entdeckt: Ein Label hatte sich von Deutsch auf Englisch geändert, ein
-`getByRole` traf einen anderen DOM-Knoten, ein Text-Match war nicht lang genug angebunden.
-Diese Tests waren beim Schreiben korrekt — aber jede UI-String-Änderung macht Text-basierte
-Selektoren fragil.
-
-**Erkenntnis:** Playwright-Tests mit hartem Text-Match (`getByText('Geometrie wählen')`,
-`getByRole('option', { name: 'City Circuit' })`) veralten leise wenn UI-Text in einer
-anderen PR geändert wird. Die Tests schlagen erst im nächsten CI-Run fehl, nicht beim
-Schreiben der UI-Änderung.
-
-**Konsequenz:** Bei UI-String-Änderungen (Deutsch → Englisch, Label-Umbenennungen): Code-Sweep
-über alle e2e-Specs nach betroffenen Selektoren. Robustere Selektoren bevorzugen: `data-testid`,
-ARIA-Rollen mit partiellem Match (`{ name: /City/ }`), oder `.first()` bei unvermeidlicher
-Ambiguität.
+**Consequence:** After every major phase, plan a user browser test — don't count only
+automated tests as verification. When a user objection "why X?" comes:
+first ask whether X is necessary at all, rather than justifying X.
 
 ---
 
-## Lesson 16 — Rückgabe-Lücke in Storage-Layer maskiert Feature-Bug (fix/list-tracks)
+## Lesson 15 — E2E Selector Drift: Tests Become Stale When UI Text Changes (PR #27)
 
-**Kontext:** `listTracks()` in `trackStorage.js` gab `worldWidth` und `worldHeight` nicht zurück.
-Das war seit D10 ein Bug, aber für alle bestehenden Tracks (1280×720) war die Konsequenz
-unsichtbar: bsX=1.0 war korrekt für 1280px. Erst beim Test mit einem echten 6000px-Track
-wurde sichtbar dass nur ~549px der World gerendert wurden.
+**Context:** After B-Wave (PR #25), 7 pre-existing selector errors were discovered in b-wave-smoke and
+b1617-smoke: a label had changed from German to English, a
+`getByRole` hit a different DOM node, a text match was not anchored long enough.
+These tests were correct when written — but every UI string change makes text-based
+selectors fragile.
 
-**Erkenntnis:** Storage-Layer-Lücken (fehlende Felder im Return-Objekt) können durch Default-
-Fallbacks (`?? 1280`) im Consumer vollständig versteckt werden solange der Default-Wert dem
-realen Wert entspricht. Eine neue Feature-Klasse (große Tracks) hebelt den Default aus und
-macht den Bug erst sichtbar.
+**Insight:** Playwright tests with hard text matches (`getByText('Geometrie wählen')`,
+`getByRole('option', { name: 'City Circuit' })`) go stale silently when UI text is changed in
+another PR. The tests fail only in the next CI run, not when writing the UI change.
 
-**Konsequenz:** Nach Storage-Schema-Erweiterungen (neues Feld) alle Read-Paths explizit
-testen, nicht nur Write-Paths. Unit-Test für `listTracks()` sollte alle Felder aus dem
-gespeicherten Objekt im Return-Objekt verifizieren — nicht nur die offensichtlichen
-(id, name, icon).
-
----
-
-## Lesson 17 — Browser-Test als Ground-Truth, auch wenn Unit + E2E grün sind (D11)
-
-**Kontext:** Vor dem Merge von PR #30 waren 809 Unit-Tests und 183 e2e-Tests grün.
-Browser-Test durch User fand dennoch 4 visuelle Bugs: (1) schwarze Ränder auf kleinen
-Tracks bei hohem Zoom (Camera world-edge clamp fehlte), (2) Sprite minScale 0.4 zu klein
-(Racers wurden fast unsichtbar), (3) symmetrische Avoidance-Kräfte cancelten sich in
-gleichmäßig verteilten Packs (mittlere Racer bewegten sich nicht), (4) Auto-Sprite-Scale
-auf Open-Tracks ignorierte Camera-Zoom → falsche Sprite-Größe.
-
-**Erkenntnis:** Unit- und E2E-Tests prüfen, was der Code berechnet — nicht, was der
-Nutzer sieht. Es gibt mindestens 4 Test-Lücken die systemisch immer wieder visuelle
-Bugs durchlassen:
-
-1. **Visual-Outcome-Tests** fehlen: kein Test prüft "sieht der Racer im Canvas
-   sichtbar aus", "gibt es schwarze Ränder"
-2. **Boundary-Geometry-Tests** fehlen: Tests mit kleinen Tracks, extremen Racer-Counts,
-   hohen Zoom-Levels
-3. **Realistic-Configuration-Tests** fehlen: echte Track-Racer-Kombos (6000px Track,
-   20+ Racers) als Test-Input statt Unit-Minimal-Values
-4. **Effect-Verification** fehlt: Tests prüfen ob Avoidance-Code läuft — nicht ob
-   Racers sich tatsächlich merkbar bewegen
-
-**Konsequenz:** Bei jedem Feature mit visuellem Output: nach automatisierten Tests
-Browser-Test einplanen. Grüne Tests sind notwendig aber nicht hinreichend für visuell
-korrekte Ergebnisse. Bei Rendering, Kamera, Skalierung: explizit Boundary-Configs
-und Realistic-Configs als Test-Input verwenden.
+**Consequence:** For UI string changes (German → English, label renames): code sweep
+over all e2e specs for affected selectors. Prefer more robust selectors: `data-testid`,
+ARIA roles with partial match (`{ name: /City/ }`), or `.first()` for unavoidable ambiguity.
 
 ---
 
-## Lesson 18 — Accumulated Complexity erkennen und Stop-and-Refactor entscheiden (D11)
+## Lesson 16 — Return Gap in Storage Layer Masks Feature Bug (fix/list-tracks)
 
-**Kontext:** Nach D11 waren 4 multiplikative Skalierungsfaktoren aktiv:
-`speedScale` (Track-Länge), `displaySizeScale` (lane-basiert + pixelFloor),
-`cameraZoomFactor` (Closed-Track-Invariante oder Open-Track-Formel),
-`behaviorSpeedFactor` (Drafting-Boost). Jeder Faktor wurde korrekt und isoliert
-eingeführt, aber ihr Zusammenspiel ist durch Browser-Tests als visuell opak identifiziert
-worden. Das Tuning von einem Faktor hat unerwartete Wechselwirkungen auf andere.
+**Context:** `listTracks()` in `trackStorage.js` did not return `worldWidth` and `worldHeight`.
+This had been a bug since D10, but for all existing tracks (1280×720) the consequence was
+invisible: bsX=1.0 was correct for 1280px. Only when testing with an actual 6000px track
+did it become visible that only ~549px of the world were rendered.
 
-Das Ergebnis (D11 + Visual-Fixes) wurde trotzdem gemergt — als "funktional gut genug"
-für den aktuellen Use-Case — statt weiter zu tunen. Gleichzeitig wurde D7 als nächste
-Phase priorisiert mit dem expliziten Auftrag: Vision-Diskussion zuerst, dann
-strukturiertes Refactor der Skalierungs-Pipeline.
+**Insight:** Storage layer gaps (missing fields in the return object) can be completely hidden by default
+fallbacks (`?? 1280`) in the consumer as long as the default value matches the
+real value. A new feature class (large tracks) cancels out the default and
+only then makes the bug visible.
 
-**Erkenntnis:** Wenn mehrere Features unabhängig korrekt entwickelt werden aber ihre
-Kombinationen schwer vorhersagbar werden, ist "noch ein Feature drauf" oft der falsche
-Weg. Das Muster: Bugs tauchen verstärkt in Kombinations-Szenarien auf, Fixes für A
-brechen B. Das ist das Signal für Accumulated Complexity — die Architektur hat die
-Feature-Dichte überholt.
-
-Die richtige Reaktion: Merge was funktioniert, dann Stop-and-Refactor als eigene Phase
-planen (D7). Nicht: weiteres Tuning auf fragiler Basis.
-
-**Konsequenz:** Wenn Feature-Korrekturen zunehmend in Kombinations-Szenarien auftreten
-statt isoliert: Architektur-Review priorisieren. Merge "funktional gut genug" ist eine
-valide Entscheidung wenn ein strukturierter Follow-up-Plan existiert. Vision-Diskussion
-vor Code schreiben: klärt was "gut" heißt bevor die Implementierung festlegt wie.
+**Consequence:** After storage schema extensions (new field), explicitly test all read paths,
+not just write paths. Unit test for `listTracks()` should verify all fields from the
+stored object in the return object — not just the obvious ones (id, name, icon).
 
 ---
 
-## Lesson 19 — Browser-Test-driven Architecture-Correction (D7a)
+## Lesson 17 — Browser Test as Ground Truth, Even When Unit + E2E Are Green (D11)
 
-**Kontext:** D7a wurde mit Math-Korrektheit als primärem Ziel implementiert: Sprites
-sollten konstante Bildschirm-Größe über alle Camera-Zoom-States behalten (`cameraZoomFactor`
-× `effZoom = REFERENCE_CAMERA_ZOOM`). 819 Unit + 183 e2e Tests bestätigten korrekte
-Implementation.
+**Context:** Before merging PR #30, 809 unit tests and 183 e2e tests were green.
+Browser test by user still found 4 visual bugs: (1) black borders on small
+tracks at high zoom (camera world-edge clamp was missing), (2) sprite minScale 0.4 too small
+(racers became nearly invisible), (3) symmetric avoidance forces canceled each other in
+evenly distributed packs (middle racers did not move), (4) auto sprite scale
+on open tracks ignored camera zoom → wrong sprite size.
 
-**Aber:** User-Browser-Test zeigte dass die Sprites sich "falsch anfühlen". Auf Open-Track
-wirkten Sprites bei Zoom-IN kleiner statt größer: das Sprite-Track-Verhältnis verkleinerte
-sich von 27% (OVERVIEW) auf 17% (LEADER) während die Track-Hintergründe mit dem Zoom wuchsen.
+**Insight:** Unit and E2E tests check what the code calculates — not what the
+user sees. There are at least 4 test gaps that systematically let visual
+bugs through:
 
-Statt weiter zu tunen: Diagnose-Auftrag an Claude Code. Ergebnis: Math war korrekt (Sprites
-objektiv 56.8px in allen States), aber das Verhältnis Sprite/Track-Hintergrund änderte sich
-wahrnehmbar. Drei Optionen wurden präsentiert (Konstant, Proportional, Proportional+Floor).
+1. **Visual outcome tests** missing: no test checks "does the racer look
+   visible on the canvas", "are there black borders"
+2. **Boundary geometry tests** missing: tests with small tracks, extreme racer counts,
+   high zoom levels
+3. **Realistic configuration tests** missing: real track-racer combos (6000px track,
+   20+ racers) as test input instead of unit minimal values
+4. **Effect verification** missing: tests check whether avoidance code runs — not whether
+   racers actually move noticeably
 
-User entschied für Option 3: natürliches "näher = größer"-Verhalten mit Mindest-Sichtbarkeit
-als Sicherheits-Floor. Korrektur in derselben PR:
-- `cameraZoomFactor` + `REFERENCE_CAMERA_ZOOM` komplett entfernt
-- `computeRenderDisplayScale` als Single-Source der Render-Pipeline
-- `autoSpriteScale.js` massiv vereinfacht (19 obsolete Tests entfernt, 10 neue hinzugefügt)
-
-**Wichtige Erkenntnis:** Die User-driven Korrektur machte die Architektur **einfacher**,
-nicht komplexer. Browser-Test entdeckte UX-Problem → Diagnose verstand die Math → User-
-Entscheidung produzierte saubere Architektur. 4 Skalierungs-Faktoren → 1 Pipeline.
-
-**Pattern für künftige Visual-Phasen:**
-1. Implementation mit Math-Korrektheit
-2. Browser-Test mit ehrlicher User-Wahrnehmung
-3. Bei Problemen: Diagnose-Auftrag (nicht raten, nicht tunen)
-4. Optionen mit Trade-offs präsentieren
-5. User-Entscheidung treibt Architektur
-6. Korrektur in derselben PR möglich und bevorzugt
+**Consequence:** For every feature with visual output: plan a browser test after
+automated tests. Green tests are necessary but not sufficient for visually
+correct results. For rendering, camera, scaling: explicitly use boundary configs
+and realistic configs as test input.
 
 ---
 
-## Lesson 20 — N-Force-Accumulation braucht N-Scaling by Design, nicht nach Browser-Test (D7b B3)
+## Lesson 18 — Recognizing Accumulated Complexity and Deciding to Stop-and-Refactor (D11)
 
-**Kontext:** Die D7b-Avoidance akkumulierte Lateral-Forces linear über alle `neighborCount`
-Nachbarn — ein Racer mit N=10 Nachbarn erhielt 10× die Per-Pair-Force. Das war als
-"Force-Stacking bei 20+ Racers" im D11-Backlog bekannt und explizit deferred.
+**Context:** After D11, 4 multiplicative scaling factors were active:
+`speedScale` (track length), `displaySizeScale` (lane-based + pixelFloor),
+`cameraZoomFactor` (closed track invariant or open track formula),
+`behaviorSpeedFactor` (drafting boost). Each factor was introduced correctly and in isolation,
+but their interplay was identified as visually opaque through browser tests.
+Tuning one factor had unexpected interactions with others.
 
-Browser-Test nach D7b B1+B2 zeigte sofort: alle 20 Racer clusterten an den Boundaries in
-zwei Gruppen. Home-Force (~0.04/Frame) wurde von akkumulierter Avoidance (~0.4/Frame von 10
-Paaren) overwhelmt. Diagnose war korrekt — aber die Behebung kostete einen zusätzlichen
-Commit-Sprint obwohl das Problem beim D11-Befund vorhersehbar war.
+The result (D11 + visual fixes) was merged anyway — as "functionally good enough"
+for the current use case — rather than continuing to tune. At the same time, D7 was
+prioritized as the next phase with the explicit mandate: vision discussion first, then
+structured refactor of the scaling pipeline.
 
-**Erkenntnis:** Jedes Force-System wo ein Entity Beiträge von N Nachbarn sammelt muss
-N-Scaling from the start berücksichtigen. `sqrt(N)` als Normalisierung ist 4 Zeilen Code
-— aber sie müssen bei System-Design stehen, nicht nach dem ersten Scale-Test.
+**Insight:** When multiple features are developed independently correctly but their
+combinations become hard to predict, "adding another feature on top" is often the wrong
+path. The pattern: bugs appear increasingly in combination scenarios, fixes for A
+break B. This is the signal for Accumulated Complexity — the architecture has been
+overtaken by feature density.
 
-Backlog-Eintrag "defer pending browser-test" für bekannte Force-Balance-Issues ist eine
-Hochrisiko-Entscheidung: bei 2-Racer-Tests ist das Problem unsichtbar, bei N=20 sofort
-sichtbar. Das ist das Muster.
+The right response: merge what works, then plan Stop-and-Refactor as its own phase
+(D7). Not: further tuning on a fragile basis.
 
-**Konsequenz:** Bei Force/Physics-Systemen: explizit fragen "was passiert bei N=20 Entities
-die alle auf dasselbe Ziel einwirken?" bevor Feature shipped. N-Scaling (÷sqrt(N) oder
-÷N) als Default-Kandidat, nicht als spätere Optimierung.
-
----
-
-## Lesson 21 — Metadata-Werte sind keine Messung — Skalen-Berechnung braucht echte Geometrie (D7c-fix)
-
-**Kontext:** D7c nutzte `trackWidth` (Operator-deklarierte Metadata, Default 140 px) als
-Eingabe für `computeRowLayout`. Das ergab `racersPerRow = floor(140 / 80) = 1` auf allen
-Tracks — korrekt für 1280px-Referenz-Welten, aber fatal auf großen Welten (z.B. 6000px):
-dort entsprachen 140 Metadata-Pixel nur ~30 Screen-Pixel, und alle 20 Racer wurden in
-Einzelreihen platziert → eine einzelne vertikale Linie beim Race-Start.
-
-Die Metadata war nie eine Messung. Sie war eine UI-Wahl aus `[100, 140, 200, 280, 360]`
-und kalibriert für 1280px-Welten. Auf anderen Weltgrößen war sie bedeutungslos.
-
-**Erkenntnis:** Wenn ein Wert für eine Skalen-Berechnung verwendet wird, muss er die
-richtige physikalische Einheit in Bezug auf die aktuelle Welt haben. Operator-deklarierte
-Metadata (die für eine Referenz-Welt sinnvoll war) ist keine Messung — sie bricht silently
-in anderen Skalierungsbereichen. Die echte Track-Breite liegt nur in der Geometrie (Abstand
-inner/outer Kurve in World-Koordinaten).
-
-**Konsequenz:** Bei Layout- oder Skalen-Berechnungen die von Track-Geometrie abhängen:
-immer `EditorShape.getActualTrackWidth()` (oder Äquivalent) statt Metadata verwenden.
-Metadata-Felder sind für UI-Anzeige und User-Kommunikation — nicht als Messgröße in Berechnungen.
-
-**Eskalation (D7c-fix-v2):** Das `trackWidth`-Feld wurde komplett aus dem Track-Datenmodell entfernt, nachdem sich auch nach der ersten Fix-Iteration herausstellte, dass die Formel noch auf einem falschen Einheitenkonzept basierte (Screen-Pixel statt World-Pixel). Wenn ein Metadata-Feld in Berechnungen nicht sinnvoll einsetzbar ist, ist das richtige Vorgehen seine vollständige Entfernung — nicht Umwege über Korrekturfaktoren.
+**Consequence:** When feature fixes increasingly occur in combination scenarios
+rather than in isolation: prioritize architecture review. Merging "functionally good enough" is a
+valid decision when a structured follow-up plan exists. Vision discussion
+before writing code: clarifies what "good" means before the implementation determines how.
 
 ---
 
-## Lesson 22 — floor() ist sensitiv gegenüber Floating-Point-Fehlern nahe Ganzzahlen (D7c-fix-v3)
+## Lesson 19 — Browser-Test-driven Architecture Correction (D7a)
 
-**Kontext:** Nach D7c-fix-v2 zeigte der Browser-Test `racersPerRow=11` statt erwarteter 12.
-Diagnose über Diagnostic-Snapshot-Tool: `getActualTrackWidth()` lieferte `299.9999999999994`
-statt `300` — catmullRom-Hermite-Interpolation über 500 Sample-Punkte akkumuliert ~6×10⁻¹³
-Rundungsfehler. Mit `spriteSize = 50` (Rocket-Override deaktiviert Auto-Scale) ergibt das
-`floor(2×299.9999.../50) = floor(11.9999...) = 11` statt 12.
+**Context:** D7a was implemented with mathematical correctness as the primary goal: sprites
+should maintain constant screen size across all camera zoom states (`cameraZoomFactor`
+× `effZoom = REFERENCE_CAMERA_ZOOM`). 819 unit + 183 e2e tests confirmed correct
+implementation.
 
-**Erkenntnis:** `Math.floor()` ist nicht tolerant gegenüber floating-point Underflow.
-Ein Wert der konzeptuell exakt 12.0 ist, aber durch Akkumulation winziger Fehler als
-11.9999...998 repräsentiert wird, gibt floor=11 — eine Reihe zu viel, 9 Racer falsch platziert.
-Das ist besonders gefährlich wenn: (1) der Eingangs-Wert durch mehrere fp-Operationen berechnet
-wird, und (2) das Ergebnis diskret ist (ganzzahlige Reihenanzahl).
+**But:** User browser test showed that the sprites "feel wrong". On open track,
+sprites at zoom-IN appeared smaller instead of larger: the sprite-track ratio shrank
+from 27% (OVERVIEW) to 17% (LEADER) while the track backgrounds grew with the zoom.
 
-**Konsequenz:** Werte die konzeptuell ganzzahlig sind (Track-Breiten in World-Pixeln, die der
-Editor in ganzen Zahlen setzt) vor dem Eingang in `floor()`-Berechnungen durch `Math.round()`
-normalisieren. `Math.round()` absorbiert den Fehler; `Math.floor()` verstärkt ihn.
-Fix: `getActualTrackWidth()` rundet den Median-Wert per `Math.round()` bevor er gecacht wird.
+Instead of continuing to tune: diagnostic task to Claude Code. Result: math was correct (sprites
+objectively 56.8px in all states), but the sprite/track background ratio changed
+perceptibly. Three options were presented (Constant, Proportional, Proportional+Floor).
 
----
+User decided for Option 3: natural "closer = larger" behavior with minimum visibility
+as a safety floor. Correction in the same PR:
+- `cameraZoomFactor` + `REFERENCE_CAMERA_ZOOM` completely removed
+- `computeRenderDisplayScale` as single source of the render pipeline
+- `autoSpriteScale.js` massively simplified (19 obsolete tests removed, 10 new ones added)
 
-## Lesson 23 — Open-Track-Layout parallel zu Closed-Track denken, nicht als Sonderfall (D7c-Phase4)
+**Key Insight:** The user-driven correction made the architecture **simpler**,
+not more complex. Browser test revealed UX problem → diagnosis understood the math → user
+decision produced clean architecture. 4 scaling factors → 1 pipeline.
 
-**Kontext:** D7c implementierte Row-Start mit negativem t für hintere Reihen. Closed tracks:
-korrekt — `tPos(t)` wraps negatives t hinter die Startlinie. Open tracks: `_idx(t)` klemmt
-auf idx=0 → alle Reihen stehen am selben Punkt. Statt eigener Lösung für Open-Track wurde
-der Closed-Track-Ansatz kommentarlos als "für Open Tracks kein Problem" übernommen.
-
-**Erkenntnis:** Open-Track-Strecken haben eine andere Topologie als Closed-Track-Strecken:
-kein Wrap-Around, Anfang und Ende sind echte Grenzen. Ein Mechanismus der bei Closed
-Tracks funktioniert (negativer t) bricht bei Open Tracks auf eine Weise die visuell wie
-"kein Problem" aussieht (alle Reihen am Startpunkt) aber tatsächlich die Row-Logik
-vollständig außer Kraft setzt.
-
-**Konsequenz:** Für jeden neuen Mechanismus der t-Werte manipuliert: explizit prüfen ob
-das Verhalten für Open und Closed Tracks separat korrekt ist. Nicht von einem Tracktyp
-auf den anderen schließen — die Topologien sind grundlegend verschieden.
+**Pattern for future visual phases:**
+1. Implementation with mathematical correctness
+2. Browser test with honest user perception
+3. On problems: diagnostic task (don't guess, don't tune)
+4. Present options with trade-offs
+5. User decision drives architecture
+6. Correction in the same PR possible and preferred
 
 ---
 
-## Lesson 24 — Atomic Write: temp + rename schützt vor korrupten Dateien (L.5)
+## Lesson 20 — N-Force Accumulation Needs N-Scaling by Design, Not After Browser Test (D7b B3)
 
-**Kontext:** Die L.5-Write-Endpoints mussten Track-JSON-Dateien updaten ohne das Risiko einer halbfertigen Datei (z.B. bei Absturz während des Schreibens oder volllaufender Disk). Standard `writeFileSync` direkt auf die Zieldatei ist nicht atomar — ein Leser zwischen Write-Start und Write-Ende sieht inkonsistenten Inhalt.
+**Context:** The D7b avoidance accumulated lateral forces linearly over all `neighborCount`
+neighbors — a racer with N=10 neighbors received 10× the per-pair force. This was known as
+"force stacking at 20+ racers" in the D11 backlog and explicitly deferred.
 
-**Erkenntnis:** Das OS garantiert dass `rename()` auf demselben Filesystem atomar ist: Leser sehen entweder die alte oder die neue Datei, nie eine unvollständige. Temporäre Datei auf demselben Volume schreiben (`.tmp`-Suffix auf selber Partition), dann `renameSync` zur finalen Adresse.
+Browser test after D7b B1+B2 immediately showed: all 20 racers clustered at the boundaries in
+two groups. Home force (~0.04/frame) was overwhelmed by accumulated avoidance (~0.4/frame from 10
+pairs). The diagnosis was correct — but the fix required an additional
+commit sprint, even though the problem was predictable from the D11 findings.
 
-**Konsequenz:** Für alle Datei-Writes die konsistenten Zustand erfordern: `writeFileSync(tmpPath, content)` dann `renameSync(tmpPath, finalPath)`. Node-built-ins — kein Extra-Package nötig. Test-Absicherung: prüfe dass `.tmp`-Datei nach erfolgreichem Save nicht existiert.
+**Insight:** Every force system where an entity collects contributions from N neighbors must
+consider N-scaling from the start. `sqrt(N)` as normalization is 4 lines of code
+— but they must be present at system design, not after the first scale test.
 
----
+Backlog entry "defer pending browser-test" for known force balance issues is a
+high-risk decision: with 2-racer tests the problem is invisible, with N=20 it is immediately
+visible. That is the pattern.
 
-## Lesson 25 — One-shot Migration: Marker-Key erst nach vollständigem Erfolg setzen (L.5)
-
-**Kontext:** L.5-Migration von localStorage-Tracks zum Server: alle Custom-Tracks lesen, jeden zum Server POSTen, localStorage-Eintrag löschen. Zwei Fehlerfälle: Marker zu früh setzen → verbleibende Tracks werden nie migriert. Marker nie setzen bei Fehlern → Migration läuft bei jedem Mount erneut und postet bereits migrierte Tracks nochmals.
-
-**Erkenntnis:** Der Marker muss exakt dann gesetzt werden wenn alle Tracks erfolgreich übertragen wurden. Einzelne Track-Fehler loggen und Migration fortsetzen (kein Early-Exit), am Ende Marker setzen wenn `allSucceeded === true`. Versionierter Key-Name (`...-v1`) erlaubt Folge-Migrationen durch neuen Key.
-
-**Konsequenz:** One-shot Migrations-Pattern: (1) Marker prüfen → abbrechen wenn gesetzt. (2) Jeden Eintrag individuell verarbeiten, Fehler loggen, kein Early-Exit. (3) Marker nur setzen wenn `allSucceeded`. (4) Marker-Key versionieren: `racearena:migration:tracks-to-server-v1`.
-
----
-
-## Lesson 26 — Cache und Index müssen synchron gehalten werden (L.6-Bug2)
-
-**Kontext:** `cacheTrackGeometry` (trackLoader.js) speicherte Server-Geometrien unter `racearena:trackGeometries:<id>` — genau dort wo auch `getTrack(id)` liest. Aber `racearena:trackGeometries:index` wurde nicht aktualisiert. `listTracks()` liest ausschließlich aus dem Index. Ergebnis: Geometrie-Daten lagen im Storage, waren aber für alle Index-Leser unsichtbar. Der Modal-Dropdown zeigte "No tracks drawn yet", obwohl die Geometrie vorhanden war.
-
-**Erkenntnis:** Wenn zwei Funktionen dasselbe Storage-Schema verwenden aber eine davon den Index überspringt, entsteht ein stiller Konsistenzbruch. Tests prüfen in der Regel "Daten können geschrieben und gelesen werden" — aber nicht "sind die Daten über alle vorgesehenen Read-Paths erreichbar". Der Bruch wird erst sichtbar wenn eine UI-Komponente den indirekten Read-Path (via Index) verwendet statt direkt per ID zu lesen.
-
-**Konsequenz:** Bei Storage-Schemas mit Index-Pointer-Struktur: jede Write-Operation (sowohl lokale saves als auch externe Cache-Einträge) muss den Index mitpflegen. Index-Registrierung und Daten-Write als unteilbares Paar behandeln. Beim Löschen analog: erst Daten entfernen, dann Index-Eintrag entfernen.
+**Consequence:** For force/physics systems: explicitly ask "what happens with N=20 entities
+all acting on the same target?" before shipping the feature. N-scaling (÷sqrt(N) or
+÷N) as the default candidate, not a later optimization.
 
 ---
 
-## Lesson 27 — Metadaten-UI und Asset-UI gehören in getrennte Oberflächen (L.6-Bug2-UX)
+## Lesson 21 — Metadata Values Are Not Measurements — Scale Calculations Need Real Geometry (D7c-fix)
 
-**Kontext:** Das Edit-Track-Modal zeigte eine read-only "Effects: none/..."-Zeile die aus der verknüpften Geometrie gelesen wurde. Die Effects werden im Track-Editor konfiguriert und sind Teil der Geometrie — nicht der Track-Metadaten. Browser-Test zeigte: User sucht Background-Bild-Verwaltung im Modal und findet sie nicht. Die Effects-Anzeige im Modal gab keinen Hinweis wohin man für Asset-Verwaltung gehen muss.
+**Context:** D7c used `trackWidth` (operator-declared metadata, default 140 px) as
+input to `computeRowLayout`. This gave `racersPerRow = floor(140 / 80) = 1` on all
+tracks — correct for 1280px reference worlds, but fatal on large worlds (e.g. 6000px):
+there 140 metadata pixels corresponded to only ~30 screen pixels, and all 20 racers were placed in
+single rows → a single vertical line at the race start.
 
-**Erkenntnis:** Eine UI-Oberfläche die Daten aus zwei semantisch unterschiedlichen Quellen anzeigt (Metadaten + Asset-Eigenschaften) erzeugt Verwirrung wo welche Verwaltung stattfindet. Read-only Anzeige von Asset-Properties im Metadaten-Modal gibt keine Orientierung — im Gegenteil: sie suggeriert dass Assets hier verwaltbar sind. Ein klarer Hinweis-Text ("Background image and effects are managed in the Track Editor") ist informativer als das Anzeigen von Werten ohne Edit-Möglichkeit.
+The metadata was never a measurement. It was a UI choice from `[100, 140, 200, 280, 360]`
+and calibrated for 1280px worlds. On other world sizes it was meaningless.
 
-**Konsequenz:** Jede UI-Oberfläche sollte eine klar definierte Domäne haben: Metadaten-Modal für Metadaten, Track-Editor für Assets/Geometrie. Informationen aus der anderen Domäne entweder weglassen oder durch Hinweis-Text auf die zuständige Oberfläche zeigen. Read-only Properties aus einer anderen Domäne anzeigen ohne Edit-Pfad führt zu UX-Verwirrung.
+**Insight:** When a value is used for a scale calculation, it must have the
+correct physical unit relative to the current world. Operator-declared metadata (which was meaningful
+for a reference world) is not a measurement — it breaks silently
+in other scaling ranges. The true track width lies only in the geometry (distance
+between inner/outer curve in world coordinates).
 
----
+**Consequence:** For layout or scale calculations that depend on track geometry:
+always use `EditorShape.getActualTrackWidth()` (or equivalent) instead of metadata.
+Metadata fields are for UI display and user communication — not as a measurement quantity in calculations.
 
-## Lesson 28 — Canvas-Lesbarkeit: Overlay und Kontrast-Defaults für dunkle Hintergründe (L.6-VIS)
-
-**Kontext:** Der Track-Editor renderte Track-Linien direkt auf das Hintergrundbild ohne Zwischenschicht. Auf Bildern mit helleren Bereichen (Gras, Himmel, Beton) verschwanden die farbigen Linien (#4fc3f7 auf weißem Untergrund) oder die Cyan-gefüllten Kontrollpunkte waren kaum von hellen Bildregionen zu unterscheiden. Erst ein Browser-Test auf echtem Track-Material machte das Problem sichtbar — Unit-Tests und Code-Review gaben kein Signal.
-
-**Erkenntnis:** Canvas-Overlays (globalAlpha + fillRect) sind der einfachste Weg um einen zuverlässigen Kontrast-Boden zu schaffen unabhängig vom Bild-Inhalt. Eine 35%-Opacity-Schicht zwischen Bild und Linien kostet eine Zeile Code und macht alle weiteren Farb-Entscheidungen Bild-agnostisch. Kontrollpunkte mit weißer Füllung und dunklem Rand (Kreismarkierung-Prinzip) sind auf jedem Hintergrund sichtbar — Cyan auf Cyan-Hintergrund nie.
-
-**Konsequenz:** Bei Canvas-Editoren die auf variablem Bildmaterial arbeiten: immer Overlay-Schicht zwischen Bild und interaktive Elemente einplanen. Kontrollpunkte mit Komplementär-Kontrast zeichnen: helle Füllung + dunkler Rand (oder umgekehrt), nie einfarbig ohne Rand. Für Linien: kontrastreiche Farbe (Magenta) die in keinem typischen Bildinhalt vorkommt, plus weiße Outline dahinter — damit ist die Lesbarkeit auf beliebigem Hintergrund garantiert ohne auf den Hintergrund-Typ angewiesen zu sein.
-
----
-
-## Lesson 29 — Partielle State-Updates: nie mehr Felder überschreiben als nötig (L.6-BgBug)
-
-**Kontext:** Der Bild-Upload-Handler im Track-Editor enthielt eine `dimChanged && hasPoints`-Verzweigung die bei Dimensionsunterschied zwischen neuem Bild und aktueller Welt `setCenterPoints([])`, `setInnerPoints([])`, `setOuterPoints([])` aufrief. Intention: vermeiden dass gezeichnete Punkte nach Dimensions-Änderung "falsch positioniert" sind. Effekt: jeder Bild-Upload auf einem neuen Track (Standardgröße 1280×720, Foto typisch andere Auflösung) zerstörte die gezeichnete Strecke.
-
-**Erkenntnis:** Handler die primär eine einzige Ressource ändern (hier: Background-Bild) dürfen keine anderen State-Felder als unbeabsichtigten Nebeneffekt zurücksetzen. Die "Schutz"-Logik war schlechter als nichts: sie überschrieb User-Arbeit, die der User nicht zurückfordern kann wenn er den confirm-Dialog bestätigt. State-Updates sollten chirurgisch sein — nur das ändern, was der Handler explizit ändern soll.
-
-**Konsequenz:** Bei jedem Handler der State ändert: prüfen welche anderen State-Felder er berührt und ob das beabsichtigt ist. "Cleanup für den Fall dass X" in einem State-Update-Handler ist ein Warnsignal — das gehört entweder in einen separaten Handler (der explizit ausgelöst wird) oder gar nicht rein.
+**Escalation (D7c-fix-v2):** The `trackWidth` field was completely removed from the track data model after it turned out, even after the first fix iteration, that the formula was still based on a wrong unit concept (screen pixels instead of world pixels). When a metadata field cannot be meaningfully used in calculations, the correct course of action is its complete removal — not workarounds via correction factors.
 
 ---
 
-## Lesson 30 — Container-First: Skeleton vor Logik (Phase L / PR #43)
+## Lesson 22 — floor() Is Sensitive to Floating-Point Errors Near Integers (D7c-fix-v3)
 
-**Kontext:** Statt den Backend-Server erst in Phase 5 als vollständiges System aufzubauen,
-wurde in Phase L zunächst nur das Container-Skeleton etabliert (Express + Dockerfile +
-docker-compose, ein einziger Health-Check-Endpunkt). Keine Datenbank, keine Authentifizierung,
-keine Geschäftslogik.
+**Context:** After D7c-fix-v2, browser test showed `racersPerRow=11` instead of the expected 12.
+Diagnosis via diagnostic snapshot tool: `getActualTrackWidth()` returned `299.9999999999994`
+instead of `300` — catmullRom-Hermite interpolation over 500 sample points accumulates ~6×10⁻¹³
+rounding errors. With `spriteSize = 50` (rocket override deactivates auto-scale), this gives
+`floor(2×299.9999.../50) = floor(11.9999...) = 11` instead of 12.
 
-**Erkenntnis:** Container-Integrationsthemen (Port-Konflikte, Build-Kontext, Volume-Mounts,
-CORS-Config) treten immer beim ersten Aufsetzen auf, unabhängig davon wie viel Logik im
-Container läuft. Diese Probleme früh zu lösen — wenn der Code noch trivial ist — kostet
-wenig. Wenn sie erst bei Phase 5 (mit Datenbank, Auth, Socket.IO) auftreten, blockieren
-sie das gesamte Feature-Delivery.
+**Insight:** `Math.floor()` is not tolerant of floating-point underflow.
+A value that is conceptually exactly 12.0, but represented as
+11.9999...998 through accumulation of tiny errors, gives floor=11 — one row too many, 9 racers incorrectly placed.
+This is particularly dangerous when: (1) the input value is calculated through multiple fp operations, and (2) the result is discrete (integer row count).
 
-**Konsequenz:** Für jeden neuen Infra-Layer (Backend, Worker, Queue) zuerst das
-Container-Skeleton etablieren und einen Smoke-Endpunkt deployen, bevor echte Logik
-hinzukommt. Dadurch kann die CI-Pipeline und das lokale Setup vertraut werden mit der
-Infrastruktur, bevor der Komplexitätssockel steigt.
+**Consequence:** Values that are conceptually integers (track widths in world pixels, which
+the editor sets in whole numbers) should be normalized by `Math.round()`
+before entering `floor()` calculations. `Math.round()` absorbs the error; `Math.floor()` amplifies it.
+Fix: `getActualTrackWidth()` rounds the median value via `Math.round()` before it is cached.
 
 ---
 
-## Lesson 31 — Server-Daten mit Code-Defaults über gemeinsame ID-Deduplication mergen (L.2–L.4)
+## Lesson 23 — Think of Open Track Layout in Parallel with Closed Track, Not as a Special Case (D7c-Phase4)
 
-**Kontext:** Phase L führte Server-Tracks (Weltall) ein, aber dieselbe Track-ID existierte
-noch in localStorage aus der Zeit bevor sie "auf den Server gewandert" ist. Die kombinierte
-Track-Liste (Frontend) müsste Weltall aus localStorage UND vom Server zeigen, was zu doppelten
-Einträgen führt.
+**Context:** D7c implemented row start with negative t for back rows. Closed tracks:
+correct — `tPos(t)` wraps negative t behind the start line. Open tracks: `_idx(t)` clamps
+to idx=0 → all rows stand at the same point. Instead of finding its own solution for open tracks, the
+closed track approach was adopted without comment as "no problem for open tracks".
 
-**Erkenntnis:** Wenn Daten von einer Quelle (localStorage) zu einer anderen (Server) migrieren,
-bleibt die alte Kopie in der Quell-Quelle — bis eine explizite localStorage-Migration die
-Daten bereinigt. Die sauberste Lösung in der Zwischenzeit: Server-Track-IDs als autoritative
-Menge definieren und lokale Kopien beim Merge herausfiltern (`serverIds`-Deduplication in
+**Insight:** Open track courses have a different topology than closed track courses:
+no wrap-around, beginning and end are real boundaries. A mechanism that works for closed
+tracks (negative t) breaks for open tracks in a way that looks visually like
+"no problem" (all rows at the start point) but actually completely disables the row logic.
+
+**Consequence:** For every new mechanism that manipulates t values: explicitly check whether
+the behavior is separately correct for open and closed tracks. Do not generalize from one track type
+to the other — the topologies are fundamentally different.
+
+---
+
+## Lesson 24 — Atomic Write: temp + rename Protects Against Corrupt Files (L.5)
+
+**Context:** The L.5 write endpoints needed to update track JSON files without the risk of a half-finished file (e.g. on crash during writing or disk filling up). Standard `writeFileSync` directly to the target file is not atomic — a reader between write-start and write-end sees inconsistent content.
+
+**Insight:** The OS guarantees that `rename()` on the same filesystem is atomic: readers see either the old or the new file, never an incomplete one. Write temporary file on the same volume (`.tmp` suffix on same partition), then `renameSync` to the final address.
+
+**Consequence:** For all file writes that require consistent state: `writeFileSync(tmpPath, content)` then `renameSync(tmpPath, finalPath)`. Node built-ins — no extra package needed. Test safeguard: verify that `.tmp` file does not exist after a successful save.
+
+---
+
+## Lesson 25 — One-shot Migration: Set Marker Key Only After Complete Success (L.5)
+
+**Context:** L.5 migration of localStorage tracks to the server: read all custom tracks, POST each to the server, delete localStorage entry. Two failure cases: setting marker too early → remaining tracks are never migrated. Never setting marker on errors → migration runs again on every mount and posts already-migrated tracks again.
+
+**Insight:** The marker must be set exactly when all tracks have been successfully transferred. Log individual track errors and continue the migration (no early exit); at the end set the marker when `allSucceeded === true`. Versioned key name (`...-v1`) allows follow-up migrations through a new key.
+
+**Consequence:** One-shot migration pattern: (1) Check marker → abort if set. (2) Process each entry individually, log errors, no early exit. (3) Only set marker when `allSucceeded`. (4) Version the marker key: `racearena:migration:tracks-to-server-v1`.
+
+---
+
+## Lesson 26 — Cache and Index Must Be Kept in Sync (L.6-Bug2)
+
+**Context:** `cacheTrackGeometry` (trackLoader.js) stored server geometries under `racearena:trackGeometries:<id>` — exactly where `getTrack(id)` also reads. But `racearena:trackGeometries:index` was not updated. `listTracks()` reads exclusively from the index. Result: geometry data was in storage but invisible to all index readers. The modal dropdown showed "No tracks drawn yet", even though the geometry was present.
+
+**Insight:** When two functions use the same storage schema but one of them skips the index, a silent consistency break occurs. Tests typically check "data can be written and read" — but not "is the data reachable via all intended read paths". The break only becomes visible when a UI component uses the indirect read path (via index) instead of reading directly by ID.
+
+**Consequence:** For storage schemas with an index pointer structure: every write operation (both local saves and external cache entries) must also maintain the index. Treat index registration and data write as an inseparable pair. When deleting, analogously: first remove data, then remove index entry.
+
+---
+
+## Lesson 27 — Metadata UI and Asset UI Belong in Separate Surfaces (L.6-Bug2-UX)
+
+**Context:** The edit track modal showed a read-only "Effects: none/..."-line that was read from the linked geometry. The effects are configured in the track editor and are part of the geometry — not the track metadata. Browser test showed: user looks for background image management in the modal and doesn't find it. The effects display in the modal gave no hint of where to go for asset management.
+
+**Insight:** A UI surface that displays data from two semantically different sources (metadata + asset properties) creates confusion about where which management takes place. Read-only display of asset properties in the metadata modal gives no orientation — on the contrary: it suggests that assets can be managed here. A clear hint text ("Background image and effects are managed in the Track Editor") is more informative than displaying values without an edit option.
+
+**Consequence:** Every UI surface should have a clearly defined domain: metadata modal for metadata, track editor for assets/geometry. Information from the other domain either leave out or point to the responsible surface through hint text. Displaying read-only properties from another domain without an edit path leads to UX confusion.
+
+---
+
+## Lesson 28 — Canvas Readability: Overlay and Contrast Defaults for Dark Backgrounds (L.6-VIS)
+
+**Context:** The track editor rendered track lines directly onto the background image without an intermediate layer. On images with lighter areas (grass, sky, concrete), the colored lines (#4fc3f7 on white background) disappeared, or the cyan-filled control points were barely distinguishable from bright image regions. Only a browser test on real track material made the problem visible — unit tests and code review gave no signal.
+
+**Insight:** Canvas overlays (globalAlpha + fillRect) are the simplest way to create a reliable contrast floor independent of the image content. A 35%-opacity layer between image and lines costs one line of code and makes all further color decisions image-agnostic. Control points with white fill and dark border (circle marker principle) are visible on any background — cyan on cyan background never is.
+
+**Consequence:** For canvas editors that work on variable image material: always plan an overlay layer between image and interactive elements. Draw control points with complementary contrast: light fill + dark border (or vice versa), never single-colored without border. For lines: high-contrast color (magenta) that doesn't appear in any typical image content, plus a white outline behind it — this guarantees readability on any background without depending on the background type.
+
+---
+
+## Lesson 29 — Partial State Updates: Never Overwrite More Fields Than Necessary (L.6-BgBug)
+
+**Context:** The image upload handler in the track editor contained a `dimChanged && hasPoints` branch that, on dimension difference between new image and current world, called `setCenterPoints([])`, `setInnerPoints([])`, `setOuterPoints([])`. Intention: avoid that drawn points are "incorrectly positioned" after a dimension change. Effect: every image upload on a new track (default size 1280×720, photo typically different resolution) destroyed the drawn track.
+
+**Insight:** Handlers that primarily change a single resource (here: background image) must not reset other state fields as an unintended side effect. The "protection" logic was worse than nothing: it overwrote user work that the user cannot recover once they confirm the dialog. State updates should be surgical — only change what the handler is explicitly meant to change.
+
+**Consequence:** For every handler that changes state: check which other state fields it touches and whether that is intentional. "Cleanup for the case that X" in a state update handler is a warning sign — it either belongs in a separate handler (that is explicitly triggered) or not at all.
+
+---
+
+## Lesson 30 — Container-First: Skeleton Before Logic (Phase L / PR #43)
+
+**Context:** Instead of building the backend server in Phase 5 as a complete system,
+in Phase L only the container skeleton was first established (Express + Dockerfile +
+docker-compose, a single health check endpoint). No database, no authentication,
+no business logic.
+
+**Insight:** Container integration issues (port conflicts, build context, volume mounts,
+CORS config) always occur at first setup, regardless of how much logic runs in
+the container. Solving these problems early — when the code is still trivial — costs
+little. When they only occur at Phase 5 (with database, auth, Socket.IO), they block
+the entire feature delivery.
+
+**Consequence:** For every new infra layer (backend, worker, queue), first establish the
+container skeleton and deploy a smoke endpoint before adding real logic.
+This allows the CI pipeline and local setup to become familiar with the
+infrastructure before the complexity base rises.
+
+---
+
+## Lesson 31 — Merge Server Data with Code Defaults via Shared ID Deduplication (L.2–L.4)
+
+**Context:** Phase L introduced server tracks (Weltall), but the same track ID still existed
+in localStorage from the time before it "migrated to the server". The combined
+track list (frontend) would have to show Weltall from localStorage AND from the server, leading to duplicate
+entries.
+
+**Insight:** When data migrates from one source (localStorage) to another (server),
+the old copy remains in the source — until an explicit localStorage migration cleans up
+the data. The cleanest solution in the meantime: define server track IDs as the authoritative
+set and filter out local copies during merge (`serverIds` deduplication in
 `getInitialTracks()`/`loadAllTracks()`).
 
-**Konsequenz:** Bei Read-Path-Integrationen, die Daten aus mehreren Quellen kombinieren,
-immer explizit prüfen welche Quelle Vorrang hat und Duplikate by-ID herausfiltern.
-Merge-Logik die stillschweigend die erste Kopie bevorzugt, ohne explizite Quelle-Priorisierung,
-führt zu schwer debuggbaren UI-Zuständen.
+**Consequence:** For read-path integrations that combine data from multiple sources,
+always explicitly check which source takes priority and filter out duplicates by ID.
+Merge logic that silently favors the first copy, without explicit source prioritization,
+leads to hard-to-debug UI states.
 
 ---
 
-## Lesson 32 — `docker compose up` ohne `--build` ist nicht idempotent gegenüber Code-Änderungen (VRE-2 Browser-Test)
+## Lesson 32 — `docker compose up` Without `--build` Is Not Idempotent with Respect to Code Changes (VRE-2 Browser Test)
 
-**Kontext:** VRE-1 (PR #46) fügte die Surface-Classes-API-Routes hinzu (`server/src/routes/surfaceClasses.js`,
-registriert in `app.js`). VRE-2 (PR #47) baute den Frontend-Editor darauf auf. Beim ersten Browser-Test
-nach VRE-2 erschien beim Save einer Default-Klasse "HTTP 404". Diagnose: Der Docker-Container lief
-noch aus einer Session vor VRE-1 — das Image enthielt die Surface-Classes-Routes nicht. Gleichzeitig
-fehlten `volumes:`-Mounts in `docker-compose.yml`, sodass laufende Container niemals aktualisierten
-Quellcode sahen.
+**Context:** VRE-1 (PR #46) added the Surface Classes API routes (`server/src/routes/surfaceClasses.js`,
+registered in `app.js`). VRE-2 (PR #47) built the frontend editor on top of that. During the first browser test
+after VRE-2, "HTTP 404" appeared when saving a default class. Diagnosis: the Docker container was still
+running from a session before VRE-1 — the image did not contain the Surface Classes routes. At the same time,
+`volumes:` mounts were missing from `docker-compose.yml`, so running containers never saw updated source code.
 
-`docker compose up -d` — das Kommando das beim Session-Start zum "Server starten" genutzt wurde —
-startet existierende Container ohne Rebuild. Die Ausgabe `Container seasonalraceclaude-server-1 Running`
-ist kein Indikator für Code-Aktualität, sondern nur ein Liveness-Check.
+`docker compose up -d` — the command used at session start to "start the server" —
+starts existing containers without rebuild. The output `Container seasonalraceclaude-server-1 Running`
+is not an indicator of code currency, just a liveness check.
 
-**Erkenntnis:** `docker compose up` ohne `--build` baut das Image nie neu. Wenn kein `volumes:`-Mount
-existiert, laufen Code-Änderungen an `src/` unsichtbar am Container vorbei. "Der Container läuft"
-bedeutet nicht "der Container hat den aktuellen Code." Dieses Muster führt zu Phantom-404s die schwer
-zu debuggen sind, weil Code und Routen korrekt aussehen — der Fehler liegt im Deployment-Gap.
+**Insight:** `docker compose up` without `--build` never rebuilds the image. When no `volumes:` mount
+exists, code changes to `src/` pass the container invisibly. "The container is running"
+does not mean "the container has the current code." This pattern leads to phantom 404s that are hard
+to debug because code and routes look correct — the error lies in the deployment gap.
 
-**Konsequenz:** `docker-compose.yml` erhält immer `volumes:`-Mounts für Quellcode-Verzeichnisse
-(`./server/src:/app/src`) und persistente Daten (`./server/data:/app/data`). Mit Live-Mount reicht
-`docker compose restart server` statt `docker compose build`. Rebuild bleibt nötig bei
-`package.json`-Änderungen (neue Dependencies) oder Dockerfile-Änderungen. Regeln:
-- Code-Änderung (`src/`): `docker compose restart server`
-- Neue npm-Dependency: `docker compose up --build -d`
-- Frischer Start: `docker compose down && docker compose up -d`
-
----
-
-## Lesson 33 — Server-Resource-Edits brauchen API-Calls in allen Mutations-Flows, nicht nur Delete (VRE-3 Bug)
-
-**Kontext:** VRE-3 fügte `surfaceClasses: string[]` zu Server-Tracks hinzu. TrackManager hatte `handleDelete()` korrekt implementiert (prüft `serverTrackIds.has(id)`, ruft `deleteTrackFromServer()`). `handleSave()` tat das aber nicht — es schrieb immer nur in localStorage via `setTracks()`. User-Änderungen (z.B. "air" zuweisen) schienen zu funktionieren, gingen aber beim nächsten Render verloren: `useServerTracks()` feuert im Hintergrund, holt `surfaceClasses: []` vom Server, und der SetupScreen-Merge überschreibt den localStorage-Wert bedingungslos mit dem Server-Stand.
-
-**Erkenntnis:** Wenn ein Merge-Layer existiert der Server-Daten gegenüber localStorage priorisiert, ist ein "nur localStorage schreiben" nicht nur unvollständig — es ist effektiv ein No-Op. Der Fehler ist zudem schwer zu entdecken: Die UI sieht sofort korrekt aus (der localStorage-Wert wird kurz gerendert), und erst nach dem Hintergrund-Fetch oder einem Reload verschwindet die Änderung. Tests die localStorage direkt prüfen, anstatt das Merge-Ergebnis, maskieren diesen Bug.
-
-**Konsequenz:** Bei jeder neuen Mutations-Operation (Save, Update, Clone, Set-Default, usw.) für Server-Resources explizit prüfen: Unterscheidet der Handler zwischen Server-Track und Local-Track? Muster: `if (serverTrackIds.has(id)) { await apiCall(); await refresh(); } else { setLocalState(); }`. `handleDelete()` ist die Referenz-Implementation. Analog gilt das Muster für Surface-Classes, Racer-Overrides oder andere Ressourcen mit dualem Speicherpfad.
+**Consequence:** `docker-compose.yml` always gets `volumes:` mounts for source code directories
+(`./server/src:/app/src`) and persistent data (`./server/data:/app/data`). With live mount,
+`docker compose restart server` is sufficient instead of `docker compose build`. Rebuild is still needed for
+`package.json` changes (new dependencies) or Dockerfile changes. Rules:
+- Code change (`src/`): `docker compose restart server`
+- New npm dependency: `docker compose up --build -d`
+- Fresh start: `docker compose down && docker compose up -d`
 
 ---
 
-## Lesson 34 — POST und PUT brauchen unterschiedliche Validation-Strenge (VRE-3 Bug)
+## Lesson 33 — Server Resource Edits Need API Calls in All Mutation Flows, Not Just Delete (VRE-3 Bug)
 
-**Kontext:** `validateTrackBody()` war eine einzige Funktion die für POST und PUT gleich verwendet wurde. Sie verlangte `closed` als Boolean und vollständige Geometrie-Arrays. TrackManager sendet beim PUT nur Metadaten-Felder (name, icon, surfaceClasses, etc.) — keine Geometrie. Der PUT schlug deshalb mit 400 fehl, obwohl das Track-Objekt im Backend vollständige Geometrie hatte. Der Merge `{ ...existing, ...rest }` hätte die Geometrie erhalten — aber die Validierung lief auf `req.body` bevor der Merge stattfand.
+**Context:** VRE-3 added `surfaceClasses: string[]` to server tracks. TrackManager had `handleDelete()` correctly implemented (checks `serverTrackIds.has(id)`, calls `deleteTrackFromServer()`). `handleSave()` did not do this however — it always only wrote to localStorage via `setTracks()`. User changes (e.g. assigning "air") appeared to work, but were lost on the next render: `useServerTracks()` fires in the background, fetches `surfaceClasses: []` from the server, and the SetupScreen merge unconditionally overwrites the localStorage value with the server state.
 
-**Erkenntnis:** POST-Validation prüft Vollständigkeit (ist das Objekt komplett genug um erstellt zu werden?). PUT-Validation prüft Korrektheit der gesendeten Felder (ist was gesendet wurde valide?). Das sind zwei verschiedene Fragen. Eine strikte Create-Validation auf Update anzuwenden zwingt den Client dazu, Felder zu schicken die er gar nicht kennt oder ändern möchte — und versteckt den Merge, der danach sowieso passiert.
+**Insight:** When a merge layer exists that prioritizes server data over localStorage, a "write to localStorage only" is not just incomplete — it is effectively a no-op. The error is also hard to discover: the UI immediately looks correct (the localStorage value is briefly rendered), and only after the background fetch or a reload does the change disappear. Tests that check localStorage directly instead of the merge result mask this bug.
 
-**Konsequenz:** Bei CRUD-APIs getrennte Validierungs-Funktionen für POST und PUT schreiben. PUT-Validation iteriert über vorhandene Keys im Body (`'field' in body`), nicht über ein fixes Schema. Felder die nicht gesendet werden, werden nicht validiert — der Merge mit `existing` macht sie idempotent. Geometrie-Felder in PUT: nur validieren wenn mindestens ein Geometrie-Key im Body vorhanden ist; sonst aus `existing` übernehmen.
+**Consequence:** For every new mutation operation (save, update, clone, set-default, etc.) for server resources, explicitly check: does the handler distinguish between server track and local track? Pattern: `if (serverTrackIds.has(id)) { await apiCall(); await refresh(); } else { setLocalState(); }`. `handleDelete()` is the reference implementation. The same pattern applies analogously for surface classes, racer overrides, or other resources with a dual storage path.
 
 ---
 
-## Lesson 35 — Stateful Generatoren brauchen eine Instanz pro Racer, nicht pro Race (VRE-4)
+## Lesson 34 — POST and PUT Need Different Validation Strictness (VRE-3 Bug)
 
-**Kontext:** Der `line`-Generator (`line.js`) schließt über `let lastX = null; let lastY = null;` — er merkt sich die letzte bekannte Racer-Position um kontinuierliche Linien-Segmente zu zeichnen. Wenn ein einzelner Emitter über alle Racers geteilt würde (einmal pro Race erstellt), würden die Position-Werte von verschiedenen Racers sich überschreiben: Racer A schreibt `lastX=200`, Racer B überschreibt mit `lastX=800`, nächstes Segment von A läuft von 800 nach 205 statt von 200 nach 205.
+**Context:** `validateTrackBody()` was a single function used equally for POST and PUT. It required `closed` as boolean and complete geometry arrays. TrackManager sends only metadata fields on PUT (name, icon, surfaceClasses, etc.) — no geometry. The PUT therefore failed with 400, even though the track object in the backend had complete geometry. The merge `{ ...existing, ...rest }` would have preserved the geometry — but validation ran on `req.body` before the merge occurred.
 
-**Erkenntnis:** Generator-Module deren `create()`-Funktion über mutablem State schließt müssen einmal pro Consumer (hier: pro Racer) instantiiert werden. Die `create()`-API ist explizit so designed: jeder Call gibt ein frisches Closure-Objekt zurück. Wird das ignoriert und `create()` nur einmal aufgerufen, funktioniert die `particle`- oder `cloud`-Implementierung noch zufällig korrekt — aber `line` bricht sofort bei mehr als einem Racer.
+**Insight:** POST validation checks completeness (is the object complete enough to be created?). PUT validation checks the correctness of the sent fields (is what was sent valid?). These are two different questions. Applying strict create validation to an update forces the client to send fields it doesn't know or want to change — and hides the merge that happens afterward anyway.
 
-**Konsequenz:** Wenn eine Funktion `create()` als Factory exportiert die einen Emitter zurückgibt: immer pro Konsument aufrufen, nie das Ergebnis teilen. Dokumentiert in `trailResolver.js` im JSDoc. Test `line-generator emitters maintain independent position state per instance` verifiziert dieses Verhalten explizit.
+**Consequence:** For CRUD APIs, write separate validation functions for POST and PUT. PUT validation iterates over present keys in the body (`'field' in body`), not over a fixed schema. Fields that are not sent are not validated — the merge with `existing` makes them idempotent. Geometry fields in PUT: only validate if at least one geometry key is present in the body; otherwise take from `existing`.
 
-## Lesson 36 — Performance-Smoke-Tests brauchen unterschiedliche Thresholds für Dev und CI (VRE-4)
+---
 
-**Symptom:** Performance-Test läuft lokal in ~5ms und ist grün. Auf CI (GitHub Actions) läuft derselbe Test in ~74ms und schlägt fehl — obwohl kein Regressionsfall vorliegt.
+## Lesson 35 — Stateful Generators Need One Instance Per Racer, Not Per Race (VRE-4)
 
-**Ursache:** CI-Runner (GitHub Actions Ubuntu shared runner) starten V8 cold ohne JIT-Warmup. Mikrobenchmarks die auf Dev durch JIT-Optimierung beschleunigt werden laufen auf CI ~10-15× langsamer. Ein globaler Threshold der auf Dev sinnvoll ist (z.B. 50ms = 10× über Dev-Baseline) ist auf CI zu eng.
+**Context:** The `line` generator (`line.js`) closes over `let lastX = null; let lastY = null;` — it remembers the last known racer position to draw continuous line segments. If a single emitter were shared across all racers (created once per race), the position values from different racers would overwrite each other: racer A writes `lastX=200`, racer B overwrites with `lastX=800`, next segment from A runs from 800 to 205 instead of 200 to 205.
 
-**Anti-Pattern:** Threshold global hochziehen (z.B. 50ms → 200ms) löst das CI-Problem aber verliert den Dev-seitigen Regressionsschutz. Bei 200ms würde eine quadratische Regression auf Dev erst bei ~40× Verschlechterung auffallen — de facto kein Guard mehr.
+**Insight:** Generator modules whose `create()` function closes over mutable state must be instantiated once per consumer (here: per racer). The `create()` API is explicitly designed this way: each call returns a fresh closure object. If this is ignored and `create()` is called only once, the `particle` or `cloud` implementation still works coincidentally — but `line` breaks immediately with more than one racer.
 
-**Konsequenz:** Umgebungsabhängigen Threshold verwenden:
+**Consequence:** When a function exports `create()` as a factory that returns an emitter: always call per consumer, never share the result. Documented in `trailResolver.js` in the JSDoc. Test `line-generator emitters maintain independent position state per instance` verifies this behavior explicitly.
+
+## Lesson 36 — Performance Smoke Tests Need Different Thresholds for Dev and CI (VRE-4)
+
+**Symptom:** Performance test runs locally in ~5ms and is green. On CI (GitHub Actions) the same test runs in ~74ms and fails — even though there is no regression case.
+
+**Cause:** CI runners (GitHub Actions Ubuntu shared runner) start V8 cold without JIT warmup. Microbenchmarks that are accelerated through JIT optimization on dev run ~10-15× slower on CI. A global threshold that is sensible on dev (e.g. 50ms = 10× above dev baseline) is too tight on CI.
+
+**Anti-Pattern:** Raising the threshold globally (e.g. 50ms → 200ms) resolves the CI problem but loses the dev-side regression protection. At 200ms, a quadratic regression on dev would only be noticed at ~40× degradation — effectively no guard anymore.
+
+**Consequence:** Use an environment-dependent threshold:
 ```js
 const threshold = process.env.CI ? 200 : 50;
 expect(elapsed).toBeLessThan(threshold);
 ```
-- Dev: 50ms = sinnvoller Guard (10× über ~5ms Baseline)
-- CI: 200ms = sinnvoller Guard (2.7× über ~74ms gemessener CI-Baseline)
-- `process.env.CI` ist auf GitHub Actions automatisch gesetzt
+- Dev: 50ms = sensible guard (10× above ~5ms baseline)
+- CI: 200ms = sensible guard (2.7× above ~74ms measured CI baseline)
+- `process.env.CI` is automatically set on GitHub Actions
 
 ---
 
-## Lesson 37 — Explizite Feld-Listen in Cache/Build-Funktionen sind ein Bug-Magnet (PR #52)
+## Lesson 37 — Explicit Field Lists in Cache/Build Functions Are a Bug Magnet (PR #52)
 
-**Symptom:** User ändert `trackLights.style` im Track-Editor, speichert, öffnet den Track erneut — Style steht wieder auf dem Default. Kein Fehler, keine Warnung. Die Änderung sieht funktional korrekt aus (Server speichert korrekt, Tests grün), aber geht beim nächsten Laden lautlos verloren.
+**Symptom:** User changes `trackLights.style` in the track editor, saves, opens the track again — style is back at the default. No error, no warning. The change looks functionally correct (server saves correctly, tests green), but is silently lost on the next load.
 
-**Ursache:** `cacheTrackGeometry` in `trackLoader.js` baute ein `geometry`-Objekt aus einer expliziten Feld-Liste:
+**Cause:** `cacheTrackGeometry` in `trackLoader.js` built a `geometry` object from an explicit field list:
 ```js
 const geometry = {
   id: full.geometryId,
   name: full.name,
   effects: full.effects ?? [],
-  // ... 10 weitere Felder
-  // ❌ trackLights fehlt — nie eingetragen
+  // ... 10 more fields
+  // ❌ trackLights missing — never added
 };
 ```
-Neues Datenmodell-Feld (`trackLights`) wurde im Server, im Editor, im Save-Pfad korrekt implementiert — aber in dieser einen Cache-Funktion vergessen. `surfaceClasses` hatte dasselbe Problem, fiel nur nicht auf weil es über einen anderen Lese-Pfad läuft.
+New data model field (`trackLights`) was correctly implemented in the server, editor, and save path — but forgotten in this one cache function. `surfaceClasses` had the same problem, just wasn't noticed because it goes through a different read path.
 
-**Konsequenz — Spread-Pattern mit bewussten Ausschlüssen:**
+**Consequence — Spread Pattern with Intentional Exclusions:**
 ```js
-// Statt Whitelist: Spread + explizite Ausschlüsse für Felder die NICHT gecached werden sollen
+// Instead of whitelist: spread + explicit exclusions for fields that should NOT be cached
 const { id: serverId, geometryId, backgroundImageFile, ...rest } = full;
 const geometry = {
-  ...rest,                         // alle Felder automatisch durch
-  id: geometryId,                  // Umbenennung
-  backgroundImage: computedUrl,   // Überschreibung
+  ...rest,                         // all fields pass through automatically
+  id: geometryId,                  // renaming
+  backgroundImage: computedUrl,   // override
 };
 ```
-Neue Datenmodell-Felder fließen automatisch durch — kein Code-Change in der Cache-Funktion nötig.
+New data model fields flow through automatically — no code change in the cache function needed.
 
-**Test-Pattern als Sicherheitsnetz:**
-Round-Trip-Tests pro Feld garantieren dass `cacheTrackGeometry` keinen Server-Response-Inhalt fallen lässt:
+**Test Pattern as Safety Net:**
+Round-trip tests per field guarantee that `cacheTrackGeometry` doesn't drop any server response content:
 ```js
 for (const field of PASSTHROUGH_FIELDS) {
   it(`preserves field "${field}" from server response`, () => {
@@ -692,106 +679,106 @@ for (const field of PASSTHROUGH_FIELDS) {
   });
 }
 ```
-Fängt Regressionen auch im Spread-Pattern ab (z.B. wenn `backgroundImageFile` versehentlich NICHT mehr ausgeschlossen wird).
+Catches regressions even in the spread pattern (e.g. if `backgroundImageFile` is accidentally NOT excluded anymore).
 
-**Wann Whitelist legitim ist:** Build-Funktionen die einen definierten Output-Shape erzeugen (z.B. `buildTrackFromEditorState` — nur Editor-bekannte Felder sollen gespeichert werden). Cache/Passthrough-Funktionen dagegen sollen transparent sein — dort ist Whitelist falsch.
-
----
-
-## Lesson 38 — UI-Felder die nicht der Server-Realität entsprechen führen zu Daten-Verlust
-
-**Kontext:** User wollte eine Default-Track-Geometrie über das Edit-Modal neu verknüpfen, indem er "Geometry = none" wählte und speicherte — in der Annahme das entkoppele das Preset von der alten Geometrie. Stattdessen ignorierte der Backend-PUT-Handler das `geometryId`-Feld vom Client komplett (`existing.geometryId` wurde hartcodiert übernommen). Gleichzeitig öffnete der "Draw Geometry"-Button den Track-Editor ohne Preset-Kontext — in "neuer Track"-Modus — und die gezeichnete Geometrie wurde als separater Track gespeichert statt das Preset zu aktualisieren. Das Ergebnis: die gezeichnete Geometrie war irreversibel verloren (als unbenannter verwaister Track im System), das Original-Preset unverändert.
-
-**Symptom:** User führt eine UI-Aktion aus die dem gewünschten Ergebnis entspricht (Geometrie neu verknüpfen), erhält keine Fehlermeldung, und verliert dabei Arbeit die er nicht zurückfordern kann.
-
-**Ursache:** Zwei voneinander unabhängige Fehler, beide mit demselben Root-Cause:
-1. Der "Geometry = none"-Dropdown im Edit-Modal suggeriert dass das Preset von einer Geometrie entkoppelt werden kann — aber das Backend hat diesen Pfad nie implementiert.
-2. Der "Draw Geometry"-Button im Edit-Modal suggeriert dass die Geometrie für dieses Preset gezeichnet wird — aber der Navigationspfad transportiert keinen Preset-Kontext.
-
-**Konsequenz:** UI muss entweder exakt das widerspiegeln was der Server tatsächlich tut, oder Felder entfernen / deaktivieren die Aktionen suggerieren die der Server nicht ausführt. Eine UI-Option die immer eine No-Op ist (oder schlimmer: eine andere als die gezeigte Aktion auslöst) ist schlimmer als keine Option.
-
-**Leitfrage für UI-Design:** "Wenn der User diese Schaltfläche / dieses Dropdown betätigt und speichert — tut der Server exakt das was die UI andeutet?" Wenn nein: die Option entfernen oder eine Warnung zeigen, niemals still divergieren.
-
-**Abgeleitete Entscheidungen (TLH):**
-- "Geometry = none"-Option: konzeptionell überprüfen — wenn "kein Geometrie-Link" ein unterstützter Zustand ist, muss der Server ihn auch unterstützen; sonst Option entfernen
-- "Draw Geometry"-Button: sendet jetzt Preset-Kontext (`/track-editor?load=<serverId>`) damit der Editor weiß für welches Preset er arbeitet
-- Backend-PUT: respektiert `geometryId` vom Client wenn im Body vorhanden
+**When whitelist is legitimate:** Build functions that produce a defined output shape (e.g. `buildTrackFromEditorState` — only editor-known fields should be saved). Cache/passthrough functions, on the other hand, should be transparent — whitelist is wrong there.
 
 ---
 
-## Lesson 39 — List-APIs die Felder strippen müssen mit dem Code synchron sein der diese Felder liest
+## Lesson 38 — UI Fields That Don't Match Server Reality Lead to Data Loss
 
-**Kontext:** `toSummary` in `server/src/routes/tracks.js` entfernt `innerPoints`/`outerPoints` aus der List-API-Response für Performance. `TrackManager.jsx` prüfte `srv.innerPoints.length > 0` um den Geometry-Status anzuzeigen — ein Feld das nicht mehr in der Response enthalten war. Ergebnis: `hasGeo` war immer `false`, das Modal zeigte immer "Geometry: not yet drawn" egal ob Geometrie gespeichert war oder nicht.
+**Context:** User wanted to re-link a default track geometry via the edit modal by choosing "Geometry = none" and saving — assuming this would decouple the preset from the old geometry. Instead, the backend PUT handler completely ignored the `geometryId` field from the client (`existing.geometryId` was hardcoded). At the same time, the "Draw Geometry" button opened the track editor without preset context — in "new track" mode — and the drawn geometry was saved as a separate track instead of updating the preset. The result: the drawn geometry was irreversibly lost (as an unnamed orphan track in the system), the original preset unchanged.
 
-**Symptom:** Status-Anzeige zeigt immer dasselbe egal was tatsächlich gespeichert ist — keine Fehlermeldung, kein sichtbarer Hinweis.
+**Symptom:** User performs a UI action that corresponds to the desired result (re-link geometry), receives no error message, and in doing so loses work that cannot be recovered.
 
-**Ursache:** List-API strippt Performance-Felder, Frontend liest diese gestrippten Felder.
+**Cause:** Two independent errors, both with the same root cause:
+1. The "Geometry = none" dropdown in the edit modal suggests that the preset can be decoupled from a geometry — but the backend never implemented this path.
+2. The "Draw Geometry" button in the edit modal suggests that the geometry is being drawn for this preset — but the navigation path transports no preset context.
 
-**Konsequenz:** Bei `toSummary`-Pattern explizit dokumentieren welche Felder verfügbar bleiben. Frontend soll IDs oder kompakte Zähler nutzen, nicht die gestrippten Daten selbst. Konkret: `geometryId` für `hasGeo`-Check, `pointCount: { inner, outer }` für Anzeige.
+**Consequence:** UI must either exactly reflect what the server actually does, or remove/disable fields that suggest actions the server doesn't perform. A UI option that is always a no-op (or worse: triggers a different action than shown) is worse than no option.
 
-**Leitfrage:** "Welche Felder werden von der List-API geliefert? Sind alle Frontend-Reads auf Felder die garantiert in der Response sind?"
+**Key Question for UI Design:** "If the user operates this button / dropdown and saves — does the server do exactly what the UI indicates?" If not: remove the option or show a warning, never silently diverge.
 
-**Audit-Pattern nach toSummary-Änderungen:** Für jedes Feld das aus `toSummary` entfernt oder durch ein kompaktes Äquivalent ersetzt wird:
-1. `grep -r "srv\.<field>\|track\.<field>\|geom\.<field>"` in `client/src/` nach allen Lesestellen des Feldes
-2. Jede Stelle prüfen: kommt das Objekt aus der List-API (`serverTracks`, `tracks`-Array) oder aus einer vollständigen Quelle (localStorage-Cache, GET `:id`)?
-3. List-API-Konsumenten müssen auf die neuen kompakten Felder umgestellt werden
-4. Eine Stelle zu fixen reicht nicht — der gleiche Pattern kann an mehreren Stellen vorkommen (F2: `hasGeo` in TrackManager; Folge-Bug: `autoMaxRacers` in `handleEdit`)
-
----
-
-## Lesson 40 — Stille Fehlerzustände sind das gefährlichste UI-Verhalten
-
-**Kontext:** Beim TLH-2 Browser-Test zeigte der Track-Editor nach einer gescheiterten (oder scheinbar erfolgreichen) Speicherung kein sichtbares Feedback. Die Fehler-Anzeige (`saveBar` mit `serverError`) befand sich im DOM oberhalb der Canvas — aber React Router setzt die Scroll-Position nicht zurück bei Navigation. Der User öffnete den Editor scrolled to canvas, sah das Save-Ergebnis nicht, und dachte der Save sei erfolgreich gewesen.
-
-**Symptom:** Save klingt erfolgreich, User sieht keine Fehlermeldung, Geometrie ist verloren.
-
-**Ursache:** Fehler-Anzeige war außerhalb des sichtbaren Bereichs (Scroll-Bug), und `hasGeo`-Status las falsche Felder (Lesson 39).
-
-**Konsequenz:** Errors müssen erzwungen sichtbar sein. `window.scrollTo(0, 0)` beim Mount des Track-Editors stellt sicher dass die Save-Bar sichtbar ist. `scrollIntoView` wenn `serverError` gesetzt wird ist eine zweite Absicherung. Status-Anzeigen müssen die echte Quelle der Wahrheit nutzen.
-
-**Leitfrage:** "Wenn der Save fehlschlägt, sieht der User es garantiert? Oder kann der Fehler unsichtbar sein?"
+**Derived Decisions (TLH):**
+- "Geometry = none" option: review conceptually — if "no geometry link" is a supported state, the server must also support it; otherwise remove the option
+- "Draw Geometry" button: now sends preset context (`/track-editor?load=<serverId>`) so the editor knows which preset it is working for
+- Backend PUT: respects `geometryId` from client when present in body
 
 ---
 
-## Lesson 41 — Lösch-Buttons müssen klar machen WAS sie löschen
+## Lesson 39 — List APIs That Strip Fields Must Be in Sync with Code That Reads Those Fields
 
-**Kontext:** City-Circuit-Bug (TLH-2 Followup). User wollte das falsche Background-Bild eines Default-Tracks entfernen. Im Track-Editor gab es nur einen roten "Delete"-Button — keinen separaten "Background entfernen"-Button. User klickte "Delete", bestätigte den Confirm-Dialog ohne die genaue Wirkung zu verstehen, und der gesamte Track (inklusive Geometrie und Background) wurde permanent gelöscht.
+**Context:** `toSummary` in `server/src/routes/tracks.js` removes `innerPoints`/`outerPoints` from the list API response for performance. `TrackManager.jsx` checked `srv.innerPoints.length > 0` to display geometry status — a field that was no longer in the response. Result: `hasGeo` was always `false`, the modal always showed "Geometry: not yet drawn" regardless of whether geometry was saved or not.
 
-**Symptom:** User klickt Lösch-Button mit Erwartung A ("Background entfernen"), tatsächlich passiert B ("gesamter Track gelöscht"). Kein Feedback über den erweiterten Scope der Aktion.
+**Symptom:** Status display always shows the same regardless of what is actually stored — no error message, no visible hint.
 
-**Ursache:** Generischer "Delete"-Button ohne Scope-Klarstellung. Confirm-Dialog enthielt nicht die vollständige Information ("Track UND Background-Bild werden gelöscht"). Kein separater Button für die tatsächlich gewollte Aktion.
+**Cause:** List API strips performance fields, frontend reads these stripped fields.
 
-**Konsequenz:** (1) Separate Buttons für separate Lösch-Aktionen: "Remove background" für nur das Bild, "Delete track" für den ganzen Track. (2) Confirm-Dialog muss den vollständigen Scope nennen: "Delete track 'X' and its background image permanently? This cannot be undone." (3) Lösch-Aktionen mit großem Scope brauchen explizite Scope-Benennung im Button-Label oder Tooltip.
+**Consequence:** With `toSummary` patterns, explicitly document which fields remain available. Frontend should use IDs or compact counters, not the stripped data itself. Concretely: `geometryId` for `hasGeo` check, `pointCount: { inner, outer }` for display.
 
-**Leitfrage:** "Wenn der User diesen Button klickt — sieht er danach was er erwartet hat? Oder mehr?"
+**Key Question:** "Which fields are delivered by the list API? Are all frontend reads on fields that are guaranteed to be in the response?"
 
-**Konkrete Umsetzung:** Track-Editor hat jetzt einen "Remove background"-Button der neben dem Background-Upload-Button erscheint wenn ein Bild geladen ist. Der Delete-Button löscht weiterhin den ganzen Track, aber der Confirm-Dialog nennt jetzt explizit dass auch das Background-Bild permanent gelöscht wird.
-
----
-
-## Lesson 42 — Default-Records brauchen server-seitigen Schutz
-
-**Kontext:** City-Circuit-Bug (TLH-2 Followup). Die 5 Default-Tracks aus der TLH-1-Migration hatten `isDefault: true` als Daten-Flag, aber kein Verhaltens-Unterschied im API-Handler. `DELETE /api/tracks/:id` löschte Default-Tracks ohne Prüfung. Außerdem: `migrateDefaultTracks()` lief nur einmal beim ersten Boot (marker-geschützt) — ein einmal gelöschter Default-Track konnte nicht automatisch wiederhergestellt werden.
-
-**Symptom:** Kritische System-Records (Defaults, Templates, Seed-Daten) werden versehentlich via API gelöscht. Nach Server-Neustart fehlen sie immer noch.
-
-**Ursache:** `isDefault`-Flag nur als Metadaten-Feld ohne API-Enforcement. Migration nur als einmalige Initialisierung statt als idempotente Startup-Routine.
-
-**Konsequenz:** (1) DELETE-Handler muss `isDefault: true` mit 403 ablehnen. (2) Migrations-/Seeding-Routinen müssen fehlende Default-Records bei jedem Boot wiederherstellen (idempotent, nicht nur beim ersten Boot). Marker-Files für "bereits migriert" sind sinnvoll für Einmal-Transformationen, aber nicht für Daten-Integrität. (3) PUT-Handler sollte `isDefault`-Flag nie aus dem Request-Body übernehmen (bereits korrekt via `isDefault: existing.isDefault`).
-
-**Leitfrage:** "Welche Records dürfen niemals fehlen? Sind sie durch API-Guards UND Startup-Wiederherstellung geschützt?"
-
-**Konkrete Umsetzung:** `DELETE /api/tracks/:id` gibt 403 für Default-Tracks. `migrateDefaultTracks()` läuft bei jedem Boot und sät fehlende Default-Tracks nach.
+**Audit Pattern After toSummary Changes:** For every field that is removed from `toSummary` or replaced by a compact equivalent:
+1. `grep -r "srv\.<field>\|track\.<field>\|geom\.<field>"` in `client/src/` for all read locations of the field
+2. Check each location: does the object come from the list API (`serverTracks`, `tracks` array) or from a complete source (localStorage cache, GET `:id`)?
+3. List API consumers must be updated to the new compact fields
+4. Fixing one location is not enough — the same pattern can occur in multiple places (F2: `hasGeo` in TrackManager; follow-up bug: `autoMaxRacers` in `handleEdit`)
 
 ---
 
-## Lesson 43 — useEffect mit asynchronen Callbacks brauchen Cleanup
+## Lesson 40 — Silent Error States Are the Most Dangerous UI Behavior
 
-**Symptom:** State wechselt mehrfach schnell, alte async Callbacks (`onload`, `onerror`, `fetch.then`, `setTimeout`) überschreiben das Resultat neuer Effekte. Sichtbar z.B. als: UI-Button zeigt "Remove background" (state truthy), Canvas bleibt aber schwarz (bgRef.current ist null, weil ein alter Callback ihn nach dem erfolgreichen Load wieder auf null gesetzt hat).
+**Context:** During the TLH-2 browser test, the track editor showed no visible feedback after a failed (or seemingly successful) save. The error display (`saveBar` with `serverError`) was in the DOM above the canvas — but React Router does not reset the scroll position on navigation. The user opened the editor scrolled to canvas, didn't see the save result, and thought the save was successful.
 
-**Ursache:** `useEffect` ohne Cleanup — alte Callbacks bleiben aktiv auch wenn ein neuer Effect-Run bereits läuft. Wenn `backgroundImage` von `null` auf eine URL wechselt (z.B. beim Track-Load), überleben Callbacks des null-Runs und können den bgRef nach erfolgreichem Load erneut nullen.
+**Symptom:** Save sounds successful, user sees no error message, geometry is lost.
 
-**Konsequenz:** `useEffect` mit asynchronen Callbacks IMMER mit `cancelled`-Flag oder `AbortController` + `return cleanup`.
+**Cause:** Error display was outside the visible area (scroll bug), and `hasGeo` status read wrong fields (Lesson 39).
+
+**Consequence:** Errors must be forced visible. `window.scrollTo(0, 0)` on mount of the track editor ensures that the save bar is visible. `scrollIntoView` when `serverError` is set is a second safeguard. Status displays must use the real source of truth.
+
+**Key Question:** "If the save fails, does the user definitely see it? Or can the error be invisible?"
+
+---
+
+## Lesson 41 — Delete Buttons Must Make Clear WHAT They Are Deleting
+
+**Context:** City Circuit bug (TLH-2 followup). User wanted to remove the wrong background image of a default track. The track editor only had a red "Delete" button — no separate "Remove background" button. User clicked "Delete", confirmed the confirmation dialog without fully understanding the exact effect, and the entire track (including geometry and background) was permanently deleted.
+
+**Symptom:** User clicks delete button with expectation A ("remove background"), what actually happens is B ("entire track deleted"). No feedback about the extended scope of the action.
+
+**Cause:** Generic "Delete" button without scope clarification. Confirmation dialog did not contain the complete information ("Track AND background image will be deleted"). No separate button for the actually desired action.
+
+**Consequence:** (1) Separate buttons for separate delete actions: "Remove background" for just the image, "Delete track" for the whole track. (2) Confirmation dialog must state the complete scope: "Delete track 'X' and its background image permanently? This cannot be undone." (3) Delete actions with large scope need explicit scope naming in the button label or tooltip.
+
+**Key Question:** "If the user clicks this button — do they see what they expected afterward? Or more?"
+
+**Concrete Implementation:** Track editor now has a "Remove background" button that appears next to the background upload button when an image is loaded. The Delete button still deletes the whole track, but the confirmation dialog now explicitly states that the background image will also be permanently deleted.
+
+---
+
+## Lesson 42 — Default Records Need Server-Side Protection
+
+**Context:** City Circuit bug (TLH-2 followup). The 5 default tracks from the TLH-1 migration had `isDefault: true` as a data flag, but no behavioral difference in the API handler. `DELETE /api/tracks/:id` deleted default tracks without checking. Additionally: `migrateDefaultTracks()` ran only once on first boot (marker-protected) — a once-deleted default track could not be automatically restored.
+
+**Symptom:** Critical system records (defaults, templates, seed data) are accidentally deleted via API. After server restart they are still missing.
+
+**Cause:** `isDefault` flag only as metadata field without API enforcement. Migration only as a one-time initialization rather than an idempotent startup routine.
+
+**Consequence:** (1) DELETE handler must reject `isDefault: true` with 403. (2) Migration/seeding routines must restore missing default records on every boot (idempotent, not just on first boot). Marker files for "already migrated" make sense for one-time transformations, but not for data integrity. (3) PUT handler should never take the `isDefault` flag from the request body (already correct via `isDefault: existing.isDefault`).
+
+**Key Question:** "Which records must never be missing? Are they protected by API guards AND startup restoration?"
+
+**Concrete Implementation:** `DELETE /api/tracks/:id` returns 403 for default tracks. `migrateDefaultTracks()` runs on every boot and re-seeds missing default tracks.
+
+---
+
+## Lesson 43 — useEffect with Async Callbacks Need Cleanup
+
+**Symptom:** State switches rapidly multiple times, old async callbacks (`onload`, `onerror`, `fetch.then`, `setTimeout`) overwrite the result of newer effects. Visible e.g. as: UI button shows "Remove background" (state truthy), canvas remains black (bgRef.current is null, because an old callback nulled it again after the successful load).
+
+**Cause:** `useEffect` without cleanup — old callbacks remain active even when a new effect run is already running. When `backgroundImage` switches from `null` to a URL (e.g. when loading a track), callbacks from the null run survive and can null the bgRef again after a successful load.
+
+**Consequence:** `useEffect` with async callbacks ALWAYS with `cancelled` flag or `AbortController` + `return cleanup`.
 
 ```js
 useEffect(() => {
@@ -811,888 +798,881 @@ useEffect(() => {
 }, [backgroundImage]);
 ```
 
-Zusätzlich: Null-Guard am Anfang verhindert `img.src = "null"` komplett wenn der State-Wert `null` oder `undefined` ist.
+Additionally: null guard at the beginning prevents `img.src = "null"` entirely when the state value is `null` or `undefined`.
 
-**Konkret in TrackEditor:** Background-Image-Effect ohne Cleanup führte zu Race-Condition wenn `backgroundImage` von `null` auf URL wechselte beim Track-Load (fix/track-delete-safeguards, PR #58 Followup).
-
----
-
-## Lesson 44 — Tendenz-Drift bei Konzept-Doc-Sprints
-
-**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Beim Übersetzen von User-Regie-Vorgaben in eine Spezifikation entstand über mehrere Nachtrag-Runden ein konsistentes Drift-Pattern: Tendenz-Aussagen wurden schrittweise zu starren Algorithmen verfestigt.
-
-**Symptom (Kette, die sich in PR #60 ergab):**
-1. User-Aussage: "Leader soll am häufigsten im Bild sein" (Tendenz)
-2. Konzept-Doc: "Leader muss in jedem Frame sichtbar sein — hartes Constraint"
-3. Folge: starre Prioritäts-Hierarchie 1–4
-4. Folge: `gap01`-Trigger der algorithmisch nur Leader-vs-Zweiter erlaubt
-5. Folge: Risiko-Doku beschreibt den entstehenden Bug als "korrekt per Hierarchie"
-
-**Ursache:** Jede einzelne Übersetzungsstufe wirkt logisch konsequent. Erst beim Gesamtbild widerspricht das Resultat der ursprünglichen Aussage. CC hat keine Rückkopplung zur User-Intention zwischen den Stufen.
-
-**Konsequenz:** (1) Bei Konzept-Docs explizit zwischen TENDENZ und CONSTRAINT unterscheiden — beide Typen sind valide, müssen aber benannt werden. (2) Reviews brauchen Aufmerksamkeit für Verfestigungs-Drift: "War das als Constraint gemeint oder als Tendenz?". (3) Architektur-Hinweis früh im Doc verankern: "Dieses System ist als Tendenz-Logik formuliert, nicht als Constraint-System."
-
-**Leitfrage:** "Ist das eine Tendenz-Aussage oder ein hartes Constraint? Hätte der User das auch so formuliert?"
-
-**Verweis:** `docs/CAMERA_DIRECTOR.md §3` Architektur-Hinweis-Blockquote, K1+K2+K5+K6 in Nachtrag 5.
+**Concretely in TrackEditor:** Background image effect without cleanup led to race condition when `backgroundImage` switched from `null` to URL when loading the track (fix/track-delete-safeguards, PR #58 followup).
 
 ---
 
-## Lesson 45 — Doc-weite Konsistenz bei Variablen-Refactor
+## Lesson 44 — Tendency Drift in Concept Doc Sprints
 
-**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Variablen-Rename `overviewCooldown → overviewCooldownMin + overviewCooldownMax` sowie Wert-Änderung "fest 20s → Random-Jitter [15s/25s]" wurden nicht doc-weit durchgezogen. Erst beim Sammel-Review wurden 5 Stellen mit dem alten Wert und 2 Stellen mit dem alten Variablen-Namen gefunden.
+**Context:** Camera Director concept sprint (PR #60). When translating user direction guidelines into a specification, a consistent drift pattern emerged over several addendum rounds: tendency statements were gradually solidified into rigid algorithms.
 
-**Symptom:** Tunable-Definition in §8.1 korrekt (`overviewCooldownMin`, `overviewCooldownMax`), aber §3.1, §4.2, §4.3, §8.2 und §12.2 noch mit altem Wert/Namen. Gleiches Muster bei `hudShowCount → hudMaxStandings`.
+**Symptom (chain that emerged in PR #60):**
+1. User statement: "Leader should be on screen most often" (tendency)
+2. Concept doc: "Leader must be visible in every frame — hard constraint"
+3. Result: rigid priority hierarchy 1–4
+4. Result: `gap01` trigger that algorithmically only allows leader-vs-second
+5. Result: risk documentation describes the resulting bug as "correct per hierarchy"
 
-**Ursache:** Variablen-Refactor nur an der Definition-Stelle gemacht, nicht überall wo der Wert oder Name vorkommt. Docs sind anders als Code — kein Compiler prüft Konsistenz.
+**Cause:** Each individual translation step appears logically consistent. Only in the overall picture does the result contradict the original statement. CC has no feedback loop to user intention between steps.
 
-**Konsequenz:** Bei jedem Variablen-Rename oder Wert-Änderung in einem Konzept-Doc: Grep nach altem Namen/Wert und alle Treffer in einem Batch ersetzen. "Definition aktualisiert" ist nicht dasselbe wie "Doc-weit konsistent".
+**Consequence:** (1) In concept docs, explicitly distinguish between TENDENCY and CONSTRAINT — both types are valid but must be named. (2) Reviews need attention for solidification drift: "Was that meant as a constraint or a tendency?". (3) Architecture note anchored early in the doc: "This system is formulated as tendency logic, not as a constraint system."
 
-**Leitfrage:** "Gibt es noch andere Stellen im Doc wo der alte Wert oder Name steht?"
+**Key Question:** "Is that a tendency statement or a hard constraint? Would the user have formulated it that way too?"
 
-**Verweis:** K3 (5 Stellen "20s"), K9 (2 Stellen "overviewCooldown" Singular), K7 (2 Stellen "hudShowCount") aus PR #60 Nachtrag 5.
-
----
-
-## Lesson 46 — Empirische Messung schlägt strukturelle Vermutung
-
-**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Q-25-Diagnose: Space Sprint fühlte sich zu kurz an. Eine strukturelle Hypothese ("Canvas-Koordinaten sind auf 1280×720 begrenzt, daher ist Space Sprint kurz") war im HANDOFF dokumentiert. Tatsächliche Ursache: `maxScale=4.0` zu niedrig.
-
-**Symptom:** HANDOFF beschreibt Hypothese A als "wahrscheinliche Ursache". Wenn man Hypothese A glaubt, folgt ein Refactor der Canvas-Koordinaten-Logik. Tatsächlich ist Hypothese A falsch — empirische Messung widerlegt sie sofort.
-
-**Ursache:** Strukturelle Hypothesen klingen plausibel und werden ohne Mess-Schritt als Grundlage für Lösungs-Konzepte verwendet. Empirische Verifikation wird als "offensichtlich" übersprungen.
-
-**Konsequenz:** Bei strukturellen Vermutungen ("wahrscheinlich liegt es an X") immer einen Mess-Auftrag in den Diagnose-Sprint einbauen bevor Lösungs-Konzepte entwickelt werden. Der Mess-Auftrag kostet wenig; das falsche Refactor kostet viel.
-
-**Leitfrage:** "Ist das eine Messung oder eine Vermutung? Kann ich die Vermutung in 5 Minuten empirisch prüfen?"
-
-**Verweis:** PR #60 Phase 1 — empirische Widerlegung der Canvas-Koordinaten-Hypothese, `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` als Root Cause identifiziert.
+**Reference:** `docs/CAMERA_DIRECTOR.md §3` architecture note blockquote, K1+K2+K5+K6 in addendum 5.
 
 ---
 
-## Lesson 47 — Konzept-Doc-Reviews brauchen zwei Perspektiven
+## Lesson 45 — Doc-wide Consistency in Variable Refactors
 
-**Kontext:** Camera-Director-Konzept-Sprint (PR #60). Das abschließende Review vor Merge fand 10 Korrektur-Punkte (K1–K10) die in 5 vorherigen Commits unentdeckt geblieben waren.
+**Context:** Camera Director concept sprint (PR #60). Variable rename `overviewCooldown → overviewCooldownMin + overviewCooldownMax` as well as value change "fixed 20s → random jitter [15s/25s]" were not applied doc-wide. Only during the collective review were 5 locations with the old value and 2 locations with the old variable name found.
 
-**Beobachtung:** User-Review und Strategie-Claude-Review fanden unterschiedliche Probleme:
-- **User** fand K1+K2+K3: Wording-Sensibilität ("das habe ich nicht gesagt"), Hierarchie-Logik, offensichtliche Zahlenwidersprüche
-- **Strategie-Claude** fand K4–K10: technische Variablen-Inkonsistenzen, algorithmische Widersprüche in Trigger-Logik, Folge-Effekte von Architektur-Änderungen in abhängigen Sektionen
+**Symptom:** Tunable definition in §8.1 correct (`overviewCooldownMin`, `overviewCooldownMax`), but §3.1, §4.2, §4.3, §8.2, and §12.2 still with old value/name. Same pattern with `hudShowCount → hudMaxStandings`.
 
-**Ursache:** User kennt die eigenen Intentions am besten (Wording-Check), hat aber keine Zeit für vollständige technische Konsistenzprüfung. Strategie-Claude prüft technische Konsistenz, kennt aber die User-Intentionen nur aus dem Doc-Text.
+**Cause:** Variable refactor only done at the definition location, not everywhere the value or name appears. Docs are different from code — no compiler checks consistency.
 
-**Konsequenz:** Zwei-stufiges Review-Pattern für Konzept-Docs: (1) User-Review zuerst — Wording, Intention-Check, offensichtliche Widersprüche zur eigenen Aussage. (2) Strategie-Claude-Review — vollständiger Konsistenz-Scan, Variablen-Grep, Folge-Effekte prüfen. (3) Sammel-Nachtrag in einem Commit, nicht einzeln.
+**Consequence:** For every variable rename or value change in a concept doc: grep for old name/value and replace all hits in a single batch. "Definition updated" is not the same as "consistent doc-wide".
 
-**Leitfrage:** "Gibt es jemanden der prüft ob das technisch konsistent ist — und jemanden der prüft ob das die eigene Aussage korrekt wiedergibt?"
+**Key Question:** "Are there other places in the doc where the old value or name appears?"
 
----
-
-## Lesson 48 — Symptom-Fix vs. Architektur-Fix (PR-A1 / PR-A2)
-
-**Kontext:** Q-25 (Space Sprint zu schnell) wurde in PR-A1 als Symptom-Fix gelöst:
-`maxScale` von 4.0 auf 10.0 erhöht. Das Ergebnis war besser, aber der fundamentale
-Defekt blieb: `openTrackFinishT` teilte nicht durch `speedScaleFactor`, d.h. der
-Duration-Slider hatte bei langen Strecken null Wirkung.
-
-**PR-A2-Diagnose** identifizierte den Architectural Gap. **PR-A2** löste ihn durch
-einen anderen Ansatz: statt "baseSpeed durch Länge dividieren" nun "baseSpeed so
-berechnen dass der Median-Racer in targetDuration fertig wird". 3-Zeilen-Formel,
-kein Konfigurationsparameter.
-
-**Erkenntnis:** Symptom-Fixes (maxScale erhöhen) können als Stepping-Stone sinnvoll
-sein — PR-A1 war notwendig um das Problem sichtbar zu machen. Aber ein Diagnose-Sprint
-vor der Implementierung (PR-A2-Diagnose) verhindert, dass man sich mit dem nächsten
-Symptom-Fix in eine Sackgasse manövriert.
-
-**Konsequenz:** Bei komplexen Bugs die UI-Parameter-Tuning erfordern: prüfen ob
-die Architektur selbst das Problem verursacht. Eine 3-Zeilen-Formel kann eine
-10-Parameter-Konfiguration überflüssig machen.
-
-**Verweis:** PR #60 Nachtrag 5 — 10 K-Korrekturen aus kombiniertem User+Strategie-Claude-Review.
+**Reference:** K3 (5 locations "20s"), K9 (2 locations "overviewCooldown" singular), K7 (2 locations "hudShowCount") from PR #60 addendum 5.
 
 ---
 
-## Lesson 49 — Last-Finisher vs. Median-Racer Semantics bei duration-driven Speed
+## Lesson 46 — Empirical Measurement Beats Structural Assumption
 
-**Kontext:** PR-A2 implementierte `computeRaceBaseSpeed(finishT, targetDuration)` so dass der
-Median-Racer (spreadFactor=1.0) in `targetDuration` fertig wird. Browser-Test (2026-05-04) zeigte:
-Dirt Oval Horse 46s → 48s (+4%, akzeptabel), Space Sprint Rocket 30s → 26s (-13%). Zwei Bugs:
-E1: `speedMultiplier` nicht normalisiert (Rocket sm=1.25 läuft 25% schneller → fertig nach 24s).
-E2: "Race Duration 30s" war de facto ein Median-Versprechen, nicht ein Last-Finisher-Versprechen.
+**Context:** Camera Director concept sprint (PR #60). Q-25 diagnosis: Space Sprint felt too short. A structural hypothesis ("Canvas coordinates are limited to 1280×720, hence Space Sprint is short") was documented in the HANDOFF. Actual cause: `maxScale=4.0` too low.
 
-**Update PR-A2.6:** Empirische Messung in der Diagnose-Phase zeigte: nur 39-63% der Races landeten
-tatsächlich innerhalb ±5% des Targets beim Race-Ende. Die ±5%-Garantie galt implizit für den
-Median-Racer. Race-Ende-Abweichung ist 1σ ≈ 4-6% abhängig von N — intrinsisch durch die
-Spread-Mechanik (Minimum von N stochastischen Draws). Die Garantie ist auf den *erwarteten* letzten
-Finisher, nicht auf jeden einzelnen Run. Dokumentiert in ARCHITECTURE.md § Speed Pipeline.
-Wichtig: Garantien immer explizit zuordnen — Median-Racer vs. Race-Ende sind verschieden.
+**Symptom:** HANDOFF describes hypothesis A as "probable cause". If you believe hypothesis A, a refactor of the canvas coordinate logic follows. In fact, hypothesis A is wrong — empirical measurement refutes it immediately.
 
-**Erkenntnis:** Eine duration-driven Speed-Architektur braucht zwei explizite Entscheidungen:
+**Cause:** Structural hypotheses sound plausible and are used as the basis for solution concepts without a measurement step. Empirical verification is skipped as "obvious".
 
-1. **Was verspricht die Duration?** Median-Racer-Semantik: Mitte des Feldes fertig bei T. Last-Finisher-Semantik: letzter Racer fertig bei T. Beide sind valide — aber es muss eine Entscheidung getroffen werden und sie muss im Code codiert sein.
+**Consequence:** For structural assumptions ("it's probably because of X"), always build a measurement task into the diagnostic sprint before developing solution concepts. The measurement task costs little; the wrong refactor costs a lot.
 
-2. **Welchen speedMultiplier hat die Kalibrierung?** Wenn `computeRaceBaseSpeed` für sm=1.0 kalibriert ist, muss der Aufruf T mit sm multiplizieren damit der Racer-eigene sm sich herauskürzt.
+**Key Question:** "Is that a measurement or an assumption? Can I empirically check the assumption in 5 minutes?"
 
-**Korrekte Formel (Last-Finisher + sm-normalisiert):**
+**Reference:** PR #60 Phase 1 — empirical refutation of the canvas coordinate hypothesis, `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` identified as root cause.
+
+---
+
+## Lesson 47 — Concept Doc Reviews Need Two Perspectives
+
+**Context:** Camera Director concept sprint (PR #60). The final review before merge found 10 correction points (K1–K10) that had gone undetected in 5 previous commits.
+
+**Observation:** User review and strategy Claude review found different problems:
+- **User** found K1+K2+K3: wording sensitivity ("I didn't say that"), hierarchy logic, obvious numerical contradictions
+- **Strategy Claude** found K4–K10: technical variable inconsistencies, algorithmic contradictions in trigger logic, follow-on effects of architecture changes in dependent sections
+
+**Cause:** User knows their own intentions best (wording check), but doesn't have time for complete technical consistency verification. Strategy Claude checks technical consistency, but only knows user intentions from the doc text.
+
+**Consequence:** Two-stage review pattern for concept docs: (1) User review first — wording, intention check, obvious contradictions to their own statements. (2) Strategy Claude review — complete consistency scan, variable grep, check follow-on effects. (3) Collective addendum in one commit, not individually.
+
+**Key Question:** "Is there someone checking that it is technically consistent — and someone checking that it correctly reflects the original statement?"
+
+---
+
+## Lesson 48 — Symptom Fix vs. Architecture Fix (PR-A1 / PR-A2)
+
+**Context:** Q-25 (Space Sprint too fast) was resolved in PR-A1 as a symptom fix:
+`maxScale` increased from 4.0 to 10.0. The result was better, but the fundamental
+defect remained: `openTrackFinishT` did not divide by `speedScaleFactor`, meaning the
+duration slider had zero effect on long tracks.
+
+**PR-A2 diagnosis** identified the architectural gap. **PR-A2** resolved it through
+a different approach: instead of "divide baseSpeed by length", now "calculate baseSpeed so that
+the median racer finishes in targetDuration". 3-line formula,
+no configuration parameter.
+
+**Insight:** Symptom fixes (increasing maxScale) can be useful as a stepping stone —
+PR-A1 was necessary to make the problem visible. But a diagnostic sprint
+before implementation (PR-A2 diagnosis) prevents maneuvering into a dead end with the next
+symptom fix.
+
+**Consequence:** For complex bugs that require UI parameter tuning: check whether
+the architecture itself is causing the problem. A 3-line formula can make a
+10-parameter configuration superfluous.
+
+**Reference:** PR #60 addendum 5 — 10 K-corrections from combined user+strategy Claude review.
+
+---
+
+## Lesson 49 — Last-Finisher vs. Median-Racer Semantics in Duration-driven Speed
+
+**Context:** PR-A2 implemented `computeRaceBaseSpeed(finishT, targetDuration)` so that the
+median racer (spreadFactor=1.0) finishes in `targetDuration`. Browser test (2026-05-04) showed:
+Dirt Oval Horse 46s → 48s (+4%, acceptable), Space Sprint Rocket 30s → 26s (-13%). Two bugs:
+E1: `speedMultiplier` not normalized (Rocket sm=1.25 runs 25% faster → finishes at 24s).
+E2: "Race Duration 30s" was de facto a median promise, not a last-finisher promise.
+
+**Update PR-A2.6:** Empirical measurement in the diagnostic phase showed: only 39-63% of races actually landed
+within ±5% of the target at race end. The ±5% guarantee applied implicitly to the
+median racer. Race-end deviation is 1σ ≈ 4-6% depending on N — intrinsic to the
+spread mechanic (minimum of N stochastic draws). The guarantee is on the *expected* last
+finisher, not on every individual run. Documented in ARCHITECTURE.md § Speed Pipeline.
+Important: always explicitly assign guarantees — median racer vs. race end are different.
+
+**Insight:** A duration-driven speed architecture needs two explicit decisions:
+
+1. **What does the duration promise?** Median racer semantics: middle of the field finishes at T. Last-finisher semantics: last racer finishes at T. Both are valid — but a decision must be made and it must be encoded in the code.
+
+2. **What speedMultiplier does the calibration have?** If `computeRaceBaseSpeed` is calibrated for sm=1.0, the call must multiply T by sm so that the racer's own sm cancels out.
+
+**Correct Formula (Last-Finisher + sm-normalized):**
 ```
 T = targetDuration × spreadMinFactor × speedMultiplier
 race_baseSpeed = finishT / (REFERENCE_FPS × T)
 ```
-Der sloweste Racer zeichnet BASE_SPEED_MIN → spreadFactor = BASE_SPEED_MIN/MEAN = spreadMinFactor.
-Sein Finish: `finishT / (race_baseSpeed × sm × spreadMinFactor × FPS)` = targetDuration ✓.
-Der Median-Racer fertig bei `targetDuration × spreadMinFactor ≈ 87%` von targetDuration.
+The slowest racer draws BASE_SPEED_MIN → spreadFactor = BASE_SPEED_MIN/MEAN = spreadMinFactor.
+Their finish: `finishT / (race_baseSpeed × sm × spreadMinFactor × FPS)` = targetDuration ✓.
+The median racer finishes at `targetDuration × spreadMinFactor ≈ 87%` of targetDuration.
 
-**Spec-Fehler-Lektion:** Die Spec zeigte `T = targetDuration × spreadMinFactor / speedMultiplier`.
-Das ist falsch. Die eigenen Validierungszahlen der Spec (Rocket 30s → letzter fertig bei 30s)
-sind nur mit Multiplikation erreichbar. Immer die Validierungszahlen gegen die Formel prüfen,
-nicht nur die Formel-Zeile im Spec-Text.
+**Spec Error Lesson:** The spec showed `T = targetDuration × spreadMinFactor / speedMultiplier`.
+That is wrong. The spec's own validation numbers (Rocket 30s → last finisher at 30s)
+are only achievable with multiplication. Always check the validation numbers against the formula,
+not just the formula line in the spec text.
 
-**Konsequenz:** Bei der Implementierung einer duration-driven Speed-Architektur:
-1. Die Duration-Semantik explizit festlegen und im Code kommentieren (last-finisher vs. median).
-2. `speedMultiplier`-Normalisierung am Aufruf-Ort, nicht in der Pure Function — die Pure Function bleibt generisch.
-3. Pipeline-Contract-Tests schreiben die End-to-End verifizieren dass der sloweste und median Racer zur richtigen Zeit ankommen.
+**Consequence:** When implementing a duration-driven speed architecture:
+1. Explicitly define the duration semantics and comment in the code (last-finisher vs. median).
+2. `speedMultiplier` normalization at the call site, not in the pure function — the pure function stays generic.
+3. Write pipeline contract tests that verify end-to-end that the slowest and median racer arrive at the right time.
 
-**Verweis:** PR-A2-fix-commit (2026-05-04), `raceBaseSpeed.test.js` describe-Block "pipeline contract — last-finisher semantics".
+**Reference:** PR-A2-fix-commit (2026-05-04), `raceBaseSpeed.test.js` describe block "pipeline contract — last-finisher semantics".
 
-
----
-
-## Lesson 50 — T-Parameter-Sampling vs Arc-Length-Sampling bei stochastischen Visualisierungen
-
-**Kontext:** PR-A2.5 — Racer bewegten sich visuell mit wechselnder Pixel-Geschwindigkeit (Beschleunigen + Bremsen) obwohl ihre `t`-Fortschritt-Rate konstant war. Root-Cause: `catmullRomSpline` sampelte im T-Parameter-Raum gleichmäßig; aufeinanderfolgende Samples hatten aber unterschiedliche Pixel-Abstände (2.69×–7.72× max/min-Verhältnis je nach Track-Geometrie).
-
-**Erkenntnis:** T-Parameter-Gleichmäßigkeit ≠ Pixel-Gleichmäßigkeit. Die Spline-Segmente im T-Raum können unterschiedlich lange Bogenlängen haben — z.B. wenn der Editor-Nutzer viele Punkte in Kurven platziert (kurze Segmente) und wenige in Geraden (lange Segmente). Jede Simulation die `t` gleichmäßig inkrementiert und dann T→Pixel abbildet hat dieses Problem.
-
-**Lösung:** Arc-Length-Reparametrisierung als One-Shot-Schritt beim Sampling:
-1. Dense Sampling im T-Raum (5× Ziel-Samples, min 1000)
-2. Kumulative Bogenlängen berechnen → Lookup-Tabelle
-3. Für jeden Output-Sample: Ziel-Bogenlänge = `i/N × totalLength`, Binary-Search in LUT → T-Wert → Spline-Punkt
-
-O(N log N) einmalig beim Track-Laden (nicht pro Frame). Closed-Tracks: eine extra Eintrag für das Wrap-Segment schließt den Loop korrekt.
-
-**Generalisierung:** Jede Visualisierung die eine Simulation über eine parametrische Kurve zeigt, muss zwischen T-Parameter-Gleichmäßigkeit und Pixel-Gleichmäßigkeit unterscheiden. Für wahrnehmbare Bewegung (Rennfahrer) ist Pixel-Gleichmäßigkeit (arc-length) immer die richtige Wahl. Für Connectivity-Checks oder Punkt-Validierung reicht T-uniform.
-
-**Diagnose-Disziplin (L46):** Vor dem Fix wurde eine Diagnostic-Messung mit 6 synthetischen Track-Shapes gemacht. Hypothese (max/min > 1.3×) wurde mit Werten 1.36×–7.72× bestätigt. Erst dann wurde implementiert.
-
-**Sub-Caveat — Aufrufer von `derivativeAt` direkt:** Code der `derivativeAt(controlPoints, t)` direkt aufruft (statt das Sample-Array zu konsumieren) umgeht die Arc-Length-Reparametrisierung. `derivativeAt` erwartet `t` als T-Parameter im Kontrollpunkt-Raum; nach dem Wechsel auf arc-length-uniform Sampling ist Racer-`t` aber eine Arc-Length-Fraktion. Das gibt falsche Tangenten an falschen Spline-Punkten — auf asymmetrischen Tracks sichtbar als "Rotation hinkt der Kurve hinterher". Zusätzlich: `derivativeAt` clampt `t` auf `[0,1]`, was bei Closed-Track-Mehrfachrunden (t > 1) alle Racer ab Runde 2 auf die konstante End-Tangente zwang. Fix: Tangenten aus dem arc-length-gesampleten Array via finiter Differenz berechnen (O(1) pro Frame, kein Bug durch T-Raum-Mapping). **Bei jedem Refactoring von Spline-Sampling alle Aufrufer prüfen — nicht nur Sample-Output-Konsumenten, sondern auch Code der auf rohen Kontrollpunkten und Racer-t arbeitet.**
-
-**Verweis:** PR-A2.5 `catmullRom.js`, `catmullRom.diagnostic.test.js`, `EditorShape.js`.
 
 ---
 
-## Lesson 51 — Silent Failures in Async Resource Loaders brauchen Observability
+## Lesson 50 — T-Parameter Sampling vs. Arc-Length Sampling in Stochastic Visualizations
 
-**Kontext:** PR-A2.8 — User berichtete dass Backgrounds im Race fehlen, ohne zu wissen warum. Root-Cause: `bgImageCache.js` setzte `record.failed = true` im `img.onerror`-Handler, gab aber keine Rückmeldung. Kein `console.warn`, kein UI-Hinweis, kein Retry. Der User hatte mehrfach Background-Bilder hochgeladen und wusste nicht, dass das Problem der offline Docker-Server war — nicht die Bilder.
+**Context:** PR-A2.5 — Racers moved visually at varying pixel speed (accelerating + braking) even though their `t` progress rate was constant. Root cause: `catmullRomSpline` sampled uniformly in T-parameter space; but consecutive samples had different pixel distances (2.69×–7.72× max/min ratio depending on track geometry).
 
-**Erkenntnis:** Async Resource Loader (Image, fetch, FileReader) die UX-sichtbare Inhalte laden, müssen bei Failure mindestens eine Konsolen-Warnung ausgeben. Silent-fail ist nur akzeptabel wenn der Caller bereits einen sichtbaren Fehlerzustand anzeigt. `img.onerror = () => { record.failed = true; }` ohne jede Ausgabe macht die Ursache beim Debuggen unsichtbar — auch für den Entwickler selbst.
+**Insight:** T-parameter uniformity ≠ pixel uniformity. Spline segments in T-space can have different arc lengths — e.g. when the editor user places many points in curves (short segments) and few in straights (long segments). Every simulation that increments `t` uniformly and then maps T→pixel has this problem.
 
-**Pattern:** Beim ersten Fehler pro Cache-Eintrag (Flag `record.warned`) einmal warnen; danach silent. Verhindert Frame-Spam bei rAF-Loop-Callers, gibt aber dennoch einen klaren Hinweis im ersten Fehlerfall. Warn-Message soll enthalten: was fehlschlug (URL), warum wahrscheinlich (mögliche Ursache), wie zu beheben (konkreter Schritt).
+**Solution:** Arc-length reparameterization as a one-shot step during sampling:
+1. Dense sampling in T-space (5× target samples, min 1000)
+2. Calculate cumulative arc lengths → lookup table
+3. For each output sample: target arc length = `i/N × totalLength`, binary search in LUT → T value → spline point
 
-**Generalisierung:** Jeder `onerror` / `catch`-Handler in einem Modul das Ressourcen cached und `null` zurückgibt sollte mit `console.warn` ausgestattet sein, wenn der Aufrufer nicht selbst warnt. Die Faustregel: Wenn das Fehlen der Ressource für den User sichtbar ist (fehlender Hintergrund, fehlendes Bild), muss die Ursache für den Entwickler sichtbar sein (Konsole).
+O(N log N) once on track load (not per frame). Closed tracks: one extra entry for the wrap segment closes the loop correctly.
 
-**Verweis:** PR-A2.8 `bgImageCache.js`.
+**Generalization:** Every visualization that shows a simulation over a parametric curve must distinguish between T-parameter uniformity and pixel uniformity. For perceptible movement (racers), pixel uniformity (arc-length) is always the right choice. For connectivity checks or point validation, T-uniform suffices.
 
----
+**Diagnostic Discipline (L46):** Before the fix, a diagnostic measurement was made with 6 synthetic track shapes. Hypothesis (max/min > 1.3×) was confirmed with values 1.36×–7.72×. Only then was implementation done.
 
-## Lesson 52 — Periodic State Re-Rolls mit Smooth Transition erzeugen Race-Dynamik ohne deterministische Garantien zu brechen
+**Sub-Caveat — Callers of `derivativeAt` Directly:** Code that calls `derivativeAt(controlPoints, t)` directly (instead of consuming the sample array) bypasses the arc-length reparameterization. `derivativeAt` expects `t` as T-parameter in control point space; after the switch to arc-length-uniform sampling, racer `t` is an arc-length fraction. This gives wrong tangents at wrong spline points — visible on asymmetric tracks as "rotation lags behind the curve". Additionally: `derivativeAt` clamps `t` to `[0,1]`, which forced all racers from round 2 onward on closed-track multi-lap races onto the constant end tangent. Fix: calculate tangents from the arc-length-sampled array via finite difference (O(1) per frame, no bug from T-space mapping). **When refactoring spline sampling, check all callers — not just sample output consumers, but also code that works on raw control points and racer-t.**
 
-**Kontext:** PR-A2.6 — Diagnose zeigte 4.3 Lead-Changes pro 30s-Race, 3% der Races völlig ohne
-Platzwechsel. Racers hielten ihre initiale Spread-Reihenfolge nahezu durchgehend.
-
-**Erkenntnis:** Einmalig gezogene Zufallswerte (spreadFactor bei Race-Start) frieren das Feld ein.
-Die Lösung: Periodische Re-Draws mit (a) Zentrierung auf den aktuellen Wert (Variant B — kein
-Reset zum globalen Mittel) und (b) einer easeInOutCubic-Übergangsanimation. Damit entstehen
-natürliche, graduelle Tempo-Schwankungen ohne ruckartige Sprünge.
-
-**Kritische Trennung: speedBonusMult vs. spreadFactor.** Nur `spreadFactor` (Glücks-Zug) darf
-re-gerollt werden. `speedBonusMult = 1 + speedBonus` (positions-basierter Back-Row-Ausgleich) ist
-räumlich determiniert und muss konstant bleiben. Vor dieser PR war speedBonus in baseSpeed
-eingerechnet — ein Re-Roll hätte den Back-Row-Ausgleich gelöscht und hintere Startpositionen
-benachteiligt. Refactor: Beide Skalare explizit als separate Felder (`spreadFactor`,
-`speedBonusMult`) — nur das erste wird re-gerollt.
-
-**Timing-Regel:** Letzter Roll bei ~80% der Race-Dauer. Danach keine Änderungen mehr — die
-Zielgerade soll von der aktuellen Reihenfolge entschieden werden, nicht von einem zufälligen
-Late-Roll. Formel: `rollCount = max(2, floor(duration/15))`, `rollInterval = 0.80 × duration / rollCount`.
-Für alle Standard-Dauern (30–120s) ergibt das konstant ~12s zwischen Rolls.
-
-**Verweis:** PR-A2.6 `RaceScreen/index.jsx`, `reRoll.test.js`, ARCHITECTURE.md § Re-Roll Mechanism.
+**Reference:** PR-A2.5 `catmullRom.js`, `catmullRom.diagnostic.test.js`, `EditorShape.js`.
 
 ---
 
-## Lesson 53 — Koordinatensystem-Dokumentation ist Pflicht: Pan-Offset und scaledRacersForCam (Phase-4 Diagnose-Session 2026-05-06)
+## Lesson 51 — Silent Failures in Async Resource Loaders Need Observability
 
-**Kontext:** CameraDirector erhält von RaceScreen **canvas-space** Koordinaten via `scaledRacersForCam`: `r.x = worldX × bsX`, `r.y = worldY × bsY`. Die Render-Pipeline zeichnet Racer bei World-Koordinaten unter `ctx.scale(cam.zoom × bsX, cam.zoom × bsY)`. Damit gilt: `screenX = offsetX + worldX × zoom × bsX = offsetX + r.x × zoom`.
+**Context:** PR-A2.8 — User reported that backgrounds are missing in the race, without knowing why. Root cause: `bgImageCache.js` set `record.failed = true` in the `img.onerror` handler, but gave no feedback. No `console.warn`, no UI hint, no retry. The user had uploaded background images multiple times and didn't know that the problem was the offline Docker server — not the images.
 
-**Die triviale Pan-Formel ist korrekt:**
+**Insight:** Async resource loaders (Image, fetch, FileReader) that load UX-visible content must output at least a console warning on failure. Silent fail is only acceptable when the caller already shows a visible error state. `img.onerror = () => { record.failed = true; }` without any output makes the cause invisible during debugging — even for the developer themselves.
+
+**Pattern:** On the first error per cache entry (flag `record.warned`) warn once; then silent. Prevents frame spam for rAF loop callers, but still gives a clear hint in the first error case. Warning message should contain: what failed (URL), why probably (possible cause), how to fix (concrete step).
+
+**Generalization:** Every `onerror` / `catch` handler in a module that caches resources and returns `null` should be equipped with `console.warn`, if the caller doesn't warn itself. The rule of thumb: if the absence of the resource is visible to the user (missing background, missing image), the cause must be visible to the developer (console).
+
+**Reference:** PR-A2.8 `bgImageCache.js`.
+
+---
+
+## Lesson 52 — Periodic State Re-Rolls with Smooth Transition Generate Race Dynamics Without Breaking Deterministic Guarantees
+
+**Context:** PR-A2.6 — Diagnosis showed 4.3 lead changes per 30s race, 3% of races completely without position changes. Racers maintained their initial spread order almost throughout.
+
+**Insight:** Once-drawn random values (spreadFactor at race start) freeze the field.
+The solution: periodic re-draws with (a) centering on the current value (Variant B — no
+reset to the global mean) and (b) an easeInOutCubic transition animation. This produces
+natural, gradual pace variations without jerky jumps.
+
+**Critical separation: speedBonusMult vs. spreadFactor.** Only `spreadFactor` (luck draw) may
+be re-rolled. `speedBonusMult = 1 + speedBonus` (position-based back-row compensation) is
+spatially determined and must remain constant. Before this PR, speedBonus was incorporated into baseSpeed
+— a re-roll would have deleted the back-row compensation and disadvantaged rear starting positions.
+Refactor: Both scalars explicitly as separate fields (`spreadFactor`,
+`speedBonusMult`) — only the first is re-rolled.
+
+**Timing rule:** Last roll at ~80% of race duration. After that no more changes — the
+home stretch should be decided by the current order, not by a random late roll. Formula: `rollCount = max(2, floor(duration/15))`, `rollInterval = 0.80 × duration / rollCount`.
+For all standard durations (30–120s) this gives a consistent ~12s between rolls.
+
+**Reference:** PR-A2.6 `RaceScreen/index.jsx`, `reRoll.test.js`, ARCHITECTURE.md § Re-Roll Mechanism.
+
+---
+
+## Lesson 53 — Coordinate System Documentation Is Mandatory: Pan Offset and scaledRacersForCam (Phase 4 Diagnostic Session 2026-05-06)
+
+**Context:** CameraDirector receives **canvas-space** coordinates from RaceScreen via `scaledRacersForCam`: `r.x = worldX × bsX`, `r.y = worldY × bsY`. The render pipeline draws racers at world coordinates under `ctx.scale(cam.zoom × bsX, cam.zoom × bsY)`. Thus: `screenX = offsetX + worldX × zoom × bsX = offsetX + r.x × zoom`.
+
+**The trivial pan formula is correct:**
 ```
 targetOffsetX = hw - r.x × zoom
 targetOffsetY = hh - r.y × zoom
 ```
-Beweis: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw - worldX×bsX×zoom + worldX×bsX×zoom = hw ✓`. Gilt für alle bsX/bsY-Kombinationen.
+Proof: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw - worldX×bsX×zoom + worldX×bsX×zoom = hw ✓`. Valid for all bsX/bsY combinations.
 
-**Befund C (Phase-4) war ein Fehler:** Commit C führte `_computePanScale(zoom) = zoom × bsX` ein mit der Begründung, die Render-Pipeline brauche bsX im Pan. Das war falsch: bsX ist **bereits in `r.x`** enthalten. `r.x × zoom × bsX = worldX × bsX² × zoom` — ein doppelter bsX-Faktor. Für Dirt Oval (bsX=0.833, bsY=1.0) ergab das:
-- X-Fehler: `screenX = hw + worldX × zoom × bsX × (1-bsX) ≈ +36px`
-- Y-Fehler (bsX statt bsY): `screenY = hh + worldY × zoom × (1-bsX) ≈ +138px`
+**Finding C (Phase 4) was an error:** Commit C introduced `_computePanScale(zoom) = zoom × bsX` with the argument that the render pipeline needs bsX in the pan. That was wrong: bsX is **already in `r.x`**. `r.x × zoom × bsX = worldX × bsX² × zoom` — a double bsX factor. For Dirt Oval (bsX=0.833, bsY=1.0) this gave:
+- X error: `screenX = hw + worldX × zoom × bsX × (1-bsX) ≈ +36px`
+- Y error (bsX instead of bsY): `screenY = hh + worldY × zoom × (1-bsX) ≈ +138px`
 
-**Warum der Fehler nicht sofort auffiel:** Das Diagnose-Log verwendete `expectedScreenCenterX = offsetX + r.x × zoom × bsX`. Das ist eine Tautologie — da `offsetX = hw - r.x × zoom × bsX`, ergibt die Summe immer `hw`. Der X-Fehler war im Log unsichtbar.
+**Why the error was not immediately noticed:** The diagnostic log used `expectedScreenCenterX = offsetX + r.x × zoom × bsX`. That is a tautology — since `offsetX = hw - r.x × zoom × bsX`, the sum always gives `hw`. The X error was invisible in the log.
 
-**Diagnosbarkeit:** Empirische `[PAN]`-Logs zeigten `expectedScreenCenterY: 498.7 ≠ 360` (Y-Fehler sichtbar weil bsY=1.0 in diesem Track). Die korrekte Screen-Formel `screenY = offsetY + worldY × zoom × bsY = offsetY + r.y × zoom` war durch Zufall identisch mit der Log-Formel. Der X-Fehler (36px) war kleiner und wurde durch die Tautologie verdeckt.
+**Diagnosability:** Empirical `[PAN]` logs showed `expectedScreenCenterY: 498.7 ≠ 360` (Y error visible because bsY=1.0 on this track). The correct screen formula `screenY = offsetY + worldY × zoom × bsY = offsetY + r.y × zoom` was coincidentally identical to the log formula. The X error (36px) was smaller and masked by the tautology.
 
-**Lehre:** Koordinatensystem (`r.x`: canvas-space oder world-space?) muss an der Systemgrenze `scaledRacersForCam` explizit dokumentiert sein. Diagnostic-Log-Formeln müssen von den Pan-Formeln **unabhängig** sein — sonst sind sie Tautologien.
+**Lesson:** Coordinate system (`r.x`: canvas-space or world-space?) must be explicitly documented at the system boundary `scaledRacersForCam`. Diagnostic log formulas must be **independent** of the pan formulas — otherwise they are tautologies.
 
-**Verweis:** Phase-4 Diagnose-Session 2026-05-06, `CameraDirector.js` `_setTargets()`, `index.jsx` L924–927 (`scaledRacersForCam`), L1022–1024 (Render-Transform). CAMERA_DIRECTOR.md §L62 (Zoom-Invarianz bleibt unverändert korrekt).
-
----
-
-## Lesson 54 — Bauchgefühl als erstes Qualitätssignal (Phase-4-Diagnose)
-
-**Kontext:** Phase-4 Commit C führte `_computePanScale(zoom) = zoom × bsX` ein. Die Formel "klang
-plausibel" — bsX taucht in der Render-Pipeline auf, also schien es logisch sie in die Pan-Formel
-einzubauen. Das Gefühl "hier stimmt etwas nicht" (zu viele Faktoren, bsX kommt doppelt vor) wurde
-nicht ernst genommen. Kein algebraischer Beweis wurde aufgeschrieben. Diagnose-Session 2026-05-06
-deckte den Fehler durch empirische Messung auf.
-
-**Erkenntnis:** Das Bauchgefühl "diese Formel macht zu viel" ist oft das früheste und günstigste
-Signal. Wenn Code "sich komisch anfühlt" — Formel die verdächtig komplex ist, Faktor der zweimal
-vorkommt, Namenskonvention die verdächtig ähnlich zu einem anderen Wert ist — ist das ein Signal
-für einen Beweis-Auftrag, nicht für "wird schon passen".
-
-**Konsequenz:** Jede Camera-Formel die bsX, zoom, oder Koordinaten-Transformationen kombiniert:
-direkt einen algebraischen Beweis aufschreiben bevor committed wird. 2–3 Zeilen Mathematik
-(`screenX = offsetX + worldX × zoom × bsX = hw`) sparen Stunden Diagnose.
+**Reference:** Phase 4 diagnostic session 2026-05-06, `CameraDirector.js` `_setTargets()`, `index.jsx` L924–927 (`scaledRacersForCam`), L1022–1024 (render transform). CAMERA_DIRECTOR.md §L62 (zoom invariance remains unchanged correct).
 
 ---
 
-## Lesson 55 — Koordinatensystem-Grenzen müssen an der API-Grenze dokumentiert sein (Phase-4-Diagnose)
+## Lesson 54 — Gut Feeling as First Quality Signal (Phase 4 Diagnosis)
 
-**Kontext:** `scaledRacersForCam` in `RaceScreen/index.jsx` liefert canvas-space Koordinaten an
-CameraDirector: `r.x = worldX × bsX`. Weder die Variable noch der CameraDirector-Aufruf hatte
-einen Kommentar der das explizit machte. Ergebnis: Commit C führte `r.x × zoom × bsX` ein (bsX
-doppelt) ohne Widerspruch — weil "bsX in der Pipeline vorkommt" stimmte, aber "bsX ist bereits in
-r.x enthalten" nicht dokumentiert war.
+**Context:** Phase 4 Commit C introduced `_computePanScale(zoom) = zoom × bsX`. The formula "sounded
+plausible" — bsX appears in the render pipeline, so it seemed logical to include it in the pan formula.
+The feeling "something is not right here" (too many factors, bsX appears twice) was
+not taken seriously. No algebraic proof was written down. Diagnostic session 2026-05-06
+uncovered the error through empirical measurement.
 
-**Erkenntnis:** Koordinatensystem-Konventionen ("Wert ist canvas-space" vs. "Wert ist world-space")
-müssen an der Systemgrenze explizit stehen. In einem Canvas-System wo beide Räume simultan existieren
-und ineinander konvertiert werden, ist die implizite Annahme über den Raum eines Wertes der häufigste
-Fehler-Mechanismus.
+**Insight:** The gut feeling "this formula is doing too much" is often the earliest and cheapest
+signal. When code "feels odd" — formula that is suspiciously complex, factor that appears twice,
+naming convention that is suspiciously similar to another value — that is a signal
+for a proof task, not for "it'll probably be fine".
 
-**Konsequenz:** Bei jedem Funktions-Parameter der Koordinaten enthält: Kommentar welcher Raum erwartet
-wird. `// r.x: canvas-space (= worldX × bsX)` in dem Mapping wo scaledRacersForCam gebaut wird. Im
-CameraDirector-Update-Kommentar analog. Ohne diesen Kommentar ist der nächste Entwickler (oder
-Claude) blind gegenüber dem eingebauten bsX-Faktor.
-
-**Verweis:** `index.jsx` L924–927 (`scaledRacersForCam`), Lesson 53.
+**Consequence:** Every camera formula that combines bsX, zoom, or coordinate transformations:
+write an algebraic proof directly before committing. 2–3 lines of mathematics
+(`screenX = offsetX + worldX × zoom × bsX = hw`) save hours of diagnosis.
 
 ---
 
-## Lesson 56 — Config-Schema-Versionierung: Test-Fixtures müssen synchron bleiben (Phase-4)
+## Lesson 55 — Coordinate System Boundaries Must Be Documented at the API Boundary (Phase 4 Diagnosis)
 
-**Kontext:** CameraDirector-Config wurde von v2 auf v3 erweitert: `battleGapThreshold` (war
-`battleGapPct`), `battleMaxDurationMs` (war `battleMaxDuration`, ohne Ms-Suffix), neue Felder
-`battleGapHysteresis`, `overviewCooldownMin/Max`. Tests die `inverseConfig` mit dem alten Schema
-verwendeten liefen grün mit Fallback-Defaults — aber ohne die neuen Felder wurde das eigentliche
-Verhalten (Hysterese, Max-Duration-Cap) nicht getestet.
+**Context:** `scaledRacersForCam` in `RaceScreen/index.jsx` delivers canvas-space coordinates to
+CameraDirector: `r.x = worldX × bsX`. Neither the variable nor the CameraDirector call had
+a comment making that explicit. Result: Commit C introduced `r.x × zoom × bsX` (bsX
+double) without objection — because "bsX appears in the pipeline" was true, but "bsX is already
+in r.x" was not documented.
 
-**Erkenntnis:** Wenn ein Config-Objekt erweitert wird, müssen Test-Fixtures explizit mit den neuen
-Feldern aktualisiert werden. "Läuft mit Defaults" maskiert fehlende Verifikation — die neuen Features
-existieren im Code aber werden nie durch Tests ausgeübt.
+**Insight:** Coordinate system conventions ("value is canvas-space" vs. "value is world-space")
+must be explicitly stated at the system boundary. In a canvas system where both spaces simultaneously exist
+and are converted into each other, the implicit assumption about the space of a value is the most common
+error mechanism.
 
-**Konsequenz:** Config-Schema-Erweiterungen → sofort alle Test-Fixtures (inkl. `inverseConfig`,
-Test-Helpers, `beforeEach`-Objekte) mit den neuen Feldern updaten. Idealerweise: ein zentraler
-`TEST_CONFIG`-Objekt aus der vollständigen Schema-Definition generiert — dann sind neue Felder
-automatisch in allen Tests präsent.
+**Consequence:** For every function parameter that contains coordinates: comment which space is expected.
+`// r.x: canvas-space (= worldX × bsX)` in the mapping where scaledRacersForCam is built. In the
+CameraDirector update comment analogously. Without this comment the next developer (or
+Claude) is blind to the built-in bsX factor.
 
----
-
-## Lesson 57 — Einheiten-Suffix als Pflicht für Timing-Parameter (Phase-4)
-
-**Kontext:** `battleMaxDuration` war in Millisekunden — aber der Name gab keine Einheit an.
-Commit 9a0d803 benannte es in `battleMaxDurationMs` um. Die Umbennenung war kein Refactor —
-sie war notwendige Klarstellung, weil ein Wert `4000` ohne Einheit zweideutig ist (4 Sekunden
-oder 4000 Sekunden?).
-
-**Erkenntnis:** Parameter die in Millisekunden sind MÜSSEN `Ms` im Namen haben. Parameter in
-Sekunden MÜSSEN `Seconds` oder `s` (bei sehr kurzen Namen) tragen. `duration` oder `cooldown`
-alleine sind mehrdeutig — sie laden zur falschen Einheit ein. Das Problem taucht besonders
-auf wenn Millisekunden mit Sekunden-Vergleichen gemischt werden (`timestamp > cooldown` wo
-timestamp ms ist und cooldown s sein sollte).
-
-**Konsequenz:** Bei jedem neuen Timing-Parameter direkt mit Einheiten-Suffix benennen:
-`battleGapThresholdMs`, `overviewDurationMs`, `lerpFactor` (dimensionslos — explizit so kommentieren).
-Bestehende Parameter ohne Suffix: bei nächster Berührung umbenennen + Schema-Version erhöhen.
+**Reference:** `index.jsx` L924–927 (`scaledRacersForCam`), Lesson 53.
 
 ---
 
-## Lesson 58 — React StrictMode Double-Mount: useRef-Initialisierungen brauchen Cleanup (Phase-4)
+## Lesson 56 — Config Schema Versioning: Test Fixtures Must Stay in Sync (Phase 4)
 
-**Kontext:** React StrictMode ruft `useEffect` zweifach auf in Development (mount → cleanup → mount).
-Wenn `camDirRef.current = new CameraDirector(...)` in einem useEffect ohne Cleanup steht, laufen
-beim zweiten Mount zwei Instanzen parallel bis der Ref überschrieben wird. In normalen Tests (kein
-StrictMode-Doppel-Invoke) ist das unsichtbar — der Bug taucht nur im Dev-Browser auf.
+**Context:** CameraDirector config was extended from v2 to v3: `battleGapThreshold` (was
+`battleGapPct`), `battleMaxDurationMs` (was `battleMaxDuration`, without Ms suffix), new fields
+`battleGapHysteresis`, `overviewCooldownMin/Max`. Tests that used `inverseConfig` with the old schema
+ran green with fallback defaults — but without the new fields, the actual
+behavior (hysteresis, max duration cap) was not tested.
 
-**Erkenntnis:** Jede `useRef`-Zuweisung in einem `useEffect` die eine externe Instanz (State-Machine,
-Timer, WebSocket) erstellt, braucht ein Cleanup-Return. Auch wenn das Objekt keinen formalen
-`dispose()`-Aufruf hat, reicht `return () => { ref.current = null; }` um StrictMode-Doppel-Instanzen
-zu verhindern.
+**Insight:** When a config object is extended, test fixtures must be explicitly updated with the new
+fields. "Runs with defaults" masks missing verification — the new features
+exist in code but are never exercised through tests.
 
-**Konsequenz:** `useEffect` mit `useRef`-Zuweisung → immer prüfen ob Cleanup nötig.
+**Consequence:** Config schema extensions → immediately update all test fixtures (including `inverseConfig`,
+test helpers, `beforeEach` objects) with the new fields. Ideally: a central
+`TEST_CONFIG` object generated from the complete schema definition — then new fields
+are automatically present in all tests.
+
+---
+
+## Lesson 57 — Unit Suffix Is Mandatory for Timing Parameters (Phase 4)
+
+**Context:** `battleMaxDuration` was in milliseconds — but the name gave no unit.
+Commit 9a0d803 renamed it to `battleMaxDurationMs`. The rename was not a refactor —
+it was a necessary clarification, because a value `4000` without unit is ambiguous (4 seconds
+or 4000 seconds?).
+
+**Insight:** Parameters that are in milliseconds MUST have `Ms` in the name. Parameters in
+seconds MUST carry `Seconds` or `s` (for very short names). `duration` or `cooldown`
+alone are ambiguous — they invite the wrong unit. The problem occurs particularly
+when milliseconds are mixed with second comparisons (`timestamp > cooldown` where
+timestamp is ms and cooldown should be s).
+
+**Consequence:** For every new timing parameter, name it directly with unit suffix:
+`battleGapThresholdMs`, `overviewDurationMs`, `lerpFactor` (dimensionless — explicitly comment it so).
+Existing parameters without suffix: rename at next touch + increment schema version.
+
+---
+
+## Lesson 58 — React StrictMode Double-Mount: useRef Initializations Need Cleanup (Phase 4)
+
+**Context:** React StrictMode calls `useEffect` twice in development (mount → cleanup → mount).
+When `camDirRef.current = new CameraDirector(...)` is in a useEffect without cleanup, two
+instances run in parallel on the second mount until the ref is overwritten. In normal tests (no
+StrictMode double-invoke) this is invisible — the bug only appears in the dev browser.
+
+**Insight:** Every `useRef` assignment in a `useEffect` that creates an external instance (state machine,
+timer, WebSocket) needs a cleanup return. Even if the object has no formal
+`dispose()` call, `return () => { ref.current = null; }` is enough to prevent StrictMode double instances.
+
+**Consequence:** `useEffect` with `useRef` assignment → always check if cleanup is needed.
 Pattern: `useEffect(() => { ref.current = new Thing(config); return () => { ref.current = null; }; }, [])`.
-B-1 (PlayerGroups StrictMode-Fix in B-Wave) hatte denselben Root-Cause — das Pattern ist systemisch.
+B-1 (PlayerGroups StrictMode fix in B-Wave) had the same root cause — the pattern is systemic.
 
-**Verweis:** B-Wave PR #25, B-1. Lesson 1 (UI-Drift-Muster bei State-Quellen).
-
----
-
-## Lesson 59 — beforeEach für zustandsbehaftete Testobjekte: nie State zwischen Tests teilen (Phase-4)
-
-**Kontext:** CameraDirector-Tests die eine Instanz über mehrere `it`-Blöcke teilen akkumulieren
-State: `_lastOverviewExitTs`, `_lastBattleExitTs`, `finishMomentExpiry`, Hysterese-State. Ein Test
-der BATTLE_ZOOM aktiviert lässt das Hysterese-Band für den nächsten Test aktiv. Ergebnis: Tests die
-in Isolation grün sind können in Suite-Reihenfolge fehlschlagen.
-
-**Erkenntnis:** CameraDirector ist eine State-Machine — jeder Zustand der in einem Test verändert
-wird beeinflusst alle nachfolgenden Tests bei geteilter Instanz. Das ist der häufigste Mechanismus
-für "flaky tests" die manchmal grün und manchmal rot sind je nach Ausführungsreihenfolge.
-
-**Konsequenz:** Für alle zustandsbehafteten Klassen (State-Machines, Timer-Manager, Caches):
-`let obj; beforeEach(() => { obj = new Thing(...); });` statt shared let auf Modul-Ebene.
-Keine Ausnahme. Tests sind schnell — eine neue CameraDirector-Instanz pro Test kostet <0.5ms.
+**Reference:** B-Wave PR #25, B-1. Lesson 1 (UI drift pattern with state sources).
 
 ---
 
-## Lesson 60 — Hard-Refresh vor visueller Verifikation: Cache ist nicht trivial (Phase-4)
+## Lesson 59 — beforeEach for Stateful Test Objects: Never Share State Between Tests (Phase 4)
 
-**Kontext:** Nach Code-Änderungen in Vite kann der Browser-Cache alte JavaScript-Bundles cachen.
-Ohne Hard-Refresh (Ctrl+Shift+R / Cmd+Shift+R) kann der Browser die alte Version weiter ausführen —
-was eine noch nicht behobene Regression vortäuscht oder eine behobene Regression verbirgt.
+**Context:** CameraDirector tests that share an instance across multiple `it` blocks accumulate
+state: `_lastOverviewExitTs`, `_lastBattleExitTs`, `finishMomentExpiry`, hysteresis state. A test
+that activates BATTLE_ZOOM leaves the hysteresis band active for the next test. Result: tests that
+are green in isolation can fail in suite order.
 
-**Erkenntnis:** Browser-Cache hat eine längere Lebensdauer als intuitiv erwartet, besonders wenn
-Vite's Hot-Module-Replacement fehlschlägt oder der Dev-Server neu gestartet wurde. Der erste
-"visual check" nach einer Code-Änderung kann silent auf altem Code laufen.
+**Insight:** CameraDirector is a state machine — every state changed in one test affects all subsequent tests with a shared instance. This is the most common mechanism
+for "flaky tests" that are sometimes green and sometimes red depending on execution order.
 
-**Konsequenz:** Checkliste vor jedem visuellen Smoke-Test:
+**Consequence:** For all stateful classes (state machines, timer managers, caches):
+`let obj; beforeEach(() => { obj = new Thing(...); });` instead of shared let at module level.
+No exception. Tests are fast — a new CameraDirector instance per test costs <0.5ms.
+
+---
+
+## Lesson 60 — Hard Refresh Before Visual Verification: Cache Is Not Trivial (Phase 4)
+
+**Context:** After code changes in Vite, the browser cache can cache old JavaScript bundles.
+Without a hard refresh (Ctrl+Shift+R / Cmd+Shift+R), the browser may continue running the old version —
+which simulates an unresolved regression or hides a resolved one.
+
+**Insight:** Browser cache has a longer lifespan than intuitively expected, particularly when
+Vite's Hot-Module-Replacement fails or the dev server was restarted. The first
+"visual check" after a code change can silently run on old code.
+
+**Consequence:** Checklist before every visual smoke test:
 1. Hard Refresh (Ctrl+Shift+R)
-2. Vite Dev-Server läuft ohne Fehler (Terminal prüfen)
-3. DevTools Network-Tab → "Disable Cache" aktivieren wenn systematische Verifikation nötig
+2. Vite dev server runs without errors (check terminal)
+3. DevTools Network tab → enable "Disable Cache" when systematic verification is needed
 
-Nach Build-Fehlern oder Server-Neustart immer Hard-Refresh, nicht normaler Reload.
+After build errors or server restart always hard refresh, not a normal reload.
 
 ---
 
-## Lesson 61 — Remote-Push vor PR-Erstellung: Push ist Teil des Merge-Workflows (Meta)
+## Lesson 61 — Remote Push Before PR Creation: Push Is Part of the Merge Workflow (Meta)
 
-**Kontext:** `gh pr create` erfordert dass der Branch auf `origin` gepusht ist. Der Aufruf schlägt
-fehl wenn der Branch nur lokal existiert. Trivial — aber wird als "selbstverständlich" übersprungen
-und dann blockiert er den Merge-Sprint.
+**Context:** `gh pr create` requires the branch to be pushed to `origin`. The call
+fails when the branch only exists locally. Trivial — but is skipped as "self-evident"
+and then blocks the merge sprint.
 
-**Erkenntnis:** Commit → Push → PR sind eine Einheit. Der Push-Schritt ist nicht optional und
-nicht automatisch. Er muss explizit ausgeführt werden, besonders wenn zwischen Commit und PR-Erstellung
-Zeit vergeht oder andere Commits hinzukommen.
+**Insight:** Commit → Push → PR are a unit. The push step is not optional and
+not automatic. It must be explicitly executed, especially when time passes between commit and PR creation
+or other commits are added.
 
-**Konsequenz:** Jeder Merge-Sprint beginnt mit: `git status && git push origin <branch>`.
-Erste Aktion, bevor `gh pr create`, bevor Doc-Updates, bevor Commit-Prüfung.
+**Consequence:** Every merge sprint begins with: `git status && git push origin <branch>`.
+First action, before `gh pr create`, before doc updates, before commit verification.
 Pattern: Commit → Push → Verify-Push (`git log origin/<branch>`) → `gh pr create`.
 
 ---
 
-## Lesson 62 — Render-Pipeline-Asymmetrien: Closed vs. Open Track erklären die Pan-Formel (Phase-4 Kernlektion)
+## Lesson 62 — Render Pipeline Asymmetries: Closed vs. Open Track Explain the Pan Formula (Phase 4 Core Lesson)
 
-**Kontext:** Phase-4-Diagnose enthüllte dass die Camera-Pan-Formeln fundamental verschieden sind für
-Closed und Open Tracks — und dass diese Asymmetrie der Root-Cause des doppelten-bsX-Fehlers war.
+**Context:** Phase 4 diagnosis revealed that the camera pan formulas are fundamentally different for
+closed and open tracks — and that this asymmetry was the root cause of the double-bsX error.
 
-**Closed-Track-Render-Pipeline** (`RaceScreen/index.jsx` L1022–1024):
+**Closed Track Render Pipeline** (`RaceScreen/index.jsx` L1022–1024):
 ```js
 ctx.translate(cam.offsetX, cam.offsetY);
 ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
-// Racer gezeichnet bei world-coordinates (r.x_world, r.y_world)
+// Racer drawn at world-coordinates (r.x_world, r.y_world)
 ```
 → `screenX = cam.offsetX + worldX × cam.zoom × bsX`
 
-**Open-Track-Render-Pipeline** (`RaceScreen/index.jsx` L1005–1006):
+**Open Track Render Pipeline** (`RaceScreen/index.jsx` L1005–1006):
 ```js
 ctx.translate(-st.camX * effZoom, -st.camY * effZoom);
 ctx.scale(effZoom, effZoom);
-// Racer gezeichnet bei world-coordinates (r.x_world, r.y_world)
+// Racer drawn at world-coordinates (r.x_world, r.y_world)
 ```
 → `screenX = -camX × effZoom + worldX × effZoom`
 
-**Key Asymmetrie:** Closed Track hat `cam.offsetX/Y` als Camera-Position; Open Track hat `st.camX/Y`.
-Für Closed Tracks muss `cam.offsetX = hw - worldX×zoom×bsX` damit `screenX = hw` (Racer zentriert).
-Da CameraDirector canvas-space empfängt (`r.x = worldX × bsX`), ist die Formel `hw - r.x × zoom`.
+**Key Asymmetry:** Closed track has `cam.offsetX/Y` as camera position; open track has `st.camX/Y`.
+For closed tracks, `cam.offsetX = hw - worldX×zoom×bsX` must hold so that `screenX = hw` (racer centered).
+Since CameraDirector receives canvas-space (`r.x = worldX × bsX`), the formula is `hw - r.x × zoom`.
 
-**Warum das L62 ist:** §6.2 des CAMERA_DIRECTOR.md dokumentiert "Cross-Track-Invarianz (L62 gelöst)" —
-die inverse Camera-Formel `cam.zoom = targetPx / (referenceSpriteSize × bsX)` ist korrekt für Closed
-Tracks weil bsX in der Render-Scale ist. Für Open Tracks ist `cam.offsetX/Y` irrelevant; der
-Pan läuft über `openTrackCamera.js / openTrackPanTarget()`.
+**Why This Is L62:** §6.2 of CAMERA_DIRECTOR.md documents "Cross-Track Invariance (L62 resolved)" —
+the inverse camera formula `cam.zoom = targetPx / (referenceSpriteSize × bsX)` is correct for closed
+tracks because bsX is in the render scale. For open tracks `cam.offsetX/Y` is irrelevant; the
+pan runs via `openTrackCamera.js / openTrackPanTarget()`.
 
-**Konsequenz:** Für jede neue Camera-Logik: zuerst fragen "welcher Render-Pfad ist aktiv — Closed oder
-Open?" und den entsprechenden Pipeline-Pfad aus L1005–1006 bzw. L1022–1024 nachverfolgen bevor Formeln
-geschrieben werden. Die Pipelines sind nicht austauschbar.
+**Consequence:** For every new camera logic: first ask "which render path is active — closed or
+open?" and trace the corresponding pipeline path from L1005–1006 or L1022–1024 before writing formulas.
+The pipelines are not interchangeable.
 
-**Verweis:** `index.jsx` L1005–1006 (Open), L1022–1024 (Closed), L924–927 (`scaledRacersForCam`).
+**Reference:** `index.jsx` L1005–1006 (open), L1022–1024 (closed), L924–927 (`scaledRacersForCam`).
 CAMERA_DIRECTOR.md §6.2, §10.2. Lesson 53.
 
 ---
 
-## Lesson 63 — Aktivierungs-Kette: Implementierter State der nie erreichbar ist (Phase-4)
+## Lesson 63 — Activation Chain: Implemented State That Is Never Reachable (Phase 4)
 
-**Kontext:** Phase 4 implementierte BATTLE_ZOOM-Hysterese und Max-Duration-Cap korrekt.
-Aber: der BATTLE_ZOOM-Trigger (`minGapInSpitzengruppe < battleGapThreshold=0.05`) setzt voraus
-dass zwei Racer der Spitzengruppe ≤ 5% t-Wert auseinanderliegen. In Races mit früh auseinander
-gehendem Feld oder wenigen Racers kann dieser Threshold nie unterschritten werden.
-"Feature implementiert" ≠ "Feature im Betrieb aktiv".
+**Context:** Phase 4 implemented BATTLE_ZOOM hysteresis and max duration cap correctly.
+But: the BATTLE_ZOOM trigger (`minGapInSpitzengruppe < battleGapThreshold=0.05`) assumes
+that two racers of the lead group are ≤ 5% t-value apart. In races where the field
+spreads out early or with few racers, this threshold may never be undershot.
+"Feature implemented" ≠ "Feature actively running".
 
-**Erkenntnis:** Wenn eine State-Machine korrekt implementiert ist aber ihre Trigger-Schwellen zu
-strikt kalibriert sind, ist der State funktional inaktiv. Das ist durch Unit-Tests unsichtbar (Tests
-setzen den State direkt, ohne den echten Trigger auszulösen) und durch Code-Review nicht erkennbar.
+**Insight:** When a state machine is correctly implemented but its trigger thresholds are
+calibrated too strictly, the state is functionally inactive. This is invisible through unit tests (tests
+set the state directly, without firing the real trigger) and undetectable through code review.
 
-**Konsequenz:** Für jeden neuen Camera-State nach Implementation: ein Mess-Commit der State-Transitions
-in echten 60s-Races logt. Format: `[CAMERA] transition: LEADER_ZOOM→BATTLE_ZOOM at t=12.4s`. 
-Wenn BATTLE_ZOOM in 10 Races nie auftaucht: Threshold anpassen. Lesson 67 beschreibt den Mess-Sprint.
-
----
-
-## Lesson 64 — Lange Sessions und Kontext-Komprimierung: Stop-Points einplanen (Meta)
-
-**Kontext:** Diese Diagnose-Session überschritt das Kontext-Limit und wurde komprimiert. Die
-Komprimierung fand mitten in der Doc-Update-Phase statt — nach den Code-Commits aber vor den
-Doc-Schreibschritten. Die Wiederaufnahme nach Komprimierung ist langsamer (Kontext neu aufbauen)
-und birgt das Risiko dass offene Fragen oder Zwischenentscheidungen verloren gehen.
-
-**Erkenntnis:** Kontext-Komprimierung ist kein Fehler — sie ist strukturell unvermeidlich bei sehr
-langen Sessions. Aber der Zeitpunkt ist kontrollierbar: Komprimierung mitten in einem komplexen
-Schritt kostet mehr als Komprimierung zwischen natürlichen Pausen.
-
-**Konsequenz:** Bei langen Sessions natürliche Stop-Points als mentale Checkpoints setzen:
-- Nach jedem Commit: kurze Zusammenfassung was offen ist (in Commit-Message oder HANDOFF-Notiz)
-- Nach Diagnose-Phase: Ergebnis committen bevor Fix-Phase beginnt
-- Vor Doc-Update-Phase: sicherstellen dass alle Code-Commits fertig sind
-- "Ich mache jetzt einen Commit" ist oft der richtige Impuls auch wenn der Code noch nicht perfekt ist
-
-**Leitfrage:** "Wenn die Session jetzt endet — weiß ich was der nächste Schritt ist?"
+**Consequence:** For every new camera state after implementation: a measurement commit that logs state transitions
+in real 60s races. Format: `[CAMERA] transition: LEADER_ZOOM→BATTLE_ZOOM at t=12.4s`. 
+If BATTLE_ZOOM never appears in 10 races: adjust threshold. Lesson 67 describes the measurement sprint.
 
 ---
 
-## Lesson 65 — Phantom-Probleme durch Browser-State: Verifikation vor Bisect (Phase-4-Diagnose)
+## Lesson 64 — Long Sessions and Context Compression: Plan Stop Points (Meta)
 
-**Kontext:** In der Phase-4-Diagnose-Session wurde eine Sprite-Verkleinerung nach einer Code-Änderung
-beobachtet und als potenzielle Regression eingestuft. Ein Bisect-Sprint wurde begonnen. Root Cause:
-Browser-Zoom war nicht 100% (Ctrl+0 vergessen) — was das Canvas-Rendering skaliert und Sprites
-kleiner erscheinen lässt. Kein Code-Bug. Mehrere Bisect-Commits wurden auf einem Artefakt ausgeführt.
+**Context:** This diagnostic session exceeded the context limit and was compressed. The
+compression occurred in the middle of the doc update phase — after the code commits but before the
+doc writing steps. Resuming after compression is slower (rebuilding context)
+and carries the risk that open questions or intermediate decisions are lost.
 
-**Erkenntnis:** Visuell präsentierte Phänomene (Sprite-Größe, Canvas-Auflösung, Pan-Versatz) können
-durch Browser-State vollständig simuliert werden. Ein Bisect auf einem Browser-State-Artefakt findet
-kein "schlechtes Commit" — weil es keines gibt. Das frustriert und kostet Zeit.
+**Insight:** Context compression is not an error — it is structurally unavoidable in very
+long sessions. But the timing is controllable: compression in the middle of a complex
+step costs more than compression between natural pauses.
 
-**Konsequenz:** Vor jedem visuellen Bisect — 5-Punkte-Checkliste:
-1. Browser-Zoom 100% (Ctrl+0 / Cmd+0 — in der Adressleiste bestätigen: "100%")
+**Consequence:** In long sessions, set natural stop points as mental checkpoints:
+- After every commit: brief summary of what is open (in commit message or HANDOFF note)
+- After diagnostic phase: commit result before fix phase begins
+- Before doc update phase: ensure all code commits are done
+- "I'll make a commit now" is often the right impulse even if the code is not perfect yet
+
+**Key Question:** "If the session ends now — do I know what the next step is?"
+
+---
+
+## Lesson 65 — Phantom Problems Through Browser State: Verify Before Bisect (Phase 4 Diagnosis)
+
+**Context:** In the Phase 4 diagnostic session, a sprite reduction was observed after a code change
+and classified as a potential regression. A bisect sprint was started. Root cause:
+browser zoom was not 100% (forgot Ctrl+0) — which scales canvas rendering and makes sprites
+appear smaller. No code bug. Several bisect commits were executed on an artifact.
+
+**Insight:** Visually presented phenomena (sprite size, canvas resolution, pan offset) can be
+fully simulated by browser state. A bisect on a browser state artifact finds
+no "bad commit" — because there is none. This is frustrating and wastes time.
+
+**Consequence:** Before every visual bisect — 5-point checklist:
+1. Browser zoom 100% (Ctrl+0 / Cmd+0 — confirm in address bar: "100%")
 2. Hard Refresh (Ctrl+Shift+R)
-3. DevTools geschlossen
-4. Canvas in normaler Fenstergröße (kein sehr kleines oder sehr großes Fenster)
-5. Phänomen exakt dokumentieren (screenshot oder Pixel-Messwert) bevor Bisect startet
+3. DevTools closed
+4. Canvas at normal window size (no very small or very large window)
+5. Precisely document the phenomenon (screenshot or pixel measurement value) before bisect starts
 
-Wenn das Phänomen nach Schritt 1–4 verschwunden ist: Bisect abbrechen, Browser-State war die Ursache.
+If the phenomenon has disappeared after steps 1–4: abort bisect, browser state was the cause.
 
 ---
 
-## Lesson 66 — Pixel-Invarianz: Algebraischen Beweis vor Implementation schreiben (Phase-4)
+## Lesson 66 — Pixel Invariance: Write the Algebraic Proof Before Implementation (Phase 4)
 
-**Kontext:** Die triviale Pan-Formel `targetOffsetX = hw - r.x × zoom` ist nicht offensichtlich
-korrekt bis man die Algebra aufschreibt:
+**Context:** The trivial pan formula `targetOffsetX = hw - r.x × zoom` is not obviously
+correct until you write out the algebra:
 ```
 screenX = cam.offsetX + worldX × cam.zoom × bsX
         = (hw - worldX×bsX×zoom) + worldX×bsX×zoom
         = hw  ✓
 ```
-Das Aufschreiben dieses 3-Zeilen-Beweises dauert 30 Sekunden und macht die Formel diskussionsfrei.
-`_computePanScale(zoom) = zoom × bsX` hätte mit demselben Beweis sofort als falsch erkannt werden
-können: `(hw - r.x×zoom×bsX) + worldX×zoom×bsX×bsX ≠ hw` — bsX² statt bsX.
+Writing this 3-line proof takes 30 seconds and makes the formula beyond discussion.
+`_computePanScale(zoom) = zoom × bsX` could have been immediately recognized as wrong with the same proof:
+`(hw - r.x×zoom×bsX) + worldX×zoom×bsX×bsX ≠ hw` — bsX² instead of bsX.
 
-**Erkenntnis:** Korrektheit von Camera-Formeln die Koordinaten transformieren ist nicht intuitiv.
-"Klingt plausibel" ist kein Beweis. "Tests sind grün" ist kein Beweis für Korrektheit bei
-Koordinaten-Formeln — Tests können falsch kalibriert sein (Tautologie, falsche Erwartungswerte).
+**Insight:** Correctness of camera formulas that transform coordinates is not intuitive.
+"Sounds plausible" is not a proof. "Tests are green" is not a proof of correctness for
+coordinate formulas — tests can be incorrectly calibrated (tautology, wrong expected values).
 
-**Konsequenz:** Für jede neue Camera-Formel die bsX, zoom, oder Koordinaten-Räume kombiniert:
-algebraischen Beweis aufschreiben bevor committed wird. Format: 3 Zeilen (`screenX = ... = hw ✓`).
-Beweis geht als Kommentar in den Code (direkt über der Formel) und als Verweis in die zugehörige
-Lesson. Wenn der Beweis nicht aufgeht: Formel überdenken statt committen.
+**Consequence:** For every new camera formula that combines bsX, zoom, or coordinate spaces:
+write an algebraic proof before committing. Format: 3 lines (`screenX = ... = hw ✓`).
+Proof goes as a comment in the code (directly above the formula) and as a reference in the associated
+lesson. If the proof doesn't work out: reconsider the formula instead of committing.
 
-**Verweis:** `CameraDirector.js` `_setTargets()`, Lesson 53. CAMERA_DIRECTOR.md §10.2.
+**Reference:** `CameraDirector.js` `_setTargets()`, Lesson 53. CAMERA_DIRECTOR.md §10.2.
 
 ---
 
-## Lesson 67 — Werte-Roulette: Ohne Baseline-Messung ist Tuning blind (Phase-4)
+## Lesson 67 — Value Roulette: Without Baseline Measurement, Tuning Is Blind (Phase 4)
 
-**Kontext:** Phase 4 übernahm Default-Werte aus dem Konzept-Doc: `battleGapThreshold=0.05`,
+**Context:** Phase 4 adopted default values from the concept doc: `battleGapThreshold=0.05`,
 `battleGapHysteresis=0.02`, `battleMaxDurationMs=4000ms`, `overviewCooldownMin=15s/Max=25s`.
-Diese Werte "klingen sinnvoll" aber wurden nicht gegen echte Race-Daten kalibriert.
-Ohne Messung ist unbekannt ob BATTLE_ZOOM in typischen Races überhaupt je aktiviert wird
-oder ob OVERVIEW alle 15–25s oder alle 5min feuert.
+These values "sound sensible" but were not calibrated against real race data.
+Without measurement it is unknown whether BATTLE_ZOOM is even activated in typical races
+or whether OVERVIEW fires every 15–25s or every 5 minutes.
 
-**Erkenntnis:** Default-Werte für State-Machine-Trigger sind Hypothesen. "Klingt gut" ist kein
-Kalibrierungskriterium. Falsch kalibrierte Defaults bedeuten: implementiertes Feature das in
-der Praxis nie aktiv ist (zu strenger Trigger) oder Feature das dauerhaft aktiv ist und andere
-States verdrängt (zu breites Band).
+**Insight:** Default values for state machine triggers are hypotheses. "Sounds good" is not a
+calibration criterion. Incorrectly calibrated defaults mean: implemented feature that
+is never active in practice (too strict trigger) or feature that is permanently active and
+crowds out other states (too wide a band).
 
-**Konsequenz:** Für jede neue State-Machine-Transition einen Mess-Sprint einplanen:
-1. Temporäre Logs einbauen: `console.log('[CAM]', newState, Date.now(), trigger_value)`
-2. Echtes Race laufen lassen (30s Dirt Oval, 60s Space Sprint, 30s City Circuit)
-3. Log auswerten: Wie oft tritt jeder State auf? Wie lang? Bei welchem Trigger-Wert?
-4. Dann Defaults anpassen
+**Consequence:** For every new state machine transition, plan a measurement sprint:
+1. Build in temporary logs: `console.log('[CAM]', newState, Date.now(), trigger_value)`
+2. Run a real race (30s Dirt Oval, 60s Space Sprint, 30s City Circuit)
+3. Evaluate log: How often does each state occur? How long? At what trigger value?
+4. Then adjust defaults
 
-Erst dann sind Defaults kalibriert — nicht nach Bauchgefühl aus dem Konzept-Doc.
-
----
-
-## Lesson 68 — Browser-State vor Bisect: Die 5-Punkte-Umgebungs-Verifikation (Phase-4-Diagnose)
-
-**Kontext:** Der verschwendete Bisect-Sprint aus L65 kam durch fehlende Umgebungs-Verifikation.
-Das Problem ist nicht nur der Browser-Zoom — es ist das Prinzip dass Bisect auf einem bewegenden
-Ziel läuft wenn die Umgebung nicht kontrolliert ist.
-
-**Erkenntnis:** Bisect setzt Reproduzierbarkeit voraus: dasselbe Phänomen bei demselben Commit,
-dieselbe Umgebung, dieselbe Messung. Browser-State (Zoom, Cache, DevTools, Hardware-Acceleration,
-Tab-Isolation) ist Teil der "Umgebung" die reproduziert werden muss. Unkontrollierte Umgebung →
-Bisect findet kein "schlechtes Commit" → frustrierende False-Negatives.
-
-**Konsequenz:** Vor jedem Bisect:
-1. Phänomen exakt dokumentieren (screenshot + Messwert, z.B. "Sprite ist 24px, erwartet 56px")
-2. Umgebung stabilisieren (L65 Checkliste)
-3. Phänomen reproduzieren bei HEAD → erst dann `git bisect start`
-4. Nach jedem Bisect-Step: Messwert wiederholen (nicht "looks bad" — "Sprite ist X px")
-5. Wenn Phänomen "verschwindet" ohne Commit-Begründung: Schritt 2 wiederholen
-
-"Kein gutes Commit gefunden" + Phänomen weg = Browser-State war die Ursache.
+Only then are defaults calibrated — not from gut feeling from the concept doc.
 
 ---
 
-## Lesson 69 — Modelle ohne Messung sind Hypothesen: Empirical First (Phase-4-Diagnose)
+## Lesson 68 — Browser State Before Bisect: The 5-Point Environment Verification (Phase 4 Diagnosis)
 
-**Kontext:** `_computePanScale(zoom) = zoom × bsX` wurde mit dem Argument eingeführt:
-"Die Render-Pipeline hat bsX in der Scale — also braucht die Pan-Formel bsX".
-Das war ein konzeptuelles Argument ("so müsste es sein") ohne algebraische Verifikation.
-Die empirischen `[PAN]`-Logs widerlegten das Modell in unter 5 Minuten: `expectedScreenCenterY: 498.7 ≠ 360`.
+**Context:** The wasted bisect sprint from L65 came from missing environment verification.
+The problem is not just browser zoom — it is the principle that bisect runs on a moving
+target when the environment is not controlled.
 
-**Erkenntnis:** Ein Mental-Model über ein Koordinatensystem ist eine Hypothese bis es empirisch
-bestätigt ist. Konzeptuelle Argumente ("bsX taucht in der Pipeline auf, also...") können elegant
-klingen und trotzdem falsch sein. Das ist besonders gefährlich in Systemen wo mehrere Koordinaten-
-Räume (world-space, canvas-space, screen-space) simultan existieren und ineinander transformiert werden.
+**Insight:** Bisect assumes reproducibility: the same phenomenon at the same commit,
+the same environment, the same measurement. Browser state (zoom, cache, DevTools, hardware acceleration,
+tab isolation) is part of the "environment" that must be reproduced. Uncontrolled environment →
+bisect finds no "bad commit" → frustrating false negatives.
 
-**Konsequenz:** Für jedes neue Camera-Konzept das Koordinaten transformiert:
-1. Algebraischen Beweis schreiben (L66)
-2. Falls Beweis nicht eindeutig: empirische Messung mit Log-Ausgabe (5 Minuten Aufwand)
-3. Erst wenn Beweis UND Messung übereinstimmen: committen
+**Consequence:** Before every bisect:
+1. Precisely document the phenomenon (screenshot + measurement value, e.g. "sprite is 24px, expected 56px")
+2. Stabilize environment (L65 checklist)
+3. Reproduce phenomenon at HEAD → only then `git bisect start`
+4. After each bisect step: repeat measurement (not "looks bad" — "sprite is X px")
+5. If phenomenon "disappears" without commit explanation: repeat step 2
 
-"Das klingt logisch" ist kein Commit-Kriterium für Camera-Mathematik.
-Messungen sind günstiger als Diagnose-Sprints. Diagnose-Sprints sind günstiger als Browser-Bisect.
-
-**Verweis:** Phase-4-Diagnose-Session 2026-05-06, `[PAN]`-Log-Analyse, Lesson 53, Lesson 66.
+"No good commit found" + phenomenon gone = browser state was the cause.
 
 ---
 
-## Lesson 70 — EditorShape-Doppelbild-Marathon: Diagnose-Disziplin als Verhütungs-Prinzip (Phase 1)
+## Lesson 69 — Models Without Measurement Are Hypotheses: Empirical First (Phase 4 Diagnosis)
 
-**Kontext:** Der EditorShape-Staircase-Bug (Doppelbild / Zackensprünge bei Racer-Positionen)
-beschäftigte die Entwicklung über Etappe 20–23. Root Cause: `Math.round()` in
-`EditorShape.getPosition()` bildete arc-length-t auf den nächsten Sample-Index ab statt linear
-zu interpolieren. Quantitativ gemessen (Etappe-23-Trace): 26.5–27.1 px Sprünge bei 500 Samples
-auf einem ~2000px-Oval bei Zoom 4×. Fix: 3 Zeilen linearer Interpolation + Winkel-Wrap.
+**Context:** `_computePanScale(zoom) = zoom × bsX` was introduced with the argument:
+"The render pipeline has bsX in the scale — so the pan formula needs bsX".
+That was a conceptual argument ("it should be this way") without algebraic verification.
+The empirical `[PAN]` logs refuted the model in under 5 minutes: `expectedScreenCenterY: 498.7 ≠ 360`.
 
-**Prozess:** Bevor die Root Cause identifiziert war, wurden Python-Frame-Analyse-Scripts,
-Playwright-Frame-Capture-Specs, 20 PNGs und mehrere Bisect-Sprints auf Browser-State-Artefakten
-ausgeführt (L65, L68). Der Diagnose-Prozess zog sich über mehrere Etappen hin weil die visuelle
-Beobachtung ("Doppelbild", "Zucken") ohne quantitative Messung früh in False-Bisects und
-Hypothesen-Roulette führte.
+**Insight:** A mental model about a coordinate system is a hypothesis until empirically
+confirmed. Conceptual arguments ("bsX appears in the pipeline, so...") can sound elegant
+and still be wrong. This is particularly dangerous in systems where multiple coordinate
+spaces (world-space, canvas-space, screen-space) simultaneously exist and are transformed into each other.
 
-**Erkenntnis:** Ein algebraischer Beweis der `getPosition()`-Formel (L66: 3-Zeilen-Beweis für
-Pixel-Invarianz) hätte die Root Cause in unter 30 Minuten identifiziert. Die ~14-stündige
-Diagnose entstand durch wiederholte Unterlassung des "Messung vor Bisect"-Schritts.
+**Consequence:** For every new camera concept that transforms coordinates:
+1. Write algebraic proof (L66)
+2. If proof is not clear: empirical measurement with log output (5 minutes effort)
+3. Only when proof AND measurement agree: commit
 
-**Konsequenz (Prinzipien-Erweiterung):** Diese Etappe war der direkte Anlass für die Erweiterung
-von PROJECT-PRINCIPLES.md um §6 (Diagnose before fix) und §7 (No hotfixes) sowie die fünf
-Diagnose-bezogenen Conventions (Quantitative Diagnose, Daten-Trace, Output-Medium,
-Etappe-23-Pattern). Die Prinzipien sind so formuliert, dass ein ähnlicher Marathon erkennbar und
-abbrechbar wird: sobald eine Diagnose-Session die quantitative Messung überspringt und mit
-visuellen Eindrücken oder Bisect startet, ist §6 verletzt.
+"Sounds logical" is not a commit criterion for camera mathematics.
+Measurements are cheaper than diagnostic sprints. Diagnostic sprints are cheaper than browser bisects.
 
-**Verweis:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
-`docs/diag/render-smoothness-measurements.md`; Commits `c8538e0`, `7333ec4`, `b53d7d6`.
-
-## Lesson 71 — Symmetric Avoidance Default war eine Regression
-
-**Kontext:** Der `symmetricAvoidance: true`-Default wurde im Force-Decomposition-Sprint eingeführt und
-ersetzte stillschweigend die ursprüngliche Asymmetrie "Trailer yields, leader holds". Die alte
-Asymmetrie hatte eine echte Funktion — klare Verantwortung wer ausweicht — und war ein Feature
-der funktionierenden Anti-Collision-Logik der frühen Iterationen.
-
-Sie wurde ohne Inventur ersetzt. In der Folge gab es symmetrische Force-Cancellation in dichten
-Pulks, die einen ganzen Diagnose-Sprint kostete bis der Architektur-Mangel erkannt war.
-
-**Take-away:** Behavior-Changes an Default-Werten sind keine kosmetische Änderung. Wenn ein
-bestehender Default eine fachliche Funktion erfüllt (selbst wenn nicht explizit dokumentiert),
-ist sein Ersatz ein Architektur-Eingriff und braucht die Regression Awareness Convention.
+**Reference:** Phase 4 diagnostic session 2026-05-06, `[PAN]` log analysis, Lesson 53, Lesson 66.
 
 ---
 
-## Lesson 72 — DevScreen Block-Platzierung ist semantisch: Geister-Bindings durch falschen Block
+## Lesson 70 — EditorShape Double-Image Marathon: Diagnostic Discipline as Prevention Principle (Phase 1)
 
-**Kontext:** PR #98 (Free-Lane Separation) fügte `homeForceReductionOnOverlap` als UI-Feld hinzu.
-Das Feld wurde im `formGrid` von Block 2 (Start Layout) platziert, aber der zugehörige
-`resetHomeForce`-Handler lag in Block 9 (Home Force). Der „Reset"-Button von Block 2 setzte
-das Feld nicht zurück — ein stiller Bug.
+**Context:** The EditorShape staircase bug (double image / jagged jumps in racer positions)
+occupied development over Etappe 20–23. Root cause: `Math.round()` in
+`EditorShape.getPosition()` mapped arc-length-t to the nearest sample index instead of
+interpolating linearly. Quantitatively measured (Etappe 23 trace): 26.5–27.1 px jumps at 500 samples
+on a ~2000px oval at zoom 4×. Fix: 3 lines of linear interpolation + angle wrap.
 
-Der Unit-Test hatte das Feld gefunden (`getByLabelText('Home Force Reduction On Overlap')`) und
-als korrekt gerendert deklariert. `getByLabelText` sucht per aria-label im gesamten DOM —
-es prüft nicht, in welchem Block das Feld sitzt. Der Test war grün, der UX-Bug unsichtbar.
+**Process:** Before the root cause was identified, Python frame analysis scripts,
+Playwright frame capture specs, 20 PNGs, and several bisect sprints on browser state artifacts
+were executed (L65, L68). The diagnostic process stretched over several Etappen because the visual
+observation ("double image", "twitching") without quantitative measurement led early into false bisects and
+hypothesis roulette.
 
-**Take-away:** Bei jedem neuen DevScreen-Feld drei Dinge prüfen:
+**Insight:** An algebraic proof of the `getPosition()` formula (L66: 3-line proof for
+pixel invariance) would have identified the root cause in under 30 minutes. The ~14-hour
+diagnosis arose through repeated omission of the "measurement before bisect" step.
 
-1. **Block-Kontext:** Liegt das Feld im semantisch richtigen Block (nicht nur im nächst-
-   passenden formGrid)?
-2. **Reset-Coverage:** Welcher Reset-Handler deckt das Feld ab? Liegt es im Block dessen
-   Reset-Button diesen Handler aufruft?
-3. **Test-Präzision:** Prüft der Test nur "rendered somewhere" oder auch "rendered in the
+**Consequence (principles extension):** This Etappe was the direct occasion for the extension
+of PROJECT-PRINCIPLES.md by §6 (diagnose before fix) and §7 (no hotfixes) as well as the five
+diagnosis-related conventions (quantitative diagnosis, data trace, output medium,
+Etappe 23 pattern). The principles are formulated so that a similar marathon is recognizable and
+stoppable: as soon as a diagnostic session skips the quantitative measurement and starts with
+visual impressions or bisect, §6 is violated.
+
+**Reference:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
+`docs/diag/render-smoothness-measurements.md`; commits `c8538e0`, `7333ec4`, `b53d7d6`.
+
+## Lesson 71 — Symmetric Avoidance Default Was a Regression
+
+**Context:** The `symmetricAvoidance: true` default was introduced in the force decomposition sprint and
+silently replaced the original asymmetry "trailer yields, leader holds". The old
+asymmetry had a real function — clear responsibility for who yields — and was a feature
+of the working anti-collision logic from the early iterations.
+
+It was replaced without an inventory. As a result, there was symmetric force cancellation in dense
+packs, which cost an entire diagnostic sprint until the architecture deficiency was recognized.
+
+**Take-away:** Behavior changes to default values are not cosmetic changes. When an
+existing default fulfills a technical function (even if not explicitly documented),
+its replacement is an architectural intervention and requires the Regression Awareness Convention.
+
+---
+
+## Lesson 72 — DevScreen Block Placement Is Semantic: Ghost Bindings From Wrong Block
+
+**Context:** PR #98 (Free-Lane Separation) added `homeForceReductionOnOverlap` as a UI field.
+The field was placed in the `formGrid` of Block 2 (Start Layout), but the associated
+`resetHomeForce` handler was in Block 9 (Home Force). The "Reset" button of Block 2 did not reset
+the field — a silent bug.
+
+The unit test had found the field (`getByLabelText('Home Force Reduction On Overlap')`) and
+declared it correctly rendered. `getByLabelText` searches by aria-label in the entire DOM —
+it does not check which block the field is in. The test was green, the UX bug invisible.
+
+**Take-away:** For every new DevScreen field, check three things:
+
+1. **Block context:** Is the field in the semantically correct block (not just the nearest
+   convenient formGrid)?
+2. **Reset coverage:** Which reset handler covers the field? Is it in the block whose
+   reset button calls that handler?
+3. **Test precision:** Does the test only check "rendered somewhere" or also "rendered in the
    right block with the right reset behavior"?
 
-Ein `getByLabelText()`-Test allein ist kein Beweis für korrekte Block-Zugehörigkeit.
+A `getByLabelText()` test alone is not proof of correct block membership.
 
-**Verweis:** PR #98 Cleanup-Audit `fbc6c48`; docs/diagnose/cleanup-audit-pr98.md §4.
-
----
-
-## Lesson 73 — Regression Awareness: Inventur vor Ersatz (Meta-Pattern)
-
-**Kontext:** Dieses Lesson schließt die Referenz PROJECT-PRINCIPLES.md §"Regression Awareness
-Convention" → LESSONS.md L73. Das Muster entstand aus L71 (Symmetric Avoidance Regression)
-und weiteren Architektur-Fehlern wo funktionierende Mechanik still ersetzt wurde.
-
-**Muster:** Immer wenn eine funktionierende Komponente durch eine neue ersetzt wird — auch
-wenn die neue "eleganter" oder "einfacher" erscheint — gilt:
-
-1. **Inventur:** Was kann die alte Komponente? Welche Edge-Cases deckt sie ab? Welche
-   User-Anforderungen erfüllt sie (auch undokumentierte)?
-2. **Anforderungs-Matching:** Kann die neue Komponente jeden einzelnen Punkt erfüllen?
-   Wo gibt es bewusste Trade-offs, und sind diese explizit akzeptiert?
-3. **Rollback-Pfad:** Branch, Commit-SHA oder Feature-Flag — explizit benannt, nicht nur
-   implizit vorhanden.
-4. **Sanity-Check vor Merge:** Ist die neue Komponente in einem Live-Race mindestens so gut
-   wie die alte? Wenn erkennbare Regression: Stopp.
-
-**Corollary:** An einer nachweislich nicht funktionierenden Komponente wird nicht beliebig
-lange weitergetuned. Nach belegter Diagnose und zwei bis drei Fix-Versuchen ohne messbare
-Verbesserung ist Architektur-Wechsel die korrekte Reaktion.
-
-**Verweis:** PROJECT-PRINCIPLES.md §"Regression Awareness Convention"; LESSONS.md L71.
+**Reference:** PR #98 cleanup audit `fbc6c48`; docs/diagnose/cleanup-audit-pr98.md §4.
 
 ---
 
-## Lesson 74 — Home-Force Dominanz: Force Attribution vor visueller Diagnose
+## Lesson 73 — Regression Awareness: Inventory Before Replacement (Meta Pattern)
 
-**Kontext:** Nach Implementierung der Free-Lane Separation (PR #98) blieben Racer-Clusters
-teilweise persistent. Visuell sah es aus als würde Free-Lane nicht feuern oder zu schwach sein.
-Die naheliegende Reaktion wäre: `lateralForce` erhöhen oder Free-Lane-Schwellwerte anpassen.
+**Context:** This lesson closes the reference PROJECT-PRINCIPLES.md §"Regression Awareness
+Convention" → LESSONS.md L73. The pattern arose from L71 (symmetric avoidance regression)
+and further architecture errors where working mechanics were silently replaced.
 
-Stattdessen wurde eine Force-Attribution-Simulation durchgeführt (docs/diagnose/
-free-lane-force-attribution-summary.md). Ergebnis: Free-Lane feuerte korrekt und mit adäquater
-Magnitude — aber `homeForceStrength = 0.04` zog die Racer pro Frame stärker zurück zur Mitte
-als Free-Lane sie trennen konnte. Die "schwache Free-Lane" war eine visuelle Illusion.
+**Pattern:** Whenever a working component is replaced by a new one — even
+if the new one appears "more elegant" or "simpler" — the following applies:
 
-**Fix:** `homeForceReductionOnOverlap = 0.3` — Home-Force wird auf 30% reduziert wenn zwei
-Racer geometrisch überlappen. Damit kann Free-Lane die Trennung durchführen bevor Home-Force
-zurückzieht. Korrekte Diagnose in ~30 Minuten statt Tuning-Roulette.
+1. **Inventory:** What can the old component do? Which edge cases does it cover? Which
+   user requirements does it fulfill (even undocumented ones)?
+2. **Requirements matching:** Can the new component fulfill every single point?
+   Where are there conscious trade-offs, and have these been explicitly accepted?
+3. **Rollback path:** Branch, commit SHA, or feature flag — explicitly named, not just
+   implicitly present.
+4. **Sanity check before merge:** Is the new component in a live race at least as good
+   as the old one? If there is a recognizable regression: stop.
 
-**Take-away:** Bei "Feature funktioniert nicht"-Beobachtungen in Force-basierten Systemen:
-zuerst Force Attribution messen, nicht Konstanten tunen. Die dominierende Kraft ist oft eine
-die man nicht auf dem Radar hat. Visuelle Beobachtung ("Racer bleiben zusammen") gibt keine
-Auskunft über die Kraft-Ursache.
+**Corollary:** A demonstrably non-functional component is not tuned indefinitely.
+After a documented diagnosis and two to three fix attempts without measurable
+improvement, an architecture change is the correct response.
 
-**Verweis:** docs/diagnose/free-lane-force-attribution-summary.md; PR #98 Commit `7459e08`.
+**Reference:** PROJECT-PRINCIPLES.md §"Regression Awareness Convention"; LESSONS.md L71.
 
 ---
 
-## Lesson 75 — PR-Merge-Routine: AUDIT.md statt Zeilen-Referenz
+## Lesson 74 — Home Force Dominance: Force Attribution Before Visual Diagnosis
 
-**Kontext:** Frühere Merge-Prompts enthielten die Anweisung „L106-L108 in AUDIT.md anpassen" —
-eine fragile Zeilen-Referenz, die nach jedem Merge obsolet wird.
+**Context:** After implementing Free-Lane Separation (PR #98), racer clusters
+remained partly persistent. Visually it looked like Free-Lane was not firing or was too weak.
+The obvious reaction would be: increase `lateralForce` or adjust Free-Lane thresholds.
 
-**Erkenntnis:** Zeilen-Nummern in Prompts veralten sofort. Die korrekte Formulierung beschreibt
-die inhaltliche Aufgabe, nicht den Ort: „AUDIT.md aktualisieren".
+Instead, a force attribution simulation was performed (docs/diagnose/
+free-lane-force-attribution-summary.md). Result: Free-Lane fired correctly and with adequate
+magnitude — but `homeForceStrength = 0.04` pulled the racers per frame more strongly back to the center
+than Free-Lane could separate them. The "weak Free-Lane" was a visual illusion.
 
-**Workflow für jeden squash-merge auf master:**
-1. Tests auf master laufen lassen — Gesamt-Count + Anzahl Failures erfassen.
-2. Test-Count-Historie in AUDIT.md: letzten Eintrag ggf. korrigieren (Branch-Count ≠ Master-Count möglich), Master-HEAD-SHA aktualisieren.
-3. Falls Branch-HEAD-Zeile vorhanden: entfernen oder auf Master umschreiben.
+**Fix:** `homeForceReductionOnOverlap = 0.3` — home force is reduced to 30% when two
+racers geometrically overlap. This allows Free-Lane to complete the separation before home force
+pulls back. Correct diagnosis in ~30 minutes instead of tuning roulette.
+
+**Take-away:** For "feature doesn't work" observations in force-based systems:
+first measure force attribution, don't tune constants. The dominant force is often one
+that is not on your radar. Visual observation ("racers stay together") gives no
+information about the force cause.
+
+**Reference:** docs/diagnose/free-lane-force-attribution-summary.md; PR #98 commit `7459e08`.
+
+---
+
+## Lesson 75 — PR Merge Routine: AUDIT.md Instead of Line Reference
+
+**Context:** Earlier merge prompts contained the instruction "adjust L106-L108 in AUDIT.md" —
+a fragile line reference that becomes obsolete after every merge.
+
+**Insight:** Line numbers in prompts become outdated immediately. The correct formulation describes
+the content task, not the location: "update AUDIT.md".
+
+**Workflow for every squash-merge to master:**
+1. Run tests on master — capture total count + number of failures.
+2. Test count history in AUDIT.md: possibly correct last entry (branch count ≠ master count possible), update master HEAD SHA.
+3. If branch HEAD line is present: remove or rewrite to master.
 4. Commit: `docs: update AUDIT.md — PR #NNN squash-merge (schema vX, NNN tests)`.
 
-**Konsequenz:** Merge-Prompts nennen ab sofort nur noch „AUDIT.md aktualisieren" — kein
-Zeilenbezug mehr.
+**Consequence:** Merge prompts from now on only say "update AUDIT.md" — no more line references.
 
 ---
 
-## Lesson 76 — Global trifft nicht selektiv: Reichweite von Symptom und Hypothese müssen übereinstimmen
+## Lesson 76 — Global Does Not Hit Selectively: Scope of Symptom and Hypothesis Must Match
 
-**Kontext:** Im Rahmen der Bolt-Avoidance-Diagnose (2026-05-16) war das beobachtete Phänomen
-selektiv — nur bestimmte Racer-Konstellationen, nur unter bestimmten Bedingungen. Eine
-zwischenzeitliche Frame-Timing-Hypothese wurde erwogen, aber sofort durch die User-Frage
-„warum nicht alle Racer?" gestoppt. Frame-Timing-Probleme betreffen global alle Racer
-gleich — ein globales System kann kein selektives Symptom erzeugen.
+**Context:** In the context of the Bolt avoidance diagnosis (2026-05-16), the observed phenomenon
+was selective — only certain racer constellations, only under certain conditions. An
+intermediate frame-timing hypothesis was considered, but immediately stopped by the user's question
+"why not all racers?". Frame timing problems affect all racers globally
+equally — a global system cannot produce a selective symptom.
 
-**Erkenntnis:** Wenn ein Symptom selektiv ist (nur bestimmte Racer, nur bestimmte Bedingungen,
-nur bestimmte Tracks), muss die Ursache ebenfalls selektiv sein. Eine globale Ursache kann kein
-selektives Symptom erklären. Wenn Hypothese und Symptom unterschiedliche Reichweiten haben,
-stimmt die Hypothese nicht — unabhängig davon wie plausibel sie isoliert betrachtet wirkt.
+**Insight:** When a symptom is selective (only certain racers, only certain conditions,
+only certain tracks), the cause must also be selective. A global cause cannot explain a selective
+symptom. When hypothesis and symptom have different scopes,
+the hypothesis is wrong — regardless of how plausible it appears in isolation.
 
-**Konsequenz:** Vor jeder Diagnose: explizit fragen „Trifft dieses Symptom global (alle Racer,
-alle Tracks) oder selektiv (bestimmte Konstellationen)?" und nur Hypothesen prüfen die dieselbe
-Reichweite haben. Reichweiten-Mismatch ist ein sofortiges Ausschlusskriterium.
-
----
-
-## Lesson 77 — Mathematisch korrekter Fix ≠ visuell wirksam: Browser-Test ist Pflicht, nicht Optional
-
-**Kontext:** PR #117 (Avoidance-Track-Skalierung, 2026-05-16) war konzeptionell korrekt und
-alle Tests waren grün. Der Browser-Test zeigte jedoch keine spürbare Verbesserung des
-beobachteten Symptoms. Spätere Diagnose zeigte: die eigentliche Ursache lag in der
-Frame-Timing-Architektur, nicht in der Avoidance-Skalierung.
-
-**Erkenntnis:** Code-Korrektheit und Test-Suite-Grün sind notwendige, aber nicht hinreichende
-Bedingungen für einen erfolgreichen Fix. Ein Fix kann mathematisch korrekt sein, alle Tests
-bestehen, und trotzdem das beobachtete visuelle Symptom nicht beheben — weil die Diagnose
-unvollständig war. „Richtig fühlt sich die Lösung an" + Tests grün + keine visuelle Wirkung
-= Warnsignal dass die zugrunde liegende Diagnose falsch war.
-
-**Konsequenz:** Browser-Test mit echtem Racebetrieb ist kein optionaler Nachschritt, sondern
-Pflicht-Verifikation. Falls ein Fix visuell keine Wirkung zeigt: Diagnose neu öffnen, nicht
-Parameter tunen.
+**Consequence:** Before any diagnosis: explicitly ask "Does this symptom hit globally (all racers,
+all tracks) or selectively (certain constellations)?" and only check hypotheses that have the same
+scope. Scope mismatch is an immediate exclusion criterion.
 
 ---
 
-## Lesson 78 — Bei mehreren erfolglosen Iterationen zurücktreten: Architektur-Review statt weiterer Patch
+## Lesson 77 — Mathematically Correct Fix ≠ Visually Effective: Browser Test Is Mandatory, Not Optional
 
-**Kontext:** Die Sprite-Interpolation (Branch feat/render-interpolation) wurde in zwei Iterationen
-angegangen: zunächst per-rAF-Snapshot (außerhalb der Accumulator-Schleife), dann per-Step-
-Snapshot (innerhalb). Beide Varianten reduzierten das Ruckeln, eliminierten es aber nicht.
-Nach diesen beiden Iterationen ohne vollständige Lösung forderte der User einen
-Architektur-Review — kein weiteres Patch-Experiment.
+**Context:** PR #117 (avoidance track scaling, 2026-05-16) was conceptually correct and
+all tests were green. However, the browser test showed no perceptible improvement of
+the observed symptom. Later diagnosis showed: the actual cause lay in the
+frame timing architecture, not in the avoidance scaling.
 
-**Erkenntnis:** Nach 2–3 erfolglosen Patch-Versuchen ist das Signal für Architektur-Review,
-nicht für weitere Patches. Statistisch ist der nächste Versuch wieder erfolglos — die
-zugrundeliegende Modell-Annahme stimmt nicht. Die korrekte Reaktion: einen Schritt zurücktreten,
-das Gesamtbild neu denken, die Annahmen explizit aufschreiben und prüfen.
+**Insight:** Code correctness and green test suite are necessary but not sufficient
+conditions for a successful fix. A fix can be mathematically correct, pass all tests,
+and still not resolve the observed visual symptom — because the diagnosis
+was incomplete. "Solution feels right" + tests green + no visual effect
+= warning signal that the underlying diagnosis was wrong.
 
-Im Frame-Timing-Fall war die falsche Annahme: „Sprite-Interpolation allein reicht." Die korrekte
-Erkenntnis: Kamera und Sprite müssen synchron interpolieren (Pattern A). Das war keine
-Iteration auf der alten Annahme, sondern ein Annahmen-Wechsel.
-
-**Konsequenz:** Nach zwei bis drei erfolglosen Fix-Versuchen: explizit in den Architektur-Review-
-Modus wechseln. Symptom, bisherige Annahmen und bisherige Fixes aufschreiben — oft wird dabei
-der Annahmen-Fehler sichtbar, ohne weiteres Debugging.
-
-**Verweis:** L73 (Regression Awareness — an nicht funktionierenden Komponenten nicht beliebig
-weitertunen).
+**Consequence:** Browser test with real race operation is not an optional follow-up step, but
+mandatory verification. If a fix shows no visual effect: reopen the diagnosis, don't
+tune parameters.
 
 ---
 
-## Lesson 79 — Zweite Meinung bei großen Architektur-Entscheidungen: Konvergenz als starkes Signal
+## Lesson 78 — Step Back After Multiple Unsuccessful Iterations: Architecture Review Instead of Further Patch
 
-**Kontext:** Vor der Pattern-A-Implementation (Render-State-Interpolation, 2026-05-16) wurde
-dieselbe Architektur-Frage beiden verfügbaren KI-Systemen gestellt: Claude Code und Copilot —
-unabhängig voneinander, mit identischem Kontext. Beide empfahlen Pattern A ohne Kenntnis der
-jeweils anderen Antwort. Bei der anschließenden Spec-Review fand Copilot außerdem drei
-HIGH-Priorität-Verbesserungen, die in die finale Spec einflossen (Whitelist-Test-Ansatz,
-sin/cos-Vergleich für lerpAngle, konkrete Steady-State-Kategorisierung).
+**Context:** The sprite interpolation (branch feat/render-interpolation) was approached in two iterations:
+first per-rAF snapshot (outside the accumulator loop), then per-step
+snapshot (inside). Both variants reduced the jitter but did not eliminate it.
+After these two iterations without a complete solution, the user requested an
+architecture review — no further patch experiment.
 
-**Erkenntnis:** Vor irreversiblen oder aufwändigen Architektur-Entscheidungen lohnt sich
-eine unabhängige zweite Meinung. Konvergenz zweier unabhängiger Stimmen auf dieselbe Lösung
-ist ein starkes Signal — verschiedene Argumentationspfade, gleiche Schlussfolgerung. Divergenz
-ist kein Problem, sondern wertvoller Anlass zum Hinterfragen bevor implementiert wird. Auch die
-Spec selbst profitiert von einer zweiten Prüfung: eine externe Stimme findet Präzisierungsbedarf
-den man selbst übersieht.
+**Insight:** After 2–3 unsuccessful patch attempts, the signal is for architecture review,
+not for further patches. Statistically the next attempt will also fail — the
+underlying model assumption is wrong. The correct reaction: step back,
+rethink the overall picture, explicitly write down and check the assumptions.
 
-**Konsequenz:** Bei Entscheidungen mit hohem Umkehr-Aufwand (neue Architektur-Schicht,
-Paradigmenwechsel, >1 Tag Implementation): zweite Meinung einholen bevor Spec geschrieben wird.
-Die Investition ist gering, das Risiko-Reduktionspotenzial hoch.
+In the frame timing case, the wrong assumption was: "sprite interpolation alone is enough." The correct
+insight: camera and sprite must interpolate synchronously (Pattern A). That was not
+an iteration on the old assumption, but a change of assumption.
 
----
+**Consequence:** After two to three unsuccessful fix attempts: explicitly switch to architecture review
+mode. Write down symptom, previous assumptions, and previous fixes — often the assumption
+error becomes visible in doing so, without further debugging.
 
-## Lesson 80 — Den eigentlichen Wunsch hinterfragen: „minimal-invasiv" ist kein Erfolgsmaß
-
-**Kontext:** Beim Übergang von B1 (Sprite-Interpolation allein) zu Pattern A (Sprite + Kamera
-synchron) wurde dem User zunächst angeboten: „Kamera auch interpoliert?" als optionale
-Erweiterung — als ob das ein Add-on wäre. Faktisch war es architektonisch zwingend: der Spalt
-zwischen Sprite-Position (interpoliert) und Kamera-Position (Physics-raw) war die Hauptursache
-des verbleibenden Ruckelns. „Optional" war die falsche Kategorisierung.
-
-**Erkenntnis:** „Minimal-invasiv" ist nicht automatisch „richtig". Die Tendenz, Lösungen als
-kleiner als nötig zu präsentieren, kann dazu führen dass der User eine halbfertige Lösung
-wählt — nicht weil er sie will, sondern weil der Aufwand des vollständigen Wegs unterschätzt
-oder versteckt wurde. Wenn eine Projektarchitektur „sicher, sauber, wartbar" als Grundwert hat,
-kann die saubere Lösung wichtiger sein als die schnelle.
-
-**Konsequenz:** Bei Architektur-Entscheidungen den eigentlichen Wunsch explizit erfragen:
-„Was ist das Ziel?" statt „Was ist der minimale Eingriff?". Wenn eine Lösung architektonisch
-zwingend ist, klar benennen — nicht als Option verkleiden. User entscheidet dann bewusst,
-nicht durch ein verzerrtes Aufwand-Bild.
-
-**Verweis:** L78 (Architektur-Review statt Patch-Iteration); L79 (Zweite Meinung).
+**Reference:** L73 (regression awareness — don't tune indefinitely on non-functional components).
 
 ---
 
-## Lesson 81 — Kompensationsformeln müssen zur Renngeometrie passen, nicht zur Einheitsmessung (Phase 1B / feat/fairness-simulation)
+## Lesson 79 — Second Opinion on Large Architecture Decisions: Convergence as a Strong Signal
 
-**Kontext:** Die `computeSpeedBonus`-Formel in `rowLayout.js` lautete seit D7c:
+**Context:** Before the Pattern A implementation (render state interpolation, 2026-05-16),
+the same architecture question was posed to both available AI systems: Claude Code and Copilot —
+independently of each other, with identical context. Both recommended Pattern A without knowledge of
+the other's answer. During the subsequent spec review, Copilot also found three
+HIGH-priority improvements that were incorporated into the final spec (whitelist test approach,
+sin/cos comparison for lerpAngle, concrete steady-state categorization).
+
+**Insight:** Before irreversible or expensive architecture decisions, an
+independent second opinion is worthwhile. Convergence of two independent voices on the same solution
+is a strong signal — different reasoning paths, same conclusion. Divergence
+is not a problem, but a valuable occasion for questioning before implementation. Even the
+spec itself benefits from a second review: an external voice finds precision needs
+that one overlooks oneself.
+
+**Consequence:** For decisions with high reversal cost (new architecture layer,
+paradigm shift, >1 day implementation): get a second opinion before the spec is written.
+The investment is small, the risk reduction potential high.
+
+---
+
+## Lesson 80 — Question the Actual Desire: "Minimal-Invasive" Is Not a Success Measure
+
+**Context:** In the transition from B1 (sprite interpolation alone) to Pattern A (sprite + camera
+synchronous), the user was initially offered: "Camera also interpolated?" as an optional
+extension — as if it were an add-on. In fact, it was architecturally mandatory: the gap
+between sprite position (interpolated) and camera position (physics-raw) was the main cause
+of the remaining jitter. "Optional" was the wrong categorization.
+
+**Insight:** "Minimal-invasive" is not automatically "right". The tendency to present solutions as
+smaller than necessary can lead the user to choose a half-finished solution — not because they want it, but
+because the cost of the complete path was underestimated or hidden. If a project architecture has "safe, clean, maintainable" as a core value,
+the clean solution may be more important than the fast one.
+
+**Consequence:** For architecture decisions, explicitly ask for the actual desire:
+"What is the goal?" instead of "What is the minimal intervention?". If a solution is architecturally
+mandatory, state it clearly — don't disguise it as an option. The user then decides consciously,
+not through a distorted cost picture.
+
+**Reference:** L78 (architecture review instead of patch iteration); L79 (second opinion).
+
+---
+
+## Lesson 81 — Compensation Formulas Must Match the Race Geometry, Not the Unit Measurement (Phase 1B / feat/fairness-simulation)
+
+**Context:** The `computeSpeedBonus` formula in `rowLayout.js` had been since D7c:
 ```
 bonus = rowIndex × rowGapPx / pathLengthPx × speedBonusFactor
       = N × tOffset × speedBonusFactor
 ```
-Diese Formel kompensiert den räumlichen Startnachteil einer hinteren Reihe — aber nur exakt bei
-`finishT = 1.0`. Bei Multi-Lap-Strecken (finishT = 2–10+) war der Bonus 2–10× zu groß (Rear-Bias);
-bei offenen Strecken und langsamen Racern mit kurzer Zieldistanz war er zu klein (Front-Bias).
-Die Simulation `sim-fairness.mjs` deckte das auf: alle 144 Track×Racer×Dauer-Kombinationen
-schlugen fehl, teils mit Row-0-Win-Rates von 0% oder 100%.
+This formula compensates for the spatial starting disadvantage of a back row — but only exactly at
+`finishT = 1.0`. For multi-lap tracks (finishT = 2–10+), the bonus was 2–10× too large (rear bias);
+for open tracks and slow racers with short target distance, it was too small (front bias).
+The simulation `sim-fairness.mjs` revealed this: all 144 track×racer×duration combinations
+failed, sometimes with row-0 win rates of 0% or 100%.
 
-**Erkenntnis:** Eine Distanz-Kompensationsformel muss zur *tatsächlichen Zieldistanz* normiert
-sein, nicht zur Tracklänge. Der korrekte Kompensationsfaktor ist:
+**Insight:** A distance compensation formula must be normalized to the *actual target distance*,
+not to the track length. The correct compensation factor is:
 
 ```
 bonus_N = N × tOffset / row0Distance × speedBonusFactor
 
-row0Distance (geschlossen) = finishT
-row0Distance (offen)       = finishT − totalRows × tOffset
+row0Distance (closed) = finishT
+row0Distance (open)   = finishT − totalRows × tOffset
 ```
 
-Bei `finishT = 1.0` (geschlossen) stimmt die alte Formel zufällig. Das war die einzige Geometrie
-für die sie ausgiebig getestet wurde.
+At `finishT = 1.0` (closed), the old formula coincidentally works. That was the only geometry
+it was extensively tested for.
 
-**Konsequenz:** Kompensationsformeln aus dem t-Raum ableiten und gegen mehrere finishT-Werte
-validieren — nicht nur gegen den Einheitsfall. Statistische Simulation ist der einzige zuverlässige
-Weg um solche systematischen Fehler sichtbar zu machen: visuelle Tests und Unit-Tests können
-den Fehler bei finishT=1.0 nicht detektieren. Neue Signatur:
+**Consequence:** Derive compensation formulas from t-space and validate against multiple finishT values
+— not just the unit case. Statistical simulation is the only reliable
+way to make such systematic errors visible: visual tests and unit tests cannot
+detect the error at finishT=1.0. New signature:
 ```javascript
 computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)
 ```
 
-**Verweis:** feat/fairness-simulation, Phase-1A-Analyse (Mathematik-Herleitung), sim-fairness.mjs.
+**Reference:** feat/fairness-simulation, Phase-1A analysis (mathematics derivation), sim-fairness.mjs.
 
 ---
 
-## Lesson 82 — spritePx-Slider ist absolut, aber referenceSpriteSize ist racer-count-abhängig
+## Lesson 82 — spritePx Slider Is Absolute, but referenceSpriteSize Is Racer-count-dependent
 
-**Kontext:** Phase 3B Diagnose — `spritePx`-Slider im Dev-Screen setzt einen absoluten Pixel-Zielwert für Racer-Sprites in LEADER/BATTLE/COMEBACK-States. `_computeZoomForTargetSize(spritePx)` dividiert durch `_referenceSpriteSize = displaySize × displaySizeScale`. `displaySizeScale` ist racer-count-abhängig (mehr Racer → kleinere Sprites → niedrigerer displaySizeScale → höherer rawZoom). Ein absoluter spritePx-Wert ergibt bei 10 Racern einen anderen Zoom als bei 70 Racern.
+**Context:** Phase 3B diagnosis — `spritePx` slider in the Dev Screen sets an absolute pixel target value for racer sprites in LEADER/BATTLE/COMEBACK states. `_computeZoomForTargetSize(spritePx)` divides by `_referenceSpriteSize = displaySize × displaySizeScale`. `displaySizeScale` is racer-count-dependent (more racers → smaller sprites → lower displaySizeScale → higher rawZoom). An absolute spritePx value gives a different zoom with 10 racers than with 70 racers.
 
-**Erkenntnis:** Ein absoluter Pixel-Zielwert ist keine stabile Kalibriergröße wenn die Basis (referenceSpriteSize) dynamisch ist. Der User dreht den Slider auf 40px und bekommt bei 10 Racern deutlich mehr Zoom als bei 70 Racern — obwohl 40px in beiden Fällen identisch aussieht.
+**Insight:** An absolute pixel target value is not a stable calibration quantity when the base (referenceSpriteSize) is dynamic. The user turns the slider to 40px and gets significantly more zoom with 10 racers than with 70 racers — even though 40px looks identical in both cases.
 
-**Konsequenz:** Für einen stabilen Zoom-Tuning-Parameter über verschiedene Racer-Counts muss ein relativer Faktor verwendet werden: `spriteScale = spritePx / referenceSpriteSize`. Dann ist der Tuning-Parameter racer-count-unabhängig. Migrationsaufwand: neuer Config-Key (`spriteScale`) + Umrechnung in `_computeZoomForTargetSize`. Eigenständige chore: `chore/sprite-scale-relative`.
+**Consequence:** For a stable zoom tuning parameter across different racer counts, a relative factor must be used: `spriteScale = spritePx / referenceSpriteSize`. Then the tuning parameter is racer-count-independent. Migration effort: new config key (`spriteScale`) + conversion in `_computeZoomForTargetSize`. Standalone chore: `chore/sprite-scale-relative`.
 
 ---
 
-## Lesson 83 — `_overviewStateZoom` auf Open Tracks muss = `overviewZoom` sein
+## Lesson 83 — `_overviewStateZoom` on Open Tracks Must Equal `overviewZoom`
 
-**Kontext:** Phase 3B OVERVIEW Zoom-Fix. `_overviewStateZoom` wurde via `_computeZoomForTargetSize(spritePx)` berechnet — auch auf Open Tracks. Das ergab einen Zoom-Wert höher als `overviewZoom` (da spritePx einen Zoom > OVERVIEW-Basiswert verlangte). Bei State-Wechsel nach OVERVIEW: `this.zoom = this._overviewStateZoom` → OVERVIEW war sichtbar zu nah (Sprites zu groß, weniger Track sichtbar) verglichen mit dem Race-Start-OVERVIEW bei dem `overviewZoom` direkt gesetzt wird.
+**Context:** Phase 3B OVERVIEW zoom fix. `_overviewStateZoom` was calculated via `_computeZoomForTargetSize(spritePx)` — even on open tracks. This gave a zoom value higher than `overviewZoom` (since spritePx demanded a zoom > OVERVIEW base value). On state change to OVERVIEW: `this.zoom = this._overviewStateZoom` → OVERVIEW was visibly too close (sprites too large, less track visible) compared to the race-start OVERVIEW where `overviewZoom` is set directly.
 
-**Erkenntnis:** Auf Open Tracks ist `overviewZoom` der definierte "voller Track sichtbar"-Wert. Jeder Zoom über `overviewZoom` zeigt nur einen Ausschnitt und widerspricht dem OVERVIEW-Konzept. `_computeZoomForTargetSize` ist für LEADER/BATTLE/COMEBACK korrekt (dort soll ein Racer eine bestimmte Bildschirmgröße haben), aber nicht für OVERVIEW.
+**Insight:** On open tracks, `overviewZoom` is the defined "full track visible" value. Any zoom above `overviewZoom` shows only a section and contradicts the OVERVIEW concept. `_computeZoomForTargetSize` is correct for LEADER/BATTLE/COMEBACK (there a racer should occupy a certain screen size), but not for OVERVIEW.
 
-**Konsequenz:** In allen drei Pfaden von `_computeZoomLevels()` gilt für Open Tracks: `this._overviewStateZoom = this.overviewZoom` (direkter Wert, keine Berechnung). Nur für Closed Tracks wird `_computeZoomForTargetSize` aufgerufen. Entsprechende Guard-Bedingung:
+**Consequence:** In all three paths of `_computeZoomLevels()`, for open tracks: `this._overviewStateZoom = this.overviewZoom` (direct value, no calculation). Only for closed tracks is `_computeZoomForTargetSize` called. Corresponding guard condition:
 ```js
 this._overviewStateZoom = this._isOpenTrack
   ? this.overviewZoom
@@ -1701,81 +1681,81 @@ this._overviewStateZoom = this._isOpenTrack
 
 ---
 
-## Lesson 84 — `tSpaceLerpActive` + falscher Pan-Target = harter Snap beim State-Wechsel
+## Lesson 84 — `tSpaceLerpActive` + Wrong Pan Target = Hard Snap on State Change
 
-**Kontext:** Phase 3B OVERVIEW Pan-Sprung-Fix. Wenn `_lerpPhase === 'entry'` und `_camT !== null` und `_shape !== null`, ist `tSpaceLerpActive = true`. In diesem Modus setzt der Renderer `offsetX = targetOffsetX` direkt (kein Lerp) um die T-Space-Interpolation zu unterstützen. OVERVIEW's `_setTargets()` lieferte in diesem Fall `focusRacers[0].x/y` als Pan-Target — die Weltposition des führenden Racers. Da `tSpaceLerpActive = true`, wurde dieser Wert sofort (ohne Lerp) als Canvas-Offset gesetzt → Kamera springt in Frame 1 des OVERVIEW-Eintritts direkt auf den Leader.
+**Context:** Phase 3B OVERVIEW pan jump fix. When `_lerpPhase === 'entry'` and `_camT !== null` and `_shape !== null`, `tSpaceLerpActive = true`. In this mode the renderer sets `offsetX = targetOffsetX` directly (no lerp) to support T-space interpolation. OVERVIEW's `_setTargets()` in this case delivered `focusRacers[0].x/y` as pan target — the world position of the leading racer. Since `tSpaceLerpActive = true`, this value was immediately (without lerp) set as canvas offset → camera jumps directly to the leader in frame 1 of OVERVIEW entry.
 
-**Erkenntnis:** Jeder Camera-State der während der Entry-Phase `_setTargets()` aufruft, muss prüfen ob T-Space-Lerp aktiv ist und in diesem Fall `shape.getPosition(_camT)` als Pan-Target verwenden. LEADER/BATTLE/COMEBACK taten das bereits; OVERVIEW tat es nicht. Das Ergebnis ist ein visuell störender Kamera-Sprung am ersten Frame jedes OVERVIEW-Eintritts.
+**Insight:** Every camera state that calls `_setTargets()` during the entry phase must check whether T-space lerp is active and in that case use `shape.getPosition(_camT)` as pan target. LEADER/BATTLE/COMEBACK did that already; OVERVIEW did not. The result is a visually disruptive camera jump on the first frame of every OVERVIEW entry.
 
-**Safety:** `_camT !== null`-Guard ist essenziell — beim Race-Start ist `_camT = null` (kein `_transition()` aufgerufen), sodass der Fix ausschließlich bei echten Mid-Race-Übergängen greift.
+**Safety:** `_camT !== null` guard is essential — at race start `_camT = null` (no `_transition()` called), so the fix applies exclusively to real mid-race transitions.
 
-**Konsequenz:** In `_setTargets()` OVERVIEW-Case: Early-Return wenn `_lerpPhase === 'entry' && _camT !== null && _shape`, mit `shape.getPosition(_camT)` als Pan-Target (Open/Closed trackspezifisch). Danach normaler OVERVIEW-Ablauf für nicht-Entry-Frames.
-
----
-
-## Lesson 85 — Battle-Gruppe einfrieren für Kamera-Lock, Live-Gruppe für visuelle Effekte
-
-**Kontext:** Phase 3B BATTLE_ZOOM-Implementation. Die Kamera soll auf eine Gruppe von Racern in einem Duell fixiert bleiben, auch wenn sich die Rennreihenfolge innerhalb der Gruppe ändert. Dafür wird die Battle-Gruppe beim State-Eintritt eingefroren (`_frozenBattleGroup`). Gleichzeitig müssen visuelle Fokus-Effekte (Highlight-Ring, Comeback-Ring) die aktuellen Duell-Teilnehmer reflektieren — nicht die eingefrorene Gruppe vom State-Eintritt.
-
-**Erkenntnis:** Zwei semantisch verschiedene Gruppen sind nötig:
-- **Frozen Group** (für Kamera-Zentroid-Berechnung): Wird beim BATTLE_ZOOM-Eintritt gesetzt und bleibt konstant. Verhindert Kamera-Drift wenn Racer aus der Gruppe herausfallen.
-- **Live Group** (für visuelle Highlights): Wird jeden Frame neu aus der aktuellen Rennposition berechnet. Zeigt an welche Racer sich tatsächlich in einem Duell befinden.
-
-Werden beide Gruppen vermischt (z.B. frozen group für Highlights), können Racer-Highlights auf falsche Racer zeigen oder verschwinden obwohl das Duell noch läuft.
-
-**Konsequenz:** BATTLE_ZOOM und COMEBACK_ZOOM halten explizit zwei Racer-Mengen: `_frozenBattleGroup` für die Kamera-Position (einmalig beim State-Eintritt gesetzt), `_liveBattleGroup` oder dynamisch berechnete Gruppe für Highlight-Rendering.
+**Consequence:** In `_setTargets()` OVERVIEW case: early return when `_lerpPhase === 'entry' && _camT !== null && _shape`, with `shape.getPosition(_camT)` as pan target (open/closed track-specific). Then normal OVERVIEW flow for non-entry frames.
 
 ---
 
-## Lesson 86 — `ctx.filter` deaktiviert GPU-Compositing — `globalAlpha` verwenden
+## Lesson 85 — Freeze Battle Group for Camera Lock, Live Group for Visual Effects
 
-**Kontext:** Phase 3B COMEBACK_ZOOM grüner Ring. Die ursprüngliche Implementation nutzte `ctx.filter = 'opacity(0.6)'` für einen halbtransparenten Highlight-Effekt. `ctx.filter` ist eine CSS-Level-Eigenschaft des Canvas-Rendering-Contexts; Browser implementieren sie durch Software-Compositing (CPU-side) anstatt GPU-beschleunigter Compositing-Operationen. Bei einem Race-Loop mit 60 FPS und potenziell mehreren gefilterten Draws pro Frame ist das ein messbarer Performance-Einbruch.
+**Context:** Phase 3B BATTLE_ZOOM implementation. The camera should stay locked on a group of racers in a duel, even if the race order within the group changes. For this the battle group is frozen on state entry (`_frozenBattleGroup`). At the same time, visual focus effects (highlight ring, comeback ring) must reflect the current duel participants — not the frozen group from state entry.
 
-**Erkenntnis:** `ctx.filter` erzwingt immer Software-Rendering für den betroffenen Draw-Call. `globalAlpha` dagegen ist ein nativer Canvas-Parameter der GPU-beschleunigt composited wird. Für reine Transparenz-Effekte (Opacity) ist `globalAlpha` immer die korrekte Wahl.
+**Insight:** Two semantically different groups are needed:
+- **Frozen Group** (for camera centroid calculation): Set at BATTLE_ZOOM entry and remains constant. Prevents camera drift when racers fall out of the group.
+- **Live Group** (for visual highlights): Recalculated every frame from the current race position. Shows which racers are actually in a duel.
 
-**Konsequenz:** Niemals `ctx.filter = 'opacity(X)'` für Transparenz verwenden — immer `ctx.globalAlpha = X` mit explizitem Reset auf `1.0` nach dem Draw. Andere `ctx.filter`-Werte (blur, brightness, etc.) haben keine `globalAlpha`-Alternative und sind in Performance-kritischen rAF-Loops zu vermeiden oder auf seltene Frames zu beschränken.
+If both groups are mixed (e.g. frozen group for highlights), racer highlights can point to wrong racers or disappear even though the duel is still running.
 
----
-
-## Lesson 87 — Fehlender STATE_CONFIG-Eintrag ahmt echten Camera-State-Bug nach
-
-**Kontext:** Phase 3C Diagnose (chore/sprite-scale-relative). Im Browser wurde beobachtet: Das Kamera-Status-Badge zeigte "OVERVIEW" (grau, breiter Text) obwohl die Kamera erkennbar in einem LEADER-Level-Zoom war. Das Transition-Log zeigte den letzten Eintrag als `LDR→LC` (LEAD_CHANGE). Das Badge zeigte also den falschen State — es zeigte OVERVIEW statt LEAD CHANGE.
-
-Root Cause: `CameraStateHUD.STATE_CONFIG` enthielt keinen Eintrag für `LEAD_CHANGE`. Die Fallback-Logik `STATE_CONFIG[displayState] ?? STATE_CONFIG.OVERVIEW` lieferte für `displayState = 'LEAD_CHANGE'` das gesamte OVERVIEW-Styling — inklusive Label "OVERVIEW", grauer Farbe und Tooltip. Die CameraDirector-State-Machine war korrekt in LEAD_CHANGE; nur das Badge renderte falsch.
-
-**Erkenntnis:** Ein fehlendes Konfigurations-Objekt mit einem `??`-Fallback produziert keine Fehlermeldung — es rendert stillschweigend den Fallback-Zustand. Das sieht für den Beobachter aus wie ein echter State-Machine-Bug (falsche State-Anzeige) obwohl die Ursache im Rendering-Layer liegt, nicht in der State-Machine.
-
-Der Diagnose-Pfad führte deshalb zunächst in die falsche Richtung: Untersuchung von `this.state`-Zuweisungen im CameraDirector (es gibt nur zwei Stellen: Konstruktor + `_transition()`), Überprüfung der `hudState`-Getter-Logik, Transition-Log-Analyse. Erst als das Log `LDR→LC` zeigte ohne entsprechenden OVERVIEW-Eintrag war klar: der Bug liegt im Badge-Rendering, nicht im Director.
-
-Die User-Beobachtung war der entscheidende Hinweis: "OVERVIEW badge bei tight zoom" — Zoom und State passten semantisch nicht zusammen. Die Diagnose-Tools (Transition-Log-Panel) bestätigten dann schnell die Ursache.
-
-**Konsequenz:** Bei Komponenten die über `STATE_CONFIG[key] ?? fallback` rendern: sicherstellen dass für jeden möglichen State-Wert ein Konfigurations-Eintrag existiert. Tests müssen alle möglichen Input-Werte abdecken — nicht nur die zum Zeitpunkt der Implementierung bekannten. Ein Test-Case pro State in `STATE_CASES` (label + CSS-Klasse + tooltip) verhindert dass ein neu hinzugefügter Camera-State im Badge-Fallback landet.
-
-**Verweis:** `CameraStateHUD.jsx`, `CameraStateHUD.test.jsx` — LEAD_CHANGE-Eintrag ergänzt, STATE_CASES von 5 auf 6 erweitert. Phase 3C (chore/sprite-scale-relative, squash `6a9dcfc`).
+**Consequence:** BATTLE_ZOOM and COMEBACK_ZOOM explicitly maintain two racer sets: `_frozenBattleGroup` for the camera position (set once on state entry), `_liveBattleGroup` or dynamically calculated group for highlight rendering.
 
 ---
 
-## Lesson 88 — T-Space Lookback ist streckenabhängig
+## Lesson 86 — `ctx.filter` Disables GPU Compositing — Use `globalAlpha`
 
-**Kontext:** Phase 3D (FINISH_OVERVIEW). Der `finishOverviewLookback`-Parameter war in T-Space definiert (0.08). Auf Space Sprint mit einer Pfadlänge von ~19772px entspricht 0.08 T-Space ≈ 1582px — fast das gesamte linke Drittel der Strecke. Auf einer kurzen geschlossenen Strecke (~3750px Pfadlänge) wären dieselben 0.08 T nur ~300px. Der Lookback-Bereich war nicht streckenunabhängig.
+**Context:** Phase 3B COMEBACK_ZOOM green ring. The original implementation used `ctx.filter = 'opacity(0.6)'` for a semi-transparent highlight effect. `ctx.filter` is a CSS-level property of the canvas rendering context; browsers implement it through software compositing (CPU-side) instead of GPU-accelerated compositing operations. In a race loop at 60 FPS with potentially multiple filtered draws per frame, this is a measurable performance hit.
 
-**Ursache:** T-Space-Parameter skalieren linear mit der Streckenlänge. Ein Operator der auf Space Sprint 0.08 einstellt bekommt auf einer anderen Strecke einen komplett anderen visuellen Effekt — die Kamera schaut auf Space Sprint viel zu weit zurück und auf kurzen Strecken zu wenig.
+**Insight:** `ctx.filter` always forces software rendering for the affected draw call. `globalAlpha`, on the other hand, is a native canvas parameter that is composited with GPU acceleration. For pure transparency effects (opacity), `globalAlpha` is always the correct choice.
 
-**Fix:** `finishOverviewLookbackPx: 300` (Weltpixel). Formel: `lookbackFrac = lookbackPx / pathLen`; dann `lookbackT = normT − lookbackFrac`. `shape.getTotalLength()` liefert die streckenspezifische Pfadlänge zur Laufzeit.
-
-**Konsequenz:** Immer prüfen ob ein Parameter in T-Space oder Weltpixeln sinnvoll ist. Wenn der visuelle Effekt eine physische Distanz ist (z.B. "wie weit vor der Ziellinie"), dann ist Weltpixel die richtige Einheit — streckenunabhängig, intuitiv für Operator-Tuning.
-
-**Verweis:** `CameraDirector.js` `_finishOverviewLookbackPx`, `_transition()` + `_setTargets()`, `defaults.js` `finishOverviewLookbackPx: 300`. Phase 3D.
+**Consequence:** Never use `ctx.filter = 'opacity(X)'` for transparency — always use `ctx.globalAlpha = X` with explicit reset to `1.0` after the draw. Other `ctx.filter` values (blur, brightness, etc.) have no `globalAlpha` alternative and should be avoided in performance-critical rAF loops or restricted to infrequent frames.
 
 ---
 
-## Lesson 89 — `_camT = target` in `_transition()` → harter Cut, nicht sanfter Pan
+## Lesson 87 — Missing STATE_CONFIG Entry Mimics a Real Camera State Bug
 
-**Kontext:** Phase 3D (FINISH_OVERVIEW). In `_transition()` wurde `this._camT = lookbackT` gesetzt. Da `_camT` den aktuellen T-Wert für T-Space-Lerp darstellt, wurde damit der Pan-Startpunkt sofort auf das Ziel gesetzt — delta = 0, kein Lerp-Schritt, Kamera springt hart.
+**Context:** Phase 3C diagnosis (chore/sprite-scale-relative). In the browser it was observed: the camera status badge showed "OVERVIEW" (gray, wider text) even though the camera was visibly at a LEADER-level zoom. The transition log showed the last entry as `LDR→LC` (LEAD_CHANGE). The badge was therefore showing the wrong state — it showed OVERVIEW instead of LEAD CHANGE.
 
-**Ursache:** Der T-Lerp arbeitet als `_camT += tDelta(_camT, _transitionTargetT) × lf`. Wenn `_camT` bereits gleich `_transitionTargetT` ist, gibt es keinen Delta und keinen Lerp-Schritt. `_transition()` legt mit `_camT = lookbackT` start = destination fest, wodurch die Entry-Phase sofort "konvergiert" ist.
+Root cause: `CameraStateHUD.STATE_CONFIG` contained no entry for `LEAD_CHANGE`. The fallback logic `STATE_CONFIG[displayState] ?? STATE_CONFIG.OVERVIEW` returned the entire OVERVIEW styling for `displayState = 'LEAD_CHANGE'` — including label "OVERVIEW", gray color, and tooltip. The CameraDirector state machine was correctly in LEAD_CHANGE; only the badge rendered incorrectly.
 
-**Fix:** In `_transition()` nur `_transitionTargetT = lookbackT` setzen, `_camT` an winner.t belassen. Eigenen `else if`-Branch in der OVERVIEW-T-Lerp-Sektion ergänzen der `_camT` schrittweise Richtung `_transitionTargetT` bewegt — parallel zum Zoom-Out mit derselben Zeitkonstante:
+**Insight:** A missing configuration object with a `??` fallback produces no error message — it silently renders the fallback state. This looks to the observer like a real state machine bug (wrong state display) even though the cause lies in the rendering layer, not in the state machine.
+
+The diagnostic path therefore initially led in the wrong direction: investigation of `this.state` assignments in CameraDirector (there are only two locations: constructor + `_transition()`), verification of `hudState` getter logic, transition log analysis. Only when the log showed `LDR→LC` without a corresponding OVERVIEW entry was it clear: the bug is in the badge rendering, not in the director.
+
+The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — zoom and state did not semantically match. The diagnostic tools (transition log panel) then quickly confirmed the cause.
+
+**Consequence:** For components that render via `STATE_CONFIG[key] ?? fallback`: ensure that a configuration entry exists for every possible state value. Tests must cover all possible input values — not just those known at the time of implementation. One test case per state in `STATE_CASES` (label + CSS class + tooltip) prevents a newly added camera state from landing in the badge fallback.
+
+**Reference:** `CameraStateHUD.jsx`, `CameraStateHUD.test.jsx` — LEAD_CHANGE entry added, STATE_CASES extended from 5 to 6. Phase 3C (chore/sprite-scale-relative, squash `6a9dcfc`).
+
+---
+
+## Lesson 88 — T-Space Lookback Is Track-dependent
+
+**Context:** Phase 3D (FINISH_OVERVIEW). The `finishOverviewLookback` parameter was defined in T-space (0.08). On Space Sprint with a path length of ~19772px, 0.08 T-space corresponds to ~1582px — almost the entire left third of the track. On a short closed track (~3750px path length), the same 0.08 T would be only ~300px. The lookback range was not track-independent.
+
+**Cause:** T-space parameters scale linearly with track length. An operator who sets 0.08 on Space Sprint gets a completely different visual effect on another track — the camera looks back much too far on Space Sprint and too little on short tracks.
+
+**Fix:** `finishOverviewLookbackPx: 300` (world pixels). Formula: `lookbackFrac = lookbackPx / pathLen`; then `lookbackT = normT − lookbackFrac`. `shape.getTotalLength()` provides the track-specific path length at runtime.
+
+**Consequence:** Always check whether a parameter makes sense in T-space or world pixels. If the visual effect is a physical distance (e.g. "how far before the finish line"), then world pixels is the right unit — track-independent, intuitive for operator tuning.
+
+**Reference:** `CameraDirector.js` `_finishOverviewLookbackPx`, `_transition()` + `_setTargets()`, `defaults.js` `finishOverviewLookbackPx: 300`. Phase 3D.
+
+---
+
+## Lesson 89 — `_camT = target` in `_transition()` → Hard Cut, Not Smooth Pan
+
+**Context:** Phase 3D (FINISH_OVERVIEW). In `_transition()`, `this._camT = lookbackT` was set. Since `_camT` represents the current T value for T-space lerp, this immediately set the pan start point to the target — delta = 0, no lerp step, camera jumps hard.
+
+**Cause:** The T-lerp works as `_camT += tDelta(_camT, _transitionTargetT) × lf`. When `_camT` is already equal to `_transitionTargetT`, there is no delta and no lerp step. `_transition()` with `_camT = lookbackT` sets start = destination, causing the entry phase to immediately "converge".
+
+**Fix:** In `_transition()`, only set `_transitionTargetT = lookbackT`, leave `_camT` at winner.t. Add a separate `else if` branch in the OVERVIEW T-lerp section that moves `_camT` step by step toward `_transitionTargetT` — in parallel with the zoom-out with the same time constant:
 
 ```js
 } else if (this._inFinishMode && this._camT !== null && this._transitionTargetT !== null) {
@@ -1783,6 +1763,6 @@ Die User-Beobachtung war der entscheidende Hinweis: "OVERVIEW badge bei tight zo
 }
 ```
 
-**Konsequenz:** `_transition()` ist für einmalige Setup-Logik (Zustände setzen, Ziele festlegen), nicht für sofortige Positionszuweisungen die sanft animiert werden sollen. Für sanfte Bewegungen: Ziel speichern, Lerp-Branch im Update-Loop ergänzen.
+**Consequence:** `_transition()` is for one-time setup logic (setting states, defining targets), not for immediate position assignments that should be smoothly animated. For smooth movements: save target, add lerp branch in the update loop.
 
-**Verweis:** `CameraDirector.js` `_transition()` FINISH_OVERVIEW-Block, OVERVIEW-T-Lerp-Branch in `_setTargets()`. Phase 3D.
+**Reference:** `CameraDirector.js` `_transition()` FINISH_OVERVIEW block, OVERVIEW T-lerp branch in `_setTargets()`. Phase 3D.

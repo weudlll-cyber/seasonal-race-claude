@@ -125,19 +125,19 @@ const PROFILE_FIELDS = [
   },
   {
     key: 'leadAheadEnabled',
-    label: 'Lead-Ahead aktiv',
+    label: 'Lead-Ahead active',
     type: 'boolean',
     onlyFor: ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'],
     tip: (v) =>
-      `Kamera zeigt Track vor dem Racer (führt ins Bild rein). Aktuell: ${v ? 'ON' : 'OFF'}.`,
+      `Camera shows the track ahead of the racer (leading into the frame). Currently: ${v ? 'ON' : 'OFF'}.`,
   },
   {
     key: 'leadOutEnabled',
-    label: 'Lead-Out aktiv',
+    label: 'Lead-Out active',
     type: 'boolean',
     onlyFor: ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'],
     tip: (v) =>
-      `Kamera verlangsamt sich exponentiell in den letzten leadOutDuration Sekunden vor State-Ende. Aktuell: ${v ? 'ON' : 'OFF'}.`,
+      `Camera decelerates exponentially in the final leadOutDuration seconds before state end. Currently: ${v ? 'ON' : 'OFF'}.`,
   },
 ];
 
@@ -319,7 +319,7 @@ function CameraAdvancedSection() {
             >
               Post-Start LEADER Hold (ms)
               <InfoTooltip
-                text={`Nach der 3s Start-OVERVIEW hält die Kamera LEADER_ZOOM für diese Dauer bevor BATTLE triggern kann. Aktuell: ${(config.postStartHoldMs / 1000).toFixed(1)}s.`}
+                text={`After the 3s start overview the camera holds LEADER_ZOOM for this duration before BATTLE can trigger. Currently: ${(config.postStartHoldMs / 1000).toFixed(1)}s.`}
               />
             </label>
             <input
@@ -340,9 +340,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Start-Zoom (px)
+              Countdown Start Zoom (px)
               <InfoTooltip
-                text={`Sprite-Höhe am Countdown-Start. Sehr kleine Werte werden auf Minimalzoom geclamppt (ganzer Track sichtbar). Aktuell: ${config.countdownStartZoomSpritePx ?? 1}px.`}
+                text={`Sprite height at countdown start. Very small values are clamped to minimum zoom (full track visible). Currently: ${config.countdownStartZoomSpritePx ?? 1}px.`}
               />
             </label>
             <input
@@ -363,9 +363,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Dauer (ms)
+              Countdown Duration (ms)
               <InfoTooltip
-                text={`Dauer des Pre-Race Countdowns. Aktuell: ${config.countdownDurationMs ?? 4000}ms.`}
+                text={`Duration of the pre-race countdown. Currently: ${config.countdownDurationMs ?? 4000}ms.`}
               />
             </label>
             <input
@@ -395,7 +395,7 @@ function CameraAdvancedSection() {
             >
               Pulk Threshold (px)
               <InfoTooltip
-                text={`BATTLE triggert wenn ≥3 der Top-10 Racer innerhalb dieses Abstands beieinander sind. Aktuell: ${config.battlePulkThresholdPx ?? 200}px.`}
+                text={`BATTLE triggers when ≥3 of the top-10 racers are within this distance of each other. Currently: ${config.battlePulkThresholdPx ?? 200}px.`}
               />
             </label>
             <input
@@ -418,7 +418,7 @@ function CameraAdvancedSection() {
             >
               BATTLE Min Hold (ms)
               <InfoTooltip
-                text={`Mindestdauer BATTLE nach Eintritt, auch wenn Cluster sich auflöst. Aktuell: ${config.battleMinDurationMs ?? 3000}ms.`}
+                text={`Minimum BATTLE duration after entry, even if the cluster dissolves. Currently: ${config.battleMinDurationMs ?? 3000}ms.`}
               />
             </label>
             <input
@@ -441,7 +441,7 @@ function CameraAdvancedSection() {
             >
               BATTLE Cooldown (ms)
               <InfoTooltip
-                text={`Mindestpause nach BATTLE bevor erneutes Triggern möglich. Aktuell: ${(config.battleCooldownMs / 1000).toFixed(1)}s.`}
+                text={`Minimum pause after BATTLE before re-triggering is possible. Currently: ${(config.battleCooldownMs / 1000).toFixed(1)}s.`}
               />
             </label>
             <input
@@ -473,10 +473,10 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 500) set('battleIsolationThresholdPx', v);
             }}
             display={`${config.battleIsolationThresholdPx ?? 0}px`}
-            tip="Mindestabstand zwischen Gruppen-Racer und Nicht-Gruppen-Racer. 0 = deaktiviert. Empfehlung: 1.5 × Pulk-Threshold."
+            tip="Minimum gap between group racer and non-group racer. 0 = disabled. Recommendation: 1.5 × pulk threshold."
           />
           <SliderRow
-            label="Max. Gruppengröße"
+            label="Max. group size"
             testId="battle-max-group-size"
             min={3}
             max={6}
@@ -487,7 +487,7 @@ function CameraAdvancedSection() {
               if (v >= 3 && v <= 6) set('battleMaxGroupSize', v);
             }}
             display={`${config.battleMaxGroupSize ?? 6}`}
-            tip="Maximale Anzahl Racer in der BATTLE-Gruppe (3–6). Default 6."
+            tip="Maximum number of racers in the BATTLE group (3–6). Default 6."
           />
           <SliderRow
             label="Max. Rank-Span (Expansion)"
@@ -501,10 +501,10 @@ function CameraAdvancedSection() {
               if (v >= 2 && v <= 10) set('battleMaxGroupRankSpan', v);
             }}
             display={`${config.battleMaxGroupRankSpan ?? 5}`}
-            tip="Maximaler Rang-Span (höchster minus niedrigster Rang) der BATTLE-Gruppe nach greedy Expansion. Default 5 → P3–P8 wenn Seed bei P3. Verhindert P3-bis-P11-Cluster."
+            tip="Maximum rank span (highest minus lowest rank) of the BATTLE group after greedy expansion. Default 5 → P3–P8 when seed is at P3. Prevents P3-to-P11 clusters."
           />
           <SliderRow
-            label="Top-N Pflicht (Mindest-Rang)"
+            label="Top-N Required (minimum rank)"
             testId="battle-min-top-n"
             min={3}
             max={20}
@@ -515,21 +515,21 @@ function CameraAdvancedSection() {
               if (v >= 3 && v <= 20) set('battleMinTopN', v);
             }}
             display={`Top-${config.battleMinTopN ?? 10}`}
-            tip="Mindestens ein Racer im Pulk muss auf Platz ≤ N sein. Default 10 → Battles nur wenn zumindest ein Top-10-Racer beteiligt ist."
+            tip="At least one racer in the pulk must be at position ≤ N. Default 10 → battles only when at least one top-10 racer is involved."
           />
         </div>
       </div>
 
       {/* ── 3. MID — Regie-Gewichte & OVERVIEW ── */}
       <div className={s.card}>
-        <SectionHeading>3 · MID — Regie-Gewichte &amp; OVERVIEW</SectionHeading>
+        <SectionHeading>3 · MID — Director Weights &amp; OVERVIEW</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Gewichteter Zufalls-Regisseur: alle aktiven Events kommen mit ihren Gewichten in den Pool.
-          Pflicht-States (Start, Endgame, Finish) sind nicht im Pool.
+          Weighted random director: all active events enter the pool with their weights. Mandatory
+          states (Start, Endgame, Finish) are not in the pool.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
-            label="BATTLE-Gewicht"
+            label="BATTLE weight"
             testId="regie-battle-weight"
             min={0}
             max={1}
@@ -540,10 +540,10 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('battleWeight', v);
             }}
             display={(config.battleWeight ?? 0.8).toFixed(2)}
-            tip="Selektionsgewicht für BATTLE_ZOOM im Kandidaten-Pool. Default 0.80."
+            tip="Selection weight for BATTLE_ZOOM in the candidate pool. Default 0.80."
           />
           <SliderRow
-            label="LEAD_CHANGE-Gewicht"
+            label="LEAD_CHANGE weight"
             testId="regie-lead-change-weight"
             min={0}
             max={1}
@@ -554,10 +554,10 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('leadChangeWeight', v);
             }}
             display={(config.leadChangeWeight ?? 0.7).toFixed(2)}
-            tip="Selektionsgewicht für LEAD_CHANGE im Kandidaten-Pool. Default 0.70."
+            tip="Selection weight for LEAD_CHANGE in the candidate pool. Default 0.70."
           />
           <SliderRow
-            label="COMEBACK-Gewicht"
+            label="COMEBACK weight"
             testId="regie-comeback-weight"
             min={0}
             max={1}
@@ -568,10 +568,10 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('comebackWeight', v);
             }}
             display={(config.comebackWeight ?? 0.6).toFixed(2)}
-            tip="Selektionsgewicht für COMEBACK_ZOOM im Kandidaten-Pool. Default 0.60."
+            tip="Selection weight for COMEBACK_ZOOM in the candidate pool. Default 0.60."
           />
           <SliderRow
-            label="OVERVIEW-Gewicht"
+            label="OVERVIEW weight"
             testId="regie-overview-weight"
             min={0}
             max={1}
@@ -582,10 +582,10 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('overviewWeight', v);
             }}
             display={(config.overviewWeight ?? 0.3).toFixed(2)}
-            tip="Selektionsgewicht für OVERVIEW im Kandidaten-Pool. Default 0.30."
+            tip="Selection weight for OVERVIEW in the candidate pool. Default 0.30."
           />
           <SliderRow
-            label="OVERVIEW-Cooldown (ms)"
+            label="OVERVIEW cooldown (ms)"
             testId="regie-overview-cooldown-ms"
             min={5000}
             max={60000}
@@ -596,10 +596,10 @@ function CameraAdvancedSection() {
               if (v >= 5000 && v <= 60000) set('overviewCooldownMs', v);
             }}
             display={`${((config.overviewCooldownMs ?? 15000) / 1000).toFixed(0)}s`}
-            tip="Mindest-Pause nach OVERVIEW bevor OVERVIEW erneut erscheinen darf. Default 15 s."
+            tip="Minimum pause after OVERVIEW before OVERVIEW may appear again. Default 15 s."
           />
           <SliderRow
-            label="OVERVIEW-Ziel-Anzahl"
+            label="OVERVIEW target count"
             testId="regie-overview-target-count"
             min={1}
             max={5}
@@ -610,10 +610,10 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('overviewTargetCount', v);
             }}
             display={`${config.overviewTargetCount ?? 2}`}
-            tip="Ziel-Anzahl von OVERVIEW-Schnitten pro Rennen. Default 2."
+            tip="Target number of OVERVIEW cuts per race. Default 2."
           />
           <SliderRow
-            label="OVERVIEW-Startverzögerung (s)"
+            label="OVERVIEW start delay (s)"
             testId="regie-overview-start-delay"
             min={5}
             max={30}
@@ -624,7 +624,7 @@ function CameraAdvancedSection() {
               if (v >= 5 && v <= 30) set('overviewStartDelay', v);
             }}
             display={`${config.overviewStartDelay ?? 15}s`}
-            tip="Sekunden nach Rennstart bevor OVERVIEW das erste Mal im Pool erscheinen darf. Default 15 s."
+            tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
         </div>
       </div>
@@ -633,11 +633,11 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>4 · LEAD_CHANGE</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Erkennt stabile Führungswechsel (Doppel-Hysterese: Abstand + Debounce).
+          Detects stable lead changes (double hysteresis: gap + debounce).
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
-            label="Min. Abstand (T-Space)"
+            label="Min. gap (T-space)"
             testId="lead-change-min-gap"
             min={0.001}
             max={0.01}
@@ -648,7 +648,7 @@ function CameraAdvancedSection() {
               if (v >= 0.001 && v <= 0.01) set('leadChangeMinGap', v);
             }}
             display={(config.leadChangeMinGap ?? 0.002).toFixed(3)}
-            tip="Mindest-T-Space-Abstand zwischen P1 und P2 für einen stabilen Führungslesewert. Default 0.002."
+            tip="Minimum T-space gap between P1 and P2 for a stable lead reading. Default 0.002."
           />
           <SliderRow
             label="Debounce (ms)"
@@ -662,10 +662,10 @@ function CameraAdvancedSection() {
               if (v >= 200 && v <= 2000) set('leadChangeDebounceMs', v);
             }}
             display={`${config.leadChangeDebounceMs ?? 800}ms`}
-            tip="Dauer in ms, die der neue Anführer halten muss bevor der Wechsel bestätigt wird. Default 800 ms."
+            tip="Duration in ms the new leader must hold before the change is confirmed. Default 800 ms."
           />
           <SliderRow
-            label="Min. Beobachtungsdauer (s)"
+            label="Min. observation duration (s)"
             testId="lead-change-min-duration"
             min={1}
             max={5}
@@ -676,7 +676,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('leadChangeMinDuration', v);
             }}
             display={`${(config.leadChangeMinDuration ?? 1.5).toFixed(1)}s`}
-            tip="Mindestdauer, die die Kamera nach LEAD_CHANGE-Eintritt auf dem neuen Anführer bleibt. Default 1.5 s."
+            tip="Minimum time the camera stays on the new leader after LEAD_CHANGE entry. Default 1.5 s."
           />
           <SliderRow
             label="LEAD_CHANGE-Cooldown (ms)"
@@ -690,7 +690,7 @@ function CameraAdvancedSection() {
               if (v >= 1000 && v <= 30000) set('leadChangeCooldownMs', v);
             }}
             display={`${((config.leadChangeCooldownMs ?? 5000) / 1000).toFixed(0)}s`}
-            tip="Mindest-Pause nach LEAD_CHANGE bevor erneutes Triggern möglich. Default 5 s."
+            tip="Minimum pause after LEAD_CHANGE before re-triggering is possible. Default 5 s."
           />
         </div>
       </div>
@@ -699,13 +699,13 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>5 · COMEBACK</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Erkennt B1-Racer (sollRank 1–5) die aktiv Plätze gutmachen. Benötigt Race Plan (nur
-          Open-Track ≥ 60 s). Outcome-Phase wird intern ab Leader-Progress-Schwelle aktiv,
-          unabhängig vom externen Flag aus RaceScreen.
+          Detects B1 racers (targetRank 1–5) actively gaining positions. Requires Race Plan (open
+          track ≥ 60 s only). Outcome phase activates internally above the leader-progress
+          threshold, independent of the external flag from RaceScreen.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
-            label="Min. Platzgewinn"
+            label="Min. positions gained"
             testId="comeback-min-positions"
             min={2}
             max={10}
@@ -716,10 +716,10 @@ function CameraAdvancedSection() {
               if (v >= 2 && v <= 10) set('comebackMinPositionsGained', v);
             }}
             display={`${config.comebackMinPositionsGained ?? 2}`}
-            tip="Mindest-Platzgewinn innerhalb des Zeitfensters um COMEBACK auszulösen. Default 2."
+            tip="Minimum positions gained within the time window to trigger COMEBACK. Default 2."
           />
           <SliderRow
-            label="Zeitfenster (s)"
+            label="Time window (s)"
             testId="comeback-window-sec"
             min={1}
             max={10}
@@ -730,10 +730,10 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 10) set('comebackWindowSec', v);
             }}
             display={`${(config.comebackWindowSec ?? 4).toFixed(1)}s`}
-            tip="Rückblick-Fenster für Rang-History. Platzgewinn = Rang vor N Sekunden minus aktueller Rang. Default 4 s."
+            tip="Look-back window for rank history. Positions gained = rank N seconds ago minus current rank. Default 4 s."
           />
           <SliderRow
-            label="Min. Beobachtungsdauer (s)"
+            label="Min. observation duration (s)"
             testId="comeback-min-duration"
             min={1}
             max={5}
@@ -744,7 +744,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('comebackMinDuration', v);
             }}
             display={`${(config.comebackMinDuration ?? 3).toFixed(1)}s`}
-            tip="Mindestdauer nach COMEBACK-Eintritt auf dem Comeback-Racer. Default 3 s."
+            tip="Minimum duration after COMEBACK entry on the comeback racer. Default 3 s."
           />
           <SliderRow
             label="COMEBACK-Cooldown (ms)"
@@ -758,10 +758,10 @@ function CameraAdvancedSection() {
               if (v >= 1000 && v <= 30000) set('comebackCooldownMs', v);
             }}
             display={`${((config.comebackCooldownMs ?? 10000) / 1000).toFixed(0)}s`}
-            tip="Mindest-Pause nach COMEBACK bevor erneutes Triggern möglich. Default 10 s."
+            tip="Minimum pause after COMEBACK before re-triggering is possible. Default 10 s."
           />
           <SliderRow
-            label="Outcome-Phase Schwelle"
+            label="Outcome phase threshold"
             testId="comeback-outcome-phase-threshold"
             min={0.5}
             max={0.95}
@@ -772,10 +772,10 @@ function CameraAdvancedSection() {
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
             }}
             display={`${((config.outcomePhaseThreshold ?? 0.75) * 100).toFixed(0)}%`}
-            tip="Leader-Fortschritt ab dem COMEBACK intern als aktiv gilt (unabhängig vom externen isOutcomePhase-Flag). Default 75%."
+            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 75%."
           />
           <SliderRow
-            label="Min. Ausgangsabstand (Start-Gap)"
+            label="Min. starting gap"
             testId="comeback-min-start-gap"
             min={0.1}
             max={0.9}
@@ -786,10 +786,10 @@ function CameraAdvancedSection() {
               if (v >= 0.1 && v <= 0.9) set('comebackMinStartGap', v);
             }}
             display={`${((config.comebackMinStartGap ?? 0.4) * 100).toFixed(0)}%`}
-            tip="Der Fahrer muss zu Beginn des Beobachtungsfensters mindestens diesen normierten Rückstand auf P1 gehabt haben (Feldanteil). 0.40 = muss in den hinteren 60% des Feldes gewesen sein. Default 40%."
+            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.40 = must have been in the back 60% of the field. Default 40%."
           />
           <SliderRow
-            label="Max. Aktueller Rang (Lead-Group-Filter)"
+            label="Max. current rank (lead-group filter)"
             testId="comeback-max-current-rank-pct"
             min={0.05}
             max={0.5}
@@ -800,7 +800,7 @@ function CameraAdvancedSection() {
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
             }}
             display={`${((config.comebackMaxCurrentRankPct ?? 0.1) * 100).toFixed(0)}%`}
-            tip="Fahrer darf beim Trigger-Zeitpunkt nicht besser als diesen normierten Rang haben. 0.10 = Top-10% ausgeschlossen (z.B. P1–P4 bei 40 Racern). Default 10%."
+            tip="Racer must not have a better normalised rank than this at trigger time. 0.10 = top 10% excluded (e.g. P1–P4 with 40 racers). Default 10%."
           />
         </div>
       </div>
@@ -809,12 +809,11 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>6 · BATTLE Slowmotion</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Verlangsamt die Physik (nicht die Kamera) während BATTLE_ZOOM. Nicht-BATTLE-Racer werden
-          abgedunkelt.
+          Slows physics (not the camera) during BATTLE_ZOOM. Non-BATTLE racers are dimmed.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
-            label="Slowmo-Faktor"
+            label="Slowmo factor"
             testId="battle-slowmo-factor"
             min={0.2}
             max={1.0}
@@ -825,10 +824,10 @@ function CameraAdvancedSection() {
               if (v >= 0.2 && v <= 1.0) set('battleSlowmoFactor', v);
             }}
             display={(config.battleSlowmoFactor ?? 0.5).toFixed(2)}
-            tip="Physik-Geschwindigkeit während BATTLE_ZOOM. 1.0 = normal, 0.5 = halb so schnell. Default 0.5."
+            tip="Physics speed during BATTLE_ZOOM. 1.0 = normal, 0.5 = half speed. Default 0.5."
           />
           <SliderRow
-            label="Mindest-Dauer (s)"
+            label="Min. duration (s)"
             testId="battle-slowmo-min-duration"
             min={1.0}
             max={5.0}
@@ -839,10 +838,10 @@ function CameraAdvancedSection() {
               if (v >= 1.0 && v <= 5.0) set('battleSlowmoMinDuration', v);
             }}
             display={`${(config.battleSlowmoMinDuration ?? 2.0).toFixed(1)}s`}
-            tip="Mindestdauer des Slowmo-Effekts nach Ende von BATTLE_ZOOM. Default 2.0s."
+            tip="Minimum duration of the slowmo effect after BATTLE_ZOOM ends. Default 2.0s."
           />
           <SliderRow
-            label="Fade-Dauer (s)"
+            label="Fade duration (s)"
             testId="battle-slowmo-fade-duration"
             min={0.0}
             max={1.0}
@@ -853,10 +852,10 @@ function CameraAdvancedSection() {
               if (v >= 0.0 && v <= 1.0) set('battleSlowmoFadeDuration', v);
             }}
             display={`${(config.battleSlowmoFadeDuration ?? 0.3).toFixed(2)}s`}
-            tip="Dauer des Ein- und Ausblendens des Slowmo-Effekts. 0 = sofortiger Wechsel. Default 0.3s."
+            tip="Duration of slowmo effect fade-in and fade-out. 0 = instant switch. Default 0.3s."
           />
           <SliderRow
-            label="Fokus-Abdunkelung"
+            label="Focus darkening"
             testId="battle-focus-darkening"
             min={0.0}
             max={1.0}
@@ -867,7 +866,7 @@ function CameraAdvancedSection() {
               if (v >= 0.0 && v <= 1.0) set('battleFocusDarkening', v);
             }}
             display={(config.battleFocusDarkening ?? 0.4).toFixed(2)}
-            tip="Abdunkelung der Nicht-BATTLE-Racer. 0 = kein Effekt, 1 = komplett schwarz. Default 0.4."
+            tip="Dimming of non-BATTLE racers. 0 = no effect, 1 = completely black. Default 0.4."
           />
         </div>
       </div>
@@ -883,7 +882,7 @@ function CameraAdvancedSection() {
             >
               Endgame Focus Threshold
               <InfoTooltip
-                text={`Ab diesem Leader-Fortschritt erzwingt die Kamera LEADER_ZOOM (außer bei LEAD_CHANGE). Aktuell: ${((config.endgameThreshold ?? 0.9) * 100).toFixed(0)}%.`}
+                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? 0.9) * 100).toFixed(0)}%.`}
               />
             </label>
             <input
@@ -906,8 +905,8 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>8 · Finish</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Nach erster Zieldurchfahrt: Drama-Pulse auf Leader → sanfter FINISH_OVERVIEW Zoom-Out bis
-          letzter Fahrer im Ziel → Pause → Leaderboard.
+          After first finish crossing: drama pulse on leader → smooth FINISH_OVERVIEW zoom-out until
+          the last racer finishes → pause → leaderboard.
         </p>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -915,9 +914,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Drama-Pulse Dauer (ms)
+              Drama pulse duration (ms)
               <InfoTooltip
-                text={`Dauer des LEADER_ZOOM-Pulses beim ersten Zieldurchlauf bevor FINISH_OVERVIEW beginnt. Aktuell: ${config.finishDramaDurationMs ?? 1500}ms.`}
+                text={`Duration of the LEADER_ZOOM pulse at the first finish crossing before FINISH_OVERVIEW begins. Currently: ${config.finishDramaDurationMs ?? 1500}ms.`}
               />
             </label>
             <input
@@ -938,9 +937,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Zoom-Out Dauer (ms)
+              Zoom-out duration (ms)
               <InfoTooltip
-                text={`Zieldauer für den sanften Zoom-Out auf OVERVIEW-Niveau nach dem Drama-Pulse. Aktuell: ${config.finishOverviewZoomOutDurationMs ?? 3000}ms.`}
+                text={`Target duration for the smooth zoom-out to OVERVIEW level after the drama pulse. Currently: ${config.finishOverviewZoomOutDurationMs ?? 3000}ms.`}
               />
             </label>
             <input
@@ -961,9 +960,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Pause vor Leaderboard (ms)
+              Pause before leaderboard (ms)
               <InfoTooltip
-                text={`Pause nach letztem Zieleinlauf bevor das Leaderboard erscheint. Aktuell: ${config.finishPauseMs ?? 2500}ms.`}
+                text={`Pause after last finisher before the leaderboard appears. Currently: ${config.finishPauseMs ?? 2500}ms.`}
               />
             </label>
             <input
@@ -984,21 +983,7 @@ function CameraAdvancedSection() {
           style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}
         >
           <SliderRow
-            label="Pan-Blend Richtung Ziel"
-            testId="finish-overview-pan-blend"
-            min={0}
-            max={1}
-            step={0.05}
-            value={config.finishOverviewPanBlend ?? 0.5}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (v >= 0 && v <= 1) set('finishOverviewPanBlend', v);
-            }}
-            display={(config.finishOverviewPanBlend ?? 0.5).toFixed(2)}
-            tip="FINISH_OVERVIEW: Kamera schwenkt von Leader Richtung Ziellinie. 0 = Leader zentriert (kein Schwenk), 0.5 = Kameramitte auf halbem Weg (Leader am Bildrand), 1 = Ziellinie zentriert. Default 0.5."
-          />
-          <SliderRow
-            label="Lookback vor Ziel (px)"
+            label="Lookback before finish (px)"
             testId="finish-overview-lookback"
             min={0}
             max={1000}
@@ -1009,7 +994,7 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1000) set('finishOverviewLookbackPx', v);
             }}
             display={String(config.finishOverviewLookbackPx ?? 300)}
-            tip="FINISH_OVERVIEW: Wie weit vor der Ziellinie (in Weltpixeln) das Kameraziel liegt. 0 = zentriert auf Ziellinie, 300 = 300 px vor dem Ziel (streckenunabhängig). Default 300."
+            tip="FINISH_OVERVIEW: How far before the finish line (in world pixels) the camera target sits. 0 = centred on finish line, 300 = 300 px before the finish (track-independent). Default 300."
           />
         </div>
       </div>
@@ -1017,11 +1002,11 @@ function CameraAdvancedSection() {
       {/* ── 9. Zoom-Profile pro State ── */}
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <SectionHeading>9 · Zoom-Profile pro State</SectionHeading>
+          <SectionHeading>9 · Zoom Profiles per State</SectionHeading>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Pro State: Sprite-Größe, Lerp-Zeitkonstanten, Lead-in/out-Dauer, Framing und Zeitgrenzen.
-          Accordion aufklappen zum Anpassen.
+          Per state: sprite size, lerp time constants, lead-in/out duration, framing, and time
+          limits. Expand the accordion to adjust.
         </p>
         {CAM_STATES_FOR_PROFILES.map((stateName) => (
           <StateProfileBlock
@@ -1037,7 +1022,7 @@ function CameraAdvancedSection() {
 
       {/* ── 10. Globale Konvergenzschwellen ── */}
       <div className={s.card}>
-        <SectionHeading>10 · Globale Konvergenzschwellen</SectionHeading>
+        <SectionHeading>10 · Global Convergence Thresholds</SectionHeading>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -1046,7 +1031,7 @@ function CameraAdvancedSection() {
             >
               Convergence Zoom Threshold
               <InfoTooltip
-                text={`Entry→Tracking wenn Zoom-Delta unter diesen Wert fällt. Aktuell: ${config.entryConvergenceZoom ?? 0.05}.`}
+                text={`Entry→Tracking when zoom delta falls below this value. Currently: ${config.entryConvergenceZoom ?? 0.05}.`}
               />
             </label>
             <input
@@ -1069,7 +1054,7 @@ function CameraAdvancedSection() {
             >
               Convergence Px Threshold
               <InfoTooltip
-                text={`Entry→Tracking wenn Offset-Delta unter diesen Pixelwert fällt. Aktuell: ${config.entryConvergencePx ?? 10}px.`}
+                text={`Entry→Tracking when offset delta falls below this pixel value. Currently: ${config.entryConvergencePx ?? 10}px.`}
               />
             </label>
             <input
@@ -1092,7 +1077,7 @@ function CameraAdvancedSection() {
             >
               T-Space Convergence Threshold
               <InfoTooltip
-                text={`Entry→Tracking wenn |camT − targetT| unter diesen Wert fällt (Track-Param-Einheiten). Steady-state-Gap ≈ 0.026; Schwelle muss darüber liegen. Aktuell: ${(config.transitionTConvergence ?? 0.03).toFixed(3)}.`}
+                text={`Entry→Tracking when |camT − targetT| falls below this value (track-parameter units). Steady-state gap ≈ 0.026; threshold must be above that. Currently: ${(config.transitionTConvergence ?? 0.03).toFixed(3)}.`}
               />
             </label>
             <input
@@ -1113,7 +1098,7 @@ function CameraAdvancedSection() {
 
       {/* ── Diagnose & Sichtbarkeit ── */}
       <div className={s.card}>
-        <SectionHeading>Diagnose &amp; Sichtbarkeit</SectionHeading>
+        <SectionHeading>Diagnostics &amp; Visibility</SectionHeading>
 
         {/* State overlay */}
         <div style={{ marginBottom: '0.75rem' }}>
@@ -1133,13 +1118,13 @@ function CameraAdvancedSection() {
               checked={config.stateOverlayEnabled ?? true}
               onChange={(e) => set('stateOverlayEnabled', e.target.checked)}
             />
-            <span style={{ fontWeight: 600 }}>Einblende-Texte aktivieren</span>
-            <InfoTooltip text="Blendet kurze Texte (z.B. 'Aktuell führt Max') beim Eintritt in OVERVIEW, BATTLE und COMEBACK ein." />
+            <span style={{ fontWeight: 600 }}>Enable overlay texts</span>
+            <InfoTooltip text="Shows short overlay texts (e.g. 'Currently leading: Max') on entry into OVERVIEW, BATTLE and COMEBACK." />
           </label>
           <label
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
           >
-            <span style={{ minWidth: '10rem' }}>Einblende-Dauer (ms)</span>
+            <span style={{ minWidth: '10rem' }}>Overlay duration (ms)</span>
             <input
               type="number"
               data-testid="state-overlay-duration"
@@ -1153,7 +1138,7 @@ function CameraAdvancedSection() {
               }}
               style={{ width: '5rem' }}
             />
-            <InfoTooltip text="Dauer in ms, wie lange der Einblende-Text sichtbar bleibt. Default: 3500 ms." />
+            <InfoTooltip text="Duration in ms the overlay text remains visible. Default: 3500 ms." />
           </label>
         </div>
 
@@ -1163,67 +1148,67 @@ function CameraAdvancedSection() {
             key: 'showCameraStateHud',
             testId: 'cam-hud-toggle',
             label: 'Show camera state HUD',
-            tip: 'Zeigt den Kamera-State-Indikator (OVERVIEW / BATTLE / etc.) oben links im Renn-Canvas.',
+            tip: 'Shows the camera state indicator (OVERVIEW / BATTLE / etc.) in the top-left of the race canvas.',
           },
           {
             key: 'showCameraDiagnostics',
             testId: 'cam-diagnostics-toggle',
             label: 'Show camera diagnostics',
-            tip: 'Diagnostik-Panel unten links: live zoom-Werte. Loggt State-Transitions in die Browser-Konsole.',
+            tip: 'Diagnostics panel bottom-left: live zoom values. Logs state transitions to the browser console.',
           },
           {
             key: 'showRpDiag',
             testId: 'rp-diag-toggle',
             label: 'Show Race Plan diagnostics',
-            tip: 'Race-Plan-Diagnose-Panel oben rechts: Phase, Re-Roll-Status, spreadFactor. Nur wenn Race Plan aktiv.',
+            tip: 'Race plan diagnostics panel top-right: phase, re-roll status, spreadFactor. Only when Race Plan is active.',
           },
           {
             key: 'showRpWinnerList',
             testId: 'rp-winner-list-toggle',
             label: 'Show B1 Winner List',
-            tip: 'Zeigt die 5 Race-Plan-Favoriten (sollRank 1–5) mit aktuellem Rang und Delta.',
+            tip: 'Shows the 5 race-plan favourites (targetRank 1–5) with current rank and delta.',
           },
           {
             key: 'showRpMinimapBadges',
             testId: 'rp-minimap-badges-toggle',
             label: 'Show Minimap Badges',
-            tip: 'Markiert die 5 Race-Plan-Favoriten in der Minimap mit einem goldenen Ring.',
+            tip: 'Marks the 5 race-plan favourites in the minimap with a gold ring.',
           },
           {
             key: 'showRpStartRow',
             testId: 'rp-startrow-toggle',
             label: 'Show Start-Row in Name Tags',
-            tip: "Hängt die Startreihe an den Namen-Tag an (z.B. 'Max (R2)').",
+            tip: "Appends the start row to the name tag (e.g. 'Max (R2)').",
           },
           {
             key: 'showTop10SpeedMonitor',
             testId: 'top10-speed-monitor-toggle',
             label: 'Show Top-10 Speed Monitor',
-            tip: 'Zeigt trajectoryMult-Werte der Top-10 Fahrer. Warnsymbol bei Oszillation.',
+            tip: 'Shows trajectoryMult values for the top-10 racers. Warning indicator on oscillation.',
           },
           {
             key: 'enableFrameLog',
             testId: 'cam-frame-log-toggle',
             label: 'Enable frame log',
-            tip: 'Aktiviert den Per-Frame-Kamera-Ringpuffer. Export-Button erscheint auf dem Race-Screen.',
+            tip: 'Enables the per-frame camera ring buffer. An export button appears on the race screen.',
           },
           {
             key: 'showBattleDiag',
             testId: 'battle-diag-toggle',
             label: 'Show BATTLE diagnostics',
-            tip: 'BATTLE-Status, beteiligte Racer und Pulk-Validität live im Canvas.',
+            tip: 'BATTLE status, involved racers, and pulk validity live in the canvas.',
           },
           {
             key: 'showComebackDiag',
             testId: 'comeback-diag-toggle',
             label: 'Show COMEBACK diagnostics',
-            tip: 'OUTCOME-Phase, B1-Racer mit Rang-Gewinn und aktiv gesperrter Comeback-Racer.',
+            tip: 'OUTCOME phase, B1 racers with rank gain, and the actively locked comeback racer.',
           },
           {
             key: 'showLeadChangeDiag',
             testId: 'lead-change-diag-toggle',
             label: 'Show LEAD_CHANGE diagnostics',
-            tip: 'Aktueller und vorheriger Anführer, Pending-Status, minGap und Debounce.',
+            tip: 'Current and previous leader, pending status, minGap and debounce.',
           },
         ].map(({ key, testId, label, tip }) => (
           <label

@@ -96,7 +96,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.05,
+
     battlePulkThresholdPx: 200,
     battleMinDurationMs: 3000,
     endgameThreshold: 0.85,
@@ -124,7 +124,7 @@ function freshConfig(overrides = {}) {
     maxTargetScreenPx: 160,
     tagVisibleMaxCount: 10,
     showCameraStateHud: true,
-    battleGapThreshold: 0.05,
+
     battlePulkThresholdPx: 200,
     battleMinDurationMs: 3000,
     endgameThreshold: 0.85,

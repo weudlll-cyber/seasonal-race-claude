@@ -219,11 +219,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
-  battleGapThreshold: 0.05,
   endgameThreshold: 0.9,
   // Pulk condition: BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance.
-  // Replaces the old battleGapThreshold (arc-length fraction) — pixel distance is tunable in Dev Panel.
   battlePulkThresholdPx: 200,
+  // Temporal threshold: maximum |t_i − t_j| between any pair of group members (track-parameter units).
+  battlePulkThresholdT: 0.12,
   // Isolation threshold: no non-group racer may be closer than this to any group member.
   // 0 = disabled (default). Suggested value: 1.5 × battlePulkThresholdPx = 300.
   battleIsolationThresholdPx: 300,
@@ -276,7 +276,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  // Regie (weighted random director) — candidate pool weights (0.0–1.0)
+  // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,
   comebackWeight: 0.6,
@@ -288,7 +288,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
   finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
-  finishOverviewPanBlend: 0.5, // 0 = camera centered on leader, 1 = centered on finish line
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)

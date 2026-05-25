@@ -803,7 +803,6 @@ const pctConfig = {
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
-  battleGapThreshold: 0.05,
   maxStateDuration: 8000,
   endgameThreshold: 0.85,
 };
@@ -918,7 +917,6 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   it('maxStateDuration=4000 allows transition after 4s (not 8s)', () => {
     const cfg = {
       ...pctConfig,
-      battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
     };
@@ -984,7 +982,6 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
   it('maxStateDuration in config overrides fallback: no transition before new duration', () => {
     const cfg = {
       ...pctConfig,
-      battleGapThreshold: 0.1,
       maxStateDuration: 6000,
       endgameThreshold: 0.85,
     };
@@ -1290,7 +1287,7 @@ describe('CameraDirector — D5: per-state transition constants', () => {
 
 // ── CameraDirector — D5: overviewCooldown jitter ─────────────────────────────
 
-describe('CameraDirector — D5: Regie OVERVIEW Scheduler', () => {
+describe('CameraDirector — D5: Director OVERVIEW Scheduler', () => {
   it('_overviewCooldownMs initializes to default 15000', () => {
     const cd = new CameraDirector();
     expect(cd._overviewCooldownMs).toBe(15000);
@@ -1440,7 +1437,6 @@ const inverseConfig = {
   maxTargetScreenPx: 160,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
-  battleGapThreshold: 0.1,
   maxStateDuration: 4000,
   endgameThreshold: 0.85,
 };
@@ -1868,7 +1864,6 @@ const profileConfig = {
   },
   entryConvergenceZoom: 0.05,
   entryConvergencePx: 10,
-  battleGapThreshold: 0.05,
   endgameThreshold: 0.85,
   postStartHoldMs: 7000,
   battleCooldownMs: 8000,
@@ -3035,9 +3030,9 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
   });
 });
 
-// ── Etappe 13: Pulk-Bedingung für BATTLE_ZOOM ─────────────────────────────────
+// ── Stage 13: Pulk condition for BATTLE_ZOOM ──────────────────────────────────
 
-describe('CameraDirector — Etappe 13: Pulk-Bedingung für BATTLE_ZOOM', () => {
+describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   // ── _isPulk unit tests ────────────────────────────────────────────────────
 
   it('_isPulk: < 3 racers → false', () => {
@@ -3490,45 +3485,6 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
     expect(cd._camT).not.toBeCloseTo(leader.t, 2);
   });
 
-  // ── _isEntryGroupStillValid ───────────────────────────────────────────────
-
-  it('_isEntryGroupStillValid: true when group still meets all 3 conditions', () => {
-    const cd = new CameraDirector();
-    const leader1 = { x: 9000, y: 300, t: 0.7 };
-    const leader2 = { x: 8500, y: 300, t: 0.65 };
-    const r0 = { x: 500, y: 300, t: 0.5 }; // rank 3
-    const r1 = { x: 515, y: 300, t: 0.48 }; // rank 4
-    const r2 = { x: 530, y: 300, t: 0.46 }; // rank 5
-    cd._battleGroupRacers = [r0, r1, r2];
-    expect(cd._isEntryGroupStillValid([leader1, leader2, r0, r1, r2])).toBe(true);
-  });
-
-  it('_isEntryGroupStillValid: false when rank span exceeded (overtakers push group members apart)', () => {
-    const cd = new CameraDirector();
-    const leader1 = { x: 9000, y: 300, t: 0.7 };
-    const leader2 = { x: 8500, y: 300, t: 0.65 };
-    const r0 = { x: 500, y: 300, t: 0.5 }; // rank 3
-    const r1 = { x: 515, y: 300, t: 0.48 }; // rank 4
-    // 3 overtakers push r2 from rank 5 to rank 8 → span index 2→7 = 5 > 3
-    const ov1 = { x: 5000, y: 300, t: 0.47 };
-    const ov2 = { x: 5000, y: 300, t: 0.46 };
-    const ov3 = { x: 5000, y: 300, t: 0.45 };
-    const r2 = { x: 530, y: 300, t: 0.44 }; // now rank 8
-    cd._battleGroupRacers = [r0, r1, r2];
-    expect(cd._isEntryGroupStillValid([leader1, leader2, r0, r1, ov1, ov2, ov3, r2])).toBe(false);
-  });
-
-  it('_isEntryGroupStillValid: false when temporal condition broken (racer fell far behind)', () => {
-    const cd = new CameraDirector();
-    const leader1 = { x: 9000, y: 300, t: 0.7 };
-    const leader2 = { x: 8500, y: 300, t: 0.65 };
-    const r0 = { x: 500, y: 300, t: 0.5 }; // rank 3
-    const r1 = { x: 515, y: 300, t: 0.48 }; // rank 4
-    const r2 = { x: 530, y: 300, t: 0.3 }; // rank 5 but |r0.t − r2.t| = 0.2 > 0.12
-    cd._battleGroupRacers = [r0, r1, r2];
-    expect(cd._isEntryGroupStillValid([leader1, leader2, r0, r1, r2])).toBe(false);
-  });
-
   // ── getBattleDiagData extended fields ────────────────────────────────────
 
   it('getBattleDiagData: groupRacerRanks, originalGroupValid, currentGroupRacers present', () => {
@@ -3907,7 +3863,7 @@ describe('CameraDirector — convergence-jump fix', () => {
   });
 });
 
-// ── Lead-in → follow observer phase snap fix (Phänomen 4) ────────────────────
+// ── Lead-in → follow observer phase snap fix (Phenomenon 4) ─────────────────
 //
 // When the lead-in phase ends (elapsed >= leadInDuration), the old code fell
 // through to the follow branch which executed `this._camT = focusT`, snapping
@@ -3918,7 +3874,7 @@ describe('CameraDirector — convergence-jump fix', () => {
 // pixel-lerp closes the gap smoothly from frame N+2 onward — analogous to
 // the PR #109 convergence-frame fix in the entry → tracking path.
 
-describe('CameraDirector — lead-in → follow snap fix (Phänomen 4)', () => {
+describe('CameraDirector — lead-in → follow snap fix (Phenomenon 4)', () => {
   // Curved open track: y = 360 + 500*sin(30π*t).
   // At t≈0.5 the sine term changes rapidly (~47 000 px/unit-T), so a 0.03T
   // gap between the lead-ahead anchor and the racer produces ~60 px of Y
@@ -4024,7 +3980,7 @@ describe('CameraDirector — lead-in → follow snap fix (Phänomen 4)', () => {
   });
 });
 
-// ── Lead-out toggle (Phänomen: Kamera bleibt stehen, Racer läuft weiter) ─────
+// ── Lead-out toggle (Phenomenon: camera freezes while racer keeps moving) ─────
 //
 // leadOutEnabled: false → trigger block is bypassed; _observerPhase stays
 //   'follow' until the state transition — camera continues tracking the racer.
@@ -4665,7 +4621,7 @@ describe('CameraDirector — Q4: centroid camera', () => {
   });
 });
 
-// ── BATTLE Pulk-Qualität: Problem A/B/C fixes ─────────────────────────────────
+// ── BATTLE Pulk quality: Problem A/B/C fixes ──────────────────────────────────
 
 describe('CameraDirector — BATTLE Pulk quality (rank-span, minTopN, P2-drift)', () => {
   // ── Problem B: battleMaxGroupRankSpan ────────────────────────────────────────
@@ -5086,16 +5042,6 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, CANVAS_W, CANVAS_H);
     return racers;
   }
-
-  it('config round-trip: finishOverviewPanBlend is stored from config', () => {
-    const cd = new CameraDirector(1280, 720, false, { finishOverviewPanBlend: 0.75 });
-    expect(cd._finishOverviewPanBlend).toBe(0.75);
-  });
-
-  it('config round-trip: finishOverviewPanBlend defaults to 0.5', () => {
-    const cd = new CameraDirector();
-    expect(cd._finishOverviewPanBlend).toBe(0.5);
-  });
 
   it('config round-trip: finishOverviewLookbackPx is stored from config', () => {
     const cd = new CameraDirector(1280, 720, false, { finishOverviewLookbackPx: 450 });

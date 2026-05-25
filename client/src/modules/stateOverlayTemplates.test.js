@@ -11,19 +11,19 @@ import {
 
 describe('hasAllVars', () => {
   it('returns true when all placeholders are provided', () => {
-    expect(hasAllVars('Aktuell führt {leader}', { leader: 'Max' })).toBe(true);
+    expect(hasAllVars('Currently leading: {leader}', { leader: 'Max' })).toBe(true);
   });
 
   it('returns false when a placeholder is missing', () => {
-    expect(hasAllVars('{count} Racer auf Platz {position}', { count: 3 })).toBe(false);
+    expect(hasAllVars('{count} racers at position {position}', { count: 3 })).toBe(false);
   });
 
   it('returns true for template with no placeholders', () => {
-    expect(hasAllVars('Heißes Rennen!', {})).toBe(true);
+    expect(hasAllVars('Close race!', {})).toBe(true);
   });
 
   it('returns false when variable is present but empty string', () => {
-    expect(hasAllVars('{leader} an der Spitze', { leader: '' })).toBe(false);
+    expect(hasAllVars('{leader} out in front', { leader: '' })).toBe(false);
   });
 });
 
@@ -31,17 +31,17 @@ describe('hasAllVars', () => {
 
 describe('resolveTemplate', () => {
   it('replaces all placeholders with variable values', () => {
-    expect(resolveTemplate('{count} Racer auf Platz {position}', { count: 4, position: 2 })).toBe(
-      '4 Racer auf Platz 2'
-    );
+    expect(
+      resolveTemplate('{count} racers at position {position}', { count: 4, position: 2 })
+    ).toBe('4 racers at position 2');
   });
 
   it('leaves unknown placeholders intact', () => {
-    expect(resolveTemplate('Hallo {unknown}', {})).toBe('Hallo {unknown}');
+    expect(resolveTemplate('Hello {unknown}', {})).toBe('Hello {unknown}');
   });
 
   it('converts numbers to strings', () => {
-    expect(resolveTemplate('Platz {position}', { position: 1 })).toBe('Platz 1');
+    expect(resolveTemplate('Position {position}', { position: 1 })).toBe('Position 1');
   });
 });
 

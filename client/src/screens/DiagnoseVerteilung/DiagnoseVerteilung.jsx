@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Description: Hidden diagnostic route /diagnose-verteilung.
 //              Runs 50 headless race simulations and reports the empirical
-//              distribution of "racers nebeneinander" after 4 seconds RACING time.
+//              distribution of "racers side by side" after 4 seconds RACING time.
 //              Part of Phase-1 inventory measurement (feature/priority-system).
 //              Internal diagnose tool — accessible only via direct URL. Not linked
 //              from main UI. Intentionally kept; do not delete.
@@ -67,7 +67,7 @@ function AsciiHistogram({ histogram, nRuns }) {
         overflowX: 'auto',
       }}
     >
-      {`MAX_NACHBARN-Histogramm (${nRuns} Rennen)\n` + lines.join('\n')}
+      {`MAX_NEIGHBOURS histogram (${nRuns} races)\n` + lines.join('\n')}
     </pre>
   );
 }
@@ -181,10 +181,10 @@ export default function DiagnoseVerteilung() {
       }}
     >
       <h1 style={{ fontSize: '1.4rem', marginBottom: '0.25rem', color: '#e6edf3' }}>
-        Empirische Verteilungs-Messung
+        Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} Racer · dirt-oval · {N_RUNS} Rennen à 4s RACING-Zeit
+        /diagnose-verteilung · {N_RACERS} racers · dirt-oval · {N_RUNS} races × 4s RACING time
       </p>
 
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -202,7 +202,7 @@ export default function DiagnoseVerteilung() {
             fontSize: '0.9rem',
           }}
         >
-          {status === 'running' ? `Läuft… ${progress}/${N_RUNS}` : 'Run 50 Tests'}
+          {status === 'running' ? `Running… ${progress}/${N_RUNS}` : 'Run 50 Tests'}
         </button>
         <button
           onClick={handleExport}
@@ -235,7 +235,7 @@ export default function DiagnoseVerteilung() {
             />
           </div>
           <p style={{ fontSize: '0.8rem', color: '#8b949e', marginTop: '0.4rem' }}>
-            Simuliere… {progress}/{N_RUNS}
+            Simulating… {progress}/{N_RUNS}
           </p>
         </div>
       )}
@@ -244,24 +244,24 @@ export default function DiagnoseVerteilung() {
         <>
           <div style={card}>
             <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: '#e6edf3' }}>
-              Aggregat-Tabelle ({results.nRuns} Rennen)
+              Aggregate table ({results.nRuns} races)
             </h2>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <tbody>
                 {[
-                  ['MAX_NACHBARN — Mittelwert über 50 Rennen', results.maxMean.toFixed(2)],
-                  ['MAX_NACHBARN — Median', results.maxMedian.toFixed(1)],
-                  ['MAX_NACHBARN — 95-Perzentil', results.max95],
-                  ['MAX_NACHBARN — höchster Einzelwert', results.maxMax],
-                  ['MEAN_NACHBARN — Mittelwert über 50 Rennen', results.meanMean.toFixed(2)],
-                  ['Anzahl Racer mit >5 Nachbarn — Mittelwert', results.withManyMean.toFixed(2)],
+                  ['MAX_NEIGHBOURS — mean over 50 races', results.maxMean.toFixed(2)],
+                  ['MAX_NEIGHBOURS — median', results.maxMedian.toFixed(1)],
+                  ['MAX_NEIGHBOURS — 95th percentile', results.max95],
+                  ['MAX_NEIGHBOURS — highest single value', results.maxMax],
+                  ['MEAN_NEIGHBOURS — mean over 50 races', results.meanMean.toFixed(2)],
+                  ['Racers with >5 neighbours — mean', results.withManyMean.toFixed(2)],
                   [
-                    'Rennen mit ≥1 Racer mit >5 Nachbarn',
+                    'Races with ≥1 racer with >5 neighbours',
                     `${results.runsWithAny}/${results.nRuns}`,
                   ],
-                  ['Anzahl Racer ohne Nachbarn — Mittelwert', results.withNoneMean.toFixed(2)],
-                  ['Standardabweichung MAX_NACHBARN', results.maxStddev.toFixed(2)],
-                  ['spriteLengthInT (Nachbar-Schwelle |Δt|<)', results.spriteLengthInT],
+                  ['Racers with no neighbours — mean', results.withNoneMean.toFixed(2)],
+                  ['Standard deviation MAX_NEIGHBOURS', results.maxStddev.toFixed(2)],
+                  ['spriteLengthInT (neighbour threshold |Δt|<)', results.spriteLengthInT],
                 ].map(([k, v]) => (
                   <tr key={k} style={{ borderBottom: '1px solid #21262d' }}>
                     <td style={{ padding: '0.45rem 0.5rem', fontWeight: 600, color: '#58a6ff' }}>
@@ -278,20 +278,20 @@ export default function DiagnoseVerteilung() {
 
           <div style={card}>
             <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: '#e6edf3' }}>
-              Ein-Satz-Aussage
+              One-line summary
             </h2>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-              In {results.nRuns} Rennen mit {N_RACERS} Racern auf dirt-oval beträgt nach 4 Sekunden
-              die maximale Anzahl Nachbarn nebeneinander im Mittel{' '}
-              <strong style={{ color: '#58a6ff' }}>{results.maxMean.toFixed(1)}</strong>, im Maximum{' '}
-              <strong style={{ color: '#f85149' }}>{results.maxMax}</strong>, in 95% der Rennen
-              höchstens <strong style={{ color: '#3fb950' }}>{results.max95}</strong>.
+              In {results.nRuns} races with {N_RACERS} racers on dirt-oval, after 4 seconds the
+              maximum number of side-by-side neighbours is on average{' '}
+              <strong style={{ color: '#58a6ff' }}>{results.maxMean.toFixed(1)}</strong>, at most{' '}
+              <strong style={{ color: '#f85149' }}>{results.maxMax}</strong>, and in 95% of races no
+              more than <strong style={{ color: '#3fb950' }}>{results.max95}</strong>.
             </p>
           </div>
 
           <div style={card}>
             <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: '#e6edf3' }}>
-              Histogramm
+              Histogram
             </h2>
             <AsciiHistogram histogram={results.histogram} nRuns={results.nRuns} />
           </div>
@@ -302,15 +302,15 @@ export default function DiagnoseVerteilung() {
             </h2>
             <p style={{ fontSize: '0.85rem', lineHeight: 1.6 }}>
               {results.maxMean >= 6
-                ? '⚠️  Hohe Dichte — im Schnitt mehr als 6 Racer nebeneinander. Anti-Kollisions-Logik ist kritisch.'
+                ? '⚠️  High density — on average more than 6 racers side by side. Anti-collision logic is critical.'
                 : results.maxMean >= 3
-                  ? '⚡ Mittlere Dichte — Kollisionen treten regelmäßig auf. Priority-System adressiert die häufigsten Fälle.'
-                  : '✅ Niedrige Dichte — wenige simultane Nachbarn. Priority-System ist präventive Maßnahme.'}{' '}
-              Kritische Schwelle ({'>'}5 Nachbarn) in{' '}
+                  ? '⚡ Medium density — collisions occur regularly. Priority system addresses the most common cases.'
+                  : '✅ Low density — few simultaneous neighbours. Priority system is a preventive measure.'}{' '}
+              Critical threshold ({'>'} 5 neighbours) in{' '}
               <strong>
                 {results.runsWithAny}/{results.nRuns}
               </strong>{' '}
-              Rennen.
+              races.
             </p>
           </div>
         </>

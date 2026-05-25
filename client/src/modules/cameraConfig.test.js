@@ -58,7 +58,6 @@ describe('loadCameraConfig', () => {
         battle: 0.12,
         comeback: 0.065,
       },
-      battleGapThreshold: 0.1,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
       tagVisibleMaxCount: 10,
