@@ -125,7 +125,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 14,
+  schemaVersion: 15,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -276,6 +276,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
+  overviewClosedTrackZoom: 1.3, // zoom multiplier for OVERVIEW pan on closed tracks (1.0 = no pan room)
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,

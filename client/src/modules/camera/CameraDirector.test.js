@@ -137,13 +137,13 @@ describe('CameraDirector', () => {
     expect(isFinite(r.offsetY)).toBe(true);
   });
 
-  it('OVERVIEW state converges to zoom≈1, offset≈0 (1280px world)', () => {
+  it('OVERVIEW state converges to zoom≈1.3, pans to leader (1280px world, closed track)', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.zoom).toBeCloseTo(1, 1);
-    expect(Math.abs(cd.offsetX)).toBeLessThan(5);
-    expect(Math.abs(cd.offsetY)).toBeLessThan(5);
+    expect(cd.zoom).toBeCloseTo(1.3, 1);
+    expect(isFinite(cd.offsetX)).toBe(true);
+    expect(isFinite(cd.offsetY)).toBe(true);
   });
 
   it('OVERVIEW on 6000px world: targetZoom = overviewZoom ≈ 0.213, not 1', () => {
@@ -595,10 +595,10 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('Start-Pulk OVERVIEW pan: closed track maintains zoom=1, does not crash with full-field or top-3 input', () => {
+  it('Start-Pulk OVERVIEW pan: closed track maintains zoom=1.3, does not crash with full-field or top-3 input', () => {
     // Full-field centroid behavior is tested in panTarget.test.js.
     // Here we verify CameraDirector plumbs the correct racer set without crashing,
-    // and that OVERVIEW on a closed track always keeps cam.zoom=1.
+    // and that OVERVIEW on a closed track always keeps cam.zoom=1.3 (overviewClosedTrackZoom).
     const cd = new CameraDirector(1280, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
@@ -611,14 +611,14 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     ];
     const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, startRs, 1280, 720);
-    expect(cd.targetZoom).toBe(1); // OVERVIEW: closed track → cam.zoom=1
+    expect(cd.targetZoom).toBe(1.3); // OVERVIEW: closed track → cam.zoom=1.3 (overviewClosedTrackZoom)
     expect(isFinite(cd.targetOffsetX)).toBe(true);
 
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, midRs, 1280, 720);
-    expect(cd.targetZoom).toBe(1);
+    expect(cd.targetZoom).toBe(1.3);
     expect(isFinite(cd.targetOffsetX)).toBe(true);
   });
 });
@@ -711,12 +711,12 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
-  it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = 1, not overviewZoom', () => {
+  it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = 1.3 (overviewClosedTrackZoom), not overviewZoom', () => {
     const cd = new CameraDirector(1536, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000; // prevents transition
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.targetZoom).toBe(1);
+    expect(cd.targetZoom).toBe(1.3);
     expect(cd.targetZoom).not.toBeCloseTo(1280 / 1536, 2); // must NOT be 0.833
   });
 

@@ -54,6 +54,9 @@
 //              (relative factor) in all cameraStateProfiles. zoom = spriteScale / bsX (closed) or
 //              spriteScale / OPEN_BASE (open) — referenceSpriteSize cancels out, making the zoom
 //              racer-count-independent (L82). v13→v14 migration: spriteScale = spritePx / 36.
+//              Schema v15 (2026-05-26): adds overviewClosedTrackZoom (default 1.3) — zoom multiplier
+//              that gives the OVERVIEW camera pan room on closed tracks (mirrors OPEN_TRACK_BASE_ZOOM).
+//              v14→v15 migration injects the field at its default.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -322,6 +325,16 @@ function migrateV6toV7(config) {
   return { ...config, cameraStateProfiles: newProfiles, schemaVersion: 7 };
 }
 
+// v14→v15: add overviewClosedTrackZoom at its default. All other fields pass through unchanged.
+function migrateV14toV15(config) {
+  return {
+    ...config,
+    overviewClosedTrackZoom:
+      config.overviewClosedTrackZoom ?? DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom,
+    schemaVersion: 15,
+  };
+}
+
 // v13→v14: replace spritePx (absolute px) with spriteScale (relative factor) in all profiles.
 // spritePx wins over spriteScale because intermediate migrations deep-merge DEFAULT_CAMERA_CONFIG
 // (which now carries spriteScale) before v13→v14 runs — so a user-stored spritePx alongside an
@@ -367,13 +380,14 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    // buildProfilesFromLegacy outputs spritePx; full chain converts to spriteScale (v14).
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(
-          migrateV10toV11(
-            migrateV9toV10(
-              migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(
+            migrateV10toV11(
+              migrateV9toV10(
+                migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
+              )
             )
           )
         )
@@ -395,12 +409,14 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(
-          migrateV10toV11(
-            migrateV9toV10(
-              migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(
+            migrateV10toV11(
+              migrateV9toV10(
+                migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
+              )
             )
           )
         )
@@ -409,16 +425,18 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 4) {
-    // v4→…→v14: preserve zoom/TC fields, reset phase fields, then full migration chain.
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(
-          migrateV10toV11(
-            migrateV9toV10(
-              migrateV8toV9(
-                migrateV7toV8(
-                  migrateV6toV7(
-                    migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }))
+    // v4→…→v15: preserve zoom/TC fields, reset phase fields, then full migration chain.
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(
+            migrateV10toV11(
+              migrateV9toV10(
+                migrateV8toV9(
+                  migrateV7toV8(
+                    migrateV6toV7(
+                      migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }))
+                    )
                   )
                 )
               )
@@ -430,7 +448,7 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 5) {
-    // v5→…→v14: reset leadInDuration; convert spritePct→spritePx; then full chain.
+    // v5→…→v15: reset leadInDuration; convert spritePct→spritePx; then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -444,11 +462,13 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(
-          migrateV10toV11(
-            migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(
+            migrateV10toV11(
+              migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(merged)))))
+            )
           )
         )
       )
@@ -456,7 +476,7 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 6) {
-    // v6→…→v14: deep-merge profiles, convert spritePct→spritePx, then full chain.
+    // v6→…→v15: deep-merge profiles, convert spritePct→spritePx, then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -470,17 +490,19 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(
-          migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(
+            migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(merged)))))
+          )
         )
       )
     );
   }
 
   if (stored.schemaVersion === 7) {
-    // v7→…→v14: deep-merge profiles (preserving user-tuned spritePx), then full chain.
+    // v7→…→v15: deep-merge profiles (preserving user-tuned spritePx), then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -492,15 +514,17 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(
-      migrateV12toV13(
-        migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(
+          migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(merged)))))
+        )
       )
     );
   }
 
   if (stored.schemaVersion === 8) {
-    // v8→…→v14: deep-merge profiles, inject overviewOffsetPx, then full chain.
+    // v8→…→v15: deep-merge profiles, inject overviewOffsetPx, then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -512,13 +536,15 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(
-      migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(merged)))))
+    return migrateV14toV15(
+      migrateV13toV14(
+        migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(merged)))))
+      )
     );
   }
 
   if (stored.schemaVersion === 9) {
-    // v9→…→v14: deep-merge profiles, inject leadAheadEnabled/leadOutEnabled/countdown, then v14.
+    // v9→…→v15: deep-merge profiles, inject leadAheadEnabled/leadOutEnabled/countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -530,13 +556,13 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(
-      migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(merged))))
+    return migrateV14toV15(
+      migrateV13toV14(migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(merged)))))
     );
   }
 
   if (stored.schemaVersion === 10) {
-    // v10→…→v14: deep-merge profiles, inject leadOutEnabled/countdown, then v14.
+    // v10→…→v15: deep-merge profiles, inject leadOutEnabled/countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -548,11 +574,13 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(migrateV12toV13(migrateV11toV12(migrateV10toV11(merged))));
+    return migrateV14toV15(
+      migrateV13toV14(migrateV12toV13(migrateV11toV12(migrateV10toV11(merged))))
+    );
   }
 
   if (stored.schemaVersion === 11) {
-    // v11→…→v14: deep-merge profiles, inject countdown, then v14.
+    // v11→…→v15: deep-merge profiles, inject countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -564,11 +592,11 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(migrateV12toV13(migrateV11toV12(merged)));
+    return migrateV14toV15(migrateV13toV14(migrateV12toV13(migrateV11toV12(merged))));
   }
 
   if (stored.schemaVersion === 12) {
-    // v12→v13→v14: deep-merge profiles, inject stateOverlay fields, then v14.
+    // v12→v13→v14→v15: deep-merge profiles, inject stateOverlay fields, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -580,11 +608,11 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(migrateV12toV13(merged));
+    return migrateV14toV15(migrateV13toV14(migrateV12toV13(merged)));
   }
 
   if (stored.schemaVersion === 13) {
-    // v13→v14: deep-merge profiles (preserving user-tuned spritePx), then convert to spriteScale.
+    // v13→v14→v15: deep-merge profiles (preserving user-tuned spritePx), then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -596,12 +624,28 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV13toV14(merged);
+    return migrateV14toV15(migrateV13toV14(merged));
   }
 
-  if (stored.schemaVersion !== 14) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 14) {
+    // v14→v15: merge top-level fields, deep-merge profiles, inject overviewClosedTrackZoom.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+      merged.cameraStateProfiles = {};
+      for (const state of Object.keys(defProfiles)) {
+        merged.cameraStateProfiles[state] = {
+          ...defProfiles[state],
+          ...(stored.cameraStateProfiles[state] ?? {}),
+        };
+      }
+    }
+    return migrateV14toV15(merged);
+  }
 
-  // v14: merge top-level fields, then deep-merge cameraStateProfiles.
+  if (stored.schemaVersion !== 15) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v15: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
@@ -617,5 +661,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 14 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 15 });
 }

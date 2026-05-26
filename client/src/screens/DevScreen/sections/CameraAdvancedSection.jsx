@@ -626,6 +626,20 @@ function CameraAdvancedSection() {
             display={`${config.overviewStartDelay ?? 15}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
+          <SliderRow
+            label="OVERVIEW Closed Zoom"
+            testId="regie-overview-closed-track-zoom"
+            min={1.0}
+            max={2.0}
+            step={0.05}
+            value={config.overviewClosedTrackZoom ?? 1.3}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 1.0 && v <= 2.0) set('overviewClosedTrackZoom', v);
+            }}
+            display={(config.overviewClosedTrackZoom ?? 1.3).toFixed(2)}
+            tip="Zoom multiplier for OVERVIEW on closed tracks. 1.0 = no pan (camera frozen), 1.3 = 30% zoom-in giving pan room. Only affects closed tracks. Default 1.30."
+          />
         </div>
       </div>
 

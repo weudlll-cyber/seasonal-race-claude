@@ -71,6 +71,7 @@ export function computeTimingFromConfig(config) {
   const overviewOffsetPx =
     config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
   const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
+  const overviewClosedTrackZoom = config?.overviewClosedTrackZoom ?? 1.3;
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
   const leadAheadEnabledByState = {};
@@ -284,6 +285,7 @@ export function computeTimingFromConfig(config) {
     transitionTConvergence,
     overviewOffsetPx,
     overviewCooldownMs,
+    overviewClosedTrackZoom,
     leadAheadEnabledByState,
     leadOutEnabledByState,
     maxEntryDurationByState,

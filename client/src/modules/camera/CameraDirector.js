@@ -408,6 +408,7 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
+    this._overviewClosedTrackZoom = t.overviewClosedTrackZoom;
   }
 
   // ── Director helpers ──────────────────────────────────────────────────────
@@ -1083,8 +1084,11 @@ export class CameraDirector {
       // temporarily override the entry TC to achieve the configured zoom-out duration.
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
-          this.zoom = this._overviewStateZoom;
-          this.targetZoom = this._overviewStateZoom;
+          const snapZoom = this._isOpenTrack
+            ? this._overviewStateZoom
+            : this._overviewStateZoom * this._overviewClosedTrackZoom;
+          this.zoom = snapZoom;
+          this.targetZoom = snapZoom;
         } else {
           // finishMode smooth zoom-out: derive TC from configured duration (90% convergence ≈ 3.45×TC).
           const tc = Math.max(0.1, this._finishOverviewZoomOutDurationMs / 3450);
@@ -1565,7 +1569,7 @@ export class CameraDirector {
             } else {
               this._setClosedTrackTargets(
                 entryPanTarget,
-                this._overviewStateZoom * this._bsX,
+                this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
                 frameSize,
                 canvasH
               );
@@ -1593,7 +1597,7 @@ export class CameraDirector {
             } else {
               this._setClosedTrackTargets(
                 target,
-                this._overviewStateZoom * this._bsX,
+                this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
                 frameSize,
                 canvasH
               );
@@ -1618,7 +1622,7 @@ export class CameraDirector {
         } else {
           this._setClosedTrackTargets(
             target,
-            this._overviewStateZoom * this._bsX,
+            this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
             frameSize,
             canvasH
           );
