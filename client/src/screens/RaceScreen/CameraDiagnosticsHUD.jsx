@@ -228,10 +228,10 @@ export default function CameraDiagnosticsHUD({
   const lagColor = lagMag < 5 ? '#4cff91' : lagMag < 50 ? '#ffd700' : '#ff6b35';
 
   const CANVAS_H = 720;
-  const effZoom = zoom * bsX;
-  const effZoomY = zoom * bsY;
-  const targEffZoom = targetZoom * bsX;
-  const targEffZoomY = targetZoom * bsY;
+  const effZoom = isOpen ? zoom * OPEN_TRACK_BASE_ZOOM : zoom * bsX;
+  const effZoomY = isOpen ? zoom * OPEN_TRACK_BASE_ZOOM : zoom * bsY;
+  const targEffZoom = isOpen ? targetZoom * OPEN_TRACK_BASE_ZOOM : targetZoom * bsX;
+  const targEffZoomY = isOpen ? targetZoom * OPEN_TRACK_BASE_ZOOM : targetZoom * bsY;
   const camWorldX = effZoom > 0 ? Math.round((CANVAS_W / 2 - offsetX) / effZoom) : 0;
   const camWorldY = effZoomY > 0 ? Math.round((CANVAS_H / 2 - offsetY) / effZoomY) : 0;
   const tgtWorldX = targEffZoom > 0 ? Math.round((CANVAS_W / 2 - targetOffsetX) / targEffZoom) : 0;
