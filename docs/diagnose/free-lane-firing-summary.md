@@ -14,21 +14,21 @@ Sim setup:
 - Sprite world size: 26.00px
 - pathLengthPx: 3244.93
 
-## Frage 1
-Wie viele Frames hatten mindestens einen Overlap?
+## Question 1
+How many frames had at least one overlap?
 
-- Overlap-Frames: **1799 / 1800** (99.9%)
+- Overlap frames: **1799 / 1800** (99.9%)
 
-## Frage 2
-Davon: in wie vielen Frames hat die Free-Lane-Logik gefeuert?
+## Question 2
+Of those: in how many frames did the free-lane logic fire?
 
-- Fired-Frames: **1799 / 1799** Overlap-Frames (100.0%)
-- Aussage: Ausloesung ist meist aktiv; H1 ist nicht die Hauptursache.
+- Fired frames: **1799 / 1799** overlap frames (100.0%)
+- Conclusion: Triggering is mostly active; H1 is not the main cause.
 
-## Frage 3
-Branch-Verteilung bei gefeuerten Logik-Aufrufen
+## Question 3
+Branch distribution for fired logic calls
 
-| Branch | Count | Anteil |
+| Branch | Count | Share |
 |---|---:|---:|
 | both_left_only | 4057 | 32.6% |
 | a_blocked_b_moves | 2918 | 23.5% |
@@ -39,41 +39,41 @@ Branch-Verteilung bei gefeuerten Logik-Aufrufen
 | a_single_b_geometry | 455 | 3.7% |
 | opposite_single_sides | 30 | 0.2% |
 
-## Frage 4
-Delta vor/nach Clamp bei gefeuerten Aufrufen
+## Question 4
+Delta before/after clamp for fired calls
 
-- Durchschnitt |y-delta| vor Clamp (fired samples): **0.005439**
-- Durchschnitt |y-delta| netto angewendet nach Clamp/Repulsion (fired samples): **0.005730**
-- Verhältnis applied/pre: **1.054**
-- Aussage: Keine dominante Clamp-Abwuergung sichtbar; eher Interaktionsproblem (H2).
+- Average |y-delta| before clamp (fired samples): **0.005439**
+- Average |y-delta| net applied after clamp/repulsion (fired samples): **0.005730**
+- Ratio applied/pre: **1.054**
+- Conclusion: No dominant clamp suppression visible; more likely an interaction problem (H2).
 
-## Frage 5
-Bewegen sich ueberlappende Racer ueber mehrere Frames auseinander?
+## Question 5
+Do overlapping racers separate over multiple frames?
 
-Metrik: fuer persistierende, gefeuert markierte Paare wird in Folgeframes geprueft, ob |dY| steigt.
+Metric: for persisting, fired-marked pairs, subsequent frames are checked to see if |dY| increases.
 
-- Verfolgte Pair-Transitions: **12373**
-- Separation (|dY| steigt): **5278** (42.7%)
-- Flat (|dY| unveraendert): **282** (2.3%)
-- Aussage: Viele Paare trennen sich trotz Firing nicht stabil -> H2 dominiert.
+- Tracked pair transitions: **12373**
+- Separation (|dY| increases): **5278** (42.7%)
+- Flat (|dY| unchanged): **282** (2.3%)
+- Conclusion: Many pairs do not separate stably despite firing → H2 dominates.
 
-## Hypothese-Auswahl
+## Hypothesis selection
 
-- Hauptursache: **H2**
-- Begruendung: Free-Lane feuert haeufig, aber Separation in Folgeframes bleibt zu oft aus (Rueckzug/Neutralisierung durch andere Kraefte).
+- Main cause: **H2**
+- Reasoning: Free-lane fires frequently, but separation in subsequent frames is too often absent (retreat/neutralization by other forces).
 
-Priorisierung (qualitativ):
-1. H2 (Haupttreiber)
-2. H1/H3 (sekundaer je nach Szene)
+Prioritization (qualitative):
+1. H2 (main driver)
+2. H1/H3 (secondary depending on scene)
 3. H3
 
-## Empfehlung naechster Schritt (kein Fix in dieser Aufgabe)
+## Recommendation next step (no fix in this task)
 
-- Wenn H1: Triggerkriterium in longitudinaler/lateraler Overlap-Erkennung gegen visuelle Sprite-Overlap-Diagnose kalibrieren.
-- Wenn H2: Konkurrenzkraefte im selben Frame als A/B-Diag isolieren (Free-Lane nur markieren, keine Wirkung) und Rueckzugsanteil quantifizieren.
-- Wenn H3: Netto-Dämpfung durch Clamp/Repulsion in kontrolliertem Sim-Case mit festen Paaren messen (gleiche Inputs, variable maxLateral).
+- If H1: Calibrate trigger criterion in longitudinal/lateral overlap detection against visual sprite-overlap diagnostics.
+- If H2: Isolate competing forces in the same frame as A/B diagnostics (free-lane mark only, no effect) and quantify retreat component.
+- If H3: Measure net damping by clamp/repulsion in a controlled sim case with fixed pairs (same inputs, variable maxLateral).
 
-## Sim-Grenzen
+## Sim limits
 
-- Sim reproduziert Race-Loop-Physik (t-Update, Re-Roll, Positionsberechnung, applyRacerBehavior), aber ohne Canvas/React/Camera Side-Effects.
-- Visuelle Wahrnehmung (Sprite-Silhouette vs. physische Y-Hitbox) kann im Browser trotzdem leicht abweichen.
+- Sim reproduces race-loop physics (t-update, re-roll, position calculation, applyRacerBehavior), but without canvas/React/camera side-effects.
+- Visual perception (sprite silhouette vs. physical Y hitbox) can still differ slightly in the browser.

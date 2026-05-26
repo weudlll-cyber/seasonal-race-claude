@@ -54,7 +54,7 @@ Symptom-fixes may serve as a deliberately marked stepping stone when the diagnos
 shows clearly why the clean solution must follow. Stepping stones must be labeled as such
 in the PR body with a forward reference to the clean-fix spec.
 
-Siehe LESSONS.md L46, L48, L69.
+See LESSONS.md L46, L48, L69.
 
 ## 7. No hotfixes
 
@@ -65,7 +65,7 @@ is a prioritized diagnose sprint, not "bump maxScale" or "add a bypass flag".
 The only exception is a deliberately marked stepping stone (see §6). Unauthorized hotfixes
 are a design defect of the same severity as a failing test.
 
-Siehe LESSONS.md L48; SPEED_REFACTOR_ANALYSIS.md.
+See LESSONS.md L48; SPEED_REFACTOR_ANALYSIS.md.
 
 ---
 
@@ -100,18 +100,18 @@ changes; Playwright e2e tests remain required when selectors or user flows chang
 issue is hard to assess from code alone, or when the user explicitly requests it
 in the prompt (e.g. "please verify visually before reporting").
 
-### UX-Verifikations-Convention (Erweiterung der CC-Smoke-Test-Convention)
+### UX Verification Convention (Extension of the CC Smoke-Test Convention)
 
-Bei UI-schweren Phasen kann zusätzlich zur normalen Smoke-Test-Spec eine separate
-UX-Verifikations-Spec (`*-ux-verification.spec.js`) erstellt werden. Diese deckt
-Verhaltens-Aspekte ab die funktionale Smoke-Tests nicht prüfen: Tooltip-Inhalte,
-Indikator-Sichtbarkeit, Validation-Recovery, disabled-State von Buttons, Modal-Layout-
-Konsistenz auf verschiedenen Viewports, State-Isolation zwischen aufeinanderfolgenden
-Modal-Aufrufen. Die Spec wird permanent behalten als Regressions-Schutz.
+For UI-heavy phases, a separate UX verification spec (`*-ux-verification.spec.js`) may be
+created in addition to the normal smoke-test spec. This covers behavioral aspects that
+functional smoke-tests do not check: tooltip contents, indicator visibility, validation
+recovery, disabled state of buttons, modal layout consistency across viewports, state
+isolation between successive modal invocations. The spec is kept permanently as regression
+protection.
 
-Wann angebracht: neue Modals, komplexe Validierungsflüsse, Indikator-Systeme (Badges,
-Markierungen), Formular-Felder mit Recovery-Verhalten, viewport-abhängige Layouts.
-Einfache List-Views oder reine Daten-Anzeigen brauchen keine separate UX-Spec.
+When appropriate: new modals, complex validation flows, indicator systems (badges, markers),
+form fields with recovery behavior, viewport-dependent layouts. Simple list views or pure
+data displays do not need a separate UX spec.
 
 ### Quality-Gate Convention
 
@@ -164,16 +164,16 @@ geometry bugs, a 3-line algebraic proof is written before any code change is com
 For stochastic or dynamic bugs, a trace run is evaluated against concrete thresholds
 (e.g. "94.1% of frame-pairs are below X px").
 
-Siehe LESSONS.md L46, L50, L66, L69.
+See LESSONS.md L46, L50, L66, L69.
 
-### Daten-Trace Convention
+### Data-Trace Convention
 
 Visual observation ("I see it flicker", "the camera looks the wrong way") is a valid bug
 signal but not a diagnose result. Before a hypothesis counts as confirmed, it must be
 validated by instrumented trace, frame log, or empirical measurement. Browser bisect and
 code changes are not initiated on the basis of visual impression — measure first, then bisect.
 
-Siehe LESSONS.md L53, L65, L67, L68, L69.
+See LESSONS.md L53, L65, L67, L68, L69.
 
 ### Output-Medium Convention
 
@@ -183,9 +183,9 @@ trace tools during active diagnosis (Etappe-23-Pattern: temporary, isolated comm
 together with the fix). Diagnose reports are committed to the repo so that Strategic Claude
 and future sessions can read the data without running the code.
 
-Praxis: `docs/diag/render-smoothness-measurements.md`, Phase-4 Diagnose-HUD Deliverable.
+Example: `docs/diag/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
 
-### Tests-grün Convention
+### Tests-green Convention
 
 Before every commit that touches logic, the test count is reported as baseline
 ("Baseline: 1728/1728 green"). After the commit, the new count is reported. Any deviation
@@ -193,41 +193,41 @@ is explained in the PR body: which tests removed, which added, which adjusted, w
 failing and why that is intentional. A PR with failing tests may only be merged when the
 failures are documented as deliberate with a reference to the follow-up fix.
 
-Siehe LESSONS.md L1, L8, L17; docs/audit/audit-pre-merge.md.
+See LESSONS.md L1, L8, L17; docs/audit/audit-pre-merge.md.
 
 ### Regression Awareness Convention
 
-Vor dem Ersetzen einer existierenden, funktionierenden Komponente wird explizit geprüft was
-die alte Komponente konnte und was die neue können muss. Bei jedem Architektur-Ersatz oder
-größeren Refactor:
+Before replacing an existing, working component, an explicit check is made of what the old
+component could do and what the new one must be able to do. For every architectural
+replacement or major refactor:
 
-1. **Inventur der alten Komponente** — welche Funktionen, welche Edge-Cases, welche
-   User-Anforderungen werden aktuell erfüllt?
-2. **Anforderungs-Matching** — kann die neue Komponente jeden Punkt erfüllen? Welche bewussten
-   Trade-offs werden eingegangen?
-3. **Rollback-Pfad** — wie kommen wir zurück falls die neue Komponente versagt? Branch,
-   Commit-SHA oder Feature-Flag, explizit benannt in der Spec.
-4. **Sanity-Check vor Merge** — User testet visuell ob die neue Komponente nicht schlechter ist
-   als die alte. Bei erkennbarer Regression: Stopp, kein Merge.
+1. **Inventory of the old component** — which functions, which edge cases, which user
+   requirements are currently fulfilled?
+2. **Requirements matching** — can the new component fulfill every point? What deliberate
+   trade-offs are being accepted?
+3. **Rollback path** — how do we get back if the new component fails? Branch, commit SHA,
+   or feature flag, explicitly named in the spec.
+4. **Sanity check before merge** — user visually tests that the new component is not worse
+   than the old one. On visible regression: stop, no merge.
 
-Zugleich gilt: an einer nachweislich nicht funktionierenden Komponente wird nicht beliebig
-lange weitergetuned. Wenn nach belegter Diagnose und zwei bis drei Fix-Versuchen keine spürbare
-Verbesserung erreicht wird, ist Architektur-Wechsel die korrekte Reaktion — nicht ein vierter
-Versuch am selben Mechanismus.
+At the same time: a demonstrably non-functioning component is not tuned indefinitely. If
+after documented diagnosis and two or three fix attempts no meaningful improvement is
+achieved, an architecture change is the correct response — not a fourth attempt at the same
+mechanism.
 
-Die Regel ist ein Gleichgewicht: nicht voreilig wegwerfen, aber auch nicht ewig am toten Pferd
-reiten. Entscheidung pro Fall, mit Belegen.
+The rule is a balance: do not discard prematurely, but do not ride a dead horse forever
+either. Decision per case, with evidence.
 
-Siehe LESSONS.md L73.
+See LESSONS.md L73.
 
-### Test-Anpassungs Convention
+### Test Adjustment Convention
 
 Existing tests may be adjusted or removed when a deliberate refactor intentionally changes
 the tested behavior. In that case the PR body explains: (a) what behavior changed, (b) why
 the old test is obsolete, (c) which new test covers the new behavior. Tests that guard
 correct behavior must not be silently deleted to make a PR green.
 
-Siehe LESSONS.md L19; docs/internal/D3-5-1-diagnose.md §5.
+See LESSONS.md L19; docs/internal/D3-5-1-diagnose.md §5.
 
 ### Diagnose-Tool-Lifecycle Convention (Etappe-23-Pattern)
 
@@ -237,8 +237,8 @@ bug is fixed, the instrumentation is removed in the same merge or the immediatel
 commit. This keeps the repo free of diagnostic dead weight and makes the `diag:` commit a
 clean revert point if a refactor fails.
 
-Beispiel: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Etappe 23).
-Bestätigt in: docs/audit/audit-pre-merge.md §5.3.
+Example: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Etappe 23).
+Confirmed in: docs/audit/audit-pre-merge.md §5.3.
 
 ### DevScreen Block-Placement Convention
 

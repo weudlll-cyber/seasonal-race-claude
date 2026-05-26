@@ -5,9 +5,9 @@ Branch: claude/free-lane-separation
 Base commit: a49636e
 Worktree: c:\Users\weudl\OneDrive\Dokumente\Seasonal race claude-master-merge
 
-## 1. Was wurde implementiert
+## 1. What was implemented
 
-Geaenderte Dateien:
+Changed files:
 - client/src/modules/raceBehavior.js (+133/-0)
 - client/src/screens/RaceScreen/index.jsx (+3/-0)
 - client/src/modules/storage/defaults.js (+1/-1)
@@ -15,76 +15,76 @@ Geaenderte Dateien:
 - client/src/modules/raceDynamicsConfig.test.js (+2/-2)
 - client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx (+4/-4)
 
-Algorithmus (Free-Lane Separation, additiv):
-- Pro Racer-Paar wird weiterhin die bestehende Force-Logik gerechnet.
-- Zusaetzlich wird bei aktiver Ueberlappung geprueft, ob links/rechts Platz ist.
-- Platzpruefung nutzt bestehende Geometrieableitung (spriteWorldSizePx, trackWidthPx, pathLengthPx), keine neuen Tuning-Defaults.
-- Bei beidseitig freiem Raum greift die Y-Geometrie-Regel (links/rechts nach aktueller physicalY-Lage).
-- Bei exakt gleicher physicalY wird deterministisch per stabilem Hash aus Racer-IDs entschieden (kein Math.random).
-- Die resultierende Free-Lane-Bewegung wird als additive Delta-Kraft zum bestehenden yDelta addiert.
-- Finale Positionsbegrenzung bleibt unveraendert ueber bestehendes maxLateral + Clamp.
+Algorithm (Free-Lane Separation, additive):
+- Per racer pair the existing force logic continues to be applied.
+- Additionally, when active overlap is detected, left/right space is checked.
+- Space check uses existing geometry derivation (spriteWorldSizePx, trackWidthPx, pathLengthPx), no new tuning defaults.
+- When space is free on both sides, the Y-geometry rule is applied (left/right by current physicalY position).
+- At exactly equal physicalY, choice is made deterministically via a stable hash of racer IDs (no Math.random).
+- The resulting free-lane movement is added as an additive delta force to the existing yDelta.
+- Final position clamping remains unchanged via existing maxLateral + clamp.
 
-## 2. Werte-Tabelle vorher/nachher
+## 2. Before/after values table
 
-| Wert | Alt | Neu | Begruendung |
+| Value | Old | New | Rationale |
 |---|---:|---:|---|
-| reRollVariationPercent | 45 | 58 | Mehr Renn-Drama/Positionswechsel, innerhalb Zielbereich 55-60 |
-| alle anderen Defaults | unveraendert | unveraendert | Nur angeforderte Erhoehung fuer reRoll |
+| reRollVariationPercent | 45 | 58 | More race drama/position changes, within target range 55-60 |
+| all other defaults | unchanged | unchanged | Only the requested increase for reRoll |
 
-## 3. Test-Ergebnisse
+## 3. Test results
 
-- Pre-Count (Basis master a49636e): 94 Files / 1728 Tests (gruen, zuvor verifiziert)
-- Post-Count (Branch claude/free-lane-separation): 94 Files / 1734 Tests (gruen)
-- Neue Tests: 6 Free-Lane-Unit-Tests in client/src/modules/raceBehavior.test.js
+- Pre-count (base master a49636e): 94 files / 1728 tests (green, previously verified)
+- Post-count (branch claude/free-lane-separation): 94 files / 1734 tests (green)
+- New tests: 6 free-lane unit tests in client/src/modules/raceBehavior.test.js
 
-Neue Testfaelle:
-- Ueberlappung, beide Seiten frei -> Y-Geometrie-Regel trennt links/rechts
-- Ueberlappung, ein Racer nur eine Seite frei -> einseitiges Ausweichen + Geometrie beim anderen
-- A nur links frei, B nur rechts frei -> A links, B rechts
-- Alle Seiten blockiert -> keine zusaetzliche Free-Lane-Aktion
-- Exakt gleiche physicalY -> deterministische Auswahl (stabil wiederholbar)
-- Free-Lane respektiert maxLateral (kein Sprung ausserhalb des Caps)
+New test cases:
+- Overlap, both sides free → Y-geometry rule separates left/right
+- Overlap, one racer only one side free → one-sided yielding + geometry for the other
+- A only left free, B only right free → A left, B right
+- All sides blocked → no additional free-lane action
+- Exactly equal physicalY → deterministic selection (stably repeatable)
+- Free-lane respects maxLateral (no jump outside the cap)
 
-## 4. Status der drei ABSOLUTEN Regeln
+## 4. Status of the three ABSOLUTE rules
 
-- Regel #1 (keine neuen renn-verhaltens-relevanten Konstanten): eingehalten.
-  - Keine neuen tunbaren Defaults oder neuen Mechanik-Konstanten in defaults.js.
-  - Free-Lane-Schwellenwerte werden aus vorhandener Geometrie (Sprite/Track/Path) abgeleitet.
-- Regel #2 (DevScreen Single Source of Truth): eingehalten.
-  - geaenderter Default bleibt im bestehenden DevScreen-Re-Roll-Block tunbar.
-- Regel #3 (localStorage-Hinweis): eingehalten.
-  - Im PR-Text wird explizit auf "Reset All Defaults" hingewiesen.
+- Rule #1 (no new race-behavior-relevant constants): observed.
+  - No new tunable defaults or new mechanics constants in defaults.js.
+  - Free-lane thresholds are derived from existing geometry (sprite/track/path).
+- Rule #2 (DevScreen Single Source of Truth): observed.
+  - Changed default remains tunable in the existing DevScreen re-roll block.
+- Rule #3 (localStorage note): observed.
+  - PR text explicitly notes "Reset All Defaults".
 
-## 5. Visueller Test - Hinweise fuer User
+## 5. Visual test — notes for user
 
-Vor Test zwingend:
-- DevScreen -> "Reset All Defaults" klicken (sonst bleiben alte localStorage-Werte aktiv).
+Before test, mandatory:
+- DevScreen → click "Reset All Defaults" (otherwise old localStorage values remain active).
 
-Beobachten:
-- Trennen sich ueberlappte Racer frueher/zuverlaessiger in seitliche freie Bereiche?
-- Bleibt Bewegung glatt (keine Spruenge, keine Doppelbilder)?
-- Ist reRoll-bedingte Race-Action sichtbar hoeher als bei Default 45?
-- Bleiben Drafting-Effekte erkennbar aktiv?
+Observe:
+- Do overlapping racers separate earlier/more reliably into lateral free areas?
+- Does movement stay smooth (no jumps, no double images)?
+- Is re-roll-driven race action visibly higher than at default 45?
+- Do drafting effects remain recognizably active?
 
-Wenn zu wenig Action:
-- reRollVariationPercent leicht weiter erhoehen (z. B. 60 -> 65) im DevScreen.
+If too little action:
+- Increase reRollVariationPercent slightly further (e.g. 60 → 65) in DevScreen.
 
-Wenn wieder zu starke Pulks:
-- reRollVariationPercent leicht senken (z. B. 58 -> 55).
-- Drafting-Werte aus PR #97 feinjustieren statt neue Mechaniken einzufuehren.
+If packs become too strong again:
+- Decrease reRollVariationPercent slightly (e.g. 58 → 55).
+- Fine-tune drafting values from PR #97 instead of introducing new mechanics.
 
-## 6. Beobachtungen aus der Implementation
+## 6. Observations from the implementation
 
-- Ohne pro-Racer Geometrie-Metadaten (sprite/track/path) war die geforderte "halbe Spritebreite"-Pruefung in raceBehavior.js nicht robust moeglich.
-- Daher wurden bestehende, bereits berechnete Groessen aus RaceScreen in jeden Racer geschrieben (abgeleitet, nicht neu getuned).
-- Keine offene Blocker-Frage mehr fuer diese Spec identifiziert.
+- Without per-racer geometry metadata (sprite/track/path) the required "half sprite width" check in raceBehavior.js was not robustly possible.
+- Therefore existing, already-computed values from RaceScreen were written to each racer (derived, not newly tuned).
+- No open blocker question identified for this spec.
 
-## 7. PR-Status
+## 7. PR status
 
-- PR-Nummer: #98
-- PR-URL: https://github.com/weudlll-cyber/seasonal-race-claude/pull/98
-- Branch-Name: claude/free-lane-separation
-- Commit-SHAs:
+- PR number: #98
+- PR URL: https://github.com/weudlll-cyber/seasonal-race-claude/pull/98
+- Branch name: claude/free-lane-separation
+- Commit SHAs:
   - d483f81 (feat)
   - 092d792 (test)
   - 8bd4594 (docs)

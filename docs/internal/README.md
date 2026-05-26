@@ -1,61 +1,59 @@
 # docs/internal/
 
-Interne Diagnose- und Analyse-Dokumente. Nicht für die Öffentlichkeit.
+Internal diagnostic and analysis documents. Not for public consumption.
 
 ## current-config-snapshot.json
 
-Aktueller Snapshot aller `racearena:*` localStorage-Daten des Browsers,
-einschließlich Track-Geometrien (`racearena:trackGeometries:*`) und allen
-Tuning-Configs (autoScaleConfig, rowLayoutConfig, raceBehaviorConfig, etc.).
+Current snapshot of all `racearena:*` localStorage data from the browser,
+including track geometries (`racearena:trackGeometries:*`) and all
+tuning configs (autoScaleConfig, rowLayoutConfig, raceBehaviorConfig, etc.).
 
-### Wozu
+### Purpose
 
-Manche Bugs sind nur reproduzierbar wenn man die exakte Browser-Konfiguration
-kennt — insbesondere:
-- Track-Geometrie-Dimensionen (beeinflusst `getActualTrackWidth()`)
-- `autoScaleConfig` (beeinflusst `displaySizeScale` → `spriteSize` → `racersPerRow`)
-- `rowLayoutConfig` (beeinflusst Reihen-Abstände und Speed-Bonus)
-- `racerTypeOverrides` (beeinflusst displaySize-Overrides)
+Some bugs are only reproducible when the exact browser configuration is known — in particular:
+- Track geometry dimensions (affects `getActualTrackWidth()`)
+- `autoScaleConfig` (affects `displaySizeScale` → `spriteSize` → `racersPerRow`)
+- `rowLayoutConfig` (affects row spacing and speed bonus)
+- `racerTypeOverrides` (affects displaySize overrides)
 
-Ohne diese Daten muss Claude Code von Browser-Console-Outputs auf Zwischenwerte
-schließen, was langsam und fehleranfällig ist.
+Without this data, Claude Code must infer intermediate values from browser console output,
+which is slow and error-prone.
 
-### Wie exportieren
+### How to export
 
-1. Browser öffnen → `http://localhost:3000`
-2. Dev Panel → **System** Tab
-3. Button **"🔬 Export Diagnostic Snapshot"** klicken
-4. Datei wird als `racearena-snapshot-YYYYMMDD-HHmm.json` heruntergeladen
-5. Datei umbenennen zu `current-config-snapshot.json`
-6. In dieses Verzeichnis legen (`docs/internal/current-config-snapshot.json`)
-7. Committen
+1. Open browser → `http://localhost:3000`
+2. Dev Panel → **System** tab
+3. Click button **"🔬 Export Diagnostic Snapshot"**
+4. File is downloaded as `racearena-snapshot-YYYYMMDD-HHmm.json`
+5. Rename file to `current-config-snapshot.json`
+6. Place in this directory (`docs/internal/current-config-snapshot.json`)
+7. Commit
 
-### Wann aktualisieren
+### When to update
 
-- Immer wenn ein Bug auftaucht der ohne Browser-Daten nicht reproduzierbar ist
-- Nach größeren Änderungen an Track-Geometrien oder Tuning-Parametern
-- Wenn Claude Code explizit nach einem neuen Snapshot fragt
+- Whenever a bug appears that is not reproducible without browser data
+- After significant changes to track geometries or tuning parameters
+- When Claude Code explicitly requests a new snapshot
 
-### Was ist enthalten
+### What is included
 
-Alle `racearena:*` Keys aus localStorage, inkl.:
-- `racearena:tracks` — Track-Presets
-- `racearena:trackGeometries:<id>` — Geometrie-Daten (inner/outer Splines)
-- `racearena:trackGeometries:index` — Geometrie-Index
-- `racearena:autoScaleConfig` — Sprite-Skalierungs-Parameter
-- `racearena:rowLayoutConfig` — Reihen-Start-Parameter
-- `racearena:raceBehaviorConfig` — Force-Pipeline-Parameter
-- `racearena:racerTypeOverrides` — Per-Type Overrides
-- alle weiteren `racearena:*` Keys
+All `racearena:*` keys from localStorage, including:
+- `racearena:tracks` — track presets
+- `racearena:trackGeometries:<id>` — geometry data (inner/outer splines)
+- `racearena:trackGeometries:index` — geometry index
+- `racearena:autoScaleConfig` — sprite scaling parameters
+- `racearena:rowLayoutConfig` — row start parameters
+- `racearena:raceBehaviorConfig` — force pipeline parameters
+- `racearena:racerTypeOverrides` — per-type overrides
+- all further `racearena:*` keys
 
-Enthält `_meta.exportedAt` Zeitstempel für Nachvollziehbarkeit.
+Contains `_meta.exportedAt` timestamp for traceability.
 
-### Was ist NICHT enthalten
+### What is NOT included
 
-- `sessionStorage['activeRace']` — flüchtiger Race-State, nicht persistent
-- Nicht-racearena-Keys aus localStorage
+- `sessionStorage['activeRace']` — transient race state, not persistent
+- Non-racearena keys from localStorage
 
-### Datenschutz
+### Privacy
 
-Enthält keine persönlichen Daten. Track-Geometrien und Konfigurationen sind
-lokale Spieleinstellungen.
+Contains no personal data. Track geometries and configurations are local game settings.

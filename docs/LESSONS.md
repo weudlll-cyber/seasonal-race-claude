@@ -258,7 +258,7 @@ b1617-smoke: a label had changed from German to English, a
 These tests were correct when written — but every UI string change makes text-based
 selectors fragile.
 
-**Insight:** Playwright tests with hard text matches (`getByText('Geometrie wählen')`,
+**Insight:** Playwright tests with hard text matches (`getByText('Select Geometry')`,
 `getByRole('option', { name: 'City Circuit' })`) go stale silently when UI text is changed in
 another PR. The tests fail only in the next CI run, not when writing the UI change.
 

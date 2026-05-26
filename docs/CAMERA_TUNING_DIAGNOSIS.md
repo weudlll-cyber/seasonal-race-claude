@@ -235,23 +235,23 @@ The camera pan can lose the leader when the leader-3rd gap is large. This is a k
 
 ---
 
-## Empfehlung
+## Recommendation
 
-**Priorität 1 — H2 beheben (Critical):**
+**Priority 1 — Fix H2 (Critical):**
 
-Der Bug liegt in `CameraDirector._computeZoomLevels`: `openTrackBaseZoom` wird dort als Faktor in `cam.zoom` eingebacken, aber der Render-Pfad multipliziert `cam.zoom` dann erneut mit dem hardkodierten `OPEN_TRACK_BASE_ZOOM = 1.5`. Das ergibt eine Doppelmultiplikation.
+The bug is in `CameraDirector._computeZoomLevels`: `openTrackBaseZoom` is baked in there as a factor in `cam.zoom`, but the render path then multiplies `cam.zoom` again by the hardcoded `OPEN_TRACK_BASE_ZOOM = 1.5`. This results in a double-multiplication.
 
-Empfohlene Lösung (minimale Änderung, kein Bruch bestehender Tests):
+Recommended fix (minimal change, no breakage of existing tests):
 
-1. **`_computeZoomLevels` aufräumen**: `openBase` entfernen. Zoom-Ratios werden nur noch auf `overviewZoom` angewendet, unabhängig vom Track-Typ.
-2. **`effectiveZoom()` konfigurierbar machen**: `config.openTrackBaseZoom ?? OPEN_TRACK_BASE_ZOOM` an den drei Render-Callsites in `index.jsx` übergeben (Zeilen 916, 949, 966).
-3. **Default `battleZoomMultiplier` korrigieren**: Der bisherige Default `2.5` wurde fälschlicherweise für die bereits-gedoppelte Formel eingestellt. Korrekte Defaults mit einer einmaligen Multiplikation: `leaderZoomMultiplier: 1.4`, `battleZoomMultiplier: 1.6`, `comebackZoomMultiplier: 1.3` (die ursprünglichen Hardcode-Ratios). `openTrackBaseZoom: 1.5` bleibt.
+1. **Clean up `_computeZoomLevels`**: Remove `openBase`. Zoom ratios are only applied to `overviewZoom`, independent of track type.
+2. **Make `effectiveZoom()` configurable**: Pass `config.openTrackBaseZoom ?? OPEN_TRACK_BASE_ZOOM` to the three render callsites in `index.jsx` (lines 916, 949, 966).
+3. **Correct the default `battleZoomMultiplier`**: The previous default `2.5` was incorrectly set for the already-doubled formula. Correct defaults with single-multiplication: `leaderZoomMultiplier: 1.4`, `battleZoomMultiplier: 1.6`, `comebackZoomMultiplier: 1.3` (the original hardcoded ratios). `openTrackBaseZoom: 1.5` remains.
 
-**Priorität 2 — H4 optional verbessern (Low):**
+**Priority 2 — Optionally improve H4 (Low):**
 
-Für LEADER_ZOOM-State den Pan-Target auf nur den Leader (`focusRacers[0]`) setzen statt Centroid-of-top-3. Dies ist eine 2-Zeilen-Änderung im Open-Track-Block von `index.jsx`. Kein Einfluss auf BATTLE/COMEBACK.
+For the LEADER_ZOOM state, set the pan target to the leader only (`focusRacers[0]`) instead of centroid-of-top-3. This is a 2-line change in the open-track block of `index.jsx`. No impact on BATTLE/COMEBACK.
 
-**H1 und H3 brauchen keine Aktion.**
+**H1 and H3 require no action.**
 
 ---
 
@@ -303,9 +303,9 @@ In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo lead
 
 ---
 
-## Datei-Referenzen
+## File References
 
-| Datei | Relevant für |
+| File | Relevant for |
 |---|---|
 | [CameraDirector.js:97–113](../client/src/modules/camera/CameraDirector.js) | H1, H2 — `_computeZoomLevels`, `openBase` |
 | [CameraDirector.js:215](../client/src/modules/camera/CameraDirector.js) | H1 — OVERVIEW targetZoom |

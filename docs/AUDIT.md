@@ -109,9 +109,9 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 ---
 
-## Test-Count-Historie
+## Test Count History
 
-| Zeitpunkt | Tests | Kontext |
+| Timestamp | Tests | Context |
 |---|---|---|
 | 2026-04-19 | 29 | Initial QA Pipeline Setup |
 | 2026-04-22 | 228 | Race Engine complete |
@@ -120,248 +120,248 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 | 2026-04-25 | 350 | Issue D Horse Sprites |
 | 2026-04-26 | 453 | D3.5.1 SpriteRacerType (PR #13) |
 | 2026-04-26 | 603 | D3.5.2 + D3.5.3 |
-| 2026-04-26 | 616 | B-7+B-8+W3 (PR #17 Basis-Commit) |
+| 2026-04-26 | 616 | B-7+B-8+W3 (PR #17 base commit) |
 | 2026-04-26 | **618** | PR #17 Test-3.1-Filter-Fix |
-| 2026-04-26 | **618** | Quality-Cleanup-Commit (unverändert) |
-| 2026-04-26 | **628** | D9 Race-Engine-Speed-Refactor (PR #19) — +10 Unit-Tests (estimatedSecondsPerLap ×5, openTrackFinishT ×5) |
-| 2026-04-26 | **628 unit + 22 e2e** | Quality-Gate-Cleanup-Commit (PR #19) — Playwright-Infrastruktur fertig |
+| 2026-04-26 | **618** | Quality Cleanup Commit (unchanged) |
+| 2026-04-26 | **628** | D9 Race-Engine-Speed-Refactor (PR #19) — +10 unit tests (estimatedSecondsPerLap ×5, openTrackFinishT ×5) |
+| 2026-04-26 | **628 unit + 22 e2e** | Quality Gate Cleanup Commit (PR #19) — Playwright infrastructure complete |
 | 2026-04-26 | **678 unit + 36 e2e** | D3.5.5 Per-Type-Tuning-UI (PR #21) — +50 unit (normalizeOverrideMap, CONFIG_SNAPSHOT, applyTunableOverride, restoreTunableDefault, RacerEditModal.test.jsx, InfoTooltip.test.jsx), +14 e2e (d355-smoke.spec.js) |
-| 2026-04-26 | **678 unit + 57 e2e** | UX-Verifikations-Spec permanent hinzugefügt (d3-5-5-ux-verification.spec.js, 21 Tests), Quality-Gate-Fix (Doppelimport, PR #21) |
-| 2026-04-27 | **694 unit + 75 e2e** | D10 Track-Größen-Variabilität + Auto-Sprite-Skalierung + Bild-First-Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Beide Specs permanent als Regressions-Schutz. |
-| 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX-Polish-Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification angepasst (dt. Strings → englisch). Keine neuen Unit-Tests. |
-| 2026-04-27 | **719 unit + 100 e2e** | B-16+B-17 Große-Tracks Fix (PR #26, master `7cdde15`). +25 unit (speedScale.test.js ×16, trackEditorSave pathLengthPx ×4, CameraDirector B-16 ×8, updated ×1), +12 e2e (b1617-smoke.spec.js). |
+| 2026-04-26 | **678 unit + 57 e2e** | UX verification spec added permanently (d3-5-5-ux-verification.spec.js, 21 tests), Quality Gate fix (duplicate import, PR #21) |
+| 2026-04-27 | **694 unit + 75 e2e** | D10 Track Size Variability + Auto Sprite Scaling + Image-First Workflow (PR #23, squash `c700ef4`) + Hotfix `13a2dd2`. +16 unit (autoSpriteScale.js), +18 e2e (d10-smoke.spec.js), +17 e2e (d10-ux-verification.spec.js). Both specs kept permanently as regression guards. |
+| 2026-04-27 | **694 unit + 88 e2e** | B-Wave UX Polish Sweep (PR #25, master `697e081`). +13 e2e (b-wave-smoke.spec.js). d10-smoke + d10-ux-verification updated (German strings → English). No new unit tests. |
+| 2026-04-27 | **719 unit + 100 e2e** | B-16+B-17 Large Tracks Fix (PR #26, master `7cdde15`). +25 unit (speedScale.test.js ×16, trackEditorSave pathLengthPx ×4, CameraDirector B-16 ×8, updated ×1), +12 e2e (b1617-smoke.spec.js). |
 | 2026-04-27 | **723 unit + 103 e2e** | fix(tracks): listTracks() worldWidth/worldHeight + migration (PR #27). +4 unit (trackStorage.test.js), +3 e2e (fix-list-tracks-world-dimensions.spec.js). Root cause fix for large-track render bug (bsX=1.0). |
-| 2026-04-27 | **723 unit + 118 e2e** | test(e2e): fix 7 selector issues in b-wave-smoke + b1617-smoke (PR #27, selber Squash). 7 pre-existing Selector-Fehler behoben: B-3×2 (div-ancestor), B-14 (option-text), B-12 (substring), B-10/B-11 (falsches Label + Edit-Regex-Anker), B-17 (tooltip-collision). 118/118 grün. |
-| 2026-04-27 | **759 unit + 157 e2e** | fix/camera-polish + Q-14 (PR #28, squash `750d826`). +36 unit (baseSpeedConfig.test.js ×16, CameraDirector adaptive-zoom ×16, lapUtils SoT ×4), +39 e2e (camera-polish-smoke.spec.js ×8, camera-polish-ux-verification.spec.js ×31 permanent). d10-ux-verification stale V8 assertion gefixt (auto-scale default changed). |
-| 2026-04-27 | **809 unit + 183 e2e** | D11 Racer Behavior + Visual-Fixes (PR #30, squash `d46cab2`). +50 unit (raceBehavior.test.js ×6 neu/rewritten, autoSpriteScale.test.js ×14 erweitert, CameraDirector world-edge-clamp ×2), +26 e2e (d11-smoke.spec.js ×14, d11-ux-verification.spec.js ×12 permanent). |
-| 2026-04-28 | **808 unit + 183 e2e** | D7a Proportional Sprite Scaling + Zoom-Ratios + Label-Skalierung (PR #33, squash `a49baa0`). -19 unit (computeCameraZoomFactor ×10, computeOpenTrackCameraZoomFactor ×4, pixel-floor-in-autoScale ×5 — obsolete functions entfernt), +10 unit (computeRenderDisplayScale proportional + floor), net -1. e2e unverändert. |
-| 2026-04-28–29 | **~870 unit + 183 e2e** | D7a-Plus + D7b + D7c sub-PRs (per-type minTargetScreenPx, lane-free physicalY, row-start layout). Exact counts in quality gates; gap between D7a und VRE-1 nicht einzeln in Tabelle erfasst. |
-| 2026-04-29 | **1044 unit + 183 e2e + 60 backend** | VRE-1 — Visual-Racer-Effects Foundation (PR #46, squash `e4fd947`). +88 neue unit (surface-effects defaults/registry/generators/hooks) + 24 backend (surfaceClasses API). Phase L Track-Server-Integration (PR #44) war Vorstufe. |
-| 2026-04-29 | **1084 unit + 183 e2e** | VRE-2 — Surface-Class Editor in Dev-Screen (PR #47, squash `2c058b1`). +40 neue unit (SurfaceClassManager ×36 + SurfaceClassPreview ×4). 2 Playwright-Specs hinzugefügt. |
-| 2026-04-30 | **1134 unit + 183 e2e + 66 backend** | VRE-3 — Surface-Class Linking (PR #48, squash `93a55b4`). +50 unit (SpriteRacerType ×10 + filterRacerTypes ×15 + UI-Tests ×25) + 6 backend (PUT partial-update). 2 Bugs gefixt. |
-| 2026-05-01 | **1165 unit + 183 e2e + 82 backend** | VRE-4 — Race Integration, Phase Visual Racer Effects abgeschlossen (PR #49, squash `c857a7e`). +14 unit (trailResolver ×14) + 16 backend (surfaceClasses+maxRacers Validation) + --no-file-parallelism Flag für Windows-renameSync-Stabilität. |
-| 2026-05-01 | **1169 unit + 183 e2e + 82 backend** | Quick-Wins Post-VRE (PR #50). +4 unit (trackStorage Corruption-Tests). Server-vitest auf v4.1.4 (0 vulns). |
-| 2026-05-01 | **1177 unit + 183 e2e + 82 backend** | Error Boundary (PR #51). +8 unit (ErrorBoundary.test.jsx). Top-level React Error Boundary in main.jsx — verhindert Blank-Screen bei Render-Crash. |
-| 2026-05-01 | **1234 unit + 183 e2e + 107 backend** | Race Track Lights + Cache-Fix (PR #52, master dc62557). +25 unit (trackLights.js), +17 component (TrackEditor.trackLights.test.jsx), +23 round-trip (trackLoader.test.js L37). 42 neue Backend-Tests (tracks.test.js trackLights-Validation + Migration). CSS-Fix (Track-Lights-Controls zu breit). |
-| 2026-05-01 | **1235 unit + 183 e2e + 107 backend** | TLH-1 — Backend-Fixes + Migration (PR #53 ausstehend). +1 unit (trackLoader geometry-preservation). +10 backend (geometryId ×3, auto-backup ×3, default-seed-migration ×4). atomicWriteJson OneDrive-Fallback, vi.unstubAllGlobals() in beforeEach. |
+| 2026-04-27 | **723 unit + 118 e2e** | test(e2e): fix 7 selector issues in b-wave-smoke + b1617-smoke (PR #27, same squash). 7 pre-existing selector errors fixed: B-3×2 (div-ancestor), B-14 (option-text), B-12 (substring), B-10/B-11 (wrong label + edit-regex-anchor), B-17 (tooltip-collision). 118/118 passing. |
+| 2026-04-27 | **759 unit + 157 e2e** | fix/camera-polish + Q-14 (PR #28, squash `750d826`). +36 unit (baseSpeedConfig.test.js ×16, CameraDirector adaptive-zoom ×16, lapUtils SoT ×4), +39 e2e (camera-polish-smoke.spec.js ×8, camera-polish-ux-verification.spec.js ×31 permanent). d10-ux-verification stale V8 assertion fixed (auto-scale default changed). |
+| 2026-04-27 | **809 unit + 183 e2e** | D11 Racer Behavior + Visual-Fixes (PR #30, squash `d46cab2`). +50 unit (raceBehavior.test.js ×6 new/rewritten, autoSpriteScale.test.js ×14 expanded, CameraDirector world-edge-clamp ×2), +26 e2e (d11-smoke.spec.js ×14, d11-ux-verification.spec.js ×12 permanent). |
+| 2026-04-28 | **808 unit + 183 e2e** | D7a Proportional Sprite Scaling + Zoom-Ratios + Label Scaling (PR #33, squash `a49baa0`). -19 unit (computeCameraZoomFactor ×10, computeOpenTrackCameraZoomFactor ×4, pixel-floor-in-autoScale ×5 — obsolete functions removed), +10 unit (computeRenderDisplayScale proportional + floor), net -1. e2e unchanged. |
+| 2026-04-28–29 | **~870 unit + 183 e2e** | D7a-Plus + D7b + D7c sub-PRs (per-type minTargetScreenPx, lane-free physicalY, row-start layout). Exact counts in quality gates; gap between D7a and VRE-1 not individually tracked in table. |
+| 2026-04-29 | **1044 unit + 183 e2e + 60 backend** | VRE-1 — Visual-Racer-Effects Foundation (PR #46, squash `e4fd947`). +88 new unit tests (surface-effects defaults/registry/generators/hooks) + 24 backend (surfaceClasses API). Phase L Track-Server-Integration (PR #44) was prerequisite. |
+| 2026-04-29 | **1084 unit + 183 e2e** | VRE-2 — Surface-Class Editor in Dev-Screen (PR #47, squash `2c058b1`). +40 new unit tests (SurfaceClassManager ×36 + SurfaceClassPreview ×4). 2 Playwright specs added. |
+| 2026-04-30 | **1134 unit + 183 e2e + 66 backend** | VRE-3 — Surface-Class Linking (PR #48, squash `93a55b4`). +50 unit (SpriteRacerType ×10 + filterRacerTypes ×15 + UI-Tests ×25) + 6 backend (PUT partial-update). 2 bugs fixed. |
+| 2026-05-01 | **1165 unit + 183 e2e + 82 backend** | VRE-4 — Race Integration, Phase Visual Racer Effects completed (PR #49, squash `c857a7e`). +14 unit (trailResolver ×14) + 16 backend (surfaceClasses+maxRacers Validation) + --no-file-parallelism flag for Windows renameSync stability. |
+| 2026-05-01 | **1169 unit + 183 e2e + 82 backend** | Quick-Wins Post-VRE (PR #50). +4 unit (trackStorage Corruption-Tests). Server-vitest on v4.1.4 (0 vulns). |
+| 2026-05-01 | **1177 unit + 183 e2e + 82 backend** | Error Boundary (PR #51). +8 unit (ErrorBoundary.test.jsx). Top-level React Error Boundary in main.jsx — prevents blank screen on render crash. |
+| 2026-05-01 | **1234 unit + 183 e2e + 107 backend** | Race Track Lights + Cache-Fix (PR #52, master dc62557). +25 unit (trackLights.js), +17 component (TrackEditor.trackLights.test.jsx), +23 round-trip (trackLoader.test.js L37). 42 new backend tests (tracks.test.js trackLights validation + migration). CSS fix (Track-Lights-Controls too wide). |
+| 2026-05-01 | **1235 unit + 183 e2e + 107 backend** | TLH-1 — Backend-Fixes + Migration (PR #53 pending). +1 unit (trackLoader geometry-preservation). +10 backend (geometryId ×3, auto-backup ×3, default-seed-migration ×4). atomicWriteJson OneDrive fallback, vi.unstubAllGlobals() in beforeEach. |
 | 2026-05-02 | **1252 unit + 183 e2e + 107 backend** | TLH-2 — UI-Flow + Cleanup (PR open, pending merge). +17 unit: TrackEditor.loadmode.test.jsx ×12 (new file), TrackManager.test.jsx +7/−2 (geometry-status tests replace old L.6-Bug2 tests). ESLint: 0 errors, 0 warnings. 71 test files. |
 | 2026-05-02 | **1254 unit + 183 e2e + 109 backend** | TLH-2 Post-Merge Bug-Fixes (same branch): F2 (hasGeo→geometryId+pointCount via extended toSummary), F4 (scroll-reset on mount + scrollIntoView on serverError), F1-revised (load-mode background optional). +2 unit (F3 reproduction: 2 scenarios), +2 backend (pointCount in list). ESLint: 0 errors, 0 warnings. |
-| 2026-05-02 | **1256 unit + 183 e2e + 109 backend** | toSummary Folge-Regression: autoMaxRacers in handleEdit nutzte `isServer ? track` als EditorShape-Input → crash (TypeError: innerPoints undefined). Fix: immer geometry cache statt server summary. +2 unit (Regression-Guard + no-crash-test). L39 Audit-Pattern ergänzt. ESLint: 0 errors, 0 warnings. |
-| 2026-05-02 | **1261 unit + 183 e2e + 114 backend** | City-Circuit-Bug-Fix (fix/track-delete-safeguards): "Remove background"-Button (+5 unit), DELETE /api/tracks/:id/background Endpoint (+3 backend), Default-Track DELETE-Schutz 403 (+2 backend), migrateDefaultTracks idempotent, React key=null Fix in TrackManager. L41+L42, Q-24 ergänzt. ESLint: 0 errors, 0 warnings. |
-| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Background-Image Race Condition Fix + L43 (PR #58, squash-merged `fc5690f`): Pre-existing race condition im backgroundImage useEffect — stale onerror-Callback vom Null-Run überschrieb bgRef nach erfolgreichem onload beim Track-Load. Fix: Null-Guard (verhindert `img.src='null'`) + cancelled-Flag mit cleanup-Return. 4 neue Komponenten-Tests (TrackEditor.effects.test.jsx — null-path, URL-load, race-guard). ESLint: 0 errors, 0 warnings. |
+| 2026-05-02 | **1256 unit + 183 e2e + 109 backend** | toSummary follow-on regression: autoMaxRacers in handleEdit used `isServer ? track` as EditorShape input → crash (TypeError: innerPoints undefined). Fix: always use geometry cache instead of server summary. +2 unit (regression guard + no-crash test). L39 audit pattern added. ESLint: 0 errors, 0 warnings. |
+| 2026-05-02 | **1261 unit + 183 e2e + 114 backend** | City-Circuit-Bug-Fix (fix/track-delete-safeguards): "Remove background" button (+5 unit), DELETE /api/tracks/:id/background endpoint (+3 backend), default-track DELETE protection 403 (+2 backend), migrateDefaultTracks idempotent, React key=null fix in TrackManager. L41+L42, Q-24 added. ESLint: 0 errors, 0 warnings. |
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Background-Image Race Condition Fix + L43 (PR #58, squash-merged `fc5690f`): Pre-existing race condition in backgroundImage useEffect — stale onerror callback from null-run overwrote bgRef after successful onload on track load. Fix: null-guard (prevents `img.src='null'`) + cancelled-flag with cleanup-return. 4 new component tests (TrackEditor.effects.test.jsx — null-path, URL-load, race-guard). ESLint: 0 errors, 0 warnings. |
 
-| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Docs: sync after TLH + Track-Delete-Safeguards (PR #59, squash-merged `b7f5bd8`). Nur Doku-Änderungen — AUDIT/BACKLOG/ARCHITECTURE/TRACK_LIFECYCLE/ROADMAP aktualisiert. Test-Counts unverändert. |
-| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Konzept-Doku-Sprint Camera-Director (PR in Arbeit). Neue Datei `docs/CAMERA_DIRECTOR.md` (12 Sektionen, 3 Code-Bugs diagnostiziert, Q-25 empirisch gelöst). Kein Code-Change — Test-Counts unverändert. |
-| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Camera-Director-Konzept (PR #60, merge-commit `123faeb`). `docs/CAMERA_DIRECTOR.md` final — 13 Sektionen, 5 Commits, alle §13.2-Fragen UI-1–UI-8 beantwortet. Nachtrag 5 (K1–K10): TENDENZ-LOGIK Architektur-Klarstellung, minGapInSpitzengruppe-Trigger, Random-Jitter OVERVIEW, findBattleCandidate(). 9 Sub-PRs spezifiziert (PR-A1 bis PR-G). Kein Code-Change — Test-Counts unverändert. |
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Docs: sync after TLH + Track-Delete-Safeguards (PR #59, squash-merged `b7f5bd8`). Documentation changes only — AUDIT/BACKLOG/ARCHITECTURE/TRACK_LIFECYCLE/ROADMAP updated. Test counts unchanged. |
+| 2026-05-02 | **1265 unit + 183 e2e + 114 backend** | Concept docs sprint Camera-Director (PR in progress). New file `docs/CAMERA_DIRECTOR.md` (12 sections, 3 code bugs diagnosed, Q-25 resolved empirically). No code change — test counts unchanged. |
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Camera-Director concept (PR #60, merge-commit `123faeb`). `docs/CAMERA_DIRECTOR.md` final — 13 sections, 5 commits, all §13.2 questions UI-1–UI-8 answered. Addendum 5 (K1–K10): TENDENCY-LOGIC architecture clarification, minGapInSpitzengruppe trigger, random jitter OVERVIEW, findBattleCandidate(). 9 sub-PRs specified (PR-A1 to PR-G). No code change — test counts unchanged. |
 
-| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Lessons L44–L47 (PR #61, merge-commit `0481689`). Docs-only — Test-Counts unverändert. |
-| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Default-Track-Geometrien + Backgrounds (PR #62, merge-commit `6d12037`). L.7-Bug2 behoben: alle 5 Default-Tracks spielbar. Kein Code-Change — Test-Counts unverändert. |
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Lessons L44–L47 (PR #61, merge-commit `0481689`). Docs-only — test counts unchanged. |
+| 2026-05-03 | **1265 unit + 183 e2e + 114 backend** | Default track geometries + backgrounds (PR #62, merge-commit `6d12037`). L.7-Bug2 fixed: all 5 default tracks playable. No code change — test counts unchanged. |
 
-| 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.6 — Race Dynamics (feat/pr-a2.6-race-dynamics). 3 Commits: (1) speedFactor/speedBonusMult-Trennung — spreadFactor + speedBonusMult als separate Felder, re-roll berührt nur spreadFactor (numerisch äquivalent zu vorher); (2) Periodischer spreadFactor Re-Roll: rollCount=max(2,⌊duration/15⌋), rollInterval≈12s, Variation ±85% of SPREAD_RANGE (Variant B), easeInOutCubic-Transition 5000ms, letzter Roll bei 80% — draftingBoost unverändert 1.10, Cone-Geometrie-Kommentar; (3) Doc-Updates ARCHITECTURE/LESSONS/BACKLOG/ROADMAP/AUDIT. +33 unit Tests (reRoll.test.js). ESLint: 0 Errors, 0 Warnings. |
-| 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.9 — Repo-Hygiene (chore/pr-a2.9-repo-hygiene). 5 Debug-Screenshots aus Repo-Root entfernt (modal-*.png). @testing-library/user-event aus devDependencies entfernt (unused). .gitignore bestätigt (audit-temp/ + diagnosis/ bereits abgedeckt). Flaky Test fix: reRoll.test.js Math.random-Spy für deterministischen Uniqueness-Test (war bei voller Suite nicht immer grün). Audit-Falsch-Positiv: services/api.js NICHT gelöscht — grep-Pattern fehlte .js-Extension, Datei hat 2 aktive Imports. Background-PNG-Komprimierung zurückgestellt (user decision). 0 neue Tests. |
-| 2026-05-16 | **1788 unit** | feat: countdown camera phase — zoom-in + dezenter Countdown-Text (schema v12) (PR #112, squash `d71a83d`). Neue `updateCountdown()`-Methode in CameraDirector: ease-out-cubic Zoom von `countdownStartZoomSpritePx` → `_overviewStateZoom`, Pulk-Centroid-Pan mit World-Bounds-Clamp. Countdown-Text: 220px Mitte → 56px Top-Right-Badge. Schema v11→v12 Migration: +`countdownStartZoomSpritePx`, +`countdownDurationMs`. DevScreen: neues "Countdown Phase"-Panel. +4 unit (3 updateCountdown + 1 v11→v12 Migration). TrackEditor.effects.test.jsx failure pre-existing (nicht von diesem PR). |
-| 2026-05-16 | **1809 unit** | feat: state-overlay-text — Einblende-Text-Infrastruktur für Kamera-States (schema v13) (PR #113, squash `c2010cb`). Neue `StateOverlay`-Komponente (unten Mitte, Pill-Form, fade-in/out). `stateOverlayTemplates.js`: 3 Template-Pools (OVERVIEW ×8, BATTLE_ZOOM ×8, COMEBACK_ZOOM ×8) mit Anti-Wiederholung und Variablen-Auflösung. Schema v12→v13: +`stateOverlayEnabled`, +`stateOverlayDurationMs`. DevScreen: Toggle + Dauer-Slider in CameraStateHudSection. RaceScreen: OVERVIEW aktiviert (leader-Name), BATTLE/COMEBACK bereit für spätere Specs. +21 unit (stateOverlayTemplates.test.js ×16 + cameraConfig v12→v13 ×4 + CameraStateHUD null-guard ×1). 3 pre-existing CameraZoomTuningSection-Timeouts (unverändert, nicht von diesem PR). |
-| 2026-05-16 | **1819 unit** | feat: frame-log racer diagnostics — per-racer dx/dy/dt/t snapshots + jump detector (PR #114, squash `cc91d20`). CameraDirector-Diagnose-Frame-Log: pro Frame dx/dy/dt/t-Snapshots aller Racer gespeichert. `scripts/analyze-camera-log.mjs`: headless Jump-Detektor (Method A Lerp-Residual + Method B Median-Outlier), Kontext-Fenster, camTDelta. `analyzeFrameLog.test.js`: +10 unit Tests (smooth lerp, synthetic jumps, Transition-Exemption, Kontext-Fenster, Method A/B, T-Space-Frames, camTDelta). |
-| 2026-05-16 | **1819 unit** | feat: headless race sim + camera-view PNG burst capture — sim-race-visual.mjs (PR #115, squash `4a130cc`). Headless Node.js Simulation: EditorShape + applyRacerBehavior + CameraDirector identisch wie Browser, seeded PRNG (mulberry32), pure-Node PNG-Encoder (zlib.deflateSync + CRC32). 5 Bursts × 20 Frames pro Track (Space Sprint + Dirt Oval) → 400 PNGs (__world.png + __camera.png). Kamera-Diagnose: Dirt Oval OVERVIEW zeigt vollen Oval (effZoom=bsX=0.833), Space Sprint LEADER_ZOOM folgt Leader korrekt, kein Jitter detektiert. Keine neuen Tests (Diagnose-Tool, kein Produktions-Code). |
-| 2026-05-16 | **1822 unit** | fix: T-Space Zoom-Mismatch — BATTLE/LEADER/COMEBACK Entry-Phasen (PR #116, squash `05e267a`). In T-Space-Snap-Entry (`tSpaceLerpActive`) wurde `targetOffsetX` mit Pre-Lerp-Zoom berechnet, Renderer nutzte Post-Lerp-Zoom → per-Frame Kamera-Center-Fehler ∝ camX × ΔeffZoom (max 140px bei dt=50ms). Fix: Zoom-Lerp vor `_setTargets()` wenn T-Space aktiv — beide Seiten nutzen denselben Zoom-Wert. Deckt Open- und Closed-Tracks (gleicher Code-Pfad). Backup-Tag: `pre-tspace-zoom-mismatch-fix`. +3 unit (T-Space Zoom-Pan Consistency, Zoom-Contribution Isolation, Variable dt Stability). |
-| 2026-05-16 | **1826 unit** | feat: avoidance lateralForce track-relative scaling (Iteration 1/3, schema v13→v14) — squash `443edac`. `REFERENCE_TRACK_WIDTH=98px` (Dirt Oval-Baseline): `scale=clamp(98/trackWidth, 0.1, 3.0)` nur auf Avoidance-Push (`yAvoidDeltas`), Free-Lane-Impulse/Home-Force/Speed-Brake unverändert. Space Sprint: Welt-Pixel-Wirkung 2.25→0.49 px/frame (÷4.6×), Dirt Oval: Bit-für-Bit identisch (scale=1.0). Kein visueller Effekt im Browser-Test: nachfolgende Log-Analyse (camera-log T11:47) identifizierte 16/33ms Frame-Timing-Oszillation (2:1 Speed-Ratio aller Racer) als eigentliche Ursache des Bolt/Nova/Comet-Phänomens — kein Avoidance-Issue. Iteration 1 bleibt als konzeptuell korrekter Fix für track-breiten-unabhängige Lateral-Kraft. Backup-Tag: `pre-avoidance-track-relative-scaling`. +4 unit (reference width→scale=1.0, 2× width→half delta, min/max clamp). |
-| 2026-05-16 | **1846 unit** | PR #118 — Frame-Timing Stabilization (Fixed-Timestep + EMA-Glättung). Determinismus-Fix vollzogen. Visuelles Sausen eliminiert, rhythmische Hüpfer als bekannte Folge sichtbar — Variante B (Render-Interpolation) als Folge-PR geplant. DevScreen-Slider 'Frame Timing' hinzugefügt (Tab Race Tuning). Variant A: FIXED_DT=16ms Physik-Akkumulator — physicsTs startet bei 0 bei RACING-Eintritt, Re-Roll-Timestamps relative Offsets. Variant C: EMA-Smoothing (dtSmoothingAlpha default 0.7) für Kamera-Lerp + Track-Effects, Physik nutzt FIXED_DT exklusiv. +20 unit (frameTimingStabilization.test.js: Akkumulator-Determinismus, Step-Count, EMA-Konvergenz, physicsTs Re-Roll-Timing, Alpha-Slider-Effekt). Backup-Tag: `pre-frame-timing-stabilization`. |
-| 2026-05-16 | **1867 unit** | PR — Pattern A komplett: Render-State-Interpolation für Sprite UND Kamera. Schließt "Fix Your Timestep" (Glenn Fiedler) für Sprite/Camera-Layer ab. Eliminiert variable-FPS-Artefakte (Multi-Step-Hüpfer und Sprite-Camera-Desync). Vom User visuell verifiziert ("sooo smooth"). lerpAngle-Helper (Shortest-Arc, verhindert Track-Seam-Wrap-Bug), r._prevT im Per-Step-Snapshot-Block, renderRacers-Map vor CameraDirector.update() — Kamera und Sprites targeten jetzt identische interpolierte Positionen. COUNTDOWN nutzt st.racers direkt (kein Akkumulator aktiv). DevScreen-Tooltip: "Sprite- und Kamera-Bewegung". +5 unit (lerpAngle, renderRacers-Whitelist, _prevT-Snapshot). Backup-Tag: `pre-render-interpolation`. Squash `91e526d`. |
+| 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.6 — Race Dynamics (feat/pr-a2.6-race-dynamics). 3 commits: (1) speedFactor/speedBonusMult separation — spreadFactor + speedBonusMult as separate fields, re-roll only touches spreadFactor (numerically equivalent to before); (2) Periodic spreadFactor re-roll: rollCount=max(2,⌊duration/15⌋), rollInterval≈12s, variation ±85% of SPREAD_RANGE (Variant B), easeInOutCubic transition 5000ms, last roll at 80% — draftingBoost unchanged at 1.10, cone-geometry comment; (3) doc updates ARCHITECTURE/LESSONS/BACKLOG/ROADMAP/AUDIT. +33 unit tests (reRoll.test.js). ESLint: 0 errors, 0 warnings. |
+| 2026-05-04 | **1359 unit + 183 e2e + 114 backend** | PR-A2.9 — Repo hygiene (chore/pr-a2.9-repo-hygiene). 5 debug screenshots removed from repo root (modal-*.png). @testing-library/user-event removed from devDependencies (unused). .gitignore confirmed (audit-temp/ + diagnosis/ already covered). Flaky test fix: reRoll.test.js Math.random spy for deterministic uniqueness test (was not always passing in full suite). Audit false-positive: services/api.js NOT deleted — grep pattern was missing .js extension, file has 2 active imports. Background PNG compression deferred (user decision). 0 new tests. |
+| 2026-05-16 | **1788 unit** | feat: countdown camera phase — zoom-in + subtle countdown text (schema v12) (PR #112, squash `d71a83d`). New `updateCountdown()` method in CameraDirector: ease-out-cubic zoom from `countdownStartZoomSpritePx` → `_overviewStateZoom`, pack centroid pan with world-bounds clamp. Countdown text: 220px center → 56px top-right badge. Schema v11→v12 migration: +`countdownStartZoomSpritePx`, +`countdownDurationMs`. DevScreen: new "Countdown Phase" panel. +4 unit (3 updateCountdown + 1 v11→v12 migration). TrackEditor.effects.test.jsx failure pre-existing (not from this PR). |
+| 2026-05-16 | **1809 unit** | feat: state-overlay-text — overlay text infrastructure for camera states (schema v13) (PR #113, squash `c2010cb`). New `StateOverlay` component (bottom center, pill shape, fade-in/out). `stateOverlayTemplates.js`: 3 template pools (OVERVIEW ×8, BATTLE_ZOOM ×8, COMEBACK_ZOOM ×8) with anti-repetition and variable resolution. Schema v12→v13: +`stateOverlayEnabled`, +`stateOverlayDurationMs`. DevScreen: toggle + duration slider in CameraStateHudSection. RaceScreen: OVERVIEW active (leader name), BATTLE/COMEBACK ready for later specs. +21 unit (stateOverlayTemplates.test.js ×16 + cameraConfig v12→v13 ×4 + CameraStateHUD null-guard ×1). 3 pre-existing CameraZoomTuningSection timeouts (unchanged, not from this PR). |
+| 2026-05-16 | **1819 unit** | feat: frame-log racer diagnostics — per-racer dx/dy/dt/t snapshots + jump detector (PR #114, squash `cc91d20`). CameraDirector diagnostic frame log: per-frame dx/dy/dt/t snapshots of all racers stored. `scripts/analyze-camera-log.mjs`: headless jump detector (Method A Lerp-Residual + Method B Median-Outlier), context window, camTDelta. `analyzeFrameLog.test.js`: +10 unit tests (smooth lerp, synthetic jumps, transition exemption, context window, Method A/B, T-Space frames, camTDelta). |
+| 2026-05-16 | **1819 unit** | feat: headless race sim + camera-view PNG burst capture — sim-race-visual.mjs (PR #115, squash `4a130cc`). Headless Node.js simulation: EditorShape + applyRacerBehavior + CameraDirector identical to browser, seeded PRNG (mulberry32), pure-Node PNG encoder (zlib.deflateSync + CRC32). 5 bursts × 20 frames per track (Space Sprint + Dirt Oval) → 400 PNGs (__world.png + __camera.png). Camera diagnosis: Dirt Oval OVERVIEW shows full oval (effZoom=bsX=0.833), Space Sprint LEADER_ZOOM follows leader correctly, no jitter detected. No new tests (diagnostic tool, not production code). |
+| 2026-05-16 | **1822 unit** | fix: T-Space Zoom-Mismatch — BATTLE/LEADER/COMEBACK entry phases (PR #116, squash `05e267a`). In T-Space snap-entry (`tSpaceLerpActive`), `targetOffsetX` was computed with pre-lerp zoom, renderer used post-lerp zoom → per-frame camera center error ∝ camX × ΔeffZoom (max 140px at dt=50ms). Fix: zoom lerp before `_setTargets()` when T-Space active — both sides use the same zoom value. Covers open and closed tracks (same code path). Backup tag: `pre-tspace-zoom-mismatch-fix`. +3 unit (T-Space Zoom-Pan Consistency, Zoom-Contribution Isolation, Variable dt Stability). |
+| 2026-05-16 | **1826 unit** | feat: avoidance lateralForce track-relative scaling (Iteration 1/3, schema v13→v14) — squash `443edac`. `REFERENCE_TRACK_WIDTH=98px` (Dirt Oval baseline): `scale=clamp(98/trackWidth, 0.1, 3.0)` applied only to avoidance push (`yAvoidDeltas`), free-lane impulse/home-force/speed-brake unchanged. Space Sprint: world-pixel effect 2.25→0.49 px/frame (÷4.6×), Dirt Oval: bit-for-bit identical (scale=1.0). No visible effect in browser test: subsequent log analysis (camera-log T11:47) identified 16/33ms frame-timing oscillation (2:1 speed ratio of all racers) as actual cause of the Bolt/Nova/Comet phenomenon — not an avoidance issue. Iteration 1 remains as a conceptually correct fix for track-width-independent lateral force. Backup tag: `pre-avoidance-track-relative-scaling`. +4 unit (reference width→scale=1.0, 2× width→half delta, min/max clamp). |
+| 2026-05-16 | **1846 unit** | PR #118 — Frame-Timing Stabilization (Fixed-Timestep + EMA smoothing). Determinism fix completed. Visual rushing eliminated, rhythmic bouncing visible as known consequence — Variant B (render interpolation) planned as follow-up PR. DevScreen slider 'Frame Timing' added (Race Tuning tab). Variant A: FIXED_DT=16ms physics accumulator — physicsTs starts at 0 on RACING entry, re-roll timestamps as relative offsets. Variant C: EMA smoothing (dtSmoothingAlpha default 0.7) for camera lerp + track effects, physics uses FIXED_DT exclusively. +20 unit (frameTimingStabilization.test.js: accumulator determinism, step count, EMA convergence, physicsTs re-roll timing, alpha slider effect). Backup tag: `pre-frame-timing-stabilization`. |
+| 2026-05-16 | **1867 unit** | PR — Pattern A complete: render-state interpolation for sprites AND camera. Closes "Fix Your Timestep" (Glenn Fiedler) for sprite/camera layer. Eliminates variable-FPS artifacts (multi-step bouncing and sprite-camera desync). Visually verified by user ("sooo smooth"). lerpAngle helper (shortest-arc, prevents track-seam wrap bug), r._prevT in per-step snapshot block, renderRacers map before CameraDirector.update() — camera and sprites now target identical interpolated positions. COUNTDOWN uses st.racers directly (no accumulator active). DevScreen tooltip: "Sprite and camera movement". +5 unit (lerpAngle, renderRacers whitelist, _prevT snapshot). Backup tag: `pre-render-interpolation`. Squash `91e526d`. |
 
-| 2026-05-16 | **1867 unit** | PR — Codebase-Audit 2026-05-16: 8 Bereiche durchleuchtet, Doku-Aktualisierungen (ARCHITECTURE/README/LESSONS L76-L80), Repo-Hygiene (Diagnose-MDs nach docs/diagnose/, poc-*.png gitignored), DiagnoseVerteilung als URL-only-Route klargestellt. Kein Logik-Code-Change. Folge-Aufgaben: ESLint-Cleanup (Cluster B), loop()-Refactoring (Cluster C) — beide BACKLOG. Squash `d5dc1ec`. |
-| 2026-05-17 | **1910 unit** | feat: fairness simulation tool + speedBonusMult formula fix (feat/fairness-simulation → master). sim-fairness.mjs (7200-Rennen, 144 Kombinationen, Chi²); computeSpeedBonus finishT-kalibriert (epsilon-guard, finite-checks, 7-Parameter); Closed-Tracks 71/72 BESTANDEN; L81, ARCHITECTURE.md, AUDIT.md PR-Bericht. +14 unit (finite-checks ×5, open-track ×3, correctness-properties ×6). Squash `2955f85`. |
-| 2026-05-17 | **1910 unit** | chore: ESLint Cleanup Cluster B (chore/eslint-cleanup-cluster-b → master). Dead code D1/D2 (CameraDirector, RaceScreen), Unused vars U1-U3 (6 Dateien), Docs-Alignment. ESLint 72→57 Warnings (net -15; Basis-Erhöhung durch Phase-1B-Merge erklärt 52→57-Delta). Keine neuen Tests. Squash `4641cb6`. |
-| 2026-05-17 | **1932 unit** | feat: Phase 2B.1 — Start-Phase speedBrake-Ramp für Open Tracks (PR #114, squash `7237900`). `computeEffectiveBrakeFactor(config, isOpen, raceElapsedMs)` in `raceBehaviorConfig.js`: easeInOutCubic-Ramp von 1.0→speedBrakeFactor über `avoidanceWarmupMs`ms; wirkt **nur auf isOpen-Tracks**, closed Tracks bit-für-bit identisch. `avoidanceWarmupMs: 3000` in `DEFAULT_RACE_BEHAVIOR_CONFIG`. DevScreen-Slider (0–8000ms, Step 100ms). Mixing-Quote-Metrik: Anteil Row-1-Racer die bei t=warmupMs mind. einen Row-0-Racer überholt haben. Backup-Tag: `pre-avoidance-warmup-ramp`. **Fairness-Sim-Ergebnis (Phase 2B.1 with 3000ms Ramp):** Vorher=71/144, Nachher=71/144 — **kein Fortschritt auf Open Tracks** (0/72 Open-Track-Kombinationen bestehen). Closed Tracks: Zero Regression bestätigt (Garden Path×giraffe×30s chi²=24.0 war in Phase-1-Baseline bereits unfair). **Mixing-Quote:** 70/72 in Zielbereich 60–95%; River Run snail 30s/120s = 32–35% (unter Ziel). **Muster-Analyse:** High Mixing-Quote korreliert nicht mit Win-Fairness — Mixing misst ob Row-1 den langsamsten Row-0 überholt, Win-Fairness hängt vom schnellsten Row-0 ab. 3000ms-Ramp reicht nicht aus, den strukturellen t-Space-Vorsprung (deltaT=0.003–0.010) der Frontreihe zu neutralisieren. Spec-Mindesterfolg (70/72) nicht erreicht — Pattern-Analyse lt. Spec vor weiteren Eingriffen. +22 unit: `avoidanceWarmupRamp.test.js` ×17 (5 describe-Blöcke: isOpen-Guard, warmupMs=0, 3000ms-Ramp, Boundary, Schema-Validation) + `sim-fairness.test.js` +4 (Mixing-Quote null/range/length/iterable). |
+| 2026-05-16 | **1867 unit** | PR — Codebase audit 2026-05-16: 8 areas audited, documentation updates (ARCHITECTURE/README/LESSONS L76-L80), repo hygiene (diagnostic MDs moved to docs/diagnose/, poc-*.png gitignored), DiagnoseVerteilung clarified as URL-only route. No logic code change. Follow-up tasks: ESLint cleanup (Cluster B), loop() refactoring (Cluster C) — both BACKLOG. Squash `d5dc1ec`. |
+| 2026-05-17 | **1910 unit** | feat: fairness simulation tool + speedBonusMult formula fix (feat/fairness-simulation → master). sim-fairness.mjs (7200 races, 144 combinations, Chi²); computeSpeedBonus finishT-calibrated (epsilon-guard, finite-checks, 7 parameters); closed-tracks 71/72 PASSED; L81, ARCHITECTURE.md, AUDIT.md PR report. +14 unit (finite-checks ×5, open-track ×3, correctness-properties ×6). Squash `2955f85`. |
+| 2026-05-17 | **1910 unit** | chore: ESLint Cleanup Cluster B (chore/eslint-cleanup-cluster-b → master). Dead code D1/D2 (CameraDirector, RaceScreen), unused vars U1-U3 (6 files), docs alignment. ESLint 72→57 warnings (net -15; baseline increase from Phase-1B merge explains 52→57 delta). No new tests. Squash `4641cb6`. |
+| 2026-05-17 | **1932 unit** | feat: Phase 2B.1 — start-phase speedBrake ramp for open tracks (PR #114, squash `7237900`). `computeEffectiveBrakeFactor(config, isOpen, raceElapsedMs)` in `raceBehaviorConfig.js`: easeInOutCubic ramp from 1.0→speedBrakeFactor over `avoidanceWarmupMs`ms; applies **only to open tracks**, closed tracks bit-for-bit identical. `avoidanceWarmupMs: 3000` in `DEFAULT_RACE_BEHAVIOR_CONFIG`. DevScreen slider (0–8000ms, step 100ms). Mixing rate metric: share of Row-1 racers who overtook at least one Row-0 racer by t=warmupMs. Backup tag: `pre-avoidance-warmup-ramp`. **Fairness sim result (Phase 2B.1 with 3000ms ramp):** before=71/144, after=71/144 — **no progress on open tracks** (0/72 open-track combinations pass). Closed tracks: zero regression confirmed (Garden Path×giraffe×30s chi²=24.0 was already unfair in Phase-1 baseline). **Mixing rate:** 70/72 in target range 60–95%; River Run snail 30s/120s = 32–35% (below target). **Pattern analysis:** high mixing rate does not correlate with win fairness — mixing measures whether Row-1 overtakes the slowest Row-0, win fairness depends on the fastest Row-0. 3000ms ramp is insufficient to neutralize the structural t-space lead (deltaT=0.003–0.010) of the front row. Minimum spec success (70/72) not achieved — pattern analysis per spec before further intervention. +22 unit: `avoidanceWarmupRamp.test.js` ×17 (5 describe blocks: isOpen-guard, warmupMs=0, 3000ms ramp, boundary, schema validation) + `sim-fairness.test.js` +4 (mixing rate null/range/length/iterable). |
 
-| 2026-05-17 | **1932 unit** | feat: track-type-specific maxPlayers cap — Open 100, Closed 40 (PR #115, squash `7619ead`). Zwei neue Config-Keys `maxPlayersOpen: 100` / `maxPlayersClosed: 40` in `DEFAULT_RACE_DEFAULTS`; `SetupScreen` nutzt bereits berechnetes `trackIsOpen` für korrekte Limit-Übergabe; `PlayerGroupsManager` nutzt Open-Ceiling (track-agnostisch); `RaceDefaults`-Stepper durch zwei Number-Inputs ersetzt. Alter Key `maxPlayers: 20` bleibt als Fallback. Browser-Test: 100 Racer × Space Sprint — Start, Rennen (77 s), Ergebnis-Screen ohne Crash, 0 neue Console-Errors. O(n²)-Avoidance-Loops (4950 Paare bei 100 Racern) laufen im Playwright-Test ohne sichtbare Frame-Drops; Performance auf Low-End-Hardware ungetestet — separate Spec falls nötig. Keine neuen Tests. Backup-Tag: `pre-maxplayers-track-specific`. |
+| 2026-05-17 | **1932 unit** | feat: track-type-specific maxPlayers cap — Open 100, Closed 40 (PR #115, squash `7619ead`). Two new config keys `maxPlayersOpen: 100` / `maxPlayersClosed: 40` in `DEFAULT_RACE_DEFAULTS`; `SetupScreen` uses pre-computed `trackIsOpen` for correct limit handoff; `PlayerGroupsManager` uses open ceiling (track-agnostic); `RaceDefaults` stepper replaced by two number inputs. Old key `maxPlayers: 20` retained as fallback. Browser test: 100 racers × Space Sprint — start, race (77 s), result screen without crash, 0 new console errors. O(n²) avoidance loops (4950 pairs at 100 racers) run in Playwright test without visible frame drops; performance on low-end hardware untested — separate spec if needed. No new tests. Backup tag: `pre-maxplayers-track-specific`. |
 
-| 2026-05-20 | **1987 unit** | feat: Phase 3A — Race Plan + Bereichs-Bonus + Trajectory-Controller (PR #120, squash `596a1b2`). racePlanner.js (Bereichszuordnung B1-B5, P-Controller trajectoryMult [0.85,1.10], Bonus-Fade); symmetrische Startreihen (bottom-up); natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks (ssf-basiert); bereichsBonusMult in Physics-Loop; 5 HUD-Overlays (RP DIAG + B1-Liste + Speed-Monitor + Minimap-Badges + Startreihen); racePlanBonusStrengthMultiplier DevPanel + Sim-CLI-Arg; computeAutoScaleFactor Sim-Parität. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (User-Sichtcheck + Sim-Smoke 120s: χ²=0.3–0.6 ✅). +77 unit. Backup-Tag: `backup/pre-phase-3a`. |
+| 2026-05-20 | **1987 unit** | feat: Phase 3A — Race Plan + zone bonus + trajectory controller (PR #120, squash `596a1b2`). racePlanner.js (zone assignment B1-B5, P-controller trajectoryMult [0.85,1.10], bonus fade); symmetric start rows (bottom-up); natural speed + dynamic finish line open tracks (ssf-based); bereichsBonusMult in physics loop; 5 HUD overlays (RP DIAG + B1 list + speed monitor + minimap badges + start rows); racePlanBonusStrengthMultiplier DevPanel + sim CLI arg; computeAutoScaleFactor sim parity. Defaults: avoidanceDistance=0.15, bonusMult=2.0 (user visual check + sim smoke 120s: χ²=0.3–0.6 ✅). +77 unit. Backup tag: `backup/pre-phase-3a`. |
 
-| 2026-05-22 | **1986/1987 unit** | fix: Open Track — Ranking, Ziellinie, Spurwechsel-Wackeln (squash `8b7f8f6`). Fix 1: Scoreboard-Sort auf Open Tracks nach projizierter Weltposition (r.x/r.y · fwdDir) statt reinem t-Wert — visuell führender Racer korrekt im HUD. Fix 2: Ziellinie senkrecht zur primären Fahrtrichtung gezeichnet (center ± openTrackHW entlang lokalem Perp); Stripe-Tiefe entlang Fwd-Vektor. Fix 3: physicalY-Offset als reine Lateralbewegung: center-Point + Projektion von getPosition(t, physicalY/2) auf lokalen Perp-Vektor — kein Forward-Leak durch Spline-Kurvengeometrie; r.angle = lokale Track-Tangente pro Racer. Nur RaceScreen/index.jsx, Closed Tracks unverändert. 1 pre-existing Failure (raceDynamicsConfig.test.js — trajectoryTransitionDuration=0 Guard, kein Zusammenhang mit diesem Fix). Backup-Tag: `backup/pre-fix-open-track-ranking`. |
+| 2026-05-22 | **1986/1987 unit** | fix: Open Track — ranking, finish line, lane-change wobble (squash `8b7f8f6`). Fix 1: scoreboard sort on open tracks by projected world position (r.x/r.y · fwdDir) instead of pure t-value — visually leading racer correct in HUD. Fix 2: finish line drawn perpendicular to primary direction of travel (center ± openTrackHW along local perp); stripe depth along fwd vector. Fix 3: physicalY offset as pure lateral movement: center point + projection of getPosition(t, physicalY/2) onto local perp vector — no forward leak through spline curve geometry; r.angle = local track tangent per racer. Only RaceScreen/index.jsx, closed tracks unchanged. 1 pre-existing failure (raceDynamicsConfig.test.js — trajectoryTransitionDuration=0 guard, unrelated to this fix). Backup tag: `backup/pre-fix-open-track-ranking`. |
 
-| 2026-05-22 | **1987 unit** | fix(raceDynamicsConfig): trajectoryTransitionDuration <= 0 Validation Guard (direct commit `980ce76`). Guard war in Commit 48c21a3 versprochen aber nie in die if-Condition geschrieben worden — eine Zeile ergänzt. 1987/1987 ✅ (pre-existing failure behoben). |
-| 2026-05-23 | **2041 unit** | feat(phase-3b): BATTLE, COMEBACK, LEAD_CHANGE, Regie-Phase + Fixes (squash `07bea7b`). BATTLE_ZOOM Isolation+Greedy-Expansion+Zentroid; COMEBACK_ZOOM grüner Ring; LEAD_CHANGE_ZOOM Führungswechsel-State; Regie-System gewichteter Kandidaten-Pool + OVERVIEW-Scheduler; OVERVIEW Zoom-Fix (_overviewStateZoom=overviewZoom auf Open Tracks); OVERVIEW Pan-Sprung (entry-phase nutzt shape.getPosition(_camT)); ctx.filter→globalAlpha (GPU-Acceleration); Overlay-Sets-Clear (Race-Reset-Bug). 3 neue HUD-Komponenten (BattleDiagHUD, ComebackDiagHUD, LeadChangeDiagHUD). +54 unit. Master-HEAD: `07bea7b`. |
+| 2026-05-22 | **1987 unit** | fix(raceDynamicsConfig): trajectoryTransitionDuration <= 0 validation guard (direct commit `980ce76`). Guard was promised in commit 48c21a3 but never written into the if-condition — one line added. 1987/1987 ✅ (pre-existing failure fixed). |
+| 2026-05-23 | **2041 unit** | feat(phase-3b): BATTLE, COMEBACK, LEAD_CHANGE, director phase + fixes (squash `07bea7b`). BATTLE_ZOOM isolation+greedy-expansion+centroid; COMEBACK_ZOOM green ring; LEAD_CHANGE_ZOOM lead-change state; director system weighted candidate pool + OVERVIEW scheduler; OVERVIEW zoom fix (_overviewStateZoom=overviewZoom on open tracks); OVERVIEW pan jump (entry-phase uses shape.getPosition(_camT)); ctx.filter→globalAlpha (GPU acceleration); overlay-sets-clear (race-reset bug). 3 new HUD components (BattleDiagHUD, ComebackDiagHUD, LeadChangeDiagHUD). +54 unit. Master HEAD: `07bea7b`. |
 
-| 2026-05-24 | **2048 unit** | feat: Phase 3C — spritePx → spriteScale, Schema v14 (chore/sprite-scale-relative → master, squash `6a9dcfc`). `spriteScale` (relativer Faktor, 1.0 = natural density-scaled size) ersetzt `spritePx` (absoluter World-Pixel-Wert) in allen cameraStateProfiles. Defaults v14: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. `_computeZoomLevels` nutzt spriteScale für alle States; Migration v1–v13→v14 (spritePx/36→spriteScale). **Bugs gefunden + gefixt:** (1) Floor-Bug: `getEffectiveMinTargetScreenPx` bekam 0 als `minSpritePx`-Floor → kein Sprite-Floor auf Open Tracks; (2) LEAD_CHANGE fehlte in `CameraStateHUD STATE_CONFIG` → Fallback auf OVERVIEW-Styling ("OVERVIEW"-Badge bei LEAD_CHANGE-State); (3) CameraZoomTuningSection.test.jsx-Mocks und Assertions auf v14-Werte aktualisiert. Diagnose-Scaffolding vollständig entfernt (_overviewSnapDiag, _lastTransitionLog, _pushTransitionLog, beide HUD-Panels). +7 Tests (6 CameraStateHUD LEAD_CHANGE + 3 CameraZoomTuningSection). |
+| 2026-05-24 | **2048 unit** | feat: Phase 3C — spritePx → spriteScale, schema v14 (chore/sprite-scale-relative → master, squash `6a9dcfc`). `spriteScale` (relative factor, 1.0 = natural density-scaled size) replaces `spritePx` (absolute world-pixel value) in all cameraStateProfiles. Defaults v14: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. `_computeZoomLevels` uses spriteScale for all states; migration v1–v13→v14 (spritePx/36→spriteScale). **Bugs found + fixed:** (1) floor bug: `getEffectiveMinTargetScreenPx` received 0 as `minSpritePx` floor → no sprite floor on open tracks; (2) LEAD_CHANGE missing from `CameraStateHUD STATE_CONFIG` → fallback to OVERVIEW styling ("OVERVIEW" badge in LEAD_CHANGE state); (3) CameraZoomTuningSection.test.jsx mocks and assertions updated to v14 values. Diagnostic scaffolding fully removed (_overviewSnapDiag, _lastTransitionLog, _pushTransitionLog, both HUD panels). +7 tests (6 CameraStateHUD LEAD_CHANGE + 3 CameraZoomTuningSection). |
 | 2026-05-25 | **2134 unit** | chore: full hygiene — i18n, refactor, dead code, RaceScreen/TrackEditor split (chore/hygiene-i18n-audit → master, squash `e180a6b`). **i18n:** CLAUDE.md English-only rule added; all German source comments, variable names, UI strings, test descriptions, and doc text translated to English. **CameraDirector refactor:** 891-line monolith split into `CameraDirector.js` + `CameraDirectorDiag.js` (diagnostics) + `cameraTimingComputation.js` (zoom/timing helpers) + `cameraTimingComputation.test.js` (+226 tests). **RaceScreen split (Q-7 ✅):** draw functions extracted to `drawing/` — overlayRendering.js, particleRendering.js, racerRendering.js, priorityModeOverlay.js, battleDiagRendering.js; `index.jsx` 1853 → 1460 lines. **TrackEditor split (Q-6 ✅):** `TrackEditorToolbar.jsx` + `TrackEditorSaveBar.jsx` (components); `useViewport.js` + `useTrackIO.js` (hooks); `TrackEditor.jsx` 1447 → 1040 lines. **RaceTuningSection split:** 1269-line monolith → `BehaviorTuningSection.jsx` (610) + `DynamicsTuningSection.jsx` (607) + `SubCard.jsx` (41) + `RaceTuningSection.jsx` thin coordinator (44). Dead code removed: legacy `battleGapThreshold` field, dead `finishOverviewPanBlend` slider, obsolete German design doc. 0 net new tests — pure structural refactor; 2134/2134 ✅. |
 
 **Master-HEAD:** `e180a6b` (chore: full hygiene — i18n, refactor, dead code, RaceScreen/TrackEditor split, 2026-05-25)
 **Tests:** 2134/2134 ✅
-**ESLint-Warnings:** ~52 (unverändert)
-**Playwright e2e:** 183 Tests — 183/183 grün (unverändert)
+**ESLint warnings:** ~52 (unchanged)
+**Playwright e2e:** 183 tests — 183/183 passing (unchanged)
 
 ---
 
-**Quality-Gate auf PR #33 (D7a — Proportional Sprite Scaling):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ Sprites skalieren proportional mit Camera-Zoom (natürliches "näher = größer")
-- ✅ Floor: `max(proportionalScreenPx, minTargetScreenPx)` — Mindest-Sichtbarkeit auf großen Tracks
-- ✅ computeRenderDisplayScale als Single-Source (computeCameraZoomFactor + computeOpenTrackCameraZoomFactor entfernt)
-- ✅ CameraDirector: overviewZoom × ratio — 1280-Track Backward-Compat (1.4/1.6/1.3 unverändert)
-- ✅ Label-Skalierung mit effZoom — konstante ~11px Screen-Größe unabhängig von Track-Größe
-- ✅ minVisiblePixels → minTargetScreenPx (Naming + UI-Label in AutoScaleSection)
-- ✅ 808 Unit-Tests grün (net -1: -19 obsolete + +10 neue Proportional-Pipeline-Tests)
-- ✅ 183 e2e-Tests grün (unverändert)
-- ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unverändert)
+**Quality gate PR #33 (D7a — Proportional Sprite Scaling):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ Sprites scale proportionally with camera zoom (natural "closer = larger")
+- ✅ Floor: `max(proportionalScreenPx, minTargetScreenPx)` — minimum visibility on large tracks
+- ✅ computeRenderDisplayScale as single source (computeCameraZoomFactor + computeOpenTrackCameraZoomFactor removed)
+- ✅ CameraDirector: overviewZoom × ratio — 1280-track backward compat (1.4/1.6/1.3 unchanged)
+- ✅ Label scaling with effZoom — constant ~11px screen size independent of track size
+- ✅ minVisiblePixels → minTargetScreenPx (naming + UI label in AutoScaleSection)
+- ✅ 808 unit tests passing (net -1: -19 obsolete + +10 new proportional pipeline tests)
+- ✅ 183 e2e tests passing (unchanged)
+- ✅ ESLint: 0 errors, 0 new warnings (3 pre-existing unchanged)
 - ✅ Prettier: clean
 
-**D7a Browser-Test-Verifikation (post-Merge):**
-- ✅ 1280-Track Backward-Compat: LEADER ~85px (proportional, vorher konstant 57px)
-- ✅ Open-Track natürliches Zoom: BATTLE ~97px > LEADER ~85px > OVERVIEW ~61px
-- ✅ Großer Track + Floor: 6000-Track bleibt ≥32px Mindest-Sichtbarkeit
-- ✅ Camera-States visuell deutlich unterscheidbar auf allen Track-Größen
-- ✅ Labels passen proportional zu Sprite-Größen
+**D7a browser test verification (post-merge):**
+- ✅ 1280-track backward compat: LEADER ~85px (proportional, previously constant 57px)
+- ✅ Open-track natural zoom: BATTLE ~97px > LEADER ~85px > OVERVIEW ~61px
+- ✅ Large track + floor: 6000-track stays ≥32px minimum visibility
+- ✅ Camera states visually clearly distinguishable on all track sizes
+- ✅ Labels scale proportionally with sprite sizes
 
-**D7-Vision-Phase Story:**
-- 6 Browser-Test-Befunde aus D11 → Vision-Diskussion
-- Drei Sparring-Partner: User + strategischer Claude + Claude Code
-- 5 Architektur-Konzepte erarbeitet (Speed-Bonus, Lane-frei, Track-Capacity, Proportional+Floor, per-Type-Override)
-- Phased Rollout beschlossen: D7a → D7a-Plus → D7b → D7c → D7d
-- D7a: Math-korrekte Implementation → Browser-Test → UX-Problem diagnostiziert → User entschied Option 3 (Proportional+Floor) → Korrektur in selber PR → sauberere Architektur
+**D7 vision phase story:**
+- 6 browser test findings from D11 → vision discussion
+- Three sparring partners: user + strategic Claude + Claude Code
+- 5 architecture concepts developed (speed bonus, lane-free, track capacity, proportional+floor, per-type override)
+- Phased rollout decided: D7a → D7a-Plus → D7b → D7c → D7d
+- D7a: mathematically correct implementation → browser test → UX problem diagnosed → user chose Option 3 (Proportional+Floor) → correction in same PR → cleaner architecture
 
 ---
 
-## Verifikations-Status pro Phase
+## Verification status per phase
 
-| Phase | Code-Tests | Playwright-Smoke-Test | Browser-Verifikation User |
+| Phase | Code tests | Playwright smoke test | Browser verification user |
 |---|---|---|---|
-| D7a (PR #33) | ✅ 808 Tests (-1 netto, -19 obsolete +10 neue) | ✅ 183/183 PASS | ✅ grün (Browser-Test-driven Korrektur in selber PR) |
-| D11 (PR #30) | ✅ 809 Tests (+50 unit, +26 e2e) | ✅ 183/183 PASS | ✅ grün (4 Befunde gefunden + gefixt vor Merge) |
-| D3.5.1 | ✅ 52 neue Tests | — (kein UI-Impact) | ✅ grün |
-| D3.5.2 | ✅ Tests migriert | — (interne Refactor) | ✅ grün |
-| D3.5.3 | ✅ Tests erweitert | — (neue Types) | ✅ grün |
-| B-7+B-8+W3 | ✅ 618 Tests | ✅ 9/9 PASS (nach Filter-Fix) | ausstehend |
-| Quality-Cleanup (PR #17) | ✅ 618 unverändert | — (keine UI-Änderung) | — |
-| D9 (PR #19) | ✅ 628 Tests (+10) | ✅ 22/22 PASS (neue e2e-Infrastruktur) | ausstehend |
-| Quality-Gate-Cleanup (PR #19) | ✅ 628 unverändert | ✅ 22/22 unverändert | — |
+| D7a (PR #33) | ✅ 808 tests (-1 net, -19 obsolete +10 new) | ✅ 183/183 PASS | ✅ passing (browser-test-driven correction in same PR) |
+| D11 (PR #30) | ✅ 809 tests (+50 unit, +26 e2e) | ✅ 183/183 PASS | ✅ passing (4 findings found + fixed before merge) |
+| D3.5.1 | ✅ 52 new tests | — (no UI impact) | ✅ passing |
+| D3.5.2 | ✅ tests migrated | — (internal refactor) | ✅ passing |
+| D3.5.3 | ✅ tests expanded | — (new types) | ✅ passing |
+| B-7+B-8+W3 | ✅ 618 tests | ✅ 9/9 PASS (after filter fix) | pending |
+| Quality-Cleanup (PR #17) | ✅ 618 unchanged | — (no UI change) | — |
+| D9 (PR #19) | ✅ 628 tests (+10) | ✅ 22/22 PASS (new e2e infrastructure) | pending |
+| Quality-Gate-Cleanup (PR #19) | ✅ 628 unchanged | ✅ 22/22 unchanged | — |
 
-**Quality-Gate auf PR #17:** 11 PASS, 8 WARN, 1 FAIL (pre-existing)
+**Quality gate PR #17:** 11 PASS, 8 WARN, 1 FAIL (pre-existing)
 - ❌ FAIL: TrackEditor.jsx (1006 LOC) + RaceScreen/index.jsx (886 LOC) — pre-existing, deferred to Phase Q-6/Q-7
-- ⚠️ WARN: 8 Items inkl. dead export, ungenutzte Imports, fehlendes JSON.parse-try/catch, fehlende File-Header
-- ✅ PASS: npm audit 0 vulnerabilities, kein dangerouslySetInnerHTML/eval, keine externen URLs, alle Tests grün
+- ⚠️ WARN: 8 items incl. dead export, unused imports, missing JSON.parse try/catch, missing file headers
+- ✅ PASS: npm audit 0 vulnerabilities, no dangerouslySetInnerHTML/eval, no external URLs, all tests passing
 
-**Quality-Gate-Cleanup (PR #17):** 5/5 Items abgearbeitet. 1 Finding war falsch-positiv (SystemSettings hatte try/catch bereits vorhanden — ehrlich gemeldet).
+**Quality-Gate-Cleanup (PR #17):** 5/5 items completed. 1 finding was false-positive (SystemSettings already had try/catch — reported honestly).
 
-**Quality-Gate auf PR #30 (D11 Racer Behavior + Visual-Fixes):** 23 PASS, 1 WARN-PR, 2 WARN-pre-existing, 0 FAIL
+**Quality gate PR #30 (D11 Racer Behavior + Visual-Fixes):** 23 PASS, 1 WARN-PR, 2 WARN-pre-existing, 0 FAIL
 - ✅ Asymmetric avoidance: trailer (lower t, tie-break index) yields, leader holds — verified in raceBehavior.test.js
 - ✅ Proximity-scaled force + avoidanceReturnSpeed smooth return
 - ✅ Drafting boost: follower in same lane behind leader gets draftingBoostFactor
-- ✅ World-edge camera clamp (Befund 2): offsetX/Y ≤ 0 at zoom > 1, centered when bbox < viewport
-- ✅ Auto-sprite minScale 0.4 → 0.65 (Befund 3)
+- ✅ World-edge camera clamp (finding 2): offsetX/Y ≤ 0 at zoom > 1, centered when bbox < viewport
+- ✅ Auto-sprite minScale 0.4 → 0.65 (finding 3)
 - ✅ Open-track cameraZoomFactor: `REFERENCE_CAMERA_ZOOM / (OPEN_TRACK_BASE_ZOOM × camZoom)` — invariant holds for any zoom
 - ✅ Pixel-floor: `minVisiblePixels / (displaySize × REFERENCE_CAMERA_ZOOM)` — camera terms cancel out
 - ✅ All 5 behavior params tunable in Dev-Screen (RaceBehaviorSection)
 - ✅ minVisiblePixels tunable in AutoScaleSection (min 8, max 120, step 4)
-- ✅ 809 Unit-Tests grün (+50 neue Tests)
-- ✅ 183 e2e-Tests grün (+26 neue Tests)
-- ✅ ESLint: 0 Errors, 0 new Warnings
+- ✅ 809 unit tests passing (+50 new tests)
+- ✅ 183 e2e tests passing (+26 new tests)
+- ✅ ESLint: 0 errors, 0 new warnings
 - ⚠️ WARN-PR: `computeAutoScaleFactor` NaN-edge if `displaySize=0` passed — bounded by `displaySize > 0` guard; cosmetic, not production path
-- ⚠️ 2 pre-existing ESLint-Warnings unverändert (storage.js:148/154 unused params)
+- ⚠️ 2 pre-existing ESLint warnings unchanged (storage.js:148/154 unused params)
 
-**Browser-Test-Befunde vor Merge (4 Bugs, alle gefixt):**
-- **Befund 1 (Q-13):** Sprite-Frame-Animation ruckelt bei großen Sprites — erkannt, deferred (kein Fix in D11, tracked als Q-13/D7)
-- **Befund 2 (gefixt):** Schwarze Ränder auf kleinen Tracks bei hohem Zoom — fehlende world-edge-Clamp in CameraDirector `_setTargets()`
-- **Befund 3 (gefixt):** minScale 0.4 zu klein, Racers wurden fast unsichtbar auf breiten Tracks → 0.65
-- **Befund 4 (gefixt):** Symmetrische Avoidance-Kräfte cancelten sich in gleich-verteilten Packs → asymmetrisch (Option A: nur Trailer yieldt)
-- **Befund 5 (gefixt, discovery during fix):** Open-Track cameraZoomFactor fehlte → Sprites klein auf Open-Tracks bei gezoomter Kamera
+**Browser test findings before merge (4 bugs, all fixed):**
+- **Finding 1 (Q-13):** sprite frame animation stutters on large sprites — noted, deferred (no fix in D11, tracked as Q-13/D7)
+- **Finding 2 (fixed):** black borders on small tracks at high zoom — missing world-edge clamp in CameraDirector `_setTargets()`
+- **Finding 3 (fixed):** minScale 0.4 too small, racers became nearly invisible on wide tracks → 0.65
+- **Finding 4 (fixed):** symmetric avoidance forces cancelled each other in evenly-distributed packs → asymmetric (Option A: only trailer yields)
+- **Finding 5 (fixed, discovery during fix):** open-track cameraZoomFactor missing → sprites small on open tracks with zoomed camera
 
-**Quality-Gate auf PR #28 (fix/camera-polish + Q-14):** 13 PASS, 2 WARN-PR, 3 WARN-pre-existing, 0 FAIL
-- ✅ 13 funktionale Anforderungen verifiziert: adaptive zoom, clampOffset 2-anchor, top-3-focus, cameraZoomFactor-Invariante, BaseSpeedSection CRUD + live-apply, lapUtils SoT, openTrackFinishT baseSpeedMax-Param
-- ✅ 759 Unit-Tests grün (+36 neue Tests)
-- ✅ 157 e2e-Tests grün (+39 neue: camera-polish-smoke ×8, camera-polish-ux-verification ×31)
-- ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unverändert)
-- ⚠️ WARN-PR #1: V7-Abweichung notiert — cameraZoomFactor greift auch mit D3.5.5-Override (korrekt: Override überspringt nur auto-scale, nicht cameraZoomFactor)
-- ⚠️ WARN-PR #2: d10-ux-verification.spec.js V8 stale Assertion gefixt (auto-scale default: enabled:true ist jetzt Defaultwert)
-- ⚠️ 3 pre-existing ESLint-Warnings unverändert
+**Quality gate PR #28 (fix/camera-polish + Q-14):** 13 PASS, 2 WARN-PR, 3 WARN-pre-existing, 0 FAIL
+- ✅ 13 functional requirements verified: adaptive zoom, clampOffset 2-anchor, top-3-focus, cameraZoomFactor invariant, BaseSpeedSection CRUD + live-apply, lapUtils SoT, openTrackFinishT baseSpeedMax param
+- ✅ 759 unit tests passing (+36 new tests)
+- ✅ 157 e2e tests passing (+39 new: camera-polish-smoke ×8, camera-polish-ux-verification ×31)
+- ✅ ESLint: 0 errors, 0 new warnings (3 pre-existing unchanged)
+- ⚠️ WARN-PR #1: V7 deviation noted — cameraZoomFactor also applies with D3.5.5 override (correct: override skips only auto-scale, not cameraZoomFactor)
+- ⚠️ WARN-PR #2: d10-ux-verification.spec.js V8 stale assertion fixed (auto-scale default: enabled:true is now the default)
+- ⚠️ 3 pre-existing ESLint warnings unchanged
 
-**Quality-Gate auf PR #27 (fix/list-tracks-world-dimensions):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings (2 pre-existing `_e` in old IIFEs, unchanged)
-- ✅ 723 Unit-Tests grün (+4 neue Tests)
-- ✅ 3 neue e2e-Tests grün (fix-list-tracks-world-dimensions.spec.js)
+**Quality gate PR #27 (fix/list-tracks-world-dimensions):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings (2 pre-existing `_e` in old IIFEs, unchanged)
+- ✅ 723 unit tests passing (+4 new tests)
+- ✅ 3 new e2e tests passing (fix-list-tracks-world-dimensions.spec.js)
 - ✅ Root cause: `listTracks()` omitted worldWidth/worldHeight → bsX=1.0 → only ~549px visible on 6000px world
 - ✅ A1: 2-line fix in `trackStorage.js listTracks()` — `worldWidth ?? 1280, worldHeight ?? 720`
 - ✅ A2: migration IIFE in `storage.js` — syncs existing track configs from linked geometry on load
 - ⚠️ 7 pre-existing e2e failures in b-wave-smoke + b1617-smoke (pre-existing, confirmed by isolating specs)
 
-**Quality-Gate auf PR #26 (B-16+B-17):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings (3 pre-existing unchanged; `worldH` → `_worldH` prefix fix applied)
-- ✅ 719 Unit-Tests grün (+25 neue Tests)
-- ✅ 100 e2e-Tests grün (+12 neue Tests in b1617-smoke.spec.js)
+**Quality gate PR #26 (B-16+B-17):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings (3 pre-existing unchanged; `worldH` → `_worldH` prefix fix applied)
+- ✅ 719 unit tests passing (+25 new tests)
+- ✅ 100 e2e tests passing (+12 new tests in b1617-smoke.spec.js)
 - ✅ CI green (PR #26, squash-merged `7cdde15`)
 - ✅ B-16: CameraDirector adaptive zoom — `zoom = clamp(worldW/VIEW_W, 1, 6)`. 1280px→≈1.4 (unchanged), 4000px→≈4.4
 - ✅ B-17: pathLengthPx computed at save (200-sample Catmull-Rom arc), migration IIFE backfills old geometries, speedScaleFactor applied to baseSpeed, SpeedScaleSection in Dev-Screen
 
-**Quality-Gate auf PR #25 (B-Wave):** 0 Show-Stopper, 0 neue Errors/Warnings
-- ✅ ESLint: 0 Errors, 0 neue Warnings (3 pre-existing unverändert)
-- ✅ Stale `alignRight`-Prop aus RacerEditModal-Aufruf entfernt
-- ✅ d10-smoke + d10-ux-verification: alle dt. String-Assertions → Englisch aktualisiert
-- ✅ 694 Unit-Tests unverändert grün; +13 e2e-Tests (b-wave-smoke.spec.js)
+**Quality gate PR #25 (B-Wave):** 0 show-stoppers, 0 new errors/warnings
+- ✅ ESLint: 0 errors, 0 new warnings (3 pre-existing unchanged)
+- ✅ Stale `alignRight` prop removed from RacerEditModal call
+- ✅ d10-smoke + d10-ux-verification: all German string assertions → updated to English
+- ✅ 694 unit tests unchanged and passing; +13 e2e tests (b-wave-smoke.spec.js)
 
-**Quality-Gate auf PR #23 (D10 + Bild-First-Fix):** 0 Show-Stopper, 0 Errors, 0 Warnings (alle PR-eingeführten Findings vor Merge gefixt)
-- ✅ Alle 8 Anforderungen (A1-A8) erfüllt
-- ✅ ESLint: 0 Errors, 0 Warnings (gefixt: `handleWorldSizeChange` unused, `Buffer` undeclared, unused import)
-- ⚠️ Q-11 (niedrig, deferred): `reader.onerror` fehlt in `handleBgUpload` — FileReader-Fehler stumm geschluckt
-- ⚠️ Q-12 (info, deferred): localStorage-Quota bei großen data-URL-Bildern — kein Quota-Handling
-- ✅ UX-Verifikation: 17/17 Tests (d10-ux-verification.spec.js) grün, permanent als Regressions-Schutz
-- ✅ Smoke-Tests: 18/18 Tests (d10-smoke.spec.js) grün
+**Quality gate PR #23 (D10 + Image-First-Fix):** 0 show-stoppers, 0 errors, 0 warnings (all PR-introduced findings fixed before merge)
+- ✅ All 8 requirements (A1-A8) met
+- ✅ ESLint: 0 errors, 0 warnings (fixed: `handleWorldSizeChange` unused, `Buffer` undeclared, unused import)
+- ⚠️ Q-11 (low, deferred): `reader.onerror` missing in `handleBgUpload` — FileReader errors silently swallowed
+- ⚠️ Q-12 (info, deferred): localStorage quota with large data-URL images — no quota handling
+- ✅ UX verification: 17/17 tests (d10-ux-verification.spec.js) passing, kept permanently as regression guard
+- ✅ Smoke tests: 18/18 tests (d10-smoke.spec.js) passing
 
-**Quality-Gate auf PR #21 (D3.5.5):** 0 Show-Stopper, 2 W-D3.5.5, 3 pre-existing
-- ⚠️ W-D3.5.5 #1 (vor Merge gefixt): Doppelter Import von `normalizeOverrideMap` in RacerEditModal.jsx (zwei Import-Statements aus demselben Modul) — 1-Zeilen-Fix im selben Branch
-- ⚠️ W-D3.5.5 #2 (PR-Body, nicht blockierend): e2e-Count-Angabe "7→21" falsch (korrekt: 22→36). Nur PR-Beschreibung betroffen, kein Code-Bug.
-- ⚠️ Pre-existing (unverändert): 3 ESLint-Warnings (TransitionContext.jsx:44, storage.js:148/154)
-- ✅ UX-Verifikation: 21/21 Tests (d3-5-5-ux-verification.spec.js) grün, permanent als Regressions-Schutz behalten
+**Quality gate PR #21 (D3.5.5):** 0 show-stoppers, 2 W-D3.5.5, 3 pre-existing
+- ⚠️ W-D3.5.5 #1 (fixed before merge): duplicate import of `normalizeOverrideMap` in RacerEditModal.jsx (two import statements from the same module) — 1-line fix in same branch
+- ⚠️ W-D3.5.5 #2 (PR body, non-blocking): e2e count claim "7→21" wrong (correct: 22→36). Only PR description affected, no code bug.
+- ⚠️ Pre-existing (unchanged): 3 ESLint warnings (TransitionContext.jsx:44, storage.js:148/154)
+- ✅ UX verification: 21/21 tests (d3-5-5-ux-verification.spec.js) passing, kept permanently as regression guard
 
-**Quality-Gate auf PR #19 (D9):** alle Findings vor Merge gefixt
-- ❌ S-1 (vor Merge gefixt): vitest.config.js ohne `exclude: ['e2e/**']` — `npm test` schlug rot weil Playwright-Spec importiert wurde
-- ⚠️ W-D1 (vor Merge gefixt): RaceScreen duplizierte `BASE_SPEED_MIN`/`BASE_SPEED_MAX` statt lapUtils-Import
-- ⚠️ W-D2 (vor Merge gefixt): `getRacerType(typeId)` dreimal aufgerufen, jetzt gecacht
-- ⚠️ W-D3+W-D4 (vor Merge gefixt): fehlende Standard-File-Header in `playwright.config.js` und `e2e/d9-smoke.spec.js`
-- ⚠️ Pre-existing (unverändert): 3 ESLint-Warnings (TransitionContext.jsx:44, storage.js:148/154); RaceScreen 940 LOC → Phase Q-7 Priorität erhöht
+**Quality gate PR #19 (D9):** all findings fixed before merge
+- ❌ S-1 (fixed before merge): vitest.config.js without `exclude: ['e2e/**']` — `npm test` failed red because Playwright spec was imported
+- ⚠️ W-D1 (fixed before merge): RaceScreen duplicated `BASE_SPEED_MIN`/`BASE_SPEED_MAX` instead of lapUtils import
+- ⚠️ W-D2 (fixed before merge): `getRacerType(typeId)` called three times, now cached
+- ⚠️ W-D3+W-D4 (fixed before merge): missing standard file headers in `playwright.config.js` and `e2e/d9-smoke.spec.js`
+- ⚠️ Pre-existing (unchanged): 3 ESLint warnings (TransitionContext.jsx:44, storage.js:148/154); RaceScreen 940 LOC → Phase Q-7 priority raised
 
 ---
 
 ## Reality-Check-Items
 
-Keine neuen systemweiten Drift-Probleme in dieser Session entdeckt.
-Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-Items aus ROADMAP.md.
+No new system-wide drift problems discovered in this session.
+Phase V (BACKLOG.md V-1 to V-9) bundles all known unverified `[x]` items from ROADMAP.md.
 
-**Quality-Gate auf PR #46 (VRE-1 — Foundation):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ ~1044 Unit-Tests grün (+88 neue: 64 Frontend + 24 Backend) — exact count per vitest: 1084 − 40 VRE-2 additions = 1044
-- ✅ 183 e2e-Tests grün (unverändert — kein UI in VRE-1)
+**Quality gate PR #46 (VRE-1 — Foundation):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings
+- ✅ ~1044 unit tests passing (+88 new: 64 frontend + 24 backend) — exact count per vitest: 1084 − 40 VRE-2 additions = 1044
+- ✅ 183 e2e tests passing (unchanged — no UI in VRE-1)
 - ✅ CI green (PR #46, squash-merged `e4fd947`)
 
-**Quality-Gate auf PR #47 (VRE-2 — Surface-Class Editor):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1084 Unit-Tests grün (+84 neue: SurfaceClassManager 36 + SurfaceClassPreview 4 + useSurfaceClasses 1 + hook shape 1 + Default-Override lifecycle 4... net after VRE-1 base)
-- ✅ 183 e2e-Tests grün (Playwright smoke + UX-Verifikation in vre-2-smoke.spec.js + vre-2-ux-verification.spec.js — run on full server)
-- ✅ Memory-Leak-Check: rAF loop in SurfaceClassPreview.jsx is cancelled on unmount (SurfaceClassPreview.test.jsx verifies cancelAnimationFrame called)
-- ✅ Inline-Doc-Updates: ARCHITECTURE.md (VRE-2 ✅ in Sub-PR table), RACER_DATA_MODEL.md (UI location note), BACKLOG.md (VRE-2 ✅)
+**Quality gate PR #47 (VRE-2 — Surface-Class Editor):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings
+- ✅ 1084 unit tests passing (+84 new: SurfaceClassManager 36 + SurfaceClassPreview 4 + useSurfaceClasses 1 + hook shape 1 + Default-Override lifecycle 4... net after VRE-1 base)
+- ✅ 183 e2e tests passing (Playwright smoke + UX verification in vre-2-smoke.spec.js + vre-2-ux-verification.spec.js — run on full server)
+- ✅ Memory leak check: rAF loop in SurfaceClassPreview.jsx is cancelled on unmount (SurfaceClassPreview.test.jsx verifies cancelAnimationFrame called)
+- ✅ Inline doc updates: ARCHITECTURE.md (VRE-2 ✅ in Sub-PR table), RACER_DATA_MODEL.md (UI location note), BACKLOG.md (VRE-2 ✅)
 
-**Quality-Gate auf PR #48 (VRE-3 — Surface-Class Linking):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1134 Unit-Tests grün (+50 neue: SpriteRacerType surfaceClasses 10 + filterRacerTypesForTrack 15 + RacerEditModal pills 8 + TrackManager pills 5 + SetupScreen filter 6 + backend partial-update validation 6)
-- ✅ 60 Backend-Tests grün (+6 neue partial-update PUT-Tests)
-- ✅ 2 neue Playwright-Specs: vre-3-smoke.spec.js + vre-3-ux-verification.spec.js
-- ✅ 2 Bugs gefixt: handleSave() Server-Tracks via API (Bug 1) + validateTrackBodyForUpdate split (Bug 2)
-- ✅ Inline-Doc-Updates: ARCHITECTURE.md (VRE-3 ✅), RACER_DATA_MODEL.md (getSurfaceClasses, TUNABLE_FIELDS), LESSONS.md (L33, L34)
+**Quality gate PR #48 (VRE-3 — Surface-Class Linking):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings
+- ✅ 1134 unit tests passing (+50 new: SpriteRacerType surfaceClasses 10 + filterRacerTypesForTrack 15 + RacerEditModal pills 8 + TrackManager pills 5 + SetupScreen filter 6 + backend partial-update validation 6)
+- ✅ 60 backend tests passing (+6 new partial-update PUT tests)
+- ✅ 2 new Playwright specs: vre-3-smoke.spec.js + vre-3-ux-verification.spec.js
+- ✅ 2 bugs fixed: handleSave() server tracks via API (Bug 1) + validateTrackBodyForUpdate split (Bug 2)
+- ✅ Inline doc updates: ARCHITECTURE.md (VRE-3 ✅), RACER_DATA_MODEL.md (getSurfaceClasses, TUNABLE_FIELDS), LESSONS.md (L33, L34)
 
-**Quality-Gate auf PR #49 (VRE-4 — Race Integration):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1165 Unit-Tests grün (+14 neue: trailResolver.test.js — match/no-match/edge cases/perf smoke)
-- ✅ 2 neue Playwright-Specs: vre-4-smoke.spec.js (4 Tests) + vre-4-ux-verification.spec.js (5 Tests)
-- ✅ Phase Visual Racer Effects abgeschlossen (VRE-1 through VRE-4 all ✅)
-- ✅ Heimat-Trail-Fallback: racers ohne Surface-Class-Match nutzen weiterhin trailFactory (rückwärtskompatibel)
-- ✅ Inline-Doc-Updates: ARCHITECTURE.md (Trail-Resolution-Pipeline, Sub-PR-Tabelle), RACER_DATA_MODEL.md (trailFactory-Status, sessionStorage-Schema), ROADMAP.md (VRE-4 ✅), BACKLOG.md (VRE-4 ✅)
+**Quality gate PR #49 (VRE-4 — Race Integration):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings
+- ✅ 1165 unit tests passing (+14 new: trailResolver.test.js — match/no-match/edge cases/perf smoke)
+- ✅ 2 new Playwright specs: vre-4-smoke.spec.js (4 tests) + vre-4-ux-verification.spec.js (5 tests)
+- ✅ Phase Visual Racer Effects completed (VRE-1 through VRE-4 all ✅)
+- ✅ Home trail fallback: racers without surface-class match continue to use trailFactory (backward-compatible)
+- ✅ Inline doc updates: ARCHITECTURE.md (Trail-Resolution-Pipeline, sub-PR table), RACER_DATA_MODEL.md (trailFactory status, sessionStorage schema), ROADMAP.md (VRE-4 ✅), BACKLOG.md (VRE-4 ✅)
 
-**Quality-Gate auf PR #51 (feat/error-boundary — Top-Level React Error Boundary):** 0 Show-Stopper, 0 Errors, 0 new Warnings
-- ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1163 Unit-Tests grün (+8 neue: ErrorBoundary — children/catch/details-toggle/reload/reset-confirm/reset-cancel/undefined-message)
-- ✅ Deep-Audit HIGH-Finding adressiert: "Kein React Error Boundary — Render-Crash führt zu Blank-Screen" → behoben durch `ErrorBoundary` über `<App>` in `main.jsx`. Drei Recovery-Optionen: Reload, Reset local data (clears `racearena:*`), Show technical details.
-- ✅ Inline-Doc-Updates: ARCHITECTURE.md (Error Boundary Section), BACKLOG.md (Audit-Finding als ✅ vermerkt)
+**Quality gate PR #51 (feat/error-boundary — Top-Level React Error Boundary):** 0 show-stoppers, 0 errors, 0 new warnings
+- ✅ ESLint: 0 errors, 0 new warnings
+- ✅ 1163 unit tests passing (+8 new: ErrorBoundary — children/catch/details-toggle/reload/reset-confirm/reset-cancel/undefined-message)
+- ✅ Deep-audit HIGH finding addressed: "No React Error Boundary — render crash leads to blank screen" → resolved via `ErrorBoundary` over `<App>` in `main.jsx`. Three recovery options: Reload, Reset local data (clears `racearena:*`), Show technical details.
+- ✅ Inline doc updates: ARCHITECTURE.md (Error Boundary section), BACKLOG.md (audit finding marked ✅)
 
 ---
 
-## 2026-05-04 — PR-A3 Dev-Panel-Reorganisation (Tier-System + Race Tuning Konsolidierung)
+## 2026-05-04 — PR-A3 Dev Panel Reorganization (Tier System + Race Tuning Consolidation)
 
 **Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
 **Scope:** client (DevScreen, RaceScreen, storage modules)
@@ -370,7 +370,7 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 ### Quality Gate
 
 - ✅ ESLint: 0 Errors, 0 new Warnings
-- ✅ 1396 Unit-Tests grün (+37 neue: raceDynamicsConfig ×12, RaceTuningSection ×15, DevScreen-tier-toggle ×10)
+- ✅ 1396 unit tests passing (+37 new: raceDynamicsConfig ×12, RaceTuningSection ×15, DevScreen-tier-toggle ×10)
 - ✅ All 1359 pre-existing tests still pass (no regressions)
 - ✅ BaseSpeedSection + RaceBehaviorSection deleted — content fully migrated to RaceTuningSection
 - ✅ raceDynamicsConfig new storage module — follows exact baseSpeedConfig.js pattern; all validation guards present
@@ -392,8 +392,8 @@ Phase V (BACKLOG.md V-1 bis V-9) bündelt alle bekannten unverifizierten `[x]`-I
 
 ### Deferred
 
-- PR-A3.1: Tooltip-Vervollständigung für Player Groups, Racer Types, Tracks, Branding, Race History
-- Permission-Lock für Tier-Toggle (eigene PR mit Auth-System)
+- PR-A3.1: Tooltip completion for Player Groups, Racer Types, Tracks, Branding, Race History
+- Permission lock for tier toggle (separate PR with auth system)
 
 ---
 
@@ -449,7 +449,7 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 - Diagnose-HUD intentionally retained as Tier-2 toggle in Dev-Panel (diagnose without code change)
 
 **Implemented — Plan-B Pan Fix:**
-- `_computePanScale()` removed entirely (was applying `bsX` twice — Befund C)
+- `_computePanScale()` removed entirely (was applying `bsX` twice — Finding C)
 - Trivial pan formula in all 3 states: `targetOffsetX = hw - r.x × zoom`, `targetOffsetY = hh - r.y × zoom`
 - Mathematical proof: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw ✓` (r.x is canvas-space, already has bsX)
 - 4 pan-centering tests replaced with proper render-formula tests (canvas-space in, world-space to render helpers)
@@ -493,33 +493,33 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 | Bundle (gzip) | 131 kB JS + 7 kB CSS |
 | ESLint | ✅ 0 errors |
 | Prettier | ✅ 0 issues |
-| CI pipeline | ✅ Lint + Format + Tests + Audit aktiv |
+| CI pipeline | ✅ Lint + Format + Tests + Audit active |
 | Pre-commit hooks | ✅ lint-staged (ESLint + Prettier) |
-| Build | ✅ sauber (390 ms) |
+| Build | ✅ clean (390 ms) |
 
-### Befunde
+### Findings
 
-**0 CRITICAL** — Branch ist mergebereit.
+**0 CRITICAL** — Branch is ready to merge.
 
-| Priorität | ID | Befund | Aktion |
+| Priority | ID | Finding | Action |
 |-----------|-----|--------|--------|
-| IMPORTANT | I1 | `utils/index.js` — totes Modul (nie importiert) | ✅ **Gefixt** in Commit C1 |
-| IMPORTANT | I2 | `SectionContainer.jsx` — tote Komponente (nie importiert) | ✅ **Gefixt** in Commit C1 |
-| IMPORTANT | I3 | CORS Wildcard `app.use(cors())` ohne Origin-Filter | Akzeptiert — Phase-L localhost-only; adressieren vor Phase 5 VPS |
-| IMPORTANT | I4 | Keine Server-Authentication auf CRUD-Endpoints | Akzeptiert — Phase 5 JWT, wie geplant |
-| IMPORTANT | I5 | Monolithische Komponenten > 700 Zeilen (TrackEditor 1447, RaceScreen 1286, RaceTuningSection 965) | Backlog — eigener Refactor-Sprint |
-| NICE-TO-HAVE | N1–N9 | JSDoc-Lücken, Browserslist, CI-Server-Tests, React 19 Upgrade-Plan, Code-Splitting | Spätere Sprints |
+| IMPORTANT | I1 | `utils/index.js` — dead module (never imported) | ✅ **Fixed** in Commit C1 |
+| IMPORTANT | I2 | `SectionContainer.jsx` — dead component (never imported) | ✅ **Fixed** in Commit C1 |
+| IMPORTANT | I3 | CORS wildcard `app.use(cors())` without origin filter | Accepted — Phase-L localhost-only; address before Phase 5 VPS |
+| IMPORTANT | I4 | No server authentication on CRUD endpoints | Accepted — Phase 5 JWT, as planned |
+| IMPORTANT | I5 | Monolithic components > 700 lines (TrackEditor 1447, RaceScreen 1286, RaceTuningSection 965) | Backlog — dedicated refactor sprint |
+| NICE-TO-HAVE | N1–N9 | JSDoc gaps, Browserslist, CI server tests, React 19 upgrade plan, code splitting | Later sprints |
 
-**Sicherheit:** Keine hardcoded Secrets, kein `dangerouslySetInnerHTML`, kein `innerHTML`-direktzugriff, keine XSS-Vektoren, kein auskommentierter Code. localStorage-Writes ausschließlich über `storage.js`-Modul.
+**Security:** No hardcoded secrets, no `dangerouslySetInnerHTML`, no direct `innerHTML` access, no XSS vectors, no commented-out code. localStorage writes exclusively via `storage.js` module.
 
-### Scope dieser Branch
+### Scope of this branch
 
-- **EditorShape linear interpolation** — `Math.round()` → `Math.floor()` + fraktionaler Blend; eliminiert ~20 px Staircase-Sprünge bei zoom 4× (Etappe 26)
-- **Pulk Battle Trigger** — `battlePulkThresholdPx` (200 px) + `battleMinDurationMs` (3000 ms) ersetzen `battleGapThreshold`/Hysterese
-- **Schema v5** — `leadInDuration`/`leadOutDuration` (Sekunden) ersetzen pixel-basierte `leadInDistance`/`followDuration`/`leadOutDistance`
-- **Observer-Phase** — lead-in → follow → lead-out pro State-Eintritt
-- **Cleanup** — `_display*` und `_drawX/_drawY` Workaround-Felder entfernt; Etappe-23-Trace-Instrumentation entfernt; tote Module gelöscht
-- **Net Tests:** 1619 → 1717 (+98 neue Tests auf Branch)
+- **EditorShape linear interpolation** — `Math.round()` → `Math.floor()` + fractional blend; eliminates ~20 px staircase jumps at zoom 4× (stage 26)
+- **Pack battle trigger** — `battlePulkThresholdPx` (200 px) + `battleMinDurationMs` (3000 ms) replace `battleGapThreshold`/hysteresis
+- **Schema v5** — `leadInDuration`/`leadOutDuration` (seconds) replace pixel-based `leadInDistance`/`followDuration`/`leadOutDistance`
+- **Observer phase** — lead-in → follow → lead-out per state entry
+- **Cleanup** — `_display*` and `_drawX/_drawY` workaround fields removed; stage-23 trace instrumentation removed; dead modules deleted
+- **Net tests:** 1619 → 1717 (+98 new tests on branch)
 
 ---
 
@@ -532,43 +532,43 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 
 ### Metrics
 
-| Metric | Baseline (`ece4f59`) | Nach Fix (`bd92ff1`) |
+| Metric | Baseline (`ece4f59`) | After Fix (`bd92ff1`) |
 |--------|---------------------|---------------------|
 | Tests | 1896 | **1910** (+14) |
-| Test-Dateien | 96 | **98** (+2 neue Gruppen) |
+| Test files | 96 | **98** (+2 new groups) |
 | ESLint | ✅ 0 Errors | ✅ 0 Errors |
 | Prettier | ✅ | ✅ |
-| Bundle | unverändert | unverändert |
+| Bundle | unchanged | unchanged |
 
 ### Test Gate
 
-| Gruppe | Neue Tests | Inhalt |
+| Group | New tests | Content |
 |--------|-----------|--------|
-| `rowLayout.test.js` — finite checks | +5 | NaN/Infinity für rowGapPx, pathLengthPx, finishT, speedBonusFactor, totalRows → return 0 |
-| `rowLayout.test.js` — open track | +3 | Standard open-case, epsilon-guard-Grenzfall, open vs closed Vergleich |
-| `rowLayout.test.js` — correctness properties | +6 | Monotonie, Skalierungs-Invarianz (finishT=1/2/5/10), alt-vs-neu finishT-Vergleiche |
-| `speedBonus.test.js` | 0 neu | Signaturen auf 7 Parameter aktualisiert (finishT=1.0, isOpen=false, totalRows=3) — alle grün |
-| `reRoll.test.js` | 0 neu | Signaturen auf 7 Parameter aktualisiert — alle grün |
-| **Gesamt** | **+14** | 1910 / 1910 ✅ |
+| `rowLayout.test.js` — finite checks | +5 | NaN/Infinity for rowGapPx, pathLengthPx, finishT, speedBonusFactor, totalRows → return 0 |
+| `rowLayout.test.js` — open track | +3 | Standard open case, epsilon-guard boundary, open vs closed comparison |
+| `rowLayout.test.js` — correctness properties | +6 | Monotonicity, scale invariance (finishT=1/2/5/10), old-vs-new finishT comparisons |
+| `speedBonus.test.js` | 0 new | Signatures updated to 7 parameters (finishT=1.0, isOpen=false, totalRows=3) — all passing |
+| `reRoll.test.js` | 0 new | Signatures updated to 7 parameters — all passing |
+| **Total** | **+14** | 1910 / 1910 ✅ |
 
 ### Quality Gate
 
-- ✅ `SPEED_BONUS_EPSILON = 1e-9` als benannte Konstante (HIGH 1)
-- ✅ Finite-Checks für alle 5 numerischen Parameter — return 0 bei NaN/Infinity (HIGH 2)
-- ✅ 3 open-track Tests: Standard, Epsilon-Grenzfall, open vs closed (HIGH 3)
-- ✅ 50-Rennen Hauptlauf (144 Kombinationen) + 100-Rennen Focused-Run (Dirt Oval) (HIGH 4)
-- ✅ Monotonie-Test: rowIndex 0→5, Bonus strikt monoton steigend (MEDIUM 5)
-- ✅ Skalierungs-Invarianz: finishT=1/2/5/10 — Bonus skaliert mit 1/finishT (MEDIUM 6)
-- ✅ finishT=1.0 Rückwärtskompatibilität: identisch zur alten Formel (MEDIUM 7)
-- ✅ Alle Call-Sites aktualisiert: index.jsx, headlessRaceSimulator.js, sim-fairness.mjs, sim-race-visual.mjs
-- ✅ LESSONS.md Lesson 81 — Kompensationsformeln müssen zur Renngeometrie passen
-- ✅ ARCHITECTURE.md speedBonus-Sektion neu geschrieben (open/closed Geometrie, Epsilon-Guard)
+- ✅ `SPEED_BONUS_EPSILON = 1e-9` as named constant (HIGH 1)
+- ✅ Finite checks for all 5 numeric parameters — return 0 on NaN/Infinity (HIGH 2)
+- ✅ 3 open-track tests: standard, epsilon-guard boundary, open vs closed (HIGH 3)
+- ✅ 50-race main run (144 combinations) + 100-race focused run (Dirt Oval) (HIGH 4)
+- ✅ Monotonicity test: rowIndex 0→5, bonus strictly monotonically increasing (MEDIUM 5)
+- ✅ Scale invariance: finishT=1/2/5/10 — bonus scales with 1/finishT (MEDIUM 6)
+- ✅ finishT=1.0 backward compatibility: identical to old formula (MEDIUM 7)
+- ✅ All call sites updated: index.jsx, headlessRaceSimulator.js, sim-fairness.mjs, sim-race-visual.mjs
+- ✅ LESSONS.md Lesson 81 — compensation formulas must match race geometry
+- ✅ ARCHITECTURE.md speedBonus section rewritten (open/closed geometry, epsilon guard)
 
-### Sim-Validierung — Hauptlauf (50 Rennen × 144 Kombinationen)
+### Sim validation — main run (50 races × 144 combinations)
 
-**Signifikanz-Schwellen:** BESTANDEN p>0.05 | WARNUNG p>0.001 | GESCHEITERT p<0.001
+**Significance thresholds:** PASSED p>0.05 | WARNING p>0.001 | FAILED p<0.001
 
-| Track | Typ | Kombinationen | Baseline BESTANDEN | Fix BESTANDEN | Fix WARNUNG | Fix GESCHEITERT |
+| Track | Type | Combinations | Baseline PASSED | Fix PASSED | Fix WARNING | Fix FAILED |
 |-------|-----|:---:|:---:|:---:|:---:|:---:|
 | Dirt Oval | closed | 24 | 0 | **24** ✅ | 0 | 0 |
 | Garden Path | closed | 24 | 0 | **23** ✅ | 1 ⚠️ | 0 |
@@ -576,50 +576,50 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 | River Run | open | 24 | 0 | 0 | 0 | **24** ❌ |
 | Space Sprint | open | 24 | 0 | 0 | 0 | **24** ❌ |
 | Weltall | open | 24 | 0 | 0 | 0 | **24** ❌ |
-| **Gesamt** | | **144** | **0 / 144** | **71 / 72** closed | **1 / 72** | **72 / 72** open |
+| **Total** | | **144** | **0 / 144** | **71 / 72** closed | **1 / 72** | **72 / 72** open |
 
-**Garden Path × giraffe × 30s (WARNUNG, p<0.01):** Row 0 gewinnt nur 8% statt erwartet 10% — leichter Rear-Advantage, gegenläufig zur Front-Bias-Richtung. χ²=24.0 liegt unter GESCHEITERT-Schwelle (p<0.001). Statistisch grenzwertig, kein systematisches Muster über andere Kombinationen.
+**Garden Path × giraffe × 30s (WARNING, p<0.01):** Row 0 wins only 8% instead of expected 10% — slight rear-advantage, opposite to front-bias direction. χ²=24.0 is below FAILED threshold (p<0.001). Statistically borderline, no systematic pattern across other combinations.
 
-**Closed-Track-Fazit:** GESCHEITERT = 0/72. Akzeptanz-Kriterium erfüllt. ✅
+**Closed-track conclusion:** FAILED = 0/72. Acceptance criterion met. ✅
 
-### Sim-Validierung — Focused Run (100 Rennen × Dirt Oval)
+### Sim validation — focused run (100 races × Dirt Oval)
 
-Höhere statistische Power zeigt marginale Residualeffekte bei 30s-Rennen:
+Higher statistical power reveals marginal residual effects at 30s races:
 
-| Kombination | χ² | p-Wert | Urteil |
+| Combination | χ² | p-value | Verdict |
 |-------------|-----|--------|--------|
-| Dirt Oval × horse × 30s | 22.4 | 0.008 | ⚠️ WARNUNG |
-| Dirt Oval × snail × 30s | 20.8 | 0.004 | ⚠️ WARNUNG |
-| Dirt Oval × snake × 30s | 15.4 | 0.032 | ⚠️ WARNUNG |
-| Dirt Oval × f1 × 30s | 18.2 | 0.033 | ⚠️ WARNUNG |
-| Alle 120s-Kombinationen (20/20) | ≤19.3 | ≥0.114 | ✅ BESTANDEN |
-| River Run (alle 24) | 91–247 | 0.000 | ❌ GESCHEITERT |
-| Space Sprint (alle 24) | 41–194 | 0.000 | ❌ GESCHEITERT |
+| Dirt Oval × horse × 30s | 22.4 | 0.008 | ⚠️ WARNING |
+| Dirt Oval × snail × 30s | 20.8 | 0.004 | ⚠️ WARNING |
+| Dirt Oval × snake × 30s | 15.4 | 0.032 | ⚠️ WARNING |
+| Dirt Oval × f1 × 30s | 18.2 | 0.033 | ⚠️ WARNING |
+| All 120s combinations (20/20) | ≤19.3 | ≥0.114 | ✅ PASSED |
+| River Run (all 24) | 91–247 | 0.000 | ❌ FAILED |
+| Space Sprint (all 24) | 41–194 | 0.000 | ❌ FAILED |
 
-**Interpretation 30s-WARNUNGen:** Bei finishT<3 (kurze Rennen mit langsamen Racertypen) bleibt ein kleiner Residual-Bias durch Anfangsdichte sichtbar. Kein GESCHEITERT — kein Handlungsbedarf in Phase 1B.
+**Interpretation of 30s warnings:** At finishT<3 (short races with slow racer types) a small residual bias from initial density remains visible. No FAILED — no action required in Phase 1B.
 
-### Ursachenanalyse — Open-Track Front-Bias
+### Root cause analysis — Open-track front bias
 
-Die speedBonus-Formel für Open Tracks ist **mathematisch korrekt** (row0Distance = finishT − totalRows × tOffset). Die chi²-Werte sind vor und nach dem Fix nahezu identisch (Bsp. River Run horse: 83.1 → 88.5). Ursache ist **nicht die Formel**, sondern die Avoidance-Dynamik:
+The speedBonus formula for open tracks is **mathematically correct** (row0Distance = finishT − totalRows × tOffset). The chi² values are nearly identical before and after the fix (e.g. River Run horse: 83.1 → 88.5). The cause is **not the formula**, but the avoidance dynamics:
 
-- Open-Track-Rennen starten mit allen Racern dicht aufgereiht
-- Row-0-Racer sind ab der ersten Sekunde ungebremst
-- Row-1/2-Racer werden durch Avoidance mit Row-0 ausgebremst
-- Effekt: Row 0 baut einen uneinholbaren Vorsprung auf, bevor speedBonus greifen kann
-- Avoidance-Kompensation durch speedBonus-Differenz: ~5% bei River Run (totalRows×tOffset ≈ 0.03) — zu klein gegen Avoidance-Bremswirkung
+- Open-track races start with all racers tightly lined up
+- Row-0 racers are unbraked from the first second
+- Row-1/2 racers are braked by avoidance with Row-0
+- Effect: Row 0 builds an unclosable lead before speedBonus can take effect
+- Avoidance compensation via speedBonus difference: ~5% at River Run (totalRows×tOffset ≈ 0.03) — too small against avoidance braking effect
 
-### Phase-2-Empfehlung
+### Phase 2 recommendation
 
-**Befund:** Open-Track Front-Bias ist ein Avoidance-Problem, kein Formel-Problem.
+**Finding:** Open-track front bias is an avoidance problem, not a formula problem.
 
-**Empfehlung Phase 2 — Avoidance-Dynamics:**
-1. **Diagnose:** Pro-Racer Avoidance-Aktivierungsrate loggen — wie oft und wie stark wird Racer N gebremst, gestaffelt nach Startreihe?
-2. **Hypothese testen:** Avoidance in den ersten N Sekunden deaktivieren (Warm-up-Phase) → χ² für Open Tracks sinkt messbar?
-3. **Lösung-A (einfach):** Avoidance-Radius in den ersten 2–3 Sekunden reduzieren → sanfterer Start, weniger Stau
-4. **Lösung-B (komplex):** Avoidance-aware Startformation — Racer starten mit seitlichem Versatz statt direkter Linie
-5. **Ziel:** River Run χ² < 20 (p>0.01) für alle Kombinationen bei 50 Rennen
+**Phase 2 recommendation — Avoidance dynamics:**
+1. **Diagnosis:** Log per-racer avoidance activation rate — how often and how strongly is racer N braked, by start row?
+2. **Test hypothesis:** Deactivate avoidance in first N seconds (warm-up phase) → does χ² for open tracks drop measurably?
+3. **Solution A (simple):** Reduce avoidance radius in first 2–3 seconds → softer start, less congestion
+4. **Solution B (complex):** Avoidance-aware start formation — racers start with lateral offset instead of direct line
+5. **Goal:** River Run χ² < 20 (p>0.01) for all combinations at 50 races
 
-**Scope Phase 2:** avoidance.js, startAssignment, Open-Track-Geometrie. Kein Eingriff in speedBonus, spreadFactor, Drafting.
+**Scope Phase 2:** avoidance.js, startAssignment, open-track geometry. No changes to speedBonus, spreadFactor, drafting.
 
 ---
 
@@ -642,72 +642,72 @@ Die speedBonus-Formel für Open Tracks ist **mathematisch korrekt** (row0Distanc
 
 ---
 
-## 2026-05-19 — Phase 3A: Race Plan + Bereichs-Bonus + Abschluss-Defaults
+## 2026-05-19 — Phase 3A: Race Plan + Zone Bonus + Final Defaults
 
 **Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
 **Scope:** client (racePlanner.js, RaceScreen, DevScreen, sim-fairness.mjs, storage defaults)
 **Branch:** `feat/phase-3a`
-**Backup-Tag:** `backup/pre-phase-3a`
+**Backup tag:** `backup/pre-phase-3a`
 
-### Was implementiert wurde
+### What was implemented
 
-| Feature | Dateien | Commits (Auswahl) |
+| Feature | Files | Commits (selection) |
 |---|---|---|
-| racePlanner.js Modul + Unit-Tests | racePlanner.js, racePlanner.test.js | `39ae61b` |
-| Race Plan Basis (Bereichszuordnung, Bereichs-Bonus, Trajectory-Controller) | racePlanner.js, RaceScreen/index.jsx | `965a6a7`, `78bac9a` |
-| Trajectory-Fenster → [0.85, 1.1] (Cobra-Fix) | racePlanner.js | `7a3ae6e` |
-| Symmetrische Startreihen (Row 0 mittig, alternierend) | rowLayout.js | `b7c5f28` |
-| Natürliche Geschwindigkeit + dynamische Ziellinie Open Tracks | RaceScreen/index.jsx, sim-fairness.mjs | `128455e`, `d4d7d09` |
-| bereichsBonusMult in Physics-Loop (fadeout nach OUTCOME) | RaceScreen/index.jsx | `78bac9a` |
-| RP DIAG HUD-Panel (5 Overlays, separate Toggles) | CameraDiagnosticsHUD.jsx | `b9c96d0`, `52960f9` |
-| racePlanBonusStrengthMultiplier (DevPanel + Sim) | defaults.js, RaceTuningSection.jsx, sim-fairness.mjs | `b5f0ddd`, `4346959` |
-| computeAutoScaleFactor im Sim (Sim-Browser-Parität) | sim-fairness.mjs | `ab6f0b1` |
-| Validierte Defaults gesetzt | defaults.js | `b221a24` |
+| racePlanner.js module + unit tests | racePlanner.js, racePlanner.test.js | `39ae61b` |
+| Race Plan base (zone assignment, zone bonus, trajectory controller) | racePlanner.js, RaceScreen/index.jsx | `965a6a7`, `78bac9a` |
+| Trajectory window → [0.85, 1.1] (Cobra fix) | racePlanner.js | `7a3ae6e` |
+| Symmetric start rows (Row 0 centered, alternating) | rowLayout.js | `b7c5f28` |
+| Natural speed + dynamic finish line open tracks | RaceScreen/index.jsx, sim-fairness.mjs | `128455e`, `d4d7d09` |
+| bereichsBonusMult in physics loop (fadeout after OUTCOME) | RaceScreen/index.jsx | `78bac9a` |
+| RP DIAG HUD panel (5 overlays, separate toggles) | CameraDiagnosticsHUD.jsx | `b9c96d0`, `52960f9` |
+| racePlanBonusStrengthMultiplier (DevPanel + sim) | defaults.js, RaceTuningSection.jsx, sim-fairness.mjs | `b5f0ddd`, `4346959` |
+| computeAutoScaleFactor in sim (sim-browser parity) | sim-fairness.mjs | `ab6f0b1` |
+| Validated defaults set | defaults.js | `b221a24` |
 
-### Phase-3A-Befunde
+### Phase 3A findings
 
-| Befund | Beschreibung | Behandlung |
+| Finding | Description | Resolution |
 |---|---|---|
-| **Befund 1** — Sim-Browser-Geometrie-Diskrepanz | `computeAutoScaleFactor` fehlte im Sim → Racer-Positionen wichen von Browser ab | Gefixt in `ab6f0b1` |
-| **Befund 2** — Re-Roll-Spreizung unsichtbar | DevPanel-Settings waren versehentlich auf sehr niedrige Werte gesetzt → Re-Roll-Effekt erschien wirkungslos | DevPanel-Werte zurückgesetzt |
-| **Befund 3** — Cobra-Sprint-Effekt | trajectoryMult-Spanne [0.70, 1.30] zu aggressiv → Racer "schossen" an Zielbereiche vorbei | Fenster auf [0.85, 1.10] reduziert (`7a3ae6e`) |
-| **Befund 4** — Avoidance-Übermaß | `avoidanceDistance=0.35` zu groß bei 70 Racern → B1-Racer erreichten Zielbereich nicht mehr | `avoidanceDistance` → 0.15; `racePlanBonusStrengthMultiplier` → 2.0 als Kompensation |
+| **Finding 1** — Sim-browser geometry discrepancy | `computeAutoScaleFactor` missing in sim → racer positions diverged from browser | Fixed in `ab6f0b1` |
+| **Finding 2** — Re-roll spread invisible | DevPanel settings were accidentally set to very low values → re-roll effect appeared to have no effect | DevPanel values reset |
+| **Finding 3** — Cobra sprint effect | trajectoryMult range [0.70, 1.30] too aggressive → racers "shot past" target zones | Window reduced to [0.85, 1.10] (`7a3ae6e`) |
+| **Finding 4** — Avoidance excess | `avoidanceDistance=0.35` too large at 70 racers → B1 racers could no longer reach target zone | `avoidanceDistance` → 0.15; `racePlanBonusStrengthMultiplier` → 2.0 as compensation |
 
-### Sim-Browser-Parität-Regel (Commit `b9c96d0`)
+### Sim-browser parity rule (Commit `b9c96d0`)
 
-Jede Mechanik-Änderung muss synchron in `sim-fairness.mjs` gespiegelt werden. Der Sim ist Vorhersage-Werkzeug, kein Sandbox — Abweichungen zwischen Sim und Browser invalidieren Fairness-Aussagen. Dauerhafte Disziplin, dokumentiert in MEMORY.
+Every mechanics change must be mirrored synchronously in `sim-fairness.mjs`. The sim is a prediction tool, not a sandbox — divergences between sim and browser invalidate fairness claims. Permanent discipline, documented in MEMORY.
 
-### Sim-Ergebnisse — Abschluss-Smoke (Phase 3A Defaults: avoidanceDistance=0.15, bonusMult=2.0)
+### Sim results — final smoke (Phase 3A defaults: avoidanceDistance=0.15, bonusMult=2.0)
 
-dragon @ 70 Racer, Space Sprint, seed=1, N=50 Rennen je Kombination, `--race-plan=true --bonusMult=2.0`
+dragon @ 70 racers, Space Sprint, seed=1, N=50 races per combination, `--race-plan=true --bonusMult=2.0`
 
-| Duration | finishT | χ² | p-Wert | Urteil |
+| Duration | finishT | χ² | p-value | Verdict |
 |---|---|---|---|---|
-| 30s | 0.218 | 2.6–8.7 (zwei Läufe) | 0.013–0.274 | grenzwertig — kurze Rennen, finishT sehr niedrig |
-| 120s | 0.872 | 0.3–0.6 | 0.752–0.844 | ✅ Fair (beide Läufe) |
+| 30s | 0.218 | 2.6–8.7 (two runs) | 0.013–0.274 | borderline — short races, finishT very low |
+| 120s | 0.872 | 0.3–0.6 | 0.752–0.844 | ✅ Fair (both runs) |
 
-**Vergleich Baseline vs. Race Plan (dragon 120s):**
+**Comparison baseline vs. Race Plan (dragon 120s):**
 
-| Modus | χ² | p-Wert | Urteil |
+| Mode | χ² | p-value | Verdict |
 |---|---|---|---|
-| Baseline (kein Race Plan) | 10.5 | 0.006 | ❌ Front-Bias |
+| Baseline (no race plan) | 10.5 | 0.006 | ❌ Front-Bias |
 | Race Plan + bonusMult=2.0 | 0.3–0.6 | 0.752–0.844 | ✅ Fair |
 
-30s-Ergebnis schwankt zwischen den Läufen (mögliche Nicht-Determinismus-Quelle untersuchen). 120s ist stabil fair in beiden unabhängigen Läufen. Phase-3A-Ziel für 120s-Rennen erreicht.
+30s result varies between runs (possible non-determinism source — investigate). 120s is stably fair in both independent runs. Phase-3A goal for 120s races achieved.
 
 ### Metrics
 
-| Metric | Wert |
+| Metric | Value |
 |--------|------|
-| Tests vor Phase 3A | 1910 |
-| Tests nach Phase 3A | **1987** (+77) |
-| ESLint | ✅ 0 Errors |
-| Commits auf Branch | 31 (seit `backup/pre-phase-3a`) |
+| Tests before Phase 3A | 1910 |
+| Tests after Phase 3A | **1987** (+77) |
+| ESLint | ✅ 0 errors |
+| Commits on branch | 31 (since `backup/pre-phase-3a`) |
 
-### User-Sichtcheck (2026-05-19)
+### User visual check (2026-05-19)
 
-Konfiguration: avoidanceDistance=0.15, racePlanBonusStrengthMultiplier=2.0, dragon × 70 Racer × Space Sprint × 60s × seed=1.
-**Ergebnis: "3a fertig ist gut so wie es ist"** — Phase 3A konzeptuell abgeschlossen.
+Configuration: avoidanceDistance=0.15, racePlanBonusStrengthMultiplier=2.0, dragon × 70 racers × Space Sprint × 60s × seed=1.
+**Result: "3a complete, good as is"** — Phase 3A conceptually complete.
 
 ---
 
@@ -748,14 +748,14 @@ Full shared-variable ownership audit across CameraDirector.js, RaceScreen/index.
 
 ---
 
-## Bewusst akzeptierte Befunde (Stand 2026-05-01)
+## Deliberately accepted findings (as of 2026-05-01)
 
-| Befund | Severity | Akzeptiert weil | Wann adressieren |
+| Finding | Severity | Accepted because | When to address |
 |---|---|---|---|
-| **CORS Wildcard** (`app.use(cors())` ohne Origin-Einschränkung) | HIGH | Local-only Betrieb, kein öffentlicher Server | Phase 5 VPS-Deployment: `cors({ origin: process.env.CLIENT_ORIGIN })` |
-| **SEC-2 — Race-State-Manipulation via React DevTools** | HIGH | Client-seitig nicht vollständig behebbar; erfordert Server-Architektur | Phase 5: Server-authoritative Race-Finale mit Signierung |
-| **RaceScreen LOC > 1000** | MEDIUM | Funktional korrekt; Refactor braucht eigene Phase | Kamera-Phase — RaceScreen ist ohnehin Hauptarbeitsgebiet |
-| **TrackEditor LOC > 1200** | MEDIUM | Funktional korrekt; Refactor ist Prerequisite für Surface Zones | Vor Surface Zones Phase |
-| ~~**Q-19 — TrackEditor.effects.test.jsx flaky**~~ | ✅ gefixt PR #55 | Root cause: `fetch`-Stub aus `trackLoader.test.js` leckte via `vi.unstubAllGlobals()` Fix. | — |
-| **TEST-RaceScreen** — 0 Unit-Tests für RaceScreen | MEDIUM | Canvas + rAF in jsdom erfordert aufwändige Mock-Infrastruktur | Kamera-Phase: minimale Integration-Tests mitliefern |
-| **Verwaiste Geometrien** — Track-Delete hinterlässt orphaned geometry cache-entries in localStorage und (nach TLH-1) keine Geometrie-Bereinigung im Backend | LOW | Explizit akzeptiert in TLH-Konzept: Geometrien sind teuer, Verlust ist irreversibel. Verwaiste Einträge nehmen keinen merkbaren Speicher und verursachen keine Fehler. | Optional: "Clean up orphaned geometries" als UI-Action in einem späteren Cleanup-Sprint. Kein akuter Handlungsbedarf. |
+| **CORS Wildcard** (`app.use(cors())` without origin restriction) | HIGH | Local-only operation, no public server | Phase 5 VPS deployment: `cors({ origin: process.env.CLIENT_ORIGIN })` |
+| **SEC-2 — Race-State-Manipulation via React DevTools** | HIGH | Not fully fixable client-side; requires server architecture | Phase 5: server-authoritative race finale with signing |
+| **RaceScreen LOC > 1000** | MEDIUM | Functionally correct; refactor needs its own phase | Camera phase — RaceScreen is the main work area anyway |
+| **TrackEditor LOC > 1200** | MEDIUM | Functionally correct; refactor is prerequisite for Surface Zones | Before Surface Zones phase |
+| ~~**Q-19 — TrackEditor.effects.test.jsx flaky**~~ | ✅ fixed PR #55 | Root cause: `fetch` stub from `trackLoader.test.js` leaked via `vi.unstubAllGlobals()` fix. | — |
+| **TEST-RaceScreen** — 0 unit tests for RaceScreen | MEDIUM | Canvas + rAF in jsdom requires extensive mock infrastructure | Camera phase: deliver minimal integration tests |
+| **Orphaned geometries** — Track-Delete leaves orphaned geometry cache entries in localStorage and (after TLH-1) no geometry cleanup in backend | LOW | Explicitly accepted in TLH concept: geometries are expensive, loss is irreversible. Orphaned entries use no measurable memory and cause no errors. | Optional: "Clean up orphaned geometries" as a UI action in a later cleanup sprint. No immediate action required. |

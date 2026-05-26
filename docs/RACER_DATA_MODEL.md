@@ -2,69 +2,69 @@
 
 **Status:** Updated 2026-04-26 post D3.5.5 merge (PR #21).
 All 12 racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
-`speedMultiplier` wirkt seit D9 effektiv auf die Race-Speed.
-6 Felder sind seit D3.5.5 live-tunbar via Dev-Screen Edit-Modal.
+`speedMultiplier` has effectively affected race speed since D9.
+6 fields have been live-tunable via Dev-Screen edit modal since D3.5.5.
 
 ---
 
-## Konzepte
+## Concepts
 
-**Racer Type** — ein Sprite-Type mit eigenem Look, Animation, Coats, Stats. Config-definierte
-`SpriteRacerType`-Instanz (z.B. `HorseRacerType`, `DuckRacerType`). Aktuell 12 Stück.
-Phase 7: dynamisch erweiterbar via Sprite-Upload im Dev-Panel.
+**Racer Type** — a sprite type with its own look, animation, coats, and stats. Config-defined
+`SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). Currently 12 in total.
+Phase 7: dynamically extensible via sprite upload in the Dev Panel.
 
-**Track** — eine Renn-Strecke mit Geometry, Background-Image, Effekten, Default-Duration etc.
-Hat einen **vorgeschlagenen Racer Type** als "Default" — wird beim Setup übernommen, wenn der
-Spielleiter nichts überschreibt.
+**Track** — a race course with geometry, background image, effects, default duration, etc.
+Has a **suggested Racer Type** as "Default" — adopted during setup if the game master does not
+override it.
 
-**Race** — ein konkretes laufendes Rennen mit einem Track und einem (genau einem) Racer Type.
-Alle Spieler im Race nutzen denselben Racer Type — keine Mischung. Spieler unterscheiden sich
-durch Coat (Farbvariante) und Name.
+**Race** — a concrete running race with a track and exactly one racer type.
+All players in the race use the same racer type — no mixing. Players differ
+by coat (color variant) and name.
 
-> **Ein Race verwendet immer einen einzigen Racer-Type für alle Spieler.** Der W3
-> Race-Type-Override im Setup-Screen ist ein **Race-Setting** (welcher Type wird gefahren),
-> NICHT per-Spieler unterschiedlich. Alle Racer in einem Race haben denselben
-> `speedMultiplier` und alle anderen Type-Werte. Speed-Streuung kommt ausschließlich aus
-> dem Random-`baseSpeed` pro Racer (innerhalb desselben Types).
+> **A Race always uses a single Racer Type for all players.** The W3
+> Race-Type-Override in the Setup Screen is a **Race-Setting** (which type is raced),
+> NOT different per player. All racers in a race have the same
+> `speedMultiplier` and all other type values. Speed variance comes exclusively from
+> the random `baseSpeed` per racer (within the same type).
 >
-> Doku-Stellen die "schnellster Racer im Race" o.ä. erwähnen (z.B. die Open-Track-
-> Ziellinien-Logik aus D9) beziehen sich auf den theoretischen Mittelwert des gewählten
-> Types, nicht auf einen Vergleich zwischen verschiedenen Types innerhalb eines Races.
+> Doc entries that mention "fastest racer in the race" or similar (e.g. the open-track
+> finish-line logic from D9) refer to the theoretical mean of the chosen
+> type, not a comparison between different types within one race.
 
-**Player** — eine Person die mitspielt. Hat einen Namen. Bekommt im Race einen Coat zugewiesen.
-Hat **keinen** eigenen Racer Type — der kommt vom Race.
+**Player** — a person who participates. Has a name. Gets a coat assigned in the race.
+Has **no** own racer type — that comes from the race.
 
 ---
 
-## Beziehungen
+## Relationships
 
 ```
 Track  --(suggests-default)-->  Racer Type
 Race   --(uses-exactly-one)-->  Racer Type
 Race   --(runs-on)----------->  Track
-Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
+Race   --(has-many)---------->  Player (each gets a coat)
 ```
 
-### Was es NICHT gibt
+### What does NOT exist
 
-- **Keine harte Track ↔ Racer Type Bindung.** Es ist nur eine Suggestion. River Run "schlägt
-  Duck vor", aber Spielleiter kann Pferd wählen.
-- **Kein "Associated Track" am Racer Type.** Racer Types sind track-unabhängig.
-- **Kein Racer Type am Player.** Player gehört zu einem Race, das Race hat den Type.
-
----
-
-## Setup-Flow (Spielleiter-Sicht)
-
-1. Spielleiter wählt Track (z.B. River Run)
-2. Setup zeigt: "Default Racer: 🦆 Duck" — mit Möglichkeit zu ändern (W3 Override-Selector)
-3. Spielleiter belässt Default oder wählt anderen Type (z.B. 🐎 Horse)
-4. Spielleiter fügt Player-Namen hinzu
-5. Race startet: alle Player bekommen denselben Racer Type, je einen Coat per Hash-Zuweisung
+- **No hard Track ↔ Racer Type binding.** It is only a suggestion. River Run "suggests
+  Duck", but the game master can choose Horse.
+- **No "Associated Track" on Racer Type.** Racer Types are track-independent.
+- **No Racer Type on Player.** Player belongs to a Race, the Race has the type.
 
 ---
 
-## 12 Racer Types — Config-Übersicht
+## Setup flow (game master view)
+
+1. Game master selects a track (e.g. River Run)
+2. Setup shows: "Default Racer: 🦆 Duck" — with option to change (W3 Override-Selector)
+3. Game master keeps the default or selects a different type (e.g. 🐎 Horse)
+4. Game master adds player names
+5. Race starts: all players get the same racer type, each assigned one coat via hash
+
+---
+
+## 12 Racer Types — Config overview
 
 | id | Emoji | frameCount | basePeriodMs | displaySize | speedMultiplier | tintMode |
 |---|---|---|---|---|---|---|
@@ -81,107 +81,107 @@ Race   --(has-many)---------->  Player (jeder bekommt einen Coat)
 | `motorbike` | 🏍️ | 8 | 500 | 36 | 1.05 | **mask** |
 | `plane` | ✈️ | 8 | 600 | 42 | 1.15 | **mask** |
 
-> **speedMultiplier:** Wirkt seit D9 (PR #19) als linearer Multiplikator auf `baseSpeed`.
-> Formel: `baseSpeed = (BASE_SPEED_MIN + random * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier`.
-> Konstanten aus `lapUtils.js`: `BASE_SPEED_MIN = 0.00085`, `BASE_SPEED_MAX = 0.0012`.
+> **speedMultiplier:** Acts since D9 (PR #19) as a linear multiplier on `baseSpeed`.
+> Formula: `baseSpeed = (BASE_SPEED_MIN + random * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier`.
+> Constants from `lapUtils.js`: `BASE_SPEED_MIN = 0.00085`, `BASE_SPEED_MAX = 0.0012`.
 >
-> **tintMode `mask`:** Buggy, Motorbike, Plane verwenden Mask-Tinting via `<sprite>-mask.png`.
-> Nur die Maske wird eingefärbt; der Rest des Sprites bleibt unverändert. Alle anderen Types
-> verwenden Multiply-Mode (gesamter Sprite wird mit Tint-Farbe multipliziert).
+> **tintMode `mask`:** Buggy, Motorbike, Plane use mask-tinting via `<sprite>-mask.png`.
+> Only the mask is tinted; the rest of the sprite remains unchanged. All other types
+> use multiply-mode (entire sprite is multiplied by the tint color).
 
 ---
 
-## Persistenz — Storage Keys
+## Persistence — Storage Keys
 
-| Storage Key | Inhalt | Status |
+| Storage Key | Content | Status |
 |---|---|---|
-| `racearena:tracks` | Array von Tracks. Felder: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, worldWidth, worldHeight, maxRacers (null=no limit), ...` — `trackWidth` entfernt in D7c-fix-v2; alte Einträge dürfen das Feld noch enthalten, wird ignoriert. | Aktiv |
-| `racearena:rowLayoutConfig` | Row-Start-Tuning-Config. Felder: `rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. (`pixelsPerRacer` war in D7c vorhanden, seit D7c-fix entfernt — racersPerRow wird jetzt auto-computed aus Geometrie.) | Aktiv (post D7c) |
-| `racearena:racerTypeOverrides` | Override-Map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` für deaktivierte Types und Tuning-Overrides (post D3.5.5). Legacy-Format `{[typeId]: false}` wird on-read via `normalizeOverrideMap()` migriert. | Aktiv (post D3.5.5) |
-| `racearena:racerTypes` | Legacy — nach Migration zu `racerTypeOverrides` leer/entfernt | Legacy/null |
-| `racearena:trackGeometries:<id>` | Track-Geometry-Records (Catmull-Rom Spline-Punkte) | Aktiv |
-| `racearena:trackGeometries:index` | Geometry-Index | Aktiv |
-| `sessionStorage['activeRace']` | Race-Setup-Daten für Setup → Race-Screen Übergang. Felder: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration, trackSurfaceClasses` | Aktiv |
-| `sessionStorage['activeRace'].racerTypeId` | **W3 Race-Override:** session-only, zurückgesetzt bei Track-Wechsel. Kein Persist. | Aktiv (post W3) |
-| `sessionStorage['activeRace'].raceMode` | `'laps'` (Closed-Track) oder `'time'` (Open-Track). Steuert Race-End-Logik in RaceScreen. | Aktiv (post D9) |
-| `sessionStorage['activeRace'].targetLaps` | Gewählte Lap-Anzahl (integer, 1–4). Nur gesetzt wenn `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`. | Aktiv (post D9) |
-| `sessionStorage['activeRace'].targetDuration` | Gewählte Race-Dauer in Sekunden. Nur gesetzt wenn `raceMode='time'`. Fallback: `duration`. | Aktiv (post D9) |
+| `racearena:tracks` | Array of tracks. Fields: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, worldWidth, worldHeight, maxRacers (null=no limit), ...` — `trackWidth` removed in D7c-fix-v2; old entries may still contain the field, it is ignored. | Active |
+| `racearena:rowLayoutConfig` | Row-start tuning config. Fields: `rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. (`pixelsPerRacer` was present in D7c, removed since D7c-fix — racersPerRow is now auto-computed from geometry.) | Active (post D7c) |
+| `racearena:racerTypeOverrides` | Override map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` for deactivated types and tuning overrides (post D3.5.5). Legacy format `{[typeId]: false}` is migrated on-read via `normalizeOverrideMap()`. | Active (post D3.5.5) |
+| `racearena:racerTypes` | Legacy — empty/removed after migration to `racerTypeOverrides` | Legacy/null |
+| `racearena:trackGeometries:<id>` | Track geometry records (Catmull-Rom spline points) | Active |
+| `racearena:trackGeometries:index` | Geometry index | Active |
+| `sessionStorage['activeRace']` | Race setup data for Setup → Race Screen transition. Fields: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration, trackSurfaceClasses` | Active |
+| `sessionStorage['activeRace'].racerTypeId` | **W3 Race-Override:** session-only, reset on track change. No persistence. | Active (post W3) |
+| `sessionStorage['activeRace'].raceMode` | `'laps'` (Closed-Track) or `'time'` (Open-Track). Controls race end logic in RaceScreen. | Active (post D9) |
+| `sessionStorage['activeRace'].targetLaps` | Selected lap count (integer, 1–4). Only set when `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`. | Active (post D9) |
+| `sessionStorage['activeRace'].targetDuration` | Selected race duration in seconds. Only set when `raceMode='time'`. Fallback: `duration`. | Active (post D9) |
 
 ---
 
-## Race-End-Logik (seit D9, PR #19)
+## Race end logic (since D9, PR #19)
 
-### Closed-Track (geschlossene Oval/Rennstrecke)
+### Closed-Track (closed oval/circuit)
 
-- **Modus:** `raceMode = 'laps'`
-- **Ziellinie:** `finishT = targetLaps` (integer in t-space, z.B. `2` = 2 volle Runden)
-- **Spielleiter-Wahl:** explizite Lap-Auswahl (1–4) im SetupScreen mit Live-Schätzung in
-  Sekunden pro Racer-Type. Default: `lapsFromDuration(duration)` (Auto aus Dauer).
-- **Race endet wenn:** alle Spieler `r.t >= finishT` erreicht haben + Auslauf abgeschlossen
-- **Lap-Counter:** angezeigt während des Rennens (LAP X / N)
+- **Mode:** `raceMode = 'laps'`
+- **Finish line:** `finishT = targetLaps` (integer in t-space, e.g. `2` = 2 full laps)
+- **Game master choice:** explicit lap selection (1–4) in SetupScreen with live estimate in
+  seconds per racer type. Default: `lapsFromDuration(duration)` (auto from duration).
+- **Race ends when:** all players have reached `r.t >= finishT` + runout complete
+- **Lap counter:** displayed during the race (LAP X / N)
 
-### Open-Track (Sprint-Strecke)
+### Open-Track (sprint course)
 
-- **Modus:** `raceMode = 'time'`
-- **Ziellinie:** dynamische Position `finishT = openTrackFinishT(targetDuration, speedMultiplier)`
-  — basiert auf theoretisch schnellstem Racer: `min(1.0, BASE_SPEED_MAX × sm × REFERENCE_FPS × seconds)`
-- **Constraint:** maximale finishT = 1.0 (Ende der Strecke). D10 hebt die 1280px-Beschränkung auf.
-- **Race endet wenn:** alle Spieler die dynamische Ziellinie passiert haben + Auslauf abgeschlossen
+- **Mode:** `raceMode = 'time'`
+- **Finish line:** dynamic position `finishT = openTrackFinishT(targetDuration, speedMultiplier)`
+  — based on theoretically fastest racer: `min(1.0, BASE_SPEED_MAX × sm × REFERENCE_FPS × seconds)`
+- **Constraint:** maximum finishT = 1.0 (end of course). D10 lifts the 1280px restriction.
+- **Race ends when:** all players have passed the dynamic finish line + runout complete
 
-### Auslauf-Verhalten (beide Track-Typen)
+### Runout behavior (both track types)
 
-Nach dem Überqueren der Ziellinie bewegen sich alle Spieler weiter mit abklingendem Speed:
-- `r.runoutDecay *= 0.97` pro Frame (ca. 62.5 FPS)
-- Effektive Geschwindigkeit: `baseSpeed × runoutDecay` — klingt über mehrere Sekunden aus
-- Prevents abruptes Einfrieren an der Ziellinie
+After crossing the finish line all players continue moving with decaying speed:
+- `r.runoutDecay *= 0.97` per frame (approx. 62.5 FPS)
+- Effective speed: `baseSpeed × runoutDecay` — decays over several seconds
+- Prevents abrupt freezing at the finish line
 
 ### Result-Delay
 
-2 Sekunden nach der letzten Ziellinien-Passage → fade zu `/results`.
-Gibt dem Publikum Zeit die Endposition zu sehen.
+2 seconds after the last finish line crossing → fade to `/results`.
+Gives the audience time to see the final positions.
 
 ---
 
-## Code-Architektur
+## Code architecture
 
-### Code-Registry als Single Source of Truth (post B-7)
+### Code registry as Single Source of Truth (post B-7)
 
-`RACER_TYPES` in `client/src/modules/racer-types/index.js` ist die einzige Wahrheit über alle
-12 Types. localStorage speichert **nur Abweichungen** vom Code-Default:
+`RACER_TYPES` in `client/src/modules/racer-types/index.js` is the single source of truth for all
+12 types. localStorage stores **only deviations** from the code default:
 
 ```
-Code-Registry (RACER_TYPES)          →  12 Types, immer vollständig
-racearena:racerTypeOverrides          →  { snail: false, ... }  (nur was abweicht)
-listAllRacerTypes()                   →  Code-Registry + Overrides zusammengeführt
+Code-Registry (RACER_TYPES)          →  12 Types, always complete
+racearena:racerTypeOverrides          →  { snail: false, ... }  (only what deviates)
+listAllRacerTypes()                   →  Code-Registry + Overrides merged
 ```
 
 ### API
 
-| Funktion | Beschreibung |
+| Function | Description |
 |---|---|
-| `listAllRacerTypes()` | Array aller 12 Types mit `isActive` aus Override-Map aufgelöst |
-| `getRacerType(id)` | Einzelner Type-Instance, Fallback auf Horse für unbekannte IDs |
-| `getRacerTypeById(id)` | Alias für `getRacerType` — bevorzugt wo ID-Semantik wichtig |
-| `listRacerTypes()` | Array aller registrierten Type-IDs |
-| `setRacerTypeOverride(id, fieldName, value)` | Override setzen: `fieldName='isActive', value=false` deaktiviert; tunable Felder (TUNABLE_FIELDS) mutieren auch Live-Config |
-| `resetRacerTypeOverride(id, fieldName?)` | Ohne fieldName: alle Overrides für id entfernen. Mit fieldName: nur das eine Feld. Stellt Live-Config aus CONFIG_SNAPSHOT wieder her. |
-| `normalizeOverrideMap(raw)` | Migriert Legacy-Format `{id: false}` → `{id: {isActive: false}}`; gibt bei null/undefined `{}` zurück |
-| `applyTunableOverride(id, fieldName, value)` | Mutiert `RACER_TYPES[id].config[fieldName]` direkt ohne Storage-Write |
-| `restoreTunableDefault(id, fieldName)` | Setzt `RACER_TYPES[id].config[fieldName]` aus CONFIG_SNAPSHOT zurück |
-| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 Felder seit VRE-3 |
-| `CONFIG_SNAPSHOT` | Eingefrorene Kopie der Code-Defaults aller 8 TUNABLE_FIELDS (seit VRE-3), captured vor Boot-Override-Application. Arrays werden deep-copied (kein Reference-Sharing) |
-| `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filtert Racer-Types auf jene mit ≥1 Klassen-Überlappung zum Track. Leere `trackSurfaceClasses` → alle zurück (Legacy). Leere Racer-Klassen → immer eingeschlossen (Heimat-Trail). VRE-3. |
-| `RACER_TYPE_IDS` | Sortiertes Array aller 12 Type-IDs |
-| `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` für UI-Anzeige |
-| `COATS_BY_TYPE` | Map `{id → coats[]}` für RaceScreen-Coat-Assignment; auto-derived aus Type-Configs |
-| `getSurfaceClasses()` on SpriteRacerType | Gibt `surfaceClasses`-Array zurück (Surface-Class-IDs dieses Types, Default: `[]`). Wird in VRE-3 von RaceScreen + SetupScreen gelesen. |
+| `listAllRacerTypes()` | Array of all 12 types with `isActive` resolved from override map |
+| `getRacerType(id)` | Single type instance, falls back to Horse for unknown IDs |
+| `getRacerTypeById(id)` | Alias for `getRacerType` — preferred where ID semantics matter |
+| `listRacerTypes()` | Array of all registered type IDs |
+| `setRacerTypeOverride(id, fieldName, value)` | Set override: `fieldName='isActive', value=false` deactivates; tunable fields (TUNABLE_FIELDS) also mutate live config |
+| `resetRacerTypeOverride(id, fieldName?)` | Without fieldName: remove all overrides for id. With fieldName: only that one field. Restores live config from CONFIG_SNAPSHOT. |
+| `normalizeOverrideMap(raw)` | Migrates legacy format `{id: false}` → `{id: {isActive: false}}`; returns `{}` for null/undefined |
+| `applyTunableOverride(id, fieldName, value)` | Directly mutates `RACER_TYPES[id].config[fieldName]` without a storage write |
+| `restoreTunableDefault(id, fieldName)` | Restores `RACER_TYPES[id].config[fieldName]` from CONFIG_SNAPSHOT |
+| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 fields since VRE-3 |
+| `CONFIG_SNAPSHOT` | Frozen copy of code defaults for all 8 TUNABLE_FIELDS (since VRE-3), captured before boot-override application. Arrays are deep-copied (no reference sharing) |
+| `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filters racer types to those with ≥1 class overlap with the track. Empty `trackSurfaceClasses` → return all (Legacy). Empty racer classes → always included (Heimat-Trail). VRE-3. |
+| `RACER_TYPE_IDS` | Sorted array of all 12 type IDs |
+| `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` for UI display |
+| `COATS_BY_TYPE` | Map `{id → coats[]}` for RaceScreen coat assignment; auto-derived from type configs |
+| `getSurfaceClasses()` on SpriteRacerType | Returns `surfaceClasses` array (surface class IDs of this type, default: `[]`). Read by RaceScreen + SetupScreen in VRE-3. |
 
-### SpriteRacerType — Config-Felder
+### SpriteRacerType — config fields
 
-`SpriteRacerType` ist eine config-driven Klasse. Alle 12 Types sind Singleton-Instanzen.
-Keine Subklassen. Required config fields:
+`SpriteRacerType` is a config-driven class. All 12 types are singleton instances.
+No subclasses. Required config fields:
 
-| Field | Typ | Beschreibung |
+| Field | Type | Description |
 |---|---|---|
 | `id` | string | Unique racer type identifier |
 | `spriteUrl` | string | Path to sprite sheet PNG |
@@ -189,8 +189,8 @@ Keine Subklassen. Required config fields:
 | `basePeriodMs` | number | Base animation period at speed 1.0 |
 | `displaySize` | number | Bounding box size in px |
 | `coats` | `{id, name, tint}[]` | Color variant definitions |
-| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` — Heimat-Trail (Fallback wenn kein Surface-Class-Match) |
-| `surfaceClasses` | `string[]` | Surface-Class-IDs dieses Types (Visual Racer Effects). Default: `[]` = alle Tracks kompatibel, immer Heimat-Trail. |
+| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` — Heimat-Trail (fallback when no surface class match) |
+| `surfaceClasses` | `string[]` | Surface class IDs of this type (Visual Racer Effects). Default: `[]` = all tracks compatible, always Heimat-Trail. |
 
 Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier` (default 1.0),
 `baseRotationOffset`, `tintMode` (`'multiply'` or `'mask'`), `maskUrl` (required when
@@ -198,41 +198,41 @@ Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier
 
 ### Mask-Tinting (Buggy, Motorbike, Plane)
 
-Mask-Types haben zwei Sprite-Dateien:
-- `<type>-<anim>.png` — vollständiger Sprite
-- `<type>-<anim>-mask.png` — PNG-Maske, definiert welche Pixel gefärbt werden
+Mask types have two sprite files:
+- `<type>-<anim>.png` — full sprite
+- `<type>-<anim>-mask.png` — PNG mask, defines which pixels are tinted
 
-Tinting-Algorithmus (`tintSpriteWithMask`):
-1. Lade Sprite + Mask via `loadSprite()`
-2. Zeichne Sprite auf Offscreen-Canvas
-3. Zeichne Mask auf zweitem Offscreen-Canvas
-4. Tint-Farbe wird nur auf Maske-Pixel angewendet (Multiply-Mode über Mask)
-5. Ergebnis: Chassis/Körper-Farbe veränderbar, Rest des Sprites unverändert
+Tinting algorithm (`tintSpriteWithMask`):
+1. Load sprite + mask via `loadSprite()`
+2. Draw sprite onto offscreen canvas
+3. Draw mask onto second offscreen canvas
+4. Tint color is applied only to mask pixels (multiply-mode over mask)
+5. Result: chassis/body color changeable, rest of sprite unchanged
 
 ### Track-Default-Lookup
 
-`SetupScreen` und `TrackManager` lesen aus `localStorage['racearena:tracks']`. Jeder Track hat
-**genau ein** Feld für den Default Racer: `defaultRacerTypeId`. Fallback-Kette im SetupScreen
-für ältere localStorage-Einträge: `defaultRacerTypeId ?? racerTypeId ?? racerId ?? d.defaultRacerTypeId`.
+`SetupScreen` and `TrackManager` read from `localStorage['racearena:tracks']`. Each track has
+**exactly one** field for the default racer: `defaultRacerTypeId`. Fallback chain in SetupScreen
+for older localStorage entries: `defaultRacerTypeId ?? racerTypeId ?? racerId ?? d.defaultRacerTypeId`.
 
 ### Race Init
 
-RaceScreen liest aus `sessionStorage['activeRace']`:
-- `racerTypeId` → bestimmt welche Racer-Instanz für alle Spieler verwendet wird
-- `racers[]` → bekommen alle denselben Type, jeweils einen Coat per djb2-Hash auf Name
+RaceScreen reads from `sessionStorage['activeRace']`:
+- `racerTypeId` → determines which racer instance is used for all players
+- `racers[]` → all get the same type, each assigned a coat via djb2 hash of their name
 
-Per-Racer Runtime-Felder (D7b/D7c, gesetzt von `initRacerBehavior` + RaceScreen-Init):
-- `physicalY` — normalisierte Lateralposition, ∈ [-1.0, +1.0]: -1=innere Boundary, 0=Centerline, +1=äußere Boundary. D7b: alle Racer in einer Reihe gleichmäßig verteilt via `computeRowPhysicalY`. D7c: gilt pro Reihe, auch für unvollständige letzte Reihen (full-spread). Wird danach durch Home-Force + Avoidance + Soft-Repulsion pro Frame mutiert.
-- `t` — Race-progress ∈ [0, finishT]. D7c: Closed tracks: hintere Reihen bei negativem t (z.B. -0.008 für Reihe 1) — `tPos` wickelt korrekt hinter die Startlinie. D7c-Phase4: Open tracks: Aufstellungs-Bereich — alle Reihen starten bei positivem t: Reihe k bei `(totalRows − k) × rowGapPx / pathLengthPx`. Kein negativer t, kein Clamp. Speed-Bonus gilt auf Open Tracks genauso wie auf Closed Tracks.
-- `baseSpeed` — seit D7c multipliziert mit `(1 + speedBonus)` für hintere Reihen. Speed-Bonus kompensiert die physische Startdistanz. `speedBonusFactor=1.0` → Pole-Position mathematisch neutral.
-- `avoidanceActive` — boolean: true wenn Racer adjacent-Speed-Brake-Bedingung triggert
-- `draftingBoostActive` — boolean: true wenn Racer im Slipstream-Kegel eines Vordermanns
+Per-racer runtime fields (D7b/D7c, set by `initRacerBehavior` + RaceScreen init):
+- `physicalY` — normalized lateral position, ∈ [-1.0, +1.0]: -1=inner boundary, 0=centerline, +1=outer boundary. D7b: all racers in a row distributed evenly via `computeRowPhysicalY`. D7c: applies per row, including incomplete last rows (full-spread). Subsequently mutated each frame by home force + avoidance + soft repulsion.
+- `t` — race progress ∈ [0, finishT]. D7c: Closed tracks: rear rows at negative t (e.g. -0.008 for row 1) — `tPos` wraps correctly behind the start line. D7c-Phase4: Open tracks: staging area — all rows start at positive t: row k at `(totalRows − k) × rowGapPx / pathLengthPx`. No negative t, no clamp. Speed bonus applies on open tracks the same as on closed tracks.
+- `baseSpeed` — since D7c multiplied by `(1 + speedBonus)` for rear rows. Speed bonus compensates for the physical start distance. `speedBonusFactor=1.0` → pole position mathematically neutral.
+- `avoidanceActive` — boolean: true when racer triggers the adjacent speed-brake condition
+- `draftingBoostActive` — boolean: true when racer is in the slipstream cone of a leader
 
-> **Anti-Stacking (D7b-fix B3):** Avoidance-Forces werden vor der Anwendung durch `sqrt(neighborCount)` normalisiert, wobei `neighborCount` = Anzahl der Racer die in diesem Frame eine non-zero Avoidance-Force auf diesen Racer ausüben. Verhindert Boundary-Clinging bei 20+ Racers: ohne Normalisierung akkumuliert ein Racer mit N Nachbarn N× die Einzelforce, was die restoring forces (home force + soft repulsion) overwhelmt.
+> **Anti-Stacking (D7b-fix B3):** Avoidance forces are normalized by `sqrt(neighborCount)` before application, where `neighborCount` = number of racers exerting a non-zero avoidance force on this racer in the current frame. Prevents boundary-clinging with 20+ racers: without normalization a racer with N neighbors accumulates N× the individual force, overwhelming the restoring forces (home force + soft repulsion).
 
-> **Reihen-Start (D7c + D7c-fix + D7c-Phase4):** `effectiveWidth = geometricTrackWidthPx × startSpreadRange` — `geometricTrackWidthPx` kommt von `EditorShape.getActualTrackWidth()` (gemessene Geometrie). `computeRacersPerRow(effectiveWidth, spriteSize)` = `floor(2 × effectiveWidth / spriteSize)`. `computeRowLayout(racerCount, racersPerRow)` mischt Racer-Indices (Fisher-Yates). `rowGapPx = spriteSize × rowGapMultiplier`. `deltaT_per_row = rowGapPx / pathLengthPx`. Closed: Reihe k → t=-(k × deltaT_per_row). Open: Reihe k → t=(totalRows−k) × deltaT_per_row (alle positiv, kein Clamp). Speed-Bonus: `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — gilt für beide Tracktypen. Open-Track finish: `finishT = 1.0 − runoutZone`.
+> **Row Start (D7c + D7c-fix + D7c-Phase4):** `effectiveWidth = geometricTrackWidthPx × startSpreadRange` — `geometricTrackWidthPx` comes from `EditorShape.getActualTrackWidth()` (measured geometry). `computeRacersPerRow(effectiveWidth, spriteSize)` = `floor(2 × effectiveWidth / spriteSize)`. `computeRowLayout(racerCount, racersPerRow)` shuffles racer indices (Fisher-Yates). `rowGapPx = spriteSize × rowGapMultiplier`. `deltaT_per_row = rowGapPx / pathLengthPx`. Closed: row k → t=-(k × deltaT_per_row). Open: row k → t=(totalRows−k) × deltaT_per_row (all positive, no clamp). Speed bonus: `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — applies to both track types. Open-track finish: `finishT = 1.0 − runoutZone`.
 
-Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
+No `currentLaneY` / `targetLaneY` / `trackOffset` anymore (removed in D7b).
 
 ---
 
@@ -242,23 +242,23 @@ Kein `currentLaneY` / `targetLaneY` / `trackOffset` mehr (ab D7b entfernt).
 >
 > **IDs:** The surface class ID is an internal technical key (e.g. `"mud"`, `"black-sea"`) — not shown in the editor. When creating a new class the ID is auto-generated by slugifying the label (`"Black Sea"` → `"black-sea"`); if the slug already exists a numeric suffix is appended (`"black-sea-2"`).
 
-Surface Classes ersetzen das statische Trail-System. Statt einer festen `trailFactory` pro Type ergibt sich der aktive Trail aus der Schnittmenge von Racer-Type-Klassen und Track-Klassen.
+Surface Classes replace the static trail system. Instead of a fixed `trailFactory` per type, the active trail is determined by the intersection of racer type classes and track classes.
 
-### surfaceClasses-Feld auf SpriteRacerType
+### surfaceClasses field on SpriteRacerType
 
 ```javascript
-// Beispiel: Pferd — kann auf Sand, Erde, Gras, Asphalt, Schnee, Schlamm fahren
+// Example: Horse — can race on sand, earth, grass, asphalt, snow, mud
 const HorseRacerType = new SpriteRacerType({
   id: 'horse',
-  // ... andere Felder ...
+  // ... other fields ...
   surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'],
-  trailFactory: horseTrailFactory,  // Heimat-Trail (Fallback)
+  trailFactory: horseTrailFactory,  // Heimat-Trail (fallback)
 });
 ```
 
-### Initial-Zuordnung — alle 12 Racer-Types
+### Initial assignment — all 12 racer types
 
-| Racer-Type | surfaceClasses |
+| Racer type | surfaceClasses |
 |---|---|
 | `snail` | `['grass']` |
 | `horse` | `['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud']` |
@@ -275,53 +275,53 @@ const HorseRacerType = new SpriteRacerType({
 
 ### Heimat-Trail (Fallback)
 
-Die vorhandene `trailFactory`-Funktion bleibt bestehen und ist der **Heimat-Trail** des Types. Er wird in zwei Fällen verwendet:
-1. `surfaceClasses: []` (leer) — Type hat noch keine Klassen-Zuordnung → immer Heimat-Trail.
-2. Kein Match — der gewählte Track hat keine Klasse die mit dem Racer-Type übereinstimmt → Heimat-Trail statt kein Trail.
+The existing `trailFactory` function remains and is the **Heimat-Trail** of the type. It is used in two cases:
+1. `surfaceClasses: []` (empty) — type has no class assignment yet → always Heimat-Trail.
+2. No match — the chosen track has no class that matches the racer type → Heimat-Trail instead of no trail.
 
-Der Heimat-Trail garantiert Rückwärtskompatibilität: Tracks ohne `surfaceClasses`-Feld verhalten sich wie bisher.
+The Heimat-Trail guarantees backward compatibility: tracks without a `surfaceClasses` field behave as before.
 
-### trailFactory nach VRE-4
+### trailFactory after VRE-4
 
-`trailFactory` bleibt in jeder Racer-Type-Config erhalten als **Heimat-Trail** — der statische Default-Effekt des Types.
+`trailFactory` remains in every racer type config as the **Heimat-Trail** — the static default effect of the type.
 
-Nach VRE-4 dispatcht RaceScreen über `resolveTrailEmitter()`:
+After VRE-4, RaceScreen dispatches via `resolveTrailEmitter()`:
 ```javascript
 // trailResolver.js
 const emitter = resolveTrailEmitter(racerType, raceData.trackSurfaceClasses);
-// emitter = { spawn, update, render } wenn Klasse matched, sonst null
+// emitter = { spawn, update, render } when class matches, otherwise null
 
-// In RaceScreen rAF loop (pro Racer):
+// In RaceScreen rAF loop (per racer):
 if (r.surfaceEmitter) {
   r.surfaceParticles = r.surfaceEmitter.update(
     [...r.surfaceParticles, ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts)],
     dt / 16
   );
 } else {
-  // Heimat-Trail: trailFactory-Partikel in globalem dustParticles Pool
+  // Heimat-Trail: trailFactory particles in global dustParticles pool
   st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
 }
 ```
 
-`trailFactory` wird in der Praxis bei allen 5 Default-Tracks nicht mehr aktiv (alle haben passende surfaceClasses). Es bleibt aber aktiv für Custom-Tracks ohne surfaceClasses und für Legacy-Kombinationen.
+`trailFactory` is in practice no longer active for all 5 default tracks (all have matching surfaceClasses). It remains active for custom tracks without surfaceClasses and for legacy combinations.
 
-### API-Erweiterung (VRE-1)
+### API extension (VRE-1)
 
-`SpriteRacerType` bekommt den neuen Accessor:
+`SpriteRacerType` gets the new accessor:
 
 ```javascript
-getSurfaceClasses()  // → string[] (IDs der Surface Classes dieses Types)
+getSurfaceClasses()  // → string[] (IDs of the surface classes of this type)
 ```
 
-Der frühere `rteDefinitions`-Platzhalter (`getRteDefinitions()`) wird in VRE-1 entfernt.
+The former `rteDefinitions` placeholder (`getRteDefinitions()`) is removed in VRE-1.
 
 ---
 
-## Phase-7-Vorausschau
+## Phase 7 preview
 
-Wenn Sprite-Upload kommt:
-1. Dev-Panel UI bekommt "+ New Racer Type"-Button
-2. User lädt Sprite-Sheet hoch + füllt Metadaten (Name, Frame-Count, Coats)
-3. Server speichert Sprite unter `client/public/assets/racers/<custom-id>.png`
-4. `racearena:racerTypes` bekommt einen neuen Eintrag mit dynamischer Config
-5. Registry liest dynamisch — keine Code-Klassen mehr für Custom Types nötig
+When sprite upload arrives:
+1. Dev Panel UI gets a "+ New Racer Type" button
+2. User uploads sprite sheet + fills in metadata (name, frame count, coats)
+3. Server saves sprite at `client/public/assets/racers/<custom-id>.png`
+4. `racearena:racerTypes` gets a new entry with dynamic config
+5. Registry reads dynamically — no code classes needed for custom types anymore

@@ -1,8 +1,8 @@
 # Home-Force Reduction On Overlap Report
 
-## 1. Was wurde implementiert
+## 1. What was implemented
 
-Dateien:
+Files:
 - client/src/modules/raceBehavior.js
 - client/src/modules/storage/defaults.js
 - client/src/modules/raceBehaviorConfig.js
@@ -11,95 +11,95 @@ Dateien:
 - client/src/modules/raceBehaviorConfig.test.js
 - client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx
 
-Code-Delta (nur Fix-Umfang, ohne Report-Datei):
+Code delta (fix scope only, excluding report file):
 - Added lines: 124
 - Removed lines: 5
 
-Conditional-Logik:
-- Overlap-Erkennung nutzt dieselbe Geometrie-Bedingung wie Free-Lane (dT/tHalfSpan + dY/lateralHalfSpan).
-- Pro Racer wird ein Overlap-Flag gesammelt.
-- Home-Force wird pro Frame skaliert:
-  - ohne Overlap: factor = 1.0
-  - mit Overlap: factor = homeForceReductionOnOverlap
-- Avoidance, Free-Lane, Drafting, ReRoll und restliche Mechanik bleiben unverandert.
+Conditional logic:
+- Overlap detection uses the same geometry condition as free-lane (dT/tHalfSpan + dY/lateralHalfSpan).
+- An overlap flag is collected per racer.
+- Home force is scaled per frame:
+  - without overlap: factor = 1.0
+  - with overlap: factor = homeForceReductionOnOverlap
+- Avoidance, free-lane, drafting, reRoll, and the remaining mechanics remain unchanged.
 
-## 2. Werte-Tabelle
+## 2. Values table
 
-| Wert | Neu | Default | Tunbar im DevScreen |
+| Value | New | Default | Tunable in DevScreen |
 |---|---|---|---|
-| homeForceReductionOnOverlap | Ja | 0.3 | Ja |
+| homeForceReductionOnOverlap | Yes | 0.3 | Yes |
 
-Hinweis zur UI:
-- Neuer Input in Block "Home Force": "Home Force Reduction On Overlap" (Range 0.0 bis 1.0).
-- Tooltip: "Home-Force-Faktor bei aktivem Overlap. 0.3 = 30% normale Starke wenn Racer uberlappt."
-- localStorage-Hinweis fur PR-Update: User muss "Reset All Defaults" klicken, damit der neue Wert sicher im gespeicherten Config-Objekt landet.
+UI note:
+- New input in block "Home Force": "Home Force Reduction On Overlap" (range 0.0 to 1.0).
+- Tooltip: "Home force factor when actively overlapping. 0.3 = 30% normal strength when racer overlaps."
+- localStorage note for PR update: user must click "Reset All Defaults" to ensure the new value lands safely in the saved config object.
 
-## 3. Test-Ergebnisse
+## 3. Test results
 
-Volltest Pre (vor Fix):
-- Test Suites: 506
+Full test pre (before fix):
+- Test suites: 506
 - Tests: 1734
 - Passed: 1734
 - Failed: 0
 
-Volltest Post (nach Fix):
-- Test Suites: 506
+Full test post (after fix):
+- Test suites: 506
 - Tests: 1741
 - Passed: 1741
 - Failed: 0
 
-Neue Unit-Tests (gefordert):
+New unit tests (required):
 - applyRacerBehavior — home force:
   - reduces home force by factor during active overlap
   - keeps full home force when there is no overlap
   - homeForceReductionOnOverlap=1.0 disables reduction (backwards-compat)
   - homeForceReductionOnOverlap=0.0 disables home force during overlap
 
-Zusatz-Validierung:
+Additional validation:
 - raceBehaviorConfig.test.js:
-  - default range-check fur homeForceReductionOnOverlap (0..1)
+  - default range check for homeForceReductionOnOverlap (0..1)
   - invalid >1 fallback to defaults
   - invalid <0 fallback to defaults
 - RaceTuningSection.test.jsx:
-  - neuer Input wird gerendert
+  - new input is rendered
 
-## 4. Status der drei ABSOLUTEN Regeln
+## 4. Status of the three ABSOLUTE rules
 
-Regel #1 (keine weiteren neuen Konstanten):
-- Erfullt. Nur homeForceReductionOnOverlap neu eingefuhrt.
+Rule #1 (no further new constants):
+- Observed. Only homeForceReductionOnOverlap newly introduced.
 
-Regel #2 (DevScreen Single Source of Truth):
-- Erfullt. Wert ist in DEFAULT_RACE_BEHAVIOR_CONFIG, load/save-Config und DevScreen-Input integriert.
+Rule #2 (DevScreen Single Source of Truth):
+- Observed. Value is integrated in DEFAULT_RACE_BEHAVIOR_CONFIG, load/save config and DevScreen input.
 
-Regel #3 (localStorage-Hinweis):
-- Erfullt. Hinweis dokumentiert: "Reset All Defaults" klicken.
+Rule #3 (localStorage note):
+- Observed. Note documented: click "Reset All Defaults".
 
-## 5. Erwartung vs. Realitat
+## 5. Expected vs. actual
 
-Diagnose-Basis (vor Fix):
-- 99.1% persistente Overlap-Transitions
-- Home-Force im Misserfolg 2.8x starker als Free-Lane
+Diagnosis baseline (before fix):
+- 99.1% persistent overlap transitions
+- Home force in failure 2.8× stronger than free-lane
 
-Erwartung nach Fix (datenbasiert):
-- Bei Overlap wird Home-Force mit 0.3 skaliert.
-- Effektive Home-Magnitude sinkt von ca. 0.0062 auf ca. 0.0019.
-- Das liegt knapp unter Free-Lane ca. 0.0022, daher sollte Free-Lane deutlich ofter "gewinnen".
-- Erwartete Grobordnung: persistente Overlaps deutlich reduziert, plausibel in Richtung <50%.
+Expected after fix (data-based):
+- On overlap, home force is scaled by 0.3.
+- Effective home magnitude drops from approx. 0.0062 to approx. 0.0019.
+- This is just below free-lane approx. 0.0022, so free-lane should win significantly more often.
+- Expected rough order: persistent overlaps significantly reduced, plausibly toward <50%.
 
-Wichtig:
-- Tatsachliche Wirksamkeit muss visuell durch User-Verifikation im Race-Screen bestaetigt werden (20 Racer, dirt-oval, drafting on).
+Important:
+- Actual effectiveness must be confirmed visually by user verification in Race Screen (20 racers, dirt oval, drafting on).
 
-## 6. Tuning-Empfehlung falls Ergebnis nicht uberzeugt
+## 6. Tuning recommendation if result is not convincing
 
-- Wenn Pulks weiter persistent sind:
-  - homeForceReductionOnOverlap Richtung 0.15 oder 0.0 senken.
-- Wenn Racer zu weit auseinander driften:
-  - homeForceReductionOnOverlap Richtung 0.5 bis 1.0 erhohen.
-- Wenn Rennfeld zu stark zerfallt:
-  - auf >=0.5 zuruckstellen und erneut beobachten.
+- If packs remain persistently overlapping:
+  - Lower homeForceReductionOnOverlap toward 0.15 or 0.0.
+- If racers drift too far apart:
+  - Raise homeForceReductionOnOverlap toward 0.5 to 1.0.
+- If race field dissolves too strongly:
+  - Reset to >=0.5 and observe again.
 
-## 7. Was als nachstes getestet werden musste
+## 7. What would need to be tested next
 
-Falls Home-Force-Reduktion allein nicht reicht:
-- Nacheinander (separater Scope) eine overlap-konditionale Avoidance-Reduktion testen.
-- Diese Folgespec ist bewusst nicht Teil dieses Fixes.
+If home-force reduction alone is insufficient:
+- Test overlap-conditional avoidance reduction separately (separate scope).
+- This follow-up spec is deliberately not part of this fix.

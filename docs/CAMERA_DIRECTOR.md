@@ -1,370 +1,370 @@
-# RaceArena — Camera-Director + RaceScreen-Refactor Konzept
+# RaceArena — Camera-Director + RaceScreen-Refactor Concept
 
-**Status:** Konzept-Doku — User-Klärungen abgeschlossen 2026-05-02; Phase 4 implementiert 2026-05-06
-**Phase:** Kamera-Phase + RaceScreen-Refactor (Hot Pos 1)
+**Status:** Concept documentation — user clarifications completed 2026-05-02; Phase 4 implemented 2026-05-06
+**Phase:** Camera Phase + RaceScreen-Refactor (Hot Pos 1)
 **Related:** `docs/BACKLOG.md — Hot §1`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ---
 
-## Phase 4 — Implementierungsstatus (2026-05-06)
+## Phase 4 — Implementation Status (2026-05-06)
 
-### Implementiert (Branch `diagnosis/camera-tuning-effectiveness`)
+### Implemented (Branch `diagnosis/camera-tuning-effectiveness`)
 
-| Feature | Status | Verweis |
-|---------|--------|---------|
-| 7 Timing-Tunables im CameraDirector | ✅ | §8.1 (battleGapThreshold, battleGapHysteresis, battleMaxDurationMs, overviewCooldown{Min,Max}, overviewDuration, lerpFactor) |
-| BATTLE_ZOOM Hysterese | ✅ | enter bei `< battleGapThreshold`, exit bei `> threshold + hysteresis` |
-| BATTLE_ZOOM Max-Duration Cap | ✅ | `battleMaxDurationMs`: erzwingt State-Exit nach Timeout |
-| Periodic OVERVIEW Jitter | ✅ | Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax] |
-| Config-Schema v3 | ✅ | `battleGapThreshold` (war `battleGapPct`), `battleMaxDurationMs` (Ms-Suffix) |
-| Dev-Panel `CameraZoomTuningSection` | ✅ | Sliders für alle 7 Tunables; Min>Max-Validation-Warning |
-| Diagnose-HUD (Tier-2-Toggle) | ✅ | Ein/Ausblendbar im Dev-Panel ohne Code-Änderung (Project-Principle 1) |
-| **Plan-B Pan-Fix** | ✅ | `_computePanScale` entfernt; triviale Formel in LEADER/BATTLE/COMEBACK |
-| **Pulk Battle Trigger** (Phase 1) | ✅ | `battleGapThreshold`/`battleGapHysteresis` ersetzt durch `battlePulkThresholdPx` (default 200 px); `_isPulk()`: ≥3 von top-10 Racern innerhalb Schwelle → BATTLE. `battleMinDurationMs` (3000 ms) verhindert Flickering bei kurzer Pulk-Auflösung. |
-| **Schema v5 — time-based Lead-In/Out** (Phase 1) | ✅ | `leadInDistance`/`followDuration`/`leadOutDistance` (px) ersetzt durch `leadInDuration`/`leadOutDuration` (Sekunden). Observer-Phase: lead-in → follow → lead-out pro State-Eintritt. v4→v5 Migration in `cameraConfig.js`. |
-| **Diagnose-HUD Tier-2 Erweiterung** (Phase 1) | ✅ | `transitionCount60f`, `entryElapsedMs`, `entryDeltaZoom/X/Y` in CameraDiagnosticsHUD. BATTLE-DIAG + LEADER-DIAG frozen-snapshot panels. |
+| Feature | Status | Reference |
+|---------|--------|-----------|
+| 7 Timing-Tunables in CameraDirector | ✅ | §8.1 (battleGapThreshold, battleGapHysteresis, battleMaxDurationMs, overviewCooldown{Min,Max}, overviewDuration, lerpFactor) |
+| BATTLE_ZOOM hysteresis | ✅ | enter at `< battleGapThreshold`, exit at `> threshold + hysteresis` |
+| BATTLE_ZOOM Max-Duration Cap | ✅ | `battleMaxDurationMs`: forces state exit after timeout |
+| Periodic OVERVIEW Jitter | ✅ | Cooldown drawn randomly from [overviewCooldownMin, overviewCooldownMax] |
+| Config-Schema v3 | ✅ | `battleGapThreshold` (was `battleGapPct`), `battleMaxDurationMs` (Ms suffix) |
+| Dev Panel `CameraZoomTuningSection` | ✅ | Sliders for all 7 tunables; Min>Max validation warning |
+| Diagnostic HUD (Tier-2-Toggle) | ✅ | Toggleable in Dev Panel without code changes (Project-Principle 1) |
+| **Plan-B Pan-Fix** | ✅ | `_computePanScale` removed; trivial formula in LEADER/BATTLE/COMEBACK |
+| **Pack Battle Trigger** (Phase 1) | ✅ | `battleGapThreshold`/`battleGapHysteresis` replaced by `battlePulkThresholdPx` (default 200 px); `_isPulk()`: ≥3 of top-10 racers within threshold → BATTLE. `battleMinDurationMs` (3000 ms) prevents flickering on short pack dissolution. |
+| **Schema v5 — time-based Lead-In/Out** (Phase 1) | ✅ | `leadInDistance`/`followDuration`/`leadOutDistance` (px) replaced by `leadInDuration`/`leadOutDuration` (seconds). Observer phase: lead-in → follow → lead-out per state entry. v4→v5 migration in `cameraConfig.js`. |
+| **Diagnostic HUD Tier-2 Extension** (Phase 1) | ✅ | `transitionCount60f`, `entryElapsedMs`, `entryDeltaZoom/X/Y` in CameraDiagnosticsHUD. BATTLE-DIAG + LEADER-DIAG frozen-snapshot panels. |
 
-### Triviale Pan-Formel (Plan-B)
+### Trivial Pan Formula (Plan-B)
 
-Alle drei Zoom-States (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM) verwenden:
+All three zoom states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM) use:
 
 ```js
 targetOffsetX = hw - r.x × zoom
 targetOffsetY = hh - r.y × zoom
 ```
 
-**Beweis (Closed-Track):** `scaledRacersForCam` liefert canvas-space: `r.x = worldX × bsX`.
-Render-Pipeline: `screenX = cam.offsetX + worldX × zoom × bsX`.
+**Proof (Closed-Track):** `scaledRacersForCam` delivers canvas-space: `r.x = worldX × bsX`.
+Render pipeline: `screenX = cam.offsetX + worldX × zoom × bsX`.
 → `screenX = (hw − worldX×bsX×zoom) + worldX×zoom×bsX = hw ✓`
 
-Keine bsX-Multiplikation in der Formel — `r.x` ist bereits canvas-space (hat bsX eingebaut).
-`_computePanScale(zoom) = zoom × bsX` war falsch weil es bsX doppelt anwendete.
-Details: Lesson 53 (Koordinatensystem), Lesson 62 (Render-Pipeline-Asymmetrien), Lesson 66 (Pixel-Invarianz).
+No bsX multiplication in the formula — `r.x` is already canvas-space (has bsX built in).
+`_computePanScale(zoom) = zoom × bsX` was wrong because it applied bsX twice.
+Details: Lesson 53 (coordinate system), Lesson 62 (render pipeline asymmetries), Lesson 66 (pixel invariance).
 
-### Open Topics (nicht in dieser Phase)
+### Open Topics (not in this phase)
 
-**DIAG-OpenTrackPan** (BACKLOG, Priorität: niedrig)
-Open-Track-Pan nutzt `openTrackCamera.js / openTrackPanTarget()` — unabhängig von `cam.offsetX/Y`.
-Die triviale Formel betrifft nur Closed-Track-Pan. Open-Track-Pan braucht separaten Browser-Test nach Merge.
+**DIAG-OpenTrackPan** (BACKLOG, priority: low)
+Open-track pan uses `openTrackCamera.js / openTrackPanTarget()` — independent of `cam.offsetX/Y`.
+The trivial formula only affects closed-track pan. Open-track pan needs a separate browser test after merge.
 
-**Pan-Target-Identification** (BACKLOG, Priorität: mittel)
-LEADER_ZOOM zielt auf Centroid der Top-N `focusRacers` nach t-Wert. Das ist nicht notwendigerweise
-der Standings-Führer. Bei mehreren Runden und engen Packs kann Camera den falschen Racer zeigen.
-Fix: standings-sortierte `focusRacers`-Liste. Eigene PR.
+**Pan-Target-Identification** (BACKLOG, priority: medium)
+LEADER_ZOOM targets the centroid of the top-N `focusRacers` by t-value. This is not necessarily
+the standings leader. With multiple laps and tight packs, the camera may show the wrong racer.
+Fix: standings-sorted `focusRacers` list. Separate PR.
 
-**State-Activation-Rates** (nicht getracked)
-battleGapThreshold (Default 0.05) und Hysterese (0.02) wurden nicht gegen echte Race-Daten kalibriert.
-Mess-Sprint empfohlen vor nächster Tunable-Phase (Lesson 67).
-
----
+**State-Activation-Rates** (not tracked)
+battleGapThreshold (default 0.05) and hysteresis (0.02) have not been calibrated against real race data.
+A measurement sprint is recommended before the next tunable phase (Lesson 67).
 
 ---
 
-## Präambel: Dieses System ist verzahnt
+---
 
-Camera-Verhalten, Strecken-Größe, Sprite-Größe, Name-Tag-Lesbarkeit und Racer-Anzahl teilen
-einen gemeinsamen Constraint-Raum:
+## Preamble: This System Is Coupled
+
+Camera behavior, track size, sprite size, name-tag readability, and racer count share
+a common constraint space:
 
 ```
-pathLengthPx     →  speedScaleFactor  →  visuelle Traversal-Rate
-worldWidth       →  overviewZoom      →  CameraDirector-Zoom-States
-Camera-Zoom      →  effektive Sprite-Px im Viewport
-Sprite-Px        →  Racer-Erkennbarkeit
-Racer-Abstand    →  Tag-Überlappung
-N (Racer-Anzahl) →  Spitzengruppe  →  Tag-Anzahl  →  HUD-Overlay-Größe
+pathLengthPx     →  speedScaleFactor  →  visual traversal rate
+worldWidth       →  overviewZoom      →  CameraDirector zoom states
+Camera zoom      →  effective sprite px in viewport
+Sprite px        →  racer recognizability
+Racer spacing    →  tag overlap
+N (racer count)  →  lead group  →  tag count  →  HUD overlay size
 ```
 
-Eine Änderung an einem Hebel zieht alle anderen. Sektion 10 (Synthese) macht Kopplungen explizit.
-N=4 bis N=100 sind keine zwei Modi — es ist dieselbe Logik auf einem Kontinuum.
+A change to one lever pulls all the others. Section 10 (Synthesis) makes couplings explicit.
+N=4 to N=100 are not two modes — it is the same logic on a continuum.
 
 ---
 
-## 1. Problemstatement
+## 1. Problem Statement
 
-### 1.1 Was nicht funktioniert — User-Beobachtungen aus Race-Tests
+### 1.1 What Does Not Work — User Observations from Race Tests
 
-| # | Strecke | Beobachtung | Diagnose |
-|---|---------|-------------|----------|
-| P1 | Garden Path | Sprites kleben in Ecke oben-links, Camera schaut auf Strecke, nicht auf Racer | §5 — OVERVIEW-Pan ist ein No-Op |
-| P2 | River Run | Camera zoomt zu weit raus wenn Pulk auseinandergeht | §5 — Zoom-Inversion auf großen Open-Tracks |
-| P3 | River Run Spitzenkampf | Nur kleiner Cluster sichtbar, Rest des Frames leer | §5 — openTrackPanTarget nutzt alle Racer |
-| P4 | Space Sprint | Vollbild-Button macht nicht echtes Browser-Vollbild | §9 — CSS-Expansion statt Fullscreen API |
-| P5 | Space Sprint | Setup-Button bringt zu Setup, kein Rückweg zu laufendem Rennen | §9 — Kein Cancel-Dialog |
-| P6 | Open Tracks | Fühlen sich zu kurz an bei großem Background | §7 — speedScaleFactor.maxScale=4.0 zu niedrig |
-| P7 | Alle Tracks | Name-Tags überlappen in dichten Pulks | §6 — kein Anti-Overlap |
-| P8 | Alle Tracks | Sprite-Größe vs Camera-Zoom Tradeoff nicht gelöst | §5/§6 — kein harter Camera-Constraint |
+| # | Track | Observation | Diagnosis |
+|---|-------|-------------|-----------|
+| P1 | Garden Path | Sprites stuck in top-left corner, camera looks at track, not at racers | §5 — OVERVIEW pan is a no-op |
+| P2 | River Run | Camera zooms too far out when the pack spreads apart | §5 — zoom inversion on large open tracks |
+| P3 | River Run lead battle | Only small cluster visible, rest of frame empty | §5 — openTrackPanTarget uses all racers |
+| P4 | Space Sprint | Fullscreen button does not trigger real browser fullscreen | §9 — CSS expansion instead of Fullscreen API |
+| P5 | Space Sprint | Setup button navigates to setup with no way back to the running race | §9 — no cancel dialog |
+| P6 | Open Tracks | Feel too short relative to large background | §7 — speedScaleFactor.maxScale=4.0 too low |
+| P7 | All Tracks | Name tags overlap in dense packs | §6 — no anti-overlap |
+| P8 | All Tracks | Sprite size vs. camera zoom tradeoff unresolved | §5/§6 — no hard camera constraint |
 
-### 1.2 Was PR #26 (B-16) und PR #28 (Camera-Polish + Q-14) bereits gelöst haben
+### 1.2 What PR #26 (B-16) and PR #28 (Camera-Polish + Q-14) Already Solved
 
 **PR #26 — B-16 Adaptive Zoom:**
-- `overviewZoom = CANVAS_W / worldW` — Zoom-States visuell konsistent bei jeder Worldbreite
-- Zoom-Ratios (LEADER=1.4×, BATTLE=1.6×, COMEBACK=1.3×) relativ zu overviewZoom
-- B-17 speedScaleFactor — gleiche Traversal-Rate unabhängig von pathLengthPx (aber maxScale=4.0 zu niedrig, §7)
+- `overviewZoom = CANVAS_W / worldW` — zoom states visually consistent at any world width
+- Zoom ratios (LEADER=1.4×, BATTLE=1.6×, COMEBACK=1.3×) relative to overviewZoom
+- B-17 speedScaleFactor — same traversal rate regardless of pathLengthPx (but maxScale=4.0 too low, §7)
 
 **PR #28 — Camera-Polish + Q-14:**
-- OVERVIEW-Pan zu Centroid top-N Racer (Bug verhindert Wirksamkeit — §5.1 Bug A)
-- COMEBACK_ZOOM zielt auf 3rd-Place statt last-place
-- MIN_ZOOM=0.15, MAX_ZOOM=2.5 Guards
+- OVERVIEW pan to centroid of top-N racers (bug prevents effectiveness — §5.1 Bug A)
+- COMEBACK_ZOOM targets 3rd place instead of last place
+- MIN_ZOOM=0.15, MAX_ZOOM=2.5 guards
 
-### 1.3 Anti-Patterns zu vermeiden
+### 1.3 Anti-Patterns to Avoid
 
-- Hardcoded Magic-Numbers für Camera-Tunables — alles ins Dev-Panel (Project-Principle 1)
-- Track-spezifische Code-Pfade — Lösungen müssen 1280×720 bis 8000×6000 und N=4 bis N=100 abdecken
-- Soft-Floors die gebrochen werden — Sprite-Min-Floor ist HARTER Constraint (§6.2)
-- Getrennte Fixes ohne Gesamtbild — Camera + Sprites + Tags + N gemeinsam denken
+- Hardcoded magic numbers for camera tunables — everything goes into the Dev Panel (Project-Principle 1)
+- Track-specific code paths — solutions must cover 1280×720 to 8000×6000 and N=4 to N=100
+- Soft floors that get broken — sprite min floor is a HARD constraint (§6.2)
+- Isolated fixes without the full picture — think camera + sprites + tags + N together
 
 ---
 
-## 2. Strecken-Größen-Range
+## 2. Track Size Range
 
-### 2.1 Gemessene Werte der aktuellen Default-Tracks
+### 2.1 Measured Values of the Current Default Tracks
 
-| Track | worldW × worldH | closed | pathLengthPx | speedScaleFactor | Est. Race-Zeit\* |
+| Track | worldW × worldH | closed | pathLengthPx | speedScaleFactor | Est. Race Time\* |
 |-------|----------------|--------|-------------|-----------------|-----------------|
 | Dirt Oval | 1536 × 1024 | ✓ | 3 245 | 1.62 | ~50 s (2 Laps) |
 | Garden Path | 1536 × 1024 | ✓ | 2 506 | 1.25 | ~77 s (4 Laps) |
 | City Circuit | 1536 × 1024 | ✓ | 3 093 | 1.55 | ~47 s (2 Laps) |
 | River Run | 6000 × 4000 | ✗ | 6 156 | 3.08 | ~45 s |
-| Space Sprint | 6000 × 4000 | ✗ | 19 772 | **4.0 (CAPPED)** | ~58 s (→ ~144 s bei maxScale=10) |
+| Space Sprint | 6000 × 4000 | ✗ | 19 772 | **4.0 (CAPPED)** | ~58 s (→ ~144 s at maxScale=10) |
 
 \* Baseline: speedMultiplier=1.0, baseSpeedMean=0.001045, REFERENCE_FPS=62.5.
 
-### 2.2 Unterstützte Track-Range
+### 2.2 Supported Track Range
 
-- **Kleinstes Track-Canvas:** 1280×720
-- **Mittlere Tracks:** 1536×1024 (alle 5 Default-Tracks geschlossen)
-- **Große Open-Tracks:** 6000×4000
-- **Geplantes Maximum:** 8000×6000
-- **pathLengthPx-Range:** ~2500 bis ~50 000+
+- **Smallest track canvas:** 1280×720
+- **Medium tracks:** 1536×1024 (all 5 default closed tracks)
+- **Large open tracks:** 6000×4000
+- **Planned maximum:** 8000×6000
+- **pathLengthPx range:** ~2500 to ~50 000+
 
-### 2.3 Skaleninvariante vs. strecken-spezifische Parameter
+### 2.3 Scale-Invariant vs. Track-Specific Parameters
 
-**Skaleninvariant:** Zoom-Ratios, Mindest-Sprite-Größe in Bildschirm-Px, Tag-Skalierungsformel.
+**Scale-invariant:** zoom ratios, minimum sprite size in screen px, tag scaling formula.
 
-**Strecken-spezifisch:** speedScaleFactor.maxScale, OPEN_TRACK_BASE_ZOOM, Camera-State-Schwellen.
+**Track-specific:** speedScaleFactor.maxScale, OPEN_TRACK_BASE_ZOOM, camera state thresholds.
 
-### 2.4 Racer-Anzahl-Range
+### 2.4 Racer Count Range
 
-Das System muss N=4 bis N=100 Racer unterstützen. D7d (BACKLOG) adressiert Performance.
-Die Camera-Logik muss von Anfang an N-adaptiv sein.
+The system must support N=4 to N=100 racers. D7d (BACKLOG) addresses performance.
+Camera logic must be N-adaptive from the start.
 
-**Spitzengruppen-Formel:**
+**Lead group formula:**
 
 ```
 spitzengruppe = clamp(round(N × 0.1), spitzengruppeMin, spitzengruppeMax)
 ```
 
-Defaults: `spitzengruppeMin=3`, `spitzengruppeMax=10`. Beide als Dev-Panel-Tunable.
+Defaults: `spitzengruppeMin=3`, `spitzengruppeMax=10`. Both as Dev Panel tunables.
 
-| N | Spitzengruppe (User-Vorgabe) |
-|---|------------------------------|
+| N | Lead group (user specification) |
+|---|----------------------------------|
 | 4–8 | 3 |
 | 9–20 | 5 |
 | 21–50 | 7 |
 | 51–100 | 10 |
 
-*Formula als Annäherung; Tunable-Defaults können angepasst werden.*
+*Formula as an approximation; tunable defaults can be adjusted.*
 
-**Wie N andere Parameter beeinflusst:**
+**How N influences other parameters:**
 
 | Parameter | N=4 | N=20 | N=100 |
 |-----------|-----|------|-------|
-| Spitzengruppe | 3 | 5 | 10 |
-| Tags sichtbar (Default) | 3 | 5 | 10 |
-| HUD-Standings | Top-3 | Top-5 | Top-10 |
-| Pulk-Spread-Erwartung | eng | mittel | breit |
-| BATTLE_ZOOM Häufigkeit | hoch | mittel | niedrig (nur Spitzengruppen-Duelle) |
+| Lead group | 3 | 5 | 10 |
+| Tags visible (default) | 3 | 5 | 10 |
+| HUD standings | Top-3 | Top-5 | Top-10 |
+| Pack spread expectation | tight | medium | wide |
+| BATTLE_ZOOM frequency | high | medium | low (lead group duels only) |
 
-**N=100 Skalierbarkeit:** Camera-Logik ist O(1) pro Frame (nur Spitzengruppe betrachtet).
-`openTrackPanTarget` mit focusRacers berechnet Midpoint über max. 10 Racer — akzeptabel.
-D7d-Performance-Work (Spatial-Grid, LOD) ist Voraussetzung für Avoidance bei 100 Racern,
-aber Camera-Architektur selbst skaliert.
-
----
-
-## 3. Camera-Regie-Philosophie
-
-Dieser normative Rahmen leitet alle Camera-State-Entscheidungen. Im bestehenden Code
-nur implizit — hier explizit formuliert.
-
-> **Architektur-Hinweis:** Die Camera-Regie ist als TENDENZ-LOGIK formuliert, nicht als
-> Constraint-System. Default-Tendenzen (LEADER_ZOOM ist häufigster State) und Spannungs-Metriken
-> (engstes Duell in Spitzengruppe triggert BATTLE_ZOOM) ersetzen feste Prioritäten-Hierarchien.
-> Das ist bewusste Architektur-Entscheidung — Camera reagiert auf Race-Dynamik, nicht auf
-> starre Reihenfolge.
-
-### 3.1 Leitsätze
-
-**LEADER_ZOOM ist Default-Modus, nicht OVERVIEW.**
-Das Rennen dreht sich um die Spitze. LEADER_ZOOM auf die Spitzengruppe ist der Ruhezustand
-zwischen dramatischen Momenten. OVERVIEW ist ein periodischer Kontext-Geber, kein Heimat-State.
-
-**Die Spitze ist die Default-Aufmerksamkeit der Camera.**
-LEADER_ZOOM ist Default-State, der Leader ist meistens im Bild.
-Andere States dürfen den Fokus temporär verschieben:
-- BATTLE_ZOOM auf Spitzengruppen-Duelle (auch wenn Leader nicht im Duell ist)
-- COMEBACK_ZOOM auf besondere Fälle (Last-place-Drama, schneller Aufholer)
-- OVERVIEW auf Pulk-Mitte (periodisch)
-Nach temporärem Abstecher kehrt Camera zu LEADER_ZOOM zurück.
-Es gibt KEIN hartes Constraint dass der Leader in jedem Frame sichtbar sein muss.
-
-**Jeder Camera-State hat eine Ziel-Sprite-Größe.**
-Statt Zoom-Multiplikatoren definiert jeder State, wie groß Sprites auf dem Bildschirm
-erscheinen sollen (als % der Canvas-Höhe). Die Camera berechnet den nötigen Zoom rückwärts
-daraus — deshalb "inverse Camera Logic" (§10.2). OVERVIEW-Größe dient gleichzeitig als
-skaleninvarianter Sprite-Floor.
-
-**Sprite-Min-Floor ist HARTER Constraint.**
-Wenn ein Camera-Zoom den Sprite unter `spritePctOfCanvas.overview × CANVAS_H` bringen würde,
-wird der Zoom blockiert. Der Floor überschreibt Camera-Entscheidungen. (§6.2)
-
-**Entfernte Nachzügler dürfen aus dem Frame fallen.**
-"Wie im Fernsehen": wenn das Feld sich streckt, zeigt die Camera die Spitze.
-Der Spielleiter sieht auf der Minimap wo alle Racer sind.
-Last-Place-Drama (COMEBACK_ZOOM) ist ein dramatischer Ausnahmefall.
-
-**OVERVIEW ist periodischer Kontext-Geber.**
-Alle [overviewCooldownMin–overviewCooldownMax]s (Random-Jitter, tunbar im Dev-Panel) gibt es eine kurze OVERVIEW-Phase (overviewDuration, tunbar) die das gesamte
-Feld zeigt. Zusätzlich am Start und am Ende des Rennens. Nicht öfter.
-
-### 3.2 Aufmerksamkeits-Tendenzen
-
-```
-1. Spitzengruppe           — LEADER_ZOOM als Default-Tendenz (häufigster State)
-2. Spitzengruppen-Duelle   — Camera zoomt ran wenn eng (BATTLE_ZOOM)
-3. Pulk-Übersicht          — Kurze periodische OVERVIEW-Checks (OVERVIEW)
-4. Last-place-Drama        — Gelegentlich wenn besonders (COMEBACK_ZOOM)
-```
-
-Das sind **Tendenzen**, keine starre Prioritäts-Hierarchie. Wenn zwei States gleichzeitig
-triggern, gewinnt der mit höherer Spannungs-Stärke (§5.3) — nicht per fixer Reihenfolge.
-LEADER_ZOOM ist häufigster State, aber andere States dürfen den Fokus temporär verschieben.
-
-### 3.3 Implikationen für N=4 vs N=100
-
-Bei N=4: BATTLE_ZOOM fast immer relevant.
-Bei N=100: BATTLE_ZOOM nur innerhalb der Top-10-Spitzengruppe — nicht für den Kampf um Platz 47.
-Camera ignoriert den Rest des Feldes bewusst — das ist Feature, kein Bug.
+**N=100 scalability:** Camera logic is O(1) per frame (only lead group considered).
+`openTrackPanTarget` with focusRacers computes midpoint over max. 10 racers — acceptable.
+D7d performance work (spatial grid, LOD) is a prerequisite for avoidance with 100 racers,
+but the camera architecture itself scales.
 
 ---
 
-## 4. Race-Phasen-Analyse
+## 3. Camera Direction Philosophy
 
-### 4.1 Beobachtbare Renn-Phasen
+This normative framework guides all camera state decisions. In the existing code
+only implicit — here made explicit.
 
-| Phase | Charakteristik | Programmatisch erkennbar |
-|-------|---------------|--------------------------|
-| **PRE_RACE** | Startreihen aufgebaut, Countdown läuft | `racePhase === 'COUNTDOWN'` |
-| **Start-Pulk** | Rennen gestartet, Racer noch dicht beieinander | `raceElapsed < 3000ms` |
-| **Auseinanderziehen** | Feld spreizt sich auf | `gapLeadLast 0.05..0.15` |
-| **Spitzenkampf** | Engster Abstand innerhalb Spitzengruppe | `minGapInSpitzengruppe < 0.05` |
-| **Klarer Anführer** | Leader weit vor 2nd | `gap01 >= 0.15` |
-| **Endspurt** | Leader nähert sich finishT | `leader.t / finishT > 0.85` |
-| **Outlier / Last-place-Drama** | Letzter weit abgehängt, vorne klar entschieden | `gapLeadLast > 0.3 && firstHalfClear` |
-| **Finish** | Erster hat finishT überschritten | `st.finishedCount >= 1` |
-| **RACE_END** | Alle Racer fertig oder Timeout | `st.finishedCount === N` |
+> **Architecture note:** The camera direction is formulated as TENDENCY LOGIC, not as a
+> constraint system. Default tendencies (LEADER_ZOOM is the most frequent state) and tension metrics
+> (tightest duel in the lead group triggers BATTLE_ZOOM) replace fixed priority hierarchies.
+> This is a deliberate architecture decision — the camera reacts to race dynamics, not to
+> a rigid order.
 
-### 4.2 Camera-State-Tabelle (nach User-Klärung UI-1)
+### 3.1 Guiding Principles
 
-| State | Trigger | Tendenz-Stärke | Default Dauer | Anmerkung |
-|-------|---------|----------------|---------------|-----------|
-| **LEADER_ZOOM** | Default-Modus | 1 (stärkste Tendenz) | unbegrenzt | Zielt auf Spitzengruppe-Centroid |
-| **BATTLE_ZOOM** | minGapInSpitzengruppe < 0.05 (engstes Duell in Spitzengruppe) | 2 | bis minGapInSpitzengruppe ≥ 0.07 | Hysterese: eintritt 0.05, austritt 0.07 |
-| **OVERVIEW** | Cooldown abgelaufen ([overviewCooldownMin–overviewCooldownMax]s, Random-Jitter) + Start + Ende | 3 | overviewDuration, dann LEADER_ZOOM | Zeigt gesamtes Feld mit Pan |
-| **COMEBACK_ZOOM** | Last-place-Drama (gapLeadLast>0.3 + firstHalfClear) | 4 (schwächste Tendenz) | max 8s | Gelegentlich, nicht dauerhaft |
+**LEADER_ZOOM is the default mode, not OVERVIEW.**
+The race revolves around the front. LEADER_ZOOM on the lead group is the resting state
+between dramatic moments. OVERVIEW is a periodic context provider, not a home state.
 
-OVERVIEW-Cooldown wird zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen (Defaults 15s/25s).
-OVERVIEW-Dauer (overviewDuration) sind Dev-Panel-Tunables.
+**The lead is the camera's default focus.**
+LEADER_ZOOM is the default state; the leader is in frame most of the time.
+Other states may temporarily shift focus:
+- BATTLE_ZOOM on lead group duels (even if the leader is not in the duel)
+- COMEBACK_ZOOM for special cases (last-place drama, fast come-back racer)
+- OVERVIEW on pack center (periodically)
+After a temporary detour the camera returns to LEADER_ZOOM.
+There is NO hard constraint that the leader must be visible in every frame.
 
-### 4.3 OVERVIEW als wiederkehrender State
+**Every camera state has a target sprite size.**
+Instead of zoom multipliers, each state defines how large sprites should appear on screen
+(as % of canvas height). The camera calculates the required zoom backwards
+from that — hence "inverse camera logic" (§10.2). OVERVIEW size simultaneously serves as
+the scale-invariant sprite floor.
 
-OVERVIEW wird dreifach ausgelöst:
-1. **Start** — erste ~3s des Rennens, zeigt gesamten Start-Pulk
-2. **Periodisch** — Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen (Defaults 15s/25s), Dauer overviewDuration, dann zurück zu LEADER_ZOOM
-3. **Finish** — bei `finishedCount >= 1`: 1.5 s LEADER_ZOOM als Drama-Puls auf den Gewinner (`_finishMomentExpiry = ts + 1500 ms`), danach dauerhaft OVERVIEW bis Rennende. Kein OVERVIEW-Cooldown, kein Rückfall in andere States — Priority-1-Guard blockiert alle anderen Pfade für den Rest des Rennens.
+**Sprite min floor is a HARD constraint.**
+If a camera zoom would bring the sprite below `spritePctOfCanvas.overview × CANVAS_H`,
+the zoom is blocked. The floor overrides camera decisions. (§6.2)
 
-### 4.4 MANUAL_FOCUS (aufgeschoben)
+**Distant trailing racers may leave the frame.**
+"Like on TV": when the field stretches out, the camera shows the front.
+The operator sees on the minimap where all racers are.
+Last-place drama (COMEBACK_ZOOM) is a dramatic exception.
 
-User-Wunsch: Spielleiter-Klick auf Racer sperrt Camera auf diesen Racer.
+**OVERVIEW is a periodic context provider.**
+Every [overviewCooldownMin–overviewCooldownMax]s (random jitter, tunable in Dev Panel) there is a short OVERVIEW phase (overviewDuration, tunable) that shows the entire
+field. Additionally at the start and at the end of the race. No more often.
 
-Aufwand-Bewertung: Canvas-Click-Handler, Hit-Test aller Racer, neuer MANUAL_FOCUS-State
-in CameraDirector, Lock-UI-Indikator, Unlock-Mechanismus. ~150–200 LOC, neuer State.
+### 3.2 Attention Tendencies
 
-**Entscheidung:** Eigenes BACKLOG-Item **MANUAL_FOCUS**, nicht Teil dieser Phase.
+```
+1. Lead group           — LEADER_ZOOM as default tendency (most frequent state)
+2. Lead group duels     — camera zooms in when tight (BATTLE_ZOOM)
+3. Pack overview        — short periodic OVERVIEW checks (OVERVIEW)
+4. Last-place drama     — occasionally when particularly notable (COMEBACK_ZOOM)
+```
+
+These are **tendencies**, not a rigid priority hierarchy. If two states trigger simultaneously,
+the one with higher tension strength (§5.3) wins — not by fixed order.
+LEADER_ZOOM is the most frequent state, but other states may temporarily shift focus.
+
+### 3.3 Implications for N=4 vs N=100
+
+With N=4: BATTLE_ZOOM almost always relevant.
+With N=100: BATTLE_ZOOM only within the top-10 lead group — not for the battle over position 47.
+The camera deliberately ignores the rest of the field — this is a feature, not a bug.
+
+---
+
+## 4. Race Phase Analysis
+
+### 4.1 Observable Race Phases
+
+| Phase | Characteristic | Programmatically detectable |
+|-------|---------------|------------------------------|
+| **PRE_RACE** | Starting grid assembled, countdown running | `racePhase === 'COUNTDOWN'` |
+| **Start pack** | Race started, racers still close together | `raceElapsed < 3000ms` |
+| **Spreading out** | Field spreading apart | `gapLeadLast 0.05..0.15` |
+| **Lead battle** | Tightest gap within lead group | `minGapInSpitzengruppe < 0.05` |
+| **Clear leader** | Leader far ahead of 2nd | `gap01 >= 0.15` |
+| **Final sprint** | Leader approaching finishT | `leader.t / finishT > 0.85` |
+| **Outlier / last-place drama** | Last racer far behind, front clearly decided | `gapLeadLast > 0.3 && firstHalfClear` |
+| **Finish** | First racer has crossed finishT | `st.finishedCount >= 1` |
+| **RACE_END** | All racers finished or timeout | `st.finishedCount === N` |
+
+### 4.2 Camera State Table (after user clarification UI-1)
+
+| State | Trigger | Tension strength | Default duration | Note |
+|-------|---------|-----------------|-----------------|------|
+| **LEADER_ZOOM** | Default mode | 1 (strongest tendency) | unlimited | Targets lead group centroid |
+| **BATTLE_ZOOM** | minGapInSpitzengruppe < 0.05 (tightest duel in lead group) | 2 | until minGapInSpitzengruppe ≥ 0.07 | Hysteresis: enter 0.05, exit 0.07 |
+| **OVERVIEW** | Cooldown expired ([overviewCooldownMin–overviewCooldownMax]s, random jitter) + start + end | 3 | overviewDuration, then LEADER_ZOOM | Shows entire field with pan |
+| **COMEBACK_ZOOM** | Last-place drama (gapLeadLast>0.3 + firstHalfClear) | 4 (weakest tendency) | max 8s | Occasionally, not permanently |
+
+OVERVIEW cooldown is drawn randomly from [overviewCooldownMin, overviewCooldownMax] (defaults 15s/25s).
+OVERVIEW duration (overviewDuration) are Dev Panel tunables.
+
+### 4.3 OVERVIEW as a Recurring State
+
+OVERVIEW is triggered three ways:
+1. **Start** — first ~3s of the race, shows the entire starting pack
+2. **Periodic** — cooldown drawn randomly from [overviewCooldownMin, overviewCooldownMax] (defaults 15s/25s), duration overviewDuration, then back to LEADER_ZOOM
+3. **Finish** — at `finishedCount >= 1`: 1.5 s LEADER_ZOOM as a drama pulse on the winner (`_finishMomentExpiry = ts + 1500 ms`), then permanently OVERVIEW until race end. No OVERVIEW cooldown, no fallback to other states — priority-1 guard blocks all other paths for the remainder of the race.
+
+### 4.4 MANUAL_FOCUS (deferred)
+
+User request: operator click on a racer locks the camera to that racer.
+
+Effort assessment: canvas click handler, hit test for all racers, new MANUAL_FOCUS state
+in CameraDirector, lock UI indicator, unlock mechanism. ~150–200 LOC, new state.
+
+**Decision:** Separate BACKLOG item **MANUAL_FOCUS**, not part of this phase.
 
 ### 4.5 Smooth Transitions
 
-`MAX_STATE_DURATION=8000ms` als globaler Timer bleibt, ergänzt durch:
-- **Hysterese:** BATTLE_ZOOM bleibt aktiv solange `minGapInSpitzengruppe < 0.07` (Eintritt 0.05, Austritt 0.07)
-- **Event-Trigger:** `finishedCount > 0` erzwingt sofort LEADER_ZOOM auf winner
-- LERP=0.04 (~1.5s zu 90%) gibt bereits sanfte Übergänge beim State-Wechsel
+`MAX_STATE_DURATION=8000ms` as global timer remains, supplemented by:
+- **Hysteresis:** BATTLE_ZOOM stays active as long as `minGapInSpitzengruppe < 0.07` (enter 0.05, exit 0.07)
+- **Event trigger:** `finishedCount > 0` immediately forces LEADER_ZOOM on winner
+- LERP=0.04 (~1.5s to 90%) already provides smooth transitions on state change
 
 ---
 
-## 5. Camera-Parameter und Trigger-Logik
+## 5. Camera Parameters and Trigger Logic
 
-### 5.1 Strukturelle Bugs im aktuellen System
+### 5.1 Structural Bugs in the Current System
 
-**Bug A — OVERVIEW-Pan ist ein No-Op:**
+**Bug A — OVERVIEW pan is a no-op:**
 
 ```js
 // CameraDirector.js:178-183 — World-Edge-Clamp
-const edgeLoX = canvasW * (1 - this.targetZoom);  // = 1280 * (1-1) = 0 im OVERVIEW
+const edgeLoX = canvasW * (1 - this.targetZoom);  // = 1280 * (1-1) = 0 in OVERVIEW
 this.targetOffsetX = edgeLoX > 0 ? edgeLoX / 2 : Math.max(edgeLoX, Math.min(0, this.targetOffsetX));
-//                                                 → Math.max(0, Math.min(0, any)) = 0 ← immer 0!
+//                                                 → Math.max(0, Math.min(0, any)) = 0 ← always 0!
 ```
 
-Wenn `targetZoom = 1` (OVERVIEW-State), ist `edgeLoX = 0`, der Clamp fixiert `targetOffsetX = 0`.
-**Sichtbar als P1** (Garden Path — Racer oben-links, Camera dreht sich nicht hin).
+When `targetZoom = 1` (OVERVIEW state), `edgeLoX = 0`, the clamp fixes `targetOffsetX = 0`.
+**Visible as P1** (Garden Path — racers top-left, camera does not turn toward them).
 
-**Bug B — Zoom-Inversion auf großen Open-Tracks:**
+**Bug B — Zoom inversion on large open tracks:**
 
-Für River Run / Space Sprint (worldW=6000): `overviewZoom = 1280/6000 = 0.213`.
+For River Run / Space Sprint (worldW=6000): `overviewZoom = 1280/6000 = 0.213`.
 - LEADER_ZOOM: `clamp(0.213 × 1.4, 0.15, 2.5) = 0.298`
-- effZoom Open-Track: `1.5 × 0.298 = 0.447` vs OVERVIEW effZoom `1.5 × 1.0 = 1.5`
-- **LEADER_ZOOM zoomt RAUS** — invertiertes Verhalten.
+- effZoom open track: `1.5 × 0.298 = 0.447` vs OVERVIEW effZoom `1.5 × 1.0 = 1.5`
+- **LEADER_ZOOM zooms OUT** — inverted behavior.
 
-**Sichtbar als P2** (River Run zoomt raus wenn Pulk auseinandergeht).
+**Visible as P2** (River Run zooms out when pack spreads apart).
 
-**Bug C — openTrackPanTarget nutzt alle Racer:**
+**Bug C — openTrackPanTarget uses all racers:**
 
 ```js
 // RaceScreen/index.jsx:838-845
 const { targetX, targetY } = openTrackPanTarget(
-  st.racers,  // alle Racer, nicht Spitzengruppe
+  st.racers,  // all racers, not lead group
   CW, CH, effZoom, camXMax, camYMax
 );
 ```
 
-Midpoint aller Racer liegt oft in der Mitte des Feldes, nicht bei der Spitze.
-**Sichtbar als P3** (River Run Spitzenkampf — zeigt Pulk-Mitte statt Spitze).
+Midpoint of all racers is often in the middle of the field, not at the front.
+**Visible as P3** (River Run lead battle — shows pack center instead of front).
 
-### 5.2 Korrektur-Richtungen
+### 5.2 Correction Directions
 
-**Fix A — OVERVIEW-Pan wiederherstellen:**
-Im OVERVIEW-State `targetZoom = overviewZoom` statt 1 setzen. Dann ist `edgeLoX = canvasW × (1 - overviewZoom)` > 0
-wenn worldW > canvasW — Pan-Offset hat Spielraum.
-OVERVIEW zeigt den Track auf adaptiven Zoom, der alle Racer im Bild hält (Sprite-Min-Floor als untere Grenze).
+**Fix A — Restore OVERVIEW pan:**
+In OVERVIEW state set `targetZoom = overviewZoom` instead of 1. Then `edgeLoX = canvasW × (1 - overviewZoom)` > 0
+when worldW > canvasW — pan offset has room to move.
+OVERVIEW shows the track at adaptive zoom that keeps all racers in frame (sprite min floor as lower bound).
 
-**Fix B — Zoom-Inversion auf Open-Tracks:**
-CameraDirector für Open-Tracks mit `overviewZoom = OPEN_TRACK_BASE_ZOOM` (=1.5) kalibrieren statt
-`CANVAS_W/worldW`. State-Ratios dann: LEADER=2.1×, BATTLE=2.4×, COMEBACK=1.95× — alle > OVERVIEW=1.5. ✓
+**Fix B — Zoom inversion on open tracks:**
+Calibrate CameraDirector for open tracks with `overviewZoom = OPEN_TRACK_BASE_ZOOM` (=1.5) instead of
+`CANVAS_W/worldW`. State ratios then: LEADER=2.1×, BATTLE=2.4×, COMEBACK=1.95× — all > OVERVIEW=1.5. ✓
 
-Implementation: CameraDirector erhält `isOpenTrack`-Parameter oder expliziten `openTrackBaseZoom`-Wert;
-`overviewZoom`-Berechnung wird daran gebunden.
+Implementation: CameraDirector receives `isOpenTrack` parameter or explicit `openTrackBaseZoom` value;
+`overviewZoom` calculation is bound to it.
 
-**Fix C — openTrackPanTarget auf Focus-Group beschränken:**
+**Fix C — Limit openTrackPanTarget to focus group:**
 ```js
 const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, spitzengruppe);
 const { targetX, targetY } = openTrackPanTarget(focusRacers, CW, CH, effZoom, camXMax, camYMax);
 ```
 
-### 5.3 Spannungs-Stärke-Logik im Code
+### 5.3 Tension Strength Logic in Code
 
-`_transition()` evaluiert Race-Zustand und wählt den passendsten State:
+`_transition()` evaluates the race state and selects the most appropriate state:
 
 ```js
-// findBattleCandidate — engstes Duell innerhalb Spitzengruppe
+// findBattleCandidate — tightest duel within lead group
 function findBattleCandidate(racersByPosition, spitzengruppe) {
   const top = racersByPosition.slice(0, spitzengruppe);
   let minGap = Infinity, candidatePair = null;
@@ -378,57 +378,57 @@ function findBattleCandidate(racersByPosition, spitzengruppe) {
 // firstHalfClear       = minGapInSpitzengruppe >= 0.05
 ```
 
-Evaluierungs-Logik in `_transition()` (harte Overrides zuerst, dann Tendenzen):
+Evaluation logic in `_transition()` (hard overrides first, then tendencies):
 
-1. `finishedCount > 0` → **Drama-Puls (Block W):** Beim ersten Auftreten (`_finishMomentExpiry === null`) → LEADER_ZOOM für 1.5 s (`_finishMomentExpiry = ts + 1500`). Nach Ablauf → OVERVIEW, dauerhaft. Der gesamte Priority-1-Block wird bei jedem `_transition()`-Aufruf solange `finishedCount > 0` als erstes evaluiert — alle anderen Pfade sind gesperrt.
-2. `raceElapsed < startPhaseSeconds×1000` → erzwingt OVERVIEW *(hartes Override — Startphase)*
-3. `minGapInSpitzengruppe < 0.05` → BATTLE_ZOOM auf candidatePair-Centroid
-4. `overviewCooldownExpired` → OVERVIEW *(Kontext-Check, tritt zurück wenn BATTLE_ZOOM aktiv)*
-5. Sonst → LEADER_ZOOM *(Default-Tendenz)*
+1. `finishedCount > 0` → **Drama pulse (Block W):** On first occurrence (`_finishMomentExpiry === null`) → LEADER_ZOOM for 1.5 s (`_finishMomentExpiry = ts + 1500`). After expiry → OVERVIEW, permanently. The entire priority-1 block is evaluated first on every `_transition()` call as long as `finishedCount > 0` — all other paths are blocked.
+2. `raceElapsed < startPhaseSeconds×1000` → forces OVERVIEW *(hard override — start phase)*
+3. `minGapInSpitzengruppe < 0.05` → BATTLE_ZOOM on candidatePair centroid
+4. `overviewCooldownExpired` → OVERVIEW *(context check, yields if BATTLE_ZOOM is active)*
+5. Otherwise → LEADER_ZOOM *(default tendency)*
 
-COMEBACK_ZOOM als gelegentliche Variante: aktiv wenn `gapLeadLast > 0.3 && firstHalfClear` —
-kein enges Duell vorne, Nachzügler weit abgehängt. Wird zufällig eingemischt, ersetzt kurz
-LEADER_ZOOM. Camera muss danach nicht sofort zurück — natürlicher Abstecher.
+COMEBACK_ZOOM as an occasional variant: active when `gapLeadLast > 0.3 && firstHalfClear` —
+no tight duel at the front, trailing racer far behind. Mixed in randomly, briefly replaces
+LEADER_ZOOM. Camera does not need to return immediately — natural detour.
 
-### 5.4 Trigger-Erweiterung
+### 5.4 Trigger Extension
 
-Zusätzlich zu MAX_STATE_DURATION-Timer:
-- **Start-Pulk** (`raceElapsed < 3000ms`): erzwingt OVERVIEW auf Feld-Centroid
-- **Endspurt** (`leader.t/finishT > endgameThreshold`, Default 0.85): priorisiert LEADER_ZOOM, unterdrückt OVERVIEW-Cooldown. Threshold tunable via Dev-Panel (Block X).
-- **Finish-Event** (`finishedCount > 0`): 1.5 s Drama-Puls LEADER_ZOOM auf Gewinner, danach dauerhaft OVERVIEW (Block W). `FINISH_DRAMA_DURATION = 1500 ms` hardcoded.
+In addition to MAX_STATE_DURATION timer:
+- **Start pack** (`raceElapsed < 3000ms`): forces OVERVIEW on field centroid
+- **Final sprint** (`leader.t/finishT > endgameThreshold`, default 0.85): prioritizes LEADER_ZOOM, suppresses OVERVIEW cooldown. Threshold tunable via Dev Panel (Block X).
+- **Finish event** (`finishedCount > 0`): 1.5 s drama-pulse LEADER_ZOOM on winner, then permanently OVERVIEW (Block W). `FINISH_DRAMA_DURATION = 1500 ms` hardcoded.
 
 ---
 
-## 6. Sprite-Size + Name-Tag-Readability (verzahnt)
+## 6. Sprite Size + Name-Tag Readability (coupled)
 
-### 6.1 Das System ist ein einziger Constraint-Graph
+### 6.1 The System Is a Single Constraint Graph
 
 ```
-pathLengthPx → speedScaleFactor → visuelle Traversal-Rate
+pathLengthPx → speedScaleFactor → visual traversal rate
 
-worldWidth → overviewZoom → State-Zooms → frameEffZoom
-  → Sprite-Px = displaySize × displaySizeScale × frameEffZoom
-    → Name-Tag-Größe = f(1/frameEffZoom)
-      → Tag-Overlap-Wahrscheinlichkeit
+worldWidth → overviewZoom → state zooms → frameEffZoom
+  → Sprite px = displaySize × displaySizeScale × frameEffZoom
+    → name tag size = f(1/frameEffZoom)
+      → tag overlap probability
 
-N → spitzengruppe → Tag-Anzahl sichtbar
+N → spitzengruppe → tags visible count
 ```
 
-### 6.2 Sprite-Größen per Camera-State (Round 3: inverse Camera Logic)
+### 6.2 Sprite Sizes per Camera State (Round 3: inverse camera logic)
 
-**Block Y (2026-05-05):** Skaleninvarianter Sprite-Floor (% der Canvas-Höhe).
-**Block Z Round 3 (2026-05-05):** State-spezifische Ziel-Sprite-Größen ersetzen Zoom-Multiplikatoren.
+**Block Y (2026-05-05):** Scale-invariant sprite floor (% of canvas height).
+**Block Z Round 3 (2026-05-05):** State-specific target sprite sizes replace zoom multipliers.
 
-**Konzept: Jeder Camera-State hat eine Ziel-Sprite-Größe:**
+**Concept: every camera state has a target sprite size:**
 
-| State | Config-Key | Default | Bedeutung |
-|-------|-----------|---------|-----------|
-| OVERVIEW | `spritePctOfCanvas.overview` | 5% | Floor + OVERVIEW-Sprite-Größe |
-| LEADER_ZOOM | `spritePctOfCanvas.leader` | 8% | Sprite-Größe beim Leader-Fokus |
-| BATTLE_ZOOM | `spritePctOfCanvas.battle` | 12% | Sprite-Größe beim Duell-Zoom |
-| COMEBACK_ZOOM | `spritePctOfCanvas.comeback` | 6.5% | Sprite-Größe beim Comeback-Zoom |
+| State | Config key | Default | Meaning |
+|-------|-----------|---------|---------|
+| OVERVIEW | `spritePctOfCanvas.overview` | 5% | Floor + OVERVIEW sprite size |
+| LEADER_ZOOM | `spritePctOfCanvas.leader` | 8% | Sprite size at leader focus |
+| BATTLE_ZOOM | `spritePctOfCanvas.battle` | 12% | Sprite size at duel zoom |
+| COMEBACK_ZOOM | `spritePctOfCanvas.comeback` | 6.5% | Sprite size at comeback zoom |
 
-**Inverse Berechnung** (warum "rückwärts" — siehe §10.2):
+**Inverse calculation** (why "backwards" — see §10.2):
 
 ```
 targetPx = spritePctOfCanvas[state] × CANVAS_H
@@ -436,140 +436,140 @@ cam.zoom  = targetPx / (referenceSpriteSize × bsX)    -- Closed-Track
 cam.zoom  = targetPx / (referenceSpriteSize × BASE)   -- Open-Track (BASE=1.5)
 ```
 
-`referenceSpriteSize = displaySize × displaySizeScale` (gesetzt beim Race-Start).
+`referenceSpriteSize = displaySize × displaySizeScale` (set at race start).
 
-**Cross-Track-Invarianz (L62 gelöst):** Dasselbe % gibt auf jedem Track denselben
-screen-px-Wert — weil `cam.zoom × bsX = targetPx / referenceSpriteSize = konstant`.
-Beweis: Garden Path (bsX=1.0) und River Run (OPEN_BASE=1.5) liefern bei 8% beide ~57.6px.
+**Cross-track invariance (L62 resolved):** The same % gives the same
+screen-px value on any track — because `cam.zoom × bsX = targetPx / referenceSpriteSize = constant`.
+Proof: Garden Path (bsX=1.0) and River Run (OPEN_BASE=1.5) both deliver ~57.6px at 8%.
 
-**Sicherheitsnetze:**
+**Safety nets:**
 ```
-cam.zoom ≥ 1.0              (Closed: nie unter OVERVIEW-Level)
-cam.zoom ≥ overviewZoom     (Open: nie unter OVERVIEW-Level)
-cam.zoom ≤ 5.0              (absolutes Maximum für beide Track-Typen)
+cam.zoom ≥ 1.0              (Closed: never below OVERVIEW level)
+cam.zoom ≥ overviewZoom     (Open: never below OVERVIEW level)
+cam.zoom ≤ 5.0              (absolute maximum for both track types)
 ```
 
-**Max-Cap (absolut für Q-13-Schutz):**
-- `maxTargetScreenPx = 160px` — harte Obergrenze für Sprite-Bildschirm-Größe
-- Camera zoomt nicht nah genug ran um sprites ruckartig groß werden zu lassen (Q-13)
+**Max cap (absolute for Q-13 protection):**
+- `maxTargetScreenPx = 160px` — hard upper limit for sprite screen size
+- Camera does not zoom close enough to let sprites snap to a large size abruptly (Q-13)
 
-**Konfiguration:** `spritePctOfCanvas` ist im Dev-Panel "Camera Behavior" tunable.
-`maxTargetScreenPx` ist in "Sprite Size Cap" tunable. Beide ohne Code-Änderung (Project-Principle 1).
+**Configuration:** `spritePctOfCanvas` is tunable in the Dev Panel under "Camera Behavior".
+`maxTargetScreenPx` is tunable under "Sprite Size Cap". Both without code changes (Project-Principle 1).
 
-### 6.3 Name-Tags — Iteration 1 (umzusetzen in PR-E)
+### 6.3 Name Tags — Iteration 1 (to be implemented in PR-E)
 
-**Ziel:** Klare Tags für die Führenden, keine Überlappungs-Kakophonie.
+**Goal:** Clear tags for the leaders, no overlapping chaos.
 
-**Tag-Strategie nach Phase:**
+**Tag strategy by phase:**
 
-| Phase | Tag-Strategie | Begründung |
-|-------|---------------|------------|
-| PRE_RACE (Countdown) | **Alle Racer** haben Tags | Spieler findet sich in Startreihe ("welcher bin ich?") |
-| RACE_START (0–3s) | Fade-out für Nicht-Spitzengruppe | Weicher Übergang, kurz Zeit zur Orientierung |
-| RACING | Top-N nach `tagVisibleCount` | Lesbarkeit, Fokus auf Spitze |
-| RACE_END | Optional: Tags wieder einblenden | Kontext für Auflösung + Ergebnis-Anzeige |
+| Phase | Tag strategy | Rationale |
+|-------|-------------|-----------|
+| PRE_RACE (Countdown) | **All racers** have tags | Player finds themselves in the starting grid ("which one am I?") |
+| RACE_START (0–3s) | Fade-out for non-lead-group | Soft transition, brief moment to orient |
+| RACING | Top-N by `tagVisibleCount` | Readability, focus on the front |
+| RACE_END | Optional: tags fade back in | Context for resolution + results display |
 
-PRE_RACE → RACE_START Übergangspunkt: Startsignal + `tagFadeOutDelay` (Tunable, Default 3s).
-Bei N=100 in PRE_RACE: 100 Tags, dicht, akzeptabel — Spieler scannt aktiv, kein passiver Konsum.
-Tag-Größe in PRE_RACE kann etwas kleiner sein als in RACING (eigener Tunable oder fixer Faktor 0.8×).
+PRE_RACE → RACE_START transition point: start signal + `tagFadeOutDelay` (tunable, default 3s).
+With N=100 in PRE_RACE: 100 tags, dense, acceptable — player actively scans, not passive consumption.
+Tag size in PRE_RACE can be slightly smaller than in RACING (separate tunable or fixed factor 0.8×).
 
-**RACING-Regeln:**
-- Nur Top-N Tags sichtbar, N = `tagVisibleCount` (Dev-Panel-Slider)
-- Default für `tagVisibleCount` = `spitzengruppe` (round(N×0.1), cap 3–10)
-- **Kein "eigener Spieler"** — Project-Principle 3: alle Racer gleichberechtigt
-- Alle Racer außerhalb Top-N: kein Tag
+**RACING rules:**
+- Only top-N tags visible, N = `tagVisibleCount` (Dev Panel slider)
+- Default for `tagVisibleCount` = `spitzengruppe` (round(N×0.1), cap 3–10)
+- **No "own player"** — Project-Principle 3: all racers equal
+- All racers outside top-N: no tag
 
-N-Skalierung (Defaults):
+N scaling (defaults):
 
-| N | Tags sichtbar |
-|---|---------------|
+| N | Tags visible |
+|---|--------------|
 | 4–8 | 3 |
 | 9–20 | 5 |
 | 21–50 | 7 |
 | 51–100 | 10 |
 
-### 6.4 Name-Tags — Iteration 2 (BACKLOG B-UX1-Iter2, nicht diese Phase)
+### 6.4 Name Tags — Iteration 2 (BACKLOG B-UX1-Iter2, not this phase)
 
-Langfristige Vision: state-abhängige Tag-Strategie:
+Long-term vision: state-dependent tag strategy:
 
-| Camera-State | Tag-Strategie |
-|-------------|---------------|
-| OVERVIEW | Nur Spitzengruppe-Tags oder keine |
-| LEADER_ZOOM | Spitzengruppe-Tags prominent |
-| BATTLE_ZOOM | Tags der beteiligten Racer prominent |
-| COMEBACK_ZOOM | Tag des fokussierten Racers + Leader als Referenz |
-| Zoom-Out | Alle konfliktfreien Tags (Anti-Overlap wenn Platz) |
+| Camera state | Tag strategy |
+|-------------|--------------|
+| OVERVIEW | Lead group tags only or none |
+| LEADER_ZOOM | Lead group tags prominent |
+| BATTLE_ZOOM | Tags of the involved racers prominent |
+| COMEBACK_ZOOM | Tag of focused racer + leader as reference |
+| Zoom-out | All conflict-free tags (anti-overlap when space permits) |
 
-Anti-Overlap: Tags die sich nicht überlappen werden angezeigt (bbox-Vergleich).
-Erfordert: State-Tracking in `drawNameTag`, Anti-Overlap-Check.
+Anti-overlap: tags that do not overlap are shown (bbox comparison).
+Requires: state tracking in `drawNameTag`, anti-overlap check.
 
-→ BACKLOG: **B-UX1-Iter2** — state-abhängige Tag-Strategie. Verweis: §6.4 dieses Dokuments.
-  User möchte das explizit umsetzen sobald Iteration 1 läuft.
+→ BACKLOG: **B-UX1-Iter2** — state-dependent tag strategy. Reference: §6.4 of this document.
+  User wants to implement this explicitly once Iteration 1 is running.
 
-### 6.5 N=100 Durchspielen (Iteration 1)
+### 6.5 N=100 Play-Through (Iteration 1)
 
-Mit N=100, spitzengruppe=10: 10 Tags auf Canvas.
-displaySize vermutlich kleiner (LOD aus D7d) → Tags skalieren mit `inv=1/ezoom`.
-Auf LEADER_ZOOM: 10 Tags, dicht, aber nicht 100 Tags → akzeptabel.
-Auf OVERVIEW: inv-Skalierung hält Tags lesbar auf weitem Zoom.
-Risiko: 10 Tags können sich bei engem Pulk noch überlappen → Iteration 2 löst das.
+With N=100, spitzengruppe=10: 10 tags on canvas.
+displaySize likely smaller (LOD from D7d) → tags scale with `inv=1/ezoom`.
+At LEADER_ZOOM: 10 tags, dense, but not 100 tags → acceptable.
+At OVERVIEW: inv-scaling keeps tags readable at wide zoom.
+Risk: 10 tags may still overlap in a tight pack → Iteration 2 resolves that.
 
-### 6.6 Der Tradeoff explizit
+### 6.6 The Tradeoff Explicitly
 
 ```
-"Wenn BATTLE_ZOOM ran-zoomt (battleZoomRatio erhöhen):
-  → Sprites proportional größer
-  → Tags größer (inv-Skalierung)
-  → Weniger Overlap
-  → Aber: weniger Strecke sichtbar, mehr Racer off-screen
-  → Anti-Pattern bei N=20, akzeptabel bei N=4"
+"When BATTLE_ZOOM zooms in (raise battleZoomRatio):
+  → Sprites proportionally larger
+  → Tags larger (inv-scaling)
+  → Less overlap
+  → But: less track visible, more racers off-screen
+  → Anti-pattern at N=20, acceptable at N=4"
 
-"Wenn minTargetScreenPx von 32 auf 48 erhöht:
-  → Floor öfter aktiv → Sprites bleiben größer auf großen Tracks
-  → Camera darf weniger weit raus (Constraint-Limit wirkt früher)
-  → Mehr Camera-States können durch Zoom-Limit blockiert werden
-  → Koordiniert mit Camera-Tunables einstellen"
+"When minTargetScreenPx raised from 32 to 48:
+  → Floor more often active → sprites stay larger on large tracks
+  → Camera allowed less zoom-out (constraint limit kicks in sooner)
+  → More camera states can be blocked by zoom limit
+  → Adjust in coordination with camera tunables"
 ```
 
 ---
 
-## 7. Open-Track-Länge — Q-25 Empirische Untersuchung
+## 7. Open-Track Length — Q-25 Empirical Investigation
 
-### 7.1 Messergebnisse (empirisch bestätigt)
+### 7.1 Measurement Results (empirically confirmed)
 
-Alle Messungen: baseSpeedMean=0.001045, REFERENCE_FPS=62.5, speedMultiplier=1.0.
+All measurements: baseSpeedMean=0.001045, REFERENCE_FPS=62.5, speedMultiplier=1.0.
 
-| Track | pathLengthPx | ssf_raw | ssf_applied | Traversal-Rate | Renndauer |
-|-------|-------------|---------|-------------|----------------|-----------|
+| Track | pathLengthPx | ssf_raw | ssf_applied | Traversal rate | Race duration |
+|-------|-------------|---------|-------------|----------------|---------------|
 | Dirt Oval | 3 245 | 1.62 | 1.62 | 131 px/s | ~50 s |
 | Garden Path | 2 506 | 1.25 | 1.25 | 131 px/s | ~77 s |
 | City Circuit | 3 093 | 1.55 | 1.55 | 131 px/s | ~47 s |
 | River Run | 6 156 | 3.08 | 3.08 | 131 px/s | ~45 s |
-| Space Sprint | 19 772 | **9.89** | **4.00 (CAPPED)** | **323 px/s** | ~58 s (→ ~144 s bei maxScale=10) |
+| Space Sprint | 19 772 | **9.89** | **4.00 (CAPPED)** | **323 px/s** | ~58 s (→ ~144 s at maxScale=10) |
 
-**Root Cause: `DEFAULT_SPEED_SCALE_CONFIG.maxScale = 4.0`** in `client/src/modules/storage/defaults.js:112`.
-Canvas-Koordinatensystem-Hypothese **empirisch widerlegt** — Space Sprint World-Koordinaten 256..5707, nicht Canvas-gebunden.
+**Root cause: `DEFAULT_SPEED_SCALE_CONFIG.maxScale = 4.0`** in `client/src/modules/storage/defaults.js:112`.
+Canvas coordinate system hypothesis **empirically disproved** — Space Sprint world coordinates 256..5707, not canvas-bound.
 
-### 7.2 Lösung (User-Entscheidung UI-2+UI-3)
+### 7.2 Solution (user decisions UI-2+UI-3)
 
-**Schritt 1 — maxScale anheben:**
+**Step 1 — Raise maxScale:**
 ```js
 // defaults.js:112
 DEFAULT_SPEED_SCALE_CONFIG.maxScale = 10.0
 ```
-Space Sprint traversiert dann bei ~131 px/s. Renndauer ~144s bei speedMultiplier=1.0.
+Space Sprint then traverses at ~131 px/s. Race duration ~144s at speedMultiplier=1.0.
 
-**Schritt 2 — Open-Track Setup-Screen: Duration-Slider:**
-- Spielleiter wählt Gesamt-Renndauer für Open-Tracks
-- **Min-Zeit:** ~30s (physikalisches Minimum)
-- **Max-Zeit:** abgeleitet aus `pathLengthPx / (baseSpeedMean × referencePathLength × minScale)` — was die Strecke physikalisch hergibt
-- **Empfohlener Default:** ~65% der Max-Zeit (CC-Vorschlag: angenehme Länge ohne zu hetzen)
-- User sieht nur erreichbare Zeiten — Slider-Range kommt aus Strecken-Physik
-- Estimated-Duration-Anzeige (analog zu closed-track Lap-Zeit-Anzeige)
+**Step 2 — Open-track setup screen: duration slider:**
+- Operator selects total race duration for open tracks
+- **Minimum time:** ~30s (physical minimum)
+- **Maximum time:** derived from `pathLengthPx / (baseSpeedMean × referencePathLength × minScale)` — what the track physically allows
+- **Recommended default:** ~65% of max time (CC suggestion: comfortable length without rushing)
+- User sees only achievable times — slider range comes from track physics
+- Estimated duration display (analogous to closed-track lap time display)
 
-**Schritt 3 — finishT für Open-Tracks dynamisch berechnen:**
+**Step 3 — Compute finishT for open tracks dynamically:**
 ```js
-// RaceScreen/index.jsx — nach Fix:
+// RaceScreen/index.jsx — after fix:
 const finishT = isOpenTrack
   ? Math.min(
       openTrackFinishT(duration, speedMultiplier, baseSpeedConfig.max),
@@ -578,157 +578,157 @@ const finishT = isOpenTrack
   : lapsFromDuration(duration);
 ```
 
-`openTrackFinishT` existiert bereits in `lapUtils.js` — bisher ungenutzt in RaceScreen.
-`runoutZone` (Default 0.05) bleibt als **Sicherheitspuffer** am Streckenende (CC-Empfehlung).
-`Math.min`-Clamp: finishT überschreitet nie `1.0 - runoutZone` auch bei sehr langer duration.
+`openTrackFinishT` already exists in `lapUtils.js` — previously unused in RaceScreen.
+`runoutZone` (default 0.05) remains as a **safety buffer** at the end of the track (CC recommendation).
+`Math.min` clamp: finishT never exceeds `1.0 - runoutZone` even with a very long duration.
 
-**Warum runoutZone behalten:** Schützt vor Racer-am-Ende-des-Pfades-Bug wenn finishT zu nah an 1.0.
-Kann tunable bleiben oder auf Default=0.05 eingefroren werden.
+**Why keep runoutZone:** Protects against the racer-at-end-of-path bug when finishT is too close to 1.0.
+Can remain tunable or be frozen at default=0.05.
 
-### 7.3 Was dadurch geklärt ist (PR-A1)
+### 7.3 What This Clarifies (PR-A1)
 
-- Q-25 Root Cause: identifiziert und lösbar mit 1-Zeilen-Fix in defaults.js
-- Space Sprint ~144s ist die korrekte Referenz-Dauer bei maxScale=10
-- Duration-Slider macht Open-Track-Setup für Spielleiter intuitiv
-- finishT-Bug (duration-Einstellung hatte keinen Effekt auf Open-Tracks) wird behoben
+- Q-25 root cause: identified and fixable with a 1-line change in defaults.js
+- Space Sprint ~144s is the correct reference duration at maxScale=10
+- Duration slider makes open-track setup intuitive for the operator
+- finishT bug (duration setting had no effect on open tracks) is fixed
 
-### 7.4 Speed-Pipeline-Architektur (PR-A2)
+### 7.4 Speed Pipeline Architecture (PR-A2)
 
-**Aktueller Stack:**
+**Current stack:**
 ```
-baseSpeed (global Default) × speedMultiplier (per Type) × speedScaleFactor (per Track)
-  → effektive px/s des Racers
-```
-
-`speedScaleFactor` gleicht unterschiedliche pathLengthPx aus (B-17). Bei maxScale=10 funktioniert
-das für alle aktuellen Tracks (pathLengthPx ≤ 20 000). Aber das User-Modell ist noch nicht konsistent:
-Spielleiter denkt in Sekunden, Code denkt in px/s + Faktoren. Sehr kurze Strecken (~800px) würden
-in 6s enden — die untere Schranke ist nicht kontrollierbar ohne Code-Änderung.
-
-**Ziel-Stack (PR-A2 — User-Option C):**
-```
-gewählte_renndauer (Spielleiter-Input)
-  → race_baseSpeed = f(pathLengthPx, renndauer, speedMultiplier_distribution)
-    → effektive px/s = race_baseSpeed × speedMultiplier (per Type)
+baseSpeed (global default) × speedMultiplier (per type) × speedScaleFactor (per track)
+  → effective px/s of the racer
 ```
 
-Kernprinzip: **Spielleiter wählt Renndauer, alles andere folgt daraus.**
-- `race_baseSpeed` wird bei Race-Init berechnet damit der Median-Racer nach `renndauer` Sekunden fertig ist
-- `speedMultiplier`-Verhältnisse zwischen Racer-Types bleiben unverändert (Rocket ist immer 1.25× schneller als Basis)
-- `speedScaleFactor` wird überflüssig oder wird zu einem simplen Korrekturfaktor für Track-Geometrie-Anomalien
-- Closed-Tracks: Spielleiter wählt Rundenzahl + optionale Wunsch-Dauer; race_baseSpeed so gesetzt
-  dass N Runden in etwa der Wunsch-Dauer entsprechen
-- Open-Tracks: Spielleiter wählt Gesamt-Dauer; race_baseSpeed direkt daraus
+`speedScaleFactor` compensates for different pathLengthPx values (B-17). At maxScale=10 this works
+for all current tracks (pathLengthPx ≤ 20 000). But the operator's mental model is not yet consistent:
+the operator thinks in seconds, the code thinks in px/s + factors. Very short tracks (~800px) would
+finish in 6s — the lower bound is not controllable without code changes.
 
-**Was sich für den Spielleiter ändert:**
-- Slider "Renndauer" wird zur zentralen Steuerung — menschenfreundlich
-- Keine px/s-Denkweise mehr nötig
-- Unterschiedlich schnelle Racer-Types erzeugen natürliche Streuung um die Ziel-Dauer
+**Target stack (PR-A2 — user option C):**
+```
+chosen_race_duration (operator input)
+  → race_baseSpeed = f(pathLengthPx, race_duration, speedMultiplier_distribution)
+    → effective px/s = race_baseSpeed × speedMultiplier (per type)
+```
 
-**Empfohlene Pipeline-Architektur:**
-- `speedScaleFactor` entfällt als eigenständiger Wert. Die Berechnung wird in `race_baseSpeed` integriert.
-- `speedMultiplier`-Override pro Race ist nicht nötig — `race_baseSpeed` steuert die Strecke ausreichend.
-- Detaillierte Scope-Analyse erfolgt in PR-A2-Diagnose (siehe §13.1 R7).
+Core principle: **The operator selects the race duration; everything else follows from that.**
+- `race_baseSpeed` is calculated at race init so that the median racer finishes after `race_duration` seconds
+- `speedMultiplier` ratios between racer types remain unchanged (Rocket is always 1.25× faster than base)
+- `speedScaleFactor` becomes redundant or is reduced to a simple correction factor for track geometry anomalies
+- Closed tracks: operator chooses lap count + optional desired duration; race_baseSpeed set
+  so that N laps approximately match the desired duration
+- Open tracks: operator chooses total duration; race_baseSpeed derived directly from that
 
-**Scope-Risiko:** Bestehende Tests aus D9/D10/D11/D7a/D7b basieren auf aktueller Speed-Pipeline.
-PR-A2 muss Tests anpassen ohne Race-Verhalten zu brechen. Mitigation: Speed-Formel-Änderung in
-isolierter Funktion (`computeRaceBaseSpeed`) — Rest des Systems referenziert diese Funktion.
+**What changes for the operator:**
+- "Race duration" slider becomes the central control — human-friendly
+- No more need to think in px/s
+- Different racer types produce natural spread around the target duration
+
+**Recommended pipeline architecture:**
+- `speedScaleFactor` is eliminated as a standalone value. The calculation is integrated into `race_baseSpeed`.
+- `speedMultiplier` override per race is not needed — `race_baseSpeed` controls the track sufficiently.
+- Detailed scope analysis in PR-A2 diagnosis (see §13.1 R7).
+
+**Scope risk:** Existing tests from D9/D10/D11/D7a/D7b are based on the current speed pipeline.
+PR-A2 must update tests without breaking race behavior. Mitigation: speed formula change in
+an isolated function (`computeRaceBaseSpeed`) — the rest of the system references this function.
 
 ---
 
-## 8. Dev-Panel-Integration
+## 8. Dev Panel Integration
 
-### 8.1 Vollständige Tunable-Liste
+### 8.1 Complete Tunable List
 
-**Neue Sektion "Camera" im Dev-Screen:**
+**New "Camera" section in Dev Screen:**
 
-| Parameter | Typ | Default | Tooltip |
-|-----------|-----|---------|---------|
-| `overviewCooldownMin` | slider 5–60 s | 15 | "Kürzeste Pause zwischen OVERVIEW-Checks. Nächster Cooldown wird zufällig aus [Min, Max] gezogen. Beide gleich = fester Rhythmus. Wert: [x]s." |
-| `overviewCooldownMax` | slider 5–60 s | 25 | "Längste Pause zwischen OVERVIEW-Checks. Zufalls-Jitter wirkt menschlicher als fester Takt (TV-Regie-Analogie). Max ≥ Min. Wert: [x]s." |
-| `overviewDuration` | slider 2–10 s | 4 | "Dauer des OVERVIEW-Modus. Dann zurück zu LEADER. Wert: [x]s." |
-| `spitzengruppeMin` | slider 1–5 | 3 | "Mindest-Größe der Camera-Fokusgruppe. round(N×0.1) wird nach oben auf diesen Wert gecappt. Wert: [x]." |
-| `spitzengruppeMax` | slider 5–20 | 10 | "Maximal-Größe der Camera-Fokusgruppe. Wert: [x]." |
-| `spritePctOfCanvas.overview` | slider 2–10% | 5% | "Ziel-Sprite-Größe in OVERVIEW (auch floor). Wert: [x]%." |
-| `spritePctOfCanvas.leader` | slider 6–16% | 8% | "Ziel-Sprite-Größe in LEADER_ZOOM. Wert: [x]%." |
-| `spritePctOfCanvas.battle` | slider 8–20% | 12% | "Ziel-Sprite-Größe in BATTLE_ZOOM. Wert: [x]%." |
-| `spritePctOfCanvas.comeback` | slider 4–12% | 6.5% | "Ziel-Sprite-Größe in COMEBACK_ZOOM. Wert: [x]%." |
-| `maxStateDuration` | slider 2000–12000 ms | 4000 | "Max Verweildauer in einem Camera-State. Wert: [x]ms." |
-| `lerpFactor` | slider 0.01–0.15 | 0.04 | "Camera-Übergangs-Geschwindigkeit. Kleiner = langsamer/sanfter. Wert: [x]." |
-| `startPhaseSeconds` | slider 1–10 s | 3 | "Dauer der erzwungenen Start-OVERVIEW-Phase. Wert: [x]s." |
+| Parameter | Type | Default | Tooltip |
+|-----------|------|---------|---------|
+| `overviewCooldownMin` | slider 5–60 s | 15 | "Shortest pause between OVERVIEW checks. Next cooldown is drawn randomly from [Min, Max]. Both equal = fixed rhythm. Value: [x]s." |
+| `overviewCooldownMax` | slider 5–60 s | 25 | "Longest pause between OVERVIEW checks. Random jitter feels more human than a fixed beat (TV-direction analogy). Max ≥ Min. Value: [x]s." |
+| `overviewDuration` | slider 2–10 s | 4 | "Duration of OVERVIEW mode. Then back to LEADER. Value: [x]s." |
+| `spitzengruppeMin` | slider 1–5 | 3 | "Minimum size of the camera focus group. round(N×0.1) is capped up to this value. Value: [x]." |
+| `spitzengruppeMax` | slider 5–20 | 10 | "Maximum size of the camera focus group. Value: [x]." |
+| `spritePctOfCanvas.overview` | slider 2–10% | 5% | "Target sprite size in OVERVIEW (also floor). Value: [x]%." |
+| `spritePctOfCanvas.leader` | slider 6–16% | 8% | "Target sprite size in LEADER_ZOOM. Value: [x]%." |
+| `spritePctOfCanvas.battle` | slider 8–20% | 12% | "Target sprite size in BATTLE_ZOOM. Value: [x]%." |
+| `spritePctOfCanvas.comeback` | slider 4–12% | 6.5% | "Target sprite size in COMEBACK_ZOOM. Value: [x]%." |
+| `maxStateDuration` | slider 2000–12000 ms | 4000 | "Max dwell time in a camera state. Value: [x]ms." |
+| `lerpFactor` | slider 0.01–0.15 | 0.04 | "Camera transition speed. Smaller = slower/smoother. Value: [x]." |
+| `startPhaseSeconds` | slider 1–10 s | 3 | "Duration of the forced start-OVERVIEW phase. Value: [x]s." |
 
-**Neue Sektion "Name Tags" im Dev-Screen:**
+**New "Name Tags" section in Dev Screen:**
 
-| Parameter | Typ | Default | Tooltip |
-|-----------|-----|---------|---------|
-| `tagVisibleCount` | slider 0–20 | = spitzengruppe | "Anzahl Tags die im Rennen sichtbar sind (Top-N nach Position). 0 = keine. Default = Camera-Spitzengruppe. Wert: [x]." |
-| `tagScaleWithZoom` | toggle | true | "Tags skalieren mit Camera-Zoom (konstante Bildschirm-Größe). Aus = Tags skalieren mit Welt." |
+| Parameter | Type | Default | Tooltip |
+|-----------|------|---------|---------|
+| `tagVisibleCount` | slider 0–20 | = spitzengruppe | "Number of tags visible during the race (top-N by position). 0 = none. Default = camera lead group. Value: [x]." |
+| `tagScaleWithZoom` | toggle | true | "Tags scale with camera zoom (constant screen size). Off = tags scale with world." |
 
-**Neue Sektion "HUD Overlay" im Dev-Screen:**
+**New "HUD Overlay" section in Dev Screen:**
 
-| Parameter | Typ | Default | Tooltip |
-|-----------|-----|---------|---------|
-| `hudOverlayOpacity` | slider 0–1 step 0.05 | 0.75 | "Transparenz der HUD-Elemente im Fullscreen-Modus. 1.0 = vollständig opak. Wert: [x]." |
-| `hudStandingsPosition` | select left/right | right | "Position des Live-Standings-Overlays im Fullscreen." |
-| `hudMaxStandings` | slider 5–30 | 15 | "Obere Grenze für Standings-Einträge. Tatsächliche Anzeige = min(Wert, passt in Viewport). Wert: [x]." |
+| Parameter | Type | Default | Tooltip |
+|-----------|------|---------|---------|
+| `hudOverlayOpacity` | slider 0–1 step 0.05 | 0.75 | "Transparency of HUD elements in fullscreen mode. 1.0 = fully opaque. Value: [x]." |
+| `hudStandingsPosition` | select left/right | right | "Position of the live standings overlay in fullscreen." |
+| `hudMaxStandings` | slider 5–30 | 15 | "Upper limit for standings entries. Actual display = min(value, fits in viewport). Value: [x]." |
 
-**HUD-Layout-Constraint:** `hudMaxStandings` ist obere Grenze, kein statischer Wert.
-Zur Laufzeit wird die tatsächliche Anzeige-Anzahl aus der verfügbaren Viewport-Höhe berechnet:
+**HUD layout constraint:** `hudMaxStandings` is an upper limit, not a static value.
+At runtime the actual display count is calculated from the available viewport height:
 `actualShowCount = min(hudMaxStandings, floor((viewportH - reservedButtonsH - padding) / rowH))`.
-Buttons (Cancel Race, Fullscreen) sind immer vollständig sichtbar — werden nie durch Standings verdeckt.
-"More..." Indikator wenn hudMaxStandings > fitsInViewport (kein Scrollen). reservedButtonsH ≈ 120px.
+Buttons (Cancel Race, Fullscreen) are always fully visible — never obscured by standings.
+"More..." indicator when hudMaxStandings > fitsInViewport (no scrolling). reservedButtonsH ≈ 120px.
 
-**Bestehende Sektion "Speed Scale" — Default ändern:**
+**Existing "Speed Scale" section — change default:**
 
-| Parameter | Alt-Default | Neu-Default |
+| Parameter | Old default | New default |
 |-----------|-------------|-------------|
 | `maxScale` | 4.0 | **10.0** |
 
-**Neue Sektion "Sprite-Größen-Korridor" im Dev-Screen** (Slider, beide live-apply):
+**New "Sprite Size Corridor" section in Dev Screen** (slider, both live-apply):
 
-| Parameter | Typ | Default | Tooltip |
-|-----------|-----|---------|---------|
-| `maxTargetScreenPx` | slider 32–256 px | 160 | "Größte zulässige Sprite-Größe in Bildschirm-Px. Camera zoomt nicht näher ran als dieser Wert erlaubt. Wert: [x]px." |
+| Parameter | Type | Default | Tooltip |
+|-----------|------|---------|---------|
+| `maxTargetScreenPx` | slider 32–256 px | 160 | "Largest permitted sprite size in screen px. Camera does not zoom closer than this value allows. Value: [x]px." |
 
-Per-Type-Override: `getEffectiveMaxTargetScreenPx()` analog zu existierendem `getEffectiveMinTargetScreenPx()`
-aus D3.5.5. Beide Overrides in PR-E implementieren — nicht aufschieben.
+Per-type override: `getEffectiveMaxTargetScreenPx()` analogous to existing `getEffectiveMinTargetScreenPx()`
+from D3.5.5. Implement both overrides in PR-E — do not defer to a later PR.
 
-### 8.2 Live-Apply
+### 8.2 Live Apply
 
-Alle neuen Camera-Parameter sofort live-wirksam beim nächsten Frame.
-CameraDirector-Instanz wird nicht neu erstellt — Parameter direkt auf dem Objekt aktualisiert.
-`overviewCooldownMin`, `overviewCooldownMax` und `overviewDuration` werden in `_transition()` live gelesen. Bei jedem OVERVIEW wird ein neuer Cooldown-Wert zufällig aus [Min, Max] gezogen.
+All new camera parameters take effect immediately on the next frame.
+CameraDirector instance is not recreated — parameters updated directly on the object.
+`overviewCooldownMin`, `overviewCooldownMax`, and `overviewDuration` are read live in `_transition()`. On each OVERVIEW a new cooldown value is drawn randomly from [Min, Max].
 
-### 8.3 Per-Track-Overrides (Zukunft)
+### 8.3 Per-Track Overrides (future)
 
-Globale Defaults zuerst. Per-Track-Overrides (openTrackBaseZoom, maxScale pro Track) in einem
-späteren "Camera"-Tab im Track-Editor. Gehört in eine spätere Phase.
+Global defaults first. Per-track overrides (openTrackBaseZoom, maxScale per track) in a
+later "Camera" tab in the track editor. Belongs to a later phase.
 
-### 8.4 Tooltip-Convention
+### 8.4 Tooltip Convention
 
-Format: "Kurze Beschreibung. Wert: [aktuell]. Auswirkung: [was ändert sich]."
-Bestehende Tooltips im Dev-Panel als Vorbild.
+Format: "Short description. Value: [current]. Effect: [what changes]."
+Existing tooltips in the Dev Panel as reference.
 
 ---
 
-## 9. UI-Bugs
+## 9. UI Bugs
 
-### 9.1 Cancel-Race-Button (P5 / UI-4)
+### 9.1 Cancel-Race Button (P5 / UI-4)
 
-**Aktuell (RaceScreen/index.jsx:1036–1044):**
-Button-Label "← Setup", löscht `activeRace` sofort ohne Confirm-Dialog.
+**Current (RaceScreen/index.jsx:1036–1044):**
+Button label "← Setup", deletes `activeRace` immediately without a confirm dialog.
 
 **Fix:**
-- Button-Label während aktivem Race: **"Cancel Race"**
-- Confirm-Dialog: `"Are you sure? Current race will be lost."`
-- Bei Bestätigung: rAF-Loop abbrechen, `sessionStorage.removeItem('activeRace')`, `fadeNavigate('/setup')`
-- Button-Label bleibt "← Setup" im FINISHED-State (kein Confirm nötig — Race ist vorbei)
+- Button label during an active race: **"Cancel Race"**
+- Confirm dialog: `"Are you sure? Current race will be lost."`
+- On confirmation: stop rAF loop, `sessionStorage.removeItem('activeRace')`, `fadeNavigate('/setup')`
+- Button label remains "← Setup" in the FINISHED state (no confirm needed — race is over)
 
-**Pause+Resume:** Explizit NICHT Teil dieser Phase. → BACKLOG-Item: **"Pause+Resume Race"**
+**Pause+Resume:** Explicitly NOT part of this phase. → BACKLOG item: **"Pause+Resume Race"**
 
-### 9.2 Fullscreen-HUD (P4 / UI-5)
+### 9.2 Fullscreen HUD (P4 / UI-5)
 
-**Fix — echtes Browser-Fullscreen auf Canvas:**
+**Fix — real browser fullscreen on canvas:**
 ```js
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -739,384 +739,384 @@ function toggleFullscreen() {
 }
 ```
 
-**HUD-Elemente als halbtransparente Overlays** (`position: fixed` über Canvas im Fullscreen):
+**HUD elements as semi-transparent overlays** (`position: fixed` over canvas in fullscreen):
 
-| Element | Position (Vorschlag CC) | Verhalten |
-|---------|------------------------|-----------|
-| Live-Standings | rechts | zeigt Top-`hudMaxStandings` Racer |
-| Buttons (Cancel, Fullscreen) | oben rechts | immer sichtbar |
-| Status (Renndauer, Phase) | oben links | Renn-Kontext |
+| Element | Position (CC suggestion) | Behavior |
+|---------|--------------------------|----------|
+| Live standings | right | shows top-`hudMaxStandings` racers |
+| Buttons (Cancel, Fullscreen) | top right | always visible |
+| Status (race duration, phase) | top left | race context |
 
-Transparenz: `hudOverlayOpacity` (Dev-Panel, Default 0.75).
-Position: `hudStandingsPosition` (Dev-Panel, Default right).
+Transparency: `hudOverlayOpacity` (Dev Panel, default 0.75).
+Position: `hudStandingsPosition` (Dev Panel, default right).
 
-Technisch: wenn `canvasRef.current` fullscreen ist, brauchen Overlay-Divs `position: fixed`
-und hohen Z-Index um über dem Canvas sichtbar zu bleiben. CSS `::backdrop` für Hintergrund-Dimming.
+Technically: when `canvasRef.current` is fullscreen, overlay divs need `position: fixed`
+and a high z-index to remain visible above the canvas. CSS `::backdrop` for background dimming.
 
-**HUD-Layout-Constraint:** Buttons (Cancel Race, Fullscreen) sind IMMER vollständig sichtbar —
-nie durch Standings verdeckbar. Standings-Anzahl wird zur Laufzeit aus Viewport-Höhe berechnet
-(`hudMaxStandings` ist obere Grenze, nicht statischer Wert). Kein Scrollen — "More..." Indikator
-wenn Liste abgeschnitten wird. Implementierung in PR-F mit dem HUD-Overlay.
+**HUD layout constraint:** Buttons (Cancel Race, Fullscreen) are ALWAYS fully visible —
+never coverable by standings. Standings count is calculated at runtime from viewport height
+(`hudMaxStandings` is an upper limit, not a static value). No scrolling — "More..." indicator
+when the list is cut off. Implementation in PR-F with the HUD overlay.
 
-Bei N=100: Standings-Anzeige = min(hudMaxStandings=15, fitsInViewport) — max. 15 Racer sichtbar.
+With N=100: standings display = min(hudMaxStandings=15, fitsInViewport) — max. 15 racers visible.
 
 ### 9.3 Minimap
 
-**Empfehlung:** Minimap behalten. Bei LEADER_ZOOM sieht der Operator auf der Minimap
-das gesamte Feld — essentiell bei N=20+ wenn Camera aktiv den Rest ignoriert (§3.1).
+**Recommendation:** Keep the minimap. At LEADER_ZOOM the operator sees the entire field
+on the minimap — essential at N=20+ when the camera actively ignores the rest (§3.1).
 
-**Verbesserung:** Alle N Racer als Dots anzeigen (nicht nur Leader).
-Leader-Dot bleibt größer/heller. Bei N=100: Dots sehr klein, aber skalierbar.
+**Improvement:** Show all N racers as dots (not just the leader).
+Leader dot remains larger/brighter. With N=100: dots very small, but scalable.
 
 ---
 
-## 10. Synthese — Wie alles zusammenhängt
+## 10. Synthesis — How Everything Fits Together
 
-### 10.1 Primäre Kopplungen
+### 10.1 Primary Couplings
 
-**Kopplung 1: worldWidth → overviewZoom → State-Zooms**
+**Coupling 1: worldWidth → overviewZoom → state zooms**
 worldW=6000 → overviewZoom=0.213 → LEADER_ZOOM=0.298 → effZoom=0.447 < OVERVIEW=1.5 → BUG B.
-Korrektur: Open-Track Camera-Kalibrierung mit OPEN_TRACK_BASE_ZOOM als overviewZoom.
+Correction: open-track camera calibration with OPEN_TRACK_BASE_ZOOM as overviewZoom.
 
-**Kopplung 2: pathLengthPx → speedScaleFactor → Traversal-Rate**
-maxScale-Cap verhindert korrekte B-17-Formel bei langen Pfaden. maxScale=10 behebt für alle
-aktuellen Tracks (pathLengthPx_max = 19772 < 10 × 2000 = 20000).
+**Coupling 2: pathLengthPx → speedScaleFactor → traversal rate**
+maxScale cap prevents the correct B-17 formula for long paths. maxScale=10 fixes for all
+current tracks (pathLengthPx_max = 19772 < 10 × 2000 = 20000).
 
-**Kopplung 3: Camera-Zoom → Sprite-Px → Camera-Constraint**
+**Coupling 3: camera zoom → sprite px → camera constraint**
 `screenPx = displaySize × displaySizeScale × frameEffZoom`.
-Floor aktiv wenn screenPx < minTargetScreenPx. Floor wirkt jetzt als CAMERA-LIMIT.
-Camera darf nicht weiter rauszoomen als dieser Floor erlaubt.
+Floor active when screenPx < minTargetScreenPx. Floor now acts as a CAMERA LIMIT.
+Camera may not zoom out further than this floor allows.
 
-**Kopplung 4: Sprite-Px → Tag-Overlap**
-Größere Sprites → weiter auseinander → weniger Overlap. N-adaptives Tag-Limit löst den Rest.
+**Coupling 4: sprite px → tag overlap**
+Larger sprites → farther apart → less overlap. N-adaptive tag limit resolves the rest.
 
-**Kopplung 6: Sprite-Korridor [min, max] → effektive Camera-Zoom-Range**
-`erlaubter_min_zoom = minTargetScreenPx / (displaySize × displaySizeScale)`
-`erlaubter_max_zoom = maxTargetScreenPx / (displaySize × displaySizeScale)`
-Wenn Korridor eng (max - min klein): Camera-Zoom-Range wird eingefroren — alle States sehen gleich aus.
-Wenn Korridor weit (max sehr groß): Q-13-Risiko (Sprite-Animation ruckartig bei großen Sprites).
-Optimum: max ≈ 4× min gibt ~2 f-Stops Spielraum ohne Q-13-Bereich zu erreichen.
+**Coupling 6: sprite corridor [min, max] → effective camera zoom range**
+`allowed_min_zoom = minTargetScreenPx / (displaySize × displaySizeScale)`
+`allowed_max_zoom = maxTargetScreenPx / (displaySize × displaySizeScale)`
+If corridor is narrow (max - min small): camera zoom range is frozen — all states look the same.
+If corridor is wide (max very large): Q-13 risk (sprite animation jerky with large sprites).
+Optimum: max ≈ 4× min gives ~2 f-stops of headroom without reaching the Q-13 zone.
 
-**Kopplung 5: N → Spitzengruppe → Tag-Anzahl + HUD-Overlay-Größe**
-Wenn N steigt, wächst spitzengruppe. `tagVisibleCount` und `hudMaxStandings` defaulten auf spitzengruppe,
-können aber unabhängig gesetzt werden. Ein Tunable (`spitzengruppeMax`) steuert alle drei indirekt.
+**Coupling 5: N → lead group → tag count + HUD overlay size**
+As N grows, spitzengruppe grows. `tagVisibleCount` and `hudMaxStandings` default to spitzengruppe,
+but can be set independently. One tunable (`spitzengruppeMax`) controls all three indirectly.
 
-### 10.2 Inverse Camera Logic — Warum rückwärts gerechnet wird
+### 10.2 Inverse Camera Logic — Why It Is Calculated Backwards
 
-**Das Problem der vorwärts gerechneten Multiplikatoren:**
-Klassische Camera-Systeme definieren Zoom direkt: `battleZoom = overviewZoom × 2.5`. Das führt zu
-Track-Abhängigkeit: derselbe Multiplikator liefert bei worldW=1280 einen Sprite der 180px groß ist,
-bei worldW=6000 aber nur 38px — obwohl der Operator "näher dran" wollte. Jeder Track braucht eigene
-Multiplikatoren, und der Dev-Panel wird zur Kalibrierhölle.
+**The problem with forward-calculated multipliers:**
+Classic camera systems define zoom directly: `battleZoom = overviewZoom × 2.5`. This leads to
+track dependency: the same multiplier gives a sprite 180px wide at worldW=1280,
+but only 38px at worldW=6000 — even though the operator wanted to "zoom in closer". Each track needs its own
+multipliers, and the Dev Panel becomes a calibration nightmare.
 
-**Die Lösung: Rückwärts vom gewünschten Ergebnis rechnen:**
+**The solution: calculate backwards from the desired result:**
 ```
 cam.zoom = targetSizePx / (referenceSpriteSize × bsX)   // Closed Track
 cam.zoom = targetSizePx / (referenceSpriteSize × OPEN_TRACK_BASE_ZOOM)  // Open Track
 ```
-Der Operator definiert "Leader-Sprite soll 8% der Canvas-Höhe einnehmen" — die Camera löst den
-nötigen Zoom aus dieser Zielgröße. `bsX = CANVAS_W / worldW` ist der Basis-Skalierungsfaktor
-des Pixi-Containers. Da `bsX` in der Formel landet, hebt er sich mit dem worldW-Einfluss auf.
+The operator defines "leader sprite should occupy 8% of canvas height" — the camera derives the
+required zoom from this target size. `bsX = CANVAS_W / worldW` is the base scaling factor
+of the Pixi container. Since `bsX` appears in the formula, it cancels out the worldW influence.
 
-**Cross-Track-Invarianz-Beweis:**
+**Cross-track invariance proof:**
 ```
 screenPx = referenceSpriteSize × bsX × cam.zoom
          = referenceSpriteSize × bsX × (targetPx / (referenceSpriteSize × bsX))
-         = targetPx   ← konstant, unabhängig von worldW
+         = targetPx   ← constant, independent of worldW
 ```
-Dieselbe `spritePctOfCanvas`-Config ergibt auf jedem Track denselben Sprite-Screen-Anteil.
+The same `spritePctOfCanvas` config yields the same sprite screen fraction on every track.
 
-**Warum das nie umkehren:**
-- `referenceSpriteSize` muss die Welt-Pixel-Größe NACH Density-Skalierung sein (`displaySize × displaySizeScale`)
-- Die Formel ist nur korrekt wenn `bsX` den tatsächlichen Pixi-Container-Scale widerspiegelt
-- Wird `bsX` durch den Camera-Zoom bereits beeinflusst (circular dependency), bricht die Invarianz
-- Safety nets (min = 1.0 / overviewZoom, max = 5.0) sind Notbremsen für Edge Cases, kein Design-Target
-- Der Fallback-Pfad (`referenceSpriteSize=0`) nutzt intern `FALLBACK_REFERENCE_SPRITE_SIZE = 36px` mit Console-Warning — kein Rückfall auf Multiplikatoren
+**Why never reverse this:**
+- `referenceSpriteSize` must be the world-pixel size AFTER density scaling (`displaySize × displaySizeScale`)
+- The formula is only correct if `bsX` reflects the actual Pixi container scale
+- If `bsX` is already influenced by the camera zoom (circular dependency), the invariance breaks
+- Safety nets (min = 1.0 / overviewZoom, max = 5.0) are emergency brakes for edge cases, not a design target
+- The fallback path (`referenceSpriteSize=0`) uses `FALLBACK_REFERENCE_SPRITE_SIZE = 36px` internally with console warning — no fallback to multipliers
 
-**Edge-Case: Safety-Net-Clamp bei großen Sprites auf schmalen Open-Tracks:**
-Wenn `effectiveOverviewPx = referenceSpriteSize × OPEN_BASE × overviewZoom` größer ist als das
-konfigurierte State-Target (z. B. LEADER-Target = 57.6px, aber OVERVIEW rendert 75px weil der
-Track sehr schmal und overviewZoom = 1.0), greift das Safety-Net (`rawZoom < overviewZoom → clamp`)
-und der State erscheint visuell identisch zu OVERVIEW. Das ist kein Bug — das System schützt davor,
-beim Übergang zu einem "dramatischeren" State einen weiteren Ausschnitt zu zeigen als OVERVIEW.
-Lösung: `spritePctOfCanvas`-Werte anheben oder `displaySize` des Racer-Typs reduzieren.
-Kein versteckter Korrektur-Code (Drama-Floor-Ansatz wurde evaluiert und verworfen: er erzeugte
-Ordering-Inversions bei partieller Aktivierung und überschrieb User-Config auf normalen Tracks).
+**Edge case: safety-net clamp with large sprites on narrow open tracks:**
+When `effectiveOverviewPx = referenceSpriteSize × OPEN_BASE × overviewZoom` is larger than the
+configured state target (e.g. LEADER target = 57.6px, but OVERVIEW renders 75px because the
+track is very narrow and overviewZoom = 1.0), the safety net (`rawZoom < overviewZoom → clamp`)
+kicks in and the state appears visually identical to OVERVIEW. This is not a bug — the system protects against
+showing a wider view when transitioning to a "more dramatic" state than OVERVIEW.
+Solution: raise `spritePctOfCanvas` values or reduce `displaySize` of the racer type.
+No hidden correction code (drama-floor approach was evaluated and rejected: it caused
+ordering inversions on partial activation and overrode user config on normal tracks).
 
-**Kopplung zur §10.1 Kopplung 6:**
-Die absolute Pixel-Grenze `maxTargetScreenPx` bleibt als Hard-Cap. Wenn der inverse Zoom eine
-zu große Darstellung berechnet, greift `Math.min(MAX_INVERSE_ZOOM, rawZoom)` und anschließend
-die Pixi-seitige `maxTargetScreenPx`-Prüfung. Beide Systeme sind komplementär, nicht redundant.
+**Coupling to §10.1 Coupling 6:**
+The absolute pixel limit `maxTargetScreenPx` remains as a hard cap. If the inverse zoom calculates
+too large a display, `Math.min(MAX_INVERSE_ZOOM, rawZoom)` kicks in followed by
+the Pixi-side `maxTargetScreenPx` check. Both systems are complementary, not redundant.
 
-### 10.3 Neue Kopplungen aus User-Klärungen
+### 10.3 New Couplings from User Clarifications
 
-**OVERVIEW-Cooldown: Random-Jitter statt fester Takt:**
-Nach jedem OVERVIEW wird der nächste Cooldown zufällig aus [overviewCooldownMin, overviewCooldownMax]
-gezogen. Default 15–25s. Begründung: im Fernsehen springt man auch nicht roboterhaft alle 20 Minuten
-um — leichte Zufalls-Variation wirkt menschlicher. Beide Slider auf gleichen Wert = fester Takt.
-Bei 30s-Race: 1–2 OVERVIEW-Slots. Bei 144s-Race: 5–9 Slots (natürliche Streuung, kein Klackern).
+**OVERVIEW cooldown: random jitter instead of fixed beat:**
+After each OVERVIEW the next cooldown is drawn randomly from [overviewCooldownMin, overviewCooldownMax].
+Default 15–25s. Rationale: on TV you don't cut robotically every 20 minutes either —
+slight random variation feels more human. Both sliders at the same value = fixed beat.
+With a 30s race: 1–2 OVERVIEW slots. With a 144s race: 5–9 slots (natural spread, no clacking).
 
-**finishT + Duration-Slider Kopplung für Open-Tracks:**
-Duration-Slider beeinflusst direkt finishT. speedMultiplier der Racer beeinflusst ebenfalls
-die effektive Dauer. Setup-Screen sollte Estimated-Duration-Anzeige haben.
+**finishT + duration slider coupling for open tracks:**
+Duration slider directly affects finishT. Speed multiplier of racers also affects
+the effective duration. Setup screen should have an estimated duration display.
 
-**Minimap + Camera-Regie:**
-Minimap gibt dem Operator den Kontext den die Camera bewusst ignoriert (§3.1).
-Diese Komplementarität macht die Regie-Philosophie "entfernte Nachzügler dürfen fallen" tragfähig.
+**Minimap + camera direction:**
+The minimap gives the operator the context that the camera deliberately ignores (§3.1).
+This complementarity makes the direction philosophy "distant trailing racers may fall out" viable.
 
-**Renndauer-Slider als zentrale Spielleiter-Größe (nach PR-A2):**
-Nach der Speed-Pipeline-Architektur-Änderung (§7.4) denkt der Spielleiter nur noch in Sekunden.
-`race_baseSpeed` wird intern berechnet — px/s ist ein Implementierungsdetail, kein UX-Concept.
-Konsequenz: Setup-Screen vereinfacht sich: Closed-Track = Runden + optionale Wunschdauer,
-Open-Track = Dauer. Beide sehen für den Spielleiter konsistent aus.
+**Race duration slider as the central operator control (after PR-A2):**
+After the speed pipeline architecture change (§7.4) the operator thinks only in seconds.
+`race_baseSpeed` is calculated internally — px/s is an implementation detail, not a UX concept.
+Consequence: setup screen simplifies: closed track = laps + optional desired duration,
+open track = duration. Both look consistent to the operator.
 
-### 10.4 N=100: Was kollabiert wenn nicht vorbereitet
+### 10.4 N=100: What Collapses If Not Prepared
 
-| Component | N=100 Risiko | Status |
-|-----------|-------------|--------|
-| Camera State-Machine | O(1) — nur Spitzengruppe | Skaliert out-of-the-box |
-| openTrackPanTarget (nach Fix C) | O(N log N) sort, dann top-10 | ~0.1ms, akzeptabel |
-| drawNameTag (nach Iter 1) | 10 Tags gezeichnet | OK |
-| Minimap-Dots | 100 Dots sehr klein | Akzeptabel |
-| Avoidance-Kräfte | O(N²) → 10000 Checks | **D7d Prerequisite** |
-| Canvas-Render | 100 Sprites pro Frame | Profiling nötig (D7d) |
+| Component | N=100 risk | Status |
+|-----------|------------|--------|
+| Camera state machine | O(1) — lead group only | Scales out-of-the-box |
+| openTrackPanTarget (after Fix C) | O(N log N) sort, then top-10 | ~0.1ms, acceptable |
+| drawNameTag (after Iter 1) | 10 tags drawn | OK |
+| Minimap dots | 100 dots very small | Acceptable |
+| Avoidance forces | O(N²) → 10000 checks | **D7d prerequisite** |
+| Canvas render | 100 sprites per frame | Profiling needed (D7d) |
 
-Camera-Logik skaliert. Performance-Bottleneck ist Avoidance (D7d, BACKLOG).
+Camera logic scales. Performance bottleneck is avoidance (D7d, BACKLOG).
 
-### 10.4 Empfohlene Tuning-Reihenfolge
+### 10.4 Recommended Tuning Sequence
 
-1. **maxScale anheben** (Q-25) — behebt hektische Open-Tracks, unabhängig von Camera
-2. **Bug B fixen** (Zoom-Inversion) — dann State-Zooms erstmals testbar
-3. **Bug A fixen** (OVERVIEW-Pan) — Camera folgt endlich Racern
-4. **Bug C fixen** (Focus-Group Pan) — Spitzenkampf-Camera korrekt
-5. **minTargetScreenPx als Camera-Constraint** — erst wenn Camera-Zooms korrekt
-6. **Tag-Visibility Iter 1** — auf korrekter Camera aufsetzen
-7. **Dev-Panel-Integration** — alles tunable
-8. **HUD + Fullscreen + Cancel Race** — UI-Verbesserungen
+1. **Raise maxScale** (Q-25) — fixes hectic open tracks, independent of camera
+2. **Fix Bug B** (zoom inversion) — then state zooms are testable for the first time
+3. **Fix Bug A** (OVERVIEW pan) — camera finally follows racers
+4. **Fix Bug C** (focus group pan) — lead battle camera correct
+5. **minTargetScreenPx as camera constraint** — only once camera zooms are correct
+6. **Tag visibility Iter 1** — build on correct camera
+7. **Dev Panel integration** — everything tunable
+8. **HUD + fullscreen + cancel race** — UI improvements
 
 ---
 
-## 11. RaceScreen-Refactor (Q-7) und Test-Infrastruktur (Q-18)
+## 11. RaceScreen Refactor (Q-7) and Test Infrastructure (Q-18)
 
-### 11.1 Aktuelle Camera-Logik-Verteilung
+### 11.1 Current Camera Logic Distribution
 
 ```
-RaceScreen/index.jsx (1032 LOC, 0 Unit-Tests)
-  ├─ Camera-Init (lines 210–219): CameraDirector-Konstruktion + bbox-Skalierung
-  ├─ Camera-Update (lines 819–848): openTrack vs. closedTrack — Bug C hier
+RaceScreen/index.jsx (1032 LOC, 0 unit tests)
+  ├─ Camera init (lines 210–219): CameraDirector construction + bbox scaling
+  ├─ Camera update (lines 819–848): openTrack vs. closedTrack — Bug C here
   ├─ drawRacers (lines 387–407)
   └─ drawNameTag (lines 366–385)
 
-modules/camera/ (extrahiert, testbar)
+modules/camera/ (extracted, testable)
   ├─ CameraDirector.js — Bugs A+B
-  ├─ openTrackCamera.js — openTrackPanTarget (Bug C Aufruf-Seite)
+  ├─ openTrackCamera.js — openTrackPanTarget (Bug C call site)
   ├─ Minimap.js
-  └─ lapUtils.js — openTrackFinishT (bisher ungenutzt in RaceScreen)
+  └─ lapUtils.js — openTrackFinishT (previously unused in RaceScreen)
 ```
 
-### 11.2 Extraktion-Plan
+### 11.2 Extraction Plan
 
 - `computeRaceCameraTransform(st, camDirRef, bsX, bsY, worldWidth, worldHeight, isOpenTrack)`
   → `modules/camera/raceCamera.js`
-- `drawNameTag` → `modules/camera/nameTagRenderer.js` (testbar ohne Canvas-Context-Vollaufsatz)
-- Camera-Initialisierungs-Logik (bbox-Skalierung) → Hilfsfunktion in `raceCamera.js`
+- `drawNameTag` → `modules/camera/nameTagRenderer.js` (testable without full canvas context setup)
+- Camera initialization logic (bbox scaling) → helper function in `raceCamera.js`
 
-Bug C (3 Zeilen in RaceScreen) wird in PR-B behoben bevor PR-C (Refactor) beginnt.
-PR-C ist dann 100% behavior-preserving.
+Bug C (3 lines in RaceScreen) is fixed in PR-B before PR-C (refactor) begins.
+PR-C is then 100% behavior-preserving.
 
-### 11.3 Test-Strategie
+### 11.3 Test Strategy
 
-**Mock-rAF-Pattern:**
+**Mock-rAF pattern:**
 ```js
 let rafCallback = null;
 vi.stubGlobal('requestAnimationFrame', (cb) => { rafCallback = cb; return 1; });
-rafCallback(timestamp); // Frame simulieren
+rafCallback(timestamp); // simulate frame
 ```
 
-**Testbar ohne Browser:**
-- `computeRaceCameraTransform` mit mock-Racer-Positionen → Pan/Zoom-Output korrekt?
-- `drawNameTag` mit mock-CanvasRenderingContext2D → Text/Rect-Calls korrekt?
-- Camera-State-Transitions unter simulierten Rennphasen
+**Testable without browser:**
+- `computeRaceCameraTransform` with mock racer positions → pan/zoom output correct?
+- `drawNameTag` with mock CanvasRenderingContext2D → text/rect calls correct?
+- Camera state transitions under simulated race phases
 
-**Neue Tunables (§8) brauchen:** Config-Persistenz-Tests, Live-Apply-Tests.
+**New tunables (§8) require:** config persistence tests, live-apply tests.
 
 ---
 
-## 12. Implementation-Aufteilung
+## 12. Implementation Breakdown
 
-### 12.1 Reihenfolge-Entscheidung
+### 12.1 Sequencing Decision
 
-Bug-Fixes (PR-B) kommen VOR dem Refactor (PR-C).
+Bug fixes (PR-B) come BEFORE the refactor (PR-C).
 
-Begründung: Bug A+B sind in `modules/camera/` — unabhängig von RaceScreen, sofort fixbar.
-Bug C ist eine 3-Zeilen-Änderung in RaceScreen — kein Grund auf Refactor zu warten.
-PR-C (Refactor) danach ist 100% behavior-preserving von Anfang an. Kein "Refactor eines buggy State".
+Rationale: Bugs A+B are in `modules/camera/` — independent of RaceScreen, fixable immediately.
+Bug C is a 3-line change in RaceScreen — no reason to wait for the refactor.
+PR-C (refactor) afterwards is 100% behavior-preserving from the start. No "refactoring a buggy state".
 
-### 12.2 Sub-PR-Plan (9 PRs: PR-A aufgeteilt in A1 + A2-Diagnose + A2)
+### 12.2 Sub-PR Plan (9 PRs: PR-A split into A1 + A2-Diagnosis + A2)
 
 ```
-PR-A1: Q-25-Fix + Duration-Slider + finishT (bestehende Pipeline)
+PR-A1: Q-25 fix + duration slider + finishT (existing pipeline)
   - DEFAULT_SPEED_SCALE_CONFIG.maxScale: 4.0 → 10.0 (defaults.js:112)
   - finishT: openTrackFinishT(duration, ...) clamped by runoutZone (lapUtils.js)
-  - Duration-Slider im Setup-Screen für Open-Tracks (Min/Max aus Strecken-Physik)
-  - Estimated-Duration-Anzeige im Setup-Screen
-  - +Tests: speedScale neue maxScale-Grenze, openTrackFinishT-Integration
-  - Macht Space Sprint sofort spielbar (~131 px/s, ~144s)
+  - Duration slider in setup screen for open tracks (min/max from track physics)
+  - Estimated duration display in setup screen
+  - +Tests: speedScale new maxScale boundary, openTrackFinishT integration
+  - Makes Space Sprint immediately playable (~131 px/s, ~144s)
 
-PR-A2-Diagnose: Speed-Pipeline Lese-PR (kein Code-Change)
-  - Analog TLH-Konzept-Sprint-Pattern: Diagnose vor Implementation
-  - CC liest alle relevanten Speed-Pipeline-Files vollständig
+PR-A2-Diagnosis: Speed pipeline read-PR (no code change)
+  - Analogous to TLH concept sprint pattern: diagnosis before implementation
+  - CC reads all relevant speed pipeline files completely
   - Output: docs/SPEED_REFACTOR_ANALYSIS.md
-    - Welche Files betroffen (Ziel: < 30)
-    - Welche Tests touchiert
-    - Welche Pattern-Brüche entstehen
-    - Geschätzter Scope
-  - PR-Body: "Diagnose vor PR-A2-Implementation, kein Code-Change"
-  - User + Strategie-Review der Diagnose vor PR-A2-Start
-  - Falls Scope groß (> 30 Files / Test-Architektur-Umbau): zusätzlicher Konzept-Sprint
+    - Which files are affected (target: < 30)
+    - Which tests are touched
+    - Which pattern breaks arise
+    - Estimated scope
+  - PR body: "Diagnosis before PR-A2 implementation, no code change"
+  - User + strategy review of the diagnosis before PR-A2 starts
+  - If scope is large (> 30 files / test architecture overhaul): additional concept sprint
 
-PR-A2: Speed-Pipeline-Architektur-Umbau (§7.4, startet erst nach Diagnose-Review)
-  - computeRaceBaseSpeed(pathLengthPx, renndauer, speedMultiplier_distribution) neue Funktion
-  - race_baseSpeed wird race-spezifisch bei Race-Init berechnet
-  - speedScaleFactor entfällt als eigenständige Größe (in computeRaceBaseSpeed integriert)
-  - Closed-Tracks: optionale Wunschdauer zusätzlich zur Rundenzahl
-  - +Tests: alle bestehenden Speed-Tests anpassen (D9/D10/D11 Basis nicht brechen)
+PR-A2: Speed pipeline architecture refactor (§7.4, starts only after diagnosis review)
+  - computeRaceBaseSpeed(pathLengthPx, race_duration, speedMultiplier_distribution) new function
+  - race_baseSpeed calculated race-specifically at race init
+  - speedScaleFactor eliminated as a standalone value (integrated into computeRaceBaseSpeed)
+  - Closed tracks: optional desired duration in addition to lap count
+  - +Tests: update all existing speed tests (do not break D9/D10/D11 basis)
 
-PR-B: Camera-Bug-Fixes (Bug A + Bug B + Bug C)
-  - Bug A: targetZoom = overviewZoom statt 1 im OVERVIEW-State (CameraDirector.js:178-183)
-  - Bug B: Open-Track-Zoom-Kalibrierung — isOpenTrack-Modus in CameraDirector
-  - Bug C: openTrackPanTarget auf Spitzengruppe (RaceScreen/index.jsx:838-845, 3 Zeilen)
-  - +Tests: CameraDirector Bug-Szenarien (Pan-Offset non-zero, Open-Track-Zoom-Richtung)
+PR-B: Camera bug fixes (Bug A + Bug B + Bug C)
+  - Bug A: targetZoom = overviewZoom instead of 1 in OVERVIEW state (CameraDirector.js:178-183)
+  - Bug B: open-track zoom calibration — isOpenTrack mode in CameraDirector
+  - Bug C: openTrackPanTarget limited to lead group (RaceScreen/index.jsx:838-845, 3 lines)
+  - +Tests: CameraDirector bug scenarios (pan offset non-zero, open-track zoom direction)
 
-PR-C: RaceScreen-Split (reines Refactor, kein Behavior-Change)
+PR-C: RaceScreen split (pure refactor, no behavior change)
   - computeRaceCameraTransform → modules/camera/raceCamera.js
   - drawNameTag → modules/camera/nameTagRenderer.js
-  - Camera-Init → Hilfsfunktion
-  - +Tests: neue reine Funktionen
-  - Prerequisite: PR-B gemergt
+  - Camera init → helper function
+  - +Tests: new pure functions
+  - Prerequisite: PR-B merged
 
-PR-D: Camera-State-Machine (neue Logik)
-  - LEADER_ZOOM als Default-Modus (Default-Tendenz, §3.2)
-  - OVERVIEW-Cooldown-Logik (Random-Jitter aus [overviewCooldownMin, overviewCooldownMax], Dauer overviewDuration, soft-Trigger über Spannungs-Stärke)
-  - Start-Pulk + Endspurt + Finish-Event-Trigger
-  - findBattleCandidate() für engstes Duell in Spitzengruppe (§5.3)
-  - Hysterese-Schwellen (BATTLE: eintritt 0.05, austritt 0.07 auf minGapInSpitzengruppe)
-  - COMEBACK_ZOOM: Last-place-Drama-Trigger (gapLeadLast>0.3 && firstHalfClear)
-  - +Tests: State-Transitions unter simulierten Rennphasen
+PR-D: Camera state machine (new logic)
+  - LEADER_ZOOM as default mode (default tendency, §3.2)
+  - OVERVIEW cooldown logic (random jitter from [overviewCooldownMin, overviewCooldownMax], duration overviewDuration, soft trigger via tension strength)
+  - Start pack + final sprint + finish event trigger
+  - findBattleCandidate() for tightest duel in lead group (§5.3)
+  - Hysteresis thresholds (BATTLE: enter 0.05, exit 0.07 on minGapInSpitzengruppe)
+  - COMEBACK_ZOOM: last-place drama trigger (gapLeadLast>0.3 && firstHalfClear)
+  - +Tests: state transitions under simulated race phases
 
-PR-E: Sprite-Korridor + Tag-Visibility Iter 1 (B-UX1)
-  - Sprite-Korridor: minTargetScreenPx UND maxTargetScreenPx als Camera-Zoom-Limits (§6.2)
-  - getEffectiveMaxTargetScreenPx() analog zu getEffectiveMinTargetScreenPx() (per-Type-Override)
-  - Beide als Dev-Panel-Sliders — nicht aufschieben in spätere PR
-  - Q-13 strukturell gelöst durch maxTargetScreenPx
-  - Tag-Visibility: Top-N nach tagVisibleCount (Default = spitzengruppe)
-  - tagVisibleCount als Dev-Panel-Tunable
-  - +Tests: computeRenderDisplayScale mit Korridor-Limits, drawNameTag mit Visibility-Flag
+PR-E: Sprite corridor + tag visibility Iter 1 (B-UX1)
+  - Sprite corridor: minTargetScreenPx AND maxTargetScreenPx as camera zoom limits (§6.2)
+  - getEffectiveMaxTargetScreenPx() analogous to getEffectiveMinTargetScreenPx() (per-type override)
+  - Both as Dev Panel sliders — do not defer to a later PR
+  - Q-13 structurally resolved by maxTargetScreenPx
+  - Tag visibility: top-N by tagVisibleCount (default = spitzengruppe)
+  - tagVisibleCount as Dev Panel tunable
+  - +Tests: computeRenderDisplayScale with corridor limits, drawNameTag with visibility flag
 
-PR-F: Dev-Panel Camera-Tunables + HUD-Overlay
-  - Neue "Camera"-Sektion (§8.1 vollständige Liste)
-  - Neue "Name Tags"-Sektion (§8.1)
-  - Neue "HUD Overlay"-Sektion (§8.1)
-  - Fullscreen-HUD-Overlays (CSS + opacity-Tunable)
-  - Live-Apply auf CameraDirector-Instanz
-  - +Tests: Config-Persistenz, Live-Apply
+PR-F: Dev Panel camera tunables + HUD overlay
+  - New "Camera" section (§8.1 complete list)
+  - New "Name Tags" section (§8.1)
+  - New "HUD Overlay" section (§8.1)
+  - Fullscreen HUD overlays (CSS + opacity tunable)
+  - Live apply on CameraDirector instance
+  - +Tests: config persistence, live apply
 
-PR-G: UI-Bugs
-  - Cancel Race: Button-Label + Confirm-Dialog (§9.1)
-  - Fullscreen API: canvasRef statt screenRef (§9.2)
-  - +Tests: toggleFullscreen mock, Cancel-Dialog-Logik
+PR-G: UI bugs
+  - Cancel Race: button label + confirm dialog (§9.1)
+  - Fullscreen API: canvasRef instead of screenRef (§9.2)
+  - +Tests: toggleFullscreen mock, cancel dialog logic
 ```
 
-**MANUAL_FOCUS:** Nicht in dieser Phase — eigenes BACKLOG-Item.
+**MANUAL_FOCUS:** Not in this phase — separate BACKLOG item.
 
-### 12.3 Alternative Reihenfolgen
+### 12.3 Alternative Orderings
 
-**Alternative — Q-25 und Bugs zusammen (PR-A+B kombiniert):**
-Vorteil: eine PR etabliert korrekte Basis. Nachteil: größere PR, schwieriger zu reverten.
+**Alternative — Q-25 and bugs together (PR-A+B combined):**
+Advantage: one PR establishes correct foundation. Disadvantage: larger PR, harder to revert.
 
 ---
 
-## 13. Risiken und offene Fragen
+## 13. Risks and Open Questions
 
-### 13.1 Architektur-Risiken
+### 13.1 Architecture Risks
 
-**R1 — Open-Track-Camera-Refactor Scope-Creep:**
-Bug B Fix erfordert separaten Kalibrier-Pfad für Open-Track-Camera.
-Mitigation: CameraDirector erhält `isOpenTrack`-Flag + `openTrackBaseZoom`-Parameter —
-kein eigener OpenTrackCameraDirector nötig, Parameter-Konfiguration statt Subklasse.
+**R1 — Open-track camera refactor scope creep:**
+Bug B fix requires a separate calibration path for open-track camera.
+Mitigation: CameraDirector receives `isOpenTrack` flag + `openTrackBaseZoom` parameter —
+no separate OpenTrackCameraDirector needed, parameter configuration instead of subclass.
 
-**R2 — RaceScreen rAF-Loop Testbarkeit:**
-Extraktion nur von Funktionen ohne rAF-Loop-State (`drawNameTag`, `computeRaceCameraTransform`).
-Beide haben keine State-Closures die den rAF-Loop referenzieren — sicher extrahierbar.
+**R2 — RaceScreen rAF loop testability:**
+Extract only functions without rAF loop state (`drawNameTag`, `computeRaceCameraTransform`).
+Both have no state closures referencing the rAF loop — safely extractable.
 
-**R3 — OVERVIEW-Cooldown + BATTLE_ZOOM-Konflikt:**
-Wenn BATTLE_ZOOM aktiv und OVERVIEW-Cooldown abläuft: BATTLE_ZOOM hat höhere Spannungs-Stärke
-(enges Duell in Spitzengruppe > periodischer Kontext-Check). OVERVIEW wird zurückgestellt —
-Cooldown-Timer wartet bis BATTLE_ZOOM endet. Nach BATTLE_ZOOM-Ende wird ein neuer Cooldown
-zufällig aus [overviewCooldownMin, overviewCooldownMax] gezogen. Korrekt nach Tendenz-Logik (§3.2).
+**R3 — OVERVIEW cooldown + BATTLE_ZOOM conflict:**
+If BATTLE_ZOOM is active and the OVERVIEW cooldown expires: BATTLE_ZOOM has higher tension strength
+(tight duel in lead group > periodic context check). OVERVIEW is deferred —
+cooldown timer waits until BATTLE_ZOOM ends. After BATTLE_ZOOM ends a new cooldown
+is drawn randomly from [overviewCooldownMin, overviewCooldownMax]. Correct per tendency logic (§3.2).
 
-**R4 — finishT + Duration-Slider Kopplung:**
-`openTrackFinishT` berechnet finishT bei Race-Init. Wenn Spielleiter während Race speedMultiplier
-ändert (Dev-Panel), ändert sich finishT nicht retroaktiv. Das ist korrekt und akzeptabel.
+**R4 — finishT + duration slider coupling:**
+`openTrackFinishT` calculates finishT at race init. If the operator changes speedMultiplier
+during the race (Dev Panel), finishT does not change retroactively. This is correct and acceptable.
 
-**R5 — N=100 + Camera Performance:**
-OVERVIEW-Pan mit Centroid aller N Racer: O(N) pro Frame. Bei N=100: ~0.01ms — akzeptabel.
-Avoidance-Kräfte (O(N²)) sind das eigentliche Performance-Problem — D7d zuständig.
+**R5 — N=100 + camera performance:**
+OVERVIEW pan with centroid of all N racers: O(N) per frame. At N=100: ~0.01ms — acceptable.
+Avoidance forces (O(N²)) are the actual performance problem — D7d is responsible.
 
-**R6 — Sprite-Korridor schlecht kalibriert:**
-Wenn `maxTargetScreenPx` zu klein: alle Camera-States zoomen ähnlich nah → kein visueller Unterschied
-zwischen BATTLE_ZOOM und OVERVIEW. Wenn `maxTargetScreenPx` zu groß: Q-13-Bereich erreichbar.
-Default 128px (4× min=32) ist Ausgangspunkt — muss mit Browser-Tests nach PR-E kalibriert werden
-bevor als stabiler Default festgelegt. Bei kleinen Racer-Types (kleines displaySize) muss max
-entsprechend angepasst werden.
+**R6 — Sprite corridor poorly calibrated:**
+If `maxTargetScreenPx` is too small: all camera states zoom similarly close → no visual difference
+between BATTLE_ZOOM and OVERVIEW. If `maxTargetScreenPx` is too large: Q-13 zone reachable.
+Default 128px (4× min=32) is the starting point — must be calibrated with browser tests after PR-E
+before being set as a stable default. For small racer types (small displaySize), max
+must be adjusted accordingly.
 
-**R7 — Speed-Pipeline-Refactor (PR-A2) Scope-Unsicherheit:**
-Speed-Pipeline (baseSpeed, speedMultiplier, speedScaleFactor) ist in vielen Stellen referenziert.
-D9/D10/D11/D7a/D7b/D7c bauen auf aktueller Pipeline. PR-A2 muss alle Tests anpassen.
-**Mitigation: PR-A2-Diagnose-PR** (Lese-PR vor Implementation) — CC analysiert Scope vollständig,
-schreibt `docs/SPEED_REFACTOR_ANALYSIS.md`, User reviewed vor PR-A2-Start. Scope-Risiko damit
-strukturell adressiert. Weiteres Mitigation: `computeRaceBaseSpeed` als isolierte Funktion.
+**R7 — Speed pipeline refactor (PR-A2) scope uncertainty:**
+Speed pipeline (baseSpeed, speedMultiplier, speedScaleFactor) is referenced in many places.
+D9/D10/D11/D7a/D7b/D7c build on the current pipeline. PR-A2 must update all tests.
+**Mitigation: PR-A2 diagnosis PR** (read-PR before implementation) — CC analyzes scope completely,
+writes `docs/SPEED_REFACTOR_ANALYSIS.md`, user reviews before PR-A2 starts. Scope risk thereby
+structurally addressed. Further mitigation: `computeRaceBaseSpeed` as an isolated function.
 
-**R8 — PRE_RACE-Phase Tag-Dichte bei N=100:**
-100 Tags gleichzeitig in PRE_RACE. Bei kleinem Canvas könnten Tags komplett überlappen.
-Mitigation: Tag-Größe in PRE_RACE 0.8× der RACING-Größe. Falls noch zu dicht:
-Tags in PRE_RACE ebenfalls limitieren (nur Name-Tags der ersten 20 Racer), aber das
-konterkariert den "Spieler findet sich"-Use-Case. Erst im Browser-Test bewerten.
+**R8 — PRE_RACE phase tag density at N=100:**
+100 tags simultaneously in PRE_RACE. On a small canvas tags could overlap completely.
+Mitigation: tag size in PRE_RACE 0.8× the RACING size. If still too dense:
+also limit tags in PRE_RACE (only name tags of the first 20 racers), but this
+undermines the "player finds themselves" use case. Evaluate in browser test first.
 
-### 13.2 Geklärte Konzept-Fragen (alle beantwortet 2026-05-02/03)
+### 13.2 Answered Concept Questions (all answered 2026-05-02/03)
 
-| # | Frage | Entscheidung |
-|---|-------|--------------|
-| UI-1 | OVERVIEW-Camera-Verhalten | LEADER_ZOOM als Default; OVERVIEW-Cooldown [15s, 25s] Random-Jitter |
-| UI-2+UI-3 | Renndauer + finishT für Open-Tracks | Duration-Slider + maxScale=10 + finishT dynamisch aus openTrackFinishT |
-| UI-4 | Setup-Button während Race | "Cancel Race" + Confirm-Dialog; Pause+Resume als separates BACKLOG-Item |
-| UI-5 | Fullscreen HUD | Echtes Browser-Fullscreen via API; HUD als halbtransparente Overlays; hudMaxStandings viewport-aware |
-| UI-6 | Name-Tags | Iter 1 (Top-N, PR-E) + Iter 2 state-abhängig als B-UX1-Iter2 im BACKLOG |
-| UI-7 | OVERVIEW-Cooldown-Rhythmus | Random-Jitter [overviewCooldownMin=15s, overviewCooldownMax=25s] — TV-Regie-Analogie |
-| UI-8 | PR-A2 Speed-Refactor Scope-Risiko | Diagnose-Lese-PR (PR-A2-Diagnose) vor Implementation — analog TLH-Pattern |
+| # | Question | Decision |
+|---|----------|----------|
+| UI-1 | OVERVIEW camera behavior | LEADER_ZOOM as default; OVERVIEW cooldown [15s, 25s] random jitter |
+| UI-2+UI-3 | Race duration + finishT for open tracks | Duration slider + maxScale=10 + finishT dynamic from openTrackFinishT |
+| UI-4 | Setup button during race | "Cancel Race" + confirm dialog; Pause+Resume as separate BACKLOG item |
+| UI-5 | Fullscreen HUD | Real browser fullscreen via API; HUD as semi-transparent overlays; hudMaxStandings viewport-aware |
+| UI-6 | Name tags | Iter 1 (Top-N, PR-E) + Iter 2 state-dependent as B-UX1-Iter2 in BACKLOG |
+| UI-7 | OVERVIEW cooldown rhythm | Random jitter [overviewCooldownMin=15s, overviewCooldownMax=25s] — TV-direction analogy |
+| UI-8 | PR-A2 speed refactor scope risk | Diagnosis read-PR (PR-A2-Diagnosis) before implementation — analogous to TLH pattern |
 
-### 13.3 Annahmen
+### 13.3 Assumptions
 
-- **A1:** speedMultiplier der Racer-Types ~1.0. Messen vor PR-A (beeinflusst Renndauer-Schätzung).
-- **A2:** maxScale=10.0 → ~131 px/s für Space Sprint. Im Browser-Test nach PR-A verifizieren.
-- **A3:** Garden-Path-Ecke-Problem (P1) ist Bug A. Nicht 100% sicher ohne Browser-Run.
-- ~~**A4:**~~ Canvas-Koordinatensystem begrenzt Geometrie-Länge — **empirisch widerlegt** (§7.1).
+- **A1:** speedMultiplier of racer types ~1.0. Measure before PR-A (affects race duration estimate).
+- **A2:** maxScale=10.0 → ~131 px/s for Space Sprint. Verify in browser test after PR-A.
+- **A3:** Garden Path corner problem (P1) is Bug A. Not 100% certain without a browser run.
+- ~~**A4:**~~ Canvas coordinate system limits geometry length — **empirically disproved** (§7.1).
 
 ---
 
 ## Cross-References
 
-- `client/src/modules/camera/CameraDirector.js` — State-Machine (Bugs A+B in §5)
+- `client/src/modules/camera/CameraDirector.js` — state machine (Bugs A+B in §5)
 - `client/src/modules/camera/openTrackCamera.js` — openTrackPanTarget (Bug C in §5)
-- `client/src/screens/RaceScreen/index.jsx` — Camera-Integration (lines 210–219, 819–848)
+- `client/src/screens/RaceScreen/index.jsx` — camera integration (lines 210–219, 819–848)
 - `client/src/modules/autoSpriteScale.js` — computeRenderDisplayScale (§6.2)
 - `client/src/modules/speedScale.js` — computeSpeedScaleFactor
-- `client/src/modules/storage/defaults.js:112` — DEFAULT_SPEED_SCALE_CONFIG.maxScale = 4.0 ← Q-25 Root Cause
-- `client/src/modules/camera/lapUtils.js` — openTrackFinishT (§7.2, bisher ungenutzt in RaceScreen)
-- `docs/BACKLOG.md — Hot §1` — Kamera-Phase als nächste Implementierungsphase
-- `docs/BACKLOG.md — B-UX1` — Name-Tag Iter 1 hier integriert (§6.3)
-- `docs/BACKLOG.md — B-UX1-Iter2` — state-abhängige Tags (§6.4)
-- `docs/BACKLOG.md — Q-25` — Open-Track-Länge (hier empirisch gelöst)
-- `docs/BACKLOG.md — Q-7` — RaceScreen-Split (§11)
-- `docs/BACKLOG.md — Q-18` — Test-RaceScreen (§11.3)
-- `docs/BACKLOG.md — D7d` — 100-Racer-Performance (Spatial-Grid, Camera Pulk-Übersicht, LOD)
+- `client/src/modules/storage/defaults.js:112` — DEFAULT_SPEED_SCALE_CONFIG.maxScale = 4.0 ← Q-25 root cause
+- `client/src/modules/camera/lapUtils.js` — openTrackFinishT (§7.2, previously unused in RaceScreen)
+- `docs/BACKLOG.md — Hot §1` — camera phase as next implementation phase
+- `docs/BACKLOG.md — B-UX1` — name tag Iter 1 integrated here (§6.3)
+- `docs/BACKLOG.md — B-UX1-Iter2` — state-dependent tags (§6.4)
+- `docs/BACKLOG.md — Q-25` — open-track length (empirically resolved here)
+- `docs/BACKLOG.md — Q-7` — RaceScreen split (§11)
+- `docs/BACKLOG.md — Q-18` — test-RaceScreen (§11.3)
+- `docs/BACKLOG.md — D7d` — 100-racer performance (spatial grid, camera pack overview, LOD)

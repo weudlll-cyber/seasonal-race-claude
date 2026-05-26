@@ -1,114 +1,114 @@
 # Phase 2N — Algorithm Summary & Structural Analysis
 
-**Ziel:** 8/9 Configs (3 Racer × r40/r70/r100) bestehen 1.5×-Gate bei N=50 für jeden Open Track.
+**Goal:** 8/9 configs (3 racers × r40/r70/r100) pass the 1.5× gate at N=50 for every open track.
 
-**Gate:** Jede Row im Bereich [erw./1.5, erw.×1.5]  
-**Fixe Parameter:** avoidanceWarmupMs=0, dur=60s, v4MetricType=per_racer, v4ThresholdActive=true  
-**Schwellen:** Row1=20/40/60, Row2+=20/40/70  
-**Schedule:** Drittel-Schema: [B, 1+(B-1)×2/3, 1+(B-1)×1/3, 1.0]
+**Gate:** Every row in the range [exp./1.5, exp.×1.5]  
+**Fixed parameters:** avoidanceWarmupMs=0, dur=60s, v4MetricType=per_racer, v4ThresholdActive=true  
+**Thresholds:** Row1=20/40/60, Row2+=20/40/70  
+**Schedule:** Third-scheme: [B, 1+(B-1)×2/3, 1+(B-1)×1/3, 1.0]
 
 ---
 
-## Ergebnisse
+## Results
 
-| Track | Beste N=50 | bei boost | Fazit |
+| Track | Best N=50 | at boost | Conclusion |
 |-------|-----------|-----------|-------|
-| Space Sprint (air, 19772px) | **2/9** — rocket@r40, plane@r40 | 1.082 | Nicht konvergierbar |
-| Weltall (air, 15986px) | **0/9** | — | Nicht konvergierbar |
-| River Run (water, 6156px) | **0/9** (N=10) | — | Nicht konvergierbar |
+| Space Sprint (air, 19772px) | **2/9** — rocket@r40, plane@r40 | 1.082 | Not convergible |
+| Weltall (air, 15986px) | **0/9** | — | Not convergible |
+| River Run (water, 6156px) | **0/9** (N=10) | — | Not convergible |
 
 ---
 
-## Iterationsübersicht
+## Iteration overview
 
-### Space Sprint — 9 Iterationen
-boost: 1.07 → 1.10 → 1.085 → 1.07(Schwellen) → 1.07(Schwellen) → 1.075 → 1.09 → 1.082 → 1.086  
-Bestes Ergebnis bei 1.082: rocket@r40 ✅, plane@r40 ✅; alle anderen ❌  
-N=50 Gesamt: 2/9
+### Space Sprint — 9 iterations
+boost: 1.07 → 1.10 → 1.085 → 1.07(thresholds) → 1.07(thresholds) → 1.075 → 1.09 → 1.082 → 1.086  
+Best result at 1.082: rocket@r40 ✅, plane@r40 ✅; all others ❌  
+N=50 total: 2/9
 
-### Weltall — 2 Iterationen
+### Weltall — 2 iterations
 boost: 1.082 → 1.09  
-Bestes Ergebnis: 0/9 bei N=50 (beide Iterationen)  
-Theoretisches Maximum: 7/9 (dragon@r40 nahe fair, alle r70/r100 bei höherem Boost möglicherweise)
+Best result: 0/9 at N=50 (both iterations)  
+Theoretical maximum: 7/9 (dragon@r40 near fair, all r70/r100 possibly at higher boost)
 
-### River Run — 3 Iterationen
+### River Run — 3 iterations
 boost: 1.15 → 1.10 → 1.13  
-Bestes Ergebnis: 0/9 bei N=10 (strukturell non-konvergent)
+Best result: 0/9 at N=10 (structurally non-convergent)
 
 ---
 
-## Strukturelle Limitierungen
+## Structural limitations
 
-### 1. Cross-Racercount Inkompatibilität
+### 1. Cross-racercount incompatibility
 
-Jeder Racercount (r40/r70/r100) erzeugt eine andere Anzahl von Rows für jeden Racer:
+Each racercount (r40/r70/r100) produces a different number of rows for each racer:
 
-**Space Sprint Beispiel:**
+**Space Sprint example:**
 | Racer | r40 | r70 | r100 |
 |-------|-----|-----|------|
 | dragon | 3 rows | 5 rows | 6 rows |
 | rocket | 2 rows | 4 rows | 5 rows |
 | plane | 2 rows | 4 rows | 5 rows |
 
-Je mehr Rows, desto höher der benötigte Boost für hintere Rows. Das Boost-Optimum für r100 liegt immer höher als für r40. Die Bereiche überlappen nicht.
+The more rows, the higher the required boost for rear rows. The boost optimum for r100 always lies higher than for r40. The ranges do not overlap.
 
-**Gemessene Boost-Optima (approximiert):**
-- r40 (2-4 Rows): optimal ~1.082-1.090
-- r70 (4-6 Rows): optimal >1.09
-- r100 (5-9 Rows): optimal >1.10+
+**Measured boost optima (approximate):**
+- r40 (2-4 rows): optimal ~1.082-1.090
+- r70 (4-6 rows): optimal >1.09
+- r100 (5-9 rows): optimal >1.10+
 
-### 2. Sehr kleine Last-Row Racer-Anzahl
+### 2. Very small last-row racer count
 
-Bei einigen Kombinationen haben die letzten Rows extrem wenige Racer:
+For some combinations the last rows have extremely few racers:
 
-**Beispiel rocket@Weltall-r40:**
-- Row 0: 950 Racer, Row 1: 950 Racer, **Row 2: 100 Racer (5%)**
-- Gate-Minimum: 22.2% × 50 Rennen = 11.1 Rennen
-- Baseline-Erwartung (kein Boost): 2/40 × 50 = 2.5 Rennen
-- **Benötigter Faktor: 4.4× — strukturell nicht erreichbar**
+**Example rocket@Weltall-r40:**
+- Row 0: 950 racers, Row 1: 950 racers, **Row 2: 100 racers (5%)**
+- Gate minimum: 22.2% × 50 races = 11.1 races
+- Baseline expectation (no boost): 2/40 × 50 = 2.5 races
+- **Required factor: 4.4× — structurally unreachable**
 
-Row-2 bleibt bei 6% Gewinnrate unabhängig vom Boost (gemessen bei 1.082 UND 1.09).
+Row-2 stays at 6% win rate regardless of boost (measured at 1.082 AND 1.09).
 
-### 3. Boost-Erschöpfung bei tiefen Rows
+### 3. Boost exhaustion at deep rows
 
-Der v4 per_racer Mechanismus erschöpft den Bonus nach Erreichen der Überhol-Schwellen (20%/40%/70%). Bei hohen Racercounts müssen hintere Rows sehr viele Racer überholen:
+The v4 per_racer mechanism exhausts the bonus after reaching the overtaking thresholds (20%/40%/70%). At high racercounts, rear rows must overtake very many racers:
 
-**Beispiel dragon@River Run-r100 (9 Rows):**
-- Row-8-Racer müssen 80%+ des Feldes überholen
-- Row-8 Bonus-End: kein=60% (60% verlieren Bonus vollständig vor Rennende)
-- Trotz Boost gewinnt Row 8: 0% der Rennen (erwartet 11.1%)
+**Example dragon@River Run-r100 (9 rows):**
+- Row-8 racers must overtake 80%+ of the field
+- Row-8 bonus end: none=60% (60% lose bonus completely before race end)
+- Despite boost, Row 8 wins: 0% of races (expected 11.1%)
 
-Bei v4 per_racer Row-7 60%-Schwelle: Ø 44.5s (von 60s) — erst nach ~75% der Rennzeit erreicht. Danach kein Boost mehr für die letzten 15s.
+At v4 per_racer Row-7 60%-threshold: avg 44.5s (of 60s) — only reached after ~75% of race time. No more boost for the final 15s.
 
-### 4. Boost shiftet primär R0→R1, nicht R0→R2+
+### 4. Boost shifts primarily R0→R1, not R0→R2+
 
-Der größte Effekt des Boosts ist die Umverteilung von Siegen von Row 0 (Front) zu Row 1:
-- Row 0 verliert 20-30% Gewinnrate pro 0.01 Boost-Erhöhung (Row 1 gewinnt das)
-- Row 2+ gewinnen kaum dazu (oft 0-6% konstant über alle Boost-Werte)
+The largest boost effect is redistribution of wins from Row 0 (front) to Row 1:
+- Row 0 loses 20-30% win rate per 0.01 boost increase (Row 1 gains that)
+- Row 2+ gain barely anything (often 0-6% constant across all boost values)
 
-Ursache: Row-1-Racer müssen nur 20-40% des Feldes überholen um konkurrenzfähig zu werden. Row-2+-Racer brauchen 60-80% und erschöpfen ihren Boost dabei.
+Cause: Row-1 racers only need to overtake 20-40% of the field to become competitive. Row-2+ racers need 60-80% and exhaust their boost in the process.
 
 ---
 
-## Empfehlungen für Phase 2O
+## Recommendations for Phase 2O
 
-### Option A: Boost nach Racercount differenzieren
-- Statt eines globalen Boosts: `boostByRacercount = {40: 1.082, 70: 1.09, 100: 1.10}`
-- Durchbricht "einen Parameter" Prinzip aber adressiert strukturelle Ursache
+### Option A: Differentiate boost by racercount
+- Instead of a global boost: `boostByRacercount = {40: 1.082, 70: 1.09, 100: 1.10}`
+- Breaks the "one parameter" principle but addresses the structural cause
 
-### Option B: Threshold-Anpassung für tiefere Rows
-- Niedrigere Schwellen für Row 2+ (z.B. 15%/30%/55% statt 20%/40%/70%)
-- Boost wird früher abgebaut → weniger Überkorrektur bei Row 1
-- Oder: per_racer durch einen anderen Metrik-Typ ersetzen
+### Option B: Threshold adjustment for deeper rows
+- Lower thresholds for Row 2+ (e.g. 15%/30%/55% instead of 20%/40%/70%)
+- Boost exhausted earlier → less over-correction at Row 1
+- Or: replace per_racer with a different metric type
 
-### Option C: Fairness-Gate lockern
-- 1.5×-Gate ist streng; 2.0× wäre realistischer für Open-Tracks mit vielen Rows
-- Bei 2.0×-Gate: Space Sprint 2/9 → vermutlich 5+/9
+### Option C: Loosen fairness gate
+- 1.5× gate is strict; 2.0× would be more realistic for open tracks with many rows
+- With 2.0× gate: Space Sprint 2/9 → presumably 5+/9
 
-### Option D: v4 nur für r40 aktivieren
-- Bei r70/r100 ist die Bias-Korrektur zu komplex
-- r70/r100 Open Tracks ohne v4 lassen → dort keine künstliche Fairness
+### Option D: Activate v4 only for r40
+- For r70/r100 the bias correction is too complex
+- Leave r70/r100 open tracks without v4 → no artificial fairness there
 
-### Option E: Separate Boost-Parameter per Row-Tiefe
-- statt einem Boost für alle: `rowBoostMultipliers = [1.0, 1.09, 1.15, 1.22, ...]`
-- Jede Row bekommt ihren eigenen Boost-Wert
+### Option E: Separate boost parameters per row depth
+- instead of one boost for all: `rowBoostMultipliers = [1.0, 1.09, 1.15, 1.22, ...]`
+- Each row gets its own boost value

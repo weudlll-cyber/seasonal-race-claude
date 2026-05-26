@@ -1,4 +1,4 @@
-# Free-Lane Force Attribution Diagnose (Runde 2)
+# Free-Lane Force Attribution Diagnostics (Round 2)
 
 ## Setup
 - Branch: claude/free-lane-separation
@@ -7,12 +7,12 @@
 - ReRoll: 58 Frames
 - Drafting: boost 1.04, maxDistance 80
 
-## Overlap-Transition Ergebnis
-- Gesamt transitions: 75436
-- Erfolg (im Folgeframe getrennt): 643 (0.9%)
-- Misserfolg (bleibt überlappt): 74793 (99.1%)
+## Overlap Transition Results
+- Total transitions: 75436
+- Success (separated in next frame): 643 (0.9%)
+- Failure (remains overlapping): 74793 (99.1%)
 
-## Frage 1: Vorzeichen in Misserfolgsfällen (30 Zufallssamples)
+## Question 1: Sign in failure cases (30 random samples)
 | Frame | RacerID | freeLane | homeForce | avoidance | drafting | total_pre | total_post | y_change |
 |---|---|---|---|---|---|---|---|---|
 | 60 | 10 | 0.0000 | -0.0066 | 0.0083 | 0.0000 | 0.0017 | 0.0017 | 0.0017 |
@@ -46,46 +46,46 @@
 | 122 | 10 | 0.0000 | -0.0017 | 0.0005 | 0.0000 | -0.0012 | -0.0012 | -0.0012 |
 | 630 | 6 | 0.0000 | -0.0061 | 0.0063 | 0.0000 | 0.0002 | 0.0002 | 0.0002 |
 
-- Fälle mit freeLane > 0 in Misserfolg: 21847
-- davon homeForce < 0: 21454 (98.2%)
-- davon avoidance < 0: 1002 (4.6%)
-- davon drafting < 0: 0 (0.0%)
+- Cases with freeLane > 0 in failure: 21847
+- of which homeForce < 0: 21454 (98.2%)
+- of which avoidance < 0: 1002 (4.6%)
+- of which drafting < 0: 0 (0.0%)
 
-## Frage 2: Relative Magnituden (|delta|, nur Misserfolg)
-| Kraft | Mittelwert |delta| | Median |delta| | Max |delta| |
+## Question 2: Relative magnitudes (|delta|, failure cases only)
+| Force | Mean |delta| | Median |delta| | Max |delta| |
 |---|---:|---:|---:|
 | Free-Lane | 0.0022 | 0.0000 | 0.0913 |
 | Home-Force | 0.0062 | 0.0053 | 0.0197 |
 | Avoidance | 0.0042 | 0.0039 | 0.0163 |
 | Drafting lateral | 0.0000 | 0.0000 | 0.0000 |
 
-## Frage 3: Korrelation Erfolg/Misserfolg mit Kraft-Konstellationen
-- Erfolg: free-dominant 7.2%, home-dominant 37.0%, avoidance-dominant 16.0%, mixed 39.8%
-- Misserfolg: free-dominant 1.0%, home-dominant 35.7%, avoidance-dominant 13.4%, mixed 49.9%
+## Question 3: Correlation of success/failure with force constellations
+- Success: free-dominant 7.2%, home-dominant 37.0%, avoidance-dominant 16.0%, mixed 39.8%
+- Failure: free-dominant 1.0%, home-dominant 35.7%, avoidance-dominant 13.4%, mixed 49.9%
 
-## Frage 4: Einzelkraft vs. Kombination in Misserfolg
-- Einzelkraft (free/home/avoid/draft dominant): 74970 (50.1%)
-- Kombination (keine klare Dominanz >=25% Abstand): 74616 (49.9%)
+## Question 4: Single force vs. combination in failure cases
+- Single force (free/home/avoid/draft dominant): 74970 (50.1%)
+- Combination (no clear dominance >=25% gap): 74616 (49.9%)
 
-## Frage 5: Clamp-Bias
-- Clamp-Aktivierungsrate Erfolg: 0.0%
-- Clamp-Aktivierungsrate Misserfolg: 0.0%
-Bewertung: Höhere Clamp-Rate in Misserfolg deutet auf systematische Limitierung der effektiven Trennung hin.
+## Question 5: Clamp bias
+- Clamp activation rate success: 0.0%
+- Clamp activation rate failure: 0.0%
+Assessment: Higher clamp rate in failure cases indicates systematic limitation of effective separation.
 
-## Hauptneutralisierer
+## Main neutralizers
 1. Home-Force (mean |delta| = 0.0062)
 2. Avoidance (mean |delta| = 0.0042)
 3. Free-Lane (mean |delta| = 0.0022)
 4. Drafting lateral (mean |delta| = 0.0000)
 
-## Empfehlung für Folge-Spec (kein Fix)
-- Bei aktivem Overlap Home-Force temporär um 40-60% reduzieren.
-- Zusätzlich den gegenläufigen Avoidance-Anteil im Overlap um 20-30% dämpfen (nur solange overlap=true).
-- Clamp-Bias adressieren: bei overlap maxLateral temporär +0.05..+0.10, danach easing back.
+## Recommendation for follow-up spec (no fix)
+- When overlap is active, temporarily reduce Home-Force by 40-60%.
+- Additionally dampen the opposing avoidance component during overlap by 20-30% (only while overlap=true).
+- Address clamp bias: when overlapping, temporarily increase maxLateral by +0.05..+0.10, then ease back.
 
-## Bonus: 3-5 Paar-Trajektorien (60 Frames)
+## Bonus: 3-5 pair trajectories (60 frames)
 
-Paar 0-12, Frames 0-59, Persistenz-Streak=1593
+Pair 0-12, Frames 0-59, persistence streak=1593
 Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 ---|---:|---:|---:|---:|---:|---|---
 0 | -0.2524 | -0.2586 | 0.0062 | -0.0797 | -0.0911 | yes | rejoined
@@ -149,7 +149,7 @@ Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 58 | -0.1785 | -0.2537 | 0.0752 | 0.0000 | 0.0000 | yes | 
 59 | -0.1777 | -0.2532 | 0.0755 | 0.0000 | 0.0000 | yes | 
 
-Paar 0-1, Frames 0-59, Persistenz-Streak=1251
+Pair 0-1, Frames 0-59, persistence streak=1251
 Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 ---|---:|---:|---:|---:|---:|---|---
 0 | -0.2524 | -0.0595 | 0.1928 | -0.0797 | 0.0000 | yes | rejoined
@@ -213,7 +213,7 @@ Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 58 | -0.1785 | -0.1624 | 0.0160 | 0.0000 | 0.0000 | yes | 
 59 | -0.1777 | -0.1619 | 0.0158 | 0.0000 | 0.0000 | yes | 
 
-Paar 12-15, Frames 191-250, Persistenz-Streak=1117
+Pair 12-15, Frames 191-250, persistence streak=1117
 Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 ---|---:|---:|---:|---:|---:|---|---
 191 | -0.0748 | 0.2039 | 0.2787 | 0.0000 | 0.0000 | yes | rejoined
@@ -277,7 +277,7 @@ Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 249 | -0.0513 | 0.0909 | 0.1421 | 0.0000 | 0.0000 | yes | 
 250 | -0.0502 | 0.0902 | 0.1404 | 0.0000 | 0.0000 | yes | 
 
-Paar 10-12, Frames 99-158, Persistenz-Streak=1097
+Pair 10-12, Frames 99-158, persistence streak=1097
 Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 ---|---:|---:|---:|---:|---:|---|---
 99 | 0.0908 | -0.1871 | 0.2778 | 0.0000 | 0.0000 | yes | rejoined
@@ -341,7 +341,7 @@ Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 157 | -0.0321 | -0.1115 | 0.0795 | 0.0000 | 0.0000 | yes | 
 158 | -0.0317 | -0.1111 | 0.0794 | 0.0000 | 0.0000 | yes | 
 
-Paar 4-5, Frames 342-401, Persistenz-Streak=1008
+Pair 4-5, Frames 342-401, persistence streak=1008
 Frame | yA | yB | |Δy| | freeA | freeB | overlap | event
 ---|---:|---:|---:|---:|---:|---|---
 342 | -0.4481 | -0.1570 | 0.2911 | -0.0125 | 0.0000 | yes | rejoined

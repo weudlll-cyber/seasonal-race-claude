@@ -7,115 +7,115 @@
 
 ## Executive Summary
 
-| Priorität | Anzahl | Bereiche |
+| Priority | Count | Areas |
 |-----------|--------|---------|
 | CRITICAL | 0 | — |
-| IMPORTANT | 5 | Toter Code (2×), CORS, Server-Auth, Monolithic Components |
-| NICE-TO-HAVE | 9 | Coverage UI-Komponenten, Dependency-Upgrades, JSDoc, Browserslist, Bundle-Split, Magic-Numbers |
+| IMPORTANT | 5 | Dead code (2×), CORS, Server auth, Monolithic components |
+| NICE-TO-HAVE | 9 | Coverage UI components, Dependency upgrades, JSDoc, Browserslist, Bundle split, Magic numbers |
 
-**Empfehlung: Branch ist mergebereit.** Kein einziges CRITICAL-Item gefunden. Alle IMPORTANT-Items sind bekannte Scope-Entscheidungen (Phase L = lokaler Dev-Server ohne Auth) oder kleiner toter Code. Folge-Cleanup kann in separaten Commits nach dem Merge erfolgen.
+**Recommendation: Branch is ready to merge.** Not a single CRITICAL item found. All IMPORTANT items are known scope decisions (Phase L = local dev server without auth) or minor dead code. Follow-up cleanup can be done in separate commits after merge.
 
-**Geschätzter Aufwand für IMPORTANT-Items:**
-- I1 + I2 (toter Code): ~10 min, 1 Commit
-- I3 + I4 (CORS/Auth): dokumentiert als Phase 5 — kein Code-Aufwand
-- I5 (monolithische Komponenten): mehrere Stunden, optionaler Refactor-Sprint
+**Estimated effort for IMPORTANT items:**
+- I1 + I2 (dead code): ~10 min, 1 commit
+- I3 + I4 (CORS/Auth): documented as Phase 5 — no code effort
+- I5 (monolithic components): several hours, optional refactor sprint
 
 ---
 
-## Sektion 1 — Security
+## Section 1 — Security
 
-### 1.1 Dependency-Vulnerabilities
+### 1.1 Dependency vulnerabilities
 
 ```
 npm audit client/: 0 vulnerabilities (9 prod + 419 dev deps)
 npm audit server/: 0 vulnerabilities (82 prod + 97 dev deps)
 ```
 
-**Befund:** Kein Handlungsbedarf. Keine bekannten CVEs in der aktuellen Dependency-Kette.
+**Finding:** No action needed. No known CVEs in the current dependency chain.
 
 ### 1.2 Sensitive Data
 
-- **Keine .env-Dateien** im Repository gefunden.
-- `.gitignore` deckt `.env`, `node_modules`, `dist`, `coverage`, `.claude/settings*`, `diagnosis/` und temporäre Backup-Dateien korrekt ab.
-- **Kein hardcoded API-Key, Token oder Passwort** in `client/src` oder `server/src` gefunden.
-- **localStorage-Nutzung:** Alle Writes laufen über `client/src/modules/storage/storage.js` mit dem `racearena:`-Namespace. Keine sensitiven Daten (keine Credentials, keine persönlichen Daten) werden gespeichert — nur Renn-Konfigurationen.
-- **URL-Parameter:** Keine sensitiven Daten in URL-Parametern gefunden.
+- **No .env files** found in the repository.
+- `.gitignore` correctly covers `.env`, `node_modules`, `dist`, `coverage`, `.claude/settings*`, `diagnosis/` and temporary backup files.
+- **No hardcoded API key, token, or password** found in `client/src` or `server/src`.
+- **localStorage usage:** All writes go through `client/src/modules/storage/storage.js` with the `racearena:` namespace. No sensitive data (no credentials, no personal data) is stored — only race configurations.
+- **URL parameters:** No sensitive data found in URL parameters.
 
-### 1.3 XSS / Input-Sanitization
+### 1.3 XSS / Input sanitization
 
-- **`dangerouslySetInnerHTML`:** Nicht verwendet. Kein Befund.
-- **`innerHTML`:** Nicht direkt gesetzt. Kein Befund.
-- **User-Inputs im Frontend:** Track-Namen, Racer-Namen etc. werden als React-State verwaltet und über JSX gerendert — React escaped automatisch. Kein direktes DOM-Injection-Risiko.
-- **Server-Validation:** `validateTrackBodyForCreate()` und `validateTrackBodyForUpdate()` in `server/src/routes/tracks.js` prüfen Typen, Pflichtfelder und Hex-Color-Format. `isValidHexColor()` via Regex `/^#[0-9a-fA-F]{6}$/`. Multer begrenzt File-Upload auf 10 MB.
+- **`dangerouslySetInnerHTML`:** Not used. No finding.
+- **`innerHTML`:** Not set directly. No finding.
+- **User inputs in frontend:** Track names, racer names etc. are managed as React state and rendered via JSX — React escapes automatically. No direct DOM injection risk.
+- **Server validation:** `validateTrackBodyForCreate()` and `validateTrackBodyForUpdate()` in `server/src/routes/tracks.js` check types, required fields, and hex color format. `isValidHexColor()` via regex `/^#[0-9a-fA-F]{6}$/`. Multer limits file upload to 10 MB.
 
-### 1.4 CORS / API-Sicherheit
+### 1.4 CORS / API security
 
-**`[IMPORTANT — I3]`** Server-App (Phase L) verwendet:
+**`[IMPORTANT — I3]`** Server app (Phase L) uses:
 ```js
-app.use(cors())  // app.js:17 — kein Origin-Filter
+app.use(cors())  // app.js:17 — no origin filter
 ```
-Alle Origins dürfen auf alle Endpoints zugreifen. Für den Phase-L-Einsatz (Docker auf localhost) akzeptabel. Für Phase 5 (öffentliche Exposition) muss ein Origin-Whitelist konfiguriert werden.
+All origins may access all endpoints. Acceptable for Phase L use (Docker on localhost). An origin whitelist must be configured for Phase 5 (public exposure).
 
-**`[IMPORTANT — I4]`** Kein Authentifizierungs-Middleware vorhanden. Alle CRUD-Endpoints (`POST /api/tracks`, `DELETE /api/tracks/:id`, `POST /api/surface-classes` etc.) sind ohne Auth erreichbar. Laut README und Roadmap ist Auth für Phase 5 (JWT) geplant. Für Phase L (Localhost-only) akzeptiert. **Vor jeder öffentlichen Exposition muss Auth implementiert sein.**
+**`[IMPORTANT — I4]`** No authentication middleware present. All CRUD endpoints (`POST /api/tracks`, `DELETE /api/tracks/:id`, `POST /api/surface-classes` etc.) are reachable without auth. Auth is planned for Phase 5 (JWT) per README and Roadmap. Accepted for Phase L (localhost-only). **Auth must be implemented before any public exposure.**
 
 ---
 
-## Sektion 2 — Source Hygiene
+## Section 2 — Source Hygiene
 
-### 2.1 Toter Code
+### 2.1 Dead code
 
-**`[IMPORTANT — I1]` `client/src/modules/utils/index.js`** — nie importiert, 0% Coverage.
+**`[IMPORTANT — I1]` `client/src/modules/utils/index.js`** — never imported, 0% coverage.
 
-Exportiert `formatLapTime`, `formatRank`, `clamp`, `lerp`. Keine einzige dieser Funktionen wird aus dieser Datei importiert. Die Datei existiert seit Projektstart, wurde aber nie in die codebase integriert. Entweder löschen oder an die Aufruforte integrieren (z.B. `formatLapTime` in ResultScreen).
+Exports `formatLapTime`, `formatRank`, `clamp`, `lerp`. Not a single one of these functions is imported from this file. The file has existed since project start but was never integrated into the codebase. Either delete or integrate at the call sites (e.g. `formatLapTime` in ResultScreen).
 
-**`[IMPORTANT — I2]` `client/src/screens/DevScreen/components/SectionContainer.jsx`** — nie importiert, 0% Coverage.
+**`[IMPORTANT — I2]` `client/src/screens/DevScreen/components/SectionContainer.jsx`** — never imported, 0% coverage.
 
-Ein wiederverwendbarer Wrapper-Component (`SectionContainer`) wird in keiner anderen Datei importiert. Alle DevScreen-Sections verwenden ihre eigenen Card-Layouts direkt. Kann gelöscht werden.
+A reusable wrapper component (`SectionContainer`) is not imported in any other file. All DevScreen sections use their own card layouts directly. Can be deleted.
 
-### 2.2 Code-Smells
+### 2.2 Code smells
 
-**Monolithische React-Komponenten `[IMPORTANT — I5]`:**
+**Monolithic React components `[IMPORTANT — I5]`:**
 
-| Komponente | Zeilen | Bewertung |
+| Component | Lines | Assessment |
 |-----------|--------|-----------|
-| `TrackEditor.jsx` | 1447 | Refactor-Kandidat |
-| `RaceScreen/index.jsx` | 1286 | Refactor-Kandidat |
-| `RaceTuningSection.jsx` | 965 | Refactor-Kandidat |
-| `SetupScreen.jsx` | 742 | Grenzwertig |
-| `TrackManager.jsx` | 657 | Grenzwertig |
-| `CameraDirector.js` | 1093 | Akzeptabel — State Machine mit vielen States |
-| `CameraDiagnosticsHUD.jsx` | 388 | Akzeptabel — legitimes HUD-Debug-Tool |
+| `TrackEditor.jsx` | 1447 | Refactor candidate |
+| `RaceScreen/index.jsx` | 1286 | Refactor candidate |
+| `RaceTuningSection.jsx` | 965 | Refactor candidate |
+| `SetupScreen.jsx` | 742 | Borderline |
+| `TrackManager.jsx` | 657 | Borderline |
+| `CameraDirector.js` | 1093 | Acceptable — state machine with many states |
+| `CameraDiagnosticsHUD.jsx` | 388 | Acceptable — legitimate HUD debug tool |
 
-TrackEditor, RaceScreen und RaceTuningSection sind kandidat für Extraktion von Sub-Komponenten (z.B. die ~100-Zeilen Star-Background-Render-Funktion in RaceScreen). Nicht merge-blockend, aber auf dem Radar für einen späteren Refactor-Sprint.
+TrackEditor, RaceScreen and RaceTuningSection are candidates for extraction of sub-components (e.g. the ~100-line star background render function in RaceScreen). Not merge-blocking, but on the radar for a later refactor sprint.
 
-**`console.*`-Aufrufe in Production-Code:**
+**`console.*` calls in production code:**
 
-Alle 19 `console.warn`/`console.error` Aufrufe sind legitim:
-- `[RaceArena]`-präfixierte Warnungen in Error-Boundaries, Storage-Migrations, Track-Loading
-- Zwei `console.warn` in CameraDirector für Camera-State-Transition-Logging (HUD-Debug-Feature, by design)
-- Kein einziges unnötiges `console.log` (debug-statement)
+All 19 `console.warn`/`console.error` calls are legitimate:
+- `[RaceArena]`-prefixed warnings in error boundaries, storage migrations, track loading
+- Two `console.warn` in CameraDirector for camera-state-transition logging (HUD debug feature, by design)
+- Not a single unnecessary `console.log` (debug statement)
 
-**Magic Numbers:**
+**Magic numbers:**
 
-In `client/src/screens/RaceScreen/index.jsx` sind Koordinaten für den Star-Background (Zeilen 673–686) als Literal-Array hardcoded. Das ist bewusst — es handelt sich um Dekordaten, keine Physik-Konstanten. Keine Aktion erforderlich.
+In `client/src/screens/RaceScreen/index.jsx` coordinates for the star background (lines 673–686) are hardcoded as a literal array. This is deliberate — they are decoration data, not physics constants. No action required.
 
-### 2.3 Naming-Inkonsistenzen
+### 2.3 Naming inconsistencies
 
-Kein systematischer Befund. Codebase verwendet konsistent camelCase für JS-Identifiers, SCREAMING_SNAKE_CASE für Modul-Konstanten (z.B. `MAX_STATE_DURATION`, `BATTLE_PULK_THRESHOLD_PX`). Abkürzungen (`tc`, `lf`, `bsX`) sind im Kontext des Camera-Moduls durch JSDoc und Konstanten erklärt.
+No systematic finding. Codebase consistently uses camelCase for JS identifiers, SCREAMING_SNAKE_CASE for module constants (e.g. `MAX_STATE_DURATION`, `BATTLE_PULK_THRESHOLD_PX`). Abbreviations (`tc`, `lf`, `bsX`) are explained in the context of the camera module via JSDoc and constants.
 
-Einziger Rest-Befund: Datei-Header in `CameraZoomTuningSection.jsx` enthält noch `Etappe 3:` in der Description-Zeile. Kein Code-Smell, nur historische Notiz — kann bereinigt werden.
+Sole remaining finding: file header in `CameraZoomTuningSection.jsx` still contains `Etappe 3:` in the description line. Not a code smell, just a historical note — can be cleaned up.
 
-### 2.4 Auskommentierter Code / Markers
+### 2.4 Commented-out code / markers
 
-- **Keine TODOs, FIXMEs, HACKs, XXX** in `client/src` oder `server/src` gefunden.
-- Kein auskommentierter Code-Block gefunden. Alle `//`-Kommentarblöcke sind Dokumentation (JSDoc, inline-Erklärungen) oder Datei-Header.
-- Verhältnis Kommentar/Code: 13,5% (2548 von 18923 Zeilen) — gesund. Der Großteil sind die standardisierten Datei-Header.
+- **No TODOs, FIXMEs, HACKs, XXX** found in `client/src` or `server/src`.
+- No commented-out code block found. All `//` comment blocks are documentation (JSDoc, inline explanations) or file headers.
+- Comment-to-code ratio: 13.5% (2548 of 18923 lines) — healthy. The majority are standardized file headers.
 
 ---
 
-## Sektion 3 — Test Coverage
+## Section 3 — Test Coverage
 
-### 3.1 Coverage-Report
+### 3.1 Coverage report
 
 ```
 Statements : 64.37%  (3555 / 5522)
@@ -124,21 +124,21 @@ Functions  : 61.63%  ( 673 / 1092)
 Lines      : 65.88%  (3239 / 4916)
 ```
 
-**Module mit 0% Coverage (nach Typ bewertet):**
+**Modules with 0% coverage (assessed by type):**
 
-| Datei | Zeilen | Bewertung |
+| File | Lines | Assessment |
 |-------|--------|-----------|
-| `modules/utils/index.js` | 26 | IMPORTANT — toter Code (I1) |
-| `screens/DevScreen/components/SectionContainer.jsx` | ~50 | IMPORTANT — toter Code (I2) |
-| `screens/RaceScreen/index.jsx` | 1286 | NICE-TO-HAVE — Canvas-UI, nicht unit-testbar |
-| `screens/RaceScreen/CameraDiagnosticsHUD.jsx` | 388 | NICE-TO-HAVE — Dev-HUD, React-rendered |
-| `screens/DevScreen/sections/SystemSettings.jsx` | ~160 | NICE-TO-HAVE — Dev-UI |
-| `screens/DevScreen/sections/RaceDefaults.jsx` | ~200 | NICE-TO-HAVE — Dev-UI |
-| `screens/DevScreen/sections/CameraStateHudSection.jsx` | ~30 | NICE-TO-HAVE — Dev-UI |
+| `modules/utils/index.js` | 26 | IMPORTANT — dead code (I1) |
+| `screens/DevScreen/components/SectionContainer.jsx` | ~50 | IMPORTANT — dead code (I2) |
+| `screens/RaceScreen/index.jsx` | 1286 | NICE-TO-HAVE — canvas UI, not unit-testable |
+| `screens/RaceScreen/CameraDiagnosticsHUD.jsx` | 388 | NICE-TO-HAVE — dev HUD, React-rendered |
+| `screens/DevScreen/sections/SystemSettings.jsx` | ~160 | NICE-TO-HAVE — dev UI |
+| `screens/DevScreen/sections/RaceDefaults.jsx` | ~200 | NICE-TO-HAVE — dev UI |
+| `screens/DevScreen/sections/CameraStateHudSection.jsx` | ~30 | NICE-TO-HAVE — dev UI |
 
-**Module mit < 50% Coverage:**
+**Modules with < 50% coverage:**
 
-| Datei | Stmts% | Bewertung |
+| File | Stmts% | Assessment |
 |-------|--------|-----------|
 | `DevScreen/sections/BrandingProfiles.jsx` | 15.62% | NICE-TO-HAVE |
 | `DevScreen/sections/PlayerGroupsManager.jsx` | 26.66% | NICE-TO-HAVE |
@@ -146,55 +146,55 @@ Lines      : 65.88%  (3239 / 4916)
 | `DevScreen/sections/RaceHistory.jsx` | 42.85% | NICE-TO-HAVE |
 | `DevScreen/sections/RacerManager.jsx` | 46.15% | NICE-TO-HAVE |
 
-Alle niedrig-gecoverten Module sind Dev-Panel UI-Komponenten ohne Logik-Kern. Fehlende Tests hier sind ein UX-Problem bei Regressions, kein Sicherheitsproblem.
+All low-coverage modules are Dev Panel UI components without a logic core. Missing tests here are a UX regression risk, not a security problem.
 
-### 3.2 Untested kritische Pfade
+### 3.2 Untested critical paths
 
-| Pfad | Getestet? | Details |
+| Path | Tested? | Details |
 |------|-----------|---------|
-| `EditorShape.getPosition()` Interpolation | ✓ JA | 3 Smoothness-Regressions-Tests (Etappe 26) + bestehende Position/Offset-Tests |
-| Camera State Machine — alle Transitions | ✓ JA | CameraDirector.test.js: ~700 Zeilen, 90+ Tests über alle States |
-| Pulk-Detection `_isPulk()` | ✓ JA | 9 dedizierte Tests in "Etappe 13"-Block |
-| Re-Roll-Mechanik | ⚠ TEILWEISE | `rowLayout.js` hat Tests; die Re-Roll-Logik in `RaceScreen/index.jsx` (Canvas) ist nicht direkt testbar |
-| Backend-Endpoints | ✓ JA | `server/src/routes/tracks.test.js` + `surfaceClasses.test.js` |
-| Schema v5 Migration | ✓ JA | `cameraConfig.test.js` |
+| `EditorShape.getPosition()` Interpolation | ✓ YES | 3 smoothness regression tests (Etappe 26) + existing position/offset tests |
+| Camera State Machine — all transitions | ✓ YES | CameraDirector.test.js: ~700 lines, 90+ tests across all states |
+| Pack detection `_isPulk()` | ✓ YES | 9 dedicated tests in the "Etappe 13" block |
+| Re-roll mechanics | ⚠ PARTIAL | `rowLayout.js` has tests; the re-roll logic in `RaceScreen/index.jsx` (canvas) is not directly testable |
+| Backend endpoints | ✓ YES | `server/src/routes/tracks.test.js` + `surfaceClasses.test.js` |
+| Schema v5 migration | ✓ YES | `cameraConfig.test.js` |
 
-### 3.3 Test-Qualität
+### 3.3 Test quality
 
-- **Kein einziger `it.skip`** oder `describe.skip` in der Codebase. Alle Tests laufen.
-- **Kein `it.only`** oder `describe.only` vergessen.
-- **Snapshot-Tests:** Keine Snapshot-Tests vorhanden — kein Risiko für veraltete Snapshots.
-- **Komplexe Tests:** `CameraDirector.test.js` ist mit ~1200 Zeilen groß, aber gut strukturiert in benannte describe-Blöcke. Tests prüfen Verhalten (State-Transitions, Timing, Cooldowns), nicht Implementation.
-- **Diagnose-Tests:** `catmullRom.diagnostic.test.js` und `trackCorridor.test.js` enthalten `console.log` — diese sind explizit als Diagnose-Tools angelegt, akzeptabel.
+- **Not a single `it.skip`** or `describe.skip` in the codebase. All tests run.
+- **No `it.only`** or `describe.only` forgotten.
+- **Snapshot tests:** No snapshot tests present — no risk of stale snapshots.
+- **Complex tests:** `CameraDirector.test.js` is large at ~1200 lines but well structured into named describe blocks. Tests check behavior (state transitions, timing, cooldowns), not implementation.
+- **Diagnostic tests:** `catmullRom.diagnostic.test.js` and `trackCorridor.test.js` contain `console.log` — these are explicitly designed as diagnostic tools, acceptable.
 
 ---
 
-## Sektion 4 — Dependencies
+## Section 4 — Dependencies
 
-### 4.1 Versions-Status
+### 4.1 Version status
 
 **Client (npm outdated):**
 
-| Package | Aktuell | Latest | Art |
+| Package | Current | Latest | Type |
 |---------|---------|--------|-----|
-| `react` | 18.3.1 | **19.2.6** | Major — breaking changes, kein Upgrade-Druck |
-| `react-dom` | 18.3.1 | **19.2.6** | Major — zusammen mit react |
-| `react-router-dom` | 6.30.3 | **7.15.0** | Major — neue API (v7 Framework-Mode) |
-| `eslint` | 9.39.4 | **10.3.0** | Major — neue flat-config-Breaking-Changes |
-| `vite` | 8.0.10 | 8.0.12 | Patch — unkritisch |
-| `@playwright/test` | 1.59.1 | 1.60.0 | Minor — update bei Gelegenheit |
-| `jsdom` | 29.0.2 | 29.1.1 | Minor — update bei Gelegenheit |
+| `react` | 18.3.1 | **19.2.6** | Major — breaking changes, no upgrade pressure |
+| `react-dom` | 18.3.1 | **19.2.6** | Major — together with react |
+| `react-router-dom` | 6.30.3 | **7.15.0** | Major — new API (v7 Framework-Mode) |
+| `eslint` | 9.39.4 | **10.3.0** | Major — new flat-config breaking changes |
+| `vite` | 8.0.10 | 8.0.12 | Patch — non-critical |
+| `@playwright/test` | 1.59.1 | 1.60.0 | Minor — update when convenient |
+| `jsdom` | 29.0.2 | 29.1.1 | Minor — update when convenient |
 
 **Server (npm outdated):**
 
-| Package | Aktuell | Latest | Art |
+| Package | Current | Latest | Type |
 |---------|---------|--------|-----|
 | `express` | 4.22.1 | **5.2.1** | Major — Express 5 async error handling |
-| `vitest` | 4.1.5 | 4.1.6 | Patch — unkritisch |
+| `vitest` | 4.1.5 | 4.1.6 | Patch — non-critical |
 
-**`[NICE-TO-HAVE]`** React 19, react-router v7, ESLint 10 und Express 5 sind alle Major-Upgrades mit potenziell breaking changes. Kein Handlungsbedarf vor diesem Merge, aber ein geplanter Upgrade-Sprint ist sinnvoll.
+**`[NICE-TO-HAVE]`** React 19, react-router v7, ESLint 10 and Express 5 are all major upgrades with potentially breaking changes. No action needed before this merge, but a planned upgrade sprint makes sense.
 
-### 4.2 Bundle-Größe
+### 4.2 Bundle size
 
 ```
 dist/assets/index.js   447.78 kB │ gzip: 131.46 kB
@@ -202,190 +202,190 @@ dist/assets/index.css   38.53 kB │ gzip:   7.41 kB
 dist/index.html          0.93 kB │ gzip:   0.48 kB
 ```
 
-Kein Code-Splitting konfiguriert — alles in einem Bundle. Für eine Canvas-Game-App mit ~136 Modulen ist 131 kB gzip akzeptabel. React (runtime + DOM) macht den Großteil aus. Bei weiterem Wachstum könnte Route-Based Code-Splitting (Vite dynamic import) sinnvoll werden.
+No code splitting configured — everything in one bundle. For a canvas game app with ~136 modules, 131 kB gzip is acceptable. React (runtime + DOM) makes up the majority. With further growth, route-based code splitting (Vite dynamic import) could make sense.
 
-**`[NICE-TO-HAVE]`** Explizite `build.rollupOptions.output.manualChunks` Konfiguration könnte React vom App-Code trennen und Browser-Caching verbessern.
+**`[NICE-TO-HAVE]`** An explicit `build.rollupOptions.output.manualChunks` configuration could separate React from app code and improve browser caching.
 
 ### 4.3 Dev vs Production
 
-Alle Production-Dependencies korrekt zugeordnet:
-- `client/`: `react`, `react-dom`, `react-router-dom` als `dependencies` ✓
-- `server/`: `express`, `cors`, `multer` als `dependencies` ✓
-- Dev-Tools (`eslint`, `vite`, `vitest`, `playwright`) alle in `devDependencies` ✓
+All production dependencies correctly assigned:
+- `client/`: `react`, `react-dom`, `react-router-dom` as `dependencies` ✓
+- `server/`: `express`, `cors`, `multer` as `dependencies` ✓
+- Dev tools (`eslint`, `vite`, `vitest`, `playwright`) all in `devDependencies` ✓
 
 ---
 
-## Sektion 5 — Documentation
+## Section 5 — Documentation
 
 ### 5.1 README.md
 
-`README.md` (Wurzel) ist vorhanden, aktuell und vollständig:
-- Tech Stack dokumentiert ✓
-- Feature-Liste vollständig ✓
+`README.md` (root) is present, current, and complete:
+- Tech stack documented ✓
+- Feature list complete ✓
 - Getting Started (dev + Docker) ✓
-- API-Endpoints für Phase L dokumentiert ✓
-- Verweis auf `docs/` für Architecture, Track-Editor-Spec, Roadmap ✓
+- API endpoints for Phase L documented ✓
+- Reference to `docs/` for Architecture, Track-Editor-Spec, Roadmap ✓
 
-Kleinigkeit: Der README-Eintrag "Camera Director" in der Feature-Liste erwähnt noch nicht die neuen States `lead-in/lead-out` und die Pulk-Bedingung. **NICE-TO-HAVE.**
+Minor: The README entry "Camera Director" in the feature list does not yet mention the new states `lead-in/lead-out` and the pack condition. **NICE-TO-HAVE.**
 
-### 5.2 Code-Dokumentation
+### 5.2 Code documentation
 
-| Modul | JSDoc | Bewertung |
+| Module | JSDoc | Assessment |
 |-------|-------|-----------|
-| `CameraDirector.js` | ✓ | Klassen-JSDoc, alle Konstanten kommentiert, `_computeZoomForTargetSize` gut erklärt |
-| `EditorShape.js` | ⚠ Teilweise | `getPosition()` Signatur-JSDoc vorhanden, aber der neue Interpolations-Modus ist nicht erwähnt |
-| `panTarget.js` | ✓ | `getPanTarget()` vollständig mit JSDoc + Shape-Fallback erklärt |
-| `rowLayout.js` | ✓ | `computeSpeedBonus()` mit JSDoc |
-| `CameraDirector._isPulk()` | ⚠ | Private Methode, kein JSDoc |
+| `CameraDirector.js` | ✓ | Class JSDoc, all constants commented, `_computeZoomForTargetSize` well explained |
+| `EditorShape.js` | ⚠ Partial | `getPosition()` signature JSDoc present, but the new interpolation mode is not mentioned |
+| `panTarget.js` | ✓ | `getPanTarget()` fully explained with JSDoc + shape fallback |
+| `rowLayout.js` | ✓ | `computeSpeedBonus()` with JSDoc |
+| `CameraDirector._isPulk()` | ⚠ | Private method, no JSDoc |
 
-**`[NICE-TO-HAVE]`** `EditorShape.getPosition()` JSDoc sollte einen Satz über lineare Interpolation erhalten (war vorher `Math.round()`-basiert, jetzt interpoliert). Verhindert künftige Verwirrung wenn jemand die alte staircase-Regression debuggt.
+**`[NICE-TO-HAVE]`** `EditorShape.getPosition()` JSDoc should receive a sentence about linear interpolation (was previously `Math.round()`-based, now interpolated). Prevents future confusion when someone debugs the old staircase regression.
 
-### 5.3 Veraltete Inline-Kommentare
+### 5.3 Stale inline comments
 
-- **Etappe-Referenzen:** Ein verbleibender Datei-Header-Kommentar in `CameraZoomTuningSection.jsx:7` (`Etappe 3: per-state cameraStateProfiles accordion`) — historisch, kein Code-Smell, aber bereinigbar.
-- **Keine weiteren Etappe-/workaround-Kommentare** in Production-Code gefunden. Alle Etappe-23-Trace-Instrucmentierungen wurden in Etappe 27 vollständig entfernt.
+- **Etappe references:** One remaining file header comment in `CameraZoomTuningSection.jsx:7` (`Etappe 3: per-state cameraStateProfiles accordion`) — historical, not a code smell, but cleanable.
+- **No further Etappe/workaround comments** found in production code. All Etappe-23 trace instrumentations were fully removed in Etappe 27.
 
 ---
 
-## Sektion 6 — Performance
+## Section 6 — Performance
 
-### 6.1 Race-Loop-Performance
+### 6.1 Race loop performance
 
-Nach den Etappe-27-Cleanups und dem Etappe-26-Fix:
+After the Etappe-27 cleanups and the Etappe-26 fix:
 
-| Operation | Vorher | Jetzt |
+| Operation | Before | Now |
 |-----------|--------|-------|
-| `shape.getPosition()` pro Racer | 2× (displayT + drawX) | 1× |
-| `_tangentAngle()` Berechnung | Live (catmullRom-Call) | Precomputed `_angles[]` |
-| Sprite EMA (`_displayT`) | Per-Frame loop | Entfernt (Etappe 19) |
+| `shape.getPosition()` per racer | 2× (displayT + drawX) | 1× |
+| `_tangentAngle()` calculation | Live (catmullRom call) | Precomputed `_angles[]` |
+| Sprite EMA (`_displayT`) | Per-frame loop | Removed (Etappe 19) |
 
-Geschätzte Allocations im Hot-Path pro Frame bei 100 Racern:
-- `getPosition()` gibt `{ x, y, angle }` zurück → 100 Objekte pro Frame. Geringe GC-Last, da kurzlebig. Optimierbar durch Object-Reuse, aber nicht notwendig auf aktueller Racer-Anzahl.
-- Die Race-Loop ist canvas-rAF-basiert — kein virtueller DOM-Overhead im Render-Pfad.
+Estimated allocations in the hot path per frame with 100 racers:
+- `getPosition()` returns `{ x, y, angle }` → 100 objects per frame. Low GC load since short-lived. Optimizable via object reuse, but not necessary at current racer counts.
+- The race loop is canvas-rAF-based — no virtual DOM overhead in the render path.
 
 ### 6.2 Memory
 
-- **Race-Reset:** Racers-Array wird bei Race-Start neu alloziert; alter State wird durch GC bereinigt. Kein strukturelles Leak.
-- **EditorShape:** `_inner[]` und `_outer[]` werden einmalig im Konstruktor alloziert (`n` Samples à 2 Floats). Bei `samples=500`: ~4 kB. Kein Leak.
-- **Trail-Buffer:** `trail.push()` in `drawRacers` — Trails werden mit `shift()` begrenzt. Kein unbegrenztes Wachstum.
+- **Race reset:** Racers array is reallocated at race start; old state is cleaned up by GC. No structural leak.
+- **EditorShape:** `_inner[]` and `_outer[]` are allocated once in the constructor (`n` samples of 2 floats each). At `samples=500`: ~4 kB. No leak.
+- **Trail buffer:** `trail.push()` in `drawRacers` — trails are limited with `shift()`. No unbounded growth.
 
 ### 6.3 Render
 
-- Keine `getImageData`/`putImageData` im Hot-Path (teuer).
-- `getEdgePoints(80)` wird einmalig beim Race-Start aufgerufen (Zeile 205), nicht per Frame. ✓
-- `drawBattleDiagMarkers()` läuft nur wenn `showCameraDiagnostics=true` (Dev-HUD). ✓
+- No `getImageData`/`putImageData` in the hot path (expensive).
+- `getEdgePoints(80)` is called once at race start (line 205), not per frame. ✓
+- `drawBattleDiagMarkers()` runs only when `showCameraDiagnostics=true` (dev HUD). ✓
 
 ---
 
-## Sektion 7 — Browser Compatibility
+## Section 7 — Browser Compatibility
 
 ### 7.1 Browserslist
 
-Kein explizites `browserslist` in `package.json` oder `.browserslistrc`. Vite verwendet Default-Target: moderne Browser mit ES-Modul-Support.
+No explicit `browserslist` in `package.json` or `.browserslistrc`. Vite uses default target: modern browsers with ES module support.
 
-**`[NICE-TO-HAVE]`** Eine explizite `"browserslist": ["> 0.5%", "last 2 versions", "not dead"]` Deklaration in `client/package.json` würde Vite und ESLint-Browser-Plugin konsistent auf dasselbe Target ausrichten.
+**`[NICE-TO-HAVE]`** An explicit `"browserslist": ["> 0.5%", "last 2 versions", "not dead"]` declaration in `client/package.json` would align Vite and ESLint browser plugin consistently on the same target.
 
 ### 7.2 Features
 
-Alle verwendeten JS-Features sind in modernen Browsern (Chrome 90+, Firefox 90+, Safari 15+, Edge 90+) verfügbar:
+All used JS features are available in modern browsers (Chrome 90+, Firefox 90+, Safari 15+, Edge 90+):
 
-| Feature | Support | Risiko |
+| Feature | Support | Risk |
 |---------|---------|--------|
-| Optional chaining `?.` | Chrome 80+ | ✓ kein Risiko |
-| Nullish coalescing `??` | Chrome 80+ | ✓ kein Risiko |
-| `Array.at()` | Chrome 92+ | ✓ kein Risiko |
-| Canvas 2D API | Universal | ✓ kein Risiko |
-| `localStorage` | Universal | ✓ kein Risiko |
-| `fetch` | Chrome 42+ | ✓ kein Risiko |
-| ES Modules (native) | Chrome 61+ | ✓ kein Risiko (Vite bundelt für Prod) |
+| Optional chaining `?.` | Chrome 80+ | ✓ no risk |
+| Nullish coalescing `??` | Chrome 80+ | ✓ no risk |
+| `Array.at()` | Chrome 92+ | ✓ no risk |
+| Canvas 2D API | Universal | ✓ no risk |
+| `localStorage` | Universal | ✓ no risk |
+| `fetch` | Chrome 42+ | ✓ no risk |
+| ES Modules (native) | Chrome 61+ | ✓ no risk (Vite bundles for prod) |
 
 ---
 
-## Sektion 8 — Accessibility (Kurzbewertung)
+## Section 8 — Accessibility (brief assessment)
 
 ### 8.1 ARIA
 
-58 ARIA-Attribute gefunden. Korrekte Nutzung:
-- Modal-Dialog: `role="dialog"`, `aria-modal="true"`, `aria-label` ✓
+58 ARIA attributes found. Correct usage:
+- Modal dialog: `role="dialog"`, `aria-modal="true"`, `aria-label` ✓
 - InfoTooltip: `role="img"` + `role="tooltip"` ✓
-- Input-Labels: `aria-label` auf Slider/Color-Picker ✓
+- Input labels: `aria-label` on slider/color-picker ✓
 
-Lücken: Canvas-Elemente (Race-Track, Minimap) haben kein ARIA — für eine Canvas-Game-App ist das unvermeidlich ohne vollständiges a11y-Framework.
+Gaps: Canvas elements (race track, minimap) have no ARIA — for a canvas game app this is unavoidable without a full a11y framework.
 
-### 8.2 Keyboard-Navigation
+### 8.2 Keyboard navigation
 
-Setup-Form und Dev-Panel navigierbar via Tab. Canvas-Race selbst ist nicht keyboard-navigierbar — by design (kein spielbarer Modus, nur Zuschauer-View).
+Setup form and Dev Panel navigable via Tab. Canvas race itself is not keyboard-navigable — by design (no playable mode, viewer only).
 
 ### 8.3 Color Contrast
 
-Nicht systematisch geprüft (kein Tool-Lauf). Das Dev-Panel verwendet Dark Theme mit hellen Labels — subjektiv ausreichend. Für öffentliche Exposition sollte ein WCAG-Check (z.B. axe-playwright) ergänzt werden.
+Not systematically checked (no tool run). Dev Panel uses dark theme with light labels — subjectively sufficient. A WCAG check (e.g. axe-playwright) should be added for public exposure.
 
 ---
 
-## Sektion 9 — Build / CI
+## Section 9 — Build / CI
 
 ### 9.1 Build
 
 ```
-✓ Build erfolgreich (390ms)
+✓ Build successful (390ms)
 dist/assets/index.js  447.78 kB │ gzip: 131.46 kB
 ```
 
-Keine Warnungen, keine Fehler. Tree-Shaking aktiv (Vite/Rollup Standard).
+No warnings, no errors. Tree-shaking active (Vite/Rollup standard).
 
-### 9.2 CI-Pipeline
+### 9.2 CI pipeline
 
-`.github/workflows/ci.yml` deckt ab:
+`.github/workflows/ci.yml` covers:
 - ✓ ESLint (Syntax + Rules)
-- ✓ Prettier Format-Check
-- ✓ Tests mit Coverage (`npm run test:coverage`)
-- ✓ Security Audit (`npm audit --audit-level=high`)
-- ⚠ Kein Server-Test-Schritt (`server/` wird nicht in CI getestet)
-- ⚠ Kein Build-Step in CI (Build könnte brechen ohne CI-Alarm)
+- ✓ Prettier format check
+- ✓ Tests with coverage (`npm run test:coverage`)
+- ✓ Security audit (`npm audit --audit-level=high`)
+- ⚠ No server test step (`server/` is not tested in CI)
+- ⚠ No build step in CI (build could break without CI alarm)
 
-**`[NICE-TO-HAVE]`** Zwei fehlende CI-Steps:
-1. `cd server && npm test` — Server-Tests laufen lokal, aber nicht in CI
-2. `cd client && npm run build` — Build wird nicht verifiziert in CI
+**`[NICE-TO-HAVE]`** Two missing CI steps:
+1. `cd server && npm test` — server tests run locally but not in CI
+2. `cd client && npm run build` — build is not verified in CI
 
 ### 9.3 Pre-Commit Hooks
 
 `.husky/pre-commit`: `cd client && npx lint-staged`
 
-lint-staged läuft ESLint + Prettier auf staged `.js`/`.jsx` Files. Sauber konfiguriert, hooks sind aktiv (Commits dieser Branch wurden korrekt durch lint-staged verarbeitet). ✓
+lint-staged runs ESLint + Prettier on staged `.js`/`.jsx` files. Cleanly configured, hooks are active (commits of this branch were correctly processed by lint-staged). ✓
 
 ### 9.4 .gitignore
 
-`.gitignore` deckt vollständig ab:
+`.gitignore` fully covers:
 - `node_modules/`, `.env`, `dist/`, `build/` ✓
 - `client/coverage/`, `client/playwright-report/`, `client/test-results/` ✓
-- `.claude/projects/`, `.claude/settings*.json` ✓ (kein Leak von Claude-Konfig)
+- `.claude/projects/`, `.claude/settings*.json` ✓ (no leak of Claude config)
 - `server/data/**/*.json.tmp`, `server/data/tracks-backups/` ✓
-- `AUDIT.md`, `audit-temp/`, `diagnosis/` ✓ (temporäre Artefakte)
+- `AUDIT.md`, `audit-temp/`, `diagnosis/` ✓ (temporary artifacts)
 
 ---
 
-## Anhang — Vollständige Item-Liste
+## Appendix — Complete item list
 
 ### IMPORTANT
 
-| ID | Befund | Datei | Aufwand |
+| ID | Finding | File | Effort |
 |----|--------|-------|---------|
-| I1 | `utils/index.js` ist totes Modul — löschen oder integrieren | `client/src/modules/utils/index.js` | 10 min |
-| I2 | `SectionContainer.jsx` nie importiert — löschen | `client/src/screens/DevScreen/components/SectionContainer.jsx` | 5 min |
-| I3 | CORS wide-open (`cors()` ohne Origin-Filter) | `server/src/app.js:17` | Phase 5 |
-| I4 | Keine Server-Authentication auf CRUD-Endpoints | `server/src/routes/tracks.js` | Phase 5 |
-| I5 | Monolithische Komponenten > 700 Zeilen (TrackEditor, RaceScreen, RaceTuningSection) | mehrere | Refactor-Sprint |
+| I1 | `utils/index.js` is dead module — delete or integrate | `client/src/modules/utils/index.js` | 10 min |
+| I2 | `SectionContainer.jsx` never imported — delete | `client/src/screens/DevScreen/components/SectionContainer.jsx` | 5 min |
+| I3 | CORS wide-open (`cors()` without origin filter) | `server/src/app.js:17` | Phase 5 |
+| I4 | No server authentication on CRUD endpoints | `server/src/routes/tracks.js` | Phase 5 |
+| I5 | Monolithic components > 700 lines (TrackEditor, RaceScreen, RaceTuningSection) | multiple | Refactor sprint |
 
 ### NICE-TO-HAVE
 
-| ID | Befund | Aufwand |
+| ID | Finding | Effort |
 |----|--------|---------|
-| N1 | `EditorShape.getPosition()` JSDoc: fehlender Hinweis auf lineare Interpolation | 2 min |
-| N2 | `CameraDirector._isPulk()` kein JSDoc | 3 min |
-| N3 | `CameraZoomTuningSection.jsx:7` — veralteter `Etappe 3:`-Kommentar im Header | 1 min |
-| N4 | Explizites `browserslist` in `client/package.json` | 2 min |
-| N5 | CI: Server-Tests + Build-Step ergänzen | 15 min |
-| N6 | README: Camera Director — lead-in/lead-out und Pulk-Bedingung erwähnen | 5 min |
-| N7 | React 19 / react-router v7 / Express 5 Upgrade-Sprint planen | mittel |
-| N8 | Code-Splitting für React-Bundle (Vite manualChunks) | 30 min |
-| N9 | WCAG-Check mit axe-playwright wenn App öffentlich wird | — |
+| N1 | `EditorShape.getPosition()` JSDoc: missing note on linear interpolation | 2 min |
+| N2 | `CameraDirector._isPulk()` no JSDoc | 3 min |
+| N3 | `CameraZoomTuningSection.jsx:7` — stale `Etappe 3:` comment in header | 1 min |
+| N4 | Explicit `browserslist` in `client/package.json` | 2 min |
+| N5 | CI: add server tests + build step | 15 min |
+| N6 | README: Camera Director — mention lead-in/lead-out and pack condition | 5 min |
+| N7 | Plan React 19 / react-router v7 / Express 5 upgrade sprint | medium |
+| N8 | Code splitting for React bundle (Vite manualChunks) | 30 min |
+| N9 | WCAG check with axe-playwright when app goes public | — |

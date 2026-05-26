@@ -1,28 +1,28 @@
-# Diagnose: Kamera-Pan-Pfad-Bug (Euklidisch vs. Track-Pfad)
+# Diagnosis: Camera Pan Path Bug (Euclidean vs. Track Path)
 
-**Datum:** 2026-05-14  
+**Date:** 2026-05-14  
 **Branch:** master (`5088639`)  
-**Kontext:** Read-only. Kein Code geändert. PR #101 unberührt.
+**Context:** Read-only. No code changed. PR #101 untouched.
 
 ---
 
-## Hintergrund
+## Background
 
-User-Beobachtung: Nach Phasen-Wechseln (vor allem nach BATTLE_ZOOM) zeigt die Kamera kurzzeitig
-nur die grüne Innenfläche des Ovals — keine Rennstrecke sichtbar. Außerdem startet die Kamera
-nach OVERVIEW → LEADER_ZOOM oft „hinter" dem Leader.
+User observation: After phase switches (especially after BATTLE_ZOOM) the camera briefly
+shows only the green inner area of the oval — no race track visible. Also, after
+OVERVIEW → LEADER_ZOOM the camera often starts "behind" the leader.
 
-**User-Hypothese:** Die Kamera nimmt beim Pan-Target-Wechsel den euklidisch kürzesten Weg durch
-den Weltraum statt dem Streckenverlauf zu folgen.
+**User hypothesis:** On pan target changes the camera takes the Euclidean shortest path through
+world space instead of following the track course.
 
 ---
 
-### Punkt 1: Interne Pan-Target-Repräsentation
+### Point 1: Internal pan target representation
 
-**Befund:**
+**Finding:**
 
-Auf Closed Tracks wird der Kamera-Zielpunkt intern als `_camT` (kumulativer Track-Parameter,
-unbegrenzt auflaufend über Runden) gespeichert. Die Konvertierung in Welt-Koordinaten erfolgt
+On closed tracks the camera target point is stored internally as `_camT` (cumulative track
+parameter, accumulating unboundedly across laps). Conversion to world coordinates happens
 frame-by-frame in `_setTargets()` via:
 
 ```js
@@ -30,28 +30,28 @@ frame-by-frame in `_setTargets()` via:
 this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
 ```
 
-`EditorShape.getPosition()` normalisiert `t` intern nochmals (`((t % 1) + 1) % 1`) — T > 1
-(mehrere Runden) und T < 0 werden korrekt auf [0, 1) abgebildet. Die Konvertierung ist also
+`EditorShape.getPosition()` normalizes `t` internally once more (`((t % 1) + 1) % 1`) — T > 1
+(multiple laps) and T < 0 are correctly mapped to [0, 1). The conversion is therefore
 wrap-safe.
 
-Wenn `_camT === null` (kein phased observer aktiv) oder für OVERVIEW, wird `getPanTarget()` aus
-`panTarget.js` direkt aufgerufen — ergibt ebenfalls Welt-Koordinaten `{x, y}`.
+When `_camT === null` (no phased observer active) or for OVERVIEW, `getPanTarget()` from
+`panTarget.js` is called directly — also returns world coordinates `{x, y}`.
 
-Das Ergebnis beider Pfade landet in `targetOffsetX`/`targetOffsetY` (screen-pixel-skaliert via
+The result of both paths lands in `targetOffsetX`/`targetOffsetY` (screen-pixel-scaled via
 `resolveCamera`).
 
-**Bezug zur User-Hypothese:** Neutral — die Ziel-Position wird korrekt auf der Streckenkurve
-berechnet. Das Problem liegt nicht hier, sondern im Schritt von aktuell→Ziel.
+**Relation to user hypothesis:** Neutral — the target position is correctly computed on the track curve.
+The problem is not here, but in the step from current → target.
 
-**Auswirkung bei aktuellem Zoom-Faktor:** Keine direkte; das Ziel ist korrekt.
+**Impact at current zoom factor:** None direct; the target is correct.
 
 ---
 
-### Punkt 2: Pan-Interpolation — Lerp auf was?
+### Point 2: Pan interpolation — lerp on what?
 
-**Befund:**
+**Finding:**
 
-Die Kamera-Position (`offsetX`, `offsetY`) wird **in Screen-Pixel-Space** zum Ziel gelenkt:
+The camera position (`offsetX`, `offsetY`) is steered toward the target **in screen pixel space**:
 
 ```js
 // CameraDirector.js:457-459
@@ -60,8 +60,8 @@ this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
 this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
 ```
 
-Das ist ein exponentieller Lerp in **Welt-Pixel-abgeleiteten Screen-Koordinaten**. Die Einheit
-`offsetX` entspricht direkt einem horizontalen Pixel-Versatz des Canvas-Transforms:
+This is an exponential lerp in **world-pixel-derived screen coordinates**. The unit
+`offsetX` directly corresponds to a horizontal pixel offset of the canvas transform:
 
 ```js
 // RaceScreen/index.jsx:1159-1160
@@ -69,236 +69,231 @@ ctx.translate(cam.offsetX, cam.offsetY);
 ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
 ```
 
-Es gibt keinen Mechanismus, der den Lerp-Pfad entlang des Track-Verlaufs erzwingt. Der Lerp
-verbindet alten und neuen Welt-Pixel-Punkt durch eine **gerade Linie im 2D-Welt-Raum** — also
-euklidisch.
+There is no mechanism that forces the lerp path along the track course. The lerp
+connects old and new world pixel point through a **straight line in 2D world space** — i.e. Euclidean.
 
-Kein separater RaceScreen-Lerp für Closed Tracks (der `0.05`-Hardcode in Zeile 1132 ist
-ausschließlich für Open Tracks, `if (isOpenTrack)` Zeile 1120).
+No separate RaceScreen lerp for closed tracks (the `0.05` hardcode in line 1132 is
+exclusively for open tracks, `if (isOpenTrack)` line 1120).
 
-**Bezug zur User-Hypothese:** **Bestätigt.** Der Lerp ist euklidisch in Pixel-Space.
+**Relation to user hypothesis:** **Confirmed.** The lerp is Euclidean in pixel space.
 
-**Auswirkung bei aktuellem Zoom-Faktor:** Kritisch. Je höher der Zoom, desto enger das Viewport.
-Bei `leaderZoom = 3.5×`: Viewport-Breite = 1280 / 3.5 ≈ **366 World-Pixel**. Der euklidische
-Lerp-Pfad muss die Strecke nicht treffen — jeder Punkt auf dem Pfad, der >183 World-Pixel vom
-nächsten Track-Punkt entfernt ist, zeigt ausschließlich Infield.
-
----
-
-### Punkt 3: Track-Topologie-Behandlung beim Pan-Wechsel
-
-**Befund:**
-
-Es gibt **keinen Track-Path-Following-Mechanismus** im Lerp. Was korrekt funktioniert:
-
-- T-Werte → Welt-Koordinaten via `getPosition` (wrap-safe, siehe Punkt 1)
-- Arithmetik auf `_camT` (z.B. Lead-out: `_camT += (leadOutTargetT - _camT) * decay`) folgt
-  automatisch dem Track, weil die T-Space-Interpolation durch `getPosition` in jede Welt-Position
-  gemappt wird
-
-Was **nicht** funktioniert:
-
-Die `offsetX`-Lerp-Linie zwischen zwei Welt-Positionen folgt keiner Kurve. Beispiel:
-
-```
-Oval-Setup (schematisch):
-  t=0.45 → Welt: (-800, 0)   ← linke Oval-Seite
-  t=0.55 → Welt: (+800, 0)   ← rechte Oval-Seite
-  Infield-Zentrum: (0, 0)
-
-Lerp-Pfad: (-800, 0) → (0, 0) → (+800, 0)   [gerader Strich durch Infield]
-Track-Pfad: (-800, 0) → oben (0, -600) → (+800, 0)  [folgt Oval-Kurve]
-```
-
-Bei t=0.45 → t=0.55 ist der Track-Pfad ~2× länger als der euklidische Pfad — aber er bleibt
-auf der Streckenkurve. Der Lerp nimmt die Abkürzung durchs Infield.
-
-Die zyklische Natur von T (**t=0.99 → t=0.01** ist Track-Distanz 0.02, nicht 0.98) wird **nur**
-bei T→Welt-Lookups berücksichtigt, **nicht** beim `offsetX`-Lerp.
-
-**Bezug zur User-Hypothese:** **Bestätigt.** Der Lerp hat keine Kenntnis der Track-Topologie.
-
-**Auswirkung bei aktuellem Zoom-Faktor:** Ist der Pan-Sprung zwischen zwei Oval-Seiten ≥ Oval-
-Radius, passiert der Lerp durch die Mitte des Infields. Bei Oval-Radius R ≈ 1000px und
-Viewport-Breite 366px sind beide Oval-Seiten ~5 Viewport-Breiten voneinander entfernt. Der
-Lerp-Pfad durch die Mitte wäre ~2.7 Viewport-Breiten vom nächsten Track-Punkt entfernt → Track
-für viele Frames komplett off-screen.
+**Impact at current zoom factor:** Critical. The higher the zoom, the narrower the viewport.
+At `leaderZoom = 3.5×`: viewport width = 1280 / 3.5 ≈ **366 world pixels**. The Euclidean
+lerp path does not need to hit the track — any point on the path that is >183 world pixels from
+the nearest track point shows only infield.
 
 ---
 
-### Punkt 4: Pan-Target-Sprünge beim State-Wechsel quantifizieren
+### Point 3: Track topology handling during pan switch
 
-**Befund:**
+**Finding:**
 
-**BATTLE_ZOOM → LEADER_ZOOM** (kritischster Fall):
+There is **no track-path-following mechanism** in the lerp. What works correctly:
 
-- BATTLE-Midpoint: `tMid = (r0.t + r1.t) / 2` → world position via `shape.getPosition(tMid)`
+- T values → world coordinates via `getPosition` (wrap-safe, see point 1)
+- Arithmetic on `_camT` (e.g. lead-out: `_camT += (leadOutTargetT - _camT) * decay`) follows
+  the track automatically because T-space interpolation maps through `getPosition` to every world position
+
+What does **not** work:
+
+The `offsetX` lerp line between two world positions follows no curve. Example:
+
+```
+Oval setup (schematic):
+  t=0.45 → world: (-800, 0)   ← left oval side
+  t=0.55 → world: (+800, 0)   ← right oval side
+  Infield center: (0, 0)
+
+Lerp path: (-800, 0) → (0, 0) → (+800, 0)   [straight line through infield]
+Track path: (-800, 0) → top (0, -600) → (+800, 0)  [follows oval curve]
+```
+
+At t=0.45 → t=0.55 the track path is ~2× longer than the Euclidean path — but it stays
+on the track curve. The lerp takes the shortcut through the infield.
+
+The cyclic nature of T (**t=0.99 → t=0.01** is track distance 0.02, not 0.98) is considered **only**
+in T→world lookups, **not** in the `offsetX` lerp.
+
+**Relation to user hypothesis:** **Confirmed.** The lerp has no knowledge of the track topology.
+
+**Impact at current zoom factor:** If the pan jump between two oval sides is ≥ oval
+radius, the lerp passes through the center of the infield. At oval radius R ≈ 1000px and
+viewport width 366px both oval sides are ~5 viewport widths apart. The lerp path through
+the center would be ~2.7 viewport widths from the nearest track point → track completely
+off-screen for many frames.
+
+---
+
+### Point 4: Quantifying pan target jumps on state switch
+
+**Finding:**
+
+**BATTLE_ZOOM → LEADER_ZOOM** (most critical case):
+
+- BATTLE midpoint: `tMid = (r0.t + r1.t) / 2` → world position via `shape.getPosition(tMid)`
   (`panTarget.js:47-49`, `_computePhasedPanTarget:877`)
-- LEADER-Target: `focusT = r0.t` → world position via `shape.getPosition(r0.t)`
+- LEADER target: `focusT = r0.t` → world position via `shape.getPosition(r0.t)`
 
-Wenn die Battle-Gruppe z.B. bei `tMid ≈ 0.3` (linke Seite) kämpft und der Leader sich auf
-`t ≈ 0.7` (rechte Seite) abgesetzt hat, liegt der Sprung im Welt-Pixel-Raum:
+If the battle group is fighting e.g. at `tMid ≈ 0.3` (left side) and the leader has broken away to
+`t ≈ 0.7` (right side), the jump in world pixel space is:
 
 ```
-Annahmen (typisches dirt-oval bei 4000px Welt-Breite):
-  Oval-Radius ≈ 800px (konservativ)
-  t=0.3 → Welt: (-600, -200)
-  t=0.7 → Welt: (+600, +200)
-  Euklidischer Abstand: ~1265 World-Pixel
+Assumptions (typical dirt oval at 4000px world width):
+  Oval radius ≈ 800px (conservative)
+  t=0.3 → world: (-600, -200)
+  t=0.7 → world: (+600, +200)
+  Euclidean distance: ~1265 world pixels
 
-Bei leaderZoom = 3.5×, Viewport-Breite = 366px:
-  → Sprung entspricht ~3.5 Viewport-Breiten
+At leaderZoom = 3.5×, viewport width = 366px:
+  → jump corresponds to ~3.5 viewport widths
 ```
 
-Dieser Sprung in `targetOffsetX` ist sofort (in einem Frame). Der Lerp-Schritt bewegt `offsetX`
-mit lf ≈ 0.027/frame (entryTC=0.8s) langsam in diese Richtung — gerade durch das Infield.
+This jump in `targetOffsetX` is immediate (in one frame). The lerp step moves `offsetX`
+at lf ≈ 0.027/frame (entryTC=0.8s) slowly in that direction — right through the infield.
 
 **OVERVIEW → LEADER_ZOOM:**
 
-- OVERVIEW auf Closed Track: `offsetX = 0` (Welt-Zentrum, weil Zoom=1 und `resolveCamera` zentriert)
-- LEADER_ZOOM: target = Leader-Welt-Position (kann überall auf dem Oval sein)
-- Sprung = Pixel-Abstand von Welt-Ursprung zu Leader-Welt-Position
+- OVERVIEW on closed track: `offsetX = 0` (world center, because zoom=1 and `resolveCamera` centers)
+- LEADER_ZOOM: target = leader world position (can be anywhere on the oval)
+- Jump = pixel distance from world origin to leader world position
 
-Da der Leader oft am Oval entlang fährt und nicht im Infield, ist der OVERVIEW→LEADER-Pfad
-weniger problematisch als BATTLE→LEADER. Aber bei hohem Zoom startet der Lerp „von weit weg"
-und der Leader läuft unterdessen weiter → Kamera erscheint „hinter" dem Leader.
+Since the leader typically runs along the oval and not in the infield, the OVERVIEW→LEADER path is
+less problematic than BATTLE→LEADER. But at high zoom the lerp starts "from far away"
+and the leader keeps running → camera appears "behind" the leader.
 
-**Bezug zur User-Hypothese:** **Bestätigt.** BATTLE_ZOOM-Exit produziert regelmäßig große
-Target-Sprünge auf entgegengesetzte Oval-Seiten.
+**Relation to user hypothesis:** **Confirmed.** BATTLE_ZOOM exit regularly produces large
+target jumps to opposite oval sides.
 
-**Auswirkung bei aktuellem Zoom-Faktor:** Bei Zoom 3.5×: 1-3 Sekunden Infield sichtbar abhängig
-von Winkel-Differenz zwischen Battle-Midpoint und Leader-Position.
-
----
-
-### Punkt 5: Spezialfall — Pan über Start-Ziel-Linie
-
-**Befund:**
-
-`EditorShape.getPosition()` normalisiert `t` intern via `((t % 1) + 1) % 1` (Zeile 75 in
-`EditorShape.js`). Damit sind T-Werte > 1 (Runde 2+) und Übergänge t=0.99 → t=1.01 korrekt
-behandelt.
-
-Konkret beim Start-Ziel-Crossing:
-- t=0.99 → World: z.B. (1000, 300) — kurz vor der Linie
-- t=1.01 → `tNorm=0.01` → World: z.B. (1000, 270) — kurz danach
-
-Diese beiden Welt-Positionen sind **benachbart** (kleine euklidische Distanz). Der Lerp-Pfad
-zwischen ihnen bleibt nah am Track — kein Infield-Problem.
-
-**Ausnahme Lead-in:** Wenn `_camT = focusT + leadInDt` und `focusT` von 0.95 auf 1.05 springt
-(Lap-Crossing während lead-in), könnte `_camT` plötzlich deutlich steigen. Aber da leadInDt
-proportional zur Racer-Geschwindigkeit berechnet wird und Racer mit ~konstanter Geschwindigkeit
-fahren, ist dieser Sprung klein.
-
-**Bezug zur User-Hypothese:** **Widerlegt für diesen Spezialfall.** Start-Ziel-Crossing ist kein
-Infield-Problem — die Welt-Positionen beider Seiten der Linie sind benachbart.
-
-**Auswirkung bei aktuellem Zoom-Faktor:** Keiner. Dieser Spezialfall ist korrekt.
+**Impact at current zoom factor:** At zoom 3.5×: 1–3 seconds infield visible depending
+on angle difference between battle midpoint and leader position.
 
 ---
 
-### Punkt 6: Open Track vs. Closed Track
+### Point 5: Special case — pan across start/finish line
 
-**Befund:**
+**Finding:**
 
-Closed Track (diese Diagnose):
+`EditorShape.getPosition()` normalizes `t` internally via `((t % 1) + 1) % 1` (line 75 in
+`EditorShape.js`). This means T values > 1 (lap 2+) and transitions t=0.99 → t=1.01 are handled correctly.
+
+Concretely at start/finish crossing:
+- t=0.99 → world: e.g. (1000, 300) — just before the line
+- t=1.01 → `tNorm=0.01` → world: e.g. (1000, 270) — just after
+
+These two world positions are **adjacent** (small Euclidean distance). The lerp path
+between them stays close to the track — no infield problem.
+
+**Exception lead-in:** If `_camT = focusT + leadInDt` and `focusT` jumps from 0.95 to 1.05
+(lap crossing during lead-in), `_camT` could suddenly rise significantly. But since leadInDt
+is calculated proportional to racer speed and racers travel at ~constant speed, this jump is small.
+
+**Relation to user hypothesis:** **Refuted for this special case.** Start/finish crossing is not
+an infield problem — the world positions on both sides of the line are adjacent.
+
+**Impact at current zoom factor:** None. This special case is handled correctly.
+
+---
+
+### Point 6: Open track vs. closed track
+
+**Finding:**
+
+Closed track (this diagnosis):
 - Lerp in `CameraDirector.js:458`: `offsetX += (targetOffsetX - offsetX) * lf`
-- Euklidisch in World-Pixel-Space
-- Bug tritt auf wenn alte und neue Pan-Position auf verschiedenen Oval-Seiten liegen
+- Euclidean in world pixel space
+- Bug occurs when old and new pan position are on different oval sides
 
-Open Track:
-- Separater Code-Pfad in `RaceScreen/index.jsx:1120-1134`
-- `st.camX = st.camX + (resolved.camX - st.camX) * 0.05` (hardcoded 0.05-Lerp)
-- Open Tracks haben keine zyklische Topologie → kein Infield-Äquivalent
-- Kein kreisförmiger Streckenverlauf → euklidischer Lerp geht nie „durch" eine Streckenmitte
+Open track:
+- Separate code path in `RaceScreen/index.jsx:1120-1134`
+- `st.camX = st.camX + (resolved.camX - st.camX) * 0.05` (hardcoded 0.05 lerp)
+- Open tracks have no cyclic topology → no infield equivalent
+- No circular track course → Euclidean lerp never goes "through" a track center
 
-**Bezug zur User-Hypothese:** Bug tritt **nur auf Closed Tracks** auf. Open Tracks sind nicht
-betroffen.
+**Relation to user hypothesis:** Bug occurs **only on closed tracks**. Open tracks are not
+affected.
 
-**Auswirkung:** Die User-Beobachtung (Infield sichtbar) ist ausschließlich ein Closed-Track-
-Phänomen. Bestätigt, dass es sich um ein topologisches Problem handelt.
-
----
-
-## Verdikt zur User-Hypothese
-
-**Teilweise bestätigt** — mit einer Präzisierung.
-
-Die User-Hypothese ist inhaltlich korrekt: Die Kamera nimmt beim Pan-Wechsel tatsächlich den
-euklidisch kürzesten Weg durch den 2D-Welt-Raum, ohne dem Streckenverlauf zu folgen. Dieser
-Weg kann durch das Infield führen.
-
-**Präzisierung:** Es ist keine bewusste Designentscheidung für den „direkten Weg", sondern eine
-Konsequenz davon, dass der Lerp auf `offsetX`/`offsetY` (Screen-Pixel-Space) operiert und keine
-Track-Topologie-Kenntnis hat. Das Ziel (`targetOffsetX`) ist stets ein korrekter Punkt auf der
-Streckenkurve — aber der **Weg** vom alten zum neuen Ziel ist immer eine gerade Linie im
-Welt-Pixel-Raum.
+**Impact:** The user observation (infield visible) is exclusively a closed-track
+phenomenon. Confirms that it is a topological problem.
 
 ---
 
-## Wurzel-Code
+## Verdict on user hypothesis
 
-| Datei | Zeile | Beschreibung |
+**Partially confirmed** — with a clarification.
+
+The user hypothesis is correct in substance: on pan switches the camera does take the
+Euclidean shortest path through 2D world space, without following the track course. This
+path can lead through the infield.
+
+**Clarification:** It is not a deliberate design decision for the "direct route", but a
+consequence of the lerp operating on `offsetX`/`offsetY` (screen pixel space) with no
+track topology knowledge. The target (`targetOffsetX`) is always a correct point on the
+track curve — but the **path** from old to new target is always a straight line in
+world pixel space.
+
+---
+
+## Root code
+
+| File | Line | Description |
 |---|---|---|
-| `CameraDirector.js` | 457-459 | Exponentieller Lerp in Pixel-Space — euklidisch, keine Track-Kenntnis |
-| `CameraDirector.js` | 604-605 | `_transition()` setzt `offsetX`/`offsetY` **nicht** zurück — alter Wert bleibt, Lerp startet von dort |
-| `CameraDirector.js` | 759-760 | `targetOffsetX` wird korrekt aus Welt-Koordinaten abgeleitet — aber der Pfad dorthin ist euclidean |
+| `CameraDirector.js` | 457-459 | Exponential lerp in pixel space — Euclidean, no track knowledge |
+| `CameraDirector.js` | 604-605 | `_transition()` does NOT reset `offsetX`/`offsetY` — old value remains, lerp starts from there |
+| `CameraDirector.js` | 759-760 | `targetOffsetX` is correctly derived from world coordinates — but the path to it is Euclidean |
 
-**Sekundäre Ursache:** `_transition()` setzt `_lerpPhase = 'entry'` (Zeile 605) aber nicht
-`offsetX = targetOffsetX`. Das ist by-design (kein harter Sprung beim Übergang), aber es bedeutet
-dass der Lerp von der alten State-Position startet — beliebig weit vom neuen Ziel entfernt.
+**Secondary cause:** `_transition()` sets `_lerpPhase = 'entry'` (line 605) but not
+`offsetX = targetOffsetX`. This is by design (no hard cut at transition), but it means
+the lerp starts from the old state position — arbitrarily far from the new target.
 
 ---
 
-## Warum ist es mit erhöhtem Zoom-Faktor schlimmer?
+## Why is it worse with an increased zoom factor?
 
 Linear: `viewport_width_world = CANVAS_W / (leaderZoom × bsX)`
 
-| leaderZoom | World-Pixel im Viewport |
+| leaderZoom | World pixels in viewport |
 |---|---|
 | 2.5× | ~512 px |
 | 3.5× | ~366 px |
 | 5.0× | ~256 px |
 
-Je kleiner das Viewport, desto früher (= kleiner Abstand vom Track-Mittelpunkt) zeigt die Kamera
-ausschließlich Infield. Bei 3.5× genügen ~183 World-Pixel Abstand vom Track, um die Strecke
-komplett aus dem Bild zu verlieren.
+The smaller the viewport, the sooner (= smaller distance from track center) the camera shows
+only infield. At 3.5× only ~183 world pixels from the track are enough to lose the track
+completely from frame.
 
 ---
 
-## Was erklärt die Beobachtung „Kamera startet hinter dem Leader" (OVERVIEW → LEADER_ZOOM)?
+## What explains the observation "camera starts behind the leader" (OVERVIEW → LEADER_ZOOM)?
 
-Das ist eine **andere Ursache**, kein Infield-Problem:
+This is a **different cause**, not an infield problem:
 
-- OVERVIEW: `offsetX ≈ 0` (closed track, zoom=1, centroid nahe Welt-Ursprung)
-- LEADER_ZOOM: `targetOffsetX` = Leader-Welt-Position; Leader **bewegt sich** weiter
-- `entryTC = 0.8s` → Kamera konvergiert in ~3 TC ≈ 2.4s zu 95% auf den Leader
-- Da `_camT = focusT` im Entry-Block jedes Frame aktualisiert wird, **wandert** `targetOffsetX`
-  mit dem Leader mit
-- Die Kamera ist also immer um einen TC-bedingten Lag hinter dem Leader — nicht im Infield,
-  aber der Leader läuft aus dem vorderen Teil des Bildes heraus
+- OVERVIEW: `offsetX ≈ 0` (closed track, zoom=1, centroid near world origin)
+- LEADER_ZOOM: `targetOffsetX` = leader world position; leader **keeps moving**
+- `entryTC = 0.8s` → camera converges to 95% on the leader in ~3 TC ≈ 2.4s
+- Since `_camT = focusT` in the entry block is updated every frame, `targetOffsetX`
+  **moves** with the leader
+- The camera therefore always lags behind the leader by a TC-conditioned delay — not in the infield,
+  but the leader runs out of the front portion of the frame
 
-Das ist **kein euklidischer Pfad-Bug**, sondern reines TC-Lag im Entry-Phase-Design.
-
----
-
-## Nicht-implementierte Fix-Empfehlungen (nur als Hinweis, kein Auftrag)
-
-1. **T-Space-Lerp für `_camT`:** Statt `offsetX` direkt zu lerpen, könnte `_camT` als
-   Zwischenwert exponentiell zum Ziel-T gelenkt werden (`_camT += (targetT - _camT) * lf`),
-   und `targetOffsetX` würde aus dem aktuellen `_camT` berechnet. Der Kamera-Pan würde damit
-   dem Streckenverlauf folgen. Problem: Wrap-around bei t≈0 (t=0.99 → t=0.01 wäre Δt=-0.98
-   statt +0.02) erfordert einen Shortest-Path-Algorithmus in T-Space. Auch während des Zooms
-   (entry-phase) ergäbe T-Space-Lerp ein anderes Konvergenz-Verhalten.
-
-2. **Direkter Sprung bei State-Transition:** `offsetX = targetOffsetX` setzen in `_transition()`
-   (harter Schnitt statt Lerp). Eliminiert Infield-Durchfahrt, ist aber visuell abrupt.
-
-3. **Kurze Blend-Out + Hard-Cut + Blend-In:** 3-Frame schwarze Blende bei Transition, dann
-   Camera direkt auf neue Position. Keine Infield-Sichtbarkeit, aber offensichtlicher Cut.
+This is **not a Euclidean path bug**, but pure TC lag in the entry-phase design.
 
 ---
 
-*Report basiert ausschließlich auf statischer Code-Analyse. Keine Tests, kein Browser, keine
-Code-Änderungen.*
+## Unimplemented fix suggestions (for reference only, not an assignment)
+
+1. **T-space lerp for `_camT`:** Instead of lerping `offsetX` directly, `_camT` could be
+   steered exponentially toward target T (`_camT += (targetT - _camT) * lf`),
+   and `targetOffsetX` would be computed from the current `_camT`. Camera pan would then
+   follow the track course. Problem: wrap-around at t≈0 (t=0.99 → t=0.01 would be Δt=-0.98
+   instead of +0.02) requires a shortest-path algorithm in T-space. Also during zoom
+   (entry phase) T-space lerp would produce different convergence behavior.
+
+2. **Direct jump on state transition:** Set `offsetX = targetOffsetX` in `_transition()`
+   (hard cut instead of lerp). Eliminates infield traversal but is visually abrupt.
+
+3. **Short blend-out + hard cut + blend-in:** 3-frame black fade at transition, then
+   camera directly at new position. No infield visibility, but an obvious cut.
+
+---
+
+*Report based exclusively on static code analysis. No tests, no browser, no code changes.*

@@ -1,6 +1,6 @@
 # RaceArena — Track Lifecycle and Hybrid Persistence
 
-**Status:** Partially implemented — TLH-1 ✅ (PR #55), TLH-2 ✅ (PR #56/#57), Track-Delete-Safeguards ✅ (PR #58), TLH-3 ⏳ zurückgestellt nach Kamera-Phase
+**Status:** Partially implemented — TLH-1 ✅ (PR #55), TLH-2 ✅ (PR #56/#57), Track-Delete-Safeguards ✅ (PR #58), TLH-3 ⏳ deferred until camera phase
 **Phase:** Track Lifecycle Hybrid (TLH) — three Sub-PRs: TLH-1 ✅, TLH-2 ✅, TLH-3 ⏳
 **Related:** `docs/ARCHITECTURE.md — Track Lifecycle and Hybrid Persistence`, `docs/TRACK_EDITOR.md`
 
@@ -177,7 +177,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 ---
 
-### TLH-3 — Code-Fallback + Status-Banner + Export ⏳ zurückgestellt nach Kamera-Phase
+### TLH-3 — Code-Fallback + Status-Banner + Export ⏳ deferred until camera phase
 
 **Goal:** Make the system resilient. Graceful offline behavior. Manual Code-Bundle snapshot mechanism.
 

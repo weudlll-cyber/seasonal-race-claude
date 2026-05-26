@@ -1,49 +1,49 @@
 # Handoff Notes
 
-## 2026-05-14 — PR #98 Cleanup-Sprint (stand nach Merge)
+## 2026-05-14 — PR #98 Cleanup Sprint (state after merge)
 
 - Branch: `claude/free-lane-separation` → squash-merged to `master`
-- Session: 13./14.5. Anti-Collision-Session + Cleanup-Sprint 14.5.
+- Session: 13./14.5. Anti-collision session + Cleanup sprint 14.5.
 - Tests (post-merge): 94 files / 1741 tests passed
 
-### Was implementiert wurde (PR #98)
+### What was implemented (PR #98)
 
 **Free-Lane Separation** (`client/src/modules/raceBehavior.js`):
-- Additive Impulse-Logik wenn zwei Racer geometrisch überlappen
-- Links/rechts-Platzprüfung per `isSideFree()` gegen alle anderen aktiven Racer
-- Deterministische Tie-Break via `stablePairBit` (stable hash) bei exakt gleicher physicalY
-- Nutzt Sprite-Geometrie-Metadaten die RaceScreen an jeden Racer übergibt
+- Additive impulse logic when two racers overlap geometrically
+- Left/right space check via `isSideFree()` against all other active racers
+- Deterministic tie-break via `stablePairBit` (stable hash) at exactly equal physicalY
+- Uses sprite geometry metadata that RaceScreen passes to each racer
 
-**Home-Force-Reduktion bei Overlap** (`homeForceReductionOnOverlap: 0.3`):
-- Während geometrischem Overlap: Home-Force auf 30% reduziert
-- Verhindert dass Home-Force Free-Lane-Separation überwältigt
-- Tunable im DevScreen → Race Tuning → Home Force Block
+**Home-Force Reduction on Overlap** (`homeForceReductionOnOverlap: 0.3`):
+- During geometric overlap: home-force reduced to 30%
+- Prevents home-force from overwhelming free-lane separation
+- Tunable in DevScreen → Race Tuning → Home Force block
 
-**reRollVariationPercent** Default: `45 → 58`
+**reRollVariationPercent** default: `45 → 58`
 
-### Was im Cleanup-Sprint gefixt wurde
+### What was fixed in the cleanup sprint
 
-- `homeForceReductionOnOverlap` war in Block 2 (Start Layout) platziert, Reset-Handler aber in Block 9 (Home Force) → verschoben nach Block 9
-- InfoTooltip für das Feld war auf Deutsch → auf Englisch geändert
-- Prettier-Formatting auf raceBehavior.js und raceBehavior.test.js angewendet
+- `homeForceReductionOnOverlap` was placed in Block 2 (Start Layout) but its reset handler was in Block 9 (Home Force) → moved to Block 9
+- InfoTooltip for the field was in German → changed to English
+- Prettier formatting applied to raceBehavior.js and raceBehavior.test.js
 
-### Anti-Collision-Status (Stand nach Merge)
+### Anti-Collision Status (state after merge)
 
-**Was funktioniert:**
-- Free-Lane Separation trennt überlappende Racer deterministisch
-- Home-Force-Reduktion gibt der Trennung Raum
-- Avoidance (Trailer yields, Leader holds) verhindert Stacking
-- Speed Brake reduziert side-by-side-Geschwindigkeit
-- Anti-Stacking sqrt(neighborCount)-Normalisierung bei dichtem Pack
+**What works:**
+- Free-Lane Separation separates overlapping racers deterministically
+- Home-force reduction gives separation room
+- Avoidance (Trailer yields, Leader holds) prevents stacking
+- Speed Brake reduces side-by-side speed
+- Anti-stacking sqrt(neighborCount) normalization at dense pack
 
-**Bekannte Limitierungen:**
-- Persistente Pulks (3+ Racer) können sich weiterhin bilden — das ist kein Bug, sondern Race-Feel; Free-Lane greift erst bei geometrischem Overlap, nicht bei Nähe
-- Drafting-Cone auf engen Kurven kann slipstream-follower verpassen (PR-A2.6 Diagnose-Note, Backlog-Item)
-- `reRollVariationPercent: 58` sorgt für deutlich mehr Positions-Wechsel als die alten 45 — kann bei wenigen Racern weniger relevant sein
+**Known limitations:**
+- Persistent packs (3+ racers) can still form — this is not a bug but race feel; free-lane only kicks in at geometric overlap, not at proximity
+- Drafting cone on tight corners can miss slipstream followers (PR-A2.6 diagnostic note, backlog item)
+- `reRollVariationPercent: 58` produces significantly more position changes than the old 45 — may be less relevant with few racers
 
-### DevScreen-Defaults nach Merge (alle Race Tuning Werte)
+### DevScreen defaults after merge (all Race Tuning values)
 
-| Wert | Default |
+| Value | Default |
 |------|---------|
 | homeForceStrength | 0.04 |
 | homeForceReductionOnOverlap | 0.3 |
@@ -67,34 +67,34 @@
 | BASE_SPEED_MIN | 0.00096 |
 | BASE_SPEED_MAX | 0.00113 |
 
-**localStorage-Hinweis:** Bei bestehenden Overrides gelten neue Defaults erst nach
-"Reset All Defaults" im DevScreen.
+**localStorage note:** With existing overrides, new defaults only take effect after
+"Reset All Defaults" in the DevScreen.
 
-### Offene Punkte für nächste Session
+### Open items for next session
 
-- PR #97 (Relaxed Defaults) noch offen — prüfen ob merge nach PR #98 sinnvoll
-- PR #96 (Phased Racing Logic) und PR #83 (Project Knowledge Inventory) noch offen
-- Backlog: Drafting-Cone auf Kurven (PR-A2.6 Diagnose-Note)
-- Backlog: Persistent Pulk-Auflösung wenn Free-Lane blockiert ist
+- PR #97 (Relaxed Defaults) still open — check if merging after PR #98 makes sense
+- PR #96 (Phased Racing Logic) and PR #83 (Project Knowledge Inventory) still open
+- Backlog: Drafting cone on curves (PR-A2.6 diagnostic note)
+- Backlog: Persistent pack dissolution when free-lane is blocked
 
-### Diagnose-Artefakte
+### Diagnostic artifacts
 
-Alle in `docs/diagnose/` mit Index-Datei `docs/diagnose/README.md`.
+All in `docs/diagnose/` with index file `docs/diagnose/README.md`.
 
 ---
 
-## Ältere Einträge
+## Older entries
 
 ### 2026-05-14 - Relaxed Defaults (Speed + Drafting) — PR #97
 
 - Branch: claude/relaxed-defaults
-- Scope: Nur Default-Werte, keine neuen Mechaniken.
+- Scope: Default values only, no new mechanics.
 
-Geänderte Defaults:
+Changed defaults:
 - BASE_SPEED_MIN: 0.00091 → 0.00096
 - BASE_SPEED_MAX: 0.00118 → 0.00113
 - reRollVariationPercent: 85 → 45
 - draftingBoost: 1.10 → 1.04
 - draftingMaxDistance: 110 → 80
 
-Tests: 94 files / 1728 tests passed. Detailbericht: docs/diagnose/relaxed-defaults-report.md
+Tests: 94 files / 1728 tests passed. Detailed report: docs/diagnose/relaxed-defaults-report.md

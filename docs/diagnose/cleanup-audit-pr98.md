@@ -1,124 +1,124 @@
-# Cleanup-Audit — PR #98 (Free-Lane Separation + Home-Force-Reduktion)
+# Cleanup Audit — PR #98 (Free-Lane Separation + Home-Force Reduction)
 
-**Datum:** 2026-05-14  
+**Date:** 2026-05-14  
 **Branch:** `claude/free-lane-separation`  
-**Scope:** Alle in PR #98 geänderten Files (Code, Tests, DevScreen-UI)
+**Scope:** All files changed in PR #98 (code, tests, DevScreen UI)
 
 ---
 
-## Schritt 2 — Code-Audit PR #98
+## Step 2 — Code Audit PR #98
 
 ### `client/src/modules/raceBehavior.js`
 
-**Befund:** Sauber.
+**Finding:** Clean.
 
-- Keine toten Code-Pfade, keine auskommentierten Blöcke.
-- Keine ungenutzten Imports (keine Imports, ist pure Funktionsdatei).
-- Utility-Funktionen (`normalizeAngle`, `shortestArcDeltaT`, `stablePairBit`, `getSpriteWorldSizePx`, `getTrackWidthPx`, `getPathLengthPx`) sind alle genutzt.
-- Magic Numbers: `1e-6` (Zeile 241) ist Standard-Epsilon für Float-Vergleich, kein Erklärungsbedarf. `2166136261` und `16777619` (Zeile 43–44) sind FNV-1a-Konstanten — ausreichend durch Kontext erkennbar.
-- Kommentar Zeile 286–289: Architektur-Notiz über Drafting-Cone-Limitation mit Verweis auf Backlog-Item. Kein Zombie-Kommentar — bleibt.
-- Kein `console.log`/`console.error`.
-- Naming: durchgängig camelCase, keine Inkonsistenzen.
+- No dead code paths, no commented-out blocks.
+- No unused imports (no imports — it is a pure function file).
+- Utility functions (`normalizeAngle`, `shortestArcDeltaT`, `stablePairBit`, `getSpriteWorldSizePx`, `getTrackWidthPx`, `getPathLengthPx`) are all used.
+- Magic numbers: `1e-6` (line 241) is standard epsilon for float comparison, no explanation needed. `2166136261` and `16777619` (lines 43–44) are FNV-1a constants — sufficiently recognizable from context.
+- Comment lines 286–289: architectural note about drafting-cone limitation with reference to backlog item. Not a zombie comment — keep.
+- No `console.log`/`console.error`.
+- Naming: consistently camelCase, no inconsistencies.
 
-**Fixes nötig:** Keine.
+**Fixes needed:** None.
 
 ---
 
 ### `client/src/modules/raceBehaviorConfig.js`
 
-**Befund:** Sauber.
+**Finding:** Clean.
 
-- Migration-Kommentar Zeile 15 (`LEGACY_START_SPREAD_DEFAULT`) ist korrekt und nötig.
-- Validierung deckt alle Config-Felder inkl. `homeForceReductionOnOverlap` (Zeilen 30–31).
-- Kein toter Code, keine unbenutzten Imports.
+- Migration comment line 15 (`LEGACY_START_SPREAD_DEFAULT`) is correct and necessary.
+- Validation covers all config fields including `homeForceReductionOnOverlap` (lines 30–31).
+- No dead code, no unused imports.
 
-**Fixes nötig:** Keine.
+**Fixes needed:** None.
 
 ---
 
 ### `client/src/modules/storage/defaults.js`
 
-**Befund:** Sauber.
+**Finding:** Clean.
 
-- `homeForceReductionOnOverlap: 0.3` korrekt hinzugefügt mit erklärendem Kommentar.
-- `reRollVariationPercent: 58` (aus PR #98-Basis) korrekt.
-- Keine Magic Numbers ohne Kontext.
+- `homeForceReductionOnOverlap: 0.3` correctly added with explanatory comment.
+- `reRollVariationPercent: 58` (from PR #98 base) correct.
+- No magic numbers without context.
 
-**Fixes nötig:** Keine.
+**Fixes needed:** None.
 
 ---
 
 ### `client/src/screens/DevScreen/sections/RaceTuningSection.jsx`
 
-**Befund:** Zwei Fehler.
+**Finding:** Two errors.
 
-#### Fehler 1 — `homeForceReductionOnOverlap` in falschem Block (UX-Bug)
+#### Error 1 — `homeForceReductionOnOverlap` in wrong block (UX bug)
 
-Das Input-Feld für `homeForceReductionOnOverlap` sitzt im `formGrid` von **Block 2 (Start Layout)** (Zeilen 399–421), gehört aber semantisch zu **Block 9 (Home Force)**.
+The input field for `homeForceReductionOnOverlap` is in the `formGrid` of **Block 2 (Start Layout)** (lines 399–421), but semantically belongs to **Block 9 (Home Force)**.
 
-Konsequenz:
-- Der „Reset"-Button von Block 2 (`resetStartLayout`) setzt `homeForceReductionOnOverlap` **nicht** zurück (nur `startSpreadRange` und `runoutZone`).
-- Der „Reset"-Button von Block 9 (`resetHomeForce`) setzt `homeForceReductionOnOverlap` zurück — aber das Feld steht drei Blöcke weiter oben.
-- User sieht das Feld in „Start Layout", drückt dort Reset → Feld bleibt unverändert.
+Consequence:
+- The "Reset" button of Block 2 (`resetStartLayout`) does **not** reset `homeForceReductionOnOverlap` (only `startSpreadRange` and `runoutZone`).
+- The "Reset" button of Block 9 (`resetHomeForce`) resets `homeForceReductionOnOverlap` — but the field sits three blocks higher up.
+- User sees the field in "Start Layout", presses Reset there → field remains unchanged.
 
-**Fix:** Input von Block 2 nach Block 9 verschieben. `resetHomeForce` deckt es bereits korrekt ab.
+**Fix:** Move input from Block 2 to Block 9. `resetHomeForce` already covers it correctly.
 
-#### Fehler 2 — InfoTooltip-Text in Deutsch (App-Language-Convention)
+#### Error 2 — InfoTooltip text in German (App-Language-Convention)
 
-Zeile 405:
+Line 405:
 ```
 text="Home-Force-Faktor bei aktivem Overlap. 0.3 = 30% normale Starke wenn Racer uberlappt."
 ```
-Alle anderen InfoTooltips im selben File sind auf Englisch. Dieser Text wurde offenbar im Diagnose-Sprint schnell hinzugefügt und nicht angepasst.
+All other InfoTooltips in the same file are in English. This text was apparently added quickly during the diagnostic sprint and not adjusted.
 
-**Fix:** Englischen Text setzen, konsistent mit anderen Tooltips.
+**Fix:** Set English text, consistent with other tooltips.
 
 ---
 
 ### `client/src/screens/RaceScreen/index.jsx`
 
-**Befund:** Sauber für PR #98-Scope.
+**Finding:** Clean for PR #98 scope.
 
-- Geometrie-Metadaten (`spriteWorldSizePx`, `geometricTrackWidthPx`, `pathLengthPx`) werden korrekt an jeden Racer übergeben (Zeilen 368–370).
-- `applyRacerBehavior` wird mit vollständigem `behaviorConfig` aufgerufen (Zeile 935).
-- Das einzige `console.error` (Zeile 178) ist legitim: kritischer Guard für fehlende `geometryId`.
+- Geometry metadata (`spriteWorldSizePx`, `geometricTrackWidthPx`, `pathLengthPx`) is correctly passed to each racer (lines 368–370).
+- `applyRacerBehavior` is called with complete `behaviorConfig` (line 935).
+- The only `console.error` (line 178) is legitimate: critical guard for missing `geometryId`.
 
-**Fixes nötig:** Keine.
+**Fixes needed:** None.
 
 ---
 
-### Test-Files
+### Test Files
 
 #### `client/src/modules/raceBehavior.test.js`
 
-**Befund:** Sauber.
+**Finding:** Clean.
 
-- Home-Force-Reduktion Tests (Zeilen 121–180): testen `homeForceReductionOnOverlap` korrekt.
-- Free-Lane-Separation Tests (Zeilen 387–487): decken alle 6 Separation-Scenarios ab.
-- Keine Ghost-Tests. Alle Tests referenzieren Funktionen/Konstanten die im aktuellen Code existieren.
+- Home-force reduction tests (lines 121–180): test `homeForceReductionOnOverlap` correctly.
+- Free-lane separation tests (lines 387–487): cover all 6 separation scenarios.
+- No ghost tests. All tests reference functions/constants that exist in the current code.
 
 #### `client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx`
 
-**Befund:** Überwiegend sauber. Ein Genauigkeitsmangel.
+**Finding:** Mostly clean. One precision gap.
 
-- Der Test "renders Block 9: Home Force" prüft `getByLabelText('Home Force Reduction On Overlap')` (Zeile 167).
-- **Nach dem Fix** (Verschiebung nach Block 9) bleibt der Test korrekt — er prüft nur ob das Element im DOM vorhanden ist, nicht in welchem Block.
-- Die Mocks enthalten `homeForceReductionOnOverlap: 0.3` konsistent mit Defaults.
-- Keine Ghost-Tests.
+- The test "renders Block 9: Home Force" checks `getByLabelText('Home Force Reduction On Overlap')` (line 167).
+- **After the fix** (move to Block 9) the test remains correct — it only checks whether the element is present in the DOM, not which block it is in.
+- The mocks contain `homeForceReductionOnOverlap: 0.3` consistent with defaults.
+- No ghost tests.
 
 ---
 
-## Schritt 4 — Backend-UI-Konsistenz
+## Step 4 — Backend-UI Consistency
 
-### Klassifikation aller `DEFAULT_RACE_BEHAVIOR_CONFIG`-Felder
+### Classification of all `DEFAULT_RACE_BEHAVIOR_CONFIG` fields
 
-| Feld | UI-Block | Wired? | Klasse |
+| Field | UI block | Wired? | Class |
 |------|----------|--------|--------|
-| `enabled` | Checkbox (unten) | ✅ | HOT |
+| `enabled` | Checkbox (bottom) | ✅ | HOT |
 | `startSpreadRange` | Block 2 | ✅ | HOT |
 | `runoutZone` | Block 2 | ✅ | HOT |
 | `homeForceStrength` | Block 9 | ✅ | HOT |
-| `homeForceReductionOnOverlap` | Block 2 (falsch) → Block 9 (nach Fix) | ✅ | HOT (misplaced → fixed) |
+| `homeForceReductionOnOverlap` | Block 2 (wrong) → Block 9 (after fix) | ✅ | HOT (misplaced → fixed) |
 | `comfortThreshold` | Block 6 | ✅ | HOT |
 | `softRepulsionStrength` | Block 6 | ✅ | HOT |
 | `avoidanceDistance` | Block 7 | ✅ | HOT |
@@ -133,31 +133,31 @@ Alle anderen InfoTooltips im selben File sind auf Englisch. Dieser Text wurde of
 | `draftingConeAngle` | Block 5 | ✅ | HOT |
 | `draftingBoost` | Block 5 | ✅ | HOT |
 
-**Ergebnis:** 18/18 Felder HOT. 0 GHOST, 0 MISSING. 1 MISPLACED (wird im gleichen Commit gefixt).
+**Result:** 18/18 fields HOT. 0 GHOST, 0 MISSING. 1 MISPLACED (fixed in the same commit).
 
-**Hinweis Free-Lane:** Es gibt keinen separaten UI-Tunable für Free-Lane Separation Force — by Design. Die Free-Lane-Logik nutzt `lateralForce` und `maxLateral` aus Block 7 (Soft Avoidance), die bereits HOT sind.
+**Free-Lane note:** There is no separate UI tunable for free-lane separation force — by design. Free-lane logic uses `lateralForce` and `maxLateral` from Block 7 (Soft Avoidance), which are already HOT.
 
 ---
 
-## Schritt 7 — Security-Check
+## Step 7 — Security Check
 
 **npm audit:** `found 0 vulnerabilities`
 
-**Secrets-Grep** (API Keys, Tokens, Passwörter, Credentials in client/src/): Keine Funde.
+**Secrets grep** (API keys, tokens, passwords, credentials in client/src/): No findings.
 
-**`.env`-Dateien committed:** Keine.
+**`.env` files committed:** None.
 
-**Ergebnis:** Security-Check bestanden — keine Findings.
+**Result:** Security check passed — no findings.
 
 ---
 
-## Monitoring-Metriken
+## Monitoring Metrics
 
-| Metrik | Wert |
+| Metric | Value |
 |--------|------|
-| Geister-Tests entfernt | 0 |
-| Geister-UI-Bindings entfernt | 0 |
-| Misplaced UI fields gefixt | 1 (homeForceReductionOnOverlap → Block 9) |
-| Language-Convention-Fixes | 1 (Tooltip German → English) |
-| raceBehavior.js: tote Code-Pfade | 0 |
-| Neue Kommentar-Leichen | 0 |
+| Ghost tests removed | 0 |
+| Ghost UI bindings removed | 0 |
+| Misplaced UI fields fixed | 1 (homeForceReductionOnOverlap → Block 9) |
+| Language-Convention fixes | 1 (Tooltip German → English) |
+| raceBehavior.js: dead code paths | 0 |
+| New zombie comments | 0 |
