@@ -1883,6 +1883,44 @@ describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
     expect(cd._battleZoom).toBeCloseTo(101 / 36, 3);
   });
 
+  it('_leadChangeZoom computed from profiles.LEAD_CHANGE.spriteScale (77/36)', () => {
+    const cfg = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEAD_CHANGE: { spriteScale: 77 / 36 },
+      },
+    };
+    const cd = new CameraDirector(1280, 720, false, cfg, 50);
+    expect(cd._leadChangeZoom).toBeCloseTo(77 / 36, 3);
+    expect(cd._leadChangeZoom).not.toBeCloseTo(cd._leaderZoom, 3);
+  });
+
+  it('_leadChangeZoom falls back to DEFAULT_SPRITE_SCALE.leader when LEAD_CHANGE profile is absent', () => {
+    const cd = new CameraDirector(1280, 720, false, profileConfig, 50);
+    expect(cd._leadChangeZoom).toBeCloseTo(1.81, 2);
+  });
+
+  it('LEAD_CHANGE hard-cut snaps zoom to _leadChangeZoom, not _leaderZoom', () => {
+    const cfg = {
+      ...profileConfig,
+      cameraStateProfiles: {
+        ...profileConfig.cameraStateProfiles,
+        LEAD_CHANGE: { spriteScale: 77 / 36 },
+      },
+    };
+    const cd = new CameraDirector(1280, 720, false, cfg, 50);
+    expect(cd._leadChangeZoom).toBeCloseTo(77 / 36, 3);
+    expect(cd._leaderZoom).toBeCloseTo(65 / 36, 3);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._leadChangePending = true;
+    const racers = [{ t: 0.9, x: 900, y: 360, finished: false, index: 0 }];
+    const rs = { raceElapsed: 50000, finishedCount: 0, winner: null, finishT: 1 };
+    cd.update(racers, 50000, rs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.LEAD_CHANGE);
+    expect(cd.zoom).toBeCloseTo(77 / 36, 3);
+  });
+
   it('_tcLeader comes from profiles.LEADER_ZOOM.trackingTC (0.25)', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig);
     expect(cd._tcLeader).toBe(0.25);

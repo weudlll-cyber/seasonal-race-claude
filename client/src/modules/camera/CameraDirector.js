@@ -281,7 +281,7 @@ export class CameraDirector {
   }
 
   /**
-   * Derive _leaderZoom / _battleZoom / _comebackZoom from config.
+   * Derive _leaderZoom / _leadChangeZoom / _battleZoom / _comebackZoom from config.
    *
    * v14+: each zoom level is computed from spriteScale (relative factor) stored in
    * cameraStateProfiles. zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open).
@@ -298,10 +298,12 @@ export class CameraDirector {
       // v14 path: spriteScale is the relative zoom factor.
       const scale = {
         leader: profiles.LEADER_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
+        leadChange: profiles.LEAD_CHANGE?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
         battle: profiles.BATTLE_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.battle,
         comeback: profiles.COMEBACK_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.comeback,
       };
       this._leaderZoom = this._computeZoomForSpriteScale(scale.leader);
+      this._leadChangeZoom = this._computeZoomForSpriteScale(scale.leadChange);
       this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
       this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
       this._overviewStateZoom = this._computeZoomForSpriteScale(
@@ -312,6 +314,7 @@ export class CameraDirector {
       const rawPct = config.spritePctOfCanvas;
       const toScale = (pct) => (pct * CANVAS_H_REF) / FALLBACK_REFERENCE_SPRITE_SIZE;
       this._leaderZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
+      this._leadChangeZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
       this._battleZoom = this._computeZoomForSpriteScale(toScale(rawPct.battle));
       this._comebackZoom = this._computeZoomForSpriteScale(toScale(rawPct.comeback));
       // OVERVIEW zoom: preserve full-world defaults for legacy configs.
@@ -319,6 +322,7 @@ export class CameraDirector {
     } else {
       // No config at all: use scale defaults.
       this._leaderZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
+      this._leadChangeZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
       this._battleZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.battle);
       this._comebackZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.comeback);
       // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
@@ -1073,10 +1077,10 @@ export class CameraDirector {
         this._leadChangeNewLeaderName = this._currentLeaderName;
         this._leadChangePrevLeaderName = this._prevLeaderName;
         this._lastLeadChangeTs = ts;
-        // Hard cut: skip entry lerp — camera snaps to leader zoom immediately
+        // Hard cut: skip entry lerp — camera snaps to lead-change zoom immediately
         this._lerpPhase = 'tracking';
-        this.zoom = this._leaderZoom;
-        this.targetZoom = this._leaderZoom;
+        this.zoom = this._leadChangeZoom;
+        this.targetZoom = this._leadChangeZoom;
       }
 
       // OVERVIEW: normally snap zoom immediately to avoid slow lerp down from previous zoom state.
@@ -1726,13 +1730,13 @@ export class CameraDirector {
       }
 
       case CAM_STATE.LEAD_CHANGE: {
-        this.targetZoom = this._leaderZoom;
+        this.targetZoom = this._leadChangeZoom;
         if (this._isOpenTrack) {
           const panTarget =
             this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
               : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
+          if (panTarget) this._setOpenTrackTargets(panTarget, this._leadChangeZoom, frameSize);
         } else {
           const panTarget =
             this._camT !== null && this._shape && this._observerPhase !== 'follow'
@@ -1741,7 +1745,7 @@ export class CameraDirector {
           if (panTarget) {
             this._setClosedTrackTargets(
               panTarget,
-              this._leaderZoom * this._bsX,
+              this._leadChangeZoom * this._bsX,
               frameSize,
               canvasH
             );
