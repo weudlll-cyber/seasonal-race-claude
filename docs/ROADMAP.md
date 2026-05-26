@@ -370,7 +370,7 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 
 | # | Phase | Status | Note |
 |---|---|---|---|
-| 1 | **Camera Phase + RaceScreen-Refactor** | 🔄 In Progress — Phase 4 (Tunables + Pan-Fix) ✅ | PR-A1/A2/A2.5/A2.6/A3 ✅. Phase 4 Timing Tunables + Plan-B Pan ✅ (branch: `diagnosis/camera-tuning-effectiveness`). Open: PR-B (Bug A+B+C), PR-C (RaceScreen-Split), PR-D (State-Machine complete), PR-E (Sprite-Corridor), PR-F (HUD), PR-G (UI-Bugs). |
+| 1 | **Camera Phase + RaceScreen-Refactor** | 🔄 In Progress — Bug A fixed ✅ | PR-A1/A2/A2.5/A2.6/A3 ✅. Phase 4 ✅. Bug A (OVERVIEW closed-track pan) ✅ 2026-05-27. Open: Bug B (zoom inversion large open tracks), Bug C (openTrackPanTarget focus group), PR-C (RaceScreen-Split), PR-D (State-Machine), PR-E (Sprite-Corridor), PR-F (HUD), PR-G (UI-Bugs). |
 | — | **Track Lifecycle Hybrid (TLH)** | ✅ TLH-1+2+Safeguards complete | TLH-1 (PR #55): backend fixes, default track migration, auto-backup. TLH-2 (PR #56/57): UI flow, two-mode editor. Track-Delete-Safeguards (PR #58): remove-background button, 403 guard, idempotent migration. TLH-3 (code fallback + export) ⏳ deferred. See `docs/TRACK_LIFECYCLE.md`. |
 | — | **Drawing Default Tracks** | ✅ Completed 2026-05-02 | All 5 geometries drawn: Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit. |
 | 3 | **Surface Zones** | planned | Local surface-class overrides within a track (puddles, mud patches). Follow-up phase after VRE. Track-Editor zone-drawing tool, `EditorShape.getZonesAtPosition()`. |

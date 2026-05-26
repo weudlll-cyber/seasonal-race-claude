@@ -35,7 +35,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 Authoritative specification in `docs/CAMERA_DIRECTOR.md` (13 sections, all §13.2 questions UI-1–UI-8 answered).
 
 **3 structural bugs identified** (empirically from code analysis):
-- **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — world-edge clamp forces offsetX/Y=0 when zoom=1 (`CameraDirector.js:178-183`)
+- ✅ **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — **fixed** `overviewClosedTrackZoom=1.3` multiplier, schema v15, DevScreen slider. (2026-05-27, squash `749c2a4`)
 - **Bug B** (River Run P2): zoom inversion on large open tracks — LEADER_ZOOM zooms out instead of in (effZoom=1.5×0.298=0.447 < OVERVIEW=1.5)
 - **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — shows pack center instead of leader
 
