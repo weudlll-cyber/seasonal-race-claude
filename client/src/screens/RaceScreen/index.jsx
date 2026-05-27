@@ -1223,7 +1223,7 @@ export default function RaceScreen() {
         inst.render(ctx);
         ctx.restore();
       }
-      drawEditorTrackSurface(ctx, shape);
+      if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
