@@ -1796,3 +1796,39 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Insight:** When a coordinator needs to call a method on a self-contained child (imperative call like `resetAll()`), `forwardRef` + `useImperativeHandle` is the clean solution: each sub-component exposes exactly the methods the coordinator needs via a ref, without leaking internal state upward. The coordinator holds refs (`dynamicsRef`, `behaviorRef`) and calls `ref.current?.resetAll()` on button click.
 
 **Consequence:** For coordinator-to-child imperative calls (reset, focus, scroll), prefer `forwardRef` + `useImperativeHandle` over prop callbacks or state lifting. The ref API is intentionally minimal — expose only what the coordinator needs.
+
+---
+
+## Lesson 92 — `getCoatVariants` Cache Key Must Match the Lookup Key in `_drawBody`
+
+**Context:** `getCoatVariants(url, coats, tintMode)` caches results under the key `url::tintMode`. When the Racer Editor introduced `tintMode='auto'`, the warm-up call passed `'auto'` as tintMode (correct), but `_drawBody`'s fast-path lookup called `getCoatVariants.cached(url, 'multiply')` — a different key — so the cache always missed on `auto` types, falling through to the slow lazy-tint path on every frame.
+
+**Insight:** Any function that warms a cache under key K must use the same key K for the lookup. When tintMode is polymorphic (e.g. `'auto'` resolves to `'multiply'` or `'screen'` at runtime), the resolution must happen at lookup time too, not silently differ between write and read.
+
+**Consequence:** Whenever adding a new tintMode value, check both the warm-up call site (registry/`warmUpAllRacerTypes`) and the render call site (`_drawBody`) to confirm the same string reaches `getCoatVariants.cached`. A unit test that calls warm-up then checks the cached key value would catch this class of bug mechanically.
+
+**Reference:** `SpriteRacerType.js` `_drawBody` fast path; `spriteTinter.js` `getCoatVariants.cached`; `index.js` `warmUpAllRacerTypes`. Racer Editor Phase 2, commit `edd044c`.
+
+---
+
+## Lesson 93 — Lazy Tint Fallback Must Resolve `tintMode='auto'` at First Use, Not Hardcode a Default
+
+**Context:** `_drawBody`'s lazy-tint path (fires when the warm-up cache is cold) had a ternary: `cfg.tintMode === 'auto' ? 'multiply' : (cfg.tintMode ?? 'multiply')`. For dark/line-art sprites that need `'screen'` compositing, this always produced the wrong blend mode, making the sprite render as untinted (effectively outline-only on dark pixels).
+
+**Insight:** `tintMode='auto'` means "detect the right mode from the sprite pixels". Hardcoding `'multiply'` as a synonym for `'auto'` defeats the whole purpose of auto-detection. The correct fix is to run `detectTintMode(getImageData(...))` once on first use and cache the result on the instance so detection never runs again per-frame.
+
+**Consequence:** When a config value means "figure it out at runtime", the code that consumes it must either (a) resolve it once at construction time if the asset is available, or (b) resolve-and-cache on first use if the asset loads asynchronously. Never silently collapse a polymorphic sentinel value into a hardcoded constant.
+
+**Reference:** `SpriteRacerType.js` `_drawBody` lazy-tint path; `spriteTinter.js` `detectTintMode`. Racer Editor Phase 2, commit `b35e7f0`.
+
+---
+
+## Lesson 94 — Bounding-Box Edge-Strip Filtering Clears Leaked Background Pixels After Removal
+
+**Context:** `computeSpriteBoundingBox` (in `backgroundRemoval.js`) scanned the alpha channel to find the tightest opaque rectangle. When the background-removal tolerance was near-threshold, semi-transparent edge pixels survived, making the bounding box 1–3 px too wide on each side. The resulting sprite had a faint-colour border that was visible when tinted.
+
+**Insight:** Background-removal algorithms always leave a halo of semi-transparent fringe pixels at colour-transition edges. A single tolerance pass is not enough. An edge-strip filter — inspecting a 1-pixel-wide band along each side of the candidate bounding box and ignoring rows/columns where all alpha values are below a secondary alpha floor — removes the fringe without affecting the actual sprite content.
+
+**Consequence:** For any bounding-box computation that follows an alpha-masking pass, add a secondary edge-strip check. The strip width (1 px) and alpha floor (e.g. 16/255) should be constants so they can be tuned without hunting through the algorithm.
+
+**Reference:** `backgroundRemoval.js` `computeSpriteBoundingBox`; 4 regression tests. Racer Editor Phase 2, commit `c9faaa4`.

@@ -52,6 +52,8 @@ import {
   CONFIG_SNAPSHOT,
   RACER_TYPES,
   restoreTunableDefault,
+  registerRacerType,
+  _resetLoadedRacerTypesForTesting,
 } from '../../../modules/racer-types/index.js';
 
 beforeEach(() => {
@@ -246,6 +248,66 @@ describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
     const resetAllBtn = screen.getByRole('button', { name: /Reset all to defaults/i });
     fireEvent.click(resetAllBtn);
     expect(setOverrides).toHaveBeenCalled();
+  });
+});
+
+describe('RacerEditModal — user-created types', () => {
+  const USER_TYPE = {
+    id: 'test-cat',
+    name: 'Test Cat',
+    emoji: '🐱',
+    spriteDataUrl: 'data:image/png;base64,abc123',
+    frameCount: 4,
+    basePeriodMs: 600,
+    displaySize: 40,
+    trailStyle: 'dust',
+    coats: [{ id: 'default', name: 'Default', tint: null }],
+    primaryColor: '#ff8800',
+    speedMultiplier: 0.9,
+    surfaceClasses: ['earth'],
+  };
+
+  beforeEach(() => {
+    _resetLoadedRacerTypesForTesting();
+    registerRacerType(USER_TYPE);
+  });
+
+  afterEach(() => {
+    _resetLoadedRacerTypesForTesting();
+  });
+
+  it('opens without crash for a user-created type', () => {
+    renderModal('test-cat');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('opens without crash for a built-in type (regression)', () => {
+    renderModal('horse');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('shows stored speedMultiplier as the initial value for user-created type', () => {
+    renderModal('test-cat');
+    expect(screen.getByLabelText(/Speed Multiplier/i).value).toBe(
+      String(USER_TYPE.speedMultiplier)
+    );
+  });
+
+  it('Reset all restores stored config values for user-created type', () => {
+    const { setOverrides } = renderModal('test-cat', { 'test-cat': { speedMultiplier: 1.8 } });
+    const smInput = screen.getByLabelText(/Speed Multiplier/i);
+    expect(smInput.value).toBe('1.8');
+    fireEvent.click(screen.getByRole('button', { name: /Reset all to defaults/i }));
+    expect(setOverrides).toHaveBeenCalled();
+    expect(smInput.value).toBe(String(USER_TYPE.speedMultiplier));
+  });
+
+  it('Reset all for built-in type still restores code defaults', () => {
+    RACER_TYPES.horse.config.speedMultiplier = 1.9;
+    const { setOverrides } = renderModal('horse', { horse: { speedMultiplier: 1.9 } });
+    fireEvent.click(screen.getByRole('button', { name: /Reset all to defaults/i }));
+    expect(setOverrides).toHaveBeenCalled();
+    expect(RACER_TYPES.horse.config.speedMultiplier).toBe(CONFIG_SNAPSHOT.horse.speedMultiplier);
   });
 });
 

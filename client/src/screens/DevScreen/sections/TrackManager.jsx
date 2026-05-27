@@ -16,7 +16,8 @@ import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
 import { deleteTrackFromServer, updateTrackOnServer } from '../../../services/trackApi.js';
 import {
   RACER_TYPE_IDS,
-  RACER_TYPE_LABELS,
+  listAllRacerTypes,
+  getRacerTypeLabel,
   getRacerType,
 } from '../../../modules/racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
@@ -553,9 +554,9 @@ function TrackManager() {
                 value={form.defaultRacerTypeId}
                 onChange={(e) => f('defaultRacerTypeId', e.target.value)}
               >
-                {RACER_TYPE_IDS.map((id) => (
+                {listAllRacerTypes().map(({ id }) => (
                   <option key={id} value={id}>
-                    {RACER_TYPE_LABELS[id]}
+                    {getRacerTypeLabel(id)}
                   </option>
                 ))}
               </select>

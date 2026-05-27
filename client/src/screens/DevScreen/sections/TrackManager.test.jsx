@@ -37,7 +37,8 @@ vi.mock('../../../modules/track-effects/index.js', () => ({
 }));
 vi.mock('../../../modules/racer-types/index.js', () => ({
   RACER_TYPE_IDS: ['horse'],
-  RACER_TYPE_LABELS: { horse: 'Horse' },
+  listAllRacerTypes: vi.fn().mockReturnValue([{ id: 'horse', speedMultiplier: 1.0 }]),
+  getRacerTypeLabel: (id) => ({ horse: 'Horse', 'test-cat': 'Test Cat' })[id] ?? id,
   getRacerType: vi.fn().mockReturnValue({ config: { displaySize: 40 } }),
 }));
 vi.mock('../../../modules/rowLayout.js', () => ({
@@ -89,6 +90,7 @@ import { useServerTracksControl } from '../../../modules/storage/useServerTracks
 import { updateTrackOnServer } from '../../../services/trackApi.js';
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
+import { listAllRacerTypes } from '../../../modules/racer-types/index.js';
 import TrackManager from './TrackManager.jsx';
 
 // ── test data ─────────────────────────────────────────────────────────────────
@@ -568,5 +570,23 @@ describe('TrackManager — handleEdit geometry source (toSummary regression)', (
     expect(screen.getByText('Edit Track')).toBeInTheDocument();
     // EditorShape must NOT be called when there is no geometry
     expect(EditorShape).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackManager — default racer type dropdown', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listAllRacerTypes).mockReturnValue([{ id: 'horse', speedMultiplier: 1.0 }]);
+  });
+
+  it('dropdown includes user-created types returned by listAllRacerTypes()', () => {
+    vi.mocked(listAllRacerTypes).mockReturnValue([
+      { id: 'horse', speedMultiplier: 1.0 },
+      { id: 'test-cat', speedMultiplier: 0.9 },
+    ]);
+    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByRole('option', { name: 'Horse' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Test Cat' })).toBeTruthy();
   });
 });

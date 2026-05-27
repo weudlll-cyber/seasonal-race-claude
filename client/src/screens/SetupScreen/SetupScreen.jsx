@@ -19,8 +19,7 @@ import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import { DEFAULT_TRACKS, DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import {
   getRacerType,
-  RACER_TYPE_IDS,
-  RACER_TYPE_LABELS,
+  getRacerTypeLabel,
   listAllRacerTypes,
 } from '../../modules/racer-types/index.js';
 import { filterRacerTypesForTrack } from '../../modules/surface-effects/registry.js';
@@ -198,9 +197,8 @@ function SetupScreen() {
   // Filter racer types to those compatible with the selected track's surface classes.
   // Types with empty surfaceClasses are always included (Heimat-Trail fallback).
   const filteredRacerTypeIds = useMemo(() => {
-    const activeIds = RACER_TYPE_IDS.filter((id) => racerTypeOverrides[id] !== false);
-    if (!selectedTrack?.surfaceClasses?.length) return activeIds;
     const allTypes = listAllRacerTypes().filter((t) => t.isActive);
+    if (!selectedTrack?.surfaceClasses?.length) return allTypes.map((t) => t.id);
     const filtered = filterRacerTypesForTrack(allTypes, selectedTrack.surfaceClasses, (id) =>
       getRacerType(id).getSurfaceClasses()
     );
@@ -528,7 +526,7 @@ function SetupScreen() {
                     >
                       {filteredRacerTypeIds.map((id) => (
                         <option key={id} value={id}>
-                          {RACER_TYPE_LABELS[id]}
+                          {getRacerTypeLabel(id)}
                           {id === (selectedTrack.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
                         </option>
                       ))}

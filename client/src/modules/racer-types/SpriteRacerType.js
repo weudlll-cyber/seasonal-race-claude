@@ -21,7 +21,7 @@
  */
 
 import { getCachedSprite } from './spriteLoader.js';
-import { getCoatVariants, tintSprite, tintSpriteWithMask } from './spriteTinter.js';
+import { getCoatVariants, tintSprite, tintSpriteWithMask, detectTintMode } from './spriteTinter.js';
 
 const REQUIRED_FIELDS = [
   'id',
@@ -105,7 +105,7 @@ export class SpriteRacerType {
     const rawCoatId = racer.coatId ?? cfg.defaultCoatId;
 
     // 1. Fast path: pre-warmed coat variant cache.
-    const variants = getCoatVariants.cached(cfg.spriteUrl);
+    const variants = getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply');
     let drawable;
     if (variants) {
       drawable = variants.get(rawCoatId) ?? variants.get(cfg.defaultCoatId);
@@ -125,7 +125,27 @@ export class SpriteRacerType {
           const maskImg = getCachedSprite(cfg.maskUrl);
           if (maskImg) drawable = tintSpriteWithMask(baseImg, maskImg, coat.tint);
         } else {
-          drawable = tintSprite(baseImg, coat.tint);
+          let blendMode;
+          if (cfg.tintMode === 'auto') {
+            if (!cfg._resolvedTintMode) {
+              const w = baseImg.naturalWidth || baseImg.width;
+              const h = baseImg.naturalHeight || baseImg.height;
+              const off = document.createElement('canvas');
+              off.width = w;
+              off.height = h;
+              const oCtx = off.getContext('2d');
+              if (oCtx) {
+                oCtx.drawImage(baseImg, 0, 0);
+                cfg._resolvedTintMode = detectTintMode(oCtx.getImageData(0, 0, w, h));
+              } else {
+                cfg._resolvedTintMode = 'multiply';
+              }
+            }
+            blendMode = cfg._resolvedTintMode;
+          } else {
+            blendMode = cfg.tintMode ?? 'multiply';
+          }
+          drawable = tintSprite(baseImg, coat.tint, blendMode);
         }
       }
     }

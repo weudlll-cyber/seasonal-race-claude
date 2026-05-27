@@ -283,6 +283,40 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 - [ ] Stats pages (top racers, busiest tracks, season history)
 - [ ] Mobile / tablet responsive tuning
 
+## Racer Editor — Phase 1+2 ✅ Done (feature/racer-editor → master squash, 2026-05-28)
+
+Full-screen UI for creating and managing custom racer types with user-supplied PNG sprite sheets.
+
+### Phase 1 — Storage, Trail Styles, Registry Merging
+- [x] `racerTypeStorage.js` — localStorage CRUD for user-created types (`racearena:racerTypes`)
+- [x] `trailStyles.js` — 6 named trail-factory presets (dust, spark, bubble, leaf, snow, fire)
+- [x] `standardCoats.js` — 12-color STANDARD_COAT_PALETTE shared across all user-created types
+- [x] Registry merging: `loadStoredRacerTypes()` called at app init; user types registered alongside built-ins
+- [x] RacerManager: edit link + delete button for user-created types; default dropdown includes user types
+- [x] RacerEditModal: loads user-created type configs without crash
+
+### Phase 2 — Sprite Generator + Full Editor Screen
+- [x] `RacerEditor.jsx` — route `/racer-editor`; two-column layout; edit mode via `?id=`
+- [x] `SpriteGeneratorPanel.jsx` — PNG upload, background removal, checkerboard preview, animation preview canvas, tint swatches
+- [x] `backgroundRemoval.js` — flood-fill tolerance removal + `computeSpriteBoundingBox` with edge-strip filter (4 tests, commit `c9faaa4`)
+- [x] `canvasUtils.js` — checkerboard pattern, image-to-canvas helpers
+- [x] `spriteAnimations.js` — pure animation math: 7 primary types (wobble, bounce, breathing, spin, pulse, drift, rumble) + tail-wiggle/shadow-pulse add-ons; `computeFrameTransforms` (35 unit tests)
+- [x] `spritesheetBuilder.js` — renders animation frames to offscreen canvas, exports data URL
+- [x] `AnimationControls.jsx` — primary type pills + per-type amplitude sliders + add-on toggles
+- [x] `RacerMetadataPanel.jsx` — name, emoji, speed multiplier, display size, trail style, surface classes, primary color
+- [x] `spriteTinter.detectTintMode` — luminance-based auto mode selection (multiply vs screen); tintMode='auto' cache key fix; lazy-tint resolution fix in `_drawBody`
+- [x] Auto-center sprite on bounding box; "Remove Background" button separate from centering
+- [x] `registerRacerType` warm-up uses instance tintMode (not hardcoded); 5 new SpriteRacerType tests for detectTintMode caching
+- [x] 2293 unit tests passing on merge
+
+### Open Points (see BACKLOG.md)
+- [ ] Extended coat palette: 20+ colors + pattern overlays
+- [ ] Frame-sequence animation mode: import individual frames instead of a spritesheet
+- [ ] Racer speed equalization option: normalize speedMultiplier across all custom types
+- [ ] D3.6 migration refactor: all existing built-in types migrated from class files to SpriteRacerType configs
+
+---
+
 ## Phase 7 — Multi-Tenant (planned)
 
 - [ ] Multiple event organizers with isolated track sets and branding profiles

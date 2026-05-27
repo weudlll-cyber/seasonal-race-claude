@@ -26,6 +26,12 @@ seasonal-race-claude/
 │       │   │       ├── battleDiagRendering.js  # Battle diagnostics world-space markers
 │       │   │       └── trackRendering.js       # Track surface (pre-existing)
 │       │   ├── ResultScreen/       # Post-race podium and history
+│       │   ├── RacerEditor/        # Full-screen custom racer type editor (Racer Editor Phase 1+2)
+│       │   │   ├── RacerEditor.jsx         # Top-level screen: two-column layout, save/cancel, edit-mode (?id=)
+│       │   │   ├── SpriteGeneratorPanel.jsx # Left column: PNG upload, background removal, checkerboard preview, animation preview canvas, tint swatches
+│       │   │   ├── RacerMetadataPanel.jsx  # Right column: name, emoji, speed, display size, trail style, surface classes, primary color
+│       │   │   ├── AnimationControls.jsx   # Primary animation type pills + per-type amplitude sliders + add-ons (tail wiggle, shadow pulse)
+│       │   │   └── RacerEditor.module.css
 │       │   ├── DevScreen/          # Developer / admin panel (10 sections, 2-tier Operator/Advanced)
 │       │   │   └── sections/
 │       │   │       ├── RaceTuningSection.jsx       # Thin coordinator (44 lines) — renders below two
@@ -54,13 +60,21 @@ seasonal-race-claude/
 │       │   │   ├── cameraTimingComputation.js   # Extracted timing/zoom computation helpers
 │       │   │   └── (lapUtils, panTarget, openTrackCamera, …)
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
-│       │   │   ├── SpriteRacerType.js  # Config-driven base class for all sprite-based racer types (D3.5)
-│       │   │   ├── HorseRacerType.js   # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
-│       │   │   ├── spriteLoader.js     # Async image loader with module cache
-│       │   │   ├── spriteTinter.js     # Offscreen-canvas tinting; tintSpriteWithMask for mask-restricted mode
-│       │   │   ├── coatAssignment.js   # Hash-based coat selection
+│       │   │   ├── SpriteRacerType.js      # Config-driven base class for all sprite-based racer types (D3.5)
+│       │   │   ├── HorseRacerType.js       # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
+│       │   │   ├── spriteLoader.js         # Async image loader with module cache
+│       │   │   ├── spriteTinter.js         # Offscreen-canvas tinting; detectTintMode (luminance-based auto); tintSpriteWithMask for mask-restricted mode
+│       │   │   ├── coatAssignment.js       # Hash-based coat selection
+│       │   │   ├── racerTypeStorage.js     # localStorage CRUD for user-created racer types (key: racearena:racerTypes)
+│       │   │   ├── trailStyles.js          # Named trail-factory presets (dust, spark, bubble, leaf, snow, fire)
+│       │   │   ├── standardCoats.js        # STANDARD_COAT_PALETTE — 12-color coat array for user-created types
+│       │   │   ├── spriteAnimations.js     # Pure animation math: computeFrameTransforms(frameIndex, N, config) → {rotate, scaleX, scaleY, translateX, translateY, shearX, shadowScale}
+│       │   │   ├── spritesheetBuilder.js   # Renders animation frames onto an offscreen canvas and exports a data URL
+│       │   │   ├── backgroundRemoval.js    # Flood-fill + tolerance background removal; computeSpriteBoundingBox with edge-strip filter
+│       │   │   ├── canvasUtils.js          # Shared canvas helpers (checkerboard pattern, image-to-canvas)
 │       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
+
 │       │   ├── surface-effects/    # Visual Racer Effects system (planned — VRE-1+)
 │       │   │   ├── index.js              # listSurfaceClasses / getSurfaceClass / getSurfaceClassApi
 │       │   │   ├── defaultClasses.js     # 9 default Surface Class definitions (code constants)
@@ -133,6 +147,8 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
 - **RaceScreen draw-function extraction (hygiene sprint, 2026-05-25)** — All non-trivial canvas draw functions have been extracted from `RaceScreen/index.jsx` into `RaceScreen/drawing/` modules: `overlayRendering.js` (title/lap/countdown/finish overlays), `particleRendering.js` (dust, bursts, surface trails), `racerRendering.js` (sprites, name tags), `priorityModeOverlay.js` (priority debug), `battleDiagRendering.js` (battle diagnostics). `index.jsx` dropped from 1853 → 1460 lines. `drawEditorTrackSurface` remains in the pre-existing `drawing/trackRendering.js` (finish-line only since the Race Track Lights PR).
 - **Track Lights** — Small glowing dots along both boundaries replace the solid cyan boundary lines. Light positions are cached once at race init via `sampleBoundaryAtInterval` (30 px spacing, ~400 points total for typical tracks). Per-frame, only brightness is recomputed per style (`steady`, `sequence`, `sync_pulse`, `random_flash`). Implementation: `client/src/modules/trackLights.js`. Configuration stored as `trackLights` on track geometry; editable in Track Editor; server-migration sets themed defaults on first startup.
+- **Racer Editor — user-created racer types via PNG upload (Racer Editor Phase 1+2, 2026-05-28)** — Users can create custom racer types at `/racer-editor` without code changes. Workflow: upload a PNG sprite sheet → background removal (flood-fill, tolerance) → animation preview (7 primary types × configurable amplitude + 2 add-ons) → metadata → save. Saved types are stored in localStorage under `racearena:racerTypes` as JSON with a `spriteDataUrl` (data URL). On load, user types are merged into the registry alongside built-in types. `SpriteRacerType` accepts user configs identically to built-in configs. `spriteTinter.detectTintMode` auto-selects multiply vs screen compositing based on average luminance of the base sprite.
+
 - **Sprite-based racers, not procedural primitives** — Issue D started with procedural Canvas drawing for racer bodies. Three iterations confirmed that anatomical detail (horse vs duck vs snail) at 22-26 px scale cannot be made readable with primitives. Racer types now use PNG sprite sheets with frame-based animation and offscreen-canvas tinting for color variants. Per-racer assets live under `client/public/assets/racers/` with credits in `CREDITS.md`.
 
 ## Visual Sprite-Scaling Pipeline (after D7a)

@@ -12,6 +12,7 @@ import DevScreen from './screens/DevScreen/DevScreen.jsx';
 import RaceScreen from './screens/RaceScreen/index.jsx';
 import ResultScreen from './screens/ResultScreen/index.jsx';
 import TrackEditor from './screens/TrackEditor/TrackEditor.jsx';
+import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
@@ -43,9 +44,10 @@ function App() {
           <Route path="/results" element={<ResultScreen />} />
           <Route path="/dev" element={<DevScreen />} />
           <Route path="/track-editor" element={<TrackEditor />} />
-          {/* INTERNAL: URL-only diagnose route. Nicht UI-verlinkt — Zugriff bewusst nur über
-              /diagnose-verteilung in der Adresszeile. Headless-Simulator zur Verteilungs-
-              Analyse. Nicht löschen. */}
+          <Route path="/racer-editor" element={<RacerEditor />} />
+          {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
+              via /diagnose-verteilung in the address bar. Headless simulator for distribution
+              analysis. Do not delete. */}
           <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
         </Routes>
       </TransitionProvider>

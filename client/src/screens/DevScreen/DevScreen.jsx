@@ -188,6 +188,18 @@ function DevScreen() {
             >
               Track Geometry Editor →
             </button>
+            <button
+              className={`${s.btn} ${s.btnSecondary}`}
+              style={{
+                marginTop: '0.4rem',
+                fontSize: '0.72rem',
+                padding: '0.35rem 0.7rem',
+                width: '100%',
+              }}
+              onClick={() => navigate('/racer-editor')}
+            >
+              Racer Editor →
+            </button>
           </div>
         </div>
 

@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  detectTintMode,
   tintSprite,
   getCoatVariants,
   tintSpriteWithMask,
@@ -31,6 +32,39 @@ function makeCtxMock() {
     fillStyle: '',
   };
 }
+
+function makePixel(r, g, b, a) {
+  const data = new Uint8ClampedArray(4);
+  data[0] = r;
+  data[1] = g;
+  data[2] = b;
+  data[3] = a;
+  return { data, width: 1, height: 1 };
+}
+
+describe('detectTintMode', () => {
+  it('returns screen for all-black opaque pixels (luminance = 0)', () => {
+    expect(detectTintMode(makePixel(0, 0, 0, 255))).toBe('screen');
+  });
+
+  it('returns multiply for all-white opaque pixels (luminance = 255)', () => {
+    expect(detectTintMode(makePixel(255, 255, 255, 255))).toBe('multiply');
+  });
+
+  it('returns multiply when there are no opaque pixels', () => {
+    expect(detectTintMode(makePixel(0, 0, 0, 0))).toBe('multiply');
+  });
+
+  it('returns screen when average luminance is 79 (just below threshold)', () => {
+    // gray(79,79,79) → L = 0.2126*79 + 0.7152*79 + 0.0722*79 = 79
+    expect(detectTintMode(makePixel(79, 79, 79, 255))).toBe('screen');
+  });
+
+  it('returns multiply when average luminance is above threshold', () => {
+    // gray(100,100,100) → L = 100 >> 80 → multiply
+    expect(detectTintMode(makePixel(100, 100, 100, 255))).toBe('multiply');
+  });
+});
 
 describe('tintSprite', () => {
   let ctxMock;
@@ -79,6 +113,27 @@ describe('tintSprite', () => {
       'composite:source-over',
     ]);
     expect(ctxMock.fillRect).toHaveBeenCalledWith(0, 0, 64, 64);
+  });
+
+  it('uses screen composite op when mode is screen', () => {
+    const src = { naturalWidth: 32, naturalHeight: 32 };
+    const callOrder = [];
+    ctxMock.drawImage = vi.fn().mockImplementation(() => callOrder.push('drawImage'));
+    ctxMock.fillRect = vi.fn().mockImplementation(() => callOrder.push('fillRect'));
+    Object.defineProperty(ctxMock, 'globalCompositeOperation', {
+      get() {
+        return 'source-over';
+      },
+      set(v) {
+        callOrder.push(`composite:${v}`);
+      },
+      configurable: true,
+    });
+
+    tintSprite(src, '#ff0000', 'screen');
+
+    expect(callOrder).toContain('composite:screen');
+    expect(callOrder).not.toContain('composite:multiply');
   });
 });
 

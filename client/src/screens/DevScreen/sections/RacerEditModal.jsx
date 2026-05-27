@@ -16,10 +16,13 @@ import {
   RACER_TYPES,
   TUNABLE_FIELDS,
   CONFIG_SNAPSHOT,
+  getRacerType,
+  getRacerTypeLabel,
   applyTunableOverride,
   restoreTunableDefault,
   normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
+import { loadStoredRacerTypes } from '../../../modules/racer-types/racerTypeStorage.js';
 import {
   loadAutoScaleConfig,
   DEFAULT_AUTO_SCALE_CONFIG,
@@ -113,11 +116,25 @@ function coerceField(fieldName, raw) {
 export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   const typeOverrides = normalizeOverrideMap(overrides)[typeId] ?? {};
 
+  const isBuiltIn = typeId in RACER_TYPES;
+  const racerTypeInstance = getRacerType(typeId);
+
+  // Reset baseline: code defaults for built-ins; stored Racer Editor values for user-created.
+  // Fields absent from the stored config (e.g. leaderRingColor) reset to undefined.
+  const resetBaseline = isBuiltIn
+    ? CONFIG_SNAPSHOT[typeId]
+    : (() => {
+        const stored = loadStoredRacerTypes().find((c) => c.id === typeId) ?? {};
+        return Object.fromEntries(
+          TUNABLE_FIELDS.map((f) => [f, f in stored ? stored[f] : undefined])
+        );
+      })();
+
   // Local text state for each standard field (drives the inputs)
   const initialText = () =>
     Object.fromEntries(
       STANDARD_FIELDS.map((f) => {
-        const raw = f in typeOverrides ? typeOverrides[f] : RACER_TYPES[typeId].config[f];
+        const raw = f in typeOverrides ? typeOverrides[f] : racerTypeInstance.config[f];
         return [f, raw !== undefined ? String(raw) : ''];
       })
     );
@@ -134,7 +151,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   const [surfaceClassesValue, setSurfaceClassesValue] = useState(() =>
     'surfaceClasses' in typeOverrides
       ? [...typeOverrides.surfaceClasses]
-      : [...(RACER_TYPES[typeId]?.config?.surfaceClasses ?? [])]
+      : [...(racerTypeInstance.config.surfaceClasses ?? [])]
   );
   const { classes: allSurfaceClasses } = useSurfaceClasses();
 
@@ -168,12 +185,14 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     setSurfaceClassesValue(
       'surfaceClasses' in freshOverrides
         ? [...freshOverrides.surfaceClasses]
-        : [...(RACER_TYPES[typeId]?.config?.surfaceClasses ?? [])]
+        : [...(racerTypeInstance.config.surfaceClasses ?? [])]
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
 
-  const label = `${RACER_TYPES[typeId]?.getEmoji?.()} ${typeId.charAt(0).toUpperCase() + typeId.slice(1)}`;
+  const label = isBuiltIn
+    ? `${RACER_TYPES[typeId].getEmoji()} ${typeId.charAt(0).toUpperCase() + typeId.slice(1)}`
+    : getRacerTypeLabel(typeId);
 
   function handleChange(fieldName, raw) {
     setText((prev) => ({ ...prev, [fieldName]: raw }));
@@ -207,8 +226,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   }
 
   function handleFieldReset(fieldName) {
-    const snap = CONFIG_SNAPSHOT[typeId];
-    const defaultVal = snap[fieldName];
+    const defaultVal = resetBaseline[fieldName];
     const defaultStr = defaultVal !== undefined ? String(defaultVal) : '';
     setText((prev) => ({ ...prev, [fieldName]: defaultStr }));
     setErrors((prev) => {
@@ -216,8 +234,11 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
       delete next[fieldName];
       return next;
     });
-    // Restore live config
-    restoreTunableDefault(typeId, fieldName);
+    if (isBuiltIn) {
+      restoreTunableDefault(typeId, fieldName);
+    } else {
+      applyTunableOverride(typeId, fieldName, defaultVal);
+    }
     // Remove from storage
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
@@ -243,7 +264,11 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
 
   function handleMinSizeReset() {
     setMinSizeOverride(undefined);
-    restoreTunableDefault(typeId, 'minTargetScreenPx');
+    if (isBuiltIn) {
+      restoreTunableDefault(typeId, 'minTargetScreenPx');
+    } else {
+      applyTunableOverride(typeId, 'minTargetScreenPx', resetBaseline.minTargetScreenPx);
+    }
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
       const typeOvr = { ...(all[typeId] ?? {}) };
@@ -272,9 +297,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   }
 
   function handleSurfaceClassesReset() {
-    const defaultVal = [...(CONFIG_SNAPSHOT[typeId]?.surfaceClasses ?? [])];
+    const defaultVal = Array.isArray(resetBaseline.surfaceClasses)
+      ? [...resetBaseline.surfaceClasses]
+      : [];
     setSurfaceClassesValue(defaultVal);
-    restoreTunableDefault(typeId, 'surfaceClasses');
+    if (isBuiltIn) {
+      restoreTunableDefault(typeId, 'surfaceClasses');
+    } else {
+      applyTunableOverride(typeId, 'surfaceClasses', defaultVal);
+    }
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
       const typeOvr = { ...(all[typeId] ?? {}) };
@@ -290,13 +321,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     'surfaceClasses' in (normalizeOverrideMap(overrides)[typeId] ?? {});
 
   function handleResetAll() {
-    // Restore all tunable fields from snapshot
-    for (const f of TUNABLE_FIELDS) restoreTunableDefault(typeId, f);
-    // Reset min size state
+    if (isBuiltIn) {
+      for (const f of TUNABLE_FIELDS) restoreTunableDefault(typeId, f);
+    } else {
+      for (const f of TUNABLE_FIELDS) applyTunableOverride(typeId, f, resetBaseline[f]);
+    }
     setMinSizeOverride(undefined);
-    // Reset surface classes state
-    setSurfaceClassesValue([...(CONFIG_SNAPSHOT[typeId]?.surfaceClasses ?? [])]);
-    // Remove all tunable overrides from storage (keep isActive if set)
+    setSurfaceClassesValue(
+      Array.isArray(resetBaseline.surfaceClasses) ? [...resetBaseline.surfaceClasses] : []
+    );
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
       const typeOvr = { ...(all[typeId] ?? {}) };
@@ -306,11 +339,10 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
       else next[typeId] = typeOvr;
       return next;
     });
-    // Reset local text to code defaults
     setText(
       Object.fromEntries(
         STANDARD_FIELDS.map((f) => {
-          const val = CONFIG_SNAPSHOT[typeId][f];
+          const val = resetBaseline[f];
           return [f, val !== undefined ? String(val) : ''];
         })
       )
@@ -443,7 +475,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
             )}
 
             <div className={s.minSizePreviewRow}>
-              <MinSpriteSizePreview racerType={RACER_TYPES[typeId]} sizePx={effectiveMinSize} />
+              <MinSpriteSizePreview racerType={racerTypeInstance} sizePx={effectiveMinSize} />
               <p className={s.minSizeDesc}>
                 This is how small this racer will be on a busy track. Camera zoom makes it bigger
                 during the race.

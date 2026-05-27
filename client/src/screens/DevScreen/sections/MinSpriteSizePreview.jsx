@@ -41,7 +41,7 @@ export function MinSpriteSizePreview({ racerType, sizePx }) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, sizePx, sizePx);
 
-      const variants = getCoatVariants.cached(cfg.spriteUrl);
+      const variants = getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply');
       let drawable = variants?.get(cfg.defaultCoatId) ?? variants?.values().next().value ?? null;
 
       if (!drawable) {

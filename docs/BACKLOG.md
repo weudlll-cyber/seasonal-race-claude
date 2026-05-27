@@ -622,10 +622,24 @@ from D3.5.5.
 
 ---
 
+## Racer Editor — Open Points
+
+Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
+
+| Item | Priority | Description |
+|---|---|---|
+| **RE-1** Extended coat palette | Medium | Expand STANDARD_COAT_PALETTE from 12 to 20+ entries. Add pattern overlays (stripes, spots, gradient) as a second tinting pass. |
+| **RE-2** Frame-sequence mode | Low | Alternative to spritesheet upload: import individual PNG frames (1–16). Builder stitches them into a sheet internally. Useful for frame-by-frame artwork. |
+| **RE-3** Speed equalization | Low | Option in RacerMetadataPanel to normalize speedMultiplier so user-created types race at the same average pace as built-in types. Auto-computes from median built-in `speedMultiplier`. |
+| **RE-4** D3.6 migration refactor | Medium | Migrate all built-in types (HorseRacerType, DuckRacerType, SnailRacerType, …) from class files to `SpriteRacerType` config objects. Remove per-type class files. See ROADMAP.md D3.6. |
+| **RE-5** Mask-mode support in Editor | Low | Expose tintMode='mask' option in SpriteGeneratorPanel; add mask PNG upload field. Currently mask mode is available in code but not exposed in the Racer Editor UI. |
+
+---
+
 ## Parking Lot — Future / Unclear Scope
 
 - Phase 5: server, leaderboard, Socket.IO (architecture planned, no code)
-- Phase 7: custom sprite upload via dev panel; dynamic SpriteRacerType from JSON
+- Phase 7: custom sprite upload ✅ delivered as standalone Racer Editor Phase 1+2 (2026-05-28)
 - i18n (English + German base) — app language is English, documentation can be both
 - Multi-tenant isolation (per-organizer track sets and branding)
 - Mobile / tablet responsive tuning

@@ -7,6 +7,23 @@
 
 import '@testing-library/jest-dom';
 
+// Polyfill ImageData for tests — jsdom does not implement the Canvas API
+if (typeof globalThis.ImageData === 'undefined') {
+  globalThis.ImageData = class ImageData {
+    constructor(dataOrWidth, widthOrHeight, height) {
+      if (dataOrWidth instanceof Uint8ClampedArray) {
+        this.data = dataOrWidth;
+        this.width = widthOrHeight;
+        this.height = height ?? dataOrWidth.length / (widthOrHeight * 4);
+      } else {
+        this.width = dataOrWidth;
+        this.height = widthOrHeight;
+        this.data = new Uint8ClampedArray(dataOrWidth * widthOrHeight * 4);
+      }
+    }
+  };
+}
+
 // Mock SVGPathElement geometry for jsdom — getTotalLength and getPointAtLength
 // are not implemented by jsdom. We intercept createElementNS and inject them
 // on every path element instance at creation time.

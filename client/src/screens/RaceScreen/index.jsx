@@ -27,7 +27,7 @@ import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleR
 import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
-import { getRacerType, COATS_BY_TYPE } from '../../modules/racer-types/index.js';
+import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
 import {
   CameraDirector,
@@ -550,7 +550,7 @@ export default function RaceScreen() {
           transitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
           nextRollTime: rollInterval + rollJitter,
           color: RACER_COLORS[i % RACER_COLORS.length],
-          coatId: COATS_BY_TYPE[typeId] ? assignCoat(r.name, COATS_BY_TYPE[typeId]) : undefined,
+          coatId: getCoatsByType(typeId) ? assignCoat(r.name, getCoatsByType(typeId)) : undefined,
           finished: false,
           finishRank: null,
           runoutDecay: 1,

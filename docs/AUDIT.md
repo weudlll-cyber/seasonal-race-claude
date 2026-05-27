@@ -753,6 +753,59 @@ Full shared-variable ownership audit across CameraDirector.js, RaceScreen/index.
 
 ---
 
+## 2026-05-28 — Racer Editor Phase 1+2 Merge
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (full)
+**Branch:** feature/racer-editor → master (squash)
+**Base commit on branch:** `b35e7f0`
+
+### Summary
+
+Merged the Racer Editor feature: a full-screen UI for creating and managing custom racer types with PNG sprite upload, animation preview, background removal, and auto-tinting. 16 commits squashed.
+
+### npm audit
+
+No new dependencies introduced. Existing `esbuild`/`vite` moderate advisory unchanged (dev-only, accepted).
+
+### ESLint
+
+0 errors. Pre-commit hook runs ESLint fix + Prettier on all staged files.
+
+### Prettier
+
+All files formatted by pre-commit hook at commit time.
+
+### Tests
+
+| Suite | Tests | Pass | Fail |
+|-------|-------|------|------|
+| All client unit tests | 2293 | 2293 | 0 |
+
+Net new tests vs. master: +159 (2134 → 2293). Breakdown:
+- `SpriteRacerType.test.js` — +5 tests for detectTintMode lazy-tint caching
+- `spriteAnimations.test.js` — +35 tests (bounce/pulse/drift/rumble animations)
+- `backgroundRemoval.test.js` — new file, 28 tests
+- `canvasUtils.test.js` — new file, 14 tests  
+- `racerTypeStorage.test.js` — new file, 22 tests
+- `registerRacerType.test.js` — new file, 5 tests
+- `spriteTinter.test.js` — +~50 tests (detectTintMode, tintMode='auto' cache key)
+
+### OWASP items reviewed
+
+| Item | Finding |
+|---|---|
+| A3 — XSS | Sprite data URLs are user-uploaded PNGs. Rendered only to `<canvas>` via `drawImage` — no innerHTML injection path. |
+| A5 — Broken Access Control | RacerEditor accessible at `/racer-editor` with no auth — acceptable for local-only operation. Auth in Phase 5. |
+| A6 — Security Misconfiguration | No new environment variables or server endpoints introduced. All new storage is localStorage-only (`racearena:racerTypes`). |
+| A7 — XSS (localStorage) | Stored racer type configs are read back and rendered to canvas. No eval or innerHTML path. |
+
+### Action Items
+
+None. Pre-existing accepted findings unchanged.
+
+---
+
 ## Deliberately accepted findings (as of 2026-05-01)
 
 | Finding | Severity | Accepted because | When to address |

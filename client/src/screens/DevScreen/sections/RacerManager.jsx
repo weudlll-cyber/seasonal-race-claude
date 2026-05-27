@@ -3,22 +3,23 @@
 // Path:        client/src/screens/DevScreen/sections/RacerManager.jsx
 // Project:     RaceArena
 // Created:     2026-04-19
-// Updated:     2026-04-26 — B7: code registry as source of truth; only
-//              isActive overrides are persisted in localStorage.
-//              D3.5.5: Edit-Modal for per-type tuning (6 fields).
-//              Override map schema migrated to object format.
-// Description: Display, enable/disable, and tune the 12 code-defined racer
-//              types. Types are defined in code — add/delete not available.
+// Updated:     2026-05-27 — Phase 2: listAllRacerTypes() as source of truth;
+//              user-created types appear alongside built-ins; delete + edit
+//              buttons for user-created types; "Edit in Racer Editor" link.
+// Description: Display, enable/disable, and tune all racer types — built-in
+//              and user-created. User-created types add delete and editor links.
 // ============================================================
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import {
-  RACER_TYPE_IDS,
   RACER_TYPES,
-  RACER_TYPE_LABELS,
+  listAllRacerTypes,
+  removeRacerType,
+  getRacerTypeLabel,
   TUNABLE_FIELDS,
   normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
@@ -26,20 +27,23 @@ import { RacerEditModal } from './RacerEditModal.jsx';
 import s from '../DevScreen.module.css';
 
 function RacerManager() {
+  const navigate = useNavigate();
   const [overrides, setOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
   const [editTypeId, setEditTypeId] = useState(null);
 
   const normalized = normalizeOverrideMap(overrides);
 
-  const types = RACER_TYPE_IDS.map((id) => {
+  // listAllRacerTypes() returns built-ins + user-created; re-evaluated on every render
+  const types = listAllRacerTypes().map(({ id, speedMultiplier }) => {
     const typeOvr = normalized[id] ?? {};
     const hasTuningOverrides = TUNABLE_FIELDS.some((f) => f in typeOvr);
     return {
       id,
-      label: RACER_TYPE_LABELS[id] ?? id,
-      speedMultiplier: RACER_TYPES[id].getSpeedMultiplier(),
+      label: getRacerTypeLabel(id),
+      speedMultiplier,
       isActive: typeOvr.isActive !== false,
       hasTuningOverrides,
+      isBuiltIn: id in RACER_TYPES,
     };
   });
 
@@ -58,6 +62,17 @@ function RacerManager() {
       if (Object.keys(typeOvr).length === 0) delete next[id];
       else next[id] = typeOvr;
       return next;
+    });
+  }
+
+  function handleDelete(id, label) {
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    removeRacerType(id);
+    // setOverrides triggers re-render; also removes any orphaned overrides for the deleted id
+    setOverrides((prev) => {
+      const all = { ...normalizeOverrideMap(prev) };
+      delete all[id];
+      return all;
     });
   }
 
@@ -123,6 +138,24 @@ function RacerManager() {
                 )}
               </span>
               <span className={s.spacer} />
+              {!type.isBuiltIn && (
+                <button
+                  onClick={() => navigate(`/racer-editor?id=${type.id}`)}
+                  title={`Edit ${type.label} in Racer Editor`}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #3a3a4a',
+                    color: 'var(--color-muted)',
+                    fontSize: '0.72rem',
+                    padding: '0.25rem 0.55rem',
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer',
+                    marginRight: '0.25rem',
+                  }}
+                >
+                  Edit in Racer Editor
+                </button>
+              )}
               <button
                 onClick={() => setEditTypeId(type.id)}
                 title={`Edit ${type.label} tuning`}
@@ -139,6 +172,24 @@ function RacerManager() {
               >
                 Edit
               </button>
+              {!type.isBuiltIn && (
+                <button
+                  onClick={() => handleDelete(type.id, type.label)}
+                  title={`Delete ${type.label}`}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #3a3a4a',
+                    color: '#e63946',
+                    fontSize: '0.72rem',
+                    padding: '0.25rem 0.55rem',
+                    borderRadius: 'var(--radius)',
+                    cursor: 'pointer',
+                    marginRight: '0.25rem',
+                  }}
+                >
+                  Delete
+                </button>
+              )}
               <label className={s.toggle} title={type.isActive ? 'Disable' : 'Enable'}>
                 <input
                   type="checkbox"

@@ -18,6 +18,13 @@
 //              leaderEllipseRx, leaderEllipseRy). Storage schema migrated
 //              from { id: false } → { id: { isActive: false } }.
 //              CONFIG_SNAPSHOT captures code defaults before any override.
+//
+//              Racer Editor Phase 1: _loadedRacerTypes internal registry
+//              for user-created types stored in localStorage. All public
+//              APIs (getRacerType, listAllRacerTypes, getCoatsByType,
+//              getRacerTypeLabel) serve both built-in and loaded types
+//              from a single flat registry — no "custom" distinction.
+//              registerRacerType / removeRacerType manage the lifecycle.
 // ============================================================
 
 export { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
@@ -46,9 +53,16 @@ import { RocketRacerType } from './RocketRacerType.js';
 import { BuggyRacerType } from './BuggyRacerType.js';
 import { MotorbikeRacerType } from './MotorbikeRacerType.js';
 import { PlaneRacerType } from './PlaneRacerType.js';
+import { SpriteRacerType } from './SpriteRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
+import {
+  loadStoredRacerTypes,
+  saveStoredRacerType,
+  deleteStoredRacerType,
+} from './racerTypeStorage.js';
+import { getTrailFactory } from './trailStyles.js';
 
 // All 12 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
@@ -68,11 +82,14 @@ export const RACER_TYPES = {
 
 export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
 
-// Auto-derived from type configs — no manual maintenance needed.
+// Auto-derived from built-in type configs — kept for backward compat.
+// Prefer getCoatsByType(id) which also covers user-created types.
 export const COATS_BY_TYPE = Object.fromEntries(
   Object.entries(RACER_TYPES).map(([id, type]) => [id, type.config.coats])
 );
 
+// Static labels for built-in types — kept for backward compat.
+// Prefer getRacerTypeLabel(id) which also covers user-created types.
 export const RACER_TYPE_LABELS = {
   horse: 'Horse 🐴',
   duck: 'Duck 🦆',
@@ -88,21 +105,50 @@ export const RACER_TYPE_LABELS = {
   plane: 'Plane ✈️',
 };
 
+// ── Loaded racer types (user-created, stored in localStorage) ─────────────────
+// Internal registry — populated at boot by _initLoadedRacerTypes().
+// Not exported — all external access goes through getRacerType / listAllRacerTypes.
+const _loadedRacerTypes = {};
+
+/**
+ * Returns the coats array for any racer type — built-in or user-created.
+ * Returns null for unknown ids.
+ */
+export function getCoatsByType(id) {
+  const type = RACER_TYPES[id] ?? _loadedRacerTypes[id];
+  return type?.config.coats ?? null;
+}
+
+/**
+ * Returns the display label for any racer type — built-in or user-created.
+ * Falls back to the raw id string for unknown types.
+ */
+export function getRacerTypeLabel(id) {
+  if (RACER_TYPE_LABELS[id]) return RACER_TYPE_LABELS[id];
+  const loaded = _loadedRacerTypes[id];
+  if (loaded) {
+    const name = loaded.config.name ?? id;
+    const emoji = loaded.config.emoji ?? '';
+    return emoji ? `${name} ${emoji}` : name;
+  }
+  return id;
+}
+
 /**
  * Returns a racer-type instance for the given typeId.
- * All types are SpriteRacerType instances — returns the shared singleton.
+ * Checks built-in types first, then user-created types loaded from storage.
  * Falls back to the horse instance for unknown ids.
  */
 export function getRacerType(typeId) {
-  return RACER_TYPES[typeId] ?? HorseRacerType;
+  return RACER_TYPES[typeId] ?? _loadedRacerTypes[typeId] ?? HorseRacerType;
 }
 
 /** Alias for getRacerType — preferred in contexts where the id semantics matter. */
 export function getRacerTypeById(id) {
-  return RACER_TYPES[id] ?? HorseRacerType;
+  return RACER_TYPES[id] ?? _loadedRacerTypes[id] ?? HorseRacerType;
 }
 
-/** Returns all registered racer type IDs. */
+/** Returns all registered built-in racer type IDs (does not include user-created types). */
 export function listRacerTypes() {
   return Object.keys(RACER_TYPES);
 }
@@ -157,8 +203,9 @@ export function normalizeOverrideMap(raw) {
 
 /** Apply a single tunable field directly to the live config (no storage write). */
 export function applyTunableOverride(id, fieldName, value) {
-  if (RACER_TYPES[id] && TUNABLE_FIELDS.includes(fieldName)) {
-    RACER_TYPES[id].config[fieldName] = value;
+  const type = RACER_TYPES[id] ?? _loadedRacerTypes[id];
+  if (type && TUNABLE_FIELDS.includes(fieldName)) {
+    type.config[fieldName] = value;
   }
 }
 
@@ -177,9 +224,10 @@ function _applyStoredTunableOverrides() {
   if (!raw) return;
   const overrides = normalizeOverrideMap(raw);
   for (const [id, fields] of Object.entries(overrides)) {
-    if (!RACER_TYPES[id]) continue;
+    const type = RACER_TYPES[id] ?? _loadedRacerTypes[id];
+    if (!type) continue;
     for (const field of TUNABLE_FIELDS) {
-      if (field in fields) RACER_TYPES[id].config[field] = fields[field];
+      if (field in fields) type.config[field] = fields[field];
     }
   }
 }
@@ -187,20 +235,25 @@ function _applyStoredTunableOverrides() {
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
- * Returns an array of all 12 racer types with isActive resolved from the override map.
- * All types are active by default; an operator can disable individual types via
- * setRacerTypeOverride(). The code registry (RACER_TYPES) is always the source of truth.
+ * Returns a flat array of all racer types — built-in and user-created — with
+ * isActive resolved from the shared override map. No distinction between origins.
+ * All types are active by default; an operator can disable any type via
+ * setRacerTypeOverride(). Built-in types appear first, then loaded types in
+ * insertion order.
  */
 export function listAllRacerTypes() {
   const raw = storageGet(KEYS.RACER_TYPE_OVERRIDES) ?? {};
   const overrides = normalizeOverrideMap(raw);
-  return RACER_TYPE_IDS.map((id) => ({
+  const toEntry = (id, type) => ({
     id,
-    name: RACER_TYPE_LABELS[id] ?? id,
-    emoji: RACER_TYPES[id].getEmoji(),
-    speedMultiplier: RACER_TYPES[id].getSpeedMultiplier(),
+    name: getRacerTypeLabel(id),
+    emoji: type.getEmoji(),
+    speedMultiplier: type.getSpeedMultiplier(),
     isActive: (overrides[id]?.isActive ?? true) !== false,
-  }));
+  });
+  const builtIns = RACER_TYPE_IDS.map((id) => toEntry(id, RACER_TYPES[id]));
+  const loaded = Object.entries(_loadedRacerTypes).map(([id, type]) => toEntry(id, type));
+  return [...builtIns, ...loaded];
 }
 
 /**
@@ -266,7 +319,7 @@ export function resetRacerTypeOverride(id, fieldName) {
 let _warmedUp = false;
 
 /**
- * Warm up sprite caches for all racer types.
+ * Warm up sprite caches for all racer types — built-in and user-created.
  * - multiply-mode types: pre-tint all coat variants via getCoatVariants.
  * - mask-mode types: preload base sprite + mask sprite; tinting is on-demand.
  * Idempotent — safe to call multiple times.
@@ -274,14 +327,16 @@ let _warmedUp = false;
 export function warmUpAllRacerTypes() {
   if (_warmedUp) return;
   _warmedUp = true;
-  for (const racerType of Object.values(RACER_TYPES)) {
+  const allTypes = [...Object.values(RACER_TYPES), ...Object.values(_loadedRacerTypes)];
+  for (const racerType of allTypes) {
     const cfg = racerType.config;
     if (!cfg) continue;
     if (cfg.tintMode === 'mask' && cfg.maskUrl) {
       loadSprite(cfg.spriteUrl).catch(() => {});
       loadSprite(cfg.maskUrl).catch(() => {});
     } else {
-      getCoatVariants(cfg.spriteUrl, cfg.coats).catch(() => {});
+      const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
+      getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch(() => {});
     }
   }
 }
@@ -291,6 +346,76 @@ export function _resetWarmUpForTesting() {
   _warmedUp = false;
 }
 
-// Apply stored tunable overrides and warm up sprites on module import.
+/** Clear all loaded (user-created) types from the live registry. Only use in tests. */
+export function _resetLoadedRacerTypesForTesting() {
+  for (const id of Object.keys(_loadedRacerTypes)) {
+    delete _loadedRacerTypes[id];
+  }
+}
+
+// ── User-created type management ─────────────────────────────────────────────
+
+/**
+ * Load user-created racer type configs from storage and construct SpriteRacerType
+ * instances. Called once at boot. Skips invalid configs with a console warning.
+ */
+function _initLoadedRacerTypes() {
+  const stored = loadStoredRacerTypes();
+  for (const cfg of stored) {
+    if (!cfg?.id) continue;
+    try {
+      _loadedRacerTypes[cfg.id] = new SpriteRacerType({
+        ...cfg,
+        spriteUrl: cfg.spriteDataUrl,
+        trailFactory: getTrailFactory(cfg.trailStyle),
+      });
+    } catch (err) {
+      console.warn(`[RaceArena] Skipping stored racer type "${cfg.id}": ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Register a new user-created racer type at runtime.
+ * Validates the config via racerTypeStorage, constructs the SpriteRacerType
+ * instance, persists it, and adds it to the live registry.
+ *
+ * @param {object} config  Must include all required storage fields (see racerTypeStorage.js).
+ *   spriteDataUrl is used as spriteUrl. trailStyle resolves via getTrailFactory.
+ * @returns {SpriteRacerType} The newly created type instance.
+ * @throws {Error} If the id collides with a built-in type or required fields are missing.
+ */
+export function registerRacerType(config) {
+  saveStoredRacerType(config, RACER_TYPE_IDS);
+  const instance = new SpriteRacerType({
+    ...config,
+    spriteUrl: config.spriteDataUrl,
+    trailFactory: getTrailFactory(config.trailStyle),
+  });
+  _loadedRacerTypes[config.id] = instance;
+  const blendMode =
+    instance.config.tintMode === 'auto' ? 'auto' : (instance.config.tintMode ?? 'multiply');
+  getCoatVariants(config.spriteDataUrl, config.coats, blendMode).catch(() => {});
+  return instance;
+}
+
+/**
+ * Remove a user-created racer type from the live registry and from storage.
+ * Rejects built-in type IDs — those cannot be removed.
+ *
+ * @param {string} id  The type id to remove.
+ * @throws {Error} If id is a built-in type.
+ */
+export function removeRacerType(id) {
+  if (RACER_TYPE_IDS.includes(id)) {
+    throw new Error(`removeRacerType: "${id}" is a built-in type and cannot be removed`);
+  }
+  deleteStoredRacerType(id);
+  delete _loadedRacerTypes[id];
+}
+
+// ── Boot sequence ────────────────────────────────────────────────────────────
+// Order matters: load user types first so override application covers them.
+_initLoadedRacerTypes();
 _applyStoredTunableOverrides();
 warmUpAllRacerTypes();
