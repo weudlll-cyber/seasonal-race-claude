@@ -639,11 +639,10 @@ export default function RaceScreen() {
     // Open-track geometry: computed once at race start, shared by Fixes 1/2/3.
     // Primary track direction sampled at midpoint (t=0.5); avoids start/end edge artefacts.
     // openTrackHW = half the median cross-section width (inner→outer = full width).
-    // Perp = cross-track unit vector (⊥ to forward); Fwd = forward unit vector.
+    // Fwd = forward unit vector (used for ranking projection at lines below).
+    // Perp vectors removed — drawOpenTrackFinishLine derives them locally from finishT angle.
     const openTrackAngle = isOpenTrack ? shapeRef.current.getPosition(0.5, 0).angle : 0;
     const openTrackHW = isOpenTrack ? shapeRef.current.getActualTrackWidth() / 2 : 0;
-    const openTrackPerpCos = Math.cos(openTrackAngle + Math.PI / 2);
-    const openTrackPerpSin = Math.sin(openTrackAngle + Math.PI / 2);
     const openTrackFwdCos = Math.cos(openTrackAngle);
     const openTrackFwdSin = Math.sin(openTrackAngle);
 
@@ -1227,16 +1226,7 @@ export default function RaceScreen() {
       drawEditorTrackSurface(ctx, shape);
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
       if (isOpenTrack && st.finishT < 1)
-        drawOpenTrackFinishLine(
-          ctx,
-          shape,
-          st.finishT,
-          openTrackPerpCos,
-          openTrackPerpSin,
-          openTrackHW,
-          openTrackFwdCos,
-          openTrackFwdSin
-        );
+        drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
       drawParticles(ctx, st.dustParticles, st.burstParticles);
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;

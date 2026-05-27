@@ -126,26 +126,24 @@ export function drawEditorTrackSurface(ctx, shape) {
 
 /**
  * Draws the open-track finish-line checkerboard at the given T fraction.
- * The perpendicular and forward geometry vectors must be pre-computed at race init
- * (they are constant for a given track) and passed in to avoid re-deriving them
- * every frame.
+ * Direction vectors are derived from the local track angle at ft so the line
+ * is perpendicular to the track at any finish position.
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} shape  EditorShape instance.
  * @param {number} ft  T-fraction where the finish line sits (0–1).
- * @param {number} perpCos  cos of the cross-track direction (perp to fwd axis).
- * @param {number} perpSin  sin of the cross-track direction.
  * @param {number} hw  Half-width of the track in world pixels.
- * @param {number} fwdCos  cos of the forward track direction.
- * @param {number} fwdSin  sin of the forward track direction.
  */
-export function drawOpenTrackFinishLine(ctx, shape, ft, perpCos, perpSin, hw, fwdCos, fwdSin) {
-  // Fix 2: Force the finish line perpendicular to the primary track axis.
-  // getPosition(ft, ±1.0) gives inner/outer at the same t-fraction, but the
-  // line between them follows the spline cross-section which may be diagonal
-  // when inner and outer splines diverge. Instead, compute pInner/pOuter as
-  // symmetric offsets from the centre along the constant cross-track direction.
+export function drawOpenTrackFinishLine(ctx, shape, ft, hw) {
+  // Use the LOCAL track angle at ft so the finish line is always perpendicular
+  // to the track direction at the actual finish position, regardless of how
+  // much the track curves between the midpoint and the finish.
   const center = shape.getPosition(ft, 0);
+  const localAngle = center.angle;
+  const perpCos = Math.cos(localAngle + Math.PI / 2);
+  const perpSin = Math.sin(localAngle + Math.PI / 2);
+  const fwdCos = Math.cos(localAngle);
+  const fwdSin = Math.sin(localAngle);
   const pInner = {
     x: center.x - perpCos * hw,
     y: center.y - perpSin * hw,
