@@ -8,7 +8,7 @@
 //              Also preserves the legacy RACER_TYPES export so
 //              existing code that imports it keeps working.
 //
-//              D3.5.3: All 12 racer types are SpriteRacerType instances.
+//              D3.5.3: All 13 racer types are SpriteRacerType instances.
 //              No class-based RacerTypes remain. CarRacerType removed,
 //              replaced by BuggyRacerType. COATS_BY_TYPE auto-derived
 //              from type configs. warmUpAllRacerTypes handles mask types.
@@ -39,6 +39,7 @@ export { RocketRacerType } from './RocketRacerType.js';
 export { BuggyRacerType } from './BuggyRacerType.js';
 export { MotorbikeRacerType } from './MotorbikeRacerType.js';
 export { PlaneRacerType } from './PlaneRacerType.js';
+export { LugeRacerType } from './LugeRacerType.js';
 export { SpriteRacerType } from './SpriteRacerType.js';
 
 import { HorseRacerType } from './HorseRacerType.js';
@@ -53,6 +54,7 @@ import { RocketRacerType } from './RocketRacerType.js';
 import { BuggyRacerType } from './BuggyRacerType.js';
 import { MotorbikeRacerType } from './MotorbikeRacerType.js';
 import { PlaneRacerType } from './PlaneRacerType.js';
+import { LugeRacerType } from './LugeRacerType.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
@@ -64,7 +66,7 @@ import {
 } from './racerTypeStorage.js';
 import { getTrailFactory } from './trailStyles.js';
 
-// All 12 racer types are SpriteRacerType instances.
+// All 13 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
   horse: HorseRacerType,
   duck: DuckRacerType,
@@ -78,6 +80,7 @@ export const RACER_TYPES = {
   buggy: BuggyRacerType,
   motorbike: MotorbikeRacerType,
   plane: PlaneRacerType,
+  luge: LugeRacerType,
 };
 
 export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
@@ -103,6 +106,7 @@ export const RACER_TYPE_LABELS = {
   buggy: 'Buggy 🚙',
   motorbike: 'Motorbike 🏍️',
   plane: 'Plane ✈️',
+  luge: 'Luge 🛷',
 };
 
 // ── Loaded racer types (user-created, stored in localStorage) ─────────────────

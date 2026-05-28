@@ -24,6 +24,7 @@ import {
   BuggyRacerType,
   MotorbikeRacerType,
   PlaneRacerType,
+  LugeRacerType,
   warmUpAllRacerTypes,
   _resetWarmUpForTesting,
 } from './index.js';
@@ -72,6 +73,7 @@ const ALL_TYPES = [
   ['buggy', BuggyRacerType],
   ['motorbike', MotorbikeRacerType],
   ['plane', PlaneRacerType],
+  ['luge', LugeRacerType],
 ];
 
 const MOCK_RACER = { index: 0, name: 'Tester', color: '#ff0000' };
@@ -90,8 +92,8 @@ describe('getRacerType factory', () => {
     expect(rt).toBe(HorseRacerType);
   });
 
-  it('RACER_TYPE_IDS contains all 12 types', () => {
-    expect(RACER_TYPE_IDS).toHaveLength(12);
+  it('RACER_TYPE_IDS contains all 13 types', () => {
+    expect(RACER_TYPE_IDS).toHaveLength(13);
   });
 });
 

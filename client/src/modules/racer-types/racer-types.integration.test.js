@@ -3,7 +3,7 @@
 // Path:        client/src/modules/racer-types/racer-types.integration.test.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Cross-type integration tests for all 12 racer types (D3.5.3).
+// Description: Cross-type integration tests for all 13 racer types (D3.5.3 + luge).
 //              Validates invariants that must hold across the entire registry.
 // ============================================================
 
@@ -28,10 +28,11 @@ const EXPECTED_IDS = [
   'buggy',
   'motorbike',
   'plane',
+  'luge',
 ];
 
 describe('Racer-Types Registry — D3.5.3 Integration', () => {
-  test('registry contains all 12 expected racer types', () => {
+  test('registry contains all 13 expected racer types', () => {
     expect(Object.keys(RACER_TYPES).sort()).toEqual(EXPECTED_IDS.sort());
   });
 

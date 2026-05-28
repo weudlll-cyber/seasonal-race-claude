@@ -162,7 +162,7 @@ describe('getRacerTypeById', () => {
     expect(getRacerTypeById('unknown-xyz')).toBe(HorseRacerType);
   });
 
-  it('returns correct type for all 12 ids', () => {
+  it('returns correct type for all 13 ids', () => {
     for (const id of RACER_TYPE_IDS) {
       const rt = getRacerTypeById(id);
       expect(rt, `${id}: should return a type`).toBeTruthy();
