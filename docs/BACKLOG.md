@@ -214,6 +214,24 @@ Additionally: Space (Custom Track) already present.
 
 ---
 
+## EditorShape Centerline Arc-Length Mismatch Fix
+
+**Status:** Identified 2026-05-28 (Diagnosis 4, Luger Hill). Fix pending — backup tag `backup/pre-centerline-fix`.
+
+**Root cause:** `EditorShape` constructor re-samples `innerPoints` and `outerPoints` each with their own arc-length parameterization (`catmullRomSpline(..., 500)`). At U-turns the inner boundary is shorter than the outer boundary. At the same T fraction, `inner[T]` is further around the bend than `outer[T]`. `getPosition(T, 0)` midpoint therefore zigzags off the actual centerline — measured at 73.7 px lateral oscillation at Luger Hill's tightest U-turn (Lesson 97).
+
+**Effect:** Racers with `physicalY = 0.000000` visually wander outside the track boundary lights at bends. The physics are correct (confirmed by DIAG3 HUD); only the visual position mapping is wrong.
+
+**Fix options:**
+- **(a) Use stored centerPoints** — Re-sample the 25-point `centerPoints` (present in track JSON) as the T→position source; derive lateral offsets perpendicular to the local tangent. Simplest to implement.
+- **(b) Center-arc-length parameterization at save time** — In the track editor, after generating inner/outer boundary points, re-sample both curves using the center curve's arc-length table so that inner[T] and outer[T] are laterally co-aligned at every T.
+
+**Scope:** `client/src/modules/track-editor/EditorShape.js` (constructor + `getPosition`), potentially `catmullRom.js` (shared re-sampling function). Track JSON files unaffected (centerPoints already saved). Closed tracks may also be affected (not yet measured). Priority: Medium — only manifests on U-turn tracks like Luger Hill.
+
+**Reference:** Lesson 97, Diagnosis session 2026-05-28, Luger Hill `90d3020197da.json`.
+
+---
+
 ## Phase 3B — Open Follow-up Items
 
 | Item | Priority | Description |

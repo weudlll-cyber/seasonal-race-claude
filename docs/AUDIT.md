@@ -192,8 +192,10 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-28 | **2293 unit** | feat(racer-editor): Racer Editor Phase 1+2 (feature/racer-editor → master, squash). +159 tests vs. 2134. |
 | 2026-05-28 | **2315 unit** | feat(luge): luge as 13th built-in racer type (feature/luge-type → master, squash `151aea4`). +22 tests (`luge.test.js`). |
+| 2026-05-28 | **2315 unit** | fix(camera): StrictMode cancelled guard for rAF loop; rewrite CAMERA_DIRECTOR.md (`c0380a5`). React StrictMode double-mount can start two concurrent rAF loops — `cancelled` flag set in the `useEffect` cleanup prevents the stale callback from calling `requestAnimationFrame` after the effect remounts. CAMERA_DIRECTOR.md fully rewritten to match current Phase 3A–3D implementation (prior doc described the pre-Phase-4 5-state system). No new tests. |
+| 2026-05-28 | **2315 unit** | feat(tracks): add Luger Hill open track + .gitignore screenshot patterns (`5f4c37a`). 13-segment open luge track: 25 control points, 200 inner/outer boundary points, pathLengthPx≈10347 px, world 4096×2728, defaultRacerTypeId=lugger. .gitignore extended with root-level session screenshot patterns (`/check-*.png`, `/luge-*.png`, etc.) to prevent debug PNGs from being committed. Diagnoses 3+4 (Luger Hill): physicalY confirmed 0.000000 throughout race via live HUD (no physics drift). Root cause of visual centerline wander: EditorShape double re-sampling arc-length mismatch — getPosition(T, 0) zigzags up to 73.7 px at U-turns (see Lesson 97). No new tests. |
 
-**Master-HEAD:** `151aea4` (feat(luge): add luge as 13th built-in racer type, 2026-05-28)
+**Master-HEAD:** `5f4c37a` (feat(tracks): add Luger Hill open track, 2026-05-28)
 **Tests:** 2315/2315 ✅
 **ESLint warnings:** ~52 (unchanged)
 **Playwright e2e:** 183 tests — 183/183 passing (unchanged)

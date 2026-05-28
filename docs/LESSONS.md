@@ -1856,3 +1856,19 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Consequence:** Hardcode `tintMode: 'multiply'` for any sprite that is dark-on-transparent (outlines, silhouettes, shadows). Only use `tintMode: 'auto'` when the sprite has a large bright body region. If the tinted sprite looks washed-out or inverted, switch from `'auto'` to `'multiply'` first before investigating anything else.
 
 **Reference:** `LugeRacerType.js` `tintMode: 'multiply'`; `spriteTinter.js` `detectTintMode`; Lesson 93 (auto resolution at first use). Feature branch `feature/luge-type`, fix commit `3208ef4`.
+
+---
+
+## Lesson 97 — EditorShape Double Re-Sampling: getPosition(T, 0) Zigzags at U-Turns
+
+**Context:** Diagnosis 4 (2026-05-28) investigated why a single racer visually drifted outside the track boundary lights on Luger Hill even though `physicalY = 0.000000` throughout the race (confirmed live by DIAG3 HUD). Root cause: `EditorShape` independently re-samples the 200-point `innerPoints` array and the 200-point `outerPoints` array each to 500 arc-length-uniform samples in the constructor. At a U-turn, the inner boundary is shorter than the outer boundary. At the same T fraction, `inner[T]` is further around the bend than `outer[T]`. `getPosition(T, 0)` computes the midpoint of these two misaligned positions — producing a lateral zigzag of up to 73.7 px at Luger Hill's tightest U-turn, far off the actual drawn centerline.
+
+**Insight:** Two curves of different arc lengths, each parameterized by their own arc-length, will be at physically different positions at the same T fraction. This destroys the invariant that `physicalY = 0` should place a racer on the track centerline. The zigzag magnitude is proportional to the inner-to-outer arc-length ratio difference and grows with U-turn curvature. Minimum circumradius (measured for Luger Hill: ~315 px >> 125 px half-width) rules out self-intersection as a cause — the mismatch is purely a re-sampling artifact.
+
+**Consequence (fix direction):** `getPosition(T, physicalY)` must use a single shared parameterization anchored to the centerline. Two options:
+- **(a) Store and re-sample centerPoints** — use the saved 25-point `centerPoints` array (present in the track JSON) directly as the T→position source for physicalY=0, and derive lateral offsets geometrically.
+- **(b) Center-arc-length parameterization** — at track save time, resample inner and outer by center arc-length so that inner[T] and outer[T] are laterally co-aligned at every T.
+
+**How to detect:** Run a single racer on an open U-turn track. `physicalY` stays at 0.000000 (confirm via diagnostic HUD), but the racer visually wanders off the centerline at bends. Measure inner/outer midpoint lateral displacement at the tightest bend — >5 px oscillation confirms the mismatch.
+
+**Reference:** Diagnosis session 2026-05-28, Luger Hill track `90d3020197da.json` (indices 67–68: inner oscillates to (3207.1, 1043.9), outer to (3444.8, 955.6), midpoint Y jumps 73.7 px). `EditorShape.js` constructor: `catmullRomSpline(innerPoints, 500)` and `catmullRomSpline(outerPoints, 500)` independently. `getPosition(t, offset)`. Backup tag: `backup/pre-centerline-fix`.

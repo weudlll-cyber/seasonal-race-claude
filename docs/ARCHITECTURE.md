@@ -408,6 +408,8 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 
+**Known issue (fix pending — `backup/pre-centerline-fix`):** `EditorShape` independently re-samples `innerPoints` and `outerPoints` each to 500 arc-length-uniform samples in the constructor. At U-turns where inner and outer have different arc lengths, the same T fraction maps to physically different positions on each curve. `getPosition(T, 0)` therefore zigzags off the actual drawn centerline by up to 73.7 px on Luger Hill's tightest U-turn — visible as racers wandering outside the boundary lights even with `physicalY = 0.000000`. Fix direction: parameterize inner and outer by center arc-length (option b), or use the stored centerPoints curve directly (option a). See Lesson 97.
+
 All parameters are tunable in the Dev Screen → **Race Tuning** section (PR-A3: formerly the standalone "Race Behavior" section, now consolidated with Base Speed, Row Start, and Re-Roll into one 9-block section). Old `currentLaneY`, `targetLaneY`, and `trackOffset` lane machinery removed in D7b.
 
 ## Frame-Timing Architecture (PR #118 + PR #119)
@@ -469,6 +471,8 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 **Implementation:** `client/src/screens/RaceScreen/index.jsx` (physics accumulator, renderRacers map, drawRacers).
 **Config:** `client/src/modules/frameTimingConfig.js` + `DEFAULT_FRAME_TIMING_CONFIG` in `storage/defaults.js`.
 **Tests:** `frameTimingStabilization.test.js` (20 Variant-A/C tests + 5 Pattern-A tests = 25 total).
+
+**React StrictMode rAF guard (2026-05-28):** React StrictMode double-mounts effects in development (mount → cleanup → mount). Without a cleanup guard, two concurrent rAF loops can run until the ref is overwritten on the second mount. Fix: `cancelled` flag set to `true` in the `useEffect` cleanup; the rAF callback checks `cancelled` before calling `requestAnimationFrame` again. See also Lesson 58.
 
 ## Camera System
 
