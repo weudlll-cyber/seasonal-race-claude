@@ -190,8 +190,11 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 | 2026-05-27 | **2137 unit** | fix(HUD): CameraDiagnosticsHUD effZoom incorrect for open tracks (`7820d4a`). Root cause: `effZoom / effZoomY / targEffZoom / targEffZoomY` all computed `zoom * bsX` regardless of track type. Open tracks need `zoom * OPEN_TRACK_BASE_ZOOM`. On Space Sprint (worldW=4000, bsX=0.32) the HUD was showing effZoom ≈ 0.096 instead of ≈ 0.45 — a 79% under-report. No new tests (HUD is render-only). |
 
-**Master-HEAD:** `7820d4a` (fix(HUD): CameraDiagnosticsHUD effZoom incorrect for open tracks, 2026-05-27)
-**Tests:** 2137/2137 ✅
+| 2026-05-28 | **2293 unit** | feat(racer-editor): Racer Editor Phase 1+2 (feature/racer-editor → master, squash). +159 tests vs. 2134. |
+| 2026-05-28 | **2315 unit** | feat(luge): luge as 13th built-in racer type (feature/luge-type → master, squash `151aea4`). +22 tests (`luge.test.js`). |
+
+**Master-HEAD:** `151aea4` (feat(luge): add luge as 13th built-in racer type, 2026-05-28)
+**Tests:** 2315/2315 ✅
 **ESLint warnings:** ~52 (unchanged)
 **Playwright e2e:** 183 tests — 183/183 passing (unchanged)
 
@@ -803,6 +806,50 @@ Net new tests vs. master: +159 (2134 → 2293). Breakdown:
 ### Action Items
 
 None. Pre-existing accepted findings unchanged.
+
+---
+
+## 2026-05-28 — Luge Racer Type Merge
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** client (racer-types/)
+**Branch:** feature/luge-type → master (squash `151aea4`)
+**Base commit on branch:** `e0f0e9e`
+
+### Summary
+
+Added luge as the 13th built-in default racer type. Spritesheet: 1536×232 px (cropped from 1536×1024 — dead rows removed via PIL flood-fill from all 4 corners), 12 frames, `tintMode: 'multiply'` (hardcoded — `detectTintMode` returns `'screen'` for dark outline sprites, `'multiply'` is correct). `speedMultiplier: 1.1`, blue-tinted ice/snow trail, `surfaceClasses: ['ice', 'snow']`. 3 commits squashed.
+
+### npm audit
+
+No new dependencies.
+
+### ESLint
+
+0 errors. Pre-commit hook ran ESLint fix + Prettier on all staged files.
+
+### Prettier
+
+All files formatted by pre-commit hook at commit time.
+
+### Tests
+
+| Suite | Tests | Pass | Fail |
+|-------|-------|------|------|
+| All client unit tests | 2315 | 2315 | 0 |
+
+Net new tests vs. prior master: +22 (2293 → 2315). New file `luge.test.js` (22 tests): registry presence, label, sprite config, coat count, tintMode, draw safety, surfaceClasses.
+
+### OWASP items reviewed
+
+| Item | Finding |
+|---|---|
+| A3 — XSS | No new data paths. Luge sprite is a bundled static asset, not user-uploaded. |
+| A6 — Security Misconfiguration | No new environment variables or endpoints. |
+
+### Action Items
+
+None.
 
 ---
 

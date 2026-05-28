@@ -1832,3 +1832,27 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Consequence:** For any bounding-box computation that follows an alpha-masking pass, add a secondary edge-strip check. The strip width (1 px) and alpha floor (e.g. 16/255) should be constants so they can be tuned without hunting through the algorithm.
 
 **Reference:** `backgroundRemoval.js` `computeSpriteBoundingBox`; 4 regression tests. Racer Editor Phase 2, commit `c9faaa4`.
+
+---
+
+## Lesson 95 — Spritesheet Dead Space: Crop to Content Before Specifying `frameHeight`
+
+**Context:** The luge PNG was exported as 1536×1024 (12 frames × 128 px wide, full 1024 px tall). The actual luge content occupied only rows 369–601 (~232 px). `frameHeight` was initially set to 1024, causing `SpriteRacerType._drawBody` to render each frame at natural height 1024 px — sprites were drawn vastly oversized and invisible (scaled off-canvas even at `displaySize: 40`).
+
+**Insight:** `frameHeight` drives the canvas `drawImage` source rectangle. If the PNG has dead transparent rows (blank space above/below the content), `frameHeight = full sheet height / frameCount` includes those rows in every frame — the displayed sprite is almost entirely blank, and any `displaySize` setting compensates for the wrong base height.
+
+**Fix:** Crop the spritesheet to the actual content bounding box (PIL `img.crop((0, 369, 1536, 601))`). Set `frameHeight` to the cropped height (232 px). The crop is permanent — the source file is the single source of truth for dimensions.
+
+**Consequence:** Before specifying `frameHeight` for any new spritesheet, visually verify that every frame row is occupied by actual content. If there are blank rows: crop first, then measure. `frameHeight` must reflect cropped content height, not the full PNG height divided by `frameCount`.
+
+---
+
+## Lesson 96 — `tintMode: 'multiply'` for Dark Outline Sprites (Hardcode, Don't Auto-detect)
+
+**Context:** The luge sprite has a dark figure (sled + rider as dark outline/shadow shapes) on a transparent background. `detectTintMode` computes the Rec.709 luminance average of all non-transparent pixels: dark pixels (near 0,0,0) pull the average below 80, so `detectTintMode` returns `'screen'`. `screen` mode: `result = 1 - (1-src)×(1-dst)` — dark source pixels become near-white. Tinting a dark sprite with `'screen'` washes it out instead of colorizing it.
+
+**Insight:** `detectTintMode` was designed for sprites whose dominant non-transparent region is the colored body (e.g. horse coat). For sprites whose dominant non-transparent region is the dark outline or shadow, the luminance heuristic inverts: the outline is dark not because it should be composited with `screen`, but because it is intentionally dark detail that must survive tinting. `'multiply'` keeps dark pixels dark and tints the mid-tone/light pixels correctly.
+
+**Consequence:** Hardcode `tintMode: 'multiply'` for any sprite that is dark-on-transparent (outlines, silhouettes, shadows). Only use `tintMode: 'auto'` when the sprite has a large bright body region. If the tinted sprite looks washed-out or inverted, switch from `'auto'` to `'multiply'` first before investigating anything else.
+
+**Reference:** `LugeRacerType.js` `tintMode: 'multiply'`; `spriteTinter.js` `detectTintMode`; Lesson 93 (auto resolution at first use). Feature branch `feature/luge-type`, fix commit `3208ef4`.
