@@ -16,6 +16,7 @@ diagnosis/
 server/data/**/*.json.tmp
 server/data/tracks-backups/
 client/tmp/
+docs/diagnose/*.ndjson
 /race-*.png
 /poc-*.png
 /check-*.png
