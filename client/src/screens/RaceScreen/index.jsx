@@ -327,6 +327,7 @@ export default function RaceScreen() {
   // ── Main animation loop ──────────────────────────────────────────────────
   useEffect(() => {
     if (!raceData || !canvasRef.current) return;
+    let cancelled = false;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -679,6 +680,7 @@ export default function RaceScreen() {
 
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
+      if (cancelled) return;
       const st = g.current;
       const shape = shapeRef.current;
       const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
@@ -1315,6 +1317,7 @@ export default function RaceScreen() {
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
+      cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       effectsRef.current = [];
     };
