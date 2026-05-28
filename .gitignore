@@ -18,3 +18,13 @@ server/data/tracks-backups/
 client/tmp/
 /race-*.png
 /poc-*.png
+/check-*.png
+/luge-*.png
+/diag3-*.png
+/snap-*.png
+/cam-diag-*.png
+/fl-snap-*.png
+/fo-*.png
+/overview-check-*.png
+/finish-*.png
+/browser-check-*.png
