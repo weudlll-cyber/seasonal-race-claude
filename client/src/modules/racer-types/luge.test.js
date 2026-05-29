@@ -97,13 +97,13 @@ describe('LugeRacerType — manifest', () => {
     expect(LugeRacerType.config.spriteUrl).toBe('/assets/racers/luge-slide.png');
   });
 
-  it('has frameCount 12', () => {
-    expect(LugeRacerType.config.frameCount).toBe(12);
+  it('has frameCount 16', () => {
+    expect(LugeRacerType.config.frameCount).toBe(16);
   });
 
-  it('has frameWidth 128 and frameHeight 232', () => {
-    expect(LugeRacerType.config.frameWidth).toBe(128);
-    expect(LugeRacerType.config.frameHeight).toBe(232);
+  it('has frameWidth 125 and frameHeight 238', () => {
+    expect(LugeRacerType.config.frameWidth).toBe(125);
+    expect(LugeRacerType.config.frameHeight).toBe(238);
   });
 
   it('has tintMode "multiply"', () => {
@@ -123,14 +123,15 @@ describe('LugeRacerType — manifest', () => {
     expect(LugeRacerType.getSpeedMultiplier()).toBe(1.1);
   });
 
-  it('_getFrameIndex cycles through all 12 frames', () => {
+  it('_getFrameIndex cycles through all 16 frames', () => {
     const period = LugeRacerType.config.basePeriodMs;
-    const binWidth = period / 12;
+    const fc = LugeRacerType.config.frameCount;
+    const binWidth = period / fc;
     const seen = new Set();
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < fc; i++) {
       seen.add(LugeRacerType._getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));
     }
-    expect(seen.size).toBe(12);
+    expect(seen.size).toBe(fc);
   });
 
   it('_drawBody falls back to arc circle when sprite not loaded', () => {

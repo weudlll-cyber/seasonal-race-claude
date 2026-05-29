@@ -96,9 +96,10 @@ describe('Racer-Types Registry — D3.5.3 Integration', () => {
     }
   });
 
-  test('dragon has frameCount === 16 (unique among all types)', () => {
+  test('dragon and luge have frameCount === 16; all other types do not', () => {
     expect(RACER_TYPES.dragon.config.frameCount).toBe(16);
-    const others = Object.entries(RACER_TYPES).filter(([id]) => id !== 'dragon');
+    expect(RACER_TYPES.luge.config.frameCount).toBe(16);
+    const others = Object.entries(RACER_TYPES).filter(([id]) => id !== 'dragon' && id !== 'luge');
     for (const [id, type] of others) {
       expect(type.config.frameCount, `${id}: frameCount should not be 16`).not.toBe(16);
     }
