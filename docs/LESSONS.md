@@ -1916,3 +1916,45 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Consequence:** When `track.centerPoints` is present, `_precomputeAngles` must use `this._center` as the tangent source. Any refactor that changes `_center` parameterization (e.g. switching from arc-length to T-uniform) must update `_precomputeAngles` to match or disable the center-tangent path.
 
 **Reference:** `EditorShape.js` `_precomputeAngles`; `EditorShape.test.js` DIAGONAL_CENTER fixture. Fix session 2026-05-29. See Lesson 97 (arc-length phase mismatch root cause), Lesson 98 (same session).
+
+---
+
+## Lesson 101 — Vite HMR Does Not Invalidate In-Memory JS Module Caches for `public/` Asset Changes
+
+**Context:** After vertically flipping `luge-slide.png` (committed to `client/public/assets/racers/`), the rotation artifact persisted in the live game. A canvas eval test using a `?timestamp` cache-busted URL showed the new sprite correctly — yet the in-game racer still rendered from the old asset.
+
+**Root cause:** `spriteTinter.js` maintains a module-level `_variantCache` Map keyed by `${spriteUrl}::${tintMode}`. `spriteLoader.js` maintains a module-level `_cache` Map keyed by URL. Both are populated once per browser session at first `getCoatVariants()` / `loadSprite()` call and never re-checked. Vite HMR correctly hot-replaces JS modules when source files change — but `public/` binary assets (PNG, etc.) are served as static files. Changing a PNG in `public/` does not trigger any HMR event; the old `Image` object and the old offscreen canvases built from it stay alive indefinitely.
+
+**Fix / detection:** A hard browser reload (Ctrl+Shift+R) clears both JS module-level caches and forces a fresh network fetch of all assets. The canvas eval test bypassed the caches by loading the image with a `?timestamp` query string — confirming the new asset was correct while the game still served stale. If a PNG replacement appears to have no effect in-game, hard-reload before investigating the code.
+
+**Consequence:** Never test sprite asset changes in the same browser session without a hard reload. `loadSprite` and `getCoatVariants` have no auto-invalidation for static asset swaps; this is by design (performance), but means debugging requires fresh sessions.
+
+**Reference:** `spriteTinter.js` (`_variantCache`, `getCoatVariants.cached()`); `spriteLoader.js` (`_cache`, `loadSprite`). Session 2026-05-29. See also Lesson 95 (sprite dead-space), Lesson 96 (multiply tinting).
+
+---
+
+## Lesson 102 — Sprite Frame X-Center Must Be Consistent Across All Frames to Avoid Perpendicular Oscillation
+
+**Context:** After fixing the vertical flip and hard-reloading, a new artifact appeared: the luge body oscillated left-right as it traveled, most visibly at the loop seam (frame 11 → frame 0). Measured by Python/numpy: frame 0 had X_ctr=94.5, frame 11 had X_ctr=33.0 — a 61 px jump in the 128 px frame width.
+
+**Why oscillation happens:** `SpriteRacerType._drawBody` draws each frame centered at `(-dw/2, -dh/2)` after `ctx.rotate(baseRotationOffset)`. With `baseRotationOffset = Math.PI/2`, the sprite's X axis maps to the screen's perpendicular-to-travel direction. A frame-to-frame X shift of Δx pixels appears as a lateral screen oscillation of `Δx × (displaySize / frameHeight)` pixels. For Δx=61, frameHeight=232, displaySize=40: `61 × (40/232) ≈ 10.5 px` of screen oscillation — easily visible.
+
+**Fix principle:** All frames in a sprite sheet must have the figure's optical center (centroid of non-transparent pixels) at the same X coordinate within the frame. For a 128 px frame width the target is X=64. Measure with `numpy.where(alpha > 0)` on each cropped frame and shift frames that deviate by >2 px.
+
+**Consequence:** When exporting sprite sheets (Blender, Krita, etc.), verify that frame content is spatially stable under animation — especially at extremes of squash/stretch cycles where the figure may lean toward a frame edge. If the sprite sheet tool does not guarantee X-stable export, post-process with PIL to re-center each frame.
+
+**Reference:** `LugeRacerType.js` (`frameWidth`, `frameHeight`, `displaySize`); `SpriteRacerType.js` `_drawBody` drawImage call. Fix session 2026-05-29. Commits 57f7c55, 478ba0e. See Lesson 103 (loop seam continuity).
+
+---
+
+## Lesson 103 — Loop Seam (Frame N−1 → Frame 0) Must Be Seamless; Large X Jump at Seam Is Highly Visible
+
+**Context:** Frames are played cyclically. The transition from the last frame back to frame 0 is a real animation frame, not a cut. If frame N−1 and frame 0 have different X-centers (or any other visual discontinuity), that jump fires at the animation period frequency — for a `basePeriodMs: 600` cycle, once every 600 ms — and is highly noticeable to viewers.
+
+**Why it's the worst location:** The human visual system is especially sensitive to sudden spatial shifts. A 61 px X-center jump at the loop seam on Luger Hill (frame 11 → frame 0 in the original 12-frame sheet) produced a lateral jump of ~10.5 px on screen — perceived as a "pop" rather than smooth animation. Interior frames with smaller deviations are less noticeable even at the same magnitude because the surrounding frames provide visual continuity.
+
+**Fix principle:** Treat frame 0 and frame N−1 as the "endpoints" of a seamless loop. They must not only both be well-centered, but their visual content should form a perceptually continuous transition (e.g. both at mid-stroke of the animation cycle, approaching from opposite sides). For a sine-curve squash/stretch animation, the natural loop point is at the neutral (upright) pose where squash and stretch are both zero.
+
+**Consequence:** When designing a cyclic sprite animation, prototype the loop seam first. Export frame 0 and frame N−1 side-by-side, overlay them, and verify both X and Y visual centers align. Any exported sheet where the final frame and first frame differs by >2 px in optical center must be rejected.
+
+**Reference:** `LugeRacerType.js` (`basePeriodMs: 600`, `frameCount: 16`); `SpriteRacerType.js` `_getFrameIndex`. Session 2026-05-29. See Lesson 102 (X-center consistency).

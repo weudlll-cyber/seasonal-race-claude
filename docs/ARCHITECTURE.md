@@ -72,7 +72,7 @@ seasonal-race-claude/
 │       │   │   ├── spritesheetBuilder.js   # Renders animation frames onto an offscreen canvas and exports a data URL
 │       │   │   ├── backgroundRemoval.js    # Flood-fill + tolerance background removal; computeSpriteBoundingBox with edge-strip filter
 │       │   │   ├── canvasUtils.js          # Shared canvas helpers (checkerboard pattern, image-to-canvas)
-│       │   │   ├── LugeRacerType.js        # 13th built-in type — 1536×232 spritesheet, 12 frames, multiply tinting, ice/snow surface classes (2026-05-28)
+│       │   │   ├── LugeRacerType.js        # 13th built-in type — 2000×238 spritesheet, 16 frames 125×238, multiply tinting, ice/snow surface classes (2026-05-28, updated 2026-05-29)
 │       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 
