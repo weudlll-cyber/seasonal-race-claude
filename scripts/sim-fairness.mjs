@@ -1581,7 +1581,7 @@ const isMain =
 
 if (isMain) {
   const trackDataDir = join(ROOT, 'server/data/tracks');
-  const trackFiles = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit', 'mogcvuipw2y5'];
+  const trackFiles = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit', 'mogcvuipw2y5', '90d3020197da'];
 
   console.log('\n=== sim-fairness — RaceArena Fairness Simulation ===');
   console.log(`Rennen pro Kombination : ${N_RACES}`);

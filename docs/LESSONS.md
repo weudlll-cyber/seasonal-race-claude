@@ -1872,3 +1872,47 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **How to detect:** Run a single racer on an open U-turn track. `physicalY` stays at 0.000000 (confirm via diagnostic HUD), but the racer visually wanders off the centerline at bends. Measure inner/outer midpoint lateral displacement at the tightest bend — >5 px oscillation confirms the mismatch.
 
 **Reference:** Diagnosis session 2026-05-28, Luger Hill track `90d3020197da.json` (indices 67–68: inner oscillates to (3207.1, 1043.9), outer to (3444.8, 955.6), midpoint Y jumps 73.7 px). `EditorShape.js` constructor: `catmullRomSpline(innerPoints, 500)` and `catmullRomSpline(outerPoints, 500)` independently. `getPosition(t, offset)`. Backup tag: `backup/pre-centerline-fix`.
+
+---
+
+## Lesson 98 — `track.width` vs `getActualTrackWidth()` for Center-Perpendicular Displacement
+
+**Context:** `EditorShape.getPosition(t, offset≠0)` in the center branch needs a perpendicular displacement magnitude. The initial implementation called `getActualTrackWidth()` — which returns the median inner-to-outer sample distance. This is wrong for the center-path formula.
+
+**Insight:** `track.width` is the designer-specified track width stored as a JSON field — the authoritative source for how far a perpendicular offset should extend from the centerline. `getActualTrackWidth()` measures the physical distance between inner and outer spline samples, which is correct for row-layout capacity calculations (fitting sprites shoulder-to-shoulder) but is NOT the right number for displacing a racer laterally from the centerline. For a center-mode track, `inner = offsetCurve(center, +w/2)` and `outer = offsetCurve(center, -w/2)`, so the measured inner-to-outer distance equals `track.width` only on straight sections; it varies around curves.
+
+**Consequence:** When using centerPoints, always read `track.width` (stored in JSON) for perpendicular displacement and cache it as `_centerWidth`. Use `getActualTrackWidth()` only for layout/capacity calculations that need the physically measured geometry.
+
+**Reference:** `EditorShape.js` constructor (`_centerWidth` assignment); `EditorShape.test.js` STRAIGHT_CENTER fixture (width=80, measured inner-to-outer=100 — they differ). Fix session 2026-05-29.
+
+---
+
+## Lesson 99 — Perpendicular Sign Convention: `angle − π/2` for Positive Offset → Outer Side
+
+**Context:** In `getPosition(t, offset≠0)` center branch, the perpendicular direction was initially computed as `angle + π/2`. This sent positive-offset racers toward the inner boundary instead of the outer — the opposite of the fallback inner/outer interpolation path.
+
+**Insight:** Canvas y-axis points downward. For rightward travel (`angle = 0`), `angle + π/2 = π/2` = 90° CCW = `+y` direction = toward larger y values = toward the inner boundary (in real game data: `trackEditorSave` builds inner via `offsetCurve(center, +w/2)`, which for rightward dx=1 gives `ny = dx/len = +1`, so inner is at larger y). The fallback path maps positive offset to the outer boundary (smaller y). The signs are inverted.
+
+**Fix:** Use `angle − π/2` (CW in canvas y-down = `−y` for rightward travel = toward smaller y = outer side). Numerical check: `angle=0`, `perpSin = sin(−π/2) = −1`, `offset = +0.5` → `y = center.y + 0.5 × width × (−1)` = toward smaller y = outer ✓.
+
+**Consequence:** Any center-branch perpendicular formula must use `Math.cos(angle − π/2)` / `Math.sin(angle − π/2)`. Do not infer sign from standard math-textbook CCW convention — canvas y-down inverts the orientation. Always cross-check against the fallback path's sign to confirm positive offset → outer.
+
+**Reference:** `EditorShape.js` `getPosition` center branch, perpendicular displacement lines. Fix session 2026-05-29. Lesson 98 (same fix session).
+
+---
+
+## Lesson 100 — `_precomputeAngles` Must Use Arc-Length-Uniform Center Curve Tangents, Not Inner+Outer Average
+
+**Context:** `_precomputeAngles` originally computed `angles[i]` from the central difference of `_inner[i]` and `_outer[i]` at the same sample index. At tight U-turns on Luger Hill, this produced up to 25.6° tangent error for center-position racers.
+
+**Root cause:** `_inner` and `_outer` are each arc-length-parameterized by their own total arc length. At a U-turn, inner and outer have substantially different arc lengths (Luger Hill: inner ≈ 600 px through the bend, outer ≈ 1400 px — factor of 2.3). At the same arc-length fraction index `i`, the inner has already rounded the apex while the outer has not yet reached it. The central-difference tangent of their positions therefore points between the two legs of the bend rather than along the track direction.
+
+**Fix:** When `this._center` is available (tracks saved with `centerPoints`), use central differences of `_center[i]` instead. The center curve is arc-length-uniform, passes through the actual bend apex, and gives correct tangents everywhere. When `_center` is absent, the inner+outer average is unchanged (zero regression).
+
+**Critical prerequisite:** `_center` must be arc-length-uniform — built with the same `opts` as `_inner` and `_outer`. A T-uniform center curve (like commit b4ebdb4) produces incorrect tangents near the track endpoints and breaks this fix. Verify that `catmullRomSpline` is called with identical `opts` for all three curves.
+
+**Test strategy:** A "diagonal center" fixture — center goes diagonally at −0.46 rad while inner/outer go horizontally at 0 — directly verifies which formula `_precomputeAngles` uses: `_angles[mid] ≈ −0.46` (center tangent, new code) vs `_angles[mid] ≈ 0` (inner+outer average, old code).
+
+**Consequence:** When `track.centerPoints` is present, `_precomputeAngles` must use `this._center` as the tangent source. Any refactor that changes `_center` parameterization (e.g. switching from arc-length to T-uniform) must update `_precomputeAngles` to match or disable the center-tangent path.
+
+**Reference:** `EditorShape.js` `_precomputeAngles`; `EditorShape.test.js` DIAGONAL_CENTER fixture. Fix session 2026-05-29. See Lesson 97 (arc-length phase mismatch root cause), Lesson 98 (same session).

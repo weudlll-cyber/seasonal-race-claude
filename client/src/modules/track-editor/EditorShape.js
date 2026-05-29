@@ -20,12 +20,24 @@ export class EditorShape {
     this._samples = samples;
     this._innerPts = track.innerPoints;
     this._outerPts = track.outerPoints;
+    if (Array.isArray(track.centerPoints) && track.centerPoints.length >= (track.closed ? 3 : 2)) {
+      this._center = catmullRomSpline(track.centerPoints, opts);
+      if (typeof track.width === 'number' && isFinite(track.width) && track.width > 0) {
+        this._centerWidth = track.width;
+      } else {
+        console.warn(
+          '[EditorShape] track.width missing or invalid — falling back to getActualTrackWidth()'
+        );
+        this._centerWidth = this.getActualTrackWidth();
+      }
+    }
     this._angles = this._precomputeAngles();
   }
 
   _precomputeAngles() {
     const n = this._samples;
     const angles = new Array(n);
+    const pts = this._center || null;
     for (let i = 0; i < n; i++) {
       let iPrev, iNext;
       if (this.isOpen) {
@@ -35,10 +47,20 @@ export class EditorShape {
         iPrev = (i - 1 + n) % n;
         iNext = (i + 1) % n;
       }
-      const dx =
-        this._inner[iNext].x - this._inner[iPrev].x + (this._outer[iNext].x - this._outer[iPrev].x);
-      const dy =
-        this._inner[iNext].y - this._inner[iPrev].y + (this._outer[iNext].y - this._outer[iPrev].y);
+      let dx, dy;
+      if (pts) {
+        dx = pts[iNext].x - pts[iPrev].x;
+        dy = pts[iNext].y - pts[iPrev].y;
+      } else {
+        dx =
+          this._inner[iNext].x -
+          this._inner[iPrev].x +
+          (this._outer[iNext].x - this._outer[iPrev].x);
+        dy =
+          this._inner[iNext].y -
+          this._inner[iPrev].y +
+          (this._outer[iNext].y - this._outer[iPrev].y);
+      }
       angles[i] = Math.atan2(dy, dx);
     }
     return angles;
@@ -62,6 +84,48 @@ export class EditorShape {
    * @returns {{ x: number, y: number, angle: number }}
    */
   getPosition(t, offset) {
+    if (this._center) {
+      const n = this._samples;
+      let idx0, idx1, frac_t;
+
+      if (this.isOpen) {
+        const tc = Math.max(0, Math.min(1, t));
+        const idxFloat = tc * (n - 1);
+        idx0 = Math.floor(idxFloat);
+        idx1 = Math.min(idx0 + 1, n - 1);
+        frac_t = idxFloat - idx0;
+      } else {
+        const tc = ((t % 1) + 1) % 1;
+        const idxFloat = tc * n;
+        const floorIdx = Math.floor(idxFloat);
+        idx0 = floorIdx % n;
+        idx1 = (idx0 + 1) % n;
+        frac_t = idxFloat - floorIdx;
+      }
+
+      const cx = this._center[idx0].x + (this._center[idx1].x - this._center[idx0].x) * frac_t;
+      const cy = this._center[idx0].y + (this._center[idx1].y - this._center[idx0].y) * frac_t;
+
+      const a0 = this._angles[idx0];
+      const a1 = this._angles[idx1];
+      let aDiff = a1 - a0;
+      if (aDiff > Math.PI) aDiff -= 2 * Math.PI;
+      if (aDiff < -Math.PI) aDiff += 2 * Math.PI;
+      const angle = a0 + aDiff * frac_t;
+
+      if (offset === 0) {
+        return { x: cx, y: cy, angle };
+      }
+
+      const perpCos = Math.cos(angle - Math.PI / 2);
+      const perpSin = Math.sin(angle - Math.PI / 2);
+      return {
+        x: cx + offset * this._centerWidth * perpCos,
+        y: cy + offset * this._centerWidth * perpSin,
+        angle,
+      };
+    }
+
     const n = this._samples;
     let idx0, idx1, frac_t;
 

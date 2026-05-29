@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EditorShape } from './EditorShape.js';
 
 // Straight open track: inner and outer run parallel horizontally
@@ -313,5 +313,261 @@ describe('EditorShape — _tangentAngle (arc-length regression)', () => {
     const shape = new EditorShape(ASYMMETRIC_L_OPEN, { samples: 500 });
     const { angle } = shape.getPosition(0.7, 0);
     expect(Math.abs(angle)).toBeLessThan(0.4); // near 0 = rightward
+  });
+});
+
+// ── centerPoints — center-perpendicular getPosition ───────────────────────────
+//
+// Straight horizontal open track: center at y=100, inner at y=50, outer at y=150.
+// track.width = 80 (canonical) — deliberately differs from inner/outer distance (100)
+// so getActualTrackWidth() = 100 ≠ _centerWidth = 80.  This makes tests unambiguously
+// verify that the formula uses track.width, not getActualTrackWidth().
+// Traveling rightward → angle ≈ 0, perpCos=0, perpSin=-1 (angle - π/2).
+// offset=+0.5 → y = 100 + 0.5*80*(-1) = 60; offset=-0.5 → y = 140.
+// NOTE: this fixture's inner/outer are at smaller/larger y respectively, which is
+// inverted from real game data (trackEditorSave: inner = offsetCurve(center, +w/2)
+// = larger y for rightward travel). Distance-based tests are unaffected.
+const STRAIGHT_CENTER = {
+  closed: false,
+  width: 80,
+  centerPoints: [
+    { x: 0, y: 100 },
+    { x: 500, y: 100 },
+  ],
+  innerPoints: [
+    { x: 0, y: 50 },
+    { x: 500, y: 50 },
+  ],
+  outerPoints: [
+    { x: 0, y: 150 },
+    { x: 500, y: 150 },
+  ],
+};
+
+describe('EditorShape — centerPoints: _centerWidth stored from track.width', () => {
+  it('_centerWidth equals track.width, not getActualTrackWidth()', () => {
+    const shape = new EditorShape(STRAIGHT_CENTER, { samples: 100 });
+    expect(shape._centerWidth).toBe(80); // from track.width
+    expect(shape.getActualTrackWidth()).toBe(100); // inner/outer are 100px apart
+    expect(shape._centerWidth).not.toBe(shape.getActualTrackWidth());
+  });
+});
+
+describe('EditorShape — centerPoints: center-perpendicular getPosition', () => {
+  const shape = new EditorShape(STRAIGHT_CENTER, { samples: 500 });
+
+  it('getPosition(0.5, 0) returns the interpolated center-curve point', () => {
+    const pos = shape.getPosition(0.5, 0);
+    // Interpolation: (center[249].x + center[250].x)/2 = exactly 250.0 on a uniform arc
+    expect(pos.x).toBeCloseTo(250, 0);
+    expect(pos.y).toBeCloseTo(100, 1);
+    expect(isFinite(pos.angle)).toBe(true);
+  });
+
+  it('getPosition(0.5, 0.5) is at track.width/2 (not getActualTrackWidth()/2) from center', () => {
+    const pos = shape.getPosition(0.5, 0.5);
+    const center = shape.getPosition(0.5, 0);
+    const dist = Math.hypot(pos.x - center.x, pos.y - center.y);
+    expect(dist).toBeCloseTo(shape._centerWidth / 2, 1); // 40, not 50
+  });
+
+  it('getPosition(0.5, -0.5) is at track.width/2 from center on the opposite side', () => {
+    const pos = shape.getPosition(0.5, -0.5);
+    const center = shape.getPosition(0.5, 0);
+    const dist = Math.hypot(pos.x - center.x, pos.y - center.y);
+    expect(dist).toBeCloseTo(shape._centerWidth / 2, 1); // 40, not 50
+  });
+
+  it('offsets +0.5 and -0.5 are symmetric about the center', () => {
+    const center = shape.getPosition(0.5, 0);
+    const pos = shape.getPosition(0.5, 0.5);
+    const neg = shape.getPosition(0.5, -0.5);
+    expect((pos.x + neg.x) / 2).toBeCloseTo(center.x, 1);
+    expect((pos.y + neg.y) / 2).toBeCloseTo(center.y, 1);
+  });
+
+  it('all offsets return the same interpolated angle', () => {
+    const a0 = shape.getPosition(0.5, 0).angle;
+    expect(shape.getPosition(0.5, 0.5).angle).toBeCloseTo(a0, 10);
+    expect(shape.getPosition(0.5, -0.5).angle).toBeCloseTo(a0, 10);
+  });
+});
+
+describe('EditorShape — centerPoints: smooth movement (no index snapping)', () => {
+  // Use samples=50 so each sample spans ~10px on a 500px track.
+  // With 500 walk steps, snapping produces ~450 zero-distance steps and ~50 jumps
+  // of ~10px each → median=0, max≈10.  Interpolation produces uniform ~1px steps.
+  // Test threshold: max < max(5 × median, 0.01) catches snapping and passes interpolation.
+  it('stepping t 0→1 in 500 steps at offset=0.4: no step > 5× median (snapping guard)', () => {
+    const shape = new EditorShape(STRAIGHT_CENTER, { samples: 50 });
+    const STEPS = 500;
+    const dists = [];
+    let prev = shape.getPosition(0, 0.4);
+    for (let i = 1; i <= STEPS; i++) {
+      const pos = shape.getPosition(i / STEPS, 0.4);
+      dists.push(Math.hypot(pos.x - prev.x, pos.y - prev.y));
+      prev = pos;
+    }
+    dists.sort((a, b) => a - b);
+    const median = dists[Math.floor(dists.length / 2)];
+    const max = dists[dists.length - 1];
+    expect(max).toBeLessThan(Math.max(5 * median, 0.01));
+  });
+});
+
+describe('EditorShape — centerPoints: fallback when track.width is absent', () => {
+  it('logs a warning and falls back to getActualTrackWidth() when width is missing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const noWidthTrack = {
+      closed: false,
+      centerPoints: [
+        { x: 0, y: 100 },
+        { x: 500, y: 100 },
+      ],
+      innerPoints: [
+        { x: 0, y: 50 },
+        { x: 500, y: 50 },
+      ],
+      outerPoints: [
+        { x: 0, y: 150 },
+        { x: 500, y: 150 },
+      ],
+      // no width field
+    };
+    const shape = new EditorShape(noWidthTrack, { samples: 100 });
+    expect(shape._centerWidth).toBeGreaterThan(0);
+    expect(isFinite(shape._centerWidth)).toBe(true);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[EditorShape]'));
+    warnSpy.mockRestore();
+  });
+
+  it('logs a warning and falls back when width is zero', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const zeroWidthTrack = {
+      closed: false,
+      width: 0,
+      centerPoints: [
+        { x: 0, y: 100 },
+        { x: 500, y: 100 },
+      ],
+      innerPoints: [
+        { x: 0, y: 50 },
+        { x: 500, y: 50 },
+      ],
+      outerPoints: [
+        { x: 0, y: 150 },
+        { x: 500, y: 150 },
+      ],
+    };
+    const shape = new EditorShape(zeroWidthTrack, { samples: 100 });
+    expect(shape._centerWidth).toBeGreaterThan(0);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});
+
+describe('EditorShape — no centerPoints: getPosition unchanged (regression)', () => {
+  it('STRAIGHT_OPEN without centerPoints still uses inner/outer interpolation', () => {
+    const shape = new EditorShape(STRAIGHT_OPEN, { samples: 100 });
+    expect(shape._center).toBeUndefined();
+    const pos = shape.getPosition(0.5, 0);
+    expect(pos.y).toBeCloseTo(30, 1); // midpoint of y=10 and y=50
+  });
+});
+
+// ── _precomputeAngles: center-curve tangent when available ────────────────────
+//
+// DIAGONAL_CENTER: center goes diagonally (angle ≈ −0.46 rad ≈ −26°);
+// inner and outer are horizontal (angle = 0).  The two formulas give measurably
+// different results at the midpoint, so this fixture directly verifies which one
+// _precomputeAngles uses.
+const DIAGONAL_CENTER = {
+  closed: false,
+  width: 100,
+  centerPoints: [
+    { x: 0, y: 200 },
+    { x: 400, y: 0 }, // diagonal: dy/dx = −200/400 → angle ≈ −0.46 rad
+  ],
+  innerPoints: [
+    { x: 0, y: 250 },
+    { x: 400, y: 250 }, // horizontal → angle = 0
+  ],
+  outerPoints: [
+    { x: 0, y: 150 },
+    { x: 400, y: 150 }, // horizontal → angle = 0
+  ],
+};
+
+// U-turn fixture used only for the smoothness test — center traces a C-shape.
+const UTURN_TRACK = {
+  closed: false,
+  width: 200,
+  centerPoints: [
+    { x: 0, y: 0 },
+    { x: 300, y: 0 },
+    { x: 300, y: 300 },
+    { x: 0, y: 300 },
+  ],
+  innerPoints: [
+    { x: 0, y: 100 },
+    { x: 200, y: 100 },
+    { x: 200, y: 200 },
+    { x: 0, y: 200 },
+  ],
+  outerPoints: [
+    { x: 0, y: -100 },
+    { x: 400, y: -100 },
+    { x: 400, y: 400 },
+    { x: 0, y: 400 },
+  ],
+};
+
+describe('EditorShape — _precomputeAngles: center-curve tangent when available', () => {
+  it('_angles use center tangent (not inner/outer average) when centerPoints present', () => {
+    // DIAGONAL_CENTER: center at ≈ −0.46 rad, inner+outer at 0.
+    // With fix: _angles[mid] ≈ −0.46. Without fix: _angles[mid] ≈ 0.
+    const shape = new EditorShape(DIAGONAL_CENTER, { samples: 200 });
+    const n = 200;
+    const mid = Math.floor(n / 2);
+    const iPrev = Math.max(0, mid - 1);
+    const iNext = Math.min(n - 1, mid + 1);
+
+    const centerAngle = Math.atan2(
+      shape._center[iNext].y - shape._center[iPrev].y,
+      shape._center[iNext].x - shape._center[iPrev].x
+    );
+    expect(shape._angles[mid]).toBeCloseTo(centerAngle, 4);
+
+    const innerOuterAngle = Math.atan2(
+      shape._inner[iNext].y - shape._inner[iPrev].y + shape._outer[iNext].y - shape._outer[iPrev].y,
+      shape._inner[iNext].x - shape._inner[iPrev].x + shape._outer[iNext].x - shape._outer[iPrev].x
+    );
+    let diff = Math.abs(centerAngle - innerOuterAngle);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    expect(diff).toBeGreaterThan(0.2); // confirms center ≠ inner+outer average here
+  });
+
+  it('no centerPoints: _angles uses inner/outer average formula (regression guard)', () => {
+    const shape = new EditorShape(L_OPEN, { samples: 100 });
+    expect(shape._center).toBeUndefined();
+    const n = 100;
+    const i = 50;
+    const iPrev = Math.max(0, i - 1);
+    const iNext = Math.min(n - 1, i + 1);
+    const expected = Math.atan2(
+      shape._inner[iNext].y - shape._inner[iPrev].y + shape._outer[iNext].y - shape._outer[iPrev].y,
+      shape._inner[iNext].x - shape._inner[iPrev].x + shape._outer[iNext].x - shape._outer[iPrev].x
+    );
+    expect(shape._angles[i]).toBeCloseTo(expected, 10);
+  });
+
+  it('angle smoothness: no jump > 30° between adjacent samples on a U-turn with centerPoints', () => {
+    const shape = new EditorShape(UTURN_TRACK, { samples: 200 });
+    const LIMIT = Math.PI / 6;
+    for (let i = 1; i < shape._angles.length; i++) {
+      let diff = Math.abs(shape._angles[i] - shape._angles[i - 1]);
+      if (diff > Math.PI) diff = 2 * Math.PI - diff;
+      expect(diff).toBeLessThan(LIMIT);
+    }
   });
 });
