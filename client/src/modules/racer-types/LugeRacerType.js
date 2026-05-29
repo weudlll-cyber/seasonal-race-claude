@@ -26,7 +26,7 @@ export const LugeRacerType = new SpriteRacerType({
   frameHeight: 232,
   frameCount: 12,
   basePeriodMs: 600,
-  baseRotationOffset: 0,
+  baseRotationOffset: Math.PI / 2,
   displaySize: 40,
   tintMode: 'multiply',
 
