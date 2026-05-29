@@ -22,9 +22,9 @@ export const LugeRacerType = new SpriteRacerType({
   emoji: '🛷',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 128,
-  frameHeight: 232,
-  frameCount: 12,
+  frameWidth: 125,
+  frameHeight: 238,
+  frameCount: 16,
   basePeriodMs: 600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 40,
