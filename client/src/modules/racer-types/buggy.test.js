@@ -24,6 +24,7 @@ vi.mock('./spriteTinter.js', () => {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
     tintSpriteWithMask: vi.fn().mockReturnValue({}),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
     _clearTintCache: vi.fn(),
     _clearMaskedTintCache: vi.fn(),
   };
@@ -92,8 +93,8 @@ describe('BuggyRacerType — manifest', () => {
     expect(buggy.getSpeedMultiplier()).toBe(0.95);
   });
 
-  it('has exactly 11 coats', () => {
-    expect(buggy.config.coats).toHaveLength(11);
+  it('has exactly 20 coats', () => {
+    expect(buggy.config.coats).toHaveLength(20);
   });
 
   it('has exactly one coat with tint: null', () => {

@@ -1,7 +1,7 @@
 {
   "icon": "🛷",
   "description": "",
-  "defaultRacerTypeId": "lugger",
+  "defaultRacerTypeId": "luge",
   "color": "#e63946",
   "defaultDuration": 90,
   "defaultWinners": 3,
@@ -1733,6 +1733,6 @@
   "isDefault": false,
   "backgroundImageFile": "90d3020197da.png",
   "createdAt": "2026-05-27T14:49:19.845Z",
-  "updatedAt": "2026-05-27T16:38:03.415Z",
+  "updatedAt": "2026-05-29T21:24:40.970Z",
   "maxRacers": null
 }

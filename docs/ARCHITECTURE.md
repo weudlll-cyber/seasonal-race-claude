@@ -63,16 +63,16 @@ seasonal-race-claude/
 │       │   │   ├── SpriteRacerType.js      # Config-driven base class for all sprite-based racer types (D3.5)
 │       │   │   ├── HorseRacerType.js       # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
 │       │   │   ├── spriteLoader.js         # Async image loader with module cache
-│       │   │   ├── spriteTinter.js         # Offscreen-canvas tinting; detectTintMode (luminance-based auto); tintSpriteWithMask for mask-restricted mode
-│       │   │   ├── coatAssignment.js       # Hash-based coat selection
+│       │   │   ├── spriteTinter.js         # Offscreen-canvas tinting; detectTintMode (luminance-based auto); tintSpriteWithMask for mask-restricted mode; pattern overlay infrastructure (stripes/dots disabled — solid only active)
+│       │   │   ├── coatAssignment.js       # Hash-based coat + pattern selection (assignCoat, assignPattern — pattern always returns 'solid')
 │       │   │   ├── racerTypeStorage.js     # localStorage CRUD for user-created racer types (key: racearena:racerTypes)
 │       │   │   ├── trailStyles.js          # Named trail-factory presets (dust, spark, bubble, leaf, snow, fire)
-│       │   │   ├── standardCoats.js        # STANDARD_COAT_PALETTE — 12-color coat array for user-created types
+│       │   │   ├── standardCoats.js        # STANDARD_COAT_PALETTE — 20-color coat array for vehicle racer types (animal types use own 11-color palettes)
 │       │   │   ├── spriteAnimations.js     # Pure animation math: computeFrameTransforms(frameIndex, N, config) → {rotate, scaleX, scaleY, translateX, translateY, shearX, shadowScale}
 │       │   │   ├── spritesheetBuilder.js   # Renders animation frames onto an offscreen canvas and exports a data URL
 │       │   │   ├── backgroundRemoval.js    # Flood-fill + tolerance background removal; computeSpriteBoundingBox with edge-strip filter
 │       │   │   ├── canvasUtils.js          # Shared canvas helpers (checkerboard pattern, image-to-canvas)
-│       │   │   ├── LugeRacerType.js        # 13th built-in type — 2000×238 spritesheet, 16 frames 125×238, multiply tinting, ice/snow surface classes (2026-05-28, updated 2026-05-29)
+│       │   │   ├── LugeRacerType.js        # 13th built-in type — 2000×238 spritesheet, 16 frames 125×238, screen tinting (dark helmet near-black), 20 coats, ice/snow surface classes (updated 2026-05-30)
 │       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 

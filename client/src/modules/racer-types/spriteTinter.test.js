@@ -13,8 +13,12 @@ import {
   tintSprite,
   getCoatVariants,
   tintSpriteWithMask,
+  getPatternedVariant,
+  PATTERN_IDS,
   _clearTintCache,
   _clearMaskedTintCache,
+  _clearPatternedVariantCache,
+  _patternedVariantCacheSize,
 } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
 
@@ -28,6 +32,13 @@ function makeCtxMock() {
   return {
     drawImage: vi.fn(),
     fillRect: vi.fn(),
+    beginPath: vi.fn(),
+    arc: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    fill: vi.fn(),
+    createPattern: vi.fn().mockReturnValue({}),
     globalCompositeOperation: 'source-over',
     fillStyle: '',
   };
@@ -259,5 +270,154 @@ describe('tintSpriteWithMask', () => {
     const mask = { naturalWidth: 32, naturalHeight: 32, src: '/mwm-mask-d.png' };
     tintSpriteWithMask(mockImg, mask, '#ff0000');
     expect(getCoatVariants.cached('/mwm-src-d.png')).toBeUndefined();
+  });
+});
+
+describe('PATTERN_IDS', () => {
+  it('exports exactly 3 pattern ids', () => {
+    expect(PATTERN_IDS).toHaveLength(3);
+  });
+
+  it('contains solid, stripes, and dots', () => {
+    expect(PATTERN_IDS).toContain('solid');
+    expect(PATTERN_IDS).toContain('stripes');
+    expect(PATTERN_IDS).toContain('dots');
+  });
+});
+
+describe('tintSprite — with patterns', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('solid patternId does not call createPattern', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64 };
+    tintSprite(src, '#ff0000', 'multiply', 'solid');
+    expect(ctxMock.createPattern).not.toHaveBeenCalled();
+  });
+
+  it('stripes patternId calls createPattern and uses source-atop composite', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64 };
+    const compositeOps = [];
+    Object.defineProperty(ctxMock, 'globalCompositeOperation', {
+      get() {
+        return 'source-over';
+      },
+      set(v) {
+        compositeOps.push(v);
+      },
+      configurable: true,
+    });
+    tintSprite(src, '#ff0000', 'multiply', 'stripes');
+    expect(ctxMock.createPattern).toHaveBeenCalled();
+    expect(compositeOps).toContain('source-atop');
+    expect(compositeOps[compositeOps.length - 1]).toBe('source-over');
+  });
+
+  it('dots patternId calls createPattern and uses source-atop composite', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64 };
+    const compositeOps = [];
+    Object.defineProperty(ctxMock, 'globalCompositeOperation', {
+      get() {
+        return 'source-over';
+      },
+      set(v) {
+        compositeOps.push(v);
+      },
+      configurable: true,
+    });
+    tintSprite(src, '#ff0000', 'multiply', 'dots');
+    expect(ctxMock.createPattern).toHaveBeenCalled();
+    expect(compositeOps).toContain('source-atop');
+  });
+
+  it('returns a canvas with correct dimensions regardless of patternId', () => {
+    const src = { naturalWidth: 200, naturalHeight: 100 };
+    const stripeCanvas = tintSprite(src, '#ff0000', 'multiply', 'stripes');
+    const dotsCanvas = tintSprite(src, '#ff0000', 'multiply', 'dots');
+    expect(stripeCanvas.width).toBe(200);
+    expect(stripeCanvas.height).toBe(100);
+    expect(dotsCanvas.width).toBe(200);
+    expect(dotsCanvas.height).toBe(100);
+  });
+});
+
+describe('getPatternedVariant — lazy baking', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    _clearTintCache();
+    _clearPatternedVariantCache();
+    vi.clearAllMocks();
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _clearTintCache();
+    _clearPatternedVariantCache();
+  });
+
+  it('returns null when solid variants not yet loaded', () => {
+    const result = getPatternedVariant('/not-loaded.png', 'multiply', 'bay', 'stripes');
+    expect(result).toBeNull();
+  });
+
+  it('solid path returns the solid canvas, not from _patternedVariantCache', async () => {
+    const mockImg = { naturalWidth: 64, naturalHeight: 64 };
+    loadSprite.mockResolvedValue(mockImg);
+    const coats = [{ id: 'bay', tint: '#8B4513' }];
+    const map = await getCoatVariants('/pv-solid.png', coats);
+    const solidCanvas = map.get('bay');
+    const result = getPatternedVariant('/pv-solid.png', 'multiply', 'bay', 'solid');
+    expect(result).toBe(solidCanvas);
+    expect(_patternedVariantCacheSize()).toBe(0);
+  });
+
+  it('lazy bake: stripes variant is created and cached on first call', async () => {
+    const mockImg = { naturalWidth: 64, naturalHeight: 64 };
+    loadSprite.mockResolvedValue(mockImg);
+    const coats = [{ id: 'bay', tint: '#8B4513' }];
+    await getCoatVariants('/pv-stripes.png', coats);
+    expect(_patternedVariantCacheSize()).toBe(0);
+    const result = getPatternedVariant('/pv-stripes.png', 'multiply', 'bay', 'stripes');
+    expect(result).not.toBeNull();
+    expect(result instanceof HTMLCanvasElement).toBe(true);
+    expect(_patternedVariantCacheSize()).toBe(1);
+  });
+
+  it('second call returns the same cached canvas instance', async () => {
+    const mockImg = { naturalWidth: 64, naturalHeight: 64 };
+    loadSprite.mockResolvedValue(mockImg);
+    const coats = [{ id: 'bay', tint: '#8B4513' }];
+    await getCoatVariants('/pv-cache.png', coats);
+    const r1 = getPatternedVariant('/pv-cache.png', 'multiply', 'bay', 'stripes');
+    const r2 = getPatternedVariant('/pv-cache.png', 'multiply', 'bay', 'stripes');
+    expect(r1).toBe(r2);
+    expect(_patternedVariantCacheSize()).toBe(1);
+  });
+
+  it('only requested (coatId, patternId) pairs are baked', async () => {
+    const mockImg = { naturalWidth: 64, naturalHeight: 64 };
+    loadSprite.mockResolvedValue(mockImg);
+    const coats = [
+      { id: 'bay', tint: '#8B4513' },
+      { id: 'gray', tint: '#888888' },
+    ];
+    await getCoatVariants('/pv-selective.png', coats);
+    getPatternedVariant('/pv-selective.png', 'multiply', 'bay', 'stripes');
+    expect(_patternedVariantCacheSize()).toBe(1);
+    getPatternedVariant('/pv-selective.png', 'multiply', 'bay', 'dots');
+    expect(_patternedVariantCacheSize()).toBe(2);
+    getPatternedVariant('/pv-selective.png', 'multiply', 'gray', 'stripes');
+    expect(_patternedVariantCacheSize()).toBe(3);
   });
 });

@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { hashStringToInt, assignCoat } from './coatAssignment.js';
+import { hashStringToInt, assignCoat, assignPattern, PATTERN_IDS } from './coatAssignment.js';
 
 const ELEVEN_COATS = Array.from({ length: 11 }, (_, i) => ({ id: `coat${i}` }));
 
@@ -61,5 +61,31 @@ describe('assignCoat', () => {
     const names = Array.from({ length: 20 }, (_, i) => `Player ${i}`);
     const assigned = new Set(names.map((n) => assignCoat(n, ELEVEN_COATS)));
     expect(assigned.size).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe('PATTERN_IDS export', () => {
+  it('has exactly 3 entries', () => {
+    expect(PATTERN_IDS).toHaveLength(3);
+  });
+
+  it('contains solid, stripes, dots', () => {
+    expect(PATTERN_IDS).toContain('solid');
+    expect(PATTERN_IDS).toContain('stripes');
+    expect(PATTERN_IDS).toContain('dots');
+  });
+});
+
+describe('assignPattern', () => {
+  it('always returns "solid" regardless of name', () => {
+    expect(assignPattern('Alice', PATTERN_IDS)).toBe('solid');
+    expect(assignPattern('Bob the racer', PATTERN_IDS)).toBe('solid');
+    expect(assignPattern('', PATTERN_IDS)).toBe('solid');
+    expect(assignPattern(null, PATTERN_IDS)).toBe('solid');
+    expect(assignPattern(undefined, PATTERN_IDS)).toBe('solid');
+  });
+
+  it('is deterministic: same name always returns the same pattern', () => {
+    expect(assignPattern('Alice', PATTERN_IDS)).toBe(assignPattern('Alice', PATTERN_IDS));
   });
 });

@@ -28,6 +28,7 @@ vi.mock('./spriteTinter.js', () => {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
     tintSpriteWithMask: vi.fn().mockReturnValue({}),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
     _clearTintCache: vi.fn(),
     _clearMaskedTintCache: vi.fn(),
   };

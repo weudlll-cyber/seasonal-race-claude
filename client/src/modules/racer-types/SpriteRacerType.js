@@ -21,7 +21,13 @@
  */
 
 import { getCachedSprite } from './spriteLoader.js';
-import { getCoatVariants, tintSprite, tintSpriteWithMask, detectTintMode } from './spriteTinter.js';
+import {
+  getCoatVariants,
+  tintSprite,
+  tintSpriteWithMask,
+  detectTintMode,
+  getPatternedVariant,
+} from './spriteTinter.js';
 
 const REQUIRED_FIELDS = [
   'id',
@@ -103,12 +109,25 @@ export class SpriteRacerType {
   _drawBody(ctx, racer, frame, displaySizeScale = 1) {
     const cfg = this.config;
     const rawCoatId = racer.coatId ?? cfg.defaultCoatId;
+    const patternId = racer.patternId ?? 'solid';
 
     // 1. Fast path: pre-warmed coat variant cache.
     const variants = getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply');
     let drawable;
     if (variants) {
-      drawable = variants.get(rawCoatId) ?? variants.get(cfg.defaultCoatId);
+      const resolvedCoatId = variants.has(rawCoatId) ? rawCoatId : cfg.defaultCoatId;
+      if (patternId === 'solid') {
+        drawable = variants.get(resolvedCoatId);
+      } else {
+        // Lazy-bake patterned variant on first call; subsequent calls hit cache.
+        drawable =
+          getPatternedVariant(
+            cfg.spriteUrl,
+            cfg.tintMode ?? 'multiply',
+            resolvedCoatId,
+            patternId
+          ) ?? variants.get(resolvedCoatId);
+      }
     }
 
     // 2. Lazy tinting: base sprite loaded but variants not yet cached.
@@ -145,7 +164,7 @@ export class SpriteRacerType {
           } else {
             blendMode = cfg.tintMode ?? 'multiply';
           }
-          drawable = tintSprite(baseImg, coat.tint, blendMode);
+          drawable = tintSprite(baseImg, coat.tint, blendMode, patternId);
         }
       }
     }

@@ -23,6 +23,7 @@ vi.mock('./spriteTinter.js', () => {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
     tintSpriteWithMask: vi.fn().mockReturnValue({}),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
     _clearTintCache: vi.fn(),
     _clearMaskedTintCache: vi.fn(),
   };
@@ -86,8 +87,8 @@ describe('F1RacerType — manifest', () => {
     expect(f1.getSpeedMultiplier()).toBe(1.2);
   });
 
-  it('has exactly 11 coats each with id, name, tint', () => {
-    expect(f1.config.coats).toHaveLength(11);
+  it('has exactly 20 coats each with id, name, tint', () => {
+    expect(f1.config.coats).toHaveLength(20);
     for (const coat of f1.config.coats) {
       expect(typeof coat.id).toBe('string');
       expect(typeof coat.name).toBe('string');

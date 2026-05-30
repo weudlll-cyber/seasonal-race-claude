@@ -1919,6 +1919,35 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 
 ---
 
+## Lesson 104 — Screen Blending Requires a Light or Neutral Base Sprite; Dark Bases Require Multiply
+
+**Context:** `LugeRacerType` was shipped with `tintMode: 'multiply'`. The luge spritesheet has a red base suit. With multiply blending, the red suit dominated: applying a blue tint still produced a reddish racer because `red × blue = dark`. Visually, multiply tinting only works when the base sprite has white or light-gray regions where the tint color should appear.
+
+**Insight:** Multiply blend: `result = base × tint`. A dark or saturated base color clamps the result toward that color regardless of the tint applied. Screen blend: `result = 1 − (1−base)×(1−tint)`. A dark base with screen tinting lets the tint color shine through because the base contributes little opacity. For sprites with a prominent dark helmet or dark sled runners, those regions should be near-black in the PNG so screen blending leaves them uncolored.
+
+**Consequence:** Choose tintMode based on the base sprite's luminance distribution:
+- `multiply` — sprite has light/white regions where tint should appear (horse body, fur, fabric).
+- `screen` — sprite has dark/black regions that define the shape; tint fills the mid-tones.
+- Darken any region that should NOT be colored by the tint (e.g. helmet, metal parts) to near-black in the PNG regardless of tintMode.
+
+**Reference:** `LugeRacerType.js` (`tintMode: 'screen'`); `spriteTinter.js` (`tintSprite`). Session 2026-05-30.
+
+---
+
+## Lesson 105 — Coat Patterns Need Sufficient Sprite Area per Region; At Small Display Sizes They Are Indistinguishable
+
+**Context:** The coat patterns feature (solid/stripes/dots) was implemented and technically functional — `source-atop` pattern overlay on the tinted canvas, lazy-baked per `(coatId, patternId)` pair. During visual validation the patterns were disabled: the 16×16 stripe tile and 20×20 dot tile rendered as a muddy texture on the 40 px display-size sprite, making racers harder to distinguish rather than easier.
+
+**Root cause:** At `displaySize: 40` and `spriteHeight: 238`, the scale factor is `40/238 ≈ 0.168`. A 16 px stripe tile renders at ~2.7 px on screen — below the threshold where the human eye can resolve a repeating pattern against a background. The overlay produced a uniform darkening effect, not a visible stripe.
+
+**Insight:** Pattern tiling only works when the tile period is ≥ ~5 px on screen. For a racer rendered at 40 px height, the entire visible sprite body is only ~20–30 px tall. There is simply not enough spatial resolution to render a distinct pattern. Patterns require either: (a) larger display sizes (≥ 80–100 px), or (b) much coarser tiles (≥ 30 px pre-scale, rendering at ≥ 5 px on screen).
+
+**Consequence:** Before implementing visual embellishments (patterns, gradients, overlays), verify the target display size at actual screen pixels. The canvas or design tool view is not representative — use `(displaySize / frameHeight) × tileSize` to compute the on-screen tile period. If below 5 px, the pattern will not be visible. Infrastructure can be kept for later; assignment should return `'solid'` until display sizes are large enough or tile sizes are tuned.
+
+**Reference:** `coatAssignment.js` (`assignPattern` — always returns `'solid'`); `spriteTinter.js` (`_buildStripeTile`, `_buildDotsTile`, `_applyPatternOverlay`). Session 2026-05-30.
+
+---
+
 ## Lesson 101 — Vite HMR Does Not Invalidate In-Memory JS Module Caches for `public/` Asset Changes
 
 **Context:** After vertically flipping `luge-slide.png` (committed to `client/public/assets/racers/`), the rotation artifact persisted in the live game. A canvas eval test using a `?timestamp` cache-busted URL showed the new sprite correctly — yet the in-game racer still rendered from the old asset.

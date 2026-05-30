@@ -28,7 +28,7 @@ export const LugeRacerType = new SpriteRacerType({
   basePeriodMs: 600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 40,
-  tintMode: 'multiply',
+  tintMode: 'screen',
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

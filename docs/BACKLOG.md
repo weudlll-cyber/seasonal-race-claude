@@ -646,7 +646,7 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 
 | Item | Priority | Description |
 |---|---|---|
-| **RE-1** Extended coat palette | Medium | Expand STANDARD_COAT_PALETTE from 12 to 20+ entries. Add pattern overlays (stripes, spots, gradient) as a second tinting pass. |
+| ✅ **RE-1** Extended coat palette | Done 2026-05-30 | `STANDARD_COAT_PALETTE` expanded to 20 colors for all vehicle types. Pattern infrastructure (solid/stripes/dots) implemented in `spriteTinter.js` + `coatAssignment.js`; patterns disabled (`assignPattern` always returns `'solid'`) — too visually dominant at 40 px display size (Lesson 105). Re-enable by updating `assignPattern` when sprite display sizes are larger or tiles are retuned. |
 | **RE-2** Frame-sequence mode | Low | Alternative to spritesheet upload: import individual PNG frames (1–16). Builder stitches them into a sheet internally. Useful for frame-by-frame artwork. |
 | **RE-3** Speed equalization | Low | Option in RacerMetadataPanel to normalize speedMultiplier so user-created types race at the same average pace as built-in types. Auto-computes from median built-in `speedMultiplier`. |
 | **RE-4** D3.6 migration refactor | Medium | Migrate all built-in types (HorseRacerType, DuckRacerType, SnailRacerType, …) from class files to `SpriteRacerType` config objects. Remove per-type class files. See ROADMAP.md D3.6. |

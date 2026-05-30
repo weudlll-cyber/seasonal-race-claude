@@ -47,9 +47,11 @@ describe('Racer-Types Registry — D3.5.3 Integration', () => {
     }
   });
 
-  test('all types have exactly 11 coats', () => {
+  test('each type has the expected coat count (vehicle=20, animal=11)', () => {
+    const VEHICLE_IDS = new Set(['buggy', 'f1', 'luge', 'motorbike', 'plane', 'rocket']);
     for (const [id, type] of Object.entries(RACER_TYPES)) {
-      expect(type.config.coats, `${id}: coat count`).toHaveLength(11);
+      const expected = VEHICLE_IDS.has(id) ? 20 : 11;
+      expect(type.config.coats, `${id}: coat count`).toHaveLength(expected);
     }
   });
 

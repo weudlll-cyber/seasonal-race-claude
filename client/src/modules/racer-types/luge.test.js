@@ -24,6 +24,7 @@ vi.mock('./spriteTinter.js', () => {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({}),
     tintSpriteWithMask: vi.fn().mockReturnValue({}),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
     detectTintMode: vi.fn().mockReturnValue('screen'),
     _clearTintCache: vi.fn(),
     _clearMaskedTintCache: vi.fn(),
@@ -106,12 +107,12 @@ describe('LugeRacerType — manifest', () => {
     expect(LugeRacerType.config.frameHeight).toBe(238);
   });
 
-  it('has tintMode "multiply"', () => {
-    expect(LugeRacerType.config.tintMode).toBe('multiply');
+  it('has tintMode "screen"', () => {
+    expect(LugeRacerType.config.tintMode).toBe('screen');
   });
 
-  it('has exactly 11 coats (STANDARD_COAT_PALETTE)', () => {
-    expect(LugeRacerType.config.coats).toHaveLength(11);
+  it('has exactly 20 coats (STANDARD_COAT_PALETTE)', () => {
+    expect(LugeRacerType.config.coats).toHaveLength(20);
   });
 
   it('first coat has tint: null (base coat)', () => {

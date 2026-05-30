@@ -26,6 +26,7 @@ vi.mock('./spriteTinter.js', () => {
     getCoatVariants,
     tintSprite: vi.fn().mockReturnValue({ _isTinted: true }),
     tintSpriteWithMask: vi.fn().mockReturnValue({ _isMaskTinted: true }),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
     detectTintMode: vi.fn().mockReturnValue('multiply'),
     _clearTintCache: vi.fn(),
     _clearMaskedTintCache: vi.fn(),
@@ -456,7 +457,7 @@ describe('SpriteRacerType — _drawBody', () => {
     const rt = new SpriteRacerType(makeConfig({ tintMode: 'multiply' }));
     const ctx = makeCtx();
     rt._drawBody(ctx, { ...MOCK_RACER, coatId: 'red' }, 0);
-    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply');
+    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply', 'solid');
     expect(tintSpriteWithMask).not.toHaveBeenCalled();
   });
 
@@ -467,7 +468,7 @@ describe('SpriteRacerType — _drawBody', () => {
     const rt = new SpriteRacerType(makeConfig({ tintMode: 'screen' }));
     const ctx = makeCtx();
     rt._drawBody(ctx, { ...MOCK_RACER, coatId: 'red' }, 0);
-    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'screen');
+    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'screen', 'solid');
   });
 
   it('passes "multiply" to tintSprite when tintMode is "auto" (lazy path has no canvas for detection)', () => {
@@ -477,7 +478,7 @@ describe('SpriteRacerType — _drawBody', () => {
     const rt = new SpriteRacerType(makeConfig({ tintMode: 'auto' }));
     const ctx = makeCtx();
     rt._drawBody(ctx, { ...MOCK_RACER, coatId: 'red' }, 0);
-    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply');
+    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply', 'solid');
   });
 
   it('passes tintMode to getCoatVariants.cached in fast path', () => {
@@ -635,7 +636,7 @@ describe('SpriteRacerType — _drawBody lazy tinting: tintMode="auto" with detec
     getCoatVariants.cached.mockReturnValue(undefined);
     const rt = new SpriteRacerType(makeConfig({ tintMode: 'auto' }));
     rt._drawBody(makeCtx(), { ...MOCK_RACER, coatId: 'red' }, 0);
-    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'screen');
+    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'screen', 'solid');
   });
 
   it('light sprite: detectTintMode returns "multiply" → tintSprite called with "multiply"', () => {
@@ -645,7 +646,7 @@ describe('SpriteRacerType — _drawBody lazy tinting: tintMode="auto" with detec
     getCoatVariants.cached.mockReturnValue(undefined);
     const rt = new SpriteRacerType(makeConfig({ tintMode: 'auto' }));
     rt._drawBody(makeCtx(), { ...MOCK_RACER, coatId: 'red' }, 0);
-    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply');
+    expect(tintSprite).toHaveBeenCalledWith(mockBase, '#ff0000', 'multiply', 'solid');
   });
 
   it('detectTintMode is called only once across multiple _drawBody calls (result cached)', () => {

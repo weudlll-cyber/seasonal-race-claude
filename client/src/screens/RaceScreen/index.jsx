@@ -28,7 +28,11 @@ import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
-import { assignCoat } from '../../modules/racer-types/coatAssignment.js';
+import {
+  assignCoat,
+  assignPattern,
+  PATTERN_IDS,
+} from '../../modules/racer-types/coatAssignment.js';
 import {
   CameraDirector,
   OPEN_TRACK_BASE_ZOOM,
@@ -552,6 +556,7 @@ export default function RaceScreen() {
           nextRollTime: rollInterval + rollJitter,
           color: RACER_COLORS[i % RACER_COLORS.length],
           coatId: getCoatsByType(typeId) ? assignCoat(r.name, getCoatsByType(typeId)) : undefined,
+          patternId: assignPattern(r.name, PATTERN_IDS),
           finished: false,
           finishRank: null,
           runoutDecay: 1,

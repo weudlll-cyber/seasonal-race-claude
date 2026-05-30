@@ -14,6 +14,125 @@ import { loadSprite } from './spriteLoader.js';
 
 const _variantCache = new Map();
 
+// ── Pattern system ──────────────────────────────────────────────────────────
+
+/** The three available pattern IDs. 'solid' is the default (no pattern overlay). */
+export const PATTERN_IDS = ['solid', 'stripes', 'dots'];
+
+// Tiny tile canvases built once and re-used for createPattern().
+const _patternTileCache = new Map();
+
+// Patterned variant cache — parallel to _variantCache, indexed by
+// `${sourceUrl}::${tintMode}::${coatId}::${patternId}`.
+const _patternedVariantCache = new Map();
+
+function _buildStripeTile() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  // Hexagonal fill that, when tiled, produces 45° diagonal stripes.
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(8, 0);
+  ctx.lineTo(16, 8);
+  ctx.lineTo(16, 16);
+  ctx.lineTo(8, 16);
+  ctx.lineTo(0, 8);
+  ctx.closePath();
+  ctx.fill();
+  return canvas;
+}
+
+function _buildDotsTile() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 20;
+  canvas.height = 20;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.arc(10, 10, 4, 0, Math.PI * 2);
+  ctx.fill();
+  return canvas;
+}
+
+function _getPatternTile(patternId) {
+  if (_patternTileCache.has(patternId)) return _patternTileCache.get(patternId);
+  let tile = null;
+  if (patternId === 'stripes') tile = _buildStripeTile();
+  else if (patternId === 'dots') tile = _buildDotsTile();
+  _patternTileCache.set(patternId, tile);
+  return tile;
+}
+
+// Apply a pattern overlay on top of a tinted full-sheet canvas.
+// Returns a NEW canvas — the input is not mutated.
+function _applyPatternOverlay(tintedCanvas, patternId) {
+  const w = tintedCanvas.width;
+  const h = tintedCanvas.height;
+  const result = document.createElement('canvas');
+  result.width = w;
+  result.height = h;
+  const ctx = result.getContext('2d');
+  if (!ctx) return result;
+  ctx.drawImage(tintedCanvas, 0, 0);
+  const tile = _getPatternTile(patternId);
+  if (tile && typeof ctx.createPattern === 'function') {
+    const pattern = ctx.createPattern(tile, 'repeat');
+    if (pattern) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  return result;
+}
+
+/**
+ * Get (or lazily bake) a patterned variant canvas for the given coat + pattern.
+ *
+ * Solid path: returns the solid canvas from _variantCache (no extra allocation).
+ * Non-solid path: bakes once from the solid canvas and stores in _patternedVariantCache.
+ * Returns null if the solid variants have not been loaded yet.
+ *
+ * @param {string} sourceUrl
+ * @param {'multiply'|'screen'|'auto'} tintMode
+ * @param {string} coatId
+ * @param {string} patternId - one of PATTERN_IDS
+ * @returns {HTMLCanvasElement|HTMLImageElement|null}
+ */
+export function getPatternedVariant(sourceUrl, tintMode, coatId, patternId) {
+  const solidVariants = _variantCache.get(`${sourceUrl}::${tintMode}`);
+  if (!solidVariants) return null;
+  if (!patternId || patternId === 'solid') {
+    return solidVariants.get(coatId) ?? null;
+  }
+  const key = `${sourceUrl}::${tintMode}::${coatId}::${patternId}`;
+  if (_patternedVariantCache.has(key)) {
+    return _patternedVariantCache.get(key);
+  }
+  const solidCanvas = solidVariants.get(coatId);
+  if (!solidCanvas) return null;
+  const result = _applyPatternOverlay(solidCanvas, patternId);
+  _patternedVariantCache.set(key, result);
+  return result;
+}
+
+/** Clear patterned variant cache and tile cache. Only use in tests. */
+export function _clearPatternedVariantCache() {
+  _patternedVariantCache.clear();
+  _patternTileCache.clear();
+}
+
+/** Number of entries currently in the patterned variant cache. Only use in tests. */
+export function _patternedVariantCacheSize() {
+  return _patternedVariantCache.size;
+}
+
 // Separate cache for mask-based tinting, keyed on sourceUrl:maskUrl:tintColor.
 const _maskedVariantCache = new Map();
 
@@ -49,9 +168,10 @@ export function detectTintMode(imageData) {
  * @param {HTMLImageElement|object} sourceImage
  * @param {string} tintColor - CSS color string
  * @param {'multiply'|'screen'} [mode='multiply']
+ * @param {string} [patternId='solid'] - optional pattern overlay (see PATTERN_IDS)
  * @returns {HTMLCanvasElement}
  */
-export function tintSprite(sourceImage, tintColor, mode = 'multiply') {
+export function tintSprite(sourceImage, tintColor, mode = 'multiply', patternId = 'solid') {
   const w = sourceImage.naturalWidth || sourceImage.width;
   const h = sourceImage.naturalHeight || sourceImage.height;
   const canvas = document.createElement('canvas');
@@ -66,6 +186,18 @@ export function tintSprite(sourceImage, tintColor, mode = 'multiply') {
   ctx.globalCompositeOperation = 'destination-in';
   ctx.drawImage(sourceImage, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
+  if (patternId && patternId !== 'solid') {
+    const tile = _getPatternTile(patternId);
+    if (tile && typeof ctx.createPattern === 'function') {
+      const pattern = ctx.createPattern(tile, 'repeat');
+      if (pattern) {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+  }
   return canvas;
 }
 
