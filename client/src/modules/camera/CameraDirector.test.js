@@ -163,7 +163,7 @@ describe('CameraDirector', () => {
   });
 
   it('LEADER_ZOOM converges to zoom > 1', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, { minRacersVisible: 0 });
     cd.state = CAM_STATE.LEADER_ZOOM;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(1.1);
@@ -238,7 +238,7 @@ describe('CameraDirector — bbox clamping', () => {
 
   it('LEADER_ZOOM with racers near canvas center: converges to adaptive offset with no clamping', () => {
     const worldW = 1280;
-    const cd = new CameraDirector(worldW, 720);
+    const cd = new CameraDirector(worldW, 720, false, { minRacersVisible: 0 });
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
@@ -1638,6 +1638,7 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     const config = {
       ...inverseConfig,
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.16 },
+      minRacersVisible: 0,
     };
     const cd = new CameraDirector(worldW, worldH, false, config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -1908,6 +1909,7 @@ describe('CameraDirector — Phase 1: cameraStateProfiles config path', () => {
         ...profileConfig.cameraStateProfiles,
         LEAD_CHANGE: { spriteScale: 77 / 36 },
       },
+      minRacersVisible: 0,
     };
     const cd = new CameraDirector(1280, 720, false, cfg, 50);
     expect(cd._leadChangeZoom).toBeCloseTo(77 / 36, 3);
@@ -2012,7 +2014,7 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
 
   it('two half-dt frames converge to the same result as one full-dt frame', () => {
     const makeCD = () => {
-      const cd = new CameraDirector(1280, 720, false, null, 36);
+      const cd = new CameraDirector(1280, 720, false, { minRacersVisible: 0 }, 36);
       cd.state = CAM_STATE.LEADER_ZOOM;
       cd.stateEnteredAt = 0;
       cd.zoom = 1.0;
@@ -5393,5 +5395,166 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
       CANVAS_H
     );
     expect(cd._leadChangeSnapPending).toBe(false);
+  });
+});
+
+// ── Dynamic zoom-out (minRacersVisible) ──────────────────────────────────────
+
+describe('_countVisibleRacers', () => {
+  const WORLD_W = 1280;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+
+  it('counts racers whose screen position falls within the viewport', () => {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
+    cd.offsetX = 0;
+    cd.offsetY = 0;
+    // bsX = 1.0 for 1280-wide world on a 1280-wide canvas (closed track)
+    const effZoom = 1.0;
+    const racers = [
+      { x: 400, y: 200, finished: false }, // visible
+      { x: 640, y: 360, finished: false }, // visible (center)
+      { x: -100, y: 200, finished: false }, // off-screen left
+      { x: 1400, y: 200, finished: false }, // off-screen right (screenX=1400 >= 1280)
+      { x: 400, y: 200, finished: true }, // finished — must be skipped
+    ];
+    expect(cd._countVisibleRacers(racers, effZoom, CANVAS_W, CANVAS_H)).toBe(2);
+  });
+
+  it('returns 0 for empty racers array', () => {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
+    expect(cd._countVisibleRacers([], 1.0, CANVAS_W, CANVAS_H)).toBe(0);
+  });
+
+  it('returns 0 when effZoom is zero', () => {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
+    const racers = [{ x: 400, y: 200, finished: false }];
+    expect(cd._countVisibleRacers(racers, 0, CANVAS_W, CANVAS_H)).toBe(0);
+  });
+
+  it('uses current offsetX/Y to shift the visible window', () => {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
+    cd.offsetX = -500;
+    cd.offsetY = 0;
+    // racer at x=200: screenX = 200 * 1.0 + (-500) = -300 → off-screen
+    const racers = [{ x: 200, y: 200, finished: false }];
+    expect(cd._countVisibleRacers(racers, 1.0, CANVAS_W, CANVAS_H)).toBe(0);
+  });
+});
+
+describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
+  const WORLD_W = 1280;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1.0 };
+
+  // Two off-screen racers (screenX < 0 at zoom=2.0, offsetX=0)
+  const offScreen = [
+    { x: -200, y: 360, t: 0.9, index: 0, finished: false },
+    { x: -200, y: 360, t: 0.8, index: 1, finished: false },
+  ];
+
+  // Three on-screen racers (screenX in [200,800] at zoom=1.0, offsetX=0)
+  const onScreen = [
+    { x: 200, y: 200, t: 0.9, index: 0, finished: false },
+    { x: 300, y: 200, t: 0.8, index: 1, finished: false },
+    { x: 400, y: 200, t: 0.7, index: 2, finished: false },
+  ];
+
+  function makeDir(min = 3, floor = 0.4, step = 0.01) {
+    const dir = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      false,
+      {
+        minRacersVisible: min,
+        leaderMinZoom: floor,
+        zoomOutStepPerFrame: step,
+      },
+      36
+    );
+    dir.state = CAM_STATE.LEADER_ZOOM;
+    dir._lerpPhase = 'tracking';
+    dir.zoom = 2.0;
+    dir.offsetX = 0;
+    dir.offsetY = 0;
+    return dir;
+  }
+
+  it('floor decrements by zoomOutStepPerFrame when visible < minRacersVisible', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir._leaderPhaseZoomFloor = 2.0;
+    // offScreen: visCount=0 < minRacersVisible=3 → floor decrements
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.99, 4);
+  });
+
+  it('floor stays constant when visible >= minRacersVisible', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir._leaderPhaseZoomFloor = 2.0;
+    // onScreen: visCount=3 >= minRacersVisible=3 → floor unchanged
+    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(2.0, 4);
+  });
+
+  it('floor stops at leaderMinZoom and does not go below', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir._leaderPhaseZoomFloor = 0.41; // one step above leaderMinZoom=0.40
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
+    // Second call: already at floor — must not go below
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
+  });
+
+  it('targetZoom does not increase mid-phase once floor is below natural target', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    // Floor below default _leaderZoom (≈2.83 for closed track at 1280 world) — cap applies
+    dir._leaderPhaseZoomFloor = 1.0;
+    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir.targetZoom).toBeLessThanOrEqual(1.0 + 1e-9);
+  });
+
+  it('initializes floor to natural targetZoom on first call when floor is null', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir._leaderPhaseZoomFloor = null;
+    // onScreen: enough visible → floor initializes but does not decrement
+    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).not.toBeNull();
+    expect(dir._leaderPhaseZoomFloor).toBeGreaterThan(0);
+  });
+
+  it('floor resets to null on state transition', () => {
+    const dir = new CameraDirector(WORLD_W, CANVAS_H, false, { minRacersVisible: 3 }, 36);
+    dir._leaderPhaseZoomFloor = 1.5;
+    dir._prevCommittedState = CAM_STATE.LEADER_ZOOM;
+    dir._activeStateMinHoldMs = 0;
+    // start-phase → OVERVIEW
+    dir._transition(
+      onScreen,
+      1000,
+      { raceElapsed: 1000, finishedCount: 0, finishT: 1.0 },
+      CANVAS_W,
+      CANVAS_H
+    );
+    expect(dir._leaderPhaseZoomFloor).toBeNull();
+  });
+
+  it('dynamic zoom-out does not apply in OVERVIEW state', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir.state = CAM_STATE.OVERVIEW;
+    dir._leaderPhaseZoomFloor = 1.0;
+    const floorBefore = dir._leaderPhaseZoomFloor;
+    // OVERVIEW case in _setTargets — floor block should not run
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBe(floorBefore);
+  });
+
+  it('dynamic zoom-out applies to LEAD_CHANGE the same as LEADER_ZOOM', () => {
+    const dir = makeDir(3, 0.4, 0.01);
+    dir.state = CAM_STATE.LEAD_CHANGE;
+    dir._leaderPhaseZoomFloor = 2.0;
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.99, 4);
   });
 });

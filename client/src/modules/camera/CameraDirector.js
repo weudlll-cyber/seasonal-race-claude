@@ -208,6 +208,10 @@ export class CameraDirector {
     this._diagIsExternalOutcomePhase = false;
     this._activeStateMinHoldMs = null; // null = use _minStateHoldByState; 0 = immediately interruptible (same-state repeat)
     this._prevCommittedState = null; // null on first call so constructor-state is never treated as a repeat
+    // Dynamic zoom-out floor: tracks the minimum targetZoom for the current LEADER/LEAD_CHANGE phase.
+    // Null between phases. Resets on every state transition. Only decrements within a phase.
+    this._leaderPhaseZoomFloor = null;
+    // _leaderMinZoom, _zoomOutStepPerFrame, _minRacersVisible set in _computeTimingConfig (above).
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
     this._currentLeaderName = null;
@@ -413,6 +417,9 @@ export class CameraDirector {
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
     this._overviewClosedTrackZoom = t.overviewClosedTrackZoom;
+    this._minRacersVisible = config?.minRacersVisible ?? 8;
+    this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
+    this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
   }
 
   // ── Director helpers ──────────────────────────────────────────────────────
@@ -634,7 +641,7 @@ export class CameraDirector {
       stateAge >= this._battleMinDurationMs &&
       !this._isOriginalGroupStillValid(racers)
     ) {
-      this._exitBattle(ts, racers, raceState);
+      this._exitBattle(ts, racers, raceState, canvasW, canvasH);
       _diagTransitioned = true;
     }
     // P2-drift exit: a locked group member moved into P1/P2 — exit after minHold (no hard-cut).
@@ -644,12 +651,12 @@ export class CameraDirector {
       stateAge >= this._battleMinDurationMs &&
       this._isBattleGroupP2Drifted(racers)
     ) {
-      this._exitBattle(ts, racers, raceState);
+      this._exitBattle(ts, racers, raceState, canvasW, canvasH);
       _diagTransitioned = true;
     }
     // Early LEAD_CHANGE interrupt: confirmed leader change while in LEADER_ZOOM.
     if (!_diagTransitioned && this.state === CAM_STATE.LEADER_ZOOM && this._leadChangePending) {
-      this._transition(racers, ts, raceState);
+      this._transition(racers, ts, raceState, canvasW, canvasH);
       _diagTransitioned = true;
     }
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
@@ -661,7 +668,7 @@ export class CameraDirector {
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
         this._lastBattleExitTs = ts;
       }
-      this._transition(racers, ts, raceState);
+      this._transition(racers, ts, raceState, canvasW, canvasH);
       _diagTransitioned = true;
     }
     this._transitionRingBuf[this._transitionRingIdx % 60] = _diagTransitioned ? 1 : 0;
@@ -1004,7 +1011,7 @@ export class CameraDirector {
     }
   }
 
-  _transition(racers, ts, raceState) {
+  _transition(racers, ts, raceState, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
     const prevState = this.state;
     const prevEnteredAt = this.stateEnteredAt;
 
@@ -1099,6 +1106,9 @@ export class CameraDirector {
           this._lfEntryByState[CAM_STATE.OVERVIEW] = tcToLerpFactor(tc);
         }
       }
+
+      // Reset per-phase zoom-out floor on every state transition.
+      this._leaderPhaseZoomFloor = null;
     }
 
     // Release camera lock when leaving BATTLE_ZOOM
@@ -1352,14 +1362,14 @@ export class CameraDirector {
   }
 
   /** Clears all BATTLE lock state and triggers a transition out of BATTLE_ZOOM. */
-  _exitBattle(ts, racers, raceState) {
+  _exitBattle(ts, racers, raceState, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
     this._lastBattleExitTs = ts;
     this._battleLockedRacer = null;
     this._battleLockedRacerIndex = null;
     this._battleGroupRacers = [];
     this._battleGroupRacerIndices = [];
     this._battleLockT = null;
-    this._transition(racers, ts, raceState);
+    this._transition(racers, ts, raceState, canvasW, canvasH);
   }
 
   /**
@@ -1445,6 +1455,27 @@ export class CameraDirector {
     return this._battleGroupRacerIndices
       .map((idx, i) => this._findByIndex(racers, idx, this._battleGroupRacers?.[i] ?? null))
       .filter(Boolean);
+  }
+
+  /**
+   * Count non-finished racers whose screen projection falls within the canvas viewport.
+   * Uses the current (live) offsetX/Y so the visibility check matches what the player sees.
+   * @param {Array} racers   Full racer list.
+   * @param {number} effZoom  Effective zoom (cam.zoom × BASE for open, × bsX for closed).
+   * @param {number} canvasW  Canvas width in pixels.
+   * @param {number} canvasH  Canvas height in pixels.
+   * @returns {number}  Count of visible non-finished racers.
+   */
+  _countVisibleRacers(racers, effZoom, canvasW, canvasH) {
+    if (!racers || effZoom <= 0) return 0;
+    let count = 0;
+    for (const r of racers) {
+      if (r.finished) continue;
+      const sx = r.x * effZoom + this.offsetX;
+      const sy = r.y * effZoom + this.offsetY;
+      if (sx >= 0 && sx < canvasW && sy >= 0 && sy < canvasH) count++;
+    }
+    return count;
   }
 
   // Compute the Y offset for closed tracks using bsY (may differ from bsX on non-square worlds).
@@ -1753,6 +1784,30 @@ export class CameraDirector {
         }
         break;
       }
+    }
+
+    // Dynamic zoom-out: if fewer than _minRacersVisible non-finished racers are visible,
+    // gradually reduce targetZoom each frame until enough appear or leaderMinZoom is reached.
+    // One-directional within a phase: floor only decrements, never increments.
+    if (
+      this._minRacersVisible > 0 &&
+      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE)
+    ) {
+      const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
+      const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
+      // Initialize floor to natural targetZoom on first frame of this phase.
+      if (this._leaderPhaseZoomFloor === null) {
+        this._leaderPhaseZoomFloor = this.targetZoom;
+      }
+      // Ratchet floor down when under-visible and above hard floor.
+      if (visCount < this._minRacersVisible && this._leaderPhaseZoomFloor > this._leaderMinZoom) {
+        this._leaderPhaseZoomFloor = Math.max(
+          this._leaderPhaseZoomFloor - this._zoomOutStepPerFrame,
+          this._leaderMinZoom
+        );
+      }
+      // Apply floor: targetZoom cannot exceed floor (prevents zoom-in mid-phase).
+      this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
     }
   }
 

@@ -67,6 +67,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { loadRubberBandConfig } from '../../modules/rubberBandConfig.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -397,6 +398,7 @@ export default function RaceScreen() {
     const behaviorConfig = loadRaceBehaviorConfig();
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
+    const rubberBandConfig = loadRubberBandConfig();
     const frameTimingConfig = loadFrameTimingConfig();
     priorityConfigRef.current = loadPrioritySystemConfig();
 
@@ -575,6 +577,10 @@ export default function RaceScreen() {
           trajectoryMultPrev: 1.0,
           trajectoryMultTransStart: 0,
           areaBonusMult: 1.0,
+          rubberBandMult: 1.0,
+          rubberBandMultPrev: 1.0,
+          rubberBandMultTarget: 1.0,
+          rubberBandTransStart: 0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -793,6 +799,44 @@ export default function RaceScreen() {
             }
           }
 
+          // ── Rubber-band: flat catch-up boost for all non-leaders ─────────────
+          if (rubberBandConfig.enabled) {
+            const leaderT = st.racers.reduce(
+              (best, r2) => (!r2.finished && r2.t > best ? r2.t : best),
+              -Infinity
+            );
+            const leaderProgress = leaderT > -Infinity ? leaderT / st.finishT : 0;
+            const endgameThreshold = cameraConfigRef.current.endgameThreshold ?? 0.9;
+            if (leaderT > 0 && leaderProgress < endgameThreshold) {
+              const secondT = st.racers.reduce(
+                (best, r2) => (!r2.finished && r2.t < leaderT && r2.t > best ? r2.t : best),
+                -Infinity
+              );
+              const leaderGap = secondT > -Infinity ? (leaderT - secondT) / st.finishT : 0;
+              const boostActive = leaderGap > rubberBandConfig.gapThreshold;
+              for (const r of st.racers) {
+                if (r.finished) {
+                  r.rubberBandMult = 1.0;
+                  continue;
+                }
+                const isLeader = r.t === leaderT;
+                const newTarget = !isLeader && boostActive ? 1.0 + rubberBandConfig.flatBoost : 1.0;
+                if (Math.abs(newTarget - r.rubberBandMultTarget) > 0.001) {
+                  r.rubberBandMultPrev = r.rubberBandMult;
+                  r.rubberBandMultTarget = newTarget;
+                  r.rubberBandTransStart = physicsTs;
+                }
+                const elapsed = physicsTs - r.rubberBandTransStart;
+                r.rubberBandMult =
+                  elapsed < rubberBandConfig.boostRampMs
+                    ? r.rubberBandMultPrev +
+                      (r.rubberBandMultTarget - r.rubberBandMultPrev) *
+                        easeInOutCubic(elapsed / rubberBandConfig.boostRampMs)
+                    : r.rubberBandMultTarget;
+              }
+            }
+          }
+
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
@@ -839,7 +883,13 @@ export default function RaceScreen() {
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
-                r.t + r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult,
+                r.t +
+                  r.baseSpeed *
+                    boost *
+                    brake *
+                    r.trajectoryMult *
+                    r.areaBonusMult *
+                    r.rubberBandMult,
                 st.finishT + 0.001
               );
             } else {
@@ -852,7 +902,12 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult) /
+                ? (r.baseSpeed *
+                    boost *
+                    brake *
+                    r.trajectoryMult *
+                    r.areaBonusMult *
+                    r.rubberBandMult) /
                   race_baseSpeed
                 : 0;
           }

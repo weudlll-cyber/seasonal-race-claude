@@ -642,6 +642,88 @@ function CameraZoomTuningSection() {
             />
           </div>
         </div>
+
+        {/* Adaptive Zoom Floor */}
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            marginBottom: '0.4rem',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: '0.5rem',
+          }}
+        >
+          Adaptive Zoom Floor
+        </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          During LEADER_ZOOM and LEAD_CHANGE, if fewer than Min racers visible are on screen, the
+          camera pulls back by Zoom-out speed each frame until enough racers appear or the Leader
+          min zoom floor is reached. 0 = disabled.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
+          >
+            <span style={{ minWidth: '14rem' }}>
+              Min racers visible
+              <InfoTooltip
+                text={`Minimum number of non-finished racers that must be visible during LEADER_ZOOM and LEAD_CHANGE. Camera zooms out by Zoom-out speed per frame until this count is met. 0 = disabled. Current: ${config.minRacersVisible ?? 8}.`}
+              />
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={15}
+              step={1}
+              value={config.minRacersVisible ?? 8}
+              onChange={(e) => set('minRacersVisible', Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <span style={{ minWidth: '1.8rem', textAlign: 'right', fontSize: '0.88rem' }}>
+              {config.minRacersVisible ?? 8}
+            </span>
+          </label>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
+          >
+            <span style={{ minWidth: '14rem' }}>
+              Leader min zoom (floor)
+              <InfoTooltip text="Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom out past this value even if fewer than Min racers visible are on screen." />
+            </span>
+            <input
+              type="range"
+              min={0.1}
+              max={1.0}
+              step={0.05}
+              value={config.leaderMinZoom ?? 0.4}
+              onChange={(e) => set('leaderMinZoom', Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <span style={{ minWidth: '3rem', textAlign: 'right', fontSize: '0.88rem' }}>
+              {(config.leaderMinZoom ?? 0.4).toFixed(2)}
+            </span>
+          </label>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
+          >
+            <span style={{ minWidth: '14rem' }}>
+              Zoom-out speed (per frame)
+              <InfoTooltip text="Zoom reduction per frame when too few racers are visible. 0.005 = gentle pull-back at ~0.5% per frame (60 fps). Higher = faster response." />
+            </span>
+            <input
+              type="range"
+              min={0.001}
+              max={0.02}
+              step={0.001}
+              value={config.zoomOutStepPerFrame ?? 0.005}
+              onChange={(e) => set('zoomOutStepPerFrame', Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <span style={{ minWidth: '3rem', textAlign: 'right', fontSize: '0.88rem' }}>
+              {((config.zoomOutStepPerFrame ?? 0.005) * 100).toFixed(1)}%
+            </span>
+          </label>
+        </div>
       </div>
     </div>
   );

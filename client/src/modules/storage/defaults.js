@@ -308,6 +308,26 @@ export const DEFAULT_CAMERA_CONFIG = {
   minStateHoldMs: 5000,
   cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   targetInnerFramePct: 0.7,
+  // Dynamic zoom-out: if fewer than minRacersVisible non-finished racers are visible, the camera
+  // gradually reduces targetZoom each frame until enough racers appear or leaderMinZoom is reached.
+  // 0 = disabled. Range: 0–15.
+  minRacersVisible: 8,
+  // Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom out past this.
+  leaderMinZoom: 0.4,
+  // Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5%/frame at 60 fps.
+  zoomOutStepPerFrame: 0.005,
+};
+
+export const DEFAULT_RUBBER_BAND_CONFIG = {
+  // Master on/off.
+  enabled: true,
+  // Flat speed boost applied to every non-leader when the leader's gap exceeds the threshold.
+  // 0.10 = all non-leaders run 10% faster while boost is active.
+  flatBoost: 0.1,
+  // Time in ms to ease from 1.0 to the boost target and back.
+  boostRampMs: 2000,
+  // Gap between leader and 2nd place (as fraction of finishT) that activates the boost.
+  gapThreshold: 0.003,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
