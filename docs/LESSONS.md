@@ -2024,3 +2024,19 @@ physicalY += physicalYVelocity
 **Insight:** The number of "survived" combos matters more than the total sweep size. A hard cutoff (e.g. overlapRate ≤ baseline per track) reduces the search space dramatically and prevents high-score but physically invalid combos from polluting Phase 2.
 
 **Reference:** `scripts/param-sweep-full.mjs`, `scripts/sweep-lateral.mjs`. Session 2026-05-31.
+
+---
+
+## Lesson 108 — Suppression (delta = 0) Beats Impulse Injection When Damping Kills Small Velocities
+
+**Context:** feat/stuck-mode (2026-05-31). Bilateral avoidance forces cancel when a racer is sandwiched between two neighbors at equal distance. With `lateralDamping = 0.25`, velocity decays to 25% per frame — a racer with net force ≈ 0 becomes motionless in ~5 frames and stays frozen until pack geometry changes.
+
+**Failed approach — escape impulse:** Adding a small per-frame velocity injection (0.0008–0.0020) to `delta` before the damping step produced effective velocities of only `impulse × 0.25 = 0.0002–0.0005` — far below the stuck-detection threshold of 0.0015. The stuck counter never saw improvement. On Dirt Oval the tiny positional drift pushed racers into new collisions, monotonically increasing episode counts (baseline 910 → max 1422 at 0.002).
+
+**Fix — suppression:** When the stuck condition holds (`totalPressure > 0.008`, `imbalance < 25%`, `|physicalYVelocity| < 0.0015`), set `delta = 0` explicitly. The racer holds its exact position and waits. Normal behavior resumes the moment the bilateral symmetry breaks (a neighbor moves, the condition clears).
+
+**Sim result:** Space Sprint −18% zigzag / −10% overlap / −25% lateralSpeedScore; Dirt Oval ±0% / ±0% / −29%. All hard cutoffs pass.
+
+**Consequence:** Before injecting a corrective force into a damped velocity system, check whether `force × damping < detection_threshold`. If so, the force will never register and is likely harmful (tiny positional drift into unexpected configurations). The correct fix is to suppress the conflicting forces, not to overpower them.
+
+**Reference:** `client/src/modules/raceBehavior.js` (`STUCK_P_THRESH`, `STUCK_BALANCE_RATIO`, `STUCK_VEL_THRESH`). Session 2026-05-31.
