@@ -2040,3 +2040,27 @@ physicalY += physicalYVelocity
 **Consequence:** Before injecting a corrective force into a damped velocity system, check whether `force × damping < detection_threshold`. If so, the force will never register and is likely harmful (tiny positional drift into unexpected configurations). The correct fix is to suppress the conflicting forces, not to overpower them.
 
 **Reference:** `client/src/modules/raceBehavior.js` (`STUCK_P_THRESH`, `STUCK_BALANCE_RATIO`, `STUCK_VEL_THRESH`). Session 2026-05-31.
+
+---
+
+## Lesson 109 — Phase-Locked Zoom Floor Fails When Computed From Frontrunners Only
+
+**Context:** feat/adaptive-zoom-rubberband (2026-05-31). Initial implementation derived the zoom floor from the bounding box of the frontrunners (top-N racers by track progress). On tight tracks or during a solo breakaway, the frontrunner bounding box collapses to a small region — the floor zoom required to show N racers within that box is already satisfied by the current zoom level, so the floor never fires and trailing racers remain off-screen.
+
+**Fix:** Count visible racers per frame against the current viewport (world-space frustum check), not against a bounding box. Apply a slow ratchet: zoom out by a small step per frame when visible count < `minRacersVisible`, never zoom in faster than the normal lerp. This per-frame visibility count responds to actual screen coverage, not pack geometry.
+
+**Consequence:** Zoom floors derived from positional bounding boxes are fragile — any pack configuration that clusters the reference group tightens the box and disables the floor. Derive floors from viewport coverage instead.
+
+**Reference:** `client/src/modules/camera/CameraDirector.js` (`minRacersVisible`, `leaderMinZoom`). Session 2026-05-31.
+
+---
+
+## Lesson 110 — Rubber-Band Formula Normalized Over Full Track Length Makes Boost Invisible
+
+**Context:** feat/adaptive-zoom-rubberband (2026-05-31). Initial rubber-band implementation computed a catch-up boost proportional to the gap between the trailing racer and the leader, normalized over the full track length (0–1). A typical mid-race gap of 0.05–0.15 track units produced a boost of `gap × boostFactor`, e.g. `0.10 × 0.5 = 0.05` speed multiplier. Natural lap-to-lap speed variance across racers already spans ±10–15%, so a 5% boost was statistically invisible and produced no measurable compression in sim.
+
+**Fix:** Replace the proportional formula with a flat boost applied to all non-leaders whenever the gap exceeds a threshold (`gapThreshold=0.003`). The flat boost (`flatBoost=0.10`) is applied uniformly regardless of exact gap magnitude, avoiding formula complexity and ensuring the effect is always above the noise floor.
+
+**Consequence:** Gap-proportional formulas normalized over long reference lengths (full track, full race distance) produce tiny per-frame deltas. When the signal must compete with natural variance, prefer a threshold gate + flat correction over a proportional one.
+
+**Reference:** `client/src/screens/RaceScreen/index.jsx`, `client/src/modules/rubberBandConfig.js`. Session 2026-05-31.
