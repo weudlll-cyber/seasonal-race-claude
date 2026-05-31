@@ -217,6 +217,7 @@ export function runSingleRace({
   behaviorConfigOverrides = {},
   racePlanController = null,   // Phase-3A: TrajectoryController instance or null
   comebackAnalysisConfig = null,  // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
+  frameHook = null,            // diag: called after applyRacerBehavior each frame — (raceTs, diagOut, racers)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -480,6 +481,9 @@ export function runSingleRace({
     let natPulkFrames = 0, natStableFrames = 0;
     let natPulkWasActive = false;
     let natPulkTriggersInWindow = 0, natPulkTriggersOutOfWindow = 0;
+
+    // frameHook support: reusable Map cleared before each applyRacerBehavior call
+    const _frameDiagOut = frameHook ? new Map() : null;
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -787,7 +791,9 @@ export function runSingleRace({
         diagPrevAvoidance = racers.map((r) => r.avoidanceActive);
       }
       computePositions();
-      applyRacerBehavior(racers, behaviorConfig, undefined);
+      if (frameHook) _frameDiagOut.clear();
+      applyRacerBehavior(racers, behaviorConfig, undefined, _frameDiagOut);
+      if (frameHook) frameHook(raceTs, _frameDiagOut, racers);
       // Lite stats: always-on, low-overhead per-frame counters
       {
         for (let ri = 0; ri < racers.length; ri++) {

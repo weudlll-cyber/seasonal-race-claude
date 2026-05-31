@@ -372,4 +372,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Start-phase brake ramp: on open tracks, speedBrakeFactor is eased in over this window (ms).
   // 0 = no ramp (full braking from frame 1). Has no effect on closed tracks.
   avoidanceWarmupMs: 3000,
+  // Stuck-mode suppression: when a racer is bilaterally sandwiched (equal pressure from both
+  // sides, near-zero velocity), suppress all lateral delta so the racer holds position and
+  // waits for a gap rather than jittering. Resumes normal behavior the moment space opens.
+  // Independent of the 8-parameter group.
+  stuckModeSuppress: true,
 };

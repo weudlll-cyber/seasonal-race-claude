@@ -91,6 +91,13 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
     }));
   }
 
+  function resetStuckEscape() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      stuckModeSuppress: DEFAULT_RACE_BEHAVIOR_CONFIG.stuckModeSuppress,
+    }));
+  }
+
   function resetAll() {
     setBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
   }
@@ -626,6 +633,36 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               }}
             />
             <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
+          </div>
+        </div>
+      </SubCard>
+
+      {/* ── Block 10: Stuck Mode Suppression ── */}
+      <SubCard
+        title="Stuck Mode Suppression"
+        onReset={resetStuckEscape}
+        resetTestId="reset-stuck-escape"
+        subtitle="When a racer is sandwiched between neighbors with equal pressure from both sides and near-zero velocity, it suppresses all lateral movement and holds its position until space opens — instead of jittering. Independent of the 8-parameter avoidance group."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Suppress When Stuck
+              <InfoTooltip text="When enabled, a racer sandwiched between equal opposing forces holds position and waits for a gap rather than jittering. Resumes normal lane-change behavior the moment space appears." />
+            </label>
+            <input
+              type="checkbox"
+              aria-label="Stuck Mode Suppression"
+              checked={
+                behaviorConfig.stuckModeSuppress ?? DEFAULT_RACE_BEHAVIOR_CONFIG.stuckModeSuppress
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => setBehavior('stuckModeSuppress', e.target.checked)}
+            />
           </div>
         </div>
       </SubCard>

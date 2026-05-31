@@ -21,6 +21,13 @@ export const PRIORITY_MODE = Object.freeze({
 // Wider tracks divide lateralForce by the ratio; narrower tracks multiply it (clamped 0.1–3.0).
 const REFERENCE_TRACK_WIDTH = 98;
 
+// Stuck-mode thresholds (match diagnosis-recommended band from diag-stuck-mode.mjs).
+// A racer is "stuck" when bilateral avoidance forces nearly cancel, leaving it motionless.
+// Used by stuckModeSuppress: when all three conditions hold, lateral delta is zeroed.
+const STUCK_P_THRESH = 0.008; // minimum totalPressure (rawPos + rawNeg) to qualify
+const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near-cancel)
+const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
+
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
  * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
@@ -198,7 +205,7 @@ function _computeBlockedMode(r, active) {
  *   Optional. When provided, activates the 4-mode priority system for Home Force (Phase 2).
  *   When omitted, falls back to the legacy homeForceReductionOnOverlap behavior.
  */
-export function applyRacerBehavior(racers, config, priorityExtras) {
+export function applyRacerBehavior(racers, config, priorityExtras, diagOut = null) {
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
@@ -222,6 +229,15 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   const overlapSet = new Set();
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
+  // rawPos/rawNeg: pre-normalization avoidance + free-lane force magnitudes by direction.
+  // Allocated when diagOut is provided (external diagnostic) OR when stuck suppression is active
+  // (suppression reads the same per-direction breakdown to decide if the racer is sandwiched).
+  // cntPos/cntNeg: pair-force counts — only needed for external diagnostic output.
+  const needsBreakdown = diagOut !== null || (config.stuckModeSuppress ?? false);
+  const dRawPos = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
+  const dRawNeg = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
+  const dCntPos = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
+  const dCntNeg = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
@@ -328,6 +344,12 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
             freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
           }
+          if (dRawPos !== null) {
+            if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
+            else if (dirA < 0) dRawNeg.set(rA.index, dRawNeg.get(rA.index) + forceMag);
+            if (dirB > 0) dRawPos.set(rB.index, dRawPos.get(rB.index) + forceMag);
+            else if (dirB < 0) dRawNeg.set(rB.index, dRawNeg.get(rB.index) + forceMag);
+          }
         }
       }
 
@@ -342,6 +364,16 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         yAvoidDeltas.get(trailer.index) + pushDir * forceMag * lateralScale
       );
       neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
+      if (dRawPos !== null) {
+        const scaled = forceMag * lateralScale;
+        if (pushDir > 0) {
+          dRawPos.set(trailer.index, dRawPos.get(trailer.index) + scaled);
+          if (dCntPos !== null) dCntPos.set(trailer.index, dCntPos.get(trailer.index) + 1);
+        } else {
+          dRawNeg.set(trailer.index, dRawNeg.get(trailer.index) + scaled);
+          if (dCntNeg !== null) dCntNeg.set(trailer.index, dCntNeg.get(trailer.index) + 1);
+        }
+      }
     }
   }
 
@@ -432,8 +464,27 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
+  const stuckSuppress = (config.stuckModeSuppress ?? false) && dRawPos !== null;
   for (const r of active) {
-    const delta = yDeltas.get(r.index) ?? 0;
+    let delta = yDeltas.get(r.index) ?? 0;
+
+    // Stuck-mode suppression: when bilaterally sandwiched (equal pressure from both sides and
+    // near-zero velocity), suppress all lateral delta so the racer waits rather than jittering.
+    // Normal behavior resumes the moment the stuck condition clears (space opens).
+    if (stuckSuppress) {
+      const rp = dRawPos.get(r.index);
+      const rn = dRawNeg.get(r.index);
+      const totalP = rp + rn;
+      if (totalP > STUCK_P_THRESH) {
+        const imbalance = Math.abs(rp - rn) / totalP;
+        if (
+          imbalance < STUCK_BALANCE_RATIO &&
+          Math.abs(r.physicalYVelocity ?? 0) < STUCK_VEL_THRESH
+        ) {
+          delta = 0;
+        }
+      }
+    }
 
     // Accumulate lateral forces into velocity, then damp
     r.physicalYVelocity = ((r.physicalYVelocity ?? 0) + delta) * damping;
@@ -452,6 +503,16 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     if (clamped !== newY) r.physicalYVelocity = 0;
     r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
+    if (diagOut) {
+      diagOut.set(r.index, {
+        rawPos: dRawPos.get(r.index),
+        rawNeg: dRawNeg.get(r.index),
+        cntPos: dCntPos !== null ? dCntPos.get(r.index) : 0,
+        cntNeg: dCntNeg !== null ? dCntNeg.get(r.index) : 0,
+        netDelta: yDeltas.get(r.index) ?? 0, // pre-suppression physics balance
+        velAfter: r.physicalYVelocity,
+      });
+    }
   }
 
   // ── Drafting — cone behind leader in world-pixel space ────────────────────
