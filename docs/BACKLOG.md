@@ -595,6 +595,12 @@ from D3.5.5.
 15. 🔜 **Camera phase + RaceScreen refactor** — revise CameraDirector, split RaceScreen (Q-7). Concept documentation sprint first. Q-25 (track canvas size) as parallel consideration in concept sprint.
 15b. ✅ **Phase 3A — Race plan + area bonus** (feat/phase-3a, 2026-05-19) — `racePlanner.js` (B1–B5 area assignment, P-controller trajectoryMult [0.85,1.10], seeded PRNG), `bereichsBonusMult` in physics loop (fade after OUTCOME), symmetric start rows (bottom-up), dynamic finish line open tracks (ssf-based), 5 HUD overlays (RP DIAG), `racePlanBonusStrengthMultiplier` DevPanel + Sim. Defaults: avoidanceDistance=0.15, bonusMult=2.0. Sim smoke 120s: χ²=0.3–0.6 ✅. User-validated.
 16 (shifted). **TLH-3 — code fallback + status banner + export** — deferred until after Camera Phase.
+15c. **STUCK mode** — racers that are geometrically trapped (surrounded on both sides, no free lane for ≥N frames) should glide straight rather than jittering. Currently the free-lane impulse keeps firing and flipping direction each frame because neither side tests free. Proposed fix: detect stuck state (`bothSidesBlocked` for 10+ consecutive frames) and suspend avoidance forces for that racer until a side opens.
+
+15d. **Adaptive zoom — minimum N racers always visible** — Leader/Lead-Change camera states should guarantee that at least N racers (range 3–15, default 8) are visible on screen simultaneously, regardless of track width. Currently spriteScale controls zoom indirectly and can produce a frame with only 1–2 racers. Implement a zoom floor derived from the desired racer count × track width / viewport width. Tunable in Dev Screen.
+
+15e. **Pulk analysis — Race Plan zone success at ~48%** — Zone success rates plateau around 48% across all parameter combinations (B1–B5 barely differ). Investigate whether the Bonus/Malus system structurally favors pack (Pulk) formation: if many racers occupy the same zone, the zone bonus is shared and dampened. This may require a positional spread mechanism or stronger zone separation incentive in the race plan.
+
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
 18. **Backup/export** (B-5) — UI exists, wiring missing.

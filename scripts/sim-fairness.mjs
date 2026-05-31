@@ -92,6 +92,12 @@ const V4_ROW2_THRESHOLDS  = V4_ROW_REST_THRESHOLDS_RAW ? V4_ROW_REST_THRESHOLDS_
 // ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
 const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
 const WARMUP_MS_OVERRIDE = WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
+// --behavior='{"lateralForce":0.016,"lateralDamping":0.30}' — JSON object merged into behaviorConfig
+const BEHAVIOR_OVERRIDE_RAW = argVal('behavior', null);
+const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW ? (() => {
+  try { return JSON.parse(BEHAVIOR_OVERRIDE_RAW); }
+  catch { console.error('⚠️  --behavior: invalid JSON, ignoring'); return {}; }
+})() : {};
 
 // ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
 const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
@@ -151,6 +157,7 @@ export const RACER_CONFIGS = {
   buggy:     { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
   motorbike: { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
   plane:     { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
+  luge:      { speedMultiplier: 1.10, displaySize: 40, surfaceClasses: ['ice', 'snow'] },
 };
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
@@ -434,6 +441,26 @@ export function runSingleRace({
     let liteLateralMoves    = 0;  // racer-frames where |physicalY delta| > 1e-4
     const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
     let litePrevPhysY       = null;
+    // Lateral quality metrics
+    let liteOverlapPairFrames    = 0;   // pair-frames with |dY|<0.08 AND |dT|<0.03
+    let liteOverlapPairTotal     = 0;   // total pair-frames checked
+    let liteZigzagSum            = 0;   // sum of |physicalYVelocity change| per racer-frame (after 4s)
+    let liteZigzagFrames         = 0;   // racer-frames counted for zigzag (after 4s warmup)
+    let litePrevPhysYVel         = null;// previous physicalYVelocity per racer index
+    const liteOverlapPairState   = new Map(); // pairKey → consecutive overlapping frame count
+    let liteOverlapResolutionSum = 0;   // sum of resolved overlap-run lengths (frames)
+    let liteOverlapResolutionN   = 0;   // count of resolved overlap runs
+    // New metrics: lateralSpeedScore, brakeRate, stableOvertakes
+    let liteLatSpeedSum          = 0;   // sum of |physicalYVelocity| per active racer-frame (after 4s)
+    let liteLatSpeedFrames       = 0;
+    let liteBrakeSum             = 0;   // racer-frames where avoidanceActive=true (after 4s)
+    let liteBrakeFrames          = 0;
+    // stableOvertakes: confirmed lead-swaps (3s+ duration) in 20%–80% of race, per racer
+    const SO_CONFIRM_FRAMES      = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
+    const soPairLeader           = new Map(); // pairKey → currentLeaderIdx
+    const soPairSince            = new Map(); // pairKey → consecutive frames at current lead
+    const soPairConfirmed        = new Map(); // pairKey → confirmed (≥3s) leader idx
+    let soCount                  = 0;
 
     // ── Phase-3A: Naturalness metrics state ──────────────────────────────────
     const JERK_BASESPEED_EPSILON = 1e-5;
@@ -772,6 +799,83 @@ export function runSingleRace({
         }
         if (!litePrevPhysY) litePrevPhysY = new Array(racers.length);
         for (let ri = 0; ri < racers.length; ri++) litePrevPhysY[ri] = racers[ri].physicalY;
+        // Lateral quality: zigzag score (avg |Δv| per racer-frame, after 4s warmup)
+        // Measures jerk-like lateral oscillation: large when params cause oscillation,
+        // near-zero when motion is smooth. Sign reversals alone are misleading in a
+        // dense pack since avoidance interactions cause frequent small-amplitude
+        // direction changes even with well-tuned parameters.
+        if (litePrevPhysYVel && raceTs > 4000) {
+          for (let ri = 0; ri < racers.length; ri++) {
+            if (!racers[ri].finished) {
+              liteZigzagSum += Math.abs((racers[ri].physicalYVelocity ?? 0) - litePrevPhysYVel[ri]);
+              liteZigzagFrames++;
+            }
+          }
+        }
+        if (!litePrevPhysYVel) litePrevPhysYVel = new Array(racers.length).fill(0);
+        for (let ri = 0; ri < racers.length; ri++) litePrevPhysYVel[ri] = racers[ri].physicalYVelocity ?? 0;
+        // Lateral quality: overlap rate + resolution
+        // Skip the first 4 s — start-phase packing always produces overlaps before
+        // avoidance kicks in; counting them would inflate overlapRate artificially.
+        if (raceTs > 4000) for (let a = 0; a < racers.length; a++) {
+          if (racers[a].finished) continue;
+          for (let b = a + 1; b < racers.length; b++) {
+            if (racers[b].finished) continue;
+            const ra = racers[a], rb = racers[b];
+            const dY = Math.abs(ra.physicalY - rb.physicalY);
+            const dT = Math.abs(ra.t - rb.t);
+            const pairKey = ra.index * 100 + rb.index;
+            liteOverlapPairTotal++;
+            if (dY < 0.08 && dT < 0.03) {
+              liteOverlapPairFrames++;
+              liteOverlapPairState.set(pairKey, (liteOverlapPairState.get(pairKey) ?? 0) + 1);
+            } else if (liteOverlapPairState.has(pairKey)) {
+              liteOverlapResolutionSum += liteOverlapPairState.get(pairKey);
+              liteOverlapResolutionN++;
+              liteOverlapPairState.delete(pairKey);
+            }
+          }
+        }
+        // lateralSpeedScore + brakeRate (after 4 s warmup)
+        if (raceTs > 4000) {
+          for (let ri = 0; ri < racers.length; ri++) {
+            if (!racers[ri].finished) {
+              liteLatSpeedSum += Math.abs(racers[ri].physicalYVelocity ?? 0);
+              liteLatSpeedFrames++;
+              if (racers[ri].avoidanceActive) liteBrakeSum++;
+              liteBrakeFrames++;
+            }
+          }
+        }
+        // stableOvertakes: confirmed lead-swaps between 20%–80% of race
+        {
+          const durMs = targetSeconds * 1000;
+          if (raceTs >= durMs * 0.2 && raceTs <= durMs * 0.8) {
+            for (let a = 0; a < racers.length; a++) {
+              if (racers[a].finished) continue;
+              for (let b = a + 1; b < racers.length; b++) {
+                if (racers[b].finished) continue;
+                const pairKey  = racers[a].index * 100 + racers[b].index;
+                const curLeader = racers[a].t >= racers[b].t ? racers[a].index : racers[b].index;
+                const prevLeader = soPairLeader.get(pairKey);
+                if (prevLeader === undefined) {
+                  soPairLeader.set(pairKey, curLeader);
+                  soPairSince.set(pairKey, 1);
+                } else if (prevLeader === curLeader) {
+                  const newSince = (soPairSince.get(pairKey) ?? 0) + 1;
+                  soPairSince.set(pairKey, newSince);
+                  if (newSince >= SO_CONFIRM_FRAMES && soPairConfirmed.get(pairKey) !== curLeader) {
+                    if (soPairConfirmed.has(pairKey)) soCount++;
+                    soPairConfirmed.set(pairKey, curLeader);
+                  }
+                } else {
+                  soPairLeader.set(pairKey, curLeader);
+                  soPairSince.set(pairKey, 1);
+                }
+              }
+            }
+          }
+        }
         if (isOpen) {
           const row0Live = racers.filter((r) => r.startRowIndex === 0 && !r.finished);
           if (row0Live.length > 0) {
@@ -807,6 +911,13 @@ export function runSingleRace({
       }
     }
 
+    // Flush any overlap runs still open at race end
+    for (const [, count] of liteOverlapPairState) {
+      liteOverlapResolutionSum += count;
+      liteOverlapResolutionN++;
+    }
+    liteOverlapPairState.clear();
+
     // DNF: rank unfinished by current t-position (higher = better)
     const dnf = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
     for (let k = 0; k < dnf.length; k++) {
@@ -835,7 +946,13 @@ export function runSingleRace({
     results.v4PerRacerEndStats  = (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer')
       ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
       : null;
-    results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
+    results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
+    results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
+    results.liteZigzagScore              = liteZigzagFrames > 0 ? liteZigzagSum / liteZigzagFrames : 0;
+    results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
+    results.liteBrakeRate                = liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
+    results.liteStableOvertakes          = soCount / racers.length;
     // Phase-3A: Δ5s per-racer oscillation metric
     let tmDelta5sMax = 0;
     let tmOscillatingCount = 0;
@@ -875,6 +992,8 @@ export function runSingleRace({
     };
     results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
     results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
+    // outcomeReached: true if at least one racer crossed the finish line (race didn't time out)
+    results.outcomeReached = finishedCount > 0;
 
     // Phase-3B: COMEBACK analysis result
     if (cbCfg) {
@@ -959,6 +1078,61 @@ export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
   const pValue   = chiSqPValue(chiSq, df);
 
   return { nRaces, totalRows, rowStats, chiSq, df, pValue };
+}
+
+/**
+ * Compute per-zone success rate using the real game zone boundaries (B1–B5)
+ * from racePlanner.js getAreaBounds() with bonusStrengthMultiplier=2.0.
+ *
+ * @param {Array<{result: object[], targetRankMap: Map<number,number>}>} raceEntries
+ * @returns {{ zones: object[], overall: object }}
+ */
+export function computeZoneSuccessRate(raceEntries) {
+  const ZONES = [
+    { zone: 'B1', lo: 1,  hi: 5,        bonus: '+6%' },
+    { zone: 'B2', lo: 6,  hi: 15,       bonus: '+4%' },
+    { zone: 'B3', lo: 16, hi: 25,       bonus: '+2%' },
+    { zone: 'B4', lo: 26, hi: 40,       bonus: '±0%' },
+    { zone: 'B5', lo: 41, hi: Infinity, bonus: '−2%' },
+  ];
+
+  function getZoneIdx(rank) {
+    if (rank <= 5)  return 0;
+    if (rank <= 15) return 1;
+    if (rank <= 25) return 2;
+    if (rank <= 40) return 3;
+    return 4;
+  }
+
+  const hits  = [0, 0, 0, 0, 0];
+  const total = [0, 0, 0, 0, 0];
+  let overallHits = 0, overallTotal = 0;
+
+  for (const { result, targetRankMap } of raceEntries) {
+    for (const racer of result) {
+      const targetRank = targetRankMap?.get(racer.racerIndex);
+      if (targetRank == null) continue;
+      const tz = getZoneIdx(targetRank);
+      const fz = getZoneIdx(racer.finalRank);
+      total[tz]++;
+      overallTotal++;
+      if (fz === tz) { hits[tz]++; overallHits++; }
+    }
+  }
+
+  return {
+    zones: ZONES.map((z, i) => ({
+      ...z,
+      hits:  hits[i],
+      total: total[i],
+      rate:  total[i] > 0 ? hits[i] / total[i] : null,
+    })),
+    overall: {
+      hits:  overallHits,
+      total: overallTotal,
+      rate:  overallTotal > 0 ? overallHits / overallTotal : null,
+    },
+  };
 }
 
 // Wilson-Hilferty chi-square p-value approximation (upper tail)
@@ -1428,6 +1602,37 @@ function buildReport(allResults, rawData, runDate) {
     lines.push('');
   }
 
+  // ── Lateral Quality Metrics (all tracks) ──
+  const withLateralQ = allResults.filter((r) => r.avgNaturalness && r.avgNaturalness.overlapRate != null);
+  if (withLateralQ.length > 0) {
+    lines.push('---');
+    lines.push('');
+    lines.push('## Lateral Quality Metrics');
+    lines.push('');
+    lines.push(
+      'overlapRate: % of active pair-frames with |dY|<0.08 AND |dT|<0.03 (lateral collision zone).  \n' +
+      'overlapResolution: avg consecutive frames a pair stays in overlap before separating.  \n' +
+      'zigzagScore: avg |physicalYVelocity change| per racer-frame (after 4s) — target < 0.003.  \n' +
+      'lateralSpeedScore: avg |physicalYVelocity| per racer-frame (after 4s) — lower = smoother.  \n' +
+      'brakeRate: fraction of racer-frames where speed-brake is active (after 4s) — lower = less blockage.  \n' +
+      'stableOvertakes: confirmed lead-swaps (≥3s) per racer in 20%–80% of race — higher = more action.'
+    );
+    lines.push('');
+    lines.push('| Track | Racer | Dist | overlapRate% | overlapResolution (fr) | zigzagScore |');
+    lines.push('|-------|-------|------|-------------|------------------------|-------------|');
+    for (const res of withLateralQ) {
+      const n = res.avgNaturalness;
+      const zigzagLabel = (n.zigzagScore ?? 0) < 0.005 ? '✅' : '⚠️';
+      lines.push(
+        `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s` +
+        ` | ${((n.overlapRate ?? 0) * 100).toFixed(1)}%` +
+        ` | ${(n.overlapResolutionFrames ?? 0).toFixed(1)}` +
+        ` | ${(n.zigzagScore ?? 0).toFixed(6)} ${zigzagLabel} |`
+      );
+    }
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
@@ -1606,6 +1811,9 @@ if (isMain) {
   if (WARMUP_MS_OVERRIDE !== null) {
     console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
   }
+  if (Object.keys(BEHAVIOR_OVERRIDE).length > 0) {
+    console.log(`⚠️  --behavior override: ${JSON.stringify(BEHAVIOR_OVERRIDE)}`);
+  }
   if (COMEBACK_ANALYSIS) {
     if (!RACE_PLAN_ACTIVE) console.warn('⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen');
     console.log(`Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`);
@@ -1720,7 +1928,10 @@ if (isMain) {
             seed,
             nRacers: N_RACERS,
             diagnosticMode: DIAG_MODE,
-            behaviorConfigOverrides: WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {},
+            behaviorConfigOverrides: {
+              ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
+              ...BEHAVIOR_OVERRIDE,
+            },
             racePlanController,
             comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
               ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
@@ -1783,6 +1994,13 @@ if (isMain) {
           racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
           tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
+          overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
+          overlapResolutionFrames: raceResults.reduce((s, r) => s + (r.liteOverlapResolutionFrames ?? 0), 0) / raceResults.length,
+          zigzagScore:             raceResults.reduce((s, r) => s + (r.liteZigzagScore ?? 0), 0) / raceResults.length,
+          lateralSpeedScore:       raceResults.reduce((s, r) => s + (r.liteLatSpeedScore ?? 0), 0) / raceResults.length,
+          brakeRate:               raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) / raceResults.length,
+          stableOvertakes:         raceResults.reduce((s, r) => s + (r.liteStableOvertakes ?? 0), 0) / raceResults.length,
+          outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
 
@@ -1850,6 +2068,15 @@ if (isMain) {
                 `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
               );
             }
+            console.log(
+              `     LateralQ: overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
+              `  resolution=Ø${(avgNaturalness.overlapResolutionFrames ?? 0).toFixed(1)}fr` +
+              `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
+              `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
+              `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
+              `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
+              `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
+            );
           }
           // per_racer: per-row bonus distribution at race end (all rows > 0)
           if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {

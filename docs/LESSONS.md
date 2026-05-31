@@ -1987,3 +1987,40 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Consequence:** When designing a cyclic sprite animation, prototype the loop seam first. Export frame 0 and frame N−1 side-by-side, overlay them, and verify both X and Y visual centers align. Any exported sheet where the final frame and first frame differs by >2 px in optical center must be rejected.
 
 **Reference:** `LugeRacerType.js` (`basePeriodMs: 600`, `frameCount: 16`); `SpriteRacerType.js` `_getFrameIndex`. Session 2026-05-29. See Lesson 102 (X-center consistency).
+
+---
+
+## Lesson 106 — Velocity-Based Lateral Physics Eliminates Zigzag at Zero Extra Overlap Cost
+
+**Context:** feat/lateral-velocity (2026-05-31). Prior implementation applied net lateral force directly to `physicalY` each frame. With opposing forces (home force pulling left, avoidance pushing right), the sign could flip frame-to-frame, producing visible zigzag oscillation — especially in tight packs.
+
+**Fix:** Accumulate forces into `physicalYVelocity`, then apply velocity to position with damping:
+```
+physicalYVelocity = physicalYVelocity * lateralDamping + netForce
+physicalY += physicalYVelocity
+```
+`lateralDamping = 0.25` means velocity decays to 25% per frame — enough inertia to smooth over single-frame sign reversals, not enough to prevent real avoidance from working.
+
+**Sim result:** −37% `lateralSpeedScore`, −44% `zigzagScore` at same or lower `overlapRate` (targeted sweep d=0.25, f=0.012 vs. baseline d=0.45, f=0.010). Zone success rates: +0.3pp overall — indistinguishable from noise. Smoother lateral motion is orthogonal to race-plan targeting effectiveness.
+
+**Insight:** Physics-based smoothing (velocity + damping) is more robust than threshold-based filtering. Threshold filters require tuning per track width and racer count; velocity damping scales naturally because it operates on the unit-normalized physicalY space.
+
+**Consequence:** For any force-accumulation system where the output oscillates between frames: add a velocity buffer with damping before applying to position. Measure both `zigzagScore` (direction reversal rate) and the target metric (overlap, success rate) separately — smoothing and accuracy are decoupled.
+
+---
+
+## Lesson 107 — Latin Hypercube Sampling for Multi-Parameter Sweeps: Extension Beats Uniform Coverage
+
+**Context:** feat/lateral-velocity 8-parameter sweep. A 1000-combo Latin Hypercube sample explored the space; top-10 combos by score were extended with 200 additional nearby combos.
+
+**Key finding:** The extension phase found substantially better scores (−5.5) than the uniform LHS phase (−2.8), even when the initial sweep had 1000 combos. The reason: LHS guarantees one sample per stratum but does not densify around promising regions. Extension around the top-10 provides local density without requiring exponentially more combos.
+
+**Pattern:**
+1. LHS Phase 1 — broad coverage (N ≥ 500 combos per track)
+2. Extension condition — if top-10 mean is within 18% of any range boundary, extend
+3. Extension Phase — 200 combos centered on top-10 centroid with ±20% range
+4. Phase 2 — 100-race validation on top-5 by score
+
+**Insight:** The number of "survived" combos matters more than the total sweep size. A hard cutoff (e.g. overlapRate ≤ baseline per track) reduces the search space dramatically and prevents high-score but physically invalid combos from polluting Phase 2.
+
+**Reference:** `scripts/param-sweep-full.mjs`, `scripts/sweep-lateral.mjs`. Session 2026-05-31.

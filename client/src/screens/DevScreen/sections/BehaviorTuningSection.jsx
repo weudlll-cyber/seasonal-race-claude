@@ -8,6 +8,20 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { SubCard } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
+const INTERDEP_WARNING_STYLE = {
+  fontSize: '0.75rem',
+  color: '#f59e0b',
+  background: 'rgba(245,158,11,0.08)',
+  border: '1px solid rgba(245,158,11,0.28)',
+  borderRadius: '4px',
+  padding: '0.3rem 0.5rem',
+  marginTop: '0.35rem',
+  lineHeight: 1.4,
+};
+const INTERDEP_WARNING =
+  '⚠️ These 8 parameters were optimized together via simulation. ' +
+  'Changing any one requires reviewing all others. Change with caution.';
+
 const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) {
   const [behaviorConfig, setBehaviorConfig] = useState(() => loadRaceBehaviorConfig());
   const [storageError, setStorageError] = useState(null);
@@ -54,6 +68,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
       yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
       lateralForce: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralForce,
+      lateralDamping: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralDamping,
       maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
     }));
   }
@@ -326,6 +341,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0) setBehavior('avoidanceDistance', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -395,6 +411,31 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0) setBehavior('lateralForce', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Lateral Damping
+              <InfoTooltip text="Fraction of lateral velocity retained each frame (0–1, must stay below 0.5). Higher = faster separation, smoother overlap resolution. Too high (≥0.5) causes oscillation. Optimized value: 0.45." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Lateral Damping"
+              min={0.05}
+              max={0.49}
+              step={0.01}
+              value={behaviorConfig.lateralDamping}
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0 && v < 0.5) setBehavior('lateralDamping', v);
+              }}
+            />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -453,6 +494,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0) setBehavior('speedBrakeYThreshold', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -476,6 +518,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0) setBehavior('speedBrakeTThreshold', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -499,6 +542,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0 && v <= 1) setBehavior('speedBrakeFactor', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -557,6 +601,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v > 0) setBehavior('homeForceStrength', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
           <div className={s.formGroup}>
             <label
@@ -580,6 +625,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (v >= 0 && v <= 1) setBehavior('homeForceReductionOnOverlap', v);
               }}
             />
+            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
         </div>
       </SubCard>

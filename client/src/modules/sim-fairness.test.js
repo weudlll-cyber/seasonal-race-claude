@@ -281,8 +281,8 @@ describe('computeFairnessStats', () => {
 
 // ── RACER_CONFIGS ─────────────────────────────────────────────────────────────
 describe('RACER_CONFIGS', () => {
-  it('has 12 racer types', () => {
-    expect(Object.keys(RACER_CONFIGS)).toHaveLength(12);
+  it('has 13 racer types', () => {
+    expect(Object.keys(RACER_CONFIGS)).toHaveLength(13);
   });
 
   it('all speedMultipliers are positive', () => {

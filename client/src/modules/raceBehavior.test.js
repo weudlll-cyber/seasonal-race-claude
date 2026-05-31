@@ -47,6 +47,11 @@ describe('initRacerBehavior', () => {
     expect(r.physicalY).toBe(0);
   });
 
+  it('sets physicalYVelocity to 0', () => {
+    const r = makeRacer();
+    expect(r.physicalYVelocity).toBe(0);
+  });
+
   it('sets avoidanceActive to false', () => {
     const r = makeRacer();
     expect(r.avoidanceActive).toBe(false);
@@ -97,7 +102,7 @@ describe('applyRacerBehavior — home force', () => {
   it('converges physicalY to near-zero over many frames', () => {
     const r = makeRacer();
     r.physicalY = 1.0;
-    for (let f = 0; f < 120; f++) applyRacerBehavior([r], cfg);
+    for (let f = 0; f < 180; f++) applyRacerBehavior([r], cfg);
     expect(Math.abs(r.physicalY)).toBeLessThan(0.15);
   });
 
@@ -128,10 +133,11 @@ describe('applyRacerBehavior — home force', () => {
       homeForceReductionOnOverlap: 0.3,
       avoidanceDistance: 1.0,
       lateralForce: 0,
+      lateralDamping: 0.45,
     });
 
-    // Full home delta would be -0.02; reduced by 0.3 => -0.006
-    expect(a.physicalY).toBeCloseTo(0.494, 6);
+    // Force delta = -0.5×0.04×0.3 = -0.006; with damping 0.45: vel = -0.0027 → y = 0.4973
+    expect(a.physicalY).toBeCloseTo(0.4973, 5);
   });
 
   it('keeps full home force when there is no overlap', () => {
@@ -144,9 +150,11 @@ describe('applyRacerBehavior — home force', () => {
       homeForceReductionOnOverlap: 0.3,
       avoidanceDistance: 1.0,
       lateralForce: 0,
+      lateralDamping: 0.45,
     });
 
-    expect(a.physicalY).toBeCloseTo(0.48, 6);
+    // Force delta = -0.5×0.04 = -0.02; with damping 0.45: vel = -0.009 → y = 0.491
+    expect(a.physicalY).toBeCloseTo(0.491, 5);
   });
 
   it('homeForceReductionOnOverlap=1.0 disables reduction (backwards-compat)', () => {
@@ -159,9 +167,11 @@ describe('applyRacerBehavior — home force', () => {
       homeForceReductionOnOverlap: 1.0,
       avoidanceDistance: 1.0,
       lateralForce: 0,
+      lateralDamping: 0.45,
     });
 
-    expect(a.physicalY).toBeCloseTo(0.48, 6);
+    // Factor=1.0 (no reduction); delta = -0.02; with damping 0.45: vel = -0.009 → y = 0.491
+    expect(a.physicalY).toBeCloseTo(0.491, 5);
   });
 
   it('homeForceReductionOnOverlap=0.0 disables home force during overlap', () => {
@@ -631,5 +641,30 @@ describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
 
   it('scale clamped to 3.0 for very narrow tracks — both 10 px and 20 px give the same delta', () => {
     expect(avoidDelta(10)).toBeCloseTo(avoidDelta(20), 10);
+  });
+});
+
+// ── Lateral velocity + damping ──────────────────────────────────────────────
+
+describe('applyRacerBehavior — lateral velocity + damping', () => {
+  it('velocity carries over: frame-2 displacement is larger than frame-1', () => {
+    const r = makeRacer();
+    r.physicalY = 0.5;
+    applyRacerBehavior([r], cfg);
+    const delta1 = 0.5 - r.physicalY;
+    const y1 = r.physicalY;
+    applyRacerBehavior([r], cfg);
+    const delta2 = y1 - r.physicalY;
+    // On frame 2 velocity from frame 1 carries over, so displacement grows
+    expect(delta2).toBeGreaterThan(delta1);
+  });
+
+  it('velocity is reset to 0 when physicalY is clamped at the boundary', () => {
+    const r = makeRacer();
+    r.physicalY = 2.0; // beyond maxLateral — will be clamped
+    r.physicalYVelocity = 0.5; // outward momentum
+    applyRacerBehavior([r], { ...cfg, homeForceStrength: 0, softRepulsionStrength: 0 });
+    expect(r.physicalYVelocity).toBe(0);
+    expect(r.physicalY).toBeLessThanOrEqual(cfg.maxLateral);
   });
 });

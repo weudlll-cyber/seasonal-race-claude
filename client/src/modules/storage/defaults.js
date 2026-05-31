@@ -356,7 +356,10 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   avoidanceDistance: 0.15,
   tWeight: 2.0,
   yWeight: 1.0,
-  lateralForce: 0.01,
+  lateralForce: 0.012,
+  // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
+  // Must stay below 0.5 to keep equilibrium velocity ≤ applied force (no oscillation).
+  lateralDamping: 0.25,
   maxLateral: 0.95,
   // Speed brake for side-by-side (adjacent) racers
   speedBrakeYThreshold: 0.2,

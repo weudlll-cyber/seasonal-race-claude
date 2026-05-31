@@ -387,11 +387,21 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 
 `scripts/sim-fairness.mjs` mirrors the Race Plan logic using `--race-plan=true` and `--bonusMult=<x>`. Every mechanics change must be reflected in both the browser and the sim (Sim-Browser Parity Rule, commit `b9c96d0`). See `reference_sim_fairness_flags.md` in project memory for exact CLI flags.
 
+**Exported metrics from `sim-fairness.mjs`:**
+- `computeFairnessStats(raceResults, totalRows, rowSizes)` — chi-square goodness-of-fit across start rows
+- `computeZoneSuccessRate(raceEntries)` — per-zone (B1–B5) hit rate: how often does a racer finish in the zone their race plan assigned them? Zone boundaries mirror `racePlanner.js getAreaBounds()` at `bonusStrengthMultiplier=2.0` (B1: ranks 1–5 +6%, B2: 6–15 +4%, B3: 16–25 +2%, B4: 26–40 ±0%, B5: 41+ −2%)
+
+**Per-race lite metrics** (on each `runSingleRace` result):
+`liteZigzagScore` (frame-to-frame physicalY direction reversals), `liteLatSpeedScore` (mean |physicalYVelocity|), `liteBrakeRate` (fraction of frames with speedBrake active), `liteStableOvertakes` (t-order changes that persist ≥ 5 frames), `liteOverlapRate` (fraction of racer-pairs in geometric overlap per frame)
+
 **Key files:**
 - `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
 - `screens/RaceScreen/index.jsx` — Race Plan activation, `bereichsBonusMult` in physics loop, fade logic
 - `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
 - `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
+- `scripts/param-sweep-full.mjs` — 8-parameter Latin Hypercube Sampling sweep
+- `scripts/sweep-lateral.mjs` — targeted 2D sweep `lateralDamping × lateralForce`
+- `scripts/compare-zones.mjs` — zone success rate comparison between two parameter sets
 
 ## Race Behavior System (D7b — lane-free)
 
@@ -401,11 +411,13 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 
 1. **Home force** — `Δy = -physicalY × homeForceStrength × factor`, where `factor = homeForceReductionOnOverlap` (default 0.3) when the racer is in geometric overlap, or 1.0 otherwise. Reduction lets free-lane separation dominate during collisions instead of being overridden by the restoring spring.
 2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields; leader holds. Force magnitude scales with proximity. Forces are accumulated separately per racer and divided by `sqrt(neighborCount)` before applying (anti-stacking normalization — prevents boundary-clinging at 20+ racers where linear accumulation would overwhelm restoring forces).
-3. **Free-lane separation** — additive impulse applied when two racers are in geometric overlap (`|ΔT| ≤ spriteSize/pathLength` AND `|ΔY| ≤ spriteSize/trackWidth`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas.
+3. **Free-lane separation** — additive impulse applied when two racers are in geometric overlap (`|ΔT| ≤ spriteSize/pathLength` AND `|ΔY| ≤ spriteSize/trackWidth`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas. Delta accumulation also normalized by `sqrt(overlapNeighborCount)` to prevent force stacking.
 4. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
 5. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
 6. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
 7. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
+
+**physicalYVelocity system (feat/lateral-velocity, 2026-05-31):** All force pipeline outputs are now accumulated into `physicalYVelocity` rather than applied directly to `physicalY`. Each frame: `physicalYVelocity = physicalYVelocity * lateralDamping + netForce`; then `physicalY += physicalYVelocity`. The damping factor (default `lateralDamping=0.25`) controls how quickly lateral velocity decays — lower values mean more inertia and smoother motion. `physicalYVelocity` is clamped by `maxLateral`. This eliminates frame-to-frame zigzag artifacts where racers would oscillate between adjacent positions due to force sign reversals on consecutive frames. Sim sweep result: `lateralDamping=0.25, lateralForce=0.012` reduces `lateralSpeedScore` by 37% and `zigzagScore` by 44% vs. the prior baseline at equivalent overlap rates.
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 

@@ -28,6 +28,7 @@ const REFERENCE_TRACK_WIDTH = 98;
  */
 export function initRacerBehavior(racer) {
   racer.physicalY = 0;
+  racer.physicalYVelocity = 0;
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
   // Priority-system fields (Phase 2). Safe to set on all racers; ignored when
@@ -214,8 +215,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   const yDeltas = new Map(active.map((r) => [r.index, 0]));
   // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
   const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
-  // Additional additive free-lane separation contribution for overlap resolution.
+  // Free-lane separation impulses — normalized by sqrt(freeLaneCount) to prevent
+  // stacking explosion at race start where many pairs overlap simultaneously.
   const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
+  const freeLaneCounts = new Map(active.map((r) => [r.index, 0]));
   const overlapSet = new Set();
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
@@ -319,9 +322,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
           if (dirA !== 0) {
             yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
+            freeLaneCounts.set(rA.index, freeLaneCounts.get(rA.index) + 1);
           }
           if (dirB !== 0) {
             yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
+            freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
           }
         }
       }
@@ -409,20 +414,30 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     }
   }
 
-  // Anti-stacking: normalize each racer's avoidance sum by sqrt(neighborCount).
-  // Prevents boundary-clinging at high racer counts where linear force accumulation
-  // across N neighbors would otherwise overwhelm restoring forces.
+  // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
+  // Prevents stacking explosion when many pairs overlap simultaneously (e.g. race start
+  // with 40 racers where each racer can overlap 10+ neighbors at once).
   for (const r of active) {
     const count = neighborCounts.get(r.index);
     const avoid =
       count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
+    const flCount = freeLaneCounts.get(r.index);
+    const freeLane =
+      flCount > 1
+        ? yFreeLaneDeltas.get(r.index) / Math.sqrt(flCount)
+        : yFreeLaneDeltas.get(r.index);
     yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
-    yDeltas.set(r.index, yDeltas.get(r.index) + yFreeLaneDeltas.get(r.index));
+    yDeltas.set(r.index, yDeltas.get(r.index) + freeLane);
   }
 
-  // Apply deltas + soft repulsion + hard clamp
+  // Apply deltas via velocity + damping + hard clamp
+  const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
   for (const r of active) {
-    let newY = r.physicalY + (yDeltas.get(r.index) ?? 0);
+    const delta = yDeltas.get(r.index) ?? 0;
+
+    // Accumulate lateral forces into velocity, then damp
+    r.physicalYVelocity = ((r.physicalYVelocity ?? 0) + delta) * damping;
+    let newY = r.physicalY + r.physicalYVelocity;
 
     // Soft repulsion: grows quadratically as physicalY approaches boundary
     const absY = Math.abs(newY);
@@ -431,9 +446,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
     }
 
-    // maxLateral cap + hard boundary clamp
+    // maxLateral cap + hard boundary clamp; reset velocity on boundary hit
     const cap = Math.min(config.maxLateral, 1.0);
-    r.physicalY = Math.max(-cap, Math.min(cap, newY));
+    const clamped = Math.max(-cap, Math.min(cap, newY));
+    if (clamped !== newY) r.physicalYVelocity = 0;
+    r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
   }
 

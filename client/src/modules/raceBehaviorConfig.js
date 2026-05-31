@@ -76,7 +76,9 @@ export function loadRaceBehaviorConfig() {
     merged.runoutZone < 0 ||
     merged.runoutZone > 0.2 ||
     !isFinite(merged.avoidanceWarmupMs) ||
-    merged.avoidanceWarmupMs < 0
+    merged.avoidanceWarmupMs < 0 ||
+    merged.lateralDamping <= 0 ||
+    merged.lateralDamping >= 1
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }
