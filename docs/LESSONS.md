@@ -2064,3 +2064,19 @@ physicalY += physicalYVelocity
 **Consequence:** Gap-proportional formulas normalized over long reference lengths (full track, full race distance) produce tiny per-frame deltas. When the signal must compete with natural variance, prefer a threshold gate + flat correction over a proportional one.
 
 **Reference:** `client/src/screens/RaceScreen/index.jsx`, `client/src/modules/rubberBandConfig.js`. Session 2026-05-31.
+
+---
+
+## Lesson 111 — Decoupling corridorStart From bonusTransitionEnd Gives the P-Controller 12 Extra Seconds
+
+**Context:** feat/race-plan-timing (2026-06-01). The Race Plan P-controller (OUTCOME phase) was gated to start at `corrStart = transitionEnd = 0.67`. This implicit coupling meant the controller never ran while the area bonus was still active and fading — the controller only began nudging racers toward their target zones after the bonus was already gone.
+
+**Discovery:** A two-phase sim sweep (Phase 1: 41 combos step 0.10, 10 races/track; Phase 2: top 3 × 100 races/track; Dirt Oval 40r / Luger Hill 60r / Space Sprint 90r; all 60s, seed=42) showed that all top Phase 1 candidates shared `corridorStart=0.55` regardless of `bonusTransitionEnd`. Decoupling `corridorStart` from `bonusTransitionEnd` allows the controller to start at 55% (33s in a 60s race) while the bonus remains active until 75% (45s) — a 12-second overlap window where both the area bonus and the P-controller pull racers toward their target zones simultaneously.
+
+**Result:** Zone success 52.4% → 64.5% (+12pp across all zones), stableOvt 9.95 → 13.20 (+33%). The longer OUTCOME window produced noticeably more visible position changes as racers actively jockeyed toward assigned zones rather than drifting passively through a bonus field.
+
+**Minor trade-off:** `overlapRate` 12.7% → 13.0% (+0.3pp, 2.4% relative). The earlier controller activation causes additional lateral shuffling in the 33–45s window while racers sort into zones. Mechanically expected; acceptable given the zone gain.
+
+**Consequence:** When a P-controller and an area bonus both point racers toward the same target, running them concurrently is better than sequentially. Sequencing them (bonus fades → controller starts) wastes time and weakens both effects.
+
+**Reference:** `client/src/modules/racePlanner.js` (`DEFAULT_PHASE_FRACTIONS.corridorStart`, `DEFAULT_PHASE_FRACTIONS.transitionEnd`), `scripts/sim-sweep.mjs`. Session 2026-06-01.

@@ -599,7 +599,7 @@ from D3.5.5.
 
 15d. ✅ **Adaptive zoom + rubber-band catch-up** (master `b5947b2`, 2382 tests) — Per-frame visibility ratchet ensures `minRacersVisible=8` on screen simultaneously; slow zoom-out floor (`leaderMinZoom=0.4`), phase-locked. Rubber band: flat boost (`flatBoost=0.10`) for all non-leaders when gap > `gapThreshold=0.003`; deactivates at OUTCOME phase. Lessons L109 (phase-locked zoom floor), L110 (flat boost vs. proportional formula).
 
-15e. **Pulk analysis — Race Plan zone success at ~48%** — Zone success rates plateau around 48% across all parameter combinations (B1–B5 barely differ). Investigate whether the Bonus/Malus system structurally favors pack (Pulk) formation: if many racers occupy the same zone, the zone bonus is shared and dampened. This may require a positional spread mechanism or stronger zone separation incentive in the race plan.
+15e. ✅ **Race Plan timing sweep** (master `9f6c0d9`, 2399 tests) — Two-phase sim sweep (Phase 1: 41 combos step 0.10, 10 races/track; Phase 2: top 3 × 100 races/track; seed=42; Dirt Oval/Luger Hill/Space Sprint). Winner: BTE=0.75, CS=0.55, CE=0.95. Zone success 52.4% → 64.5% (+12pp), stableOvt 9.95 → 13.20 (+33%). Decoupling corridorStart (0.55) from bonusTransitionEnd (0.75) gives the P-controller 12 extra seconds of OUTCOME phase. 4 timing sliders exposed in Dev Screen with amber warning banner. Reusable sweep script `scripts/sim-sweep.mjs`. Lesson L111.
 
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
