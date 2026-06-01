@@ -52,15 +52,28 @@ const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
 //             n=0 (default): non-deterministic (Math.random()), exploration only
 // --race-plan=true|false  (default false): activate Race Plan controller
 // --bonusMult=<x>  Bereichs-Bonus strength multiplier (default 1.0 = original values)
-const GLOBAL_SEED      = Number(argVal('seed', '0'));
-const RACE_PLAN_ACTIVE = argVal('race-plan', 'false') === 'true';
-const BONUS_MULT       = Number(argVal('bonusMult', '1.0'));
+// Race Plan timing (fraction of race duration, mirroring racePlanBonusTransitionEnd etc. in defaults.js)
+const GLOBAL_SEED             = Number(argVal('seed', '0'));
+const RACE_PLAN_ACTIVE        = argVal('race-plan', 'false') === 'true';
+const BONUS_MULT              = Number(argVal('bonusMult',            '1.0'));
+const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd',   '0.75'));
+const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',    '1500'));
+const RP_CORRIDOR_START       = Number(argVal('corridorStart',        '0.55'));
+const RP_CORRIDOR_END         = Number(argVal('corridorEnd',          '0.95'));
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
 const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
 const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
+
+// ── Rubber-band catch-up (mirrors DEFAULT_RUBBER_BAND_CONFIG in browser) ─────
+// Default true = matches game default (enabled:true). Use --rubber-band=false to disable.
+const RUBBER_BAND_ACTIVE   = argVal('rubber-band', 'true') !== 'false';
+const RB_FLAT_BOOST        = Number(argVal('rbFlatBoost',        '0.10'));
+const RB_GAP_THRESHOLD     = Number(argVal('rbGapThreshold',     '0.003'));
+const RB_RAMP_MS           = Number(argVal('rbRampMs',           '2000'));
+const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', '0.9'));
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -321,6 +334,11 @@ export function runSingleRace({
         trajectoryMultPrev:       1.0,
         trajectoryMultTransStart: 0,
         bereichsBonusMult:        1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
+        rubberBandMult:           1.0,
+        rubberBandMultPrev:       1.0,
+        rubberBandMultTarget:     1.0,
+        rubberBandTransStart:     0,
+        rbActivatedThisRace:      false,
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -551,6 +569,36 @@ export function runSingleRace({
         for (const r of racers) r.trajectoryMult = 1.0;
       }
 
+      // ── Rubber-band: flat catch-up boost for all non-leaders (mirrors index.jsx) ──
+      if (RUBBER_BAND_ACTIVE) {
+        let leaderT = -Infinity;
+        for (const r of racers) { if (!r.finished && r.t > leaderT) leaderT = r.t; }
+        const leaderProgress = leaderT > -Infinity ? leaderT / finishT : 0;
+        if (leaderT > -Infinity && leaderProgress < RB_ENDGAME_THRESHOLD) {
+          let secondT = -Infinity;
+          for (const r of racers) {
+            if (!r.finished && r.t < leaderT && r.t > secondT) secondT = r.t;
+          }
+          const leaderGap = secondT > -Infinity ? (leaderT - secondT) / finishT : 0;
+          const boostActive = leaderGap > RB_GAP_THRESHOLD;
+          for (const r of racers) {
+            if (r.finished) { r.rubberBandMult = 1.0; continue; }
+            const isLeader = r.t === leaderT;
+            const newTarget = !isLeader && boostActive ? 1.0 + RB_FLAT_BOOST : 1.0;
+            if (Math.abs(newTarget - r.rubberBandMultTarget) > 0.001) {
+              r.rubberBandMultPrev = r.rubberBandMult;
+              r.rubberBandMultTarget = newTarget;
+              r.rubberBandTransStart = raceTs;
+            }
+            const el = raceTs - r.rubberBandTransStart;
+            r.rubberBandMult = el < RB_RAMP_MS
+              ? r.rubberBandMultPrev + (r.rubberBandMultTarget - r.rubberBandMultPrev) * easeInOutCubic(el / RB_RAMP_MS)
+              : r.rubberBandMultTarget;
+            if (r.rubberBandMult > 1.001) r.rbActivatedThisRace = true;
+          }
+        }
+      }
+
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
       if (racePlanController && racePlanController.getPhase(raceTs) === 'OUTCOME') {
         for (const r of racers) {
@@ -609,7 +657,7 @@ export function runSingleRace({
           }
           // trajectoryMult + bereichsBonusMult: both 1.0 when Race Plan inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.bereichsBonusMult * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.bereichsBonusMult * r.rubberBandMult * (DT / 16);
         }
       }
 
@@ -937,6 +985,7 @@ export function runSingleRace({
       finalT:        r.t,
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
+      rbActivated:   r.rbActivatedThisRace,
     }));
     // Attach mixing-quota and v4 diagnostics as non-iterable properties.
     results.mixingQuota     = mixingQuota;
@@ -1806,6 +1855,10 @@ if (isMain) {
   console.log(`Output                 : ${OUT_DIR}`);
   console.log(`Seed                   : ${GLOBAL_SEED > 0 ? GLOBAL_SEED + ' (deterministisch)' : '0 (Math.random, Exploration)'}`);
   console.log(`Race Plan              : ${RACE_PLAN_ACTIVE ? '✅ aktiv' : '❌ inaktiv (Baseline-Modus)'}`);
+  if (RACE_PLAN_ACTIVE) {
+    console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
+  }
+  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (boost=${RB_FLAT_BOOST} gap=${RB_GAP_THRESHOLD} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
@@ -1913,9 +1966,15 @@ if (isMain) {
             const planRacers = comboRowLayout.assignments.map(
               (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
             );
-            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, { bonusStrengthMultiplier: BONUS_MULT }, seed);
+            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
+              bonusStrengthMultiplier: BONUS_MULT,
+              bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
+              bonusFadeDuration:       RP_BONUS_FADE_MS,
+              corridorStart:           RP_CORRIDOR_START,
+              corridorEnd:             RP_CORRIDOR_END,
+            }, seed);
             racePlanController = createTrajectoryController(plan);
-            raceSollRankMap = plan._racerSollRank;
+            raceSollRankMap = plan._racerTargetRank;
             if (COMEBACK_ANALYSIS) {
               for (const [idx, sr] of raceSollRankMap) {
                 if (sr <= 5) b1Indices.add(idx);
@@ -1964,6 +2023,7 @@ if (isMain) {
             rawData.push({
               trackId,
               trackName,
+              isOpen,
               racerType,
               durationSec,
               finishT,
@@ -2171,6 +2231,67 @@ if (isMain) {
 
   const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`\nSimulation abgeschlossen in ${totalElapsed}s`);
+
+  // ── Zone Success Rate summary (Race Plan mode only) ───────────────────────
+  const zoneRows = rawData.filter((r) => r.sollBereich != null);
+  if (RACE_PLAN_ACTIVE && zoneRows.length > 0) {
+    function zoneIdxOf(rank) {
+      if (rank <= 5)  return 0;
+      if (rank <= 15) return 1;
+      if (rank <= 25) return 2;
+      if (rank <= 40) return 3;
+      return 4;
+    }
+    const ZNAMES = ['B1 (1–5)', 'B2 (6–15)', 'B3 (16–25)', 'B4 (26–40)', 'B5 (41+)'];
+
+    console.log('\n=== Zone Success Rate (Race Plan) ===');
+    console.log('| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |');
+    console.log('|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|');
+
+    for (let zi = 0; zi < 5; zi++) {
+      const b = zi + 1;
+      const grp    = zoneRows.filter((r) => r.sollBereich === b);
+      const openG  = grp.filter((r) =>  r.isOpen);
+      const closG  = grp.filter((r) => !r.isOpen);
+      const oHits  = openG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
+      const cHits  = closG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
+      const allHit = oHits + cHits;
+      const oPct   = openG.length ? (oHits  / openG.length  * 100).toFixed(1) + '%' : '—';
+      const cPct   = closG.length ? (cHits  / closG.length  * 100).toFixed(1) + '%' : '—';
+      const allPct = grp.length   ? (allHit / grp.length    * 100).toFixed(1) + '%' : '—';
+      // RB-Fail%: among racers who FAILED their zone target AND had RB active
+      const failed = grp.filter((r) => zoneIdxOf(r.finalRank) !== zi);
+      const rbFail = failed.filter((r) => r.rbActivated).length;
+      const rbPct  = failed.length ? (rbFail / failed.length * 100).toFixed(1) + '%' : '—';
+      console.log(`| ${ZNAMES[zi].padEnd(9)} | ${String(oHits).padStart(9)} | ${String(openG.length).padStart(8)} | ${oPct.padStart(7)} | ${String(cHits).padStart(11)} | ${String(closG.length).padStart(10)} | ${cPct.padStart(8)} | ${allPct.padStart(7)} | ${rbPct.padStart(8)} |`);
+    }
+
+    // Overall row
+    const allHits2  = zoneRows.filter((r) => zoneIdxOf(r.finalRank) === (r.sollBereich - 1)).length;
+    const allFailed = zoneRows.filter((r) => zoneIdxOf(r.finalRank) !== (r.sollBereich - 1));
+    const allRbFail = allFailed.filter((r) => r.rbActivated).length;
+    const overallPct = (allHits2 / zoneRows.length * 100).toFixed(1) + '%';
+    const overallRb  = allFailed.length ? (allRbFail / allFailed.length * 100).toFixed(1) + '%' : '—';
+    console.log(`| ${'OVERALL'.padEnd(9)} | ${' '.repeat(9)} | ${' '.repeat(8)} | ${' '.repeat(7)} | ${' '.repeat(11)} | ${' '.repeat(10)} | ${' '.repeat(8)} | ${overallPct.padStart(7)} | ${overallRb.padStart(8)} |`);
+
+    // Per-track breakdown
+    const trackIds = [...new Set(zoneRows.map((r) => r.trackId))];
+    console.log('\n--- Per-Track Zone Success ---');
+    for (const tid of trackIds) {
+      const tRows = zoneRows.filter((r) => r.trackId === tid);
+      const tName = tRows[0].trackName;
+      const tOpen = tRows[0].isOpen;
+      const parts = [];
+      for (let zi = 0; zi < 5; zi++) {
+        const grp  = tRows.filter((r) => r.sollBereich === zi + 1);
+        if (grp.length === 0) { parts.push('—'); continue; }
+        const hits = grp.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
+        parts.push((hits / grp.length * 100).toFixed(0) + '%');
+      }
+      console.log(`  ${tName.padEnd(16)} (${tOpen ? 'open  ' : 'closed'})  B1=${parts[0]}  B2=${parts[1]}  B3=${parts[2]}  B4=${parts[3]}  B5=${parts[4]}`);
+    }
+    console.log('');
+  }
 
   // Write JSON
   const jsonPath = join(OUT_DIR, 'fairness-data.json');

@@ -46,7 +46,8 @@ function getAreaBounds(targetRank) {
 const DEFAULT_PHASE_FRACTIONS = {
   pulkStart: 0.25,
   pulkEnd: 0.5,
-  transitionEnd: 0.67,
+  transitionEnd: 0.75,
+  corridorStart: 0.55,
   corridorEnd: 0.95,
   midToLateSwitchFraction: 0.85,
 };
@@ -109,6 +110,21 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const rng = seed > 0 ? mulberry32(seed) : Math.random;
 
   const phaseFractions = { ...DEFAULT_PHASE_FRACTIONS, ...(config.phaseFractions ?? {}) };
+
+  // Top-level timing shortcuts: bonusTransitionEnd / corridorStart / corridorEnd / bonusFadeDuration.
+  // These take precedence over phaseFractions when explicitly provided, and are reflected back into
+  // phaseFractions so plan.phaseFractions always shows the effective values.
+  if (config.bonusTransitionEnd !== undefined)
+    phaseFractions.transitionEnd = config.bonusTransitionEnd;
+  if (config.corridorStart !== undefined) phaseFractions.corridorStart = config.corridorStart;
+  if (config.corridorEnd !== undefined) phaseFractions.corridorEnd = config.corridorEnd;
+
+  // Enforce constraint: corridorStart <= corridorEnd (clamp silently).
+  phaseFractions.corridorStart = Math.min(
+    phaseFractions.corridorStart ?? phaseFractions.transitionEnd,
+    phaseFractions.corridorEnd
+  );
+
   const corridorConfig = { ...DEFAULT_CORRIDOR_CONFIG, ...(config.corridorConfig ?? {}) };
   const controllerParams = { ...DEFAULT_CONTROLLER_PARAMS, ...(config.controllerParams ?? {}) };
 
@@ -156,8 +172,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const phases = {
     pulkStart: Math.max(postStartHoldMs, phaseFractions.pulkStart * targetDurationMs),
     pulkEnd: phaseFractions.pulkEnd * targetDurationMs,
-    transEnd: phaseFractions.transitionEnd * targetDurationMs,
-    corrEnd: phaseFractions.corridorEnd * targetDurationMs,
+    transEnd: phaseFractions.transitionEnd * targetDurationMs, // areaBonusMult fade boundary
+    corrStart: phaseFractions.corridorStart * targetDurationMs, // P-controller start (OUTCOME begin)
+    corrEnd: phaseFractions.corridorEnd * targetDurationMs, // P-controller end  (OUTCOME end)
     midSwitch: phaseFractions.midToLateSwitchFraction * targetDurationMs,
   };
 
@@ -185,7 +202,8 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
-    _areaBonusFadeDuration: config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
+    _areaBonusFadeDuration:
+      config.bonusFadeDuration ?? config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
   };
 }
 
@@ -202,7 +220,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  *   // Each physics step:
  *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
  *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * dt
+ *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * dt
  *
  * @param {object} racePlan  output of createRacePlan
  * @returns {object} TrajectoryController
@@ -210,7 +228,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 export function createTrajectoryController(racePlan) {
   const plan = racePlan;
   const { gain, maxMult, minMult } = plan.controllerParams;
-  const { pulkStart, pulkEnd, transEnd, corrEnd } = plan._phases;
+  const { pulkStart, pulkEnd, transEnd, corrStart, corrEnd } = plan._phases;
 
   const rng = plan.seed > 0 ? mulberry32(plan.seed + 0x9e3779b9) : Math.random;
 
@@ -230,7 +248,7 @@ export function createTrajectoryController(racePlan) {
   function getPhase(elapsedMs) {
     if (elapsedMs < pulkStart) return 'PRE_PULK';
     if (elapsedMs < pulkEnd) return 'PULK';
-    if (elapsedMs < transEnd) return 'TRANSITION';
+    if (elapsedMs < corrStart) return 'TRANSITION';
     if (elapsedMs < corrEnd) return 'OUTCOME';
     return 'FINAL';
   }
@@ -251,7 +269,7 @@ export function createTrajectoryController(racePlan) {
   }
 
   function update(racers, elapsedMs) {
-    // ── areaBonusMult: full pre-OUTCOME, easeInOutCubic fade at OUTCOME entry ──
+    // ── areaBonusMult: full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
     if (elapsedMs < transEnd) {
       for (const r of racers) {
         r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;

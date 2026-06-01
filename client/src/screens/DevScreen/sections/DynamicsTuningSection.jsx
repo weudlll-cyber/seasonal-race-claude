@@ -24,6 +24,17 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { SubCard } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
+const RACE_PLAN_TIMING_WARNING_STYLE = {
+  fontSize: '0.75rem',
+  color: '#f59e0b',
+  background: 'rgba(245,158,11,0.08)',
+  border: '1px solid rgba(245,158,11,0.28)',
+  borderRadius: '4px',
+  padding: '0.3rem 0.5rem',
+  marginTop: '0.5rem',
+  lineHeight: 1.4,
+};
+
 const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) {
   const [speedConfig, setSpeedConfig] = useState(() => loadBaseSpeedConfig());
   const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
@@ -97,6 +108,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     setDynamicsConfig((prev) => ({
       ...prev,
       racePlanBonusStrengthMultiplier: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier,
+      racePlanBonusTransitionEnd: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd,
+      racePlanBonusFadeDuration: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration,
+      racePlanCorridorStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart,
+      racePlanCorridorEnd: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
     }));
   }
 
@@ -481,12 +496,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4b: Race Plan Bonus ── */}
+      {/* ── Block 4b: Race Plan Bonus + Timing ── */}
       <SubCard
         title="Race Plan Bonus"
         onReset={resetRacePlanBonus}
         resetTestId="reset-race-plan-bonus"
-        subtitle="Scales the Race Plan area bonuses. At 1.0 the default values apply (B1=+3%). At 2.0 the bonus doubles (B1=+6%). Useful when avoidance is tight and B1 racers can't reach their target area."
+        subtitle="Scales the Race Plan area bonuses and controls the timing of the bonus fade and P-controller window."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -511,7 +526,109 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Bonus active until (% race)
+              <InfoTooltip text="The area speed bonus (B1=+6%, B5=−2%) is applied at full strength from race start until this point, then fades out over the Bonus fade duration. Default: 67%" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan Bonus active until percent"
+              min={30}
+              max={95}
+              step={5}
+              value={Math.round((dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75) * 100)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 30 && v <= 95) setDynamics('racePlanBonusTransitionEnd', v / 100);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Bonus fade duration (ms)
+              <InfoTooltip text="How long the area bonus takes to fade from full strength to 1.0 after Bonus active until. Default: 1500ms" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan Bonus fade duration ms"
+              min={500}
+              max={5000}
+              step={500}
+              value={dynamicsConfig.racePlanBonusFadeDuration ?? 1500}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 500 && v <= 5000) setDynamics('racePlanBonusFadeDuration', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              P-Controller starts (% race)
+              <InfoTooltip text="The trajectory P-controller (OUTCOME phase) becomes active at this point and pushes each racer toward their assigned target rank. Default: 67%" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan P-Controller starts percent"
+              min={50}
+              max={100}
+              step={5}
+              value={Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const end = (dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100;
+                if (v >= 50 && v <= end) setDynamics('racePlanCorridorStart', v / 100);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              P-Controller ends (% race)
+              <InfoTooltip text="The trajectory P-controller deactivates at this point (FINAL phase begins). Must be >= P-Controller starts. Default: 95%" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan P-Controller ends percent"
+              min={50}
+              max={100}
+              step={5}
+              value={Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 50 && v <= 100) {
+                  const newEnd = v / 100;
+                  const curStart = dynamicsConfig.racePlanCorridorStart ?? 0.55;
+                  setDynamicsConfig((prev) => ({
+                    ...prev,
+                    racePlanCorridorEnd: newEnd,
+                    racePlanCorridorStart: Math.min(curStart, newEnd),
+                  }));
+                }
+              }}
+            />
+          </div>
         </div>
+        <p style={RACE_PLAN_TIMING_WARNING_STYLE} data-testid="race-plan-timing-warning">
+          {
+            '⚠️ These timing values interact closely with the 8 physics parameters (lateralForce, lateralDamping, etc.) and with the Race Plan bonus/malus strength. Changing them may require re-tuning the physics parameters. Use the simulation sweep to validate any changes.'
+          }
+        </p>
         <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}>
           At{' '}
           <strong style={{ color: 'var(--color-accent)' }}>
@@ -527,6 +644,25 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           <strong>
             {(1.0 - 0.01 * (dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0)).toFixed(3)}
           </strong>
+        </p>
+        <p
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+            marginTop: '0.4rem',
+            fontFamily: 'monospace',
+          }}
+          data-testid="race-plan-timeline-hint"
+        >
+          {'Bonus: 0%→'}
+          <strong>{Math.round((dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75) * 100)}%</strong>
+          {'  |  Controller: '}
+          <strong>{Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}%</strong>
+          {'→'}
+          <strong>{Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}%</strong>
+          {'  |  Final: '}
+          <strong>{Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}%</strong>
+          {'→100%'}
         </p>
       </SubCard>
 

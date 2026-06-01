@@ -35,6 +35,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       reRollLastPositionPercent: 80,
       trajectoryTransitionDuration: 1.5,
       racePlanBonusStrengthMultiplier: 2.0,
+      racePlanBonusTransitionEnd: 0.75,
+      racePlanBonusFadeDuration: 1500,
+      racePlanCorridorStart: 0.55,
+      racePlanCorridorEnd: 0.95,
     });
   });
 

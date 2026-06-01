@@ -103,7 +103,7 @@ describe('createRacePlan', () => {
     const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     expect(plan.phaseFractions.pulkStart).toBe(0.25);
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
-    expect(plan.phaseFractions.transitionEnd).toBe(0.67);
+    expect(plan.phaseFractions.transitionEnd).toBe(0.75);
     expect(plan.phaseFractions.corridorEnd).toBe(0.95);
   });
 
@@ -173,7 +173,7 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
       trajectoryMultPrev: 1.0,
       trajectoryMultTransStart: 0,
     }));
-    const transMs = plan._phases.transEnd - 1000; // just before transition end
+    const transMs = plan._phases.corrStart - 1000; // just before OUTCOME begins
     ctrl.update(racers, transMs);
     for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
   });
@@ -411,18 +411,18 @@ describe('createTrajectoryController — areaBonusMult', () => {
 // ── createTrajectoryController — phase transitions ────────────────────────────
 
 describe('createTrajectoryController — getPhase', () => {
-  it('returns correct phases for all time ranges', () => {
+  it('returns correct phases for all time ranges (default: corrStart=0.55 < transEnd=0.75)', () => {
     const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     const ctrl = createTrajectoryController(plan);
-    const { pulkStart, pulkEnd, transEnd, corrEnd } = plan._phases;
+    const { pulkStart, pulkEnd, corrStart, corrEnd } = plan._phases;
 
     expect(ctrl.getPhase(0)).toBe('PRE_PULK');
     expect(ctrl.getPhase(pulkStart - 1)).toBe('PRE_PULK');
     expect(ctrl.getPhase(pulkStart)).toBe('PULK');
     expect(ctrl.getPhase(pulkEnd - 1)).toBe('PULK');
     expect(ctrl.getPhase(pulkEnd)).toBe('TRANSITION');
-    expect(ctrl.getPhase(transEnd - 1)).toBe('TRANSITION');
-    expect(ctrl.getPhase(transEnd)).toBe('OUTCOME');
+    expect(ctrl.getPhase(corrStart - 1)).toBe('TRANSITION');
+    expect(ctrl.getPhase(corrStart)).toBe('OUTCOME');
     expect(ctrl.getPhase(corrEnd - 1)).toBe('OUTCOME');
     expect(ctrl.getPhase(corrEnd)).toBe('FINAL');
     expect(ctrl.getPhase(corrEnd + 10_000)).toBe('FINAL');
@@ -533,5 +533,281 @@ describe('createTrajectoryController — collectTelemetry', () => {
 
     const tel2 = ctrl.collectTelemetry();
     expect(tel2.winnerBlockedFractionInOutcome).toBe(0);
+  });
+});
+
+// ── Timing parameters: corridorStart, corridorEnd, bonusTransitionEnd ─────────
+
+describe('createRacePlan — timing parameter defaults', () => {
+  it('corridorStart defaults to 0.55 in phaseFractions', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan.phaseFractions.corridorStart).toBe(0.55);
+  });
+
+  it('_phases.corrStart defaults to 0.55 × targetDurationMs', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._phases.corrStart).toBeCloseTo(0.55 * TARGET_DUR_MS, 0);
+  });
+
+  it('_phases.corrEnd defaults to 0.95 × targetDurationMs', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._phases.corrEnd).toBeCloseTo(0.95 * TARGET_DUR_MS, 0);
+  });
+
+  it('_areaBonusFadeDuration defaults to 1500ms', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan._areaBonusFadeDuration).toBe(1500);
+  });
+});
+
+describe('createRacePlan — top-level timing shortcuts', () => {
+  it('corridorStart config override is stored in phaseFractions', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.75 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.75);
+    expect(plan._phases.corrStart).toBeCloseTo(0.75 * TARGET_DUR_MS, 0);
+  });
+
+  it('corridorEnd config override is stored in phaseFractions and _phases', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorEnd: 0.85 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorEnd).toBe(0.85);
+    expect(plan._phases.corrEnd).toBeCloseTo(0.85 * TARGET_DUR_MS, 0);
+  });
+
+  it('bonusTransitionEnd config override updates transitionEnd in phaseFractions', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bonusTransitionEnd: 0.5 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.transitionEnd).toBe(0.5);
+    expect(plan._phases.transEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
+  });
+
+  it('bonusFadeDuration config override is stored in _areaBonusFadeDuration', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bonusFadeDuration: 3000 },
+      BASE_SEED
+    );
+    expect(plan._areaBonusFadeDuration).toBe(3000);
+  });
+
+  it('bonusTransitionEnd and corridorStart can differ independently', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
+      BASE_SEED
+    );
+    expect(plan._phases.transEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
+    expect(plan._phases.corrStart).toBeCloseTo(0.75 * TARGET_DUR_MS, 0);
+  });
+
+  it('corridorStart > corridorEnd is clamped to corridorEnd (constraint enforcement)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.99, corridorEnd: 0.8 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.8);
+    expect(plan._phases.corrStart).toBeCloseTo(0.8 * TARGET_DUR_MS, 0);
+  });
+});
+
+describe('createTrajectoryController — corridorStart gates P-controller', () => {
+  it('P-controller inactive just before corridorStart', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.75 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const justBefore = plan._phases.corrStart - 1;
+
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: r.index === plan.winnerRacerId ? 0.1 : 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+    ctrl.update(racers, justBefore);
+    // All targets must be 1.0 (no correction outside OUTCOME)
+    for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
+  });
+
+  it('P-controller active just after corridorStart', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.75 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const justAfter = plan._phases.corrStart + 1;
+
+    // Place winner last so its target deviates from 1.0
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: r.index === plan.winnerRacerId ? 0.01 : 0.9,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+    ctrl.update(racers, justAfter);
+    const winner = racers.find((r) => r.index === plan.winnerRacerId);
+    expect(winner.trajectoryMultTarget).toBeGreaterThan(1.0); // boosted toward rank 1
+  });
+
+  it('P-controller inactive just after corridorEnd', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorEnd: 0.8 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const afterEnd = plan._phases.corrEnd + 1;
+
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: r.index === plan.winnerRacerId ? 0.01 : 0.9,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+    ctrl.update(racers, afterEnd);
+    for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
+  });
+
+  it('getPhase returns OUTCOME between corrStart and corrEnd', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.7, corridorEnd: 0.9 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const { corrStart, corrEnd } = plan._phases;
+    expect(ctrl.getPhase(corrStart)).toBe('OUTCOME');
+    expect(ctrl.getPhase((corrStart + corrEnd) / 2)).toBe('OUTCOME');
+    expect(ctrl.getPhase(corrEnd - 1)).toBe('OUTCOME');
+    expect(ctrl.getPhase(corrEnd)).toBe('FINAL');
+  });
+
+  it('getPhase returns TRANSITION between corrStart boundary and corrStart', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.7 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const { corrStart } = plan._phases;
+    expect(ctrl.getPhase(corrStart - 1)).toBe('TRANSITION');
+  });
+});
+
+describe('createTrajectoryController — bonusTransitionEnd independent from corridorStart', () => {
+  it('areaBonusMult fades at transEnd even when corridorStart is later', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+
+    // Just before bonusTransitionEnd (50%) → full bonus
+    ctrl.update(racers, plan._phases.transEnd - 100);
+    for (const r of racers) {
+      const expected = plan._racerAreaBonus.get(r.index) ?? 1.0;
+      expect(r.areaBonusMult).toBeCloseTo(expected, 4);
+    }
+
+    // After full fade (transEnd + fadeDuration) → 1.0
+    ctrl.update(racers, plan._phases.transEnd + plan._areaBonusFadeDuration + 100);
+    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 4);
+  });
+
+  it('areaBonusMult still full between bonusTransitionEnd (50%) and corridorStart (75%)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+
+    const racers = BASE_RACERS.map((r) => ({
+      ...r,
+      t: 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+
+    // In the gap zone (60% = between 50% fade-done and 75% corrStart) → bonus faded, P-ctrl off
+    const midGap = plan._phases.transEnd + plan._areaBonusFadeDuration + 1000;
+    ctrl.update(racers, midGap);
+    // areaBonusMult should be 1.0 (fully faded)
+    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 4);
+    // trajectoryMultTarget should be 1.0 (P-ctrl not yet active)
+    for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
   });
 });

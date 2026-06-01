@@ -339,6 +339,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Race Plan area bonus strength: validated at 2.0 (B1=+6%, B5=-2%). Range 0.5–3.0.
   // 2.0 compensates for tighter avoidanceDistance (0.15) so B1 racers reliably reach their area.
   racePlanBonusStrengthMultiplier: 2.0,
+  // Race Plan timing — fraction of race duration (0–1), applied in racePlanner.js.
+  // bonusTransitionEnd: bonus active until this point, then fades over bonusFadeDuration ms.
+  // corridorStart / corridorEnd: P-controller (OUTCOME phase) active window.
+  // Constraint enforced: corridorStart <= corridorEnd.
+  racePlanBonusTransitionEnd: 0.75,
+  racePlanBonusFadeDuration: 1500,
+  racePlanCorridorStart: 0.55,
+  racePlanCorridorEnd: 0.95,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {
