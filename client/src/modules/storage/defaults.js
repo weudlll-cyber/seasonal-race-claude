@@ -126,6 +126,40 @@ export const DEFAULT_TRACKS = [
     worldHeight: 1024,
     isDefault: false,
   },
+  {
+    id: 'seatrack',
+    name: 'Seatrack',
+    icon: '🐬',
+    description: 'Open sea dash through waves and sunken ruins.',
+    defaultRacerTypeId: 'dolphin',
+    geometryId: null,
+    color: '#0077b6',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['water'],
+
+    worldWidth: 6144,
+    worldHeight: 4096,
+    isDefault: false,
+  },
+  {
+    id: 'searound',
+    name: 'Searound',
+    icon: '🌊',
+    description: 'Circular sea circuit — racers loop around a sunken atoll.',
+    defaultRacerTypeId: 'manta',
+    geometryId: null,
+    color: '#023e8a',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['water'],
+
+    worldWidth: 3072,
+    worldHeight: 2048,
+    isDefault: false,
+  },
 ];
 
 export const DEFAULT_RACE_DEFAULTS = {

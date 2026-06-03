@@ -10,6 +10,7 @@
 
 import { useEffect, useRef } from 'react';
 import { getCoatVariants } from '../../../modules/racer-types/spriteTinter.js';
+import { getCachedSprite } from '../../../modules/racer-types/spriteLoader.js';
 
 /**
  * Renders an animated sprite canvas at the given sizePx.
@@ -43,6 +44,12 @@ export function MinSpriteSizePreview({ racerType, sizePx }) {
 
       const variants = getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply');
       let drawable = variants?.get(cfg.defaultCoatId) ?? variants?.values().next().value ?? null;
+
+      // Mask-mode types (buggy, motorbike, plane, koi, turtle, manta, dolphin, …) are not
+      // pre-baked into getCoatVariants — use the raw base sprite for shape/animation preview.
+      if (!drawable && cfg.tintMode === 'mask') {
+        drawable = getCachedSprite(cfg.spriteUrl) ?? null;
+      }
 
       if (!drawable) {
         const r = sizePx / 2;

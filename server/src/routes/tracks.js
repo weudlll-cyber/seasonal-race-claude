@@ -54,7 +54,7 @@ function loadAllTracks() {
 
 const tracksMap = loadAllTracks();
 
-// Metadata for the built-in default tracks — seeded as server records on first boot.
+// Metadata for the 9 built-in default tracks — seeded as server records on first boot.
 // Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
 export const DEFAULT_TRACK_SEEDS = [
   {
@@ -167,6 +167,38 @@ export const DEFAULT_TRACK_SEEDS = [
     trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
     worldWidth: 1536,
     worldHeight: 1024,
+    isDefault: true,
+  },
+  {
+    id: 'seatrack',
+    name: 'Seatrack',
+    icon: '🐬',
+    description: 'Open sea dash through waves and sunken ruins.',
+    color: '#0077b6',
+    defaultRacerTypeId: 'dolphin',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['water'],
+    trackLights: { color: '#00b4d8', style: 'sync_pulse', speed: 0.7 },
+    worldWidth: 6144,
+    worldHeight: 4096,
+    isDefault: true,
+  },
+  {
+    id: 'searound',
+    name: 'Searound',
+    icon: '🌊',
+    description: 'Circular sea circuit — racers loop around a sunken atoll.',
+    color: '#023e8a',
+    defaultRacerTypeId: 'manta',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['water'],
+    trackLights: { color: '#0096c7', style: 'sync_pulse', speed: 0.9 },
+    worldWidth: 3072,
+    worldHeight: 2048,
     isDefault: true,
   },
 ];

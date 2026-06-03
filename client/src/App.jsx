@@ -18,7 +18,7 @@ import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
 import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
 
-const CURRENT_DATA_VERSION = 4;
+const CURRENT_DATA_VERSION = 5;
 
 // Removes localStorage track entries whose name case-insensitively matches a
 // DEFAULT_TRACKS entry but whose id is a legacy hash (track was promoted to default).
@@ -54,6 +54,11 @@ function removeStalePromotedDefaults() {
 
   if (version < 4) {
     // v3 → v4: remove stale promoted-default entries (Ice Track).
+    removeStalePromotedDefaults();
+  }
+
+  if (version < 5) {
+    // v4 → v5: remove stale promoted-default entries (Seatrack, Searound).
     removeStalePromotedDefaults();
   }
 

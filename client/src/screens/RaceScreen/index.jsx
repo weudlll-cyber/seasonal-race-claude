@@ -46,6 +46,7 @@ import {
   currentLap,
   REFERENCE_FPS,
   computeSpeedScaleFactor,
+  computeClosedTrackSsf,
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
@@ -431,8 +432,10 @@ export default function RaceScreen() {
     const targetDuration = raceData.targetDuration ?? 60;
     // Open tracks: finish line set to the distance a mean racer covers in targetDuration at natural speed.
     // ssf scales t-space speed for track length so physical traversal time is comparable across tracks.
-    // Closed tracks: finish line is the target lap count.
+    // Closed tracks: finish line is the target lap count; closedSsf normalizes race_baseSpeed by
+    // path length so all closed tracks produce comparable on-screen speeds (analogous to open ssf).
     const ssf = isOpenTrack ? computeSpeedScaleFactor(geometry.pathLengthPx ?? 0) : 1;
+    const closedSsf = isOpenTrack ? 1 : computeClosedTrackSsf(geometry.pathLengthPx ?? 0);
     const finishT = isOpenTrack
       ? Math.min(
           (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS * targetDuration) / ssf,
@@ -440,14 +443,14 @@ export default function RaceScreen() {
         )
       : (raceData.targetLaps ?? lapsFromDuration(duration));
     // N-calibrated expected-minimum spread: E[min_n] = spreadMin + (spreadMax - spreadMin) / (n+1).
-    // Ensures the expected last finisher arrives at targetDuration regardless of player count.
+    // Ensures the expected last finisher arrives at targetDuration × closedSsf for closed tracks.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
     const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
     const expectedMinSpreadFactor =
       spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
     const race_baseSpeed = computeRaceBaseSpeed(
       finishT,
-      targetDuration * expectedMinSpreadFactor * speedMultiplier
+      targetDuration * expectedMinSpreadFactor * speedMultiplier * closedSsf
     );
     const maxLaps = isOpenTrack ? 1 : finishT;
 

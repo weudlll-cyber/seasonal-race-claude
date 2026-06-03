@@ -50,6 +50,15 @@ function _computeSpeedScaleFactor(pathLengthPx) {
   return Math.max(_MIN_SCALE, Math.min(_MAX_SCALE, raw));
 }
 
+/**
+ * Reference path length for closed tracks.
+ * Median of the five standard closed tracks: Dirt Oval (3245), City Circuit (3093),
+ * Garden Path (2506), Ice Track (3037), plus headroom for larger custom tracks.
+ * Used by computeClosedTrackSsf to normalize race_baseSpeed so all closed tracks
+ * produce comparable physical traversal speeds regardless of path length.
+ */
+export const REFERENCE_CLOSED_PATH_PX = 3200;
+
 const OPEN_TRACK_DURATION_MIN = 30;
 
 /**
@@ -64,6 +73,23 @@ const OPEN_TRACK_DURATION_MIN = 30;
  */
 export function computeSpeedScaleFactor(pathLengthPx) {
   return _computeSpeedScaleFactor(pathLengthPx);
+}
+
+/**
+ * Speed scale factor for a closed track: longer paths scale race_baseSpeed down
+ * so all closed tracks produce comparable on-screen traversal speeds.
+ * closedSsf = pathLengthPx / REFERENCE_CLOSED_PATH_PX
+ *
+ * Applied as a multiplier to the targetDuration in computeRaceBaseSpeed, matching
+ * the open-track ssf pattern. Standard closed tracks (~3000–3300 px) are within
+ * ±3% of 1.0; larger tracks (e.g. Searound at 5147 px) are scaled down proportionally.
+ *
+ * @param {number} pathLengthPx
+ * @returns {number}
+ */
+export function computeClosedTrackSsf(pathLengthPx) {
+  if (!pathLengthPx || pathLengthPx <= 0) return 1;
+  return pathLengthPx / REFERENCE_CLOSED_PATH_PX;
 }
 
 // Slider range [min, max] for the open-track duration picker.

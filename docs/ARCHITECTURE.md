@@ -725,7 +725,7 @@ See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summaris
 | **Track-Preset** | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`. |
 | **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`. |
 | **Server-Track** | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file). |
-| **Default-Track** | One of the 7 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
+| **Default-Track** | One of the 9 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
 | **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty. |
 
 ### Persistence Layer (after TLH)
@@ -737,7 +737,7 @@ Frontend loading order for track list:
   3. Code-Bundle (defaultTracks.js — hardcoded snapshot, bootstrap + last-resort fallback)
 ```
 
-The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 7 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
+The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 9 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
 
 ### Default-Tracks as Server-Records (TLH-1)
 

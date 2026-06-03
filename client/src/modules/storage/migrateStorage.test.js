@@ -4,7 +4,7 @@ import { DEFAULT_TRACKS } from './defaults.js';
 
 // Re-implements the App.jsx migration logic so we can test its invariants in isolation.
 // If the migration logic in App.jsx changes, update this helper to match.
-const CURRENT_DATA_VERSION = 4;
+const CURRENT_DATA_VERSION = 5;
 
 function removeStalePromotedDefaults() {
   const defaultNames = new Map(DEFAULT_TRACKS.map((t) => [t.name.toLowerCase(), t.id]));
@@ -35,6 +35,10 @@ function runMigration() {
   }
 
   if (version < 4) {
+    removeStalePromotedDefaults();
+  }
+
+  if (version < 5) {
     removeStalePromotedDefaults();
   }
 
@@ -196,8 +200,81 @@ describe('migrateStorage — v4: stale Ice Track cleanup', () => {
     expect(tracks.some((t) => t.id === ICE_TRACK.id)).toBe(true);
   });
 
-  it('fires for users at v3 and bumps version to 4', () => {
+  it('fires for users at v3 and bumps version to current', () => {
     storageSet(KEYS.DATA_VERSION, 3);
+    runMigration();
+    expect(storageGet(KEYS.DATA_VERSION, 0)).toBe(CURRENT_DATA_VERSION);
+  });
+});
+
+describe('migrateStorage — v5: stale Seatrack/Searound cleanup', () => {
+  const SEATRACK = DEFAULT_TRACKS.find((t) => t.name === 'Seatrack');
+  const SEAROUND = DEFAULT_TRACKS.find((t) => t.name === 'Searound');
+
+  it('removes stale hash-ID Seatrack entry for users at v4', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [
+      { id: 'cdc8780d97a7', name: 'Seatrack', icon: '🐬', color: '#0077b6' },
+      { id: 'keep-custom', name: 'My Track', icon: '🧪' },
+    ]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === 'cdc8780d97a7')).toBe(false);
+    expect(tracks.some((t) => t.id === 'keep-custom')).toBe(true);
+  });
+
+  it('removes stale hash-ID Searound entry for users at v4', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [
+      { id: '5ea647f96360', name: 'Searound', icon: '🌊', color: '#023e8a' },
+      { id: 'keep-custom', name: 'My Track', icon: '🧪' },
+    ]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === '5ea647f96360')).toBe(false);
+    expect(tracks.some((t) => t.id === 'keep-custom')).toBe(true);
+  });
+
+  it('removes both stale entries when user has both', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [
+      { id: 'cdc8780d97a7', name: 'Seatrack', icon: '🐬' },
+      { id: '5ea647f96360', name: 'Searound', icon: '🌊' },
+      { id: 'custom-keep', name: 'User Track', icon: '🧪' },
+    ]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === 'cdc8780d97a7')).toBe(false);
+    expect(tracks.some((t) => t.id === '5ea647f96360')).toBe(false);
+    expect(tracks.some((t) => t.id === 'custom-keep')).toBe(true);
+  });
+
+  it('case-insensitive: removes "SEATRACK" variant', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [{ id: 'old-hash-abc', name: 'SEATRACK', icon: '🐬' }]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === 'old-hash-abc')).toBe(false);
+  });
+
+  it('keeps the canonical seatrack entry untouched', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [{ id: SEATRACK.id, name: 'Seatrack', icon: '🐬' }]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === SEATRACK.id)).toBe(true);
+  });
+
+  it('keeps the canonical searound entry untouched', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
+    storageSet(KEYS.TRACKS, [{ id: SEAROUND.id, name: 'Searound', icon: '🌊' }]);
+    runMigration();
+    const tracks = storageGet(KEYS.TRACKS, null);
+    expect(tracks.some((t) => t.id === SEAROUND.id)).toBe(true);
+  });
+
+  it('fires for users at v4 and bumps version to current', () => {
+    storageSet(KEYS.DATA_VERSION, 4);
     runMigration();
     expect(storageGet(KEYS.DATA_VERSION, 0)).toBe(CURRENT_DATA_VERSION);
   });

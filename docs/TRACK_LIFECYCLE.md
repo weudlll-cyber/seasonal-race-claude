@@ -26,7 +26,7 @@ This document captures the agreed solution before implementation begins.
 | **Track-Preset** | Metadata for a race: name, icon, color, default racer type, surface classes, track lights, `geometryId` link. |
 | **Track-Geometry** | Spatial path data: background image, inner/outer/center boundary points, closed flag, effects, surface classes, track lights config. |
 | **Server-Track** | A Track-Preset with a backing `server/data/tracks/<id>.json` file. Authoritative source of truth. |
-| **Default-Track** | One of the 7 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track). After TLH-1, these are Server-Tracks seeded at boot. |
+| **Default-Track** | One of the 9 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound). After TLH-1, these are Server-Tracks seeded at boot. |
 | **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — in-code fallback snapshot, used when server is unreachable and cache is empty. |
 | **Orphaned Geometry** | A geometry cache entry whose linked Track-Preset no longer exists. Harmless — preserved indefinitely. |
 
@@ -200,7 +200,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 ## Default-Tracks Server Record Schema
 
-Each of the 7 default tracks is seeded with the following structure:
+Each of the 9 default tracks is seeded with the following structure:
 
 ```json
 {

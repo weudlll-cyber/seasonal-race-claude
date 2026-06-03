@@ -125,7 +125,7 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS, computeSpeedScaleFactor } from '../client/src/modules/camera/lapUtils.js';
+import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf } from '../client/src/modules/camera/lapUtils.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -158,19 +158,26 @@ function easeInOutCubic(t) {
 // displaySize affects racersPerRow (track capacity) and avoidance pixel distances.
 // surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
 export const RACER_CONFIGS = {
-  horse:     { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
-  duck:      { speedMultiplier: 0.85, displaySize: 36, surfaceClasses: ['water', 'grass'] },
-  snail:     { speedMultiplier: 0.30, displaySize: 35, surfaceClasses: ['grass'] },
-  elephant:  { speedMultiplier: 0.60, displaySize: 44, surfaceClasses: ['sand', 'earth', 'grass'] },
-  giraffe:   { speedMultiplier: 0.90, displaySize: 48, surfaceClasses: ['sand', 'earth', 'grass'] },
-  snake:     { speedMultiplier: 0.75, displaySize: 36, surfaceClasses: ['sand', 'earth', 'grass'] },
-  dragon:    { speedMultiplier: 1.10, displaySize: 50, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
-  f1:        { speedMultiplier: 1.20, displaySize: 38, surfaceClasses: ['asphalt'] },
-  rocket:    { speedMultiplier: 1.25, displaySize: 40, surfaceClasses: ['air', 'water'] },
-  buggy:     { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
-  motorbike: { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
-  plane:     { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
-  luge:      { speedMultiplier: 1.10, displaySize: 40, surfaceClasses: ['ice', 'snow'] },
+  horse:      { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
+  duck:       { speedMultiplier: 0.85, displaySize: 36, surfaceClasses: ['water', 'grass'] },
+  snail:      { speedMultiplier: 0.30, displaySize: 35, surfaceClasses: ['grass'] },
+  elephant:   { speedMultiplier: 0.60, displaySize: 44, surfaceClasses: ['sand', 'earth', 'grass'] },
+  giraffe:    { speedMultiplier: 0.90, displaySize: 48, surfaceClasses: ['sand', 'earth', 'grass'] },
+  snake:      { speedMultiplier: 0.75, displaySize: 36, surfaceClasses: ['sand', 'earth', 'grass'] },
+  dragon:     { speedMultiplier: 1.10, displaySize: 50, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
+  f1:         { speedMultiplier: 1.20, displaySize: 38, surfaceClasses: ['asphalt'] },
+  rocket:     { speedMultiplier: 1.25, displaySize: 40, surfaceClasses: ['air', 'water'] },
+  buggy:      { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
+  motorbike:  { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
+  plane:      { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
+  luge:       { speedMultiplier: 1.10, displaySize: 40, surfaceClasses: ['ice', 'snow'] },
+  beetle:     { speedMultiplier: 0.90, displaySize: 38, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
+  boarder:    { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
+  koi:        { speedMultiplier: 0.95, displaySize: 52, surfaceClasses: ['water'] },
+  turtle:     { speedMultiplier: 0.85, displaySize: 48, surfaceClasses: ['water'] },
+  manta:      { speedMultiplier: 1.10, displaySize: 56, surfaceClasses: ['water'] },
+  dolphin:    { speedMultiplier: 1.15, displaySize: 52, surfaceClasses: ['water'] },
+  snowmobile: { speedMultiplier: 1.10, displaySize: 52, surfaceClasses: ['snow', 'ice', 'earth'] },
 };
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
@@ -246,13 +253,15 @@ export function runSingleRace({
     // N-calibrated base speed — mirrors index.jsx computeRaceBaseSpeed formula.
     // Open tracks: speed derived from finishT/targetSeconds so physical race lasts exactly
     // targetSeconds; re-roll schedule (keyed to targetSeconds) then fires the correct count.
-    // Closed tracks: natural formula kept unchanged (finishT already encodes targetSeconds).
+    // Closed tracks: closedSsf normalizes race_baseSpeed by path length so all closed tracks
+    // produce comparable on-screen speeds — mirrors the closedSsf change in RaceScreen/index.jsx.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
     const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
     const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
+    const closedSsf       = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
     const race_baseSpeed  = isOpen
       ? finishT / (REFERENCE_FPS * targetSeconds * expectedMinSF * speedMultiplier)
-      : BASE_SPEED_MEAN / expectedMinSF;
+      : BASE_SPEED_MEAN / (expectedMinSF * closedSsf);
 
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
@@ -1841,7 +1850,14 @@ const isMain =
 
 if (isMain) {
   const trackDataDir = join(ROOT, 'server/data/tracks');
-  const trackFiles = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit', 'mogcvuipw2y5', '90d3020197da'];
+  const trackFiles = [
+    'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
+    '90d3020197da',    // Luger hill (open)
+    'ice-track',       // Ice Track (closed)
+    'mountainstreet',  // Mountainstreet (open)
+    'searound',        // Searound (closed)
+    'seatrack',        // Seatrack (open)
+  ];
 
   console.log('\n=== sim-fairness — RaceArena Fairness Simulation ===');
   console.log(`Rennen pro Kombination : ${N_RACES}`);
@@ -1932,9 +1948,10 @@ if (isMain) {
       for (const durationSec of DURATION_VARIANTS) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
         // Open tracks: natural speed = BASE_SPEED_MEAN / ssf so traversal time is track-length-invariant.
-        // Closed tracks: N-calibrated global race_baseSpeed unchanged.
+        // Closed tracks: closedSsf normalizes speed by path length — same pattern as open ssf.
         const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
-        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed;
+        const trackClosedSsf = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
+        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed / trackClosedSsf;
         const finishT = computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen);
 
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).

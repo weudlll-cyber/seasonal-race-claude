@@ -13,6 +13,8 @@ import {
   currentLap,
   estimatedSecondsPerLap,
   openTrackDurationRange,
+  computeClosedTrackSsf,
+  REFERENCE_CLOSED_PATH_PX,
 } from './lapUtils.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
 
@@ -139,5 +141,49 @@ describe('openTrackDurationRange', () => {
       0.0
     );
     expect(noRunout.max).toBeGreaterThanOrEqual(withRunout.max);
+  });
+});
+
+describe('computeClosedTrackSsf', () => {
+  it('REFERENCE_CLOSED_PATH_PX is 3200', () => {
+    expect(REFERENCE_CLOSED_PATH_PX).toBe(3200);
+  });
+
+  it('returns 1.0 at the reference path length', () => {
+    expect(computeClosedTrackSsf(3200)).toBeCloseTo(1.0, 5);
+  });
+
+  it('Searound (5147px) returns ~1.609', () => {
+    expect(computeClosedTrackSsf(5147)).toBeCloseTo(5147 / 3200, 5);
+  });
+
+  it('Dirt Oval (3245px) returns ~1.014 — within 2% of 1', () => {
+    const ssf = computeClosedTrackSsf(3245);
+    expect(ssf).toBeCloseTo(3245 / 3200, 5);
+    expect(Math.abs(ssf - 1)).toBeLessThan(0.02);
+  });
+
+  it('Garden Path (2506px) returns ~0.783', () => {
+    expect(computeClosedTrackSsf(2506)).toBeCloseTo(2506 / 3200, 5);
+  });
+
+  it('longer path yields ssf > 1 (slower race)', () => {
+    expect(computeClosedTrackSsf(4000)).toBeGreaterThan(1);
+  });
+
+  it('shorter path yields ssf < 1 (faster race up to reference)', () => {
+    expect(computeClosedTrackSsf(2000)).toBeLessThan(1);
+  });
+
+  it('returns 1 for zero or missing pathLengthPx', () => {
+    expect(computeClosedTrackSsf(0)).toBe(1);
+    expect(computeClosedTrackSsf(null)).toBe(1);
+    expect(computeClosedTrackSsf(undefined)).toBe(1);
+  });
+
+  it('is proportional: doubling path length doubles ssf', () => {
+    const s1 = computeClosedTrackSsf(2000);
+    const s2 = computeClosedTrackSsf(4000);
+    expect(s2).toBeCloseTo(s1 * 2, 5);
   });
 });
