@@ -36,8 +36,8 @@ Authoritative specification in `docs/CAMERA_DIRECTOR.md` (13 sections, all §13.
 
 **3 structural bugs identified** (empirically from code analysis):
 - ✅ **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — **fixed** `overviewClosedTrackZoom=1.3` multiplier, schema v15, DevScreen slider. (2026-05-27, squash `749c2a4`)
-- **Bug B** (River Run P2): zoom inversion on large open tracks — LEADER_ZOOM zooms out instead of in (effZoom=1.5×0.298=0.447 < OVERVIEW=1.5)
-- **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — shows pack center instead of leader
+- ✅ **Bug B** (River Run P2): zoom inversion on large open tracks — **fixed** action camera for open tracks with 1.5× base zoom. (2026-05-04, PR #73 `2d79678`)
+- ✅ **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — **fixed** top-3 focus group. (2026-05-04, PR #73 `80dcb8d`)
 
 **Q-25 root cause identified and solution decided:**
 - `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in `defaults.js:112` → Fix: `maxScale=10.0`
@@ -57,11 +57,11 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 - ✅ PR-A2.6: Race dynamics — spreadFactor re-roll (±85%, 5s transition) + speedBonusMult separation (2026-05-04). draftingBoost unchanged 1.10.
 - ✅ PR-A3: Dev panel reorganization (tier system, Race Tuning section, raceDynamicsConfig). (2026-05-04)
 - ✅ **Phase 4 (Timing Tunables + Plan-B Pan):** 7 timing tunables, battleMaxDurationMs, OVERVIEW jitter, diagnosis HUD, `_computePanScale` removed, trivial pan formula. (2026-05-06) — Branch: `diagnosis/camera-tuning-effectiveness`
-- PR-B: Camera bug fixes (Bug A+B+C)
-- PR-C: RaceScreen split (Q-7 refactor, no behavior change)
-- PR-D: Camera state machine (OVERVIEW random jitter, tension-strength logic, findBattleCandidate)
-- PR-E: Sprite corridor [min+max] + tag visibility iter 1 (B-UX1) + dev panel sliders for both values
-- PR-F: Dev panel camera tunables + HUD overlay
+- ✅ PR-B: Camera bug fixes (Bug A+B+C) — PR #73 `feat/pr-b-camera-reform` + PR #74 `fix/pr-b-closed-track-regression` (2026-05-04)
+- ✅ PR-C: RaceScreen split (Q-7 refactor, no behavior change) — `e180a6b` chore/hygiene (2026-05-25)
+- ✅ PR-D: Camera state machine (OVERVIEW random jitter, tension-strength logic, findBattleCandidate) — OVERVIEW jitter `d6f4d20` Phase 4 (2026-05-06) + direction system/findBattleCandidate `07bea7b` Phase 3B (2026-05-22)
+- ✅ PR-E: Sprite corridor [min+max] + tag visibility iter 1 (B-UX1) + dev panel sliders — `SpriteSizeRangeSection` + `NameTagVisibilitySection` in Phase 4 `d6f4d20` (2026-05-06). `tagVisibleMaxCount` tunable live.
+- ✅ PR-F: Dev panel camera tunables + HUD overlay — Phase 4 `d6f4d20` (7 timing tunables + battleMaxDurationMs + OVERVIEW cooldown sliders) + 3 HUD components in Phase 3B `07bea7b`
 - PR-G: UI bugs (Cancel Race + Fullscreen API)
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
@@ -214,21 +214,15 @@ Additionally: Space (Custom Track) already present.
 
 ---
 
-## EditorShape Centerline Arc-Length Mismatch Fix
+## EditorShape Centerline Arc-Length Mismatch Fix ✅
 
-**Status:** Identified 2026-05-28 (Diagnosis 4, Luger Hill). Fix pending — backup tag `backup/pre-centerline-fix`.
+**Status:** ✅ DONE — `aeb49c4` (2026-05-29, in master). Backup tag `backup/pre-centerline-fix` preserved for reference.
 
-**Root cause:** `EditorShape` constructor re-samples `innerPoints` and `outerPoints` each with their own arc-length parameterization (`catmullRomSpline(..., 500)`). At U-turns the inner boundary is shorter than the outer boundary. At the same T fraction, `inner[T]` is further around the bend than `outer[T]`. `getPosition(T, 0)` midpoint therefore zigzags off the actual centerline — measured at 73.7 px lateral oscillation at Luger Hill's tightest U-turn (Lesson 97).
+**Root cause (historical):** `EditorShape` constructor re-samples `innerPoints` and `outerPoints` each with their own arc-length parameterization (`catmullRomSpline(..., 500)`). At U-turns the inner boundary is shorter than the outer boundary. At the same T fraction, `inner[T]` is further around the bend than `outer[T]`. `getPosition(T, 0)` midpoint therefore zigzags off the actual centerline — measured at 73.7 px lateral oscillation at Luger Hill's tightest U-turn (Lesson 97).
 
-**Effect:** Racers with `physicalY = 0.000000` visually wander outside the track boundary lights at bends. The physics are correct (confirmed by DIAG3 HUD); only the visual position mapping is wrong.
+**Fix applied (option a):** When a track provides `centerPoints`, `EditorShape` re-samples them as a third arc-length-uniform curve `_center = catmullRomSpline(track.centerPoints)`. `getPosition(t, 0)` returns position directly from `_center` instead of interpolating inner/outer midpoint. Perpendicular offsets use `angle − π/2` (CW = toward outer, matching convention). `_precomputeAngles` uses `_center[i]` tangents when available. Tracks without `centerPoints` fall back to existing midpoint behavior — no regression on Dirt Oval, River Run, City Circuit, Space Sprint, Garden Path.
 
-**Fix options:**
-- **(a) Use stored centerPoints** — Re-sample the 25-point `centerPoints` (present in track JSON) as the T→position source; derive lateral offsets perpendicular to the local tangent. Simplest to implement.
-- **(b) Center-arc-length parameterization at save time** — In the track editor, after generating inner/outer boundary points, re-sample both curves using the center curve's arc-length table so that inner[T] and outer[T] are laterally co-aligned at every T.
-
-**Scope:** `client/src/modules/track-editor/EditorShape.js` (constructor + `getPosition`), potentially `catmullRom.js` (shared re-sampling function). Track JSON files unaffected (centerPoints already saved). Closed tracks may also be affected (not yet measured). Priority: Medium — only manifests on U-turn tracks like Luger Hill.
-
-**Reference:** Lesson 97, Diagnosis session 2026-05-28, Luger Hill `90d3020197da.json`.
+**Reference:** Lessons 97–99, commits `b4ebdb4` + `aeb49c4`, Luger Hill `90d3020197da.json`.
 
 ---
 
@@ -604,6 +598,14 @@ from D3.5.5.
 15f. ✅ **New racer types + camera fixes + track cleanup** (master `d33c28d`, 2543 tests) — 7 new racer types: Beetle, Boarder, Koi, Turtle, Manta, Dolphin, Snowmobile (registry 13→20). New default tracks: Mountainstreet (6th), Ice Track (7th), River Run updated. Track ID cleanup + localStorage migrations v2/v3. OVERVIEW sprite-size normalization (L116). Adaptive ratchet stops at `min(minRacersVisible, activeCount)` (L117). Motorbike artifact fix (L115). Lessons L112–L117.
 
 15g. ✅ **Closed track speed normalization + sea tracks + UI fixes** (master `066a0ed`, 2559 tests) — `closedSsf = pathLengthPx / 3200` applied to `race_baseSpeed`; Searound now races at comparable speed to standard closed tracks (L118). Seatrack (open, dolphin) and Searound (closed, manta) promoted as 8th and 9th default tracks; v5 migration; hash-ID duplicates deleted. `MinSpriteSizePreview` fixed for all mask-mode racer types. `black-sea` custom surface class removed. Sim: 7 new racer types + 4 new tracks wired.
+
+15h. ✅ **Server ReadStream error listener** (master `d615ab7`, 2559 tests) — `createReadStream` without `.on('error', ...)` converts stream errors into uncaught process exceptions that kill the Node.js server. Added error listener with `!res.headersSent` guard; covers ENOENT, EISDIR, and Windows/Docker bind-mount race conditions. Lesson L119.
+
+15i. ✅ **Sprite crop — tight-crop 12 spritesheets, restore displaySizes** (master `11093ff`, 2560 tests) — Audited all 20 racer types for bounding-box fill ratio. 8 types were adequate; 12 had excessive transparent padding and were cropped (horse, rocket, giraffe, snake, motorbike, luge, koi, snowmobile + associated masks). All displaySizes restored to values appropriate for cropped frame sizes. Lesson L120.
+
+15j. ✅ **MAX_INVERSE_ZOOM 5.0 → 10.0** (master `ee9b664`, 2560 tests) — Raised ceiling for inverse (spriteScale-based) cam.zoom in `CameraDirector`. Closed tracks with worldW > ~3500px (e.g. worldW=6144 → rawZoom≈8.69) were previously capped to 5.0, rendering sprites at 57.5%. Headroom now extends to worldW≈12800. Note: Mountainstreet is `"closed": false` (open track) — fix only applies to future large closed tracks. Lesson L121.
+
+⏳ **bodyFillX/bodyFillY per racer type** — `f5d61d5` on branch `feat/body-dimensions` (not yet merged). Adds `bodyFillX` and `bodyFillY` to all 20 racer type configs for use in sim collision detection. Awaiting merge to master.
 
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
