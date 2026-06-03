@@ -2080,3 +2080,69 @@ physicalY += physicalYVelocity
 **Consequence:** When a P-controller and an area bonus both point racers toward the same target, running them concurrently is better than sequentially. Sequencing them (bonus fades → controller starts) wastes time and weakens both effects.
 
 **Reference:** `client/src/modules/racePlanner.js` (`DEFAULT_PHASE_FRACTIONS.corridorStart`, `DEFAULT_PHASE_FRACTIONS.transitionEnd`), `scripts/sim-sweep.mjs`. Session 2026-06-01.
+
+---
+
+## Lesson 112 — Side-View Sprites Rotate With Track Direction and Appear Upside Down on Curves
+
+**Context:** feat/luge-new-sprite (2026-06-03). A snowboarder sprite drawn in side profile was added as a racer type. When tested on a curved track, the sprite rotated with the racer's heading, which is correct for top-down sprites but wrong for side-view sprites — on the descending half of a loop the sprite appeared upside down, and on the return curve it appeared mirrored.
+
+**Consequence:** Only top-down (overhead) sprites work for racer types. Side-view sprites must be rejected at the design stage. Any sprite where the orientation of the figure conveys direction of travel will misbehave on curves.
+
+**Reference:** `revert(snowboarder)` commit on feat/luge-new-sprite. Session 2026-06-03.
+
+---
+
+## Lesson 113 — Never Hardcode Track IDs or Track Counts — Always Derive From DEFAULT_TRACKS Source of Truth
+
+**Context:** feat/luge-new-sprite (2026-06-03). Server migration code and test assertions hardcoded specific track IDs (e.g. `'mogcvuipw2y5'`) and counts (e.g. `DEFAULT_TRACK_COUNT = 5`). When tracks were added or retired, every hardcoded reference had to be hunted down manually, and several were missed causing test failures.
+
+**Consequence:** Track IDs and counts must always be derived from `DEFAULT_TRACKS` (the source of truth) at runtime. Migration logic should iterate `DEFAULT_TRACKS` rather than name individual IDs. Test assertions for "all N default tracks" should use `DEFAULT_TRACKS.length`.
+
+**Reference:** `refactor(tracks): replace raw track ID strings` commit, `server/src/routes/tracks.js`. Session 2026-06-03.
+
+---
+
+## Lesson 114 — Promoting a User-Created Track to a Default Track Requires a localStorage Migration Step
+
+**Context:** feat/luge-new-sprite (2026-06-03). A user-created track was promoted to a built-in default track. The old localStorage entry (keyed by the user-generated hash ID) remained, causing the track to appear twice in the UI — once from the server default list and once from the stale localStorage entry.
+
+**Fix:** A migration step (v2) was added that removes localStorage entries whose `name` field matches any default track name (case-insensitive). A v3 migration handles the case where the name comparison needs to be case-insensitive.
+
+**Consequence:** Whenever a track is promoted from user-created to default, a one-time localStorage migration must be shipped alongside the promotion to remove the stale hash-ID entry.
+
+**Reference:** `fix(storage): v2 migration`, `fix(storage): v3 migration` commits, `client/src/modules/storage/migrateStorage.js`. Session 2026-06-03.
+
+---
+
+## Lesson 115 — Sprite Elements Thinner Than ~4px at Source Resolution Will Not Survive Downscaling
+
+**Context:** feat/luge-new-sprite (2026-06-03). Motorbike spritesheet had stray pixel clusters (1–2 px) that were invisible at source resolution but became detached floating artifacts after downscaling to the 40–52 px display size used in game. The artifacts survived multiply-mask tinting and appeared as colored dots disconnected from the sprite body.
+
+**Consequence:** Before shipping a new sprite, verify at display size (not source resolution) that no element is thinner than ~4 px at source. Elements narrower than that threshold will either disappear entirely or appear as detached artifacts after anti-aliased downscaling. Fix at source before downscaling — the artifact cannot be removed post-scale.
+
+**Reference:** `fix(motorbike)` commit series, `client/public/assets/racers/motorbike-walk.png`. Session 2026-06-03.
+
+---
+
+## Lesson 116 — OVERVIEW Zoom Normalization: Use referenceSpriteSize to Compute a Consistent Target Sprite Screen Size Across Different Racer Counts
+
+**Context:** feat/luge-new-sprite (2026-06-03). OVERVIEW zoom was computed using `_overviewStateZoom` which was a fixed value independent of racer count. `computeRacerLayout` scales `displaySizeScale` based on racer count — 8 racers produced sprites ~2× larger on screen than 80 racers at the same camera zoom. The OVERVIEW therefore showed very different sprite densities depending on the number of racers.
+
+**Fix:** `CameraDirector` stores `_referenceSpriteSize = displaySize × displaySizeScale` from the racer layout. At OVERVIEW entry, snap zoom is computed as `overviewTargetScreenPx / (referenceSpriteSize × BASE_ZOOM)`, clamped to `[overviewZoom, _overviewStateZoom × 0.8]`. This keeps the apparent sprite size consistent at ~18 px regardless of racer count.
+
+**Consequence:** Any zoom level that must be "racer-count-independent" should derive its value from `referenceSpriteSize` rather than from a fixed config constant.
+
+**Reference:** `CameraDirector._overviewSnapZoom`, `cameraTimingComputation.js (overviewTargetScreenPx)`, `defaults.js (overviewTargetScreenPx: 18)`. Session 2026-06-03.
+
+---
+
+## Lesson 117 — Adaptive Zoom Ratchet Should Stop at min(minRacersVisible, activeCount)
+
+**Context:** feat/luge-new-sprite (2026-06-03). The adaptive zoom ratchet (LEADER_ZOOM / LEAD_CHANGE) decremented `_leaderPhaseZoomFloor` each frame when `visCount < minRacersVisible`. When `activeCount < minRacersVisible` (e.g. 5 non-finished racers with `minRacersVisible = 8`), the condition was always true and the ratchet zoomed all the way to `leaderMinZoom` even after all active racers were already visible.
+
+**Fix:** Compute `activeCount = racers.filter(r => !r.finished).length` and use `visTarget = Math.min(minRacersVisible, activeCount)` as the stop condition. The ratchet halts as soon as all non-finished racers fit in the viewport.
+
+**Consequence:** Any "zoom until N racers visible" ratchet must account for the case where fewer than N racers exist. The stop condition should be `min(target, totalActive)`, not a fixed target.
+
+**Reference:** `CameraDirector._setTargets` ratchet block (~line 1818), `fix(camera): stop ratchet when all active racers are visible` commit. Session 2026-06-03.

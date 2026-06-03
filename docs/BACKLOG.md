@@ -601,6 +601,8 @@ from D3.5.5.
 
 15e. ✅ **Race Plan timing sweep** (master `9f6c0d9`, 2399 tests) — Two-phase sim sweep (Phase 1: 41 combos step 0.10, 10 races/track; Phase 2: top 3 × 100 races/track; seed=42; Dirt Oval/Luger Hill/Space Sprint). Winner: BTE=0.75, CS=0.55, CE=0.95. Zone success 52.4% → 64.5% (+12pp), stableOvt 9.95 → 13.20 (+33%). Decoupling corridorStart (0.55) from bonusTransitionEnd (0.75) gives the P-controller 12 extra seconds of OUTCOME phase. 4 timing sliders exposed in Dev Screen with amber warning banner. Reusable sweep script `scripts/sim-sweep.mjs`. Lesson L111.
 
+15f. ✅ **New racer types + camera fixes + track cleanup** (master `d33c28d`, 2543 tests) — 7 new racer types: Beetle, Boarder, Koi, Turtle, Manta, Dolphin, Snowmobile (registry 13→20). New default tracks: Mountainstreet (6th), Ice Track (7th), River Run updated. Track ID cleanup + localStorage migrations v2/v3. OVERVIEW sprite-size normalization (L116). Adaptive ratchet stops at `min(minRacersVisible, activeCount)` (L117). Motorbike artifact fix (L115). Lessons L112–L117.
+
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
 18. **Backup/export** (B-5) — UI exists, wiring missing.
@@ -635,6 +637,10 @@ from D3.5.5.
   browser state artifact (browser zoom was known as error source in the same session).
   CameraDirector's `cam.offsetX/Y` are irrelevant for open tracks — `st.camX/Y` via
   `openTrackPanTarget()` control the pan. Clarify with separate browser test after Phase 4 merge.
+
+- **Snowmobile sprite improvement** — The current snowmobile spritesheet (`snowboard-ride.png`, downscaled to 192×192) is a generic snowboard-riding animation not specifically designed for a snowmobile racer. A dedicated snowmobile sprite with clearer vehicle silhouette and more distinct rider/chassis separation would improve tinting results and visual identity. *(Priority: low — cosmetic)*
+
+- **Mountainstreet OVERVIEW inversion fix** — The Mountainstreet track is a steep downhill open course. The OVERVIEW camera shows the track with the finish line at the bottom of the canvas and the start at the top, which is counter-intuitive for a downhill track (should feel like racers are descending toward the viewer). Consider adding an `overviewFlip` or `baseRotationOffset` field to the track config that rotates the OVERVIEW camera 180°. *(Priority: low — cosmetic)*
 
 - **Pan target identification** — Camera does not reliably show the race leader *(Priority: medium)*
   LEADER_ZOOM and BATTLE_ZOOM zoom onto the centroid of the top-N lead group (`focusRacers.slice(0, N)`).
