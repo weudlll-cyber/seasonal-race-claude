@@ -8,20 +8,6 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { SubCard } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
-const INTERDEP_WARNING_STYLE = {
-  fontSize: '0.75rem',
-  color: '#f59e0b',
-  background: 'rgba(245,158,11,0.08)',
-  border: '1px solid rgba(245,158,11,0.28)',
-  borderRadius: '4px',
-  padding: '0.3rem 0.5rem',
-  marginTop: '0.35rem',
-  lineHeight: 1.4,
-};
-const INTERDEP_WARNING =
-  '⚠️ These 8 parameters were optimized together via simulation. ' +
-  'Changing any one requires reviewing all others. Change with caution.';
-
 const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) {
   const [behaviorConfig, setBehaviorConfig] = useState(() => loadRaceBehaviorConfig());
   const [storageError, setStorageError] = useState(null);
@@ -64,11 +50,8 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
   function resetSoftAvoidance() {
     setBehaviorConfig((prev) => ({
       ...prev,
-      avoidanceDistance: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance,
       tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
       yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
-      lateralForce: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralForce,
-      lateralDamping: DEFAULT_RACE_BEHAVIOR_CONFIG.lateralDamping,
       maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
     }));
   }
@@ -76,18 +59,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
   function resetSpeedBrake() {
     setBehaviorConfig((prev) => ({
       ...prev,
-      speedBrakeYThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeYThreshold,
-      speedBrakeTThreshold: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTThreshold,
-      speedBrakeFactor: DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
       avoidanceWarmupMs: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs,
-    }));
-  }
-
-  function resetHomeForce() {
-    setBehaviorConfig((prev) => ({
-      ...prev,
-      homeForceStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceStrength,
-      homeForceReductionOnOverlap: DEFAULT_RACE_BEHAVIOR_CONFIG.homeForceReductionOnOverlap,
     }));
   }
 
@@ -331,30 +303,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Avoidance Distance
-              <InfoTooltip text="How far ahead racers look to detect collision risk. Higher = early smooth steering, races look graceful. Lower = last-second corrections, looks more chaotic." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Avoidance Distance"
-              min={0.05}
-              max={1.0}
-              step={0.05}
-              value={behaviorConfig.avoidanceDistance}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('avoidanceDistance', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               T Weight
               <InfoTooltip text="How much racers care about avoiding collisions with someone directly in front. Higher = strong reaction to racers ahead, prefers to swerve around. Lower = less concerned with what's directly ahead." />
             </label>
@@ -401,54 +349,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Lateral Force
-              <InfoTooltip text="How forcefully racers steer sideways to avoid collisions. Higher = decisive sharp steering. Lower = gentle subtle drifts." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Lateral Force"
-              min={0.001}
-              max={0.1}
-              step={0.001}
-              value={behaviorConfig.lateralForce}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('lateralForce', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Lateral Damping
-              <InfoTooltip text="Fraction of lateral velocity retained each frame (0–1, must stay below 0.5). Higher = faster separation, smoother overlap resolution. Too high (≥0.5) causes oscillation. Optimized value: 0.45." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Lateral Damping"
-              min={0.05}
-              max={0.49}
-              step={0.01}
-              value={behaviorConfig.lateralDamping}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0 && v < 0.5) setBehavior('lateralDamping', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Max Lateral
               <InfoTooltip text="Maximum sideways position deviation allowed during avoidance. Caps how far a racer can swerve from their lane to dodge another." />
             </label>
@@ -484,78 +384,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Adjacent Y Threshold
-              <InfoTooltip text="How sideways-aligned racers have to be for the brake to activate. Lower = only directly-behind racers brake. Higher = racers brake even when slightly off to the side." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Adjacent Y Threshold"
-              min={0.01}
-              max={0.5}
-              step={0.01}
-              value={behaviorConfig.speedBrakeYThreshold}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('speedBrakeYThreshold', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Adjacent T Threshold
-              <InfoTooltip text="How close behind another racer triggers the brake. Higher = brakes activate earlier from further behind. Lower = only very close trailing racers brake." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Adjacent T Threshold"
-              min={0.001}
-              max={0.1}
-              step={0.001}
-              value={behaviorConfig.speedBrakeTThreshold}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('speedBrakeTThreshold', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Speed Brake Factor
-              <InfoTooltip text="How much a braking racer slows down. 0.95 = -5% speed. Lower = stronger braking, racer falls back more. Higher = subtle braking, barely noticeable." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Speed Brake Factor"
-              min={0.5}
-              max={1.0}
-              step={0.01}
-              value={behaviorConfig.speedBrakeFactor}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0 && v <= 1) setBehavior('speedBrakeFactor', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Avoidance Warmup (ms)
               <InfoTooltip text="Open tracks only. Eases in the speed-brake over this many milliseconds from race start, giving rear-row racers a window to overtake in t-space. 0 = no ramp (full braking immediately). 3000 = 3-second ease-in." />
             </label>
@@ -573,66 +401,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 if (isFinite(v) && v >= 0) setBehavior('avoidanceWarmupMs', v);
               }}
             />
-          </div>
-        </div>
-      </SubCard>
-
-      {/* ── Block 9: Home Force ── */}
-      <SubCard
-        title="Home Force"
-        onReset={resetHomeForce}
-        resetTestId="reset-home-force"
-        subtitle="The track has a centerline that racers naturally follow. After they swerve off-line (to avoid collisions, drafting, or just by chance), this force gently pulls them back to the center. Without it, racers would drift off forever; with too much, they snap back unrealistically."
-        disabled={!behaviorConfig.enabled}
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Home Force Strength
-              <InfoTooltip text="How strongly racers return to the track centerline after deviating. Higher = quick return, tight racing lines. Lower = racers drift longer before recentering, more wandering feel." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Home Force Strength"
-              min={0.005}
-              max={0.1}
-              step={0.002}
-              value={behaviorConfig.homeForceStrength}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('homeForceStrength', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Home Force Reduction On Overlap
-              <InfoTooltip text="How much of its normal home force a racer keeps while in geometric overlap with another racer. 1.0 = full home force (no reduction). 0.0 = home force off during overlap. Lower values give free-lane separation more room to push overlapping racers apart." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Home Force Reduction On Overlap"
-              min={0.0}
-              max={1.0}
-              step={0.05}
-              value={behaviorConfig.homeForceReductionOnOverlap}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 1) setBehavior('homeForceReductionOnOverlap', v);
-              }}
-            />
-            <p style={INTERDEP_WARNING_STYLE}>{INTERDEP_WARNING}</p>
           </div>
         </div>
       </SubCard>

@@ -441,27 +441,13 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   startSpreadRange: 0.95,
   // Open-track run-out zone: fraction of path after which the finish line sits (0 = no runout)
   runoutZone: 0.05,
-  // Home force — spring toward centerline (physicalY = 0)
-  homeForceStrength: 0.04,
-  // While a racer is in geometric overlap, reduce home force so free-lane can separate.
-  // 1.0 = no reduction, 0.0 = home force off during overlap.
-  homeForceReductionOnOverlap: 0.3,
   // Comfort zone & soft boundary repulsion
   comfortThreshold: 0.7,
   softRepulsionStrength: 0.1,
-  // Anisotropic avoidance distance metric (dimensionless, t×tWeight and physicalY×yWeight)
-  avoidanceDistance: 0.15,
+  // Anisotropic avoidance distance metric weights (t×tWeight and physicalY×yWeight)
   tWeight: 2.0,
   yWeight: 1.0,
-  lateralForce: 0.012,
-  // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
-  // Must stay below 0.5 to keep equilibrium velocity ≤ applied force (no oscillation).
-  lateralDamping: 0.25,
   maxLateral: 0.95,
-  // Speed brake for side-by-side (adjacent) racers
-  speedBrakeYThreshold: 0.2,
-  speedBrakeTThreshold: 0.015,
-  speedBrakeFactor: 0.95,
   // Drafting / slipstream
   draftingMaxDistance: 80,
   draftingConeAngle: 30,
@@ -472,6 +458,48 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Stuck-mode suppression: when a racer is bilaterally sandwiched (equal pressure from both
   // sides, near-zero velocity), suppress all lateral delta so the racer holds position and
   // waits for a gap rather than jittering. Resumes normal behavior the moment space opens.
-  // Independent of the 8-parameter group.
+  // Independent of the 8-parameter group below.
   stuckModeSuppress: true,
+
+  /*
+   * PHYSICS PARAMETERS — DO NOT CHANGE WITHOUT RUNNING A FULL SIM SWEEP
+   *
+   * These 8 parameters were optimized via a 4-phase simulation sweep
+   * (4020-race LHS + 520-race refinement + 1500-race validation
+   * across all 10 default tracks and default racer types).
+   *
+   * Current values (Phase 5 winner, established 2026-06-03):
+   *   lateralForce:                0.011400
+   *   lateralDamping:              0.160000
+   *   homeForceStrength:           0.030000
+   *   homeForceReductionOnOverlap: 0.300000
+   *   avoidanceDistance:           0.180000
+   *   speedBrakeFactor:            0.945000
+   *   speedBrakeTMultiplier:       1.500000
+   *   speedBrakeYThreshold:        0.180000
+   *
+   * These parameters are strongly interdependent. Changing one
+   * without re-sweeping the others will likely degrade race quality.
+   *
+   * To find new optimal values:
+   *   1. Run scripts/sim-fairness.mjs with LHS sampling (200 combos)
+   *      on Dirt Oval + Space Sprint simultaneously
+   *   2. Take top 5 survivors, refine with ±5%/±2.5% sweep
+   *   3. Validate top 3 on all 10 tracks with 50+ races each
+   *   4. Only apply values that pass all hard cutoffs on all tracks
+   *      (fairness p > 0.05, zigzag < 0.003, hardOverlap < 3%)
+   *
+   * Sweep scripts: scripts/sim-sweep.mjs, scripts/sim-fairness.mjs
+   */
+  lateralForce: 0.0114,
+  // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
+  lateralDamping: 0.16,
+  homeForceStrength: 0.03,
+  // While a racer is in geometric overlap, reduce home force so free-lane can separate.
+  // 1.0 = no reduction, 0.0 = home force off during overlap.
+  homeForceReductionOnOverlap: 0.3,
+  avoidanceDistance: 0.18,
+  speedBrakeFactor: 0.945,
+  speedBrakeTMultiplier: 1.5,
+  speedBrakeYThreshold: 0.18,
 };

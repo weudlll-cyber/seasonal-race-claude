@@ -38,7 +38,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     lateralDamping: 0.25,
     maxLateral: 0.95,
     speedBrakeYThreshold: 0.12,
-    speedBrakeTThreshold: 0.008,
+    speedBrakeTMultiplier: 1.5,
     speedBrakeFactor: 0.98,
     avoidanceWarmupMs: 3000,
     draftingMaxDistance: 80,
@@ -61,7 +61,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     lateralDamping: 0.25,
     maxLateral: 0.95,
     speedBrakeYThreshold: 0.12,
-    speedBrakeTThreshold: 0.008,
+    speedBrakeTMultiplier: 1.5,
     speedBrakeFactor: 0.98,
     avoidanceWarmupMs: 3000,
     draftingMaxDistance: 80,
@@ -113,7 +113,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('RaceTuningSection — renders all 9 blocks', () => {
+describe('RaceTuningSection — renders all 8 blocks', () => {
   it('renders section header and subtitle', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Race Tuning')).toBeTruthy();
@@ -161,20 +161,13 @@ describe('RaceTuningSection — renders all 9 blocks', () => {
   it('renders Block 7: Soft Avoidance', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Soft Avoidance')).toBeTruthy();
-    expect(screen.getByLabelText('Avoidance Distance')).toBeTruthy();
+    expect(screen.getByLabelText('T Weight')).toBeTruthy();
   });
 
   it('renders Block 8: Speed Brake', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Speed Brake')).toBeTruthy();
-    expect(screen.getByLabelText('Speed Brake Factor')).toBeTruthy();
-  });
-
-  it('renders Block 9: Home Force', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByText('Home Force')).toBeTruthy();
-    expect(screen.getByLabelText('Home Force Strength')).toBeTruthy();
-    expect(screen.getByLabelText('Home Force Reduction On Overlap')).toBeTruthy();
+    expect(screen.getByLabelText('Avoidance Warmup Ms')).toBeTruthy();
   });
 });
 
@@ -257,11 +250,6 @@ describe('RaceTuningSection — per-block reset buttons', () => {
   it('renders Reset button for Speed Brake block', () => {
     render(<RaceTuningSection />);
     expect(screen.getByTestId('reset-speed-brake')).toBeTruthy();
-  });
-
-  it('renders Reset button for Home Force block', () => {
-    render(<RaceTuningSection />);
-    expect(screen.getByTestId('reset-home-force')).toBeTruthy();
   });
 
   it('clicking reset-speed-range restores default min/max without crash', () => {

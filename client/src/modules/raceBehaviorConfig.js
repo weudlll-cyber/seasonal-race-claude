@@ -51,6 +51,14 @@ export function loadRaceBehaviorConfig() {
   if (merged.startSpreadRange === LEGACY_START_SPREAD_DEFAULT) {
     merged.startSpreadRange = DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
   }
+  // Migrate: speedBrakeTThreshold (absolute value) renamed to speedBrakeTMultiplier (dimensionless).
+  // Old stored absolute values are not meaningful as multipliers — drop them so the new default applies.
+  if ('speedBrakeTThreshold' in merged) {
+    delete merged.speedBrakeTThreshold;
+    if (!('speedBrakeTMultiplier' in stored)) {
+      merged.speedBrakeTMultiplier = DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTMultiplier;
+    }
+  }
   if (
     merged.startSpreadRange <= 0 ||
     merged.startSpreadRange > 1 ||
@@ -66,7 +74,7 @@ export function loadRaceBehaviorConfig() {
     merged.lateralForce <= 0 ||
     merged.maxLateral <= 0 ||
     merged.speedBrakeYThreshold <= 0 ||
-    merged.speedBrakeTThreshold <= 0 ||
+    merged.speedBrakeTMultiplier <= 0 ||
     merged.speedBrakeFactor <= 0 ||
     merged.speedBrakeFactor > 1 ||
     merged.draftingMaxDistance <= 0 ||

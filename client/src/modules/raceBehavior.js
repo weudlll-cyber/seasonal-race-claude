@@ -197,7 +197,7 @@ function _computeBlockedMode(r, active) {
  *   comfortThreshold: number, softRepulsionStrength: number,
  *   avoidanceDistance: number, tWeight: number, yWeight: number,
  *   lateralForce: number, maxLateral: number,
- *   speedBrakeYThreshold: number, speedBrakeTThreshold: number,
+ *   speedBrakeYThreshold: number, speedBrakeTMultiplier: number,
  *   speedBrakeFactor: number,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
  * }} config
@@ -268,14 +268,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const trailer = aIsTrailer ? rA : rB;
       const leader = aIsTrailer ? rB : rA;
 
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
-      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < config.speedBrakeTThreshold) {
-        speedBrakeSet.add(trailer.index);
-      }
-
-      // Free-lane separation: when racers overlap, add deterministic, smooth lateral
-      // impulses based on local left/right free-space checks.
+      // Sprite geometry for this pair — used by both speed brake and free-lane separation.
       const sizeA = getSpriteWorldSizePx(rA);
       const sizeB = getSpriteWorldSizePx(rB);
       const spriteWorldSize = Math.max(sizeA, sizeB);
@@ -285,6 +278,22 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const pathLengthA = getPathLengthPx(rA);
       const pathLengthB = getPathLengthPx(rB);
       const pathLength = Math.max(pathLengthA, pathLengthB);
+
+      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
+      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
+      // Dynamic threshold: scales with sprite size and path length so the brake fires at
+      // the same relative proximity (in sprite-widths) on every track and racer type.
+      // Falls back to a fixed 0.014 when geometry is unavailable (e.g. unit tests).
+      const dynamicBrakeT =
+        spriteWorldSize > 0 && pathLength > 0
+          ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
+          : 0.014;
+      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
+        speedBrakeSet.add(trailer.index);
+      }
+
+      // Free-lane separation: when racers overlap, add deterministic, smooth lateral
+      // impulses based on local left/right free-space checks.
 
       if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
         const lateralHalfSpan = spriteWorldSize / trackWidth;

@@ -102,7 +102,9 @@ describe('applyRacerBehavior — home force', () => {
   it('converges physicalY to near-zero over many frames', () => {
     const r = makeRacer();
     r.physicalY = 1.0;
-    for (let f = 0; f < 180; f++) applyRacerBehavior([r], cfg);
+    // Phase 5 physics (hfs=0.030, ld=0.160) converges more slowly than legacy defaults —
+    // needs ~290 frames to cross 0.15 from 1.0. 360 gives a safe margin.
+    for (let f = 0; f < 360; f++) applyRacerBehavior([r], cfg);
     expect(Math.abs(r.physicalY)).toBeLessThan(0.15);
   });
 
@@ -499,31 +501,58 @@ describe('applyRacerBehavior — free-lane separation', () => {
 // ── Speed brake ────────────────────────────────────────────────────────────
 
 describe('applyRacerBehavior — speed brake', () => {
-  it('sets avoidanceActive on trailer when side-by-side', () => {
-    const trailer = makeRacer({ index: 0, t: 0.5, x: 200, y: 200 });
-    const leader = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 }); // within T threshold
-    trailer.physicalY = 0.05; // within Y threshold
-    leader.physicalY = 0.05;
+  it('sets avoidanceActive on trailer when side-by-side within dynamic threshold', () => {
+    // spriteWorldSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 40/1200*1.5 = 0.050
+    // dT = 0.51 - 0.50 = 0.01 < 0.050 → brake fires
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, x: 200, y: 200, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.51, x: 200, y: 200, physicalY: 0.05 });
     applyRacerBehavior([trailer, leader], {
       ...cfg,
       homeForceStrength: 0,
       avoidanceDistance: 1.0,
       speedBrakeYThreshold: 0.2,
-      speedBrakeTThreshold: 0.02,
+      speedBrakeTMultiplier: 1.5,
     });
     expect(trailer.avoidanceActive).toBe(true);
   });
 
+  it('dynamic threshold scales with sprite size and path length', () => {
+    // dynamicT = spriteWorldSizePx / pathLengthPx * speedBrakeTMultiplier
+    // spriteWorldSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 0.050
+    // Place trailer just inside threshold (dT=0.049) → fires
+    const inside = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
+    const leader1 = makeLaneRacer({ index: 1, t: 0.549, physicalY: 0.0 });
+    applyRacerBehavior([inside, leader1], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      speedBrakeYThreshold: 0.2,
+      speedBrakeTMultiplier: 1.5,
+    });
+    expect(inside.avoidanceActive).toBe(true);
+
+    // Place trailer just outside threshold (dT=0.051) → does not fire
+    const outside = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
+    const leader2 = makeLaneRacer({ index: 1, t: 0.551, physicalY: 0.0 });
+    applyRacerBehavior([outside, leader2], {
+      ...cfg,
+      homeForceStrength: 0,
+      avoidanceDistance: 1.0,
+      speedBrakeYThreshold: 0.2,
+      speedBrakeTMultiplier: 1.5,
+    });
+    expect(outside.avoidanceActive).toBe(false);
+  });
+
   it('no speed brake when Y difference exceeds threshold', () => {
-    const trailer = makeRacer({ index: 0, t: 0.5, x: 200, y: 200 });
-    const leader = makeRacer({ index: 1, t: 0.51, x: 200, y: 200 });
-    trailer.physicalY = -0.5; // far apart in Y
-    leader.physicalY = 0.5;
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, x: 200, y: 200, physicalY: -0.5 });
+    const leader = makeLaneRacer({ index: 1, t: 0.51, x: 200, y: 200, physicalY: 0.5 });
     applyRacerBehavior([trailer, leader], {
       ...cfg,
       homeForceStrength: 0,
       avoidanceDistance: 1.0,
       speedBrakeYThreshold: 0.2,
+      speedBrakeTMultiplier: 1.5,
     });
     expect(trailer.avoidanceActive).toBe(false);
   });

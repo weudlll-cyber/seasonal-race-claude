@@ -2198,3 +2198,27 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 **Consequence:** When adding a new closed track with an unusually large `worldW`, verify that `spriteScale / bsX ≤ MAX_INVERSE_ZOOM`. If not, raise the constant and update the corresponding test.
 
 **Reference:** `CameraDirector.js` (`MAX_INVERSE_ZOOM`), `CameraDirector.test.js` (`closed worldW=6144` test). Session 2026-06-03.
+
+---
+
+## Lesson 122 — Fixed Absolute speedBrakeTThreshold Is Not Calibrated to Sprite Size or Path Length
+
+**Context:** feat/dynamic-speed-brake (2026-06-04). The original `speedBrakeTThreshold` was a fixed absolute value in track-parameter space. Because track-parameter distance is `pixelDistance / pathLengthPx`, the same threshold corresponds to very different pixel distances on tracks of different lengths. On Ice Track (luge sprite, displaySize=80, pathLengthPx=3037), the threshold of 0.013838 fired 13.1 px after sprite overlap had already begun — the brake was too late. On Space Sprint (pathLengthPx=19772), the same threshold fired 231 px before sprite contact — unnecessary drag on the entire field for most of the race.
+
+**Fix:** Replace with a dimensionless `speedBrakeTMultiplier` (default 1.5). Dynamic threshold computed per pair as `(spriteWorldSizePx / pathLengthPx) × multiplier`. This fires at the same relative proximity — 1.5 sprite-widths before contact — on every track and racer type regardless of path length or sprite size. Sim validation (700 races across 5 multiplier values × 7 tracks) confirmed 1.5 passes all cutoffs with the cleanest lateral-motion scores (lowest mean zigzag and lat).
+
+**Consequence:** Any physics threshold expressed in track-parameter space must account for the fact that `dT = 1 / pathLengthPx` in pixel space. Thresholds that feel like small dimensionless fractions are actually large pixel distances on short tracks and tiny pixel distances on long tracks. Use `spriteWorldSizePx / pathLengthPx` as the natural unit so the threshold scales correctly with both sprite size and path length.
+
+**Reference:** `raceBehavior.js` (`dynamicBrakeT`), `defaults.js` (`speedBrakeTMultiplier: 1.500000`), `scripts/sweep-dyn-sbt.mjs`. Session 2026-06-04.
+
+---
+
+## Lesson 123 — Interdependent Physics Parameters Should Be Locked Out of the Dev Screen and Documented at the Source
+
+**Context:** feat/dynamic-speed-brake (2026-06-04). The 8 core avoidance/braking parameters (`lateralForce`, `lateralDamping`, `homeForceStrength`, `homeForceReductionOnOverlap`, `avoidanceDistance`, `speedBrakeFactor`, `speedBrakeTMultiplier`, `speedBrakeYThreshold`) were exposed as individual sliders in the Dev Screen with an amber warning banner. The banner was ignored in practice and the sliders were a liability: any single-param change that "looks good" on one track can degrade fairness or motion quality on other tracks in ways that are not visible without running a sim sweep.
+
+**Fix:** Remove the 8 sliders from the Dev Screen entirely. Keep the parameters in `defaults.js` with a full block comment documenting: the sweep methodology, current values with their date, why the params are interdependent, and exact steps to re-derive them. This makes the intended workflow (change defaults.js → run sweep → validate → commit) clear at the point where the change would be made.
+
+**Consequence:** Physics parameters that were optimized as a group via simulation should be treated as a unit, not as individually tunable knobs. Exposing them in a UI that allows per-param changes without re-running the sweep creates a false sense of safety. Document them at the source (in the default config file) where a future developer is forced to see the constraint before changing a value.
+
+**Reference:** `client/src/modules/storage/defaults.js` (PHYSICS PARAMETERS comment block), `docs/ARCHITECTURE.md` (Physics Parameters section), `client/src/screens/DevScreen/sections/BehaviorTuningSection.jsx`. Session 2026-06-04.

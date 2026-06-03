@@ -806,6 +806,49 @@ A backend will be built in Phase 5 with the following responsibilities:
 
 The Phase 5 server will be a fresh implementation designed around race integrity. The original server scaffold (user-auth REST) was deleted in F16 as architecturally incompatible with this model.
 
+## Physics Parameters
+
+Eight core physics parameters control racer avoidance, lateral motion, speed braking, and home force. They are **intentionally not exposed in the Dev Screen** — they are strongly interdependent and were optimized via a multi-phase simulation sweep. Accidental changes to any one parameter without re-sweeping the others degrades race quality in non-obvious ways.
+
+### Current Values (Phase 5 winner, established 2026-06-03)
+
+| Parameter | Value | Description |
+|---|---|---|
+| `lateralForce` | 0.011400 | Sideways steering force applied per frame during avoidance |
+| `lateralDamping` | 0.160000 | Fraction of lateral velocity retained each frame |
+| `homeForceStrength` | 0.030000 | Spring strength pulling racers back to the centerline |
+| `homeForceReductionOnOverlap` | 0.300000 | Home force multiplier during geometric overlap |
+| `avoidanceDistance` | 0.180000 | Anisotropic distance threshold for avoidance to fire |
+| `speedBrakeFactor` | 0.945000 | Speed multiplier applied to the trailing racer when side-by-side |
+| `speedBrakeTMultiplier` | 1.500000 | Brake fires this many sprite-widths before contact (dynamic threshold) |
+| `speedBrakeYThreshold` | 0.180000 | Max lateral separation for speed brake to activate |
+
+### Where They Live
+
+Defined in `DEFAULT_RACE_BEHAVIOR_CONFIG` in `client/src/modules/storage/defaults.js`, grouped at the end of the object with a full documentation comment explaining the sweep methodology and how to re-run. They are present in the config schema, localStorage serialization, and all sim scripts — only absent from the UI.
+
+### Why They Are Fixed
+
+These parameters were optimized across all 10 default tracks and all default racer types using a 4-phase simulation sweep:
+
+- **Phase 1 (LHS):** 200 Latin Hypercube samples on Dirt Oval + Space Sprint simultaneously
+- **Phase 2 (Refine):** Top 5 survivors refined at ±5% and ±2.5% around each winner
+- **Phase 3 (Validate):** Top 3 finalists validated on all 10 tracks × 50+ races each
+- **Hard cutoffs:** fairness p > 0.05, zigzag score < 0.003, hard overlap rate < 3%
+
+The `speedBrakeTMultiplier` replaces an earlier fixed absolute threshold (`speedBrakeTThreshold`) that was not calibrated to sprite size or path length — it fired too late on the Ice Track (large luge sprite) and too early on open tracks with long paths. The new dynamic formula `(spriteWorldSizePx / pathLengthPx) × multiplier` fires at the same relative proximity (in sprite-widths) on every track and racer type.
+
+### Changing Them
+
+The values CAN be changed but only in `defaults.js` directly, and only after running a full sim sweep. Steps:
+
+1. Run `scripts/sim-fairness.mjs` with LHS sampling (200 combos) on Dirt Oval + Space Sprint simultaneously
+2. Take top 5 survivors; refine with ±5% / ±2.5% sweep
+3. Validate top 3 on all 10 tracks with 50+ races each
+4. Apply only values that pass all hard cutoffs on all tracks
+
+**Sim scripts:** `scripts/sim-fairness.mjs`, `scripts/sim-sweep.mjs`
+
 ## Development Workflow
 
 RaceArena uses a three-party model for significant features:
