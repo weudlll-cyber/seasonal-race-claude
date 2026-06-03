@@ -104,9 +104,9 @@ describe('LugeRacerType — manifest', () => {
     expect(LugeRacerType.config.frameCount).toBe(16);
   });
 
-  it('has frameWidth 64 and frameHeight 64', () => {
-    expect(LugeRacerType.config.frameWidth).toBe(64);
-    expect(LugeRacerType.config.frameHeight).toBe(64);
+  it('has frameWidth 128 and frameHeight 128', () => {
+    expect(LugeRacerType.config.frameWidth).toBe(128);
+    expect(LugeRacerType.config.frameHeight).toBe(128);
   });
 
   it('has tintMode "multiply"', () => {

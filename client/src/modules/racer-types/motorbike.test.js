@@ -79,7 +79,7 @@ describe('MotorbikeRacerType — manifest', () => {
 
   it('has correct sprite config', () => {
     expect(motorbike.config.frameCount).toBe(8);
-    expect(motorbike.config.displaySize).toBe(36);
+    expect(motorbike.config.displaySize).toBe(42);
     expect(motorbike.config.basePeriodMs).toBe(500);
   });
 

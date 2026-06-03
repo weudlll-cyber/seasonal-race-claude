@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-26
 // Description: Snake racer — SpriteRacerType configuration.
-//              Sprite: 8-frame slither cycle, 1024×128 sheet.
+//              Sprite: 8-frame slither cycle, 1240×155 sheet (155×155 per frame, tight-cropped).
 //              Speed: 0.75 — sleek but low-friction (effective after D9).
 // ============================================================
 
@@ -32,12 +32,12 @@ export const SnakeRacerType = new SpriteRacerType({
   emoji: '🐍',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 155,
+  frameHeight: 155,
   frameCount: 8,
   basePeriodMs: 600,
   baseRotationOffset: Math.PI / 2,
-  displaySize: 36,
+  displaySize: 44,
 
   coats: SNAKE_COATS,
   defaultCoatId: 'emerald',
@@ -46,8 +46,8 @@ export const SnakeRacerType = new SpriteRacerType({
   accentColor: '#334422',
 
   leaderRingColor: '#66dd66',
-  leaderEllipseRx: 14,
-  leaderEllipseRy: 9,
+  leaderEllipseRx: 17,
+  leaderEllipseRy: 11,
 
   speedMultiplier: 0.75,
 

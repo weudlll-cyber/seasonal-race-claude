@@ -4,8 +4,8 @@
 // Project:     RaceArena
 // Created:     2026-05-28
 // Description: Luge racer — SpriteRacerType configuration.
-//              Sprite: 16-frame combined breathing + wobble cycle, 1024×64 sheet
-//              (64×64 per frame, source: Luger.png rotated 180°, feet-first).
+//              Sprite: 16-frame combined breathing + wobble cycle, 2048×128 sheet
+//              (128×128 per frame, tight-cropped and scaled up from 64×64 source).
 //              tintMode:'multiply' — dark figure pixels (outlines/shadows) stay
 //              dark under tinting; auto-detection would wrongly pick 'screen'.
 //              Speed: 1.1 — fast on ice.
@@ -22,12 +22,12 @@ export const LugeRacerType = new SpriteRacerType({
   emoji: '🛷',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 64,
-  frameHeight: 64,
+  frameWidth: 128,
+  frameHeight: 128,
   frameCount: 16,
   basePeriodMs: 3200,
   baseRotationOffset: Math.PI / 2,
-  displaySize: 40,
+  displaySize: 80,
   tintMode: 'multiply',
 
   coats: [...LUGE_COAT_PALETTE],
@@ -37,8 +37,8 @@ export const LugeRacerType = new SpriteRacerType({
   accentColor: '#111111',
 
   leaderRingColor: '#88ccff',
-  leaderEllipseRx: 16,
-  leaderEllipseRy: 10,
+  leaderEllipseRx: 32,
+  leaderEllipseRy: 20,
 
   speedMultiplier: 1.1,
 

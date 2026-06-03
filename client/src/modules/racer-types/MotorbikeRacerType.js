@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-26
 // Description: Motorbike racer — SpriteRacerType configuration with mask-tinting.
-//              Sprite: 8-frame ride cycle, 1024×128 sheet.
+//              Sprite: 8-frame ride cycle, 1200×150 sheet (150×150 per frame, tight-cropped).
 //              Mask: body-area mask for targeted color variation.
 //              Speed: 1.05 — agile and quick (effective after D9).
 // ============================================================
@@ -23,12 +23,12 @@ export const MotorbikeRacerType = new SpriteRacerType({
   spriteUrl: SPRITE_URL,
   maskUrl: MASK_URL,
   tintMode: 'mask',
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 150,
+  frameHeight: 150,
   frameCount: 8,
   basePeriodMs: 500,
   baseRotationOffset: Math.PI / 2,
-  displaySize: 36,
+  displaySize: 42,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',
@@ -37,8 +37,8 @@ export const MotorbikeRacerType = new SpriteRacerType({
   accentColor: '#222222',
 
   leaderRingColor: '#bb88ff',
-  leaderEllipseRx: 14,
-  leaderEllipseRy: 9,
+  leaderEllipseRx: 16,
+  leaderEllipseRy: 11,
 
   speedMultiplier: 1.05,
 

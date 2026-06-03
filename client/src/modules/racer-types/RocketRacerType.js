@@ -5,7 +5,7 @@
 // Created:     2026-04-20
 // Updated:     2026-04-26 — D3.5.3: migrated from class to SpriteRacerType instance.
 // Description: Rocket racer — SpriteRacerType configuration.
-//              Sprite: 8-frame flight cycle, 1024×128 sheet.
+//              Sprite: 8-frame flight cycle, 1208×151 sheet (151×151 per frame, tight-cropped).
 //              Speed: 1.25 — fastest racer type (effective after D9).
 // ============================================================
 
@@ -20,12 +20,12 @@ export const RocketRacerType = new SpriteRacerType({
   emoji: '🚀',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 151,
+  frameHeight: 151,
   frameCount: 8,
   basePeriodMs: 500,
   baseRotationOffset: Math.PI / 2,
-  displaySize: 40,
+  displaySize: 47,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',
@@ -34,8 +34,8 @@ export const RocketRacerType = new SpriteRacerType({
   accentColor: '#444444',
 
   leaderRingColor: '#ffaa44',
-  leaderEllipseRx: 16,
-  leaderEllipseRy: 10,
+  leaderEllipseRx: 19,
+  leaderEllipseRy: 12,
 
   speedMultiplier: 1.25,
 

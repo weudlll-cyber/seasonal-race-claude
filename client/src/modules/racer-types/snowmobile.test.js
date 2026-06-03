@@ -95,9 +95,9 @@ describe('SnowmobileRacerType — manifest', () => {
     expect(SnowmobileRacerType.config.frameCount).toBe(16);
   });
 
-  it('frameWidth and frameHeight are 192', () => {
-    expect(SnowmobileRacerType.config.frameWidth).toBe(192);
-    expect(SnowmobileRacerType.config.frameHeight).toBe(192);
+  it('frameWidth and frameHeight are 148', () => {
+    expect(SnowmobileRacerType.config.frameWidth).toBe(148);
+    expect(SnowmobileRacerType.config.frameHeight).toBe(148);
   });
 
   it('tintMode is multiply', () => {

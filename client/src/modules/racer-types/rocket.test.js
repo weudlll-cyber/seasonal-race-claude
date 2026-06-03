@@ -78,7 +78,7 @@ describe('RocketRacerType — manifest', () => {
 
   it('has correct sprite config', () => {
     expect(rocket.config.frameCount).toBe(8);
-    expect(rocket.config.displaySize).toBe(40);
+    expect(rocket.config.displaySize).toBe(47);
     expect(rocket.config.basePeriodMs).toBe(500);
     expect(rocket.config.tintMode).toBe('multiply');
   });

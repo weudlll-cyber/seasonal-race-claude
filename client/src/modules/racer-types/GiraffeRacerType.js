@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-26
 // Description: Giraffe racer — SpriteRacerType configuration.
-//              Sprite: 8-frame walk cycle, 1024×128 sheet.
+//              Sprite: 8-frame walk cycle, 1032×129 sheet (129×129 per frame, tight-cropped).
 //              Speed: 0.9 — long-legged but ungainly (effective after D9).
 // ============================================================
 
@@ -32,8 +32,8 @@ export const GiraffeRacerType = new SpriteRacerType({
   emoji: '🦒',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 129,
+  frameHeight: 129,
   frameCount: 8,
   basePeriodMs: 750,
   baseRotationOffset: Math.PI / 2,

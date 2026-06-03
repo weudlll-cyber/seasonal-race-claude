@@ -98,9 +98,9 @@ describe('KoiRacerType — manifest', () => {
     expect(KoiRacerType.config.frameCount).toBe(16);
   });
 
-  it('has frameWidth 565 and frameHeight 565', () => {
-    expect(KoiRacerType.config.frameWidth).toBe(565);
-    expect(KoiRacerType.config.frameHeight).toBe(565);
+  it('has frameWidth 256 and frameHeight 256', () => {
+    expect(KoiRacerType.config.frameWidth).toBe(256);
+    expect(KoiRacerType.config.frameHeight).toBe(256);
   });
 
   it('has basePeriodMs 1600', () => {

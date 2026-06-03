@@ -3,7 +3,7 @@
 // Path:        client/src/modules/racer-types/SnowmobileRacerType.js
 // Project:     RaceArena
 // Description: Snowmobile racer — SpriteRacerType with multiply tinting.
-//              Sprite: 16-frame ride cycle, 3072×192 sheet (192×192 per frame,
+//              Sprite: 16-frame ride cycle, 2368×148 sheet (148×148 per frame, tight-cropped;
 //              source: snowboard-ride.png downscaled via gen-snowmobile-sprite.mjs).
 //              tintMode: 'multiply' — white areas (rider suit, chassis highlights)
 //              absorb the coat color fully; outlines and shadows stay dark.
@@ -19,8 +19,8 @@ export const SnowmobileRacerType = new SpriteRacerType({
   emoji: '🏂',
 
   spriteUrl: '/assets/racers/snowmobile.png',
-  frameWidth: 192,
-  frameHeight: 192,
+  frameWidth: 148,
+  frameHeight: 148,
   frameCount: 16,
   basePeriodMs: 1600,
   baseRotationOffset: Math.PI / 2,

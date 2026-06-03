@@ -45,12 +45,12 @@ export const HorseRacerType = new SpriteRacerType({
   emoji: '🐴',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 150,
+  frameHeight: 150,
   frameCount: 8,
   basePeriodMs: 700,
   baseRotationOffset: Math.PI / 2,
-  displaySize: 40,
+  displaySize: 47,
 
   coats: HORSE_COATS,
   defaultCoatId: 'cream',
@@ -60,8 +60,8 @@ export const HorseRacerType = new SpriteRacerType({
   // fallbackColor not set — defaults to primaryColor ('#E8DCC4')
 
   leaderRingColor: '#ffd700',
-  leaderEllipseRx: 16,
-  leaderEllipseRy: 10,
+  leaderEllipseRx: 19,
+  leaderEllipseRy: 12,
 
   speedMultiplier: 1.0,
 

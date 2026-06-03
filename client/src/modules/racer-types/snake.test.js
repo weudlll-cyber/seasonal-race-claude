@@ -78,7 +78,7 @@ describe('SnakeRacerType — manifest', () => {
 
   it('has correct sprite config', () => {
     expect(snake.config.frameCount).toBe(8);
-    expect(snake.config.displaySize).toBe(36);
+    expect(snake.config.displaySize).toBe(44);
     expect(snake.config.basePeriodMs).toBe(600);
     expect(typeof snake.config.spriteUrl).toBe('string');
   });
