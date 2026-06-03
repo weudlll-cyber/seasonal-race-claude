@@ -2160,3 +2160,15 @@ Open tracks already have an ssf correction (`ssf = pathLengthPx / REFERENCE_PATH
 **Consequence:** Any race engine where `race_baseSpeed` is derived from lap count and target duration (independent of track length) will produce faster-feeling races on tracks with longer paths. Always apply an ssf-style normalization if consistent visual speed across tracks is required.
 
 **Reference:** `computeClosedTrackSsf` in `lapUtils.js`, `REFERENCE_CLOSED_PATH_PX = 3200`, `RaceScreen/index.jsx` (`closedSsf` computation). Session 2026-06-03.
+
+---
+
+## Lesson 119 — createReadStream Without an Error Listener Kills the Node.js Server
+
+**Context:** feat/server-robustness (2026-06-03). After deleting a background image file while the server's in-memory track map still referenced it, a subsequent request triggered `createReadStream` on the missing file. Because no `.on('error', ...)` handler was attached, Node.js converted the unhandled stream error into an uncaught exception, killing the process. The `existsSync` guard before the call was insufficient: on Windows/Docker bind mounts, the file can disappear between `existsSync` returning `true` and `createReadStream` executing.
+
+**Fix:** Always attach `.on('error', handler)` **before** `.pipe(res)` on any stream that is piped to an HTTP response. Include an `if (!res.headersSent)` guard inside the handler so late-firing errors (after headers are flushed) are silently absorbed rather than thrown.
+
+**Consequence:** Any `createReadStream(...).pipe(res)` pattern without an error listener is a silent server-kill waiting to happen — especially on Windows/Docker where filesystem sync delays make the race condition reproducible in production. The EISDIR trick (create a directory at the expected file path) is a reliable way to test the error handler without mocking.
+
+**Reference:** `server/src/routes/tracks.js` (`stream.on('error', ...)`), `server/src/routes/tracks.test.js` (EISDIR test). Session 2026-06-03.
