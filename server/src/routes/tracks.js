@@ -474,7 +474,11 @@ router.get('/:id/background', (req, res) => {
 
   const ext = extname(track.backgroundImageFile).slice(1).toLowerCase();
   res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
-  createReadStream(bgPath).pipe(res);
+  const stream = createReadStream(bgPath);
+  stream.on('error', () => {
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to read background' });
+  });
+  stream.pipe(res);
 });
 
 // ── Write ─────────────────────────────────────────────────────────────────────

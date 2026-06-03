@@ -8,7 +8,7 @@
 
 import { describe, it, expect, afterAll } from 'vitest';
 import request from 'supertest';
-import { existsSync, readdirSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
@@ -18,6 +18,7 @@ const SEED = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.name, s.id]));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/tracks');
+const BG_DIR = join(__dirname, '../../data/backgrounds');
 const BACKUP_DIR = join(__dirname, '../../data/tracks-backups');
 
 function findBackupFiles(trackId) {
@@ -194,6 +195,46 @@ describe('GET /api/tracks/:id/background', () => {
   it('returns 404 for unknown track background', async () => {
     const res = await request(app).get('/api/tracks/nonexistent-id-xyz/background');
     expect(res.status).toBe(404);
+  });
+
+  it('returns 500 without crashing if ReadStream fails after existsSync passes', async () => {
+    // Create a track and upload a background so tracksMap has backgroundImageFile set.
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    expect(createRes.status).toBe(201);
+    const trackId = createRes.body.id;
+    createdIds.push(trackId);
+
+    // Tiny valid JPEG (1×1 pixel).
+    const tinyJpeg = Buffer.from(
+      '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
+      'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+      'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+      'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+      'AAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABmX/9k=',
+      'base64'
+    );
+    const uploadRes = await request(app)
+      .post(`/api/tracks/${trackId}/background`)
+      .attach('background', tinyJpeg, { filename: 'bg.jpg', contentType: 'image/jpeg' });
+    expect(uploadRes.status).toBe(200);
+
+    // The background file is now at BG_DIR/{trackId}.jpg.
+    // Replace it with a directory of the same name so existsSync returns true
+    // but createReadStream fails with EISDIR — simulating the race condition.
+    const bgFilePath = join(BG_DIR, `${trackId}.jpg`);
+    if (existsSync(bgFilePath)) unlinkSync(bgFilePath);
+    mkdirSync(bgFilePath, { recursive: true });
+
+    try {
+      const res = await request(app).get(`/api/tracks/${trackId}/background`);
+      // Error handler must send 500, not crash the server.
+      expect(res.status).toBe(500);
+      // Subsequent requests must still succeed — server is alive.
+      const healthRes = await request(app).get('/api/health');
+      expect(healthRes.status).toBe(200);
+    } finally {
+      rmdirSync(bgFilePath);
+    }
   });
 });
 
