@@ -2172,3 +2172,15 @@ Open tracks already have an ssf correction (`ssf = pathLengthPx / REFERENCE_PATH
 **Consequence:** Any `createReadStream(...).pipe(res)` pattern without an error listener is a silent server-kill waiting to happen — especially on Windows/Docker where filesystem sync delays make the race condition reproducible in production. The EISDIR trick (create a directory at the expected file path) is a reliable way to test the error handler without mocking.
 
 **Reference:** `server/src/routes/tracks.js` (`stream.on('error', ...)`), `server/src/routes/tracks.test.js` (EISDIR test). Session 2026-06-03.
+
+---
+
+## Lesson 120 — Tight-Cropping a Tall-Narrow Sprite Increases frameHeight, Shrinking the Rendered Body
+
+**Context:** feat/sprite-crop (2026-06-03). Sprite crop spec added 15px padding on each side and squared the result. For types where `bodyHeight ≈ frameHeight` (horse: 120/128, snake: 125/128, rocket: 121/128, motorbike: 120/128, luge: 50/64), `cropSize = bodyHeight + 30` exceeded the original `frameHeight`. Since the drawn canvas box is always `displaySize × displaySize` and the body fills `bodyHeight / frameHeight` of it, a larger frame means the body occupies a smaller fraction — it appears smaller on screen despite the "tight crop."
+
+**Fix:** Increase `displaySize` by the factor `cropSize / frameHeight_old` to restore the pre-crop rendered body size. Apply the same factor to `leaderEllipseRx/Ry` so the leader ring still fits.
+
+**Consequence:** "Tight crop" only shrinks the frame when the body has padding in both dimensions. For sprites whose body already fills the frame in one axis, adding symmetric padding makes the frame larger in that axis. Check whether `cropSize > frameHeight_old` after computing the crop and compensate `displaySize` before committing the change.
+
+**Reference:** `HorseRacerType.js`, `SnakeRacerType.js`, `RocketRacerType.js`, `MotorbikeRacerType.js`, `LugeRacerType.js` (displaySize increases). `scripts/audit-sprite-crops.mjs`, `scripts/crop-sprite-sheets.mjs`. Session 2026-06-03.
