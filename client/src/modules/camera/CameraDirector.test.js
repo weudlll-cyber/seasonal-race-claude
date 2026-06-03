@@ -387,8 +387,7 @@ describe('CameraDirector — zoom ordering (inverse logic)', () => {
   });
 
   it('comebackZoom < leaderZoom (comeback pct < leader pct)', () => {
-    // Use worldW where zooms do not hit MAX_INVERSE_ZOOM ceiling (avoid 6000px closed).
-    for (const worldW of [1280, 2560]) {
+    for (const worldW of [1280, 2560, 6144]) {
       const cd = new CameraDirector(worldW, 720);
       expect(cd._comebackZoom).toBeLessThan(cd._leaderZoom);
     }
@@ -870,14 +869,22 @@ describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
     expect(cd._battleZoom).toBeCloseTo((0.12 * 720) / 36, 3);
   });
 
-  it('extreme battle pct (0.95) clamps _battleZoom to MAX_INVERSE_ZOOM (5.0)', () => {
+  it('extreme battle pct (0.95) clamps _battleZoom to MAX_INVERSE_ZOOM (10.0)', () => {
     const extremeConfig = {
       ...pctConfig,
       spritePctOfCanvas: { ...pctConfig.spritePctOfCanvas, battle: 0.95 },
     };
     const cd = new CameraDirector(1280, 720, false, extremeConfig, 50);
-    // 0.95×720/50 = 13.68 → clamped to 5.0
-    expect(cd._battleZoom).toBe(5.0);
+    // 0.95×720/50 = 13.68 → clamped to 10.0
+    expect(cd._battleZoom).toBe(10.0);
+  });
+
+  it('closed worldW=6144: _computeZoomForSpriteScale(1.81) is unclamped at ~8.69', () => {
+    // Mountainstreet worldW=6144: required zoom = 1.81 × (6144/1280) = 8.688, below MAX_INVERSE_ZOOM=10.
+    // Before fix (MAX_INVERSE_ZOOM=5): capped to 5.0 → sprites at 57.5% size.
+    // After fix (MAX_INVERSE_ZOOM=10): unclamped → sprites match standard closed tracks.
+    const cd = new CameraDirector(6144, 4096);
+    expect(cd._computeZoomForSpriteScale(1.81)).toBeCloseTo(1.81 * (6144 / 1280), 2);
   });
 
   it('no config passed: DEFAULT_SPRITE_SCALE gives predictable zoom values', () => {
@@ -1523,10 +1530,10 @@ describe('CameraDirector — _computeZoomForSpriteScale (Round 3)', () => {
     expect(cd._computeZoomForSpriteScale(1 / 36)).toBeCloseTo(1280 / 6000, 3);
   });
 
-  it('safety net upper — very large spriteScale clamps cam.zoom to 5.0', () => {
+  it('safety net upper — very large spriteScale clamps cam.zoom to 10.0', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 50);
-    // spriteScale=200: zoom = 200/1 = 200, clamped to 5.0
-    expect(cd._computeZoomForSpriteScale(200)).toBe(5.0);
+    // spriteScale=200: zoom = 200/1 = 200, clamped to 10.0
+    expect(cd._computeZoomForSpriteScale(200)).toBe(10.0);
   });
 
   it('result is independent of referenceSpriteSize — closed track', () => {

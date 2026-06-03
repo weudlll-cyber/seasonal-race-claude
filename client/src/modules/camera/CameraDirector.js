@@ -43,7 +43,7 @@ const TC_LEADER = 0.3;
 const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
 const OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
-const MAX_INVERSE_ZOOM = 5.0; // ceiling for inverse (targetSize-based) zoom
+const MAX_INVERSE_ZOOM = 10.0; // ceiling for inverse (targetSize-based) zoom; raised from 5 to support worldW=6144 (Mountainstreet)
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
