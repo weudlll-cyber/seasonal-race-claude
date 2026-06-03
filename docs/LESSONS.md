@@ -2184,3 +2184,17 @@ Open tracks already have an ssf correction (`ssf = pathLengthPx / REFERENCE_PATH
 **Consequence:** "Tight crop" only shrinks the frame when the body has padding in both dimensions. For sprites whose body already fills the frame in one axis, adding symmetric padding makes the frame larger in that axis. Check whether `cropSize > frameHeight_old` after computing the crop and compensate `displaySize` before committing the change.
 
 **Reference:** `HorseRacerType.js`, `SnakeRacerType.js`, `RocketRacerType.js`, `MotorbikeRacerType.js`, `LugeRacerType.js` (displaySize increases). `scripts/audit-sprite-crops.mjs`, `scripts/crop-sprite-sheets.mjs`. Session 2026-06-03.
+
+---
+
+## Lesson 121 — MAX_INVERSE_ZOOM Must Be High Enough for Future Large Closed Tracks
+
+**Context:** feat/mountainstreet-zoom (2026-06-03). Diagnosis of small sprites on Mountainstreet revealed that the old `MAX_INVERSE_ZOOM = 5.0` cap in `CameraDirector.js` would clip `cam.zoom` on any closed track with `worldW > ~3500 px`. For a closed track with `worldW = 6144`, the formula requires `cam.zoom = spriteScale / bsX = 1.81 / (1280/6144) = 8.70` — capped to 5.0, resulting in `effZoom = 5.0 × 0.208 = 1.04` instead of the target 1.81 (sprites at 57.5% of correct size). Raised to 10.0, providing headroom up to `worldW ≈ 12800`.
+
+Note: Mountainstreet itself has `"closed": false` and is an open track — the `MAX_INVERSE_ZOOM` cap does not apply to it (open tracks use `rawZoom = spriteScale / OPEN_TRACK_BASE_ZOOM`, independent of `worldW`). The fix protects any future large closed track.
+
+**Fix:** `const MAX_INVERSE_ZOOM = 10.0` in `CameraDirector.js`. Threshold: open tracks are unaffected; closed tracks with `worldW > CANVAS_W × MAX_INVERSE_ZOOM / spriteScale` still hit the cap.
+
+**Consequence:** When adding a new closed track with an unusually large `worldW`, verify that `spriteScale / bsX ≤ MAX_INVERSE_ZOOM`. If not, raise the constant and update the corresponding test.
+
+**Reference:** `CameraDirector.js` (`MAX_INVERSE_ZOOM`), `CameraDirector.test.js` (`closed worldW=6144` test). Session 2026-06-03.
