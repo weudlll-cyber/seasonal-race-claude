@@ -26,7 +26,7 @@ This document captures the agreed solution before implementation begins.
 | **Track-Preset** | Metadata for a race: name, icon, color, default racer type, surface classes, track lights, `geometryId` link. |
 | **Track-Geometry** | Spatial path data: background image, inner/outer/center boundary points, closed flag, effects, surface classes, track lights config. |
 | **Server-Track** | A Track-Preset with a backing `server/data/tracks/<id>.json` file. Authoritative source of truth. |
-| **Default-Track** | One of the 5 built-in tracks (dirt-oval, river-run, space-sprint, garden-path, city-circuit). After TLH-1, these are Server-Tracks seeded at boot. |
+| **Default-Track** | One of the 7 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track). After TLH-1, these are Server-Tracks seeded at boot. |
 | **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — in-code fallback snapshot, used when server is unreachable and cache is empty. |
 | **Orphaned Geometry** | A geometry cache entry whose linked Track-Preset no longer exists. Harmless — preserved indefinitely. |
 
@@ -113,6 +113,8 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │      space-sprint.json       ← Default-Track (seeded)       │
 │      garden-path.json        ← Default-Track (seeded)       │
 │      city-circuit.json       ← Default-Track (seeded)       │
+│      mountainstreet.json     ← Default-Track (seeded)       │
+│      ice-track.json          ← Default-Track (seeded)       │
 │      <uuid>.json             ← User-created custom tracks   │
 │    backgrounds/                                             │
 │      <id>.jpg                ← Binary background images     │
@@ -198,7 +200,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 ## Default-Tracks Server Record Schema
 
-Each of the 5 default tracks is seeded with the following structure:
+Each of the 7 default tracks is seeded with the following structure:
 
 ```json
 {
@@ -220,7 +222,7 @@ Each of the 5 default tracks is seeded with the following structure:
 }
 ```
 
-`geometryId: null` and empty boundary arrays indicate "no geometry drawn yet". The Track Editor handles this state correctly: when `?load=dirt-oval` and no geometry exists, the editor starts in empty-canvas mode ready for first draw.
+`geometryId: null` and empty boundary arrays indicate "no geometry drawn yet". The Track Editor handles this state correctly: when `?load=<id>` and no geometry exists, the editor starts in empty-canvas mode ready for first draw.
 
 ---
 

@@ -12,6 +12,7 @@
 //              No class-based RacerTypes remain. CarRacerType removed,
 //              replaced by BuggyRacerType. COATS_BY_TYPE auto-derived
 //              from type configs. warmUpAllRacerTypes handles mask types.
+//              20 types total as of snowmobile addition.
 //
 //              D3.5.5: Override-API extended to support 6 tunable fields
 //              (speedMultiplier, displaySize, basePeriodMs, leaderRingColor,
@@ -40,6 +41,13 @@ export { BuggyRacerType } from './BuggyRacerType.js';
 export { MotorbikeRacerType } from './MotorbikeRacerType.js';
 export { PlaneRacerType } from './PlaneRacerType.js';
 export { LugeRacerType } from './LugeRacerType.js';
+export { BeetleRacerType } from './BeetleRacerType.js';
+export { BoarderRacerType } from './BoarderRacerType.js';
+export { KoiRacerType } from './KoiRacerType.js';
+export { TurtleRacerType } from './TurtleRacerType.js';
+export { MantaRacerType } from './MantaRacerType.js';
+export { DolphinRacerType } from './DolphinRacerType.js';
+export { SnowmobileRacerType } from './SnowmobileRacerType.js';
 export { SpriteRacerType } from './SpriteRacerType.js';
 
 import { HorseRacerType } from './HorseRacerType.js';
@@ -55,6 +63,13 @@ import { BuggyRacerType } from './BuggyRacerType.js';
 import { MotorbikeRacerType } from './MotorbikeRacerType.js';
 import { PlaneRacerType } from './PlaneRacerType.js';
 import { LugeRacerType } from './LugeRacerType.js';
+import { BeetleRacerType } from './BeetleRacerType.js';
+import { BoarderRacerType } from './BoarderRacerType.js';
+import { KoiRacerType } from './KoiRacerType.js';
+import { TurtleRacerType } from './TurtleRacerType.js';
+import { MantaRacerType } from './MantaRacerType.js';
+import { DolphinRacerType } from './DolphinRacerType.js';
+import { SnowmobileRacerType } from './SnowmobileRacerType.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
@@ -66,7 +81,7 @@ import {
 } from './racerTypeStorage.js';
 import { getTrailFactory } from './trailStyles.js';
 
-// All 13 racer types are SpriteRacerType instances.
+// All 20 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
   horse: HorseRacerType,
   duck: DuckRacerType,
@@ -81,6 +96,13 @@ export const RACER_TYPES = {
   motorbike: MotorbikeRacerType,
   plane: PlaneRacerType,
   luge: LugeRacerType,
+  beetle: BeetleRacerType,
+  boarder: BoarderRacerType,
+  koi: KoiRacerType,
+  turtle: TurtleRacerType,
+  manta: MantaRacerType,
+  dolphin: DolphinRacerType,
+  snowmobile: SnowmobileRacerType,
 };
 
 export const RACER_TYPE_IDS = Object.keys(RACER_TYPES);
@@ -107,6 +129,13 @@ export const RACER_TYPE_LABELS = {
   motorbike: 'Motorbike 🏍️',
   plane: 'Plane ✈️',
   luge: 'Luge 🛷',
+  beetle: 'Beetle 🪲',
+  boarder: 'Boarder 🛹',
+  koi: 'Koi 🐟',
+  turtle: 'Turtle 🐢',
+  manta: 'Manta 🦈',
+  dolphin: 'Dolphin 🐬',
+  snowmobile: 'Snowmobile 🏂',
 };
 
 // ── Loaded racer types (user-created, stored in localStorage) ─────────────────
@@ -335,9 +364,15 @@ export function warmUpAllRacerTypes() {
   for (const racerType of allTypes) {
     const cfg = racerType.config;
     if (!cfg) continue;
-    if (cfg.tintMode === 'mask' && cfg.maskUrl) {
+    if (cfg.tintMode === 'mask') {
       loadSprite(cfg.spriteUrl).catch(() => {});
-      loadSprite(cfg.maskUrl).catch(() => {});
+      if (cfg.maskUrl) loadSprite(cfg.maskUrl).catch(() => {});
+      // Preload per-coat pattern masks and dual-mask border masks.
+      const coatMasks = new Set([
+        ...(cfg.coats?.map((c) => c.patternMask).filter(Boolean) ?? []),
+        ...(cfg.coats?.map((c) => c.borderMask).filter(Boolean) ?? []),
+      ]);
+      for (const url of coatMasks) loadSprite(url).catch(() => {});
     } else {
       const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
       getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch(() => {});

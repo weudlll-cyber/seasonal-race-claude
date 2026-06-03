@@ -1,0 +1,20 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^Set-Location 'c:\\\\Users\\\\weudl\\\\OneDrive\\\\Dokumente\\\\Seasonal race claude'; git branch -vv; git show-ref --heads master; git tag --list backup/pre-sprite-scale-relative; git show --no-patch --oneline backup/pre-sprite-scale-relative$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location 'c:\\\\Users\\\\weudl\\\\OneDrive\\\\Dokumente\\\\Seasonal race claude'; if \\(git merge-base --is-ancestor 1f0e7bc master\\) \\{ '1f0e7bc is ancestor of master' \\} else \\{ '1f0e7bc NOT ancestor of master' \\}; if \\(git merge-base --is-ancestor 1c85fae master\\) \\{ '1c85fae is ancestor of master' \\} else \\{ '1c85fae NOT ancestor of master' \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location 'c:\\\\Users\\\\weudl\\\\OneDrive\\\\Dokumente\\\\Seasonal race claude\\\\client'; node --input-type=module -e \"import \\{ CameraDirector \\} from '\\./src/modules/camera/CameraDirector\\.js'; import \\{ loadCameraConfig \\} from '\\./src/modules/cameraConfig\\.js'; const cfg=loadCameraConfig\\(\\); const cd=new CameraDirector\\(6000,720,true,cfg,50,null\\); console\\.log\\(JSON\\.stringify\\(\\{overviewZoom:cd\\.overviewZoom,overviewStateZoom:cd\\._overviewStateZoom,leaderZoom:cd\\._leaderZoom,battleZoom:cd\\._battleZoom,state:cd\\.state,zoom:cd\\.zoom,targetZoom:cd\\.targetZoom\\},null,2\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^\\$p = \"c:\\\\Users\\\\weudl\\\\OneDrive\\\\Dokumente\\\\Seasonal race claude\\\\client\\\\src\\\\screens\\\\RaceScreen\\\\index\\.jsx\"; \\$i=1; Get-Content \\$p \\| ForEach-Object \\{ \"\\{0,4\\}: \\{1\\}\" -f \\$i, \\$_; \\$i\\+\\+ \\} \\| Select-Object -Skip 640 -First 70$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

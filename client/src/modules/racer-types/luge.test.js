@@ -5,6 +5,8 @@
 // Created:     2026-05-28
 // Description: Tests for LugeRacerType — registry presence, label,
 //              sprite config, coat count, and draw safety.
+// Updated:     2026-06-01 — new 8-frame breathing sprite (64×64),
+//              multiply tintMode, LUGE_COAT_PALETTE (13 winter coats).
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -102,17 +104,17 @@ describe('LugeRacerType — manifest', () => {
     expect(LugeRacerType.config.frameCount).toBe(16);
   });
 
-  it('has frameWidth 125 and frameHeight 238', () => {
-    expect(LugeRacerType.config.frameWidth).toBe(125);
-    expect(LugeRacerType.config.frameHeight).toBe(238);
+  it('has frameWidth 64 and frameHeight 64', () => {
+    expect(LugeRacerType.config.frameWidth).toBe(64);
+    expect(LugeRacerType.config.frameHeight).toBe(64);
   });
 
-  it('has tintMode "screen"', () => {
-    expect(LugeRacerType.config.tintMode).toBe('screen');
+  it('has tintMode "multiply"', () => {
+    expect(LugeRacerType.config.tintMode).toBe('multiply');
   });
 
-  it('has exactly 20 coats (STANDARD_COAT_PALETTE)', () => {
-    expect(LugeRacerType.config.coats).toHaveLength(20);
+  it('has exactly 17 coats (LUGE_COAT_PALETTE: base + 16 winter colors)', () => {
+    expect(LugeRacerType.config.coats).toHaveLength(17);
   });
 
   it('first coat has tint: null (base coat)', () => {
@@ -125,9 +127,11 @@ describe('LugeRacerType — manifest', () => {
   });
 
   it('_getFrameIndex cycles through all 16 frames', () => {
-    const period = LugeRacerType.config.basePeriodMs;
     const fc = LugeRacerType.config.frameCount;
-    const binWidth = period / fc;
+    // basePeriodMs (3200) exceeds the 1500ms upper clamp in _getFrameIndex at speed=1.
+    // Sample at the effective clamped period so bin widths align with actual frame boundaries.
+    const effectivePeriod = Math.min(1500, Math.max(200, LugeRacerType.config.basePeriodMs / 1));
+    const binWidth = effectivePeriod / fc;
     const seen = new Set();
     for (let i = 0; i < fc; i++) {
       seen.add(LugeRacerType._getFrameIndex(Math.floor(i * binWidth + binWidth / 2), 1));

@@ -25,6 +25,8 @@ import {
   getCoatVariants,
   tintSprite,
   tintSpriteWithMask,
+  tintSpriteBodyAndMask,
+  tintSpriteWithDualMask,
   detectTintMode,
   getPatternedVariant,
 } from './spriteTinter.js';
@@ -47,8 +49,14 @@ export class SpriteRacerType {
       }
     }
 
-    if (config.tintMode === 'mask' && !config.maskUrl) {
-      throw new Error('SpriteRacerType: tintMode "mask" requires maskUrl to be set');
+    if (
+      config.tintMode === 'mask' &&
+      !config.maskUrl &&
+      !config.coats?.some((c) => c.patternMask)
+    ) {
+      throw new Error(
+        'SpriteRacerType: tintMode "mask" requires maskUrl or per-coat patternMask to be set'
+      );
     }
 
     if (config.rteDefinitions !== undefined && !Array.isArray(config.rteDefinitions)) {
@@ -141,8 +149,24 @@ export class SpriteRacerType {
         if (!coat || coat.tint === null) {
           drawable = baseImg;
         } else if (cfg.tintMode === 'mask') {
-          const maskImg = getCachedSprite(cfg.maskUrl);
-          if (maskImg) drawable = tintSpriteWithMask(baseImg, maskImg, coat.tint);
+          if (coat.borderMask) {
+            // Turtle dual-mask: plate centers (patternMask+tint) + borders (borderMask+borderTint).
+            const mask1 = getCachedSprite(coat.patternMask);
+            const mask2 = getCachedSprite(coat.borderMask);
+            if (mask1 && mask2)
+              drawable = tintSpriteWithDualMask(baseImg, mask1, coat.tint, mask2, coat.borderTint);
+          } else if (coat.patchTint) {
+            // Manta/dolphin: whole-body multiply tint + screen patch in masked region.
+            const maskUrl = coat.patternMask ?? cfg.maskUrl;
+            const maskImg = maskUrl ? getCachedSprite(maskUrl) : null;
+            if (maskImg)
+              drawable = tintSpriteBodyAndMask(baseImg, coat.tint, maskImg, coat.patchTint);
+          } else {
+            // Koi etc: single mask tint.
+            const maskUrl = coat.patternMask ?? cfg.maskUrl;
+            const maskImg = maskUrl ? getCachedSprite(maskUrl) : null;
+            if (maskImg) drawable = tintSpriteWithMask(baseImg, maskImg, coat.tint);
+          }
         } else {
           let blendMode;
           if (cfg.tintMode === 'auto') {

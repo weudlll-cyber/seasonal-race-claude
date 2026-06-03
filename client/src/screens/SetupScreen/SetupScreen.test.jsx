@@ -99,10 +99,10 @@ describe('SetupScreen — override selector filters inactive racer types', () =>
     sessionStorage.clear();
   });
 
-  it('override selector shows all 13 types when no overrides are set', () => {
+  it('override selector shows all 20 types when no overrides are set', () => {
     renderWithTrackSelected();
     const select = screen.getByRole('combobox');
-    expect(select.options).toHaveLength(13);
+    expect(select.options).toHaveLength(20);
   });
 
   it('override selector omits a type that has been disabled via override map', () => {
@@ -111,7 +111,7 @@ describe('SetupScreen — override selector filters inactive racer types', () =>
     const select = screen.getByRole('combobox');
     const optionValues = Array.from(select.options).map((o) => o.value);
     expect(optionValues).not.toContain('snail');
-    expect(select.options).toHaveLength(12);
+    expect(select.options).toHaveLength(19);
   });
 });
 

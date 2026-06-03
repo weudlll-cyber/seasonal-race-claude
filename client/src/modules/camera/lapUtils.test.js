@@ -82,7 +82,7 @@ describe('estimatedSecondsPerLap', () => {
 
 describe('openTrackDurationRange', () => {
   const SPACE_SPRINT_PATH_PX = 19772;
-  const RIVER_RUN_PATH_PX = 6156;
+  const RIVER_RUN_PATH_PX = 13061;
 
   it('min is always 30', () => {
     const range = openTrackDurationRange(RIVER_RUN_PATH_PX);
@@ -106,11 +106,11 @@ describe('openTrackDurationRange', () => {
     expect(range.max).toBeLessThan(160);
   });
 
-  it('River Run max is approximately 45s', () => {
+  it('River Run max is approximately 95s', () => {
     const range = openTrackDurationRange(RIVER_RUN_PATH_PX, DEFAULT_BASE_SPEED_CONFIG, 1.0, 0.05);
-    // §7.1: River Run ~45s at ssf=3.08
-    expect(range.max).toBeGreaterThan(35);
-    expect(range.max).toBeLessThan(60);
+    // §7.1: River Run ~95s
+    expect(range.max).toBeGreaterThan(85);
+    expect(range.max).toBeLessThan(110);
   });
 
   it('max increases with longer path lengths', () => {
@@ -119,7 +119,7 @@ describe('openTrackDurationRange', () => {
     expect(long.max).toBeGreaterThan(short.max);
   });
 
-  it('slider min/max calculation — River Run slider range is [30, ~45]', () => {
+  it('slider min/max calculation — River Run slider range is [30, ~95]', () => {
     const range = openTrackDurationRange(RIVER_RUN_PATH_PX, DEFAULT_BASE_SPEED_CONFIG, 1.0, 0.05);
     expect(range.min).toBe(30);
     expect(range.max).toBeGreaterThanOrEqual(30);

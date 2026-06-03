@@ -640,6 +640,64 @@ function CameraAdvancedSection() {
             display={(config.overviewClosedTrackZoom ?? 1.3).toFixed(2)}
             tip="Zoom multiplier for OVERVIEW on closed tracks. 1.0 = no pan (camera frozen), 1.3 = 30% zoom-in giving pan room. Only affects closed tracks. Default 1.30."
           />
+          <SliderRow
+            label="OVERVIEW target sprite size (px)"
+            testId="regie-overview-target-screen-px"
+            min={16}
+            max={48}
+            step={1}
+            value={config.overviewTargetScreenPx ?? 18}
+            onChange={(e) => set('overviewTargetScreenPx', parseInt(e.target.value, 10))}
+            display={`${config.overviewTargetScreenPx ?? 18}px`}
+            tip="Target sprite screen size during OVERVIEW on open tracks. Camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Only affects open tracks. Default 18 px."
+          />
+        </div>
+
+        <p
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+            margin: '0.75rem 0 0.4rem',
+          }}
+        >
+          <strong>Adaptive Zoom Floor</strong> — during LEADER_ZOOM and LEAD_CHANGE, if fewer than
+          Min racers visible are on screen the camera pulls back each frame until enough appear or
+          the floor is reached. 0 = disabled.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <SliderRow
+            label="Min racers visible"
+            testId="regie-min-racers-visible"
+            min={0}
+            max={15}
+            step={1}
+            value={config.minRacersVisible ?? 8}
+            onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
+            display={`${config.minRacersVisible ?? 8}`}
+            tip="Minimum non-finished racers that must be visible in LEADER_ZOOM / LEAD_CHANGE. Camera zooms out until this count is met or the floor is hit. 0 = disabled. Default 8."
+          />
+          <SliderRow
+            label="Leader min zoom (floor)"
+            testId="regie-leader-min-zoom"
+            min={0.1}
+            max={1.0}
+            step={0.05}
+            value={config.leaderMinZoom ?? 0.4}
+            onChange={(e) => set('leaderMinZoom', parseFloat(e.target.value))}
+            display={(config.leaderMinZoom ?? 0.4).toFixed(2)}
+            tip="Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom past this value even if too few racers are visible. Default 0.40."
+          />
+          <SliderRow
+            label="Zoom-out speed (per frame)"
+            testId="regie-zoom-out-step"
+            min={0.001}
+            max={0.02}
+            step={0.001}
+            value={config.zoomOutStepPerFrame ?? 0.005}
+            onChange={(e) => set('zoomOutStepPerFrame', parseFloat(e.target.value))}
+            display={`${((config.zoomOutStepPerFrame ?? 0.005) * 100).toFixed(1)}%`}
+            tip="Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5% per frame at 60 fps. Higher = faster pull-back. Default 0.005."
+          />
         </div>
       </div>
 

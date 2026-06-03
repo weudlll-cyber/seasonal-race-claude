@@ -5,3 +5,5 @@ Place the following files here:
 - space-sprint.jpg
 - garden-path.jpg
 - city-circuit.jpg
+- mountainstreet.jpg
+- ice-track.png

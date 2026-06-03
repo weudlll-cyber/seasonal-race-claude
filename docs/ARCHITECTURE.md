@@ -725,7 +725,7 @@ See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summaris
 | **Track-Preset** | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`. |
 | **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`. |
 | **Server-Track** | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file). |
-| **Default-Track** | One of the 5 built-in tracks (dirt-oval, river-run, space-sprint, garden-path, city-circuit). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
+| **Default-Track** | One of the 7 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
 | **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty. |
 
 ### Persistence Layer (after TLH)
@@ -737,13 +737,13 @@ Frontend loading order for track list:
   3. Code-Bundle (defaultTracks.js — hardcoded snapshot, bootstrap + last-resort fallback)
 ```
 
-The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 5 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
+The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 7 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
 
 ### Default-Tracks as Server-Records (TLH-1)
 
-On every server boot, `migrateDefaultTracks()` checks which of the 5 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
+On every server boot, `migrateDefaultTracks()` checks which of the 7 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
-**Server-wins deduplication:** `loadAllTracks()` (used by SetupScreen, TrackManager) merges code defaults from `defaults.js` with server tracks and filters out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 5 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
+**Server-wins deduplication:** `loadAllTracks()` (used by SetupScreen, TrackManager) merges code defaults from `defaults.js` with server tracks and filters out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 7 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
 
 `DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
 

@@ -1260,15 +1260,18 @@ export default function RaceScreen() {
       const frameEffZoom = isOpenTrack
         ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
         : cam.zoom * bsX;
+      // On open tracks in OVERVIEW, use overviewTargetScreenPx as the floor so sprites
+      // can shrink to the normalized target size. Other states keep the 36px OVERVIEW floor.
+      const isOverviewOpen = isOpenTrack && camDirRef.current?.state === 'OVERVIEW';
+      const minFloorPx = isOverviewOpen
+        ? (cameraConfigRef.current.overviewTargetScreenPx ?? 28)
+        : (cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spriteScale ?? 1.0) *
+          FALLBACK_REFERENCE_SPRITE_SIZE;
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
         displaySizeScale,
         frameEffZoom,
-        getEffectiveMinTargetScreenPx(
-          racerTypeRef.current?.config?.minTargetScreenPx,
-          (cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spriteScale ?? 1.0) *
-            FALLBACK_REFERENCE_SPRITE_SIZE
-        ),
+        getEffectiveMinTargetScreenPx(racerTypeRef.current?.config?.minTargetScreenPx, minFloorPx),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,
           cameraConfigRef.current.maxTargetScreenPx

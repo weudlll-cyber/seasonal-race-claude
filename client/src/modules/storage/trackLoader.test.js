@@ -20,6 +20,9 @@ import {
 import { cacheBackground, getCachedBackground } from './trackCache.js';
 import { storageSet, storageGet, KEYS } from './storage.js';
 import { listTracks } from '../track-editor/trackStorage.js';
+import { DEFAULT_TRACKS } from './defaults.js';
+
+const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 const MOCK_TRACK_SUMMARY = {
   id: 'test-track-1',
@@ -175,8 +178,8 @@ describe('getTrackBackgroundUrl', () => {
   });
 
   it('returns geometry backgroundImage for non-server tracks', () => {
-    const url = getTrackBackgroundUrl('dirt-oval', '/assets/tracks/dirt-oval.jpg');
-    expect(url).toBe('/assets/tracks/dirt-oval.jpg');
+    const url = getTrackBackgroundUrl(DIRT_OVAL.id, `/assets/tracks/${DIRT_OVAL.id}.jpg`);
+    expect(url).toBe(`/assets/tracks/${DIRT_OVAL.id}.jpg`);
   });
 
   it('returns empty string when no backgroundImage and not a server track', () => {

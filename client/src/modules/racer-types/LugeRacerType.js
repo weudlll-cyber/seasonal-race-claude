@@ -4,8 +4,8 @@
 // Project:     RaceArena
 // Created:     2026-05-28
 // Description: Luge racer — SpriteRacerType configuration.
-//              Sprite: 12-frame squash/stretch cycle, 1536×232 sheet
-//              (128×232 per frame, cropped + background flood-filled to alpha=0).
+//              Sprite: 16-frame combined breathing + wobble cycle, 1024×64 sheet
+//              (64×64 per frame, source: Luger.png rotated 180°, feet-first).
 //              tintMode:'multiply' — dark figure pixels (outlines/shadows) stay
 //              dark under tinting; auto-detection would wrongly pick 'screen'.
 //              Speed: 1.1 — fast on ice.
@@ -13,7 +13,7 @@
 
 import { SpriteRacerType } from './SpriteRacerType.js';
 import { makeGenericDustTrail } from './genericDustTrail.js';
-import { STANDARD_COAT_PALETTE } from './standardCoats.js';
+import { LUGE_COAT_PALETTE } from './lugeCoats.js';
 
 const SPRITE_URL = '/assets/racers/luge-slide.png';
 
@@ -22,15 +22,15 @@ export const LugeRacerType = new SpriteRacerType({
   emoji: '🛷',
 
   spriteUrl: SPRITE_URL,
-  frameWidth: 125,
-  frameHeight: 238,
+  frameWidth: 64,
+  frameHeight: 64,
   frameCount: 16,
-  basePeriodMs: 600,
+  basePeriodMs: 3200,
   baseRotationOffset: Math.PI / 2,
   displaySize: 40,
-  tintMode: 'screen',
+  tintMode: 'multiply',
 
-  coats: [...STANDARD_COAT_PALETTE],
+  coats: [...LUGE_COAT_PALETTE],
   defaultCoatId: 'base',
 
   primaryColor: '#cc3333',

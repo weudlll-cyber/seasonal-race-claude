@@ -92,6 +92,40 @@ export const DEFAULT_TRACKS = [
     worldHeight: 720,
     isDefault: false,
   },
+  {
+    id: 'mountainstreet',
+    name: 'Mountainstreet',
+    icon: '🏞',
+    description: 'A winding mountain road with sweeping corners and elevation changes.',
+    defaultRacerTypeId: 'boarder',
+    geometryId: null,
+    color: '#e63946',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['asphalt'],
+
+    worldWidth: 6144,
+    worldHeight: 4096,
+    isDefault: false,
+  },
+  {
+    id: 'ice-track',
+    name: 'Ice Track',
+    icon: '🎿',
+    description: 'A slippery closed circuit on packed ice and snow.',
+    defaultRacerTypeId: 'horse',
+    geometryId: null,
+    color: '#e63946',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['ice', 'snow'],
+
+    worldWidth: 1536,
+    worldHeight: 1024,
+    isDefault: false,
+  },
 ];
 
 export const DEFAULT_RACE_DEFAULTS = {
@@ -277,6 +311,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
   overviewClosedTrackZoom: 1.3, // zoom multiplier for OVERVIEW pan on closed tracks (1.0 = no pan room)
+  overviewTargetScreenPx: 18, // target sprite screen size (px) for normalized OVERVIEW zoom on open tracks
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,

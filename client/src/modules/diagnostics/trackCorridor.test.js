@@ -4,30 +4,25 @@ import { fileURLToPath } from 'url';
 import { resolve, dirname } from 'path';
 import { EditorShape } from '../track-editor/EditorShape.js';
 import { computeAutoScaleFactor, getEffectiveMinTargetScreenPx } from '../autoSpriteScale.js';
+import { DEFAULT_TRACKS } from '../storage/defaults.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GEO_DIR = resolve(__dirname, '../../../../server/data/tracks');
 
-function loadGeo(filename) {
-  return JSON.parse(readFileSync(resolve(GEO_DIR, filename), 'utf-8'));
+function loadGeo(id) {
+  return JSON.parse(readFileSync(resolve(GEO_DIR, `${id}.json`), 'utf-8'));
 }
 
 const AUTO_SCALE_CFG = { referenceValue: 23, minScale: 0.65, maxScale: 2.5 };
 
-const TRACKS = [
-  { id: 'dirt-oval', file: 'dirt-oval.json' },
-  { id: 'garden-path', file: 'garden-path.json' },
-  { id: 'city-circuit', file: 'city-circuit.json' },
-  { id: 'river-run', file: 'river-run.json' },
-  { id: 'space-sprint', file: 'space-sprint.json' },
-];
+const TRACKS = DEFAULT_TRACKS.map(({ id }) => ({ id }));
 
 describe('diagnostic: track corridor widths and auto-scale', () => {
   it('logs corridorWidthPx and displaySizeScale per track', () => {
     const rows = [];
 
-    for (const { id, file } of TRACKS) {
-      const geo = loadGeo(file);
+    for (const { id } of TRACKS) {
+      const geo = loadGeo(id);
       const shape = new EditorShape(geo);
       const corridorWidthPx = shape.getActualTrackWidth();
 
@@ -38,7 +33,7 @@ describe('diagnostic: track corridor widths and auto-scale', () => {
       rows.push({ id, worldW: geo.worldWidth, corridorWidthPx, s5, s10, s20 });
     }
 
-    // Tabelle für Chat-Output
+    // Table for console output
     console.log('\n=== TRACK CORRIDOR + AUTO-SCALE DIAGNOSTIC ===');
     console.log(
       '| Track          | worldW | corridorWidthPx | scale@N=5 | scale@N=10 | scale@N=20 |'
@@ -68,7 +63,7 @@ describe('diagnostic: track corridor widths and auto-scale', () => {
 });
 
 // ── Block-Z Regression Diagnosis ─────────────────────────────────────────────
-// Hypothesen A / B / C: Why do Garden Path sprites look tiny in LEADER_ZOOM
+// Hypotheses A / B / C: Why do Garden Path sprites look tiny in LEADER_ZOOM
 // while River Run sprites look large?
 //
 // This test computes the full render-pipeline for both tracks at N=5 so all
@@ -92,8 +87,10 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     const OVERVIEW_SPRITE_SCALE = 1.0; // DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spriteScale
     const FALLBACK_REF_SIZE = 36; // RaceScreen multiplies spriteScale by this to get the px floor
 
-    const geoGarden = loadGeo('garden-path.json');
-    const geoRiver = loadGeo('river-run.json');
+    const gardenPath = DEFAULT_TRACKS.find((t) => t.name === 'Garden Path');
+    const riverRun = DEFAULT_TRACKS.find((t) => t.name === 'River Run');
+    const geoGarden = loadGeo(gardenPath.id);
+    const geoRiver = loadGeo(riverRun.id);
     const shapeGarden = new EditorShape(geoGarden);
     const shapeRiver = new EditorShape(geoRiver);
 

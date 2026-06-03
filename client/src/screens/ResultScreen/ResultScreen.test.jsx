@@ -30,6 +30,9 @@ vi.mock('../../modules/storage/storage', () => ({
 
 import ResultScreen from './index.jsx';
 import { storageSet } from '../../modules/storage/storage';
+import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+
+const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 const VALID_RACE_RESULTS = JSON.stringify({
   finishOrder: [
@@ -37,7 +40,7 @@ const VALID_RACE_RESULTS = JSON.stringify({
     { name: 'Bob', icon: '🐎', color: '#00f', index: 1, lap: 1, progress: 95 },
   ],
   elapsedTime: 62,
-  race: { trackId: 'dirt-oval', trackName: 'Dirt Oval', winners: 3, duration: 60 },
+  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
 });
 
 beforeEach(() => {
@@ -72,7 +75,7 @@ describe('ResultScreen — double-save regression', () => {
     const entry = saved[0]; // history.unshift → entry is at index 0
     expect(entry).toMatchObject({
       id: 'test-id-001',
-      trackId: 'dirt-oval',
+      trackId: DIRT_OVAL.id,
       duration: 62,
       playerCount: 2,
       winners: ['Alice', 'Bob'],

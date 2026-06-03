@@ -54,23 +54,132 @@ function loadAllTracks() {
 
 const tracksMap = loadAllTracks();
 
-// Initial surfaceClasses assignments for the 5 code-default tracks.
-const DEFAULT_TRACK_SURFACE_CLASSES = {
-  'dirt-oval': ['earth'],
-  'river-run': ['water'],
-  'space-sprint': ['air'],
-  'garden-path': ['grass', 'earth'],
-  'city-circuit': ['asphalt'],
-};
+// Metadata for the built-in default tracks — seeded as server records on first boot.
+// Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
+export const DEFAULT_TRACK_SEEDS = [
+  {
+    id: 'dirt-oval',
+    name: 'Dirt Oval',
+    icon: '🐴',
+    description: 'Classic oval on packed earth — tight turns, lots of dust.',
+    color: '#a0522d',
+    defaultRacerTypeId: 'horse',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['earth'],
+    trackLights: { color: '#ff8844', style: 'sequence', speed: 1.0 },
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'river-run',
+    name: 'River Run',
+    icon: '🦆',
+    description: 'Downstream sprint through meandering rapids and lily pads.',
+    color: '#2196f3',
+    defaultRacerTypeId: 'duck',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'easy',
+    surfaceClasses: ['water'],
+    trackLights: { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'space-sprint',
+    name: 'Space Sprint',
+    icon: '🚀',
+    description: 'Zero-gravity dash past asteroids and nebula clouds.',
+    color: '#7c3aed',
+    defaultRacerTypeId: 'rocket',
+    defaultDuration: 90,
+    defaultWinners: 3,
+    difficulty: 'hard',
+    surfaceClasses: ['air'],
+    trackLights: { color: '#a8d4ff', style: 'sequence', speed: 1.5 },
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'garden-path',
+    name: 'Garden Path',
+    icon: '🐌',
+    description: 'A leisurely (yet surprisingly competitive) crawl through the roses.',
+    color: '#16a34a',
+    defaultRacerTypeId: 'snail',
+    defaultDuration: 120,
+    defaultWinners: 3,
+    difficulty: 'easy',
+    surfaceClasses: ['grass', 'earth'],
+    trackLights: { color: '#ffdd66', style: 'steady', speed: 1.0 },
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'city-circuit',
+    name: 'City Circuit',
+    icon: '🚙',
+    description: 'High-speed urban track with hairpin corners and tunnel sections.',
+    color: '#64748b',
+    defaultRacerTypeId: 'buggy',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'hard',
+    surfaceClasses: ['asphalt'],
+    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
+    worldWidth: 1280,
+    worldHeight: 720,
+    isDefault: true,
+  },
+  {
+    id: 'mountainstreet',
+    name: 'Mountainstreet',
+    icon: '🏞',
+    description: 'A winding mountain road with sweeping corners and elevation changes.',
+    color: '#e63946',
+    defaultRacerTypeId: 'boarder',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['asphalt'],
+    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
+    worldWidth: 6144,
+    worldHeight: 4096,
+    isDefault: true,
+  },
+  {
+    id: 'ice-track',
+    name: 'Ice Track',
+    icon: '🎿',
+    description: 'A slippery closed circuit on packed ice and snow.',
+    color: '#e63946',
+    defaultRacerTypeId: 'horse',
+    defaultDuration: 60,
+    defaultWinners: 3,
+    difficulty: 'medium',
+    surfaceClasses: ['ice', 'snow'],
+    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
+    worldWidth: 1536,
+    worldHeight: 1024,
+    isDefault: true,
+  },
+];
 
-// Initial trackLights configuration for the 5 code-default tracks and custom tracks.
-const DEFAULT_TRACK_LIGHTS_BY_ID = {
-  'dirt-oval': { color: '#ff8844', style: 'sequence', speed: 1.0 },
-  'river-run': { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
-  'space-sprint': { color: '#a8d4ff', style: 'sequence', speed: 1.5 },
-  'garden-path': { color: '#ffdd66', style: 'steady', speed: 1.0 },
-  'city-circuit': { color: '#ffffff', style: 'sequence', speed: 1.0 },
-};
+// Lookup maps derived from seeds — used by startup migrations to patch tracks written
+// before these fields existed.
+const SEED_SURFACE_CLASSES = Object.fromEntries(
+  DEFAULT_TRACK_SEEDS.map((s) => [s.id, s.surfaceClasses])
+);
+const SEED_TRACK_LIGHTS = Object.fromEntries(
+  DEFAULT_TRACK_SEEDS.map((s) => [s.id, s.trackLights])
+);
+
 const CUSTOM_TRACK_LIGHTS_DEFAULT = { color: '#ffffff', style: 'sequence', speed: 1.0 };
 
 const VALID_LIGHT_STYLES = ['steady', 'sequence', 'sync_pulse', 'random_flash'];
@@ -103,7 +212,7 @@ function validateTrackLights(lights) {
 function migrateTrackSurfaceClasses() {
   for (const [id, track] of tracksMap.entries()) {
     if (Array.isArray(track.surfaceClasses)) continue;
-    const classes = DEFAULT_TRACK_SURFACE_CLASSES[id] ?? [];
+    const classes = SEED_SURFACE_CLASSES[id] ?? [];
     const patched = { ...track, surfaceClasses: classes };
     atomicWriteJson(join(DATA_DIR, `${id}.json`), patched);
     tracksMap.set(id, patched);
@@ -119,7 +228,7 @@ function migrateTrackLights() {
     if (track.trackLights && typeof track.trackLights === 'object' && !Array.isArray(track.trackLights)) {
       continue;
     }
-    const lights = DEFAULT_TRACK_LIGHTS_BY_ID[id] ?? CUSTOM_TRACK_LIGHTS_DEFAULT;
+    const lights = SEED_TRACK_LIGHTS[id] ?? CUSTOM_TRACK_LIGHTS_DEFAULT;
     const patched = { ...track, trackLights: lights };
     atomicWriteJson(join(DATA_DIR, `${id}.json`), patched);
     tracksMap.set(id, patched);
@@ -177,92 +286,7 @@ function writeTrackBackup(trackId, trackData) {
   }
 }
 
-// Metadata for the 5 built-in default tracks — seeded as server records on first boot.
-// Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
-const DEFAULT_TRACK_SEEDS = [
-  {
-    id: 'dirt-oval',
-    name: 'Dirt Oval',
-    icon: '🐴',
-    description: 'Classic oval on packed earth — tight turns, lots of dust.',
-    color: '#a0522d',
-    defaultRacerTypeId: 'horse',
-    defaultDuration: 60,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['earth'],
-    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['dirt-oval'],
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'river-run',
-    name: 'River Run',
-    icon: '🦆',
-    description: 'Downstream sprint through meandering rapids and lily pads.',
-    color: '#2196f3',
-    defaultRacerTypeId: 'duck',
-    defaultDuration: 60,
-    defaultWinners: 3,
-    difficulty: 'easy',
-    surfaceClasses: ['water'],
-    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['river-run'],
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'space-sprint',
-    name: 'Space Sprint',
-    icon: '🚀',
-    description: 'Zero-gravity dash past asteroids and nebula clouds.',
-    color: '#7c3aed',
-    defaultRacerTypeId: 'rocket',
-    defaultDuration: 90,
-    defaultWinners: 3,
-    difficulty: 'hard',
-    surfaceClasses: ['air'],
-    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['space-sprint'],
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'garden-path',
-    name: 'Garden Path',
-    icon: '🐌',
-    description: 'A leisurely (yet surprisingly competitive) crawl through the roses.',
-    color: '#16a34a',
-    defaultRacerTypeId: 'snail',
-    defaultDuration: 120,
-    defaultWinners: 3,
-    difficulty: 'easy',
-    surfaceClasses: ['grass', 'earth'],
-    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['garden-path'],
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'city-circuit',
-    name: 'City Circuit',
-    icon: '🚙',
-    description: 'High-speed urban track with hairpin corners and tunnel sections.',
-    color: '#64748b',
-    defaultRacerTypeId: 'buggy',
-    defaultDuration: 60,
-    defaultWinners: 3,
-    difficulty: 'hard',
-    surfaceClasses: ['asphalt'],
-    trackLights: DEFAULT_TRACK_LIGHTS_BY_ID['city-circuit'],
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-];
-
-// Seed the 5 built-in default tracks as server records.
+// Seed the built-in default tracks as server records.
 // Runs on every boot but only creates tracks that are missing — idempotent for
 // existing tracks. Marker file is written once for historical reference.
 function migrateDefaultTracks() {
@@ -284,7 +308,7 @@ function migrateDefaultTracks() {
     };
     atomicWriteJson(join(DATA_DIR, `${seed.id}.json`), track);
     tracksMap.set(seed.id, track);
-    console.log(`[RaceArena] Default track re-seeded: ${seed.id}`);
+    console.log(`[RaceArena] Default track seeded: ${seed.name}`);
   }
   if (!existsSync(DEFAULT_TRACKS_MARKER)) {
     writeFileSync(DEFAULT_TRACKS_MARKER, new Date().toISOString(), 'utf8');

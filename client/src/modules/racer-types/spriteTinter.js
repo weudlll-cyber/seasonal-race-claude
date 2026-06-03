@@ -321,6 +321,136 @@ export function tintSpriteWithMask(sourceImage, maskImage, tintColor) {
 }
 
 /**
+ * Tint a sprite in two passes: whole-body multiply tint first, then a
+ * screen-blend patch color applied only in the masked area.
+ *
+ * Used by manta and dolphin coats where each coat has a dark body color
+ * (bodyTint, applied via multiply to the whole sprite) and a lighter patch
+ * color (patchTint, applied via screen only in the masked region so it
+ * brightens rather than darkens the already-tinted area).
+ *
+ * Results cached per (sourceUrl, bodyTint, maskUrl, patchTint) quartet.
+ *
+ * @param {HTMLImageElement|object} sourceImage
+ * @param {string} bodyTint  - CSS color applied multiply to the whole body.
+ * @param {HTMLImageElement|object} maskImage  - Mask (alpha=brightness convention).
+ * @param {string} patchTint - CSS color applied screen in the masked patch area.
+ * @returns {HTMLCanvasElement}
+ */
+export function tintSpriteBodyAndMask(sourceImage, bodyTint, maskImage, patchTint) {
+  const sourceUrl = sourceImage.src || '';
+  const maskUrl = maskImage.src || '';
+  const cacheKey = `bm:${sourceUrl}:${bodyTint}:${maskUrl}:${patchTint}`;
+  if (_maskedVariantCache.has(cacheKey)) return _maskedVariantCache.get(cacheKey);
+
+  const w = sourceImage.naturalWidth || sourceImage.width;
+  const h = sourceImage.naturalHeight || sourceImage.height;
+  const result = document.createElement('canvas');
+  result.width = w;
+  result.height = h;
+  const ctx = result.getContext('2d');
+  if (!ctx) {
+    _maskedVariantCache.set(cacheKey, result);
+    return result;
+  }
+
+  // Pass 1: draw sprite then multiply-blend body tint over the whole canvas.
+  ctx.drawImage(sourceImage, 0, 0);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = bodyTint;
+  ctx.fillRect(0, 0, w, h);
+  // Restore original alpha (multiply with fillRect does not preserve it).
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(sourceImage, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Pass 2: build a color layer clipped to mask, then screen-blend onto result.
+  const patchCanvas = document.createElement('canvas');
+  patchCanvas.width = w;
+  patchCanvas.height = h;
+  const pCtx = patchCanvas.getContext('2d');
+  if (pCtx) {
+    pCtx.drawImage(maskImage, 0, 0);
+    pCtx.globalCompositeOperation = 'source-in';
+    pCtx.fillStyle = patchTint;
+    pCtx.fillRect(0, 0, w, h);
+  }
+  ctx.globalCompositeOperation = 'screen';
+  ctx.drawImage(patchCanvas, 0, 0);
+
+  // Final clip to original sprite alpha.
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(sourceImage, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+
+  _maskedVariantCache.set(cacheKey, result);
+  return result;
+}
+
+/**
+ * Tint a sprite with two independent masks — used by the turtle dual-mask system:
+ * mask1+tint1 for shell plate centers, mask2+tint2 for border lines between plates.
+ * Both overlays use multiply blend so that darker tints produce visible color on
+ * the white sprite base. The two masks are designed to be non-overlapping.
+ *
+ * Results cached per (sourceUrl, mask1Url, tint1, mask2Url, tint2) quintuple.
+ *
+ * @param {HTMLImageElement|object} sourceImage
+ * @param {HTMLImageElement|object} mask1  - Plate-center mask.
+ * @param {string} tint1                  - Plate color.
+ * @param {HTMLImageElement|object} mask2  - Border mask.
+ * @param {string} tint2                  - Border color.
+ * @returns {HTMLCanvasElement}
+ */
+export function tintSpriteWithDualMask(sourceImage, mask1, tint1, mask2, tint2) {
+  const sourceUrl = sourceImage.src || '';
+  const mask1Url = mask1.src || '';
+  const mask2Url = mask2.src || '';
+  const cacheKey = `dm:${sourceUrl}:${mask1Url}:${tint1}:${mask2Url}:${tint2}`;
+  if (_maskedVariantCache.has(cacheKey)) return _maskedVariantCache.get(cacheKey);
+
+  const w = sourceImage.naturalWidth || sourceImage.width;
+  const h = sourceImage.naturalHeight || sourceImage.height;
+  const result = document.createElement('canvas');
+  result.width = w;
+  result.height = h;
+  const ctx = result.getContext('2d');
+  if (!ctx) {
+    _maskedVariantCache.set(cacheKey, result);
+    return result;
+  }
+
+  // Draw base sprite.
+  ctx.drawImage(sourceImage, 0, 0);
+
+  // Helper: build a color layer clipped to a mask, then multiply-blend onto result.
+  function applyMaskedLayer(mask, tint) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const cc = c.getContext('2d');
+    if (!cc) return;
+    cc.drawImage(mask, 0, 0);
+    cc.globalCompositeOperation = 'source-in';
+    cc.fillStyle = tint;
+    cc.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(c, 0, 0);
+  }
+
+  applyMaskedLayer(mask1, tint1);
+  applyMaskedLayer(mask2, tint2);
+
+  // Final clip to source alpha.
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(sourceImage, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+
+  _maskedVariantCache.set(cacheKey, result);
+  return result;
+}
+
+/**
  * Clear the masked-variant cache. Only use in tests.
  */
 export function _clearMaskedTintCache() {

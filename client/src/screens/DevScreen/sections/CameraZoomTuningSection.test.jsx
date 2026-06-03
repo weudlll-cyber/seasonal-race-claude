@@ -142,182 +142,142 @@ beforeEach(() => {
 });
 
 describe('CameraZoomTuningSection — default rendering', () => {
-  it('renders section title "Camera Behavior"', () => {
+  // Render once per test in beforeEach — eliminates the race between render()
+  // and getAllByRole() that caused intermittent failures under full-suite load.
+  beforeEach(() => {
     render(<CameraZoomTuningSection />);
+  });
+
+  it('renders section title "Camera Behavior"', () => {
     expect(screen.getByText('Camera Behavior')).toBeTruthy();
   });
 
   it('renders subtitle about per-state profiles', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText(/Per-state camera profiles/)).toBeTruthy();
   });
 
   it('renders state block summary for Overview', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Overview')).toBeTruthy();
   });
 
   it('renders state block summary for Leader Zoom', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Leader Zoom')).toBeTruthy();
   });
 
   it('renders state block summary for Battle Zoom', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Battle Zoom')).toBeTruthy();
   });
 
   it('renders state block summary for Comeback Zoom', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Comeback Zoom')).toBeTruthy();
   });
 
   it('renders Entry Convergence section header', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Entry Convergence')).toBeTruthy();
   });
 
   it('renders Convergence zoom threshold label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Convergence zoom threshold')).toBeTruthy();
   });
 
   it('renders Convergence px threshold label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Convergence px threshold')).toBeTruthy();
   });
 
   it('renders State Trigger Settings section header', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('State Trigger Settings')).toBeTruthy();
   });
 
   it('renders Pulk threshold (px) label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Pulk threshold (px)')).toBeTruthy();
   });
 
   it('renders BATTLE min hold (ms) label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('BATTLE min hold (ms)')).toBeTruthy();
   });
 
   it('renders Endgame focus threshold label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Endgame focus threshold')).toBeTruthy();
   });
 
   it('renders Post-Start LEADER Hold label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Post-Start LEADER Hold')).toBeTruthy();
   });
 
   it('renders BATTLE Cooldown label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('BATTLE Cooldown')).toBeTruthy();
   });
 
   it('renders Periodic OVERVIEW — Min Interval label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Periodic OVERVIEW — Min Interval')).toBeTruthy();
   });
 
   it('renders Periodic OVERVIEW — Max Interval label', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByText('Periodic OVERVIEW — Max Interval')).toBeTruthy();
   });
 
   it('shows OVERVIEW spriteScale value 1', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '1')).toBe(true);
+    // Use getAllByDisplayValue — multiple inputs may share value '1' in this form.
+    expect(screen.getAllByDisplayValue('1').length).toBeGreaterThan(0);
   });
 
   it('shows LEADER_ZOOM spriteScale value 1.81', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '1.81')).toBe(true);
+    expect(screen.getByDisplayValue('1.81')).toBeTruthy();
   });
 
   it('shows BATTLE_ZOOM spriteScale value 2.81', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '2.81')).toBe(true);
+    expect(screen.getByDisplayValue('2.81')).toBeTruthy();
   });
 
   it('shows COMEBACK_ZOOM spriteScale value 1.39', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '1.39')).toBe(true);
+    expect(screen.getByDisplayValue('1.39')).toBeTruthy();
   });
 
   it('shows OVERVIEW trackingTC value 1.5', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '1.5')).toBe(true);
+    expect(screen.getAllByDisplayValue('1.5').length).toBeGreaterThan(0);
   });
 
   it('shows default entryConvergenceZoom value 0.05', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.05')).toBe(true);
+    expect(screen.getByDisplayValue('0.05')).toBeTruthy();
   });
 
   it('shows default entryConvergencePx value 10', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '10')).toBe(true);
+    expect(screen.getByDisplayValue('10')).toBeTruthy();
   });
 
   it('shows default battlePulkThresholdPx value 200', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '200')).toBe(true);
+    expect(screen.getByDisplayValue('200')).toBeTruthy();
   });
 
   it('shows default battleMinDurationMs value 3000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '3000')).toBe(true);
+    expect(screen.getByDisplayValue('3000')).toBeTruthy();
   });
 
   it('shows default endgameThreshold value 0.85', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '0.85')).toBe(true);
+    expect(screen.getByDisplayValue('0.85')).toBeTruthy();
   });
 
   it('shows default postStartHoldMs value 7000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '7000')).toBe(true);
+    expect(screen.getByDisplayValue('7000')).toBeTruthy();
   });
 
   it('shows default battleCooldownMs value 8000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '8000')).toBe(true);
+    expect(screen.getByDisplayValue('8000')).toBeTruthy();
   });
 
   it('shows default overviewCooldownMin value 15000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '15000')).toBe(true);
+    expect(screen.getByDisplayValue('15000')).toBeTruthy();
   });
 
   it('shows default overviewCooldownMax value 25000', () => {
-    render(<CameraZoomTuningSection />);
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs.some((i) => i.value === '25000')).toBe(true);
+    expect(screen.getByDisplayValue('25000')).toBeTruthy();
   });
 
   it('renders Reset Camera Behavior button', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByTestId('reset-camera-behavior')).toBeTruthy();
   });
 
   it('renders per-state Reset state buttons', () => {
-    render(<CameraZoomTuningSection />);
     expect(screen.getByTestId('reset-state-OVERVIEW')).toBeTruthy();
     expect(screen.getByTestId('reset-state-LEADER_ZOOM')).toBeTruthy();
     expect(screen.getByTestId('reset-state-BATTLE_ZOOM')).toBeTruthy();
@@ -438,39 +398,27 @@ describe('CameraZoomTuningSection — per-state reset', () => {
 });
 
 describe('CameraZoomTuningSection — overviewCooldown min/max silent rejection', () => {
-  it('setting overviewCooldownMin equal to overviewCooldownMax is rejected (silent)', () => {
+  beforeEach(() => {
     loadCameraConfig.mockReturnValue(
       freshConfig({ overviewCooldownMin: 15000, overviewCooldownMax: 25000 })
     );
     render(<CameraZoomTuningSection />);
+    // Clear spy call counts from the render-triggered useEffect save.
     vi.clearAllMocks();
-    const inputs = screen.getAllByRole('spinbutton');
-    const minInput = inputs.find((i) => i.value === '15000');
-    fireEvent.change(minInput, { target: { value: '25000' } });
+  });
+
+  it('setting overviewCooldownMin equal to overviewCooldownMax is rejected (silent)', () => {
+    fireEvent.change(screen.getByDisplayValue('15000'), { target: { value: '25000' } });
     expect(saveCameraConfig).not.toHaveBeenCalled();
   });
 
   it('setting overviewCooldownMax equal to overviewCooldownMin is rejected (silent)', () => {
-    loadCameraConfig.mockReturnValue(
-      freshConfig({ overviewCooldownMin: 15000, overviewCooldownMax: 25000 })
-    );
-    render(<CameraZoomTuningSection />);
-    vi.clearAllMocks();
-    const inputs = screen.getAllByRole('spinbutton');
-    const maxInput = inputs.find((i) => i.value === '25000');
-    fireEvent.change(maxInput, { target: { value: '15000' } });
+    fireEvent.change(screen.getByDisplayValue('25000'), { target: { value: '15000' } });
     expect(saveCameraConfig).not.toHaveBeenCalled();
   });
 
   it('valid overviewCooldownMin change below max is accepted', () => {
-    loadCameraConfig.mockReturnValue(
-      freshConfig({ overviewCooldownMin: 15000, overviewCooldownMax: 25000 })
-    );
-    render(<CameraZoomTuningSection />);
-    vi.clearAllMocks();
-    const inputs = screen.getAllByRole('spinbutton');
-    const minInput = inputs.find((i) => i.value === '15000');
-    fireEvent.change(minInput, { target: { value: '20000' } });
+    fireEvent.change(screen.getByDisplayValue('15000'), { target: { value: '20000' } });
     expect(saveCameraConfig).toHaveBeenCalled();
   });
 });

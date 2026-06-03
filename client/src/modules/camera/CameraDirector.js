@@ -211,6 +211,10 @@ export class CameraDirector {
     // Dynamic zoom-out floor: tracks the minimum targetZoom for the current LEADER/LEAD_CHANGE phase.
     // Null between phases. Resets on every state transition. Only decrements within a phase.
     this._leaderPhaseZoomFloor = null;
+    // Normalized OVERVIEW snap zoom — computed from _referenceSpriteSize at each OVERVIEW entry.
+    // Null until first non-repeat OVERVIEW transition on open tracks with referenceSpriteSize>0.
+    // _setTargets reads this; falls back to _overviewStateZoom when null.
+    this._overviewSnapZoom = null;
     // _leaderMinZoom, _zoomOutStepPerFrame, _minRacersVisible set in _computeTimingConfig (above).
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
@@ -255,6 +259,8 @@ export class CameraDirector {
   updateConfig(config) {
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
+    // Invalidate stored snap so the new overviewTargetScreenPx takes effect on the next OVERVIEW cut.
+    this._overviewSnapZoom = null;
   }
 
   /**
@@ -417,6 +423,7 @@ export class CameraDirector {
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
     this._overviewClosedTrackZoom = t.overviewClosedTrackZoom;
+    this._overviewTargetScreenPx = t.overviewTargetScreenPx;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
     this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
@@ -1095,9 +1102,22 @@ export class CameraDirector {
       // temporarily override the entry TC to achieve the configured zoom-out duration.
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
-          const snapZoom = this._isOpenTrack
-            ? this._overviewStateZoom
-            : this._overviewStateZoom * this._overviewClosedTrackZoom;
+          let snapZoom;
+          if (this._isOpenTrack && this._referenceSpriteSize > 0) {
+            // Normalize: choose cam.zoom so sprites appear at _overviewTargetScreenPx screen px.
+            // Floor: overviewZoom (full-world view). Ceiling: lesser of MAX_INVERSE_ZOOM and
+            // _overviewStateZoom × 0.8 so the camera never zooms tighter than 80% of the static
+            // OVERVIEW zoom — prevents the leader from being pushed outside the canvas bounds.
+            const raw =
+              this._overviewTargetScreenPx / (this._referenceSpriteSize * OPEN_TRACK_BASE_ZOOM);
+            const maxZoom = Math.min(MAX_INVERSE_ZOOM, this._overviewStateZoom * 0.8);
+            snapZoom = Math.max(this.overviewZoom, Math.min(maxZoom, raw));
+            this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
+          } else {
+            snapZoom = this._isOpenTrack
+              ? this._overviewStateZoom
+              : this._overviewStateZoom * this._overviewClosedTrackZoom;
+          }
           this.zoom = snapZoom;
           this.targetZoom = snapZoom;
         } else {
@@ -1592,6 +1612,12 @@ export class CameraDirector {
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
+        // On open tracks, use the normalized snap zoom so targetZoom stays consistent with the
+        // zoom committed at OVERVIEW entry. Falls back to _overviewStateZoom before first snap.
+        const _ovOpenZoom = this._isOpenTrack
+          ? (this._overviewSnapZoom ?? this._overviewStateZoom)
+          : this._overviewStateZoom;
+
         // Entry phase with T-space lerp active: pan follows _camT along the track curve,
         // matching LEADER/BATTLE/COMEBACK — prevents hard snap to leader position on frame 1.
         if (this._lerpPhase === 'entry' && this._camT !== null && this._shape) {
@@ -1600,7 +1626,7 @@ export class CameraDirector {
             : this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
           if (entryPanTarget) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(entryPanTarget, this._overviewStateZoom, frameSize);
+              this._setOpenTrackTargets(entryPanTarget, _ovOpenZoom, frameSize);
             } else {
               this._setClosedTrackTargets(
                 entryPanTarget,
@@ -1628,7 +1654,7 @@ export class CameraDirector {
           const target = this._shape.getPosition(lookbackT, 0);
           if (target) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(target, this._overviewStateZoom, frameSize);
+              this._setOpenTrackTargets(target, _ovOpenZoom, frameSize);
             } else {
               this._setClosedTrackTargets(
                 target,
@@ -1653,7 +1679,7 @@ export class CameraDirector {
             ? this._applyOverviewRadialOffset(basePanTarget)
             : basePanTarget;
         if (this._isOpenTrack) {
-          this._setOpenTrackTargets(target, this._overviewStateZoom, frameSize);
+          this._setOpenTrackTargets(target, _ovOpenZoom, frameSize);
         } else {
           this._setClosedTrackTargets(
             target,
@@ -1787,7 +1813,9 @@ export class CameraDirector {
     }
 
     // Dynamic zoom-out: if fewer than _minRacersVisible non-finished racers are visible,
-    // gradually reduce targetZoom each frame until enough appear or leaderMinZoom is reached.
+    // gradually reduce targetZoom each frame until enough appear or the effective floor is reached.
+    // Also stops early when all active (non-finished) racers are already visible, even if that
+    // count is below minRacersVisible — prevents ratcheting to the hard floor with small fields.
     // One-directional within a phase: floor only decrements, never increments.
     if (
       this._minRacersVisible > 0 &&
@@ -1795,15 +1823,23 @@ export class CameraDirector {
     ) {
       const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
       const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
+      const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
+      const visTarget = Math.min(this._minRacersVisible, activeCount);
       // Initialize floor to natural targetZoom on first frame of this phase.
       if (this._leaderPhaseZoomFloor === null) {
         this._leaderPhaseZoomFloor = this.targetZoom;
       }
-      // Ratchet floor down when under-visible and above hard floor.
-      if (visCount < this._minRacersVisible && this._leaderPhaseZoomFloor > this._leaderMinZoom) {
+      // On closed tracks cam.zoom must stay >= 1.0: below that, _setClosedTrackTargets
+      // computes the pan offset at minEffZoom=bsX but rendering uses the lower effZoom,
+      // squeezing the world into the top-left corner of the canvas (black screen bug).
+      const effectiveFloor = this._isOpenTrack
+        ? this._leaderMinZoom
+        : Math.max(this._leaderMinZoom, 1.0);
+      // Ratchet floor down when under-visible and above effective hard floor.
+      if (visCount < visTarget && this._leaderPhaseZoomFloor > effectiveFloor) {
         this._leaderPhaseZoomFloor = Math.max(
           this._leaderPhaseZoomFloor - this._zoomOutStepPerFrame,
-          this._leaderMinZoom
+          effectiveFloor
         );
       }
       // Apply floor: targetZoom cannot exceed floor (prevents zoom-in mid-phase).

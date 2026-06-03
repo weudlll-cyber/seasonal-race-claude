@@ -92,8 +92,8 @@ describe('getRacerType factory', () => {
     expect(rt).toBe(HorseRacerType);
   });
 
-  it('RACER_TYPE_IDS contains all 13 types', () => {
-    expect(RACER_TYPE_IDS).toHaveLength(13);
+  it('RACER_TYPE_IDS contains all 20 types', () => {
+    expect(RACER_TYPE_IDS).toHaveLength(20);
   });
 });
 

@@ -184,7 +184,7 @@ export default function DiagnoseVerteilung() {
         Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} racers · dirt-oval · {N_RUNS} races × 4s RACING time
+        /diagnose-verteilung · {N_RACERS} racers · Dirt Oval · {N_RUNS} races × 4s RACING time
       </p>
 
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -281,7 +281,7 @@ export default function DiagnoseVerteilung() {
               One-line summary
             </h2>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-              In {results.nRuns} races with {N_RACERS} racers on dirt-oval, after 4 seconds the
+              In {results.nRuns} races with {N_RACERS} racers on Dirt Oval, after 4 seconds the
               maximum number of side-by-side neighbours is on average{' '}
               <strong style={{ color: '#58a6ff' }}>{results.maxMean.toFixed(1)}</strong>, at most{' '}
               <strong style={{ color: '#f85149' }}>{results.maxMax}</strong>, and in 95% of races no

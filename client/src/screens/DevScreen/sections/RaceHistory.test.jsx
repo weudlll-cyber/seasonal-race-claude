@@ -23,6 +23,9 @@ vi.mock('../../../modules/storage/useServerTracks.js', () => ({
 
 import RaceHistory from './RaceHistory.jsx';
 import { useStorage } from '../../../modules/storage/useStorage.js';
+import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
+
+const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -64,7 +67,7 @@ describe('RaceHistory — crash regression (winners: undefined)', () => {
             {
               id: 'crash-repro-1',
               date: '2026-05-04T10:00:00.000Z',
-              trackId: 'dirt-oval',
+              trackId: DIRT_OVAL.id,
               duration: 60,
               playerCount: 5,
               // winners intentionally absent → undefined, triggers the original crash
@@ -88,7 +91,7 @@ describe('RaceHistory — crash regression (winners: undefined)', () => {
             {
               id: 'crash-repro-2',
               date: '2026-05-04T10:00:00.000Z',
-              trackId: 'dirt-oval',
+              trackId: DIRT_OVAL.id,
               duration: 60,
               playerCount: 3,
             },
@@ -113,7 +116,7 @@ describe('RaceHistory — crash regression (winners: undefined)', () => {
             {
               id: 'correct-entry',
               date: '2026-05-04T10:00:00.000Z',
-              trackId: 'dirt-oval',
+              trackId: DIRT_OVAL.id,
               duration: 60,
               playerCount: 5,
               winners: ['Alice', 'Bob', 'Charlie'],

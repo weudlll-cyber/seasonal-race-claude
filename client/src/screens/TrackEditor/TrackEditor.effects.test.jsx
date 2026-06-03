@@ -407,14 +407,23 @@ describe('TrackEditor background upload — track path preserved', () => {
 
 // ── Background image upload: file size guard (SEC-4) ────────────────────────
 describe('TrackEditor background upload size guard', () => {
+  // Restore any FileReader spies after each test so cross-test bleed is impossible.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('shows an error and does not call FileReader when file exceeds 10 MB', async () => {
+    const { container } = renderEditor();
+    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
+
+    // Flush ALL pending async from the render (including any deferred FileReader ops)
+    // before installing the spy so they don't bleed into the assertion window.
+    await act(async () => {});
+
     const readSpy = vi.fn();
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = readSpy;
     });
-
-    const { container } = renderEditor();
-    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
 
     const oversizeFile = new File(['x'], 'big.jpg', { type: 'image/jpeg' });
     Object.defineProperty(oversizeFile, 'size', { value: 11 * 1024 * 1024 });
@@ -428,16 +437,16 @@ describe('TrackEditor background upload size guard', () => {
   });
 
   it('does not show a size error for a file within the 10 MB limit', async () => {
-    // FileReader is synchronous in jsdom — stub it so onload never fires.
-    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
-      this.readAsDataURL = vi.fn();
-    });
-
     const { container } = renderEditor();
     const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
 
     const smallFile = new File(['x'], 'small.jpg', { type: 'image/jpeg' });
     Object.defineProperty(smallFile, 'size', { value: 1 * 1024 * 1024 });
+
+    // FileReader is synchronous in jsdom — stub it so onload never fires.
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+      this.readAsDataURL = vi.fn();
+    });
 
     await act(async () => {
       fireEvent.change(fileInput, { target: { files: [smallFile] } });

@@ -730,6 +730,57 @@ describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
   });
 });
 
+// ── CameraDirector — normalized OVERVIEW zoom (overviewTargetScreenPx) ───────
+// Fewer racers → larger sprites (higher referenceSpriteSize) → smaller snap cam.zoom
+// (camera zooms out more). On small-world tracks the floor clamps to overviewZoom.
+
+describe('CameraDirector — normalized OVERVIEW zoom on open tracks', () => {
+  const openConfig = {
+    cameraStateProfiles: { OVERVIEW: { spriteScale: 1.0 } },
+    overviewTargetScreenPx: 28,
+  };
+  const racers = [
+    { t: 0.3, x: 300, y: 200, finished: false },
+    { t: 0.2, x: 250, y: 180, finished: false },
+  ];
+  const rs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+
+  it('fewer racers (larger sprites) snap to a smaller cam.zoom than many racers', () => {
+    // 8 racers: referenceSpriteSize=71.3  →  28/(71.3×1.5) ≈ 0.262
+    // 80 racers: referenceSpriteSize=35.6 →  28/(35.6×1.5) ≈ 0.524
+    const cdFew = new CameraDirector(6144, 4096, true, openConfig, 71.3);
+    const cdMany = new CameraDirector(6144, 4096, true, openConfig, 35.6);
+
+    // Force a non-repeat OVERVIEW snap via start-phase (raceElapsed=1000 < 3000ms)
+    // with stateAge > holdGate so _transition() fires.
+    cdFew.state = CAM_STATE.LEADER_ZOOM;
+    cdFew.stateEnteredAt = 0;
+    cdFew.update(racers, 9000, rs, 1280, 720);
+
+    cdMany.state = CAM_STATE.LEADER_ZOOM;
+    cdMany.stateEnteredAt = 0;
+    cdMany.update(racers, 9000, rs, 1280, 720);
+
+    expect(cdFew.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cdMany.state).toBe(CAM_STATE.OVERVIEW);
+    // Fewer (larger) racers → camera zooms out more → smaller cam.zoom
+    expect(cdFew.zoom).toBeLessThan(cdMany.zoom);
+    // Both above the overviewZoom floor (1280/6144 ≈ 0.208)
+    expect(cdFew.zoom).toBeGreaterThan(1280 / 6144 - 0.001);
+  });
+
+  it('normalized zoom is clamped to overviewZoom when target is below full-world zoom', () => {
+    // worldW=1280: overviewZoom=1.0. raw=28/(71.3×1.5)≈0.262 < 1.0 → clamped to 1.0
+    const cd = new CameraDirector(1280, 720, true, openConfig, 71.3);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 9000, rs, 1280, 720);
+
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd.zoom).toBeCloseTo(cd.overviewZoom, 3);
+  });
+});
+
 // ── CameraDirector — OVERVIEW spriteScale on open tracks (v14 path) ───────────
 // Phase 3D fix: _overviewStateZoom on open tracks now uses _computeZoomForSpriteScale
 // instead of being hardcoded to overviewZoom. OVERVIEW spriteScale slider now has effect.
@@ -5497,14 +5548,58 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
     expect(dir._leaderPhaseZoomFloor).toBeCloseTo(2.0, 4);
   });
 
-  it('floor stops at leaderMinZoom and does not go below', () => {
+  it('floor stops at 1.0 on closed track regardless of leaderMinZoom=0.4', () => {
+    // Closed track (WORLD_W=1280, isOpenTrack=false): effectiveFloor = max(0.4, 1.0) = 1.0.
     const dir = makeDir(3, 0.4, 0.01);
-    dir._leaderPhaseZoomFloor = 0.41; // one step above leaderMinZoom=0.40
+    dir._leaderPhaseZoomFloor = 1.01; // one step above effective floor=1.0
     dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
-    // Second call: already at floor — must not go below
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
+    // Second call: already at effective floor — must not go below
     dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
+  });
+
+  it('floor stops at leaderMinZoom on open track (no closed-track clamp)', () => {
+    // Open track: effectiveFloor = leaderMinZoom = 0.4 (no 1.0 clamp applied).
+    const openDir = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true, // isOpenTrack
+      { minRacersVisible: 3, leaderMinZoom: 0.4, zoomOutStepPerFrame: 0.01 },
+      36
+    );
+    openDir.state = CAM_STATE.LEADER_ZOOM;
+    openDir._lerpPhase = 'tracking';
+    openDir.zoom = 2.0;
+    openDir.offsetX = 0;
+    openDir.offsetY = 0;
+    openDir._leaderPhaseZoomFloor = 0.41;
+    openDir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(openDir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
+    openDir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(openDir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
+  });
+
+  it('closed-track floor never descends below 1.0 even when leaderMinZoom is very low', () => {
+    // leaderMinZoom=0.1 — without the fix this would allow cam.zoom=0.1 causing black screen.
+    const dir = new CameraDirector(
+      1536, // City Circuit worldW — bsX=0.8333
+      CANVAS_H,
+      false,
+      { minRacersVisible: 3, leaderMinZoom: 0.1, zoomOutStepPerFrame: 0.05 },
+      36
+    );
+    dir.state = CAM_STATE.LEADER_ZOOM;
+    dir._lerpPhase = 'tracking';
+    dir.zoom = 2.0;
+    dir.offsetX = 0;
+    dir.offsetY = 0;
+    dir._leaderPhaseZoomFloor = 2.0;
+    // Drive the ratchet for many frames until it saturates.
+    for (let i = 0; i < 50; i++) {
+      dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    }
+    expect(dir._leaderPhaseZoomFloor).toBeGreaterThanOrEqual(1.0 - 1e-9);
   });
 
   it('targetZoom does not increase mid-phase once floor is below natural target', () => {
@@ -5556,5 +5651,17 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
     dir._leaderPhaseZoomFloor = 2.0;
     dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
     expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.99, 4);
+  });
+
+  it('stops ratchet when all active racers are visible, even if fewer than minRacersVisible', () => {
+    // minRacersVisible=3 but only 2 active racers exist, both on-screen → ratchet must not fire
+    const dir = makeDir(3, 0.4, 0.01);
+    dir._leaderPhaseZoomFloor = 2.0;
+    const twoOnScreen = [
+      { x: 200, y: 200, t: 0.9, index: 0, finished: false },
+      { x: 300, y: 200, t: 0.8, index: 1, finished: false },
+    ];
+    dir._setTargets(twoOnScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(2.0, 4);
   });
 });

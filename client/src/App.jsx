@@ -18,19 +18,47 @@ import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
 import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
 
-// Bump this when DEFAULT_TRACKS schema changes to force a one-time reset of stale localStorage data.
-const CURRENT_DATA_VERSION = 1;
+const CURRENT_DATA_VERSION = 4;
+
+// Removes localStorage track entries whose name case-insensitively matches a
+// DEFAULT_TRACKS entry but whose id is a legacy hash (track was promoted to default).
+function removeStalePromotedDefaults() {
+  const defaultNames = new Map(DEFAULT_TRACKS.map((t) => [t.name.toLowerCase(), t.id]));
+  const existing = storageGet(KEYS.TRACKS, []);
+  if (!Array.isArray(existing)) return;
+  const cleaned = existing.filter((t) => {
+    const canonicalId = defaultNames.get((t.name ?? '').toLowerCase());
+    return !(canonicalId && t.id !== canonicalId);
+  });
+  if (cleaned.length !== existing.length) {
+    storageSet(KEYS.TRACKS, cleaned);
+  }
+}
 
 (function migrateStorage() {
-  if (storageGet(KEYS.DATA_VERSION, 0) < CURRENT_DATA_VERSION) {
-    // Seed defaults only when no tracks exist yet — never overwrite user data.
+  const version = storageGet(KEYS.DATA_VERSION, 0);
+  if (version >= CURRENT_DATA_VERSION) return;
+
+  if (version < 1) {
+    // v0 → v1: seed defaults on first install — never overwrite existing tracks.
     const existing = storageGet(KEYS.TRACKS, null);
     if (!Array.isArray(existing) || existing.length === 0) {
       storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
     }
-    storageSet(KEYS.DATA_VERSION, CURRENT_DATA_VERSION);
-    console.warn('[RaceArena] Storage migrated to v' + CURRENT_DATA_VERSION);
   }
+
+  if (version < 3) {
+    // v1/v2 → v3: remove stale promoted-default entries (Mountainstreet).
+    removeStalePromotedDefaults();
+  }
+
+  if (version < 4) {
+    // v3 → v4: remove stale promoted-default entries (Ice Track).
+    removeStalePromotedDefaults();
+  }
+
+  storageSet(KEYS.DATA_VERSION, CURRENT_DATA_VERSION);
+  console.warn('[RaceArena] Storage migrated to v' + CURRENT_DATA_VERSION);
 })();
 
 function App() {

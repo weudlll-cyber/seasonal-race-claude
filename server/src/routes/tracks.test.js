@@ -12,6 +12,9 @@ import { existsSync, readdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
+import { DEFAULT_TRACK_SEEDS } from './tracks.js';
+
+const SEED = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.name, s.id]));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/tracks');
@@ -141,15 +144,15 @@ describe('GET /api/tracks', () => {
 
 describe('GET /api/tracks/:id', () => {
   it('returns 200 with full track for known id', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}`);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('id', 'mogcvuipw2y5');
-    expect(res.body).toHaveProperty('name', 'Weltall');
+    expect(res.body).toHaveProperty('id', SEED['Mountainstreet']);
+    expect(res.body).toHaveProperty('name', 'Mountainstreet');
     expect(res.body).toHaveProperty('geometryId');
   });
 
   it('includes geometry arrays in detail response', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.innerPoints)).toBe(true);
     expect(Array.isArray(res.body.outerPoints)).toBe(true);
@@ -157,7 +160,7 @@ describe('GET /api/tracks/:id', () => {
   });
 
   it('does not expose backgroundImageFile in detail response', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}`);
     expect(res.body).not.toHaveProperty('backgroundImageFile');
   });
 
@@ -170,14 +173,14 @@ describe('GET /api/tracks/:id', () => {
 
 describe('GET /api/tracks/:id/background', () => {
   it('returns 200 with image content-type for known track', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5/background');
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}/background`);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/^image\//);
   });
 
   it('returns image bytes for known track', async () => {
     const res = await request(app)
-      .get('/api/tracks/mogcvuipw2y5/background')
+      .get(`/api/tracks/${SEED['Mountainstreet']}/background`)
       .buffer(true)
       .parse((res, callback) => {
         const chunks = [];
@@ -344,14 +347,14 @@ describe('DELETE /api/tracks/:id', () => {
   });
 
   it('returns 403 when attempting to delete a default track', async () => {
-    const res = await request(app).delete('/api/tracks/dirt-oval');
+    const res = await request(app).delete(`/api/tracks/${SEED['Dirt Oval']}`);
     expect(res.status).toBe(403);
     expect(res.body.error).toMatch(/cannot delete default track/i);
   });
 
   it('default track still exists after rejected DELETE', async () => {
-    await request(app).delete('/api/tracks/dirt-oval');
-    const res = await request(app).get('/api/tracks/dirt-oval');
+    await request(app).delete(`/api/tracks/${SEED['Dirt Oval']}`);
+    const res = await request(app).get(`/api/tracks/${SEED['Dirt Oval']}`);
     expect(res.status).toBe(200);
     expect(res.body.isDefault).toBe(true);
   });
@@ -400,10 +403,10 @@ describe('surfaceClasses field — startup migration', () => {
     }
   });
 
-  it('migrated unknown track (Weltall) gets surfaceClasses: []', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+  it('Mountainstreet default track has surfaceClasses: [asphalt]', async () => {
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}`);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.surfaceClasses)).toBe(true);
+    expect(res.body.surfaceClasses).toEqual(['asphalt']);
   });
 });
 
@@ -733,8 +736,8 @@ describe('trackLights field — startup migration', () => {
     }
   });
 
-  it('migrated Weltall track gets a valid trackLights object', async () => {
-    const res = await request(app).get('/api/tracks/mogcvuipw2y5');
+  it('Mountainstreet default track has a valid trackLights object', async () => {
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}`);
     expect(res.status).toBe(200);
     expect(typeof res.body.trackLights).toBe('object');
     expect(res.body.trackLights).toHaveProperty('color');
@@ -890,9 +893,9 @@ describe('PUT /api/tracks/:id — trackLights update', () => {
 // ── Default-Track seed migration (TLH-1) ─────────────────────────────────────
 
 describe('Default-Track seed migration (TLH-1)', () => {
-  const DEFAULT_IDS = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit'];
+  const DEFAULT_IDS = DEFAULT_TRACK_SEEDS.map((s) => s.id);
 
-  it('all 5 default tracks appear in GET /api/tracks', async () => {
+  it('all default tracks appear in GET /api/tracks', async () => {
     const res = await request(app).get('/api/tracks');
     expect(res.status).toBe(200);
     const ids = res.body.map((t) => t.id);
@@ -909,8 +912,8 @@ describe('Default-Track seed migration (TLH-1)', () => {
     }
   });
 
-  it('dirt-oval has expected metadata', async () => {
-    const res = await request(app).get('/api/tracks/dirt-oval');
+  it('Dirt Oval has expected metadata', async () => {
+    const res = await request(app).get(`/api/tracks/${SEED['Dirt Oval']}`);
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Dirt Oval');
     expect(typeof res.body.icon).toBe('string');
@@ -922,7 +925,7 @@ describe('Default-Track seed migration (TLH-1)', () => {
   it('default tracks appear in GET /api/tracks list without geometry arrays but with pointCount', async () => {
     const res = await request(app).get('/api/tracks');
     const defaults = res.body.filter((t) => DEFAULT_IDS.includes(t.id));
-    expect(defaults.length).toBe(5);
+    expect(defaults.length).toBe(DEFAULT_TRACK_SEEDS.length);
     for (const t of defaults) {
       expect(t).not.toHaveProperty('innerPoints');
       expect(t).not.toHaveProperty('outerPoints');

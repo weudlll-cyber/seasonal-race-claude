@@ -12,6 +12,9 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
+import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+
+const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
 
@@ -70,7 +73,7 @@ vi.mock('../../modules/storage/trackLoader.js', () => ({
   removeCachedTrackData: vi.fn(),
 }));
 
-const mockUpdate = vi.fn().mockResolvedValue({ id: 'dirt-oval', geometryId: 'custom-new' });
+const mockUpdate = vi.fn().mockResolvedValue({ id: DIRT_OVAL.id, geometryId: 'custom-new' });
 const mockCreate = vi.fn().mockResolvedValue({ id: 'new-id', geometryId: 'custom-123' });
 
 const mockRemoveBg = vi.fn().mockResolvedValue(undefined);
@@ -115,8 +118,8 @@ import { useServerTracksControl } from '../../modules/storage/useServerTracks.js
 // ── test fixtures ─────────────────────────────────────────────────────────────
 
 const DIRT_OVAL_NO_GEO = {
-  id: 'dirt-oval',
-  name: 'Dirt Oval',
+  id: DIRT_OVAL.id,
+  name: DIRT_OVAL.name,
   icon: '🏟️',
   geometryId: null,
   innerPoints: [],
@@ -133,7 +136,7 @@ const DIRT_OVAL_NO_GEO = {
 // Same track but with a background image already saved — enables the Save button
 const DIRT_OVAL_WITH_BG = {
   ...DIRT_OVAL_NO_GEO,
-  backgroundImageFile: 'dirt-oval.jpg',
+  backgroundImageFile: `${DIRT_OVAL.id}.jpg`,
 };
 
 const DIRT_OVAL_WITH_GEO = {
@@ -195,7 +198,7 @@ describe('TrackEditor — new track mode (no ?load param)', () => {
 describe('TrackEditor — load mode (?load=<serverId>)', () => {
   it('title shows "Editing: Dirt Oval" after server track is found', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
@@ -204,7 +207,7 @@ describe('TrackEditor — load mode (?load=<serverId>)', () => {
 
   it('name input field is NOT visible in load mode', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
@@ -214,7 +217,7 @@ describe('TrackEditor — load mode (?load=<serverId>)', () => {
 
   it('new track mode shows name input; load mode does not', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.queryByTestId('track-name-input')).toBeNull();
@@ -223,7 +226,7 @@ describe('TrackEditor — load mode (?load=<serverId>)', () => {
 
   it('editor starts in blank canvas when track has no geometry', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     // The counter label should show 0 points (boundary mode selected by default for server tracks)
     await waitFor(() => {
@@ -239,7 +242,7 @@ describe('TrackEditor — load mode (?load=<serverId>)', () => {
 describe('TrackEditor — save path in load mode', () => {
   it('Save calls updateTrackOnServer (PUT) with the server track id', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     // Wait for load mode to activate
     await waitFor(() => {
@@ -253,14 +256,14 @@ describe('TrackEditor — save path in load mode', () => {
     });
 
     await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith('dirt-oval', expect.any(Object));
+      expect(mockUpdate).toHaveBeenCalledWith(DIRT_OVAL.id, expect.any(Object));
     });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('first-time geometry save includes a new geometryId in the PUT body', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
@@ -289,7 +292,7 @@ describe('TrackEditor — save path in load mode', () => {
       JSON.stringify({
         ...DIRT_OVAL_WITH_GEO,
         id: DIRT_OVAL_WITH_GEO.geometryId,
-        backgroundImage: 'http://localhost:4000/api/tracks/dirt-oval/background',
+        backgroundImage: `http://localhost:4000/api/tracks/${DIRT_OVAL.id}/background`,
       })
     );
     localStorage.setItem(
@@ -297,7 +300,7 @@ describe('TrackEditor — save path in load mode', () => {
       JSON.stringify([DIRT_OVAL_WITH_GEO.geometryId])
     );
 
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
@@ -317,9 +320,9 @@ describe('TrackEditor — save path in load mode', () => {
   });
 });
 
-// ── F3 reproduction: dirt-oval no-background save path ───────────────────────
+// ── F3 reproduction: Dirt Oval no-background save path ───────────────────────
 // Reproduces the exact scenario from the 2026-05-02 browser test:
-//   - dirt-oval loads (geometryId: null, no background)
+//   - Dirt Oval loads (geometryId: null, no background)
 //   - user draws geometry (mocked via buildTrackFromEditorState stub)
 //   - user clicks Save
 // Confirms the frontend PUT path fires correctly — if this test passes, any
@@ -328,7 +331,7 @@ describe('TrackEditor — save path in load mode', () => {
 describe('TrackEditor — F3 reproduction: save from no-background track (load mode)', () => {
   it('Save calls PUT (not POST) even when track has no background', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     // Wait for load mode to activate (Path 2 load from serverTracksCtl.tracks)
     await waitFor(() => {
@@ -344,14 +347,14 @@ describe('TrackEditor — F3 reproduction: save from no-background track (load m
     });
 
     await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith('dirt-oval', expect.any(Object));
+      expect(mockUpdate).toHaveBeenCalledWith(DIRT_OVAL.id, expect.any(Object));
     });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('first-draw on no-background track generates a new geometryId in PUT body', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_NO_GEO]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-title').textContent).toBe('Editing: Dirt Oval');
@@ -367,7 +370,7 @@ describe('TrackEditor — F3 reproduction: save from no-background track (load m
     });
 
     const [serverId, putBody] = mockUpdate.mock.calls[0];
-    expect(serverId).toBe('dirt-oval');
+    expect(serverId).toBe(DIRT_OVAL.id);
     expect(typeof putBody.geometryId).toBe('string');
     expect(putBody.geometryId.startsWith('custom-')).toBe(true);
   });
@@ -383,7 +386,7 @@ describe('TrackEditor — "Remove background" button', () => {
 
   it('is visible when a background image is loaded (load mode)', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
@@ -392,7 +395,7 @@ describe('TrackEditor — "Remove background" button', () => {
 
   it('click in load mode calls removeTrackBackground with the server ID', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();
@@ -403,13 +406,13 @@ describe('TrackEditor — "Remove background" button', () => {
     });
 
     await waitFor(() => {
-      expect(mockRemoveBg).toHaveBeenCalledWith('dirt-oval');
+      expect(mockRemoveBg).toHaveBeenCalledWith(DIRT_OVAL.id);
     });
   });
 
   it('click in load mode hides the button after removal', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue(makeCtl([DIRT_OVAL_WITH_BG]));
-    renderEditor('/track-editor?load=dirt-oval');
+    renderEditor(`/track-editor?load=${DIRT_OVAL.id}`);
 
     await waitFor(() => {
       expect(screen.getByTestId('remove-background-btn')).toBeInTheDocument();

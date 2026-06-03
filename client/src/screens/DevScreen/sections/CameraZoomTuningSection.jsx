@@ -268,6 +268,7 @@ function CameraZoomTuningSection() {
       battleCooldownMs: DEFAULT_CAMERA_CONFIG.battleCooldownMs,
       overviewCooldownMin: DEFAULT_CAMERA_CONFIG.overviewCooldownMin,
       overviewCooldownMax: DEFAULT_CAMERA_CONFIG.overviewCooldownMax,
+      overviewTargetScreenPx: DEFAULT_CAMERA_CONFIG.overviewTargetScreenPx,
     }));
   }
 
@@ -641,6 +642,29 @@ function CameraZoomTuningSection() {
               }}
             />
           </div>
+        </div>
+
+        <div className={s.formGroup}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            OVERVIEW target sprite size (px)
+            <InfoTooltip
+              text={`Target sprite screen size during OVERVIEW on open tracks. The camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Value: ${config.overviewTargetScreenPx ?? 28}px.`}
+            />
+          </label>
+          <input
+            type="range"
+            min={16}
+            max={48}
+            step={1}
+            value={config.overviewTargetScreenPx ?? 28}
+            onChange={(e) => set('overviewTargetScreenPx', Number(e.target.value))}
+          />
+          <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+            {config.overviewTargetScreenPx ?? 28}px
+          </span>
         </div>
 
         {/* Adaptive Zoom Floor */}
