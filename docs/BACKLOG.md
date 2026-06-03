@@ -603,6 +603,8 @@ from D3.5.5.
 
 15f. ✅ **New racer types + camera fixes + track cleanup** (master `d33c28d`, 2543 tests) — 7 new racer types: Beetle, Boarder, Koi, Turtle, Manta, Dolphin, Snowmobile (registry 13→20). New default tracks: Mountainstreet (6th), Ice Track (7th), River Run updated. Track ID cleanup + localStorage migrations v2/v3. OVERVIEW sprite-size normalization (L116). Adaptive ratchet stops at `min(minRacersVisible, activeCount)` (L117). Motorbike artifact fix (L115). Lessons L112–L117.
 
+15g. ✅ **Closed track speed normalization + sea tracks + UI fixes** (master `066a0ed`, 2559 tests) — `closedSsf = pathLengthPx / 3200` applied to `race_baseSpeed`; Searound now races at comparable speed to standard closed tracks (L118). Seatrack (open, dolphin) and Searound (closed, manta) promoted as 8th and 9th default tracks; v5 migration; hash-ID duplicates deleted. `MinSpriteSizePreview` fixed for all mask-mode racer types. `black-sea` custom surface class removed. Sim: 7 new racer types + 4 new tracks wired.
+
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
 18. **Backup/export** (B-5) — UI exists, wiring missing.

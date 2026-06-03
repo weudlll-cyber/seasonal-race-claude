@@ -2146,3 +2146,17 @@ physicalY += physicalYVelocity
 **Consequence:** Any "zoom until N racers visible" ratchet must account for the case where fewer than N racers exist. The stop condition should be `min(target, totalActive)`, not a fixed target.
 
 **Reference:** `CameraDirector._setTargets` ratchet block (~line 1818), `fix(camera): stop ratchet when all active racers are visible` commit. Session 2026-06-03.
+
+---
+
+## Lesson 118 — Closed Tracks Have No Path-Length Speed Normalization — Perceived Speed Scales Linearly With pathLengthPx
+
+**Context:** feat/closed-track-speed (2026-06-03). Searound (closed, pathLengthPx=5147, worldW=3072) felt ~69% faster than standard closed tracks (~3000–3300 px). The root cause: for closed tracks, `race_baseSpeed = finishT / (REFERENCE_FPS × targetDuration × spreadFactor)` — completely independent of `pathLengthPx`. Physical world displacement per frame = `race_baseSpeed × pathLengthPx` scales linearly. `worldWidth` cancels exactly in the screen velocity formula (`cam.zoom = spriteScale / bsX`, so `screenVelocity = race_baseSpeed × pathLengthPx × spriteScale`), so only `pathLengthPx` determines perceived speed.
+
+Open tracks already have an ssf correction (`ssf = pathLengthPx / REFERENCE_PATH_LENGTH`) applied to `finishT`, normalizing physical speed to a constant regardless of path length. Closed tracks had no equivalent.
+
+**Fix:** Compute `closedSsf = pathLengthPx / REFERENCE_CLOSED_PATH_PX` (reference 3200 px, the mean of standard closed tracks). Apply as a multiplier to the `targetDuration` argument of `computeRaceBaseSpeed`. Side effect: race duration scales with path length — Searound's 2-lap race lasts ~97s with a 60s target, which is correct behavior for a longer-than-standard closed track.
+
+**Consequence:** Any race engine where `race_baseSpeed` is derived from lap count and target duration (independent of track length) will produce faster-feeling races on tracks with longer paths. Always apply an ssf-style normalization if consistent visual speed across tracks is required.
+
+**Reference:** `computeClosedTrackSsf` in `lapUtils.js`, `REFERENCE_CLOSED_PATH_PX = 3200`, `RaceScreen/index.jsx` (`closedSsf` computation). Session 2026-06-03.
