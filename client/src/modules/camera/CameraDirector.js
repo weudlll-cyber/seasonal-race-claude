@@ -25,24 +25,24 @@ export const CAM_STATE = {
 // not inside CameraDirector. Exported so RaceScreen can use the same constant.
 export const OPEN_TRACK_BASE_ZOOM = 1.5;
 
-const MAX_STATE_DURATION = 8000; // fallback when no config provided
+const _MAX_STATE_DURATION = 8000; // fallback when no config provided
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
-const ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
-const BATTLE_PULK_THRESHOLD_PX = 200; // fallback: world-pixel radius for pulk detection
-const BATTLE_PULK_THRESHOLD_T = 0.12; // fallback: max T-space gap for temporal proximity condition
-const BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
-const FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
-const POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
-const BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
-const BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
-const MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
+const _ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
+const _BATTLE_PULK_THRESHOLD_PX = 200; // fallback: world-pixel radius for pulk detection
+const _BATTLE_PULK_THRESHOLD_T = 0.12; // fallback: max T-space gap for temporal proximity condition
+const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
+const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
+const _POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
+const _BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
+const _BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
+const _MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
 const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scaling applied in update)
 // Per-state transition TC fallbacks (used when no config is provided at all)
-const TC_OVERVIEW = 1.5;
-const TC_LEADER = 0.3;
-const TC_BATTLE = 0.3;
-const TC_COMEBACK = 0.3;
-const OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
+const _TC_OVERVIEW = 1.5;
+const _TC_LEADER = 0.3;
+const _TC_BATTLE = 0.3;
+const _TC_COMEBACK = 0.3;
+const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
 const MAX_INVERSE_ZOOM = 10.0; // ceiling for inverse (targetSize-based) zoom; raised from 5 to support worldW=6144 (Mountainstreet)
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
@@ -58,17 +58,17 @@ const DEFAULT_SPRITE_SCALE = {
   comeback: 1.39,
 };
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
-const DEFAULT_OVERVIEW_OFFSET_PX = 150;
+const _DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
 // Default T-space convergence threshold. Raised from 0.005 to 0.03 so the camera exits entry
 // phase while the leader is moving: steady-state gap = ese/lf ≈ 0.026 at typical speeds, which
 // was above the old threshold (camera never converged). Configurable via transitionTConvergence.
-const TRANSITION_T_CONVERGENCE = 0.03;
+const _TRANSITION_T_CONVERGENCE = 0.03;
 // Per-state fallback max entry duration (ms) when not set in cameraStateProfiles.
 // Formula: ≈ 3.45 × entryTC × 2 (safety factor). OVERVIEW uses TC=1.5s, others TC=0.8s.
-const DEFAULT_MAX_ENTRY_DURATION_MS = {
+const _DEFAULT_MAX_ENTRY_DURATION_MS = {
   OVERVIEW: 10000,
   LEADER_ZOOM: 5000,
   BATTLE_ZOOM: 5000,
@@ -1018,7 +1018,7 @@ export class CameraDirector {
     }
   }
 
-  _transition(racers, ts, raceState, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
+  _transition(racers, ts, raceState, _canvasW = CANVAS_W, _canvasH = CANVAS_H_REF) {
     const prevState = this.state;
     const prevEnteredAt = this.stateEnteredAt;
 
