@@ -148,7 +148,7 @@ Gives the audience time to see the final positions.
 ### Code registry as Single Source of Truth (post B-7)
 
 `RACER_TYPES` in `client/src/modules/racer-types/index.js` is the single source of truth for all
-12 types. localStorage stores **only deviations** from the code default:
+20 built-in types. localStorage stores **only deviations** from the code default:
 
 ```
 Code-Registry (RACER_TYPES)          →  12 Types, always complete
@@ -160,7 +160,7 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 
 | Function | Description |
 |---|---|
-| `listAllRacerTypes()` | Array of all 12 types with `isActive` resolved from override map |
+| `listAllRacerTypes()` | Array of all 20 built-in types (+ user-created types) with `isActive` resolved from override map |
 | `getRacerType(id)` | Single type instance, falls back to Horse for unknown IDs |
 | `getRacerTypeById(id)` | Alias for `getRacerType` — preferred where ID semantics matter |
 | `listRacerTypes()` | Array of all registered type IDs |
@@ -172,14 +172,14 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 | `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 fields since VRE-3 |
 | `CONFIG_SNAPSHOT` | Frozen copy of code defaults for all 8 TUNABLE_FIELDS (since VRE-3), captured before boot-override application. Arrays are deep-copied (no reference sharing) |
 | `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filters racer types to those with ≥1 class overlap with the track. Empty `trackSurfaceClasses` → return all (Legacy). Empty racer classes → always included (Heimat-Trail). VRE-3. |
-| `RACER_TYPE_IDS` | Sorted array of all 12 type IDs |
+| `RACER_TYPE_IDS` | Sorted array of all 20 built-in type IDs |
 | `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` for UI display |
 | `COATS_BY_TYPE` | Map `{id → coats[]}` for RaceScreen coat assignment; auto-derived from type configs |
 | `getSurfaceClasses()` on SpriteRacerType | Returns `surfaceClasses` array (surface class IDs of this type, default: `[]`). Read by RaceScreen + SetupScreen in VRE-3. |
 
 ### SpriteRacerType — config fields
 
-`SpriteRacerType` is a config-driven class. All 12 types are singleton instances.
+`SpriteRacerType` is a config-driven class. All 20 built-in types are singleton instances; user-created types are also `SpriteRacerType` instances created at runtime.
 No subclasses. Required config fields:
 
 | Field | Type | Description |
