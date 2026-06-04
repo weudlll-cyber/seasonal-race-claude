@@ -422,7 +422,6 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
-    this._overviewClosedTrackZoom = t.overviewClosedTrackZoom;
     this._overviewTargetScreenPx = t.overviewTargetScreenPx;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
@@ -1103,20 +1102,22 @@ export class CameraDirector {
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
           let snapZoom;
-          if (this._isOpenTrack && this._referenceSpriteSize > 0) {
-            // Normalize: choose cam.zoom so sprites appear at _overviewTargetScreenPx screen px.
-            // Floor: overviewZoom (full-world view). Ceiling: lesser of MAX_INVERSE_ZOOM and
-            // _overviewStateZoom × 0.8 so the camera never zooms tighter than 80% of the static
-            // OVERVIEW zoom — prevents the leader from being pushed outside the canvas bounds.
-            const raw =
-              this._overviewTargetScreenPx / (this._referenceSpriteSize * OPEN_TRACK_BASE_ZOOM);
-            const maxZoom = Math.min(MAX_INVERSE_ZOOM, this._overviewStateZoom * 0.8);
-            snapZoom = Math.max(this.overviewZoom, Math.min(maxZoom, raw));
+          if (this._referenceSpriteSize > 0) {
+            // Normalize for both open and closed tracks: choose cam.zoom so racers appear at
+            // _overviewTargetScreenPx screen pixels. The effective-zoom divisor is
+            // OPEN_TRACK_BASE_ZOOM (open) or bsX (closed) — same formula, different multiplier.
+            const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
+            const raw = this._overviewTargetScreenPx / (this._referenceSpriteSize * divisor);
+            // Open ceiling: 80% of state zoom prevents the leader leaving canvas during pan.
+            // Closed ceiling: only MAX_INVERSE_ZOOM — resolveCamera handles world-edge clamping.
+            const maxZoom = this._isOpenTrack
+              ? Math.min(MAX_INVERSE_ZOOM, this._overviewStateZoom * 0.8)
+              : MAX_INVERSE_ZOOM;
+            const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
+            snapZoom = Math.max(minZoom, Math.min(maxZoom, raw));
             this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
           } else {
-            snapZoom = this._isOpenTrack
-              ? this._overviewStateZoom
-              : this._overviewStateZoom * this._overviewClosedTrackZoom;
+            snapZoom = this._overviewStateZoom;
           }
           this.zoom = snapZoom;
           this.targetZoom = snapZoom;
@@ -1612,11 +1613,9 @@ export class CameraDirector {
 
     switch (this.state) {
       case CAM_STATE.OVERVIEW: {
-        // On open tracks, use the normalized snap zoom so targetZoom stays consistent with the
-        // zoom committed at OVERVIEW entry. Falls back to _overviewStateZoom before first snap.
-        const _ovOpenZoom = this._isOpenTrack
-          ? (this._overviewSnapZoom ?? this._overviewStateZoom)
-          : this._overviewStateZoom;
+        // Normalized snap zoom committed at OVERVIEW entry — same for open and closed tracks.
+        // Falls back to _overviewStateZoom before the first OVERVIEW transition fires.
+        const _ovSnapZoom = this._overviewSnapZoom ?? this._overviewStateZoom;
 
         // Entry phase with T-space lerp active: pan follows _camT along the track curve,
         // matching LEADER/BATTLE/COMEBACK — prevents hard snap to leader position on frame 1.
@@ -1626,11 +1625,11 @@ export class CameraDirector {
             : this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
           if (entryPanTarget) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(entryPanTarget, _ovOpenZoom, frameSize);
+              this._setOpenTrackTargets(entryPanTarget, _ovSnapZoom, frameSize);
             } else {
               this._setClosedTrackTargets(
                 entryPanTarget,
-                this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
+                _ovSnapZoom * this._bsX,
                 frameSize,
                 canvasH
               );
@@ -1654,14 +1653,9 @@ export class CameraDirector {
           const target = this._shape.getPosition(lookbackT, 0);
           if (target) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(target, _ovOpenZoom, frameSize);
+              this._setOpenTrackTargets(target, _ovSnapZoom, frameSize);
             } else {
-              this._setClosedTrackTargets(
-                target,
-                this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
-                frameSize,
-                canvasH
-              );
+              this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
             }
             break;
           }
@@ -1679,14 +1673,9 @@ export class CameraDirector {
             ? this._applyOverviewRadialOffset(basePanTarget)
             : basePanTarget;
         if (this._isOpenTrack) {
-          this._setOpenTrackTargets(target, _ovOpenZoom, frameSize);
+          this._setOpenTrackTargets(target, _ovSnapZoom, frameSize);
         } else {
-          this._setClosedTrackTargets(
-            target,
-            this._overviewStateZoom * this._bsX * this._overviewClosedTrackZoom,
-            frameSize,
-            canvasH
-          );
+          this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
         }
         break;
       }
