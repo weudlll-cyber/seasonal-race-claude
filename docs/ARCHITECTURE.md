@@ -392,7 +392,14 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - `computeZoneSuccessRate(raceEntries)` — per-zone (B1–B5) hit rate: how often does a racer finish in the zone their race plan assigned them? Zone boundaries mirror `racePlanner.js getAreaBounds()` at `bonusStrengthMultiplier=2.0` (B1: ranks 1–5 +6%, B2: 6–15 +4%, B3: 16–25 +2%, B4: 26–40 ±0%, B5: 41+ −2%)
 
 **Per-race lite metrics** (on each `runSingleRace` result):
-`liteZigzagScore` (frame-to-frame physicalY direction reversals), `liteLatSpeedScore` (mean |physicalYVelocity|), `liteBrakeRate` (fraction of frames with speedBrake active), `liteStableOvertakes` (t-order changes that persist ≥ 5 frames), `liteOverlapRate` (fraction of racer-pairs in geometric overlap per frame)
+- `liteZigzagScore` — mean |Δ(physicalYVelocity)| per racer-frame after 4 s warmup. Target: < 0.003. High values indicate excessive lateral oscillation.
+- `liteLatSpeedScore` — mean |physicalYVelocity| per racer-frame. Measures overall lateral agitation.
+- `liteBrakeRate` — fraction of racer-frames with speed brake active. Expected ~50–85% on dense tracks.
+- `liteStableOvertakes` — t-order changes (A passes B) that persist ≥ 5 frames. High values indicate clean passing. Low values indicate "flicker" overtakes from frame-rate noise.
+- `liteOverlapRate` — fraction of active racer-pairs in geometric overlap per frame. Hard gate < 3%; target ≈ 0%.
+- `outcomeReached` — fraction of races where the OUTCOME phase was reached (leader past `racePlanCorridorStart`). Expected ~100%; low values indicate racers DNF before the corridor activates.
+- **Race-plan adherence (zone success rate)** — of all races where a racer was assigned zone B1 (target ranks 1–5), what fraction did it actually finish in positions 1–5? Computed per-zone (B1–B5) by `computeZoneSuccessRate`. B1 adherence is the headline choreography metric. A track+racer combo with B1 adherence < ~50% indicates the Race Plan bonus is insufficient to overcome dense-field blocking or speed mismatch on that pairing.
+- **Trapped/trembling** — operationally identified as a combo of high zigzagScore (> 0.003), low stableOvt, and near-zero net progress over a time window. No dedicated counter in the sim; inferred from the lateral quality metrics above. The stuckModeSuppress system (bilateral avoidance suppression) was added specifically to prevent this pattern (L108).
 
 **Key files:**
 - `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
