@@ -2234,3 +2234,19 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 **Fix / Rule:** Either (a) have E2E tests read the current value from the UI and verify persistence/reset behavior relative to it rather than asserting a specific literal, or (b) derive expected defaults in the spec from the source (`DEFAULT_RACE_BEHAVIOR_CONFIG`) at import time so they always track the code. If option (b) is impractical in Playwright, document a **"run E2E suite after any defaults.js change"** requirement in CLAUDE.md or CI.
 
 **Reference:** `client/e2e/d11-ux-verification.spec.js` (V1–V3 tests), `client/src/modules/storage/defaults.js`. Session 2026-06-04 clean-state audit.
+
+---
+
+## Lesson 125 — E2E Diagnosis from Static Code Analysis Is a Hypothesis, Not a Finding
+
+**Context:** d11-ux-verification fix (2026-06-04). A static code reading of `BehaviorTuningSection.jsx` predicted 5 test deletions (labels `Home Force Strength`, `Avoidance Distance`, `Speed Brake Factor` gone) and 2 value updates (draftingBoost 1.1 → 1.04). The proposal looked thorough. The first live run proved most of it was wrong: ALL 17 tests failed, not 9, because the root cause was a single cascading error in the shared helper `openBehaviorSection` — it looked for `getByRole('button', { name: /Race Behavior/ })` but the Dev Screen button had been renamed to "Race Tuning." Every test that called this helper timed out, producing the same failure pattern as "element not found," making it look like all those controls were gone.
+
+**Consequence:** A static code analysis that shows "label X not present in component Y" tells you only that the label is absent from that component. It does not tell you whether the test is failing for that reason or for a completely different reason (wrong helper, wrong route, wrong test structure). When a shared setup function is broken, all tests that use it cascade-fail, masquerading as individual feature removals. Only after the helper is fixed does genuine element-not-found separate from collateral failure. The live run also found two issues the code-reading missed: an InfoTooltip matching `getByLabel('Enabled')` (strict mode violation) and the reset button saying "Reset All Defaults" not "Reset Defaults."
+
+**Fix / Rule:** Never delete E2E assertions based on a code reading alone. The workflow is:
+1. Run the spec live against the running server.
+2. Fix any cascading infrastructure failures first (wrong helper, wrong server, wrong route).
+3. Re-run and read per-test error types: "element not found" authorizes deletion; "wrong value" authorizes update; "strict mode violation" authorizes selector fix.
+4. Only apply the change that matches the live error type. Code-reading is a guide for step 2 prep, not a substitute for step 3 evidence.
+
+**Reference:** `client/e2e/d11-ux-verification.spec.js`, `reports/clean-state-2026-06-04/05-d11-fix-proposal.md` (Verification section). Session 2026-06-04.
