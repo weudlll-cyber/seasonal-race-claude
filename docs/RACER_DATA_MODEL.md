@@ -1,17 +1,18 @@
 # RaceArena — Racer Data Model
 
-**Status:** Updated 2026-04-26 post D3.5.5 merge (PR #21).
-All 12 racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
+**Status:** Updated 2026-06-04 (clean-state audit). Original: 2026-04-26 post D3.5.5 merge (PR #21).
+All 20 built-in racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
 `speedMultiplier` has effectively affected race speed since D9.
 6 fields have been live-tunable via Dev-Screen edit modal since D3.5.5.
+User-created types (Racer Editor Phase 1+2, 2026-05-28) are also `SpriteRacerType` instances stored in `localStorage`.
 
 ---
 
 ## Concepts
 
 **Racer Type** — a sprite type with its own look, animation, coats, and stats. Config-defined
-`SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). Currently 12 in total.
-Phase 7: dynamically extensible via sprite upload in the Dev Panel.
+`SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). 20 built-in types.
+Dynamically extensible via sprite upload at `/racer-editor` (Racer Editor Phase 1+2, shipped 2026-05-28).
 
 **Track** — a race course with geometry, background image, effects, default duration, etc.
 Has a **suggested Racer Type** as "Default" — adopted during setup if the game master does not
@@ -256,7 +257,7 @@ const HorseRacerType = new SpriteRacerType({
 });
 ```
 
-### Initial assignment — all 12 racer types
+### Surface class assignment — all 20 racer types
 
 | Racer type | surfaceClasses |
 |---|---|
@@ -272,6 +273,14 @@ const HorseRacerType = new SpriteRacerType({
 | `f1` | `['asphalt']` |
 | `plane` | `['air']` |
 | `rocket` | `['air', 'water']` |
+| `luge` | `['ice', 'snow']` |
+| `beetle` | `['asphalt', 'cobble', 'earth']` |
+| `boarder` | `['asphalt', 'cobble', 'earth']` |
+| `koi` | `['water']` |
+| `turtle` | `['water']` |
+| `manta` | `['water']` |
+| `dolphin` | `['water']` |
+| `snowmobile` | `['snow', 'ice', 'earth']` |
 
 ### Heimat-Trail (Fallback)
 
