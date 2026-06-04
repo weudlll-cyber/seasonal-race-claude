@@ -33,11 +33,7 @@ import {
   assignPattern,
   PATTERN_IDS,
 } from '../../modules/racer-types/coatAssignment.js';
-import {
-  CameraDirector,
-  OPEN_TRACK_BASE_ZOOM,
-  FALLBACK_REFERENCE_SPRITE_SIZE,
-} from '../../modules/camera/CameraDirector.js';
+import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import {
@@ -62,6 +58,7 @@ import {
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
   computeRacerLayout,
+  computeBodyNarrowRef,
   computeEvenRowLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
@@ -408,7 +405,13 @@ export default function RaceScreen() {
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
+    const bodyFillNarrow = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
     const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
+    // displaySizeScale_physical: frame-based scale from real track width.
+    // Used only for rowGapPx / rowCount (physics) — must not change for determinism.
+    let displaySizeScale_physical = 1;
+    // displaySizeScale: body-narrow-based scale from fixed reference width W_REF.
+    // Used for camera normalization (referenceSpriteSize) and render (frameDisplayScale).
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -416,16 +419,31 @@ export default function RaceScreen() {
       const hasDisplaySizeOverride =
         typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
       if (!hasDisplaySizeOverride) {
-        // Bottom-up: min rows at minScale sprite, then even distribution, then back-compute size
+        // Physical layout: real width, frame-based (unchanged — drives rowGapPx/rowCount)
         const racerLayout = computeRacerLayout(
           effectiveWidth,
           nRacers,
           displaySize,
           autoScaleConfig
         );
-        displaySizeScale = racerLayout.spriteSize / displaySize;
+        displaySizeScale_physical = racerLayout.spriteSize / displaySize;
+        // Render/camera reference: fixed reference width, body-narrow-based
+        // W_REF = 285 matches open tracks (trackW=300 × startSpreadRange=0.95).
+        const W_REF = 285;
+        const bodyRef = computeBodyNarrowRef(
+          W_REF,
+          nRacers,
+          displaySize,
+          bodyFillNarrow,
+          autoScaleConfig
+        );
+        displaySizeScale = bodyRef.bodyNarrow / displaySize;
+      } else {
+        displaySizeScale_physical = 1;
       }
     }
+    // referenceSpriteSize is now the body-narrow world-px: camera zoom is set so the
+    // visible narrow-axis body equals overviewTargetScreenPx at OVERVIEW.
     const referenceSpriteSize = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
@@ -466,14 +484,17 @@ export default function RaceScreen() {
 
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
-    const spriteSize = displaySize * displaySizeScale;
-    const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
+    // physicalSpriteSize: frame-based, real width — drives row gap and row count (physics).
+    const physicalSpriteSize = displaySize * displaySizeScale_physical;
+    const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
     // rowCount: min rows at current sprite size; racers distributed evenly across them
     const rowCount = Math.max(
       1,
-      Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, spriteSize))))
+      Math.ceil(
+        nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize)))
+      )
     );
     const rowLayout = computeEvenRowLayout(nRacers, rowCount);
 
@@ -569,7 +590,7 @@ export default function RaceScreen() {
           x: 0,
           y: 0,
           angle: 0,
-          spriteWorldSizePx: spriteSize,
+          spriteWorldSizePx: physicalSpriteSize,
           geometricTrackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
@@ -1263,13 +1284,10 @@ export default function RaceScreen() {
       const frameEffZoom = isOpenTrack
         ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
         : cam.zoom * bsX;
-      // On open tracks in OVERVIEW, use overviewTargetScreenPx as the floor so sprites
-      // can shrink to the normalized target size. Other states keep the 36px OVERVIEW floor.
-      const isOverviewOpen = isOpenTrack && camDirRef.current?.state === 'OVERVIEW';
-      const minFloorPx = isOverviewOpen
-        ? (cameraConfigRef.current.overviewTargetScreenPx ?? 28)
-        : (cameraConfigRef.current.cameraStateProfiles?.OVERVIEW?.spriteScale ?? 1.0) *
-          FALLBACK_REFERENCE_SPRITE_SIZE;
+      // Honest single floor: overviewTargetScreenPx is the minimum visible narrow-body
+      // size in screen-px for ALL camera states (body-narrow units, not frame units).
+      // Applies uniformly — no open/closed branch, no OVERVIEW.spriteScale coupling.
+      const minFloorPx = cameraConfigRef.current.overviewTargetScreenPx ?? 28;
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
         displaySizeScale,

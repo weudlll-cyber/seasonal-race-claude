@@ -204,7 +204,13 @@ export class SpriteRacerType {
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * cfg.frameWidth;
-    const scale = ((cfg.displaySize * displaySizeScale) / cfg.frameHeight) * cfg.silhouetteScale;
+    const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+    // displaySizeScale is now the body-narrow world-px reference divided by displaySize.
+    // Dividing by bodyFillNarrow converts from body-narrow units to frame units so the
+    // visible narrow body equals displaySize × displaySizeScale in world pixels.
+    const scale =
+      ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / bodyFillNarrow) *
+      cfg.silhouetteScale;
     const dw = cfg.frameWidth * scale;
     const dh = cfg.frameHeight * scale;
 

@@ -210,6 +210,40 @@ export function computeEvenRowLayout(racerCount, rowCount) {
 }
 
 /**
+ * Compute the body-narrow world-px reference for camera and render sizing.
+ *
+ * Identical staircase logic to computeRacerLayout but measures slot widths in
+ * VISIBLE BODY NARROW units (min(bodyFillX,bodyFillY) × displaySize) rather than
+ * frame units. Returns the body-narrow world-px so every racer type at the same
+ * N and W_ref gets the same visible narrow-axis size on screen.
+ *
+ * Used only for referenceSpriteSize (camera) and displaySizeScale (render).
+ * Physical layout (rowGapPx, rowCount, start positions) uses computeRacerLayout
+ * with real track width — untouched.
+ *
+ * @param {number} W_ref          Fixed reference effective width (world px)
+ * @param {number} nRacers        Number of racers
+ * @param {number} displaySize    Base sprite size (world px) from racer type
+ * @param {number} bodyFillNarrow min(bodyFillX, bodyFillY) for the racer type
+ * @param {{minScale:number, maxScale:number}} config  Auto-scale config bounds
+ * @returns {{ bodyNarrow: number }}
+ */
+export function computeBodyNarrowRef(W_ref, nRacers, displaySize, bodyFillNarrow, config) {
+  const { minScale, maxScale } = config;
+  if (!nRacers || !W_ref || !displaySize || !bodyFillNarrow) {
+    return { bodyNarrow: displaySize * bodyFillNarrow * (minScale || 0.65) };
+  }
+  const narrowDS = displaySize * bodyFillNarrow;
+  const minBodyNarrow = narrowDS * minScale;
+  const maxBodyNarrow = narrowDS * maxScale;
+  const maxRPRatMin = Math.max(1, Math.floor((2 * W_ref) / Math.max(1, minBodyNarrow)));
+  const rowCount = Math.max(1, Math.ceil(nRacers / maxRPRatMin));
+  const racersPerRow = Math.ceil(nRacers / rowCount);
+  const targetBodyNarrow = (2 * W_ref) / racersPerRow;
+  return { bodyNarrow: Math.min(targetBodyNarrow, maxBodyNarrow) };
+}
+
+/**
  * Compute the auto-default maxRacers for a track.
  * Caps the rearmost row at maxCapacityFactor × pathLengthPx behind the start.
  *
