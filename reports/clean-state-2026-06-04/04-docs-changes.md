@@ -66,6 +66,23 @@ Comment-only change. No JS logic affected.
 
 ---
 
+### 7. `docs/RACER_DATA_MODEL.md`
+
+| Change | Reason |
+|---|---|
+| Status line updated from 2026-04-26 to 2026-06-04 | Reflects this audit |
+| "12 types" → "20 built-in types" (×4 locations) | Stale type count |
+| Phase 7 forward-reference replaced with "shipped 2026-05-28" | Racer Editor was delivered |
+| Surface class table extended with 8 missing types (luge–snowmobile) | Table only had 12 of 20 entries |
+
+### 8. `docs/ROADMAP.md`
+
+| Change | Reason |
+|---|---|
+| Added `feat/body-dimensions` session entry (2026-06-04, 2564 tests) | Missing session history entry |
+
+---
+
 ## Not Changed (Recommendations Only)
 
 | Doc | Issue | Reason Not Applied |
