@@ -8,7 +8,7 @@
 //              Also preserves the legacy RACER_TYPES export so
 //              existing code that imports it keeps working.
 //
-//              D3.5.3: All 13 racer types are SpriteRacerType instances.
+//              D3.5.3+: All 20 racer types are SpriteRacerType instances.
 //              No class-based RacerTypes remain. CarRacerType removed,
 //              replaced by BuggyRacerType. COATS_BY_TYPE auto-derived
 //              from type configs. warmUpAllRacerTypes handles mask types.

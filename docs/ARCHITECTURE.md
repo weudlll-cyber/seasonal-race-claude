@@ -17,7 +17,7 @@ seasonal-race-claude/
 │       ├── screens/                # Route-level full-page views
 │       │   ├── SetupScreen/        # Pre-race config (players, track, settings)
 │       │   ├── RaceScreen/         # Live race canvas + camera director
-│       │   │   ├── index.jsx       # Main component (1460 lines, hygiene sprint)
+│       │   │   ├── index.jsx       # Main component (~1528 lines, hygiene sprint + body-dimensions)
 │       │   │   └── drawing/        # Extracted canvas draw modules (hygiene sprint)
 │       │   │       ├── overlayRendering.js     # Title, lap info, countdown, finish overlays
 │       │   │       ├── particleRendering.js    # Dust/burst particles, surface trails
@@ -61,7 +61,7 @@ seasonal-race-claude/
 │       │   │   └── (lapUtils, panTarget, openTrackCamera, …)
 │       │   ├── racer-types/        # Racer manifests (sprite render, animation, trail, coats)
 │       │   │   ├── SpriteRacerType.js      # Config-driven base class for all sprite-based racer types (D3.5)
-│       │   │   ├── HorseRacerType.js       # Sprite-based horse with 11 coats (migrates to SpriteRacerType in D3.5.2)
+│       │   │   ├── HorseRacerType.js       # Sprite-based horse with 11 coats (SpriteRacerType, migrated D3.5.2)
 │       │   │   ├── spriteLoader.js         # Async image loader with module cache
 │       │   │   ├── spriteTinter.js         # Offscreen-canvas tinting; detectTintMode (luminance-based auto); tintSpriteWithMask for mask-restricted mode; pattern overlay infrastructure (stripes/dots disabled — solid only active)
 │       │   │   ├── coatAssignment.js       # Hash-based coat + pattern selection (assignCoat, assignPattern — pattern always returns 'solid')
@@ -72,8 +72,8 @@ seasonal-race-claude/
 │       │   │   ├── spritesheetBuilder.js   # Renders animation frames onto an offscreen canvas and exports a data URL
 │       │   │   ├── backgroundRemoval.js    # Flood-fill + tolerance background removal; computeSpriteBoundingBox with edge-strip filter
 │       │   │   ├── canvasUtils.js          # Shared canvas helpers (checkerboard pattern, image-to-canvas)
-│       │   │   ├── LugeRacerType.js        # 13th built-in type — 2000×238 spritesheet, 16 frames 125×238, screen tinting (dark helmet near-black), 20 coats, ice/snow surface classes (updated 2026-05-30)
-│       │   │   └── (DuckRacerType.js, SnailRacerType.js — migrate to SpriteRacerType in D3.5.2; RocketRacerType.js, CarRacerType.js — emoji-only)
+│       │   │   ├── LugeRacerType.js        # Built-in type 13 of 20 — 2000×238 spritesheet, 16 frames 125×238, screen tinting (dark helmet near-black), 20 coats, ice/snow surface classes
+│       │   │   └── (All 20 built-in types are SpriteRacerType instances — D3.5.x migration complete; CarRacerType replaced by BuggyRacerType)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 
 │       │   ├── surface-effects/    # Visual Racer Effects system (planned — VRE-1+)
@@ -392,7 +392,14 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - `computeZoneSuccessRate(raceEntries)` — per-zone (B1–B5) hit rate: how often does a racer finish in the zone their race plan assigned them? Zone boundaries mirror `racePlanner.js getAreaBounds()` at `bonusStrengthMultiplier=2.0` (B1: ranks 1–5 +6%, B2: 6–15 +4%, B3: 16–25 +2%, B4: 26–40 ±0%, B5: 41+ −2%)
 
 **Per-race lite metrics** (on each `runSingleRace` result):
-`liteZigzagScore` (frame-to-frame physicalY direction reversals), `liteLatSpeedScore` (mean |physicalYVelocity|), `liteBrakeRate` (fraction of frames with speedBrake active), `liteStableOvertakes` (t-order changes that persist ≥ 5 frames), `liteOverlapRate` (fraction of racer-pairs in geometric overlap per frame)
+- `liteZigzagScore` — mean |Δ(physicalYVelocity)| per racer-frame after 4 s warmup. Target: < 0.003. High values indicate excessive lateral oscillation.
+- `liteLatSpeedScore` — mean |physicalYVelocity| per racer-frame. Measures overall lateral agitation.
+- `liteBrakeRate` — fraction of racer-frames with speed brake active. Expected ~50–85% on dense tracks.
+- `liteStableOvertakes` — t-order changes (A passes B) that persist ≥ 5 frames. High values indicate clean passing. Low values indicate "flicker" overtakes from frame-rate noise.
+- `liteOverlapRate` — fraction of active racer-pairs in geometric overlap per frame. Hard gate < 3%; target ≈ 0%.
+- `outcomeReached` — fraction of races where the OUTCOME phase was reached (leader past `racePlanCorridorStart`). Expected ~100%; low values indicate racers DNF before the corridor activates.
+- **Race-plan adherence (zone success rate)** — of all races where a racer was assigned zone B1 (target ranks 1–5), what fraction did it actually finish in positions 1–5? Computed per-zone (B1–B5) by `computeZoneSuccessRate`. B1 adherence is the headline choreography metric. A track+racer combo with B1 adherence < ~50% indicates the Race Plan bonus is insufficient to overcome dense-field blocking or speed mismatch on that pairing.
+- **Trapped/trembling** — operationally identified as a combo of high zigzagScore (> 0.003), low stableOvt, and near-zero net progress over a time window. **No dedicated counter in the sim; always inferred from lateral quality metrics above — not directly measured.** A result of "no trapped/trembling events" means none of the indirect indicators triggered, not that trapping was directly ruled out. The stuckModeSuppress system (bilateral avoidance suppression) was added specifically to prevent this pattern (L108).
 
 **Key files:**
 - `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
@@ -628,7 +635,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 |---|---|
 | ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
 | ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
-| ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 13 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
+| ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 20 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
 | ✅ VRE-4 — Race Integration | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; native trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen. |
 
 ### Future: Surface Zones
@@ -829,7 +836,7 @@ Defined in `DEFAULT_RACE_BEHAVIOR_CONFIG` in `client/src/modules/storage/default
 
 ### Why They Are Fixed
 
-These parameters were optimized across all 10 default tracks and all default racer types using a 4-phase simulation sweep:
+These parameters were optimized across 9 default tracks + 1 user-created track (Luger Hill) and all 20 default racer types using a 4-phase simulation sweep:
 
 - **Phase 1 (LHS):** 200 Latin Hypercube samples on Dirt Oval + Space Sprint simultaneously
 - **Phase 2 (Refine):** Top 5 survivors refined at ±5% and ±2.5% around each winner

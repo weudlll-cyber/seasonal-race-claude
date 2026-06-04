@@ -618,6 +618,20 @@ from D3.5.5.
 
 ---
 
+## Clean-State Audit 2026-06-04 — Follow-up Items
+
+Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`.
+
+| Item | Priority | Description |
+|---|---|---|
+| **Fix d11-ux-verification.spec.js** | Medium | V1–V3 E2E tests assert stale physics default values (homeForceStrength=0.018, avoidanceDistance=0.35, etc.). These will fail when run against the current app. Fix: update `DEFAULT_CFG` constants and test assertions to match current `DEFAULT_RACE_BEHAVIOR_CONFIG`. Requires browser verification. Lesson L124. |
+| ✅ **npm audit fix (react-router)** | Done | Patched in follow-up commit on `chore/clean-state-2026-06-04`. 0 vulnerabilities. |
+| ✅ **Dead fallback constants in CameraDirector.js** | Done | 18 constants prefixed with `_` in follow-up commit on `chore/clean-state-2026-06-04`. |
+| **Speed-bonus Rear-Bias calibration** | Medium | 4 of 5 fairness failures in the Phase 2 sim are Rear-Bias (back rows winning more often than expected): elephant×DirtOval, dragon×GardenPath, plane×LugerHill, horse×IceTrack. Root cause is NOT the 8 physics avoidance params — investigate `speedBonusFactor` and `maxCapacityFactor` in `DEFAULT_ROW_LAYOUT_CONFIG` (rowLayout.js). A targeted sim sweep on those two params (not a full 8-param LHS) is the next step. |
+| **Browser-check Ice Track × horse geometry** | Medium | The 100-race sim found p=0.001 Rear-Bias for horse on Ice Track (χ²=21.3, df=5) — the strongest single failure. Horse has adequate laps (~4.5) and the track is slightly WIDER than Dirt Oval where horse passes. Track geometry (specific corner sequence or straight layout) is the suspected cause. Open Ice Track in a browser, run a race with horse, and observe whether any starting position shows a systematic advantage. If confirmed, consider a geometry edit. |
+
+---
+
 ## Known Limitations — Deliberately Accepted
 
 - **SEC-2 — Race state manipulation via React DevTools** *(audit-2026-04-29, Severity: High — accepted)*

@@ -466,7 +466,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *
    * These 8 parameters were optimized via a 4-phase simulation sweep
    * (4020-race LHS + 520-race refinement + 1500-race validation
-   * across all 10 default tracks and default racer types).
+   * across 9 default tracks + 1 user-created (Luger Hill) and 20 racer types).
    *
    * Current values (Phase 5 winner, established 2026-06-03):
    *   lateralForce:                0.011400
@@ -485,7 +485,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   1. Run scripts/sim-fairness.mjs with LHS sampling (200 combos)
    *      on Dirt Oval + Space Sprint simultaneously
    *   2. Take top 5 survivors, refine with ±5%/±2.5% sweep
-   *   3. Validate top 3 on all 10 tracks with 50+ races each
+   *   3. Validate top 3 on all 10 tracks (9 default + Luger Hill) with 50+ races each
    *   4. Only apply values that pass all hard cutoffs on all tracks
    *      (fairness p > 0.05, zigzag < 0.003, hardOverlap < 3%)
    *

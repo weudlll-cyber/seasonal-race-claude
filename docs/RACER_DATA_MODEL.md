@@ -1,17 +1,48 @@
 # RaceArena — Racer Data Model
 
-**Status:** Updated 2026-04-26 post D3.5.5 merge (PR #21).
-All 12 racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
+**Status:** Updated 2026-06-04 (clean-state audit). Original: 2026-04-26 post D3.5.5 merge (PR #21).
+All 20 built-in racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
 `speedMultiplier` has effectively affected race speed since D9.
 6 fields have been live-tunable via Dev-Screen edit modal since D3.5.5.
+User-created types (Racer Editor Phase 1+2, 2026-05-28) are also `SpriteRacerType` instances stored in `localStorage`.
 
 ---
 
 ## Concepts
 
 **Racer Type** — a sprite type with its own look, animation, coats, and stats. Config-defined
-`SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). Currently 12 in total.
-Phase 7: dynamically extensible via sprite upload in the Dev Panel.
+`SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). 20 built-in types.
+Dynamically extensible via sprite upload at `/racer-editor` (Racer Editor Phase 1+2, shipped 2026-05-28).
+
+### Canonical list of the 20 built-in racer types (source of truth)
+
+| ID | Label | Speed | Surface classes |
+|---|---|---|---|
+| `horse` | Horse 🐴 | 1.00 | sand, earth, grass, asphalt, snow, mud |
+| `duck` | Duck 🦆 | 0.85 | water, grass |
+| `snail` | Snail 🐌 | 0.30 | grass |
+| `elephant` | Elephant 🐘 | 0.60 | sand, earth, grass |
+| `giraffe` | Giraffe 🦒 | 0.90 | sand, earth, grass |
+| `snake` | Snake 🐍 | 0.75 | sand, earth, grass |
+| `dragon` | Dragon 🐉 | 1.10 | air, asphalt, earth, water |
+| `f1` | F1 🏎️ | 1.20 | asphalt |
+| `rocket` | Rocket 🚀 | 1.25 | air, water |
+| `buggy` | Buggy 🚙 | 0.95 | sand, earth, mud |
+| `motorbike` | Motorbike 🏍️ | 1.05 | asphalt, earth |
+| `plane` | Plane ✈️ | 1.15 | air |
+| `luge` | Luge 🛷 | 1.10 | ice, snow |
+| `beetle` | Beetle 🪲 | 0.90 | asphalt, cobble, earth |
+| `boarder` | Boarder 🛹 | 1.00 | asphalt, cobble, earth |
+| `koi` | Koi 🐟 | 0.95 | water |
+| `turtle` | Turtle 🐢 | 0.85 | water |
+| `manta` | Manta 🦈 | 1.10 | water |
+| `dolphin` | Dolphin 🐬 | 1.15 | water |
+| `snowmobile` | Snowmobile 🏂 | 1.10 | snow, ice, earth |
+
+> **Note:** The racer types `penguin` and `ufo` never existed in the codebase. They appeared in
+> a stale HANDOFF document (now obsolete) as a naming artifact. The correct types at those
+> positions in that document were `snail` and `elephant`, which are and always have been the
+> actual built-in types. The canonical list above supersedes any older reference.
 
 **Track** — a race course with geometry, background image, effects, default duration, etc.
 Has a **suggested Racer Type** as "Default" — adopted during setup if the game master does not
@@ -147,7 +178,7 @@ Gives the audience time to see the final positions.
 ### Code registry as Single Source of Truth (post B-7)
 
 `RACER_TYPES` in `client/src/modules/racer-types/index.js` is the single source of truth for all
-12 types. localStorage stores **only deviations** from the code default:
+20 built-in types. localStorage stores **only deviations** from the code default:
 
 ```
 Code-Registry (RACER_TYPES)          →  12 Types, always complete
@@ -159,7 +190,7 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 
 | Function | Description |
 |---|---|
-| `listAllRacerTypes()` | Array of all 12 types with `isActive` resolved from override map |
+| `listAllRacerTypes()` | Array of all 20 built-in types (+ user-created types) with `isActive` resolved from override map |
 | `getRacerType(id)` | Single type instance, falls back to Horse for unknown IDs |
 | `getRacerTypeById(id)` | Alias for `getRacerType` — preferred where ID semantics matter |
 | `listRacerTypes()` | Array of all registered type IDs |
@@ -171,14 +202,14 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 | `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 fields since VRE-3 |
 | `CONFIG_SNAPSHOT` | Frozen copy of code defaults for all 8 TUNABLE_FIELDS (since VRE-3), captured before boot-override application. Arrays are deep-copied (no reference sharing) |
 | `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filters racer types to those with ≥1 class overlap with the track. Empty `trackSurfaceClasses` → return all (Legacy). Empty racer classes → always included (Heimat-Trail). VRE-3. |
-| `RACER_TYPE_IDS` | Sorted array of all 12 type IDs |
+| `RACER_TYPE_IDS` | Sorted array of all 20 built-in type IDs |
 | `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` for UI display |
 | `COATS_BY_TYPE` | Map `{id → coats[]}` for RaceScreen coat assignment; auto-derived from type configs |
 | `getSurfaceClasses()` on SpriteRacerType | Returns `surfaceClasses` array (surface class IDs of this type, default: `[]`). Read by RaceScreen + SetupScreen in VRE-3. |
 
 ### SpriteRacerType — config fields
 
-`SpriteRacerType` is a config-driven class. All 12 types are singleton instances.
+`SpriteRacerType` is a config-driven class. All 20 built-in types are singleton instances; user-created types are also `SpriteRacerType` instances created at runtime.
 No subclasses. Required config fields:
 
 | Field | Type | Description |
@@ -256,7 +287,7 @@ const HorseRacerType = new SpriteRacerType({
 });
 ```
 
-### Initial assignment — all 12 racer types
+### Surface class assignment — all 20 racer types
 
 | Racer type | surfaceClasses |
 |---|---|
@@ -272,6 +303,14 @@ const HorseRacerType = new SpriteRacerType({
 | `f1` | `['asphalt']` |
 | `plane` | `['air']` |
 | `rocket` | `['air', 'water']` |
+| `luge` | `['ice', 'snow']` |
+| `beetle` | `['asphalt', 'cobble', 'earth']` |
+| `boarder` | `['asphalt', 'cobble', 'earth']` |
+| `koi` | `['water']` |
+| `turtle` | `['water']` |
+| `manta` | `['water']` |
+| `dolphin` | `['water']` |
+| `snowmobile` | `['snow', 'ice', 'earth']` |
 
 ### Heimat-Trail (Fallback)
 
