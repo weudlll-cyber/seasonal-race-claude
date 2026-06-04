@@ -862,14 +862,79 @@ None.
 
 ---
 
+## 2026-06-04 — Clean-State Audit + Total Sim Check
+
+**Auditor:** weudlll@gmail.com / Claude Sonnet 4.6
+**Scope:** full (client + server + scripts + docs)
+**Branch:** chore/clean-state-2026-06-04
+
+### npm audit
+
+| Package | Severity | Advisory | Status |
+|---------|----------|----------|--------|
+| react-router 6.7.0–6.30.3 | Moderate | GHSA-2j2x-hqr9-3h42 — open redirect via protocol-relative URL | Fix available: `npm audit fix` (minor upgrade). Accepted for now — local-only deployment. |
+| react-router-dom | Moderate | Depends on vulnerable react-router | Same as above. |
+
+### ESLint
+
+- **Errors:** 0
+- **Warnings:** 45 (17 unused fallback consts in CameraDirector.js, 2 unused params, test console.log calls, react-refresh warning in TransitionContext.jsx)
+- All warnings are non-blocking; no auto-fix applied (all require judgment).
+
+### Prettier
+
+All files pass `prettier --check`. No formatting issues.
+
+### Tests
+
+| Suite | Tests | Pass | Fail |
+|-------|-------|------|------|
+| All client unit tests (vitest) | 2564 | 2564 | 0 |
+
+### Simulation
+
+100-race sim run across all 10 tracks (9 default + Luger Hill), all surface-compatible racer types, seed=1, race-plan=true. Results in `reports/clean-state-2026-06-04/`. See `02-sim-check.md` for per-track verdicts.
+
+### Findings applied in this audit
+
+| Item | Change |
+|---|---|
+| ARCHITECTURE.md stale racer count | "13 racer types" → "20 racer types" (×2 locations) |
+| ARCHITECTURE.md stale migration note | "migrate to SpriteRacerType in D3.5.2" → "(migrated D3.5.2)" |
+| ARCHITECTURE.md stale LugeRacerType description | "13th built-in type" → "Built-in type 13 of 20" |
+| ARCHITECTURE.md stale folder tree entries | "emoji-only, CarRacerType" stub → "All 20 are SpriteRacerType" |
+| ARCHITECTURE.md stale physics sweep claim | "10 default tracks" → "9 default + 1 user-created (Luger Hill)" |
+| ARCHITECTURE.md stale RaceScreen line count | 1460 → ~1528 |
+| defaults.js stale comment | "10 default tracks" → "9 default + 1 user-created" |
+| README.md stale server claim | "Planned for Phase 5" → shows Phase L server exists |
+| README.md missing features | Added Racer Editor, 9 tracks, 20 racers, Race Plan to feature list |
+| README.md missing project structure | Added server/ and scripts/ to folder tree |
+| AUDIT.md stale LOC findings | RaceScreen: LOW (was MEDIUM); TrackEditor: resolved |
+
+### Findings not applied (recommendations)
+
+| Finding | Action |
+|---|---|
+| E2E test d11-ux-verification.spec.js — stale physics default assertions | Recommend fix; needs browser verification |
+| 17 dead constants in CameraDirector.js | Recommend prefix `_` or delete |
+| npm audit react-router moderate vulns | Recommend `npm audit fix` in client/ |
+
+### Action Items
+
+- [ ] Fix `d11-ux-verification.spec.js` stale physics default assertions (V1–V3 tests)
+- [ ] `npm audit fix` in `client/` (react-router open-redirect, moderate)
+- [ ] Prefix or delete 17 dead fallback constants in `CameraDirector.js`
+
+---
+
 ## Deliberately accepted findings (as of 2026-05-01)
 
 | Finding | Severity | Accepted because | When to address |
 |---|---|---|---|
 | **CORS Wildcard** (`app.use(cors())` without origin restriction) | HIGH | Local-only operation, no public server | Phase 5 VPS deployment: `cors({ origin: process.env.CLIENT_ORIGIN })` |
 | **SEC-2 — Race-State-Manipulation via React DevTools** | HIGH | Not fully fixable client-side; requires server architecture | Phase 5: server-authoritative race finale with signing |
-| **RaceScreen LOC > 1000** | MEDIUM | Functionally correct; refactor needs its own phase | Camera phase — RaceScreen is the main work area anyway |
-| **TrackEditor LOC > 1200** | MEDIUM | Functionally correct; refactor is prerequisite for Surface Zones | Before Surface Zones phase |
+| **RaceScreen LOC ~1528** | LOW | Draw functions extracted to `drawing/`; screen is 1460→1528 after body-dimensions feature | Next major feature touching RaceScreen |
+| ~~**TrackEditor LOC > 1200**~~ | ✅ resolved (hygiene 2026-05-25) | TrackEditor.jsx split: now ~1040 lines; toolbar, save-bar, hooks extracted | — |
 | ~~**Q-19 — TrackEditor.effects.test.jsx flaky**~~ | ✅ fixed PR #55 | Root cause: `fetch` stub from `trackLoader.test.js` leaked via `vi.unstubAllGlobals()` fix. | — |
 | **TEST-RaceScreen** — 0 unit tests for RaceScreen | MEDIUM | Canvas + rAF in jsdom requires extensive mock infrastructure | Camera phase: deliver minimal integration tests |
 | **Orphaned geometries** — Track-Delete leaves orphaned geometry cache entries in localStorage and (after TLH-1) no geometry cleanup in backend | LOW | Explicitly accepted in TLH concept: geometries are expensive, loss is irreversible. Orphaned entries use no measurable memory and cause no errors. | Optional: "Clean up orphaned geometries" as a UI action in a later cleanup sprint. No immediate action required. |

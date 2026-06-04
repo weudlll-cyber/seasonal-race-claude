@@ -618,6 +618,18 @@ from D3.5.5.
 
 ---
 
+## Clean-State Audit 2026-06-04 — Follow-up Items
+
+Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`.
+
+| Item | Priority | Description |
+|---|---|---|
+| **Fix d11-ux-verification.spec.js** | Medium | V1–V3 E2E tests assert stale physics default values (homeForceStrength=0.018, avoidanceDistance=0.35, etc.). These will fail when run against the current app. Fix: update `DEFAULT_CFG` constants and test assertions to match current `DEFAULT_RACE_BEHAVIOR_CONFIG`. Requires browser verification. Lesson L124. |
+| **npm audit fix (react-router)** | Low | `npm audit fix` in `client/` upgrades react-router to patch a moderate open-redirect vuln (GHSA-2j2x-hqr9-3h42). Non-breaking minor upgrade. |
+| **Dead fallback constants in CameraDirector.js** | Low | 17 named fallback constants (lines 28–71) are no longer read because the config is always provided. Prefix with `_` to silence ESLint or delete after confirming none are exported. |
+
+---
+
 ## Known Limitations — Deliberately Accepted
 
 - **SEC-2 — Race state manipulation via React DevTools** *(audit-2026-04-29, Severity: High — accepted)*

@@ -2222,3 +2222,15 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 **Consequence:** Physics parameters that were optimized as a group via simulation should be treated as a unit, not as individually tunable knobs. Exposing them in a UI that allows per-param changes without re-running the sweep creates a false sense of safety. Document them at the source (in the default config file) where a future developer is forced to see the constraint before changing a value.
 
 **Reference:** `client/src/modules/storage/defaults.js` (PHYSICS PARAMETERS comment block), `docs/ARCHITECTURE.md` (Physics Parameters section), `client/src/screens/DevScreen/sections/BehaviorTuningSection.jsx`. Session 2026-06-04.
+
+---
+
+## Lesson 124 — E2E Tests That Assert Default Config Values Become Latent Failures When Defaults Change
+
+**Context:** clean-state-audit (2026-06-04). `client/e2e/d11-ux-verification.spec.js` contained V1 tests (`'V1 — default homeForceStrength is 0.018'`, `'V1 — default avoidanceDistance is 0.35'`) that directly asserted the numeric default values shown in the Dev Screen UI. When the physics sweep updated the defaults (homeForceStrength 0.018 → 0.030, avoidanceDistance 0.35 → 0.18, lateralForce 0.015 → 0.0114, speedBrakeFactor 0.98 → 0.945), the vitest unit suite remained green but the Playwright E2E tests silently diverged from reality. The E2E suite is not run in CI vitest, so the stale assertions went undetected across multiple commits.
+
+**Consequence:** E2E tests that hard-code config default values (rather than reading them from the app and checking relative behavior) are coupled to the values themselves, not to the behavior they test. When defaults change, these tests fail without anyone noticing until the E2E suite is explicitly run. This is a latent failure mode specific to Playwright specs that are excluded from the standard vitest CI run.
+
+**Fix / Rule:** Either (a) have E2E tests read the current value from the UI and verify persistence/reset behavior relative to it rather than asserting a specific literal, or (b) derive expected defaults in the spec from the source (`DEFAULT_RACE_BEHAVIOR_CONFIG`) at import time so they always track the code. If option (b) is impractical in Playwright, document a **"run E2E suite after any defaults.js change"** requirement in CLAUDE.md or CI.
+
+**Reference:** `client/e2e/d11-ux-verification.spec.js` (V1–V3 tests), `client/src/modules/storage/defaults.js`. Session 2026-06-04 clean-state audit.
