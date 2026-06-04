@@ -186,3 +186,90 @@ Before committing the fix:
 4. Confirm the renamed/rewritten tests pass
 5. Confirm the updated value assertions pass
 6. Commit with message: `test: fix d11-ux-verification — remove deleted physics sliders, update draftingBoost default`
+
+---
+
+## Verification (live run 2026-06-04)
+
+### draftingBoost source confirmation
+
+`client/src/modules/storage/defaults.js` line 454:
+```js
+draftingBoost: 1.04,
+```
+Confirmed: 1.04 is the current default from `DEFAULT_RACE_BEHAVIOR_CONFIG`. The proposal's 1.04 value is correct.
+
+### Discovery: Root cause was deeper than the proposal
+
+The proposal identified wrong slider labels and a stale draftingBoost value. Live run revealed two additional issues the code-reading missed:
+
+1. **`openBehaviorSection` used the wrong button selector** — The helper looked for `getByRole('button', { name: /Race Behavior/ })` but the Dev Screen sidebar button is labeled **"Race Tuning"** (the section is `RaceTuningSection` which contains `BehaviorTuningSection` as a child). This caused ALL tests to fail in the first run (before server fix). Fix: changed selector to `/Race Tuning/` and heading check to `/race tuning/i`.
+
+2. **`getByLabel('Enabled')` causes strict mode violation** — There are TWO elements matching the substring "Enabled" on the Race Tuning page: an InfoTooltip `<span aria-label="When enabled, a racer sandwiched...">` and the actual checkbox `<input aria-label="Race Behavior Enabled">`. The proposal predicted `getByLabel('Enabled')` would pass (Playwright substring matching); live run proved it fails with "strict mode violation: 2 elements". Fix: use `getByLabel('Race Behavior Enabled')` (full label, unambiguous).
+
+3. **Reset button label is "Reset All Defaults" not "Reset Defaults"** — The RaceTuningSection header button says "Reset All Defaults". The spec used `/reset defaults/i` which is NOT a substring of "Reset All Defaults" (because "All" is between "Reset" and "Defaults"). Fix applied in the structural pre-fix commit.
+
+### BEFORE: live failure inventory (after structural fix, before final fix)
+
+| Test | Duration | Error type | Error detail |
+|---|---|---|---|
+| V1 homeForceStrength | 10.2s | **element not found** | `getByLabel('Home Force Strength')` — element(s) not found |
+| V1 avoidanceDistance | 6.7s | **element not found** | `getByLabel('Avoidance Distance')` — element(s) not found |
+| V1 draftingBoost | 6.7s | **wrong value** | unexpected value "1.04" (expected "1.1") |
+| V1 enabled | 1.8s | **strict mode violation** | 2 elements match `getByLabel('Enabled')` |
+| V2 avoidanceDistance | 31.4s | **element not found** | `getByLabel('Avoidance Distance')` — 30s timeout |
+| V3 avoidanceDistance | 31.6s | **element not found** | `getByLabel('Avoidance Distance')` — 30s timeout |
+| V3 draftingBoost | 6.9s | **wrong value** | unexpected value "1.04" (expected "1.1") |
+| V3 re-enables toggle | 1.6s | **strict mode violation** | 2 elements match `getByLabel('Enabled')` |
+| V4 unchecking Enabled | 1.9s | **strict mode violation** | 2 elements match `getByLabel('Enabled')` |
+| V5 avoidanceDistance | 31.6s | **element not found** | `getByLabel('Avoidance Distance')` — 30s timeout |
+| V9 homeForceStrength | 31.5s | **element not found** | `getByLabel('Home Force Strength')` — 30s timeout |
+| V9 speedBrakeFactor | 31.7s | **element not found** | `getByLabel('Speed Brake Factor')` — 30s timeout |
+
+Tests V6, V7, V8, V9-draftingConeAngle, V10 all **passed** in the BEFORE run.
+
+### Per-assertion action taken (based on live evidence)
+
+| Test | Live error type | Action | Live authorized? |
+|---|---|---|---|
+| V1 homeForceStrength | element not found | **DELETED** | ✅ Yes — confirmed not found |
+| V1 avoidanceDistance | element not found | **DELETED** | ✅ Yes |
+| V1 draftingBoost | wrong value (1.04) | **UPDATED** 1.1 → 1.04, title updated | ✅ Yes |
+| V1 enabled | strict mode violation | **FIXED** selector → `getByLabel('Race Behavior Enabled')` | ✅ Yes (element exists but ambiguous) |
+| V2 avoidanceDistance | element not found | **REWRITTEN** using `Avoidance Warmup Ms` | ✅ Yes |
+| V3 avoidanceDistance | element not found | **DELETED** | ✅ Yes |
+| V3 draftingBoost | wrong value | **UPDATED** 1.1 → 1.04, title updated | ✅ Yes |
+| V3 re-enables toggle | strict mode violation | **FIXED** selector | ✅ Yes |
+| V4 unchecking Enabled | strict mode violation | **FIXED** selector (×2) | ✅ Yes |
+| V5 avoidanceDistance | element not found | **REWRITTEN** using `Avoidance Warmup Ms` | ✅ Yes |
+| V9 homeForceStrength | element not found | **DELETED** | ✅ Yes |
+| V9 speedBrakeFactor | element not found | **DELETED** | ✅ Yes |
+
+**DEFAULT_CFG** also updated: removed stale physics params (homeForceStrength, avoidanceDistance, lateralForce, speedBrakeTThreshold, speedBrakeFactor), updated draftingBoost 1.1 → 1.04, updated draftingMaxDistance 110 → 80 (current default).
+
+### Where the live run disagreed with the proposal
+
+| Disagreement | Proposal said | Live run proved |
+|---|---|---|
+| `openBehaviorSection` | Would work after `openBehaviorSection` fix | The button `/Race Behavior/` doesn't exist at all — button says "Race Tuning". All tests cascaded from this. |
+| `getByLabel('Enabled')` | Would pass (Playwright substring match) | Fails with strict mode violation — InfoTooltip also has "enabled" in its aria-label, causing 2 matches |
+| `getByRole('button', { name: /reset defaults/i })` | Would match the reset button | "Reset All Defaults" does NOT match `/reset defaults/i` (not a contiguous substring) — live run confirmed |
+
+### AFTER: d11 spec green
+
+```
+12 passed (47.1s)
+```
+
+All 12 tests pass. Test count reduced from 17 to 12: 5 tests deleted (labels confirmed gone by live run), 2 rewritten, 2 updated values, 2 selector fixes, 1 structural (openBehaviorSection).
+
+### Full vitest suite and fingerprint
+
+```
+Tests  2564 passed (2564)   [121 files, 100% pass]
+```
+
+Determinism fingerprint (dirt-oval, seed=42, dur=30):
+- Before: horse p=0.634, dragon p=0.224, buggy p=0.180, snowmobile p=0.224
+- After: horse p=0.634, dragon p=0.224, buggy p=0.180, snowmobile p=0.224
+- **IDENTICAL — no behavior change** ✓

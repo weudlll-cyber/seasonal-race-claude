@@ -48,101 +48,79 @@ async function seedGeometry(page) {
 
 const DEFAULT_CFG = {
   enabled: true,
-  homeForceStrength: 0.018,
   comfortThreshold: 0.70,
   softRepulsionStrength: 0.06,
-  avoidanceDistance: 0.35,
   tWeight: 2.0,
   yWeight: 1.0,
-  lateralForce: 0.015,
   maxLateral: 0.95,
   speedBrakeYThreshold: 0.12,
-  speedBrakeTThreshold: 0.008,
-  speedBrakeFactor: 0.98,
-  draftingMaxDistance: 110,
+  draftingMaxDistance: 80,
   draftingConeAngle: 30,
-  draftingBoost: 1.1,
+  draftingBoost: 1.04,
 };
 
 async function openBehaviorSection(page) {
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Race Behavior/ }).click();
-  await expect(page.getByRole('heading', { name: /race behavior/i })).toBeVisible();
+  await page.getByRole('button', { name: /Race Tuning/ }).click();
+  await expect(page.getByRole('heading', { name: /race tuning/i })).toBeVisible();
 }
 
 // ── V1: Default values match spec ──────────────────────────────────────────
-test('V1 — default homeForceStrength is 0.018', async ({ page }) => {
+test('V1 — default draftingBoost is 1.04', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Home Force Strength')).toHaveValue('0.018');
-});
-
-test('V1 — default avoidanceDistance is 0.35', async ({ page }) => {
-  await openBehaviorSection(page);
-  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.35');
-});
-
-test('V1 — default draftingBoost is 1.1', async ({ page }) => {
-  await openBehaviorSection(page);
-  await expect(page.getByLabel('Boost Factor')).toHaveValue('1.1');
+  await expect(page.getByLabel('Boost Factor')).toHaveValue('1.04');
 });
 
 test('V1 — default enabled is true', async ({ page }) => {
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Enabled')).toBeChecked();
+  await expect(page.getByLabel('Race Behavior Enabled')).toBeChecked();
 });
 
 // ── V2: Config persists across page reload ─────────────────────────────────
-test('V2 — changed avoidanceDistance persists across reload', async ({ page }) => {
+test('V2 — changed avoidanceWarmupMs persists across reload', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance').fill('0.5');
+  await page.getByLabel('Avoidance Warmup Ms').fill('5000');
 
   await page.reload();
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.5');
+  await expect(page.getByLabel('Avoidance Warmup Ms')).toHaveValue('5000');
 });
 
 // ── V3: Reset Defaults restores all values ─────────────────────────────────
-test('V3 — Reset Defaults restores avoidanceDistance to 0.35', async ({ page }) => {
-  await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance').fill('0.8');
-  await page.getByRole('button', { name: /reset defaults/i }).click();
-  await expect(page.getByLabel('Avoidance Distance')).toHaveValue('0.35');
-});
-
-test('V3 — Reset Defaults restores draftingBoost to 1.1', async ({ page }) => {
+test('V3 — Reset Defaults restores draftingBoost to 1.04', async ({ page }) => {
   await openBehaviorSection(page);
   await page.getByLabel('Boost Factor').fill('1.5');
-  await page.getByRole('button', { name: /reset defaults/i }).click();
-  await expect(page.getByLabel('Boost Factor')).toHaveValue('1.1');
+  await page.getByRole('button', { name: /reset all defaults/i }).click();
+  await expect(page.getByLabel('Boost Factor')).toHaveValue('1.04');
 });
 
 test('V3 — Reset Defaults re-enables the toggle', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Enabled').uncheck();
-  await page.getByRole('button', { name: /reset defaults/i }).click();
-  await expect(page.getByLabel('Enabled')).toBeChecked();
+  await page.getByLabel('Race Behavior Enabled').uncheck();
+  await page.getByRole('button', { name: /reset all defaults/i }).click();
+  await expect(page.getByLabel('Race Behavior Enabled')).toBeChecked();
 });
 
 // ── V4: Toggle disable/enable ──────────────────────────────────────────────
 test('V4 — unchecking Enabled persists across reload', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Enabled').uncheck();
+  await page.getByLabel('Race Behavior Enabled').uncheck();
   await page.reload();
   await openBehaviorSection(page);
-  await expect(page.getByLabel('Enabled')).not.toBeChecked();
+  await expect(page.getByLabel('Race Behavior Enabled')).not.toBeChecked();
 });
 
 // ── V5: Live apply — config stored immediately ─────────────────────────────
-test('V5 — config change is stored in localStorage immediately', async ({ page }) => {
+test('V5 — avoidanceWarmupMs change is stored in localStorage immediately', async ({ page }) => {
   await openBehaviorSection(page);
-  await page.getByLabel('Avoidance Distance').fill('0.6');
+  await page.getByLabel('Avoidance Warmup Ms').fill('5000');
 
   const stored = await page.evaluate(() => {
     const raw = localStorage.getItem('racearena:raceBehaviorConfig');
     return raw ? JSON.parse(raw) : null;
   });
   expect(stored).not.toBeNull();
-  expect(stored.avoidanceDistance).toBeCloseTo(0.6, 5);
+  expect(stored.avoidanceWarmupMs).toBe(5000);
 });
 
 // ── V6: Custom config loaded by race engine ────────────────────────────────
@@ -218,18 +196,6 @@ test('V8 — race with 5 racers and behavior enabled produces no errors', async 
 });
 
 // ── V9: All tunable fields are editable ───────────────────────────────────
-test('V9 — homeForceStrength can be changed', async ({ page }) => {
-  await openBehaviorSection(page);
-  await page.getByLabel('Home Force Strength').fill('0.03');
-  await expect(page.getByLabel('Home Force Strength')).toHaveValue('0.03');
-});
-
-test('V9 — speedBrakeFactor can be changed', async ({ page }) => {
-  await openBehaviorSection(page);
-  await page.getByLabel('Speed Brake Factor').fill('0.9');
-  await expect(page.getByLabel('Speed Brake Factor')).toHaveValue('0.9');
-});
-
 test('V9 — draftingConeAngle can be changed', async ({ page }) => {
   await openBehaviorSection(page);
   await page.getByLabel('Drafting Cone Angle').fill('45');
