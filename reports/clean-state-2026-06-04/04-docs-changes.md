@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Six doc-only fixes applied to correct stale racer/track counts (13→20 types, "10 default" → "9 default + 1 user-created"), update line count references, and improve completeness. No code behavior changes. All 2564 tests still pass after doc changes.
+12 stale claims corrected across 8 files (ARCHITECTURE.md ×6, defaults.js ×2, RACER_DATA_MODEL.md ×4+surface table, README.md, AUDIT.md, BACKLOG.md, LESSONS.md L124, ROADMAP.md ×2 session entries). No code behavior changes. All 2564 tests still pass after doc changes.
 
 ---
 

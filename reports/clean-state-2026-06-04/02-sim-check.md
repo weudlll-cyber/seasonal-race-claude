@@ -14,11 +14,11 @@
 
 ## Executive Summary
 
-FAIRNESS: **9/10 tracks PASS all hard gates.** Dirt Oval has one ATTENTION item (elephant p=0.017 — slow-racer boundary case, not a parameter issue). All other 64 racer/track combos pass p > 0.05 with zero hard overlaps and zigzag well below 0.003.
+FAIRNESS: **61/66 combos pass (92.4%); 5 ATTENTION items across 5 tracks.** The five failures are: elephant × Dirt Oval (p=0.017, Rear-Bias), dragon × Garden Path (p=0.049, Rear-Bias borderline), horse × Ice Track (p=0.001, Rear-Bias strong), dragon × Seatrack (p=0.043, Front-Bias borderline), plane × Luger Hill (p=0.005, Rear-Bias). Root causes: speed-bonus calibration (4 cases) and track geometry (1 case) — NOT the 8 physics avoidance parameters. Hard overlap = 0% everywhere. Zigzag well below 0.003 on all 66 combos.
 
-ADHERENCE: Race Plan active on all runs; outcomeReached=100% on all tested combos. Zone success rates from JSON — see Section 4 below.
+ADHERENCE: **B1 top-5 adherence = 68.7%** overall (target 64.5%, Phase 15e sweep). All 10 tracks pass. Race Plan outcomeReached = 100%. Choreography is reliable.
 
-MOTION QUALITY: No trapped/trembling events. Zigzag universally ~0.0002 (7× below gate). Hard overlap 0% everywhere. Stable overtake rates 8.0–8.3 (clean passing).
+MOTION QUALITY: No trapped/trembling events detected (inferred from zigzag + stableOvt; no dedicated counter — see § Limitations). Zigzag universally ~0.0002 (7× below gate). Hard overlap 0% everywhere. Stable overtake rates 8.0–8.5 (clean passing).
 
 ---
 

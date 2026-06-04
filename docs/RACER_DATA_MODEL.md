@@ -14,6 +14,36 @@ User-created types (Racer Editor Phase 1+2, 2026-05-28) are also `SpriteRacerTyp
 `SpriteRacerType` instance (e.g. `HorseRacerType`, `DuckRacerType`). 20 built-in types.
 Dynamically extensible via sprite upload at `/racer-editor` (Racer Editor Phase 1+2, shipped 2026-05-28).
 
+### Canonical list of the 20 built-in racer types (source of truth)
+
+| ID | Label | Speed | Surface classes |
+|---|---|---|---|
+| `horse` | Horse 🐴 | 1.00 | sand, earth, grass, asphalt, snow, mud |
+| `duck` | Duck 🦆 | 0.85 | water, grass |
+| `snail` | Snail 🐌 | 0.30 | grass |
+| `elephant` | Elephant 🐘 | 0.60 | sand, earth, grass |
+| `giraffe` | Giraffe 🦒 | 0.90 | sand, earth, grass |
+| `snake` | Snake 🐍 | 0.75 | sand, earth, grass |
+| `dragon` | Dragon 🐉 | 1.10 | air, asphalt, earth, water |
+| `f1` | F1 🏎️ | 1.20 | asphalt |
+| `rocket` | Rocket 🚀 | 1.25 | air, water |
+| `buggy` | Buggy 🚙 | 0.95 | sand, earth, mud |
+| `motorbike` | Motorbike 🏍️ | 1.05 | asphalt, earth |
+| `plane` | Plane ✈️ | 1.15 | air |
+| `luge` | Luge 🛷 | 1.10 | ice, snow |
+| `beetle` | Beetle 🪲 | 0.90 | asphalt, cobble, earth |
+| `boarder` | Boarder 🛹 | 1.00 | asphalt, cobble, earth |
+| `koi` | Koi 🐟 | 0.95 | water |
+| `turtle` | Turtle 🐢 | 0.85 | water |
+| `manta` | Manta 🦈 | 1.10 | water |
+| `dolphin` | Dolphin 🐬 | 1.15 | water |
+| `snowmobile` | Snowmobile 🏂 | 1.10 | snow, ice, earth |
+
+> **Note:** The racer types `penguin` and `ufo` never existed in the codebase. They appeared in
+> a stale HANDOFF document (now obsolete) as a naming artifact. The correct types at those
+> positions in that document were `snail` and `elephant`, which are and always have been the
+> actual built-in types. The canonical list above supersedes any older reference.
+
 **Track** — a race course with geometry, background image, effects, default duration, etc.
 Has a **suggested Racer Type** as "Default" — adopted during setup if the game master does not
 override it.
