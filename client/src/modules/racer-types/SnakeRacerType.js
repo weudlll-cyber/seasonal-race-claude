@@ -38,6 +38,8 @@ export const SnakeRacerType = new SpriteRacerType({
   basePeriodMs: 600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 44,
+  bodyFillX: 0.374,
+  bodyFillY: 0.806,
 
   coats: SNAKE_COATS,
   defaultCoatId: 'emerald',

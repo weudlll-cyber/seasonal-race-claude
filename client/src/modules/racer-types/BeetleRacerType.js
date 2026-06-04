@@ -29,6 +29,8 @@ export const BeetleRacerType = new SpriteRacerType({
   basePeriodMs: 1600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 38,
+  bodyFillX: 0.398,
+  bodyFillY: 0.672,
   tintMode: 'multiply',
 
   coats: [...BEETLE_COAT_PALETTE],

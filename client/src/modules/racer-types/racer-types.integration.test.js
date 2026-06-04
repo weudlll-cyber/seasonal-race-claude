@@ -181,4 +181,51 @@ describe('Racer-Types Registry — D3.5.3 Integration', () => {
       expect(typeof coat.tint).toBe('string');
     }
   });
+
+  test('every type has bodyFillX and bodyFillY defined as numbers', () => {
+    for (const [id, type] of Object.entries(RACER_TYPES)) {
+      expect(typeof type.config.bodyFillX, `${id}: bodyFillX type`).toBe('number');
+      expect(typeof type.config.bodyFillY, `${id}: bodyFillY type`).toBe('number');
+    }
+  });
+
+  test('bodyFillX and bodyFillY are both in range (0.0, 1.0] for every type', () => {
+    for (const [id, type] of Object.entries(RACER_TYPES)) {
+      expect(type.config.bodyFillX, `${id}: bodyFillX > 0`).toBeGreaterThan(0);
+      expect(type.config.bodyFillX, `${id}: bodyFillX <= 1`).toBeLessThanOrEqual(1);
+      expect(type.config.bodyFillY, `${id}: bodyFillY > 0`).toBeGreaterThan(0);
+      expect(type.config.bodyFillY, `${id}: bodyFillY <= 1`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('renderedBodyH = displaySize × bodyFillY matches sprite crop audit within ±5%', () => {
+    // Audit values (px) from scripts/audit-sprite-crops.mjs — measured post-crop.
+    const AUDIT_RENDERED_BODY_H = {
+      horse: 37.6,
+      duck: 31.5,
+      snail: 32.8,
+      elephant: 41.3,
+      giraffe: 36.8,
+      snake: 35.5,
+      dragon: 44.9,
+      f1: 36.2,
+      rocket: 37.6,
+      buggy: 33.3,
+      motorbike: 33.6,
+      plane: 39.1,
+      luge: 51.3,
+      beetle: 25.5,
+      boarder: 28.8,
+      koi: 47.5,
+      turtle: 35.2,
+      manta: 45.1,
+      dolphin: 46.1,
+      snowmobile: 41.4,
+    };
+    for (const [id, type] of Object.entries(RACER_TYPES)) {
+      const computed = type.config.displaySize * type.config.bodyFillY;
+      const expected = AUDIT_RENDERED_BODY_H[id];
+      expect(computed, `${id}: renderedBodyH`).toBeCloseTo(expected, 1);
+    }
+  });
 });

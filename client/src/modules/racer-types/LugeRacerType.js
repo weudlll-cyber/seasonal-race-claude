@@ -28,6 +28,8 @@ export const LugeRacerType = new SpriteRacerType({
   basePeriodMs: 3200,
   baseRotationOffset: Math.PI / 2,
   displaySize: 80,
+  bodyFillX: 0.313,
+  bodyFillY: 0.641,
   tintMode: 'multiply',
 
   coats: [...LUGE_COAT_PALETTE],

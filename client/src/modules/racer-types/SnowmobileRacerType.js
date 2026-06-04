@@ -25,6 +25,8 @@ export const SnowmobileRacerType = new SpriteRacerType({
   basePeriodMs: 1600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 52,
+  bodyFillX: 0.459,
+  bodyFillY: 0.797,
   tintMode: 'multiply',
 
   coats: SNOWMOBILE_COATS,

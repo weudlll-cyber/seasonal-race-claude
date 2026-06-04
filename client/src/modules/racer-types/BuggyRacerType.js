@@ -31,6 +31,8 @@ export const BuggyRacerType = new SpriteRacerType({
   basePeriodMs: 500,
   baseRotationOffset: Math.PI / 2,
   displaySize: 38,
+  bodyFillX: 0.844,
+  bodyFillY: 0.875,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

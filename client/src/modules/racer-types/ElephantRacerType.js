@@ -38,6 +38,8 @@ export const ElephantRacerType = new SpriteRacerType({
   basePeriodMs: 800,
   baseRotationOffset: Math.PI / 2,
   displaySize: 44,
+  bodyFillX: 0.539,
+  bodyFillY: 0.938,
 
   coats: ELEPHANT_COATS,
   defaultCoatId: 'savanna',

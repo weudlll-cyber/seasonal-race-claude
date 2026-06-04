@@ -29,6 +29,8 @@ export const MotorbikeRacerType = new SpriteRacerType({
   basePeriodMs: 500,
   baseRotationOffset: Math.PI / 2,
   displaySize: 42,
+  bodyFillX: 0.4,
+  bodyFillY: 0.8,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

@@ -24,6 +24,8 @@ export const TurtleRacerType = new SpriteRacerType({
   basePeriodMs: 2000,
   baseRotationOffset: Math.PI / 2,
   displaySize: 48,
+  bodyFillX: 0.578,
+  bodyFillY: 0.734,
   tintMode: 'mask',
 
   coats: TURTLE_COATS,

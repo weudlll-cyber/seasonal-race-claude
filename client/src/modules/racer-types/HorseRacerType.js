@@ -51,6 +51,8 @@ export const HorseRacerType = new SpriteRacerType({
   basePeriodMs: 700,
   baseRotationOffset: Math.PI / 2,
   displaySize: 47,
+  bodyFillX: 0.353,
+  bodyFillY: 0.8,
 
   coats: HORSE_COATS,
   defaultCoatId: 'cream',

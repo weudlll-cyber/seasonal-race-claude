@@ -50,6 +50,8 @@ export const DuckRacerType = new SpriteRacerType({
   basePeriodMs: 700,
   baseRotationOffset: Math.PI / 2,
   displaySize: 36,
+  bodyFillX: 0.875,
+  bodyFillY: 0.875,
 
   coats: DUCK_COATS,
   defaultCoatId: 'yellow',

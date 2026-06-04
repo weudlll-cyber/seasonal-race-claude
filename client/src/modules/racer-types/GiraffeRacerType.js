@@ -38,6 +38,8 @@ export const GiraffeRacerType = new SpriteRacerType({
   basePeriodMs: 750,
   baseRotationOffset: Math.PI / 2,
   displaySize: 48,
+  bodyFillX: 0.271,
+  bodyFillY: 0.767,
 
   coats: GIRAFFE_COATS,
   defaultCoatId: 'golden',

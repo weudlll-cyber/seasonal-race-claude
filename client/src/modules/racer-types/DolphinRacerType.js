@@ -25,6 +25,8 @@ export const DolphinRacerType = new SpriteRacerType({
   basePeriodMs: 1400,
   baseRotationOffset: Math.PI / 2,
   displaySize: 52,
+  bodyFillX: 0.402,
+  bodyFillY: 0.887,
   tintMode: 'mask',
 
   coats: DOLPHIN_COATS,

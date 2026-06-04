@@ -29,6 +29,8 @@ export const BoarderRacerType = new SpriteRacerType({
   basePeriodMs: 1800,
   baseRotationOffset: Math.PI / 2,
   displaySize: 40,
+  bodyFillX: 0.398,
+  bodyFillY: 0.719,
   tintMode: 'multiply',
 
   coats: [...BOARDER_COAT_PALETTE],

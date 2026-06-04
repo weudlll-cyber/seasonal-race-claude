@@ -29,6 +29,8 @@ export const PlaneRacerType = new SpriteRacerType({
   basePeriodMs: 600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 42,
+  bodyFillX: 0.836,
+  bodyFillY: 0.93,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

@@ -34,6 +34,8 @@ export const KoiRacerType = new SpriteRacerType({
   basePeriodMs: 1600,
   baseRotationOffset: Math.PI / 2,
   displaySize: 52,
+  bodyFillX: 0.578,
+  bodyFillY: 0.914,
   tintMode: 'mask',
 
   coats: KOI_COATS,

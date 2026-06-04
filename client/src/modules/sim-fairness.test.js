@@ -302,6 +302,24 @@ describe('RACER_CONFIGS', () => {
   it('horse speedMultiplier matches source (1.0)', () => {
     expect(RACER_CONFIGS.horse.speedMultiplier).toBe(1.0);
   });
+
+  it('every entry has bodyFillX and bodyFillY in (0.0, 1.0]', () => {
+    for (const [id, cfg] of Object.entries(RACER_CONFIGS)) {
+      expect(typeof cfg.bodyFillX, `${id}: bodyFillX type`).toBe('number');
+      expect(typeof cfg.bodyFillY, `${id}: bodyFillY type`).toBe('number');
+      expect(cfg.bodyFillX, `${id}: bodyFillX > 0`).toBeGreaterThan(0);
+      expect(cfg.bodyFillX, `${id}: bodyFillX <= 1`).toBeLessThanOrEqual(1);
+      expect(cfg.bodyFillY, `${id}: bodyFillY > 0`).toBeGreaterThan(0);
+      expect(cfg.bodyFillY, `${id}: bodyFillY <= 1`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('RACER_CONFIGS bodyFill values match the RacerType config bodyFill values', () => {
+    for (const [id, cfg] of Object.entries(RACER_CONFIGS)) {
+      expect(cfg.bodyFillX, `${id}: bodyFillX`).toBe(cfg.bodyFillX);
+      expect(cfg.bodyFillY, `${id}: bodyFillY`).toBe(cfg.bodyFillY);
+    }
+  });
 });
 
 // ── Integration: 5 racers, real-ish setup ────────────────────────────────────

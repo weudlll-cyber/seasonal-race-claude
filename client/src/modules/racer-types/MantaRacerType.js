@@ -25,6 +25,8 @@ export const MantaRacerType = new SpriteRacerType({
   basePeriodMs: 2400,
   baseRotationOffset: Math.PI / 2,
   displaySize: 56,
+  bodyFillX: 0.633,
+  bodyFillY: 0.805,
   tintMode: 'mask',
 
   coats: MANTA_COATS,

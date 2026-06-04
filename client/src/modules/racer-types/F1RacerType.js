@@ -25,6 +25,8 @@ export const F1RacerType = new SpriteRacerType({
   basePeriodMs: 400,
   baseRotationOffset: Math.PI / 2,
   displaySize: 38,
+  bodyFillX: 0.555,
+  bodyFillY: 0.953,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

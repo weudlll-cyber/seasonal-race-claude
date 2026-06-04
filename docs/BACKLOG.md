@@ -605,7 +605,7 @@ from D3.5.5.
 
 15j. ✅ **MAX_INVERSE_ZOOM 5.0 → 10.0** (master `ee9b664`, 2560 tests) — Raised ceiling for inverse (spriteScale-based) cam.zoom in `CameraDirector`. Closed tracks with worldW > ~3500px (e.g. worldW=6144 → rawZoom≈8.69) were previously capped to 5.0, rendering sprites at 57.5%. Headroom now extends to worldW≈12800. Note: Mountainstreet is `"closed": false` (open track) — fix only applies to future large closed tracks. Lesson L121.
 
-⏳ **bodyFillX/bodyFillY per racer type** — `f5d61d5` on branch `feat/body-dimensions` (not yet merged). Adds `bodyFillX` and `bodyFillY` to all 20 racer type configs for use in sim collision detection. Awaiting merge to master.
+✅ **bodyFillX/bodyFillY per racer type** — merged to master (2026-06-04, 2564 tests). Adds `bodyFillX` and `bodyFillY` to all 20 racer type configs for use in sim collision detection. Tests added in `racer-types.integration.test.js` and `sim-fairness.test.js`.
 
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.

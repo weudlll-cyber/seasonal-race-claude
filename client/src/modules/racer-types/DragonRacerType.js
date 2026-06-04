@@ -40,6 +40,8 @@ export const DragonRacerType = new SpriteRacerType({
   basePeriodMs: 700,
   baseRotationOffset: Math.PI / 2,
   displaySize: 50,
+  bodyFillX: 0.836,
+  bodyFillY: 0.898,
 
   coats: DRAGON_COATS,
   defaultCoatId: 'pearl',

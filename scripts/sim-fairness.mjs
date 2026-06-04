@@ -154,30 +154,31 @@ function easeInOutCubic(t) {
 }
 
 // ── Racer type configs ────────────────────────────────────────────────────────
-// speedMultiplier and displaySize sourced from the respective *RacerType.js files.
+// speedMultiplier, displaySize, bodyFillX, bodyFillY sourced from *RacerType.js files.
 // displaySize affects racersPerRow (track capacity) and avoidance pixel distances.
+// bodyFillX/Y: fraction of frame occupied by body pixels (measured from spritesheet).
 // surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
 export const RACER_CONFIGS = {
-  horse:      { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
-  duck:       { speedMultiplier: 0.85, displaySize: 36, surfaceClasses: ['water', 'grass'] },
-  snail:      { speedMultiplier: 0.30, displaySize: 35, surfaceClasses: ['grass'] },
-  elephant:   { speedMultiplier: 0.60, displaySize: 44, surfaceClasses: ['sand', 'earth', 'grass'] },
-  giraffe:    { speedMultiplier: 0.90, displaySize: 48, surfaceClasses: ['sand', 'earth', 'grass'] },
-  snake:      { speedMultiplier: 0.75, displaySize: 36, surfaceClasses: ['sand', 'earth', 'grass'] },
-  dragon:     { speedMultiplier: 1.10, displaySize: 50, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
-  f1:         { speedMultiplier: 1.20, displaySize: 38, surfaceClasses: ['asphalt'] },
-  rocket:     { speedMultiplier: 1.25, displaySize: 40, surfaceClasses: ['air', 'water'] },
-  buggy:      { speedMultiplier: 0.95, displaySize: 38, surfaceClasses: ['sand', 'earth', 'mud'] },
-  motorbike:  { speedMultiplier: 1.05, displaySize: 36, surfaceClasses: ['asphalt', 'earth'] },
-  plane:      { speedMultiplier: 1.15, displaySize: 42, surfaceClasses: ['air'] },
-  luge:       { speedMultiplier: 1.10, displaySize: 40, surfaceClasses: ['ice', 'snow'] },
-  beetle:     { speedMultiplier: 0.90, displaySize: 38, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
-  boarder:    { speedMultiplier: 1.00, displaySize: 40, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
-  koi:        { speedMultiplier: 0.95, displaySize: 52, surfaceClasses: ['water'] },
-  turtle:     { speedMultiplier: 0.85, displaySize: 48, surfaceClasses: ['water'] },
-  manta:      { speedMultiplier: 1.10, displaySize: 56, surfaceClasses: ['water'] },
-  dolphin:    { speedMultiplier: 1.15, displaySize: 52, surfaceClasses: ['water'] },
-  snowmobile: { speedMultiplier: 1.10, displaySize: 52, surfaceClasses: ['snow', 'ice', 'earth'] },
+  horse:      { speedMultiplier: 1.00, displaySize: 47, bodyFillX: 0.353, bodyFillY: 0.800, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
+  duck:       { speedMultiplier: 0.85, displaySize: 36, bodyFillX: 0.875, bodyFillY: 0.875, surfaceClasses: ['water', 'grass'] },
+  snail:      { speedMultiplier: 0.30, displaySize: 35, bodyFillX: 0.727, bodyFillY: 0.938, surfaceClasses: ['grass'] },
+  elephant:   { speedMultiplier: 0.60, displaySize: 44, bodyFillX: 0.539, bodyFillY: 0.938, surfaceClasses: ['sand', 'earth', 'grass'] },
+  giraffe:    { speedMultiplier: 0.90, displaySize: 48, bodyFillX: 0.271, bodyFillY: 0.767, surfaceClasses: ['sand', 'earth', 'grass'] },
+  snake:      { speedMultiplier: 0.75, displaySize: 44, bodyFillX: 0.374, bodyFillY: 0.806, surfaceClasses: ['sand', 'earth', 'grass'] },
+  dragon:     { speedMultiplier: 1.10, displaySize: 50, bodyFillX: 0.836, bodyFillY: 0.898, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
+  f1:         { speedMultiplier: 1.20, displaySize: 38, bodyFillX: 0.555, bodyFillY: 0.953, surfaceClasses: ['asphalt'] },
+  rocket:     { speedMultiplier: 1.25, displaySize: 47, bodyFillX: 0.278, bodyFillY: 0.801, surfaceClasses: ['air', 'water'] },
+  buggy:      { speedMultiplier: 0.95, displaySize: 38, bodyFillX: 0.844, bodyFillY: 0.875, surfaceClasses: ['sand', 'earth', 'mud'] },
+  motorbike:  { speedMultiplier: 1.05, displaySize: 42, bodyFillX: 0.400, bodyFillY: 0.800, surfaceClasses: ['asphalt', 'earth'] },
+  plane:      { speedMultiplier: 1.15, displaySize: 42, bodyFillX: 0.836, bodyFillY: 0.930, surfaceClasses: ['air'] },
+  luge:       { speedMultiplier: 1.10, displaySize: 80, bodyFillX: 0.313, bodyFillY: 0.641, surfaceClasses: ['ice', 'snow'] },
+  beetle:     { speedMultiplier: 0.90, displaySize: 38, bodyFillX: 0.398, bodyFillY: 0.672, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
+  boarder:    { speedMultiplier: 1.00, displaySize: 40, bodyFillX: 0.398, bodyFillY: 0.719, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
+  koi:        { speedMultiplier: 0.95, displaySize: 52, bodyFillX: 0.578, bodyFillY: 0.914, surfaceClasses: ['water'] },
+  turtle:     { speedMultiplier: 0.85, displaySize: 48, bodyFillX: 0.578, bodyFillY: 0.734, surfaceClasses: ['water'] },
+  manta:      { speedMultiplier: 1.10, displaySize: 56, bodyFillX: 0.633, bodyFillY: 0.805, surfaceClasses: ['water'] },
+  dolphin:    { speedMultiplier: 1.15, displaySize: 52, bodyFillX: 0.402, bodyFillY: 0.887, surfaceClasses: ['water'] },
+  snowmobile: { speedMultiplier: 1.10, displaySize: 52, bodyFillX: 0.459, bodyFillY: 0.797, surfaceClasses: ['snow', 'ice', 'earth'] },
 };
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
@@ -216,6 +217,8 @@ export function computeFinishT(naturalBaseSpeed, speedMultiplier, targetSeconds,
  * @param {boolean} p.isOpen
  * @param {number}  p.speedMultiplier      racer-type factor
  * @param {number}  p.displaySize          sprite size in world pixels
+ * @param {number}  [p.bodyFillX=0.75]     body width / frameWidth (from spritesheet measurement)
+ * @param {number}  [p.bodyFillY=0.75]     body height / frameHeight (from spritesheet measurement)
  * @param {number}  p.finishT              adjusted finish line in t-space
  * @param {number}  p.targetSeconds        used for re-roll scheduling
  * @param {number}  p.seed                 PRNG seed
@@ -229,6 +232,8 @@ export function runSingleRace({
   isOpen,
   speedMultiplier,
   displaySize,
+  bodyFillX = 0.75,
+  bodyFillY = 0.75,
   finishT,
   targetSeconds,
   seed,
@@ -469,8 +474,15 @@ export function runSingleRace({
     let liteLateralMoves    = 0;  // racer-frames where |physicalY delta| > 1e-4
     const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
     let litePrevPhysY       = null;
+    // Overlap thresholds: 10% of body diameter in normalised track-space.
+    // bodyDiameterX/Y are in world pixels; divide by track dimensions to get normalised units.
+    const bodyDiameterX       = displaySize * bodyFillX;
+    const bodyDiameterY       = displaySize * bodyFillY;
+    const overlapThreshold_t  = 0.10 * bodyDiameterY / pathLengthPx;
+    const overlapThreshold_y  = 0.10 * bodyDiameterX / geometricTrackWidth;
+
     // Lateral quality metrics
-    let liteOverlapPairFrames    = 0;   // pair-frames with |dY|<0.08 AND |dT|<0.03
+    let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
     let liteOverlapPairTotal     = 0;   // total pair-frames checked
     let liteZigzagSum            = 0;   // sum of |physicalYVelocity change| per racer-frame (after 4s)
     let liteZigzagFrames         = 0;   // racer-frames counted for zigzag (after 4s warmup)
@@ -889,7 +901,7 @@ export function runSingleRace({
             const dT = Math.abs(ra.t - rb.t);
             const pairKey = ra.index * 100 + rb.index;
             liteOverlapPairTotal++;
-            if (dY < 0.08 && dT < 0.03) {
+            if (dT < overlapThreshold_t && dY < overlapThreshold_y) {
               liteOverlapPairFrames++;
               liteOverlapPairState.set(pairKey, (liteOverlapPairState.get(pairKey) ?? 0) + 1);
             } else if (liteOverlapPairState.has(pairKey)) {
@@ -1674,7 +1686,7 @@ function buildReport(allResults, rawData, runDate) {
     lines.push('## Lateral Quality Metrics');
     lines.push('');
     lines.push(
-      'overlapRate: % of active pair-frames with |dY|<0.08 AND |dT|<0.03 (lateral collision zone).  \n' +
+      'overlapRate: % of active pair-frames with |dT|<10%·bodyH/pathLen AND |dY|<10%·bodyW/trackW.  \n' +
       'overlapResolution: avg consecutive frames a pair stays in overlap before separating.  \n' +
       'zigzagScore: avg |physicalYVelocity change| per racer-frame (after 4s) — target < 0.003.  \n' +
       'lateralSpeedScore: avg |physicalYVelocity| per racer-frame (after 4s) — lower = smoother.  \n' +
@@ -1943,7 +1955,7 @@ if (isMain) {
       // Skip racers incompatible with this track's surface (empty surfaceClasses = no restriction)
       if (cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
           !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s))) continue;
-      const { speedMultiplier, displaySize } = cfg;
+      const { speedMultiplier, displaySize, bodyFillX, bodyFillY } = cfg;
 
       for (const durationSec of DURATION_VARIANTS) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
@@ -2005,6 +2017,8 @@ if (isMain) {
             isOpen,
             speedMultiplier,
             displaySize,
+            bodyFillX,
+            bodyFillY,
             finishT,
             targetSeconds: durationSec,
             seed,

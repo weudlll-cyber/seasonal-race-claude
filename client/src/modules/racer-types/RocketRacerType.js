@@ -26,6 +26,8 @@ export const RocketRacerType = new SpriteRacerType({
   basePeriodMs: 500,
   baseRotationOffset: Math.PI / 2,
   displaySize: 47,
+  bodyFillX: 0.278,
+  bodyFillY: 0.801,
 
   coats: [...STANDARD_COAT_PALETTE],
   defaultCoatId: 'base',

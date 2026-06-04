@@ -53,6 +53,8 @@ export const SnailRacerType = new SpriteRacerType({
   basePeriodMs: 1500,
   baseRotationOffset: Math.PI / 2,
   displaySize: 35,
+  bodyFillX: 0.727,
+  bodyFillY: 0.938,
 
   coats: SNAIL_COATS,
   defaultCoatId: 'garden',
