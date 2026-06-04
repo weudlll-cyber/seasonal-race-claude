@@ -17,15 +17,7 @@ server/data/**/*.json.tmp
 server/data/tracks-backups/
 client/tmp/
 docs/diagnose/*.ndjson
-/race-*.png
-/poc-*.png
-/check-*.png
-/luge-*.png
-/diag3-*.png
-/snap-*.png
-/cam-diag-*.png
-/fl-snap-*.png
-/fo-*.png
-/overview-check-*.png
-/finish-*.png
-/browser-check-*.png
+# Root-level diagnostic screenshots and sweep artifacts (not part of the codebase)
+/*.png
+/sweep-*.txt
+/sweep-*.mjs
