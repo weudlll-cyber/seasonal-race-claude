@@ -21,3 +21,5 @@ docs/diagnose/*.ndjson
 /*.png
 /sweep-*.txt
 /sweep-*.mjs
+# Sim raw data JSON files (too large for GitHub, reproduced via sim-fairness.mjs --seed=1)
+reports/clean-state-2026-06-04/sim-phase2/fairness-data.json
