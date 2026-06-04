@@ -156,8 +156,9 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByText(/Per-state camera profiles/)).toBeTruthy();
   });
 
-  it('renders state block summary for Overview', () => {
-    expect(screen.getByText('Overview')).toBeTruthy();
+  it('does NOT render a per-state block for OVERVIEW (zoom set by minimum-body-size slider)', () => {
+    // OVERVIEW zoom is controlled by overviewTargetScreenPx, not a spriteScale profile block.
+    expect(screen.queryByText('Overview')).toBeNull();
   });
 
   it('renders state block summary for Leader Zoom', () => {
@@ -233,8 +234,9 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByDisplayValue('1.39')).toBeTruthy();
   });
 
-  it('shows OVERVIEW trackingTC value 1.5', () => {
-    expect(screen.getAllByDisplayValue('1.5').length).toBeGreaterThan(0);
+  it('OVERVIEW trackingTC 1.5 is not rendered (OVERVIEW block removed from Dev Screen)', () => {
+    // OVERVIEW accordion block no longer exists; its camera zoom is set by overviewTargetScreenPx.
+    expect(screen.queryAllByDisplayValue('1.5').length).toBe(0);
   });
 
   it('shows default entryConvergenceZoom value 0.05', () => {
@@ -277,8 +279,8 @@ describe('CameraZoomTuningSection — default rendering', () => {
     expect(screen.getByTestId('reset-camera-behavior')).toBeTruthy();
   });
 
-  it('renders per-state Reset state buttons', () => {
-    expect(screen.getByTestId('reset-state-OVERVIEW')).toBeTruthy();
+  it('renders per-state Reset state buttons for LEADER, BATTLE, COMEBACK (not OVERVIEW)', () => {
+    expect(screen.queryByTestId('reset-state-OVERVIEW')).toBeNull(); // OVERVIEW has no profile block
     expect(screen.getByTestId('reset-state-LEADER_ZOOM')).toBeTruthy();
     expect(screen.getByTestId('reset-state-BATTLE_ZOOM')).toBeTruthy();
     expect(screen.getByTestId('reset-state-COMEBACK_ZOOM')).toBeTruthy();
@@ -372,12 +374,13 @@ describe('CameraZoomTuningSection — reset all (start from non-default values)'
 });
 
 describe('CameraZoomTuningSection — per-state reset', () => {
-  it('reset-state-OVERVIEW restores only OVERVIEW profile', () => {
+  it('reset-state-LEADER_ZOOM restores only LEADER_ZOOM profile', () => {
+    // OVERVIEW no longer has a per-state reset button — its zoom is set by overviewTargetScreenPx.
     loadCameraConfig.mockReturnValue(
       freshConfig({
         cameraStateProfiles: {
-          OVERVIEW: { ...defaultProfiles.OVERVIEW, spriteScale: 1.8, trackingTC: 2.0 },
-          LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM, spriteScale: 2.0 },
+          OVERVIEW: { ...defaultProfiles.OVERVIEW },
+          LEADER_ZOOM: { ...defaultProfiles.LEADER_ZOOM, spriteScale: 2.5, trackingTC: 2.0 },
           BATTLE_ZOOM: { ...defaultProfiles.BATTLE_ZOOM },
           COMEBACK_ZOOM: { ...defaultProfiles.COMEBACK_ZOOM },
         },
@@ -385,12 +388,12 @@ describe('CameraZoomTuningSection — per-state reset', () => {
     );
     render(<CameraZoomTuningSection />);
     vi.clearAllMocks();
-    fireEvent.click(screen.getByTestId('reset-state-OVERVIEW'));
+    fireEvent.click(screen.getByTestId('reset-state-LEADER_ZOOM'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         cameraStateProfiles: expect.objectContaining({
-          OVERVIEW: expect.objectContaining({ spriteScale: 1.0, trackingTC: 1.5 }),
-          LEADER_ZOOM: expect.objectContaining({ spriteScale: 2.0 }), // unchanged
+          LEADER_ZOOM: expect.objectContaining({ spriteScale: 1.81, trackingTC: 0.3 }),
+          BATTLE_ZOOM: expect.objectContaining({ spriteScale: 2.81 }), // unchanged
         }),
       })
     );
