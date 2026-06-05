@@ -934,9 +934,18 @@ export function runSingleRace({
           for (let b = a + 1; b < racers.length; b++) {
             if (racers[b].finished) continue;
             const ra = racers[a], rb = racers[b];
-            const rawDt  = Math.abs(ra.t - rb.t);
-            const wrapDt = isOpen ? rawDt : Math.min(rawDt % finishT, finishT - (rawDt % finishT));
-            const dT_px  = wrapDt * pathLengthPx;
+            // Closed tracks: wrap by 1.0 (one lap), not finishT (which is several laps).
+            // tPos = ((t % 1) + 1) % 1 gives the racer's position within the current lap.
+            // Two racers at the same tPos are visually co-located even if on different laps.
+            let dT_px;
+            if (isOpen) {
+              dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
+            } else {
+              const tPosA = ((ra.t % 1) + 1) % 1;
+              const tPosB = ((rb.t % 1) + 1) % 1;
+              const dtNorm = Math.abs(tPosA - tPosB);
+              dT_px = Math.min(dtNorm, 1 - dtNorm) * pathLengthPx;
+            }
             const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
             honestOverlapPairTotal++;
             if (dT_px < honestBodyLong && dY_px < honestBodyLat) honestOverlapPairFrames++;
@@ -1748,7 +1757,8 @@ function buildReport(allResults, rawData, runDate) {
     lines.push('');
 
     // Fair-chance placement table (Step 1, only when race plan data is present)
-    const withFairChance = allResults.filter((r) => r.avgNaturalness?.fairChanceExactRate != null);
+    // Fair-chance placement — aggregate + per-row (all combos with race-plan data)
+    const withFairChance = allResults.filter((r) => (r.avgNaturalness?.fairChanceB1Count ?? 0) > 0);
     if (withFairChance.length > 0) {
       lines.push('---');
       lines.push('');
@@ -1756,10 +1766,11 @@ function buildReport(allResults, rawData, runDate) {
       lines.push('');
       lines.push(
         'B1exact: fraction of B1-assigned racers (targetRank 1–5) finishing at their exact assigned rank.  \n' +
-        'B1top5: fraction of B1-assigned racers finishing anywhere in top 5.  \n' +
-        'Gap = top5 − exact: racers who reached top 5 but not their precise slot.  \n' +
-        'By construction B1top5 ≥ B1exact. Aggregate over all races in the combo.'
+        'B1top5: fraction finishing anywhere in top 5.  \n' +
+        'Gap = top5 − exact. By construction B1top5 ≥ B1exact. Aggregate over all races in the combo.'
       );
+      lines.push('');
+      lines.push('### Aggregate (all B1 racers, across all races)');
       lines.push('');
       lines.push('| Track | Racer | Dist | N | B1exact% | B1top5% | gap% |');
       lines.push('|-------|-------|------|---|----------|---------|------|');
@@ -1774,6 +1785,38 @@ function buildReport(allResults, rawData, runDate) {
         );
       }
       lines.push('');
+
+      // Per-row breakdown: for each combo that has row data, emit a separate table
+      const withRowData = withFairChance.filter((r) => (r.avgNaturalness?.fairChanceByRow?.length ?? 0) > 1);
+      if (withRowData.length > 0) {
+        lines.push('### Per-Starting-Row Breakdown');
+        lines.push('');
+        lines.push(
+          'Does the designation (targetRank 1–5) cash in equally for front-row and back-row racers?  \n' +
+          'n = total B1-racer appearances from that row across all 10 races.  \n' +
+          'exact% and top5% are the hit rates for that starting row only.'
+        );
+        lines.push('');
+        // Collect all row indices seen across all combos for the header
+        const allRowIdxs = [...new Set(withRowData.flatMap((r) => r.avgNaturalness.fairChanceByRow.map((rd) => rd.row)))].sort((a, b) => a - b);
+        const rowHdrs = allRowIdxs.flatMap((ri) => [`R${ri} exact%`, `R${ri} top5%`, `R${ri} n`]);
+        lines.push(`| Track | Racer | Dist | ${rowHdrs.join(' | ')} |`);
+        lines.push(`|-------|-------|------|${allRowIdxs.map(() => '---|---|---').join('')}|`);
+        for (const res of withRowData) {
+          const rowMap = new Map(res.avgNaturalness.fairChanceByRow.map((rd) => [rd.row, rd]));
+          const cells  = allRowIdxs.flatMap((ri) => {
+            const rd = rowMap.get(ri);
+            if (!rd) return ['—', '—', '0'];
+            return [
+              rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + '%' : '—',
+              rd.top5Rate  != null ? (rd.top5Rate  * 100).toFixed(0) + '%' : '—',
+              String(rd.b1Count),
+            ];
+          });
+          lines.push(`| ${res.trackName} | ${res.racerType} | ${res.durationSec}s | ${cells.join(' | ')} |`);
+        }
+        lines.push('');
+      }
     }
   }
 
@@ -2107,19 +2150,27 @@ if (isMain) {
           if (raceSollRankMap) {
             const b1Entries = [...raceSollRankMap.entries()].filter(([, sr]) => sr <= 5);
             let fcExact = 0, fcTop5 = 0;
+            // Gap B: per-starting-row breakdown (rowIndex → {b1Count, exactHits, top5Hits})
+            const fcByRow = new Map();
             for (const [racerIdx, sollRank] of b1Entries) {
               const rr = result.find((x) => x.racerIndex === racerIdx);
               if (!rr) continue;
-              if (rr.finalRank === sollRank) fcExact++;
-              if (rr.finalRank <= 5) fcTop5++;
+              const row = rr.startRowIndex;
+              if (!fcByRow.has(row)) fcByRow.set(row, { b1Count: 0, exactHits: 0, top5Hits: 0 });
+              const rd = fcByRow.get(row);
+              rd.b1Count++;
+              if (rr.finalRank === sollRank) { fcExact++; rd.exactHits++; }
+              if (rr.finalRank <= 5) { fcTop5++; rd.top5Hits++; }
             }
-            result.fairChanceB1Count  = b1Entries.length;
-            result.fairChanceExactHits = fcExact;
-            result.fairChanceTop5Hits  = fcTop5;
+            result.fairChanceB1Count   = b1Entries.length;
+            result.fairChanceExactHits  = fcExact;
+            result.fairChanceTop5Hits   = fcTop5;
+            result.fairChanceByRow      = fcByRow;
           } else {
-            result.fairChanceB1Count  = 0;
-            result.fairChanceExactHits = 0;
-            result.fairChanceTop5Hits  = 0;
+            result.fairChanceB1Count   = 0;
+            result.fairChanceExactHits  = 0;
+            result.fairChanceTop5Hits   = 0;
+            result.fairChanceByRow      = new Map();
           }
           raceResults.push(result);
           if (COMEBACK_ANALYSIS) result._seed = seed;
@@ -2195,6 +2246,28 @@ if (isMain) {
             ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceTop5Hits  / r.fairChanceB1Count : 0), 0) / raceResults.length
             : null,
           fairChanceB1Count:       raceResults.reduce((s, r) => s + (r.fairChanceB1Count ?? 0), 0) / raceResults.length,
+          // Gap B: per-row fair-chance aggregated across all races (sorted by rowIndex)
+          fairChanceByRow: (() => {
+            const rowSet = new Set(raceResults.flatMap((r) => r.fairChanceByRow ? [...r.fairChanceByRow.keys()] : []));
+            return [...rowSet].sort((a, b) => a - b).map((row) => {
+              let b1Count = 0, exactHits = 0, top5Hits = 0;
+              for (const r of raceResults) {
+                const rd = r.fairChanceByRow?.get(row);
+                if (!rd) continue;
+                b1Count  += rd.b1Count;
+                exactHits += rd.exactHits;
+                top5Hits  += rd.top5Hits;
+              }
+              return {
+                row,
+                b1Count,
+                exactHits,
+                top5Hits,
+                exactRate: b1Count > 0 ? exactHits / b1Count : null,
+                top5Rate:  b1Count > 0 ? top5Hits  / b1Count : null,
+              };
+            });
+          })(),
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, nRacers: nRacersForCombo });
 
@@ -2261,7 +2334,6 @@ if (isMain) {
                 `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
                 `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
               );
-              // Step 1: fair-chance placement summary
               const fcExact = avgNaturalness.fairChanceExactRate;
               const fcTop5  = avgNaturalness.fairChanceTop5Rate;
               if (fcExact != null) {
@@ -2272,6 +2344,7 @@ if (isMain) {
                 );
               }
             }
+            // LateralQ — printed for open tracks in this block (closed tracks: printed in block below)
             console.log(
               `     LateralQ: overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
               `  honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
@@ -2304,6 +2377,36 @@ if (isMain) {
               );
             }
           }
+        }
+
+        // Gap A + Gap B: for CLOSED tracks, emit LateralQ and FairChance here
+        // (open tracks already printed these inside the isOpen block above)
+        if (!isOpen && avgNaturalness) {
+          console.log(
+            `     LateralQ: honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
+            `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%`
+          );
+          if (RACE_PLAN_ACTIVE) {
+            const fcExact = avgNaturalness.fairChanceExactRate;
+            const fcTop5  = avgNaturalness.fairChanceTop5Rate;
+            if (fcExact != null) {
+              console.log(
+                `     FairChance: B1exact=${(fcExact * 100).toFixed(1)}%` +
+                `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
+                `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`
+              );
+            }
+          }
+        }
+        // FairChance per-row breakdown (all tracks, when race-plan active)
+        if (RACE_PLAN_ACTIVE && avgNaturalness?.fairChanceByRow?.length > 0) {
+          const rowParts = avgNaturalness.fairChanceByRow.map((rd) =>
+            `R${rd.row}:` +
+            `exact=${rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + '%' : '—'}` +
+            `/top5=${rd.top5Rate != null ? (rd.top5Rate * 100).toFixed(0) + '%' : '—'}` +
+            `(n=${rd.b1Count})`
+          );
+          console.log(`     FairChance by row: ${rowParts.join('  ')}`);
         }
 
         // v4 diagnostics: per-threshold average crossing time + physical overtake counts
