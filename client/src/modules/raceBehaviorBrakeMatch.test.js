@@ -42,8 +42,16 @@ function makeRacer(overrides = {}) {
   return r;
 }
 
-// Base config with jitter guard enabled at the default values
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+// Base config: pin activation-zone params to the values these tests were designed for.
+// dynamicBrakeT = (spriteWorldSizePx=40 / pathLengthPx=20000) × speedBrakeTMultiplier=1.5 = 0.003
+// Test pairs use dT=0.0015, which requires dynamicBrakeT > 0.0015.
+// Pinning these values here makes the tests independent of DEFAULT_RACE_BEHAVIOR_CONFIG changes
+// (these tests verify brake-to-match formula/state logic, not the activation threshold default).
+const cfg = {
+  ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+  speedBrakeTMultiplier: 1.5,
+  speedBrakeYThreshold: 0.18,
+};
 
 // Config variant that freezes physicalY: no lateral forces fire.
 // Used for anti-trap tests where we need the pair to stay in the brake zone

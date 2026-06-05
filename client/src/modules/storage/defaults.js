@@ -475,10 +475,17 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   homeForceReductionOnOverlap: 0.300000
    *   avoidanceDistance:           0.180000
    *   speedBrakeFactor:            0.945000
-   *   speedBrakeTMultiplier:       1.500000
-   *   speedBrakeYThreshold:        0.180000
+   *   speedBrakeTMultiplier:       0.500000  (reduced from 1.5 — activation-zone experiment 2026-06-05)
+   *   speedBrakeYThreshold:        0.060000  (reduced from 0.18 — activation-zone experiment 2026-06-05)
    *
-   * These parameters are strongly interdependent. Changing one
+   * speedBrakeTMultiplier and speedBrakeYThreshold control when brake-to-match activates.
+   * Reduced in the Step-1 activation-zone experiment to target the "near-contact only" band
+   * (~0.5 sprite-widths longitudinally, ~6% half-track-width laterally) to break the
+   * chain-lock that caused front-row freeze at N=50 (report 09, 2026-06-05).
+   * If the experiment confirms fairness recovery at N=50, these values become permanent.
+   * To revert to pre-experiment baseline: speedBrakeTMultiplier=1.5, speedBrakeYThreshold=0.18.
+   *
+   * Other parameters are strongly interdependent. Changing one
    * without re-sweeping the others will likely degrade race quality.
    *
    * To find new optimal values:
@@ -500,8 +507,8 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   homeForceReductionOnOverlap: 0.3,
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
-  speedBrakeTMultiplier: 1.5,
-  speedBrakeYThreshold: 0.18,
+  speedBrakeTMultiplier: 0.5,
+  speedBrakeYThreshold: 0.06,
   // Brake-to-match tuning (Step 1 — overtaking rebuild).
   // speedMatchMinDifferential: fractional speed excess above which brake-to-match engages.
   //   0.005 = engage only when trailer is >0.5% faster than leader.
