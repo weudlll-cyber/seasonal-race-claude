@@ -394,6 +394,7 @@ export default function RaceScreen() {
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
     const behaviorConfig = loadRaceBehaviorConfig();
+    behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
     const rubberBandConfig = loadRubberBandConfig();

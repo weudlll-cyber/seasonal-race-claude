@@ -2224,6 +2224,7 @@ if (isMain) {
             nRacers: nRacersForCombo,
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: {
+              isOpen,
               ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
               ...BEHAVIOR_OVERRIDE,
             },

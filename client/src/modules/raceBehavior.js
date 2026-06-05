@@ -325,54 +325,58 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const pathLengthB = getPathLengthPx(rB);
       const pathLength = Math.max(pathLengthA, pathLengthB);
 
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
-      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
-      // Dynamic threshold: scales with sprite size and path length so the brake fires at
-      // the same relative proximity (in sprite-widths) on every track and racer type.
-      // Falls back to a fixed 0.014 when geometry is unavailable (e.g. unit tests).
-      const dynamicBrakeT =
-        spriteWorldSize > 0 && pathLength > 0
-          ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
-          : 0.014;
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
-        speedBrakeSet.add(trailer.index);
+      // Speed brake + brake-to-match: open tracks only (report 12).
+      // On closed tracks (config.isOpen === false), pack dynamics are handled by
+      // avoidance forces alone — the speed-brake chain lock regresses closed-track
+      // fairness when the activation zone is tuned for open-track chain-lock prevention.
+      if (config.isOpen !== false) {
+        // Dynamic threshold: scales with sprite size and path length so the brake fires
+        // at the same relative proximity (in sprite-widths) on every open track.
+        // Falls back to a fixed 0.014 when geometry is unavailable (e.g. unit tests).
+        const dynamicBrakeT =
+          spriteWorldSize > 0 && pathLength > 0
+            ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
+            : 0.014;
+        if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
+          speedBrakeSet.add(trailer.index);
 
-        // Brake-to-match: compute leader-speed cap for this pair.
-        // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
-        const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
-        const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-        const leaderRawSpeed =
-          (leader.baseSpeed ?? 0) *
-          boostL *
-          (leader.trajectoryMult ?? 1.0) *
-          (leader.areaBonusMult ?? 1.0) *
-          (leader.rubberBandMult ?? 1.0);
-        const trailerDenom =
-          (trailer.baseSpeed ?? 0) *
-          boostT *
-          (trailer.trajectoryMult ?? 1.0) *
-          (trailer.areaBonusMult ?? 1.0) *
-          (trailer.rubberBandMult ?? 1.0);
-        // Account for the leader's own effective brake so the cap targets the leader's
-        // ACTUAL advance, not its raw speed. Primary bypass mechanism (report 09): when
-        // the leader is avoidanceActive, it advances at rawSpeed × 0.945 (floor brake),
-        // but the old cap allowed the trailer to advance at rawSpeed — 5.8% bypass.
-        // Using speedBrakeFactor as the floor approximation (exact after 3s warmup;
-        // slightly conservative during warmup when effectiveBrakeFactor > speedBrakeFactor).
-        const leaderBrake = leader.avoidanceActive
-          ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
-          : 1.0;
-        const cap = computeBrakeMatchFactor(
-          leaderRawSpeed * leaderBrake,
-          trailerDenom,
-          config.speedMatchMinDifferential ?? 0.005,
-          config.speedMatchSafetyMargin ?? 0.001
-        );
-        // Track the most constraining leader (lowest cap). Tie-break: first-found
-        // (lower pair indices) wins because strict < never updates on equal caps.
-        if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
-          brakeMatchCaps.set(trailer.index, cap);
-          brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+          // Brake-to-match: compute leader-speed cap for this pair.
+          // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
+          const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+          const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+          const leaderRawSpeed =
+            (leader.baseSpeed ?? 0) *
+            boostL *
+            (leader.trajectoryMult ?? 1.0) *
+            (leader.areaBonusMult ?? 1.0) *
+            (leader.rubberBandMult ?? 1.0);
+          const trailerDenom =
+            (trailer.baseSpeed ?? 0) *
+            boostT *
+            (trailer.trajectoryMult ?? 1.0) *
+            (trailer.areaBonusMult ?? 1.0) *
+            (trailer.rubberBandMult ?? 1.0);
+          // Account for the leader's own effective brake so the cap targets the leader's
+          // ACTUAL advance, not its raw speed. Primary bypass mechanism (report 09): when
+          // the leader is avoidanceActive, it advances at rawSpeed × 0.945 (floor brake),
+          // but the old cap allowed the trailer to advance at rawSpeed — 5.8% bypass.
+          // Using speedBrakeFactor as the floor approximation (exact after 3s warmup;
+          // slightly conservative during warmup when effectiveBrakeFactor > speedBrakeFactor).
+          const leaderBrake = leader.avoidanceActive
+            ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+            : 1.0;
+          const cap = computeBrakeMatchFactor(
+            leaderRawSpeed * leaderBrake,
+            trailerDenom,
+            config.speedMatchMinDifferential ?? 0.005,
+            config.speedMatchSafetyMargin ?? 0.001
+          );
+          // Track the most constraining leader (lowest cap). Tie-break: first-found
+          // (lower pair indices) wins because strict < never updates on equal caps.
+          if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
+            brakeMatchCaps.set(trailer.index, cap);
+            brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+          }
         }
       }
 

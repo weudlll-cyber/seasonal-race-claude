@@ -475,15 +475,14 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   homeForceReductionOnOverlap: 0.300000
    *   avoidanceDistance:           0.180000
    *   speedBrakeFactor:            0.945000
-   *   speedBrakeTMultiplier:       0.500000  (reduced from 1.5 — T-only experiment 2026-06-05)
-   *   speedBrakeYThreshold:        0.180000  (restored to original after full-shrink report 10)
+   *   speedBrakeTMultiplier:       0.500000  (reduced from 1.5 — open-track only experiment 2026-06-05)
+   *   speedBrakeYThreshold:        0.060000  (reduced from 0.18 — open-track only experiment 2026-06-05)
    *
-   * speedBrakeTMultiplier controls when brake-to-match activates longitudinally.
-   * Reduced from 1.5 to 0.5 (T-only experiment, report 11): activates only at ~0.5 sprite-widths
-   * ahead/behind instead of 1.5, targeting ~29% brake% and breaking the chain-lock that caused
-   * front-row freeze at N=50 (report 09). Y threshold restored to 0.18 (original) after the
-   * full-shrink experiment (report 10) showed Y=0.06 regressed closed-track fairness.
-   * To revert to pre-experiment baseline: speedBrakeTMultiplier=1.5.
+   * speedBrakeTMultiplier and speedBrakeYThreshold control when brake-to-match activates on open
+   * tracks. These values are now only applied when config.isOpen=true (set by callers per race).
+   * On closed tracks (config.isOpen=false), the entire speedBrakeSet / brakeMatchCaps block is
+   * skipped — closed-track pack dynamics are handled by avoidance forces alone (report 12).
+   * To revert to pre-experiment baseline: speedBrakeTMultiplier=1.5, speedBrakeYThreshold=0.18.
    *
    * Other parameters are strongly interdependent. Changing one
    * without re-sweeping the others will likely degrade race quality.
@@ -508,7 +507,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
   speedBrakeTMultiplier: 0.5,
-  speedBrakeYThreshold: 0.18,
+  speedBrakeYThreshold: 0.06,
   // Brake-to-match tuning (Step 1 — overtaking rebuild).
   // speedMatchMinDifferential: fractional speed excess above which brake-to-match engages.
   //   0.005 = engage only when trailer is >0.5% faster than leader.

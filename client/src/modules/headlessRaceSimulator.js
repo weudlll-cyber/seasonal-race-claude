@@ -228,7 +228,8 @@ export function simulateRace({
     }
 
     // Apply behavior (avoidance, free-lane, home force, drafting, etc.)
-    applyRacerBehavior(racers, behaviorConfig);
+    // headlessRaceSimulator always uses Dirt Oval (closed track) — isOpen=false.
+    applyRacerBehavior(racers, { ...behaviorConfig, isOpen: false });
 
     // Per-racer speed update + re-roll
     for (const r of racers) {
