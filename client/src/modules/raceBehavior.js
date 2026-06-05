@@ -29,6 +29,35 @@ const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near
 const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
 
 /**
+ * Compute the per-pair brake cap for brake-to-match behavior.
+ *
+ * Returns 1.0 (no braking) when the trailer is not meaningfully faster than the
+ * leader, keeping the existing fixed-% brake as the effective floor.
+ *
+ * The returned cap is applied in index.jsx as:
+ *   brake = min(computeEffectiveBrakeFactor(...), computeBrakeMatchFactor(...))
+ * so the warmup ramp and the cap interact correctly (Flag 3, report 06).
+ *
+ * @param {number} leaderFwdSpeed  leader's effective forward speed (no brake term)
+ * @param {number} trailerDenom    trailer's forward speed denominator (no brake term)
+ * @param {number} minDifferential fractional excess above which cap engages (e.g. 0.005)
+ * @param {number} safetyMargin    fractional undercut below exact leader speed (e.g. 0.001)
+ * @returns {number} cap in (0, 1]; 1.0 = no extra braking beyond existing floor
+ */
+export function computeBrakeMatchFactor(
+  leaderFwdSpeed,
+  trailerDenom,
+  minDifferential,
+  safetyMargin
+) {
+  if (leaderFwdSpeed <= 0 || trailerDenom <= 0) return 1.0;
+  // Engage only when trailer is meaningfully faster (prevents jitter on near-speed pairs).
+  if (trailerDenom <= leaderFwdSpeed * (1 + minDifferential)) return 1.0;
+  const rawFactor = leaderFwdSpeed / trailerDenom;
+  return rawFactor * (1 - safetyMargin);
+}
+
+/**
  * Initialise per-racer behavior state. Call once per racer at race start.
  * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
  * @param {{ [key: string]: unknown }} racer
@@ -43,6 +72,17 @@ export function initRacerBehavior(racer) {
   racer.currentMode = PRIORITY_MODE.NORMAL;
   racer.lastOverlapEndTime = -Infinity;
   racer.currentModeFrameCount = 0;
+  // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
+  // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
+  //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
+  // brakeMatchFactor: current cap written by raceBehavior.js, read by index.jsx
+  //   (same cross-file pattern as avoidanceActive — one-frame lag is intentional).
+  // brakeMatchFrames: consecutive hold frames (anti-trap counter); negative = escape/cooldown countdown.
+  // brakeReleaseFrames: consecutive clear frames counted toward debounced release.
+  racer.brakeMatchLeaderIndex = -1;
+  racer.brakeMatchFactor = 1.0;
+  racer.brakeMatchFrames = 0;
+  racer.brakeReleaseFrames = 0;
 }
 
 /**
@@ -229,6 +269,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   const overlapSet = new Set();
   const neighborCounts = new Map(active.map((r) => [r.index, 0]));
   const speedBrakeSet = new Set();
+  // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
+  // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
+  const brakeMatchCaps = new Map(); // trailer.index → lowest requiredBrakeFactor this frame
+  const brakeMatchLeaderIdxs = new Map(); // trailer.index → leader.index for that cap
   // rawPos/rawNeg: pre-normalization avoidance + free-lane force magnitudes by direction.
   // Allocated when diagOut is provided (external diagnostic) OR when stuck suppression is active
   // (suppression reads the same per-direction breakdown to decide if the racer is sandwiched).
@@ -290,6 +334,35 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           : 0.014;
       if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
         speedBrakeSet.add(trailer.index);
+
+        // Brake-to-match: compute leader-speed cap for this pair.
+        // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
+        const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+        const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+        const leaderFwdSpeed =
+          (leader.baseSpeed ?? 0) *
+          boostL *
+          (leader.trajectoryMult ?? 1.0) *
+          (leader.areaBonusMult ?? 1.0) *
+          (leader.rubberBandMult ?? 1.0);
+        const trailerDenom =
+          (trailer.baseSpeed ?? 0) *
+          boostT *
+          (trailer.trajectoryMult ?? 1.0) *
+          (trailer.areaBonusMult ?? 1.0) *
+          (trailer.rubberBandMult ?? 1.0);
+        const cap = computeBrakeMatchFactor(
+          leaderFwdSpeed,
+          trailerDenom,
+          config.speedMatchMinDifferential ?? 0.005,
+          config.speedMatchSafetyMargin ?? 0.001
+        );
+        // Track the most constraining leader (lowest cap). Tie-break: first-found
+        // (lower pair indices) wins because strict < never updates on equal caps.
+        if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
+          brakeMatchCaps.set(trailer.index, cap);
+          brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+        }
       }
 
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
@@ -512,6 +585,75 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     if (clamped !== newY) r.physicalYVelocity = 0;
     r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
+
+    // ── Brake-to-match hold state update ──────────────────────────────────
+    // Constants read once per racer for clarity; values from config with safe defaults.
+    const bmTimeout = config.brakeHoldTimeoutFrames ?? 90;
+    const bmEscape = config.brakeHoldEscapeReleaseDurationFrames ?? 15;
+    const bmCooldown = config.brakeHoldEscapeCooldownFrames ?? 60;
+    const bmDebounce = config.brakeReleaseDebounceFrames ?? 3;
+
+    if (r.brakeMatchFrames < 0) {
+      // Counting up from -(bmEscape+bmCooldown) toward 0: escape release then cooldown.
+      // No new hold allowed until brakeMatchFrames reaches 0.
+      r.brakeMatchFrames += 1;
+      r.brakeMatchFactor = 1.0;
+      r.brakeMatchLeaderIndex = -1;
+    } else {
+      // Stale-index guard: if locked leader is no longer active, reset immediately.
+      if (r.brakeMatchLeaderIndex !== -1) {
+        let leaderStillActive = false;
+        for (const a of active) {
+          if (a.index === r.brakeMatchLeaderIndex) {
+            leaderStillActive = true;
+            break;
+          }
+        }
+        if (!leaderStillActive) {
+          r.brakeMatchLeaderIndex = -1;
+          r.brakeMatchFactor = 1.0;
+          r.brakeMatchFrames = 0;
+          r.brakeReleaseFrames = 0;
+        }
+      }
+
+      const newCap = brakeMatchCaps.get(r.index);
+      if (newCap !== undefined) {
+        // A constraining leader is in the brake zone this frame — hold or enter hold.
+        r.brakeMatchLeaderIndex = brakeMatchLeaderIdxs.get(r.index);
+        r.brakeMatchFactor = newCap;
+        r.brakeMatchFrames += 1;
+        r.brakeReleaseFrames = 0;
+
+        // Anti-trap: force escape after too many consecutive hold frames.
+        if (r.brakeMatchFrames >= bmTimeout) {
+          r.brakeMatchLeaderIndex = -1;
+          r.brakeMatchFactor = 1.0;
+          // Negative countdown: -(escape + cooldown) counts up to 0 over (escape+cooldown) frames.
+          r.brakeMatchFrames = -(bmEscape + bmCooldown);
+          r.brakeReleaseFrames = 0;
+        }
+      } else {
+        // No constraining leader this frame.
+        if (r.brakeMatchLeaderIndex !== -1) {
+          // Was in hold — debounced release: count consecutive clear frames.
+          r.brakeReleaseFrames += 1;
+          if (r.brakeReleaseFrames >= bmDebounce) {
+            r.brakeMatchLeaderIndex = -1;
+            r.brakeMatchFactor = 1.0;
+            r.brakeMatchFrames = 0;
+            r.brakeReleaseFrames = 0;
+          }
+          // During debounce window: retain previous brakeMatchFactor (hold persists briefly).
+        } else {
+          // No hold active; ensure clean state.
+          r.brakeMatchFactor = 1.0;
+          r.brakeMatchFrames = 0;
+          r.brakeReleaseFrames = 0;
+        }
+      }
+    }
+
     if (diagOut) {
       diagOut.set(r.index, {
         rawPos: dRawPos.get(r.index),

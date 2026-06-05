@@ -502,4 +502,19 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   speedBrakeFactor: 0.945,
   speedBrakeTMultiplier: 1.5,
   speedBrakeYThreshold: 0.18,
+  // Brake-to-match tuning (Step 1 — overtaking rebuild).
+  // speedMatchMinDifferential: fractional speed excess above which brake-to-match engages.
+  //   0.005 = engage only when trailer is >0.5% faster than leader.
+  // speedMatchSafetyMargin: fractional undercut below exact leader speed to prevent oscillation.
+  //   0.001 = cap set to leaderSpeed × 0.999 instead of exact leader speed.
+  // brakeHoldTimeoutFrames: consecutive hold frames before anti-trap escape triggers.
+  // brakeHoldEscapeReleaseDurationFrames: frames of forced brake-release after timeout.
+  // brakeHoldEscapeCooldownFrames: frames after escape before re-lock is allowed.
+  // brakeReleaseDebounceFrames: consecutive clear frames needed to exit hold.
+  speedMatchMinDifferential: 0.005,
+  speedMatchSafetyMargin: 0.001,
+  brakeHoldTimeoutFrames: 90,
+  brakeHoldEscapeReleaseDurationFrames: 15,
+  brakeHoldEscapeCooldownFrames: 60,
+  brakeReleaseDebounceFrames: 3,
 };

@@ -86,7 +86,14 @@ export function loadRaceBehaviorConfig() {
     !isFinite(merged.avoidanceWarmupMs) ||
     merged.avoidanceWarmupMs < 0 ||
     merged.lateralDamping <= 0 ||
-    merged.lateralDamping >= 1
+    merged.lateralDamping >= 1 ||
+    merged.speedMatchMinDifferential <= 0 ||
+    merged.speedMatchSafetyMargin <= 0 ||
+    merged.speedMatchSafetyMargin >= 1 ||
+    !(merged.brakeHoldTimeoutFrames > 0) ||
+    !(merged.brakeHoldEscapeReleaseDurationFrames > 0) ||
+    !(merged.brakeHoldEscapeCooldownFrames > 0) ||
+    !(merged.brakeReleaseDebounceFrames > 0)
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

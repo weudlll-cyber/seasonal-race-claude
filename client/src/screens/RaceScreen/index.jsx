@@ -910,7 +910,14 @@ export default function RaceScreen() {
               isOpenTrack,
               physicsTs
             );
-            const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
+            // Flag 2 (report 06): brakeMatchFactor is written by raceBehavior.js one frame
+            // prior and read here — same one-frame-lag cross-file pattern as avoidanceActive.
+            // Flag 3 (report 06): min() preserves the warmup ramp: during the first 3s the
+            // ramp factor may already be weaker than the cap, so the cap must not override it.
+            // speedBrakeFactor (0.945) remains a fixed floor via effectiveBrakeFactor.
+            const brake = r.avoidanceActive
+              ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
+              : 1.0;
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(

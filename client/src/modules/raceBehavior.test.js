@@ -697,3 +697,26 @@ describe('applyRacerBehavior — lateral velocity + damping', () => {
     expect(r.physicalY).toBeLessThanOrEqual(cfg.maxLateral);
   });
 });
+
+// ── brake-to-match regressions (Step 1) ───────────────────────────────────────
+
+describe('applyRacerBehavior — brake-to-match regressions', () => {
+  function makeLanePair(trailerSpeed, leaderSpeed) {
+    const leader = makeLaneRacer({ index: 1, t: 0.41, baseSpeed: leaderSpeed });
+    const trailer = makeLaneRacer({ index: 0, t: 0.4, baseSpeed: trailerSpeed });
+    return [trailer, leader];
+  }
+
+  it('avoidanceActive still fires on trailer when inside proximity zone under new cap', () => {
+    const [trailer, leader] = makeLanePair(1.2e-4, 1.0e-4);
+    applyRacerBehavior([trailer, leader], cfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('brakeMatchFactor is 1.0 (no extra cap) when trailer speed is within min-diff of leader', () => {
+    // Trailer only 0.1% faster — below the 0.5% minDifferential threshold
+    const [trailer, leader] = makeLanePair(1.001e-4, 1.0e-4);
+    applyRacerBehavior([trailer, leader], cfg);
+    expect(trailer.brakeMatchFactor).toBe(1.0);
+  });
+});
