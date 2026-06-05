@@ -40,12 +40,16 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const N_RACES       = Number(argVal('races', '50'));
-const N_RACERS      = Number(argVal('racers', '40'));
-const OUT_DIR       = join(ROOT, argVal('out', 'client/tmp'));
-const TRACK_FILTER  = argVal('track', null);   // e.g. --track=river-run
-const RACER_FILTER  = argVal('racer', null);   // e.g. --racer=horse
-const DUR_FILTER    = argVal('dur', null);     // e.g. --dur=30
+const N_RACES        = Number(argVal('races', '50'));
+const N_RACERS       = Number(argVal('racers', '40'));
+// --openRacers / --closedRacers: per-topology racer count (Phase-1 matrix).
+// Fall back to N_RACERS when not specified so existing --racers= still works.
+const N_RACERS_OPEN   = Number(argVal('openRacers',   String(N_RACERS)));
+const N_RACERS_CLOSED = Number(argVal('closedRacers', String(N_RACERS)));
+const OUT_DIR        = join(ROOT, argVal('out', 'client/tmp'));
+const TRACK_FILTER   = argVal('track', null);   // e.g. --track=river-run
+const RACER_FILTER   = argVal('racer', null);   // e.g. --racer=horse
+const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30
 
 // ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
 // --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
@@ -484,6 +488,23 @@ export function runSingleRace({
     // Lateral quality metrics
     let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
     let liteOverlapPairTotal     = 0;   // total pair-frames checked
+    // Honest overlap metric: actual body-extent collision (Step 2).
+    // Uses effectiveDisplaySize (auto-scaled sprite size) × bodyFillX/Y.
+    // Lateral body (half-span each): effectiveDisplaySize × bodyFillX
+    // Longitudinal body (half-span each): effectiveDisplaySize × bodyFillY
+    // Overlap fires when both axes touch simultaneously.
+    // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
+    const honestBodyLong  = effectiveDisplaySize * bodyFillY;   // px
+    const honestBodyLat   = effectiveDisplaySize * bodyFillX;   // px
+    let honestOverlapPairFrames = 0;
+    let honestOverlapPairTotal  = 0;
+    // Lapping instrumentation (closed tracks only, Part 1 verification):
+    // maxRealSpread: max(t_leading - t_trailing) seen during the race, in laps (1.0 = one full lap).
+    // honestSameLapFrames: honest overlap where |ra.t - rb.t| < 1.0 (same or seam-adjacent lap).
+    // honestCrossLapFrames: honest overlap where |ra.t - rb.t| >= 1.0 (genuine lapping: 1+ lap ahead).
+    let maxRealSpread        = 0;
+    let honestSameLapFrames  = 0;
+    let honestCrossLapFrames = 0;
     let liteZigzagSum            = 0;   // sum of |physicalYVelocity change| per racer-frame (after 4s)
     let liteZigzagFrames         = 0;   // racer-frames counted for zigzag (after 4s warmup)
     let litePrevPhysYVel         = null;// previous physicalYVelocity per racer index
@@ -911,6 +932,52 @@ export function runSingleRace({
             }
           }
         }
+        // Honest overlap: body-extent check (all pairs, open + closed, after 4s warmup).
+        // dT_px: path-pixel gap along track (wraps for closed tracks so lapping is detected).
+        // dY_px: lateral pixel gap (physicalY × trackWidth/2).
+        // Fires when both rendered bodies physically overlap or touch.
+        if (raceTs > 4000) for (let a = 0; a < racers.length; a++) {
+          if (racers[a].finished) continue;
+          for (let b = a + 1; b < racers.length; b++) {
+            if (racers[b].finished) continue;
+            const ra = racers[a], rb = racers[b];
+            // Closed tracks: wrap by 1.0 (one lap), not finishT (which is several laps).
+            // tPos = ((t % 1) + 1) % 1 gives the racer's position within the current lap.
+            // Two racers at the same tPos are visually co-located even if on different laps.
+            let dT_px;
+            if (isOpen) {
+              dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
+            } else {
+              const tPosA = ((ra.t % 1) + 1) % 1;
+              const tPosB = ((rb.t % 1) + 1) % 1;
+              const dtNorm = Math.abs(tPosA - tPosB);
+              dT_px = Math.min(dtNorm, 1 - dtNorm) * pathLengthPx;
+            }
+            const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
+            honestOverlapPairTotal++;
+            if (dT_px < honestBodyLong && dY_px < honestBodyLat) {
+              honestOverlapPairFrames++;
+              if (!isOpen) {
+                // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
+                if (Math.abs(ra.t - rb.t) >= 1.0) honestCrossLapFrames++;
+                else honestSameLapFrames++;
+              }
+            }
+          }
+        }
+        // Track max real progress spread (closed tracks, for lapping verification)
+        if (!isOpen && raceTs > 4000) {
+          let tMin = Infinity, tMax = -Infinity;
+          for (const r of racers) {
+            if (r.finished) continue;
+            if (r.t < tMin) tMin = r.t;
+            if (r.t > tMax) tMax = r.t;
+          }
+          if (tMax > tMin) {
+            const spread = tMax - tMin;
+            if (spread > maxRealSpread) maxRealSpread = spread;
+          }
+        }
         // lateralSpeedScore + brakeRate (after 4 s warmup)
         if (raceTs > 4000) {
           for (let ri = 0; ri < racers.length; ri++) {
@@ -1024,6 +1091,10 @@ export function runSingleRace({
       : null;
     results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
     results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
+    results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
+    results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
+    results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
+    results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
     results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
     results.liteZigzagScore              = liteZigzagFrames > 0 ? liteZigzagSum / liteZigzagFrames : 0;
     results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
@@ -1686,7 +1757,8 @@ function buildReport(allResults, rawData, runDate) {
     lines.push('## Lateral Quality Metrics');
     lines.push('');
     lines.push(
-      'overlapRate: % of active pair-frames with |dT|<10%·bodyH/pathLen AND |dY|<10%·bodyW/trackW.  \n' +
+      'overlapRate: % of active pair-frames with |dT|<10%·bodyH/pathLen AND |dY|<10%·bodyW/trackW (old center-proximity metric).  \n' +
+      'honestOverlapRate: % of pair-frames where rendered body boxes actually overlap — full body extents, all pairs, open+closed (NEW).  \n' +
       'overlapResolution: avg consecutive frames a pair stays in overlap before separating.  \n' +
       'zigzagScore: avg |physicalYVelocity change| per racer-frame (after 4s) — target < 0.003.  \n' +
       'lateralSpeedScore: avg |physicalYVelocity| per racer-frame (after 4s) — lower = smoother.  \n' +
@@ -1694,19 +1766,88 @@ function buildReport(allResults, rawData, runDate) {
       'stableOvertakes: confirmed lead-swaps (≥3s) per racer in 20%–80% of race — higher = more action.'
     );
     lines.push('');
-    lines.push('| Track | Racer | Dist | overlapRate% | overlapResolution (fr) | zigzagScore |');
-    lines.push('|-------|-------|------|-------------|------------------------|-------------|');
+    lines.push('| Track | Racer | Dist | N | overlapRate% | honestOverlap% | gap | overlapResolution (fr) | zigzagScore |');
+    lines.push('|-------|-------|------|---|-------------|----------------|-----|------------------------|-------------|');
     for (const res of withLateralQ) {
       const n = res.avgNaturalness;
       const zigzagLabel = (n.zigzagScore ?? 0) < 0.005 ? '✅' : '⚠️';
+      const oldOvl  = (n.overlapRate    ?? 0) * 100;
+      const newOvl  = (n.honestOverlapRate ?? 0) * 100;
+      const gapOvl  = newOvl - oldOvl;
+      const honestLabel = newOvl > 0.5 ? ' ⚠️' : '';
       lines.push(
-        `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s` +
-        ` | ${((n.overlapRate ?? 0) * 100).toFixed(1)}%` +
+        `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s | ${res.nRacers ?? '—'}` +
+        ` | ${oldOvl.toFixed(1)}%` +
+        ` | ${newOvl.toFixed(1)}%${honestLabel}` +
+        ` | +${gapOvl.toFixed(1)}%` +
         ` | ${(n.overlapResolutionFrames ?? 0).toFixed(1)}` +
         ` | ${(n.zigzagScore ?? 0).toFixed(6)} ${zigzagLabel} |`
       );
     }
     lines.push('');
+
+    // Fair-chance placement table (Step 1, only when race plan data is present)
+    // Fair-chance placement — aggregate + per-row (all combos with race-plan data)
+    const withFairChance = allResults.filter((r) => (r.avgNaturalness?.fairChanceB1Count ?? 0) > 0);
+    if (withFairChance.length > 0) {
+      lines.push('---');
+      lines.push('');
+      lines.push('## Fair-Chance Placement (B1 target ranks 1–5)');
+      lines.push('');
+      lines.push(
+        'B1exact: fraction of B1-assigned racers (targetRank 1–5) finishing at their exact assigned rank.  \n' +
+        'B1top5: fraction finishing anywhere in top 5.  \n' +
+        'Gap = top5 − exact. By construction B1top5 ≥ B1exact. Aggregate over all races in the combo.'
+      );
+      lines.push('');
+      lines.push('### Aggregate (all B1 racers, across all races)');
+      lines.push('');
+      lines.push('| Track | Racer | Dist | N | B1exact% | B1top5% | gap% |');
+      lines.push('|-------|-------|------|---|----------|---------|------|');
+      for (const res of withFairChance) {
+        const fc = res.avgNaturalness;
+        const exact = (fc.fairChanceExactRate ?? 0) * 100;
+        const top5  = (fc.fairChanceTop5Rate  ?? 0) * 100;
+        const gap   = top5 - exact;
+        lines.push(
+          `| ${res.trackName} | ${res.racerType} | ${res.durationSec}s | ${res.nRacers ?? '—'}` +
+          ` | ${exact.toFixed(1)}% | ${top5.toFixed(1)}% | ${gap.toFixed(1)}% |`
+        );
+      }
+      lines.push('');
+
+      // Per-row breakdown: for each combo that has row data, emit a separate table
+      const withRowData = withFairChance.filter((r) => (r.avgNaturalness?.fairChanceByRow?.length ?? 0) > 1);
+      if (withRowData.length > 0) {
+        lines.push('### Per-Starting-Row Breakdown');
+        lines.push('');
+        lines.push(
+          'Does the designation (targetRank 1–5) cash in equally for front-row and back-row racers?  \n' +
+          'n = total B1-racer appearances from that row across all 10 races.  \n' +
+          'exact% and top5% are the hit rates for that starting row only.'
+        );
+        lines.push('');
+        // Collect all row indices seen across all combos for the header
+        const allRowIdxs = [...new Set(withRowData.flatMap((r) => r.avgNaturalness.fairChanceByRow.map((rd) => rd.row)))].sort((a, b) => a - b);
+        const rowHdrs = allRowIdxs.flatMap((ri) => [`R${ri} exact%`, `R${ri} top5%`, `R${ri} n`]);
+        lines.push(`| Track | Racer | Dist | ${rowHdrs.join(' | ')} |`);
+        lines.push(`|-------|-------|------|${allRowIdxs.map(() => '---|---|---').join('')}|`);
+        for (const res of withRowData) {
+          const rowMap = new Map(res.avgNaturalness.fairChanceByRow.map((rd) => [rd.row, rd]));
+          const cells  = allRowIdxs.flatMap((ri) => {
+            const rd = rowMap.get(ri);
+            if (!rd) return ['—', '—', '0'];
+            return [
+              rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + '%' : '—',
+              rd.top5Rate  != null ? (rd.top5Rate  * 100).toFixed(0) + '%' : '—',
+              String(rd.b1Count),
+            ];
+          });
+          lines.push(`| ${res.trackName} | ${res.racerType} | ${res.durationSec}s | ${cells.join(' | ')} |`);
+        }
+        lines.push('');
+      }
+    }
   }
 
   return lines.join('\n');
@@ -1959,6 +2100,8 @@ if (isMain) {
 
       for (const durationSec of DURATION_VARIANTS) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
+        // Phase-1: use topology-specific racer count (open vs closed).
+        const nRacersForCombo = isOpen ? N_RACERS_OPEN : N_RACERS_CLOSED;
         // Open tracks: natural speed = BASE_SPEED_MEAN / ssf so traversal time is track-length-invariant.
         // Closed tracks: closedSsf normalizes speed by path length — same pattern as open ssf.
         const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
@@ -1969,13 +2112,13 @@ if (isMain) {
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
         // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
         const effectiveWidth       = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
-        const comboLayout          = computeRacerLayout(effectiveWidth, N_RACERS, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+        const comboLayout          = computeRacerLayout(effectiveWidth, nRacersForCombo, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
         const comboEffDisplaySize  = comboLayout.spriteSize;
         const comboAutoScale       = comboEffDisplaySize / displaySize;
         const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
         const totalRows            = comboLayout.rowCount;
         const rowSizes             = comboLayout.layout;
-        const comboRowLayout       = computeEvenRowLayout(N_RACERS, totalRows);
+        const comboRowLayout       = computeEvenRowLayout(nRacersForCombo, totalRows);
 
         process.stdout.write(
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
@@ -2022,7 +2165,7 @@ if (isMain) {
             finishT,
             targetSeconds: durationSec,
             seed,
-            nRacers: N_RACERS,
+            nRacers: nRacersForCombo,
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: {
               ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
@@ -2033,6 +2176,32 @@ if (isMain) {
               ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
               : null,
           });
+          // Step 1: fair-chance placement metrics (requires race-plan target ranks)
+          if (raceSollRankMap) {
+            const b1Entries = [...raceSollRankMap.entries()].filter(([, sr]) => sr <= 5);
+            let fcExact = 0, fcTop5 = 0;
+            // Gap B: per-starting-row breakdown (rowIndex → {b1Count, exactHits, top5Hits})
+            const fcByRow = new Map();
+            for (const [racerIdx, sollRank] of b1Entries) {
+              const rr = result.find((x) => x.racerIndex === racerIdx);
+              if (!rr) continue;
+              const row = rr.startRowIndex;
+              if (!fcByRow.has(row)) fcByRow.set(row, { b1Count: 0, exactHits: 0, top5Hits: 0 });
+              const rd = fcByRow.get(row);
+              rd.b1Count++;
+              if (rr.finalRank === sollRank) { fcExact++; rd.exactHits++; }
+              if (rr.finalRank <= 5) { fcTop5++; rd.top5Hits++; }
+            }
+            result.fairChanceB1Count   = b1Entries.length;
+            result.fairChanceExactHits  = fcExact;
+            result.fairChanceTop5Hits   = fcTop5;
+            result.fairChanceByRow      = fcByRow;
+          } else {
+            result.fairChanceB1Count   = 0;
+            result.fairChanceExactHits  = 0;
+            result.fairChanceTop5Hits   = 0;
+            result.fairChanceByRow      = new Map();
+          }
           raceResults.push(result);
           if (COMEBACK_ANALYSIS) result._seed = seed;
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
@@ -2092,14 +2261,56 @@ if (isMain) {
           tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
+          honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
+          // Lapping instrumentation (closed tracks):
+          maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
+          maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
+          honestSameLapFraction:   (() => {
+            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
+            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;
+          })(),
+          honestCrossLapFraction:  (() => {
+            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
+            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestCrossLapFrames ?? 0), 0) / tot : null;
+          })(),
           overlapResolutionFrames: raceResults.reduce((s, r) => s + (r.liteOverlapResolutionFrames ?? 0), 0) / raceResults.length,
           zigzagScore:             raceResults.reduce((s, r) => s + (r.liteZigzagScore ?? 0), 0) / raceResults.length,
           lateralSpeedScore:       raceResults.reduce((s, r) => s + (r.liteLatSpeedScore ?? 0), 0) / raceResults.length,
           brakeRate:               raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) / raceResults.length,
           stableOvertakes:         raceResults.reduce((s, r) => s + (r.liteStableOvertakes ?? 0), 0) / raceResults.length,
           outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
+          // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
+          fairChanceExactRate:     raceResults.length > 0
+            ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceExactHits / r.fairChanceB1Count : 0), 0) / raceResults.length
+            : null,
+          fairChanceTop5Rate:      raceResults.length > 0
+            ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceTop5Hits  / r.fairChanceB1Count : 0), 0) / raceResults.length
+            : null,
+          fairChanceB1Count:       raceResults.reduce((s, r) => s + (r.fairChanceB1Count ?? 0), 0) / raceResults.length,
+          // Gap B: per-row fair-chance aggregated across all races (sorted by rowIndex)
+          fairChanceByRow: (() => {
+            const rowSet = new Set(raceResults.flatMap((r) => r.fairChanceByRow ? [...r.fairChanceByRow.keys()] : []));
+            return [...rowSet].sort((a, b) => a - b).map((row) => {
+              let b1Count = 0, exactHits = 0, top5Hits = 0;
+              for (const r of raceResults) {
+                const rd = r.fairChanceByRow?.get(row);
+                if (!rd) continue;
+                b1Count  += rd.b1Count;
+                exactHits += rd.exactHits;
+                top5Hits  += rd.top5Hits;
+              }
+              return {
+                row,
+                b1Count,
+                exactHits,
+                top5Hits,
+                exactRate: b1Count > 0 ? exactHits / b1Count : null,
+                top5Rate:  b1Count > 0 ? top5Hits  / b1Count : null,
+              };
+            });
+          })(),
         } : null;
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness });
+        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, nRacers: nRacersForCombo });
 
         // Phase-3B: COMEBACK analysis report (printed per combo when flag active)
         if (COMEBACK_ANALYSIS && raceResults.some((r) => r.comebackDiag)) {
@@ -2164,9 +2375,20 @@ if (isMain) {
                 `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
                 `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
               );
+              const fcExact = avgNaturalness.fairChanceExactRate;
+              const fcTop5  = avgNaturalness.fairChanceTop5Rate;
+              if (fcExact != null) {
+                console.log(
+                  `     FairChance: B1exact=${(fcExact * 100).toFixed(1)}%` +
+                  `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
+                  `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`
+                );
+              }
             }
+            // LateralQ — printed for open tracks in this block (closed tracks: printed in block below)
             console.log(
               `     LateralQ: overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
+              `  honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
               `  resolution=Ø${(avgNaturalness.overlapResolutionFrames ?? 0).toFixed(1)}fr` +
               `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
               `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
@@ -2196,6 +2418,40 @@ if (isMain) {
               );
             }
           }
+        }
+
+        // Gap A + Gap B + lapping: for CLOSED tracks, emit LateralQ and FairChance here
+        // (open tracks already printed these inside the isOpen block above)
+        if (!isOpen && avgNaturalness) {
+          const sameLapPct  = avgNaturalness.honestSameLapFraction  != null ? (avgNaturalness.honestSameLapFraction  * 100).toFixed(1) + '%' : '—';
+          const crossLapPct = avgNaturalness.honestCrossLapFraction != null ? (avgNaturalness.honestCrossLapFraction * 100).toFixed(1) + '%' : '—';
+          const maxSpreadLaps = avgNaturalness.maxRealSpreadMax?.toFixed(3) ?? '—';
+          console.log(
+            `     LateralQ: honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
+            `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
+            `  maxSpread=${maxSpreadLaps}laps  sameLap=${sameLapPct}  crossLap=${crossLapPct}`
+          );
+          if (RACE_PLAN_ACTIVE) {
+            const fcExact = avgNaturalness.fairChanceExactRate;
+            const fcTop5  = avgNaturalness.fairChanceTop5Rate;
+            if (fcExact != null) {
+              console.log(
+                `     FairChance: B1exact=${(fcExact * 100).toFixed(1)}%` +
+                `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
+                `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`
+              );
+            }
+          }
+        }
+        // FairChance per-row breakdown (all tracks, when race-plan active)
+        if (RACE_PLAN_ACTIVE && avgNaturalness?.fairChanceByRow?.length > 0) {
+          const rowParts = avgNaturalness.fairChanceByRow.map((rd) =>
+            `R${rd.row}:` +
+            `exact=${rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + '%' : '—'}` +
+            `/top5=${rd.top5Rate != null ? (rd.top5Rate * 100).toFixed(0) + '%' : '—'}` +
+            `(n=${rd.b1Count})`
+          );
+          console.log(`     FairChance by row: ${rowParts.join('  ')}`);
         }
 
         // v4 diagnostics: per-threshold average crossing time + physical overtake counts
