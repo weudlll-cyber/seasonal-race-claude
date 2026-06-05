@@ -632,6 +632,38 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 ---
 
+## Physics — Open Issues
+
+### P-1 — Longitudinal overlap during passing on open tracks *(backlogged 2026-06-05)*
+
+**Symptom:** In open-track races with ≥20 racers, planes and other racers visibly cross/stack during overtaking events. Visible in top-down view — not an illusion.
+
+**Root cause:** `speedBrakeYThreshold` (= 0.18) and `avoidanceDistance` (= 0.18) are coupled to the same value. When two racers are more than 80.8 px apart laterally (`|dY| > 0.18`), neither the speed brake nor the avoidance force fires. Rubber-band boost (+10%) exceeds the speed-brake reduction (−5.5%), so trailers continue closing the gap and `dT → 0`. Free-lane separation pushes passing racers to adjacent lateral slots; at `dT = 0`, rendered longitudinal bodies (31.7 px at N=80 for plane) fully overlap. On screen at the camera zoom used mid-race (~2.8× OVERVIEW), this is ≈89 px of visible body overlap per passing pair. With 80 racers and brakeRate ≈93%, multiple such passes happen simultaneously.
+
+**Pre-existing:** Exists on both master and current branch. Branch bodies are SMALLER than master (31.7 vs 35.1 px at N=80), so the branch is slightly better. The body-sizing rebuild (feat/closed-track-overview-normalization) did NOT introduce or worsen this.
+
+**Fix direction:** Decouple `speedBrakeYThreshold` from `avoidanceDistance`. Add a longitudinal-separation mechanism that works at all `|dY|` values (not gated by the lateral threshold). This is a **PHYSICS** change.
+
+**Impact on sims:** Targeted sweep only — specifically low/medium N on wide open tracks (e.g. Space Sprint × plane × N=9, 20, 40). The full 8-parameter sweep does NOT need to be re-run; the fairness metric (win rate distribution) is not affected by rendering or passing overlap.
+
+**Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
+
+### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05)*
+
+The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 px lateral, ~3.9 px longitudinal). The physics never allows centers that close. Real visual overlap at `dT = 0` (31.7 px body) is invisible to the metric — it reported 0% while ~89 px on-screen overlap was occurring.
+
+**Fix direction:** Add per-axis body-extent checks to the sim:
+1. **Longitudinal overflow at separation floor:** `(bfY/bfX) × bodyNarrow > physSlot`
+2. **Lateral overflow:** `bodyNarrow > physSlot` (currently ≈0)
+3. **Dead-zone guard:** `physSlot / trackWidth > avoidanceDistance`
+4. **Closed-track overlap coverage:** `liteOverlapRate` currently only runs on open tracks
+
+These are sim metrics additions — no code change in the race engine, no sweep re-run needed.
+
+**Reference:** `reports/closed-track-overview/14-full-diagnosis.md` §Q8, `reports/closed-track-overview/15-topdown-overlap.md`
+
+---
+
 ## Known Limitations — Deliberately Accepted
 
 - **SEC-2 — Race state manipulation via React DevTools** *(audit-2026-04-29, Severity: High — accepted)*
