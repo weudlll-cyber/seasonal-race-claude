@@ -81,6 +81,8 @@ Runs 50 races on all track×racer×duration combos. Writes two files to `client/
 node scripts/sim-fairness.mjs \
   --races=100          # races per track×racer×duration combo (default: 50)
   --racers=40          # racers per race (default: 40)
+  --openRacers=60      # racers for open-track combos (overrides --racers for open tracks)
+  --closedRacers=40    # racers for closed-track combos (overrides --racers for closed tracks)
   --out=client/tmp     # output directory (default: client/tmp)
   --track=river-run    # run only this track (optional filter)
   --racer=horse        # run only this racer type (optional filter)
@@ -274,15 +276,65 @@ Writes per-race JSON snapshots at 0.0s, 0.2s, 0.4s, 0.6s, 0.8s, 1.0s, 2.0s, 5.0s
 
 ---
 
-### overlapRate
+### overlapRate (old center-proximity metric)
 
-**Formula:** Fraction of racer-pair-frames where `|dY| < 0.08` AND `|dT| < 0.03` (both laterally and longitudinally inside the collision zone).
+**Formula:** Fraction of racer-pair-frames where `|dT| < 0.10 × bodyFillY × displaySize / pathLengthPx` AND `|dY| < 0.10 × bodyFillX × displaySize / trackWidth`. Thresholds are 10% of each body-fill diameter, converting to normalized track coordinates.
 
-**What it measures:** How often racers are physically overlapping. Persistent overlap means avoidance is not working.
+**What it measures:** Whether any pair of racer *centers* are nearly coincident — roughly within 3–4 px in both axes simultaneously.
 
-**Good:** Lower is better. No hard cutoff, but higher overlap is penalized in Phase 2 scoring.
+**Good:** Lower is better. No hard cutoff.
 
-**Limitations:** Threshold values (0.08, 0.03) are in normalized track coordinates. The meaning is track-width-dependent — the same numeric overlap rate can look different on wide vs. narrow tracks.
+**Limitations — IMPORTANT:** This metric is **blind to rendered-body overlap during overtaking** (Lesson 126). Physics keeps centers at least `physSlot` apart (≈30–40 px), so the threshold (~3–4 px) is never reached under normal avoidance. The metric reads 0% even while racers' *rendered bodies* (which can be 20–40 px long) visually cross during a pass. Use `honestOverlapRate` to detect real body-box intersections.
+
+---
+
+### honestOverlapRate (new body-extent metric)
+
+**Formula:** Fraction of active racer-pair-frames (after 4 s warmup) where both of the following hold simultaneously:
+- Longitudinal gap `< effectiveDisplaySize × bodyFillY` (rendered bodies touch or overlap lengthwise)
+- Lateral gap `< effectiveDisplaySize × bodyFillX` (rendered bodies touch or overlap laterally)
+
+For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so same-lap adjacent pairs at the lap seam are correctly detected.
+
+**What it measures:** Whether the rendered body boxes of two racers actually intersect — the same criterion a viewer would use to judge visual stacking. Catches overtaking overlap that the old metric misses.
+
+**Good:** Lower is better. Typical values: open tracks 0.5–4% (dragon-type wide bodies); closed short ovals 5–8% (pack crowding — see Known Limitations). A value of 0% means no body-box intersections at any moment after warmup.
+
+**Limitations:** A non-zero value on *closed tracks* is almost always **same-lap pack crowding** (many bodies on a short perimeter), not lapping — measured directly: max progress spread in 60s homogeneous races is 0.2–0.55 laps, well below the 1.0-lap threshold for a genuine lap-over. The open-track counterpart (Lesson P-1 BACKLOG) is actual body-crossing during overtaking and is a physics bug under investigation.
+
+---
+
+### fairChanceExactRate / fairChanceTop5Rate / fairChanceByRow
+
+**Formula:**
+- `fairChanceExactRate`: of all B1-assigned racers (targetRank 1–5) across all races in the combo, what fraction finished at their *exact* assigned rank?
+- `fairChanceTop5Rate`: same denominator, what fraction finished *anywhere* in positions 1–5?
+- `fairChanceByRow`: same rates broken down by each racer's **starting row**. Answers whether back-row designated racers reach top-5 as often as front-row ones.
+
+**What it measures:** Whether the race plan's B1 designation actually delivers racers to the top positions, and whether the row-blind lottery is truly row-blind in practice.
+
+**Good:** `fairChanceTop5Rate` ~60% (measured across 66 combos at N=50–60); `fairChanceExactRate` ~18% (stochastic noise from re-rolls means racers land near but not exactly at their assigned rank). `fairChanceByRow` should be flat across rows — a systematic drop for back rows would indicate the P-controller cannot overcome the start deficit.
+
+**Requires:** `--race-plan=true`. Returns null when race plan is inactive.
+
+**Limitations:** At N=10 races, per-row `n` is very small (often 1–5 racers). The per-row rates are sampling-noisy — N=50 or more is needed before interpreting row-to-row differences as structural.
+
+---
+
+### maxRealSpread / honestSameLapFraction / honestCrossLapFraction (closed tracks only)
+
+**Formula:**
+- `maxRealSpread`: maximum `(t_leading − t_trailing)` observed across all active racer pairs and all frames during the race, in laps (1.0 = one full lap).
+- `honestSameLapFraction`: fraction of honest-overlap events where `|ra.t − rb.t| < 1.0` (same lap or seam-adjacent).
+- `honestCrossLapFraction`: fraction where `|ra.t − rb.t| ≥ 1.0` (genuine lapping: leader is 1+ full lap ahead).
+
+**What it measures:** Whether lapping actually occurs, and whether closed-track honest overlap comes from same-lap crowding or genuine lap-crossing events.
+
+**Good:** In 60-second homogeneous-field races, `maxRealSpread` < 1.0 and `honestCrossLapFraction` = 0% (confirmed across all tested combos). This means all closed-track honest overlap is same-lap crowding.
+
+**Requires:** Closed track (`isOpen = false`). Returns 0 / null for open tracks.
+
+**Limitations:** Open tracks always show `maxRealSpread = 0` and `honestSameLapFraction = null` — the lapping metrics are meaningless there. Lapping *could* occur on closed tracks if the race is long enough or racer speeds differ greatly; `maxRealSpread ≥ 1.0` would confirm it.
 
 ---
 
@@ -437,6 +489,10 @@ The Dev Screen displays a warning banner when these parameters are changed indiv
 **Catch-up tuning without `speedBonusMult`.** The sim always runs with `speedBonusMult` active. The baseline (bonus off) is not tested. Results apply only to the bonused configuration.
 
 **Track-specific effects in Phase 1.** Phase 1 scoring aggregates across three tracks. A combo that is excellent on two tracks and broken on one may still survive Phase 1 if the aggregate score is high enough. Always check per-track p-values in Phase 2.
+
+**`liteOverlapRate` is blind to rendered-body overlap.** The center-proximity metric reads ~0% in all tested conditions because physics prevents centers from reaching its threshold (~3–4 px). Real visual stacking during overtakes (bodies crossing lengthwise) is invisible to it. Use `honestOverlapRate` for body-level overlap measurement (Lesson 126).
+
+**Closed-track `honestOverlapRate` is pack crowding, not lapping.** Short closed ovals (path ≤ 3300 px) produce 5–8% honest overlap in 60s homogeneous fields because 40 racers occupy 30–40% of the perimeter by body length. Direct measurement confirms lapping does not occur: `maxRealSpread` is 0.2–0.55 laps (well below 1.0) and `honestCrossLapFraction` is 0% in all tested combos.
 
 ### Start-phase warmup exclusion (first 4 seconds)
 
