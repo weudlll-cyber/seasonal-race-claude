@@ -475,14 +475,17 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   homeForceReductionOnOverlap: 0.300000
    *   avoidanceDistance:           0.180000
    *   speedBrakeFactor:            0.945000
-   *   speedBrakeTMultiplier:       0.500000  (reduced from 1.5 — open-track only experiment 2026-06-05)
-   *   speedBrakeYThreshold:        0.060000  (reduced from 0.18 — open-track only experiment 2026-06-05)
+   *   speedBrakeTMultiplier:       1.500000  (restored — avoidanceActive zone, all tracks)
+   *   speedBrakeYThreshold:        0.180000  (restored — avoidanceActive zone, all tracks)
+   *   brakeMatchActivationTMultiplier: 0.500000  (new — brake-to-match zone, open tracks only)
+   *   brakeMatchActivationYThreshold:  0.060000  (new — brake-to-match zone, open tracks only)
    *
-   * speedBrakeTMultiplier and speedBrakeYThreshold control when brake-to-match activates on open
-   * tracks. These values are now only applied when config.isOpen=true (set by callers per race).
-   * On closed tracks (config.isOpen=false), the entire speedBrakeSet / brakeMatchCaps block is
-   * skipped — closed-track pack dynamics are handled by avoidance forces alone (report 12).
-   * To revert to pre-experiment baseline: speedBrakeTMultiplier=1.5, speedBrakeYThreshold=0.18.
+   * Two-zone architecture (report 13): avoidanceActive (floor brake) uses the original wide
+   * zone on ALL tracks; brake-to-match cap uses the narrow zone on OPEN TRACKS ONLY.
+   * Report-12 isOpen guard proved that disabling avoidanceActive on closed tracks causes
+   * closed-track regressions (Dirt Oval × dragon p=0.285→0.013, motorbike p=0.686→0.008).
+   * To revert to pre-experiment baseline: remove brakeMatchActivation* params; set
+   *   speedBrakeTMultiplier=1.5, speedBrakeYThreshold=0.18 (already restored).
    *
    * Other parameters are strongly interdependent. Changing one
    * without re-sweeping the others will likely degrade race quality.
@@ -506,8 +509,20 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   homeForceReductionOnOverlap: 0.3,
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
-  speedBrakeTMultiplier: 0.5,
-  speedBrakeYThreshold: 0.06,
+  // speedBrakeTMultiplier / speedBrakeYThreshold — avoidanceActive (floor brake 0.945) zone.
+  // Applied to ALL tracks (open and closed) when racers are side-by-side.
+  // Restored to Phase-5 calibrated values (report 13): report-12 isOpen guard proved that
+  // disabling avoidanceActive on closed tracks causes closed-track fairness regressions.
+  speedBrakeTMultiplier: 1.5,
+  speedBrakeYThreshold: 0.18,
+  // brakeMatchActivationTMultiplier / brakeMatchActivationYThreshold — brake-to-match zone.
+  // Separate narrow activation zone for the brake-to-match cap computation.
+  // Applied ONLY on OPEN tracks (config.isOpen !== false).
+  // Near-contact values (report 13): activates when within ~0.5 sprite-widths longitudinally
+  // and ~6% half-track-width laterally. Breaks the open-track chain lock without affecting
+  // the avoidanceActive floor-brake zone used for pack stabilization on all tracks.
+  brakeMatchActivationTMultiplier: 0.5,
+  brakeMatchActivationYThreshold: 0.06,
   // Brake-to-match tuning (Step 1 — overtaking rebuild).
   // speedMatchMinDifferential: fractional speed excess above which brake-to-match engages.
   //   0.005 = engage only when trailer is >0.5% faster than leader.
