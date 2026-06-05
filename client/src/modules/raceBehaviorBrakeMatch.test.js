@@ -332,6 +332,77 @@ describe('brake-match state — stale-index guard', () => {
   });
 });
 
+// ── leader-brake fix: cap accounts for leader's floor brake ──────────────────
+//
+// Proved mechanism (report 09): cap was computed from leaderRawSpeed, but the
+// leader also advances at leaderRawSpeed × 0.945 (floor brake when avoidanceActive).
+// Trailer was capped at leaderRawSpeed → 5.8% bypass every frame.
+// Fix: leaderFwdSpeed = leaderRawSpeed × min(speedBrakeFactor, leader.brakeMatchFactor).
+
+describe('brake-match — cap accounts for leader own floor brake (pack-cascade fix)', () => {
+  // Chain: r0 (slow, far ahead) → r1 (medium) → r2 (fastest trailer).
+  // r0 is far enough ahead that r2 is NOT in r0's brake zone; only r1-r0 and r2-r1 pairs fire.
+  function makeChain() {
+    const r0 = makeRacer({ index: 0, t: 0.504, baseSpeed: 1.0e-4 }); // front, slow
+    const r1 = makeRacer({ index: 1, t: 0.5015, baseSpeed: 1.1e-4 }); // middle
+    const r2 = makeRacer({ index: 2, t: 0.5, baseSpeed: 1.3e-4 }); // trailer, fast
+    return [r0, r1, r2];
+  }
+
+  it('first frame: r1 enters brake zone of r0, r1.avoidanceActive becomes true', () => {
+    const [r0, r1, r2] = makeChain();
+    applyRacerBehavior([r0, r1, r2], cfgFrozen);
+    expect(r1.avoidanceActive).toBe(true);
+    expect(r1.brakeMatchFactor).toBeLessThan(1.0);
+  });
+
+  it('second frame: r2 cap uses r1 braked speed (not r1 raw speed)', () => {
+    const [r0, r1, r2] = makeChain();
+    // Frame 1: establishes r1.avoidanceActive=true and r1.brakeMatchFactor
+    applyRacerBehavior([r0, r1, r2], cfgFrozen);
+    const r1BrakeFactor = r1.brakeMatchFactor; // ~0.908 = r0.baseSpeed/r1.baseSpeed × 0.999
+    expect(r1BrakeFactor).toBeLessThan(1.0);
+
+    // Frame 2: r2's cap should use r1.braked speed
+    applyRacerBehavior([r0, r1, r2], cfgFrozen);
+
+    const leaderBrake = Math.min(cfgFrozen.speedBrakeFactor, r1BrakeFactor);
+    const expected = computeBrakeMatchFactor(
+      1.1e-4 * leaderBrake, // r1.baseSpeed × leaderBrake
+      1.3e-4, // r2.baseSpeed
+      cfgFrozen.speedMatchMinDifferential,
+      cfgFrozen.speedMatchSafetyMargin
+    );
+    expect(r2.brakeMatchFactor).toBeCloseTo(expected, 6);
+  });
+
+  it('second frame cap is tighter than first frame cap (accounts for leader brake)', () => {
+    const [r0, r1, r2] = makeChain();
+    // Frame 1: r2 cap ignores r1 brake (r1 not yet avoidanceActive at cap-compute time)
+    applyRacerBehavior([r0, r1, r2], cfgFrozen);
+    const cap1 = r2.brakeMatchFactor;
+    // Frame 2: r2 cap uses r1 braked speed → tighter cap (lower brakeMatchFactor)
+    applyRacerBehavior([r0, r1, r2], cfgFrozen);
+    const cap2 = r2.brakeMatchFactor;
+    expect(cap2).toBeLessThan(cap1);
+  });
+
+  it('cap uses raw leader speed when leader is NOT avoidanceActive', () => {
+    // Isolated pair: leader not in any brake zone → leaderBrake=1.0
+    const [trailer, leader] = makePair(1.2e-4, 1.0e-4);
+    applyRacerBehavior([trailer, leader], cfgFrozen);
+    // leader.avoidanceActive = false (leader has no leader ahead → not in speedBrakeSet)
+    expect(leader.avoidanceActive).toBe(false);
+    const expected = computeBrakeMatchFactor(
+      1.0e-4, // raw speed, no discount
+      1.2e-4,
+      cfgFrozen.speedMatchMinDifferential,
+      cfgFrozen.speedMatchSafetyMargin
+    );
+    expect(trailer.brakeMatchFactor).toBeCloseTo(expected, 6);
+  });
+});
+
 // ── adjacent-collision prevention (min-diff guard) ────────────────────────────
 
 describe('brake-match state — min-diff guard prevents unnecessary cap', () => {

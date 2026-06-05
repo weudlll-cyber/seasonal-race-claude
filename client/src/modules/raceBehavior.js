@@ -38,7 +38,9 @@ const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the race
  *   brake = min(computeEffectiveBrakeFactor(...), computeBrakeMatchFactor(...))
  * so the warmup ramp and the cap interact correctly (Flag 3, report 06).
  *
- * @param {number} leaderFwdSpeed  leader's effective forward speed (no brake term)
+ * @param {number} leaderFwdSpeed  leader's ACTUAL expected advance speed — raw speed × the
+ *   leader's own effective brake (speedBrakeFactor floor when avoidanceActive, else 1.0).
+ *   Callers must multiply by the leader's brake BEFORE passing to this function.
  * @param {number} trailerDenom    trailer's forward speed denominator (no brake term)
  * @param {number} minDifferential fractional excess above which cap engages (e.g. 0.005)
  * @param {number} safetyMargin    fractional undercut below exact leader speed (e.g. 0.001)
@@ -339,7 +341,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
         const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
         const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-        const leaderFwdSpeed =
+        const leaderRawSpeed =
           (leader.baseSpeed ?? 0) *
           boostL *
           (leader.trajectoryMult ?? 1.0) *
@@ -351,8 +353,17 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           (trailer.trajectoryMult ?? 1.0) *
           (trailer.areaBonusMult ?? 1.0) *
           (trailer.rubberBandMult ?? 1.0);
+        // Account for the leader's own effective brake so the cap targets the leader's
+        // ACTUAL advance, not its raw speed. Primary bypass mechanism (report 09): when
+        // the leader is avoidanceActive, it advances at rawSpeed × 0.945 (floor brake),
+        // but the old cap allowed the trailer to advance at rawSpeed — 5.8% bypass.
+        // Using speedBrakeFactor as the floor approximation (exact after 3s warmup;
+        // slightly conservative during warmup when effectiveBrakeFactor > speedBrakeFactor).
+        const leaderBrake = leader.avoidanceActive
+          ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+          : 1.0;
         const cap = computeBrakeMatchFactor(
-          leaderFwdSpeed,
+          leaderRawSpeed * leaderBrake,
           trailerDenom,
           config.speedMatchMinDifferential ?? 0.005,
           config.speedMatchSafetyMargin ?? 0.001

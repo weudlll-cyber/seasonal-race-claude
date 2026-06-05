@@ -520,6 +520,7 @@ export function runSingleRace({
     // but the trailer still out-advances its locked leader for 5 consecutive frames while
     // both remain in the longitudinal brake zone (report 06 §7 metric).
     let brakeMatchFailureCount   = 0;
+    let brakeMatchLeaderBraked   = 0; // bypass events where the leader was itself braked (bmFactor<1)
     const brakeMatchFailState    = new Map(); // pairKey → consecutive qualifying frames
     // stableOvertakes: confirmed lead-swaps (3s+ duration) in 20%–80% of race, per racer
     const SO_CONFIRM_FRAMES      = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
@@ -1004,6 +1005,10 @@ export function runSingleRace({
               const consec = (brakeMatchFailState.get(pairKey) ?? 0) + 1;
               if (consec >= 5) {
                 brakeMatchFailureCount++;
+                // Diagnostic: is the leader avoidanceActive (receiving the floor brake)?
+                // The primary bypass: cap = leaderRawSpeed but leader advances at
+                // 0.945 × leaderRawSpeed → trailer systematically out-advances leader.
+                if (leader.avoidanceActive) brakeMatchLeaderBraked++;
                 brakeMatchFailState.set(pairKey, 0); // reset after counting event
               } else {
                 brakeMatchFailState.set(pairKey, consec);
@@ -1150,6 +1155,7 @@ export function runSingleRace({
     results.liteBrakeRate                = liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
     results.liteStableOvertakes          = soCount / racers.length;
     results.brakeMatchFailureCount       = brakeMatchFailureCount;
+    results.brakeMatchLeaderBraked       = brakeMatchLeaderBraked;
     // Phase-3A: Δ5s per-racer oscillation metric
     let tmDelta5sMax = 0;
     let tmOscillatingCount = 0;
@@ -2331,6 +2337,7 @@ if (isMain) {
           outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
           // Sum (not average): total pass-through events over all races in this combo.
           brakeMatchFailureCount:  raceResults.reduce((s, r) => s + (r.brakeMatchFailureCount ?? 0), 0),
+          brakeMatchLeaderBraked:  raceResults.reduce((s, r) => s + (r.brakeMatchLeaderBraked ?? 0), 0),
           // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
           fairChanceExactRate:     raceResults.length > 0
             ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceExactHits / r.fairChanceB1Count : 0), 0) / raceResults.length
@@ -2445,7 +2452,7 @@ if (isMain) {
               `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
               `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
               `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
-              `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}` +
+              `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}(leaderBraked=${avgNaturalness.brakeMatchLeaderBraked ?? 0})` +
               `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
               `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
             );
