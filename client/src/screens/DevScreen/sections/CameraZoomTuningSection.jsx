@@ -17,10 +17,11 @@ import {
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
-const CAM_STATES = ['OVERVIEW', 'LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'];
+// OVERVIEW is intentionally excluded: its zoom is set by the "Minimum visible body size"
+// control (overviewTargetScreenPx). The spriteScale field has no effect for OVERVIEW.
+const CAM_STATES = ['LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM'];
 
 const STATE_LABELS = {
-  OVERVIEW: 'Overview',
   LEADER_ZOOM: 'Leader Zoom',
   BATTLE_ZOOM: 'Battle Zoom',
   COMEBACK_ZOOM: 'Comeback Zoom',
@@ -29,12 +30,12 @@ const STATE_LABELS = {
 const PROFILE_FIELDS = [
   {
     key: 'spriteScale',
-    label: 'Sprite scale (×)',
+    label: 'Body size multiplier (×)',
     min: 0.5,
     max: 5.0,
     step: 0.05,
     tip: (v, n) =>
-      `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large. Racer-count-independent.`,
+      `Visible body width multiplier for ${n}. ${v.toFixed(2)}× — relative to the OVERVIEW body size (set by "Minimum visible body size"). 1.0 = same body width as OVERVIEW, 2.0 = twice as wide. Equal for all racer types at the same value.`,
   },
   {
     key: 'trackingTC',
@@ -649,9 +650,9 @@ function CameraZoomTuningSection() {
             className={s.label}
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            OVERVIEW target sprite size (px)
+            Minimum visible body size (px)
             <InfoTooltip
-              text={`Target sprite screen size during OVERVIEW on open tracks. The camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Value: ${config.overviewTargetScreenPx ?? 28}px.`}
+              text={`Minimum visible narrow-body size in screen pixels. Applies to OVERVIEW (sets the camera zoom) and as a floor for all other phases. Measured on the racer's narrower body axis so all racer types appear consistently sized — a giraffe and a duck at the same value have the same cross-track body width. Smaller = more zoomed out in OVERVIEW; larger = more zoomed in. Value: ${config.overviewTargetScreenPx ?? 28}px.`}
             />
           </label>
           <input

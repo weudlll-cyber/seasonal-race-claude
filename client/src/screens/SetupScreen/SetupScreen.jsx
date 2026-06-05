@@ -310,6 +310,26 @@ function SetupScreen() {
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
   const [quickTestCount, setQuickTestCount] = useState(20);
   const [quickTestSeed, setQuickTestSeed] = useState(1);
+  // Racer type selected for Quick Test (null = use quickTrack.defaultRacerTypeId)
+  const [quickTestRacerTypeId, setQuickTestRacerTypeId] = useState(null);
+
+  // Surface-compatible racer types for the currently selected Quick Test track.
+  // Same logic as filteredRacerTypeIds for the main SetupScreen selector.
+  const quickCompatibleRacerTypeIds = useMemo(() => {
+    const allTypes = listAllRacerTypes().filter((t) => t.isActive);
+    if (!quickTrack?.surfaceClasses?.length) return allTypes.map((t) => t.id);
+    const filtered = filterRacerTypesForTrack(allTypes, quickTrack.surfaceClasses, (id) =>
+      getRacerType(id).getSurfaceClasses()
+    );
+    return filtered.map((t) => t.id);
+  }, [quickTrack, racerTypeOverrides]);
+
+  // Reset racer selection when track changes and the selected type is no longer compatible.
+  useEffect(() => {
+    if (quickTestRacerTypeId && !quickCompatibleRacerTypeIds.includes(quickTestRacerTypeId)) {
+      setQuickTestRacerTypeId(null);
+    }
+  }, [quickCompatibleRacerTypeIds, quickTestRacerTypeId]);
 
   function handleStartRace() {
     const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
@@ -349,7 +369,11 @@ function SetupScreen() {
       return geom ? !geom.closed : false;
     })();
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
-    const effectiveTypeId = racerTypeOverride ?? defaultTypeId;
+    // Use the Quick Test racer selector; fall back to track default (backward-compatible).
+    const effectiveTypeId =
+      quickTestRacerTypeId && quickCompatibleRacerTypeIds.includes(quickTestRacerTypeId)
+        ? quickTestRacerTypeId
+        : defaultTypeId;
 
     const needed = Math.max(0, quickTestCount - players.length);
     const existingNames = new Set(players.map((p) => p.name));
@@ -501,6 +525,7 @@ function SetupScreen() {
                       Racer type for this race
                     </label>
                     <select
+                      data-testid="racer-type-select"
                       value={
                         filteredRacerTypeIds.includes(
                           racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
@@ -842,6 +867,52 @@ function SetupScreen() {
                     {getRacerType(t.defaultRacerTypeId ?? 'horse').getEmoji()} {t.name}
                   </button>
                 ))}
+              </div>
+              {/* Racer selector for Quick Test — surface-compatible types only */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: '#aaa',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  Racer:
+                  <select
+                    data-testid="quick-test-racer-select"
+                    value={
+                      quickCompatibleRacerTypeIds.includes(
+                        quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse'
+                      )
+                        ? (quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse')
+                        : (quickCompatibleRacerTypeIds[0] ?? 'horse')
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQuickTestRacerTypeId(
+                        val === (quickTrack?.defaultRacerTypeId ?? 'horse') ? null : val
+                      );
+                    }}
+                    style={{
+                      fontSize: '11px',
+                      padding: '1px 4px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '3px',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {quickCompatibleRacerTypeIds.map((id) => (
+                      <option key={id} value={id}>
+                        {getRacerType(id).getEmoji()} {getRacerTypeLabel(id)}
+                        {id === (quickTrack?.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
                 <label

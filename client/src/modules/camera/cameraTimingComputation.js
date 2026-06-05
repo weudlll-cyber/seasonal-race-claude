@@ -71,7 +71,9 @@ export function computeTimingFromConfig(config) {
   const overviewOffsetPx =
     config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
   const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
-  const overviewClosedTrackZoom = config?.overviewClosedTrackZoom ?? 1.3;
+  // overviewClosedTrackZoom removed 2026-06-04: closed tracks now use referenceSpriteSize
+  // normalization (same formula as open tracks). Field is kept in defaults.js / schema v15
+  // for migration compatibility but is no longer read at runtime.
   const overviewTargetScreenPx = config?.overviewTargetScreenPx ?? 28;
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
@@ -286,7 +288,6 @@ export function computeTimingFromConfig(config) {
     transitionTConvergence,
     overviewOffsetPx,
     overviewCooldownMs,
-    overviewClosedTrackZoom,
     overviewTargetScreenPx,
     leadAheadEnabledByState,
     leadOutEnabledByState,

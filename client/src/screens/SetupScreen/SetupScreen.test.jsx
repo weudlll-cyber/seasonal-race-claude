@@ -101,14 +101,14 @@ describe('SetupScreen — override selector filters inactive racer types', () =>
 
   it('override selector shows all 20 types when no overrides are set', () => {
     renderWithTrackSelected();
-    const select = screen.getByRole('combobox');
+    const select = screen.getByTestId('racer-type-select');
     expect(select.options).toHaveLength(20);
   });
 
   it('override selector omits a type that has been disabled via override map', () => {
     storageSet(KEYS.RACER_TYPE_OVERRIDES, { snail: false });
     renderWithTrackSelected();
-    const select = screen.getByRole('combobox');
+    const select = screen.getByTestId('racer-type-select');
     const optionValues = Array.from(select.options).map((o) => o.value);
     expect(optionValues).not.toContain('snail');
     expect(select.options).toHaveLength(19);
@@ -139,20 +139,20 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
 
   it('racer dropdown shows only 3 air-compatible types for Space Sprint', () => {
     renderWithAirTrack();
-    const select = screen.getByRole('combobox');
+    const select = screen.getByTestId('racer-type-select');
     expect(select.options).toHaveLength(3);
   });
 
   it('racer dropdown includes dragon (air-compatible multi-class type)', () => {
     renderWithAirTrack();
-    const select = screen.getByRole('combobox');
+    const select = screen.getByTestId('racer-type-select');
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).toContain('dragon');
   });
 
   it('racer dropdown excludes horse (not air-compatible)', () => {
     renderWithAirTrack();
-    const select = screen.getByRole('combobox');
+    const select = screen.getByTestId('racer-type-select');
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).not.toContain('horse');
   });
@@ -425,5 +425,132 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
     fireEvent.click(lapBtn);
     // After lap change, duration resets to auto for new lap count
     expect(screen.getByTestId('closed-track-duration-slider')).toBeInTheDocument();
+  });
+});
+
+describe('SetupScreen — Quick Test racer selector', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  // Garden Path (index 3): surfaceClasses: ['grass', 'earth']
+  // Searound    (index 7): surfaceClasses: ['water']
+  // DEFAULT_TRACKS index values may vary; find by id instead.
+  function getTracksWithGeometry(trackIds) {
+    return DEFAULT_TRACKS.map((t) =>
+      trackIds.includes(t.id) ? { ...t, geometryId: `geom-${t.id}` } : t
+    );
+  }
+
+  function renderWithQuickTracks(trackIds = ['garden-path']) {
+    storageSet(KEYS.TRACKS, getTracksWithGeometry(trackIds));
+    renderSetupScreen();
+  }
+
+  function getQuickRacerSelect() {
+    return screen.getByTestId('quick-test-racer-select');
+  }
+
+  function clickQuickTrack(name) {
+    // The quick-test track buttons show emoji + track name
+    const btn = screen.getAllByRole('button').find((b) => b.getAttribute('title') === name);
+    fireEvent.click(btn);
+  }
+
+  it('shows the racer selector in the Quick Test UI', () => {
+    renderWithQuickTracks(['garden-path']);
+    expect(getQuickRacerSelect()).toBeInTheDocument();
+  });
+
+  it('Garden Path (grass/earth): shows only surface-compatible racer types', () => {
+    renderWithQuickTracks(['garden-path']);
+    const select = getQuickRacerSelect();
+    const values = Array.from(select.options).map((o) => o.value);
+    // Garden Path surfaceClasses=['grass','earth']
+    // Racer types with empty surfaceClasses (always included) + those intersecting grass/earth
+    // At minimum: horse (earth,grass), giraffe (sand,earth,grass), elephant (sand,earth,grass),
+    //             snake (sand,earth,grass), boarder (asphalt,cobble,earth), beetle (asphalt,cobble,earth),
+    //             buggy (sand,earth,mud), snowmobile (snow,ice,earth)
+    expect(values).toContain('horse');
+    expect(values).toContain('giraffe');
+    expect(values).toContain('snake');
+    // Water-only racer should NOT appear
+    expect(values).not.toContain('koi');
+    expect(values).not.toContain('dolphin');
+    // Air-only racer should NOT appear
+    expect(values).not.toContain('plane');
+  });
+
+  it('Searound (water): shows only water-compatible racer types', () => {
+    renderWithQuickTracks(['searound']);
+    // Switch quick-test track to Searound
+    clickQuickTrack('Searound');
+    const select = getQuickRacerSelect();
+    const values = Array.from(select.options).map((o) => o.value);
+    // Water-compatible: duck, koi, turtle, manta, dolphin, rocket (air+water)
+    expect(values).toContain('koi');
+    expect(values).toContain('dolphin');
+    expect(values).toContain('manta');
+    // Land-only racer should NOT appear
+    expect(values).not.toContain('horse');
+    expect(values).not.toContain('giraffe');
+  });
+
+  it('default racer for the track is pre-selected (backward-compatible)', () => {
+    renderWithQuickTracks(['garden-path']);
+    clickQuickTrack('Garden Path');
+    const select = getQuickRacerSelect();
+    // Garden Path defaultRacerTypeId is 'snail'; that should be the selected value
+    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    expect(select.value).toBe(gardenPath.defaultRacerTypeId ?? 'horse');
+  });
+
+  it('default option is marked "(default)" in the label', () => {
+    renderWithQuickTracks(['garden-path']);
+    clickQuickTrack('Garden Path');
+    const select = getQuickRacerSelect();
+    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    const defaultOpt = Array.from(select.options).find(
+      (o) => o.value === (gardenPath.defaultRacerTypeId ?? 'horse')
+    );
+    expect(defaultOpt.text).toContain('(default)');
+  });
+
+  it('Quick Test launches with the selected racer type', () => {
+    renderWithQuickTracks(['garden-path']);
+    clickQuickTrack('Garden Path');
+    const select = getQuickRacerSelect();
+    // Pick a non-default compatible racer (horse is compatible with garden-path)
+    fireEvent.change(select, { target: { value: 'horse' } });
+    // Trigger Quick Test
+    const btn = screen.getByTitle(/Auto-fill to/);
+    fireEvent.click(btn);
+    const race = JSON.parse(sessionStorage.getItem('activeRace'));
+    expect(race.racerTypeId).toBe('horse');
+  });
+
+  it('Quick Test with default selection uses track default racer (backward-compat)', () => {
+    renderWithQuickTracks(['garden-path']);
+    clickQuickTrack('Garden Path');
+    // No racer change — just click Quick Test
+    const btn = screen.getByTitle(/Auto-fill to/);
+    fireEvent.click(btn);
+    const race = JSON.parse(sessionStorage.getItem('activeRace'));
+    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    expect(race.racerTypeId).toBe(gardenPath.defaultRacerTypeId ?? 'horse');
+  });
+
+  it('switching to incompatible track resets selection to that track default', () => {
+    renderWithQuickTracks(['garden-path', 'searound']);
+    const select = getQuickRacerSelect();
+    // On Garden Path, pick horse (compatible)
+    fireEvent.change(select, { target: { value: 'horse' } });
+    expect(select.value).toBe('horse');
+    // Switch quick-test track to Searound (horse is not water-compatible)
+    clickQuickTrack('Searound');
+    // Selection should reset to Searound's default racer
+    const searound = DEFAULT_TRACKS.find((t) => t.id === 'searound');
+    expect(getQuickRacerSelect().value).toBe(searound.defaultRacerTypeId ?? 'horse');
   });
 });

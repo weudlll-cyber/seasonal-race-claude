@@ -31,6 +31,10 @@ import {
   getPatternedVariant,
 } from './spriteTinter.js';
 
+// Sleeping long-axis guard threshold (Stage 5). Inert for all 20 current racer types
+// (max ratio 2.88:1). Exported so tests can verify it never fires for current racers.
+export const BODY_LONG_AXIS_MAX_RATIO = 5.0;
+
 const REQUIRED_FIELDS = [
   'id',
   'spriteUrl',
@@ -204,7 +208,25 @@ export class SpriteRacerType {
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * cfg.frameWidth;
-    const scale = ((cfg.displaySize * displaySizeScale) / cfg.frameHeight) * cfg.silhouetteScale;
+    const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+    const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
+    // displaySizeScale is now the body-narrow world-px reference divided by displaySize.
+    // Dividing by bodyFillNarrow converts from body-narrow units to frame units so the
+    // visible narrow body equals displaySize × displaySizeScale in world pixels.
+    //
+    // Sleeping long-axis guard (Stage 5): if a future racer has a visible-body aspect
+    // ratio exceeding BODY_LONG_AXIS_MAX_RATIO, scale up the effective bodyFillNarrow
+    // denominator so the long axis is capped at RATIO × narrow. INERT for all 20 current
+    // racer types — max ratio is 2.88:1 (rocket, bodyFillLong/bodyFillNarrow=0.801/0.278).
+    // Threshold: 5.0. Activate by adding a racer where max(bFX,bFY)/min(bFX,bFY) > 5.0.
+    const aspectRatio = bodyFillLong / bodyFillNarrow;
+    const guardedFillNarrow =
+      aspectRatio > BODY_LONG_AXIS_MAX_RATIO
+        ? bodyFillNarrow * (aspectRatio / BODY_LONG_AXIS_MAX_RATIO)
+        : bodyFillNarrow;
+    const scale =
+      ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / guardedFillNarrow) *
+      cfg.silhouetteScale;
     const dw = cfg.frameWidth * scale;
     const dh = cfg.frameHeight * scale;
 

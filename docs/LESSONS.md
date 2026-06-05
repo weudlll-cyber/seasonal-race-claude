@@ -2250,3 +2250,19 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 4. Only apply the change that matches the live error type. Code-reading is a guide for step 2 prep, not a substitute for step 3 evidence.
 
 **Reference:** `client/e2e/d11-ux-verification.spec.js`, `reports/clean-state-2026-06-04/05-d11-fix-proposal.md` (Verification section). Session 2026-06-04.
+
+---
+
+## Lesson 126 — A Green Metric Only Proves What It Measures
+
+**Context:** feat/closed-track-overview-normalization body-sizing rebuild (2026-06-05). A 7-report investigation into visible racer stacking on Space Sprint × plane was triggered by user screenshots showing planes clearly crossing each other in a top-down orthographic view. The sim's `liteOverlapRate` reported 0% throughout — across all N values (9–80), both master and branch. This was interpreted as "no overlap" in early reports, leading to an incorrect "pulk makes it look dense" explanation (report 14) that was only corrected when the user pointed out that top-down is orthographic and density cannot be an illusion.
+
+The actual mechanism (report 15): rubber-band (+10%) overcomes speed-brake (−5.5%) → dT → 0 during passes → 31.7 px longitudinal body overlap per pair at the crossing moment. The `liteOverlapRate` threshold fires only at ≤3.5 px center gap — physics never allows centers that close. The metric was measuring hard colocations, not rendered-body overlap.
+
+The 91.3% fairness sweep optimized the 8 physics parameters around a metric that was blind to this class of overlap. The parameters are still valid for fairness (win-rate distribution) but the overlap behavior they produce was not what the metric described.
+
+**Insight:** A simulation metric reporting "0%" proves only that the specific condition it checks did not occur, not that the phenomenon you care about is absent. When a sweep validates behavior, confirm the metric actually measures the behavior you care about — not a proxy that differs from it by an order of magnitude (3.5 px threshold vs 31.7 px actual body overlap).
+
+**Consequence:** Before relying on a sim metric for a "no overlap" claim: trace the exact threshold calculation and compare it to the actual rendered body extents. For body overlap: the threshold must use scaled body sizes (bodyNarrow_ref × aspect_ratio), not raw `displaySize × bodyFill`. A metric based on unscaled values can silently miss all real-scale overlap while reporting green.
+
+**Reference:** `reports/closed-track-overview/reports 11–15`, particularly `14-full-diagnosis.md §Q8` and `15-topdown-overlap.md`. Session 2026-06-05.

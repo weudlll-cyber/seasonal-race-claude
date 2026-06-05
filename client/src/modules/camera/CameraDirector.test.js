@@ -137,11 +137,12 @@ describe('CameraDirector', () => {
     expect(isFinite(r.offsetY)).toBe(true);
   });
 
-  it('OVERVIEW state converges to zoom≈1.3, pans to leader (1280px world, closed track)', () => {
+  it('OVERVIEW state converges to zoom≈1.0, pans to leader (1280px world, closed track, no referenceSpriteSize)', () => {
+    // No referenceSpriteSize → fallback to _overviewStateZoom=1.0 (overviewClosedTrackZoom retired).
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.zoom).toBeCloseTo(1.3, 1);
+    expect(cd.zoom).toBeCloseTo(1.0, 1);
     expect(isFinite(cd.offsetX)).toBe(true);
     expect(isFinite(cd.offsetY)).toBe(true);
   });
@@ -594,10 +595,10 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('Start-Pulk OVERVIEW pan: closed track maintains zoom=1.3, does not crash with full-field or top-3 input', () => {
+  it('Start-Pulk OVERVIEW pan: closed track does not crash with full-field or top-3 input', () => {
     // Full-field centroid behavior is tested in panTarget.test.js.
-    // Here we verify CameraDirector plumbs the correct racer set without crashing,
-    // and that OVERVIEW on a closed track always keeps cam.zoom=1.3 (overviewClosedTrackZoom).
+    // Here we verify CameraDirector plumbs the correct racer set without crashing.
+    // No referenceSpriteSize → fallback: targetZoom = _overviewStateZoom = 1.0 (overviewClosedTrackZoom retired).
     const cd = new CameraDirector(1280, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
@@ -610,14 +611,14 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     ];
     const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, startRs, 1280, 720);
-    expect(cd.targetZoom).toBe(1.3); // OVERVIEW: closed track → cam.zoom=1.3 (overviewClosedTrackZoom)
+    expect(cd.targetZoom).toBeCloseTo(1.0, 3);
     expect(isFinite(cd.targetOffsetX)).toBe(true);
 
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000;
     const midRs = { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 };
     cd.update(spreadRacers, 1000, midRs, 1280, 720);
-    expect(cd.targetZoom).toBe(1.3);
+    expect(cd.targetZoom).toBeCloseTo(1.0, 3);
     expect(isFinite(cd.targetOffsetX)).toBe(true);
   });
 });
@@ -710,13 +711,15 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — isOpenTrack OVERVIEW zoom', () => {
-  it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = 1.3 (overviewClosedTrackZoom), not overviewZoom', () => {
+  it('closed track (worldW=1536, isOpenTrack=false): OVERVIEW targetZoom = _overviewStateZoom ≈ 1.0, not overviewZoom', () => {
+    // No referenceSpriteSize → fallback: _ovSnapZoom = _overviewStateZoom = 1.0 (no-config path).
+    // effZoom = 1.0 × bsX = 0.833 → targetZoom = 0.833/bsX = 1.0. Distinct from overviewZoom (0.833).
     const cd = new CameraDirector(1536, 720, false);
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 1000; // prevents transition
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.targetZoom).toBe(1.3);
-    expect(cd.targetZoom).not.toBeCloseTo(1280 / 1536, 2); // must NOT be 0.833
+    expect(cd.targetZoom).toBeCloseTo(1.0, 3);
+    expect(cd.targetZoom).not.toBeCloseTo(1280 / 1536, 2); // must NOT be overviewZoom (0.833)
   });
 
   it('open track (worldW=6000, isOpenTrack=true): OVERVIEW targetZoom = overviewZoom ≈ 0.213', () => {
@@ -777,6 +780,82 @@ describe('CameraDirector — normalized OVERVIEW zoom on open tracks', () => {
 
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     expect(cd.zoom).toBeCloseTo(cd.overviewZoom, 3);
+  });
+});
+
+// ── CameraDirector — normalized OVERVIEW zoom on closed tracks ────────────────
+// L116 extension: closed tracks now use the same referenceSpriteSize normalization as
+// open tracks (overviewTargetScreenPx / (referenceSpriteSize × bsX)). overviewClosedTrackZoom
+// is retired. The on-screen racer size should be equal across all closed tracks at a fixed
+// referenceSpriteSize and overviewTargetScreenPx.
+
+describe('CameraDirector — normalized OVERVIEW zoom on closed tracks', () => {
+  const cfg = {
+    cameraStateProfiles: { OVERVIEW: { spriteScale: 1.0 } },
+    overviewTargetScreenPx: 28,
+  };
+  const racers = [
+    { t: 0.3, x: 300, y: 200, finished: false },
+    { t: 0.2, x: 250, y: 180, finished: false },
+  ];
+  const rs = { raceElapsed: 9000, finishedCount: 0, winner: null, finishT: 1.0 };
+
+  // raceElapsed=1000 < START_PHASE_DURATION=3000ms forces the OVERVIEW transition in the start phase,
+  // same pattern as the open-track normalization tests above.
+  const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+
+  function forceOverviewSnap(cd) {
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 9000, startRs, 1280, 720);
+  }
+
+  it('_overviewSnapZoom is stored for a closed track when referenceSpriteSize > 0', () => {
+    // bsX = 1280/1536. snapZoom = 28 / (30.6 × bsX) ≈ 1.099
+    const cd = new CameraDirector(1536, 720, false, cfg, 30.6);
+    forceOverviewSnap(cd);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    const bsX = 1280 / 1536;
+    const expected = 28 / (30.6 * bsX);
+    expect(cd._overviewSnapZoom).toBeCloseTo(expected, 3);
+  });
+
+  it('effZoom (snapZoom × bsX) is equal across all closed-track world sizes at same referenceSpriteSize', () => {
+    // dirt oval / ice track: worldW=1536; searound: worldW=3072
+    // Both should produce the same effective zoom = 28/referenceSpriteSize ≈ 0.915
+    const refSprite = 30.6;
+    const cd1536 = new CameraDirector(1536, 1024, false, cfg, refSprite);
+    const cd3072 = new CameraDirector(3072, 2048, false, cfg, refSprite);
+    forceOverviewSnap(cd1536);
+    forceOverviewSnap(cd3072);
+    expect(cd1536.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd3072.state).toBe(CAM_STATE.OVERVIEW);
+    const effZoom1536 = cd1536._overviewSnapZoom * (1280 / 1536);
+    const effZoom3072 = cd3072._overviewSnapZoom * (1280 / 3072);
+    expect(effZoom1536).toBeCloseTo(effZoom3072, 3);
+    // Both should equal 28/referenceSpriteSize (the target screen size)
+    expect(effZoom1536).toBeCloseTo(28 / refSprite, 2);
+  });
+
+  it('floor clamps to cam.zoom=1.0 when referenceSpriteSize is very large (full-world view)', () => {
+    // Very large referenceSpriteSize → raw < 1.0 → clamped to floor=1.0 (shows full world)
+    const cd = new CameraDirector(1536, 720, false, cfg, 150);
+    forceOverviewSnap(cd);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    // raw = 28 / (150 × 1280/1536) ≈ 0.224 < 1.0 → floor
+    expect(cd._overviewSnapZoom).toBeCloseTo(1.0, 3);
+  });
+
+  it('targetZoom after OVERVIEW snap reflects normalized formula, not the retired 1.3 multiplier', () => {
+    // Force transition through start-phase so _overviewSnapZoom is committed, then read targetZoom.
+    const cd = new CameraDirector(1536, 720, false, cfg, 30.6);
+    forceOverviewSnap(cd);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    const bsX = 1280 / 1536;
+    const expectedSnap = 28 / (30.6 * bsX);
+    // _setTargets uses _ovSnapZoom × bsX as stateEffZoom → targetZoom = effZoom/bsX = _ovSnapZoom
+    expect(cd.targetZoom).toBeCloseTo(expectedSnap, 2);
+    expect(cd.targetZoom).not.toBeCloseTo(1.3, 1); // old static multiplier is retired
   });
 });
 

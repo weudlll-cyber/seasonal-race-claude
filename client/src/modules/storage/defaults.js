@@ -344,8 +344,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  overviewClosedTrackZoom: 1.3, // zoom multiplier for OVERVIEW pan on closed tracks (1.0 = no pan room)
-  overviewTargetScreenPx: 18, // target sprite screen size (px) for normalized OVERVIEW zoom on open tracks
+  overviewClosedTrackZoom: 1.3, // @deprecated 2026-06-04 — retired; kept in schema v15 for migration compatibility only; not read at runtime
+  overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,
