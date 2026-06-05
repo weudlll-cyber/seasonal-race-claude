@@ -516,6 +516,11 @@ export function runSingleRace({
     let liteLatSpeedFrames       = 0;
     let liteBrakeSum             = 0;   // racer-frames where avoidanceActive=true (after 4s)
     let liteBrakeFrames          = 0;
+    // brakeMatchFailureCount: events where brake-to-match is engaged (brakeMatchFactor<1)
+    // but the trailer still out-advances its locked leader for 5 consecutive frames while
+    // both remain in the longitudinal brake zone (report 06 §7 metric).
+    let brakeMatchFailureCount   = 0;
+    const brakeMatchFailState    = new Map(); // pairKey → consecutive qualifying frames
     // stableOvertakes: confirmed lead-swaps (3s+ duration) in 20%–80% of race, per racer
     const SO_CONFIRM_FRAMES      = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
     const soPairLeader           = new Map(); // pairKey → currentLeaderIdx
@@ -688,7 +693,11 @@ export function runSingleRace({
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
+          // Sim-Browser Parity: mirror the Step-1 min() from index.jsx so the sim
+          // accurately reflects brake-to-match behavior (report 07 parity fix).
+          const brake = r.avoidanceActive
+            ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
+            : 1.0;
           // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
           let tefMult = 1.0;
           if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
@@ -965,6 +974,46 @@ export function runSingleRace({
             }
           }
         }
+        // brakeMatchFailureCount: open-track pass-through telemetry (after 4s warmup).
+        // Fires when brake-to-match is engaged on a trailer AND the trailer still advances
+        // faster than its locked leader for 5 consecutive frames while in the brake zone.
+        // natPrevT (saved at line 676 before the t-update) gives the previous t for delta.
+        if (raceTs > 4000 && isOpen) {
+          for (let ri = 0; ri < racers.length; ri++) {
+            const trailer = racers[ri];
+            if (trailer.finished) continue;
+            if (!(trailer.brakeMatchFactor < 1.0)) { brakeMatchFailState.delete(trailer.index * 10000); continue; }
+            const leaderIdx = trailer.brakeMatchLeaderIndex;
+            if (leaderIdx === -1) continue;
+            let leader = null;
+            for (let lj = 0; lj < racers.length; lj++) {
+              if (racers[lj].index === leaderIdx && !racers[lj].finished) { leader = racers[lj]; break; }
+            }
+            if (!leader) continue;
+            // Longitudinal zone check: same dynamicBrakeT gate as raceBehavior.js.
+            const sizeT = (trailer.visibleWidthPx ?? 0) > 0 && pathLengthPx > 0
+              ? (trailer.visibleWidthPx / pathLengthPx) * behaviorConfig.speedBrakeTMultiplier
+              : 0.014;
+            const dT = Math.abs(trailer.t - leader.t);
+            if (dT > sizeT) { brakeMatchFailState.delete(trailer.index * 10000 + leaderIdx); continue; }
+            // 1-frame advance delta: natPrevT holds t before the t-update this frame.
+            const trailerDelta = trailer.t - (natPrevT.get(trailer.index) ?? trailer.t);
+            const leaderDelta  = leader.t  - (natPrevT.get(leader.index)  ?? leader.t);
+            const pairKey = trailer.index * 10000 + leaderIdx;
+            if (trailerDelta > leaderDelta) {
+              const consec = (brakeMatchFailState.get(pairKey) ?? 0) + 1;
+              if (consec >= 5) {
+                brakeMatchFailureCount++;
+                brakeMatchFailState.set(pairKey, 0); // reset after counting event
+              } else {
+                brakeMatchFailState.set(pairKey, consec);
+              }
+            } else {
+              brakeMatchFailState.delete(pairKey);
+            }
+          }
+        }
+
         // Track max real progress spread (closed tracks, for lapping verification)
         if (!isOpen && raceTs > 4000) {
           let tMin = Infinity, tMax = -Infinity;
@@ -1100,6 +1149,7 @@ export function runSingleRace({
     results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
     results.liteBrakeRate                = liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
     results.liteStableOvertakes          = soCount / racers.length;
+    results.brakeMatchFailureCount       = brakeMatchFailureCount;
     // Phase-3A: Δ5s per-racer oscillation metric
     let tmDelta5sMax = 0;
     let tmOscillatingCount = 0;
@@ -2279,6 +2329,8 @@ if (isMain) {
           brakeRate:               raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) / raceResults.length,
           stableOvertakes:         raceResults.reduce((s, r) => s + (r.liteStableOvertakes ?? 0), 0) / raceResults.length,
           outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
+          // Sum (not average): total pass-through events over all races in this combo.
+          brakeMatchFailureCount:  raceResults.reduce((s, r) => s + (r.brakeMatchFailureCount ?? 0), 0),
           // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
           fairChanceExactRate:     raceResults.length > 0
             ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceExactHits / r.fairChanceB1Count : 0), 0) / raceResults.length
@@ -2393,6 +2445,7 @@ if (isMain) {
               `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
               `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
               `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
+              `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}` +
               `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
               `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
             );
