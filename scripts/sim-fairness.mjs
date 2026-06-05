@@ -498,6 +498,13 @@ export function runSingleRace({
     const honestBodyLat   = effectiveDisplaySize * bodyFillX;   // px
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
+    // Lapping instrumentation (closed tracks only, Part 1 verification):
+    // maxRealSpread: max(t_leading - t_trailing) seen during the race, in laps (1.0 = one full lap).
+    // honestSameLapFrames: honest overlap where |ra.t - rb.t| < 1.0 (same or seam-adjacent lap).
+    // honestCrossLapFrames: honest overlap where |ra.t - rb.t| >= 1.0 (genuine lapping: 1+ lap ahead).
+    let maxRealSpread        = 0;
+    let honestSameLapFrames  = 0;
+    let honestCrossLapFrames = 0;
     let liteZigzagSum            = 0;   // sum of |physicalYVelocity change| per racer-frame (after 4s)
     let liteZigzagFrames         = 0;   // racer-frames counted for zigzag (after 4s warmup)
     let litePrevPhysYVel         = null;// previous physicalYVelocity per racer index
@@ -948,7 +955,27 @@ export function runSingleRace({
             }
             const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
             honestOverlapPairTotal++;
-            if (dT_px < honestBodyLong && dY_px < honestBodyLat) honestOverlapPairFrames++;
+            if (dT_px < honestBodyLong && dY_px < honestBodyLat) {
+              honestOverlapPairFrames++;
+              if (!isOpen) {
+                // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
+                if (Math.abs(ra.t - rb.t) >= 1.0) honestCrossLapFrames++;
+                else honestSameLapFrames++;
+              }
+            }
+          }
+        }
+        // Track max real progress spread (closed tracks, for lapping verification)
+        if (!isOpen && raceTs > 4000) {
+          let tMin = Infinity, tMax = -Infinity;
+          for (const r of racers) {
+            if (r.finished) continue;
+            if (r.t < tMin) tMin = r.t;
+            if (r.t > tMax) tMax = r.t;
+          }
+          if (tMax > tMin) {
+            const spread = tMax - tMin;
+            if (spread > maxRealSpread) maxRealSpread = spread;
           }
         }
         // lateralSpeedScore + brakeRate (after 4 s warmup)
@@ -1065,6 +1092,9 @@ export function runSingleRace({
     results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
     results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
+    results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
+    results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
+    results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
     results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
     results.liteZigzagScore              = liteZigzagFrames > 0 ? liteZigzagSum / liteZigzagFrames : 0;
     results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
@@ -2232,6 +2262,17 @@ if (isMain) {
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
+          // Lapping instrumentation (closed tracks):
+          maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
+          maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
+          honestSameLapFraction:   (() => {
+            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
+            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;
+          })(),
+          honestCrossLapFraction:  (() => {
+            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
+            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestCrossLapFrames ?? 0), 0) / tot : null;
+          })(),
           overlapResolutionFrames: raceResults.reduce((s, r) => s + (r.liteOverlapResolutionFrames ?? 0), 0) / raceResults.length,
           zigzagScore:             raceResults.reduce((s, r) => s + (r.liteZigzagScore ?? 0), 0) / raceResults.length,
           lateralSpeedScore:       raceResults.reduce((s, r) => s + (r.liteLatSpeedScore ?? 0), 0) / raceResults.length,
@@ -2379,12 +2420,16 @@ if (isMain) {
           }
         }
 
-        // Gap A + Gap B: for CLOSED tracks, emit LateralQ and FairChance here
+        // Gap A + Gap B + lapping: for CLOSED tracks, emit LateralQ and FairChance here
         // (open tracks already printed these inside the isOpen block above)
         if (!isOpen && avgNaturalness) {
+          const sameLapPct  = avgNaturalness.honestSameLapFraction  != null ? (avgNaturalness.honestSameLapFraction  * 100).toFixed(1) + '%' : '—';
+          const crossLapPct = avgNaturalness.honestCrossLapFraction != null ? (avgNaturalness.honestCrossLapFraction * 100).toFixed(1) + '%' : '—';
+          const maxSpreadLaps = avgNaturalness.maxRealSpreadMax?.toFixed(3) ?? '—';
           console.log(
             `     LateralQ: honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
-            `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%`
+            `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
+            `  maxSpread=${maxSpreadLaps}laps  sameLap=${sameLapPct}  crossLap=${crossLapPct}`
           );
           if (RACE_PLAN_ACTIVE) {
             const fcExact = avgNaturalness.fairChanceExactRate;
