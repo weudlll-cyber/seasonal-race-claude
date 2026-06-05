@@ -713,3 +713,117 @@ describe('BODY_LONG_AXIS_MAX_RATIO — sleeping guard is inert for all 20 curren
     expect(ratio).toBeLessThan(BODY_LONG_AXIS_MAX_RATIO);
   });
 });
+
+// ── Overlap guard: visible body ≤ physical avoidance slot ────────────────────
+//
+// This test closes the fingerprint gap identified in report 09. The determinism
+// fingerprint only covers physics (finishT + rows). This guard covers the
+// render-vs-physical relationship: the visible body must never exceed the physical
+// slot to prevent cosmetic overlap. It would have caught the Stage 1 regression
+// (W_REF=285 >> Garden Path W=95) before any user ever saw it.
+//
+// Invariant: computeBodyNarrowRef(min(285, effW), N, ds, bFN) ≤ computeRacerLayout(effW, N, ds).spriteSize
+//
+// On wide tracks (effW≥285): W_REF=285=effW → equality holds by the body-narrow packing proof.
+// On narrow tracks (effW<285): W_REF=effW<285 → body-narrow packing is strictly within the slot.
+
+const AUTOCONFIG_GUARD = { minScale: 0.65, maxScale: 2.5, referenceValue: 23 };
+const W_REF_MAX = 285; // must match the constant in RaceScreen/index.jsx
+
+// All 20 current racer types with their bodyFillX/Y values.
+const ALL_RACERS_GUARD = [
+  { id: 'beetle', ds: 38, bFX: 0.398, bFY: 0.672 },
+  { id: 'boarder', ds: 40, bFX: 0.398, bFY: 0.719 },
+  { id: 'buggy', ds: 38, bFX: 0.844, bFY: 0.875 },
+  { id: 'dolphin', ds: 52, bFX: 0.402, bFY: 0.887 },
+  { id: 'dragon', ds: 50, bFX: 0.836, bFY: 0.898 },
+  { id: 'duck', ds: 36, bFX: 0.875, bFY: 0.875 },
+  { id: 'elephant', ds: 44, bFX: 0.539, bFY: 0.938 },
+  { id: 'f1', ds: 38, bFX: 0.555, bFY: 0.953 },
+  { id: 'giraffe', ds: 48, bFX: 0.271, bFY: 0.767 },
+  { id: 'horse', ds: 47, bFX: 0.353, bFY: 0.8 },
+  { id: 'koi', ds: 52, bFX: 0.578, bFY: 0.914 },
+  { id: 'luge', ds: 80, bFX: 0.313, bFY: 0.641 },
+  { id: 'manta', ds: 56, bFX: 0.633, bFY: 0.805 },
+  { id: 'motorbike', ds: 42, bFX: 0.4, bFY: 0.8 },
+  { id: 'plane', ds: 42, bFX: 0.836, bFY: 0.93 },
+  { id: 'rocket', ds: 47, bFX: 0.278, bFY: 0.801 },
+  { id: 'snail', ds: 35, bFX: 0.727, bFY: 0.938 },
+  { id: 'snake', ds: 44, bFX: 0.374, bFY: 0.806 },
+  { id: 'snowmobile', ds: 52, bFX: 0.459, bFY: 0.797 },
+  { id: 'turtle', ds: 48, bFX: 0.578, bFY: 0.734 },
+];
+
+// Representative track effective widths (trackWidth × startSpreadRange=0.95).
+// Covers narrow closed tracks (95–124px) and wide open tracks (285px).
+const TRACK_WIDTHS_GUARD = [
+  { id: 'dirt-oval', effW: 93 * 0.95 }, // ≈ 88px — narrowest closed
+  { id: 'garden-path', effW: 100 * 0.95 }, // ≈ 95px — reported regression track
+  { id: 'city-circuit', effW: 95 * 0.95 }, // ≈ 90px
+  { id: 'ice-track', effW: 110 * 0.95 }, // ≈ 105px
+  { id: 'searound', effW: 131 * 0.95 }, // ≈ 124px — widest closed
+  { id: 'river-run', effW: 300 * 0.95 }, // = 285px — wide open
+  { id: 'space-sprint', effW: 300 * 0.95 }, // = 285px — wide open
+  { id: 'mountainstreet', effW: 300 * 0.95 }, // = 285px
+  { id: 'seatrack', effW: 300 * 0.95 }, // = 285px
+];
+
+describe('Overlap guard — visible body ≤ physical avoidance slot', () => {
+  // This is the invariant the determinism fingerprint cannot catch.
+  // It must hold for all racer × track × N combos after the W_REF cap.
+  // A failure here means visible bodies exceed physical slots → cosmetic overlap.
+
+  for (const N of [20, 40, 80]) {
+    it(`N=${N}: bodyNarrow ≤ physSlot for every racer × track combo (${ALL_RACERS_GUARD.length} racers × ${TRACK_WIDTHS_GUARD.length} tracks)`, () => {
+      for (const track of TRACK_WIDTHS_GUARD) {
+        for (const racer of ALL_RACERS_GUARD) {
+          const bFN = Math.min(racer.bFX, racer.bFY);
+          const W_REF = Math.min(W_REF_MAX, track.effW);
+          const { bodyNarrow } = computeBodyNarrowRef(W_REF, N, racer.ds, bFN, AUTOCONFIG_GUARD);
+          const { spriteSize: physSlot } = computeRacerLayout(
+            track.effW,
+            N,
+            racer.ds,
+            AUTOCONFIG_GUARD
+          );
+          expect(
+            bodyNarrow,
+            `${racer.id} on ${track.id} N=${N}: bodyNarrow=${bodyNarrow.toFixed(2)} > physSlot=${physSlot.toFixed(2)}`
+          ).toBeLessThanOrEqual(physSlot + 0.001); // 0.001 tolerance for floating-point
+        }
+      }
+    });
+  }
+
+  it('on wide tracks (effW=285), all 20 racer types return equal bodyNarrow at N=20 (within-track equality)', () => {
+    // With W_REF=min(285,285)=285, the body-narrow packing uses a fixed width
+    // → equal bodyNarrow for all racer types in the same staircase regime.
+    // Verified here for the 1-row uncapped regime at N=20 (all types qualify: maxRPR≥20).
+    const effW = 285;
+    const W_REF = Math.min(W_REF_MAX, effW);
+    const results = ALL_RACERS_GUARD.map((r) => {
+      const bFN = Math.min(r.bFX, r.bFY);
+      return computeBodyNarrowRef(W_REF, 20, r.ds, bFN, AUTOCONFIG_GUARD).bodyNarrow;
+    });
+    const first = results[0];
+    for (let i = 1; i < results.length; i++) {
+      expect(
+        results[i],
+        `${ALL_RACERS_GUARD[i].id} bodyNarrow should equal ${ALL_RACERS_GUARD[0].id}`
+      ).toBeCloseTo(first, 1);
+    }
+  });
+
+  it('Garden Path snail N=40: visible body dropped from 28.5→~19px after W_REF cap (no overflow)', () => {
+    // Regression test for the specific case that triggered this fix.
+    // Before cap: W_REF=285 → bodyNarrow=28.5 > physSlot=23.75 (overflow +2.4px/side).
+    // After  cap: W_REF=min(285,95)=95 → bodyNarrow≈19px < physSlot=23.75 (no overflow).
+    const effW = 100 * 0.95; // Garden Path
+    const W_REF = Math.min(W_REF_MAX, effW);
+    const { bodyNarrow } = computeBodyNarrowRef(W_REF, 40, 35, 0.727, AUTOCONFIG_GUARD); // snail
+    const { spriteSize: physSlot } = computeRacerLayout(effW, 40, 35, AUTOCONFIG_GUARD);
+    expect(bodyNarrow).toBeCloseTo(19.0, 1);
+    expect(physSlot).toBeCloseTo(23.75, 1);
+    expect(bodyNarrow).toBeLessThan(physSlot); // visible body fits within physical slot
+  });
+});

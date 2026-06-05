@@ -427,9 +427,10 @@ export default function RaceScreen() {
           autoScaleConfig
         );
         displaySizeScale_physical = racerLayout.spriteSize / displaySize;
-        // Render/camera reference: fixed reference width, body-narrow-based
-        // W_REF = 285 matches open tracks (trackW=300 × startSpreadRange=0.95).
-        const W_REF = 285;
+        // Render/camera reference: body-narrow-based, capped at real track width.
+        // W_REF=285 matches wide open tracks; capping at effectiveWidth prevents visible
+        // bodies from exceeding physical avoidance slots on narrow closed tracks.
+        const W_REF = Math.min(285, effectiveWidth);
         const bodyRef = computeBodyNarrowRef(
           W_REF,
           nRacers,
