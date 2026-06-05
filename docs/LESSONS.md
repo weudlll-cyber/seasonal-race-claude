@@ -2266,3 +2266,41 @@ The 91.3% fairness sweep optimized the 8 physics parameters around a metric that
 **Consequence:** Before relying on a sim metric for a "no overlap" claim: trace the exact threshold calculation and compare it to the actual rendered body extents. For body overlap: the threshold must use scaled body sizes (bodyNarrow_ref × aspect_ratio), not raw `displaySize × bodyFill`. A metric based on unscaled values can silently miss all real-scale overlap while reporting green.
 
 **Reference:** `reports/closed-track-overview/reports 11–15`, particularly `14-full-diagnosis.md §Q8` and `15-topdown-overlap.md`. Session 2026-06-05.
+
+---
+
+## Lesson 127 — Closed-Track t-Normalization Must Use One Lap, Not Total Race Distance
+
+**Context:** Phase-1 metrics work (2026-06-05). The honest overlap metric was added with closed-track wrapping via `Math.min(rawDt % finishT, finishT - (rawDt % finishT))`. For closed tracks, `finishT` is the total t-distance for the entire race (e.g. 4.189 for Dirt Oval × horse × 60s — roughly 4 laps). Two racers one lap apart have `rawDt = 1.0`. With `finishT = 4.189` as modulus: `1.0 % 4.189 = 1.0` → `dT_px = 1.0 × 3245 = 3245 px` — far above any body threshold. The metric read 0% on all closed tracks despite computing non-zero pair-frame totals.
+
+The browser's own `tPos(t) = ((t % 1) + 1) % 1` uses modulo-1 (one lap = 1.0 t-unit). The correct wrapping for the sim is the same: normalize to the position within the current lap, then take the shorter arc. With mod-1, two racers at the seam (one at t=0.02, another at t=0.98) correctly show dT_px = 0.04 × pathLengthPx instead of 0.96 × pathLengthPx.
+
+**Fix:**
+```javascript
+// WRONG — finishT is multiple laps, not one
+const wrapDt = Math.min(rawDt % finishT, finishT - rawDt % finishT);
+
+// CORRECT — one lap = 1.0 t-unit, matching the browser's tPos()
+const tPosA = ((ra.t % 1) + 1) % 1;
+const tPosB = ((rb.t % 1) + 1) % 1;
+const dtNorm = Math.abs(tPosA - tPosB);
+dT_px = Math.min(dtNorm, 1 - dtNorm) * pathLengthPx;
+```
+
+**Consequence:** Any sim operation that computes "distance on a closed track" must use modulo-1 (the physical lap unit), not modulo-finishT (the race-completion unit). These are different when finishT > 1.0. The rule of thumb: if you are asking "how far apart are these two racers on the track right now?", use `tPos`; if you are asking "has this racer finished the race?", use `finishT`.
+
+**Reference:** `scripts/sim-fairness.mjs` (honestOverlapRate closed-track wrapping). Session 2026-06-05.
+
+---
+
+## Lesson 128 — A Plausible Mechanism Still Requires Direct Measurement Before Attribution
+
+**Context:** Phase-1 metrics work (2026-06-05). After the closed-track wrapping fix, the honest overlap metric correctly registered 5–8% overlap on short closed ovals (Dirt Oval, Garden Path). The most intuitive explanation was "lapping" — faster racers completing extra laps and physically crossing slower ones from behind. The mechanism is physically possible and the new wrapping code would detect it. The explanation was stated confidently in report 02 without measuring whether lapping actually occurred.
+
+Report 03 added direct measurement: `maxRealSpread` (maximum t-gap between leading and trailing racer, in laps) and `honestSameLapFraction`/`honestCrossLapFraction` (split of overlap events by whether |Δt| ≥ 1.0). Result across 200 races: `maxRealSpread` = 0.215–0.548 laps (never reaches 1.0), `crossLap` = 0.0% in all cases. Lapping does not occur in 60s homogeneous races. The overlap is same-lap pack crowding on short tracks.
+
+**The error pattern:** A new metric started detecting something (overlap on closed tracks). An explanation was proposed (lapping) that (a) matched the code path that could detect it and (b) sounded plausible. But "the metric could detect lapping" ≠ "lapping is occurring." Attribution required a separate measurement. Without it, the fix that was actually correct (closed-track crowding on short perimeters) was obscured by a wrong causal story.
+
+**Consequence:** When a metric starts registering a new signal, resist immediately attributing it to the most salient mechanism. Always add a direct measurement that can distinguish between plausible mechanisms before stating which one is active. In the sim: `maxRealSpread` takes 5 lines to add and directly answers "did lapping happen?" — far cheaper than a wrong explanation that propagates into reports and docs.
+
+**Reference:** `reports/phase1-metrics/02-gap-close-results.md` (lapping hypothesis stated), `reports/phase1-metrics/03-n50-lapping-confirmation.md` (hypothesis falsified). Session 2026-06-05.

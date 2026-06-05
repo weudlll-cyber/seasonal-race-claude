@@ -648,19 +648,20 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 **Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
 
-### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05)*
+### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05, partially resolved 2026-06-05)*
 
 The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 px lateral, ~3.9 px longitudinal). The physics never allows centers that close. Real visual overlap at `dT = 0` (31.7 px body) is invisible to the metric — it reported 0% while ~89 px on-screen overlap was occurring.
 
-**Fix direction:** Add per-axis body-extent checks to the sim:
-1. **Longitudinal overflow at separation floor:** `(bfY/bfX) × bodyNarrow > physSlot`
-2. **Lateral overflow:** `bodyNarrow > physSlot` (currently ≈0)
-3. **Dead-zone guard:** `physSlot / trackWidth > avoidanceDistance`
-4. **Closed-track overlap coverage:** `liteOverlapRate` currently only runs on open tracks
+**Fix direction — status:**
+1. ✅ **Longitudinal + lateral body-extent overlap metric** — `honestOverlapRate` added to sim: uses `effectiveDisplaySize × bodyFillX/Y` as thresholds, checks all active pairs every frame after 4 s warmup. Covers open AND closed tracks.
+2. ✅ **Closed-track overlap coverage** — honest overlap now emits for both topologies (wrapping uses `tPos mod 1`, matching the browser's own normalization — see Lesson 127).
+3. ⏳ **Dead-zone guard metric** `physSlot / trackWidth > avoidanceDistance` — not yet added to sim.
 
-These are sim metrics additions — no code change in the race engine, no sweep re-run needed.
+**Two distinct phenomena — do not conflate:**
+- **(a) Same-lap pack crowding on short closed tracks** (5–8% honest overlap): many bodies on a short perimeter (path ≤ 3300 px). Measured directly: max spread is 0.2–0.55 laps, 100% same-lap events, 0% cross-lap. NOT caused by lapping — lapping does not occur in 60s homogeneous fields. Not a physics bug.
+- **(b) Longitudinal rendered-body overlap during open-track overtaking** (P-1 bug): rubber-band overcomes speed brake, dT → 0 at crossing, ~31.7 px body overlap per pair on screen. Pre-existing physics issue, still open.
 
-**Reference:** `reports/closed-track-overview/14-full-diagnosis.md` §Q8, `reports/closed-track-overview/15-topdown-overlap.md`
+**Reference:** `reports/closed-track-overview/14-full-diagnosis.md` §Q8, `reports/closed-track-overview/15-topdown-overlap.md`, `reports/phase1-metrics/03-n50-lapping-confirmation.md`
 
 ---
 

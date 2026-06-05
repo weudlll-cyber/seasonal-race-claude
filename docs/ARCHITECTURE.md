@@ -335,9 +335,9 @@ The Race Plan gives each racer a target finishing area and nudges their speed to
 
 ### Area Assignment (`createRacePlan`)
 
-At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a target area:
+At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a **unique target rank** (1..N) via Fisher-Yates shuffle. The shuffle is **completely row-blind** — a racer from the last row is equally likely to draw targetRank=1 as one from row 0. Every racer receives exactly one target; there is no "selected subset." Target ranks are then mapped to five areas:
 
-| Area | Target place | Base bonus delta |
+| Area | Target rank range | Base bonus delta |
 |---|---|---|
 | B1 | 1–5 (top 7%) | +0.03 |
 | B2 | 6–15 (next 14%) | +0.02 |
@@ -345,7 +345,11 @@ At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `m
 | B4 | 26–40 (mid 21%) | 0.00 |
 | B5 | 41–N (bottom 44%) | −0.01 |
 
-The winner racer (`winnerRacerId`) is pre-selected from the pulk (racer cluster around median rank). A seeded PRNG provides deterministic results for the same race setup.
+Two special subsets are identified from the shuffle:
+- **Winner** (`winnerRacerId`): the racer who drew targetRank=1.
+- **Pulk racers**: 3 racers shuffled from rows 1–3 (middle field, never the winner) — the only selection that uses row position explicitly.
+
+A seeded PRNG provides deterministic results for the same race setup.
 
 ### bereichsBonusMult (Physics-Loop)
 
@@ -366,6 +370,8 @@ trajectoryMult = clamp(trajectoryMult, 0.85, 1.10)
 `effectiveSpeed = baseSpeed × spreadFactor × bereichsBonusMult × trajectoryMult`
 
 The window [0.85, 1.10] was chosen empirically: wider windows cause "Cobra-Sprint" overshoot (racers race past target area); narrower windows lose corrective power.
+
+**Important: the controller does NOT disable per-racer once a racer first reaches its target band.** It runs continuously for every active racer throughout the entire OUTCOME phase (55%–95% of race duration). After a racer enters its band, the controller continues applying corrections — braking if it overshot its exact rank, boosting if it falls back. This ensures racers stay near their assigned rank for the duration of the OUTCOME window, not just until they first reach it.
 
 ### Dynamic Finish Line (Open Tracks)
 
@@ -396,8 +402,14 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - `liteLatSpeedScore` — mean |physicalYVelocity| per racer-frame. Measures overall lateral agitation.
 - `liteBrakeRate` — fraction of racer-frames with speed brake active. Expected ~50–85% on dense tracks.
 - `liteStableOvertakes` — t-order changes (A passes B) that persist ≥ 5 frames. High values indicate clean passing. Low values indicate "flicker" overtakes from frame-rate noise.
-- `liteOverlapRate` — fraction of active racer-pairs in geometric overlap per frame. Hard gate < 3%; target ≈ 0%.
+- `liteOverlapRate` — fraction of active racer-pair-frames where racer *centers* are within 10% of each body-fill diameter of each other. **Blind to rendered-body overlap during overtaking** — physics never allows centers that close (L126). Target ≈ 0%; a non-zero value would indicate avoidance has completely broken down.
+- `honestOverlapRate` — fraction of active racer-pair-frames (after 4 s warmup) where the rendered body boxes actually overlap (both longitudinal and lateral axes simultaneously). Covers open and closed tracks. Typical open-track values: 0.5–4%; closed short-oval values: 5–8% (pack crowding — not lapping, see Lesson 127).
 - `outcomeReached` — fraction of races where the OUTCOME phase was reached (leader past `racePlanCorridorStart`). Expected ~100%; low values indicate racers DNF before the corridor activates.
+- `fairChanceExactRate` — fraction of B1-designated racers (targetRank 1–5) finishing at their exact assigned rank. Typical ~18–20%.
+- `fairChanceTop5Rate` — fraction of B1-designated racers finishing anywhere in top 5. Typical ~60–65%.
+- `fairChanceByRow` — same rates broken down by starting row. Should be flat across rows (row-blind lottery confirmed by N=50 measurement: no back-row penalty found).
+- `maxRealSpread` (closed tracks) — max `(t_leading − t_trailing)` in laps. < 1.0 means no lapping occurred.
+- `honestSameLapFraction` / `honestCrossLapFraction` (closed tracks) — fraction of honest-overlap events that are same-lap adjacency vs. genuine lapping (|Δt| ≥ 1.0). Measured values: 100% / 0% in all 60-second homogeneous-field tests.
 - **Race-plan adherence (zone success rate)** — of all races where a racer was assigned zone B1 (target ranks 1–5), what fraction did it actually finish in positions 1–5? Computed per-zone (B1–B5) by `computeZoneSuccessRate`. B1 adherence is the headline choreography metric. A track+racer combo with B1 adherence < ~50% indicates the Race Plan bonus is insufficient to overcome dense-field blocking or speed mismatch on that pairing.
 - **Trapped/trembling** — operationally identified as a combo of high zigzagScore (> 0.003), low stableOvt, and near-zero net progress over a time window. **No dedicated counter in the sim; always inferred from lateral quality metrics above — not directly measured.** A result of "no trapped/trembling events" means none of the indirect indicators triggered, not that trapping was directly ruled out. The stuckModeSuppress system (bilateral avoidance suppression) was added specifically to prevent this pattern (L108).
 
