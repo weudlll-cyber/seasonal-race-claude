@@ -491,7 +491,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *
    * Sweep scripts: scripts/sim-sweep.mjs, scripts/sim-fairness.mjs
    */
-  lateralForce: 0.0228, // probe value (+100% vs 0.0114 baseline) — feat/open-track-overlap, revert via backup/pre-lateral-force-probe
+  lateralForce: 0.0114,
   // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
   lateralDamping: 0.16,
   homeForceStrength: 0.03,
