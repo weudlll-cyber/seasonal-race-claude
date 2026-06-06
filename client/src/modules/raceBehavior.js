@@ -52,10 +52,12 @@ const _approachRight = new Set();
 const _forwardLeft = new Set();
 const _forwardRight = new Set();
 // Step-2 Stage B: same-lane detection (open tracks, post-Y-rejection pair loop body).
-// _sameLaneApproach: trailer indices that have a leader nearly directly ahead this step.
-// _approachForceMag: per-trailer max forceMag seen for same-lane pairs (for force scaling).
+// _sameLaneApproach:    trailer indices that have a leader nearly directly ahead this step.
+// _approachForceMag:    per-trailer max forceMag seen for same-lane pairs (force scaling).
+// _sameLaneLeaderPhysY: per-trailer leader physicalY for deadlock-break direction.
 const _sameLaneApproach = new Set();
 const _approachForceMag = new Map();
+const _sameLaneLeaderPhysY = new Map();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -309,6 +311,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _forwardRight.clear();
   _sameLaneApproach.clear();
   _approachForceMag.clear();
+  _sameLaneLeaderPhysY.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -595,6 +598,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           if (forceMag > (_approachForceMag.get(trailer.index) ?? 0)) {
             _approachForceMag.set(trailer.index, forceMag);
           }
+          // Store leader physicalY for the deadlock-break fallback in apply-deltas.
+          // Most-constraining leader (highest forceMag) wins so the same priority as
+          // forceMag selection applies to the direction reference.
+          if (forceMag >= (_approachForceMag.get(trailer.index) ?? 0)) {
+            _sameLaneLeaderPhysY.set(trailer.index, leader.physicalY);
+          }
         }
       }
 
@@ -748,7 +757,28 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           // True tie: stable, identity-based direction (not position-based → no row bias).
           else desiredDir = (r.index & 1) === 0 ? 1 : -1;
         }
-        // desiredDir === 0: both sides occupied — no commit; brake-to-match handles it.
+        // Both sides occupied (desiredDir still 0): break the deadlock.
+        // Priority: (1) prefer side with no forward obstacle — blocker is behind us and
+        // we leave it behind as we advance. (2) fall back to leader-relative direction.
+        // This is safer than always going leader-relative: a forward-clear side means
+        // we're moving into space that is actually open ahead, not into an oncoming racer.
+        if (desiredDir === 0) {
+          const fwdL = _forwardLeft.has(r.index);
+          const fwdR = _forwardRight.has(r.index);
+          if (!fwdL && fwdR)
+            desiredDir = -1; // left forward clear → go left
+          else if (fwdL && !fwdR)
+            desiredDir = 1; // right forward clear → go right
+          else {
+            // Both forward clear or both forward blocked: leader-relative direction.
+            const lpy = _sameLaneLeaderPhysY.get(r.index);
+            if (lpy !== undefined) {
+              const relPos = r.physicalY - lpy;
+              desiredDir =
+                Math.abs(relPos) >= 1e-6 ? (relPos >= 0 ? 1 : -1) : (r.index & 1) === 0 ? 1 : -1;
+            }
+          }
+        }
 
         const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
         if (desiredDir !== 0) {
@@ -768,7 +798,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             r.approachCommitFrames = 0;
           }
         } else {
-          // Both sides occupied: decay commitment to zero.
+          // desiredDir still 0: no leader physicalY available — decay gently.
           r.approachCommitFrames = Math.max(0, r.approachCommitFrames - 1);
           if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
         }

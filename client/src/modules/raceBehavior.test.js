@@ -451,10 +451,13 @@ describe('applyRacerBehavior — free-lane separation', () => {
     const blockBLeft = makeLaneRacer({ index: 44, t: 0.501, physicalY: -40 / 140 });
     const blockBRight = makeLaneRacer({ index: 45, t: 0.501, physicalY: 40 / 140 });
 
+    // isOpen: false scopes to closed-track / free-lane-separation behavior only;
+    // Stage B (same-lane commit) is open-track only and must not affect this assertion.
     applyRacerBehavior([a, b, blockALeft, blockARight, blockBLeft, blockBRight], {
       ...cfg,
       homeForceStrength: 0,
       avoidanceDistance: 1.0,
+      isOpen: false,
     });
 
     expect(a.physicalY).toBe(0);
