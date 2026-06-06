@@ -336,6 +336,7 @@ export function runSingleRace({
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
         spriteWorldSizePx:      effectiveDisplaySize,
+        honestBodyWidthPx:      effectiveDisplaySize * bodyFillX,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)

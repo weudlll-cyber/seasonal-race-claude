@@ -601,6 +601,7 @@ export default function RaceScreen() {
           y: 0,
           angle: 0,
           spriteWorldSizePx: physicalSpriteSize,
+          honestBodyWidthPx: physicalSpriteSize * racerType.config.bodyFillX,
           geometricTrackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
