@@ -478,3 +478,190 @@ on Space Sprint or Luger Hill before B1 stage is signed off).
 The Y-rejection lesson applies directly: derive from existing traversals rather than
 opening new ones. Step 2's approach-zone checks are all O(1) per pair additions to an
 existing O(N²) loop — not new O(N) scans layered on top.
+
+---
+
+## Addendum — Y-Rejection / Forward-Clearance Interaction
+
+**Date:** 2026-06-06
+**Question:** Can pairs relevant to forward-clearance be missed because Y-rejection skipped them?
+
+---
+
+### The gate widths in numbers
+
+Y-rejection skips pairs where `|dY| * yWeight >= avoidanceDistance`, i.e. with
+`yWeight=1.0, avoidanceDistance=0.18`: **skips pairs with `|dY| >= 0.18`**.
+
+The side-corridor geometry (forward and adjacent clearance) checks blockers in the range
+`|dY| ∈ (0, 2 × lateralHalfSpan)` from the racer's center. A blocker at the CENTER of
+the target lane has `|dY| = lateralHalfSpan`. The OUTER EDGE has `|dY| = 2 × lateralHalfSpan`.
+
+For Y-rejection to cover the full corridor: `2 × lateralHalfSpan ≤ 0.18`, i.e.
+`lateralHalfSpan ≤ 0.09`.
+
+---
+
+### Hole with `spriteWorldSizePx` as the half-span (the naive approach)
+
+`lateralHalfSpan = spriteWorldSizePx / trackWidthPx`
+
+Selected combos showing the gap between corridor max `|dY|` and the Y-rejection gate:
+
+| Track | Racer | halfSpan | max corridor `|dY|` | Y-reject covers | Hole |
+|-------|-------|---------|---------------------|-----------------|------|
+| Space Sprint (449px) | dragon (50px) | 0.111 | 0.222 | 0.180 | **19%** |
+| Luger Hill (330px) | dragon (50px) | 0.152 | 0.303 | 0.180 | **41%** |
+| Luger Hill (330px) | luge (80px) | **0.242** | **0.485** | 0.180 | **63%** |
+| Mountainstreet (368px) | horse (47px) | 0.128 | 0.255 | 0.180 | **30%** |
+| River Run (390px) | giraffe (48px) | 0.123 | 0.246 | 0.180 | **27%** |
+
+With `spriteWorldSizePx`, **the center of the target lane (`|dY| = halfSpan`) is OUTSIDE
+Y-rejection's surviving set for most open-track / large-racer combinations.** For luge on
+Luger Hill, 63% of the relevant corridor is invisible to the accumulator. The forward-clearance
+data would be fundamentally wrong — a blocker at the center of the right lane is missed
+entirely.
+
+**Verdict:** Using `spriteWorldSizePx` as the corridor half-span creates a critical correctness
+hole. Forward-clearance accumulators populated only from post-Y-rejection pairs would produce
+wrong side-selection decisions for the most common open-track combos. Stage A must NOT use
+`spriteWorldSizePx` for corridor sizing.
+
+---
+
+### With `honestBodyWidthPx` as the half-span
+
+`honestLateralHalfSpan = honestBodyWidthPx / trackWidthPx = spriteWorldSizePx × bodyFillX / trackWidthPx`
+
+| Track | Racer | bodyFillX | hHalfSpan | max corridor `|dY|` | Y-reject covers | Hole |
+|-------|-------|-----------|-----------|---------------------|-----------------|------|
+| Space Sprint | dragon (0.836) | 0.836 | 0.093 | 0.186 | 0.180 | **3%** |
+| Luger Hill | dragon (0.836) | 0.836 | 0.127 | 0.253 | 0.180 | **29%** |
+| Luger Hill | luge (0.313) | 0.313 | 0.076 | 0.152 | 0.152 | **0%** |
+| Luger Hill | horse (0.353) | 0.353 | 0.050 | 0.101 | 0.101 | **0%** |
+| Luger Hill | duck (0.875) | 0.875 | 0.095 | 0.191 | 0.180 | **6%** |
+| River Run | giraffe (0.271) | 0.271 | 0.033 | 0.067 | 0.067 | **0%** |
+| Mountainstreet | plane (0.836) | 0.836 | 0.095 | 0.191 | 0.180 | **6%** |
+
+**Key findings with `honestBodyWidthPx`:**
+
+- Luge, horse, rocket, giraffe: **0% hole everywhere**. Their slim honest bodies make
+  `2 × hHalfSpan < 0.18` on all open tracks.
+- Most body-filling racers (duck, buggy, plane): **0–7% residual** on the narrowest
+  open track (Luger Hill, 330px).
+- Dragon: **3–29% residual**, worst on Luger Hill. The CENTER of dragon's target lane
+  (`|dY| = 0.093–0.127`) is **within** Y-rejection's surviving set — the center-lane blocker
+  is always captured. The missed portion (outer fringe, `|dY| ∈ [0.18, 0.25]`) represents
+  racers already beyond dragon's honest body radius; any such racer would not cause honest overlap.
+
+**The residual dragon hole at 29% (Luger Hill) in practical terms:**
+
+At Luger Hill (330px), a blocker at `|dY| = 0.20` (just above the 0.18 gate) is 0.20 × 330px
+= 66px from dragon's center. Dragon's honest half-body is 50px × 0.836 / 2 = 20.9px. At 66px
+separation, the two honest bodies do NOT overlap (combined half-bodies = 41.8px < 66px). A
+missed blocker at the outer fringe is already outside honest-overlap range. The existing
+avoidance forces will push them apart the moment dragon moves closer. This is a non-critical
+miss — it might cause dragon to occasionally commit to a "slightly occupied" side that
+resolves harmlessly via avoidance.
+
+---
+
+### The fix: pre-Y-rejection clearance gate (O(1), no new loop)
+
+Place the clearance-accumulator block **before** the Y-rejection `continue`, with its own
+geometric gate:
+
+```js
+// [Pair loop body — immediately after computing dY, before Y-rejection]
+
+// Step-2 clearance accumulators — own gate decoupled from avoidance physics.
+// Must run before Y-rejection because clearance corridor can extend beyond |dY|=0.18.
+if (config.isOpen !== false) {
+  const rAHH = (rA.honestBodyWidthPx ?? rA.spriteWorldSizePx ?? 0) / Math.max(getTrackWidthPx(rA), 1);
+  const rBHH = (rB.honestBodyWidthPx ?? rB.spriteWorldSizePx ?? 0) / Math.max(getTrackWidthPx(rB), 1);
+  const pairHH = Math.max(rAHH, rBHH);
+  if (Math.abs(dY) < 2 * pairHH) {
+    const aIsAhead = rA.t >= rB.t;
+    const front = aIsAhead ? rA : rB;
+    const back  = aIsAhead ? rB : rA;
+    const lateralDelta = front.physicalY - back.physicalY; // >0: front is to back's right
+
+    // Adjacent occupancy (both directions, both racers)
+    if      (lateralDelta > 0) { _approachRight.add(back.index);  _approachLeft.add(front.index);  }
+    else if (lateralDelta < 0) { _approachLeft.add(back.index);   _approachRight.add(front.index); }
+
+    // Forward occupancy (front is ahead of back; only meaningful from back's perspective)
+    if      (lateralDelta >  pairHH) _forwardRight.add(back.index);
+    else if (lateralDelta < -pairHH) _forwardLeft.add(back.index);
+  }
+}
+
+// Y-rejection (avoidance physics — unchanged, independent gate)
+if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) continue;
+```
+
+**Why `aIsAhead = rA.t >= rB.t` (without tie-break):** Forward clearance only cares about
+who is ahead in t-space; the exact tie-break used by the avoidance physics (index-based) is
+irrelevant here. Equal-t pairs produce no forward-clearance entry either way (lateral delta
+is what matters).
+
+**Why `lateralDelta > pairHH` (not `> 0`) for forward occupancy:** A racer directly ahead
+in the same lane (`|lateralDelta| < pairHH`) is a same-lane obstacle, not a side-corridor
+blocker. Same-lane obstacles are the reason brake-to-match exists (Step 1). Forward clearance
+records only racers ahead that occupy the LEFT or RIGHT lane, not the center.
+
+---
+
+### Cost of the pre-Y-rejection gate
+
+For cases where `2 × pairHH < 0.18` (all racers except dragon on narrower open tracks):
+the pre-gate fires on **exactly the same pairs** that survive Y-rejection — zero extra work.
+
+For dragon where `2 × hHalfSpan` slightly exceeds 0.18 (e.g. 0.253 on Luger Hill): the
+pre-gate processes pairs with `|dY| ∈ [0.18, 0.253]` additionally. At N=60 and Y-rejection
+skip rate ~70%, approximately 530 pairs survive per step. The extra dragon pairs in [0.18, 0.253]
+add at most ~15% more pairs for the accumulator block only (not for avoidance physics). At
+530 × 0.15 = ~80 additional pairs × ~10 operations = ~800 operations per step. Negligible.
+
+---
+
+### Adjacent-clearance hole (Task 3)
+
+Adjacent clearance (Part 1 of Phase 0) uses the same corridor width — a blocker at the
+center of the immediately adjacent space has `|dY| = pairHH`. With `honestBodyWidthPx`,
+`pairHH ≤ 0.127` for dragon (max case), well within the Y-rejection gate of 0.18. The
+adjacent-clearance center is always within the surviving set. The pre-Y-rejection gate
+covers any residual outer fringe. **No hole for adjacent clearance beyond what the
+pre-gate resolves.**
+
+---
+
+### Consequence for stage ordering
+
+`honestBodyWidthPx` must be added to the racer object as a **prerequisite** before Stage A,
+not deferred to Stage D. The field is required for the pre-Y-rejection gate to have correct
+corridor widths from the start. Moving it earlier has no downside — it is a single data field.
+
+The revised stage prerequisite:
+
+> **Pre-Stage A:** Add `honestBodyWidthPx: physicalSpriteSize × racerType.config.bodyFillX`
+> to each racer in `index.jsx` (~line 603) and to the sim-racer in `sim-fairness.mjs`
+> (~line 338). Commit separately. Tests green (no behavior change — field is just data).
+
+---
+
+### Design completeness statement
+
+**The piggyback design is correct and complete for all four information pieces** — adjacent
+left/right and forward left/right — **provided:**
+
+1. `honestBodyWidthPx` is added to the racer object before Stage A (moved from Stage D to
+   prerequisite).
+2. The clearance-accumulator block runs **before** the Y-rejection `continue` (not after),
+   with its own `|dY| < 2 × pairHH` gate.
+3. Forward occupancy is recorded only when `|lateralDelta| > pairHH` (racer is clearly in
+   the side lane, not directly ahead in the same lane).
+
+With these three conditions satisfied: no Y-rejection-induced correctness holes exist, no
+new scans are introduced, and the total added cost remains well within the original ~5%
+estimate.
