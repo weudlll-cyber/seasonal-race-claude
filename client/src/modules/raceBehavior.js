@@ -51,6 +51,11 @@ const _approachLeft = new Set();
 const _approachRight = new Set();
 const _forwardLeft = new Set();
 const _forwardRight = new Set();
+// Step-2 Stage B: same-lane detection (open tracks, post-Y-rejection pair loop body).
+// _sameLaneApproach: trailer indices that have a leader nearly directly ahead this step.
+// _approachForceMag: per-trailer max forceMag seen for same-lane pairs (for force scaling).
+const _sameLaneApproach = new Set();
+const _approachForceMag = new Map();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -109,6 +114,10 @@ export function initRacerBehavior(racer) {
   racer.brakeMatchFactor = 1.0;
   racer.brakeMatchFrames = 0;
   racer.brakeReleaseFrames = 0;
+  // Step-2 Stage B: lateral commitment state (open tracks only).
+  // approachCommitDir: −1 (left), 0 (none), +1 (right). Debounced to prevent zigzag.
+  racer.approachCommitDir = 0;
+  racer.approachCommitFrames = 0;
 }
 
 /**
@@ -298,6 +307,8 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _approachRight.clear();
   _forwardLeft.clear();
   _forwardRight.clear();
+  _sameLaneApproach.clear();
+  _approachForceMag.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -568,6 +579,25 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
       // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
       const yDiff = trailer.physicalY - leader.physicalY;
+
+      // ── Step-2 Stage B: same-lane approach detection (open tracks only) ────────
+      // Fires when the trailer is within one honest body half-span of the leader laterally.
+      // Stores this trailer as needing a committed side choice, plus the current forceMag
+      // for magnitude-bounded force injection in the apply-deltas loop.
+      if (config.isOpen !== false && trackWidth > 0) {
+        const sameLaneHH =
+          Math.max(
+            trailer.honestBodyWidthPx ?? trailer.spriteWorldSizePx ?? 0,
+            leader.honestBodyWidthPx ?? leader.spriteWorldSizePx ?? 0
+          ) / trackWidth;
+        if (sameLaneHH > 0 && Math.abs(yDiff) < sameLaneHH) {
+          _sameLaneApproach.add(trailer.index);
+          if (forceMag > (_approachForceMag.get(trailer.index) ?? 0)) {
+            _approachForceMag.set(trailer.index, forceMag);
+          }
+        }
+      }
+
       if (Math.abs(yDiff) < 1e-6) continue;
       const pushDir = yDiff >= 0 ? 1 : -1;
       yAvoidDeltas.set(
@@ -694,6 +724,68 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         ) {
           delta = 0;
         }
+      }
+    }
+
+    // ── Step-2 Stage B: lateral commitment (open tracks only) ─────────────────
+    // Consume the Stage A/B accumulators to update the committed side and inject force.
+    if (config.isOpen !== false) {
+      const inSameLane = _sameLaneApproach.has(r.index);
+      if (inSameLane) {
+        const leftFree = !_approachLeft.has(r.index);
+        const rightFree = !_approachRight.has(r.index);
+        let desiredDir = 0;
+        if (leftFree && !rightFree) {
+          desiredDir = -1;
+        } else if (!leftFree && rightFree) {
+          desiredDir = 1;
+        } else if (leftFree && rightFree) {
+          // Both sides free: prefer the one without a forward obstacle.
+          const fwdL = _forwardLeft.has(r.index);
+          const fwdR = _forwardRight.has(r.index);
+          if (!fwdL && fwdR) desiredDir = -1;
+          else if (fwdL && !fwdR) desiredDir = 1;
+          // True tie: stable, identity-based direction (not position-based → no row bias).
+          else desiredDir = (r.index & 1) === 0 ? 1 : -1;
+        }
+        // desiredDir === 0: both sides occupied — no commit; brake-to-match handles it.
+
+        const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
+        if (desiredDir !== 0) {
+          if (desiredDir === r.approachCommitDir) {
+            r.approachCommitFrames++;
+          } else {
+            // Debounce direction flip: decay the counter before switching.
+            r.approachCommitFrames--;
+            if (r.approachCommitFrames <= 0) {
+              r.approachCommitDir = desiredDir;
+              r.approachCommitFrames = 1;
+            }
+          }
+          if (r.approachCommitFrames >= commitTimeout) {
+            // Anti-starvation: abandon commit after too many consecutive frames.
+            r.approachCommitDir = 0;
+            r.approachCommitFrames = 0;
+          }
+        } else {
+          // Both sides occupied: decay commitment to zero.
+          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - 1);
+          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
+        }
+      } else {
+        // No same-lane leader: decay commitment over bmDebounce frames.
+        const dbDecay = config.brakeReleaseDebounceFrames ?? 3;
+        if (r.approachCommitDir !== 0) {
+          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - dbDecay);
+          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
+        }
+      }
+
+      // Inject committed lateral force into this frame's delta (before velocity update).
+      // Magnitude is bounded to the already-computed forceMag from the same pair.
+      if (r.approachCommitDir !== 0) {
+        const fMag = _approachForceMag.get(r.index) ?? 0;
+        if (fMag > 0) delta += r.approachCommitDir * fMag;
       }
     }
 
