@@ -44,6 +44,13 @@ const _dRawPos = new Map();
 const _dRawNeg = new Map();
 const _dCntPos = new Map();
 const _dCntNeg = new Map();
+// Step-2 clearance accumulators (Stage A — populated, not yet consumed).
+// Sets of racer index: which racers have a neighbor in each directional corridor.
+// Populated before Y-rejection so the corridor is not clipped by the avoidance gate.
+const _approachLeft = new Set();
+const _approachRight = new Set();
+const _forwardLeft = new Set();
+const _forwardRight = new Set();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -287,6 +294,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _speedBrakeSet.clear();
   _brakeMatchCaps.clear();
   _brakeMatchLeaderIdxs.clear();
+  _approachLeft.clear();
+  _approachRight.clear();
+  _forwardLeft.clear();
+  _forwardRight.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -348,6 +359,38 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       let dT = Math.abs(rA.t - rB.t);
       if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
       const dY = rA.physicalY - rB.physicalY;
+
+      // ── Step-2 clearance accumulators (Stage A — open tracks only) ────────────
+      // Runs BEFORE Y-rejection so the clearance corridor is not clipped by the
+      // avoidance gate. Uses its own geometric gate (2 × honest half-span) which
+      // is independent of avoidanceDistance / yWeight config values.
+      // Not yet consumed — populated here for budget measurement only.
+      if (config.isOpen !== false) {
+        const twA = getTrackWidthPx(rA);
+        const twB = getTrackWidthPx(rB);
+        const pairTW = Math.max(twA, twB);
+        if (pairTW > 0) {
+          const rAHH = (rA.honestBodyWidthPx ?? rA.spriteWorldSizePx ?? 0) / pairTW;
+          const rBHH = (rB.honestBodyWidthPx ?? rB.spriteWorldSizePx ?? 0) / pairTW;
+          const pairHH = Math.max(rAHH, rBHH);
+          if (pairHH > 0 && Math.abs(dY) < 2 * pairHH) {
+            const aIsAhead = rA.t >= rB.t;
+            const front = aIsAhead ? rA : rB;
+            const back = aIsAhead ? rB : rA;
+            const lateralDelta = front.physicalY - back.physicalY;
+            if (lateralDelta > 0) {
+              _approachRight.add(back.index);
+              _approachLeft.add(front.index);
+            } else if (lateralDelta < 0) {
+              _approachLeft.add(back.index);
+              _approachRight.add(front.index);
+            }
+            if (lateralDelta > pairHH) _forwardRight.add(back.index);
+            else if (lateralDelta < -pairHH) _forwardLeft.add(back.index);
+          }
+        }
+      }
+
       // dist ≥ |dY·yWeight|, so if this holds, the existing dist gate below would also fire.
       if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) continue;
       const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
