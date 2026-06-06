@@ -45,11 +45,6 @@ const _dRawNeg = new Map();
 const _dCntPos = new Map();
 const _dCntNeg = new Map();
 
-// Temporary diagnostic counters for Y-rejection skip-fraction measurement. Remove after confirmed.
-let _dbg_pairTotal = 0;
-let _dbg_pairYSkip = 0;
-let _dbg_stepCount = 0;
-
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
  *
@@ -353,12 +348,8 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       let dT = Math.abs(rA.t - rB.t);
       if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
       const dY = rA.physicalY - rB.physicalY;
-      _dbg_pairTotal++;
       // dist ≥ |dY·yWeight|, so if this holds, the existing dist gate below would also fire.
-      if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) {
-        _dbg_pairYSkip++;
-        continue;
-      }
+      if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) continue;
       const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
       if (dist >= config.avoidanceDistance) continue;
 
@@ -789,18 +780,5 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       follower.draftingBoostActive = true;
       break;
     }
-  }
-
-  // Diagnostic: log Y-rejection skip fraction every 300 steps (~5 s at 60 fps). Remove after confirmed.
-  if (++_dbg_stepCount >= 300) {
-    if (_dbg_pairTotal > 0) {
-      // eslint-disable-next-line no-console
-      console.log(
-        `[Y-reject] pairs=${_dbg_pairTotal} skipped=${_dbg_pairYSkip} (${((_dbg_pairYSkip / _dbg_pairTotal) * 100).toFixed(1)}%) over 300 steps`
-      );
-    }
-    _dbg_pairTotal = 0;
-    _dbg_pairYSkip = 0;
-    _dbg_stepCount = 0;
   }
 }
