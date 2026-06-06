@@ -336,10 +336,13 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
         speedBrakeSet.add(trailer.index);
 
-        // ── Brake-to-match cap: OPEN TRACKS ONLY ────────────────────────────
-        // Uses a separate, narrower activation zone (brakeMatchActivation*) to break
-        // the chain lock on open tracks without affecting closed-track pack dynamics.
-        // Falls back to speedBrake* values when the new params are absent (migration).
+        // ── Brake-to-match cap ──────────────────────────────────────────────────
+        // Open tracks: narrower activation zone (brakeMatchActivation*) prevents chain
+        // lock without affecting closed-track pack dynamics.
+        // Closed tracks: wide zone (same thresholds as outer if) — restores the
+        // pre-rebuild baseline that passed all closed combos. Report 14: removing
+        // brake-match from closed tracks caused giraffe + boarder regressions.
+        let inBrakeMatchZone;
         if (config.isOpen !== false) {
           const bmMultiplier =
             config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
@@ -348,44 +351,47 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             spriteWorldSize > 0 && pathLength > 0
               ? (spriteWorldSize / pathLength) * bmMultiplier
               : 0.014;
-          if (Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT) {
-            // Brake-to-match: compute leader-speed cap for this pair.
-            // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
-            const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
-            const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-            const leaderRawSpeed =
-              (leader.baseSpeed ?? 0) *
-              boostL *
-              (leader.trajectoryMult ?? 1.0) *
-              (leader.areaBonusMult ?? 1.0) *
-              (leader.rubberBandMult ?? 1.0);
-            const trailerDenom =
-              (trailer.baseSpeed ?? 0) *
-              boostT *
-              (trailer.trajectoryMult ?? 1.0) *
-              (trailer.areaBonusMult ?? 1.0) *
-              (trailer.rubberBandMult ?? 1.0);
-            // Account for the leader's own effective brake so the cap targets the leader's
-            // ACTUAL advance, not its raw speed. Primary bypass mechanism (report 09): when
-            // the leader is avoidanceActive, it advances at rawSpeed × 0.945 (floor brake),
-            // but the old cap allowed the trailer to advance at rawSpeed — 5.8% bypass.
-            // Using speedBrakeFactor as the floor approximation (exact after 3s warmup;
-            // slightly conservative during warmup when effectiveBrakeFactor > speedBrakeFactor).
-            const leaderBrake = leader.avoidanceActive
+          inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
+        } else {
+          inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
+        }
+        if (inBrakeMatchZone) {
+          // Brake-to-match: compute leader-speed cap for this pair.
+          // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
+          const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+          const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+          const leaderRawSpeed =
+            (leader.baseSpeed ?? 0) *
+            boostL *
+            (leader.trajectoryMult ?? 1.0) *
+            (leader.areaBonusMult ?? 1.0) *
+            (leader.rubberBandMult ?? 1.0);
+          const trailerDenom =
+            (trailer.baseSpeed ?? 0) *
+            boostT *
+            (trailer.trajectoryMult ?? 1.0) *
+            (trailer.areaBonusMult ?? 1.0) *
+            (trailer.rubberBandMult ?? 1.0);
+          // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
+          // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
+          // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
+          // baseline cap — the 5.8%-tighter corrected cap causes chain-lock for beetle
+          // and boarder on Dirt Oval.
+          const leaderBrake =
+            config.isOpen !== false && leader.avoidanceActive
               ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
               : 1.0;
-            const cap = computeBrakeMatchFactor(
-              leaderRawSpeed * leaderBrake,
-              trailerDenom,
-              config.speedMatchMinDifferential ?? 0.005,
-              config.speedMatchSafetyMargin ?? 0.001
-            );
-            // Track the most constraining leader (lowest cap). Tie-break: first-found
-            // (lower pair indices) wins because strict < never updates on equal caps.
-            if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
-              brakeMatchCaps.set(trailer.index, cap);
-              brakeMatchLeaderIdxs.set(trailer.index, leader.index);
-            }
+          const cap = computeBrakeMatchFactor(
+            leaderRawSpeed * leaderBrake,
+            trailerDenom,
+            config.speedMatchMinDifferential ?? 0.005,
+            config.speedMatchSafetyMargin ?? 0.001
+          );
+          // Track the most constraining leader (lowest cap). Tie-break: first-found
+          // (lower pair indices) wins because strict < never updates on equal caps.
+          if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
+            brakeMatchCaps.set(trailer.index, cap);
+            brakeMatchLeaderIdxs.set(trailer.index, leader.index);
           }
         }
       }
