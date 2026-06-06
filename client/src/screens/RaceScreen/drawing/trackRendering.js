@@ -155,8 +155,6 @@ export function drawOpenTrackFinishLine(ctx, shape, ft, hw) {
   const dx = pOuter.x - pInner.x,
     dy = pOuter.y - pInner.y;
   const segments = 8;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = '#ffd700';
   for (let i = 0; i < segments; i++) {
     const f0 = i / segments,
       f1 = (i + 1) / segments;
@@ -171,7 +169,17 @@ export function drawOpenTrackFinishLine(ctx, shape, ft, hw) {
     ctx.closePath();
     ctx.fill();
   }
-  ctx.shadowBlur = 0;
+  // Gold border — replaces ctx.shadowBlur (which forced an offscreen compositor pass
+  // every frame). Thick stroke drawn once; same visual read as the former glow.
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pInner.x, pInner.y);
+  ctx.lineTo(pOuter.x, pOuter.y);
+  ctx.lineTo(pOuter.x + fwdCos * 7, pOuter.y + fwdSin * 7);
+  ctx.lineTo(pInner.x + fwdCos * 7, pInner.y + fwdSin * 7);
+  ctx.closePath();
+  ctx.stroke();
   const midX = (pOuter.x + pInner.x) / 2,
     midY = (pOuter.y + pInner.y) / 2;
   ctx.font = 'bold 11px sans-serif';

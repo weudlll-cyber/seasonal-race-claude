@@ -138,6 +138,17 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32).
+function formatRaceTime(ms) {
+  const hundredths = Math.floor(ms / 10) % 100;
+  const totalSecs = Math.floor(ms / 1000);
+  const secs = totalSecs % 60;
+  const mins = Math.floor(totalSecs / 60);
+  return mins > 0
+    ? `${mins}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`
+    : `${secs}.${String(hundredths).padStart(2, '0')}`;
+}
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
@@ -184,7 +195,6 @@ export default function RaceScreen() {
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [finishTState, setFinishTState] = useState(1);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
@@ -482,8 +492,6 @@ export default function RaceScreen() {
       referenceSpriteSize,
       shapeRef.current
     );
-    setFinishTState(finishT);
-
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     // physicalSpriteSize: frame-based, real width — drives row gap and row count (physics).
@@ -680,15 +688,9 @@ export default function RaceScreen() {
     };
 
     // ── Canvas positions ────────────────────────────────────────────────────
-    // Open-track geometry: computed once at race start, shared by Fixes 1/2/3.
-    // Primary track direction sampled at midpoint (t=0.5); avoids start/end edge artefacts.
     // openTrackHW = half the median cross-section width (inner→outer = full width).
-    // Fwd = forward unit vector (used for ranking projection at lines below).
-    // Perp vectors removed — drawOpenTrackFinishLine derives them locally from finishT angle.
-    const openTrackAngle = isOpenTrack ? shapeRef.current.getPosition(0.5, 0).angle : 0;
+    // drawOpenTrackFinishLine derives its own perp/fwd vectors from finishT angle locally.
     const openTrackHW = isOpenTrack ? shapeRef.current.getActualTrackWidth() / 2 : 0;
-    const openTrackFwdCos = Math.cos(openTrackAngle);
-    const openTrackFwdSin = Math.sin(openTrackAngle);
 
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
@@ -800,7 +802,11 @@ export default function RaceScreen() {
           // Remainder carries over so no physics time is lost between frames.
           st.physicsAccum += rawDt * effectiveSlowmoFactor;
         }
-        while (st.physicsAccum >= FIXED_DT) {
+        // Cap catch-up at 2 steps per rAF — prevents the stall→many-steps→longer-stall
+        // death spiral that causes STATUS_ACCESS_VIOLATION at ~14s under load.
+        // Fairness is unaffected: sim tests physics in sim time, not wall-clock time.
+        let _catchupSteps = 0;
+        while (st.physicsAccum >= FIXED_DT && _catchupSteps++ < 2) {
           st.physicsTs += FIXED_DT;
           const physicsTs = st.physicsTs;
 
@@ -982,25 +988,25 @@ export default function RaceScreen() {
             if (r.t >= st.finishT) {
               r.finished = true;
               r.finishRank = ++st.finishedCount;
+              r.finishTimeMs = physicsTs;
               emitBurst(st.burstParticles, r.x, r.y);
             }
             r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
 
-          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary
+          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary.
+          // Two-group sort mirrors the Results screen: finishers by finishRank
+          // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
+          // fails once racers finish because the runout-decay surge lets later
+          // finishers temporarily overtake earlier ones in raw r.t.
           if (Math.round(physicsTs / 100) !== Math.round((physicsTs - FIXED_DT) / 100)) {
             setScoreboard(
-              // Fix 1: On open tracks sort by projected world position (r.x/r.y already
-              // updated by computePositions above) so the HUD leader matches the visual.
               [...st.racers]
-                .sort(
-                  isOpenTrack
-                    ? (a, b) =>
-                        b.x * openTrackFwdCos +
-                        b.y * openTrackFwdSin -
-                        (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
-                    : (a, b) => b.t - a.t
-                )
+                .sort((a, b) => {
+                  if (a.finished !== b.finished) return a.finished ? -1 : 1;
+                  if (a.finished) return a.finishRank - b.finishRank;
+                  return b.t - a.t;
+                })
                 .map((r, i) => ({ ...r, rank: i + 1 }))
             );
           }
@@ -1011,16 +1017,7 @@ export default function RaceScreen() {
             const byRank = st.racers
               .filter((r) => r.finished)
               .sort((a, b) => a.finishRank - b.finishRank);
-            const rest = st.racers
-              .filter((r) => !r.finished)
-              .sort(
-                isOpenTrack
-                  ? (a, b) =>
-                      b.x * openTrackFwdCos +
-                      b.y * openTrackFwdSin -
-                      (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
-                  : (a, b) => b.t - a.t
-              );
+            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
             sessionStorage.setItem(
               'raceResults',
               JSON.stringify({
@@ -1486,6 +1483,16 @@ export default function RaceScreen() {
         </div>
 
         <aside className="race-hud">
+          <button
+            className="race-back-btn"
+            onClick={() => {
+              sessionStorage.removeItem('activeRace');
+              fadeNavigate('/setup');
+            }}
+          >
+            ← Setup
+          </button>
+
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
             {scoreboard.map((r, i) => (
@@ -1503,21 +1510,12 @@ export default function RaceScreen() {
                   {i === 0 ? '👑' : `#${i + 1}`}
                 </span>
                 <span className="sb-icon">{r.icon}</span>
-                <div className="sb-info">
-                  <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
-                    {r.name}
-                  </span>
-                  <div className="sb-bar-bg">
-                    <div
-                      className="sb-bar-fill"
-                      style={{
-                        width: `${Math.min(Math.max(0, lapProgress(r.t ?? 0, finishTState)), 1) * 100}%`,
-                        background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
-                      }}
-                    />
-                  </div>
-                </div>
-                {r.finished && <span className="sb-check">✓</span>}
+                <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
+                  {r.name}
+                </span>
+                {r.finished && r.finishTimeMs != null && (
+                  <span className="sb-finish-time">{formatRaceTime(r.finishTimeMs)}</span>
+                )}
               </div>
             ))}
           </div>
@@ -1537,16 +1535,6 @@ export default function RaceScreen() {
             title="Toggle fullscreen"
           >
             {isFullscreen ? '⊡' : '⛶'}
-          </button>
-
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
-            ← Setup
           </button>
         </aside>
       </div>
