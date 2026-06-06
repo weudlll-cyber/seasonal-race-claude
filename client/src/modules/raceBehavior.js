@@ -28,6 +28,23 @@ const STUCK_P_THRESH = 0.008; // minimum totalPressure (rawPos + rawNeg) to qual
 const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near-cancel)
 const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
 
+// Pre-allocated per-step structures reused across every applyRacerBehavior call.
+// Eliminates ~10 new Map/Set allocations per physics step (~37,500 per 60s race).
+// Each call clears + repopulates; no stale values leak between steps.
+const _yDeltas = new Map();
+const _yAvoidDeltas = new Map();
+const _yFreeLaneDeltas = new Map();
+const _freeLaneCounts = new Map();
+const _overlapSet = new Set();
+const _neighborCounts = new Map();
+const _speedBrakeSet = new Set();
+const _brakeMatchCaps = new Map();
+const _brakeMatchLeaderIdxs = new Map();
+const _dRawPos = new Map();
+const _dRawNeg = new Map();
+const _dCntPos = new Map();
+const _dCntNeg = new Map();
+
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
  *
@@ -260,30 +277,66 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   const active = racers.filter((r) => !r.finished);
   for (const r of active) r.draftingBoostActive = false;
 
+  // Clear + repopulate pre-allocated module-level structures (no per-step allocation).
+  _yDeltas.clear();
+  _yAvoidDeltas.clear();
+  _yFreeLaneDeltas.clear();
+  _freeLaneCounts.clear();
+  _overlapSet.clear();
+  _neighborCounts.clear();
+  _speedBrakeSet.clear();
+  _brakeMatchCaps.clear();
+  _brakeMatchLeaderIdxs.clear();
+  for (const r of active) {
+    _yDeltas.set(r.index, 0);
+    _yAvoidDeltas.set(r.index, 0);
+    _yFreeLaneDeltas.set(r.index, 0);
+    _freeLaneCounts.set(r.index, 0);
+    _neighborCounts.set(r.index, 0);
+  }
   // Accumulate physicalY deltas from home force + avoidance
-  const yDeltas = new Map(active.map((r) => [r.index, 0]));
+  const yDeltas = _yDeltas;
   // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
-  const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
+  const yAvoidDeltas = _yAvoidDeltas;
   // Free-lane separation impulses — normalized by sqrt(freeLaneCount) to prevent
   // stacking explosion at race start where many pairs overlap simultaneously.
-  const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
-  const freeLaneCounts = new Map(active.map((r) => [r.index, 0]));
-  const overlapSet = new Set();
-  const neighborCounts = new Map(active.map((r) => [r.index, 0]));
-  const speedBrakeSet = new Set();
+  const yFreeLaneDeltas = _yFreeLaneDeltas;
+  const freeLaneCounts = _freeLaneCounts;
+  const overlapSet = _overlapSet;
+  const neighborCounts = _neighborCounts;
+  const speedBrakeSet = _speedBrakeSet;
   // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
-  const brakeMatchCaps = new Map(); // trailer.index → lowest requiredBrakeFactor this frame
-  const brakeMatchLeaderIdxs = new Map(); // trailer.index → leader.index for that cap
+  const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
+  const brakeMatchLeaderIdxs = _brakeMatchLeaderIdxs; // trailer.index → leader.index for that cap
   // rawPos/rawNeg: pre-normalization avoidance + free-lane force magnitudes by direction.
-  // Allocated when diagOut is provided (external diagnostic) OR when stuck suppression is active
-  // (suppression reads the same per-direction breakdown to decide if the racer is sandwiched).
+  // Reuse pre-allocated module-level maps when needed; null signals "not needed" to inner loops.
   // cntPos/cntNeg: pair-force counts — only needed for external diagnostic output.
   const needsBreakdown = diagOut !== null || (config.stuckModeSuppress ?? false);
-  const dRawPos = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dRawNeg = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dCntPos = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dCntNeg = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
+  let dRawPos = null;
+  let dRawNeg = null;
+  let dCntPos = null;
+  let dCntNeg = null;
+  if (needsBreakdown) {
+    _dRawPos.clear();
+    _dRawNeg.clear();
+    for (const r of active) {
+      _dRawPos.set(r.index, 0);
+      _dRawNeg.set(r.index, 0);
+    }
+    dRawPos = _dRawPos;
+    dRawNeg = _dRawNeg;
+  }
+  if (diagOut !== null) {
+    _dCntPos.clear();
+    _dCntNeg.clear();
+    for (const r of active) {
+      _dCntPos.set(r.index, 0);
+      _dCntNeg.set(r.index, 0);
+    }
+    dCntPos = _dCntPos;
+    dCntNeg = _dCntNeg;
+  }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {

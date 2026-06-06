@@ -723,6 +723,9 @@ export default function RaceScreen() {
       }
     }
 
+    // Pre-allocated render-interpolation buffer — reused every frame, no per-frame allocation.
+    const renderBuf = [];
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       if (cancelled) return;
@@ -1146,8 +1149,9 @@ export default function RaceScreen() {
         // physicsAccum is always in [0, FIXED_DT) after the loop.
         renderAlpha = Math.min(1, st.physicsAccum / FIXED_DT);
 
-        // D1: per-racer pixel speed and smoothed Δv between top-3 (once per rAF, uses rawDt)
-        {
+        // D1: per-racer pixel speed and smoothed Δv between top-3 — diagnostics HUD only.
+        // Gated: the sort + spread runs only when the diagnostics overlay is visible.
+        if (showCameraDiagnostics) {
           const ordered = [...st.racers].sort((a, b) => b.t - a.t);
           for (const r of st.racers) {
             const dx = r.x - (r._diagPrevX ?? r.x);
@@ -1197,38 +1201,54 @@ export default function RaceScreen() {
             }
           }
         }
-        // Advance Heimat-Trail dustParticles (unchanged behavior)
-        st.dustParticles = st.dustParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            alpha: p.alpha - 0.022,
-            r: p.r * 0.97,
-          }))
-          .filter((p) => p.alpha > 0);
-        st.burstParticles = st.burstParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.18,
-            alpha: p.alpha - 0.014,
-            r: p.r * 0.97,
-          }))
-          .filter((p) => p.alpha > 0);
+        // Advance Heimat-Trail dustParticles — in-place mutation + swap-remove (no allocation).
+        {
+          let i = 0;
+          while (i < st.dustParticles.length) {
+            const p = st.dustParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.022;
+            p.r *= 0.97;
+            if (p.alpha <= 0) {
+              st.dustParticles[i] = st.dustParticles[st.dustParticles.length - 1];
+              st.dustParticles.length--;
+            } else i++;
+          }
+        }
+        // Advance burst particles — in-place mutation + swap-remove (no allocation).
+        {
+          let i = 0;
+          while (i < st.burstParticles.length) {
+            const p = st.burstParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.18;
+            p.alpha -= 0.014;
+            p.r *= 0.97;
+            if (p.alpha <= 0) {
+              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
+              st.burstParticles.length--;
+            } else i++;
+          }
+        }
       } else {
-        // FINISHED — keep burst particles alive
+        // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
-        st.burstParticles = st.burstParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.18,
-            alpha: p.alpha - 0.014,
-          }))
-          .filter((p) => p.alpha > 0);
+        {
+          let i = 0;
+          while (i < st.burstParticles.length) {
+            const p = st.burstParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.18;
+            p.alpha -= 0.014;
+            if (p.alpha <= 0) {
+              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
+              st.burstParticles.length--;
+            } else i++;
+          }
+        }
       }
 
       // ── Camera update ──
@@ -1236,16 +1256,25 @@ export default function RaceScreen() {
       // tracks the same world position as the sprites. Without this, the camera jumps
       // with physics steps while sprites stay 1 step behind → sprite-camera desync.
       // COUNTDOWN uses st.racers directly (no physics steps, no interpolation needed).
-      const renderRacers =
-        frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING
-          ? st.racers.map((r) => ({
-              ...r,
-              t: lerp(r._prevT ?? r.t, r.t, renderAlpha),
-              x: lerp(r._prevX ?? r.x, r.x, renderAlpha),
-              y: lerp(r._prevY ?? r.y, r.y, renderAlpha),
-              angle: lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha),
-            }))
-          : st.racers;
+      // renderBuf is pre-allocated once per race mount — Object.assign reuses existing
+      // objects rather than spreading new ones each frame (eliminates N fat allocations/frame).
+      let renderRacers;
+      if (frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING) {
+        const n = st.racers.length;
+        while (renderBuf.length < n) renderBuf.push({});
+        renderBuf.length = n;
+        for (let _i = 0; _i < n; _i++) {
+          const r = st.racers[_i];
+          Object.assign(renderBuf[_i], r);
+          renderBuf[_i].t = lerp(r._prevT ?? r.t, r.t, renderAlpha);
+          renderBuf[_i].x = lerp(r._prevX ?? r.x, r.x, renderAlpha);
+          renderBuf[_i].y = lerp(r._prevY ?? r.y, r.y, renderAlpha);
+          renderBuf[_i].angle = lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha);
+        }
+        renderRacers = renderBuf;
+      } else {
+        renderRacers = st.racers;
+      }
       const raceState = {
         raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
         finishedCount: st.finishedCount,
