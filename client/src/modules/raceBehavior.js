@@ -54,7 +54,7 @@ const _forwardRight = new Set();
 // Step-2 Stage B: same-lane detection (open tracks, post-Y-rejection pair loop body).
 // _sameLaneApproach:    trailer indices that have a leader nearly directly ahead this step.
 // _approachForceMag:    per-trailer max forceMag seen for same-lane pairs (force scaling).
-// _sameLaneLeaderPhysY: per-trailer leader physicalY for deadlock-break direction.
+// _sameLaneLeaderPhysY: per-trailer leader physicalY — primary direction source for commit.
 const _sameLaneApproach = new Set();
 const _approachForceMag = new Map();
 const _sameLaneLeaderPhysY = new Map();
@@ -741,43 +741,22 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     if (config.isOpen !== false) {
       const inSameLane = _sameLaneApproach.has(r.index);
       if (inSameLane) {
-        const leftFree = !_approachLeft.has(r.index);
-        const rightFree = !_approachRight.has(r.index);
+        // Leader-relative direction: steer to the side the trailer is already on,
+        // away from this specific leader. Removes the t-blind corridor false-positive
+        // (_approachLeft/Right) that deadlocked 91.5% of dense-field triggers and caused
+        // Stage B force to cancel the natural avoidance push instead of reinforcing it.
+        // Override only when the natural path is forward-blocked AND the opposite is clear.
         let desiredDir = 0;
-        if (leftFree && !rightFree) {
-          desiredDir = -1;
-        } else if (!leftFree && rightFree) {
-          desiredDir = 1;
-        } else if (leftFree && rightFree) {
-          // Both sides free: prefer the one without a forward obstacle.
-          const fwdL = _forwardLeft.has(r.index);
-          const fwdR = _forwardRight.has(r.index);
-          if (!fwdL && fwdR) desiredDir = -1;
-          else if (fwdL && !fwdR) desiredDir = 1;
-          // True tie: stable, identity-based direction (not position-based → no row bias).
-          else desiredDir = (r.index & 1) === 0 ? 1 : -1;
-        }
-        // Both sides occupied (desiredDir still 0): break the deadlock.
-        // Priority: (1) prefer side with no forward obstacle — blocker is behind us and
-        // we leave it behind as we advance. (2) fall back to leader-relative direction.
-        // This is safer than always going leader-relative: a forward-clear side means
-        // we're moving into space that is actually open ahead, not into an oncoming racer.
-        if (desiredDir === 0) {
-          const fwdL = _forwardLeft.has(r.index);
-          const fwdR = _forwardRight.has(r.index);
-          if (!fwdL && fwdR)
-            desiredDir = -1; // left forward clear → go left
-          else if (fwdL && !fwdR)
-            desiredDir = 1; // right forward clear → go right
-          else {
-            // Both forward clear or both forward blocked: leader-relative direction.
-            const lpy = _sameLaneLeaderPhysY.get(r.index);
-            if (lpy !== undefined) {
-              const relPos = r.physicalY - lpy;
-              desiredDir =
-                Math.abs(relPos) >= 1e-6 ? (relPos >= 0 ? 1 : -1) : (r.index & 1) === 0 ? 1 : -1;
-            }
-          }
+        const lpy = _sameLaneLeaderPhysY.get(r.index);
+        if (lpy !== undefined) {
+          const relPos = r.physicalY - lpy;
+          const naturalDir =
+            Math.abs(relPos) >= 1e-6 ? (relPos >= 0 ? 1 : -1) : (r.index & 1) === 0 ? 1 : -1;
+          const naturalFwdBlocked =
+            naturalDir > 0 ? _forwardRight.has(r.index) : _forwardLeft.has(r.index);
+          const oppFwdBlocked =
+            naturalDir > 0 ? _forwardLeft.has(r.index) : _forwardRight.has(r.index);
+          desiredDir = naturalFwdBlocked && !oppFwdBlocked ? -naturalDir : naturalDir;
         }
 
         const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
