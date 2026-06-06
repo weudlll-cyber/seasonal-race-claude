@@ -745,7 +745,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         // away from this specific leader. Removes the t-blind corridor false-positive
         // (_approachLeft/Right) that deadlocked 91.5% of dense-field triggers and caused
         // Stage B force to cancel the natural avoidance push instead of reinforcing it.
-        // Override only when the natural path is forward-blocked AND the opposite is clear.
+        // Stage C two-part override: switch from naturalDir only when (a) natural side
+        // has a forward obstacle AND (b) the opposite side is clear both AHEAD and
+        // ADJACENTLY — preventing a switch into a lane with a racer right beside us.
+        // _approachLeft/Right used here only as a gate on the switch, never as the
+        // primary direction source (no force-cancellation risk on the primary case).
         let desiredDir = 0;
         const lpy = _sameLaneLeaderPhysY.get(r.index);
         if (lpy !== undefined) {
@@ -756,7 +760,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             naturalDir > 0 ? _forwardRight.has(r.index) : _forwardLeft.has(r.index);
           const oppFwdBlocked =
             naturalDir > 0 ? _forwardLeft.has(r.index) : _forwardRight.has(r.index);
-          desiredDir = naturalFwdBlocked && !oppFwdBlocked ? -naturalDir : naturalDir;
+          // Part 1 (adjacent): is the opposite side free right now?
+          const oppApproachBlocked =
+            naturalDir > 0 ? _approachLeft.has(r.index) : _approachRight.has(r.index);
+          desiredDir =
+            naturalFwdBlocked && !oppFwdBlocked && !oppApproachBlocked ? -naturalDir : naturalDir;
         }
 
         const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
