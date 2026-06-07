@@ -149,6 +149,18 @@ function stablePairBit(a, b) {
   return (hash >>> 0) & 1;
 }
 
+// ── physicalY ↔ world-pixel helpers ─────────────────────────────────────────
+// physicalY ∈ [-1, +1] maps through EditorShape.getPosition(t, physicalY/2),
+// so 1 physicalY unit = trackWidth/2 world pixels (the /2 is in EditorShape).
+// ALL lateral physicalY↔px conversions MUST go through these two helpers.
+// Never use raw × trackWidth — that misses the factor of 2.
+function pxToPhysicalY(px, trackWidth) {
+  return px / (trackWidth / 2);
+}
+function physicalYToPx(phy, trackWidth) {
+  return phy * (trackWidth / 2);
+}
+
 function getSpriteWorldSizePx(racer) {
   if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0)
     return racer.visibleWidthPx;
@@ -218,7 +230,7 @@ function _computeBlockedMode(r, active) {
   }
 
   // Edge case: already within one sprite-width of center — trivially clear
-  if (Math.abs(r.physicalY) * trackWidth < spriteSize) {
+  if (physicalYToPx(Math.abs(r.physicalY), trackWidth) < spriteSize) {
     r.blockerInfo = null;
     return false;
   }
@@ -235,7 +247,7 @@ function _computeBlockedMode(r, active) {
 
     // Distance from other racer to target point (r.t, physicalY=0) in pixel space
     const dx = dT * pathLength;
-    const dy = other.physicalY * trackWidth;
+    const dy = physicalYToPx(other.physicalY, trackWidth);
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < spriteSize) {
@@ -243,7 +255,7 @@ function _computeBlockedMode(r, active) {
         index: other.index,
         name: other.name ?? `#${other.index}`,
         dT: Math.round(dT * pathLength),
-        dY: Math.round((other.physicalY - r.physicalY) * trackWidth),
+        dY: Math.round(physicalYToPx(other.physicalY - r.physicalY, trackWidth)),
         otherPhysicalY: other.physicalY,
       };
       return true;
@@ -384,8 +396,8 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         const twB = getTrackWidthPx(rB);
         const pairTW = Math.max(twA, twB);
         if (pairTW > 0) {
-          const rAHH = (rA.honestBodyWidthPx ?? rA.spriteWorldSizePx ?? 0) / pairTW;
-          const rBHH = (rB.honestBodyWidthPx ?? rB.spriteWorldSizePx ?? 0) / pairTW;
+          const rAHH = pxToPhysicalY(rA.honestBodyWidthPx ?? rA.spriteWorldSizePx ?? 0, pairTW);
+          const rBHH = pxToPhysicalY(rB.honestBodyWidthPx ?? rB.spriteWorldSizePx ?? 0, pairTW);
           const pairHH = Math.max(rAHH, rBHH);
           if (pairHH > 0 && Math.abs(dY) < 2 * pairHH) {
             const aIsAhead = rA.t >= rB.t;
@@ -512,6 +524,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // impulses based on local left/right free-space checks.
 
       if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
+        // INTENTIONAL: lateralHalfSpan uses spriteWorldSize (full frame) / trackWidth (not /2).
+        // This is the free-lane frame-proximity sensor — it uses the full frame envelope as its
+        // clearance radius (conservative), not the drawn body. pxToPhysicalY is not applied here
+        // because this sensor deliberately measures in the wider frame-overlap space, not body space.
         const lateralHalfSpan = spriteWorldSize / trackWidth;
         const tHalfSpan = spriteWorldSize / pathLength;
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
@@ -588,11 +604,13 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // Stores this trailer as needing a committed side choice, plus the current forceMag
       // for magnitude-bounded force injection in the apply-deltas loop.
       if (config.isOpen !== false && trackWidth > 0) {
-        const sameLaneHH =
+        const sameLaneHH = pxToPhysicalY(
           Math.max(
             trailer.honestBodyWidthPx ?? trailer.spriteWorldSizePx ?? 0,
             leader.honestBodyWidthPx ?? leader.spriteWorldSizePx ?? 0
-          ) / trackWidth;
+          ),
+          trackWidth
+        );
         if (sameLaneHH > 0 && Math.abs(yDiff) < sameLaneHH) {
           _sameLaneApproach.add(trailer.index);
           if (forceMag > (_approachForceMag.get(trailer.index) ?? 0)) {
@@ -798,11 +816,41 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
 
-      // Inject committed lateral force into this frame's delta (before velocity update).
-      // Magnitude is bounded to the already-computed forceMag from the same pair.
+      // Inject committed lateral force + Stage D gap-clearing force into this frame's delta.
       if (r.approachCommitDir !== 0) {
         const fMag = _approachForceMag.get(r.index) ?? 0;
-        if (fMag > 0) delta += r.approachCommitDir * fMag;
+        if (fMag > 0) {
+          let injected = fMag;
+          // ── Step-2 Stage D: self-limiting honest-clearance force ───────────────
+          // Proportional push toward one honest body width of lateral separation.
+          // Three gates ensure this only fires in the genuine direct-behind pass scenario:
+          //   (1) inSameLane: leader is within sameLaneHH laterally, leaderPhysY is fresh.
+          //   (2) speedBrakeSet: trailer is actively decelerating behind a leader (close in T).
+          //       Excludes "alongside" pairs (similar track position, large T separation) that
+          //       would otherwise get extra lateral push causing zigzag and excess contact.
+          //   (3) lpy defined: fresh leader physicalY available this frame.
+          // Ramps from lateralForce×strength at |yDiff|=0 down to 0 at |yDiff|=2×honestHalfSpan.
+          const lpy = _sameLaneLeaderPhysY.get(r.index);
+          if (inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined) {
+            const tw = getTrackWidthPx(r);
+            if (tw > 0) {
+              const honestHalfSpan = pxToPhysicalY(
+                r.honestBodyWidthPx ?? r.spriteWorldSizePx ?? 0,
+                tw
+              );
+              if (honestHalfSpan > 0) {
+                const absYDiff = Math.abs(r.physicalY - lpy);
+                const clearanceSpan = 2 * honestHalfSpan;
+                const gapRatio = Math.max(0, (clearanceSpan - absYDiff) / clearanceSpan);
+                const gapForce = config.lateralForce * (config.gapForceStrength ?? 1.0) * gapRatio;
+                // Safety ceiling: total Stage B injection ≤ lateralForce × gapForceCap.
+                const cap = config.lateralForce * (config.gapForceCap ?? 1.5);
+                injected = Math.min(injected + gapForce, cap);
+              }
+            }
+          }
+          delta += r.approachCommitDir * injected;
+        }
       }
     }
 
