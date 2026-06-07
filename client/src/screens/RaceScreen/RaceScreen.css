@@ -109,40 +109,20 @@
   text-align: center;
 }
 
-.sb-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
 .sb-name {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
-/* Progress bar */
-.sb-bar-bg {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.sb-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.12s linear;
-  box-shadow: 0 0 4px currentColor;
-}
-
-.sb-check {
+.sb-finish-time {
   font-size: 10px;
   font-weight: bold;
   color: #0f9;
+  white-space: nowrap;
   padding-left: 2px;
 }
 

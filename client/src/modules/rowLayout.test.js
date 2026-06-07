@@ -55,7 +55,7 @@ describe('computeRacersPerRow', () => {
     expect(small).toBeGreaterThan(large);
   });
 
-  it('spriteWorldSizePx = 0 → clamped to 1, returns sensible value', () => {
+  it('frameSizePx = 0 → clamped to 1, returns sensible value', () => {
     expect(computeRacersPerRow(100, 0)).toBeGreaterThan(0);
   });
 });

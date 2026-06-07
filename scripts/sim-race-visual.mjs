@@ -328,7 +328,7 @@ function runSimulation(track, seed, burstIndex, burstLen) {
   const shape              = new EditorShape(track);
   const isOpen             = shape.isOpen;
   const pathLengthPx       = track.pathLengthPx ?? shape.getTotalLength();
-  const geometricTrackWidth = shape.getActualTrackWidth();
+  const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
   const duration           = track.defaultDuration ?? 60;
 
   const finishT = isOpen

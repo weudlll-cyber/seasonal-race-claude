@@ -231,7 +231,8 @@ function SetupScreen() {
     const shape = new EditorShape(geom);
     const racerType = getRacerType(selectedTrack.defaultRacerTypeId ?? 'horse');
     const displaySize = racerType?.config?.displaySize ?? 40;
-    const effectiveWidth = shape.getActualTrackWidth() * behaviorConfig.startSpreadRange;
+    const effectiveWidth =
+      (geom.width ?? shape.getActualTrackWidth()) * behaviorConfig.startSpreadRange;
     return computeRacersPerRow(effectiveWidth, displaySize);
   }, [selectedTrack, behaviorConfig]);
 

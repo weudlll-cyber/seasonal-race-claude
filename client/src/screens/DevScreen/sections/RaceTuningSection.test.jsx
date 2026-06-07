@@ -32,8 +32,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     comfortThreshold: 0.7,
     softRepulsionStrength: 0.1,
     avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
+    avoidanceBufferPct: 0.2,
     lateralForce: 0.012,
     lateralDamping: 0.25,
     maxLateral: 0.95,
@@ -55,8 +54,7 @@ vi.mock('../../../modules/raceBehaviorConfig.js', () => ({
     comfortThreshold: 0.7,
     softRepulsionStrength: 0.1,
     avoidanceDistance: 0.35,
-    tWeight: 2.0,
-    yWeight: 1.0,
+    avoidanceBufferPct: 0.2,
     lateralForce: 0.012,
     lateralDamping: 0.25,
     maxLateral: 0.95,
@@ -161,7 +159,7 @@ describe('RaceTuningSection — renders all 8 blocks', () => {
   it('renders Block 7: Soft Avoidance', () => {
     render(<RaceTuningSection />);
     expect(screen.getByText('Soft Avoidance')).toBeTruthy();
-    expect(screen.getByLabelText('T Weight')).toBeTruthy();
+    expect(screen.getByLabelText('Avoidance Buffer')).toBeTruthy();
   });
 
   it('renders Block 8: Speed Brake', () => {

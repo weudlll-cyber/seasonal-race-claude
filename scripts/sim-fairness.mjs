@@ -124,6 +124,7 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
 import {
+  computeBodyNarrowRef,
   computeEvenRowLayout,
   computeRacerLayout,
   computeRowPhysicalY,
@@ -275,6 +276,13 @@ export function runSingleRace({
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
     const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+    // Body narrow/long references — mirror index.jsx W_REF + computeBodyNarrowRef call.
+    // bodyFillNarrow = min(X,Y); bodyFillLong = max(X,Y) — narrow axis identified by fill fraction.
+    // W_REF cap at 285 matches the game's cap for the camera reference width.
+    const bodyFillNarrow = Math.min(bodyFillX, bodyFillY);
+    const bodyFillLong   = Math.max(bodyFillX, bodyFillY);
+    const W_REF = Math.min(285, effectiveWidth);
+    const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
     const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
     const rowLayout           = computeEvenRowLayout(nRacers, rowCount);
@@ -335,8 +343,14 @@ export function runSingleRace({
         indexInRow:          assignment.indexInRow,
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
-        spriteWorldSizePx:      effectiveDisplaySize,
-        geometricTrackWidthPx:  geometricTrackWidth,
+        frameSizePx:         effectiveDisplaySize,
+        drawnBodyWidthPx:    bodyRef.bodyNarrow,
+        // Same formula as RaceScreen/index.jsx line 610-612 (report 39 parity fix):
+        // drawnBodyLengthPx = drawnBodyWidthRefPx × bodyFillLong / bodyFillNarrow.
+        drawnBodyLengthPx:   bodyFillNarrow > 0
+          ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow
+          : bodyRef.bodyNarrow,
+        trackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)
         v4BonusMult:              1.0,
@@ -488,14 +502,17 @@ export function runSingleRace({
     // Lateral quality metrics
     let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
     let liteOverlapPairTotal     = 0;   // total pair-frames checked
-    // Honest overlap metric: actual body-extent collision (Step 2).
-    // Uses effectiveDisplaySize (auto-scaled sprite size) × bodyFillX/Y.
-    // Lateral body (half-span each): effectiveDisplaySize × bodyFillX
-    // Longitudinal body (half-span each): effectiveDisplaySize × bodyFillY
+    // Honest overlap metric: actual body-extent collision.
+    // Both dimensions sourced from render primitives independently (not one from the other).
+    // Isotropic renderer: scale = bodyRef.bodyNarrow / (displaySize × bodyFillNarrow).
+    // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
+    // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
     // Overlap fires when both axes touch simultaneously.
     // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
-    const honestBodyLong  = effectiveDisplaySize * bodyFillY;   // px
-    const honestBodyLat   = effectiveDisplaySize * bodyFillX;   // px
+    const drawnBodyWidthPx  = bodyRef.bodyNarrow;                                              // px drawn width
+    const drawnBodyLengthPx = bodyFillNarrow > 0
+      ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow                                  // px drawn length
+      : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
     // Lapping instrumentation (closed tracks only, Part 1 verification):
@@ -516,6 +533,12 @@ export function runSingleRace({
     let liteLatSpeedFrames       = 0;
     let liteBrakeSum             = 0;   // racer-frames where avoidanceActive=true (after 4s)
     let liteBrakeFrames          = 0;
+    // brakeMatchFailureCount: events where brake-to-match is engaged (brakeMatchFactor<1)
+    // but the trailer still out-advances its locked leader for 5 consecutive frames while
+    // both remain in the longitudinal brake zone (report 06 §7 metric).
+    let brakeMatchFailureCount   = 0;
+    let brakeMatchLeaderBraked   = 0; // bypass events where the leader was itself braked (bmFactor<1)
+    const brakeMatchFailState    = new Map(); // pairKey → consecutive qualifying frames
     // stableOvertakes: confirmed lead-swaps (3s+ duration) in 20%–80% of race, per racer
     const SO_CONFIRM_FRAMES      = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
     const soPairLeader           = new Map(); // pairKey → currentLeaderIdx
@@ -688,7 +711,11 @@ export function runSingleRace({
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-          const brake = r.avoidanceActive     ? effectiveBrakeFactor : 1.0;
+          // Sim-Browser Parity: mirror the Step-1 min() from index.jsx so the sim
+          // accurately reflects brake-to-match behavior (report 07 parity fix).
+          const brake = r.avoidanceActive
+            ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
+            : 1.0;
           // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
           let tefMult = 1.0;
           if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
@@ -955,7 +982,7 @@ export function runSingleRace({
             }
             const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
             honestOverlapPairTotal++;
-            if (dT_px < honestBodyLong && dY_px < honestBodyLat) {
+            if (dT_px < drawnBodyLengthPx && dY_px < drawnBodyWidthPx) {
               honestOverlapPairFrames++;
               if (!isOpen) {
                 // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
@@ -965,6 +992,50 @@ export function runSingleRace({
             }
           }
         }
+        // brakeMatchFailureCount: open-track pass-through telemetry (after 4s warmup).
+        // Fires when brake-to-match is engaged on a trailer AND the trailer still advances
+        // faster than its locked leader for 5 consecutive frames while in the brake zone.
+        // natPrevT (saved at line 676 before the t-update) gives the previous t for delta.
+        if (raceTs > 4000 && isOpen) {
+          for (let ri = 0; ri < racers.length; ri++) {
+            const trailer = racers[ri];
+            if (trailer.finished) continue;
+            if (!(trailer.brakeMatchFactor < 1.0)) { brakeMatchFailState.delete(trailer.index * 10000); continue; }
+            const leaderIdx = trailer.brakeMatchLeaderIndex;
+            if (leaderIdx === -1) continue;
+            let leader = null;
+            for (let lj = 0; lj < racers.length; lj++) {
+              if (racers[lj].index === leaderIdx && !racers[lj].finished) { leader = racers[lj]; break; }
+            }
+            if (!leader) continue;
+            // Longitudinal zone check: same dynamicBrakeT gate as raceBehavior.js.
+            const sizeT = (trailer.frameSizePx ?? 0) > 0 && pathLengthPx > 0
+              ? (trailer.frameSizePx / pathLengthPx) * behaviorConfig.speedBrakeTMultiplier
+              : 0.014;
+            const dT = Math.abs(trailer.t - leader.t);
+            if (dT > sizeT) { brakeMatchFailState.delete(trailer.index * 10000 + leaderIdx); continue; }
+            // 1-frame advance delta: natPrevT holds t before the t-update this frame.
+            const trailerDelta = trailer.t - (natPrevT.get(trailer.index) ?? trailer.t);
+            const leaderDelta  = leader.t  - (natPrevT.get(leader.index)  ?? leader.t);
+            const pairKey = trailer.index * 10000 + leaderIdx;
+            if (trailerDelta > leaderDelta) {
+              const consec = (brakeMatchFailState.get(pairKey) ?? 0) + 1;
+              if (consec >= 5) {
+                brakeMatchFailureCount++;
+                // Diagnostic: is the leader avoidanceActive (receiving the floor brake)?
+                // The primary bypass: cap = leaderRawSpeed but leader advances at
+                // 0.945 × leaderRawSpeed → trailer systematically out-advances leader.
+                if (leader.avoidanceActive) brakeMatchLeaderBraked++;
+                brakeMatchFailState.set(pairKey, 0); // reset after counting event
+              } else {
+                brakeMatchFailState.set(pairKey, consec);
+              }
+            } else {
+              brakeMatchFailState.delete(pairKey);
+            }
+          }
+        }
+
         // Track max real progress spread (closed tracks, for lapping verification)
         if (!isOpen && raceTs > 4000) {
           let tMin = Infinity, tMax = -Infinity;
@@ -1100,6 +1171,8 @@ export function runSingleRace({
     results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
     results.liteBrakeRate                = liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
     results.liteStableOvertakes          = soCount / racers.length;
+    results.brakeMatchFailureCount       = brakeMatchFailureCount;
+    results.brakeMatchLeaderBraked       = brakeMatchLeaderBraked;
     // Phase-3A: Δ5s per-racer oscillation metric
     let tmDelta5sMax = 0;
     let tmOscillatingCount = 0;
@@ -2085,7 +2158,8 @@ if (isMain) {
     const shape  = new EditorShape(track);
     const isOpen = !!shape.isOpen;
     const pathLengthPx       = track.pathLengthPx ?? shape.getTotalLength();
-    const geometricTrackWidth = shape.getActualTrackWidth();
+    // Read stored width first; getActualTrackWidth() overestimates for open tracks.
+    const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
     const trackName = track.name ?? trackId;
 
     console.log(`── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`);
@@ -2168,6 +2242,7 @@ if (isMain) {
             nRacers: nRacersForCombo,
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: {
+              isOpen,
               ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
               ...BEHAVIOR_OVERRIDE,
             },
@@ -2279,6 +2354,9 @@ if (isMain) {
           brakeRate:               raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) / raceResults.length,
           stableOvertakes:         raceResults.reduce((s, r) => s + (r.liteStableOvertakes ?? 0), 0) / raceResults.length,
           outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
+          // Sum (not average): total pass-through events over all races in this combo.
+          brakeMatchFailureCount:  raceResults.reduce((s, r) => s + (r.brakeMatchFailureCount ?? 0), 0),
+          brakeMatchLeaderBraked:  raceResults.reduce((s, r) => s + (r.brakeMatchLeaderBraked ?? 0), 0),
           // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
           fairChanceExactRate:     raceResults.length > 0
             ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceExactHits / r.fairChanceB1Count : 0), 0) / raceResults.length
@@ -2393,6 +2471,7 @@ if (isMain) {
               `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
               `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
               `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
+              `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}(leaderBraked=${avgNaturalness.brakeMatchLeaderBraked ?? 0})` +
               `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
               `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
             );

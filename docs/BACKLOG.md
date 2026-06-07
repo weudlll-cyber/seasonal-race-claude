@@ -201,10 +201,11 @@ Additionally: Space (Custom Track) already present.
 | ✅ **D7b-fix B1+B2** | #37 | Follow-up commit on branch D7b: B1 — start spread: racers start evenly distributed over [-startSpreadRange, +startSpreadRange] instead of all at physicalY=0 (computeStartPhysicalY, new dev screen parameter). B2 — yDiff=0 edge case: when both racers have the same physicalY, no lateral force is applied (prevents all trailers flying toward +1). |
 | ✅ **D7b-fix B3** | #37 | Anti-stacking (force imbalance, was listed as D11 finding in backlog): avoidance forces are normalized by sqrt(neighborCount) — prevents boundary clinging with 20+ racers where linear force accumulation overwhelmed restoring forces. New defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
 | ✅ **D7c** | #39 | Row start + speed bonus + track capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full spread also for last incomplete row), `computeSpeedBonus` (factor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto capacity from pathLengthPx). Closed tracks: back rows start at negative t (tPos wraps correctly). Open tracks: t=0 through EditorShape clamp. `maxRacers` on track with "modified" badge. Setup screen: row hint + capacity warning. Dev screen row start section: 4 parameters. 21 unit + 6 e2e tests. |
-| ✅ **D7c-fix** | #39 | Bug: `trackWidth` metadata (140 px, calibrated for 1280px world) gave `racersPerRow=1` on large worlds (6000px) → all 20 racers in single rows → single vertical line. Fix phase 1: `EditorShape.getActualTrackWidth()` measures real geometric width (median, cached). Fix phase 2 (D7c-fix-v2): formula completely in world pixel space: `computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx)` = `floor(2×geometricW/spriteWorldSizePx)`. `trackWidth` field completely removed from track data model — TrackManager dropdown (100/140/200/280/360) removed, `raceData.trackWidth` and `track.trackWidth` removed from all callers, storage migration: old entries ignored. `autoSpriteScale` now uses `getActualTrackWidth()` instead of metadata. Fix phase 3 (D7c-fix-v3): floating-point rounding error in catmullRom spline (~10⁻¹³) led to `racersPerRow=11` instead of 12 when Rocket displaySize override (50px) disabled auto scale → `getActualTrackWidth()` now rounds median via `Math.round()`. |
+| ✅ **D7c-fix** | #39 | Bug: `trackWidth` metadata (140 px, calibrated for 1280px world) gave `racersPerRow=1` on large worlds (6000px) → all 20 racers in single rows → single vertical line. Fix phase 1: `EditorShape.getActualTrackWidth()` measures real geometric width (median, cached). Fix phase 2 (D7c-fix-v2): formula completely in world pixel space: `computeRacersPerRow(trackWidthPx, frameSizePx)` = `floor(2×trackWidthPx/frameSizePx)`. `trackWidth` field completely removed from track data model — TrackManager dropdown removed, `raceData.trackWidth` and `track.trackWidth` removed. Fix phase 3 (D7c-fix-v3): floating-point rounding. **Note (scale-cleanup 2026-06-07):** `getActualTrackWidth()` is now the FALLBACK only. Physics reads `track.width` first (`track.width ?? getActualTrackWidth()`). The Track Editor stores the true physical lane width as `track.width`; `getActualTrackWidth()` can overestimate (e.g. Space Sprint: 449 px spline vs 300 px stored). |
 | ✅ **D7c-Phase4** | #39 | Three fixes on feat/d7c-row-start-with-speed-bonus. (1) **startSpreadRange 0.7→0.95**: default increased; migration: saved value 0.7 is updated to 0.95 on load. (2) **Formula mismatch fix**: `computeRacersPerRow` now receives `effectiveWidth = geometricWidth × startSpreadRange` — packing calculation now matches actual racer distribution (before: formula used 100% of track width, distribution only 70%). Updated in RaceScreen, TrackManager, SetupScreen. (3) **Open track layout**: a) Assembly area — rows start at `t = (totalRows − rowIndex) × deltaT_per_row` instead of negative t → no more clamping, all rows within track. b) `runoutZone` parameter (default 0.05) — finish line on open tracks at `1.0 − runoutZone` (tunable in dev screen). No more `openTrackFinishT` in RaceScreen. Setup screen shows finish % from runoutZone. Migration for startSpreadRange + runoutZone validation in loadRaceBehaviorConfig. |
 
-| ✅ **D7b-fix B4** | #98 | Free-lane separation + home force reduction. Additive impulse logic on geometric overlap: `isSideFree()` checks left/right space against all other active racers; deterministic direction choice via `stablePairBit` when exactly equal physicalY. `homeForceReductionOnOverlap: 0.3` — home force reduced to 30% during geometric overlap so free-lane can complete the separation. Geometry metadata (spriteWorldSizePx, geometricTrackWidthPx, pathLengthPx) passed from RaceScreen to racer. `reRollVariationPercent: 45 → 58`. 13 new unit tests. 94 files / 1741 tests. |
+| ✅ **D7b-fix B4** | #98 | Free-lane separation + home force reduction. Additive impulse logic on geometric overlap: `isSideFree()` checks left/right space against all other active racers; deterministic direction choice via `stablePairBit` when exactly equal physicalY. `homeForceReductionOnOverlap: 0.3` — home force reduced to 30% during geometric overlap so free-lane can complete the separation. Geometry metadata (`frameSizePx`, `trackWidthPx`, `pathLengthPx` — field names from scale-cleanup rename) passed from RaceScreen to racer. `reRollVariationPercent: 45 → 58`. 13 new unit tests. 94 files / 1741 tests. |
+| ✅ **Scale Cleanup** | `feat/open-track-overlap` | Foundation fix: physics now measures the world that is drawn. Three sources of truth corrected: (1) `trackWidthPx` reads `track.width` (stored by Track Editor, e.g. 300 px for Space Sprint) first, `getActualTrackWidth()` only as fallback for legacy tracks without stored width. (2) `drawnBodyWidthPx` = `bodyRef.bodyNarrow` from `computeBodyNarrowRef` (true visible body width), not `physicalSpriteSize × bodyFillX`. (3) `drawnBodyLengthPx` from render primitives independently. (4) physicalY ↔ px helpers `pxToPhysicalY` / `physicalYToPx` route ALL lateral conversions; raw `× trackWidth` was off by 2×. Six denominator/BLOCKED sites in `raceBehavior.js` fixed. Naming cleanup: 9 field renames, 2 getter renames, dead branches removed. All 19 sweep scripts + diag scripts updated. 2629/2629 tests. See `docs/ARCHITECTURE.md` § Scale & Size and `reports/open-track-overlap/34-scale-build.md`. |
 
 | ✅ **Priority System** | #100 | 4-mode home force priority system (Phase 2). OVERLAP / COOLDOWN / BLOCKED / NORMAL — home force only active in NORMAL, so free-lane and avoidance resolve collisions first. `priorityExtras` param in `applyRacerBehavior`; legacy path (`homeForceReductionOnOverlap`) kept for tests. Escape hatch: after `blockedTimeoutFrames` (default 60) consecutive BLOCKED frames, `blockedEscapeForce × homeForceStrength` (default 30%) kicks in. M-overlay: colored rings, frame count, avg/max stats, blocker detail panel. DevScreen: PrioritySystemSection with cooldownMs, blockedTimeoutFrames, blockedEscapeForce. **BLOCKED check iterations:** (1) bounding box (false positives — Decision Log #9) → (2) line segment distance (too restrictive, racers with forward movement on path block incorrectly) → (3) **target point check** (final): checks only point (r.t, physicalY=0), distance < spriteSize → BLOCKED; reactive per frame, no lookahead needed. `lookaheadFrames` removed from DevScreen. |
 | ✅ **Phase 3B** | squash `07bea7b` | BATTLE_ZOOM (isolation+greedy expansion+centroid), COMEBACK_ZOOM (green ring, globalAlpha), LEAD_CHANGE_ZOOM (lead change). Direction system: weighted candidate pool + OVERVIEW scheduler. Fixes: OVERVIEW zoom fix (L83), OVERVIEW pan jump (L84), ctx.filter→globalAlpha (L86), overlay sets clear. 3 new HUD components. +54 unit. 2041/2041 ✅. Master HEAD `07bea7b`. |
@@ -647,6 +648,46 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 **Impact on sims:** Targeted sweep only — specifically low/medium N on wide open tracks (e.g. Space Sprint × plane × N=9, 20, 40). The full 8-parameter sweep does NOT need to be re-run; the fairness metric (win rate distribution) is not affected by rendering or passing overlap.
 
 **Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
+
+### P-3 — Speed-brake lateral: body-based same-lane filter on narrow tracks *(backlogged 2026-06-08)*
+
+**Resolved in report 45:** Speed-brake lateral now uses `contactWidth × 1.0` (body-based same-lane filter). The ×1.5 attempt (report 43 revert) failed because the multiplier expanded the zone into adjacent rows for wide-body racers on narrow tracks (luge/250px: 22.5px→37.5px, caught all adjacent pairs).
+
+**Remaining edge case:** For very narrow tracks or unusually wide bodies, `contactWidth × 1.0` can be slightly wider than the old normalized threshold (luge: 25px vs 22.5px old — 11% wider). Currently safe (luge p=0.585). A future fix would introduce density-awareness: cap the lateral threshold so it stays below the typical row spacing on the current track.
+
+**Fix direction:** `min(contactWidth, effectiveWidth / racersPerRow × 0.9)` as the lateral threshold — this ensures the filter never catches ALL adjacent pairs regardless of body/track density ratio.
+
+**Priority:** Low. Current ×1.0 solution is safe across all 10 tracks + 20 racer types.
+
+---
+
+### P-4 — getWidthAtT: non-uniform track width *(backlogged 2026-06-07)*
+
+`getTrackWidthAtTpx` returns a single track-width value per racer (the stored `track.width` constant). For tracks with variable lane width (e.g. banked curves, chicanes), avoidance thresholds should scale with the local width at `racer.t`. Extension hook is documented in `raceBehavior.js`. Implement by querying `EditorShape._centerWidth(t)` or equivalent per frame.
+
+**Priority:** Low. No existing track has variable width. Build only when the Track Editor gains variable-width curves.
+
+---
+
+### P-5 — Luger Hill hex track-ID rename *(backlogged 2026-06-08)*
+
+Luger Hill's track ID is the hex UUID `90d3020197da` (vs. human-readable IDs for all other tracks like `dirt-oval`, `river-run`). This causes sim commands to need `--track=90d3020197da` and has caused "0 combos" errors when `--track=luger-hill` is used. The ID should be renamed to `luger-hill` to match conventions.
+
+**This is a data change:** renaming the server JSON file and updating any references. Requires migration for users who have cached geometry under the old ID. No behavior change.
+
+**Priority:** Low. The hex ID is functional; the only cost is inconvenience in sim scripts.
+
+---
+
+### P-6 — Spatial grid for O(N) avoidance (D7d) *(backlogged)*
+
+Current avoidance loop is O(N²) over all active pairs. At N=100 this is 4950 pair checks per frame. A spatial grid (cell size ≈ avoidance gate threshold) would reduce to O(N) average by only checking pairs in adjacent grid cells.
+
+**Already planned as D7d** in the roadmap. Prerequisite for 100-racer races.
+
+**Priority:** Medium. Required for D7d; no urgency at current N=40–60.
+
+---
 
 ### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05, partially resolved 2026-06-05)*
 

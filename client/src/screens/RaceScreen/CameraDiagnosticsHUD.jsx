@@ -91,7 +91,7 @@ export default function CameraDiagnosticsHUD({
       const diag = diagRef?.current ?? {};
       setSnapshot({
         zoom: dir.zoom ?? 1,
-        refPx: dir._referenceSpriteSize ?? 0,
+        refPx: dir._drawnBodyWidthRefPx ?? 0,
         worldW: dir._worldW ?? 1280,
         isOpen: dir._isOpenTrack ?? false,
         hudState: dir.hudState ?? 'OVERVIEW',

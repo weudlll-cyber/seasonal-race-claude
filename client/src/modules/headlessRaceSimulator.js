@@ -192,8 +192,8 @@ export function simulateRace({
       draftingBoostActive: false,
       physicalY: 0,
       // Geometry fields needed by raceBehavior.js
-      spriteWorldSizePx: spriteSize,
-      geometricTrackWidthPx,
+      frameSizePx: spriteSize,
+      trackWidthPx: geometricTrackWidthPx,
       pathLengthPx,
     };
 
@@ -228,7 +228,8 @@ export function simulateRace({
     }
 
     // Apply behavior (avoidance, free-lane, home force, drafting, etc.)
-    applyRacerBehavior(racers, behaviorConfig);
+    // headlessRaceSimulator always uses Dirt Oval (closed track) — isOpen=false.
+    applyRacerBehavior(racers, { ...behaviorConfig, isOpen: false });
 
     // Per-racer speed update + re-roll
     for (const r of racers) {

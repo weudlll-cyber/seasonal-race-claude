@@ -79,7 +79,7 @@ function loadTrack(trackId) {
     shape,
     isOpen,
     pathLengthPx:        track.pathLengthPx ?? shape.getTotalLength(),
-    geometricTrackWidth: shape.getActualTrackWidth(),
+    geometricTrackWidth: track.width ?? shape.getActualTrackWidth(),
   };
 }
 

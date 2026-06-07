@@ -111,7 +111,7 @@ export class CameraDirector {
    *   Optional camera tuning config (from cameraConfig.js). Drives the inverse-zoom
    *   path via cameraStateProfiles.spriteScale (v14+) or legacy spritePctOfCanvas.
    *   Call updateConfig() for live-apply without re-construction.
-   * @param {number} [referenceSpriteSize=0]
+   * @param {number} [drawnBodyWidthRefPx=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
    *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
    * @param {object|null} [shape=null]
@@ -125,7 +125,7 @@ export class CameraDirector {
     worldH = 720,
     isOpenTrack = false,
     config = null,
-    referenceSpriteSize = 0,
+    drawnBodyWidthRefPx = 0,
     shape = null
   ) {
     this._isOpenTrack = isOpenTrack;
@@ -134,7 +134,7 @@ export class CameraDirector {
     this._worldBounds = { minX: 0, minY: 0, maxX: worldW, maxY: worldH };
     this._bsX = CANVAS_W / worldW;
     this._bsY = CANVAS_H_REF / worldH;
-    this._referenceSpriteSize = referenceSpriteSize;
+    this._drawnBodyWidthRefPx = drawnBodyWidthRefPx;
     // Adaptive overview zoom: shows the entire world at cam.zoom=overviewZoom.
     // For closed tracks, OVERVIEW uses cam.zoom=1 (bsX handles world mapping).
     // For open tracks, OVERVIEW uses cam.zoom=overviewZoom to shrink the field of view.
@@ -211,8 +211,8 @@ export class CameraDirector {
     // Dynamic zoom-out floor: tracks the minimum targetZoom for the current LEADER/LEAD_CHANGE phase.
     // Null between phases. Resets on every state transition. Only decrements within a phase.
     this._leaderPhaseZoomFloor = null;
-    // Normalized OVERVIEW snap zoom — computed from _referenceSpriteSize at each OVERVIEW entry.
-    // Null until first non-repeat OVERVIEW transition on open tracks with referenceSpriteSize>0.
+    // Normalized OVERVIEW snap zoom — computed from _drawnBodyWidthRefPx at each OVERVIEW entry.
+    // Null until first non-repeat OVERVIEW transition on open tracks with drawnBodyWidthRefPx>0.
     // _setTargets reads this; falls back to _overviewStateZoom when null.
     this._overviewSnapZoom = null;
     // _leaderMinZoom, _zoomOutStepPerFrame, _minRacersVisible set in _computeTimingConfig (above).
@@ -267,7 +267,7 @@ export class CameraDirector {
    * Compute cam.zoom from a spriteScale factor.
    *
    * spriteScale = 1.0 means sprites render at their natural density-scaled size.
-   * referenceSpriteSize cancels out of the formula (L82):
+   * drawnBodyWidthRefPx cancels out of the formula (L82):
    *   Closed: zoom = spriteScale / bsX   (bsX = CANVAS_W / worldW)
    *   Open:   zoom = spriteScale / OPEN_TRACK_BASE_ZOOM
    *
@@ -295,7 +295,7 @@ export class CameraDirector {
    *
    * v14+: each zoom level is computed from spriteScale (relative factor) stored in
    * cameraStateProfiles. zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open).
-   * referenceSpriteSize cancels out — zoom is racer-count-independent (L82).
+   * drawnBodyWidthRefPx cancels out — zoom is racer-count-independent (L82).
    *
    * Legacy spritePctOfCanvas path: pct × CANVAS_H_REF / FALLBACK_REFERENCE_SPRITE_SIZE gives
    * the equivalent spriteScale, preserving cross-track invariance for old configs.
@@ -1102,12 +1102,12 @@ export class CameraDirector {
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
           let snapZoom;
-          if (this._referenceSpriteSize > 0) {
+          if (this._drawnBodyWidthRefPx > 0) {
             // Normalize for both open and closed tracks: choose cam.zoom so racers appear at
             // _overviewTargetScreenPx screen pixels. The effective-zoom divisor is
             // OPEN_TRACK_BASE_ZOOM (open) or bsX (closed) — same formula, different multiplier.
             const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-            const raw = this._overviewTargetScreenPx / (this._referenceSpriteSize * divisor);
+            const raw = this._overviewTargetScreenPx / (this._drawnBodyWidthRefPx * divisor);
             // Open ceiling: 80% of state zoom prevents the leader leaving canvas during pan.
             // Closed ceiling: only MAX_INVERSE_ZOOM — resolveCamera handles world-edge clamping.
             const maxZoom = this._isOpenTrack

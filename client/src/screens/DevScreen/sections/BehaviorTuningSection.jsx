@@ -50,8 +50,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
   function resetSoftAvoidance() {
     setBehaviorConfig((prev) => ({
       ...prev,
-      tWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.tWeight,
-      yWeight: DEFAULT_RACE_BEHAVIOR_CONFIG.yWeight,
+      avoidanceBufferPct: DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct,
       maxLateral: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateral,
     }));
   }
@@ -294,7 +293,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
         title="Soft Avoidance"
         onReset={resetSoftAvoidance}
         resetTestId="reset-soft-avoidance"
-        subtitle="When racers are about to collide, they steer around each other instead of overlapping. This block fine-tunes how they detect and avoid each other — how far ahead they look, whether they prioritize racers in front or to the side, and how strong their evasive maneuvers are. Affects the smoothness and realism of close racing."
+        subtitle="When racers are about to collide, they steer around each other instead of overlapping. The buffer controls how early avoidance forces engage — a small lead time before bodies actually touch so forces can push racers apart smoothly."
         disabled={!behaviorConfig.enabled}
       >
         <div className={s.formGrid}>
@@ -303,44 +302,21 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              T Weight
-              <InfoTooltip text="How much racers care about avoiding collisions with someone directly in front. Higher = strong reaction to racers ahead, prefers to swerve around. Lower = less concerned with what's directly ahead." />
+              Avoidance Buffer (% of body size)
+              <InfoTooltip text="How early avoidance forces engage before bodies actually touch. 20% means forces start when centers are within 120% of the contact distance. Higher = forces engage earlier, more space between racers. Lower = racers get very close before forces start. Tune live; re-run a sweep after settling on a value." />
             </label>
             <input
               type="number"
               className={s.input}
-              aria-label="T Weight"
-              min={0.1}
-              max={10}
-              step={0.1}
-              value={behaviorConfig.tWeight}
+              aria-label="Avoidance Buffer"
+              min={0}
+              max={2.0}
+              step={0.05}
+              value={behaviorConfig.avoidanceBufferPct ?? 0.2}
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0) setBehavior('tWeight', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Y Weight
-              <InfoTooltip text="How much racers care about avoiding collisions with someone to the side. Higher = strong reaction to racers next to them. Lower = less concerned with sideways neighbors." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Y Weight"
-              min={0.1}
-              max={10}
-              step={0.1}
-              value={behaviorConfig.yWeight}
-              disabled={!behaviorConfig.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) setBehavior('yWeight', v);
+                if (isFinite(v) && v >= 0) setBehavior('avoidanceBufferPct', v);
               }}
             />
           </div>

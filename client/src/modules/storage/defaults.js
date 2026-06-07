@@ -444,7 +444,13 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Comfort zone & soft boundary repulsion
   comfortThreshold: 0.7,
   softRepulsionStrength: 0.1,
-  // Anisotropic avoidance distance metric weights (t×tWeight and physicalY×yWeight)
+  // Avoidance buffer: forces engage this fraction BEFORE body-edge contact (lead time).
+  // 0.20 = gate fires when centers are within 120% of the sum-of-half-sizes on both axes.
+  // Tunable in Dev Screen — Soft Avoidance. Calibrate by eye before running sweeps.
+  avoidanceBufferPct: 0.2,
+  // tWeight / yWeight: RETIRED from browser avoidance gate (report 39 — geometric gate).
+  // Kept here so sim scripts that still read avoidanceDistance/tWeight/yWeight for
+  // reference runs continue to work. Do NOT use in raceBehavior.js gate logic.
   tWeight: 2.0,
   yWeight: 1.0,
   maxLateral: 0.95,
@@ -475,10 +481,19 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   homeForceReductionOnOverlap: 0.300000
    *   avoidanceDistance:           0.180000
    *   speedBrakeFactor:            0.945000
-   *   speedBrakeTMultiplier:       1.500000
-   *   speedBrakeYThreshold:        0.180000
+   *   speedBrakeTMultiplier:       1.500000  (restored — avoidanceActive zone, all tracks)
+   *   speedBrakeYThreshold:        0.180000  (restored — avoidanceActive zone, all tracks)
+   *   brakeMatchActivationTMultiplier: 0.500000  (new — brake-to-match zone, open tracks only)
+   *   brakeMatchActivationYThreshold:  0.060000  (new — brake-to-match zone, open tracks only)
    *
-   * These parameters are strongly interdependent. Changing one
+   * Two-zone architecture (report 13): avoidanceActive (floor brake) uses the original wide
+   * zone on ALL tracks; brake-to-match cap uses the narrow zone on OPEN TRACKS ONLY.
+   * Report-12 isOpen guard proved that disabling avoidanceActive on closed tracks causes
+   * closed-track regressions (Dirt Oval × dragon p=0.285→0.013, motorbike p=0.686→0.008).
+   * To revert to pre-experiment baseline: remove brakeMatchActivation* params; set
+   *   speedBrakeTMultiplier=1.5, speedBrakeYThreshold=0.18 (already restored).
+   *
+   * Other parameters are strongly interdependent. Changing one
    * without re-sweeping the others will likely degrade race quality.
    *
    * To find new optimal values:
@@ -498,8 +513,45 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // While a racer is in geometric overlap, reduce home force so free-lane can separate.
   // 1.0 = no reduction, 0.0 = home force off during overlap.
   homeForceReductionOnOverlap: 0.3,
+  // avoidanceDistance: RETIRED from browser gate (report 39 — geometric gate replaces it).
+  // Kept for sim script backward compat. Browser now uses avoidanceBufferPct (above).
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
+  // speedBrakeTMultiplier — longitudinal lead-time multiplier for the body-based brake zone.
+  // Lateral threshold now uses body contact width ×1.0 (same-lane filter, report 45).
+  // Restored to Phase-5 calibrated values (report 13).
   speedBrakeTMultiplier: 1.5,
+  // speedBrakeYThreshold: RETIRED from browser brake gate (report 45 — body-based same-lane
+  // filter replaces it). Kept for sim-script backward compat and raceBehaviorConfig validation.
   speedBrakeYThreshold: 0.18,
+  // brakeMatchActivationTMultiplier / brakeMatchActivationYThreshold — brake-to-match zone.
+  // Separate narrow activation zone for the brake-to-match cap computation.
+  // Applied ONLY on OPEN tracks (config.isOpen !== false).
+  // Near-contact values (report 13): activates when within ~0.5 sprite-widths longitudinally
+  // and ~6% half-track-width laterally. Breaks the open-track chain lock without affecting
+  // the avoidanceActive floor-brake zone used for pack stabilization on all tracks.
+  brakeMatchActivationTMultiplier: 0.5,
+  brakeMatchActivationYThreshold: 0.06,
+  // Brake-to-match tuning (Step 1 — overtaking rebuild).
+  // speedMatchMinDifferential: fractional speed excess above which brake-to-match engages.
+  //   0.005 = engage only when trailer is >0.5% faster than leader.
+  // speedMatchSafetyMargin: fractional undercut below exact leader speed to prevent oscillation.
+  //   0.001 = cap set to leaderSpeed × 0.999 instead of exact leader speed.
+  // brakeHoldTimeoutFrames: consecutive hold frames before anti-trap escape triggers.
+  // brakeHoldEscapeReleaseDurationFrames: frames of forced brake-release after timeout.
+  // brakeHoldEscapeCooldownFrames: frames after escape before re-lock is allowed.
+  // brakeReleaseDebounceFrames: consecutive clear frames needed to exit hold.
+  speedMatchMinDifferential: 0.005,
+  speedMatchSafetyMargin: 0.001,
+  brakeHoldTimeoutFrames: 90,
+  brakeHoldEscapeReleaseDurationFrames: 15,
+  brakeHoldEscapeCooldownFrames: 60,
+  brakeReleaseDebounceFrames: 3,
+  // Step-2 Stage D: gap-clearing force (open tracks only).
+  // Adds a self-limiting proportional lateral impulse when two racers are in a same-lane
+  // approach, targeting honest body clearance (|yDiff| ≥ honestBodyWidthPx / trackWidth).
+  // gapForceStrength: scale on lateralForce for the gap impulse (0 = off → Stage C behavior).
+  // gapForceCap: max Stage B total injection as a multiple of lateralForce (safety ceiling).
+  gapForceStrength: 1.0,
+  gapForceCap: 1.5,
 };

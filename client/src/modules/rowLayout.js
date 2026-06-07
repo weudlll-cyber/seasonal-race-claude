@@ -16,14 +16,14 @@ import { shuffle } from './utils/RandomHelper.js';
  * Uses world-pixel coordinates throughout so the result is correct at any world size.
  *
  * Each slot is half a sprite wide (shoulder-to-shoulder packing).
- * Formula: floor(2 × geometricTrackWidthPx / spriteWorldSizePx)
+ * Formula: floor(2 × trackWidthPx / frameSizePx)
  *
- * @param {number} geometricTrackWidthPx  World-pixel inner-to-outer track width
- * @param {number} spriteWorldSizePx      Sprite display size in world pixels (displaySize × displaySizeScale)
+ * @param {number} trackWidthPx  World-pixel inner-to-outer track width
+ * @param {number} frameSizePx   Sprite display size in world pixels (displaySize × displaySizeScale)
  * @returns {number} at least 1
  */
-export function computeRacersPerRow(geometricTrackWidthPx, spriteWorldSizePx) {
-  return Math.max(1, Math.floor((2 * geometricTrackWidthPx) / Math.max(1, spriteWorldSizePx)));
+export function computeRacersPerRow(trackWidthPx, frameSizePx) {
+  return Math.max(1, Math.floor((2 * trackWidthPx) / Math.max(1, frameSizePx)));
 }
 
 /**

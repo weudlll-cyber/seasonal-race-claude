@@ -9,6 +9,33 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
+// ── Pair diagnostic (TEMP — remove after investigation) ──────────────────────
+// Mutated each applyRacerBehavior call. RaceScreen reads via direct DOM update.
+// Tracks the pair with smallest |dY| within the avoidance zone (worst-case pair).
+export const _diagPair = {
+  nameA: '?',
+  nameB: '?',
+  physYA: 0,
+  physYB: 0,
+  dY: 0,
+  dT: 0,
+  dist: 0, // kept for any downstream readers; set to min penetration fraction when gate passes
+  latPx: 0, // center-to-center lateral distance in world px
+  longPx: 0, // center-to-center longitudinal distance in world px
+  latTrigger: 0, // gate admission threshold (lateral, px) = bodyWidth × (1+buffer)
+  longTrigger: 0, // gate admission threshold (longitudinal, px) = bodyLength × (1+buffer)
+  passedAvoidGate: false,
+  lateralHalfSpan: 0,
+  tHalfSpan: 0,
+  overlaps: false,
+  flRawA: 0,
+  flRawB: 0, // raw freeLane delta written (pre-normalization)
+  flCountA: 0,
+  flCountB: 0,
+  homeDeltaA: 0,
+  homeDeltaB: 0,
+};
+
 // Priority-system mode constants. Exported so RaceScreen can read them for the debug overlay.
 export const PRIORITY_MODE = Object.freeze({
   NORMAL: 'NORMAL',
@@ -28,6 +55,68 @@ const STUCK_P_THRESH = 0.008; // minimum totalPressure (rawPos + rawNeg) to qual
 const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near-cancel)
 const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
 
+// Pre-allocated per-step structures reused across every applyRacerBehavior call.
+// Eliminates ~10 new Map/Set allocations per physics step (~37,500 per 60s race).
+// Each call clears + repopulates; no stale values leak between steps.
+const _yDeltas = new Map();
+const _yAvoidDeltas = new Map();
+const _yFreeLaneDeltas = new Map();
+const _freeLaneCounts = new Map();
+const _overlapSet = new Set();
+const _neighborCounts = new Map();
+const _speedBrakeSet = new Set();
+const _brakeMatchCaps = new Map();
+const _brakeMatchLeaderIdxs = new Map();
+const _dRawPos = new Map();
+const _dRawNeg = new Map();
+const _dCntPos = new Map();
+const _dCntNeg = new Map();
+// Step-2 clearance accumulators (Stage A — populated, not yet consumed).
+// Sets of racer index: which racers have a neighbor in each directional corridor.
+// Populated before Y-rejection so the corridor is not clipped by the avoidance gate.
+const _approachLeft = new Set();
+const _approachRight = new Set();
+const _forwardLeft = new Set();
+const _forwardRight = new Set();
+// Step-2 Stage B: same-lane detection (open tracks, post-Y-rejection pair loop body).
+// _sameLaneApproach:    trailer indices that have a leader nearly directly ahead this step.
+// _approachForceMag:    per-trailer max forceMag seen for same-lane pairs (force scaling).
+// _sameLaneLeaderPhysY: per-trailer leader physicalY — primary direction source for commit.
+const _sameLaneApproach = new Set();
+const _approachForceMag = new Map();
+const _sameLaneLeaderPhysY = new Map();
+
+/**
+ * Compute the per-pair brake cap for brake-to-match behavior.
+ *
+ * Returns 1.0 (no braking) when the trailer is not meaningfully faster than the
+ * leader, keeping the existing fixed-% brake as the effective floor.
+ *
+ * The returned cap is applied in index.jsx as:
+ *   brake = min(computeEffectiveBrakeFactor(...), computeBrakeMatchFactor(...))
+ * so the warmup ramp and the cap interact correctly (Flag 3, report 06).
+ *
+ * @param {number} leaderFwdSpeed  leader's ACTUAL expected advance speed — raw speed × the
+ *   leader's own effective brake (speedBrakeFactor floor when avoidanceActive, else 1.0).
+ *   Callers must multiply by the leader's brake BEFORE passing to this function.
+ * @param {number} trailerDenom    trailer's forward speed denominator (no brake term)
+ * @param {number} minDifferential fractional excess above which cap engages (e.g. 0.005)
+ * @param {number} safetyMargin    fractional undercut below exact leader speed (e.g. 0.001)
+ * @returns {number} cap in (0, 1]; 1.0 = no extra braking beyond existing floor
+ */
+export function computeBrakeMatchFactor(
+  leaderFwdSpeed,
+  trailerDenom,
+  minDifferential,
+  safetyMargin
+) {
+  if (leaderFwdSpeed <= 0 || trailerDenom <= 0) return 1.0;
+  // Engage only when trailer is meaningfully faster (prevents jitter on near-speed pairs).
+  if (trailerDenom <= leaderFwdSpeed * (1 + minDifferential)) return 1.0;
+  const rawFactor = leaderFwdSpeed / trailerDenom;
+  return rawFactor * (1 - safetyMargin);
+}
+
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
  * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
@@ -43,6 +132,21 @@ export function initRacerBehavior(racer) {
   racer.currentMode = PRIORITY_MODE.NORMAL;
   racer.lastOverlapEndTime = -Infinity;
   racer.currentModeFrameCount = 0;
+  // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
+  // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
+  //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
+  // brakeMatchFactor: current cap written by raceBehavior.js, read by index.jsx
+  //   (same cross-file pattern as avoidanceActive — one-frame lag is intentional).
+  // brakeMatchFrames: consecutive hold frames (anti-trap counter); negative = escape/cooldown countdown.
+  // brakeReleaseFrames: consecutive clear frames counted toward debounced release.
+  racer.brakeMatchLeaderIndex = -1;
+  racer.brakeMatchFactor = 1.0;
+  racer.brakeMatchFrames = 0;
+  racer.brakeReleaseFrames = 0;
+  // Step-2 Stage B: lateral commitment state (open tracks only).
+  // approachCommitDir: −1 (left), 0 (none), +1 (right). Debounced to prevent zigzag.
+  racer.approachCommitDir = 0;
+  racer.approachCommitFrames = 0;
 }
 
 /**
@@ -72,24 +176,56 @@ function stablePairBit(a, b) {
   return (hash >>> 0) & 1;
 }
 
-function getSpriteWorldSizePx(racer) {
-  if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0)
-    return racer.visibleWidthPx;
-  if (Number.isFinite(racer.spriteWorldSizePx) && racer.spriteWorldSizePx > 0)
-    return racer.spriteWorldSizePx;
+// ── physicalY ↔ world-pixel helpers ─────────────────────────────────────────
+// physicalY ∈ [-1, +1] maps through EditorShape.getPosition(t, physicalY/2),
+// so 1 physicalY unit = trackWidth/2 world pixels (the /2 is in EditorShape).
+// ALL lateral physicalY↔px conversions MUST go through these two helpers.
+// Never use raw × trackWidth — that misses the factor of 2.
+function pxToPhysicalY(px, trackWidth) {
+  return px / (trackWidth / 2);
+}
+function physicalYToPx(phy, trackWidth) {
+  return phy * (trackWidth / 2);
+}
+
+function getFrameSizePx(racer) {
+  if (Number.isFinite(racer.frameSizePx) && racer.frameSizePx > 0) return racer.frameSizePx;
   return 0;
 }
 
-function getTrackWidthPx(racer) {
+function getTrackWidthAtTpx(racer) {
+  // For non-uniform tracks (no _centerWidth): extend here with racer.t per-frame lookup
   if (Number.isFinite(racer.trackWidthPx) && racer.trackWidthPx > 0) return racer.trackWidthPx;
-  if (Number.isFinite(racer.geometricTrackWidthPx) && racer.geometricTrackWidthPx > 0)
-    return racer.geometricTrackWidthPx;
   return 0;
 }
 
 function getPathLengthPx(racer) {
   if (Number.isFinite(racer.pathLengthPx) && racer.pathLengthPx > 0) return racer.pathLengthPx;
   return 0;
+}
+
+// Geometric contact distances for the avoidance gate and the free-lane overlap check.
+//
+// contactWidth  = halfWidthA + halfWidthB  (sum of half-sizes — correct 2-body geometry)
+// contactLength = halfLengthA + halfLengthB
+//
+// Bodies touch when the center-to-center pixel distance equals the contact value.
+// The gate fires at contactWidth × (1+buffer) — always wider than the free-lane threshold
+// (contactWidth), so the invariant "gate ≥ inner check" holds by construction for any pair
+// of body sizes, equal or unequal (see dragon 28px vs rocket 14px: contact = 21px, not 28).
+// Falls back to frameSizePx/2 per racer when drawnBodyWidthPx is absent (sim racers).
+function pairContact(rA, rB) {
+  const frameA = getFrameSizePx(rA);
+  const frameB = getFrameSizePx(rB);
+  const hw_A = (rA.drawnBodyWidthPx ?? frameA) / 2;
+  const hw_B = (rB.drawnBodyWidthPx ?? frameB) / 2;
+  const hl_A = (rA.drawnBodyLengthPx ?? frameA) / 2;
+  const hl_B = (rB.drawnBodyLengthPx ?? frameB) / 2;
+  const contactWidth = hw_A + hw_B;
+  const contactLength = hl_A + hl_B;
+  const pairTW = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
+  const pairPL = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+  return { contactWidth, contactLength, pairTW, pairPL };
 }
 
 function chooseGeometricDirection(self, other, tieBitForSelf) {
@@ -127,21 +263,21 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
  * Per-frame re-evaluation means a racer crossing the path mid-frame is caught next frame.
  */
 function _computeBlockedMode(r, active) {
-  const trackWidth = getTrackWidthPx(r);
+  const trackWidth = getTrackWidthAtTpx(r);
   const pathLength = getPathLengthPx(r);
   if (trackWidth <= 0 || pathLength <= 0) {
     r.blockerInfo = null;
     return false;
   }
 
-  const spriteSize = getSpriteWorldSizePx(r);
+  const spriteSize = getFrameSizePx(r);
   if (spriteSize <= 0) {
     r.blockerInfo = null;
     return false;
   }
 
   // Edge case: already within one sprite-width of center — trivially clear
-  if (Math.abs(r.physicalY) * trackWidth < spriteSize) {
+  if (physicalYToPx(Math.abs(r.physicalY), trackWidth) < spriteSize) {
     r.blockerInfo = null;
     return false;
   }
@@ -158,7 +294,7 @@ function _computeBlockedMode(r, active) {
 
     // Distance from other racer to target point (r.t, physicalY=0) in pixel space
     const dx = dT * pathLength;
-    const dy = other.physicalY * trackWidth;
+    const dy = physicalYToPx(other.physicalY, trackWidth);
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < spriteSize) {
@@ -166,7 +302,7 @@ function _computeBlockedMode(r, active) {
         index: other.index,
         name: other.name ?? `#${other.index}`,
         dT: Math.round(dT * pathLength),
-        dY: Math.round((other.physicalY - r.physicalY) * trackWidth),
+        dY: Math.round(physicalYToPx(other.physicalY - r.physicalY, trackWidth)),
         otherPhysicalY: other.physicalY,
       };
       return true;
@@ -186,8 +322,9 @@ function _computeBlockedMode(r, active) {
  *   index: number, x: number, y: number, angle: number, t: number,
  *   physicalY: number, finished: boolean,
  *   avoidanceActive: boolean, draftingBoostActive: boolean,
- *   spriteWorldSizePx?: number, visibleWidthPx?: number,
- *   geometricTrackWidthPx?: number, trackWidthPx?: number,
+ *   frameSizePx?: number,
+ *   drawnBodyWidthPx?: number,
+ *   trackWidthPx?: number,
  *   pathLengthPx?: number
  * }>} racers
  * @param {{
@@ -195,7 +332,7 @@ function _computeBlockedMode(r, active) {
  *   homeForceStrength: number,
  *   homeForceReductionOnOverlap: number,
  *   comfortThreshold: number, softRepulsionStrength: number,
- *   avoidanceDistance: number, tWeight: number, yWeight: number,
+ *   avoidanceBufferPct: number,
  *   lateralForce: number, maxLateral: number,
  *   speedBrakeYThreshold: number, speedBrakeTMultiplier: number,
  *   speedBrakeFactor: number,
@@ -218,28 +355,77 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   const active = racers.filter((r) => !r.finished);
   for (const r of active) r.draftingBoostActive = false;
 
+  // Clear + repopulate pre-allocated module-level structures (no per-step allocation).
+  _yDeltas.clear();
+  _yAvoidDeltas.clear();
+  _yFreeLaneDeltas.clear();
+  _freeLaneCounts.clear();
+  _overlapSet.clear();
+  _neighborCounts.clear();
+  _speedBrakeSet.clear();
+  _brakeMatchCaps.clear();
+  _brakeMatchLeaderIdxs.clear();
+  _approachLeft.clear();
+  _approachRight.clear();
+  _forwardLeft.clear();
+  _forwardRight.clear();
+  _sameLaneApproach.clear();
+  _approachForceMag.clear();
+  _sameLaneLeaderPhysY.clear();
+  for (const r of active) {
+    _yDeltas.set(r.index, 0);
+    _yAvoidDeltas.set(r.index, 0);
+    _yFreeLaneDeltas.set(r.index, 0);
+    _freeLaneCounts.set(r.index, 0);
+    _neighborCounts.set(r.index, 0);
+  }
   // Accumulate physicalY deltas from home force + avoidance
-  const yDeltas = new Map(active.map((r) => [r.index, 0]));
+  const yDeltas = _yDeltas;
   // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
-  const yAvoidDeltas = new Map(active.map((r) => [r.index, 0]));
+  const yAvoidDeltas = _yAvoidDeltas;
   // Free-lane separation impulses — normalized by sqrt(freeLaneCount) to prevent
   // stacking explosion at race start where many pairs overlap simultaneously.
-  const yFreeLaneDeltas = new Map(active.map((r) => [r.index, 0]));
-  const freeLaneCounts = new Map(active.map((r) => [r.index, 0]));
-  const overlapSet = new Set();
-  const neighborCounts = new Map(active.map((r) => [r.index, 0]));
-  const speedBrakeSet = new Set();
+  const yFreeLaneDeltas = _yFreeLaneDeltas;
+  const freeLaneCounts = _freeLaneCounts;
+  const overlapSet = _overlapSet;
+  const neighborCounts = _neighborCounts;
+  const speedBrakeSet = _speedBrakeSet;
+  // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
+  // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
+  const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
+  const brakeMatchLeaderIdxs = _brakeMatchLeaderIdxs; // trailer.index → leader.index for that cap
   // rawPos/rawNeg: pre-normalization avoidance + free-lane force magnitudes by direction.
-  // Allocated when diagOut is provided (external diagnostic) OR when stuck suppression is active
-  // (suppression reads the same per-direction breakdown to decide if the racer is sandwiched).
+  // Reuse pre-allocated module-level maps when needed; null signals "not needed" to inner loops.
   // cntPos/cntNeg: pair-force counts — only needed for external diagnostic output.
   const needsBreakdown = diagOut !== null || (config.stuckModeSuppress ?? false);
-  const dRawPos = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dRawNeg = needsBreakdown ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dCntPos = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
-  const dCntNeg = diagOut ? new Map(active.map((r) => [r.index, 0])) : null;
+  let dRawPos = null;
+  let dRawNeg = null;
+  let dCntPos = null;
+  let dCntNeg = null;
+  if (needsBreakdown) {
+    _dRawPos.clear();
+    _dRawNeg.clear();
+    for (const r of active) {
+      _dRawPos.set(r.index, 0);
+      _dRawNeg.set(r.index, 0);
+    }
+    dRawPos = _dRawPos;
+    dRawNeg = _dRawNeg;
+  }
+  if (diagOut !== null) {
+    _dCntPos.clear();
+    _dCntNeg.clear();
+    for (const r of active) {
+      _dCntPos.set(r.index, 0);
+      _dCntNeg.set(r.index, 0);
+    }
+    dCntPos = _dCntPos;
+    dCntNeg = _dCntNeg;
+  }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
+  // Temp diag — reset candidate each frame
+  let _dc = null; // {rA,rB,dY,dT,dist,lhs,ths,overlaps,flRawA,flRawB}
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
       const rA = active[i];
@@ -249,56 +435,216 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       let dT = Math.abs(rA.t - rB.t);
       if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
       const dY = rA.physicalY - rB.physicalY;
-      const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
-      if (dist >= config.avoidanceDistance) continue;
 
-      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
-      // so the pixel-space force is consistent across all track widths.
-      const pairTrackWidth = Math.max(getTrackWidthPx(rA), getTrackWidthPx(rB));
-      const lateralScale =
-        pairTrackWidth > 0
-          ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTrackWidth))
-          : 1.0;
+      // ── Step-2 clearance accumulators (Stage A — open tracks only) ────────────
+      // Runs BEFORE Y-rejection so the clearance corridor is not clipped by the
+      // avoidance gate. Uses its own geometric gate (2 × honest half-span) which
+      // is independent of avoidanceDistance / yWeight config values.
+      // Not yet consumed — populated here for budget measurement only.
+      if (config.isOpen !== false) {
+        const twA = getTrackWidthAtTpx(rA);
+        const twB = getTrackWidthAtTpx(rB);
+        const pairTW = Math.max(twA, twB);
+        if (pairTW > 0) {
+          const rAHH = pxToPhysicalY(rA.drawnBodyWidthPx ?? rA.frameSizePx ?? 0, pairTW);
+          const rBHH = pxToPhysicalY(rB.drawnBodyWidthPx ?? rB.frameSizePx ?? 0, pairTW);
+          const pairHH = Math.max(rAHH, rBHH);
+          if (pairHH > 0 && Math.abs(dY) < 2 * pairHH) {
+            const aIsAhead = rA.t >= rB.t;
+            const front = aIsAhead ? rA : rB;
+            const back = aIsAhead ? rB : rA;
+            const lateralDelta = front.physicalY - back.physicalY;
+            if (lateralDelta > 0) {
+              _approachRight.add(back.index);
+              _approachLeft.add(front.index);
+            } else if (lateralDelta < 0) {
+              _approachLeft.add(back.index);
+              _approachRight.add(front.index);
+            }
+            if (lateralDelta > pairHH) _forwardRight.add(back.index);
+            else if (lateralDelta < -pairHH) _forwardLeft.add(back.index);
+          }
+        }
+      }
 
-      // Proximity-scaled lateral force
-      const forceMag = config.lateralForce * (1 - dist / config.avoidanceDistance);
+      // Temp diag — track closest pair by ACTUAL 2D world-pixel center distance.
+      // Must run BEFORE the avoidance gate so we always capture the visually closest pair
+      // even if it falls outside the physics processing zone.
+      // rA.x / rA.y are set by computePositions() before applyRacerBehavior() is called.
+      const screenDist = Math.sqrt((rA.x - rB.x) ** 2 + (rA.y - rB.y) ** 2);
+      if (_dc === null || screenDist < (_dc.screenDist ?? Infinity)) {
+        _dc = {
+          rA,
+          rB,
+          dY,
+          dT,
+          dist: -1,
+          screenDist,
+          passedGate: false,
+          latPx: 0,
+          longPx: 0,
+          latTrigger: 0,
+          longTrigger: 0,
+          lhs: 0,
+          ths: 0,
+          overlaps: false,
+          flRawA: 0,
+          flRawB: 0,
+        };
+      }
+
+      // Body geometry for the speed-brake — both axes body-based (reports 43/45).
+      // Frame size kept as fallback when body dims are absent.
+      const frameA = getFrameSizePx(rA);
+      const frameB = getFrameSizePx(rB);
+      const hlA_b = (rA.drawnBodyLengthPx ?? frameA) / 2;
+      const hlB_b = (rB.drawnBodyLengthPx ?? frameB) / 2;
+      const hwA_b = (rA.drawnBodyWidthPx ?? frameA) / 2;
+      const hwB_b = (rB.drawnBodyWidthPx ?? frameB) / 2;
+      const brakeContactLength = hlA_b + hlB_b;
+      const brakeContactWidth = hwA_b + hwB_b;
+      const trackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
+      const pathLength = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+      // Same-lane filter: brake only if bodies would collide laterally (no expansion multiplier).
+      const brakeSameLaneY =
+        trackWidth > 0 ? pxToPhysicalY(brakeContactWidth, trackWidth) : config.speedBrakeYThreshold;
 
       // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
       const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
       const trailer = aIsTrailer ? rA : rB;
       const leader = aIsTrailer ? rB : rA;
 
-      // Sprite geometry for this pair — used by both speed brake and free-lane separation.
-      const sizeA = getSpriteWorldSizePx(rA);
-      const sizeB = getSpriteWorldSizePx(rB);
-      const spriteWorldSize = Math.max(sizeA, sizeB);
-      const trackWidthA = getTrackWidthPx(rA);
-      const trackWidthB = getTrackWidthPx(rB);
-      const trackWidth = Math.max(trackWidthA, trackWidthB);
-      const pathLengthA = getPathLengthPx(rA);
-      const pathLengthB = getPathLengthPx(rB);
-      const pathLength = Math.max(pathLengthA, pathLengthB);
-
-      // Speed brake: apply to trailer when truly side-by-side (close in both Y and T).
-      // Evaluated before the yDiff skip so it fires even when racers share the same Y.
-      // Dynamic threshold: scales with sprite size and path length so the brake fires at
-      // the same relative proximity (in sprite-widths) on every track and racer type.
-      // Falls back to a fixed 0.014 when geometry is unavailable (e.g. unit tests).
+      // ── Speed brake (avoidanceActive + 0.945 floor): ALL tracks ─────────────
+      // Runs BEFORE the body-contact gate. Both thresholds are body-based (reports 43/45):
+      //   longitudinal: bodyContactLength × speedBrakeTMultiplier (lead-time zone)
+      //   lateral: bodyContactWidth × 1.0 (same-lane filter only — no expansion multiplier)
+      // Lateral proximity must NOT drive braking; it only answers "same lane y/n".
+      // Report 13: disabling avoidanceActive on closed tracks caused regressions.
       const dynamicBrakeT =
-        spriteWorldSize > 0 && pathLength > 0
-          ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
+        brakeContactLength > 0 && pathLength > 0
+          ? (brakeContactLength / pathLength) * config.speedBrakeTMultiplier
           : 0.014;
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
+      if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         speedBrakeSet.add(trailer.index);
+
+        // ── Brake-to-match cap ──────────────────────────────────────────────────
+        // Open tracks: narrower activation zone (brakeMatchActivation*) prevents chain
+        // lock without affecting closed-track pack dynamics.
+        // Closed tracks: wide zone (same thresholds as outer if) — restores the
+        // pre-rebuild baseline that passed all closed combos. Report 14: removing
+        // brake-match from closed tracks caused giraffe + boarder regressions.
+        let inBrakeMatchZone;
+        if (config.isOpen !== false) {
+          const bmMultiplier =
+            config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
+          const dynamicBrakeMatchT =
+            brakeContactLength > 0 && pathLength > 0
+              ? (brakeContactLength / pathLength) * bmMultiplier
+              : 0.014;
+          const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
+          inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
+        } else {
+          inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
+        }
+        if (inBrakeMatchZone) {
+          // Brake-to-match: compute leader-speed cap for this pair.
+          // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
+          const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+          const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+          const leaderRawSpeed =
+            (leader.baseSpeed ?? 0) *
+            boostL *
+            (leader.trajectoryMult ?? 1.0) *
+            (leader.areaBonusMult ?? 1.0) *
+            (leader.rubberBandMult ?? 1.0);
+          const trailerDenom =
+            (trailer.baseSpeed ?? 0) *
+            boostT *
+            (trailer.trajectoryMult ?? 1.0) *
+            (trailer.areaBonusMult ?? 1.0) *
+            (trailer.rubberBandMult ?? 1.0);
+          // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
+          // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
+          // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
+          // baseline cap — the 5.8%-tighter corrected cap causes chain-lock for beetle
+          // and boarder on Dirt Oval.
+          const leaderBrake =
+            config.isOpen !== false && leader.avoidanceActive
+              ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+              : 1.0;
+          const cap = computeBrakeMatchFactor(
+            leaderRawSpeed * leaderBrake,
+            trailerDenom,
+            config.speedMatchMinDifferential ?? 0.005,
+            config.speedMatchSafetyMargin ?? 0.001
+          );
+          // Track the most constraining leader (lowest cap). Tie-break: first-found
+          // (lower pair indices) wins because strict < never updates on equal caps.
+          if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
+            brakeMatchCaps.set(trailer.index, cap);
+            brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+          }
+        }
       }
+
+      // ── Geometric avoidance gate (report 38/39) ──────────────────────────────
+      // Replaced the mixed-unit metric (dT×tWeight + dY×yWeight) that could not be
+      // calibrated per-track (required weight ≈ 131 on Space Sprint, ≈ 67 on Dirt Oval).
+      // Two independent px-space axes, no sqrt. Speed brake runs BEFORE this gate (above)
+      // because its frameSizePx-based threshold is intentionally wider than body size.
+      // Invariant: gate contact threshold × (1+buffer) > contact = free-lane threshold.
+      const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+      // Skip pairs with no body size info (real racers always have frameSizePx as fallback).
+      if (contactWidth === 0 || contactLength === 0) continue;
+      const latPx = Math.abs(dY) * (pairTW / 2);
+      const longPx = dT * pairPL;
+      const bufferPct = config.avoidanceBufferPct ?? 0.2;
+      // Gate = contact × (1+buffer) > contact (free-lane) — invariant by construction.
+      const latTrigger = contactWidth * (1 + bufferPct);
+      const longTrigger = contactLength * (1 + bufferPct);
+      // Two-axis AND: both axes must be inside the buffered contact zone.
+      if (latPx >= latTrigger || longPx >= longTrigger) continue;
+      // Temp diag — mark if the screen-closest pair also passed the avoidance gate
+      if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
+        const latFrac = 1 - latPx / latTrigger;
+        const longFrac = 1 - longPx / longTrigger;
+        _dc.dist = Math.min(latFrac, longFrac); // penetration fraction [0,1]
+        _dc.latPx = latPx;
+        _dc.longPx = longPx;
+        _dc.latTrigger = latTrigger;
+        _dc.longTrigger = longTrigger;
+        _dc.passedGate = true;
+      }
+
+      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
+      // so the pixel-space force is consistent across all track widths.
+      const lateralScale =
+        pairTW > 0 ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTW)) : 1.0;
+
+      // Proximity-scaled lateral force: min penetration fraction across both axes.
+      // Decays from lateralForce (centers touching) to 0 (at the trigger boundary).
+      const latFraction = 1 - latPx / latTrigger;
+      const longFraction = 1 - longPx / longTrigger;
+      const forceMag = config.lateralForce * Math.min(latFraction, longFraction);
 
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
       // impulses based on local left/right free-space checks.
 
-      if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
-        const lateralHalfSpan = spriteWorldSize / trackWidth;
-        const tHalfSpan = spriteWorldSize / pathLength;
+      if (contactLength > 0 && trackWidth > 0 && pathLength > 0) {
+        // lateralHalfSpan and tHalfSpan use the same sum-of-half-sizes base as the gate.
+        // Gate = contact × (1+buffer); free-lane = contact exactly — invariant by construction.
+        // contactWidth/contactLength already computed above via pairContact; referenced here.
+        // Falls back via pairContact's ?? frameSizePx when drawnBodyWidthPx/LengthPx absent.
+        // pxToPhysicalY required — raw / trackWidth misses the factor of 2 (report 35).
+        const lateralHalfSpan = pxToPhysicalY(contactWidth, trackWidth);
+        const tHalfSpan = contactLength / pathLength;
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
+        // Temp diag — record lhs/ths/overlaps for the candidate pair
+        if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
+          _dc.lhs = lateralHalfSpan;
+          _dc.ths = tHalfSpan;
+          _dc.overlaps = overlaps;
+        }
 
         if (overlaps) {
           overlapSet.add(rA.index);
@@ -353,6 +699,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
             freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
           }
+          // Temp diag — capture raw flDelta for the candidate pair
+          if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
+            _dc.flRawA = dirA * forceMag;
+            _dc.flRawB = dirB * forceMag;
+          }
           if (dRawPos !== null) {
             if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
             else if (dirA < 0) dRawNeg.set(rA.index, dRawNeg.get(rA.index) + forceMag);
@@ -366,6 +717,33 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
       // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
       const yDiff = trailer.physicalY - leader.physicalY;
+
+      // ── Step-2 Stage B: same-lane approach detection (open tracks only) ────────
+      // Fires when the trailer is within one honest body half-span of the leader laterally.
+      // Stores this trailer as needing a committed side choice, plus the current forceMag
+      // for magnitude-bounded force injection in the apply-deltas loop.
+      if (config.isOpen !== false && trackWidth > 0) {
+        const sameLaneHH = pxToPhysicalY(
+          Math.max(
+            trailer.drawnBodyWidthPx ?? trailer.frameSizePx ?? 0,
+            leader.drawnBodyWidthPx ?? leader.frameSizePx ?? 0
+          ),
+          trackWidth
+        );
+        if (sameLaneHH > 0 && Math.abs(yDiff) < sameLaneHH) {
+          _sameLaneApproach.add(trailer.index);
+          if (forceMag > (_approachForceMag.get(trailer.index) ?? 0)) {
+            _approachForceMag.set(trailer.index, forceMag);
+          }
+          // Store leader physicalY for the deadlock-break fallback in apply-deltas.
+          // Most-constraining leader (highest forceMag) wins so the same priority as
+          // forceMag selection applies to the direction reference.
+          if (forceMag >= (_approachForceMag.get(trailer.index) ?? 0)) {
+            _sameLaneLeaderPhysY.set(trailer.index, leader.physicalY);
+          }
+        }
+      }
+
       if (Math.abs(yDiff) < 1e-6) continue;
       const pushDir = yDiff >= 0 ? 1 : -1;
       yAvoidDeltas.set(
@@ -384,6 +762,33 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
     }
+  }
+
+  // Temp diag — flush candidate into the exported state
+  if (_dc) {
+    _diagPair.nameA = _dc.rA.name ?? `#${_dc.rA.index}`;
+    _diagPair.nameB = _dc.rB.name ?? `#${_dc.rB.index}`;
+    _diagPair.physYA = _dc.rA.physicalY;
+    _diagPair.physYB = _dc.rB.physicalY;
+    _diagPair.dY = _dc.dY;
+    _diagPair.dT = _dc.dT;
+    _diagPair.screenDist = _dc.screenDist;
+    _diagPair.dist = _dc.dist;
+    _diagPair.latPx = _dc.latPx;
+    _diagPair.longPx = _dc.longPx;
+    _diagPair.latTrigger = _dc.latTrigger;
+    _diagPair.longTrigger = _dc.longTrigger;
+    _diagPair.passedAvoidGate = _dc.passedGate;
+    _diagPair.lateralHalfSpan = _dc.lhs;
+    _diagPair.tHalfSpan = _dc.ths;
+    _diagPair.overlaps = _dc.overlaps;
+    _diagPair.flRawA = _dc.flRawA;
+    _diagPair.flRawB = _dc.flRawB;
+    _diagPair.flCountA = freeLaneCounts.get(_dc.rA.index) ?? 0;
+    _diagPair.flCountB = freeLaneCounts.get(_dc.rB.index) ?? 0;
+  } else {
+    _diagPair.passedAvoidGate = false;
+    _diagPair.screenDist = -1;
   }
 
   // ── Priority-mode computation (Phase 2) ───────────────────────────────────
@@ -455,6 +860,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     }
   }
 
+  // Temp diag — capture home-force contribution after it's been written to yDeltas
+  if (_dc) {
+    _diagPair.homeDeltaA = yDeltas.get(_dc.rA.index) ?? 0;
+    _diagPair.homeDeltaB = yDeltas.get(_dc.rB.index) ?? 0;
+  }
+
   // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
   // Prevents stacking explosion when many pairs overlap simultaneously (e.g. race start
   // with 40 racers where each racer can overlap 10+ neighbors at once).
@@ -495,6 +906,103 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
     }
 
+    // ── Step-2 Stage B: lateral commitment (open tracks only) ─────────────────
+    // Consume the Stage A/B accumulators to update the committed side and inject force.
+    if (config.isOpen !== false) {
+      const inSameLane = _sameLaneApproach.has(r.index);
+      if (inSameLane) {
+        // Leader-relative direction: steer to the side the trailer is already on,
+        // away from this specific leader. Removes the t-blind corridor false-positive
+        // (_approachLeft/Right) that deadlocked 91.5% of dense-field triggers and caused
+        // Stage B force to cancel the natural avoidance push instead of reinforcing it.
+        // Stage C two-part override: switch from naturalDir only when (a) natural side
+        // has a forward obstacle AND (b) the opposite side is clear both AHEAD and
+        // ADJACENTLY — preventing a switch into a lane with a racer right beside us.
+        // _approachLeft/Right used here only as a gate on the switch, never as the
+        // primary direction source (no force-cancellation risk on the primary case).
+        let desiredDir = 0;
+        const lpy = _sameLaneLeaderPhysY.get(r.index);
+        if (lpy !== undefined) {
+          const relPos = r.physicalY - lpy;
+          const naturalDir =
+            Math.abs(relPos) >= 1e-6 ? (relPos >= 0 ? 1 : -1) : (r.index & 1) === 0 ? 1 : -1;
+          const naturalFwdBlocked =
+            naturalDir > 0 ? _forwardRight.has(r.index) : _forwardLeft.has(r.index);
+          const oppFwdBlocked =
+            naturalDir > 0 ? _forwardLeft.has(r.index) : _forwardRight.has(r.index);
+          // Part 1 (adjacent): is the opposite side free right now?
+          const oppApproachBlocked =
+            naturalDir > 0 ? _approachLeft.has(r.index) : _approachRight.has(r.index);
+          desiredDir =
+            naturalFwdBlocked && !oppFwdBlocked && !oppApproachBlocked ? -naturalDir : naturalDir;
+        }
+
+        const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
+        if (desiredDir !== 0) {
+          if (desiredDir === r.approachCommitDir) {
+            r.approachCommitFrames++;
+          } else {
+            // Debounce direction flip: decay the counter before switching.
+            r.approachCommitFrames--;
+            if (r.approachCommitFrames <= 0) {
+              r.approachCommitDir = desiredDir;
+              r.approachCommitFrames = 1;
+            }
+          }
+          if (r.approachCommitFrames >= commitTimeout) {
+            // Anti-starvation: abandon commit after too many consecutive frames.
+            r.approachCommitDir = 0;
+            r.approachCommitFrames = 0;
+          }
+        } else {
+          // desiredDir still 0: no leader physicalY available — decay gently.
+          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - 1);
+          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
+        }
+      } else {
+        // No same-lane leader: decay commitment over bmDebounce frames.
+        const dbDecay = config.brakeReleaseDebounceFrames ?? 3;
+        if (r.approachCommitDir !== 0) {
+          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - dbDecay);
+          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
+        }
+      }
+
+      // Inject committed lateral force + Stage D gap-clearing force into this frame's delta.
+      if (r.approachCommitDir !== 0) {
+        const fMag = _approachForceMag.get(r.index) ?? 0;
+        if (fMag > 0) {
+          let injected = fMag;
+          // ── Step-2 Stage D: self-limiting honest-clearance force ───────────────
+          // Proportional push toward one honest body width of lateral separation.
+          // Three gates ensure this only fires in the genuine direct-behind pass scenario:
+          //   (1) inSameLane: leader is within sameLaneHH laterally, leaderPhysY is fresh.
+          //   (2) speedBrakeSet: trailer is actively decelerating behind a leader (close in T).
+          //       Excludes "alongside" pairs (similar track position, large T separation) that
+          //       would otherwise get extra lateral push causing zigzag and excess contact.
+          //   (3) lpy defined: fresh leader physicalY available this frame.
+          // Ramps from lateralForce×strength at |yDiff|=0 down to 0 at |yDiff|=2×honestHalfSpan.
+          const lpy = _sameLaneLeaderPhysY.get(r.index);
+          if (inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined) {
+            const tw = getTrackWidthAtTpx(r);
+            if (tw > 0) {
+              const honestHalfSpan = pxToPhysicalY(r.drawnBodyWidthPx ?? r.frameSizePx ?? 0, tw);
+              if (honestHalfSpan > 0) {
+                const absYDiff = Math.abs(r.physicalY - lpy);
+                const clearanceSpan = 2 * honestHalfSpan;
+                const gapRatio = Math.max(0, (clearanceSpan - absYDiff) / clearanceSpan);
+                const gapForce = config.lateralForce * (config.gapForceStrength ?? 1.0) * gapRatio;
+                // Safety ceiling: total Stage B injection ≤ lateralForce × gapForceCap.
+                const cap = config.lateralForce * (config.gapForceCap ?? 1.5);
+                injected = Math.min(injected + gapForce, cap);
+              }
+            }
+          }
+          delta += r.approachCommitDir * injected;
+        }
+      }
+    }
+
     // Accumulate lateral forces into velocity, then damp
     r.physicalYVelocity = ((r.physicalYVelocity ?? 0) + delta) * damping;
     let newY = r.physicalY + r.physicalYVelocity;
@@ -512,6 +1020,75 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     if (clamped !== newY) r.physicalYVelocity = 0;
     r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
+
+    // ── Brake-to-match hold state update ──────────────────────────────────
+    // Constants read once per racer for clarity; values from config with safe defaults.
+    const bmTimeout = config.brakeHoldTimeoutFrames ?? 90;
+    const bmEscape = config.brakeHoldEscapeReleaseDurationFrames ?? 15;
+    const bmCooldown = config.brakeHoldEscapeCooldownFrames ?? 60;
+    const bmDebounce = config.brakeReleaseDebounceFrames ?? 3;
+
+    if (r.brakeMatchFrames < 0) {
+      // Counting up from -(bmEscape+bmCooldown) toward 0: escape release then cooldown.
+      // No new hold allowed until brakeMatchFrames reaches 0.
+      r.brakeMatchFrames += 1;
+      r.brakeMatchFactor = 1.0;
+      r.brakeMatchLeaderIndex = -1;
+    } else {
+      // Stale-index guard: if locked leader is no longer active, reset immediately.
+      if (r.brakeMatchLeaderIndex !== -1) {
+        let leaderStillActive = false;
+        for (const a of active) {
+          if (a.index === r.brakeMatchLeaderIndex) {
+            leaderStillActive = true;
+            break;
+          }
+        }
+        if (!leaderStillActive) {
+          r.brakeMatchLeaderIndex = -1;
+          r.brakeMatchFactor = 1.0;
+          r.brakeMatchFrames = 0;
+          r.brakeReleaseFrames = 0;
+        }
+      }
+
+      const newCap = brakeMatchCaps.get(r.index);
+      if (newCap !== undefined) {
+        // A constraining leader is in the brake zone this frame — hold or enter hold.
+        r.brakeMatchLeaderIndex = brakeMatchLeaderIdxs.get(r.index);
+        r.brakeMatchFactor = newCap;
+        r.brakeMatchFrames += 1;
+        r.brakeReleaseFrames = 0;
+
+        // Anti-trap: force escape after too many consecutive hold frames.
+        if (r.brakeMatchFrames >= bmTimeout) {
+          r.brakeMatchLeaderIndex = -1;
+          r.brakeMatchFactor = 1.0;
+          // Negative countdown: -(escape + cooldown) counts up to 0 over (escape+cooldown) frames.
+          r.brakeMatchFrames = -(bmEscape + bmCooldown);
+          r.brakeReleaseFrames = 0;
+        }
+      } else {
+        // No constraining leader this frame.
+        if (r.brakeMatchLeaderIndex !== -1) {
+          // Was in hold — debounced release: count consecutive clear frames.
+          r.brakeReleaseFrames += 1;
+          if (r.brakeReleaseFrames >= bmDebounce) {
+            r.brakeMatchLeaderIndex = -1;
+            r.brakeMatchFactor = 1.0;
+            r.brakeMatchFrames = 0;
+            r.brakeReleaseFrames = 0;
+          }
+          // During debounce window: retain previous brakeMatchFactor (hold persists briefly).
+        } else {
+          // No hold active; ensure clean state.
+          r.brakeMatchFactor = 1.0;
+          r.brakeMatchFrames = 0;
+          r.brakeReleaseFrames = 0;
+        }
+      }
+    }
+
     if (diagOut) {
       diagOut.set(r.index, {
         rawPos: dRawPos.get(r.index),

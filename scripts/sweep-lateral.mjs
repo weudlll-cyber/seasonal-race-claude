@@ -56,7 +56,7 @@ function loadTracks() {
     const shape  = new EditorShape(track);
     const isOpen = !!shape.isOpen;
     const pathLengthPx        = track.pathLengthPx ?? shape.getTotalLength();
-    const geometricTrackWidth = shape.getActualTrackWidth();
+    const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
     const BS     = DEFAULT_BASE_SPEED_CONFIG;
     const BSMean = (BS.min + BS.max) / 2;
     const sfMin  = BS.min / BSMean, sfMax = BS.max / BSMean;

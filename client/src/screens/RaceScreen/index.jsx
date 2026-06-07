@@ -54,6 +54,7 @@ import {
   initRacerBehavior,
   applyRacerBehavior,
   PRIORITY_MODE,
+  _diagPair,
 } from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
@@ -138,11 +139,23 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32).
+function formatRaceTime(ms) {
+  const hundredths = Math.floor(ms / 10) % 100;
+  const totalSecs = Math.floor(ms / 1000);
+  const secs = totalSecs % 60;
+  const mins = Math.floor(totalSecs / 60);
+  return mins > 0
+    ? `${mins}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`
+    : `${secs}.${String(hundredths).padStart(2, '0')}`;
+}
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const canvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
+  const pairDiagRef = useRef(null); // temp diag overlay
   const g = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
@@ -184,7 +197,6 @@ export default function RaceScreen() {
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [finishTState, setFinishTState] = useState(1);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
@@ -358,7 +370,10 @@ export default function RaceScreen() {
     diagDataRef.current.constSpeed = constSpeedActive;
 
     shapeRef.current = new EditorShape(geometry);
-    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
+    // Read stored width first; fall back to spline estimate only for tracks without one.
+    // getActualTrackWidth() measures the median spline cross-section and overestimates for
+    // open tracks whose physical centerWidth is narrower than the spline envelope.
+    const trackWidthPx = geometry.width ?? shapeRef.current.getActualTrackWidth();
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
     const bsX = CANVAS_W / worldWidth;
@@ -394,6 +409,7 @@ export default function RaceScreen() {
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
     const behaviorConfig = loadRaceBehaviorConfig();
+    behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
     const rubberBandConfig = loadRubberBandConfig();
@@ -406,12 +422,12 @@ export default function RaceScreen() {
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
     const bodyFillNarrow = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
-    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
-    // displaySizeScale_physical: frame-based scale from real track width.
-    // Used only for rowGapPx / rowCount (physics) — must not change for determinism.
-    let displaySizeScale_physical = 1;
-    // displaySizeScale: body-narrow-based scale from fixed reference width W_REF.
-    // Used for camera normalization (referenceSpriteSize) and render (frameDisplayScale).
+    const bodyFillLong = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
+    // physicalSpriteSize: frame-based scale from real track width — drives rowGapPx / rowCount (physics).
+    let physicalSpriteSize = displaySize;
+    // displaySizeScale: body-narrow-based scale from W_REF.
+    // Used for camera normalization (drawnBodyWidthRefPx) and render (frameDisplayScale).
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -426,7 +442,7 @@ export default function RaceScreen() {
           displaySize,
           autoScaleConfig
         );
-        displaySizeScale_physical = racerLayout.spriteSize / displaySize;
+        physicalSpriteSize = racerLayout.spriteSize;
         // Render/camera reference: body-narrow-based, capped at real track width.
         // W_REF=285 matches wide open tracks; capping at effectiveWidth prevents visible
         // bodies from exceeding physical avoidance slots on narrow closed tracks.
@@ -439,13 +455,11 @@ export default function RaceScreen() {
           autoScaleConfig
         );
         displaySizeScale = bodyRef.bodyNarrow / displaySize;
-      } else {
-        displaySizeScale_physical = 1;
       }
     }
-    // referenceSpriteSize is now the body-narrow world-px: camera zoom is set so the
-    // visible narrow-axis body equals overviewTargetScreenPx at OVERVIEW.
-    const referenceSpriteSize = displaySize * displaySizeScale;
+    // drawnBodyWidthRefPx = body-narrow world-px: camera zoom set so visible narrow-axis body
+    // equals overviewTargetScreenPx at OVERVIEW.
+    const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
     const targetDuration = raceData.targetDuration ?? 60;
@@ -478,15 +492,11 @@ export default function RaceScreen() {
       worldHeight,
       isOpenTrack,
       cameraConfig,
-      referenceSpriteSize,
+      drawnBodyWidthRefPx,
       shapeRef.current
     );
-    setFinishTState(finishT);
-
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
-    // physicalSpriteSize: frame-based, real width — drives row gap and row count (physics).
-    const physicalSpriteSize = displaySize * displaySizeScale_physical;
     const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
@@ -591,8 +601,17 @@ export default function RaceScreen() {
           x: 0,
           y: 0,
           angle: 0,
-          spriteWorldSizePx: physicalSpriteSize,
-          geometricTrackWidthPx,
+          frameSizePx: physicalSpriteSize,
+          drawnBodyWidthPx: drawnBodyWidthRefPx,
+          // Drawn body length from render primitives — independent of drawnBodyWidthPx variable.
+          // Isotropic renderer: scale = drawnBodyWidthRefPx / (displaySize × bodyFillNarrow).
+          // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
+          // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
+          drawnBodyLengthPx:
+            bodyFillNarrow > 0
+              ? (drawnBodyWidthRefPx * bodyFillLong) / bodyFillNarrow
+              : drawnBodyWidthRefPx,
+          trackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
@@ -679,15 +698,9 @@ export default function RaceScreen() {
     };
 
     // ── Canvas positions ────────────────────────────────────────────────────
-    // Open-track geometry: computed once at race start, shared by Fixes 1/2/3.
-    // Primary track direction sampled at midpoint (t=0.5); avoids start/end edge artefacts.
-    // openTrackHW = half the median cross-section width (inner→outer = full width).
-    // Fwd = forward unit vector (used for ranking projection at lines below).
-    // Perp vectors removed — drawOpenTrackFinishLine derives them locally from finishT angle.
-    const openTrackAngle = isOpenTrack ? shapeRef.current.getPosition(0.5, 0).angle : 0;
-    const openTrackHW = isOpenTrack ? shapeRef.current.getActualTrackWidth() / 2 : 0;
-    const openTrackFwdCos = Math.cos(openTrackAngle);
-    const openTrackFwdSin = Math.sin(openTrackAngle);
+    // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
+    // drawOpenTrackFinishLine derives its own perp/fwd vectors from finishT angle locally.
+    const openTrackHW = isOpenTrack ? trackWidthPx / 2 : 0;
 
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
@@ -719,6 +732,9 @@ export default function RaceScreen() {
         }
       }
     }
+
+    // Pre-allocated render-interpolation buffer — reused every frame, no per-frame allocation.
+    const renderBuf = [];
 
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
@@ -799,7 +815,11 @@ export default function RaceScreen() {
           // Remainder carries over so no physics time is lost between frames.
           st.physicsAccum += rawDt * effectiveSlowmoFactor;
         }
-        while (st.physicsAccum >= FIXED_DT) {
+        // Cap catch-up at 2 steps per rAF — prevents the stall→many-steps→longer-stall
+        // death spiral that causes STATUS_ACCESS_VIOLATION at ~14s under load.
+        // Fairness is unaffected: sim tests physics in sim time, not wall-clock time.
+        let _catchupSteps = 0;
+        while (st.physicsAccum >= FIXED_DT && _catchupSteps++ < 2) {
           st.physicsTs += FIXED_DT;
           const physicsTs = st.physicsTs;
 
@@ -910,7 +930,14 @@ export default function RaceScreen() {
               isOpenTrack,
               physicsTs
             );
-            const brake = r.avoidanceActive ? effectiveBrakeFactor : 1.0;
+            // Flag 2 (report 06): brakeMatchFactor is written by raceBehavior.js one frame
+            // prior and read here — same one-frame-lag cross-file pattern as avoidanceActive.
+            // Flag 3 (report 06): min() preserves the warmup ramp: during the first 3s the
+            // ramp factor may already be weaker than the cap, so the cap must not override it.
+            // speedBrakeFactor (0.945) remains a fixed floor via effectiveBrakeFactor.
+            const brake = r.avoidanceActive
+              ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
+              : 1.0;
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
@@ -968,31 +995,53 @@ export default function RaceScreen() {
                 }
               : undefined
           );
+          // Temp diag overlay — update DOM directly (no React re-render)
+          if (pairDiagRef.current) {
+            const d = _diagPair;
+            const f = (n) => (typeof n === 'number' ? n.toFixed(4) : n);
+            const f1 = (n) => (typeof n === 'number' ? n.toFixed(1) : n);
+            const flNetA = d.flCountA > 1 ? d.flRawA / Math.sqrt(d.flCountA) : d.flRawA;
+            const flNetB = d.flCountB > 1 ? d.flRawB / Math.sqrt(d.flCountB) : d.flRawB;
+            // Convert to real-world pixel distances for sanity check
+            const latPx = Math.abs(d.dY) * (trackWidthPx / 2);
+            const longPx = Math.abs(d.dT) * pathLengthPx;
+            pairDiagRef.current.innerHTML =
+              `<b>Pair: ${d.nameA} / ${d.nameB}</b><br>` +
+              `screenDist: ${f1(d.screenDist ?? -1)}px  gate:${d.passedAvoidGate ? '✓' : '✗'}<br>` +
+              `latPx: ${f1(latPx)}  longPx: ${f1(longPx)}<br>` +
+              `|dY|: ${f(Math.abs(d.dY))}  dT: ${f(d.dT)}<br>` +
+              `lhs: ${f(d.lateralHalfSpan)}  ths: ${f(d.tHalfSpan)}<br>` +
+              `buffer: ${f(behaviorConfig.avoidanceBufferPct ?? 0.2)} latTrig: ${f1(_diagPair.latTrigger ?? 0)}px<br>` +
+              `<b>overlaps: ${d.overlaps}</b><br>` +
+              `flRaw: ${f(d.flRawA)} / ${f(d.flRawB)}<br>` +
+              `flNet: ${f(flNetA)} / ${f(flNetB)}<br>` +
+              `home: ${f(d.homeDeltaA)} / ${f(d.homeDeltaB)}`;
+          }
 
           for (const r of st.racers) {
             if (r.finished) continue;
             if (r.t >= st.finishT) {
               r.finished = true;
               r.finishRank = ++st.finishedCount;
+              r.finishTimeMs = physicsTs;
               emitBurst(st.burstParticles, r.x, r.y);
             }
             r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
 
-          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary
+          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary.
+          // Two-group sort mirrors the Results screen: finishers by finishRank
+          // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
+          // fails once racers finish because the runout-decay surge lets later
+          // finishers temporarily overtake earlier ones in raw r.t.
           if (Math.round(physicsTs / 100) !== Math.round((physicsTs - FIXED_DT) / 100)) {
             setScoreboard(
-              // Fix 1: On open tracks sort by projected world position (r.x/r.y already
-              // updated by computePositions above) so the HUD leader matches the visual.
               [...st.racers]
-                .sort(
-                  isOpenTrack
-                    ? (a, b) =>
-                        b.x * openTrackFwdCos +
-                        b.y * openTrackFwdSin -
-                        (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
-                    : (a, b) => b.t - a.t
-                )
+                .sort((a, b) => {
+                  if (a.finished !== b.finished) return a.finished ? -1 : 1;
+                  if (a.finished) return a.finishRank - b.finishRank;
+                  return b.t - a.t;
+                })
                 .map((r, i) => ({ ...r, rank: i + 1 }))
             );
           }
@@ -1003,16 +1052,7 @@ export default function RaceScreen() {
             const byRank = st.racers
               .filter((r) => r.finished)
               .sort((a, b) => a.finishRank - b.finishRank);
-            const rest = st.racers
-              .filter((r) => !r.finished)
-              .sort(
-                isOpenTrack
-                  ? (a, b) =>
-                      b.x * openTrackFwdCos +
-                      b.y * openTrackFwdSin -
-                      (a.x * openTrackFwdCos + a.y * openTrackFwdSin)
-                  : (a, b) => b.t - a.t
-              );
+            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
             sessionStorage.setItem(
               'raceResults',
               JSON.stringify({
@@ -1141,8 +1181,9 @@ export default function RaceScreen() {
         // physicsAccum is always in [0, FIXED_DT) after the loop.
         renderAlpha = Math.min(1, st.physicsAccum / FIXED_DT);
 
-        // D1: per-racer pixel speed and smoothed Δv between top-3 (once per rAF, uses rawDt)
-        {
+        // D1: per-racer pixel speed and smoothed Δv between top-3 — diagnostics HUD only.
+        // Gated: the sort + spread runs only when the diagnostics overlay is visible.
+        if (showCameraDiagnostics) {
           const ordered = [...st.racers].sort((a, b) => b.t - a.t);
           for (const r of st.racers) {
             const dx = r.x - (r._diagPrevX ?? r.x);
@@ -1192,38 +1233,54 @@ export default function RaceScreen() {
             }
           }
         }
-        // Advance Heimat-Trail dustParticles (unchanged behavior)
-        st.dustParticles = st.dustParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            alpha: p.alpha - 0.022,
-            r: p.r * 0.97,
-          }))
-          .filter((p) => p.alpha > 0);
-        st.burstParticles = st.burstParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.18,
-            alpha: p.alpha - 0.014,
-            r: p.r * 0.97,
-          }))
-          .filter((p) => p.alpha > 0);
+        // Advance Heimat-Trail dustParticles — in-place mutation + swap-remove (no allocation).
+        {
+          let i = 0;
+          while (i < st.dustParticles.length) {
+            const p = st.dustParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.022;
+            p.r *= 0.97;
+            if (p.alpha <= 0) {
+              st.dustParticles[i] = st.dustParticles[st.dustParticles.length - 1];
+              st.dustParticles.length--;
+            } else i++;
+          }
+        }
+        // Advance burst particles — in-place mutation + swap-remove (no allocation).
+        {
+          let i = 0;
+          while (i < st.burstParticles.length) {
+            const p = st.burstParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.18;
+            p.alpha -= 0.014;
+            p.r *= 0.97;
+            if (p.alpha <= 0) {
+              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
+              st.burstParticles.length--;
+            } else i++;
+          }
+        }
       } else {
-        // FINISHED — keep burst particles alive
+        // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
-        st.burstParticles = st.burstParticles
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.18,
-            alpha: p.alpha - 0.014,
-          }))
-          .filter((p) => p.alpha > 0);
+        {
+          let i = 0;
+          while (i < st.burstParticles.length) {
+            const p = st.burstParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.18;
+            p.alpha -= 0.014;
+            if (p.alpha <= 0) {
+              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
+              st.burstParticles.length--;
+            } else i++;
+          }
+        }
       }
 
       // ── Camera update ──
@@ -1231,16 +1288,25 @@ export default function RaceScreen() {
       // tracks the same world position as the sprites. Without this, the camera jumps
       // with physics steps while sprites stay 1 step behind → sprite-camera desync.
       // COUNTDOWN uses st.racers directly (no physics steps, no interpolation needed).
-      const renderRacers =
-        frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING
-          ? st.racers.map((r) => ({
-              ...r,
-              t: lerp(r._prevT ?? r.t, r.t, renderAlpha),
-              x: lerp(r._prevX ?? r.x, r.x, renderAlpha),
-              y: lerp(r._prevY ?? r.y, r.y, renderAlpha),
-              angle: lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha),
-            }))
-          : st.racers;
+      // renderBuf is pre-allocated once per race mount — Object.assign reuses existing
+      // objects rather than spreading new ones each frame (eliminates N fat allocations/frame).
+      let renderRacers;
+      if (frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING) {
+        const n = st.racers.length;
+        while (renderBuf.length < n) renderBuf.push({});
+        renderBuf.length = n;
+        for (let _i = 0; _i < n; _i++) {
+          const r = st.racers[_i];
+          Object.assign(renderBuf[_i], r);
+          renderBuf[_i].t = lerp(r._prevT ?? r.t, r.t, renderAlpha);
+          renderBuf[_i].x = lerp(r._prevX ?? r.x, r.x, renderAlpha);
+          renderBuf[_i].y = lerp(r._prevY ?? r.y, r.y, renderAlpha);
+          renderBuf[_i].angle = lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha);
+        }
+        renderRacers = renderBuf;
+      } else {
+        renderRacers = st.racers;
+      }
       const raceState = {
         raceElapsed: st.raceStart != null ? ts - st.raceStart : 0,
         finishedCount: st.finishedCount,
@@ -1457,6 +1523,23 @@ export default function RaceScreen() {
       <div className="race-layout">
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+          {/* Temp pair diag — remove after investigation */}
+          <div
+            ref={pairDiagRef}
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              background: 'rgba(0,0,0,0.72)',
+              color: '#0f0',
+              font: '11px/1.5 monospace',
+              padding: '6px 10px',
+              borderRadius: 4,
+              pointerEvents: 'none',
+              zIndex: 999,
+              whiteSpace: 'pre',
+            }}
+          />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
           <StateOverlay text={overlayText} />
           <CameraDiagnosticsHUD
@@ -1478,6 +1561,16 @@ export default function RaceScreen() {
         </div>
 
         <aside className="race-hud">
+          <button
+            className="race-back-btn"
+            onClick={() => {
+              sessionStorage.removeItem('activeRace');
+              fadeNavigate('/setup');
+            }}
+          >
+            ← Setup
+          </button>
+
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
             {scoreboard.map((r, i) => (
@@ -1495,21 +1588,12 @@ export default function RaceScreen() {
                   {i === 0 ? '👑' : `#${i + 1}`}
                 </span>
                 <span className="sb-icon">{r.icon}</span>
-                <div className="sb-info">
-                  <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
-                    {r.name}
-                  </span>
-                  <div className="sb-bar-bg">
-                    <div
-                      className="sb-bar-fill"
-                      style={{
-                        width: `${Math.min(Math.max(0, lapProgress(r.t ?? 0, finishTState)), 1) * 100}%`,
-                        background: RANK_PALETTE[i] ?? r.color ?? '#4488ff',
-                      }}
-                    />
-                  </div>
-                </div>
-                {r.finished && <span className="sb-check">✓</span>}
+                <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
+                  {r.name}
+                </span>
+                {r.finished && r.finishTimeMs != null && (
+                  <span className="sb-finish-time">{formatRaceTime(r.finishTimeMs)}</span>
+                )}
               </div>
             ))}
           </div>
@@ -1529,16 +1613,6 @@ export default function RaceScreen() {
             title="Toggle fullscreen"
           >
             {isFullscreen ? '⊡' : '⛶'}
-          </button>
-
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
-            ← Setup
           </button>
         </aside>
       </div>
