@@ -2304,3 +2304,46 @@ Report 03 added direct measurement: `maxRealSpread` (maximum t-gap between leadi
 **Consequence:** When a metric starts registering a new signal, resist immediately attributing it to the most salient mechanism. Always add a direct measurement that can distinguish between plausible mechanisms before stating which one is active. In the sim: `maxRealSpread` takes 5 lines to add and directly answers "did lapping happen?" — far cheaper than a wrong explanation that propagates into reports and docs.
 
 **Reference:** `reports/phase1-metrics/02-gap-close-results.md` (lapping hypothesis stated), `reports/phase1-metrics/03-n50-lapping-confirmation.md` (hypothesis falsified). Session 2026-06-05.
+
+---
+
+## Lesson 129 — Physics Must Measure the World That Is Drawn
+
+**Context:** Scale cleanup, `feat/open-track-overlap`, 2026-06-07. Physics was computing avoidance forces in a 449 px world while the screen drew 300 px (Space Sprint). Body-overlap thresholds used 34 px instead of the 28.5 px actually rendered. Racer overlap stayed flat through many behavior improvements; the sim metric showed no improvement through Stages A–C, even after correct avoidance logic was added.
+
+**The root cause:** Three separate sources of truth had each silently drifted to wrong values:
+- Track width: `getActualTrackWidth()` returned 449 px (spline envelope estimate) while the true physical lane width was 300 px (stored as `track.width` by the Track Editor).
+- Body width: `physicalSpriteSize × bodyFillX` used the frame-scale physics sprite size × a fill fraction, not the actual drawn body width from `computeBodyNarrowRef`.
+- Lateral conversion: raw `physicalY × trackWidth` missed the factor-of-2 baked into `EditorShape.getPosition` (which uses `physicalY / 2`).
+
+Each error was invisible alone, but together they meant the physics thought the track was 50% wider, the bodies 19% larger, and lateral distances 2× larger than reality. A racer could overlap visually before any avoidance check fired.
+
+**Insight:** Physics that operates on different numbers than the renderer will produce behavior that looks wrong in the browser regardless of how correct the algorithm is. The invariant is: **every distance the physics uses must be the same distance the renderer draws**. Read known stored values, don't recompute them. "Measured at runtime" is not better than "stored at save time" when the measurement can drift.
+
+**Consequence:** When a behavior metric is flat despite multiple algorithm improvements: check the foundation. Verify that trackWidth, spriteSize, and body dimensions in physics match what appears on screen. Add explicit checkpoints (A–H pattern: compute expected values from source, verify sim prints them) before concluding that algorithm changes are not working.
+
+**Reference:** `reports/open-track-overlap/28-scale-audit.md` through `34-scale-build.md`. `docs/ARCHITECTURE.md` § Scale & Size. Session 2026-06-07.
+
+---
+
+## Lesson 130 — Read Known Values; Don't Recompute Them
+
+**Context:** Scale cleanup, 2026-06-07. Three width sources diverged: `getActualTrackWidth()` (spline estimate, 449 px), `track.width` (Track Editor stored value, 300 px), `track._centerWidth` (internal). The Track Editor already knew the correct value and stored it. The physics had to call a runtime method instead of reading the stored value, because nobody added the `??` fallback to make the stored value the primary source.
+
+**The pattern:** A computed fallback (`getActualTrackWidth()`) became the primary path because the stored value was never plumbed through. Callers kept calling the fallback even after the stored value was available.
+
+**Insight:** When a known, stable value (track physical width, sprite display size) exists in persisted data, read it directly. A runtime estimate of a value that is already known exactly is worse, not better — it can drift, change with resampling density, and give different answers on different hardware. The right pattern: `primaryValue ?? runtimeFallback`, where the fallback is only for legacy data that predates the stored field.
+
+**Consequence:** Before adding a runtime computation for a physical property, check whether the property is already stored in the data model. If it is, route the code to read it. If it isn't, add it to the model and write it at the authoring step, not at runtime.
+
+---
+
+## Lesson 131 — One Source of Truth Per Concept; Honest Names
+
+**Context:** Scale cleanup, 2026-06-07. `honestBodyWidthPx` was actually `physicalSpriteSize × bodyFillX` — the physics sprite size (calibrated to row layout, not visual appearance) multiplied by a fill fraction. It was neither honest nor a body width. `geometricTrackWidthPx` was an overestimating spline measurement. `spriteWorldSizePx` was the full frame envelope, not the "sprite world size." `referenceSpriteSize` was actually `bodyNarrow` — the drawn body width used for camera calibration.
+
+Each name carried the wrong mental model into every reader of that code. Copilot's initial "Copilot gaps" report identified 4 bugs — every one of them was a mismatch between what a name implied and what the code actually used.
+
+**Insight:** A misleading name is a latent bug magnet. When a concept has one true source, give it a name that describes the source, not the computation path that used to produce it. `drawnBodyWidthPx` (what is drawn) is unambiguous; `honestBodyWidthPx` is a self-refutation (if you need "honest" in the name, the previous version was lying). The name must make violations obvious: any code doing `frameSizePx × bodyFill` for body-overlap clearance is visibly wrong because `frameSizePx` is the frame, not the body.
+
+**Consequence:** When naming a physics quantity, ask: does the name describe the concept or the implementation path? If a reader could compute the wrong value and still think the name fits, the name is wrong. For SOT fields, include the unit (Px) and the concept (drawn, frame, track) in the name.
