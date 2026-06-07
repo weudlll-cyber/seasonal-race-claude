@@ -2347,3 +2347,73 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Insight:** A misleading name is a latent bug magnet. When a concept has one true source, give it a name that describes the source, not the computation path that used to produce it. `drawnBodyWidthPx` (what is drawn) is unambiguous; `honestBodyWidthPx` is a self-refutation (if you need "honest" in the name, the previous version was lying). The name must make violations obvious: any code doing `frameSizePx × bodyFill` for body-overlap clearance is visibly wrong because `frameSizePx` is the frame, not the body.
 
 **Consequence:** When naming a physics quantity, ask: does the name describe the concept or the implementation path? If a reader could compute the wrong value and still think the name fits, the name is wrong. For SOT fields, include the unit (Px) and the concept (drawn, frame, track) in the name.
+
+---
+
+## Lesson 132 — The Entry Gate Must Be Wider Than Every Inner Check
+
+**Context:** feat/open-track-overlap (2026-06-07). The avoidance gate was built with body-based thresholds (~37px), but the speed brake ran inside the gate and had a wider zone (~60px). Result: pairs at 37–60px never reached the speed brake. Free-lane also ran inside the gate with the same body dimensions, making gate = inner check → gate was irrelevant (never filtered anything the inner checks didn't already handle identically).
+
+**The pattern:** A multi-stage pair loop where later stages only run if an outer condition passes — the outer gate must be wider than any stage's activation zone. If the outer gate is tighter, it silently cuts off inner stages.
+
+**Insight:** Before adding a new pair-loop stage, explicitly check: what is the widest zone among all stages? The entry gate must be ≥ that zone. In this case the speed brake's 60px zone was the widest; the gate had to be moved outside it or eliminated as the guard.
+
+**Consequence:** When designing pair-loop stages: (1) enumerate all zones; (2) set entry guard = max(all zones); (3) any stage whose zone is ≤ entry guard can safely live inside it; any stage with a wider zone must run before the guard.
+
+**Reference:** `reports/open-track-overlap/39-geometric-gate-build.md` §corrections. Session 2026-06-07.
+
+---
+
+## Lesson 133 — Contact Distance = Sum of Half-Sizes (Not Max)
+
+**Context:** feat/open-track-overlap (2026-06-07). The initial avoidance gate used `max(bodyWidthA, bodyWidthB)` as the lateral contact distance. For a dragon (28.5px) and a rocket (14px) pair, this gives 14.25px — but the bodies actually touch at `14.25 + 7 = 21.25px` (when the rocket's edge meets the dragon's edge). The max formula fired too late for mixed-size pairs.
+
+**The geometric fact:** Two bodies A and B touch at a center-to-center distance equal to the sum of their half-widths (half-lengths). It is never a single body's half-size. The max formula is only correct when both bodies are the same size.
+
+**Insight:** Any proximity or clearance threshold based on body size must use `hwA + hwB` (sum of half-widths). Using a single body's half-size (max, min, or either) gives the wrong answer for all mixed-size pairs. This is the standard physics collision distance formula — it is not a heuristic.
+
+**Consequence:** `contactWidth = hwA + hwB`, `contactLength = hlA + hlB`. This applies to avoidance gates, free-lane overlap checks, speed-brake zones, and any other pair-proximity threshold. If you see `max(bodyA, bodyB) / 2` being used as a contact distance, it is wrong for mixed-size pairs.
+
+**Reference:** `reports/open-track-overlap/39-geometric-gate-build.md` §pairContact helper. Session 2026-06-07.
+
+---
+
+## Lesson 134 — Fairness Must Be Measured with the Production Fairness Mechanism
+
+**Context:** feat/open-track-overlap (2026-06-07). Three combos "failed" in the sim (Front-Bias), but the sim was run with Race Plan OFF (Baseline mode). In the production game, the Race Plan is always ON. Baseline mode is structurally biased: Row 0 always starts closest to the finish line and the avoidance system fires more for back rows — no mechanism compensates either effect. The "failures" were not regressions; they were measuring something the game never ships.
+
+**The error:** "Let me check the baseline first" used the wrong baseline. Baseline mode = no fairness mechanism. Production mode = Race Plan ON, bonusMult=2.0.
+
+**Insight:** A fairness measurement is only valid if it measures the system in the configuration the end user experiences. Any deviation from production configuration (Race Plan OFF, wrong bonusMult, wrong racer count) measures a different system. The result cannot be attributed to the feature being tested.
+
+**Consequence:** Sim fairness sweeps must always use `--race-plan=true --bonusMult=2.0` (the stored default). Baseline mode is valid only for diagnosing whether a specific mechanism is contributing — it must never be cited as "the fairness result" for production behavior. Add `--race-plan=true` as the first flag in every sweep command template.
+
+**Reference:** `reports/open-track-overlap/40-frontbias-diag.md`. Session 2026-06-07.
+
+---
+
+## Lesson 135 — Tests Must Be Re-Derived from the New Formula, Not Forced Green
+
+**Context:** feat/open-track-overlap (2026-06-07). The speed-brake test "dynamic threshold scales with sprite size and path length" was written against the old frame-based formula (`frameSizePx × 1.5 / pathLength`). When the formula changed to body-based (`bodyContactLength × 1.5 / pathLength`), the test was updated by changing the `leader.t` values to values that made the test pass — but without re-deriving why those values were correct.
+
+**The distinction:** "Force-green" = pick inputs that make assertions pass. "Re-derive" = compute what the correct threshold is under the new formula, then pick test inputs that bracket that threshold. Force-green produces a test that documents no invariant; re-derived produces a test that guards the exact formula.
+
+**Insight:** When a formula changes, the test inputs must change to match the new formula's threshold — not to match the old test's pass/fail structure. Write the derivation as a comment in the test so the next maintainer understands which formula produced those specific numbers.
+
+**Consequence:** On every physics formula change: (1) compute the new threshold from scratch in a comment; (2) pick `inside` and `outside` values that bracket the threshold; (3) never copy old values and adjust until the test passes.
+
+**Reference:** `reports/open-track-overlap/43-speedbrake-body-fix.md` §Tests. Session 2026-06-08.
+
+---
+
+## Lesson 136 — Speed-Brake Lateral Is a Same-Lane Filter, Never a Brake Driver
+
+**Context:** feat/open-track-overlap (2026-06-08, report 45). The speed-brake's lateral condition `Math.abs(dY) < speedBrakeYThreshold` was a normalized track-fraction (0.18 → 27px on a 300px track). It was too wide for slim racers (rocket body 14px → braked for racers in adjacent lanes 13px away) and too narrow for some wide-body racers on narrow tracks. An attempt to fix it with `contactWidth × 1.5` used the wrong multiplier and saturated wide-body racers on narrow tracks (luge p=0.057→0.004).
+
+**The concept:** The lateral condition is not a "zone size" — it does not need lead time. It answers one binary question: "If neither racer changes lanes, will these bodies collide laterally?" The answer is yes iff the center-to-center lateral distance < sum of half-widths (= `contactWidth`). Lead-time expansion (`× 1.5`) is a longitudinal concept only — it gives the trailer time to slow down before a longitudinal collision.
+
+**Insight:** There are two separate concepts in the speed-brake condition: (a) longitudinal lead-time zone (needs a multiplier > 1 so the brake fires before contact); (b) lateral same-lane filter (binary, no multiplier — either you're in the same lane or you're not). Conflating them by applying `speedBrakeTMultiplier` to both axes was the error. For (b), `contactWidth × 1.0` is geometrically exact.
+
+**Consequence:** Speed-brake lateral threshold = `pxToPhysicalY(contactWidth, trackWidth)` (no multiplier). Speed-brake longitudinal threshold = `(contactLength / pathLength) × speedBrakeTMultiplier` (multiplier gives lead time). Never apply a lead-time multiplier to a same-lane filter.
+
+**Reference:** `reports/open-track-overlap/44-speedbrake-lateral-concept.md`, `reports/open-track-overlap/45-speedbrake-lateral-fix.md`. Session 2026-06-08.

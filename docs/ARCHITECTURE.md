@@ -502,11 +502,11 @@ Racer lateral movement is governed by `modules/raceBehavior.js`. All racers shar
 **Force pipeline (applied once per frame after world positions are computed):**
 
 1. **Home force** — `Δy = -physicalY × homeForceStrength × factor`, where `factor = homeForceReductionOnOverlap` (default 0.3) when the racer is in geometric overlap, or 1.0 otherwise. Reduction lets free-lane separation dominate during collisions instead of being overridden by the restoring spring.
-2. **Avoidance** — anisotropic distance metric `sqrt((ΔT×tWeight)² + (ΔY×yWeight)²)` over all unfinished pairs. Trailer (lower t, tie-break by index) yields; leader holds. Force magnitude scales with proximity. Forces are accumulated separately per racer and divided by `sqrt(neighborCount)` before applying (anti-stacking normalization — prevents boundary-clinging at 20+ racers where linear accumulation would overwhelm restoring forces).
-3. **Free-lane separation** — additive impulse applied when two racers are in geometric overlap (`|ΔT| ≤ spriteSize/pathLength` AND `|ΔY| ≤ spriteSize/trackWidth`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas. Delta accumulation also normalized by `sqrt(overlapNeighborCount)` to prevent force stacking.
+2. **Avoidance — geometric two-axis body-contact gate (feat/open-track-overlap, report 39)** — Two-axis px-space check: `latPx < contactWidth × (1+bufferPct)` AND `longPx < contactLength × (1+bufferPct)`, where `contactWidth = hwA + hwB` (sum of body half-widths), `contactLength = hlA + hlB` (sum of body half-lengths), and `avoidanceBufferPct = 0.20` (20% lead time before contact). Replaces the old anisotropic normalized-distance metric which was not calibrated to physical body size. Proximity-scaled force: `forceMag = lateralForce × min(latFraction, longFraction)`. Anti-stacking: forces accumulated per racer and divided by `sqrt(neighborCount)`. **Invariant: gate must be wider than the free-lane inner check** (gate = contactWidth × 1.2 vs free-lane = contactWidth × 1.0). Speed brake runs BEFORE the gate to prevent the gate from cutting off the wider brake zone.
+3. **Free-lane separation** — additive impulse applied when two racers are in body-contact overlap (`|ΔT| ≤ contactLength/pathLength` AND `|ΔY| ≤ pxToPhysicalY(contactWidth, trackWidth)`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas. Delta accumulation also normalized by `sqrt(overlapNeighborCount)` to prevent force stacking.
 4. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
 5. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
-6. **Speed brake** — trailer flagged `avoidanceActive = true` when adjacent (`|ΔY| < speedBrakeYThreshold` AND `|ΔT| < speedBrakeTThreshold`); applied next frame via `speedBrakeFactor`
+6. **Speed brake — body-based both axes (reports 43+45)** — trailer flagged `avoidanceActive = true` when (a) `dT < (contactLength / pathLength) × speedBrakeTMultiplier` (longitudinal: body half-lengths × lead-time multiplier) AND (b) `|dY| < pxToPhysicalY(contactWidth, trackWidth)` (lateral: **same-lane filter only** — are bodies in the same lane? No lead-time multiplier on the lateral axis). Applied next frame via `speedBrakeFactor`. Lateral is a binary "same lane y/n" test; lead-time expansion (`speedBrakeTMultiplier = 1.5`) applies to the longitudinal axis only.
 7. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
 
 **physicalYVelocity system (feat/lateral-velocity, 2026-05-31):** All force pipeline outputs are now accumulated into `physicalYVelocity` rather than applied directly to `physicalY`. Each frame: `physicalYVelocity = physicalYVelocity * lateralDamping + netForce`; then `physicalY += physicalYVelocity`. The damping factor (default `lateralDamping=0.25`) controls how quickly lateral velocity decays — lower values mean more inertia and smoother motion. `physicalYVelocity` is clamped by `maxLateral`. This eliminates frame-to-frame zigzag artifacts where racers would oscillate between adjacent positions due to force sign reversals on consecutive frames. Sim sweep result: `lateralDamping=0.25, lateralForce=0.012` reduces `lateralSpeedScore` by 37% and `zigzagScore` by 44% vs. the prior baseline at equivalent overlap rates.
@@ -902,7 +902,7 @@ The Phase 5 server will be a fresh implementation designed around race integrity
 
 Eight core physics parameters control racer avoidance, lateral motion, speed braking, and home force. They are **intentionally not exposed in the Dev Screen** — they are strongly interdependent and were optimized via a multi-phase simulation sweep. Accidental changes to any one parameter without re-sweeping the others degrades race quality in non-obvious ways.
 
-### Current Values (Phase 5 winner, established 2026-06-03)
+### Current Values (Phase 5 winner, established 2026-06-03; speed-brake body-based 2026-06-08)
 
 | Parameter | Value | Description |
 |---|---|---|
@@ -910,10 +910,11 @@ Eight core physics parameters control racer avoidance, lateral motion, speed bra
 | `lateralDamping` | 0.160000 | Fraction of lateral velocity retained each frame |
 | `homeForceStrength` | 0.030000 | Spring strength pulling racers back to the centerline |
 | `homeForceReductionOnOverlap` | 0.300000 | Home force multiplier during geometric overlap |
-| `avoidanceDistance` | 0.180000 | Anisotropic distance threshold for avoidance to fire |
+| `avoidanceBufferPct` | 0.200000 | Buffer beyond body contact before avoidance gate fires (20% lead time) |
 | `speedBrakeFactor` | 0.945000 | Speed multiplier applied to the trailing racer when side-by-side |
-| `speedBrakeTMultiplier` | 1.500000 | Brake fires this many sprite-widths before contact (dynamic threshold) |
-| `speedBrakeYThreshold` | 0.180000 | Max lateral separation for speed brake to activate |
+| `speedBrakeTMultiplier` | 1.500000 | Longitudinal lead-time multiplier: brake fires at `bodyContactLength × 1.5` before contact |
+| `avoidanceDistance` | 0.180000 | *Retired from browser gate (report 39). Kept for sim-script backward compat.* |
+| `speedBrakeYThreshold` | 0.180000 | *Retired from browser brake gate (report 45 — body-based same-lane filter). Kept for sim compat.* |
 
 ### Where They Live
 
@@ -928,7 +929,7 @@ These parameters were optimized across 9 default tracks + 1 user-created track (
 - **Phase 3 (Validate):** Top 3 finalists validated on all 10 tracks × 50+ races each
 - **Hard cutoffs:** fairness p > 0.05, zigzag score < 0.003, hard overlap rate < 3%
 
-The `speedBrakeTMultiplier` replaces an earlier fixed absolute threshold (`speedBrakeTThreshold`) that was not calibrated to sprite size or path length — it fired too late on the Ice Track (large luge sprite) and too early on open tracks with long paths. The new dynamic formula `(spriteWorldSizePx / pathLengthPx) × multiplier` fires at the same relative proximity (in sprite-widths) on every track and racer type.
+The `speedBrakeTMultiplier` replaces an earlier fixed absolute threshold (`speedBrakeTThreshold`) that was not calibrated to sprite size or path length. As of feat/open-track-overlap (reports 43+45), both speed-brake axes are body-based: the longitudinal zone uses `(bodyContactLength / pathLength) × speedBrakeTMultiplier` (lead-time, fires at 1.5× contact distance); the lateral zone uses the body contact width as a same-lane filter (no multiplier — either in the same lane or not). `avoidanceDistance` and `speedBrakeYThreshold` are retired from the browser gate; they remain in defaults.js and sim scripts for backward compat.
 
 ### Changing Them
 

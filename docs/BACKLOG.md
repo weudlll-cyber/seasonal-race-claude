@@ -649,6 +649,46 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 **Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
 
+### P-3 — Speed-brake lateral: body-based same-lane filter on narrow tracks *(backlogged 2026-06-08)*
+
+**Resolved in report 45:** Speed-brake lateral now uses `contactWidth × 1.0` (body-based same-lane filter). The ×1.5 attempt (report 43 revert) failed because the multiplier expanded the zone into adjacent rows for wide-body racers on narrow tracks (luge/250px: 22.5px→37.5px, caught all adjacent pairs).
+
+**Remaining edge case:** For very narrow tracks or unusually wide bodies, `contactWidth × 1.0` can be slightly wider than the old normalized threshold (luge: 25px vs 22.5px old — 11% wider). Currently safe (luge p=0.585). A future fix would introduce density-awareness: cap the lateral threshold so it stays below the typical row spacing on the current track.
+
+**Fix direction:** `min(contactWidth, effectiveWidth / racersPerRow × 0.9)` as the lateral threshold — this ensures the filter never catches ALL adjacent pairs regardless of body/track density ratio.
+
+**Priority:** Low. Current ×1.0 solution is safe across all 10 tracks + 20 racer types.
+
+---
+
+### P-4 — getWidthAtT: non-uniform track width *(backlogged 2026-06-07)*
+
+`getTrackWidthAtTpx` returns a single track-width value per racer (the stored `track.width` constant). For tracks with variable lane width (e.g. banked curves, chicanes), avoidance thresholds should scale with the local width at `racer.t`. Extension hook is documented in `raceBehavior.js`. Implement by querying `EditorShape._centerWidth(t)` or equivalent per frame.
+
+**Priority:** Low. No existing track has variable width. Build only when the Track Editor gains variable-width curves.
+
+---
+
+### P-5 — Luger Hill hex track-ID rename *(backlogged 2026-06-08)*
+
+Luger Hill's track ID is the hex UUID `90d3020197da` (vs. human-readable IDs for all other tracks like `dirt-oval`, `river-run`). This causes sim commands to need `--track=90d3020197da` and has caused "0 combos" errors when `--track=luger-hill` is used. The ID should be renamed to `luger-hill` to match conventions.
+
+**This is a data change:** renaming the server JSON file and updating any references. Requires migration for users who have cached geometry under the old ID. No behavior change.
+
+**Priority:** Low. The hex ID is functional; the only cost is inconvenience in sim scripts.
+
+---
+
+### P-6 — Spatial grid for O(N) avoidance (D7d) *(backlogged)*
+
+Current avoidance loop is O(N²) over all active pairs. At N=100 this is 4950 pair checks per frame. A spatial grid (cell size ≈ avoidance gate threshold) would reduce to O(N) average by only checking pairs in adjacent grid cells.
+
+**Already planned as D7d** in the roadmap. Prerequisite for 100-racer races.
+
+**Priority:** Medium. Required for D7d; no urgency at current N=40–60.
+
+---
+
 ### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05, partially resolved 2026-06-05)*
 
 The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 px lateral, ~3.9 px longitudinal). The physics never allows centers that close. Real visual overlap at `dT = 0` (31.7 px body) is invisible to the metric — it reported 0% while ~89 px on-screen overlap was occurring.

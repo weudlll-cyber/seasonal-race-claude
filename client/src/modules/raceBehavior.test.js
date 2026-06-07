@@ -494,55 +494,79 @@ describe('applyRacerBehavior — free-lane separation', () => {
 
 describe('applyRacerBehavior — speed brake', () => {
   it('sets avoidanceActive on trailer when side-by-side within dynamic threshold', () => {
-    // frameSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 40/1200*1.5 = 0.050
-    // dT = 0.51 - 0.50 = 0.01 < 0.050 → brake fires
+    // drawnBodyLengthPx=31, pathLengthPx=1200, multiplier=1.5 → dynamicT = 31/1200*1.5 = 0.03875
+    // drawnBodyWidthPx=28, trackWidthPx=140 → sameLaneY = 28/70 = 0.400
+    // dT=0.01 < 0.03875 AND |dY|=0.0 < 0.400 → brake fires
     const trailer = makeLaneRacer({ index: 0, t: 0.5, x: 200, y: 200, physicalY: 0.05 });
     const leader = makeLaneRacer({ index: 1, t: 0.51, x: 200, y: 200, physicalY: 0.05 });
     applyRacerBehavior([trailer, leader], {
       ...cfg,
       homeForceStrength: 0,
-      speedBrakeYThreshold: 0.2,
       speedBrakeTMultiplier: 1.5,
     });
     expect(trailer.avoidanceActive).toBe(true);
   });
 
-  it('dynamic threshold scales with sprite size and path length', () => {
-    // dynamicT = frameSizePx / pathLengthPx * speedBrakeTMultiplier
-    // frameSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 0.050
-    // Place trailer just inside threshold (dT=0.049) → fires
+  it('dynamic threshold scales with body size and path length', () => {
+    // dynamicT = brakeContactLength / pathLengthPx * speedBrakeTMultiplier
+    // brakeContactLength = drawnBodyLengthPx/2 + drawnBodyLengthPx/2 = 31px (makeLaneRacer)
+    // pathLengthPx=1200, multiplier=1.5 → dynamicT = 31/1200*1.5 = 0.038750
+    // Place trailer just inside threshold (dT=0.037) → fires
     const inside = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
-    const leader1 = makeLaneRacer({ index: 1, t: 0.549, physicalY: 0.0 });
+    const leader1 = makeLaneRacer({ index: 1, t: 0.537, physicalY: 0.0 });
     applyRacerBehavior([inside, leader1], {
       ...cfg,
       homeForceStrength: 0,
-      speedBrakeYThreshold: 0.2,
       speedBrakeTMultiplier: 1.5,
     });
     expect(inside.avoidanceActive).toBe(true);
 
-    // Place trailer just outside threshold (dT=0.051) → does not fire
+    // Place trailer just outside threshold (dT=0.041) → does not fire
     const outside = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
-    const leader2 = makeLaneRacer({ index: 1, t: 0.551, physicalY: 0.0 });
+    const leader2 = makeLaneRacer({ index: 1, t: 0.541, physicalY: 0.0 });
     applyRacerBehavior([outside, leader2], {
       ...cfg,
       homeForceStrength: 0,
-      speedBrakeYThreshold: 0.2,
       speedBrakeTMultiplier: 1.5,
     });
     expect(outside.avoidanceActive).toBe(false);
   });
 
-  it('no speed brake when Y difference exceeds threshold', () => {
+  it('same-lane filter: no brake when |dY| exceeds body contact width', () => {
+    // drawnBodyWidthPx=28, trackWidthPx=140 → sameLaneY = 28/70 = 0.400
+    // physicalY diff = 0.5 - (-0.5) = 1.0 > 0.400 → racers in different lanes, no brake
     const trailer = makeLaneRacer({ index: 0, t: 0.5, x: 200, y: 200, physicalY: -0.5 });
     const leader = makeLaneRacer({ index: 1, t: 0.51, x: 200, y: 200, physicalY: 0.5 });
     applyRacerBehavior([trailer, leader], {
       ...cfg,
       homeForceStrength: 0,
-      speedBrakeYThreshold: 0.2,
       speedBrakeTMultiplier: 1.5,
     });
     expect(trailer.avoidanceActive).toBe(false);
+  });
+
+  it('same-lane filter: brakes just inside body-width, no brake just outside', () => {
+    // drawnBodyWidthPx=28, trackWidthPx=140 → sameLaneY = 28/70 = 0.400
+    // dynamicT = 31/1200*1.5 = 0.03875 (longitudinal zone for makeLaneRacer)
+    // inside: |dY|=0.35 < 0.400 AND dT=0.037 < 0.03875 → fires
+    const trailerIn = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
+    const leaderIn = makeLaneRacer({ index: 1, t: 0.537, physicalY: 0.35 });
+    applyRacerBehavior([trailerIn, leaderIn], {
+      ...cfg,
+      homeForceStrength: 0,
+      speedBrakeTMultiplier: 1.5,
+    });
+    expect(trailerIn.avoidanceActive).toBe(true);
+
+    // outside: |dY|=0.45 > 0.400 → no brake even though longitudinally close
+    const trailerOut = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
+    const leaderOut = makeLaneRacer({ index: 1, t: 0.537, physicalY: 0.45 });
+    applyRacerBehavior([trailerOut, leaderOut], {
+      ...cfg,
+      homeForceStrength: 0,
+      speedBrakeTMultiplier: 1.5,
+    });
+    expect(trailerOut.avoidanceActive).toBe(false);
   });
 });
 

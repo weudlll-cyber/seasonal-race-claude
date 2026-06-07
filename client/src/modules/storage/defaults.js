@@ -517,11 +517,12 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Kept for sim script backward compat. Browser now uses avoidanceBufferPct (above).
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
-  // speedBrakeTMultiplier / speedBrakeYThreshold — avoidanceActive (floor brake 0.945) zone.
-  // Applied to ALL tracks (open and closed) when racers are side-by-side.
-  // Restored to Phase-5 calibrated values (report 13): report-12 isOpen guard proved that
-  // disabling avoidanceActive on closed tracks causes closed-track fairness regressions.
+  // speedBrakeTMultiplier — longitudinal lead-time multiplier for the body-based brake zone.
+  // Lateral threshold now uses body contact width ×1.0 (same-lane filter, report 45).
+  // Restored to Phase-5 calibrated values (report 13).
   speedBrakeTMultiplier: 1.5,
+  // speedBrakeYThreshold: RETIRED from browser brake gate (report 45 — body-based same-lane
+  // filter replaces it). Kept for sim-script backward compat and raceBehaviorConfig validation.
   speedBrakeYThreshold: 0.18,
   // brakeMatchActivationTMultiplier / brakeMatchActivationYThreshold — brake-to-match zone.
   // Separate narrow activation zone for the brake-to-match cap computation.

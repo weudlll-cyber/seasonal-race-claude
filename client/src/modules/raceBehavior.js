@@ -493,13 +493,21 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         };
       }
 
-      // Sprite geometry for this pair. Computed before the body-contact gate because the
-      // speed brake uses frameSizePx-based thresholds independent of body-overlap distance.
-      const sizeA = getFrameSizePx(rA);
-      const sizeB = getFrameSizePx(rB);
-      const spriteWorldSize = Math.max(sizeA, sizeB);
+      // Body geometry for the speed-brake — both axes body-based (reports 43/45).
+      // Frame size kept as fallback when body dims are absent.
+      const frameA = getFrameSizePx(rA);
+      const frameB = getFrameSizePx(rB);
+      const hlA_b = (rA.drawnBodyLengthPx ?? frameA) / 2;
+      const hlB_b = (rB.drawnBodyLengthPx ?? frameB) / 2;
+      const hwA_b = (rA.drawnBodyWidthPx ?? frameA) / 2;
+      const hwB_b = (rB.drawnBodyWidthPx ?? frameB) / 2;
+      const brakeContactLength = hlA_b + hlB_b;
+      const brakeContactWidth = hwA_b + hwB_b;
       const trackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
       const pathLength = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+      // Same-lane filter: brake only if bodies would collide laterally (no expansion multiplier).
+      const brakeSameLaneY =
+        trackWidth > 0 ? pxToPhysicalY(brakeContactWidth, trackWidth) : config.speedBrakeYThreshold;
 
       // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
       const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
@@ -507,16 +515,16 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const leader = aIsTrailer ? rB : rA;
 
       // ── Speed brake (avoidanceActive + 0.945 floor): ALL tracks ─────────────
-      // Runs BEFORE the body-contact gate: its threshold (frameSizePx × 1.5 ≈ 60px) is
-      // intentionally wider than the body-contact zone (body × 1.2 ≈ 37px), so it must
-      // not be gated by body size. Uses the original wide activation zone so that pack
-      // stabilization works on both open and closed tracks. Report 13: disabling
-      // avoidanceActive on closed tracks caused closed-track regressions.
+      // Runs BEFORE the body-contact gate. Both thresholds are body-based (reports 43/45):
+      //   longitudinal: bodyContactLength × speedBrakeTMultiplier (lead-time zone)
+      //   lateral: bodyContactWidth × 1.0 (same-lane filter only — no expansion multiplier)
+      // Lateral proximity must NOT drive braking; it only answers "same lane y/n".
+      // Report 13: disabling avoidanceActive on closed tracks caused regressions.
       const dynamicBrakeT =
-        spriteWorldSize > 0 && pathLength > 0
-          ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
+        brakeContactLength > 0 && pathLength > 0
+          ? (brakeContactLength / pathLength) * config.speedBrakeTMultiplier
           : 0.014;
-      if (Math.abs(dY) < config.speedBrakeYThreshold && dT < dynamicBrakeT) {
+      if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         speedBrakeSet.add(trailer.index);
 
         // ── Brake-to-match cap ──────────────────────────────────────────────────
@@ -529,11 +537,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         if (config.isOpen !== false) {
           const bmMultiplier =
             config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
-          const bmYThreshold = config.brakeMatchActivationYThreshold ?? config.speedBrakeYThreshold;
           const dynamicBrakeMatchT =
-            spriteWorldSize > 0 && pathLength > 0
-              ? (spriteWorldSize / pathLength) * bmMultiplier
+            brakeContactLength > 0 && pathLength > 0
+              ? (brakeContactLength / pathLength) * bmMultiplier
               : 0.014;
+          const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
           inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
         } else {
           inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
@@ -622,7 +630,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
       // impulses based on local left/right free-space checks.
 
-      if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
+      if (contactLength > 0 && trackWidth > 0 && pathLength > 0) {
         // lateralHalfSpan and tHalfSpan use the same sum-of-half-sizes base as the gate.
         // Gate = contact × (1+buffer); free-lane = contact exactly — invariant by construction.
         // contactWidth/contactLength already computed above via pairContact; referenced here.

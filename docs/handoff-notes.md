@@ -1,8 +1,33 @@
 # Handoff Notes
 
-> **NOTE (2026-06-07):** This file is outdated. The current architecture is documented in
-> `docs/ARCHITECTURE.md` § "Scale & Size — Single Sources of Truth". Field names, width sources,
-> and body-size sources have all changed since the entries below were written.
+> **NOTE (2026-06-08):** Branch `feat/open-track-overlap` merged to master. See below for current state.
+
+## 2026-06-08 — feat/open-track-overlap merged (geometric gate + speed-brake body fix)
+
+**Branch:** `feat/open-track-overlap` → merged to `master` (overnight merge)
+
+### What was built (reports 39–45)
+
+**Scale cleanup (reports 31–33):** Three SOTs corrected — `trackWidthPx = track.width`, `drawnBodyWidthPx = bodyRef.bodyNarrow`, `drawnBodyLengthPx` from render primitives. Raw `physicalY × trackWidth` replaced by `pxToPhysicalY` / `physicalYToPx` helpers everywhere. 9 field renames. See `docs/ARCHITECTURE.md § Scale & Size`.
+
+**Geometric avoidance gate (report 39):** Replaced the old mixed-unit anisotropic distance gate with a two-axis body-contact check. `pairContact()` helper: `contactWidth = hwA + hwB`, `contactLength = hlA + hlB`. Gate threshold = contact × (1 + avoidanceBufferPct). Speed brake moved before the gate. Free-lane overlap also uses body sizes. DevScreen: old T Weight / Y Weight replaced by "Avoidance Buffer (% of body size)".
+
+**Speed-brake body fix (reports 43+45):** Both speed-brake axes now body-based. Longitudinal: `(bodyContactLength / pathLength) × speedBrakeTMultiplier`. Lateral: `pxToPhysicalY(contactWidth, trackWidth)` — same-lane filter only, no multiplier. `speedBrakeYThreshold` and `avoidanceDistance` retired from browser gate (kept in defaults.js for sim-script backward compat).
+
+### Current fairness baseline
+
+Full 66-combo sweep (N=50, Race Plan ON, `--bonusMult=2.0`): see `reports/open-track-overlap/41-baseline-sweep.md` (updated by overnight sweep). Rocket regression resolved: brake 96%→53%, all 3 seeds pass. `overlap=0.0%` on all 66 combos.
+
+### Tests
+
+87/87 raceBehavior + brakeMatch tests. Total project tests: see `npm test` output on master.
+
+### Next priorities (unchanged from pre-merge)
+
+1. Player Group Selection (hot — priority 1 after camera phase)
+2. D7d — 100-racer performance (spatial grid)
+3. TLH-3 — code fallback + status banner + export
+4. Backlog P-1 — longitudinal body overlap during passing (still open physics issue)
 
 ## 2026-05-14 — PR #98 Cleanup Sprint (state after merge)
 
