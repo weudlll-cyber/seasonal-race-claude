@@ -604,7 +604,9 @@ export default function RaceScreen() {
           y: 0,
           angle: 0,
           spriteWorldSizePx: physicalSpriteSize,
-          honestBodyWidthPx: physicalSpriteSize * racerType.config.bodyFillX,
+          // True drawn body width = body-narrow reference (referenceSpriteSize).
+          // physicalSpriteSize is the full frame and inflates body overlap thresholds.
+          honestBodyWidthPx: referenceSpriteSize,
           geometricTrackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)

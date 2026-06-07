@@ -124,6 +124,7 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
 import {
+  computeBodyNarrowRef,
   computeEvenRowLayout,
   computeRacerLayout,
   computeRowPhysicalY,
@@ -275,6 +276,12 @@ export function runSingleRace({
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
     const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+    // Body narrow reference — mirrors index.jsx W_REF + computeBodyNarrowRef call.
+    // bodyFillNarrow = min(X,Y) so the narrow axis is correctly identified regardless of sprite orientation.
+    // W_REF cap at 285 matches the game's cap for the camera reference width.
+    const bodyFillNarrow = Math.min(bodyFillX, bodyFillY);
+    const W_REF = Math.min(285, effectiveWidth);
+    const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
     const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
     const rowLayout           = computeEvenRowLayout(nRacers, rowCount);
@@ -336,7 +343,7 @@ export function runSingleRace({
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
         spriteWorldSizePx:      effectiveDisplaySize,
-        honestBodyWidthPx:      effectiveDisplaySize * bodyFillX,
+        honestBodyWidthPx:      bodyRef.bodyNarrow,
         geometricTrackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)
@@ -490,13 +497,12 @@ export function runSingleRace({
     let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
     let liteOverlapPairTotal     = 0;   // total pair-frames checked
     // Honest overlap metric: actual body-extent collision (Step 2).
-    // Uses effectiveDisplaySize (auto-scaled sprite size) × bodyFillX/Y.
-    // Lateral body (half-span each): effectiveDisplaySize × bodyFillX
-    // Longitudinal body (half-span each): effectiveDisplaySize × bodyFillY
+    // Lateral: bodyRef.bodyNarrow = per-type drawn body width (half-span each side).
+    // Longitudinal: effectiveDisplaySize * bodyFillY — corrected in step 3.
     // Overlap fires when both axes touch simultaneously.
     // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
-    const honestBodyLong  = effectiveDisplaySize * bodyFillY;   // px
-    const honestBodyLat   = effectiveDisplaySize * bodyFillX;   // px
+    const honestBodyLong  = effectiveDisplaySize * bodyFillY;   // px — TODO step 3: use derived formula
+    const honestBodyLat   = bodyRef.bodyNarrow;                 // px
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
     // Lapping instrumentation (closed tracks only, Part 1 verification):
