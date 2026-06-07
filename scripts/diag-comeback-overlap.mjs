@@ -67,7 +67,7 @@ function easeInOutCubic(t) {
 const trackRaw = JSON.parse(readFileSync(join(ROOT, 'server/data/tracks/space-sprint.json'), 'utf8'));
 const shape    = new EditorShape(trackRaw);
 const pathLengthPx       = shape.pathLength ?? trackRaw.pathLengthPx;
-const geometricTrackWidth = trackRaw.width ?? 300;
+const geometricTrackWidth = trackRaw.width ?? shape.getActualTrackWidth();
 const isOpen  = !trackRaw.closed;
 console.log(`Track: ${trackRaw.name}  open=${isOpen}  path=${Math.round(pathLengthPx)}px  width=${geometricTrackWidth}px`);
 

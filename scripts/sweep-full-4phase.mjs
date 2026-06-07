@@ -97,7 +97,7 @@ function loadTrack(id) {
     shape,
     isOpen:             !!shape.isOpen,
     pathLengthPx:       raw.pathLengthPx ?? shape.getTotalLength(),
-    geometricTrackWidth: shape.getActualTrackWidth(),
+    geometricTrackWidth: raw.width ?? shape.getActualTrackWidth(),
   };
   return _tc[id];
 }

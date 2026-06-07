@@ -38,7 +38,7 @@ const track            = JSON.parse(readFileSync(join(TRACK_DIR, `${TRACK_ID}.js
 const shape            = new EditorShape(track);
 const isOpen           = !!shape.isOpen;
 const pathLengthPx     = track.pathLengthPx ?? shape.getTotalLength();
-const geometricTrackWidth = shape.getActualTrackWidth();
+const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
 
 const ssf        = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
 const finishT    = computeFinishT(BASE_SPEED_MEAN, speedMultiplier, DUR_SEC, isOpen,

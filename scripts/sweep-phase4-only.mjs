@@ -98,7 +98,7 @@ function loadTrack(id) {
   const shape = new EditorShape(raw);
   _tc[id] = { shape, isOpen: !!shape.isOpen,
                pathLengthPx: raw.pathLengthPx ?? shape.getTotalLength(),
-               geometricTrackWidth: shape.getActualTrackWidth() };
+               geometricTrackWidth: raw.width ?? shape.getActualTrackWidth() };
   return _tc[id];
 }
 

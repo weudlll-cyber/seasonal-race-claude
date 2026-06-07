@@ -105,7 +105,7 @@ function loadTrack(trackId, racerType, nRacers, durSec) {
   const shape = new EditorShape(raw);
   const isOpen            = !!shape.isOpen;
   const pathLengthPx      = raw.pathLengthPx ?? shape.getTotalLength();
-  const geometricTrackWidth = shape.getActualTrackWidth();
+  const geometricTrackWidth = raw.width ?? shape.getActualTrackWidth();
   const { displaySize, bodyFillX, bodyFillY, speedMultiplier } = RACER_CONFIGS[racerType];
   const finishT = computeFinishT(BASE_SPEED_MEAN, speedMultiplier, durSec, isOpen);
   return { shape, isOpen, pathLengthPx, geometricTrackWidth,

@@ -35,7 +35,7 @@ async function runTrack(trackId) {
   const data = JSON.parse(readFileSync(`./server/data/tracks/${trackId}.json`, 'utf8'));
   const shape = new EditorShape(data);
   const pathLengthPx = shape.getTotalLength();
-  const trackWidth = shape.getActualTrackWidth();
+  const trackWidth = data.width ?? shape.getActualTrackWidth();
   const isOpen = !data.closed;
   const duration = data.defaultDuration ?? 60;
   const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
