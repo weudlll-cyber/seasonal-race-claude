@@ -444,7 +444,13 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Comfort zone & soft boundary repulsion
   comfortThreshold: 0.7,
   softRepulsionStrength: 0.1,
-  // Anisotropic avoidance distance metric weights (t×tWeight and physicalY×yWeight)
+  // Avoidance buffer: forces engage this fraction BEFORE body-edge contact (lead time).
+  // 0.20 = gate fires when centers are within 120% of the sum-of-half-sizes on both axes.
+  // Tunable in Dev Screen — Soft Avoidance. Calibrate by eye before running sweeps.
+  avoidanceBufferPct: 0.2,
+  // tWeight / yWeight: RETIRED from browser avoidance gate (report 39 — geometric gate).
+  // Kept here so sim scripts that still read avoidanceDistance/tWeight/yWeight for
+  // reference runs continue to work. Do NOT use in raceBehavior.js gate logic.
   tWeight: 2.0,
   yWeight: 1.0,
   maxLateral: 0.95,
@@ -507,6 +513,8 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // While a racer is in geometric overlap, reduce home force so free-lane can separate.
   // 1.0 = no reduction, 0.0 = home force off during overlap.
   homeForceReductionOnOverlap: 0.3,
+  // avoidanceDistance: RETIRED from browser gate (report 39 — geometric gate replaces it).
+  // Kept for sim script backward compat. Browser now uses avoidanceBufferPct (above).
   avoidanceDistance: 0.18,
   speedBrakeFactor: 0.945,
   // speedBrakeTMultiplier / speedBrakeYThreshold — avoidanceActive (floor brake 0.945) zone.
@@ -538,4 +546,11 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   brakeHoldEscapeReleaseDurationFrames: 15,
   brakeHoldEscapeCooldownFrames: 60,
   brakeReleaseDebounceFrames: 3,
+  // Step-2 Stage D: gap-clearing force (open tracks only).
+  // Adds a self-limiting proportional lateral impulse when two racers are in a same-lane
+  // approach, targeting honest body clearance (|yDiff| ≥ honestBodyWidthPx / trackWidth).
+  // gapForceStrength: scale on lateralForce for the gap impulse (0 = off → Stage C behavior).
+  // gapForceCap: max Stage B total injection as a multiple of lateralForce (safety ceiling).
+  gapForceStrength: 1.0,
+  gapForceCap: 1.5,
 };

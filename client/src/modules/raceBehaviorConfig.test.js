@@ -52,7 +52,12 @@ describe('DEFAULT_RACE_BEHAVIOR_CONFIG', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.comfortThreshold).toBeLessThan(1);
   });
 
-  it('has positive avoidanceDistance', () => {
+  it('has avoidanceBufferPct between 0 and 1 (default 20%)', () => {
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct).toBeGreaterThanOrEqual(0);
+    expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct).toBeLessThanOrEqual(1);
+  });
+
+  it('has positive avoidanceDistance (kept for sim-script backward compat)', () => {
     expect(DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceDistance).toBeGreaterThan(0);
   });
 

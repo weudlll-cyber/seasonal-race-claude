@@ -1011,7 +1011,7 @@ export default function RaceScreen() {
               `latPx: ${f1(latPx)}  longPx: ${f1(longPx)}<br>` +
               `|dY|: ${f(Math.abs(d.dY))}  dT: ${f(d.dT)}<br>` +
               `lhs: ${f(d.lateralHalfSpan)}  ths: ${f(d.tHalfSpan)}<br>` +
-              `avoidDist: ${f(behaviorConfig.avoidanceDistance)}<br>` +
+              `buffer: ${f(behaviorConfig.avoidanceBufferPct ?? 0.2)} latTrig: ${f1(_diagPair.latTrigger ?? 0)}px<br>` +
               `<b>overlaps: ${d.overlaps}</b><br>` +
               `flRaw: ${f(d.flRawA)} / ${f(d.flRawB)}<br>` +
               `flNet: ${f(flNetA)} / ${f(flNetB)}<br>` +

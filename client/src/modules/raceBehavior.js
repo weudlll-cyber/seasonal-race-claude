@@ -19,7 +19,11 @@ export const _diagPair = {
   physYB: 0,
   dY: 0,
   dT: 0,
-  dist: 0,
+  dist: 0, // kept for any downstream readers; set to min penetration fraction when gate passes
+  latPx: 0, // center-to-center lateral distance in world px
+  longPx: 0, // center-to-center longitudinal distance in world px
+  latTrigger: 0, // gate admission threshold (lateral, px) = bodyWidth × (1+buffer)
+  longTrigger: 0, // gate admission threshold (longitudinal, px) = bodyLength × (1+buffer)
   passedAvoidGate: false,
   lateralHalfSpan: 0,
   tHalfSpan: 0,
@@ -200,6 +204,30 @@ function getPathLengthPx(racer) {
   return 0;
 }
 
+// Geometric contact distances for the avoidance gate and the free-lane overlap check.
+//
+// contactWidth  = halfWidthA + halfWidthB  (sum of half-sizes — correct 2-body geometry)
+// contactLength = halfLengthA + halfLengthB
+//
+// Bodies touch when the center-to-center pixel distance equals the contact value.
+// The gate fires at contactWidth × (1+buffer) — always wider than the free-lane threshold
+// (contactWidth), so the invariant "gate ≥ inner check" holds by construction for any pair
+// of body sizes, equal or unequal (see dragon 28px vs rocket 14px: contact = 21px, not 28).
+// Falls back to frameSizePx/2 per racer when drawnBodyWidthPx is absent (sim racers).
+function pairContact(rA, rB) {
+  const frameA = getFrameSizePx(rA);
+  const frameB = getFrameSizePx(rB);
+  const hw_A = (rA.drawnBodyWidthPx ?? frameA) / 2;
+  const hw_B = (rB.drawnBodyWidthPx ?? frameB) / 2;
+  const hl_A = (rA.drawnBodyLengthPx ?? frameA) / 2;
+  const hl_B = (rB.drawnBodyLengthPx ?? frameB) / 2;
+  const contactWidth = hw_A + hw_B;
+  const contactLength = hl_A + hl_B;
+  const pairTW = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
+  const pairPL = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+  return { contactWidth, contactLength, pairTW, pairPL };
+}
+
 function chooseGeometricDirection(self, other, tieBitForSelf) {
   if (self.physicalY < other.physicalY) return -1;
   if (self.physicalY > other.physicalY) return 1;
@@ -304,7 +332,7 @@ function _computeBlockedMode(r, active) {
  *   homeForceStrength: number,
  *   homeForceReductionOnOverlap: number,
  *   comfortThreshold: number, softRepulsionStrength: number,
- *   avoidanceDistance: number, tWeight: number, yWeight: number,
+ *   avoidanceBufferPct: number,
  *   lateralForce: number, maxLateral: number,
  *   speedBrakeYThreshold: number, speedBrakeTMultiplier: number,
  *   speedBrakeFactor: number,
@@ -453,6 +481,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           dist: -1,
           screenDist,
           passedGate: false,
+          latPx: 0,
+          longPx: 0,
+          latTrigger: 0,
+          longTrigger: 0,
           lhs: 0,
           ths: 0,
           overlaps: false,
@@ -461,47 +493,25 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         };
       }
 
-      // dist ≥ |dY·yWeight|, so if this holds, the existing dist gate below would also fire.
-      if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) continue;
-      const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
-      if (dist >= config.avoidanceDistance) continue;
-      // Temp diag — mark if the screen-closest pair also passed the avoidance gate
-      if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
-        _dc.dist = dist;
-        _dc.passedGate = true;
-      }
-
-      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
-      // so the pixel-space force is consistent across all track widths.
-      const pairTrackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
-      const lateralScale =
-        pairTrackWidth > 0
-          ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTrackWidth))
-          : 1.0;
-
-      // Proximity-scaled lateral force
-      const forceMag = config.lateralForce * (1 - dist / config.avoidanceDistance);
+      // Sprite geometry for this pair. Computed before the body-contact gate because the
+      // speed brake uses frameSizePx-based thresholds independent of body-overlap distance.
+      const sizeA = getFrameSizePx(rA);
+      const sizeB = getFrameSizePx(rB);
+      const spriteWorldSize = Math.max(sizeA, sizeB);
+      const trackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
+      const pathLength = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
 
       // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
       const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
       const trailer = aIsTrailer ? rA : rB;
       const leader = aIsTrailer ? rB : rA;
 
-      // Sprite geometry for this pair — used by both speed brake and free-lane separation.
-      const sizeA = getFrameSizePx(rA);
-      const sizeB = getFrameSizePx(rB);
-      const spriteWorldSize = Math.max(sizeA, sizeB);
-      const trackWidthA = getTrackWidthAtTpx(rA);
-      const trackWidthB = getTrackWidthAtTpx(rB);
-      const trackWidth = Math.max(trackWidthA, trackWidthB);
-      const pathLengthA = getPathLengthPx(rA);
-      const pathLengthB = getPathLengthPx(rB);
-      const pathLength = Math.max(pathLengthA, pathLengthB);
-
       // ── Speed brake (avoidanceActive + 0.945 floor): ALL tracks ─────────────
-      // Uses the original wide activation zone so that pack stabilization works on
-      // both open and closed tracks. Report 13: disabling avoidanceActive on closed
-      // tracks (report-12 approach) caused closed-track regressions.
+      // Runs BEFORE the body-contact gate: its threshold (frameSizePx × 1.5 ≈ 60px) is
+      // intentionally wider than the body-contact zone (body × 1.2 ≈ 37px), so it must
+      // not be gated by body size. Uses the original wide activation zone so that pack
+      // stabilization works on both open and closed tracks. Report 13: disabling
+      // avoidanceActive on closed tracks caused closed-track regressions.
       const dynamicBrakeT =
         spriteWorldSize > 0 && pathLength > 0
           ? (spriteWorldSize / pathLength) * config.speedBrakeTMultiplier
@@ -569,24 +579,57 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
 
+      // ── Geometric avoidance gate (report 38/39) ──────────────────────────────
+      // Replaced the mixed-unit metric (dT×tWeight + dY×yWeight) that could not be
+      // calibrated per-track (required weight ≈ 131 on Space Sprint, ≈ 67 on Dirt Oval).
+      // Two independent px-space axes, no sqrt. Speed brake runs BEFORE this gate (above)
+      // because its frameSizePx-based threshold is intentionally wider than body size.
+      // Invariant: gate contact threshold × (1+buffer) > contact = free-lane threshold.
+      const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+      // Skip pairs with no body size info (real racers always have frameSizePx as fallback).
+      if (contactWidth === 0 || contactLength === 0) continue;
+      const latPx = Math.abs(dY) * (pairTW / 2);
+      const longPx = dT * pairPL;
+      const bufferPct = config.avoidanceBufferPct ?? 0.2;
+      // Gate = contact × (1+buffer) > contact (free-lane) — invariant by construction.
+      const latTrigger = contactWidth * (1 + bufferPct);
+      const longTrigger = contactLength * (1 + bufferPct);
+      // Two-axis AND: both axes must be inside the buffered contact zone.
+      if (latPx >= latTrigger || longPx >= longTrigger) continue;
+      // Temp diag — mark if the screen-closest pair also passed the avoidance gate
+      if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
+        const latFrac = 1 - latPx / latTrigger;
+        const longFrac = 1 - longPx / longTrigger;
+        _dc.dist = Math.min(latFrac, longFrac); // penetration fraction [0,1]
+        _dc.latPx = latPx;
+        _dc.longPx = longPx;
+        _dc.latTrigger = latTrigger;
+        _dc.longTrigger = longTrigger;
+        _dc.passedGate = true;
+      }
+
+      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
+      // so the pixel-space force is consistent across all track widths.
+      const lateralScale =
+        pairTW > 0 ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTW)) : 1.0;
+
+      // Proximity-scaled lateral force: min penetration fraction across both axes.
+      // Decays from lateralForce (centers touching) to 0 (at the trigger boundary).
+      const latFraction = 1 - latPx / latTrigger;
+      const longFraction = 1 - longPx / longTrigger;
+      const forceMag = config.lateralForce * Math.min(latFraction, longFraction);
+
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
       // impulses based on local left/right free-space checks.
 
       if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
-        // lateralHalfSpan: full frame envelope as overlap threshold, converted via pxToPhysicalY.
-        // Using the frame (frameSizePx) rather than drawnBodyWidthPx is intentionally conservative
-        // (fires before body edges touch). pxToPhysicalY is required — / trackWidth (not /2) gives
-        // HALF a frame and creates a blind zone where bodies visually overlap but the sensor misses
-        // them (report 35). There is now NO raw physicalY↔px conversion anywhere in this file.
-        const lateralHalfSpan = pxToPhysicalY(spriteWorldSize, trackWidth);
-        // tHalfSpan: longitudinal body length converted to t-space via pathLength.
-        // drawnBodyLengthPx is the real drawn body size; frameSizePx would be wrong here
-        // (frame includes transparent area, body is narrower). px→t: bodyLength / pathLength.
-        // Note: drawnBodyLengthPx on rA/rB may be undefined on sim racers — fallback to frameSizePx.
-        const bodyLengthA = rA.drawnBodyLengthPx ?? spriteWorldSize;
-        const bodyLengthB = rB.drawnBodyLengthPx ?? spriteWorldSize;
-        const bodyLength = Math.max(bodyLengthA, bodyLengthB);
-        const tHalfSpan = bodyLength / pathLength;
+        // lateralHalfSpan and tHalfSpan use the same sum-of-half-sizes base as the gate.
+        // Gate = contact × (1+buffer); free-lane = contact exactly — invariant by construction.
+        // contactWidth/contactLength already computed above via pairContact; referenced here.
+        // Falls back via pairContact's ?? frameSizePx when drawnBodyWidthPx/LengthPx absent.
+        // pxToPhysicalY required — raw / trackWidth misses the factor of 2 (report 35).
+        const lateralHalfSpan = pxToPhysicalY(contactWidth, trackWidth);
+        const tHalfSpan = contactLength / pathLength;
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
         // Temp diag — record lhs/ths/overlaps for the candidate pair
         if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
@@ -723,6 +766,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     _diagPair.dT = _dc.dT;
     _diagPair.screenDist = _dc.screenDist;
     _diagPair.dist = _dc.dist;
+    _diagPair.latPx = _dc.latPx;
+    _diagPair.longPx = _dc.longPx;
+    _diagPair.latTrigger = _dc.latTrigger;
+    _diagPair.longTrigger = _dc.longTrigger;
     _diagPair.passedAvoidGate = _dc.passedGate;
     _diagPair.lateralHalfSpan = _dc.lhs;
     _diagPair.tHalfSpan = _dc.ths;
