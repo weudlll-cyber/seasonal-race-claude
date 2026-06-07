@@ -56,7 +56,7 @@ function autoMaxRacers(geom, track, rowCfg) {
   const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
   const shape = new EditorShape(geom);
   const behaviorCfg = loadRaceBehaviorConfig();
-  const effectiveWidth = shape.getActualTrackWidth() * behaviorCfg.startSpreadRange;
+  const effectiveWidth = (geom.width ?? shape.getActualTrackWidth()) * behaviorCfg.startSpreadRange;
   const racersPerRow = computeRacersPerRow(effectiveWidth, displaySize);
   return computeMaxRacersDefault(
     geom.pathLengthPx,

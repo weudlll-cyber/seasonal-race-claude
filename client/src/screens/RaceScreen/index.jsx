@@ -368,7 +368,10 @@ export default function RaceScreen() {
     diagDataRef.current.constSpeed = constSpeedActive;
 
     shapeRef.current = new EditorShape(geometry);
-    const geometricTrackWidthPx = shapeRef.current.getActualTrackWidth();
+    // Read stored width first; fall back to spline estimate only for tracks without one.
+    // getActualTrackWidth() measures the median spline cross-section and overestimates for
+    // open tracks whose physical centerWidth is narrower than the spline envelope.
+    const geometricTrackWidthPx = geometry.width ?? shapeRef.current.getActualTrackWidth();
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
     const bsX = CANVAS_W / worldWidth;
@@ -689,9 +692,9 @@ export default function RaceScreen() {
     };
 
     // ── Canvas positions ────────────────────────────────────────────────────
-    // openTrackHW = half the median cross-section width (inner→outer = full width).
+    // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
     // drawOpenTrackFinishLine derives its own perp/fwd vectors from finishT angle locally.
-    const openTrackHW = isOpenTrack ? shapeRef.current.getActualTrackWidth() / 2 : 0;
+    const openTrackHW = isOpenTrack ? geometricTrackWidthPx / 2 : 0;
 
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {

@@ -2142,7 +2142,8 @@ if (isMain) {
     const shape  = new EditorShape(track);
     const isOpen = !!shape.isOpen;
     const pathLengthPx       = track.pathLengthPx ?? shape.getTotalLength();
-    const geometricTrackWidth = shape.getActualTrackWidth();
+    // Read stored width first; getActualTrackWidth() overestimates for open tracks.
+    const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
     const trackName = track.name ?? trackId;
 
     console.log(`── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`);
