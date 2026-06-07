@@ -190,16 +190,17 @@ Implemented in `modules/rowLayout.js`. Called once at race start in `RaceScreen`
 racer init map.
 
 **Algorithm:**
-1. `EditorShape.getActualTrackWidth()` — samples 20 evenly-spaced positions and returns the
-   median inner-to-outer distance in world pixels. This is the ground-truth geometric width —
-   it scales correctly with any world size. The `trackWidth` metadata field has been removed
-   from the track data model (D7c-fix-v2); all width-dependent calculations use this method.
-2. `effectiveWidth = geometricTrackWidthPx × startSpreadRange` — the region actually used by
+1. Track width source: `trackWidthPx = track.width ?? shape.getActualTrackWidth()`. The stored
+   `track.width` field (set by the Track Editor from `_centerWidth`, the true physical lane width)
+   is read first. `getActualTrackWidth()` is the spline-based fallback for tracks that predate
+   the stored-width field; it measures the median inner-to-outer distance and may overestimate.
+   See § "Scale & Size — Single Sources of Truth" for why this matters.
+2. `effectiveWidth = trackWidthPx × startSpreadRange` — the region actually used by
    racers at start. This ensures the packing formula matches the actual lateral distribution.
-3. `computeRacersPerRow(effectiveWidth, spriteWorldSizePx)` — computes how many
-   sprites fit shoulder-to-shoulder: `floor(2 × effectiveWidth / spriteWorldSizePx)`.
+3. `computeRacersPerRow(effectiveWidth, frameSizePx)` — computes how many sprites fit
+   shoulder-to-shoulder: `floor(2 × effectiveWidth / frameSizePx)`.
    Stays in world-pixel space — correct at any world size.
-   `spriteWorldSizePx = displaySize × displaySizeScale` (same values as the render pipeline).
+   `frameSizePx = displaySize × displaySizeScale_physical` (frame-based, real width — physics layout).
 4. `computeRowLayout(racerCount, racersPerRow)` — shuffles racer indices (Fisher-Yates) and
    assigns them to rows based on the pre-computed `racersPerRow`.
 5. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across
@@ -224,6 +225,78 @@ Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `s
 `maxCapacityFactor`). Start-layout params in `racearena:raceBehaviorConfig` (`startSpreadRange`,
 `runoutZone`). All tunable in Dev Screen. Track-level `maxRacers` shown in TrackManager with
 "modified" badge.
+
+## Scale & Size — Single Sources of Truth
+
+*(Added 2026-06-07, feat/open-track-overlap scale-cleanup. This section is load-bearing — read before touching any lateral distance or body-size calculation.)*
+
+### The bug this fixed
+
+Before the scale cleanup, physics was computing in a 449 px world while the screen drew a 300 px track (Space Sprint). The body width used for overlap thresholds was 34 px instead of the 28.5 px actually drawn. The per-side clearance trigger was 5.7 px vs the correct 14.25 px. Racers overlapped visually before avoidance engaged, and the overlap metric stayed flat through many behavior improvements because the foundation was wrong.
+
+### Three single sources of truth
+
+```
+trackWidthPx        = track.width  ← stored by Track Editor from _centerWidth (physical lane width)
+                      ?? shape.getActualTrackWidth()  ← spline fallback only for tracks without stored width
+
+drawnBodyWidthPx    = bodyRef.bodyNarrow   (from computeBodyNarrowRef — body-narrow visible width)
+                    = drawnBodyWidthRefPx  (the camera reference; same value, same source)
+                    ← NOT physicalSpriteSize × bodyFillX (that's the frame × fill fraction, not the body)
+
+drawnBodyLengthPx   = drawnBodyWidthRefPx × bodyFillLong / bodyFillNarrow  (square frames, general: × frameWidth/frameHeight)
+                    ← derived directly from render primitives; NOT computed from drawnBodyWidthPx variable
+```
+
+### physicalY ↔ world-pixel mapping
+
+```
+EditorShape.getPosition(t, physicalY / 2)   ← the /2 is inside EditorShape (physicalY = ±1 is edge)
+
+So:  1 physicalY unit = trackWidth / 2  world pixels
+
+Conversion helpers (raceBehavior.js, top of file):
+  pxToPhysicalY(px, trackWidth)  = px  / (trackWidth / 2)
+  physicalYToPx(phy, trackWidth) = phy * (trackWidth / 2)
+```
+
+**ALL lateral physicalY ↔ pixel conversions must go through these helpers.** Using raw `× trackWidth` or `/ trackWidth` misses the factor of 2 and is a real production bug (the BLOCKED-mode off-by-2 caused the blocked state to fire at half the intended pixel distance).
+
+### Naming map (old → new, feat/open-track-overlap)
+
+| Old name | New name | Notes |
+|---|---|---|
+| `geometricTrackWidthPx` | `trackWidthPx` | racer field; now from track.width not getActualTrackWidth |
+| `getTrackWidthPx(racer)` | `getTrackWidthAtTpx(racer)` | single branch; non-uniform track hook in comment |
+| `honestBodyWidthPx` | `drawnBodyWidthPx` | true per-type visible body width, not frame × fill |
+| `honestBodyLat` (sim) | `drawnBodyWidthPx` | aligned with game field name |
+| `honestBodyLong` (sim) | `drawnBodyLengthPx` | aligned with game convention |
+| `referenceSpriteSize` | `drawnBodyWidthRefPx` | clarifies it is the camera reference (same value as drawnBodyWidthPx) |
+| `spriteWorldSizePx` | `frameSizePx` | it is the full frame envelope, not a "sprite world size" |
+| `visibleWidthPx` | `frameSizePx` | merged with spriteWorldSizePx; one field, one name |
+| `getSpriteWorldSizePx` | `getFrameSizePx` | getter for frameSizePx |
+| `displaySizeScale_physical` | *(inlined)* | was only used to compute physicalSpriteSize; deleted |
+
+### Do NOT touch — invariants
+
+1. **Do NOT use `getActualTrackWidth()` for physics / overlap / clearance.** It is the spline estimate (overestimates on open tracks like Space Sprint: 449 vs 300 px). It stays only as a fallback in the `??` expression for tracks without a stored `width` field.
+
+2. **Do NOT reintroduce raw `physicalY × trackWidth` conversions.** Use `physicalYToPx` / `pxToPhysicalY`. The factor-of-2 lives only in those helpers.
+
+3. **Do NOT change `REFERENCE_TRACK_WIDTH = 98` to compensate for anything.** It is the Dirt Oval calibration anchor for `lateralScale`. Changing it would break all closed-track tuning.
+
+4. **Do NOT use `frameSizePx` (the sprite frame) for body overlap.** Use `drawnBodyWidthPx` / `drawnBodyLengthPx` (the visible body). The frame is larger than the body.
+
+5. **Do NOT derive `drawnBodyLengthPx` from `drawnBodyWidthPx` as a variable.** Both must reference `drawnBodyWidthRefPx` independently so length is not chained through width.
+
+6. **The L515 free-lane `lateralHalfSpan` is an intentional exemption.** It uses `frameSizePx / trackWidth` (not `/ (trackWidth/2)`) — this is the full-frame proximity sensor for the free-lane separation gate. It deliberately measures frame-overlap clearance, not body-overlap clearance. Document your intent before "fixing" it.
+
+7. **Camera anisotropy on closed tracks (`bsX ≠ bsY`) is screen-only.** Never pull it into world-space body/clearance math.
+
+### Deferred follow-ups (not blocking)
+
+- **Non-uniform track width (`getWidthAtT(t)`):** The function `getTrackWidthAtTpx` has an extension comment for when tracks with variable width are added. Implement by querying `EditorShape._centerWidth` (or equivalent) at `racer.t` per frame. Do NOT build prematurely.
+- **Sim brake-match parity:** `sim-fairness.mjs:~1007` reads `trailer.frameSizePx` (was `visibleWidthPx`) for the dynamic brake-match threshold. Sim racer objects never set `frameSizePx`, so this always falls back to `0.014`. Fix: set `frameSizePx: effectiveDisplaySize` (already set; now correctly named) and verify the threshold matches the game's `dynamicBrakeMatchT`.
 
 ## Speed Pipeline (PR-A2 + fix + PR-A2.6)
 

@@ -1,5 +1,9 @@
 # Handoff Notes
 
+> **NOTE (2026-06-07):** This file is outdated. The current architecture is documented in
+> `docs/ARCHITECTURE.md` § "Scale & Size — Single Sources of Truth". Field names, width sources,
+> and body-size sources have all changed since the entries below were written.
+
 ## 2026-05-14 — PR #98 Cleanup Sprint (state after merge)
 
 - Branch: `claude/free-lane-separation` → squash-merged to `master`
@@ -82,6 +86,67 @@
 All in `docs/diagnose/` with index file `docs/diagnose/README.md`.
 
 ---
+
+## 2026-06-06 — Step 2 Stage B + avoid-first diagnosis (current state)
+
+**Branch:** `feat/open-track-overlap` (not merged — master clean at fc36ff6)
+
+### Stage summary
+
+| Stage | Commit | Status |
+|-------|--------|--------|
+| Stage A — accumulators built | `9834bd3` | ✓ budget-neutral, not consumed |
+| Stage B — same-lane commit + deadlock fix | `1864180` | ✓ dragon overlap −22%, screening green, browser: no zigzag |
+
+Stage B reduces honest dragon overlap ~22% on all open tracks. Fairness passes
+(N=20 all tracks, N=50 3-combo screening). Browser confirms no visible zigzag.
+
+### Remaining problem (user-observed)
+
+Slightly-offset comeback racer brakes instead of steering around a free side.
+**Root cause diagnosed in `reports/open-track-overlap/20-avoid-first-diag.md`:**
+
+1. Stage B direction logic uses approach corridors (`_approachLeft/Right`). In a
+   60-racer field, both sides appear occupied 91.5% of the time (dense-field
+   false positives). Even when right side is visually free, Stage B calls it occupied.
+
+2. Deadlock resolution uses forward tiebreak (`_forwardLeft/Right`), populated
+   globally from all pairs. This can pick a direction OPPOSITE to the natural
+   avoidance push. Stage B force and natural avoidance force then CANCEL each other
+   — net lateral delta ≈ 0. Only the 0.945 floor-brake is visible → user perceives
+   "brakes first, doesn't avoid."
+
+3. Avoidance fires at dT ≈ 0.089; brake-to-match fires at dT ≈ 0.001 (72× closer).
+   The ordering is correct — but force cancellation makes it irrelevant.
+
+### Next implementation step
+
+Replace `_approachLeft/Right` direction-selection block in
+[raceBehavior.js:744–781](../client/src/modules/raceBehavior.js#L744):
+- Primary: leader-relative direction (from `_sameLaneLeaderPhysY`)
+- Override only when natural direction is forward-blocked AND opposite is clear
+- Remove corridor occupancy check from Stage B entirely
+
+Screen: 3 tracks × default racer. Gate: racer steers around (no pass-through) + zigzag <0.05.
+
+---
+
+## 2026-06-06 - Step 2 planning report (analysis-only)
+
+- Branch: `feat/open-track-overlap`
+- Scope: Design-only planning for Step 2 forward-looking lateral avoidance (no code changes)
+- New report: `reports/open-track-overlap/10-step2-design.md`
+
+What was delivered:
+- Concrete mapping of report-05 avoid-first behavior to current runtime decision points
+- Performance-first derive-don't-rescan plan tied to current pair-loop architecture
+- Fairness risk map and mandatory N=50 sweep gates for each behavior-changing stage
+- Wide-body (Flag 1) runtime feasibility check and minimal safe data-plumbing approach
+- Staged implementation plan: small increments, frame-log check, fairness sweep, then next stage
+
+Update (same date):
+- Added completeness addendum in `reports/open-track-overlap/10-step2-design.md` resolving the open Y-rejection question.
+- Conclusion: forward/adjacent side-corridor data can be wider than the current Y-rejection gate; accumulator population must run in a pre-Y branch inside the same pair loop to remain complete without rescans.
 
 ## Older entries
 
