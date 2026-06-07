@@ -276,10 +276,11 @@ export function runSingleRace({
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
     const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
-    // Body narrow reference — mirrors index.jsx W_REF + computeBodyNarrowRef call.
-    // bodyFillNarrow = min(X,Y) so the narrow axis is correctly identified regardless of sprite orientation.
+    // Body narrow/long references — mirror index.jsx W_REF + computeBodyNarrowRef call.
+    // bodyFillNarrow = min(X,Y); bodyFillLong = max(X,Y) — narrow axis identified by fill fraction.
     // W_REF cap at 285 matches the game's cap for the camera reference width.
     const bodyFillNarrow = Math.min(bodyFillX, bodyFillY);
+    const bodyFillLong   = Math.max(bodyFillX, bodyFillY);
     const W_REF = Math.min(285, effectiveWidth);
     const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
@@ -496,13 +497,17 @@ export function runSingleRace({
     // Lateral quality metrics
     let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
     let liteOverlapPairTotal     = 0;   // total pair-frames checked
-    // Honest overlap metric: actual body-extent collision (Step 2).
-    // Lateral: bodyRef.bodyNarrow = per-type drawn body width (half-span each side).
-    // Longitudinal: effectiveDisplaySize * bodyFillY — corrected in step 3.
+    // Honest overlap metric: actual body-extent collision.
+    // Both dimensions sourced from render primitives independently (not one from the other).
+    // Isotropic renderer: scale = bodyRef.bodyNarrow / (displaySize × bodyFillNarrow).
+    // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
+    // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
     // Overlap fires when both axes touch simultaneously.
     // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
-    const honestBodyLong  = effectiveDisplaySize * bodyFillY;   // px — TODO step 3: use derived formula
-    const honestBodyLat   = bodyRef.bodyNarrow;                 // px
+    const honestBodyLat  = bodyRef.bodyNarrow;                                              // px drawn width
+    const honestBodyLong = bodyFillNarrow > 0
+      ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow                                  // px drawn length
+      : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
     // Lapping instrumentation (closed tracks only, Part 1 verification):

@@ -420,6 +420,7 @@ export default function RaceScreen() {
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
     const bodyFillNarrow = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    const bodyFillLong = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
     const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
     // displaySizeScale_physical: frame-based scale from real track width.
     // Used only for rowGapPx / rowCount (physics) — must not change for determinism.
@@ -607,6 +608,14 @@ export default function RaceScreen() {
           // True drawn body width = body-narrow reference (referenceSpriteSize).
           // physicalSpriteSize is the full frame and inflates body overlap thresholds.
           honestBodyWidthPx: referenceSpriteSize,
+          // Drawn body length derived directly from render primitives — not via honestBodyWidthPx.
+          // Isotropic renderer: scale = referenceSpriteSize / (displaySize × bodyFillNarrow).
+          // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
+          // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
+          drawnBodyLengthPx:
+            bodyFillNarrow > 0
+              ? (referenceSpriteSize * bodyFillLong) / bodyFillNarrow
+              : referenceSpriteSize,
           geometricTrackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
