@@ -58,7 +58,7 @@ export function drawPriorityModeOverlay(
     const sx = rox * effZx + cam.offsetX;
     const sy = roy * effZy + cam.offsetY;
 
-    const spriteScreenR = (r.spriteWorldSizePx ?? 20) * effZx * 0.5;
+    const spriteScreenR = (r.frameSizePx ?? 20) * effZx * 0.5;
     const ringR = Math.max(spriteScreenR, 8);
     ctx.beginPath();
     ctx.arc(sx, sy, ringR, 0, Math.PI * 2);

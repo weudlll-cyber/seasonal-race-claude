@@ -161,18 +161,14 @@ function physicalYToPx(phy, trackWidth) {
   return phy * (trackWidth / 2);
 }
 
-function getSpriteWorldSizePx(racer) {
-  if (Number.isFinite(racer.visibleWidthPx) && racer.visibleWidthPx > 0)
-    return racer.visibleWidthPx;
-  if (Number.isFinite(racer.spriteWorldSizePx) && racer.spriteWorldSizePx > 0)
-    return racer.spriteWorldSizePx;
+function getFrameSizePx(racer) {
+  if (Number.isFinite(racer.frameSizePx) && racer.frameSizePx > 0) return racer.frameSizePx;
   return 0;
 }
 
-function getTrackWidthPx(racer) {
+function getTrackWidthAtTpx(racer) {
+  // For non-uniform tracks (no _centerWidth): extend here with racer.t per-frame lookup
   if (Number.isFinite(racer.trackWidthPx) && racer.trackWidthPx > 0) return racer.trackWidthPx;
-  if (Number.isFinite(racer.geometricTrackWidthPx) && racer.geometricTrackWidthPx > 0)
-    return racer.geometricTrackWidthPx;
   return 0;
 }
 
@@ -216,14 +212,14 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
  * Per-frame re-evaluation means a racer crossing the path mid-frame is caught next frame.
  */
 function _computeBlockedMode(r, active) {
-  const trackWidth = getTrackWidthPx(r);
+  const trackWidth = getTrackWidthAtTpx(r);
   const pathLength = getPathLengthPx(r);
   if (trackWidth <= 0 || pathLength <= 0) {
     r.blockerInfo = null;
     return false;
   }
 
-  const spriteSize = getSpriteWorldSizePx(r);
+  const spriteSize = getFrameSizePx(r);
   if (spriteSize <= 0) {
     r.blockerInfo = null;
     return false;
@@ -275,8 +271,9 @@ function _computeBlockedMode(r, active) {
  *   index: number, x: number, y: number, angle: number, t: number,
  *   physicalY: number, finished: boolean,
  *   avoidanceActive: boolean, draftingBoostActive: boolean,
- *   spriteWorldSizePx?: number, visibleWidthPx?: number,
- *   geometricTrackWidthPx?: number, trackWidthPx?: number,
+ *   frameSizePx?: number,
+ *   drawnBodyWidthPx?: number,
+ *   trackWidthPx?: number,
  *   pathLengthPx?: number
  * }>} racers
  * @param {{
@@ -392,12 +389,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // is independent of avoidanceDistance / yWeight config values.
       // Not yet consumed — populated here for budget measurement only.
       if (config.isOpen !== false) {
-        const twA = getTrackWidthPx(rA);
-        const twB = getTrackWidthPx(rB);
+        const twA = getTrackWidthAtTpx(rA);
+        const twB = getTrackWidthAtTpx(rB);
         const pairTW = Math.max(twA, twB);
         if (pairTW > 0) {
-          const rAHH = pxToPhysicalY(rA.honestBodyWidthPx ?? rA.spriteWorldSizePx ?? 0, pairTW);
-          const rBHH = pxToPhysicalY(rB.honestBodyWidthPx ?? rB.spriteWorldSizePx ?? 0, pairTW);
+          const rAHH = pxToPhysicalY(rA.drawnBodyWidthPx ?? rA.frameSizePx ?? 0, pairTW);
+          const rBHH = pxToPhysicalY(rB.drawnBodyWidthPx ?? rB.frameSizePx ?? 0, pairTW);
           const pairHH = Math.max(rAHH, rBHH);
           if (pairHH > 0 && Math.abs(dY) < 2 * pairHH) {
             const aIsAhead = rA.t >= rB.t;
@@ -424,7 +421,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
 
       // Track-relative scaling: wider tracks get proportionally weaker lateralForce
       // so the pixel-space force is consistent across all track widths.
-      const pairTrackWidth = Math.max(getTrackWidthPx(rA), getTrackWidthPx(rB));
+      const pairTrackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
       const lateralScale =
         pairTrackWidth > 0
           ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTrackWidth))
@@ -439,11 +436,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const leader = aIsTrailer ? rB : rA;
 
       // Sprite geometry for this pair — used by both speed brake and free-lane separation.
-      const sizeA = getSpriteWorldSizePx(rA);
-      const sizeB = getSpriteWorldSizePx(rB);
+      const sizeA = getFrameSizePx(rA);
+      const sizeB = getFrameSizePx(rB);
       const spriteWorldSize = Math.max(sizeA, sizeB);
-      const trackWidthA = getTrackWidthPx(rA);
-      const trackWidthB = getTrackWidthPx(rB);
+      const trackWidthA = getTrackWidthAtTpx(rA);
+      const trackWidthB = getTrackWidthAtTpx(rB);
       const trackWidth = Math.max(trackWidthA, trackWidthB);
       const pathLengthA = getPathLengthPx(rA);
       const pathLengthB = getPathLengthPx(rB);
@@ -606,8 +603,8 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       if (config.isOpen !== false && trackWidth > 0) {
         const sameLaneHH = pxToPhysicalY(
           Math.max(
-            trailer.honestBodyWidthPx ?? trailer.spriteWorldSizePx ?? 0,
-            leader.honestBodyWidthPx ?? leader.spriteWorldSizePx ?? 0
+            trailer.drawnBodyWidthPx ?? trailer.frameSizePx ?? 0,
+            leader.drawnBodyWidthPx ?? leader.frameSizePx ?? 0
           ),
           trackWidth
         );
@@ -832,12 +829,9 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           // Ramps from lateralForce×strength at |yDiff|=0 down to 0 at |yDiff|=2×honestHalfSpan.
           const lpy = _sameLaneLeaderPhysY.get(r.index);
           if (inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined) {
-            const tw = getTrackWidthPx(r);
+            const tw = getTrackWidthAtTpx(r);
             if (tw > 0) {
-              const honestHalfSpan = pxToPhysicalY(
-                r.honestBodyWidthPx ?? r.spriteWorldSizePx ?? 0,
-                tw
-              );
+              const honestHalfSpan = pxToPhysicalY(r.drawnBodyWidthPx ?? r.frameSizePx ?? 0, tw);
               if (honestHalfSpan > 0) {
                 const absYDiff = Math.abs(r.physicalY - lpy);
                 const clearanceSpan = 2 * honestHalfSpan;

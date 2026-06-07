@@ -120,8 +120,7 @@ for (let i = 0; i < NUM_RACERS; i++) {
     spreadFactor: baseSpeed / BASE_SPEED_MEAN,
     baseSpeed,
     nextRerollFrame: Math.floor(rand() * REROLL_INTERVAL_FRAMES),
-    visibleWidthPx: spriteWorldSizePx,
-    spriteWorldSizePx,
+    frameSizePx: spriteWorldSizePx,
     trackWidthPx,
     pathLengthPx,
   };

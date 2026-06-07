@@ -343,9 +343,9 @@ export function runSingleRace({
         indexInRow:          assignment.indexInRow,
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
-        spriteWorldSizePx:      effectiveDisplaySize,
-        honestBodyWidthPx:      bodyRef.bodyNarrow,
-        geometricTrackWidthPx:  geometricTrackWidth,
+        frameSizePx:      effectiveDisplaySize,
+        drawnBodyWidthPx:      bodyRef.bodyNarrow,
+        trackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)
         v4BonusMult:              1.0,
@@ -504,8 +504,8 @@ export function runSingleRace({
     // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
     // Overlap fires when both axes touch simultaneously.
     // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
-    const honestBodyLat  = bodyRef.bodyNarrow;                                              // px drawn width
-    const honestBodyLong = bodyFillNarrow > 0
+    const drawnBodyWidthPx  = bodyRef.bodyNarrow;                                              // px drawn width
+    const drawnBodyLengthPx = bodyFillNarrow > 0
       ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow                                  // px drawn length
       : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
@@ -977,7 +977,7 @@ export function runSingleRace({
             }
             const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
             honestOverlapPairTotal++;
-            if (dT_px < honestBodyLong && dY_px < honestBodyLat) {
+            if (dT_px < drawnBodyLengthPx && dY_px < drawnBodyWidthPx) {
               honestOverlapPairFrames++;
               if (!isOpen) {
                 // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
@@ -1004,8 +1004,8 @@ export function runSingleRace({
             }
             if (!leader) continue;
             // Longitudinal zone check: same dynamicBrakeT gate as raceBehavior.js.
-            const sizeT = (trailer.visibleWidthPx ?? 0) > 0 && pathLengthPx > 0
-              ? (trailer.visibleWidthPx / pathLengthPx) * behaviorConfig.speedBrakeTMultiplier
+            const sizeT = (trailer.frameSizePx ?? 0) > 0 && pathLengthPx > 0
+              ? (trailer.frameSizePx / pathLengthPx) * behaviorConfig.speedBrakeTMultiplier
               : 0.014;
             const dT = Math.abs(trailer.t - leader.t);
             if (dT > sizeT) { brakeMatchFailState.delete(trailer.index * 10000 + leaderIdx); continue; }

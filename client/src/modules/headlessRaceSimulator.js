@@ -192,8 +192,8 @@ export function simulateRace({
       draftingBoostActive: false,
       physicalY: 0,
       // Geometry fields needed by raceBehavior.js
-      spriteWorldSizePx: spriteSize,
-      geometricTrackWidthPx,
+      frameSizePx: spriteSize,
+      trackWidthPx: geometricTrackWidthPx,
       pathLengthPx,
     };
 

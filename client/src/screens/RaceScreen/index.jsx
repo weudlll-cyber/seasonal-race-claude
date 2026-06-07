@@ -371,7 +371,7 @@ export default function RaceScreen() {
     // Read stored width first; fall back to spline estimate only for tracks without one.
     // getActualTrackWidth() measures the median spline cross-section and overestimates for
     // open tracks whose physical centerWidth is narrower than the spline envelope.
-    const geometricTrackWidthPx = geometry.width ?? shapeRef.current.getActualTrackWidth();
+    const trackWidthPx = geometry.width ?? shapeRef.current.getActualTrackWidth();
     const isOpenTrack = shapeRef.current.isOpen;
     const worldWidth = raceData.worldWidth ?? 1280;
     const bsX = CANVAS_W / worldWidth;
@@ -421,12 +421,11 @@ export default function RaceScreen() {
     const displaySize = racerType.config.displaySize;
     const bodyFillNarrow = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
     const bodyFillLong = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
-    const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
-    // displaySizeScale_physical: frame-based scale from real track width.
-    // Used only for rowGapPx / rowCount (physics) — must not change for determinism.
-    let displaySizeScale_physical = 1;
-    // displaySizeScale: body-narrow-based scale from fixed reference width W_REF.
-    // Used for camera normalization (referenceSpriteSize) and render (frameDisplayScale).
+    const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
+    // physicalSpriteSize: frame-based scale from real track width — drives rowGapPx / rowCount (physics).
+    let physicalSpriteSize = displaySize;
+    // displaySizeScale: body-narrow-based scale from W_REF.
+    // Used for camera normalization (drawnBodyWidthRefPx) and render (frameDisplayScale).
     let displaySizeScale = 1;
     if (autoScaleConfig.enabled) {
       const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -441,7 +440,7 @@ export default function RaceScreen() {
           displaySize,
           autoScaleConfig
         );
-        displaySizeScale_physical = racerLayout.spriteSize / displaySize;
+        physicalSpriteSize = racerLayout.spriteSize;
         // Render/camera reference: body-narrow-based, capped at real track width.
         // W_REF=285 matches wide open tracks; capping at effectiveWidth prevents visible
         // bodies from exceeding physical avoidance slots on narrow closed tracks.
@@ -454,13 +453,11 @@ export default function RaceScreen() {
           autoScaleConfig
         );
         displaySizeScale = bodyRef.bodyNarrow / displaySize;
-      } else {
-        displaySizeScale_physical = 1;
       }
     }
-    // referenceSpriteSize is now the body-narrow world-px: camera zoom is set so the
-    // visible narrow-axis body equals overviewTargetScreenPx at OVERVIEW.
-    const referenceSpriteSize = displaySize * displaySizeScale;
+    // drawnBodyWidthRefPx = body-narrow world-px: camera zoom set so visible narrow-axis body
+    // equals overviewTargetScreenPx at OVERVIEW.
+    const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
     const duration = raceData.duration ?? 60;
     const targetDuration = raceData.targetDuration ?? 60;
@@ -493,13 +490,11 @@ export default function RaceScreen() {
       worldHeight,
       isOpenTrack,
       cameraConfig,
-      referenceSpriteSize,
+      drawnBodyWidthRefPx,
       shapeRef.current
     );
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
-    // physicalSpriteSize: frame-based, real width — drives row gap and row count (physics).
-    const physicalSpriteSize = displaySize * displaySizeScale_physical;
     const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
     const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
@@ -604,19 +599,17 @@ export default function RaceScreen() {
           x: 0,
           y: 0,
           angle: 0,
-          spriteWorldSizePx: physicalSpriteSize,
-          // True drawn body width = body-narrow reference (referenceSpriteSize).
-          // physicalSpriteSize is the full frame and inflates body overlap thresholds.
-          honestBodyWidthPx: referenceSpriteSize,
-          // Drawn body length derived directly from render primitives — not via honestBodyWidthPx.
-          // Isotropic renderer: scale = referenceSpriteSize / (displaySize × bodyFillNarrow).
+          frameSizePx: physicalSpriteSize,
+          drawnBodyWidthPx: drawnBodyWidthRefPx,
+          // Drawn body length from render primitives — independent of drawnBodyWidthPx variable.
+          // Isotropic renderer: scale = drawnBodyWidthRefPx / (displaySize × bodyFillNarrow).
           // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
           // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
           drawnBodyLengthPx:
             bodyFillNarrow > 0
-              ? (referenceSpriteSize * bodyFillLong) / bodyFillNarrow
-              : referenceSpriteSize,
-          geometricTrackWidthPx,
+              ? (drawnBodyWidthRefPx * bodyFillLong) / bodyFillNarrow
+              : drawnBodyWidthRefPx,
+          trackWidthPx,
           pathLengthPx,
           // VRE-4: one emitter instance per racer (stateful generators must not be shared)
           surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
@@ -705,7 +698,7 @@ export default function RaceScreen() {
     // ── Canvas positions ────────────────────────────────────────────────────
     // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
     // drawOpenTrackFinishLine derives its own perp/fwd vectors from finishT angle locally.
-    const openTrackHW = isOpenTrack ? geometricTrackWidthPx / 2 : 0;
+    const openTrackHW = isOpenTrack ? trackWidthPx / 2 : 0;
 
     // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
     function computePositions() {
