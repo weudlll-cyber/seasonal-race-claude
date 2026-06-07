@@ -343,8 +343,13 @@ export function runSingleRace({
         indexInRow:          assignment.indexInRow,
         runoutDecay:         1,
         x: 0, y: 0, angle:   0,
-        frameSizePx:      effectiveDisplaySize,
-        drawnBodyWidthPx:      bodyRef.bodyNarrow,
+        frameSizePx:         effectiveDisplaySize,
+        drawnBodyWidthPx:    bodyRef.bodyNarrow,
+        // Same formula as RaceScreen/index.jsx line 610-612 (report 39 parity fix):
+        // drawnBodyLengthPx = drawnBodyWidthRefPx × bodyFillLong / bodyFillNarrow.
+        drawnBodyLengthPx:   bodyFillNarrow > 0
+          ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow
+          : bodyRef.bodyNarrow,
         trackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)
