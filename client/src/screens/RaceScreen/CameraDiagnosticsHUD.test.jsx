@@ -30,7 +30,7 @@ function makeDir(overrides = {}) {
     _worldW: 1280,
     _bsY: 1,
     _isOpenTrack: false,
-    _referenceSpriteSize: 36,
+    _drawnBodyWidthRefPx: 36,
     observerPhase: 'tracking',
     camT: 0.5,
     lastFocusT: 0.5,

@@ -28,8 +28,8 @@ function makeRacer(overrides = {}) {
 function makeLaneRacer(overrides = {}) {
   const { physicalY, ...rest } = overrides;
   const racer = makeRacer({
-    spriteWorldSizePx: 40,
-    geometricTrackWidthPx: 140,
+    frameSizePx: 40,
+    trackWidthPx: 140,
     pathLengthPx: 1200,
     ...rest,
   });
@@ -505,7 +505,7 @@ describe('applyRacerBehavior — free-lane separation', () => {
 
 describe('applyRacerBehavior — speed brake', () => {
   it('sets avoidanceActive on trailer when side-by-side within dynamic threshold', () => {
-    // spriteWorldSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 40/1200*1.5 = 0.050
+    // frameSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 40/1200*1.5 = 0.050
     // dT = 0.51 - 0.50 = 0.01 < 0.050 → brake fires
     const trailer = makeLaneRacer({ index: 0, t: 0.5, x: 200, y: 200, physicalY: 0.05 });
     const leader = makeLaneRacer({ index: 1, t: 0.51, x: 200, y: 200, physicalY: 0.05 });
@@ -520,8 +520,8 @@ describe('applyRacerBehavior — speed brake', () => {
   });
 
   it('dynamic threshold scales with sprite size and path length', () => {
-    // dynamicT = spriteWorldSizePx / pathLengthPx * speedBrakeTMultiplier
-    // spriteWorldSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 0.050
+    // dynamicT = frameSizePx / pathLengthPx * speedBrakeTMultiplier
+    // frameSizePx=40, pathLengthPx=1200, multiplier=1.5 → dynamicT = 0.050
     // Place trailer just inside threshold (dT=0.049) → fires
     const inside = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
     const leader1 = makeLaneRacer({ index: 1, t: 0.549, physicalY: 0.0 });
@@ -640,19 +640,19 @@ describe('applyRacerBehavior — drafting cone', () => {
 
 describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
   // Two close racers in avoidance range (dT=0, dY=0.2 → dist=0.2 < avoidanceDistance=0.35).
-  // homeForce off; spriteWorldSizePx absent so free-lane separation does not fire.
+  // homeForce off; frameSizePx absent so free-lane separation does not fire.
   // Avoidance delta = rA.physicalY_after - 0.1
   function avoidDelta(trackW) {
     const rA = makeRacer({
       index: 0,
       t: 0.5,
-      ...(trackW > 0 && { geometricTrackWidthPx: trackW }),
+      ...(trackW > 0 && { trackWidthPx: trackW }),
     });
     rA.physicalY = 0.1;
     const rB = makeRacer({
       index: 1,
       t: 0.5,
-      ...(trackW > 0 && { geometricTrackWidthPx: trackW }),
+      ...(trackW > 0 && { trackWidthPx: trackW }),
     });
     rB.physicalY = -0.1;
     applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0 });

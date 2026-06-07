@@ -1633,9 +1633,9 @@ describe('CameraDirector — _computeZoomForSpriteScale (Round 3)', () => {
 });
 
 describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => {
-  it('_referenceSpriteSize is stored at construction time', () => {
+  it('_drawnBodyWidthRefPx is stored at construction time', () => {
     const cd = new CameraDirector(1280, 720, false, inverseConfig, 42);
-    expect(cd._referenceSpriteSize).toBe(42);
+    expect(cd._drawnBodyWidthRefPx).toBe(42);
   });
 
   it('OPEN_TRACK_BASE_ZOOM is exported as 1.5', () => {
@@ -1648,8 +1648,8 @@ describe('CameraDirector — inverse zoom: _computeZoomLevels (Round 3)', () => 
     expect(cd._leaderZoom).toBeCloseTo((0.08 * 720) / 36, 3);
   });
 
-  it('referenceSpriteSize has no effect on zoom (formula uses spriteScale / bsX only)', () => {
-    // Both instances use legacy pctOfCanvas; zoom is identical regardless of referenceSpriteSize.
+  it('drawnBodyWidthRefPx has no effect on zoom (formula uses spriteScale / bsX only)', () => {
+    // Both instances use legacy pctOfCanvas; zoom is identical regardless of drawnBodyWidthRefPx.
     const cd0 = new CameraDirector(1280, 720, false, inverseConfig, 0);
     const cd50 = new CameraDirector(1280, 720, false, inverseConfig, 50);
     expect(cd0._leaderZoom).toBeCloseTo(cd50._leaderZoom, 5);
