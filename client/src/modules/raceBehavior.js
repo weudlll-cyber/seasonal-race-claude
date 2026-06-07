@@ -439,14 +439,36 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
 
+      // Temp diag — track closest pair by ACTUAL 2D world-pixel center distance.
+      // Must run BEFORE the avoidance gate so we always capture the visually closest pair
+      // even if it falls outside the physics processing zone.
+      // rA.x / rA.y are set by computePositions() before applyRacerBehavior() is called.
+      const screenDist = Math.sqrt((rA.x - rB.x) ** 2 + (rA.y - rB.y) ** 2);
+      if (_dc === null || screenDist < (_dc.screenDist ?? Infinity)) {
+        _dc = {
+          rA,
+          rB,
+          dY,
+          dT,
+          dist: -1,
+          screenDist,
+          passedGate: false,
+          lhs: 0,
+          ths: 0,
+          overlaps: false,
+          flRawA: 0,
+          flRawB: 0,
+        };
+      }
+
       // dist ≥ |dY·yWeight|, so if this holds, the existing dist gate below would also fire.
       if (Math.abs(dY) * config.yWeight >= config.avoidanceDistance) continue;
       const dist = Math.sqrt((dT * config.tWeight) ** 2 + (dY * config.yWeight) ** 2);
       if (dist >= config.avoidanceDistance) continue;
-      // Temp diag — track pair with min dist (closest in combined anisotropic space)
-      // dist < |dY| alone avoids picking laterally-close but longitudinally-far pairs
-      if (_dc === null || dist < _dc.dist) {
-        _dc = { rA, rB, dY, dT, dist, lhs: 0, ths: 0, overlaps: false, flRawA: 0, flRawB: 0 };
+      // Temp diag — mark if the screen-closest pair also passed the avoidance gate
+      if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
+        _dc.dist = dist;
+        _dc.passedGate = true;
       }
 
       // Track-relative scaling: wider tracks get proportionally weaker lateralForce
@@ -699,8 +721,9 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     _diagPair.physYB = _dc.rB.physicalY;
     _diagPair.dY = _dc.dY;
     _diagPair.dT = _dc.dT;
+    _diagPair.screenDist = _dc.screenDist;
     _diagPair.dist = _dc.dist;
-    _diagPair.passedAvoidGate = true;
+    _diagPair.passedAvoidGate = _dc.passedGate;
     _diagPair.lateralHalfSpan = _dc.lhs;
     _diagPair.tHalfSpan = _dc.ths;
     _diagPair.overlaps = _dc.overlaps;
@@ -710,6 +733,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     _diagPair.flCountB = freeLaneCounts.get(_dc.rB.index) ?? 0;
   } else {
     _diagPair.passedAvoidGate = false;
+    _diagPair.screenDist = -1;
   }
 
   // ── Priority-mode computation (Phase 2) ───────────────────────────────────

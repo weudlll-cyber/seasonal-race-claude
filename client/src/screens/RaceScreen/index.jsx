@@ -54,6 +54,7 @@ import {
   initRacerBehavior,
   applyRacerBehavior,
   PRIORITY_MODE,
+  _diagPair,
 } from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
@@ -154,6 +155,7 @@ export default function RaceScreen() {
   const canvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
+  const pairDiagRef = useRef(null); // temp diag overlay
   const g = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
@@ -993,6 +995,28 @@ export default function RaceScreen() {
                 }
               : undefined
           );
+          // Temp diag overlay — update DOM directly (no React re-render)
+          if (pairDiagRef.current) {
+            const d = _diagPair;
+            const f = (n) => (typeof n === 'number' ? n.toFixed(4) : n);
+            const f1 = (n) => (typeof n === 'number' ? n.toFixed(1) : n);
+            const flNetA = d.flCountA > 1 ? d.flRawA / Math.sqrt(d.flCountA) : d.flRawA;
+            const flNetB = d.flCountB > 1 ? d.flRawB / Math.sqrt(d.flCountB) : d.flRawB;
+            // Convert to real-world pixel distances for sanity check
+            const latPx = Math.abs(d.dY) * (trackWidthPx / 2);
+            const longPx = Math.abs(d.dT) * pathLengthPx;
+            pairDiagRef.current.innerHTML =
+              `<b>Pair: ${d.nameA} / ${d.nameB}</b><br>` +
+              `screenDist: ${f1(d.screenDist ?? -1)}px  gate:${d.passedAvoidGate ? '✓' : '✗'}<br>` +
+              `latPx: ${f1(latPx)}  longPx: ${f1(longPx)}<br>` +
+              `|dY|: ${f(Math.abs(d.dY))}  dT: ${f(d.dT)}<br>` +
+              `lhs: ${f(d.lateralHalfSpan)}  ths: ${f(d.tHalfSpan)}<br>` +
+              `avoidDist: ${f(behaviorConfig.avoidanceDistance)}<br>` +
+              `<b>overlaps: ${d.overlaps}</b><br>` +
+              `flRaw: ${f(d.flRawA)} / ${f(d.flRawB)}<br>` +
+              `flNet: ${f(flNetA)} / ${f(flNetB)}<br>` +
+              `home: ${f(d.homeDeltaA)} / ${f(d.homeDeltaB)}`;
+          }
 
           for (const r of st.racers) {
             if (r.finished) continue;
@@ -1499,6 +1523,23 @@ export default function RaceScreen() {
       <div className="race-layout">
         <div className="race-canvas-wrapper">
           <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+          {/* Temp pair diag — remove after investigation */}
+          <div
+            ref={pairDiagRef}
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              background: 'rgba(0,0,0,0.72)',
+              color: '#0f0',
+              font: '11px/1.5 monospace',
+              padding: '6px 10px',
+              borderRadius: 4,
+              pointerEvents: 'none',
+              zIndex: 999,
+              whiteSpace: 'pre',
+            }}
+          />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
           <StateOverlay text={overlayText} />
           <CameraDiagnosticsHUD
