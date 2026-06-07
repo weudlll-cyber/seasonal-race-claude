@@ -521,11 +521,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // impulses based on local left/right free-space checks.
 
       if (spriteWorldSize > 0 && trackWidth > 0 && pathLength > 0) {
-        // INTENTIONAL: lateralHalfSpan uses spriteWorldSize (full frame) / trackWidth (not /2).
-        // This is the free-lane frame-proximity sensor — it uses the full frame envelope as its
-        // clearance radius (conservative), not the drawn body. pxToPhysicalY is not applied here
-        // because this sensor deliberately measures in the wider frame-overlap space, not body space.
-        const lateralHalfSpan = spriteWorldSize / trackWidth;
+        // lateralHalfSpan: full frame envelope as overlap threshold, converted via pxToPhysicalY.
+        // Using the frame (frameSizePx) rather than drawnBodyWidthPx is intentionally conservative
+        // (fires before body edges touch). pxToPhysicalY is required — / trackWidth (not /2) gives
+        // HALF a frame and creates a blind zone where bodies visually overlap but the sensor misses
+        // them (report 35). There is now NO raw physicalY↔px conversion anywhere in this file.
+        const lateralHalfSpan = pxToPhysicalY(spriteWorldSize, trackWidth);
         const tHalfSpan = spriteWorldSize / pathLength;
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
 

@@ -289,7 +289,7 @@ Conversion helpers (raceBehavior.js, top of file):
 
 5. **Do NOT derive `drawnBodyLengthPx` from `drawnBodyWidthPx` as a variable.** Both must reference `drawnBodyWidthRefPx` independently so length is not chained through width.
 
-6. **The L515 free-lane `lateralHalfSpan` is an intentional exemption.** It uses `frameSizePx / trackWidth` (not `/ (trackWidth/2)`) — this is the full-frame proximity sensor for the free-lane separation gate. It deliberately measures frame-overlap clearance, not body-overlap clearance. Document your intent before "fixing" it.
+6. **There are NO raw physicalY↔px conversions anywhere.** The previous "L515 exemption" (`frameSizePx / trackWidth` in the free-lane sensor) was fixed in the step after the scale cleanup: `/ trackWidth` gave HALF a frame in physicalY (off by 2×), creating a blind zone where bodies overlapped visually but the sensor missed them (report 35). All lateral thresholds now go through `pxToPhysicalY` / `physicalYToPx`. If you see `/ trackWidth` or `* trackWidth` next to a physicalY quantity, it is a bug.
 
 7. **Camera anisotropy on closed tracks (`bsX ≠ bsY`) is screen-only.** Never pull it into world-space body/clearance math.
 
