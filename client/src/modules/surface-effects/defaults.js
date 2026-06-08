@@ -35,9 +35,9 @@ export const DEFAULT_SURFACE_CLASSES = [
     config: {
       color: '#d4b483', // warm tan
       startSize: 4,
-      endSize: 16,
-      lifetimeFrames: 35,
-      spawnProbability: 0.45,
+      endSize: 10,
+      lifetimeFrames: 22,
+      spawnProbability: 0.2,
       driftDirection: 'back',
     },
     isDefault: true,
@@ -49,9 +49,9 @@ export const DEFAULT_SURFACE_CLASSES = [
     config: {
       color: '#8b5e3c', // rich brown dirt
       startSize: 3,
-      endSize: 10,
-      lifetimeFrames: 30,
-      spawnProbability: 0.4,
+      endSize: 8,
+      lifetimeFrames: 20,
+      spawnProbability: 0.22,
       driftDirection: 'back',
     },
     isDefault: true,
@@ -94,9 +94,9 @@ export const DEFAULT_SURFACE_CLASSES = [
     config: {
       color: '#e8f4fd', // near-white, slight blue tint
       startSize: 3,
-      endSize: 14,
-      lifetimeFrames: 45,
-      spawnProbability: 0.35,
+      endSize: 9,
+      lifetimeFrames: 25,
+      spawnProbability: 0.15,
       driftDirection: 'random',
     },
     isDefault: true,
@@ -135,9 +135,9 @@ export const DEFAULT_SURFACE_CLASSES = [
     config: {
       color: '#c8d8e8', // very pale grey-blue contrail
       startSize: 5,
-      endSize: 22,
-      lifetimeFrames: 60,
-      spawnProbability: 0.25,
+      endSize: 12,
+      lifetimeFrames: 28,
+      spawnProbability: 0.12,
       driftDirection: 'back',
     },
     isDefault: true,
