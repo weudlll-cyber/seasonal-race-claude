@@ -1067,3 +1067,212 @@ describe('POST /api/tracks/:id/background', () => {
     expect(res.body.backgroundImageFile).toMatch(/\.jpg$/);
   });
 });
+
+// ── Security: input-validation layer (C1 / C2 / H4) ─────────────────────────
+
+// C1 — effect config.count must be a finite integer 0–1000
+describe('POST /api/tracks — C1: effect count validation', () => {
+  it('rejects count: 1e12 (the audit exploit payload)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        effects: [{ id: 'dust', config: { count: 1e12, size: 1, color: '#fff', opacity: 0.5, drift: 1, direction: 'random' } }],
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/count/i);
+  });
+
+  it('rejects count: Infinity', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: Infinity } }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects count: -1 (negative)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: -1 } }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects count: 1001 (above cap)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: 1001 } }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects count: 3.7 (non-integer)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: 3.7 } }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts count: 500 (highest UI slider max) — valid track created', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        effects: [{ id: 'dust', config: { count: 500, size: 1, color: '#fff', opacity: 0.5, drift: 1, direction: 'random' } }],
+      });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+
+  it('accepts count: 1000 (cap boundary) — valid track created', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        effects: [{ id: 'dust', config: { count: 1000 } }],
+      });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+
+  it('accepts effects: [] — valid track created', async () => {
+    const res = await request(app).post('/api/tracks').send({ ...VALID_TRACK, effects: [] });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+});
+
+describe('PUT /api/tracks/:id — C1: effect count validation', () => {
+  it('rejects count: 1e12 on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ effects: [{ id: 'dust', config: { count: 1e12 } }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/count/i);
+  });
+
+  it('accepts valid effects update on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ effects: [{ id: 'dust', config: { count: 80 } }] });
+    expect(res.status).toBe(200);
+  });
+});
+
+// C2 — geometry coordinates must be finite numbers within bounds
+describe('POST /api/tracks — C2: geometry coordinate validation', () => {
+  it('rejects centerPoints: [[null,"hello"],[Infinity,-Infinity]] (the audit exploit payload)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [[null, 'hello'], [Infinity, -Infinity]],
+        innerPoints: undefined,
+        outerPoints: undefined,
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/centerPoints/i);
+  });
+
+  it('rejects centerPoints with NaN coordinate', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [{ x: NaN, y: 100 }, { x: 200, y: 100 }],
+        innerPoints: undefined,
+        outerPoints: undefined,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects centerPoints coordinate exceeding COORD_BOUND (1e10)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [{ x: 1e10, y: 100 }, { x: 200, y: 100 }],
+        innerPoints: undefined,
+        outerPoints: undefined,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects innerPoints with null entry', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        innerPoints: [null, { x: 200, y: 100 }, { x: 300, y: 100 }],
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts {x,y} object points within bounds — valid track created', async () => {
+    const res = await request(app).post('/api/tracks').send(VALID_TRACK);
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+
+  it('accepts [x,y] array points within bounds — valid track created', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [[100, 200], [300, 400], [500, 200]],
+        innerPoints: [[80, 180], [300, 380], [520, 180]],
+        outerPoints: [[120, 220], [300, 420], [480, 220]],
+      });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+});
+
+// H4 — track name length limit
+describe('POST /api/tracks — H4: name length limit', () => {
+  it('rejects a name longer than 100 characters', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, name: 'A'.repeat(101) });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/name/i);
+  });
+
+  it('accepts a name of exactly 100 characters', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, name: 'A'.repeat(100) });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+});
+
+describe('PUT /api/tracks/:id — H4: name length limit', () => {
+  it('rejects a name longer than 100 characters on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'B'.repeat(101) });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a name of exactly 100 characters on PUT', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .put(`/api/tracks/${id}`)
+      .send({ name: 'B'.repeat(100) });
+    expect(res.status).toBe(200);
+  });
+});

@@ -239,6 +239,73 @@ function validateTrackLights(lights) {
   return null;
 }
 
+// ── Input-validation bounds (SEC-C1 / SEC-C2 / SEC-H4) ───────────────────────
+
+// Highest effect-count slider max across all shipped effects is 500 (dust,
+// fireflies, rain, stars). Cap at 2× that to allow future effects headroom.
+const EFFECT_COUNT_MAX = 1000;
+
+// Track-editor MAX_BG_W = 8000, MAX_BG_H = 4096. Add 25 % margin.
+const COORD_BOUND = 10000;
+
+// Longest existing default track name is 14 chars ("Mountainstreet"). 100 is
+// generous while blocking megabyte-length strings.
+const TRACK_NAME_MAX = 100;
+
+function isFiniteCoord(v) {
+  return typeof v === 'number' && isFinite(v) && Math.abs(v) <= COORD_BOUND;
+}
+
+// Accepts both {x, y} objects (what the track editor sends) and [x, y] arrays.
+function isValidPoint(p) {
+  if (Array.isArray(p)) {
+    return p.length === 2 && isFiniteCoord(p[0]) && isFiniteCoord(p[1]);
+  }
+  if (p !== null && typeof p === 'object') {
+    return isFiniteCoord(p.x) && isFiniteCoord(p.y);
+  }
+  return false;
+}
+
+// Returns an error string if any point in the array is malformed, otherwise null.
+function validatePoints(points, fieldName) {
+  for (let i = 0; i < points.length; i++) {
+    if (!isValidPoint(points[i])) {
+      return `${fieldName}[${i}] must be a {x,y} object or [x,y] array with finite coordinates (|coord| ≤ ${COORD_BOUND})`;
+    }
+  }
+  return null;
+}
+
+// Returns an error string if any effect config violates limits, otherwise null.
+function validateEffects(effects) {
+  if (!Array.isArray(effects)) return 'effects must be an array';
+  for (let i = 0; i < effects.length; i++) {
+    const e = effects[i];
+    if (!e || typeof e !== 'object' || Array.isArray(e)) {
+      return `effects[${i}] must be an object`;
+    }
+    if (e.config !== undefined) {
+      if (typeof e.config !== 'object' || e.config === null || Array.isArray(e.config)) {
+        return `effects[${i}].config must be a non-array object`;
+      }
+      if ('count' in e.config) {
+        const c = e.config.count;
+        if (
+          typeof c !== 'number' ||
+          !isFinite(c) ||
+          !Number.isInteger(c) ||
+          c < 0 ||
+          c > EFFECT_COUNT_MAX
+        ) {
+          return `effects[${i}].config.count must be an integer between 0 and ${EFFECT_COUNT_MAX}`;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // On startup: patch any stored track that lacks surfaceClasses.
 // Idempotent — only mutates tracks where the field is missing.
 function migrateTrackSurfaceClasses() {
@@ -342,6 +409,8 @@ function validateTrackBodyForCreate(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
     errors.push('name is required');
+  } else if (body.name.length > TRACK_NAME_MAX) {
+    errors.push(`name must be ${TRACK_NAME_MAX} characters or fewer`);
   }
   if (typeof body.closed !== 'boolean') {
     errors.push('closed must be a boolean');
@@ -358,6 +427,17 @@ function validateTrackBodyForCreate(body) {
     body.outerPoints.length >= 2;
   if (!hasCenter && !hasInnerOuter) {
     errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
+  } else {
+    for (const [arr, field] of [
+      [body.centerPoints, 'centerPoints'],
+      [body.innerPoints, 'innerPoints'],
+      [body.outerPoints, 'outerPoints'],
+    ]) {
+      if (Array.isArray(arr)) {
+        const err = validatePoints(arr, field);
+        if (err) errors.push(err);
+      }
+    }
   }
   if ('surfaceClasses' in body) {
     if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
@@ -373,6 +453,10 @@ function validateTrackBodyForCreate(body) {
     const err = validateTrackLights(body.trackLights);
     if (err) errors.push(err);
   }
+  if ('effects' in body) {
+    const err = validateEffects(body.effects);
+    if (err) errors.push(err);
+  }
   return errors;
 }
 
@@ -385,8 +469,12 @@ function validateTrackBodyForCreate(body) {
  */
 function validateTrackBodyForUpdate(body) {
   const errors = [];
-  if ('name' in body && (!body.name || typeof body.name !== 'string' || !body.name.trim())) {
-    errors.push('name is required');
+  if ('name' in body) {
+    if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
+      errors.push('name is required');
+    } else if (body.name.length > TRACK_NAME_MAX) {
+      errors.push(`name must be ${TRACK_NAME_MAX} characters or fewer`);
+    }
   }
   if ('closed' in body && typeof body.closed !== 'boolean') {
     errors.push('closed must be a boolean');
@@ -407,6 +495,17 @@ function validateTrackBodyForUpdate(body) {
       body.outerPoints.length >= 2;
     if (!hasCenter && !hasInnerOuter) {
       errors.push('geometry requires centerPoints (≥2) or innerPoints+outerPoints (each ≥2)');
+    } else {
+      for (const [arr, field] of [
+        [body.centerPoints, 'centerPoints'],
+        [body.innerPoints, 'innerPoints'],
+        [body.outerPoints, 'outerPoints'],
+      ]) {
+        if (Array.isArray(arr)) {
+          const err = validatePoints(arr, field);
+          if (err) errors.push(err);
+        }
+      }
     }
   }
   if ('geometryId' in body) {
@@ -426,6 +525,10 @@ function validateTrackBodyForUpdate(body) {
   }
   if ('trackLights' in body) {
     const err = validateTrackLights(body.trackLights);
+    if (err) errors.push(err);
+  }
+  if ('effects' in body) {
+    const err = validateEffects(body.effects);
     if (err) errors.push(err);
   }
   return errors;

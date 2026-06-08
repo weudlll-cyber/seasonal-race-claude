@@ -88,10 +88,61 @@ export function exportDiagnosticSnapshot() {
   };
 }
 
-/** Restore a full backup object (from importAllStorage). */
+// ── Import validation (H1) ────────────────────────────────────────────────────
+// Mirror the server-side bounds so a crafted backup cannot inject values that
+// would crash the client even before they reach the server.
+const _IMPORT_NAME_MAX = 100;
+const _IMPORT_EFFECT_COUNT_MAX = 1000;
+
+function _isValidImportEffect(e) {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return false;
+  if (e.config !== undefined) {
+    if (typeof e.config !== 'object' || e.config === null || Array.isArray(e.config)) return false;
+    if ('count' in e.config) {
+      const c = e.config.count;
+      if (
+        typeof c !== 'number' ||
+        !isFinite(c) ||
+        !Number.isInteger(c) ||
+        c < 0 ||
+        c > _IMPORT_EFFECT_COUNT_MAX
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function _validateImportTrack(t) {
+  if (!t || typeof t !== 'object' || Array.isArray(t)) return false;
+  if (typeof t.name !== 'string' || t.name.length > _IMPORT_NAME_MAX) return false;
+  if (Array.isArray(t.effects) && !t.effects.every(_isValidImportEffect)) return false;
+  return true;
+}
+
+/** Restore a full backup object (from importAllStorage).
+ *  Items that fail validation are skipped with a console warning rather than
+ *  written to localStorage, so a crafted backup cannot corrupt game state. */
 export function importAllStorage(data) {
   for (const [key, val] of Object.entries(data)) {
-    if (key.startsWith('racearena:')) storageSet(key, val);
+    if (!key.startsWith('racearena:')) continue;
+    if (key === KEYS.TRACKS) {
+      if (!Array.isArray(val)) {
+        console.warn('[RaceArena] importAllStorage: racearena:tracks must be an array — skipped');
+        continue;
+      }
+      const valid = val.filter((t) => {
+        if (!_validateImportTrack(t)) {
+          console.warn('[RaceArena] importAllStorage: skipping invalid track entry', t?.id ?? t);
+          return false;
+        }
+        return true;
+      });
+      storageSet(key, valid);
+    } else {
+      storageSet(key, val);
+    }
   }
 }
 

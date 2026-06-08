@@ -31,6 +31,9 @@ const DATA_DIR = join(__dirname, '../../data/surface-classes');
 
 const VALID_GENERATOR_IDS = new Set(['particle', 'cloud', 'splash', 'line']);
 
+// Longest existing default label has 8 chars. 100 is generous.
+const LABEL_MAX = 100;
+
 // Ensure the data directory exists at startup.
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -69,6 +72,8 @@ function validateBody(body) {
   }
   if (!body.label || typeof body.label !== 'string' || !body.label.trim()) {
     errors.push('label is required');
+  } else if (body.label.trim().length > LABEL_MAX) {
+    errors.push(`label must be ${LABEL_MAX} characters or fewer`);
   }
   if (!VALID_GENERATOR_IDS.has(body.generatorId)) {
     errors.push(`generatorId must be one of: ${[...VALID_GENERATOR_IDS].join(', ')}`);

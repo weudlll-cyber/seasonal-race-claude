@@ -295,3 +295,51 @@ describe('DELETE /api/surface-classes/:id', () => {
     expect(found).toBeUndefined();
   });
 });
+
+// ── Security: H4 — label length limit ────────────────────────────────────────
+
+describe('POST /api/surface-classes — H4: label length limit', () => {
+  it('rejects a label longer than 100 characters', async () => {
+    const res = await request(app)
+      .post('/api/surface-classes')
+      .send({ ...VALID_CUSTOM, id: 'test-long-label', label: 'X'.repeat(101) });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/label/i);
+  });
+
+  it('accepts a label of exactly 100 characters', async () => {
+    const res = await request(app)
+      .post('/api/surface-classes')
+      .send({ ...VALID_CUSTOM, id: 'test-label-100', label: 'X'.repeat(100) });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+});
+
+describe('PUT /api/surface-classes/:id — H4: label length limit', () => {
+  it('rejects a label longer than 100 characters on PUT', async () => {
+    const id = 'test-put-long-label';
+    const createRes = await request(app)
+      .post('/api/surface-classes')
+      .send({ ...VALID_CUSTOM, id });
+    createdIds.push(createRes.body.id);
+
+    const res = await request(app)
+      .put(`/api/surface-classes/${id}`)
+      .send({ ...VALID_CUSTOM, id, label: 'Y'.repeat(101) });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a label of exactly 100 characters on PUT', async () => {
+    const id = 'test-put-label-100';
+    const createRes = await request(app)
+      .post('/api/surface-classes')
+      .send({ ...VALID_CUSTOM, id });
+    createdIds.push(createRes.body.id);
+
+    const res = await request(app)
+      .put(`/api/surface-classes/${id}`)
+      .send({ ...VALID_CUSTOM, id, label: 'Y'.repeat(100) });
+    expect(res.status).toBe(200);
+  });
+});
