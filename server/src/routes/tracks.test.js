@@ -1138,6 +1138,21 @@ describe('POST /api/tracks — C1: effect count validation', () => {
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
+
+  it('rejects count: null (NaN equivalent through JSON serialisation)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: null } }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts count: 0 (lower boundary)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: 0 } }] });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
 });
 
 describe('PUT /api/tracks/:id — C1: effect count validation', () => {
@@ -1228,6 +1243,31 @@ describe('POST /api/tracks — C2: geometry coordinate validation', () => {
         centerPoints: [[100, 200], [300, 400], [500, 200]],
         innerPoints: [[80, 180], [300, 380], [520, 180]],
         outerPoints: [[120, 220], [300, 420], [480, 220]],
+      });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+  });
+
+  it('rejects a coord just above COORD_BOUND (10001)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [{ x: 10001, y: 0 }, { x: 200, y: 100 }],
+        innerPoints: undefined,
+        outerPoints: undefined,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a coord at COORD_BOUND (10000)', async () => {
+    const res = await request(app)
+      .post('/api/tracks')
+      .send({
+        ...VALID_TRACK,
+        centerPoints: [{ x: 10000, y: 0 }, { x: 200, y: 100 }],
+        innerPoints: undefined,
+        outerPoints: undefined,
       });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
