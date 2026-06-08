@@ -1775,12 +1775,7 @@
       "y": 3739.5810611503134
     }
   ],
-  "effects": [
-    {
-      "id": null,
-      "config": {}
-    }
-  ],
+  "effects": [],
   "worldWidth": 6144,
   "worldHeight": 4096,
   "pathLengthPx": 15665.223112136975,
