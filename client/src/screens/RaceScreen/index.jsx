@@ -157,6 +157,7 @@ export default function RaceScreen() {
   const screenRef = useRef(null);
   const rafRef = useRef(null);
   const finishNavTimerRef = useRef(null);
+  const fadeNavRef = useRef(fadeNavigate);
 
   const g = useRef(null);
   const shapeRef = useRef(null);
@@ -226,6 +227,12 @@ export default function RaceScreen() {
   const overlayUsedBattleIndicesRef = useRef(new Set());
   const overlayUsedComebackIndicesRef = useRef(new Set());
   const overlayUsedLeadChangeIndicesRef = useRef(new Set());
+
+  // Keep fadeNavRef current so the rAF loop can always call the latest fadeNavigate
+  // without having that function's identity in the loop-effect dependency array.
+  useEffect(() => {
+    fadeNavRef.current = fadeNavigate;
+  }, [fadeNavigate]);
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -1057,7 +1064,7 @@ export default function RaceScreen() {
               })
             );
             finishNavTimerRef.current = setTimeout(
-              () => fadeNavigate('/results'),
+              () => fadeNavRef.current?.('/results'),
               camDirRef.current?.finishPauseMs ?? 2500
             );
           }
@@ -1491,7 +1498,7 @@ export default function RaceScreen() {
       for (const inst of effectsRef.current) inst.destroy?.();
       effectsRef.current = [];
     };
-  }, [raceData, fadeNavigate]);
+  }, [raceData]);
 
   // ── Fullscreen toggle ───────────────────────────────────────────────────
   function toggleFullscreen() {
