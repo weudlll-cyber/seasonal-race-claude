@@ -64,7 +64,7 @@ describe('createTrackOnServer', () => {
   it('throws with unreachable message when fetch rejects', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
 
-    await expect(createTrackOnServer({})).rejects.toThrow(/docker-compose|Server nicht erreichbar/);
+    await expect(createTrackOnServer({})).rejects.toThrow(/Server not reachable/);
   });
 });
 

@@ -23,7 +23,7 @@ export function withTimeout(promise, ms) {
         () =>
           reject(
             new Error(
-              'Server nicht erreichbar. Bitte prüfe ob der Backend-Server läuft (docker-compose up im Repo-Verzeichnis), dann erneut versuchen.'
+              'Server not reachable. Check that the backend is running (docker compose up in the project root), then try again.'
             )
           ),
         ms
@@ -38,9 +38,9 @@ export async function apiCall(url, options = {}) {
     res = await withTimeout(fetch(url, options), TIMEOUT_MS);
   } catch (err) {
     throw new Error(
-      err.message.includes('docker-compose')
+      err.message.includes('docker compose')
         ? err.message
-        : 'Server nicht erreichbar. Bitte prüfe ob der Backend-Server läuft (docker-compose up im Repo-Verzeichnis), dann erneut versuchen.'
+        : 'Server not reachable. Check that the backend is running (docker compose up in the project root), then try again.'
     );
   }
   if (!res.ok) {
