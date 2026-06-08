@@ -1308,7 +1308,7 @@ export default function RaceScreen() {
       };
       const cam =
         st.phase === PHASE.RACING
-          ? camDirRef.current.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
+          ? camDirRef.current.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, rawDt)
           : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
             ? camDirRef.current.updateCountdown(
                 st.racers,
