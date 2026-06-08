@@ -156,6 +156,7 @@ export default function RaceScreen() {
   const canvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
+  const finishNavTimerRef = useRef(null);
 
   const g = useRef(null);
   const shapeRef = useRef(null);
@@ -1055,7 +1056,10 @@ export default function RaceScreen() {
                 race: raceData,
               })
             );
-            setTimeout(() => fadeNavigate('/results'), camDirRef.current?.finishPauseMs ?? 2500);
+            finishNavTimerRef.current = setTimeout(
+              () => fadeNavigate('/results'),
+              camDirRef.current?.finishPauseMs ?? 2500
+            );
           }
 
           // Final lap detection — ts (browser time) used so visual overlay timing is correct
@@ -1483,6 +1487,7 @@ export default function RaceScreen() {
     return () => {
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      clearTimeout(finishNavTimerRef.current);
       effectsRef.current = [];
     };
   }, [raceData, fadeNavigate]);
