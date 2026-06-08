@@ -182,6 +182,7 @@ export class CameraDirector {
     // Diagnostic: entry-phase convergence tracking
     this._entryStartTs = null;
     this._lastTs = 0;
+    this._lastDt = 1000 / FRAME_RATE;
     this._lastEntryDeltaZoom = 0;
     this._lastEntryDeltaX = 0;
     this._lastEntryDeltaY = 0;
@@ -776,6 +777,7 @@ export class CameraDirector {
     if (tSpaceLerpActive) {
       this.zoom += (this.targetZoom - this.zoom) * lf;
     }
+    this._lastDt = dt;
     this._setTargets(racers, canvasW, canvasH, raceState);
 
     // LEAD_CHANGE hard-cut: snap offsetX/Y synchronously with the zoom snap so the
@@ -1825,9 +1827,11 @@ export class CameraDirector {
         ? this._leaderMinZoom
         : Math.max(this._leaderMinZoom, 1.0);
       // Ratchet floor down when under-visible and above effective hard floor.
+      // dt-scaled so zoom-out speed is time-proportional (=1.0 at 16.67ms/60fps).
       if (visCount < visTarget && this._leaderPhaseZoomFloor > effectiveFloor) {
+        const dtScale = (this._lastDt * FRAME_RATE) / 1000;
         this._leaderPhaseZoomFloor = Math.max(
-          this._leaderPhaseZoomFloor - this._zoomOutStepPerFrame,
+          this._leaderPhaseZoomFloor - this._zoomOutStepPerFrame * dtScale,
           effectiveFloor
         );
       }
