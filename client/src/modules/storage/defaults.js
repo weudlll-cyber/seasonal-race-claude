@@ -39,7 +39,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 1280,
     worldHeight: 720,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'space-sprint',
@@ -56,7 +56,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 1280,
     worldHeight: 720,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'garden-path',
@@ -73,7 +73,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 1280,
     worldHeight: 720,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'city-circuit',
@@ -90,7 +90,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 1280,
     worldHeight: 720,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'mountainstreet',
@@ -107,7 +107,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 6144,
     worldHeight: 4096,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'ice-track',
@@ -124,7 +124,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 1536,
     worldHeight: 1024,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'seatrack',
@@ -141,7 +141,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 6144,
     worldHeight: 4096,
-    isDefault: false,
+    isDefault: true,
   },
   {
     id: 'searound',
@@ -158,7 +158,7 @@ export const DEFAULT_TRACKS = [
 
     worldWidth: 3072,
     worldHeight: 2048,
-    isDefault: false,
+    isDefault: true,
   },
 ];
 
