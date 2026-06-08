@@ -669,13 +669,9 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 ---
 
-### P-5 — Luger Hill hex track-ID rename *(backlogged 2026-06-08)*
+### ✅ P-5 — Luger Hill hex track-ID rename *(completed commit 2410d78, 2026-06-08)*
 
-Luger Hill's track ID is the hex UUID `90d3020197da` (vs. human-readable IDs for all other tracks like `dirt-oval`, `river-run`). This causes sim commands to need `--track=90d3020197da` and has caused "0 combos" errors when `--track=luger-hill` is used. The ID should be renamed to `luger-hill` to match conventions.
-
-**This is a data change:** renaming the server JSON file and updating any references. Requires migration for users who have cached geometry under the old ID. No behavior change.
-
-**Priority:** Low. The hex ID is functional; the only cost is inconvenience in sim scripts.
+Luger Hill's track ID was the hex UUID `90d3020197da`. Renamed to `luger-hill` in commit `2410d78` (`refactor(data): rename Luger Hill track id to slug (luger-hill)`): `90d3020197da.json` → `luger-hill.json`, `90d3020197da.png` → `luger-hill.png`, all script references updated. Live server confirms `"id": "luger-hill"` in the JSON.
 
 ---
 

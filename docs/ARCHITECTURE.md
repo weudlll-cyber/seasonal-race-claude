@@ -104,7 +104,7 @@ seasonal-race-claude/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md             # This file
-│   ├── API.md                      # Phase 5 placeholder
+│   ├── API.md                      # REST API reference (Tracks + Surface Classes)
 │   ├── SETUP.md
 │   ├── ROADMAP.md
 │   └── TRACK_EDITOR.md             # Track Editor full spec
@@ -626,7 +626,7 @@ Where:
 
 This replaces the old absolute `spritePx` field which was racer-count-dependent: the same pixel value produced different zooms at 10 vs. 70 racers because `displaySize × displaySizeScale` (the denominator) shifts with racer count (see Lesson 82, Lesson 87).
 
-Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → **Camera Advanced** section (Phase 3D: `CameraZoomTuningSection` + `CameraStateHudSection` merged into `CameraAdvancedSection`). Schema version: 14.
+Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → **Camera Advanced** section (Phase 3D: two camera sections merged into `CameraAdvancedSection`). Schema version: 14.
 
 ## Visual Racer Effects System (Phase VRE)
 
@@ -737,6 +737,7 @@ seasonal-race-claude/
 │   └── src/
 │       ├── services/
 │       │   ├── api.js               # API_BASE_URL — single config point
+│       │   ├── apiClient.js         # Shared fetch boilerplate: withTimeout + apiCall (used by trackApi + surfaceClassApi)
 │       │   └── trackApi.js          # Write-path client: create/update/deleteTrack, uploadTrackBackground
 │       └── modules/storage/
 │           ├── trackLoader.js       # fetchServerTracks, cacheTrackGeometry, removeCachedTrackData
@@ -772,6 +773,16 @@ seasonal-race-claude/
 - `getTrackBackgroundUrl(trackId)` returns the cached data-URL when available, server URL otherwise
 - Cache is capped at 3 MB; oldest entries are evicted first (LRU)
 - Quota errors from `storageSet` are caught silently
+
+**Atomic writes:** All JSON writes use `server/utils/atomicWriteJson.js` (write to `.tmp`, then rename; falls back to direct write on OneDrive where `renameSync` can transiently fail).
+
+**Input validation (Sec-1 — C1/C2/H4):** POST and PUT requests to `/api/tracks` are validated before writing:
+- `name` — non-empty string, max 100 characters
+- `effects[*].config.count` — must be a finite integer, 0–1000
+- Geometry coordinates (`centerPoints`, `innerPoints`, `outerPoints`) — must be finite numbers with `|coord| ≤ 10000`
+- `importAllStorage` (client-side) validates track entries before writing to localStorage: name length and effects count are checked; invalid entries are skipped with a console warning.
+
+**Upload validation (Sec-2 — C4):** `POST /api/tracks/:id/background` validates the upload against magic bytes (PNG: `89 50 4E 47`, JPEG: `FF D8 FF`, WebP: `RIFF????WEBP`). Non-image MIME types are rejected by multer before buffering; magic-byte check is the authoritative guard. Response includes `X-Content-Type-Options: nosniff`.
 
 **Track Write API (L.5):**
 - `POST /api/tracks` — creates track (validates name, closed, worldWidth/worldHeight, geometry arrays); atomic write (temp + rename); returns new track object
@@ -833,9 +844,9 @@ The Code-Bundle initially ships with empty geometry fields (bootstrap). After th
 
 ### Default-Tracks as Server-Records (TLH-1)
 
-On every server boot, `migrateDefaultTracks()` checks which of the 7 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
+On every server boot, `migrateDefaultTracks()` checks which of the 9 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
-**Server-wins deduplication:** `loadAllTracks()` (used by SetupScreen, TrackManager) merges code defaults from `defaults.js` with server tracks and filters out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 7 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
+**Server-wins deduplication:** `loadAllTracks()` (used by SetupScreen, TrackManager) merges code defaults from `defaults.js` with server tracks and filters out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 9 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
 
 `DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
 

@@ -18,7 +18,9 @@ Introduced in Phase L (PR #43–#44).
 | `DELETE` | `/api/tracks/:id` | Delete a track (also removes background file) |
 | `POST` | `/api/tracks/:id/background` | Upload background image (multipart/form-data, max 10 MB) |
 
-**Validation (POST/PUT):** `name` (non-empty string), `closed` (boolean), `worldWidth`/`worldHeight` (numbers), geometry (`centerPoints ≥ 2` OR both `innerPoints ≥ 2` and `outerPoints ≥ 2`).
+**Validation (POST/PUT):** `name` (non-empty string, max 100 characters), `closed` (boolean), `worldWidth`/`worldHeight` (numbers), geometry (`centerPoints ≥ 2` OR both `innerPoints ≥ 2` and `outerPoints ≥ 2`). Additionally: `effects[*].config.count` must be a finite integer 0–1000; geometry coordinates must be finite numbers with `|coord| ≤ 10000`.
+
+**Upload validation (POST /:id/background):** Accepted types are PNG, JPEG, and WebP only. Validation is against magic bytes (file content), not the client-supplied `Content-Type` header — non-image types are rejected before buffering. Response includes `X-Content-Type-Options: nosniff`.
 
 **Atomic writes:** all JSON files are written to a `.tmp` file and renamed — no partial-write corruption.
 
@@ -62,7 +64,7 @@ The backend stores only **custom classes** and **default-class parameter overrid
 
 **Validation:**
 - `id` — required; lowercase alphanumeric + hyphens/underscores only (`[a-z0-9_-]+`)
-- `label` — required, non-empty string
+- `label` — required, non-empty string, max 100 characters
 - `generatorId` — required; one of `"particle"`, `"cloud"`, `"splash"`, `"line"`
 - `config` — required, non-array object
 

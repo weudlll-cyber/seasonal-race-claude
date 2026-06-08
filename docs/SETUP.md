@@ -52,4 +52,27 @@ VITE_API_URL=http://localhost:4000
 
 ---
 
+---
+
+## 5. Working with the server
+
+**Single-server rule:** Only one server instance should run on port 4000 at a time. If you see `EADDRINUSE`, kill the stale process and restart:
+
+```bash
+# Windows
+taskkill /F /IM node.exe
+docker compose up
+```
+
+**Restarting after code changes:** The server does not hot-reload. After editing any file under `server/src/`:
+
+```bash
+docker compose restart server   # source change — restart is enough
+docker compose build            # package.json change — rebuild first
+```
+
+**Track JSON changes:** The server loads track JSON into an in-memory Map at startup. If you modify a `.json` file under `server/data/tracks/` directly (e.g. restoring a backup), restart the server to pick up the change. The UI Track Editor triggers saves through the API automatically.
+
+---
+
 *Phase 5 will add race-integrity, leaderboard, and Socket.IO multiplayer (separate server implementation).*
