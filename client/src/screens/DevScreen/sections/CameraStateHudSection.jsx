@@ -50,6 +50,10 @@ function CameraStateHudSection() {
     setConfig((prev) => ({ ...prev, enableFrameLog: e.target.checked }));
   }
 
+  function togglePerfLog(e) {
+    setConfig((prev) => ({ ...prev, enablePerfLog: e.target.checked }));
+  }
+
   function toggleBattleDiag(e) {
     setConfig((prev) => ({ ...prev, showBattleDiag: e.target.checked }));
   }
@@ -459,6 +463,33 @@ function CameraStateHudSection() {
           />
           <span style={{ fontWeight: 600 }}>Enable frame log</span>
           <InfoTooltip text="Activates the per-frame camera ring buffer. When enabled, an Export Log button appears on the race screen — click it after observing jitter to download the log for CC analysis. Drop the downloaded file in client/tmp/camera-logs/ and share the path with CC." />
+        </label>
+      </div>
+
+      <div className={s.card}>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Per-frame phase timing: breaks each frame into physics / prep / camera / render / other
+          (ms). Shows live P50/P90/P99/max stats and the 50 worst spike frames. Use to find the REAL
+          cause of visible stutter before optimising. Default off — takes effect on the next race.
+        </p>
+
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="perf-log-toggle"
+            checked={config.enablePerfLog ?? false}
+            onChange={togglePerfLog}
+          />
+          <span style={{ fontWeight: 600 }}>Enable perf log</span>
+          <InfoTooltip text="Adds a timing HUD (top-left) showing physics/camera/render/other ms per frame, P50/P90/P99/max, and the 50 worst spike frames. Export via the Copy or Download buttons. Off by default. Takes effect on the next race — toggle before starting." />
         </label>
       </div>
 

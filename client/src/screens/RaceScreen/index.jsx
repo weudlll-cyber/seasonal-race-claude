@@ -84,6 +84,8 @@ import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
+import PerfLogHUD from './PerfLogHUD.jsx';
+import { createPerfLog, recordPerfFrame } from './perfLog.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
@@ -199,6 +201,7 @@ export default function RaceScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
+  const perfLogRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);
@@ -208,6 +211,7 @@ export default function RaceScreen() {
   const showRpWinnerList = cameraConfig.showRpWinnerList ?? false;
   const showTop10SpeedMonitor = cameraConfig.showTop10SpeedMonitor ?? false;
   const enableFrameLog = cameraConfig.enableFrameLog ?? false;
+  const enablePerfLog = cameraConfig.enablePerfLog ?? false;
   const showBattleDiag = cameraConfig.showBattleDiag ?? false;
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
@@ -736,12 +740,19 @@ export default function RaceScreen() {
     // Pre-allocated render-interpolation buffer — reused every frame, no per-frame allocation.
     const renderBuf = [];
 
+    // Perf-log: reset ring buffer on each race start (enablePerfLog captured from cameraConfig).
+    if (enablePerfLog) perfLogRef.current = createPerfLog();
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       if (cancelled) return;
       const st = g.current;
       const shape = shapeRef.current;
       const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
+      // Perf-log bracket 1: start of frame (also serves as default for tPhys when no physics ran).
+      const t0 = enablePerfLog ? performance.now() : 0;
+      // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
+      let tPhys = t0;
       // Render-interpolation alpha: set in RACING branch after accumulator.
       // 0 for non-RACING phases → lerp falls back to current value.
       let renderAlpha = 0;
@@ -1176,6 +1187,8 @@ export default function RaceScreen() {
           st.physicsAccum -= FIXED_DT;
         }
         // ── End physics accumulator ──────────────────────────────────────────
+        // Perf-log bracket 2: after physics while-loop (includes EMA + clearRect overhead).
+        if (enablePerfLog) tPhys = performance.now();
 
         // Fraction of next physics step already elapsed in wall time.
         // physicsAccum is always in [0, FIXED_DT) after the loop.
@@ -1283,6 +1296,8 @@ export default function RaceScreen() {
         }
       }
 
+      // Perf-log bracket 3: after all branches (particles + render-interp on RACING path).
+      const tPreCam = enablePerfLog ? performance.now() : 0;
       // ── Camera update ──
       // Pattern A: camera receives interpolated racer positions (renderRacers) so it
       // tracks the same world position as the sprites. Without this, the camera jumps
@@ -1335,6 +1350,8 @@ export default function RaceScreen() {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
       }
+      // Perf-log bracket 4: after camera director update.
+      const tCam = enablePerfLog ? performance.now() : 0;
 
       // ── Draw world ──
       // Background, effects, track, and racers are all in world space (1280×720).
@@ -1469,6 +1486,20 @@ export default function RaceScreen() {
         renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH, minimapHighlights);
       }
 
+      // Perf-log bracket 5: after all drawing — record the completed frame.
+      if (enablePerfLog && perfLogRef.current) {
+        recordPerfFrame(
+          perfLogRef.current,
+          ts,
+          rawDt,
+          t0,
+          tPhys,
+          tPreCam,
+          tCam,
+          performance.now(),
+          st.racers.length
+        );
+      }
       rafRef.current = requestAnimationFrame(loop);
     }
 
@@ -1550,6 +1581,7 @@ export default function RaceScreen() {
             showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
+          <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
           <LeadChangeDiagHUD cameraRef={camDirRef} visible={showLeadChangeDiag} />
