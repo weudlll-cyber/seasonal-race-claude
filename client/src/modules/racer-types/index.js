@@ -198,6 +198,7 @@ export const TUNABLE_FIELDS = [
   'leaderEllipseRy',
   'minTargetScreenPx',
   'surfaceClasses',
+  'surfaceEffectOverrides',
 ];
 
 /**

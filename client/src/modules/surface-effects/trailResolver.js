@@ -34,5 +34,13 @@ export function resolveTrailEmitter(racerType, trackSurfaceClasses) {
   const generatorModule = getGeneratorForClass(activeClass.id);
   if (!generatorModule) return null;
 
-  return generatorModule.create(activeClass.config);
+  // Per-racer-type effect overrides (set via DevScreen tuning modal).
+  // Stored as { spawnProbability, endSize, lifetimeFrames } on the racer type config.
+  // Missing or null → use class defaults as-is.
+  const effectOverrides = racerType.config?.surfaceEffectOverrides;
+  const effectConfig = effectOverrides
+    ? { ...activeClass.config, ...effectOverrides }
+    : activeClass.config;
+
+  return generatorModule.create(effectConfig);
 }

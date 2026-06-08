@@ -33,10 +33,16 @@ import s from './RacerEditModal.module.css';
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
-// Fields rendered in the standard loop. minTargetScreenPx and surfaceClasses have their own sections.
+// Fields rendered in the standard loop. minTargetScreenPx, surfaceClasses and surfaceEffectOverrides have their own sections.
 const STANDARD_FIELDS = TUNABLE_FIELDS.filter(
-  (f) => f !== 'minTargetScreenPx' && f !== 'surfaceClasses'
+  (f) => f !== 'minTargetScreenPx' && f !== 'surfaceClasses' && f !== 'surfaceEffectOverrides'
 );
+
+const CLOUD_EFFECT_PARAMS = [
+  { key: 'spawnProbability', label: 'Density', min: 0, max: 1, step: 0.01 },
+  { key: 'endSize', label: 'Cloud size (px)', min: 2, max: 40, step: 1 },
+  { key: 'lifetimeFrames', label: 'Lifetime (frames)', min: 10, max: 120, step: 5 },
+];
 
 const FIELD_META = {
   speedMultiplier: {
@@ -155,6 +161,11 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   );
   const { classes: allSurfaceClasses } = useSurfaceClasses();
 
+  // Cloud effect overrides — null means no override (class defaults apply)
+  const [effectOverrides, setEffectOverridesState] = useState(
+    () => typeOverrides.surfaceEffectOverrides ?? null
+  );
+
   // Scroll indicator: true when body has more content below the visible area
   const bodyRef = useRef(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
@@ -187,6 +198,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
         ? [...freshOverrides.surfaceClasses]
         : [...(racerTypeInstance.config.surfaceClasses ?? [])]
     );
+    setEffectOverridesState(freshOverrides.surfaceEffectOverrides ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
 
@@ -330,6 +342,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
     setSurfaceClassesValue(
       Array.isArray(resetBaseline.surfaceClasses) ? [...resetBaseline.surfaceClasses] : []
     );
+    setEffectOverridesState(null);
     setOverrides((prev) => {
       const all = normalizeOverrideMap(prev);
       const typeOvr = { ...(all[typeId] ?? {}) };
@@ -348,6 +361,46 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
       )
     );
     setErrors({});
+  }
+
+  function handleEffectChange(field, value) {
+    const firstCloudClass = allSurfaceClasses.find(
+      (c) => surfaceClassesValue.includes(c.id) && c.generatorId === 'cloud'
+    );
+    const refConfig = firstCloudClass?.config ?? {
+      spawnProbability: 0.12,
+      endSize: 12,
+      lifetimeFrames: 28,
+    };
+    const base = effectOverrides ?? refConfig;
+    const newOverrides = {
+      spawnProbability: base.spawnProbability,
+      endSize: base.endSize,
+      lifetimeFrames: base.lifetimeFrames,
+      [field]: value,
+    };
+    setEffectOverridesState(newOverrides);
+    applyTunableOverride(typeId, 'surfaceEffectOverrides', newOverrides);
+    setOverrides((prev) => {
+      const all = normalizeOverrideMap(prev);
+      const typeOvr = { ...(all[typeId] ?? {}) };
+      typeOvr.surfaceEffectOverrides = newOverrides;
+      return { ...all, [typeId]: typeOvr };
+    });
+  }
+
+  function handleEffectReset() {
+    setEffectOverridesState(null);
+    applyTunableOverride(typeId, 'surfaceEffectOverrides', undefined);
+    setOverrides((prev) => {
+      const all = normalizeOverrideMap(prev);
+      const typeOvr = { ...(all[typeId] ?? {}) };
+      delete typeOvr.surfaceEffectOverrides;
+      const next = { ...all };
+      if (Object.keys(typeOvr).length === 0) delete next[typeId];
+      else next[typeId] = typeOvr;
+      return next;
+    });
   }
 
   function hasAnyTunableOverride() {
@@ -521,6 +574,70 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
               </button>
             )}
           </div>
+          {/* ── Cloud Effect Overrides ── */}
+          {(() => {
+            const cloudClasses = allSurfaceClasses.filter(
+              (c) => surfaceClassesValue.includes(c.id) && c.generatorId === 'cloud'
+            );
+            if (cloudClasses.length === 0) return null;
+            const refConfig = cloudClasses[0].config;
+            const effectiveConfig = effectOverrides ?? refConfig;
+            const effectOverridesModified =
+              'surfaceEffectOverrides' in (normalizeOverrideMap(overrides)[typeId] ?? {});
+            return (
+              <div
+                className={`${s.fieldRow}${effectOverridesModified ? ` ${s.fieldRowModified}` : ''}`}
+              >
+                <div className={s.labelRow}>
+                  <span className={s.fieldLabel}>Cloud Effect</span>
+                  <InfoTooltip text="Override cloud particle params for this racer type. Applies to all cloud surface classes. Leave unset to use per-class defaults." />
+                  {effectOverridesModified && <span className={s.modifiedBadge}>modified</span>}
+                </div>
+                {CLOUD_EFFECT_PARAMS.map(({ key, label, min, max, step }) => (
+                  <div key={key} className={s.minSizeRow} style={{ marginTop: '0.45rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        color: 'var(--color-muted)',
+                        minWidth: '9rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <input
+                      type="range"
+                      className={s.slider}
+                      min={min}
+                      max={max}
+                      step={step}
+                      value={effectiveConfig[key]}
+                      aria-label={label}
+                      onChange={(e) => handleEffectChange(key, parseFloat(e.target.value))}
+                    />
+                    <span className={s.sliderValue}>
+                      {key === 'spawnProbability'
+                        ? effectiveConfig[key].toFixed(2)
+                        : effectiveConfig[key]}
+                    </span>
+                  </div>
+                ))}
+                {!effectOverridesModified && (
+                  <span className={s.minSizeHint}>class defaults ({cloudClasses[0].label})</span>
+                )}
+                {effectOverridesModified && (
+                  <button
+                    className={s.resetFieldBtn}
+                    onClick={handleEffectReset}
+                    style={{ marginTop: '0.5rem', alignSelf: 'flex-start' }}
+                    title="Remove overrides — revert to surface class defaults"
+                  >
+                    Reset to class defaults
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
         {hasMoreBelow && <div className={s.scrollFade} aria-hidden="true" />}
 
