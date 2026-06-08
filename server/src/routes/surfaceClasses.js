@@ -17,15 +17,14 @@
 import express from 'express';
 import {
   readFileSync,
-  writeFileSync,
   readdirSync,
-  renameSync,
   unlinkSync,
   existsSync,
   mkdirSync,
 } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/surface-classes');
@@ -54,18 +53,6 @@ function loadAll() {
 const classesMap = loadAll();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function atomicWriteJson(filePath, data) {
-  const json = JSON.stringify(data, null, 2);
-  const tmp = filePath + '.tmp';
-  writeFileSync(tmp, json, 'utf8');
-  try {
-    renameSync(tmp, filePath);
-  } catch {
-    writeFileSync(filePath, json, 'utf8');
-    try { unlinkSync(tmp); } catch {}
-  }
-}
 
 function filePath(id) {
   return join(DATA_DIR, `${id}.json`);
