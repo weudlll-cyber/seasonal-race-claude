@@ -1488,6 +1488,7 @@ export default function RaceScreen() {
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);
+      for (const inst of effectsRef.current) inst.destroy?.();
       effectsRef.current = [];
     };
   }, [raceData, fadeNavigate]);

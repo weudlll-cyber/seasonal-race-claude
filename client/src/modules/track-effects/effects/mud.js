@@ -62,6 +62,9 @@ function create(canvas, config) {
       }
       ctx.globalAlpha = 1;
     },
+    destroy() {
+      blobs = [];
+    },
   };
 }
 

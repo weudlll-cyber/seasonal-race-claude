@@ -66,6 +66,9 @@ function create(canvas, config) {
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     },
+    destroy() {
+      flies.length = 0;
+    },
   };
 }
 

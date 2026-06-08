@@ -56,6 +56,9 @@ function create(canvas, config) {
       }
       ctx.globalAlpha = 1;
     },
+    destroy() {
+      particles.length = 0;
+    },
   };
 }
 
