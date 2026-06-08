@@ -2,6 +2,26 @@ import { getBackgroundImage } from '../../../modules/track-effects/bgImageCache.
 
 const CANVAS_W = 1280;
 
+// Pre-darkened background cache — keyed by `${path}_${ww}x${wh}`.
+// Each entry is an OffscreenCanvas with rgba(0,0,0,0.25) baked in once at load.
+const _darkenedBgCache = new Map();
+
+function _getOrCreateDarkenedBg(bgImg, path, ww, wh) {
+  const key = `${path}_${ww}x${wh}`;
+  const cached = _darkenedBgCache.get(key);
+  if (cached) return cached;
+
+  if (typeof OffscreenCanvas === 'undefined') return null;
+
+  const oc = new OffscreenCanvas(ww, wh);
+  const octx = oc.getContext('2d');
+  octx.drawImage(bgImg, 0, 0, ww, wh);
+  octx.fillStyle = 'rgba(0,0,0,0.25)';
+  octx.fillRect(0, 0, ww, wh);
+  _darkenedBgCache.set(key, oc);
+  return oc;
+}
+
 /**
  * Draws the animated stadium background — gradient sky, stars, crowd, and sun.
  * @param {CanvasRenderingContext2D} ctx
@@ -13,9 +33,15 @@ const CANVAS_W = 1280;
 export function drawEditorBackground(ctx, frame, bgPath, ww = CANVAS_W, wh = 720) {
   const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
   if (bgImg) {
-    ctx.drawImage(bgImg, 0, 0, ww, wh);
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.fillRect(0, 0, ww, wh);
+    const darkened = _getOrCreateDarkenedBg(bgImg, bgPath, ww, wh);
+    if (darkened) {
+      ctx.drawImage(darkened, 0, 0);
+    } else {
+      // OffscreenCanvas unavailable — fall back to original two-step draw
+      ctx.drawImage(bgImg, 0, 0, ww, wh);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, 0, ww, wh);
+    }
   } else {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);
     const grad = ctx.createLinearGradient(0, 0, ww, wh);
