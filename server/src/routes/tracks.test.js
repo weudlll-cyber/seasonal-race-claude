@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, unlinkSync } fro
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
-import { DEFAULT_TRACK_SEEDS } from './tracks.js';
+import { DEFAULT_TRACK_SEEDS, detectMagicType } from './tracks.js';
 
 const SEED = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.name, s.id]));
 
@@ -1274,5 +1274,163 @@ describe('PUT /api/tracks/:id — H4: name length limit', () => {
       .put(`/api/tracks/${id}`)
       .send({ name: 'B'.repeat(100) });
     expect(res.status).toBe(200);
+  });
+});
+
+// ── Security: C4 — upload content validation + nosniff ───────────────────────
+
+// Minimal valid image fixtures
+const MINIMAL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==',
+  'base64'
+);
+const MINIMAL_JPEG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
+  'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+  'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+  'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+  'AAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA' +
+  '/9oADAMBAAIRAxEAPwCwABmX/9k=',
+  'base64'
+);
+const MINIMAL_WEBP = Buffer.from(
+  'UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoBAAEAAUAmJZACdAEO/gHOAAA=',
+  'base64'
+);
+
+// Unit tests for detectMagicType helper
+describe('detectMagicType', () => {
+  it('detects PNG from magic bytes', () => {
+    expect(detectMagicType(MINIMAL_PNG)).toBe('image/png');
+  });
+
+  it('detects JPEG from magic bytes', () => {
+    expect(detectMagicType(MINIMAL_JPEG)).toBe('image/jpeg');
+  });
+
+  it('detects WebP from magic bytes', () => {
+    expect(detectMagicType(MINIMAL_WEBP)).toBe('image/webp');
+  });
+
+  it('returns null for plain text content', () => {
+    expect(detectMagicType(Buffer.from('<html><script>alert(1)</script></html>'))).toBeNull();
+  });
+
+  it('returns null for a short buffer', () => {
+    expect(detectMagicType(Buffer.from([0x89, 0x50]))).toBeNull();
+  });
+
+  it('returns null for null/undefined', () => {
+    expect(detectMagicType(null)).toBeNull();
+  });
+});
+
+// Integration tests for POST /api/tracks/:id/background
+describe('POST /api/tracks/:id/background — C4: content validation', () => {
+  it('rejects a polyglot: image/jpeg header but HTML content (the audit exploit)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const polyglot = Buffer.from('<html><script>alert(document.cookie)</script></html>');
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', polyglot, { filename: 'evil.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).not.toMatch(/multer|internal|stack/i);
+  });
+
+  it('rejects a polyglot: image/png header but text/JS content', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const fakeImage = Buffer.from('console.log("not an image")');
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', fakeImage, { filename: 'fake.png', contentType: 'image/png' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a disallowed MIME type (image/gif)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const gifBytes = Buffer.from('47494638 39 61 01 00 01 00 00 00 00 3b'.replace(/\s/g,''), 'hex');
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', gifBytes, { filename: 'img.gif', contentType: 'image/gif' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).not.toMatch(/multer|internal|stack/i);
+  });
+
+  it('rejects a disallowed MIME type (text/html)', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', Buffer.from('<html>evil</html>'), { filename: 'evil.html', contentType: 'text/html' });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a valid PNG — 200 with backgroundImageFile ending in .png', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', MINIMAL_PNG, { filename: 'bg.png', contentType: 'image/png' });
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toMatch(/\.png$/);
+  });
+
+  it('accepts a valid JPEG — 200 with backgroundImageFile ending in .jpg', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', MINIMAL_JPEG, { filename: 'bg.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toMatch(/\.jpg$/);
+  });
+
+  it('accepts a valid WebP — 200 with backgroundImageFile ending in .webp', async () => {
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', MINIMAL_WEBP, { filename: 'bg.webp', contentType: 'image/webp' });
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toMatch(/\.webp$/);
+  });
+
+  it('ext is derived from magic bytes, not the Content-Type header', async () => {
+    // Upload a real PNG but lie and say it is JPEG — should store as .png (magic wins)
+    const createRes = await request(app).post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await request(app)
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', MINIMAL_PNG, { filename: 'sneaky.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toMatch(/\.png$/);
+  });
+});
+
+// nosniff header on GET /:id/background
+describe('GET /api/tracks/:id/background — C4: X-Content-Type-Options', () => {
+  it('response includes X-Content-Type-Options: nosniff', async () => {
+    const res = await request(app).get(`/api/tracks/${SEED['Mountainstreet']}/background`);
+    expect(res.status).toBe(200);
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 });
