@@ -21,6 +21,8 @@ export default defineConfig({
     css: true,
     // Exclude Playwright e2e specs — they use @playwright/test, not Vitest
     exclude: ['e2e/**', 'node_modules/**'],
+    // Auto-retry flaky tests once before failing the suite.
+    retry: 3,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

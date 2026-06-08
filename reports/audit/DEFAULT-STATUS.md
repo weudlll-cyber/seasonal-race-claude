@@ -193,3 +193,151 @@ from custom operator overrides). No action needed here.
 ### Key constraint (from server/src/routes/tracks.js:558)
 Never set `isDefault: false` on any of the 9 server JSON files. Doing so removes the
 only DELETE guard for those tracks and `migrateDefaultTracks()` will not restore it.
+
+---
+
+## Step 1b — Part A: Per-Racer Visual Effects Inventory
+
+### How the trail / particle system works
+
+Every racer gets a visual trail via two independent, priority-ordered systems:
+
+**System 1 — Surface-class emitter (higher priority)**
+At race init (`RaceScreen/index.jsx:620`), `resolveTrailEmitter(racerType, trackSurfaceClasses)` is called per racer. If the racer's `surfaceClasses` array (e.g. `['asphalt', 'water']`) overlaps with the track's active surface classes, a per-racer generator emitter is created. This runs every frame, emitting surface-class-specific particles (skid marks, splashes, snow, etc.).
+
+**System 2 — Heimat-Trail / trailFactory (fallback)**
+If `surfaceEmitter` is `null` (no surface-class match), the racer's `trailFactory` function is called each frame. For built-in racers, `trailFactory` is hardcoded in the racer's `*RacerType.js` file. For user-created racers, `trailFactory: getTrailFactory(cfg.trailStyle)` resolves a named style (dust / sparkle / bubbles / exhaust / none) from `trailStyles.js`, with an explicit `'dust'` fallback for any unknown name (including undefined).
+
+**`trailFactory` is a REQUIRED field** in `SpriteRacerType` (`SpriteRacerType.js:45`). Every built-in racer and every user-created racer always has one.
+
+### Per-racer trail table (built-in types)
+
+| Racer | Trail file:line | Trail type | surfaceClasses | Surface emitter possible? |
+|---|---|---|---|---|
+| horse | HorseRacerType.js:70 | Custom horseTrailFactory (gallop dust) | sand, earth, grass, asphalt, snow, mud | Yes |
+| duck | DuckRacerType.js:69 | Custom duckTrailFactory (blue water drops) | water, grass | Yes |
+| snail | SnailRacerType.js:72 | Custom snailTrailFactory | grass | Yes |
+| elephant | ElephantRacerType.js:56 | makeGenericDustTrail #a09070 | sand, earth, grass | Yes |
+| giraffe | GiraffeRacerType.js:56 | makeGenericDustTrail #c4a060 | sand, earth, grass | Yes |
+| snake | SnakeRacerType.js:56 | makeGenericDustTrail #88aa66 | (none listed — empty) | No |
+| dragon | DragonRacerType.js:58 | makeGenericDustTrail #cc6633 | air, asphalt, earth, water | Yes |
+| f1 | F1RacerType.js:43 | makeGenericDustTrail #888888 | asphalt | Yes |
+| rocket | RocketRacerType.js:44 | makeGenericDustTrail (white exhaust) | air, water | Yes |
+| buggy | BuggyRacerType.js:49 | makeGenericDustTrail #998866 | sand, earth, mud | Yes |
+| motorbike | MotorbikeRacerType.js:47 | makeGenericDustTrail #888888 | asphalt, earth | Yes |
+| plane | PlaneRacerType.js:47 | makeGenericDustTrail #ffffff low-alpha | air | Yes |
+| luge | LugeRacerType.js:47 | makeGenericDustTrail (ice chips) | ice, snow | Yes |
+| beetle | BeetleRacerType.js:48 | makeGenericDustTrail (earth dust) | asphalt, cobble, earth | Yes |
+| boarder | BoarderRacerType.js:48 | makeGenericDustTrail (earth dust) | asphalt, cobble, earth | Yes |
+| koi | KoiRacerType.js:53 | makeGenericDustTrail (water ripple) | water | Yes |
+| turtle | TurtleRacerType.js:43 | makeGenericDustTrail (slow wake) | water, earth | Yes (likely) |
+| manta | MantaRacerType.js:44 | makeGenericDustTrail (ocean mist) | water | Yes |
+| dolphin | DolphinRacerType.js:44 | makeGenericDustTrail (splash) | water | Yes |
+| snowmobile | SnowmobileRacerType.js:44 | makeGenericDustTrail (snow spray) | ice, snow | Yes |
+
+**User-created racers:** `trailFactory: getTrailFactory(cfg.trailStyle)` — resolves to one of `{none, dust, sparkle, bubbles, exhaust}`, fallback to `dust` if unknown. `surfaceClasses` are stored in the racer config if set via the editor. No missing-trail scenario is possible.
+
+### Is there any default/custom distinction for trail effects?
+
+**No.** The trail system has no "default vs custom" concept. Built-in racers have hardcoded factories; user-created racers have a named style resolved at registration time. Both paths are robust.
+
+### Fallback chain — what happens with no match
+
+```
+resolveTrailEmitter → null  (no surface class overlap)
+  → rt.getTrailParticles()  (calls trailFactory)
+  → always returns an array  (dust fallback, or [] for 'none')
+```
+
+No crash, no missing effect. The "none" style is explicitly registered and intentionally emits nothing.
+
+### Verdict on "problems the owner recalls"
+
+**No current problem found in code.** All 20 built-in racers have explicit, non-nullable `trailFactory` values. User-created racers always resolve a factory (dust fallback). The surface-emitter system gracefully falls back to the Heimat-Trail when no surface class matches. No missing-data scenario exists in the current codebase.
+
+If the owner recalls past issues, they likely predated the current architecture (migration from class-based to config-based racers in D3.5) or were related to a specific surface-class match failing on a track. The current code has no structural gap here.
+
+**No action required for racer trail effects.**
+
+---
+
+## Step 1b — Part B: Luger Hill ID Rename Plan
+
+### Re-confirmed reference map at HEAD (7e85e2a)
+
+All 14 canonical references confirmed unchanged:
+
+**Data files (must be modified + renamed):**
+
+| Location | Type | What changes |
+|----------|------|-------------|
+| `server/data/tracks/90d3020197da.json:1731` | JSON `"id"` field | `"id": "90d3020197da"` → `"id": "luger-hill"` |
+| `server/data/tracks/90d3020197da.json:1734` | JSON `"backgroundImageFile"` field | `"backgroundImageFile": "90d3020197da.png"` → `"backgroundImageFile": "luger-hill.png"` |
+| `server/data/tracks/90d3020197da.json` | Filename | Rename file to `luger-hill.json` |
+| `server/data/backgrounds/90d3020197da.png` | Background image | Rename file to `luger-hill.png` (file confirmed present) |
+
+**Sweep scripts (12 single-line string changes, all in `scripts/`):**
+
+| File | Line | Change |
+|------|------|--------|
+| `scripts/sim-fairness.mjs` | 2081 | `'90d3020197da'` → `'luger-hill'` |
+| `scripts/sim-sweep.mjs` | 43 | `id: '90d3020197da'` → `id: 'luger-hill'` |
+| `scripts/param-sweep.mjs` | 75 | `track: '90d3020197da'` → `track: 'luger-hill'` |
+| `scripts/param-sweep-braking.mjs` | 77 | `track: '90d3020197da'` → `track: 'luger-hill'` |
+| `scripts/param-sweep-braking-phase2.mjs` | 74 | `track: '90d3020197da'` → `track: 'luger-hill'` |
+| `scripts/param-sweep-full.mjs` | 73 | `trackId: '90d3020197da'` → `trackId: 'luger-hill'` |
+| `scripts/param-sweep-phase2.mjs` | 47 | `track: '90d3020197da'` → `track: 'luger-hill'` |
+| `scripts/compare-sets.mjs` | 26 | `trackId: '90d3020197da'` → `trackId: 'luger-hill'` |
+| `scripts/compare-zones.mjs` | 28 | `trackId: '90d3020197da'` → `trackId: 'luger-hill'` |
+| `scripts/sweep-lateral.mjs` | 47 | `trackId: '90d3020197da'` → `trackId: 'luger-hill'` |
+| `scripts/sweep-phase4-only.mjs` | 72 | `id: '90d3020197da'` → `id: 'luger-hill'` |
+| `scripts/sweep-phase5.mjs` | 93 | `id: '90d3020197da'` → `id: 'luger-hill'` |
+
+**No client/src changes needed** — zero references to `90d3020197da` in client source (confirmed). The client fetches tracks from the server API by dynamic lookup; it has no hardcoded track IDs.
+
+**Docs (not blocking, update separately):**
+`docs/BACKLOG.md:226`, `docs/BACKLOG.md:674`, `docs/LESSONS.md:1874`, `docs/ROADMAP.md:404` — narrative/historical references; no functionality depends on them.
+
+**`client/src/modules/storage/defaults.js:480,508`** — two comments that call Luger Hill "user-created." These are factually accurate (it IS user-created, not a shipped default). No change needed.
+
+### Server load-order and in-memory cache
+
+`loadAllTracks()` runs at module load (`tracks.js:55`). It reads every `.json` file in `DATA_DIR` and keys the in-memory map by `track.id`. After the rename:
+
+- The file `90d3020197da.json` no longer exists → `loadAllTracks()` will not find it
+- The new file `luger-hill.json` has `"id": "luger-hill"` → keyed as `luger-hill` in `tracksMap`
+- **Server restart is required** — the old entry `90d3020197da` stays in memory until the process restarts. After restart, it resolves to `luger-hill`.
+
+### DELETE guard / migrateDefaultTracks interaction
+
+- Luger Hill has `"isDefault": false` — the DELETE guard at `tracks.js:558` only blocks `isDefault: true` tracks. No interaction.
+- Luger Hill is NOT in `DEFAULT_TRACK_SEEDS` (that list covers only the 9 shipped defaults). `migrateDefaultTracks()` will not re-seed it. No interaction.
+
+### Client-side cache impact
+
+`trackCache.js` (localStorage background cache) stores images keyed by `trackId`. After rename, any existing `90d3020197da` background cache entry becomes orphaned (stale but inert — the LRU eviction will eventually remove it). The client will re-fetch and cache the background under the new key `luger-hill`. **Harmless.**
+
+`sessionStorage('activeRace')` stores track geometry for the active race session. If a race is in progress when the rename is applied, the session would use the old track data from sessionStorage until the race ends. The next race setup fetches the renamed track from the server. **No mid-race breakage.**
+
+### Risk summary
+
+| Risk | Severity | Notes |
+|------|----------|-------|
+| Sweep scripts use wrong ID | High (before fix) | All 12 currently use the hex ID; the rename fixes exactly this |
+| Server needs restart | Medium | Data files are loaded at startup; a restart is required after the rename |
+| Orphaned background cache in client | Low | LRU evicts it automatically |
+| Docs still reference hex ID | Cosmetic | Historical narrative; no runtime impact |
+| isDefault / DELETE guard | None | Luger Hill is isDefault:false; not in DEFAULT_TRACK_SEEDS |
+| Client source | None | Zero references in client/src — dynamic API lookup only |
+
+### Proposed Step-2 execution (for owner decision)
+
+**Single atomic commit:**
+1. Edit `server/data/tracks/90d3020197da.json` — change `"id"` and `"backgroundImageFile"`
+2. `git mv server/data/tracks/90d3020197da.json server/data/tracks/luger-hill.json`
+3. `git mv server/data/backgrounds/90d3020197da.png server/data/backgrounds/luger-hill.png`
+4. Edit all 12 sweep scripts — single-line string replacement in each
+5. Run tests (no test covers the hex ID directly — 2591/2591 expected)
+6. Restart backend server after merge to pick up the renamed file
+
+No client/src changes, no defaults.js changes, no doc changes (those can follow separately).
