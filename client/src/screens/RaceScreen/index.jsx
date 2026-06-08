@@ -1021,7 +1021,7 @@ export default function RaceScreen() {
           // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
           // fails once racers finish because the runout-decay surge lets later
           // finishers temporarily overtake earlier ones in raw r.t.
-          if (Math.round(physicsTs / 100) !== Math.round((physicsTs - FIXED_DT) / 100)) {
+          if (Math.round(physicsTs / 250) !== Math.round((physicsTs - FIXED_DT) / 250)) {
             setScoreboard(
               [...st.racers]
                 .sort((a, b) => {
