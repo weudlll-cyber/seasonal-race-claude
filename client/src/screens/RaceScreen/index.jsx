@@ -50,11 +50,7 @@ import {
   loadRaceBehaviorConfig,
   computeEffectiveBrakeFactor,
 } from '../../modules/raceBehaviorConfig.js';
-import {
-  initRacerBehavior,
-  applyRacerBehavior,
-  PRIORITY_MODE,
-} from '../../modules/raceBehavior.js';
+import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
   computeRacerLayout,

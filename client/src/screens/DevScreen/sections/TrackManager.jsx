@@ -15,7 +15,6 @@ import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
 import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
 import { deleteTrackFromServer, updateTrackOnServer } from '../../../services/trackApi.js';
 import {
-  RACER_TYPE_IDS,
   listAllRacerTypes,
   getRacerTypeLabel,
   getRacerType,
