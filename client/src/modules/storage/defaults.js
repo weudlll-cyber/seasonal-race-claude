@@ -386,6 +386,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   leaderMinZoom: 0.4,
   // Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5%/frame at 60 fps.
   zoomOutStepPerFrame: 0.005,
+  // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
+  // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
+  // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.
+  // dt-normalised — frame-rate independent. ~50 ms suits most cases; higher = smoother but laggier.
+  focalSmoothTc: 0.05,
 };
 
 export const DEFAULT_RUBBER_BAND_CONFIG = {

@@ -212,6 +212,11 @@ export class CameraDirector {
     // Dynamic zoom-out floor: tracks the minimum targetZoom for the current LEADER/LEAD_CHANGE phase.
     // Null between phases. Resets on every state transition. Only decrements within a phase.
     this._leaderPhaseZoomFloor = null;
+    // Focal-position EMA state: smoothed world-space pan target for LEADER_ZOOM and COMEBACK_ZOOM
+    // follow phases. Null = uninitialized (snaps to raw on first follow-phase call).
+    // Reset to null on every non-repeat state transition so cuts stay crisp.
+    this._smoothedFocalX = null;
+    this._smoothedFocalY = null;
     // Normalized OVERVIEW snap zoom — computed from _drawnBodyWidthRefPx at each OVERVIEW entry.
     // Null until first non-repeat OVERVIEW transition on open tracks with drawnBodyWidthRefPx>0.
     // _setTargets reads this; falls back to _overviewStateZoom when null.
@@ -427,6 +432,11 @@ export class CameraDirector {
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
     this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
+    this._focalSmoothTc = config?.focalSmoothTc ?? 0.05;
+    // Pre-compute per-60fps EMA base factor from TC. 0 when TC=0 (disabled).
+    // alpha per frame = 1 − (1−base)^(dt×60/1000) — same dt-normalisation as the zoom lerp.
+    this._focalSmoothBase =
+      this._focalSmoothTc > 0 ? 1 - Math.pow(0.1, 1 / (this._focalSmoothTc * FRAME_RATE)) : 0;
   }
 
   // ── Director helpers ──────────────────────────────────────────────────────
@@ -1132,6 +1142,9 @@ export class CameraDirector {
 
       // Reset per-phase zoom-out floor on every state transition.
       this._leaderPhaseZoomFloor = null;
+      // Reset focal smoother so the first follow frame snaps to the new target — no lag on cuts.
+      this._smoothedFocalX = null;
+      this._smoothedFocalY = null;
     }
 
     // Release camera lock when leaving BATTLE_ZOOM
@@ -1609,6 +1622,38 @@ export class CameraDirector {
     return { x: leaderPos.x - dx * scale, y: leaderPos.y - dy * scale };
   }
 
+  /**
+   * EMA-smooth the camera's world-space focal position during follow phase.
+   *
+   * Only active when _observerPhase === 'follow' and _focalSmoothBase > 0. During entry and
+   * lead-in the T-space lerp already provides smooth motion — smoothing is bypassed (snaps
+   * to raw) so the two mechanisms never fight each other. Also snaps on the first follow frame
+   * after a state transition (_smoothedFocalX === null) so deliberate cuts stay crisp.
+   *
+   * dt-normalised: alpha = 1−(1−base)^(dt×FRAME_RATE/1000) — identical real-time smoothing
+   * at any frame rate. Uses this._lastDt which is set to the current frame's dt before
+   * _setTargets is called (Fix A move).
+   *
+   * @param {number} rawX  Raw world x from the racer's physics position.
+   * @param {number} rawY  Raw world y.
+   * @returns {{ x: number, y: number }}  Smoothed world position to use as pan target.
+   */
+  _smoothFocal(rawX, rawY) {
+    if (
+      this._focalSmoothBase <= 0 ||
+      this._observerPhase !== 'follow' ||
+      this._smoothedFocalX === null
+    ) {
+      this._smoothedFocalX = rawX;
+      this._smoothedFocalY = rawY;
+      return { x: rawX, y: rawY };
+    }
+    const alpha = 1 - Math.pow(1 - this._focalSmoothBase, (this._lastDt * FRAME_RATE) / 1000);
+    this._smoothedFocalX += (rawX - this._smoothedFocalX) * alpha;
+    this._smoothedFocalY += (rawY - this._smoothedFocalY) * alpha;
+    return { x: this._smoothedFocalX, y: this._smoothedFocalY };
+  }
+
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
@@ -1685,16 +1730,22 @@ export class CameraDirector {
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
         if (this._isOpenTrack) {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+          let panTarget;
+          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
+            panTarget = this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0);
+          } else {
+            const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+            panTarget = this._smoothFocal(raw.x, raw.y);
+          }
           if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
         } else {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
-              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+          let panTarget;
+          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
+            panTarget = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
+          } else {
+            const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+            panTarget = this._smoothFocal(raw.x, raw.y);
+          }
           if (panTarget) {
             this._setClosedTrackTargets(
               panTarget,
@@ -1751,20 +1802,26 @@ export class CameraDirector {
           this._comebackLockedRacerIndex,
           this._comebackLockedRacer
         );
-        const comebackFallback = lockedCBRacer
+        // Raw focal position: locked racer's physics x,y (or rank-3 fallback).
+        // Smoothed via _smoothFocal in follow phase to remove brake-induced velocity oscillation.
+        const rawFocal = lockedCBRacer
           ? { x: lockedCBRacer.x, y: lockedCBRacer.y }
           : getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
         if (this._isOpenTrack) {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-              : comebackFallback;
+          let panTarget;
+          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
+            panTarget = this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0);
+          } else {
+            panTarget = this._smoothFocal(rawFocal.x, rawFocal.y);
+          }
           if (panTarget) this._setOpenTrackTargets(panTarget, this._comebackZoom, frameSize);
         } else {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
-              : comebackFallback;
+          let panTarget;
+          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
+            panTarget = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
+          } else {
+            panTarget = this._smoothFocal(rawFocal.x, rawFocal.y);
+          }
           if (panTarget) {
             this._setClosedTrackTargets(
               panTarget,

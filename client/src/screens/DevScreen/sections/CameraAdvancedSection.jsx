@@ -777,6 +777,24 @@ function CameraAdvancedSection() {
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
+            label="Focal smooth TC"
+            testId="focal-smooth-tc"
+            min={0}
+            max={0.2}
+            step={0.005}
+            value={config.focalSmoothTc ?? 0.05}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 0 && v <= 0.2) set('focalSmoothTc', v);
+            }}
+            display={
+              (config.focalSmoothTc ?? 0.05) > 0
+                ? `${Math.round((config.focalSmoothTc ?? 0.05) * 1000)}ms`
+                : 'Off'
+            }
+            tip="EMA time-constant applied to the pan target in COMEBACK and LEADER_ZOOM follow phase. Removes comeback-braking oscillation and per-physics-step jitter. 0 = disabled. Higher = smoother but the camera trails the racer more. Default 50 ms."
+          />
+          <SliderRow
             label="Min. positions gained"
             testId="comeback-min-positions"
             min={2}
