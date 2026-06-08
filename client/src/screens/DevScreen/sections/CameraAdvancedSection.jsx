@@ -1265,6 +1265,12 @@ function CameraAdvancedSection() {
             tip: 'Enables the per-frame camera ring buffer. An export button appears on the race screen.',
           },
           {
+            key: 'enablePerfLog',
+            testId: 'perf-log-toggle',
+            label: 'Enable perf log',
+            tip: 'Per-frame phase timing (physics/camera/render/other ms). Shows live P50/P90/P99/max + worst-50 spikes top-left. Takes effect on the next race.',
+          },
+          {
             key: 'showBattleDiag',
             testId: 'battle-diag-toggle',
             label: 'Show BATTLE diagnostics',
