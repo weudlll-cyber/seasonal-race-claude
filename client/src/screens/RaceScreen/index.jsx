@@ -348,7 +348,7 @@ export default function RaceScreen() {
     let cancelled = false;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     ctx.imageSmoothingQuality = 'high';
     const nRacers = raceData.racers.length;
 
