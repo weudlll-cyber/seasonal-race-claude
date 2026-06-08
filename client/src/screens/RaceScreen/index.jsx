@@ -1376,7 +1376,7 @@ export default function RaceScreen() {
         ctx.restore();
       }
       if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
-      drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack);
+      drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
       drawParticles(ctx, st.dustParticles, st.burstParticles);

@@ -129,29 +129,47 @@ export function getLightAlpha(style, lightIndex, totalLights, ts, speed, isClose
 /**
  * Render track boundary lights on a canvas context.
  * Must be called inside an active camera transform (world coordinates).
- * Uses shadowBlur for glow effect.
+ *
+ * Glow is approximated with two arcs (halo + core) instead of ctx.shadowBlur.
+ * shadowBlur forces an offscreen Gaussian-blur pass per dot on the GPU — extremely
+ * expensive at ~220 dots/frame. The two-arc approach produces the same visual at a
+ * tiny fraction of the GPU cost. The halo radius is expressed in world pixels via
+ * `SHADOW_BLUR_PX / effectiveZoom` so it always appears as the original 8 CSS pixels
+ * on screen regardless of camera zoom.
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ outer: {x,y}[], inner: {x,y}[] }} cachedLights - pre-computed light positions
  * @param {{ color: string, style: string, speed: number }} trackLights
  * @param {number} ts - current timestamp in ms
  * @param {boolean} isClosed
+ * @param {number} [effectiveZoom=1] - canvas effective zoom (cam.zoom × bsX / BASE).
+ *   Used to convert the CSS-pixel glow radius into world-pixel radius so the halo
+ *   appears the same screen size at any zoom level.
  */
-export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed) {
+const SHADOW_BLUR_PX = 8; // original shadowBlur value in CSS pixels — preserved for visual parity
+export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, effectiveZoom = 1) {
   const { color = '#ffffff', style = 'sequence', speed = 1.0 } = trackLights;
+  // Convert the original 8 CSS-pixel glow into world-pixel radius.
+  // At ezoom=2.5: glowR=3.2 wp → 8 screen px. At ezoom=0.5: glowR=16 wp → 8 screen px.
+  const glowR = Math.max(LIGHT_RADIUS * 2, SHADOW_BLUR_PX / effectiveZoom);
 
   ctx.save();
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = color;
   ctx.fillStyle = color;
 
   for (const boundary of [cachedLights.outer, cachedLights.inner]) {
     const total = boundary.length;
     for (let i = 0; i < total; i++) {
       const alpha = getLightAlpha(style, i, total, ts, speed, isClosed);
+      const { x, y } = boundary[i];
+      // Soft halo ring — replaces shadowBlur=8 (no GPU offscreen blur pass needed)
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.beginPath();
+      ctx.arc(x, y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+      // Bright core dot
       ctx.globalAlpha = alpha;
       ctx.beginPath();
-      ctx.arc(boundary[i].x, boundary[i].y, LIGHT_RADIUS, 0, Math.PI * 2);
+      ctx.arc(x, y, LIGHT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
     }
   }

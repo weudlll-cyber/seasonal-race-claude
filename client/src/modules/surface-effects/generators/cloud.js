@@ -92,7 +92,18 @@ export function create(config, _racer) {
     },
 
     render(ctx, particles) {
+      // Viewport cull: skip blobs entirely outside the canvas.
+      // ctx.getTransform() reads the live camera matrix — no extra parameters needed.
+      // At N=70 in a tight pack, ~1050 blobs are alive; at LEADER_ZOOM most are off-screen.
+      const { a: ez, e: ox, f: oy } = ctx.getTransform();
+      const cw = ctx.canvas.width;
+      const ch = ctx.canvas.height;
       for (const p of particles) {
+        const sr = p.r * ez;
+        const sx = p.x * ez + ox;
+        if (sx + sr < 0 || sx - sr > cw) continue;
+        const sy = p.y * ez + oy;
+        if (sy + sr < 0 || sy - sr > ch) continue;
         ctx.globalAlpha = Math.max(0, p.alpha);
         ctx.fillStyle = p.color;
         ctx.beginPath();
