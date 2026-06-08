@@ -1490,6 +1490,10 @@ export default function RaceScreen() {
       for (const inst of effectsRef.current) inst.destroy?.();
       effectsRef.current = [];
     };
+    // enablePerfLog / showCameraDiagnostics come from cameraConfig, which is frozen
+    // at mount (useState init, no setter). Adding them to deps would restart the whole
+    // race loop (cancel rAF, destroy effects, re-init) if a setter is ever introduced.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [raceData]);
 
   // ── Fullscreen toggle ───────────────────────────────────────────────────
