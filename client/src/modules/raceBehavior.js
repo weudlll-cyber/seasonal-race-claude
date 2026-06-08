@@ -591,7 +591,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // Replaced the mixed-unit metric (dT×tWeight + dY×yWeight) that could not be
       // calibrated per-track (required weight ≈ 131 on Space Sprint, ≈ 67 on Dirt Oval).
       // Two independent px-space axes, no sqrt. Speed brake runs BEFORE this gate (above)
-      // because its frameSizePx-based threshold is intentionally wider than body size.
+      // because its body-based longitudinal zone (×1.5) is wider than the gate (×1.2).
       // Invariant: gate contact threshold × (1+buffer) > contact = free-lane threshold.
       const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
       // Skip pairs with no body size info (real racers always have frameSizePx as fallback).

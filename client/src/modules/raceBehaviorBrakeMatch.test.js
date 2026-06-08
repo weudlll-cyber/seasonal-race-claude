@@ -7,9 +7,10 @@
 //              multi-leader selection, anti-trap, stale-index guard.
 //              No React, no DOM — mirrors raceBehavior.test.js style.
 //
-// Geometry note: dynamicBrakeT = (frameSizePx/pathLengthPx) × speedBrakeTMultiplier
-//   With frameSizePx=40, pathLengthPx=20000, multiplier=1.5 → dynamicBrakeT=0.003.
-//   Pair dT must be < 0.003 to enter the brake zone. Tests use dT=0.0015 (leader at t+0.0015).
+// Geometry note: dynamicBrakeT = (brakeContactLength/pathLengthPx) × speedBrakeTMultiplier
+//   makeRacer sets no drawnBodyLengthPx → fallback brakeContactLength = frameSizePx = 40px.
+//   40/20000 × 1.5 = 0.003. Pair dT must be < 0.003 to enter the brake zone.
+//   Tests use dT=0.0015 (leader at t+0.0015).
 //   Anti-trap tests also set lateralForce=0 + homeForceStrength=0 so physicalY stays at 0
 //   across all 90 frames (no free-lane push drifts the pair out of the brake zone).
 // ============================================================
@@ -50,7 +51,6 @@ function makeRacer(overrides = {}) {
 const cfg = {
   ...DEFAULT_RACE_BEHAVIOR_CONFIG,
   speedBrakeTMultiplier: 1.5,
-  speedBrakeYThreshold: 0.18,
   brakeMatchActivationTMultiplier: 1.5,
   brakeMatchActivationYThreshold: 0.18,
 };
