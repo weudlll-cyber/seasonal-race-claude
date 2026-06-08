@@ -413,26 +413,32 @@ describe('TrackEditor background upload size guard', () => {
   });
 
   it('shows an error and does not call FileReader when file exceeds 10 MB', async () => {
-    const { container } = renderEditor();
-    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
-
-    // Flush ALL pending async from the render (including any deferred FileReader ops)
-    // before installing the spy so they don't bleed into the assertion window.
-    await act(async () => {});
-
+    // The TrackEditor triggers legitimate readAsDataURL calls during render/re-render
+    // (sprite loading, thumbnails). We assert that the specific oversize file was never
+    // passed to readAsDataURL — not that readAsDataURL was never called at all.
+    const OVERSIZE = 11 * 1024 * 1024;
     const readSpy = vi.fn();
     vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
       this.readAsDataURL = readSpy;
     });
 
+    const { container } = renderEditor();
+    const fileInput = container.querySelector('input[type="file"][accept="image/*"]');
+
+    await act(async () => {});
+
     const oversizeFile = new File(['x'], 'big.jpg', { type: 'image/jpeg' });
-    Object.defineProperty(oversizeFile, 'size', { value: 11 * 1024 * 1024 });
+    Object.defineProperty(oversizeFile, 'size', { value: OVERSIZE });
 
     await act(async () => {
       fireEvent.change(fileInput, { target: { files: [oversizeFile] } });
     });
 
-    expect(readSpy).not.toHaveBeenCalled();
+    // None of the readAsDataURL calls may be for the oversize file itself.
+    const calledWithOversizeFile = readSpy.mock.calls.some(
+      ([blob]) => blob instanceof Blob && blob.size === OVERSIZE
+    );
+    expect(calledWithOversizeFile).toBe(false);
     expect(container.textContent).toMatch(/too large/i);
   });
 
