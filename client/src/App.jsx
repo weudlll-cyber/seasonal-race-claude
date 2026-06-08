@@ -68,7 +68,7 @@ function removeStalePromotedDefaults() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <TransitionProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/setup" replace />} />
