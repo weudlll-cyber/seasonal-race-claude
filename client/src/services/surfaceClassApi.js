@@ -8,50 +8,9 @@
 // ============================================================
 
 import { API_BASE_URL } from './api.js';
+import { apiCall } from './apiClient.js';
 
-const TIMEOUT_MS = 8000;
 const BASE_URL = `${API_BASE_URL}/api/surface-classes`;
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new Error(
-              'Server nicht erreichbar. Bitte prüfe ob der Backend-Server läuft (docker-compose up im Repo-Verzeichnis), dann erneut versuchen.'
-            )
-          ),
-        ms
-      )
-    ),
-  ]);
-}
-
-async function apiCall(url, options = {}) {
-  let res;
-  try {
-    res = await withTimeout(fetch(url, options), TIMEOUT_MS);
-  } catch (err) {
-    throw new Error(
-      err.message.includes('docker-compose')
-        ? err.message
-        : 'Server nicht erreichbar. Bitte prüfe ob der Backend-Server läuft (docker-compose up im Repo-Verzeichnis), dann erneut versuchen.'
-    );
-  }
-  if (!res.ok) {
-    let errMsg = `HTTP ${res.status}`;
-    try {
-      const body = await res.json();
-      if (body.error) errMsg = body.error;
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(errMsg);
-  }
-  return res;
-}
 
 /**
  * Fetch all backend-stored surface classes (custom + default overrides).
