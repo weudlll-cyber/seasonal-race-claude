@@ -11,7 +11,11 @@
 import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
-import { computeTimingFromConfig } from './cameraTimingComputation.js';
+import {
+  computeTimingFromConfig,
+  BATTLE_PULK_THRESHOLD_PX,
+  BATTLE_PULK_THRESHOLD_T,
+} from './cameraTimingComputation.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -28,8 +32,9 @@ export const OPEN_TRACK_BASE_ZOOM = 1.5;
 const _MAX_STATE_DURATION = 8000; // fallback when no config provided
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const _ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
-const _BATTLE_PULK_THRESHOLD_PX = 200; // fallback: world-pixel radius for pulk detection
-const _BATTLE_PULK_THRESHOLD_T = 0.12; // fallback: max T-space gap for temporal proximity condition
+// Single source in cameraTimingComputation.js; aliased here with underscore convention.
+const _BATTLE_PULK_THRESHOLD_PX = BATTLE_PULK_THRESHOLD_PX;
+const _BATTLE_PULK_THRESHOLD_T = BATTLE_PULK_THRESHOLD_T;
 const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
 const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const _POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)

@@ -9,10 +9,10 @@
 //              Does NOT import from CameraDirector.js — no circular dep.
 // ============================================================
 
-// Fallback constants — must match the defaults in CameraDirector.js.
+// Fallback constants — single source of truth; imported by CameraDirector.js.
 const MAX_STATE_DURATION = 8000;
-const BATTLE_PULK_THRESHOLD_PX = 200;
-const BATTLE_PULK_THRESHOLD_T = 0.12;
+export const BATTLE_PULK_THRESHOLD_PX = 200;
+export const BATTLE_PULK_THRESHOLD_T = 0.12;
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
 const BATTLE_COOLDOWN_MS = 8000;
