@@ -69,7 +69,7 @@ const P4_TRACKS = [
   { id: 'city-circuit',    label: 'City Circuit',   racer: 'f1',      n: 40 },
   { id: 'ice-track',       label: 'Ice Track',      racer: 'luge',    n: 40 },
   { id: 'searound',        label: 'Searound',       racer: 'manta',   n: 40 },
-  { id: '90d3020197da',    label: 'Luger Hill',     racer: 'luge',    n: 50 },
+  { id: 'luger-hill',    label: 'Luger Hill',     racer: 'luge',    n: 50 },
   { id: 'space-sprint',    label: 'Space Sprint',   racer: 'rocket',  n: 60 },
   { id: 'river-run',       label: 'River Run',      racer: 'dolphin', n: 50 },
   { id: 'mountainstreet',  label: 'Mountainstreet', racer: 'horse',   n: 50 },

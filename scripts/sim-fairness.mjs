@@ -2078,7 +2078,7 @@ if (isMain) {
   const trackDataDir = join(ROOT, 'server/data/tracks');
   const trackFiles = [
     'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
-    '90d3020197da',    // Luger hill (open)
+    'luger-hill',    // Luger hill (open)
     'ice-track',       // Ice Track (closed)
     'mountainstreet',  // Mountainstreet (open)
     'searound',        // Searound (closed)

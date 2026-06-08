@@ -1728,10 +1728,10 @@
   "worldWidth": 4096,
   "worldHeight": 2728,
   "pathLengthPx": 10347.481566031156,
-  "id": "90d3020197da",
+  "id": "luger-hill",
   "geometryId": "custom-cc768a59-94a6-4afb-a5b9-fb5f7eb525f4",
   "isDefault": false,
-  "backgroundImageFile": "90d3020197da.png",
+  "backgroundImageFile": "luger-hill.png",
   "createdAt": "2026-05-27T14:49:19.845Z",
   "updatedAt": "2026-05-29T21:24:40.970Z",
   "maxRacers": null

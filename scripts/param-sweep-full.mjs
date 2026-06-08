@@ -70,7 +70,7 @@ const REPORT_FILE = join(OUT_DIR, 'full-sweep-report.md');
 // Tracks: open (Space Sprint, Luger Hill 50R) + closed (Dirt Oval 40R)
 const TRACK_SPECS = [
   { trackId: 'space-sprint', racerType: 'rocket', nRacers: 50, label: 'Space Sprint' },
-  { trackId: '90d3020197da', racerType: 'luge',   nRacers: 50, label: 'Luger Hill'  },
+  { trackId: 'luger-hill', racerType: 'luge',   nRacers: 50, label: 'Luger Hill'  },
   { trackId: 'dirt-oval',    racerType: 'horse',  nRacers: 40, label: 'Dirt Oval'   },
 ];
 

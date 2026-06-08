@@ -72,7 +72,7 @@ const TRACK_RACER_PAIRS = TRACK_FILTER && RACER_FILTER
   ? [{ track: TRACK_FILTER, racer: RACER_FILTER, racers: Number(argVal('racers', '50')) }]
   : [
       { track: 'space-sprint', racer: 'rocket', racers: 50 },
-      { track: '90d3020197da', racer: 'luge',   racers: 50 },  // Luger Hill
+      { track: 'luger-hill', racer: 'luge',   racers: 50 },  // Luger Hill
       { track: 'dirt-oval',    racer: 'horse',  racers: 40 },  // closed
     ];
 

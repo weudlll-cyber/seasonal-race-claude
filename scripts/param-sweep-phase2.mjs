@@ -44,7 +44,7 @@ const ALL = [...CANDIDATES, BASELINE];
 
 const TRACK_RACER_PAIRS = [
   { track: 'space-sprint', racer: 'rocket', racers: 50 },
-  { track: '90d3020197da', racer: 'luge',   racers: 50 },
+  { track: 'luger-hill', racer: 'luge',   racers: 50 },
   { track: 'dirt-oval',    racer: 'horse',  racers: 40 },
 ];
 

@@ -40,7 +40,7 @@ const BONUS_FADE_MS   = 1500; // fixed — not swept
 // Sweep tracks: (id, racerType, nRacers, durationSec)
 const SWEEP_TRACKS = [
   { id: 'dirt-oval',    name: 'Dirt Oval',   racerType: 'horse',  nRacers: 40, durationSec: 60 },
-  { id: '90d3020197da', name: 'Luger Hill',  racerType: 'luge',   nRacers: 60, durationSec: 60 },
+  { id: 'luger-hill', name: 'Luger Hill',  racerType: 'luge',   nRacers: 60, durationSec: 60 },
   { id: 'space-sprint', name: 'Space Sprint',racerType: 'rocket', nRacers: 90, durationSec: 60 },
 ];
 

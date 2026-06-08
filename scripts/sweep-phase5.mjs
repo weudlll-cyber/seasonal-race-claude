@@ -90,7 +90,7 @@ const PHASE_B_TRACKS = [
   { id: 'city-circuit',   name: 'City Circuit',     racerType: 'f1',      nRacers: 40, durSec: 60 },
   { id: 'ice-track',      name: 'Ice Track',        racerType: 'luge',    nRacers: 40, durSec: 60 },
   { id: 'searound',       name: 'Searound',         racerType: 'manta',   nRacers: 40, durSec: 60 },
-  { id: '90d3020197da',   name: 'Luger Hill',       racerType: 'luge',    nRacers: 50, durSec: 60 },
+  { id: 'luger-hill',   name: 'Luger Hill',       racerType: 'luge',    nRacers: 50, durSec: 60 },
   { id: 'space-sprint',   name: 'Space Sprint',     racerType: 'rocket',  nRacers: 60, durSec: 60 },
   { id: 'river-run',      name: 'River Run',        racerType: 'dolphin', nRacers: 50, durSec: 60 },
   { id: 'mountainstreet', name: 'Mountainstreet',   racerType: 'horse',   nRacers: 50, durSec: 60 },
