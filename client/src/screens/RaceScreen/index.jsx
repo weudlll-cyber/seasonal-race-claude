@@ -153,11 +153,13 @@ function formatRaceTime(ms) {
 
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
+  const fadeNavRef = useRef(fadeNavigate);
+  // eslint-disable-next-line react-hooks/refs
+  fadeNavRef.current = fadeNavigate; // inline render-body sync — no extra effect, no queue shift
   const canvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
   const finishNavTimerRef = useRef(null);
-  const fadeNavRef = useRef(fadeNavigate);
 
   const g = useRef(null);
   const shapeRef = useRef(null);
@@ -227,12 +229,6 @@ export default function RaceScreen() {
   const overlayUsedBattleIndicesRef = useRef(new Set());
   const overlayUsedComebackIndicesRef = useRef(new Set());
   const overlayUsedLeadChangeIndicesRef = useRef(new Set());
-
-  // Keep fadeNavRef current so the rAF loop can always call the latest fadeNavigate
-  // without having that function's identity in the loop-effect dependency array.
-  useEffect(() => {
-    fadeNavRef.current = fadeNavigate;
-  }, [fadeNavigate]);
 
   // Keep ref in sync and notify the director whenever config changes.
   useEffect(() => {
@@ -1064,7 +1060,7 @@ export default function RaceScreen() {
               })
             );
             finishNavTimerRef.current = setTimeout(
-              () => fadeNavRef.current?.('/results'),
+              () => fadeNavRef.current('/results'),
               camDirRef.current?.finishPauseMs ?? 2500
             );
           }
