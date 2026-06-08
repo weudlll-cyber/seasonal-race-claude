@@ -68,9 +68,6 @@ export function loadRaceBehaviorConfig() {
     merged.comfortThreshold <= 0 ||
     merged.comfortThreshold >= 1 ||
     merged.softRepulsionStrength <= 0 ||
-    merged.avoidanceDistance <= 0 ||
-    merged.tWeight <= 0 ||
-    merged.yWeight <= 0 ||
     merged.lateralForce <= 0 ||
     merged.maxLateral <= 0 ||
     merged.speedBrakeYThreshold <= 0 ||

@@ -409,8 +409,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
 
       // ── Step-2 clearance accumulators (Stage A — open tracks only) ────────────
       // Runs BEFORE Y-rejection so the clearance corridor is not clipped by the
-      // avoidance gate. Uses its own geometric gate (2 × honest half-span) which
-      // is independent of avoidanceDistance / yWeight config values.
+      // avoidance gate. Uses its own geometric gate (2 × honest half-span).
       // Not yet consumed — populated here for budget measurement only.
       if (config.isOpen !== false) {
         const twA = getTrackWidthAtTpx(rA);

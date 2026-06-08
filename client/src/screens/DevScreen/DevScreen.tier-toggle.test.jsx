@@ -37,9 +37,6 @@ vi.mock('./sections/RaceTuningSection.jsx', () => ({
 vi.mock('./sections/SpriteSizeRangeSection.jsx', () => ({
   default: () => <div data-testid="section-sprite-size-range" />,
 }));
-vi.mock('./sections/CameraZoomTuningSection.jsx', () => ({
-  default: () => <div data-testid="section-camera-zoom" />,
-}));
 vi.mock('./sections/NameTagVisibilitySection.jsx', () => ({
   default: () => <div data-testid="section-nametag-visibility" />,
 }));

@@ -5,8 +5,6 @@
 // Created:     2026-05-24
 // Description: Unified camera tuning UI — all controls merged and ordered
 //              by race timeline (Start → MID → Endgame → Finish → Profiles).
-//              Replaces the separate CameraZoomTuningSection + CameraStateHudSection
-//              entries in DevScreen.
 // ============================================================
 
 import { useEffect, useState } from 'react';
