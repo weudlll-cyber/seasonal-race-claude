@@ -9,33 +9,6 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
-// ── Pair diagnostic (TEMP — remove after investigation) ──────────────────────
-// Mutated each applyRacerBehavior call. RaceScreen reads via direct DOM update.
-// Tracks the pair with smallest |dY| within the avoidance zone (worst-case pair).
-export const _diagPair = {
-  nameA: '?',
-  nameB: '?',
-  physYA: 0,
-  physYB: 0,
-  dY: 0,
-  dT: 0,
-  dist: 0, // kept for any downstream readers; set to min penetration fraction when gate passes
-  latPx: 0, // center-to-center lateral distance in world px
-  longPx: 0, // center-to-center longitudinal distance in world px
-  latTrigger: 0, // gate admission threshold (lateral, px) = bodyWidth × (1+buffer)
-  longTrigger: 0, // gate admission threshold (longitudinal, px) = bodyLength × (1+buffer)
-  passedAvoidGate: false,
-  lateralHalfSpan: 0,
-  tHalfSpan: 0,
-  overlaps: false,
-  flRawA: 0,
-  flRawB: 0, // raw freeLane delta written (pre-normalization)
-  flCountA: 0,
-  flCountB: 0,
-  homeDeltaA: 0,
-  homeDeltaB: 0,
-};
-
 // Priority-system mode constants. Exported so RaceScreen can read them for the debug overlay.
 export const PRIORITY_MODE = Object.freeze({
   NORMAL: 'NORMAL',
@@ -424,8 +397,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
-  // Temp diag — reset candidate each frame
-  let _dc = null; // {rA,rB,dY,dT,dist,lhs,ths,overlaps,flRawA,flRawB}
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
       const rA = active[i];
@@ -465,32 +436,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             else if (lateralDelta < -pairHH) _forwardLeft.add(back.index);
           }
         }
-      }
-
-      // Temp diag — track closest pair by ACTUAL 2D world-pixel center distance.
-      // Must run BEFORE the avoidance gate so we always capture the visually closest pair
-      // even if it falls outside the physics processing zone.
-      // rA.x / rA.y are set by computePositions() before applyRacerBehavior() is called.
-      const screenDist = Math.sqrt((rA.x - rB.x) ** 2 + (rA.y - rB.y) ** 2);
-      if (_dc === null || screenDist < (_dc.screenDist ?? Infinity)) {
-        _dc = {
-          rA,
-          rB,
-          dY,
-          dT,
-          dist: -1,
-          screenDist,
-          passedGate: false,
-          latPx: 0,
-          longPx: 0,
-          latTrigger: 0,
-          longTrigger: 0,
-          lhs: 0,
-          ths: 0,
-          overlaps: false,
-          flRawA: 0,
-          flRawB: 0,
-        };
       }
 
       // Body geometry for the speed-brake — both axes body-based (reports 43/45).
@@ -604,17 +549,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const longTrigger = contactLength * (1 + bufferPct);
       // Two-axis AND: both axes must be inside the buffered contact zone.
       if (latPx >= latTrigger || longPx >= longTrigger) continue;
-      // Temp diag — mark if the screen-closest pair also passed the avoidance gate
-      if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
-        const latFrac = 1 - latPx / latTrigger;
-        const longFrac = 1 - longPx / longTrigger;
-        _dc.dist = Math.min(latFrac, longFrac); // penetration fraction [0,1]
-        _dc.latPx = latPx;
-        _dc.longPx = longPx;
-        _dc.latTrigger = latTrigger;
-        _dc.longTrigger = longTrigger;
-        _dc.passedGate = true;
-      }
 
       // Track-relative scaling: wider tracks get proportionally weaker lateralForce
       // so the pixel-space force is consistent across all track widths.
@@ -639,12 +573,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         const lateralHalfSpan = pxToPhysicalY(contactWidth, trackWidth);
         const tHalfSpan = contactLength / pathLength;
         const overlaps = dT <= tHalfSpan && Math.abs(dY) <= lateralHalfSpan;
-        // Temp diag — record lhs/ths/overlaps for the candidate pair
-        if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
-          _dc.lhs = lateralHalfSpan;
-          _dc.ths = tHalfSpan;
-          _dc.overlaps = overlaps;
-        }
 
         if (overlaps) {
           overlapSet.add(rA.index);
@@ -698,11 +626,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           if (dirB !== 0) {
             yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
             freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
-          }
-          // Temp diag — capture raw flDelta for the candidate pair
-          if (_dc && _dc.rA.index === rA.index && _dc.rB.index === rB.index) {
-            _dc.flRawA = dirA * forceMag;
-            _dc.flRawB = dirB * forceMag;
           }
           if (dRawPos !== null) {
             if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
@@ -762,33 +685,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
     }
-  }
-
-  // Temp diag — flush candidate into the exported state
-  if (_dc) {
-    _diagPair.nameA = _dc.rA.name ?? `#${_dc.rA.index}`;
-    _diagPair.nameB = _dc.rB.name ?? `#${_dc.rB.index}`;
-    _diagPair.physYA = _dc.rA.physicalY;
-    _diagPair.physYB = _dc.rB.physicalY;
-    _diagPair.dY = _dc.dY;
-    _diagPair.dT = _dc.dT;
-    _diagPair.screenDist = _dc.screenDist;
-    _diagPair.dist = _dc.dist;
-    _diagPair.latPx = _dc.latPx;
-    _diagPair.longPx = _dc.longPx;
-    _diagPair.latTrigger = _dc.latTrigger;
-    _diagPair.longTrigger = _dc.longTrigger;
-    _diagPair.passedAvoidGate = _dc.passedGate;
-    _diagPair.lateralHalfSpan = _dc.lhs;
-    _diagPair.tHalfSpan = _dc.ths;
-    _diagPair.overlaps = _dc.overlaps;
-    _diagPair.flRawA = _dc.flRawA;
-    _diagPair.flRawB = _dc.flRawB;
-    _diagPair.flCountA = freeLaneCounts.get(_dc.rA.index) ?? 0;
-    _diagPair.flCountB = freeLaneCounts.get(_dc.rB.index) ?? 0;
-  } else {
-    _diagPair.passedAvoidGate = false;
-    _diagPair.screenDist = -1;
   }
 
   // ── Priority-mode computation (Phase 2) ───────────────────────────────────
@@ -858,12 +754,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const factor = overlapSet.has(r.index) ? overlapFactor : 1;
       yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
     }
-  }
-
-  // Temp diag — capture home-force contribution after it's been written to yDeltas
-  if (_dc) {
-    _diagPair.homeDeltaA = yDeltas.get(_dc.rA.index) ?? 0;
-    _diagPair.homeDeltaB = yDeltas.get(_dc.rB.index) ?? 0;
   }
 
   // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
