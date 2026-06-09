@@ -259,6 +259,16 @@ export function _clearTintCache() {
   _variantCache.clear();
 }
 
+/** Current entry count for the coat-variant cache. Used by dev diagnostics — read-only. */
+export function _variantCacheSize() {
+  return _variantCache.size;
+}
+
+/** Current entry count for the pattern-tile cache. Used by dev diagnostics — read-only. */
+export function _patternTileCacheSize() {
+  return _patternTileCache.size;
+}
+
 /**
  * Tint a sprite image using a mask canvas to restrict which pixels are affected.
  * White pixels in the mask mark areas to tint; black pixels leave the source unchanged.
@@ -455,4 +465,9 @@ export function tintSpriteWithDualMask(sourceImage, mask1, tint1, mask2, tint2) 
  */
 export function _clearMaskedTintCache() {
   _maskedVariantCache.clear();
+}
+
+/** Current entry count for the masked-variant cache. Used by dev diagnostics — read-only. */
+export function _maskedVariantCacheSize() {
+  return _maskedVariantCache.size;
 }

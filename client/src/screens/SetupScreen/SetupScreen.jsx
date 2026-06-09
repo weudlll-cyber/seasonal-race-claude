@@ -358,6 +358,7 @@ function SetupScreen() {
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
+    window.__raceDiagCapture?.('setup→race');
     navigate('/race');
   }
 
@@ -408,6 +409,7 @@ function SetupScreen() {
     };
 
     sessionStorage.setItem('activeRace', JSON.stringify(race));
+    window.__raceDiagCapture?.('setup→race');
     navigate('/race');
   }
 

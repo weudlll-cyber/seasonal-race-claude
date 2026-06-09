@@ -52,3 +52,8 @@ export function getBackgroundImage(path) {
 export function _clearBackgroundImageCache() {
   _cache.clear();
 }
+
+/** Current entry count. Used by dev diagnostics — read-only. */
+export function _bgImageCacheSize() {
+  return _cache.size;
+}
