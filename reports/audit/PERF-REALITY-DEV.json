@@ -1,0 +1,16 @@
+{
+  "label": "DEV",
+  "baseURL": "http://localhost:3000",
+  "nRacers": 70,
+  "track": "space-sprint (curvy, open)",
+  "stats": {
+    "n": 266,
+    "p50": 116.6,
+    "p90": 150,
+    "p99": 233.4,
+    "max": 766.6,
+    "framesOver20ms": 266,
+    "framesOver33ms": 266
+  },
+  "timestamp": "2026-06-09T18:40:27.671Z"
+}
