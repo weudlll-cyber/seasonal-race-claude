@@ -100,7 +100,7 @@ import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
-import { initProbe, recordFrame } from '../../modules/rAFProbe.js';
+import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -154,6 +154,7 @@ export default function RaceScreen() {
   // eslint-disable-next-line react-hooks/refs
   fadeNavRef.current = fadeNavigate; // inline render-body sync — no extra effect, no queue shift
   const canvasRef = useRef(null);
+  const bgCanvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
   const finishNavTimerRef = useRef(null);
@@ -349,7 +350,7 @@ export default function RaceScreen() {
     let cancelled = false;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d', { alpha: true });
     ctx.imageSmoothingQuality = 'high';
     const nRacers = raceData.racers.length;
 
@@ -1334,6 +1335,8 @@ export default function RaceScreen() {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
       }
+      // Perf probe: record camera state + zoom alongside the inter-rAF gap captured by recordFrame.
+      recordFrameCamera(camDirRef.current.state, cam.zoom);
       // Perf-log bracket 4: after camera director update.
       const tCam = enablePerfLog ? performance.now() : 0;
 
@@ -1543,7 +1546,25 @@ export default function RaceScreen() {
     <div ref={screenRef} className="screen screen--race">
       <div className="race-layout">
         <div className="race-canvas-wrapper">
-          <canvas ref={canvasRef} width={CW} height={CH} className="race-canvas" />
+          <canvas
+            ref={bgCanvasRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              transformOrigin: '0 0',
+              willChange: 'transform',
+            }}
+          />
+          <canvas
+            ref={canvasRef}
+            width={CW}
+            height={CH}
+            className="race-canvas"
+            style={{ position: 'relative' }}
+          />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
           <StateOverlay text={overlayText} />
           <CameraDiagnosticsHUD
