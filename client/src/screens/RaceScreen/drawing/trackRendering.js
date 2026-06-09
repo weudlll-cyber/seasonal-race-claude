@@ -30,17 +30,26 @@ export function getBgCanvasReady(bgImg, path, ww, wh) {
  * @param {number} [ww=CANVAS_W]  World (canvas) width in pixels.
  * @param {number} [wh=720]  World (canvas) height in pixels.
  */
-export function drawEditorBackground(ctx, frame, bgPath, ww = CANVAS_W, wh = 720) {
+export function drawEditorBackground(
+  ctx,
+  frame,
+  bgPath,
+  ww = CANVAS_W,
+  wh = 720,
+  skipImageBlit = false
+) {
   const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
   if (bgImg) {
-    const darkened = getBgCanvasReady(bgImg, bgPath, ww, wh);
-    if (darkened) {
-      ctx.drawImage(darkened, 0, 0);
-    } else {
-      // OffscreenCanvas unavailable — fall back to original two-step draw
-      ctx.drawImage(bgImg, 0, 0, ww, wh);
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(0, 0, ww, wh);
+    if (!skipImageBlit) {
+      const darkened = getBgCanvasReady(bgImg, bgPath, ww, wh);
+      if (darkened) {
+        ctx.drawImage(darkened, 0, 0);
+      } else {
+        // OffscreenCanvas unavailable — fall back to original two-step draw
+        ctx.drawImage(bgImg, 0, 0, ww, wh);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, ww, wh);
+      }
     }
   } else {
     const pulse = 0.5 + 0.5 * Math.sin(frame * 0.0006);

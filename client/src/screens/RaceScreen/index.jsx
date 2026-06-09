@@ -14,7 +14,9 @@ import {
   drawEditorBackground,
   drawEditorTrackSurface,
   drawOpenTrackFinishLine,
+  getBgCanvasReady,
 } from './drawing/trackRendering.js';
+import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import {
   drawTitle,
   drawTitleOpen,
@@ -348,6 +350,7 @@ export default function RaceScreen() {
   useEffect(() => {
     if (!raceData || !canvasRef.current) return;
     let cancelled = false;
+    let bgCanvasReady = false;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
@@ -384,6 +387,12 @@ export default function RaceScreen() {
     const bsX = CANVAS_W / worldWidth;
     const bsY = CANVAS_H / worldHeight;
     const bgImagePath = geometry.backgroundImage ?? null;
+
+    // Size and clear the bg canvas for this track (setting width/height always clears it).
+    if (bgCanvasRef.current) {
+      bgCanvasRef.current.width = worldWidth;
+      bgCanvasRef.current.height = worldHeight;
+    }
 
     // Cache track-light positions once at race init (not per frame).
     // 800 samples gives ~18 px/sample on a 15 000 px track — accurate enough
@@ -1370,6 +1379,23 @@ export default function RaceScreen() {
         )
       );
 
+      // ── Bg canvas: lazy-draw once on first available frame; CSS transform each frame ──
+      if (!bgCanvasReady && bgCanvasRef.current && bgImagePath) {
+        const bgImg = getBackgroundImage(bgImagePath);
+        if (bgImg) {
+          const darkened = getBgCanvasReady(bgImg, bgImagePath, worldWidth, worldHeight);
+          if (darkened) {
+            bgCanvasRef.current.getContext('2d').drawImage(darkened, 0, 0);
+            bgCanvasReady = true;
+          }
+        }
+      }
+      if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
+        const bgScaleX = isOpenTrack ? frameEffZoom * (worldWidth / CANVAS_W) : cam.zoom;
+        const bgScaleY = isOpenTrack ? frameEffZoom * (worldHeight / CANVAS_H) : cam.zoom;
+        bgCanvasRef.current.style.transform = `translate(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%) scale(${bgScaleX}, ${bgScaleY})`;
+      }
+
       // Pan and zoom are now computed by CameraDirector for both open and closed tracks.
       // cam.offsetX/offsetY are the canvas-space offsets; the scale differs by track topology.
       ctx.save();
@@ -1380,7 +1406,7 @@ export default function RaceScreen() {
       } else {
         ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
       }
-      drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight);
+      drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight, bgCanvasReady);
       for (const inst of effectsRef.current) {
         ctx.save();
         inst.render(ctx);
