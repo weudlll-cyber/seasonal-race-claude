@@ -1,0 +1,219 @@
+[
+  {
+    "cycle": 0,
+    "phase": "baseline",
+    "cdpNodes": 485,
+    "attachedNodes": 85,
+    "detachedNodes": 400
+  },
+  {
+    "cycle": 1,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 1,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 2,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 2,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 3,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 3,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 4,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 4,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 5,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 5,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 6,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 6,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 7,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 7,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 8,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 8,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 9,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 9,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 10,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 10,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 11,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 11,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 12,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 12,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 13,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 13,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 14,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 14,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  },
+  {
+    "cycle": 15,
+    "phase": "race-screen",
+    "cdpNodes": 645,
+    "attachedNodes": 122,
+    "detachedNodes": 523
+  },
+  {
+    "cycle": 15,
+    "phase": "setup-after-return",
+    "cdpNodes": 644,
+    "attachedNodes": 85,
+    "detachedNodes": 559
+  }
+]
