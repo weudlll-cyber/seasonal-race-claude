@@ -6,7 +6,7 @@ const CANVAS_W = 1280;
 // Each entry is an OffscreenCanvas with rgba(0,0,0,0.25) baked in once at load.
 const _darkenedBgCache = new Map();
 
-function _getOrCreateDarkenedBg(bgImg, path, ww, wh) {
+export function getBgCanvasReady(bgImg, path, ww, wh) {
   const key = `${path}_${ww}x${wh}`;
   const cached = _darkenedBgCache.get(key);
   if (cached) return cached;
@@ -33,7 +33,7 @@ function _getOrCreateDarkenedBg(bgImg, path, ww, wh) {
 export function drawEditorBackground(ctx, frame, bgPath, ww = CANVAS_W, wh = 720) {
   const bgImg = bgPath ? getBackgroundImage(bgPath) : null;
   if (bgImg) {
-    const darkened = _getOrCreateDarkenedBg(bgImg, bgPath, ww, wh);
+    const darkened = getBgCanvasReady(bgImg, bgPath, ww, wh);
     if (darkened) {
       ctx.drawImage(darkened, 0, 0);
     } else {
