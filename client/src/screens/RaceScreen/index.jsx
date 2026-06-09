@@ -1516,7 +1516,6 @@ export default function RaceScreen() {
             className="race-back-btn"
             onClick={() => {
               sessionStorage.removeItem('activeRace');
-              window.__raceDiagCapture?.('race→setup');
               fadeNavigate('/setup');
             }}
           >
@@ -1566,7 +1565,6 @@ export default function RaceScreen() {
             className="race-back-btn"
             onClick={() => {
               sessionStorage.removeItem('activeRace');
-              window.__raceDiagCapture?.('race→setup');
               fadeNavigate('/setup');
             }}
           >

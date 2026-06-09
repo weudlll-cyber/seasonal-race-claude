@@ -49,8 +49,3 @@ export function getCachedSprite(url) {
 export function _clearSpriteCache() {
   _cache.clear();
 }
-
-/** Current entry count. Used by dev diagnostics — read-only. */
-export function _spriteLoaderCacheSize() {
-  return _cache.size;
-}
