@@ -100,6 +100,7 @@ import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
+import { initProbe, recordFrame } from '../../modules/rAFProbe.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -742,9 +743,13 @@ export default function RaceScreen() {
     // Perf-log: reset ring buffer on each race start (enablePerfLog captured from cameraConfig).
     if (enablePerfLog) perfLogRef.current = createPerfLog();
 
+    // Perf probe: activated by ?perfprobe=1 URL flag (persisted via sessionStorage).
+    initProbe();
+
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
       if (cancelled) return;
+      recordFrame(ts);
       const st = g.current;
       const shape = shapeRef.current;
       const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
