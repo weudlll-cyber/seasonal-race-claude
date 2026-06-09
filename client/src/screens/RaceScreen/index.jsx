@@ -1393,7 +1393,7 @@ export default function RaceScreen() {
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frameEffZoom * (worldWidth / CANVAS_W) : cam.zoom;
         const bgScaleY = isOpenTrack ? frameEffZoom * (worldHeight / CANVAS_H) : cam.zoom;
-        bgCanvasRef.current.style.transform = `translate(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%) scale(${bgScaleX}, ${bgScaleY})`;
+        bgCanvasRef.current.style.transform = `translate3d(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%, 0) scale3d(${bgScaleX}, ${bgScaleY}, 1)`;
       }
 
       // Pan and zoom are now computed by CameraDirector for both open and closed tracks.
