@@ -127,6 +127,66 @@ describe('applyRacerBehavior — priority mode COOLDOWN', () => {
   });
 });
 
+// ── A4 — Same-lane commit decays when same-lane leader departs ────────────────
+
+describe('applyRacerBehavior — same-lane commit decays when leader departs (open track)', () => {
+  // drawnBodyWidthPx=28 required: same-lane detection uses pxToPhysicalY(28, 140) ≈ 0.4.
+  // Without drawnBodyWidthPx the sim fallback (frameSizePx=40) gives a different gate width.
+  // isOpen:true required: Stage B is open-track only.
+  // Debounce value read from cfg.brakeReleaseDebounceFrames (not hardcoded).
+  //
+  // Build phase: run pair in same-lane zone for (dbDecay+1) frames.
+  //   After (dbDecay+1) frames: approachCommitFrames = dbDecay+1.
+  // Decay maths for any dbDecay ≥ 1:
+  //   Step 1: (dbDecay+1) − dbDecay = 1  → still non-zero  (gradual)
+  //   Step 2: 1 − dbDecay ≤ 0 → 0        → cleared
+
+  it('approachCommitDir reaches 0 after the leader leaves the same-lane zone', () => {
+    const dbDecay = cfg.brakeReleaseDebounceFrames;
+    const buildFrames = dbDecay + 1;
+
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
+    const leader = makeLaneRacer({ index: 1, t: 0.501, physicalY: 0 });
+
+    // Phase 1: build commitment — pair in same-lane zone for (dbDecay+1) frames.
+    for (let f = 0; f < buildFrames; f++) {
+      applyRacerBehavior([trailer, leader], cfgFrozenOpen);
+    }
+    expect(trailer.approachCommitDir).not.toBe(0); // commitment confirmed before decay
+
+    // Phase 2: move leader far ahead so no same-lane approach fires this frame.
+    // longPx = 0.1 × 1200 = 120 > longTrigger(37.2) → gate rejects → inSameLane = false.
+    leader.t = 0.6;
+
+    // Phase 3: two decay steps exhaust approachCommitFrames (dbDecay+1 → 1 → 0).
+    applyRacerBehavior([trailer, leader], cfgFrozenOpen);
+    applyRacerBehavior([trailer, leader], cfgFrozenOpen);
+
+    expect(trailer.approachCommitDir).toBe(0);
+    expect(trailer.approachCommitFrames).toBe(0);
+  });
+
+  it('commitment is still non-zero after the first decay step (decay is gradual, not instant)', () => {
+    const dbDecay = cfg.brakeReleaseDebounceFrames;
+    const buildFrames = dbDecay + 1;
+
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
+    const leader = makeLaneRacer({ index: 1, t: 0.501, physicalY: 0 });
+
+    for (let f = 0; f < buildFrames; f++) {
+      applyRacerBehavior([trailer, leader], cfgFrozenOpen);
+    }
+
+    leader.t = 0.6;
+
+    // One decay step: approachCommitFrames drops from (dbDecay+1) to 1 — not yet zero.
+    applyRacerBehavior([trailer, leader], cfgFrozenOpen);
+
+    expect(trailer.approachCommitDir).not.toBe(0);
+    expect(trailer.approachCommitFrames).toBeGreaterThan(0);
+  });
+});
+
 // ── A3 — Anti-starvation commit timeout (open track) ─────────────────────────
 
 describe('applyRacerBehavior — anti-starvation commit timeout (open track)', () => {
