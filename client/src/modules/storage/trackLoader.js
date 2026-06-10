@@ -132,19 +132,6 @@ export async function fetchServerTracks() {
 }
 
 /**
- * Returns all tracks: local defaults (from KEYS.TRACKS in localStorage, falling
- * back to code DEFAULT_TRACKS), merged with server custom tracks.
- * Server tracks deduplicate any local copy of the same ID.
- * @returns {Promise<object[]>}
- */
-export async function loadAllTracks() {
-  const localTracks = storageGet(KEYS.TRACKS, DEFAULT_TRACKS);
-  const serverTracks = await fetchServerTracks();
-  const serverIds = new Set(serverTracks.map((t) => t.id));
-  return [...localTracks.filter((t) => !serverIds.has(t.id)), ...serverTracks];
-}
-
-/**
  * Sync version for initial render — uses cached server tracks.
  * @returns {object[]}
  */
