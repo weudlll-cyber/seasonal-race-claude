@@ -17,7 +17,7 @@ import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
-import { HorseRacerType } from '../../modules/racer-types/HorseRacerType.js';
+import { RACER_TYPES, RACER_TYPE_LABELS } from '../../modules/racer-types/index.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 
 const N_RUNS = 50;
@@ -80,6 +80,7 @@ export default function DiagnoseVerteilung() {
   const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState(null);
+  const [selectedTypeId, setSelectedTypeId] = useState('horse');
   const cancelRef = useRef(false);
 
   const handleRun = useCallback(() => {
@@ -88,12 +89,13 @@ export default function DiagnoseVerteilung() {
     setProgress(0);
     setResults(null);
 
+    const racerType = RACER_TYPES[selectedTypeId] ?? RACER_TYPES.horse;
     const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
-    const horseOverride = rawOverrides[HorseRacerType.config.id];
+    const typeOverride = rawOverrides[selectedTypeId];
     const hasDisplaySizeOverride = !!(
-      horseOverride &&
-      typeof horseOverride === 'object' &&
-      'displaySize' in horseOverride
+      typeOverride &&
+      typeof typeOverride === 'object' &&
+      'displaySize' in typeOverride
     );
 
     const raceConfig = {
@@ -103,9 +105,9 @@ export default function DiagnoseVerteilung() {
       rowConfig: loadRowLayoutConfig(),
       dynamicsConfig: loadRaceDynamicsConfig(),
       racerTypeConfig: {
-        bodyFillX: HorseRacerType.config.bodyFillX,
-        bodyFillY: HorseRacerType.config.bodyFillY,
-        displaySize: HorseRacerType.config.displaySize,
+        bodyFillX: racerType.config.bodyFillX,
+        bodyFillY: racerType.config.bodyFillY,
+        displaySize: racerType.config.displaySize,
         hasDisplaySizeOverride,
       },
       autoScaleConfig: loadAutoScaleConfig(),
@@ -171,7 +173,7 @@ export default function DiagnoseVerteilung() {
     }
 
     setTimeout(() => runChunk(0), 0);
-  }, []);
+  }, [selectedTypeId]);
 
   const handleExport = useCallback(() => {
     if (!results) return;
@@ -211,6 +213,30 @@ export default function DiagnoseVerteilung() {
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
         /diagnose-verteilung · {N_RACERS} racers · Dirt Oval · {N_RUNS} races × 4s RACING time
       </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.85rem', color: '#8b949e', flexShrink: 0 }}>Racer Type:</label>
+        <select
+          value={selectedTypeId}
+          onChange={(e) => setSelectedTypeId(e.target.value)}
+          disabled={status === 'running'}
+          style={{
+            background: '#161b22',
+            color: '#c9d1d9',
+            border: '1px solid #30363d',
+            borderRadius: 6,
+            padding: '0.4rem 0.75rem',
+            fontSize: '0.9rem',
+            cursor: status === 'running' ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {Object.entries(RACER_TYPE_LABELS).map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <button
