@@ -1,3 +1,12 @@
+/* ============================================================
+   File:        CameraStateHUD.css
+   Path:        client/src/screens/RaceScreen/CameraStateHUD.css
+   Project:     RaceArena
+   Created:     2026-05-06
+   Description: Styles for the camera-state indicator HUD — pill badge
+                shown in the top-left corner during races.
+   ============================================================ */
+
 /* CameraStateHUD.css — camera-state indicator overlay */
 
 .cam-state-hud {

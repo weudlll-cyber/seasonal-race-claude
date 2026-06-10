@@ -1,3 +1,12 @@
+/* ============================================================
+   File:        TransitionOverlay.css
+   Path:        client/src/contexts/TransitionOverlay.css
+   Project:     RaceArena
+   Created:     2026-04-22
+   Description: Full-screen fade overlay for screen transition animations;
+                opacity-toggled by TransitionContext.
+   ============================================================ */
+
 .transition-overlay {
   position: fixed;
   inset: 0;
