@@ -176,9 +176,12 @@ export function simulateRace({
     );
   }
 
-  const racersPerRow = computeRacersPerRow(effectiveWidth, spriteSize);
+  // Use the actual displaySize (not stale SPRITE_SIZE=40) so row count and gap
+  // match the racer type's true nominal size — same source as the browser.
+  const rowFrameSize = racerTypeConfig?.displaySize ?? spriteSize;
+  const racersPerRow = computeRacersPerRow(effectiveWidth, rowFrameSize);
   const rowLayout = computeRowLayoutSeeded(nRacers, racersPerRow, rng);
-  const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
+  const rowGapPx = rowFrameSize * rowConfig.rowGapMultiplier;
   const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
 
   const rowSizeByRow = new Map();
