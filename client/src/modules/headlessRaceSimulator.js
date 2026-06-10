@@ -24,12 +24,15 @@ import {
 } from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { avg, median, p95, stddev } from './statsHelpers.js';
+import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
+import { computeClosedTrackSsf } from './camera/lapUtils.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const REFERENCE_FPS = 62.5; // 1000ms / 16ms, same as camera/lapUtils.js
 const DT = 16; // fixed frame delta in ms (reference frame)
 const FRAMES_PER_RACE = 250; // 4000ms / 16ms = 250 frames of RACING time
+const RACE_DURATION_SECONDS = 60; // Dirt Oval target race duration — must match game's 60 s calibration
 
 /** Convert a RACING duration in seconds to the equivalent frame count. */
 export const secondsToFrames = (seconds) => Math.round((seconds * 1000) / DT);
@@ -68,22 +71,6 @@ function mulberry32(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-// ── Speed calibration ──────────────────────────────────────────────────────────
-// Replicates RaceScreen: lapsFromDuration(60)=2, N-calibrated base speed.
-function calibrateBaseSpeed(nRacers, baseSpeedConfig, speedMultiplier = 1.0) {
-  const { min, max } = baseSpeedConfig;
-  const mean = (min + max) / 2;
-  const finishT = 2; // lapsFromDuration(60) = 2 for a 60s dirt-oval race
-  const targetDuration = finishT / (mean * REFERENCE_FPS);
-  const spreadMinFactor = min / mean;
-  const spreadMaxFactor = max / mean;
-  const expectedMinSpreadFactor =
-    spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-  // computeRaceBaseSpeed(finishT, targetDuration * expectedMinSpreadFactor * speedMultiplier)
-  const calibratedDuration = targetDuration * expectedMinSpreadFactor * speedMultiplier;
-  return calibratedDuration > 0 ? finishT / (REFERENCE_FPS * calibratedDuration) : 0;
 }
 
 // ── World position from t (circular approximation) ────────────────────────────
@@ -157,10 +144,15 @@ export function simulateRace({
   const pathLengthPx = DIRT_OVAL_PATH_LENGTH_PX;
   const geometricTrackWidthPx = DIRT_OVAL_TRACK_WIDTH_PX;
   const spriteSize = SPRITE_SIZE;
-  const race_baseSpeed = calibrateBaseSpeed(nRacers, baseSpeedConfig);
-
-  // finishT = 2 laps, but since this is only a 4-second window, racers won't finish
+  // Two laps; lapsFromDuration(60) = 2 for a 60 s Dirt Oval race.
   const finishT = 2;
+  // N-calibrated base speed — same path as RaceScreen/index.jsx.
+  // closedSsf normalizes for Dirt Oval path length (3245/3200 ≈ 1.014).
+  const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
+  const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
+  const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
+  const closedSsf = computeClosedTrackSsf(DIRT_OVAL_PATH_LENGTH_PX);
+  const race_baseSpeed = computeRaceBaseSpeed(finishT, RACE_DURATION_SECONDS * ems * closedSsf);
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;

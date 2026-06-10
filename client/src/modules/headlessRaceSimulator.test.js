@@ -14,6 +14,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { simulateRace, countNeighbors, secondsToFrames } from './headlessRaceSimulator.js';
+import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
+import { computeClosedTrackSsf } from './camera/lapUtils.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -266,5 +268,45 @@ describe('secondsToFrames + framesPerRace propagation (TC-06/K3)', () => {
     const withExplicit = simulateRace({ ...cfg, framesPerRace: secondsToFrames(4) });
     expect(withExplicit.racerTs).toEqual(withDefault.racerTs);
     expect(withExplicit.neighborCounts).toEqual(withDefault.neighborCounts);
+  });
+});
+
+// ── TC-07/K1: game-speed calibration ─────────────────────────────────────────
+//
+// After replacing calibrateBaseSpeed with the game's computeRaceBaseSpeed path,
+// race_baseSpeed must equal computeRaceBaseSpeed(2, 60 × ems(40) × closedSsf) ≈ 0.000570 t/frame.
+// The old self-referential calibrateBaseSpeed gave ≈ 0.001133 — almost 2× faster.
+//
+// Proof: single racer at row 0 (tStart=0, speedBonusMult=1, no neighbours → no avoidance).
+// After 1 frame: t = race_baseSpeed × spreadFactor.
+// Dividing by the expected game speed yields the implied spreadFactor:
+//   Game speed → impliedSF ∈ [0.9187, 1.0813]  (valid spreadFactor range)
+//   Old speed  → impliedSF ≈ 0.001133/0.000570 ≈ 1.99  (clearly outside)
+
+describe('simulateRace — game-speed calibration (TC-07/K1)', () => {
+  it('race_baseSpeed === computeRaceBaseSpeed(2, 60 × ems(40) × closedSsf) ≈ 0.000570 t/frame', () => {
+    const { min, max } = DEFAULT_BASE_SPEED_CONFIG;
+    const bsm = (min + max) / 2;
+    const smf = min / bsm;
+    const sxf = max / bsm;
+    const ems40 = smf + (sxf - smf) / 41; // N=40 → divisor N+1=41
+    const expectedSpeed = computeRaceBaseSpeed(2, 60 * ems40 * computeClosedTrackSsf(3245));
+    // ≈ 0.000570 t/frame
+
+    const { racerTs } = simulateRace({
+      nRacers: 1,
+      seed: 42,
+      baseSpeedConfig: DEFAULT_BASE_SPEED_CONFIG,
+      behaviorConfig: DEFAULT_RACE_BEHAVIOR_CONFIG,
+      rowConfig: DEFAULT_ROW_LAYOUT_CONFIG,
+      dynamicsConfig: DEFAULT_RACE_DYNAMICS_CONFIG,
+      framesPerRace: 1,
+    });
+    // t = race_baseSpeed × spreadFactor; impliedSF = t / expectedSpeed
+    const impliedSF = racerTs[0] / expectedSpeed;
+    // Game speed: impliedSF ∈ [0.9187, 1.0813] — valid spreadFactor range
+    // Old speed:  impliedSF ≈ 1.99 — fails the upper bound
+    expect(impliedSF).toBeGreaterThan(0.85);
+    expect(impliedSF).toBeLessThan(1.15);
   });
 });
