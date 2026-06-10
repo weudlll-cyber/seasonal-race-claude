@@ -38,7 +38,7 @@ export const secondsToFrames = (seconds) => Math.round((seconds * 1000) / DT);
 
 // Dirt-oval geometry constants (from server/data/tracks/dirt-oval.json)
 export const DIRT_OVAL_PATH_LENGTH_PX = 3245;
-export const DIRT_OVAL_TRACK_WIDTH_PX = 93;
+const DIRT_OVAL_TRACK_WIDTH_PX = 93;
 const WORLD_WIDTH = 1280;
 const WORLD_HEIGHT = 720;
 const SPRITE_SIZE = 40; // horse displaySize without auto-scale
@@ -355,83 +355,5 @@ export function simulateRace({
     neighborCounts,
     racerTs: racers.map((r) => r.t),
     spriteLengthInT,
-  };
-}
-
-// ── Aggregate statistics ───────────────────────────────────────────────────────
-/**
- * Run nRuns races and compute aggregate statistics.
- * @param {number} nRuns
- * @param {object} raceConfig - same shape as simulateRace opts (minus seed)
- * @param {function} onProgress - called after each run with { run, total }
- * @returns {object} statistics
- */
-export function runDistributionMeasurement(nRuns, raceConfig, onProgress) {
-  const runResults = [];
-  // spriteLengthInT is seed-independent — capture once from the first run.
-  let firstSpriteLengthInT;
-
-  for (let run = 0; run < nRuns; run++) {
-    const { neighborCounts, spriteLengthInT } = simulateRace({
-      ...raceConfig,
-      seed: run * 7919 + 1,
-    });
-    if (run === 0) firstSpriteLengthInT = spriteLengthInT;
-
-    const maxNeighbors = Math.max(...neighborCounts);
-    const meanNeighbors = neighborCounts.reduce((s, c) => s + c, 0) / neighborCounts.length;
-    const countWithMany = neighborCounts.filter((c) => c > 5).length;
-    const countWithNone = neighborCounts.filter((c) => c === 0).length;
-
-    runResults.push({
-      run,
-      maxNeighbors,
-      meanNeighbors,
-      countWithMany,
-      countWithNone,
-      neighborCounts,
-    });
-
-    if (onProgress) onProgress({ run: run + 1, total: nRuns });
-  }
-
-  const maxArr = runResults.map((r) => r.maxNeighbors);
-  const meanArr = runResults.map((r) => r.meanNeighbors);
-  const withManyArr = runResults.map((r) => r.countWithMany);
-  const withNoneArr = runResults.map((r) => r.countWithNone);
-
-  const maxMean = avg(maxArr);
-  const maxMedian = median(maxArr);
-  const max95 = p95(maxArr);
-  const maxAbsolute = Math.max(...maxArr);
-  const meanMean = avg(meanArr);
-  const withManyMean = avg(withManyArr);
-  const runsWithAnyMany = withManyArr.filter((c) => c > 0).length;
-  const withNoneMean = avg(withNoneArr);
-  const maxStddev = stddev(maxArr, maxMean);
-
-  // Histogram of MAX_NACHBARN (0..maxAbsolute)
-  const histogram = {};
-  for (const v of maxArr) {
-    histogram[v] = (histogram[v] ?? 0) + 1;
-  }
-
-  return {
-    nRuns,
-    nRacers: raceConfig.nRacers,
-    framesPerRace: FRAMES_PER_RACE,
-    spriteLengthInT: firstSpriteLengthInT ?? SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX,
-    maxNeighbors: {
-      mean: maxMean,
-      median: maxMedian,
-      p95: max95,
-      max: maxAbsolute,
-      stddev: maxStddev,
-    },
-    meanNeighbors: { mean: meanMean, min: Math.min(...meanArr), max: Math.max(...meanArr) },
-    withMany: { mean: withManyMean, runsWithAny: runsWithAnyMany },
-    withNone: { mean: withNoneMean },
-    histogram,
-    runResults,
   };
 }
