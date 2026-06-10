@@ -649,6 +649,21 @@ function CameraAdvancedSection() {
             display={`${config.overviewTargetScreenPx ?? 18}px`}
             tip="Target sprite screen size during OVERVIEW on open tracks. Camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Only affects open tracks. Default 18 px."
           />
+          <SliderRow
+            label="OVERVIEW zoom floor (effZoom)"
+            testId="regie-overview-min-eff-zoom"
+            min={0}
+            max={0.9}
+            step={0.05}
+            value={config.overviewMinEffZoom ?? 0}
+            onChange={(e) => set('overviewMinEffZoom', parseFloat(e.target.value))}
+            display={
+              (config.overviewMinEffZoom ?? 0) === 0
+                ? 'Off'
+                : (config.overviewMinEffZoom ?? 0).toFixed(2) + '×'
+            }
+            tip="Minimum effective zoom (effZoom) during OVERVIEW on open tracks. 0 = off (current behavior — camera zooms out as far as racer count demands). Higher = less zoom-out, fewer GPU stutter frames. Suggested range: 0.5–0.7. Only affects open tracks. Default: off."
+          />
         </div>
 
         <p

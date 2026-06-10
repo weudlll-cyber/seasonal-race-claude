@@ -75,6 +75,7 @@ export function computeTimingFromConfig(config) {
   // normalization (same formula as open tracks). Field is kept in defaults.js / schema v15
   // for migration compatibility but is no longer read at runtime.
   const overviewTargetScreenPx = config?.overviewTargetScreenPx ?? 28;
+  const overviewMinEffZoom = config?.overviewMinEffZoom ?? 0;
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
   const leadAheadEnabledByState = {};
@@ -289,6 +290,7 @@ export function computeTimingFromConfig(config) {
     overviewOffsetPx,
     overviewCooldownMs,
     overviewTargetScreenPx,
+    overviewMinEffZoom,
     leadAheadEnabledByState,
     leadOutEnabledByState,
     maxEntryDurationByState,
