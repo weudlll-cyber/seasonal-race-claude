@@ -13,6 +13,8 @@ import {
   tintSprite,
   getCoatVariants,
   tintSpriteWithMask,
+  tintSpriteBodyAndMask,
+  tintSpriteWithDualMask,
   getPatternedVariant,
   PATTERN_IDS,
   _clearTintCache,
@@ -419,5 +421,160 @@ describe('getPatternedVariant — lazy baking', () => {
     expect(_patternedVariantCacheSize()).toBe(2);
     getPatternedVariant('/pv-selective.png', 'multiply', 'gray', 'stripes');
     expect(_patternedVariantCacheSize()).toBe(3);
+  });
+
+  it('returns null when the coat ID is not in the loaded solid variants', async () => {
+    const mockImg = { naturalWidth: 64, naturalHeight: 64 };
+    loadSprite.mockResolvedValue(mockImg);
+    const coats = [{ id: 'bay', tint: '#8B4513' }];
+    await getCoatVariants('/pv-unknown-coat.png', coats);
+    const result = getPatternedVariant(
+      '/pv-unknown-coat.png',
+      'multiply',
+      'nonexistent',
+      'stripes'
+    );
+    expect(result).toBeNull();
+  });
+});
+
+// ── tintSpriteBodyAndMask — cache key correctness ─────────────────────────────
+
+describe('tintSpriteBodyAndMask — cache key correctness', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    _clearMaskedTintCache();
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _clearMaskedTintCache();
+  });
+
+  it('same inputs return the identical canvas instance (cache hit)', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/bm-src.png' };
+    const mask = { naturalWidth: 64, naturalHeight: 64, src: '/bm-mask.png' };
+    const c1 = tintSpriteBodyAndMask(src, '#800000', mask, '#ffcccc');
+    const c2 = tintSpriteBodyAndMask(src, '#800000', mask, '#ffcccc');
+    expect(c1).toBe(c2);
+  });
+
+  it('swapped bodyTint and patchTint produce different canvases', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/bm-src-swap.png' };
+    const mask = { naturalWidth: 64, naturalHeight: 64, src: '/bm-mask-swap.png' };
+    const c1 = tintSpriteBodyAndMask(src, '#800000', mask, '#ffcccc');
+    const c2 = tintSpriteBodyAndMask(src, '#ffcccc', mask, '#800000');
+    expect(c1).not.toBe(c2);
+  });
+
+  it('does not alias with tintSpriteWithMask for overlapping source and color (bm: prefix isolates)', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/bm-shared-src.png' };
+    const mask = { naturalWidth: 64, naturalHeight: 64, src: '/bm-shared-mask.png' };
+    const wmResult = tintSpriteWithMask(src, mask, '#ff0000');
+    const bmResult = tintSpriteBodyAndMask(src, '#ff0000', mask, '#0000ff');
+    expect(wmResult).not.toBe(bmResult);
+  });
+});
+
+// ── tintSpriteWithDualMask — cache key correctness ────────────────────────────
+
+describe('tintSpriteWithDualMask — cache key correctness', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    _clearMaskedTintCache();
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _clearMaskedTintCache();
+  });
+
+  it('same quintuple returns the identical canvas instance (cache hit)', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/dm-src.png' };
+    const mask1 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-mask1.png' };
+    const mask2 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-mask2.png' };
+    const c1 = tintSpriteWithDualMask(src, mask1, '#111111', mask2, '#222222');
+    const c2 = tintSpriteWithDualMask(src, mask1, '#111111', mask2, '#222222');
+    expect(c1).toBe(c2);
+  });
+
+  it('swapped mask order produces different canvases', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/dm-src-swap.png' };
+    const mask1 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-mask1-swap.png' };
+    const mask2 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-mask2-swap.png' };
+    const c1 = tintSpriteWithDualMask(src, mask1, '#111111', mask2, '#222222');
+    const c2 = tintSpriteWithDualMask(src, mask2, '#111111', mask1, '#222222');
+    expect(c1).not.toBe(c2);
+  });
+
+  it('does not alias with tintSpriteBodyAndMask for the same source and tints (dm: vs bm: prefix)', () => {
+    const src = { naturalWidth: 64, naturalHeight: 64, src: '/dm-bm-src.png' };
+    const mask1 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-bm-mask1.png' };
+    const mask2 = { naturalWidth: 64, naturalHeight: 64, src: '/dm-bm-mask2.png' };
+    const dmResult = tintSpriteWithDualMask(src, mask1, '#111111', mask2, '#222222');
+    const bmResult = tintSpriteBodyAndMask(src, '#111111', mask1, '#222222');
+    expect(dmResult).not.toBe(bmResult);
+  });
+});
+
+// ── getCoatVariants — auto tint mode routing ──────────────────────────────────
+
+describe('getCoatVariants — auto tint mode routing', () => {
+  let ctxMock;
+
+  beforeEach(() => {
+    _clearTintCache();
+    vi.clearAllMocks();
+    ctxMock = makeCtxMock();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctxMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    _clearTintCache();
+  });
+
+  it('uses screen composite when pixel data is dark (detectTintMode result is threaded through)', async () => {
+    const darkData = { data: new Uint8ClampedArray([10, 10, 10, 255]), width: 1, height: 1 };
+    ctxMock.getImageData = vi.fn().mockReturnValue(darkData);
+    const compositeOps = [];
+    Object.defineProperty(ctxMock, 'globalCompositeOperation', {
+      get() {
+        return 'source-over';
+      },
+      set(v) {
+        compositeOps.push(v);
+      },
+      configurable: true,
+    });
+    loadSprite.mockResolvedValue({ naturalWidth: 1, naturalHeight: 1 });
+    await getCoatVariants('/auto-dark.png', [{ id: 'coat1', tint: '#8B4513' }], 'auto');
+    expect(compositeOps).toContain('screen');
+    expect(compositeOps).not.toContain('multiply');
+  });
+
+  it('uses multiply composite when pixel data is bright', async () => {
+    const brightData = { data: new Uint8ClampedArray([200, 200, 200, 255]), width: 1, height: 1 };
+    ctxMock.getImageData = vi.fn().mockReturnValue(brightData);
+    const compositeOps = [];
+    Object.defineProperty(ctxMock, 'globalCompositeOperation', {
+      get() {
+        return 'source-over';
+      },
+      set(v) {
+        compositeOps.push(v);
+      },
+      configurable: true,
+    });
+    loadSprite.mockResolvedValue({ naturalWidth: 1, naturalHeight: 1 });
+    await getCoatVariants('/auto-bright.png', [{ id: 'coat1', tint: '#8B4513' }], 'auto');
+    expect(compositeOps).toContain('multiply');
+    expect(compositeOps).not.toContain('screen');
   });
 });
