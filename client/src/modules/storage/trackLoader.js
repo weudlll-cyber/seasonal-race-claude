@@ -14,17 +14,11 @@ import { storageGet, storageSet, storageRemove, KEYS } from './storage.js';
 import { DEFAULT_TRACKS } from './defaults.js';
 import { cacheBackground, getCachedBackground, removeBackgroundFromCache } from './trackCache.js';
 import { registerInIndex, unregisterFromIndex } from '../track-editor/trackStorage.js';
+import { withTimeout } from '../../utils/withTimeout.js';
 
 export const CACHE_KEY = 'racearena:cache:serverTracks';
 const GEO_KEY = (id) => `racearena:trackGeometries:${id}`;
 const FETCH_TIMEOUT_MS = 3000;
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ]);
-}
 
 /** Sync — returns the server tracks list from the last successful fetch. */
 export function getCachedServerTracks() {

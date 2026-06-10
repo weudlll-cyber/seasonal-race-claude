@@ -10,15 +10,9 @@
 import { fetchSurfaceClasses } from '../../services/surfaceClassApi.js';
 import { storageGet, storageSet, KEYS } from './storage.js';
 import { loadServerClasses } from '../surface-effects/registry.js';
+import { withTimeout } from '../../utils/withTimeout.js';
 
 const FETCH_TIMEOUT_MS = 3000;
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
-  ]);
-}
 
 /**
  * Returns the last successfully fetched server classes from localStorage cache.
