@@ -312,7 +312,7 @@ export function simulateRace({
   }
 
   // ── Measure neighbors after FRAMES_PER_RACE frames ────────────────────────
-  const spriteLengthInT = spriteSize / pathLengthPx;
+  const spriteLengthInT = (drawnBodyLengthPx ?? spriteSize) / pathLengthPx;
   const neighborCounts = racers.map((r) => {
     let count = 0;
     for (const other of racers) {
@@ -327,6 +327,7 @@ export function simulateRace({
   return {
     neighborCounts,
     racerTs: racers.map((r) => r.t),
+    spriteLengthInT,
   };
 }
 

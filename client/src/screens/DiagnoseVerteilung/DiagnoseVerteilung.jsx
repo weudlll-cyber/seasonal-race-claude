@@ -102,6 +102,7 @@ export default function DiagnoseVerteilung() {
     };
 
     const allRuns = [];
+    let capturedSpriteLengthInT = null;
 
     function runChunk(base) {
       if (cancelRef.current) {
@@ -111,7 +112,11 @@ export default function DiagnoseVerteilung() {
       const end = Math.min(base + CHUNK_SIZE, N_RUNS);
 
       for (let run = base; run < end; run++) {
-        const { neighborCounts } = simulateRace({ ...raceConfig, seed: run * 7919 + 1 });
+        const { neighborCounts, spriteLengthInT } = simulateRace({
+          ...raceConfig,
+          seed: run * 7919 + 1,
+        });
+        if (capturedSpriteLengthInT === null) capturedSpriteLengthInT = spriteLengthInT;
         allRuns.push({
           maxNeighbors: Math.max(...neighborCounts),
           meanNeighbors: avg(neighborCounts),
@@ -146,7 +151,9 @@ export default function DiagnoseVerteilung() {
           runsWithAny: withManyArr.filter((c) => c > 0).length,
           withNoneMean: avg(withNoneArr),
           histogram,
-          spriteLengthInT: (SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX).toFixed(5),
+          spriteLengthInT: (
+            capturedSpriteLengthInT ?? SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX
+          ).toFixed(5),
           rawRuns: allRuns,
         });
         setStatus('done');
