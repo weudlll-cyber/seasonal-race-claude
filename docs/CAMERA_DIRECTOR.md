@@ -65,7 +65,7 @@ Priority is evaluated in strict order every time `_transition()` is called:
 2. **Start phase** (`raceElapsed < 3000 ms`) → force OVERVIEW.
 3. **Post-start hold** (`raceElapsed < 3000 + postStartHoldMs`) → force LEADER_ZOOM.
    Prevents BATTLE triggering on natural clustering at race start.
-4. **Endgame** (`leaderProgress > endgameThreshold`, default 0.85) → force LEADER_ZOOM.
+4. **Endgame** (`leaderProgress > endgameThreshold`, default 0.90) → force LEADER_ZOOM.
    Exception: a LEAD_CHANGE that cleared its cooldown passes through the endgame gate.
 5. **Weighted-random candidate pool** — if none of the above applies, build a list of
    eligible candidates and pick one by weighted draw:
@@ -121,7 +121,7 @@ hardcoded fallbacks apply when omitted.
 | `battleMaxGroupRankSpan` | number | 5 | Max rank-span allowed in the pulk group |
 | `battleMinTopN` | number | 10 | Frontmost pulk racer must be within top-N |
 | `battleCooldownMs` | number | 8000 | Lockout after leaving BATTLE_ZOOM |
-| `endgameThreshold` | number | 0.85 | Leader progress fraction that triggers endgame gate |
+| `endgameThreshold` | number | 0.90 | Leader progress fraction that triggers endgame gate (code fallback 0.85; RaceScreen passes 0.90 when config omits this field) |
 | `postStartHoldMs` | number | 7000 | ms of forced LEADER after start phase |
 | `transitionTConvergence` | number | 0.03 | T-space delta threshold for entry→tracking promotion |
 | `entryConvergenceZoom` | number | 0.05 | Zoom delta threshold for entry→tracking promotion |
@@ -346,7 +346,7 @@ cleanup:
 ```
 
 **Single call site** — `camDir.update()` is called exactly once per frame at
-[`RaceScreen/index.jsx:1161`](client/src/screens/RaceScreen/index.jsx#L1161).
+[`RaceScreen/index.jsx:1329`](client/src/screens/RaceScreen/index.jsx#L1329).
 
 **React StrictMode** — `<React.StrictMode>` is active in dev (`client/src/main.jsx:16`).
 StrictMode double-invokes `useEffect` in dev. The `cancelled` flag (set before

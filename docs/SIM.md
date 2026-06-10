@@ -441,22 +441,25 @@ Where `pMin` is the minimum p-value across all tested tracks. Higher score is be
 
 ---
 
-## 5. The 8 Interdependent Parameters
+## 5. Physics Behavior Parameters
 
 The following parameters control lateral collision avoidance, home-lane restoration, and speed braking. They must be tuned together — changing one in isolation typically breaks another.
 
+The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. Two parameters (`avoidanceDistance`, `speedBrakeYThreshold`) are retired from the browser gate but kept for sim script backward compat.
+
 ### Parameter table
 
-| Parameter | Default | Range (lo–hi) | What it controls |
+| Parameter | Default | Range (sweep) | What it controls |
 |---|---|---|---|
-| `lateralForce` | 0.014 | 0.006–0.024 | Force applied to `physicalYVelocity` per frame when another racer is within `avoidanceDistance` |
-| `lateralDamping` | 0.45 | 0.22–0.49 | Velocity retention per frame: `velocity *= lateralDamping`. Hard cap < 0.50 (code constraint) |
-| `homeForceStrength` | 0.040 | 0.015–0.065 | Restoring force pulling a racer back toward their home lane when not avoiding anyone |
-| `homeForceReductionOnOverlap` | 0.15 | 0.02–0.45 | Multiplier applied to home force when overlapping — reduces home pull so avoidance can work |
-| `avoidanceDistance` | 0.15 | 0.07–0.28 | Proximity threshold in normalized track coordinates that triggers lateral avoidance |
-| `speedBrakeFactor` | 0.98 | 0.87–0.995 | Speed multiplier applied when braking; 0.98 = 2% speed reduction per brake frame |
-| `speedBrakeTThreshold` | 0.008 | 0.003–0.018 | t-space (longitudinal) proximity that triggers speed braking |
-| `speedBrakeYThreshold` | 0.12 | 0.05–0.22 | Lateral distance that must be below this threshold for braking to trigger |
+| `lateralForce` | 0.0114 | 0.006–0.024 | Force applied to `physicalYVelocity` per frame when another racer is within the geometric avoidance gate |
+| `lateralDamping` | 0.16 | 0.05–0.45 | Velocity retention per frame: `velocity *= lateralDamping`. Hard cap < 0.50 (code constraint) |
+| `homeForceStrength` | 0.030 | 0.015–0.065 | Restoring force pulling a racer back toward their home lane when not avoiding anyone |
+| `homeForceReductionOnOverlap` | 0.30 | 0.02–0.45 | Multiplier applied to home force when overlapping — reduces home pull so avoidance can work |
+| `avoidanceBufferPct` | 0.20 | — | Buffer fraction beyond body contact before the avoidance gate fires (20% lead time); replaces the old fixed `avoidanceDistance` in the browser gate |
+| `speedBrakeFactor` | 0.945 | 0.87–0.995 | Speed multiplier applied when braking; 0.945 = 5.5% speed reduction per brake frame |
+| `speedBrakeTMultiplier` | 1.5 | 0.5–3.0 | Longitudinal lead-time multiplier for the body-based brake zone (replaces the old fixed `speedBrakeTThreshold`) |
+| `avoidanceDistance` *(retired from browser gate)* | 0.18 | 0.07–0.28 | Former fixed proximity threshold in normalized track coordinates; replaced by body-based geometric gate + `avoidanceBufferPct`. Kept for sim script backward compat. |
+| `speedBrakeYThreshold` *(retired from browser gate)* | 0.18 | 0.05–0.22 | Former lateral threshold for brake gate; replaced by body-based same-lane detection. Kept for sim script backward compat. |
 
 ### Why they must be changed together
 
@@ -464,13 +467,13 @@ The following parameters control lateral collision avoidance, home-lane restorat
 
 **homeForceStrength ↔ homeForceReductionOnOverlap:** During overlap, home force must be suppressed or it fights the avoidance push — both forces act at the same time and cancel each other. The reduction multiplier must be tuned to match `lateralForce`: stronger avoidance force requires a lower (more suppressed) home force during overlap.
 
-**speedBrakeTThreshold ↔ speedBrakeFactor:** Braking triggers when two racers are close longitudinally and laterally. A tight threshold with a weak brake factor produces many small slow-downs. A loose threshold with a strong brake factor produces few but severe slow-downs. Both affect `brakeRate` and `stableOvertakes`.
+**speedBrakeTMultiplier ↔ speedBrakeFactor:** Braking triggers when the longitudinal gap between two racers is less than `speedBrakeTMultiplier × bodyLength`. A tight multiplier with a weak brake factor produces many small slow-downs. A loose multiplier with a strong brake factor produces few but severe slow-downs. Both affect `brakeRate` and `stableOvertakes`.
 
-**avoidanceDistance ↔ lateralForce:** The distance at which avoidance triggers must be matched to the force magnitude. A large distance with small force produces prolonged gentle pushes (high `lateralSpeedScore`). A small distance with large force produces sharp last-moment corrections (potential zigzag near the threshold).
+**avoidanceBufferPct ↔ lateralForce:** The buffer fraction determines how early avoidance fires relative to actual body contact. A larger buffer with small force produces prolonged gentle pushes (high `lateralSpeedScore`). A smaller buffer with large force produces sharp last-moment corrections (potential zigzag near the threshold).
 
-### Dev Screen warning
+### Dev Screen
 
-The Dev Screen displays a warning banner when these parameters are changed individually without running a full sweep. This is intentional — isolated changes are not validated.
+The physics sliders (`lateralForce`, `lateralDamping`, `homeForceStrength`, `homeForceReductionOnOverlap`, `avoidanceDistance`, `speedBrakeFactor`, `speedBrakeTMultiplier`, `speedBrakeYThreshold`) were removed from the Dev Screen during `feat/dynamic-speed-brake`. The Phase 5 winner values are now locked in `storage/defaults.js`. To test new values, override via `--behavior='{"lateralForce":…}'` in the sim, or apply a temporary patch in `storage/defaults.js` and run the browser gate.
 
 ---
 

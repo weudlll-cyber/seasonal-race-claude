@@ -91,6 +91,9 @@ seasonal-race-claude/
 │       │   │   ├── index.js        # listEffects / getEffect / getDefaultConfig
 │       │   │   └── effects/        # rain, stars, bubbles, fireflies, dust, mud, wave
 │       │   └── utils/              # RandomHelper (shuffle, assignRacers)
+│       ├── utils/                  # Shared pure utilities (no React, no DOM)
+│       │   ├── slugify.js          # String → URL-safe slug
+│       │   └── withTimeout.js      # Promise.race wrapper: rejects after ms (created N-1)
 │       ├── contexts/               # React contexts (TransitionContext)
 │       ├── styles/
 │       │   └── main.css

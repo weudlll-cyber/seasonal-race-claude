@@ -115,6 +115,8 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │      city-circuit.json       ← Default-Track (seeded)       │
 │      mountainstreet.json     ← Default-Track (seeded)       │
 │      ice-track.json          ← Default-Track (seeded)       │
+│      seatrack.json           ← Default-Track (seeded)       │
+│      searound.json           ← Default-Track (seeded)       │
 │      <uuid>.json             ← User-created custom tracks   │
 │    backgrounds/                                             │
 │      <id>.jpg                ← Binary background images     │
@@ -143,7 +145,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Goal:** Make the system safe. Prevent data loss. Establish Default-Tracks as server records.
 
 **Changes:**
-- **Boot migration** — One-shot: if `server/data/.default-tracks-seeded` absent, create server records for all 5 default tracks. Each record includes full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry arrays (`innerPoints: [], outerPoints: [], centerPoints: [], closed: true`). Write marker file on completion. Idempotent — safe to run twice.
+- **Boot migration** — One-shot: if `server/data/.default-tracks-seeded` absent, create server records for all 9 default tracks. Each record includes full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry arrays (`innerPoints: [], outerPoints: [], centerPoints: [], closed: true`). Write marker file on completion. Idempotent — safe to run twice.
 - **PUT handler** — When `geometryId` is present in request body: use client value. When absent: keep `existing.geometryId`. Remove the hardcoded `existing.geometryId` override.
 - **DELETE handler** — Remove track JSON + background image only. Do not call `removeCachedTrackData` for geometry. On the frontend, update `removeCachedTrackData` calls from Delete flow to pass `{ trackOnly: true }`.
 - **Auto-backup** — Before every `PUT /api/tracks/:id` and `POST /api/tracks`: write backup copy to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. No auto-cleanup.
@@ -183,14 +185,14 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 **Goal:** Make the system resilient. Graceful offline behavior. Manual Code-Bundle snapshot mechanism.
 
-**Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅, all 5 default-track geometries drawn ✅) is met — but implementation is postponed until after the Camera-Director phase. The system is currently functional without TLH-3 (all tracks have geometry, server is always reachable in local-only use).
+**Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅) is partially met — but implementation is postponed until after the Camera-Director phase. Note: the default-track count has grown to 9 (Seatrack and Searound added after TLH-2). The system is currently functional without TLH-3 (server is always reachable in local-only use).
 
 **Changes:**
 - **Frontend loading chain** — `useServerTracks()` / `fetchServerTracks()`: if server unreachable → try geometry cache → if cache empty → fall back to Code-Bundle (`defaultTracks.js`). Emit `fallbackMode: 'code-bundle'` flag.
 - **Status-Banner** — When `fallbackMode === 'code-bundle'`: render top-of-page banner: "Server unavailable — showing default tracks (limited functionality)". Banner disappears when server becomes reachable again and tracks refresh successfully.
 - **Write disable in fallback mode** — Save and Delete operations in TrackManager / Track Editor show "Server required" state when in code-bundle mode.
-- **Export button** — New button in Dev-Screen "Tracks" section: "Export track snapshot". Reads current server-track list (all 5 default tracks with geometry), formats as `defaultTracks.js` module content, and presents it as a file download or clipboard copy. User manually pastes/replaces `defaultTracks.js` and commits.
-- **Code-Bundle bootstrap** — `defaultTracks.js` ships with the 5 default presets and empty geometry arrays initially. After the user has drawn all 5 geometries and run Export, the Code-Bundle is updated to include the actual geometry.
+- **Export button** — New button in Dev-Screen "Tracks" section: "Export track snapshot". Reads current server-track list (all 9 default tracks with geometry), formats as `defaultTracks.js` module content, and presents it as a file download or clipboard copy. User manually pastes/replaces `defaultTracks.js` and commits.
+- **Code-Bundle bootstrap** — `defaultTracks.js` ships with the 9 default presets and empty geometry arrays initially. After the user has drawn all 9 geometries and run Export, the Code-Bundle is updated to include the actual geometry.
 
 **Test scope:** Unit tests for fallback-chain logic, Status-Banner render when `fallbackMode` is set, Export button output format.
 
@@ -263,9 +265,9 @@ After Track-Delete, the geometry cache entry (`racearena:trackGeometries:<geomet
 
 The Code-Bundle (`defaultTracks.js`) is updated manually, not automatically. The workflow:
 
-1. User completes TLH-2 and draws all 5 default-track geometries via the Track Editor.
+1. User draws all 9 default-track geometries via the Track Editor.
 2. User opens Dev-Screen → Tracks section → clicks "Export track snapshot".
-3. The Export button fetches all 5 default tracks from the server (including geometry) and formats them as a `defaultTracks.js` module.
+3. The Export button fetches all 9 default tracks from the server (including geometry) and formats them as a `defaultTracks.js` module.
 4. User downloads / copies the output and replaces `client/src/modules/storage/defaultTracks.js`.
 5. User commits the updated file: `chore: update default track snapshot with drawn geometries`.
 

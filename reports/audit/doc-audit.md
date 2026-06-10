@@ -88,23 +88,93 @@
 
 ---
 
-## Docs Checked and Found Accurate
+## Docs Checked and Found Accurate (Pass 1)
 
 | Doc | Status |
 |---|---|
 | `README.md` | Accurate: tech stack, feature list, track/racer counts, setup commands, endpoint table |
-| `docs/API.md` | Accurate relative to backend routes |
-| `docs/ARCHITECTURE.md` | 1 fix applied (items 5, 6 above); remainder accurate |
+| `docs/API.md` | Accurate: surface-effects defaults file is `defaults.js` (not `defaultClasses.js`) — path in API.md is correct |
+| `docs/ARCHITECTURE.md` | 2 fixes applied (items 5, 6 above); additional fix in pass 2 (item 18) |
 | `docs/BACKLOG.md` | 2 fixes applied (items 7, 8 above); historical entries are intentionally snapshot-in-time |
-| `docs/CAMERA_DIRECTOR.md` | Not modified; no stale references found |
 | `docs/LESSONS.md` | 1 fix applied (item 9 above); historical lessons accurate |
 | `docs/PROJECT-PRINCIPLES.md` | Accurate |
 | `docs/RACER_DATA_MODEL.md` | 4 fixes applied (items 1–4 above) |
-| `docs/ROADMAP.md` | Accurate |
 | `docs/SETUP.md` | 1 fix applied (item 10 above) |
-| `docs/SIM.md` | Not modified; no stale references found |
-| `docs/TRACK_EDITOR.md` | Not modified; no stale references found |
-| `docs/TRACK_LIFECYCLE.md` | Not modified; no stale references found |
+
+---
+
+## Second Pass — Content Accuracy (applied directly)
+
+### 11. `docs/SIM.md` — Section 5 parameter table severely stale
+
+**Finding:** "The 8 Interdependent Parameters" table documented old pre-Phase-5 sweep candidate values, not the Phase 5 winners locked in `storage/defaults.js`. Specific errors:
+- `lateralForce`: 0.014 → actual 0.0114
+- `lateralDamping`: 0.45 → actual 0.16
+- `homeForceStrength`: 0.040 → actual 0.030
+- `homeForceReductionOnOverlap`: 0.15 → actual 0.30
+- `avoidanceDistance`: 0.15 → actual 0.18 (and retired from browser gate after `feat/open-track-overlap`)
+- `speedBrakeFactor`: 0.98 → actual 0.945
+- `speedBrakeTThreshold` (0.008): renamed to `speedBrakeTMultiplier` (1.5) — body-based dynamic threshold
+- `speedBrakeYThreshold`: 0.12 → actual 0.18 (also retired from browser gate)
+- `avoidanceBufferPct` (0.20): new parameter entirely missing from the table
+- "Dev Screen displays a warning banner" claim: wrong — all 8 physics sliders were removed from Dev Screen in `feat/dynamic-speed-brake`
+
+**Fix:** Rewrote section 5: renamed "The 8 Interdependent Parameters" to "Physics Behavior Parameters"; updated all 7 active parameter values; added `avoidanceBufferPct`; marked `avoidanceDistance` and `speedBrakeYThreshold` as retired from browser gate; replaced "Dev Screen warning" subsection with accurate description (sliders removed, values locked in `defaults.js`).
+
+---
+
+### 12. `docs/CAMERA_DIRECTOR.md` — Stale call site line number and endgameThreshold default
+
+**Finding (a):** Section 6 linked `camDir.update()` call site to `RaceScreen/index.jsx:1161`. Actual line (verified by grep): 1329.
+
+**Finding (b):** Config table listed `endgameThreshold` default as 0.85. The code fallback (`_ENDGAME_PROGRESS_THRESHOLD`) is 0.85, but `RaceScreen/index.jsx:885` applies a nullish-coalesce to 0.90 before passing the value to `CameraDirector`. Effective default in the running game is 0.90, consistent with ARCHITECTURE.md ("Phase 3D: 90% (was 85%)").
+
+**Fix:** Updated call site link to `:1329`; updated config table default to 0.90 with a note about the code fallback; updated priority chain description to say "default 0.90".
+
+---
+
+### 13. `docs/TRACK_LIFECYCLE.md` — Server data layout missing 2 tracks; "5 default tracks" counts stale
+
+**Finding:** The server data layout diagram listed only 7 default tracks (dirt-oval through ice-track), missing `seatrack.json` and `searound.json` (added in `feat/closed-track-speed`). TLH-1 description, TLH-3 status, Export button description, and Code-Bundle Update Workflow all said "5 default tracks" / "all 5 default-track geometries" — stale since Seatrack and Searound were added.
+
+**Fix:** Added `seatrack.json` and `searound.json` to the data layout diagram; updated all "5 default tracks" counts to 9 throughout the TLH-1/TLH-3 sections and Code-Bundle workflow.
+
+---
+
+### 14. `docs/TRACK_EDITOR.md` — Surface class assignments missing 4 default tracks; camera states list missing LEAD_CHANGE
+
+**Finding (a):** "Initial Surface-Class Assignments — 5 Default Tracks" only listed the original 5 tracks. Mountainstreet, Ice Track, Seatrack, and Searound were missing. Actual surface classes from server JSON: Mountainstreet `['asphalt']`, Ice Track `['ice', 'snow']`, Seatrack `['water']`, Searound `['water']`.
+
+**Finding (b):** The "Included features" list in "Editor UI Scope — Version 1" listed camera states as "OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM", missing LEAD_CHANGE (added in Phase 3B).
+
+**Fix:** Updated section heading from "5 Default Tracks" to "9 Default Tracks"; added 4 new rows to the surface class table; added LEAD_CHANGE to the camera states list.
+
+---
+
+### 15. `docs/ROADMAP.md` — "12 racer types" and "12-color STANDARD_COAT_PALETTE" counts stale
+
+**Finding (a):** D3.5.5 entry said "Edit-Modal for all 12 racer types". The registry has 20 built-in types.
+
+**Finding (b):** Racer Editor Phase 1 entry said "12-color STANDARD_COAT_PALETTE". The actual palette in `standardCoats.js` is 20 colors.
+
+**Fix:** Updated both counts to 20.
+
+---
+
+### 16. `docs/ARCHITECTURE.md` — `client/src/utils/` folder missing from folder structure
+
+**Finding:** `client/src/utils/` (containing `slugify.js` and `withTimeout.js`, the latter created in hygiene step N-1) was completely absent from the folder structure diagram. The existing `modules/utils/` entry is for a different folder (module-level RandomHelper), not the shared pure utilities.
+
+**Fix:** Added `├── utils/` to the folder structure between `modules/` and `contexts/`, listing both `slugify.js` and `withTimeout.js`.
+
+---
+
+## Docs Checked Accurate (Pass 2)
+
+| Doc | Notes |
+|---|---|
+| `docs/API.md` | Surface-effects defaults path `defaults.js` confirmed correct (file exists at that path) |
+| `docs/CAMERA_DIRECTOR.md` | Schema version "v14 / v15" — current `cameraConfig.js` schema; accurate |
 
 ## Docs Not Audited (out of scope)
 

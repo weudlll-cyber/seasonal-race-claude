@@ -115,7 +115,7 @@ smoke tests. 628 unit tests + 22 e2e tests.
 
 ## D3.5.5 — Per-Type-Tuning-UI ✅ Done (PR #21, master `2d76bc3`)
 
-Edit-Modal in RacerManager for all 12 racer types. 6 live-tuneable fields: speedMultiplier,
+Edit-Modal in RacerManager for all 20 racer types. 6 live-tuneable fields: speedMultiplier,
 displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy. Live-apply on
 each valid change, per-field reset, reset-all-defaults (preserves isActive). InfoTooltip as
 reusable component. Override-API extended generically (setRacerTypeOverride 3-arg,
@@ -290,7 +290,7 @@ Full-screen UI for creating and managing custom racer types with user-supplied P
 ### Phase 1 — Storage, Trail Styles, Registry Merging
 - [x] `racerTypeStorage.js` — localStorage CRUD for user-created types (`racearena:racerTypes`)
 - [x] `trailStyles.js` — 6 named trail-factory presets (dust, spark, bubble, leaf, snow, fire)
-- [x] `standardCoats.js` — 12-color STANDARD_COAT_PALETTE shared across all user-created types
+- [x] `standardCoats.js` — 20-color STANDARD_COAT_PALETTE shared across all user-created types
 - [x] Registry merging: `loadStoredRacerTypes()` called at app init; user types registered alongside built-ins
 - [x] RacerManager: edit link + delete button for user-created types; default dropdown includes user types
 - [x] RacerEditModal: loads user-created type configs without crash

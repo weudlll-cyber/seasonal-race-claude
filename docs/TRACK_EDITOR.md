@@ -245,7 +245,7 @@ Each track stores a `surfaceClasses` array of Surface-Class IDs. These IDs deter
 1. **Trail rendering:** During a race, the active surface class is the intersection of the racer type's `surfaceClasses` and the track's `surfaceClasses`. The matching class's generator module renders the trail. If no class matches, the racer falls back to its Heimat-Trail (`trailFactory`).
 2. **Setup filtering:** The Setup Screen only shows racer types that have ≥ 1 overlapping surface class with the track. Types with no overlap are suppressed or marked incompatible.
 
-### Initial Surface-Class Assignments — 5 Default Tracks
+### Initial Surface-Class Assignments — 9 Default Tracks
 
 | Track | surfaceClasses |
 |---|---|
@@ -254,6 +254,10 @@ Each track stores a `surfaceClasses` array of Surface-Class IDs. These IDs deter
 | Space Sprint | `['air']` |
 | Garden Path | `['grass', 'earth']` |
 | City Circuit | `['asphalt']` |
+| Mountainstreet | `['asphalt']` |
+| Ice Track | `['ice', 'snow']` |
+| Seatrack | `['water']` |
+| Searound | `['water']` |
 
 ### Track Manager UI (VRE-3)
 
@@ -277,7 +281,7 @@ The Track Manager preset editor gains a **Surface Classes** multi-select field l
 - Effect configuration panel (EffectConfig component, up to 3 simultaneous effects)
 - Live effect preview on editor canvas (rAF loop, cancelable on unmount or effect change)
 - Picture-in-picture minimap with leader indicator
-- Camera director (OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM)
+- Camera director (OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM / COMEBACK_ZOOM / LEAD_CHANGE)
 - Preset thumbnail cards in SetupScreen
 
 **Deliberately not in v1** (tracked in Future Extensions):
