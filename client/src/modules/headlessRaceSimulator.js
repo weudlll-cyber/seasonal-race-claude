@@ -6,10 +6,9 @@
 //              measurement. No Canvas, no DOM, no React.
 //              Replicates the core race loop from RaceScreen/index.jsx.
 //
-// Track parameters are hardcoded for dirt-oval (closed, 1280×720):
-//   pathLengthPx ≈ 3245 (from server geometry data)
-//   geometricTrackWidthPx ≈ 93 (median track width at runtime)
-//   spriteSize = 40 (horse displaySize, no auto-scale applied)
+// Track parameters default to dirt-oval (closed, 1280×720) when trackConfig is omitted:
+//   pathLengthPx = 3245, trackWidthPx = 93, raceDurationSeconds = 60
+// Pass trackConfig = { pathLengthPx, trackWidthPx, raceDurationSeconds } for other closed tracks.
 //
 // World positions for drafting: simplified circular approximation
 //   radius = pathLengthPx / (2π), centered at (640, 360)
@@ -25,7 +24,7 @@ import {
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { avg, median, p95, stddev } from './statsHelpers.js';
 import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
-import { computeClosedTrackSsf } from './camera/lapUtils.js';
+import { computeClosedTrackSsf, lapsFromDuration } from './camera/lapUtils.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -136,23 +135,24 @@ export function simulateRace({
   racerTypeConfig,
   autoScaleConfig,
   framesPerRace = FRAMES_PER_RACE,
+  trackConfig = null,
 }) {
   const rng = mulberry32(seed);
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
-  const pathLengthPx = DIRT_OVAL_PATH_LENGTH_PX;
-  const geometricTrackWidthPx = DIRT_OVAL_TRACK_WIDTH_PX;
+  const raceDurationSeconds = trackConfig?.raceDurationSeconds ?? RACE_DURATION_SECONDS;
+  const pathLengthPx = trackConfig?.pathLengthPx ?? DIRT_OVAL_PATH_LENGTH_PX;
+  const geometricTrackWidthPx = trackConfig?.trackWidthPx ?? DIRT_OVAL_TRACK_WIDTH_PX;
   const spriteSize = SPRITE_SIZE;
-  // Two laps; lapsFromDuration(60) = 2 for a 60 s Dirt Oval race.
-  const finishT = 2;
+  const finishT = lapsFromDuration(raceDurationSeconds);
   // N-calibrated base speed — same path as RaceScreen/index.jsx.
   // closedSsf normalizes for Dirt Oval path length (3245/3200 ≈ 1.014).
   const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
   const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
   const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-  const closedSsf = computeClosedTrackSsf(DIRT_OVAL_PATH_LENGTH_PX);
-  const race_baseSpeed = computeRaceBaseSpeed(finishT, RACE_DURATION_SECONDS * ems * closedSsf);
+  const closedSsf = computeClosedTrackSsf(pathLengthPx);
+  const race_baseSpeed = computeRaceBaseSpeed(finishT, raceDurationSeconds * ems * closedSsf);
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
@@ -214,10 +214,13 @@ export function simulateRace({
   const rollCount = Math.max(
     2,
     Math.floor(
-      dynamicsConfig.reRollIntervalDivisor > 0 ? 60 / dynamicsConfig.reRollIntervalDivisor : 2
+      dynamicsConfig.reRollIntervalDivisor > 0
+        ? raceDurationSeconds / dynamicsConfig.reRollIntervalDivisor
+        : 2
     )
   );
-  const rollInterval = ((dynamicsConfig.reRollLastPositionPercent / 100) * 60 * 1000) / rollCount;
+  const rollInterval =
+    ((dynamicsConfig.reRollLastPositionPercent / 100) * raceDurationSeconds * 1000) / rollCount;
 
   // Initialize racers
   const racers = Array.from({ length: nRacers }, (_, i) => {
@@ -285,7 +288,7 @@ export function simulateRace({
   // ── Simulation loop (RACING phase only, ts=0..FRAMES_PER_RACE*DT) ──────────
   const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
   const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
-  const targetDuration = 60; // seconds
+  const targetDuration = raceDurationSeconds;
   const lastRollDeadline = targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
 
   for (let frame = 0; frame < framesPerRace; frame++) {

@@ -16,6 +16,8 @@ import {
   secondsToFrames,
   DIRT_OVAL_PATH_LENGTH_PX,
 } from '../../modules/headlessRaceSimulator.js';
+import { getInitialTracks } from '../../modules/storage/trackLoader.js';
+import { computeClosedTrackSsf } from '../../modules/camera/lapUtils.js';
 import { avg, median, p95, stddev } from '../../modules/statsHelpers.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
@@ -29,10 +31,23 @@ const N_RUNS = 50;
 const N_RACERS = 40;
 const SPRITE_SIZE = 40;
 const CHUNK_SIZE = 5; // races per animation frame
-// Upper bound for the runtime slider. Dirt Oval @40 racers starts dead-stacking beyond ~51s;
-// values above this cap reflect finish-line clustering, not live mid-race density.
-// Single source of truth — future hook for per-track ranges when a track selector arrives.
-const MAX_RUNTIME_SECONDS = 50;
+
+// Closed-track list built from the same cached source as the game (sync, localStorage-backed).
+// Tracks with no geometryId or open geometry are excluded. Empty when server not yet fetched.
+const CLOSED_TRACKS = getInitialTracks().filter((t) => t.geometryId != null && t.closed === true);
+
+// Per-track live-racing cap: the second the fastest racer reaches finishT, minus 1 s buffer.
+// Derived from race_baseSpeed calibration: fastestFinish = duration × ems × closedSsf / sxf.
+// At N=40 on Dirt Oval (3245 px, 60 s) this gives 50 s — identical to the old MAX_RUNTIME_SECONDS.
+function computeTrackCap(track, bsc) {
+  const { min: MIN, max: MAX } = bsc;
+  const MEAN = (MIN + MAX) / 2;
+  const smf = MIN / MEAN;
+  const sxf = MAX / MEAN;
+  const ems = smf + (sxf - smf) / (N_RACERS + 1);
+  const fastest = (track.defaultDuration * ems * computeClosedTrackSsf(track.pathLengthPx)) / sxf;
+  return Math.max(5, Math.floor(fastest) - 1);
+}
 
 // ── ASCII histogram ────────────────────────────────────────────────────────────
 function AsciiHistogram({ histogram, nRuns }) {
@@ -72,15 +87,30 @@ export default function DiagnoseVerteilung() {
   const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState(null);
+  const [selectedTrackId, setSelectedTrackId] = useState(CLOSED_TRACKS[0]?.id ?? null);
   const [selectedTypeId, setSelectedTypeId] = useState('horse');
-  const [runtimeSeconds, setRuntimeSeconds] = useState(Math.min(4, MAX_RUNTIME_SECONDS));
+  const [runtimeSeconds, setRuntimeSeconds] = useState(4);
   const cancelRef = useRef(false);
+
+  const selectedTrack = CLOSED_TRACKS.find((t) => t.id === selectedTrackId) ?? null;
+  const maxRuntimeSeconds = selectedTrack
+    ? computeTrackCap(selectedTrack, loadBaseSpeedConfig())
+    : 50;
 
   const handleRun = useCallback(() => {
     cancelRef.current = false;
     setStatus('running');
     setProgress(0);
     setResults(null);
+
+    const currentTrack = CLOSED_TRACKS.find((t) => t.id === selectedTrackId) ?? null;
+    const trackConfig = currentTrack
+      ? {
+          pathLengthPx: currentTrack.pathLengthPx,
+          trackWidthPx: currentTrack.width,
+          raceDurationSeconds: currentTrack.defaultDuration,
+        }
+      : null;
 
     const frames = secondsToFrames(runtimeSeconds);
     const racerType = RACER_TYPES[selectedTypeId] ?? RACER_TYPES.horse;
@@ -122,6 +152,7 @@ export default function DiagnoseVerteilung() {
           ...raceConfig,
           seed: run * 7919 + 1,
           framesPerRace: frames,
+          trackConfig,
         });
         if (capturedSpriteLengthInT === null) capturedSpriteLengthInT = spriteLengthInT;
         allRuns.push({
@@ -162,6 +193,7 @@ export default function DiagnoseVerteilung() {
           spriteLengthInT: (
             capturedSpriteLengthInT ?? SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX
           ).toFixed(5),
+          trackName: currentTrack?.name ?? 'Dirt Oval',
           rawRuns: allRuns,
         });
         setStatus('done');
@@ -169,7 +201,7 @@ export default function DiagnoseVerteilung() {
     }
 
     setTimeout(() => runChunk(0), 0);
-  }, [selectedTypeId, runtimeSeconds]);
+  }, [selectedTypeId, runtimeSeconds, selectedTrackId]);
 
   const handleExport = useCallback(() => {
     if (!results) return;
@@ -207,9 +239,45 @@ export default function DiagnoseVerteilung() {
         Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} racers · Dirt Oval · {N_RUNS} races × {runtimeSeconds}s
-        RACING time
+        /diagnose-verteilung · {N_RACERS} racers · {selectedTrack?.name ?? '—'} · {N_RUNS} races ×{' '}
+        {runtimeSeconds}s RACING time
       </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.85rem', color: '#8b949e', flexShrink: 0 }}>Track:</label>
+        {CLOSED_TRACKS.length === 0 ? (
+          <span style={{ fontSize: '0.85rem', color: '#f85149' }}>
+            No closed tracks cached — visit the app first to populate geometry cache.
+          </span>
+        ) : (
+          <select
+            value={selectedTrackId ?? ''}
+            onChange={(e) => {
+              const newId = e.target.value;
+              const newTrack = CLOSED_TRACKS.find((t) => t.id === newId);
+              const newCap = newTrack ? computeTrackCap(newTrack, loadBaseSpeedConfig()) : 50;
+              setSelectedTrackId(newId);
+              setRuntimeSeconds((prev) => Math.min(prev, newCap));
+            }}
+            disabled={status === 'running'}
+            style={{
+              background: '#161b22',
+              color: '#c9d1d9',
+              border: '1px solid #30363d',
+              borderRadius: 6,
+              padding: '0.4rem 0.75rem',
+              fontSize: '0.9rem',
+              cursor: status === 'running' ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {CLOSED_TRACKS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
         <label style={{ fontSize: '0.85rem', color: '#8b949e', flexShrink: 0 }}>Racer Type:</label>
@@ -242,7 +310,7 @@ export default function DiagnoseVerteilung() {
         <input
           type="range"
           min={1}
-          max={MAX_RUNTIME_SECONDS}
+          max={maxRuntimeSeconds}
           step={1}
           value={runtimeSeconds}
           onChange={(e) => setRuntimeSeconds(Number(e.target.value))}
@@ -345,7 +413,7 @@ export default function DiagnoseVerteilung() {
               One-line summary
             </h2>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-              In {results.nRuns} races with {N_RACERS} racers on Dirt Oval, after{' '}
+              In {results.nRuns} races with {N_RACERS} racers on {results.trackName}, after{' '}
               {results.runtimeSeconds}s the maximum number of side-by-side neighbours is on average{' '}
               <strong style={{ color: '#58a6ff' }}>{results.maxMean.toFixed(1)}</strong>, at most{' '}
               <strong style={{ color: '#f85149' }}>{results.maxMax}</strong>, and in 95% of races no
