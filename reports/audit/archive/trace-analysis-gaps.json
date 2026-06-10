@@ -1,0 +1,543 @@
+{
+  "slow": {
+    "label": "SLOW-OVERVIEW",
+    "rafCount": 164,
+    "top10LongGaps": [
+      {
+        "gapMs": 159.017,
+        "mainThread": {
+          "RunTask": 18.38,
+          "PageAnimator::serviceScriptedAnimations": 12.645,
+          "Commit": 4.659,
+          "Paint": 0.507,
+          "PrePaint": 0.048,
+          "Layerize": 0.033,
+          "PaintImage": 0.015,
+          "UpdateLayer": 0.012
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 159.583,
+          "CrGpuMain::GPUTask": 158.715,
+          "GpuVSyncThread::RunTask": 149.746,
+          "Compositor::RunTask": 1.298,
+          "VizCompositorThread::RunTask": 1.233,
+          "CrBrowserMain::RunTask": 0.355,
+          "PerfettoTrace::RunTask": 0.269,
+          "ThreadPoolForegroundWorker::RasterTask": 0.21
+        }
+      },
+      {
+        "gapMs": 153.014,
+        "mainThread": {
+          "RunTask": 8.966,
+          "Commit": 6.524,
+          "PageAnimator::serviceScriptedAnimations": 6.235,
+          "Paint": 0.881,
+          "v8.callFunction": 0.69,
+          "FunctionCall": 0.65,
+          "PrePaint": 0.101,
+          "Layerize": 0.096
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 166.447,
+          "CrGpuMain::RunTask": 147.994,
+          "CrGpuMain::GPUTask": 146.469,
+          "CrBrowserMain::RunTask": 4.076,
+          "PerfettoTrace::RunTask": 2.331,
+          "VizCompositorThread::RunTask": 1.722,
+          "Compositor::RunTask": 1.048,
+          "ThreadPoolForegroundWorker::RasterTask": 0.323
+        }
+      },
+      {
+        "gapMs": 151.038,
+        "mainThread": {
+          "RunTask": 21.571,
+          "PageAnimator::serviceScriptedAnimations": 15.777,
+          "Commit": 5.328,
+          "Paint": 0.899,
+          "v8::Debugger::AsyncTaskRun": 0.273,
+          "EventDispatch": 0.266,
+          "v8.callFunction": 0.226,
+          "FunctionCall": 0.198
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 166.496,
+          "CrGpuMain::RunTask": 157.794,
+          "CrGpuMain::GPUTask": 156.959,
+          "VizCompositorThread::RunTask": 1.711,
+          "Compositor::RunTask": 0.921,
+          "PerfettoTrace::RunTask": 0.434,
+          "ThreadPoolForegroundWorker::RasterTask": 0.296,
+          "CrBrowserMain::RunTask": 0.291
+        }
+      },
+      {
+        "gapMs": 125.798,
+        "mainThread": {
+          "RunTask": 11.715,
+          "Commit": 4.813,
+          "PageAnimator::serviceScriptedAnimations": 4.761,
+          "Paint": 0.411,
+          "PrePaint": 0.057,
+          "Layerize": 0.04,
+          "PaintImage": 0.016,
+          "UpdateLayer": 0.015
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 124.911,
+          "CrGpuMain::GPUTask": 123.41,
+          "GpuVSyncThread::RunTask": 116.411,
+          "VizCompositorThread::RunTask": 53.422,
+          "CrBrowserMain::RunTask": 26.885,
+          "Window owner thread::RunTask": 13.376,
+          "Compositor::RunTask": 1.188,
+          "ThreadPoolForegroundWorker::RasterTask": 0.416
+        }
+      },
+      {
+        "gapMs": 123.303,
+        "mainThread": {
+          "RunTask": 7.945,
+          "PageAnimator::serviceScriptedAnimations": 6.46,
+          "Paint": 0.593,
+          "Commit": 0.362,
+          "PrePaint": 0.051,
+          "Layerize": 0.041,
+          "UpdateLayer": 0.018,
+          "IntersectionObserverController::computeIntersections": 0.016
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 124.657,
+          "CrGpuMain::GPUTask": 123.081,
+          "GpuVSyncThread::RunTask": 116.44,
+          "VizCompositorThread::RunTask": 1.147,
+          "Compositor::RunTask": 1.138,
+          "PerfettoTrace::RunTask": 0.33,
+          "ThreadPoolForegroundWorker::RasterTask": 0.27,
+          "CrBrowserMain::RunTask": 0.152
+        }
+      },
+      {
+        "gapMs": 121.481,
+        "mainThread": {
+          "RunTask": 7.889,
+          "PageAnimator::serviceScriptedAnimations": 3.982,
+          "v8.callFunction": 1.54,
+          "FunctionCall": 1.489,
+          "Paint": 0.819,
+          "Commit": 0.505,
+          "UpdateLayoutTree": 0.357,
+          "TimerFire": 0.191
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 133.154,
+          "CrGpuMain::RunTask": 123.943,
+          "CrGpuMain::GPUTask": 122.66,
+          "VizCompositorThread::RunTask": 1.402,
+          "Compositor::RunTask": 1.049,
+          "CrBrowserMain::RunTask": 0.293,
+          "PerfettoTrace::RunTask": 0.253,
+          "ThreadPoolForegroundWorker::RasterTask": 0.189
+        }
+      },
+      {
+        "gapMs": 119.765,
+        "mainThread": {
+          "RunTask": 21.784,
+          "PageAnimator::serviceScriptedAnimations": 15.239,
+          "Commit": 4.673,
+          "Paint": 0.526,
+          "PrePaint": 0.115,
+          "Layerize": 0.039,
+          "PaintImage": 0.015,
+          "IntersectionObserverController::computeIntersections": 0.012
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 135.519,
+          "CrGpuMain::GPUTask": 134.303,
+          "GpuVSyncThread::RunTask": 116.562,
+          "MemoryInfra::RunTask": 1.249,
+          "Compositor::RunTask": 1.187,
+          "VizCompositorThread::RunTask": 1.163,
+          "CrBrowserMain::RunTask": 0.653,
+          "ThreadPoolForegroundWorker::RasterTask": 0.459
+        }
+      },
+      {
+        "gapMs": 117.259,
+        "mainThread": {
+          "RunTask": 7.79,
+          "PageAnimator::serviceScriptedAnimations": 5.824,
+          "Paint": 0.52,
+          "Commit": 0.406,
+          "PrePaint": 0.113,
+          "HitTest": 0.055,
+          "Layerize": 0.05,
+          "PaintImage": 0.018
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 125.663,
+          "CrGpuMain::GPUTask": 124.457,
+          "GpuVSyncThread::RunTask": 116.526,
+          "VizCompositorThread::RunTask": 1.447,
+          "Compositor::RunTask": 0.92,
+          "ThreadPoolForegroundWorker::RasterTask": 0.3,
+          "CrBrowserMain::RunTask": 0.226,
+          "PerfettoTrace::RunTask": 0.178
+        }
+      },
+      {
+        "gapMs": 116.737,
+        "mainThread": {
+          "RunTask": 5.562,
+          "PageAnimator::serviceScriptedAnimations": 4.391,
+          "Paint": 0.75,
+          "Commit": 0.59,
+          "Layerize": 0.106,
+          "PrePaint": 0.086,
+          "PaintImage": 0.02,
+          "UpdateLayer": 0.014
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 116.46,
+          "CrGpuMain::RunTask": 111.567,
+          "CrGpuMain::GPUTask": 110.39,
+          "VizCompositorThread::RunTask": 1.499,
+          "Compositor::RunTask": 1.281,
+          "ThreadPoolForegroundWorker::RasterTask": 0.379,
+          "CrBrowserMain::RunTask": 0.27,
+          "Chrome_ChildIOThread::RunTask": 0.154
+        }
+      },
+      {
+        "gapMs": 115.145,
+        "mainThread": {
+          "RunTask": 7.137,
+          "PageAnimator::serviceScriptedAnimations": 5.639,
+          "Paint": 0.779,
+          "Commit": 0.673,
+          "PrePaint": 0.097,
+          "Layerize": 0.093,
+          "UpdateLayer": 0.024,
+          "PaintImage": 0.023
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 116.496,
+          "CrGpuMain::RunTask": 115.362,
+          "CrGpuMain::GPUTask": 113.931,
+          "VizCompositorThread::RunTask": 1.459,
+          "Compositor::RunTask": 1.171,
+          "PerfettoTrace::RunTask": 0.308,
+          "ThreadPoolForegroundWorker::RasterTask": 0.239,
+          "Chrome_IOThread::RunTask": 0.108
+        }
+      }
+    ],
+    "paintPerFrameMs": {
+      "samples": 164,
+      "medianMs": 4.902,
+      "p90Ms": 6.604,
+      "maxMs": 8.239
+    },
+    "gpuStats": {
+      "totalMs": 23055.006,
+      "topByName": {
+        "RunTask": 15932.805,
+        "GPUTask": 7122.201
+      }
+    },
+    "rasterStats": {
+      "Compositor": {
+        "totalMs": 160.851,
+        "topByName": {
+          "RunTask": 160.851
+        }
+      },
+      "VizCompositorThread": {
+        "totalMs": 233.644,
+        "topByName": {
+          "RunTask": 233.644
+        }
+      },
+      "CompositorTileWorker1": {
+        "totalMs": 0.23,
+        "topByName": {
+          "RasterTask": 0.23
+        }
+      }
+    },
+    "drawFrameCount": 0,
+    "begunFrameCount": 664,
+    "mainThreadTotalMs": 7209.149
+  },
+  "fast": {
+    "label": "FAST-leader",
+    "rafCount": 404,
+    "top10LongGaps": [
+      {
+        "gapMs": 44.932,
+        "mainThread": {
+          "RunTask": 17.18,
+          "Commit": 7.146,
+          "PageAnimator::serviceScriptedAnimations": 4.721,
+          "v8.callFunction": 2.647,
+          "FunctionCall": 2.295,
+          "Paint": 0.692,
+          "Layout": 0.607,
+          "LocalFrameView::performLayout": 0.522
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 43.395,
+          "CrGpuMain::RunTask": 21.671,
+          "CrGpuMain::GPUTask": 20.127,
+          "VizCompositorThread::RunTask": 1.641,
+          "Compositor::RunTask": 1.349,
+          "ThreadPoolForegroundWorker::RasterTask": 0.39,
+          "Chrome_ChildIOThread::RunTask": 0.167
+        }
+      },
+      {
+        "gapMs": 32.863,
+        "mainThread": {
+          "RunTask": 13.101,
+          "Commit": 8.327,
+          "PageAnimator::serviceScriptedAnimations": 5.055,
+          "Paint": 1.058,
+          "PrePaint": 0.116,
+          "Layerize": 0.089,
+          "PaintImage": 0.039,
+          "UpdateLayer": 0.02
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.243,
+          "CrGpuMain::RunTask": 24.233,
+          "CrGpuMain::GPUTask": 23.043,
+          "VizCompositorThread::RunTask": 1.211,
+          "Compositor::RunTask": 1.182,
+          "ThreadPoolForegroundWorker::RasterTask": 0.433,
+          "Chrome_ChildIOThread::RunTask": 0.074
+        }
+      },
+      {
+        "gapMs": 29.751,
+        "mainThread": {
+          "RunTask": 16.899,
+          "Commit": 8.8,
+          "PageAnimator::serviceScriptedAnimations": 6.458,
+          "Paint": 0.49,
+          "v8::Debugger::AsyncTaskRun": 0.287,
+          "EventDispatch": 0.274,
+          "v8.callFunction": 0.204,
+          "FunctionCall": 0.156
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.357,
+          "CrGpuMain::RunTask": 28.644,
+          "CrGpuMain::GPUTask": 26.753,
+          "VizCompositorThread::RunTask": 1.398,
+          "Compositor::RunTask": 1.207,
+          "ThreadPoolForegroundWorker::RasterTask": 0.287,
+          "PerfettoTrace::RunTask": 0.215,
+          "Chrome_ChildIOThread::RunTask": 0.179
+        }
+      },
+      {
+        "gapMs": 28.857,
+        "mainThread": {
+          "RunTask": 16.753,
+          "Commit": 7.217,
+          "PageAnimator::serviceScriptedAnimations": 5.874,
+          "MinorGC": 1.423,
+          "V8.GCScavenger": 1.356,
+          "V8.GC_SCAVENGER": 1.333,
+          "V8.GC_SCAVENGER_SCAVENGE": 1.235,
+          "Paint": 0.896
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.285,
+          "CrGpuMain::RunTask": 19.276,
+          "CrGpuMain::GPUTask": 18.642,
+          "VizCompositorThread::RunTask": 17.132,
+          "Window owner thread::RunTask": 15.313,
+          "CrBrowserMain::RunTask": 3.829,
+          "Compositor::RunTask": 1.345,
+          "PerfettoTrace::RunTask": 0.944
+        }
+      },
+      {
+        "gapMs": 26.911,
+        "mainThread": {
+          "RunTask": 13.393,
+          "Commit": 8.269,
+          "PageAnimator::serviceScriptedAnimations": 5.245,
+          "Paint": 0.953,
+          "PrePaint": 0.156,
+          "Layerize": 0.09,
+          "PaintImage": 0.029,
+          "UpdateLayer": 0.023
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 46.958,
+          "CrGpuMain::GPUTask": 45.354,
+          "GpuVSyncThread::RunTask": 23.173,
+          "VizCompositorThread::RunTask": 1.276,
+          "Compositor::RunTask": 1.162,
+          "ThreadPoolForegroundWorker::RasterTask": 0.436,
+          "Chrome_ChildIOThread::RunTask": 0.147,
+          "Chrome_IOThread::RunTask": 0.046
+        }
+      },
+      {
+        "gapMs": 25.652,
+        "mainThread": {
+          "RunTask": 14.427,
+          "Commit": 8.19,
+          "PageAnimator::serviceScriptedAnimations": 5.409,
+          "Paint": 0.976,
+          "PrePaint": 0.298,
+          "Layerize": 0.052,
+          "PaintImage": 0.028,
+          "UpdateLayer": 0.02
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.334,
+          "CrGpuMain::RunTask": 29.539,
+          "CrGpuMain::GPUTask": 28.372,
+          "CrBrowserMain::RunTask": 5.881,
+          "Compositor::RunTask": 1.268,
+          "VizCompositorThread::RunTask": 1.252,
+          "ThreadPoolForegroundWorker::RasterTask": 0.277,
+          "Chrome_ChildIOThread::RunTask": 0.068
+        }
+      },
+      {
+        "gapMs": 24.993,
+        "mainThread": {
+          "RunTask": 13.881,
+          "Commit": 7.79,
+          "PageAnimator::serviceScriptedAnimations": 4.347,
+          "Paint": 0.9,
+          "PrePaint": 0.083,
+          "Layerize": 0.05,
+          "PaintImage": 0.03,
+          "UpdateLayer": 0.018
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.287,
+          "CrGpuMain::RunTask": 26.642,
+          "CrGpuMain::GPUTask": 20.184,
+          "Compositor::RunTask": 1.254,
+          "VizCompositorThread::RunTask": 1.119,
+          "ThreadPoolForegroundWorker::RasterTask": 0.436,
+          "CrBrowserMain::RunTask": 0.256,
+          "PerfettoTrace::RunTask": 0.132
+        }
+      },
+      {
+        "gapMs": 23.839,
+        "mainThread": {
+          "RunTask": 14.886,
+          "Commit": 6.784,
+          "PageAnimator::serviceScriptedAnimations": 4.865,
+          "v8.callFunction": 0.838,
+          "FunctionCall": 0.797,
+          "Paint": 0.711,
+          "PrePaint": 0.112,
+          "Layerize": 0.056
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 23.797,
+          "CrGpuMain::GPUTask": 22.999,
+          "GpuVSyncThread::RunTask": 16.657,
+          "Compositor::RunTask": 1.554,
+          "VizCompositorThread::RunTask": 1.37,
+          "ThreadPoolForegroundWorker::RasterTask": 0.445,
+          "Chrome_ChildIOThread::RunTask": 0.066
+        }
+      },
+      {
+        "gapMs": 23.799,
+        "mainThread": {
+          "RunTask": 15.581,
+          "Commit": 6.339,
+          "PageAnimator::serviceScriptedAnimations": 6.324,
+          "Paint": 0.917,
+          "PrePaint": 0.131,
+          "PaintImage": 0.098,
+          "Layerize": 0.062,
+          "UpdateLayer": 0.019
+        },
+        "otherThreads": {
+          "CrGpuMain::RunTask": 21.789,
+          "CrGpuMain::GPUTask": 21.077,
+          "GpuVSyncThread::RunTask": 16.638,
+          "VizCompositorThread::RunTask": 1.241,
+          "Compositor::RunTask": 1.084,
+          "ThreadPoolForegroundWorker::RasterTask": 0.31,
+          "PerfettoTrace::RunTask": 0.162,
+          "Chrome_ChildIOThread::RunTask": 0.15
+        }
+      },
+      {
+        "gapMs": 23.365,
+        "mainThread": {
+          "RunTask": 14.09,
+          "PageAnimator::serviceScriptedAnimations": 7.804,
+          "Commit": 7.123,
+          "Paint": 0.456,
+          "PrePaint": 0.055,
+          "Layerize": 0.038,
+          "UpdateLayer": 0.021,
+          "PaintImage": 0.013
+        },
+        "otherThreads": {
+          "GpuVSyncThread::RunTask": 33.218,
+          "CrGpuMain::RunTask": 25.526,
+          "CrGpuMain::GPUTask": 19.355,
+          "VizCompositorThread::RunTask": 1.801,
+          "Compositor::RunTask": 1.526,
+          "ThreadPoolForegroundWorker::RasterTask": 0.395,
+          "CrBrowserMain::RunTask": 0.145,
+          "Chrome_ChildIOThread::RunTask": 0.118
+        }
+      }
+    ],
+    "paintPerFrameMs": {
+      "samples": 404,
+      "medianMs": 6.382,
+      "p90Ms": 8.248,
+      "maxMs": 9.873
+    },
+    "gpuStats": {
+      "totalMs": 23172.189,
+      "topByName": {
+        "RunTask": 15958.923,
+        "GPUTask": 7213.266
+      }
+    },
+    "rasterStats": {
+      "Compositor": {
+        "totalMs": 430.157,
+        "topByName": {
+          "RunTask": 430.157
+        }
+      },
+      "VizCompositorThread": {
+        "totalMs": 450.826,
+        "topByName": {
+          "RunTask": 450.826
+        }
+      },
+      "CompositorTileWorker1": {
+        "totalMs": 0.214,
+        "topByName": {
+          "RasterTask": 0.214
+        }
+      }
+    },
+    "drawFrameCount": 0,
+    "begunFrameCount": 873,
+    "mainThreadTotalMs": 15545.521
+  }
+}

@@ -953,6 +953,81 @@ The values CAN be changed but only in `defaults.js` directly, and only after run
 
 **Sim scripts:** `scripts/sim-fairness.mjs`, `scripts/sim-sweep.mjs`
 
+## Background Layer — GPU Compositor Promotion
+
+*(Added 2026-06-09, after bg-layer/promotion investigation.)*
+
+The race canvas is split into two sibling `<canvas>` elements, stacked with CSS `position: absolute`:
+
+1. **Background canvas** — draws the static or animated track background image. Promoted to its
+   own GPU compositor layer via `transform: translate3d(0,0,0)` in CSS. Repainted only when the
+   background changes (not every rAF).
+
+2. **World canvas** — draws racers, track, particles, and overlays. Occupies the same pixel
+   area. Painted every rAF frame.
+
+**Why the split:** Before the split, every rAF frame repainted the background image (full
+1280×720 px texture copy) plus all race content in a single canvas. On integrated GPUs this
+caused ~33 ms frames at ~10% drop rate during OVERVIEW. Separating the background onto a
+promoted layer keeps it in GPU memory; the compositor composites it with the world canvas
+without involving the CPU rasterizer. After the fix: OVERVIEW p90 = 16.7 ms, drop rate ≈ 1%.
+
+**The promotion mechanism:** `translate3d(0,0,0)` on the background canvas creates a new GPU
+compositor layer (same as `will-change: transform`). The background canvas sits underneath
+the world canvas in z-order (lower `z-index`). No JavaScript per-frame work for the
+background layer.
+
+**The `overviewMinEffZoom` field** (camera config, default 0/off) was added during this
+investigation as a candidate workaround (cap the OVERVIEW zoom to reduce repaint area). It was
+not needed after the compositor promotion fix — the zoom-cap approach is redundant. The field
+remains at default 0/off and is a candidate for future removal.
+
+---
+
+## Camera — LEADER_ZOOM Entry Zoom Consistency (Fix A)
+
+*(Added 2026-06-10.)*
+
+### The invariant
+
+When the camera transitions to `LEADER_ZOOM` (or `LEAD_CHANGE`) and enters the tracking phase,
+`this.zoom` must be at or below `this.targetZoom`. If zoom enters tracking above targetZoom
+(overshoot), the coupled pan-target computation (`_setOpenTrackTargets`, call 2) shifts the
+pan target every frame as zoom corrects downward, producing a visible camera wobble ("unrund").
+
+### The root cause (before Fix A)
+
+`_leaderPhaseZoomFloor` uses `this.zoom` (the in-flight zoom, low during entry from OVERVIEW
+≈ 0.533) to count visible racers. At low zoom the whole field is visible → `visCount ≥ visTarget`
+→ the floor never decrements during entry → `targetZoom` stays at the full resolved leaderZoom
+(≈ 1.0–1.2). The entry phase chases this high target. When T-space convergence fires (camera
+reaches the leadAhead position), `targetZoom` may drop due to world-edge clamping in
+`resolveCamera`, while `this.zoom` has already risen past the new lower target. The delta
+falls within the `entryConvergenceZoom = 0.05` threshold → entry ends with `zoom > targetZoom`.
+
+### The fix
+
+Change the visibility check in the `_leaderPhaseZoomFloor` block to use `this.targetZoom`:
+
+```js
+// CameraDirector.js — _setTargets, inside the _leaderPhaseZoomFloor block
+const effZoom = this._isOpenTrack
+  ? this.targetZoom * OPEN_TRACK_BASE_ZOOM   // was: this.zoom * ...
+  : this.targetZoom * this._bsX;
+```
+
+Effect: the floor evaluates visibility at the *intended* zoom (leaderZoom) from frame 1 of
+LEADER_ZOOM. During entry, the target zoom is high → fewer racers visible → floor decrements
+immediately. By the time entry converges, `targetZoom` has already stepped down toward the
+correct tracking value. Entry ends with `zoom ≤ targetZoom` — no overshoot, no correction tail.
+
+**During tracking:** `this.zoom ≈ this.targetZoom` (lerped close), so the change is minimal.
+
+**Verification (camTrace, 2026-06-10):** First tracking frame `z = 0.9876 < tz = 1.0318` (was
+`z = 0.985 > tz = 0.957`). Pan error converges in 217 ms vs 1 066 ms in the bad trace.
+
+---
+
 ## Development Workflow
 
 RaceArena uses a three-party model for significant features:
