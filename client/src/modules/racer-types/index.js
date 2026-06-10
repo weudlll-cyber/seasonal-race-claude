@@ -181,11 +181,6 @@ export function getRacerTypeById(id) {
   return RACER_TYPES[id] ?? _loadedRacerTypes[id] ?? HorseRacerType;
 }
 
-/** Returns all registered built-in racer type IDs (does not include user-created types). */
-export function listRacerTypes() {
-  return Object.keys(RACER_TYPES);
-}
-
 // ── D3.5.5 tunable override infrastructure ────────────────────────────────
 
 /** Fields that can be overridden via the Dev-Screen tuning UI. */
