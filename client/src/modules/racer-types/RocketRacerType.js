@@ -50,5 +50,3 @@ export const RocketRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['air', 'water'],
 });
-
-export default RocketRacerType;

@@ -47,5 +47,3 @@ export const PlaneRacerType = new SpriteRacerType({
   trailFactory: makeGenericDustTrail({ color: '#ffffff', ttl: 30, alphaCoeff: 0.3 }),
   surfaceClasses: ['air'],
 });
-
-export default PlaneRacerType;

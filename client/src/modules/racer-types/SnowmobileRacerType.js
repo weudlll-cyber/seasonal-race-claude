@@ -51,5 +51,3 @@ export const SnowmobileRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['snow', 'ice', 'earth'],
 });
-
-export default SnowmobileRacerType;

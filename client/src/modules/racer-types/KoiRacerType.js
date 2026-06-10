@@ -60,5 +60,3 @@ export const KoiRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['water'],
 });
-
-export default KoiRacerType;

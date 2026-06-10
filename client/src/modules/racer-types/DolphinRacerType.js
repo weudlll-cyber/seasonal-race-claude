@@ -51,5 +51,3 @@ export const DolphinRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['water'],
 });
-
-export default DolphinRacerType;

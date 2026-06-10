@@ -54,5 +54,3 @@ export const LugeRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['ice', 'snow'],
 });
-
-export default LugeRacerType;

@@ -69,5 +69,3 @@ export const DuckRacerType = new SpriteRacerType({
   trailFactory: duckTrailFactory,
   surfaceClasses: ['water', 'grass'],
 });
-
-export default DuckRacerType;

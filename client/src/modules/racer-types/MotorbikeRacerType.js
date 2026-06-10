@@ -47,5 +47,3 @@ export const MotorbikeRacerType = new SpriteRacerType({
   trailFactory: makeGenericDustTrail({ color: '#888888', ttl: 20 }),
   surfaceClasses: ['asphalt', 'earth'],
 });
-
-export default MotorbikeRacerType;

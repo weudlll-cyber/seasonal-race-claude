@@ -51,5 +51,3 @@ export const MantaRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['water'],
 });
-
-export default MantaRacerType;

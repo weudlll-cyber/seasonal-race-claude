@@ -50,5 +50,3 @@ export const TurtleRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['water'],
 });
-
-export default TurtleRacerType;

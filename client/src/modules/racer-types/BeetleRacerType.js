@@ -55,5 +55,3 @@ export const BeetleRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['asphalt', 'cobble', 'earth'],
 });
-
-export default BeetleRacerType;

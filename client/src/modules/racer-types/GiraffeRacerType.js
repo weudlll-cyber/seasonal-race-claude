@@ -56,5 +56,3 @@ export const GiraffeRacerType = new SpriteRacerType({
   trailFactory: makeGenericDustTrail({ color: '#c4a060', ttl: 25 }),
   surfaceClasses: ['sand', 'earth', 'grass'],
 });
-
-export default GiraffeRacerType;

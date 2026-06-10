@@ -72,5 +72,3 @@ export const SnailRacerType = new SpriteRacerType({
   trailFactory: snailTrailFactory,
   surfaceClasses: ['grass'],
 });
-
-export default SnailRacerType;

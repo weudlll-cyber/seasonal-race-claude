@@ -55,5 +55,3 @@ export const BoarderRacerType = new SpriteRacerType({
   }),
   surfaceClasses: ['asphalt', 'cobble', 'earth'],
 });
-
-export default BoarderRacerType;

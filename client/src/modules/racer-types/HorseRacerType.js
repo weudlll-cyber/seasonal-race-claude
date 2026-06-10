@@ -70,5 +70,3 @@ export const HorseRacerType = new SpriteRacerType({
   trailFactory: horseTrailFactory,
   surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'],
 });
-
-export default HorseRacerType;
