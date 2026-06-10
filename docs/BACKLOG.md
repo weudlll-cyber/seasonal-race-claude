@@ -170,7 +170,7 @@ Additionally: Space (Custom Track) already present.
 - **Visual Racer Effects** — Surface-class-driven trail system. Four sub-PRs:
   - ✅ **VRE-1** — Foundation: 4 generator modules (`particle`, `cloud`, `splash`, `line`), 9 default surface classes, registry with override resolution, `/api/surface-classes` backend API (CRUD, atomic writes), `surfaceClassLoader.js` cache, `surfaceClassApi.js` service layer. 64 frontend + 24 backend tests. No UI, no race integration.
   - ✅ **VRE-2** — Surface class editor in dev screen. Master-detail layout: class list with Default/Modified/Custom badges on the left, animated live preview canvas + generator config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. 36 new unit tests + 31 new e2e tests (smoke + UX verification). 1084 unit + 183 e2e tests total.
-  - ✅ **VRE-3** — Racer/track association: `surfaceClasses` on SpriteRacerType + `getSurfaceClasses()`, all 12 racer types with classes, surfaceClasses in TUNABLE_FIELDS + CONFIG_SNAPSHOT, `filterRacerTypesForTrack()` in registry.js, surfaceClasses on DEFAULT_TRACKS + server migration, pill multi-select UI in RacerEditModal + TrackManager, SetupScreen filter + surface hint. 1134 frontend + 60 backend tests. 2 Playwright specs (smoke + UX verification) written.
+  - ✅ **VRE-3** — Racer/track association: `surfaceClasses` on SpriteRacerType + `getSurfaceClasses()`, all 20 racer types with classes, surfaceClasses in TUNABLE_FIELDS + CONFIG_SNAPSHOT, `filterRacerTypesForTrack()` in registry.js, surfaceClasses on DEFAULT_TRACKS + server migration, pill multi-select UI in RacerEditModal + TrackManager, SetupScreen filter + surface hint. 1134 frontend + 60 backend tests. 2 Playwright specs (smoke + UX verification) written.
   - ✅ **VRE-4** — Race integration: `trailResolver.js` with `resolveTrailEmitter()`. RaceScreen dispatches trail via emitter per racer; home trail fallback when no match. `trackSurfaceClasses` in raceData. 14 new unit tests + Playwright specs.
 
 ---
@@ -366,7 +366,7 @@ Additionally: Space (Custom Track) already present.
 
   Code defaults in `defaults.js` have no `backgroundImage` field. With a running server they are
   automatically migrated to the backend (`migrateDefaultTracks()` runs idempotently on every boot) and
-  user-edited server versions fully replace them (`loadAllTracks()` filters out code defaults
+  user-edited server versions fully replace them (`getInitialTracks()` filters out code defaults
   when the server delivers the same ID).
 
   **Problem only occurs when:** fresh install or deleted server state. Then the user sees

@@ -114,7 +114,7 @@ Race   --(has-many)---------->  Player (each gets a coat)
 
 > **speedMultiplier:** Acts since D9 (PR #19) as a linear multiplier on `baseSpeed`.
 > Formula: `baseSpeed = (BASE_SPEED_MIN + random * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier`.
-> Constants from `lapUtils.js`: `BASE_SPEED_MIN = 0.00085`, `BASE_SPEED_MAX = 0.0012`.
+> Constants from `DEFAULT_BASE_SPEED_CONFIG` in `storage/defaults.js`: `min = 0.00096`, `max = 0.00113`.
 >
 > **tintMode `mask`:** Buggy, Motorbike, Plane use mask-tinting via `<sprite>-mask.png`.
 > Only the mask is tinted; the rest of the sprite remains unchanged. All other types
@@ -181,7 +181,7 @@ Gives the audience time to see the final positions.
 20 built-in types. localStorage stores **only deviations** from the code default:
 
 ```
-Code-Registry (RACER_TYPES)          →  12 Types, always complete
+Code-Registry (RACER_TYPES)          →  20 Types, always complete
 racearena:racerTypeOverrides          →  { snail: false, ... }  (only what deviates)
 listAllRacerTypes()                   →  Code-Registry + Overrides merged
 ```
@@ -193,7 +193,6 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 | `listAllRacerTypes()` | Array of all 20 built-in types (+ user-created types) with `isActive` resolved from override map |
 | `getRacerType(id)` | Single type instance, falls back to Horse for unknown IDs |
 | `getRacerTypeById(id)` | Alias for `getRacerType` — preferred where ID semantics matter |
-| `listRacerTypes()` | Array of all registered type IDs |
 | `setRacerTypeOverride(id, fieldName, value)` | Set override: `fieldName='isActive', value=false` deactivates; tunable fields (TUNABLE_FIELDS) also mutate live config |
 | `resetRacerTypeOverride(id, fieldName?)` | Without fieldName: remove all overrides for id. With fieldName: only that one field. Restores live config from CONFIG_SNAPSHOT. |
 | `normalizeOverrideMap(raw)` | Migrates legacy format `{id: false}` → `{id: {isActive: false}}`; returns `{}` for null/undefined |
@@ -261,7 +260,7 @@ Per-racer runtime fields (D7b/D7c, set by `initRacerBehavior` + RaceScreen init)
 
 > **Anti-Stacking (D7b-fix B3):** Avoidance forces are normalized by `sqrt(neighborCount)` before application, where `neighborCount` = number of racers exerting a non-zero avoidance force on this racer in the current frame. Prevents boundary-clinging with 20+ racers: without normalization a racer with N neighbors accumulates N× the individual force, overwhelming the restoring forces (home force + soft repulsion).
 
-> **Row Start (D7c + D7c-fix + D7c-Phase4):** `effectiveWidth = geometricTrackWidthPx × startSpreadRange` — `geometricTrackWidthPx` comes from `EditorShape.getActualTrackWidth()` (measured geometry). `computeRacersPerRow(effectiveWidth, spriteSize)` = `floor(2 × effectiveWidth / spriteSize)`. `computeRowLayout(racerCount, racersPerRow)` shuffles racer indices (Fisher-Yates). `rowGapPx = spriteSize × rowGapMultiplier`. `deltaT_per_row = rowGapPx / pathLengthPx`. Closed: row k → t=-(k × deltaT_per_row). Open: row k → t=(totalRows−k) × deltaT_per_row (all positive, no clamp). Speed bonus: `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — applies to both track types. Open-track finish: `finishT = 1.0 − runoutZone`.
+> **Row Start (D7c + D7c-fix + D7c-Phase4):** `effectiveWidth = trackWidthPx × startSpreadRange` — `trackWidthPx` comes from `track.width` (stored by Track Editor) with `EditorShape.getActualTrackWidth()` as spline fallback. `computeRacersPerRow(effectiveWidth, spriteSize)` = `floor(2 × effectiveWidth / spriteSize)`. `computeRowLayout(racerCount, racersPerRow)` shuffles racer indices (Fisher-Yates). `rowGapPx = spriteSize × rowGapMultiplier`. `deltaT_per_row = rowGapPx / pathLengthPx`. Closed: row k → t=-(k × deltaT_per_row). Open: row k → t=(totalRows−k) × deltaT_per_row (all positive, no clamp). Speed bonus: `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor)` — applies to both track types. Open-track finish: `finishT = 1.0 − runoutZone`.
 
 No `currentLaneY` / `targetLaneY` / `trackOffset` anymore (removed in D7b).
 

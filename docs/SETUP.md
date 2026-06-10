@@ -52,8 +52,6 @@ VITE_API_URL=http://localhost:4000
 
 ---
 
----
-
 ## 5. Working with the server
 
 **Single-server rule:** Only one server instance should run on port 4000 at a time. If you see `EADDRINUSE`, kill the stale process and restart:

@@ -559,7 +559,7 @@ entries.
 the old copy remains in the source — until an explicit localStorage migration cleans up
 the data. The cleanest solution in the meantime: define server track IDs as the authoritative
 set and filter out local copies during merge (`serverIds` deduplication in
-`getInitialTracks()`/`loadAllTracks()`).
+`getInitialTracks()`).
 
 **Consequence:** For read-path integrations that combine data from multiple sources,
 always explicitly check which source takes priority and filter out duplicates by ID.

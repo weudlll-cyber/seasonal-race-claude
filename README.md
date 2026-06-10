@@ -12,6 +12,7 @@ RaceArena lets an event organiser configure racers, draw tracks, set effects, an
 |----------|----------------------------------------------------|
 | Client   | React 18, CSS Modules, Vite, React Router v6       |
 | Physics  | Client-side rAF race engine (Canvas 2D)            |
+| Tests    | vitest (2654 tests across 128 files), Playwright (e2e) |
 | Storage  | `localStorage` (`racearena:*` keys)                |
 | CI/CD    | GitHub Actions (lint → test → audit on every PR)   |
 | Server   | Express / Node (Phase L, port 4000); Phase 5 race-integrity planned |
@@ -47,6 +48,12 @@ cd client && npm run dev
 ```
 
 App runs at `http://localhost:3000`.
+
+## Running Tests
+
+```bash
+cd client && npm test          # vitest run — 2654 tests across 128 suites
+```
 
 ## Local Backend (Phase L)
 
