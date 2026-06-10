@@ -103,7 +103,6 @@ import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClas
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
-import { initCamTrace, recordCamFrame } from '../../modules/camTrace.js';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -756,8 +755,6 @@ export default function RaceScreen() {
 
     // Perf probe: activated by ?perfprobe=1 URL flag (persisted via sessionStorage).
     initProbe();
-    // Camera trace: activated by ?camtrace=1 (persisted via sessionStorage). Dev-only.
-    const camTraceActive = initCamTrace();
 
     // ── rAF loop ─────────────────────────────────────────────────────────────
     function loop(ts) {
@@ -1349,24 +1346,6 @@ export default function RaceScreen() {
       }
       // Perf probe: record camera state + zoom alongside the inter-rAF gap captured by recordFrame.
       recordFrameCamera(camDirRef.current.state, cam.zoom);
-      // Camera trace: per-frame camera values for motion-smoothness diagnosis (?camtrace=1).
-      if (camTraceActive) {
-        const _dir = camDirRef.current;
-        recordCamFrame({
-          ts,
-          state: _dir.state ?? 'UNKNOWN',
-          lerpPhase: _dir._lerpPhase ?? 'tracking',
-          offsetX: cam.offsetX,
-          offsetY: cam.offsetY,
-          zoom: cam.zoom,
-          effZoom: isOpenTrack ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM) : cam.zoom * bsX,
-          targetOffsetX: _dir.targetOffsetX ?? cam.offsetX,
-          targetOffsetY: _dir.targetOffsetY ?? cam.offsetY,
-          targetZoom: _dir.targetZoom ?? cam.zoom,
-          wasClamped: _dir._lastResolvedPanTarget?.wasClamped ?? false,
-          wasZoomAdapted: _dir._lastResolvedPanTarget?.wasZoomAdapted ?? false,
-        });
-      }
       // Perf-log bracket 4: after camera director update.
       const tCam = enablePerfLog ? performance.now() : 0;
 
