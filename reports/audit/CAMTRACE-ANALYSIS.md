@@ -1,8 +1,8 @@
 # CAMTRACE-ANALYSIS — Camera motion smoothness investigation
 
 **Date:** 2026-06-10  
-**Trace:** Owner-captured trace, Space Sprint, post-Direction-A (translate3d fix)  
-**Status:** PARTIAL — OVERVIEW data available; LEADER_ZOOM transition data not yet captured.
+**Traces:** (1) OVERVIEW-only capture (Z pressed too early). (2) LEADER_ZOOM tracking capture — the actual unrund event. Analysis complete from Trace 2.  
+**Status:** ROOT CAUSE IDENTIFIED. See §7.
 
 ---
 
@@ -225,7 +225,7 @@ exact Z-marked frame within the trace.
 
 ---
 
-## 6. What to look for in the new trace
+## 6. What to look for in the new trace (retrospective — now answered by §7)
 
 Once the LEADER_ZOOM trace arrives, look at:
 
@@ -237,3 +237,201 @@ Once the LEADER_ZOOM trace arrives, look at:
 | `ex` / `ey` | Decreasing toward 0 during entry | Sign flip = overshoot |
 | `clamp` | Likely 0 during LEADER_ZOOM | 0→1 toggle = world-edge interference |
 | `phase = 'tracking'` first frame | `dox` should match last entry-phase dox | Big delta change = lerp-mode velocity discontinuity |
+
+---
+
+## 7. LEADER_ZOOM trace analysis — root cause found
+
+**Trace 2** spans `ts 50649 → 53331` (~2.7 s visible), all `state: LEADER_ZOOM, phase: tracking`.  
+The unrund event is fully captured. The data tells a clear story.
+
+---
+
+### 7a. Entry phase left the zoom grossly overshooted
+
+The **first tracked frame** (`ts = 50 649`) shows:
+
+| Field | Value | Meaning |
+|---|---|---|
+| `z` (current zoom) | **0.9853** | Camera zoomed IN far |
+| `tz` (target zoom) | 0.9568 | Still needs to zoom out a little |
+| `tz` (stable floor, ts=51715) | **0.6420** | Final converged zoom is 35% lower |
+| `dox`, `doy` | +8.7, +23.0 px/frame | Camera moving fast (leader is still far) |
+
+The entry phase set the camera to `z = 0.985` (effZoom = 1.478). The correct LEADER_ZOOM tracking
+zoom turns out to be `z = 0.642` (effZoom = 0.963). **The entry overshot the correct tracking zoom
+by 0.343 zoom units — 3× the total range from OVERVIEW to tracking.**
+
+The zoom target (`tz`) itself starts at 0.957 and decreases continuously toward 0.642 over the
+first 1066 ms of tracking. This is a deliberate zoom-out driven by the camera director (likely
+`_dynamicZoomFloor` or speed-dependent zoom — the exact mechanism needs one more code trace
+through `_setTargets` for LEADER_ZOOM). The entry phase converged to a high-zoom value that was
+correct at entry-start but is wrong by steady tracking.
+
+---
+
+### 7b. Zoom-pan coupling keeps the camera unsettled for 1.5 seconds
+
+During tracking, the pan target depends on the current zoom:
+
+```
+targetOffsetX = -leaderWorldX × effZoom + canvasWidth/2
+```
+
+As `effZoom` decreases each frame, `targetOffsetX` changes even if the leader stands still.
+The camera cannot converge cleanly on the pan target while the zoom is still changing — the
+target is a moving goalposts.
+
+**Measured pan-error growth during zoom correction:**
+
+| Timestamp | `ex` (pan error X) | `dox` | Phase |
+|---|---|---|---|
+| ts = 50 649 | +52 px | +8.7 px/frame | zoom still at 0.985, far from target |
+| ts = 50 983 | +84 px | +13.9 px/frame | error GROWING — zoom-drift pulling target away |
+| ts = 51 715 | **+95 px** | +15.8 px/frame | zoom converges to 0.642 — pan error at peak |
+| ts = 51 982 | +24 px | +3.9 px/frame | camera closing fast — zoom stable |
+| ts = 52 215 | **+0.5 px** | +0.08 px/frame | near-convergence |
+
+For the first 1 066 ms the pan error GROWS even though the camera is moving toward the target.
+The zoom correction shifts the target faster than the camera can follow. Only after the zoom
+floor converges does the camera start closing the gap cleanly.
+
+---
+
+### 7c. The overshoot and sign-flip (the visible "unrund")
+
+After zoom converges, the camera decelerates from peak dox = +15.8 to near-zero over ~500 ms.
+The deceleration is smooth — this is the lerp doing its job.
+
+**The problem is what happens at near-convergence:**
+
+| ts | `ex` | `dox` | Event |
+|---|---|---|---|
+| 52 215 | +0.48 | +0.08 | Camera nearly stopped, almost on target |
+| 52 232 | **−0.16** | −0.03 | **OVERSHOT** — camera passed the target in X |
+| 52 265 | −1.28 | −0.21 | Camera now drifting backward (negative dox) |
+| 52 449 | −4.41 | −1.58 | Backward drift accumulating |
+| 52 582 | −4.87 | **−1.75** | **33 ms gap hits — tz drops 0.64204 → 0.63205** |
+| 52 615 | **+1.75** | **+0.63** | **Target snaps +7.26 px — camera must reverse** |
+| 52 715 | +5.83 | +2.08 | Camera accelerating forward again |
+| 52 998 | +20.4 | +11.9 | Back to chasing the leader (accelerating) |
+
+**Steps broken down:**
+
+1. `ts 52 232`: Camera overshoots by 0.16 px. Tiny, but now ex is negative — the lerp drives
+   `dox` negative.
+2. `ts 52 232 → 52 582`: Camera drifts backward at −1.6 px/frame while ex = −4 to −5 px.
+   This looks like slow backward drift of the camera.
+3. `ts 52 582` (33 ms gap): The zoom target drops discretely from 0.64204 to 0.63205. The zoom
+   drops 2× the normal amount (dz = −0.00264 vs normal −0.0001). This shifts `tx` by −1.93 px
+   (target moves further in the direction the camera just came from).
+4. `ts 52 615` (another 33 ms gap): The leader runs 2 physics steps. `tx` snaps **+7.26 px** in
+   one frame — target jumps from −1563 to −1556. The camera (`ox = −1558`) is suddenly BEHIND
+   the target again (ex = +1.75). `dox` must flip sign: −1.75 → +0.63.
+5. From here: camera re-accelerates in the original direction. The zoom target continues
+   stepping down, keeping the camera unsettled for many more seconds.
+
+**The visible "unrund"**: slow backward drift → target snaps forward → camera snaps forward.
+The snap at step 4 is the perceptual event. The camera that was barely moving in one direction
+suddenly moves in the opposite direction in a single frame.
+
+---
+
+### 7d. Why the zoom target keeps decreasing after ts=52582
+
+After the sign-flip event, `tz` continues stepping down:
+
+```
+52 582: tz = 0.63205   (−0.01 from 0.64204)
+52 748: tz = 0.62203   (−0.01)
+52 815: tz = 0.61705   (−0.005)
+52 865: tz = 0.61204   (−0.005)
+52 931: tz = 0.60208   (−0.01)
+53 031: tz = 0.59707   (−0.005)
+53 081: tz = 0.58705   (−0.01)
+53 165: tz = 0.57709   (−0.01)
+53 265: tz = 0.57208   (−0.005)
+53 298: tz = 0.56206   (−0.01) ← still decreasing at end of visible data
+```
+
+Note: `zadapt = 0` throughout the trace. The `zadapt` field records `wasZoomAdapted` from the
+**pan** `resolveCamera` call, but the zoom reduction comes from the **zoom** `resolveCamera` call —
+a separate call whose `wasZoomAdapted` is not recorded by the current instrument.
+
+The continuous discrete zoom steps (~0.005–0.01 per step) resemble the `ZOOM_STEP = 0.9`
+reduction loop in `resolveCamera`, applied one step at a time. Most likely: as the leader
+approaches the world edge (Space Sprint track curves toward the boundary), `resolveCamera`
+keeps needing to reduce the zoom to fit the target in the inner frame. **The camera is in a
+perpetual zoom-out for the duration of this leader-zoom episode.**
+
+As a result, the `targetOffsetX` is never stable — it keeps drifting because `effZoom` keeps
+changing — and the camera can never truly converge. Every near-convergence encounter repeats
+the sign-flip pattern.
+
+---
+
+## 8. Root cause summary
+
+| Cause | Evidence | Severity |
+|---|---|---|
+| **Entry phase zoom overshoot** — camera enters tracking at z=0.985 when correct zoom is z=0.642 | First tracked frame z=0.985, tz→0.642 over 1 066 ms | **PRIMARY** |
+| **Zoom-pan coupling** — `targetOffsetX` shifts as zoom lerps, keeping pan target in constant motion | Pan error grows to 95px during zoom correction phase despite camera moving toward target | **PRIMARY** |
+| **Continuous resolveCamera zoom reduction** — zoom target decreases for entire visible trace (ts=50649→53331), never stabilising | tz steps from 0.957 to 0.562 in discrete ~0.01 jumps throughout the entire 2.7s window | **PRIMARY** |
+| **Near-convergence sign-flip** — camera overshoots and drifts backward when dox nears 0 | ex = −0.16 at ts=52232, dox goes negative for 350ms | SECONDARY (consequence of above) |
+| **33ms frame drops amplifying** — dropped frames at ts=52582 and 52615 cause double zoom-step and double leader-move, snapping target +7.26px while camera was drifting −1.75px/frame | tx jumps +7.26 in one 33ms frame at ts=52615; dox reverses sign | SECONDARY (aggravating factor) |
+
+**Single-sentence root cause:** The LEADER_ZOOM camera enters tracking phase with a zoom far above
+the correct tracking value, then spends 1+ seconds zooming out; the coupled zoom-pan computation
+means the pan target drifts throughout this correction, making clean convergence impossible, and
+when the camera nearly converges, a dropped frame causes a +7px target snap that visibly reverses
+the camera direction.
+
+---
+
+## 9. Fix directions (not implementing — owner picks)
+
+### Fix A — Prevent entry zoom overshoot (targeted, likely sufficient alone)
+
+The entry phase should not converge to a zoom higher than the tracking target zoom. Options:
+
+1. **Cap entry zoom at the tracking target**: Before the entry lerp runs, clamp `targetZoom =
+   min(targetZoom, trackingTargetZoom)`. The camera would zoom in only as far as the correct
+   tracking zoom, not beyond.
+
+2. **Immediate zoom correction at tracking phase start**: When `_lerpPhase` switches from
+   `'entry'` to `'tracking'`, detect if `z > targetZoom` by more than a threshold; if so, apply
+   a faster zoom convergence rate (e.g., a one-time hard-cut or higher lf for the first ~10
+   frames).
+
+3. **Reduce entry zoom lerp factor**: Lower `_lfEntry` for the LEADER_ZOOM state's zoom so the
+   camera cannot overshoot as far during entry.
+
+### Fix B — Stable pan target during zoom correction (orthogonal fix)
+
+Compute `targetOffsetX` using `targetZoom` (the converged zoom) instead of `this.zoom` (the
+still-correcting zoom). This decouples the pan target from the zoom correction:
+
+```js
+// In _setOpenTrackTargets — use targetZoom for pan resolution, not current zoom:
+const stableEffZoom = Math.max(this.targetZoom * BASE, minEffZoom);  // ← change
+const panResolved = resolveCamera({ desiredEffZoom: stableEffZoom, ... });
+```
+
+Effect: the pan target would be at the leader's position at the target zoom, not the current
+(overshooted) zoom. The camera would pan to the correct "final view" position immediately,
+without the zoom-induced target drift. This is the cleanest fix but requires verifying that it
+doesn't break edge cases (world-edge clamping, inner-frame guarantee).
+
+### Fix C — Address the dropped frames (ongoing)
+
+The 33ms frame gaps (10% of frames) amplify the sign-flip by causing double target jumps. The
+bg-layer translate3d fix reduced GPU overhead; if OVERVIEW is now smooth, these remaining drops
+during LEADER_ZOOM may still come from the world canvas repaint (unresolved, see PROMOTION-
+DIAGNOSIS.md). Reducing them would shrink the "snap" magnitude but not eliminate the sign-flip.
+
+### Recommended starting point: Fix A option 2 (detect overshoot at tracking-phase start)
+
+It is the most surgical: a one-time correction when `_lerpPhase` switches to `'tracking'` if
+`z > targetZoom` by more than a threshold. No entry-phase changes needed, no coupling changes.
+Low blast radius. If it visibly reduces the overshoot-deceleration pattern, combine with Fix B
+for a complete solution.
