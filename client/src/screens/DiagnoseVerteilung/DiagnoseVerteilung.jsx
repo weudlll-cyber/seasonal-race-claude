@@ -12,6 +12,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { simulateRace, DIRT_OVAL_PATH_LENGTH_PX } from '../../modules/headlessRaceSimulator.js';
+import { avg, median, p95, stddev } from '../../modules/statsHelpers.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
@@ -24,23 +25,6 @@ const N_RUNS = 50;
 const N_RACERS = 40;
 const SPRITE_SIZE = 40;
 const CHUNK_SIZE = 5; // races per animation frame
-
-// ── Statistics helpers ─────────────────────────────────────────────────────────
-function avg(arr) {
-  return arr.reduce((s, v) => s + v, 0) / arr.length;
-}
-function median(arr) {
-  const s = [...arr].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m];
-}
-function p95(arr) {
-  const s = [...arr].sort((a, b) => a - b);
-  return s[Math.ceil(s.length * 0.95) - 1];
-}
-function stddev(arr, m) {
-  return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
-}
 
 // ── ASCII histogram ────────────────────────────────────────────────────────────
 function AsciiHistogram({ histogram, nRuns }) {

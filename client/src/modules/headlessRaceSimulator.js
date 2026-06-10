@@ -23,6 +23,7 @@ import {
   computeBodyNarrowRef,
 } from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
+import { avg, median, p95, stddev } from './statsHelpers.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -400,27 +401,9 @@ export function runDistributionMeasurement(nRuns, raceConfig, onProgress) {
   const withManyArr = runResults.map((r) => r.countWithMany);
   const withNoneArr = runResults.map((r) => r.countWithNone);
 
-  const sortedMax = [...maxArr].sort((a, b) => a - b);
-
-  function avg(arr) {
-    return arr.reduce((s, v) => s + v, 0) / arr.length;
-  }
-  function median(sorted) {
-    const m = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? (sorted[m - 1] + sorted[m]) / 2 : sorted[m];
-  }
-  function percentile95(sorted) {
-    const idx = Math.ceil(sorted.length * 0.95) - 1;
-    return sorted[Math.max(0, Math.min(sorted.length - 1, idx))];
-  }
-  function stddev(arr, mean) {
-    const variance = arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length;
-    return Math.sqrt(variance);
-  }
-
   const maxMean = avg(maxArr);
-  const maxMedian = median(sortedMax);
-  const max95 = percentile95(sortedMax);
+  const maxMedian = median(maxArr);
+  const max95 = p95(maxArr);
   const maxAbsolute = Math.max(...maxArr);
   const meanMean = avg(meanArr);
   const withManyMean = avg(withManyArr);
