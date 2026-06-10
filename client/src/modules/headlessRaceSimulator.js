@@ -137,9 +137,10 @@ export function simulateRace({
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
 
-  // Browser-matched body dimensions via computeBodyNarrowRef — same formula as RaceScreen.
-  // drawnBodyWidthPx: narrow-axis body world-px; drawnBodyLengthPx: long-axis body world-px.
-  // Undefined when racerTypeConfig/autoScaleConfig absent; raceBehavior.js frameSizePx fallback activates.
+  // Browser-matched body dimensions — mirrors RaceScreen's auto-scale guard exactly.
+  // computeBodyNarrowRef is called only when autoScaleConfig.enabled && !hasDisplaySizeOverride,
+  // matching the if(autoScaleConfig.enabled)+if(!hasDisplaySizeOverride) guard in RaceScreen.
+  // Bypass path: displaySizeScale=1 → drawnBodyWidthPx=displaySize (same as browser bypass).
   const W_REF = Math.min(285, effectiveWidth);
   const bodyFillNarrow = racerTypeConfig
     ? Math.min(racerTypeConfig.bodyFillX, racerTypeConfig.bodyFillY)
@@ -147,19 +148,25 @@ export function simulateRace({
   const bodyFillLong = racerTypeConfig
     ? Math.max(racerTypeConfig.bodyFillX, racerTypeConfig.bodyFillY)
     : 0;
-  const { bodyNarrow } =
-    racerTypeConfig && autoScaleConfig && bodyFillNarrow > 0
+
+  let drawnBodyWidthPx;
+  let drawnBodyLengthPx;
+  if (racerTypeConfig && autoScaleConfig && bodyFillNarrow > 0) {
+    const useAutoScale = autoScaleConfig.enabled && !racerTypeConfig.hasDisplaySizeOverride;
+    const effectiveBodyNarrow = useAutoScale
       ? computeBodyNarrowRef(
           W_REF,
           nRacers,
           racerTypeConfig.displaySize,
           bodyFillNarrow,
           autoScaleConfig
-        )
-      : { bodyNarrow: 0 };
-  const drawnBodyWidthPx = bodyNarrow > 0 ? bodyNarrow : undefined;
-  const drawnBodyLengthPx =
-    bodyNarrow > 0 && bodyFillNarrow > 0 ? bodyNarrow * (bodyFillLong / bodyFillNarrow) : undefined;
+        ).bodyNarrow
+      : racerTypeConfig.displaySize;
+    if (effectiveBodyNarrow > 0) {
+      drawnBodyWidthPx = effectiveBodyNarrow;
+      drawnBodyLengthPx = effectiveBodyNarrow * (bodyFillLong / bodyFillNarrow);
+    }
+  }
 
   if (seed === 1 && drawnBodyLengthPx !== undefined) {
     const brakeT =

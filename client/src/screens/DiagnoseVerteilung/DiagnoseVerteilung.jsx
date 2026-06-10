@@ -18,6 +18,7 @@ import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { HorseRacerType } from '../../modules/racer-types/HorseRacerType.js';
+import { storageGet, KEYS } from '../../modules/storage/storage.js';
 
 const N_RUNS = 50;
 const N_RACERS = 40;
@@ -87,6 +88,14 @@ export default function DiagnoseVerteilung() {
     setProgress(0);
     setResults(null);
 
+    const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
+    const horseOverride = rawOverrides[HorseRacerType.config.id];
+    const hasDisplaySizeOverride = !!(
+      horseOverride &&
+      typeof horseOverride === 'object' &&
+      'displaySize' in horseOverride
+    );
+
     const raceConfig = {
       nRacers: N_RACERS,
       baseSpeedConfig: loadBaseSpeedConfig(),
@@ -97,6 +106,7 @@ export default function DiagnoseVerteilung() {
         bodyFillX: HorseRacerType.config.bodyFillX,
         bodyFillY: HorseRacerType.config.bodyFillY,
         displaySize: HorseRacerType.config.displaySize,
+        hasDisplaySizeOverride,
       },
       autoScaleConfig: loadAutoScaleConfig(),
     };
