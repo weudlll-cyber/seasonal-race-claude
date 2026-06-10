@@ -3,14 +3,10 @@
 // Path:        client/src/modules/track-editor/trackStorage.js
 // Project:     RaceArena
 // Created:     2026-04-25
-// Description: localStorage CRUD for editor-created track geometries
-//              (key scheme: racearena:trackGeometries:*).
+// Description: localStorage CRUD for editor-created track geometries.
+//              Key scheme: racearena:trackGeometries:index (ID list) and
+//              racearena:trackGeometries:<id> (geometry JSON per entry).
 // ============================================================
-
-// localStorage CRUD for editor-created track geometries.
-// Key scheme:
-//   racearena:trackGeometries:index  — JSON array of geometry IDs
-//   racearena:trackGeometries:<id>   — full geometry JSON
 
 import { catmullRomSpline } from './catmullRom.js';
 
