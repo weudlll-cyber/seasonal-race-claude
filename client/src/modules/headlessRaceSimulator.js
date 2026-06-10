@@ -31,6 +31,9 @@ const REFERENCE_FPS = 62.5; // 1000ms / 16ms, same as camera/lapUtils.js
 const DT = 16; // fixed frame delta in ms (reference frame)
 const FRAMES_PER_RACE = 250; // 4000ms / 16ms = 250 frames of RACING time
 
+/** Convert a RACING duration in seconds to the equivalent frame count. */
+export const secondsToFrames = (seconds) => Math.round((seconds * 1000) / DT);
+
 // Dirt-oval geometry constants (from server/data/tracks/dirt-oval.json)
 export const DIRT_OVAL_PATH_LENGTH_PX = 3245;
 export const DIRT_OVAL_TRACK_WIDTH_PX = 93;
@@ -145,6 +148,7 @@ export function simulateRace({
   dynamicsConfig,
   racerTypeConfig,
   autoScaleConfig,
+  framesPerRace = FRAMES_PER_RACE,
 }) {
   const rng = mulberry32(seed);
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
@@ -292,7 +296,7 @@ export function simulateRace({
   const targetDuration = 60; // seconds
   const lastRollDeadline = targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
 
-  for (let frame = 0; frame < FRAMES_PER_RACE; frame++) {
+  for (let frame = 0; frame < framesPerRace; frame++) {
     const ts = frame * DT;
 
     // Update world positions for drafting (circular approximation)
