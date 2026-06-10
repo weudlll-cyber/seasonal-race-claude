@@ -6,8 +6,6 @@
 //              Lights replace solid boundary lines in the RaceScreen.
 // ============================================================
 
-import { DEFAULT_TRACKS } from './storage/defaults.js';
-
 export const LIGHT_SPACING_PX = 30;
 const LIGHT_RADIUS = 3;
 const BASE_ALPHA = 0.4;
@@ -18,25 +16,6 @@ const WAVE_HALF_WIDTH = 5;
 export const VALID_LIGHT_STYLES = ['steady', 'sequence', 'sync_pulse', 'random_flash'];
 
 export const DEFAULT_TRACK_LIGHTS = { color: '#ffffff', style: 'sequence', speed: 1.0 };
-
-const THEMED_DEFAULTS_BY_NAME = {
-  'Dirt Oval': { color: '#ff8844', style: 'sequence', speed: 1.0 },
-  'River Run': { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
-  'Space Sprint': { color: '#a8d4ff', style: 'sequence', speed: 1.5 },
-  'Garden Path': { color: '#ffdd66', style: 'steady', speed: 1.0 },
-  'City Circuit': { color: '#ffffff', style: 'sequence', speed: 1.0 },
-};
-
-const THEMED_DEFAULTS = Object.fromEntries(
-  DEFAULT_TRACKS.filter((t) => t.name in THEMED_DEFAULTS_BY_NAME).map((t) => [
-    t.id,
-    THEMED_DEFAULTS_BY_NAME[t.name],
-  ])
-);
-
-export function getDefaultTrackLights(trackId) {
-  return THEMED_DEFAULTS[trackId] ?? DEFAULT_TRACK_LIGHTS;
-}
 
 /**
  * Sample a boundary polyline at evenly-spaced arc-length intervals.
