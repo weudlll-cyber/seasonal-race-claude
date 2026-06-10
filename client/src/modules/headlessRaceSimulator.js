@@ -351,9 +351,15 @@ export function simulateRace({
  */
 export function runDistributionMeasurement(nRuns, raceConfig, onProgress) {
   const runResults = [];
+  // spriteLengthInT is seed-independent — capture once from the first run.
+  let firstSpriteLengthInT;
 
   for (let run = 0; run < nRuns; run++) {
-    const { neighborCounts } = simulateRace({ ...raceConfig, seed: run * 7919 + 1 });
+    const { neighborCounts, spriteLengthInT } = simulateRace({
+      ...raceConfig,
+      seed: run * 7919 + 1,
+    });
+    if (run === 0) firstSpriteLengthInT = spriteLengthInT;
 
     const maxNeighbors = Math.max(...neighborCounts);
     const meanNeighbors = neighborCounts.reduce((s, c) => s + c, 0) / neighborCounts.length;
@@ -415,7 +421,7 @@ export function runDistributionMeasurement(nRuns, raceConfig, onProgress) {
     nRuns,
     nRacers: raceConfig.nRacers,
     framesPerRace: FRAMES_PER_RACE,
-    spriteLengthInT: SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX,
+    spriteLengthInT: firstSpriteLengthInT ?? SPRITE_SIZE / DIRT_OVAL_PATH_LENGTH_PX,
     maxNeighbors: {
       mean: maxMean,
       median: maxMedian,
