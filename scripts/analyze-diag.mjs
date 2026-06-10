@@ -7,7 +7,7 @@
 //              fairness-data.json from client/tmp/ and compares distributions.
 // ============================================================
 
-// analyze-diag.mjs — Soll-vs-Ist analysis for Phase 3A M2v2 diagnostic
+// analyze-diag.mjs — target-vs-actual analysis for Phase 3A M2v2 diagnostic
 // Usage: node scripts/analyze-diag.mjs
 
 import { readFileSync } from 'fs';
