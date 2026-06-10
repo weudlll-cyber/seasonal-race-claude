@@ -25,7 +25,7 @@ class TimeoutError extends Error {
   }
 }
 
-export function withTimeout(promise, ms) {
+function withTimeout(promise, ms) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new TimeoutError()), ms)),
