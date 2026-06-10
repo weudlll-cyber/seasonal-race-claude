@@ -16,6 +16,8 @@ import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
+import { HorseRacerType } from '../../modules/racer-types/HorseRacerType.js';
 
 const N_RUNS = 50;
 const N_RACERS = 40;
@@ -91,6 +93,12 @@ export default function DiagnoseVerteilung() {
       behaviorConfig: loadRaceBehaviorConfig(),
       rowConfig: loadRowLayoutConfig(),
       dynamicsConfig: loadRaceDynamicsConfig(),
+      racerTypeConfig: {
+        bodyFillX: HorseRacerType.config.bodyFillX,
+        bodyFillY: HorseRacerType.config.bodyFillY,
+        displaySize: HorseRacerType.config.displaySize,
+      },
+      autoScaleConfig: loadAutoScaleConfig(),
     };
 
     const allRuns = [];

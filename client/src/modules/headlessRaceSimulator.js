@@ -16,7 +16,12 @@
 //   This is an approximation documented in the Phase-1 Decision Log.
 // ============================================================
 
-import { computeRacersPerRow, computeRowPhysicalY, computeSpeedBonus } from './rowLayout.js';
+import {
+  computeRacersPerRow,
+  computeRowPhysicalY,
+  computeSpeedBonus,
+  computeBodyNarrowRef,
+} from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -114,6 +119,8 @@ export function simulateRace({
   behaviorConfig,
   rowConfig,
   dynamicsConfig,
+  racerTypeConfig,
+  autoScaleConfig,
 }) {
   const rng = mulberry32(seed);
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
@@ -129,6 +136,39 @@ export function simulateRace({
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
+
+  // Browser-matched body dimensions via computeBodyNarrowRef — same formula as RaceScreen.
+  // drawnBodyWidthPx: narrow-axis body world-px; drawnBodyLengthPx: long-axis body world-px.
+  // Undefined when racerTypeConfig/autoScaleConfig absent; raceBehavior.js frameSizePx fallback activates.
+  const W_REF = Math.min(285, effectiveWidth);
+  const bodyFillNarrow = racerTypeConfig
+    ? Math.min(racerTypeConfig.bodyFillX, racerTypeConfig.bodyFillY)
+    : 0;
+  const bodyFillLong = racerTypeConfig
+    ? Math.max(racerTypeConfig.bodyFillX, racerTypeConfig.bodyFillY)
+    : 0;
+  const { bodyNarrow } =
+    racerTypeConfig && autoScaleConfig && bodyFillNarrow > 0
+      ? computeBodyNarrowRef(
+          W_REF,
+          nRacers,
+          racerTypeConfig.displaySize,
+          bodyFillNarrow,
+          autoScaleConfig
+        )
+      : { bodyNarrow: 0 };
+  const drawnBodyWidthPx = bodyNarrow > 0 ? bodyNarrow : undefined;
+  const drawnBodyLengthPx =
+    bodyNarrow > 0 && bodyFillNarrow > 0 ? bodyNarrow * (bodyFillLong / bodyFillNarrow) : undefined;
+
+  if (seed === 1 && drawnBodyLengthPx !== undefined) {
+    const brakeT =
+      (drawnBodyLengthPx / pathLengthPx) * (behaviorConfig.speedBrakeTMultiplier ?? 1.5);
+    console.warn(
+      `[SimGeom] drawnBodyWidthPx=${drawnBodyWidthPx.toFixed(2)} drawnBodyLengthPx=${drawnBodyLengthPx.toFixed(2)} dynamicBrakeT≈${brakeT.toFixed(5)}`
+    );
+  }
+
   const racersPerRow = computeRacersPerRow(effectiveWidth, spriteSize);
   const rowLayout = computeRowLayoutSeeded(nRacers, racersPerRow, rng);
   const rowGapPx = spriteSize * rowConfig.rowGapMultiplier;
@@ -193,6 +233,8 @@ export function simulateRace({
       physicalY: 0,
       // Geometry fields needed by raceBehavior.js
       frameSizePx: spriteSize,
+      drawnBodyWidthPx,
+      drawnBodyLengthPx,
       trackWidthPx: geometricTrackWidthPx,
       pathLengthPx,
     };
