@@ -29,6 +29,10 @@ const N_RUNS = 50;
 const N_RACERS = 40;
 const SPRITE_SIZE = 40;
 const CHUNK_SIZE = 5; // races per animation frame
+// Upper bound for the runtime slider. Dirt Oval @40 racers starts dead-stacking beyond ~51s;
+// values above this cap reflect finish-line clustering, not live mid-race density.
+// Single source of truth — future hook for per-track ranges when a track selector arrives.
+const MAX_RUNTIME_SECONDS = 50;
 
 // ── ASCII histogram ────────────────────────────────────────────────────────────
 function AsciiHistogram({ histogram, nRuns }) {
@@ -69,7 +73,7 @@ export default function DiagnoseVerteilung() {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState(null);
   const [selectedTypeId, setSelectedTypeId] = useState('horse');
-  const [runtimeSeconds, setRuntimeSeconds] = useState(4);
+  const [runtimeSeconds, setRuntimeSeconds] = useState(Math.min(4, MAX_RUNTIME_SECONDS));
   const cancelRef = useRef(false);
 
   const handleRun = useCallback(() => {
@@ -238,7 +242,7 @@ export default function DiagnoseVerteilung() {
         <input
           type="range"
           min={1}
-          max={60}
+          max={MAX_RUNTIME_SECONDS}
           step={1}
           value={runtimeSeconds}
           onChange={(e) => setRuntimeSeconds(Number(e.target.value))}
