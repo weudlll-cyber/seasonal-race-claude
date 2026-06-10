@@ -11,7 +11,11 @@
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';
-import { simulateRace, DIRT_OVAL_PATH_LENGTH_PX } from '../../modules/headlessRaceSimulator.js';
+import {
+  simulateRace,
+  secondsToFrames,
+  DIRT_OVAL_PATH_LENGTH_PX,
+} from '../../modules/headlessRaceSimulator.js';
 import { avg, median, p95, stddev } from '../../modules/statsHelpers.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
@@ -65,6 +69,7 @@ export default function DiagnoseVerteilung() {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState(null);
   const [selectedTypeId, setSelectedTypeId] = useState('horse');
+  const [runtimeSeconds, setRuntimeSeconds] = useState(4);
   const cancelRef = useRef(false);
 
   const handleRun = useCallback(() => {
@@ -73,6 +78,7 @@ export default function DiagnoseVerteilung() {
     setProgress(0);
     setResults(null);
 
+    const frames = secondsToFrames(runtimeSeconds);
     const racerType = RACER_TYPES[selectedTypeId] ?? RACER_TYPES.horse;
     const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
     const typeOverride = rawOverrides[selectedTypeId];
@@ -111,6 +117,7 @@ export default function DiagnoseVerteilung() {
         const { neighborCounts, spriteLengthInT } = simulateRace({
           ...raceConfig,
           seed: run * 7919 + 1,
+          framesPerRace: frames,
         });
         if (capturedSpriteLengthInT === null) capturedSpriteLengthInT = spriteLengthInT;
         allRuns.push({
@@ -137,6 +144,7 @@ export default function DiagnoseVerteilung() {
         setResults({
           nRuns: allRuns.length,
           nRacers: N_RACERS,
+          runtimeSeconds,
           maxMean,
           maxMedian: median(maxArr),
           max95: p95(maxArr),
@@ -157,7 +165,7 @@ export default function DiagnoseVerteilung() {
     }
 
     setTimeout(() => runChunk(0), 0);
-  }, [selectedTypeId]);
+  }, [selectedTypeId, runtimeSeconds]);
 
   const handleExport = useCallback(() => {
     if (!results) return;
@@ -195,7 +203,8 @@ export default function DiagnoseVerteilung() {
         Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} racers · Dirt Oval · {N_RUNS} races × 4s RACING time
+        /diagnose-verteilung · {N_RACERS} racers · Dirt Oval · {N_RUNS} races × {runtimeSeconds}s
+        RACING time
       </p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -220,6 +229,22 @@ export default function DiagnoseVerteilung() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.85rem', color: '#8b949e', flexShrink: 0 }}>
+          RACING runtime: {runtimeSeconds} s
+        </label>
+        <input
+          type="range"
+          min={1}
+          max={60}
+          step={1}
+          value={runtimeSeconds}
+          onChange={(e) => setRuntimeSeconds(Number(e.target.value))}
+          disabled={status === 'running'}
+          style={{ cursor: status === 'running' ? 'not-allowed' : 'pointer' }}
+        />
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -316,8 +341,8 @@ export default function DiagnoseVerteilung() {
               One-line summary
             </h2>
             <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
-              In {results.nRuns} races with {N_RACERS} racers on Dirt Oval, after 4 seconds the
-              maximum number of side-by-side neighbours is on average{' '}
+              In {results.nRuns} races with {N_RACERS} racers on Dirt Oval, after{' '}
+              {results.runtimeSeconds}s the maximum number of side-by-side neighbours is on average{' '}
               <strong style={{ color: '#58a6ff' }}>{results.maxMean.toFixed(1)}</strong>, at most{' '}
               <strong style={{ color: '#f85149' }}>{results.maxMax}</strong>, and in 95% of races no
               more than <strong style={{ color: '#3fb950' }}>{results.max95}</strong>.

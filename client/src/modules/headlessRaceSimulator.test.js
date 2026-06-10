@@ -13,7 +13,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { simulateRace, countNeighbors } from './headlessRaceSimulator.js';
+import { simulateRace, countNeighbors, secondsToFrames } from './headlessRaceSimulator.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -215,5 +215,56 @@ describe('countNeighbors — counting contract (TC-06/K2)', () => {
     // sees the other two, but NOT itself. Without self-exclusion, count would be 3.
     const counts = countNeighbors([0.5, 0.5, 0.5], 0.01);
     expect(counts).toEqual([2, 2, 2]);
+  });
+});
+
+// ── TC-06/K3: secondsToFrames + framesPerRace propagation ────────────────────
+//
+// Verifies the seconds→frames conversion helper and that simulateRace honours
+// the framesPerRace parameter (more frames → racers advance further).
+//
+// secondsToFrames formula: Math.round(seconds * 1000 / DT), DT=16ms.
+//   4s  → 4000/16 = 250
+//   60s → 60000/16 = 3750
+
+describe('secondsToFrames + framesPerRace propagation (TC-06/K3)', () => {
+  // ── K3-a: Conversion formula ─────────────────────────────────────────────────
+
+  it('secondsToFrames(4) === 250 (default slider value)', () => {
+    expect(secondsToFrames(4)).toBe(250);
+  });
+
+  it('secondsToFrames(60) === 3750 (slider maximum)', () => {
+    expect(secondsToFrames(60)).toBe(3750);
+  });
+
+  // ── K3-b: framesPerRace propagates to sim run length ─────────────────────────
+
+  it('framesPerRace=secondsToFrames(4) vs framesPerRace=secondsToFrames(8): racers advance further with more frames', () => {
+    // Same seed, same config — only framesPerRace differs.
+    // If framesPerRace is ignored and the constant FRAMES_PER_RACE is used instead,
+    // both runs would return identical racerTs (both equal to the 250-frame result).
+    const cfg = {
+      ...BASE_CONFIG,
+      racerTypeConfig: HORSE_TYPE,
+      autoScaleConfig: AUTO_SCALE_ON,
+    };
+    const short = simulateRace({ ...cfg, framesPerRace: secondsToFrames(4) });
+    const longer = simulateRace({ ...cfg, framesPerRace: secondsToFrames(8) });
+    const meanT = (ts) => ts.reduce((s, t) => s + t, 0) / ts.length;
+    expect(meanT(longer.racerTs)).toBeGreaterThan(meanT(short.racerTs));
+  });
+
+  it('framesPerRace=secondsToFrames(4) produces same racerTs as default (behaviour-neutral at 4s)', () => {
+    // With the slider at 4s, output must be IDENTICAL to omitting framesPerRace.
+    const cfg = {
+      ...BASE_CONFIG,
+      racerTypeConfig: HORSE_TYPE,
+      autoScaleConfig: AUTO_SCALE_ON,
+    };
+    const withDefault = simulateRace({ ...cfg });
+    const withExplicit = simulateRace({ ...cfg, framesPerRace: secondsToFrames(4) });
+    expect(withExplicit.racerTs).toEqual(withDefault.racerTs);
+    expect(withExplicit.neighborCounts).toEqual(withDefault.neighborCounts);
   });
 });
