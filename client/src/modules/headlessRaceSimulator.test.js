@@ -3,16 +3,17 @@
 // Path:        client/src/modules/headlessRaceSimulator.test.js
 // Project:     RaceArena
 // Created:     2026-06-10
-// Description: Contract tests for headlessRaceSimulator.js — spriteLengthInT
-//              geometry guards (TC-06/K1). Protects the G1-a parity work
-//              (computeBodyNarrowRef path, bypass conditions, spriteSize fallback)
+// Description: Contract tests for headlessRaceSimulator.js.
+//              TC-06/K1 — spriteLengthInT geometry guards. Protects the G1-a parity
+//              work (computeBodyNarrowRef path, bypass conditions, spriteSize fallback)
 //              against accidental reversion. spriteLengthInT is seed-independent:
-//              the geometry is computed before the first rng() call, so no RNG
-//              control is needed.
+//              the geometry is computed before the first rng() call.
+//              TC-06/K2 — countNeighbors unit tests. Pure-fixture tests on threshold
+//              boundary (strict <), wrap-around correction, and self-exclusion.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { simulateRace } from './headlessRaceSimulator.js';
+import { simulateRace, countNeighbors } from './headlessRaceSimulator.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -155,5 +156,64 @@ describe('simulateRace — spriteLengthInT geometry guards (TC-06/K1)', () => {
       autoScaleConfig: AUTO_SCALE_ON,
     });
     expect(spriteLengthInT).toBeCloseTo(0.00784, 3);
+  });
+});
+
+// ── TC-06/K2: countNeighbors — counting contract ──────────────────────────────
+//
+// Pure-fixture tests: no simulation, no seed dependency. Each test provides
+// a known racerTs array and threshold, and asserts the exact neighbor counts.
+//
+// Invariants under test:
+//   a) Strict-<: a racer at exactly |Δt| = threshold is NOT counted (< not <=)
+//   b) Wrap-around: |Δt| = 0.6 on a closed track uses the shorter arc (1-0.6=0.4)
+//   c) Self-exclusion: a racer never counts itself
+
+describe('countNeighbors — counting contract (TC-06/K2)', () => {
+  // ── K2-a: Strict less-than at the boundary ───────────────────────────────────
+
+  it('racer exactly at threshold distance is NOT counted (strict <, not <=)', () => {
+    // |0.0 - 0.01| = 0.01; 0.01 < 0.01 is false → neither racer counts the other.
+    // If the check were <= instead of <, both would return count=1.
+    const counts = countNeighbors([0.0, 0.01], 0.01);
+    expect(counts).toEqual([0, 0]);
+  });
+
+  it('racer just inside threshold IS counted', () => {
+    // |0.0 - 0.009| = 0.009; 0.009 < 0.01 is true → both see each other.
+    const counts = countNeighbors([0.0, 0.009], 0.01);
+    expect(counts).toEqual([1, 1]);
+  });
+
+  // ── K2-b: Wrap-around (shortest-arc) correction ──────────────────────────────
+
+  it('wrap-around: |Δt|=0.6 uses shortest arc 0.4, counted when threshold=0.45', () => {
+    // Without wrap: dT=0.6, 0.6 < 0.45 is false → would not count.
+    // With wrap: dT > 0.5 → dT = 1-0.6 = 0.4; 0.4 < 0.45 is true → both count.
+    // This verifies that lead/last-place racers are correctly recognised as neighbors.
+    const counts = countNeighbors([0.0, 0.6], 0.45);
+    expect(counts).toEqual([1, 1]);
+  });
+
+  it('wrap-around: |Δt|=0.6 is NOT counted when threshold=0.35 (even shortest arc too large)', () => {
+    // Shortest arc = 0.4, threshold = 0.35 → 0.4 < 0.35 is false → not counted.
+    const counts = countNeighbors([0.0, 0.6], 0.35);
+    expect(counts).toEqual([0, 0]);
+  });
+
+  // ── K2-c: Self-exclusion ─────────────────────────────────────────────────────
+
+  it('single racer returns count 0 — never counts itself', () => {
+    // With a threshold wider than any possible distance, a lone racer must still
+    // return 0 (self-exclusion).
+    const counts = countNeighbors([0.5], 1.0);
+    expect(counts).toEqual([0]);
+  });
+
+  it('multi-racer array: each racer is excluded from its own count', () => {
+    // Three racers all at the same t-value. |Δt|=0 < any positive threshold → each
+    // sees the other two, but NOT itself. Without self-exclusion, count would be 3.
+    const counts = countNeighbors([0.5, 0.5, 0.5], 0.01);
+    expect(counts).toEqual([2, 2, 2]);
   });
 });

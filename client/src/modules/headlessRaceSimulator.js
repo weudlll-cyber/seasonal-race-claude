@@ -98,6 +98,29 @@ function computeWorldPos(t, pathLengthPx) {
   };
 }
 
+// ── Neighbor counting ─────────────────────────────────────────────────────────
+/**
+ * Count neighbors within threshold t-distance for each racer.
+ * Uses shortest-arc distance on a closed track (wraps at 1.0).
+ * A racer does not count itself. Threshold comparison is strict less-than.
+ *
+ * @param {number[]} racerTs   - t-positions of all racers
+ * @param {number}   threshold - racer at |Δt| < threshold counts as a neighbor
+ * @returns {number[]} neighbor count per racer, same order as racerTs
+ */
+export function countNeighbors(racerTs, threshold) {
+  return racerTs.map((t, i) => {
+    let count = 0;
+    for (let j = 0; j < racerTs.length; j++) {
+      if (j === i) continue;
+      let dT = Math.abs(t - racerTs[j]);
+      if (dT > 0.5) dT = 1 - dT; // shortest arc on closed track
+      if (dT < threshold) count++;
+    }
+    return count;
+  });
+}
+
 // ── Single race simulation ─────────────────────────────────────────────────────
 /**
  * Simulate one race for FRAMES_PER_RACE frames and return the per-racer
@@ -323,16 +346,10 @@ export function simulateRace({
 
   // ── Measure neighbors after FRAMES_PER_RACE frames ────────────────────────
   const spriteLengthInT = (drawnBodyLengthPx ?? spriteSize) / pathLengthPx;
-  const neighborCounts = racers.map((r) => {
-    let count = 0;
-    for (const other of racers) {
-      if (other.index === r.index) continue;
-      let dT = Math.abs(r.t - other.t);
-      if (dT > 0.5) dT = 1 - dT; // shortest arc on closed track
-      if (dT < spriteLengthInT) count++;
-    }
-    return count;
-  });
+  const neighborCounts = countNeighbors(
+    racers.map((r) => r.t),
+    spriteLengthInT
+  );
 
   return {
     neighborCounts,
