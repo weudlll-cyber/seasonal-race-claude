@@ -1,3 +1,12 @@
+// ============================================================
+// File:        diag-free-lane-force-attribution.mjs
+// Path:        scripts/diag-free-lane-force-attribution.mjs
+// Project:     RaceArena
+// Created:     2026-05-14
+// Description: Traces lateral force attribution per racer per frame on Dirt Oval;
+//              outputs NDJSON to docs/diagnose/ for the summary script.
+// ============================================================
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';

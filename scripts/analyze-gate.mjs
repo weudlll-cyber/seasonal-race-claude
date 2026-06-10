@@ -1,3 +1,12 @@
+// ============================================================
+// File:        analyze-gate.mjs
+// Path:        scripts/analyze-gate.mjs
+// Project:     RaceArena
+// Created:     2026-05-20
+// Description: Re-evaluates existing sim runs with weighted gate calibration
+//              using chi-square p-value scoring; reads from client/tmp/.
+// ============================================================
+
 // analyze-gate.mjs — Re-evaluate existing sim runs with weighted gate calibration
 // Usage: node scripts/analyze-gate.mjs
 

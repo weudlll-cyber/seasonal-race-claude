@@ -1,3 +1,12 @@
+// ============================================================
+// File:        crop-sprite-sheets.mjs
+// Path:        scripts/crop-sprite-sheets.mjs
+// Project:     RaceArena
+// Created:     2026-06-03
+// Description: Crops flagged racer spritesheets to tight body bounding box —
+//              per-frame extract → crop → resize → stitch; requires sharp.
+// ============================================================
+
 /**
  * crop-sprite-sheets.mjs
  * Crops flagged racer spritesheets to tight body bounding box.

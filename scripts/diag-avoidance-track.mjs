@@ -1,3 +1,12 @@
+// ============================================================
+// File:        diag-avoidance-track.mjs
+// Path:        scripts/diag-avoidance-track.mjs
+// Project:     RaceArena
+// Created:     2026-05-17
+// Description: Diagnoses forward-fraction anomaly by comparing avoidance
+//              behavior on Space Sprint vs Dirt Oval.
+// ============================================================
+
 // Diagnostic: forward-fraction anomaly comparison Space Sprint vs Dirt Oval
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
 import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';

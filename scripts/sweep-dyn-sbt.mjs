@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-dyn-sbt.mjs
+// Path:        scripts/sweep-dyn-sbt.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Tests speedBrakeTMultiplier values [0.8–2.5] against 7 tracks
+//              using Phase 5 winner physics — 700 races; outputs to sweep-dyn-sbt-results.txt.
+// ============================================================
+
 /**
  * sweep-dyn-sbt.mjs
  * Mandatory sim for feat/dynamic-speed-brake.

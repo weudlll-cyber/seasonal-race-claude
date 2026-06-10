@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-balanced-lhs.mjs
+// Path:        scripts/sweep-balanced-lhs.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: LHS balanced sweep — 201 combos × 10 races × 2 tracks
+//              (Dirt Oval + Space Sprint); outputs to sweep-balanced-lhs-results.txt.
+// ============================================================
+
 /**
  * sweep-balanced-lhs.mjs
  * Phase 1: LHS balanced sweep — Dirt Oval (horse 40) + Space Sprint (rocket 60).

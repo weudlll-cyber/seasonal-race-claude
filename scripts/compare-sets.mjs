@@ -1,3 +1,12 @@
+// ============================================================
+// File:        compare-sets.mjs
+// Path:        scripts/compare-sets.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Head-to-head comparison: master baseline vs sweep winner —
+//              100 races per set, seed=42, all tracks.
+// ============================================================
+
 // Comparison: Master baseline vs Sweep winner — 100 races per set, seed=42
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

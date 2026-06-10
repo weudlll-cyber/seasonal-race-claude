@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// ============================================================
+// File:        param-sweep-phase2.mjs
+// Path:        scripts/param-sweep-phase2.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Phase 2 confirmation sweep — top-5 Phase 1 survivors
+//              × 100 races per track.
+// ============================================================
+
 // scripts/param-sweep-phase2.mjs
 // Phase 2 confirmation sweep — top 5 Phase 1 survivors, 100 races each.
 //

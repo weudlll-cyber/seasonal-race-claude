@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// ============================================================
+// File:        param-sweep.mjs
+// Path:        scripts/param-sweep.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Phase 1 lateral physics sweep — 243 combos (lf×ld×hfs×hfr×ad,
+//              3 levels each) × 10 races; use --quick for a sanity check.
+// ============================================================
+
 // scripts/param-sweep.mjs
 // Phase 1 parameter sweep — lateral physics optimization.
 //

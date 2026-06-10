@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-phase4.mjs
+// Path:        scripts/sweep-phase4.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Fine-tunes 7 params ±2.5/5% around Phase 2 winner
+//              (homeForceStrength fixed at 0.030) — 30 combos × 600 races.
+// ============================================================
+
 /**
  * sweep-phase4.mjs
  * Phase 4: homeForceStrength fixed at 0.030, fine-tune all other 7 params

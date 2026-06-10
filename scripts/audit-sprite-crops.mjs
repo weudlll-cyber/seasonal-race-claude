@@ -1,3 +1,12 @@
+// ============================================================
+// File:        audit-sprite-crops.mjs
+// Path:        scripts/audit-sprite-crops.mjs
+// Project:     RaceArena
+// Created:     2026-06-03
+// Description: Measures body bounding box and fill ratio for each racer
+//              spritesheet across all animation frames; requires sharp.
+// ============================================================
+
 /**
  * audit-sprite-crops.mjs
  * Measures the body bounding box and fill ratio for each racer spritesheet.

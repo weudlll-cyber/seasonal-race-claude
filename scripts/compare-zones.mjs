@@ -1,3 +1,12 @@
+// ============================================================
+// File:        compare-zones.mjs
+// Path:        scripts/compare-zones.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Zone success rate comparison — Set A vs Set B lateral params,
+//              100 races × 3 tracks × 5 zones (B1–B5), seed=42.
+// ============================================================
+
 // Zone success rate: Set A (lateralDamping=0.25, lateralForce=0.012) vs
 //                   Set B (lateralDamping=0.45, lateralForce=0.010)
 // 100 races × 3 tracks × 5 zones (B1–B5), seed=42

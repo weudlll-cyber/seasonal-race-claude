@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// ============================================================
+// File:        param-sweep-braking.mjs
+// Path:        scripts/param-sweep-braking.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Phase 1 braking sweep — 27 combos × 3 tracks × 10 races;
+//              use --quick for a 3-combo sanity check.
+// ============================================================
+
 // scripts/param-sweep-braking.mjs
 // Phase 1 braking parameter sweep — 27 combos × 3 tracks × 10 races.
 //

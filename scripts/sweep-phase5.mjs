@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-phase5.mjs
+// Path:        scripts/sweep-phase5.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Two-phase combination test (lateralDamping + sbt): Phase A 120 races
+//              + Phase B 1500 races across 10 tracks; outputs to sweep-phase5-results.txt.
+// ============================================================
+
 /**
  * sweep-phase5.mjs
  * Phase A: Combination test ld + sbt (6 combos × 10 races/track × 2 tracks = 120 races).

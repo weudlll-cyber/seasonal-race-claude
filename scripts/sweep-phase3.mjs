@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-phase3.mjs
+// Path:        scripts/sweep-phase3.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Phase 3 lower-boundary extension for lateralDamping + homeForceStrength —
+//              13 combos × 260 races; outputs to sweep-phase3-results.txt.
+// ============================================================
+
 /**
  * sweep-phase3.mjs
  * Phase 3: Extend lower boundary for lateralDamping + homeForceStrength,

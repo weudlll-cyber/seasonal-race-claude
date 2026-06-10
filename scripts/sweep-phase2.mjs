@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-phase2.mjs
+// Path:        scripts/sweep-phase2.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Phase 2 extended-range + fine-tuning around Phase 1 winner —
+//              26 combos × 520 races; outputs to sweep-phase2-results.txt.
+// ============================================================
+
 /**
  * sweep-phase2.mjs
  * Phase 2: Extended range (sub-sweep A) + fine-tuning (sub-sweep B) around Phase 1 winner.

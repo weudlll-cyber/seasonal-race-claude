@@ -1,3 +1,12 @@
+// ============================================================
+// File:        diag-free-lane-force-attribution-summary.mjs
+// Path:        scripts/diag-free-lane-force-attribution-summary.mjs
+// Project:     RaceArena
+// Created:     2026-05-14
+// Description: Summarizes free-lane force attribution trace (NDJSON) and
+//              writes a markdown report to docs/diagnose/.
+// ============================================================
+
 import fs from 'node:fs';
 import path from 'node:path';
 

@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-body-collision.mjs
+// Path:        scripts/sweep-body-collision.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Avoidance sweep — 82 combos (ad×lf×hfr×hfs, 3 levels + baseline)
+//              × 10 races on Space Sprint × Rocket.
+// ============================================================
+
 /**
  * sweep-body-collision.mjs
  * Phase 1: avoidance parameter sweep — Space Sprint × Rocket × 60 racers × 10 races.

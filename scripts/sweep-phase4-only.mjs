@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-phase4-only.mjs
+// Path:        scripts/sweep-phase4-only.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Phase 4 validation — Phase-3 top-3 combos × 10 tracks × 100 races
+//              (3100 total); appends to sweep-full-4phase-results.txt.
+// ============================================================
+
 /**
  * sweep-phase4-only.mjs
  * Phase 4 validation run using Phase-3 top-3 combos from sweep-full-4phase.mjs.

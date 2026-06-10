@@ -1,3 +1,12 @@
+// ============================================================
+// File:        sweep-full-4phase.mjs
+// Path:        scripts/sweep-full-4phase.mjs
+// Project:     RaceArena
+// Created:     2026-06-04
+// Description: Four-phase collision optimization: Phase 1–3 sweeps then Phase 4
+//              validation (3100 races); writes live to sweep-full-4phase-results.txt.
+// ============================================================
+
 /**
  * sweep-full-4phase.mjs
  * Full 4-phase collision parameter optimization sweep.

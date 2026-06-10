@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// ============================================================
+// File:        param-sweep-braking-phase2.mjs
+// Path:        scripts/param-sweep-braking-phase2.mjs
+// Project:     RaceArena
+// Created:     2026-05-31
+// Description: Phase 2 braking sweep — top-5 Phase 1 survivors + baseline
+//              × 3 tracks × 100 races; use --quick for a fast dev run.
+// ============================================================
+
 // scripts/param-sweep-braking-phase2.mjs
 // Phase 2 braking parameter sweep — top 5 from Phase 1 + baseline × 3 tracks × 100 races.
 //

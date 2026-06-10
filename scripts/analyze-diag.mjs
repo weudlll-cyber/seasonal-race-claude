@@ -1,3 +1,12 @@
+// ============================================================
+// File:        analyze-diag.mjs
+// Path:        scripts/analyze-diag.mjs
+// Project:     RaceArena
+// Created:     2026-05-20
+// Description: Phase 3A M2v2 target-vs-actual zone analysis; reads
+//              fairness-data.json from client/tmp/ and compares distributions.
+// ============================================================
+
 // analyze-diag.mjs — Soll-vs-Ist analysis for Phase 3A M2v2 diagnostic
 // Usage: node scripts/analyze-diag.mjs
 
