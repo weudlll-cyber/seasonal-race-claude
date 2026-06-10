@@ -6,6 +6,7 @@ build
 .claude/settings.json
 .claude/settings.local.json
 client/coverage/
+server/coverage/
 client/playwright-report/
 client/test-results/
 .playwright-mcp/

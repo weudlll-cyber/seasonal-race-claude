@@ -20,8 +20,8 @@ export const DEFAULT_TRACKS = [
     difficulty: 'medium',
     surfaceClasses: ['earth'],
 
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 1536,
+    worldHeight: 1024,
     isDefault: true,
   },
   {
@@ -37,8 +37,8 @@ export const DEFAULT_TRACKS = [
     difficulty: 'easy',
     surfaceClasses: ['water'],
 
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 6144,
+    worldHeight: 4096,
     isDefault: true,
   },
   {
@@ -54,8 +54,8 @@ export const DEFAULT_TRACKS = [
     difficulty: 'hard',
     surfaceClasses: ['air'],
 
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 6000,
+    worldHeight: 4000,
     isDefault: true,
   },
   {
@@ -71,8 +71,8 @@ export const DEFAULT_TRACKS = [
     difficulty: 'easy',
     surfaceClasses: ['grass', 'earth'],
 
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 1536,
+    worldHeight: 1024,
     isDefault: true,
   },
   {
@@ -88,8 +88,8 @@ export const DEFAULT_TRACKS = [
     difficulty: 'hard',
     surfaceClasses: ['asphalt'],
 
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 1536,
+    worldHeight: 1024,
     isDefault: true,
   },
   {
@@ -347,6 +347,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
   overviewClosedTrackZoom: 1.3, // @deprecated 2026-06-04 — retired; kept in schema v15 for migration compatibility only; not read at runtime
   overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
+  overviewMinEffZoom: 0, // OVERVIEW zoom floor (effective zoom). 0 = off (current behavior). E.g. 0.6 = effZoom never goes below 0.6 on open tracks.
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,
