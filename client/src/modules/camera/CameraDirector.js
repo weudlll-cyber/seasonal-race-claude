@@ -434,6 +434,7 @@ export class CameraDirector {
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
     this._overviewTargetScreenPx = t.overviewTargetScreenPx;
+    this._overviewMinEffZoom = t.overviewMinEffZoom ?? 0;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
     this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
@@ -1132,6 +1133,10 @@ export class CameraDirector {
               : MAX_INVERSE_ZOOM;
             const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
             snapZoom = Math.max(minZoom, Math.min(maxZoom, raw));
+            // Apply configurable zoom floor (open tracks only): prevents extreme zoom-out at low racer counts.
+            if (this._isOpenTrack && this._overviewMinEffZoom > 0) {
+              snapZoom = Math.max(snapZoom, this._overviewMinEffZoom / OPEN_TRACK_BASE_ZOOM);
+            }
             this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
           } else {
             snapZoom = this._overviewStateZoom;
@@ -1575,9 +1580,9 @@ export class CameraDirector {
    * @param {number} stateZoom  cam.zoom for this state (not effective zoom)
    * @param {{ width: number, height: number }} frameSize
    */
-  _setOpenTrackTargets(target, stateZoom, frameSize) {
+  _setOpenTrackTargets(target, stateZoom, frameSize, extraMinEffZoom = 0) {
     const BASE = OPEN_TRACK_BASE_ZOOM;
-    const minEffZoom = this.overviewZoom * BASE;
+    const minEffZoom = Math.max(this.overviewZoom * BASE, extraMinEffZoom);
     const stateEffZoom = stateZoom * BASE;
 
     const zoomResolved = resolveCamera({
@@ -1677,7 +1682,12 @@ export class CameraDirector {
             : this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
           if (entryPanTarget) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(entryPanTarget, _ovSnapZoom, frameSize);
+              this._setOpenTrackTargets(
+                entryPanTarget,
+                _ovSnapZoom,
+                frameSize,
+                this._overviewMinEffZoom
+              );
             } else {
               this._setClosedTrackTargets(
                 entryPanTarget,
@@ -1705,7 +1715,7 @@ export class CameraDirector {
           const target = this._shape.getPosition(lookbackT, 0);
           if (target) {
             if (this._isOpenTrack) {
-              this._setOpenTrackTargets(target, _ovSnapZoom, frameSize);
+              this._setOpenTrackTargets(target, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
             } else {
               this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
             }
@@ -1725,7 +1735,7 @@ export class CameraDirector {
             ? this._applyOverviewRadialOffset(basePanTarget)
             : basePanTarget;
         if (this._isOpenTrack) {
-          this._setOpenTrackTargets(target, _ovSnapZoom, frameSize);
+          this._setOpenTrackTargets(target, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
         } else {
           this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
         }
@@ -1874,7 +1884,15 @@ export class CameraDirector {
       this._minRacersVisible > 0 &&
       (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE)
     ) {
-      const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
+      // Fix A: use targetZoom (not this.zoom) to evaluate visibility. During entry phase
+      // this.zoom is still low (camera zooming in from OVERVIEW), so using this.zoom would
+      // show all racers as visible and prevent the floor from decrementing. Using targetZoom
+      // (the resolved leaderZoom) correctly represents the intended zoom level, so the floor
+      // starts ratcheting down from the first LEADER_ZOOM frame. This ensures entry converges
+      // to the correct tracking zoom instead of overshooting to the raw config value.
+      const effZoom = this._isOpenTrack
+        ? this.targetZoom * OPEN_TRACK_BASE_ZOOM
+        : this.targetZoom * this._bsX;
       const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
       const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
       const visTarget = Math.min(this._minRacersVisible, activeCount);
