@@ -1,3 +1,12 @@
+// ============================================================
+// File:        useViewport.js
+// Path:        client/src/screens/TrackEditor/useViewport.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: React hook managing the track editor's viewport state —
+//              zoom level, pan offset, and canvas world dimensions.
+// ============================================================
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 const CW = 1280;

@@ -1,3 +1,12 @@
+// ============================================================
+// File:        trackRendering.js
+// Path:        client/src/screens/RaceScreen/drawing/trackRendering.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for track geometry, background image (pre-darkened
+//              cache), and track lighting.
+// ============================================================
+
 import { getBackgroundImage } from '../../../modules/track-effects/bgImageCache.js';
 
 const CANVAS_W = 1280;

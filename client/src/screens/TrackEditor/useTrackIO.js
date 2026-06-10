@@ -1,3 +1,12 @@
+// ============================================================
+// File:        useTrackIO.js
+// Path:        client/src/screens/TrackEditor/useTrackIO.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: React hook managing track server I/O state — create, update,
+//              delete, and background image upload operations.
+// ============================================================
+
 import { useState } from 'react';
 import { listTracks, deleteTrack } from '../../modules/track-editor/trackStorage.js';
 import { cacheTrackGeometry, removeCachedTrackData } from '../../modules/storage/trackLoader.js';

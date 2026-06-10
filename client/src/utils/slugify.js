@@ -1,3 +1,11 @@
+// ============================================================
+// File:        slugify.js
+// Path:        client/src/utils/slugify.js
+// Project:     RaceArena
+// Created:     2026-04-30
+// Description: URL-safe slug generator and unique-suffix helper for surface-class IDs.
+// ============================================================
+
 /**
  * Convert a human-readable label into a URL-safe slug matching /^[a-z0-9_-]+$/.
  * Falls back to 'class' when the input contains no usable characters.

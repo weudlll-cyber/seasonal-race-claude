@@ -1,3 +1,12 @@
+// ============================================================
+// File:        battleDiagRendering.js
+// Path:        client/src/screens/RaceScreen/drawing/battleDiagRendering.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for battle-diagnostics markers; draws world-space
+//              overlays and records a 20-frame snapshot during BATTLE_ZOOM state.
+// ============================================================
+
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 const PHASE_RACING = 1;

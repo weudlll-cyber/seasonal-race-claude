@@ -1,3 +1,12 @@
+// ============================================================
+// File:        TrackEditor.jsx
+// Path:        client/src/screens/TrackEditor/TrackEditor.jsx
+// Project:     RaceArena
+// Created:     2026-04-25
+// Description: Full-screen track editor — Catmull-Rom spline drawing, undo/redo,
+//              effects config, and server save/load.
+// ============================================================
+
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';

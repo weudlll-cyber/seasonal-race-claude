@@ -1,3 +1,12 @@
+// ============================================================
+// File:        DynamicsTuningSection.jsx
+// Path:        client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: DevScreen section — UI controls for race dynamics: base speed,
+//              start row layout, race dynamics, and frame timing config.
+// ============================================================
+
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadBaseSpeedConfig,

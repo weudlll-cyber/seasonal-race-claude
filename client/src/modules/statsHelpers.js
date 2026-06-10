@@ -1,3 +1,11 @@
+// ============================================================
+// File:        statsHelpers.js
+// Path:        client/src/modules/statsHelpers.js
+// Project:     RaceArena
+// Created:     2026-06-10
+// Description: Pure statistical helpers — avg, median, p95, stddev — for number arrays.
+// ============================================================
+
 export function avg(arr) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }

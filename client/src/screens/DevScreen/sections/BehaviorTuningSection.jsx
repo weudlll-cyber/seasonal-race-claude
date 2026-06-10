@@ -1,3 +1,12 @@
+// ============================================================
+// File:        BehaviorTuningSection.jsx
+// Path:        client/src/screens/DevScreen/sections/BehaviorTuningSection.jsx
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: DevScreen section — UI controls for racer behavior tuning
+//              (avoidance, drafting, and priority mode config).
+// ============================================================
+
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadRaceBehaviorConfig,

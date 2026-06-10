@@ -1,3 +1,12 @@
+// ============================================================
+// File:        priorityModeOverlay.js
+// Path:        client/src/screens/RaceScreen/drawing/priorityModeOverlay.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for the priority-mode debug overlay — racer rings
+//              and info box; active only when the M hotkey overlay is enabled.
+// ============================================================
+
 import { PRIORITY_MODE } from '../../../modules/raceBehavior.js';
 
 const CW = 1280;

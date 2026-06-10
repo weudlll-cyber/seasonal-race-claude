@@ -1,3 +1,12 @@
+// ============================================================
+// File:        trackEditorHelpers.js
+// Path:        client/src/screens/TrackEditor/trackEditorHelpers.js
+// Project:     RaceArena
+// Created:     2026-04-25
+// Description: Geometry helpers for the track editor — point hit-testing,
+//              segment proximity, and midpoint insertion.
+// ============================================================
+
 /**
  * Returns the index of the point at canvas position (x, y) within `radius` pixels.
  * When multiple points overlap, the last one (topmost / highest index) wins.

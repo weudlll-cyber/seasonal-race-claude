@@ -1,3 +1,12 @@
+// ============================================================
+// File:        trackStorage.js
+// Path:        client/src/modules/track-editor/trackStorage.js
+// Project:     RaceArena
+// Created:     2026-04-25
+// Description: localStorage CRUD for editor-created track geometries
+//              (key scheme: racearena:trackGeometries:*).
+// ============================================================
+
 // localStorage CRUD for editor-created track geometries.
 // Key scheme:
 //   racearena:trackGeometries:index  — JSON array of geometry IDs

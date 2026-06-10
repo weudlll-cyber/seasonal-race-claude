@@ -1,3 +1,12 @@
+// ============================================================
+// File:        trackEditorSave.js
+// Path:        client/src/screens/TrackEditor/trackEditorSave.js
+// Project:     RaceArena
+// Created:     2026-04-25
+// Description: Track export logic — validates editor state, builds the
+//              server-ready track object, extracts effects and track lights.
+// ============================================================
+
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';

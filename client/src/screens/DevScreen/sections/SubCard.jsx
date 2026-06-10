@@ -1,3 +1,12 @@
+// ============================================================
+// File:        SubCard.jsx
+// Path:        client/src/screens/DevScreen/sections/SubCard.jsx
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Shared card shell for DevScreen sections — title, optional subtitle,
+//              disable-fade, and reset button slot.
+// ============================================================
+
 import s from '../DevScreen.module.css';
 
 export function SubCard({ title, subtitle, children, disabled, onReset, resetTestId }) {

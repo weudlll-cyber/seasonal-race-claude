@@ -1,3 +1,12 @@
+// ============================================================
+// File:        trackEditorDraw.js
+// Path:        client/src/screens/TrackEditor/trackEditorDraw.js
+// Project:     RaceArena
+// Created:     2026-04-29
+// Description: Canvas draw functions for the track editor's static scene —
+//              control points, spline preview, and background image.
+// ============================================================
+
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
 
 const CW = 1280;

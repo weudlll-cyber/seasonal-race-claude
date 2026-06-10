@@ -1,3 +1,12 @@
+// ============================================================
+// File:        TrackEditorSaveBar.jsx
+// Path:        client/src/screens/TrackEditor/TrackEditorSaveBar.jsx
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Bottom save/load bar for the track editor — track name input,
+//              background image upload status, and save button.
+// ============================================================
+
 import s from './TrackEditor.module.css';
 
 export default function TrackEditorSaveBar({

@@ -1,3 +1,12 @@
+// ============================================================
+// File:        racerRendering.js
+// Path:        client/src/screens/RaceScreen/drawing/racerRendering.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for racers, name tags, and dust trails
+//              in world coordinates.
+// ============================================================
+
 import { visibleTagRacers } from '../nameTagVisibility.js';
 
 const PHASE_RACING = 1;

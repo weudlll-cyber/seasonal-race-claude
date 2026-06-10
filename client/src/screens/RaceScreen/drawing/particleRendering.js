@@ -1,3 +1,12 @@
+// ============================================================
+// File:        particleRendering.js
+// Path:        client/src/screens/RaceScreen/drawing/particleRendering.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for burst and trail particles — pure draw/emit
+//              functions, no game state.
+// ============================================================
+
 /**
  * Appends a burst of 45 coloured particles at (x, y) to the burstParticles array.
  * Pure data mutation — no canvas context needed.

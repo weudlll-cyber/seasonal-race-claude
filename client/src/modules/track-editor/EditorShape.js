@@ -1,3 +1,12 @@
+// ============================================================
+// File:        EditorShape.js
+// Path:        client/src/modules/track-editor/EditorShape.js
+// Project:     RaceArena
+// Created:     2026-04-25
+// Description: Race-engine shape adapter for track-editor geometry; wraps inner/outer
+//              Catmull-Rom splines. Offset ∈ [-0.5, +0.5] maps inner→outer boundary.
+// ============================================================
+
 import { catmullRomSpline } from './catmullRom.js';
 
 /**

@@ -1,3 +1,12 @@
+// ============================================================
+// File:        RaceTuningSection.jsx
+// Path:        client/src/screens/DevScreen/sections/RaceTuningSection.jsx
+// Project:     RaceArena
+// Created:     2026-05-04
+// Description: DevScreen section — composite card mounting DynamicsTuningSection
+//              and BehaviorTuningSection with a shared Reset All button.
+// ============================================================
+
 import { useRef } from 'react';
 import DynamicsTuningSection from './DynamicsTuningSection.jsx';
 import BehaviorTuningSection from './BehaviorTuningSection.jsx';

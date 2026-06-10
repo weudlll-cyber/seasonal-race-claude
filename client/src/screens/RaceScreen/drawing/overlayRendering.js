@@ -1,3 +1,12 @@
+// ============================================================
+// File:        overlayRendering.js
+// Path:        client/src/screens/RaceScreen/drawing/overlayRendering.js
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Canvas renderer for race overlays — event title, lap counter,
+//              position results panel, and camera-debug info.
+// ============================================================
+
 import { currentLap } from '../../../modules/camera/lapUtils.js';
 
 const CW = 1280;

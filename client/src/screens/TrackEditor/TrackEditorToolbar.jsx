@@ -1,3 +1,12 @@
+// ============================================================
+// File:        TrackEditorToolbar.jsx
+// Path:        client/src/screens/TrackEditor/TrackEditorToolbar.jsx
+// Project:     RaceArena
+// Created:     2026-05-25
+// Description: Top toolbar for the track editor — mode toggles, undo/redo,
+//              effects and track-lights config.
+// ============================================================
+
 import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
 import s from './TrackEditor.module.css';
 
