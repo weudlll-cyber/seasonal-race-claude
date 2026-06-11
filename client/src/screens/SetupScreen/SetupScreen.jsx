@@ -16,7 +16,12 @@ import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../modules/storage/useServerTracks.js';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
-import { DEFAULT_TRACKS, DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import {
+  DEFAULT_TRACKS,
+  DEFAULT_RACE_DEFAULTS,
+  DEFAULT_BRANDING,
+  DEFAULT_ACTIVE_SESSION,
+} from '../../modules/storage/defaults.js';
 import {
   getRacerType,
   getRacerTypeLabel,
@@ -149,6 +154,24 @@ function SetupScreen() {
     return Array.from(byId.values());
   })();
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
+  const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
+  const [activeSession, setActiveSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
+
+  // Inject brand CSS vars whenever the active profile changes.
+  // Vars are set on document.documentElement so they persist through navigation.
+  // Removing them lets each CSS use-site's var() fallback take over.
+  useEffect(() => {
+    const id = activeSession?.activeBrandingProfileId;
+    const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+    const root = document.documentElement.style;
+    if (profile) {
+      root.setProperty('--brand-primary', profile.primaryColor);
+      root.setProperty('--brand-secondary', profile.secondaryColor);
+    } else {
+      root.removeProperty('--brand-primary');
+      root.removeProperty('--brand-secondary');
+    }
+  }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
   // Consume any group loaded from the Dev Panel (one-shot read + clear).
   // useEffect instead of lazy initializer: StrictMode double-invokes initializers,
@@ -421,6 +444,29 @@ function SetupScreen() {
           <span style={{ fontSize: '0.9rem', color: 'var(--color-muted)' }}>
             {raceSettings.eventName}
           </span>
+        )}
+        {brandingProfiles.length > 0 && (
+          <select
+            value={activeSession?.activeBrandingProfileId ?? ''}
+            onChange={(e) => setActiveSession({ activeBrandingProfileId: e.target.value || null })}
+            style={{
+              fontSize: '0.8rem',
+              background: 'var(--color-surface)',
+              color: 'var(--color-text)',
+              border: '1px solid var(--color-muted)',
+              borderRadius: 'var(--radius)',
+              padding: '0.15rem 0.4rem',
+              cursor: 'pointer',
+            }}
+            aria-label="Active branding profile"
+          >
+            <option value="">Branding: None</option>
+            {brandingProfiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         )}
         {/* Gear icon — always visible, opens the Dev Panel */}
         <Link

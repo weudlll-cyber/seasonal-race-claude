@@ -177,6 +177,7 @@ export const DEFAULT_RACE_DEFAULTS = {
 
 export const DEFAULT_PLAYER_GROUPS = [];
 export const DEFAULT_BRANDING = [];
+export const DEFAULT_ACTIVE_SESSION = { activeBrandingProfileId: null };
 export const DEFAULT_RACE_HISTORY = [];
 
 // Mean stays at 0.001045 while total min→max spread is reduced to ~17.7%

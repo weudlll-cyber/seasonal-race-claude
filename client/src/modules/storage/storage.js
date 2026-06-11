@@ -11,6 +11,7 @@ export const KEYS = {
   RACER_TYPE_OVERRIDES: 'racearena:racerTypeOverrides',
   TRACKS: 'racearena:tracks',
   BRANDING: 'racearena:branding',
+  ACTIVE_SESSION: 'racearena:activeSession',
   RACE_DEFAULTS: 'racearena:raceDefaults',
   RACE_HISTORY: 'racearena:raceHistory',
   ACTIVE_GROUP: 'racearena:activeGroup',
