@@ -117,6 +117,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │      ice-track.json          ← Default-Track (seeded)       │
 │      seatrack.json           ← Default-Track (seeded)       │
 │      searound.json           ← Default-Track (seeded)       │
+│      luger-hill.json         ← Non-default named track      │
 │      <uuid>.json             ← User-created custom tracks   │
 │    backgrounds/                                             │
 │      <id>.jpg                ← Binary background images     │

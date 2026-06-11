@@ -445,7 +445,7 @@ Where `pMin` is the minimum p-value across all tested tracks. Higher score is be
 
 The following parameters control lateral collision avoidance, home-lane restoration, and speed braking. They must be tuned together — changing one in isolation typically breaks another.
 
-The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. Two parameters (`avoidanceDistance`, `speedBrakeYThreshold`) are retired from the browser gate but kept for sim script backward compat.
+The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. One parameter (`avoidanceDistance`) is retired from the browser gate. `speedBrakeYThreshold` (0.18) is still read by the browser as a same-lane fallback when track width is unavailable (`raceBehavior.js`); kept for both browser and sim use.
 
 ### Parameter table
 
@@ -459,7 +459,7 @@ The values below are the **Phase 5 winners** — locked into `storage/defaults.j
 | `speedBrakeFactor` | 0.945 | 0.87–0.995 | Speed multiplier applied when braking; 0.945 = 5.5% speed reduction per brake frame |
 | `speedBrakeTMultiplier` | 1.5 | 0.5–3.0 | Longitudinal lead-time multiplier for the body-based brake zone (replaces the old fixed `speedBrakeTThreshold`) |
 | `avoidanceDistance` *(retired from browser gate)* | 0.18 | 0.07–0.28 | Former fixed proximity threshold in normalized track coordinates; replaced by body-based geometric gate + `avoidanceBufferPct`. Kept for sim script backward compat. |
-| `speedBrakeYThreshold` *(retired from browser gate)* | 0.18 | 0.05–0.22 | Former lateral threshold for brake gate; replaced by body-based same-lane detection. Kept for sim script backward compat. |
+| `speedBrakeYThreshold` | 0.18 | 0.05–0.22 | Default same-lane lateral threshold; still read by the browser as a fallback when track width is unavailable (`raceBehavior.js`). Body-based detection takes precedence when `trackWidth > 0`. |
 
 ### Why they must be changed together
 

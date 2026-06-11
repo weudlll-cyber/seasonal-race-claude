@@ -943,7 +943,7 @@ These parameters were optimized across 9 default tracks + 1 user-created track (
 - **Phase 3 (Validate):** Top 3 finalists validated on all 10 tracks × 50+ races each
 - **Hard cutoffs:** fairness p > 0.05, zigzag score < 0.003, hard overlap rate < 3%
 
-The `speedBrakeTMultiplier` replaces an earlier fixed absolute threshold (`speedBrakeTThreshold`) that was not calibrated to sprite size or path length. As of feat/open-track-overlap (reports 43+45), both speed-brake axes are body-based: the longitudinal zone uses `(bodyContactLength / pathLength) × speedBrakeTMultiplier` (lead-time, fires at 1.5× contact distance); the lateral zone uses the body contact width as a same-lane filter (no multiplier — either in the same lane or not). `avoidanceDistance` and `speedBrakeYThreshold` are retired from the browser gate; they remain in defaults.js and sim scripts for backward compat.
+The `speedBrakeTMultiplier` replaces an earlier fixed absolute threshold (`speedBrakeTThreshold`) that was not calibrated to sprite size or path length. As of feat/open-track-overlap (reports 43+45), both speed-brake axes are body-based: the longitudinal zone uses `(bodyContactLength / pathLength) × speedBrakeTMultiplier` (lead-time, fires at 1.5× contact distance); the lateral zone uses the body contact width as a same-lane filter (no multiplier — either in the same lane or not). `avoidanceDistance` is retired from the browser gate (body-based geometric gate replaces it entirely); it remains in `defaults.js` and sim scripts for backward compat. `speedBrakeYThreshold` (0.18) is still read by the browser as a same-lane fallback when track width is unavailable (`raceBehavior.js`); it remains in `defaults.js` for both browser and sim use.
 
 ### Changing Them
 
