@@ -8,7 +8,7 @@
 //              fullscreen toggle, and fade-to-black navigation.
 // ============================================================
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { validateActiveRace } from './raceSession.js';
 import {
   drawEditorBackground,
@@ -189,6 +189,12 @@ export default function RaceScreen() {
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
+
+  const activeBrand = useMemo(() => {
+    const profiles = storageGet(KEYS.BRANDING, []);
+    const id = storageGet(KEYS.ACTIVE_SESSION, null)?.activeBrandingProfileId;
+    return id ? (profiles.find((p) => p.id === id) ?? null) : null;
+  }, []);
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);
@@ -1536,6 +1542,14 @@ export default function RaceScreen() {
     return (
       <div className="screen screen--race race-error-screen">
         <div className="race-error-box">
+          {activeBrand?.logo && (
+            <img
+              src={activeBrand.logo}
+              alt=""
+              className="race-brand-logo-sm"
+              style={{ opacity: activeBrand.logoOpacity ?? 0.9 }}
+            />
+          )}
           <div className="race-error-title">Error</div>
           <div className="race-error-msg">{error}</div>
           <button
@@ -1555,6 +1569,17 @@ export default function RaceScreen() {
   if (!raceData) {
     return (
       <div className="screen screen--race race-loading-screen">
+        {activeBrand?.logo && (
+          <img
+            src={activeBrand.logo}
+            alt=""
+            className="race-brand-logo-sm"
+            style={{ opacity: activeBrand.logoOpacity ?? 0.9 }}
+          />
+        )}
+        {activeBrand?.eventName && (
+          <div className="race-loading-event">{activeBrand.eventName}</div>
+        )}
         <span>Loading…</span>
       </div>
     );

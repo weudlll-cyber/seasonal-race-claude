@@ -245,6 +245,19 @@
   color: #ccc;
 }
 
+/* ── Brand elements on load / error screens ─────────────────────────────── */
+.race-brand-logo-sm {
+  max-height: 64px;
+  max-width: 180px;
+  object-fit: contain;
+}
+
+.race-loading-event {
+  font-size: 14px;
+  color: var(--brand-primary, rgba(255, 215, 0, 0.7));
+  letter-spacing: 0.5px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .race-layout {
