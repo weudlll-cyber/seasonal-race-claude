@@ -485,7 +485,7 @@ function SetupScreen() {
                     left: '0.85rem',
                     right: 0,
                     fontSize: '0.72rem',
-                    color: 'rgba(234,234,234,0.45)',
+                    color: 'var(--brand-secondary)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
