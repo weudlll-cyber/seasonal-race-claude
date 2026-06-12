@@ -8,7 +8,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
+import { useStorage } from '../../modules/storage/useStorage.js';
 import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
+import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../../modules/storage/defaults.js';
 import './ResultScreen.css';
 
 function ResultScreen() {
@@ -19,6 +21,13 @@ function ResultScreen() {
   // React 18 StrictMode fires every effect twice in dev (mount → unmount → remount).
   // This ref survives the simulated unmount and prevents a double history write.
   const hasSaved = useRef(false);
+
+  const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
+  const [activeSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
+  const activeBrandId = activeSession?.activeBrandingProfileId;
+  const activeBrand = activeBrandId
+    ? (brandingProfiles.find((p) => p.id === activeBrandId) ?? null)
+    : null;
 
   useEffect(() => {
     if (hasSaved.current) return;
@@ -73,17 +82,48 @@ function ResultScreen() {
       <div className="results-container">
         <h1 className="results-title">🏁 Race Results</h1>
 
-        {race && (
-          <div className="race-info">
-            <span className="race-track">{race.trackName || 'Track'}</span>
-            <span className="race-time">{elapsedTime}s</span>
+        {/* Brand identity block (event name + subtitle + track·time) or bare track·time */}
+        {activeBrand ? (
+          <div className="brand-identity">
+            <div className="brand-event-name" style={{ color: activeBrand.primaryColor }}>
+              {activeBrand.eventName}
+            </div>
+            {activeBrand.subtitle && (
+              <div className="brand-subtitle" style={{ color: activeBrand.secondaryColor }}>
+                {activeBrand.subtitle}
+              </div>
+            )}
+            {race && (
+              <div className="race-info">
+                <span className="race-track">{race.trackName || 'Track'}</span>
+                <span className="race-time">{elapsedTime}s</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          race && (
+            <div className="race-info">
+              <span className="race-track">{race.trackName || 'Track'}</span>
+              <span className="race-time">{elapsedTime}s</span>
+            </div>
+          )
+        )}
+
+        {/* Brand logo */}
+        {activeBrand?.logo && (
+          <div className="brand-logo-result">
+            <img
+              src={activeBrand.logo}
+              alt={activeBrand.eventName}
+              className="brand-logo-result__img"
+              style={{ opacity: activeBrand.logoOpacity ?? 0.9 }}
+            />
           </div>
         )}
 
-        {/* Podium */}
+        {/* Podium — ranks 1–3 */}
         <div className="podium-section">
           <div className="podium">
-            {/* Second place */}
             {second && (
               <div className="podium-slot podium-slot--2nd">
                 <div className="podium-medal">🥈</div>
@@ -95,7 +135,6 @@ function ResultScreen() {
               </div>
             )}
 
-            {/* First place (center, tallest) */}
             {first && (
               <div className="podium-slot podium-slot--1st">
                 <div className="podium-medal">🥇</div>
@@ -107,7 +146,6 @@ function ResultScreen() {
               </div>
             )}
 
-            {/* Third place */}
             {third && (
               <div className="podium-slot podium-slot--3rd">
                 <div className="podium-medal">🥉</div>
@@ -121,20 +159,22 @@ function ResultScreen() {
           </div>
         </div>
 
-        {/* Full rankings */}
-        <div className="rankings-section">
-          <h2 className="rankings-title">Final Rankings</h2>
-          <div className="rankings-table">
-            {finishOrder.map((racer, index) => (
-              <div key={racer.index ?? index} className="ranking-row">
-                <span className="rank-number">#{index + 1}</span>
-                <span className="rank-icon">{racer.icon}</span>
-                <span className="rank-name">{racer.name}</span>
-                <span className="rank-progress">{Math.round(racer.progress ?? 100)}%</span>
-              </div>
-            ))}
+        {/* Ranks 4+ in a fixed-height scroll panel; hidden when ≤3 finishers */}
+        {finishOrder.length > 3 && (
+          <div className="rankings-section">
+            <h2 className="rankings-title">Final Rankings</h2>
+            <div className="rankings-table rankings-scroll">
+              {finishOrder.slice(3).map((racer, index) => (
+                <div key={racer.index ?? index + 3} className="ranking-row">
+                  <span className="rank-number">#{index + 4}</span>
+                  <span className="rank-icon">{racer.icon}</span>
+                  <span className="rank-name">{racer.name}</span>
+                  <span className="rank-progress">{Math.round(racer.progress ?? 100)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="results-actions">
@@ -143,6 +183,7 @@ function ResultScreen() {
           </button>
         </div>
 
+        {/* Sponsor strip — grey footer, unchanged */}
         {race?.sponsorText && <div className="result-sponsor">{race.sponsorText}</div>}
       </div>
     </div>

@@ -24,12 +24,16 @@ vi.mock('../../contexts/TransitionContext.jsx', () => {
 vi.mock('../../modules/storage/storage', () => ({
   storageGet: vi.fn(() => []),
   storageSet: vi.fn(),
-  KEYS: { RACE_HISTORY: 'racearena:raceHistory' },
+  KEYS: {
+    RACE_HISTORY: 'racearena:raceHistory',
+    BRANDING: 'racearena:branding',
+    ACTIVE_SESSION: 'racearena:activeSession',
+  },
   newId: vi.fn(() => 'test-id-001'),
 }));
 
 import ResultScreen from './index.jsx';
-import { storageSet } from '../../modules/storage/storage';
+import { storageGet, storageSet } from '../../modules/storage/storage';
 import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
 
 const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
@@ -43,8 +47,22 @@ const VALID_RACE_RESULTS = JSON.stringify({
   race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
 });
 
+const FOUR_FINISHER_RESULTS = JSON.stringify({
+  finishOrder: [
+    { name: 'Alice', icon: '🐎', color: '#f00', index: 0, progress: 100 },
+    { name: 'Bob', icon: '🐎', color: '#00f', index: 1, progress: 95 },
+    { name: 'Carol', icon: '🐎', color: '#0f0', index: 2, progress: 90 },
+    { name: 'Dave', icon: '🐎', color: '#ff0', index: 3, progress: 85 },
+  ],
+  elapsedTime: 62,
+  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Explicitly reset storageGet implementation; clearAllMocks does not touch it.
+  // Individual tests that need a specific profile call mockImplementation themselves.
+  storageGet.mockImplementation(() => []);
   sessionStorage.setItem('raceResults', VALID_RACE_RESULTS);
 });
 
@@ -102,5 +120,56 @@ describe('ResultScreen — double-save regression', () => {
   it('renders no sponsor strip when race.sponsorText is absent', () => {
     render(<ResultScreen />);
     expect(screen.queryByText(/Sponsored by/i)).toBeNull();
+  });
+});
+
+describe('ResultScreen — brand identity block', () => {
+  it('shows brand event name when a profile is active', () => {
+    storageGet.mockImplementation((key) => {
+      if (key === 'racearena:branding')
+        return [
+          {
+            id: 'bp1',
+            eventName: 'Acme Invitational',
+            subtitle: 'Spring Series',
+            primaryColor: '#e63946',
+            secondaryColor: '#f4a261',
+          },
+        ];
+      if (key === 'racearena:activeSession') return { activeBrandingProfileId: 'bp1' };
+      return [];
+    });
+    render(<ResultScreen />);
+    expect(screen.getByText('Acme Invitational')).toBeTruthy();
+  });
+
+  it('hides brand identity block when no profile is active', () => {
+    // Default mock: storageGet returns [] → no active profile
+    render(<ResultScreen />);
+    expect(screen.queryByText('Acme Invitational')).toBeNull();
+  });
+});
+
+describe('ResultScreen — rankings scroll panel', () => {
+  it('shows rank 4+ in the scroll panel with correct rank numbers', () => {
+    sessionStorage.setItem('raceResults', FOUR_FINISHER_RESULTS);
+    render(<ResultScreen />);
+    expect(screen.getByText('Dave')).toBeTruthy();
+    expect(screen.getByText('#4')).toBeTruthy();
+  });
+
+  it('does not render rank numbers 1-3 in the scroll panel', () => {
+    sessionStorage.setItem('raceResults', FOUR_FINISHER_RESULTS);
+    render(<ResultScreen />);
+    // Ranks 1–3 belong to the podium only, not in the scroll panel rank numbers
+    expect(screen.queryByText('#1')).toBeNull();
+    expect(screen.queryByText('#2')).toBeNull();
+    expect(screen.queryByText('#3')).toBeNull();
+  });
+
+  it('renders no rankings panel when there are 3 or fewer finishers', () => {
+    // VALID_RACE_RESULTS has 2 finishers — no panel should appear
+    render(<ResultScreen />);
+    expect(screen.queryByText('Final Rankings')).toBeNull();
   });
 });
