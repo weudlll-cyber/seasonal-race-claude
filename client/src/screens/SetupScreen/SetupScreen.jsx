@@ -449,52 +449,54 @@ function SetupScreen() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <div className={styles.logo}>
-          Race<span>Arena</span>
-        </div>
-        {raceSettings.eventName && (
-          <div
-            style={{
-              position: 'relative',
-              paddingLeft: '0.85rem',
-              borderLeft: '0.5px solid rgba(255,255,255,0.12)',
-              lineHeight: 1,
-              minWidth: 0,
-              maxWidth: '28ch',
-            }}
-          >
-            <span
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
+          <div className={styles.logo}>
+            Race<span>Arena</span>
+          </div>
+          {raceSettings.eventName && (
+            <div
               style={{
-                display: 'block',
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                position: 'relative',
+                paddingLeft: '0.85rem',
+                borderLeft: '0.5px solid rgba(255,255,255,0.12)',
+                lineHeight: 1,
+                minWidth: 0,
+                maxWidth: '28ch',
               }}
             >
-              {raceSettings.eventName}
-            </span>
-            {activeBrandProfile?.subtitle && (
               <span
                 style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 2px)',
-                  left: '0.85rem',
-                  right: 0,
-                  fontSize: '0.72rem',
-                  color: 'rgba(234,234,234,0.45)',
+                  display: 'block',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {activeBrandProfile.subtitle}
+                {raceSettings.eventName}
               </span>
-            )}
-          </div>
-        )}
+              {activeBrandProfile?.subtitle && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 2px)',
+                    left: '0.85rem',
+                    right: 0,
+                    fontSize: '0.72rem',
+                    color: 'rgba(234,234,234,0.45)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {activeBrandProfile.subtitle}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         {brandingProfiles.length > 0 && (
           <select
             value={activeSession?.activeBrandingProfileId ?? ''}
