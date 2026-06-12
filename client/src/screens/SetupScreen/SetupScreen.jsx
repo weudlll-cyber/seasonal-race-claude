@@ -458,14 +458,20 @@ function SetupScreen() {
               display: 'flex',
               flexDirection: 'column',
               paddingLeft: '0.85rem',
+              marginRight: '0.85rem',
               borderLeft: '0.5px solid rgba(255,255,255,0.12)',
               lineHeight: 1.3,
+              minWidth: 0,
+              maxWidth: '28ch',
             }}
           >
             <span
               style={{
                 fontSize: '0.95rem',
                 color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {raceSettings.eventName}
@@ -476,6 +482,9 @@ function SetupScreen() {
                   fontSize: '0.72rem',
                   color: 'rgba(234,234,234,0.45)',
                   marginTop: '0.1rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {activeBrandProfile.subtitle}
