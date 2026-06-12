@@ -455,9 +455,7 @@ function SetupScreen() {
         {raceSettings.eventName && (
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
+              position: 'relative',
               paddingLeft: '0.85rem',
               marginRight: '0.85rem',
               borderLeft: '0.5px solid rgba(255,255,255,0.12)',
@@ -468,6 +466,7 @@ function SetupScreen() {
           >
             <span
               style={{
+                display: 'block',
                 fontSize: '0.95rem',
                 color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
                 overflow: 'hidden',
@@ -480,12 +479,15 @@ function SetupScreen() {
             {activeBrandProfile?.subtitle && (
               <span
                 style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 2px)',
+                  left: 0,
                   fontSize: '0.72rem',
                   color: 'rgba(234,234,234,0.45)',
-                  marginTop: '0.1rem',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  maxWidth: '100%',
                 }}
               >
                 {activeBrandProfile.subtitle}
