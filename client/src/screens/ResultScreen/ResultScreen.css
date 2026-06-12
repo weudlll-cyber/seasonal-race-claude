@@ -23,10 +23,10 @@
 .results-container {
   position: relative; /* anchor for absolute-positioned logo */
   width: 100%;
-  max-width: 900px;
+  max-width: 920px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  padding: 24px 32px;
+  padding: 28px 36px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: slideUp 0.5s ease-out;
 }
@@ -72,16 +72,16 @@
 /* Brand logo — top-left corner, outside the vertical flow */
 .brand-logo-result {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  max-width: 180px;
+  top: 26px;
+  left: 26px;
+  max-width: 210px;
   pointer-events: none;
 }
 
 .brand-logo-result__img {
   display: block;
-  max-height: 180px;
-  max-width: 180px;
+  max-height: 210px;
+  max-width: 210px;
   object-fit: contain;
 }
 
@@ -263,7 +263,7 @@
 }
 
 .rankings-scroll {
-  max-height: 120px;
+  max-height: 200px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
