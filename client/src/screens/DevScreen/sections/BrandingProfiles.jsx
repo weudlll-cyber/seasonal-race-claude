@@ -405,17 +405,6 @@ function BrandingProfiles() {
                 </span>
               </div>
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Logo Corner</label>
-              <select
-                className={s.input}
-                value={form.logoCorner}
-                onChange={(e) => f('logoCorner', e.target.value)}
-              >
-                <option value="bottom-right">Bottom-right</option>
-                <option value="top-right">Top-right</option>
-              </select>
-            </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>
             <button
