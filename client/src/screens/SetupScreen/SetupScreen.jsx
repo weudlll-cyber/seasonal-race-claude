@@ -461,7 +461,7 @@ function SetupScreen() {
               paddingLeft: '0.85rem',
               marginRight: '0.85rem',
               borderLeft: '0.5px solid rgba(255,255,255,0.12)',
-              lineHeight: 1.3,
+              lineHeight: 1,
               minWidth: 0,
               maxWidth: '28ch',
             }}
