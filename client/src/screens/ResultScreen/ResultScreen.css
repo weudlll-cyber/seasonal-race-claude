@@ -26,7 +26,7 @@
   max-width: 920px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  padding: 14px 36px;
+  padding: 7px 36px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: slideUp 0.5s ease-out;
 }
@@ -47,14 +47,14 @@
   font-size: 28px;
   font-weight: bold;
   color: #ffd700;
-  margin-bottom: 4px;
+  margin-bottom: 0;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
 }
 
 /* Brand identity block */
 .brand-identity {
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .brand-event-name {
@@ -89,11 +89,11 @@
   display: flex;
   justify-content: center;
   gap: 30px;
-  margin-bottom: 4px;
+  margin-bottom: 0;
   font-size: 14px;
   color: #aaa;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 6px;
+  padding-bottom: 2px;
 }
 
 /* When race-info is nested inside the brand-identity block, suppress the separator */
@@ -117,7 +117,8 @@
 .podium-section {
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-top: 36px; /* keeps 1st-place medal clear of race-info line */
+  margin-bottom: 0;
 }
 
 .podium {
@@ -243,14 +244,14 @@
 
 /* Rankings Section — ranks 4+ only, scrollable */
 .rankings-section {
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .rankings-title {
   font-size: 16px;
   font-weight: bold;
   color: #fff;
-  margin-bottom: 4px;
+  margin-bottom: 0;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
@@ -343,7 +344,7 @@
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .btn {
