@@ -457,6 +457,7 @@ function SetupScreen() {
             style={{
               display: 'flex',
               flexDirection: 'column',
+              justifyContent: 'center',
               paddingLeft: '0.85rem',
               marginRight: '0.85rem',
               borderLeft: '0.5px solid rgba(255,255,255,0.12)',
