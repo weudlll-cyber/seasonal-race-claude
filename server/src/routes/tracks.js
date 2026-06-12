@@ -86,7 +86,7 @@ function loadAllTracks() {
 
 const tracksMap = loadAllTracks();
 
-// Metadata for the 9 built-in default tracks — seeded as server records on first boot.
+// Metadata for the 10 built-in default tracks — seeded as server records on first boot.
 // Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
 export const DEFAULT_TRACK_SEEDS = [
   {
@@ -231,6 +231,22 @@ export const DEFAULT_TRACK_SEEDS = [
     trackLights: { color: '#0096c7', style: 'sync_pulse', speed: 0.9 },
     worldWidth: 3072,
     worldHeight: 2048,
+    isDefault: true,
+  },
+  {
+    id: 'luger-hill',
+    name: 'Luger Hill',
+    icon: '🛷',
+    description: 'Steep luge descent through frozen mountain banks and open ridgelines.',
+    color: '#e63946',
+    defaultRacerTypeId: 'luge',
+    defaultDuration: 90,
+    defaultWinners: 3,
+    difficulty: 'hard',
+    surfaceClasses: ['ice', 'air'],
+    trackLights: { color: '#0eaf2e', style: 'sequence', speed: 1.0 },
+    worldWidth: 4096,
+    worldHeight: 2728,
     isDefault: true,
   },
 ];

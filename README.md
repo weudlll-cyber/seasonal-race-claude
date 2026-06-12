@@ -19,7 +19,7 @@ RaceArena lets an event organiser configure racers, draw tracks, set effects, an
 
 ## Features
 
-- **9 built-in tracks** — Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound; each with surface classes, world dimensions, and background images
+- **10 built-in tracks** — Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill; each with surface classes, world dimensions, and background images
 - **20 built-in racer types** — horse, duck, snail, elephant, giraffe, snake, dragon, f1, rocket, buggy, motorbike, plane, luge, beetle, boarder, koi, turtle, manta, dolphin, snowmobile; all SpriteRacerType with surface-class filtering
 - **Racer Editor** — create custom racer types from PNG sprite sheets: background removal, animation preview, metadata, saved to localStorage
 - **Track Editor** — draw inner/outer boundary curves on a background image (Center Mode and Boundary Mode), stored server-side via Phase L
