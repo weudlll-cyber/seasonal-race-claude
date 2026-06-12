@@ -142,6 +142,8 @@ function ResultScreen() {
             ← Back to Setup
           </button>
         </div>
+
+        {race?.sponsorText && <div className="result-sponsor">{race.sponsorText}</div>}
       </div>
     </div>
   );

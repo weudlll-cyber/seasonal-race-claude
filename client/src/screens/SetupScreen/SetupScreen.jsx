@@ -383,6 +383,7 @@ function SetupScreen() {
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
       subtitle: activeBrandProfile?.subtitle ?? '',
+      sponsorText: activeBrandProfile?.sponsorText ?? '',
       winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,

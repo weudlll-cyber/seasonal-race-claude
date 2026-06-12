@@ -8,7 +8,7 @@
 // ============================================================
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -81,5 +81,26 @@ describe('ResultScreen — double-save regression', () => {
       winners: ['Alice', 'Bob'],
     });
     expect(typeof entry.date).toBe('string');
+  });
+
+  it('renders sponsor strip when race.sponsorText is present', () => {
+    const withSponsor = JSON.stringify({
+      ...JSON.parse(VALID_RACE_RESULTS),
+      race: {
+        trackId: DIRT_OVAL.id,
+        trackName: DIRT_OVAL.name,
+        winners: 3,
+        duration: 60,
+        sponsorText: 'Sponsored by Acme',
+      },
+    });
+    sessionStorage.setItem('raceResults', withSponsor);
+    render(<ResultScreen />);
+    expect(screen.getByText('Sponsored by Acme')).toBeTruthy();
+  });
+
+  it('renders no sponsor strip when race.sponsorText is absent', () => {
+    render(<ResultScreen />);
+    expect(screen.queryByText(/Sponsored by/i)).toBeNull();
   });
 });
