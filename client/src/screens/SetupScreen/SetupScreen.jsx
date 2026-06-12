@@ -8,7 +8,7 @@
 //              changes are reflected immediately
 // ============================================================
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
@@ -177,26 +177,11 @@ function SetupScreen() {
     }
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
-  // Tracks the last value seeded from a brand profile so deactivation can safely clear it
-  // without touching a value the operator typed themselves (Variant Z).
-  const lastSeededEventNameRef = useRef('');
-
-  // B1/Z: seed title from active profile; clear on deactivation only if value is still brand-sourced.
+  // Seed eventName from the active brand profile; clear unconditionally when no profile is active.
   useEffect(() => {
     const id = activeSession?.activeBrandingProfileId;
     const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
-    if (profile?.eventName) {
-      setRaceSettings((prev) => ({ ...prev, eventName: profile.eventName }));
-      lastSeededEventNameRef.current = profile.eventName;
-    } else if (!id) {
-      setRaceSettings((prev) => {
-        if (prev.eventName && prev.eventName === lastSeededEventNameRef.current) {
-          lastSeededEventNameRef.current = '';
-          return { ...prev, eventName: '' };
-        }
-        return prev;
-      });
-    }
+    setRaceSettings((prev) => ({ ...prev, eventName: profile?.eventName || '' }));
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
   // Consume any group loaded from the Dev Panel (one-shot read + clear).

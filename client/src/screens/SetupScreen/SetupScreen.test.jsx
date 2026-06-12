@@ -572,36 +572,10 @@ describe('SetupScreen — brand eventName seed (B1)', () => {
     storageSet(KEYS.BRANDING, [profile]);
     storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-test' });
     renderSetupScreen();
-    // The header span and/or Settings tab should show the seeded event name
     expect(document.body).toHaveTextContent('Acme Cup');
   });
 
-  it('activating a profile with empty eventName does NOT wipe an operator-typed title', async () => {
-    // Profile has no eventName — activating it must not clear an existing title.
-    const profile = {
-      id: 'bp-empty',
-      name: 'No-Name Brand',
-      eventName: '',
-      primaryColor: '#111',
-      secondaryColor: '#222',
-    };
-    storageSet(KEYS.BRANDING, [profile]);
-    // No active session yet — operator types a title first via Settings tab, then activates
-    // We simulate the invariant at storage level: session is active but eventName is empty
-    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-empty' });
-    renderSetupScreen();
-    // Navigate to Settings tab and type a title
-    const tabs = screen.getAllByRole('tab');
-    fireEvent.click(tabs[2]);
-    const titleInput = screen.getByPlaceholderText(/summer sprint/i);
-    act(() => {
-      fireEvent.change(titleInput, { target: { value: 'My Custom Title' } });
-    });
-    // The title must still be 'My Custom Title' — not wiped by the empty-eventName profile
-    expect(titleInput.value).toBe('My Custom Title');
-  });
-
-  it('deactivating (None) clears a still-brand-seeded value immediately', () => {
+  it('deactivating (None) clears the event name immediately', () => {
     const profile = {
       id: 'bp-deact',
       name: 'Deact Brand',
@@ -612,38 +586,12 @@ describe('SetupScreen — brand eventName seed (B1)', () => {
     storageSet(KEYS.BRANDING, [profile]);
     storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-deact' });
     renderSetupScreen();
-    // Navigate to Settings tab — seeded value should be present
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[2]);
     const titleInput = screen.getByPlaceholderText(/summer sprint/i);
     expect(titleInput.value).toBe('Brand Cup');
-    // Deactivate via the branding selector
     const brandSelect = screen.getByRole('combobox', { name: /active branding profile/i });
     fireEvent.change(brandSelect, { target: { value: '' } });
     expect(titleInput.value).toBe('');
-  });
-
-  it('deactivating (None) does NOT wipe a value the operator edited after seeding', () => {
-    const profile = {
-      id: 'bp-deact2',
-      name: 'Edit Brand',
-      eventName: 'Brand Cup',
-      primaryColor: '#e63946',
-      secondaryColor: '#f4a261',
-    };
-    storageSet(KEYS.BRANDING, [profile]);
-    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-deact2' });
-    renderSetupScreen();
-    // Navigate to Settings tab and edit the seeded title
-    const tabs = screen.getAllByRole('tab');
-    fireEvent.click(tabs[2]);
-    const titleInput = screen.getByPlaceholderText(/summer sprint/i);
-    expect(titleInput.value).toBe('Brand Cup');
-    fireEvent.change(titleInput, { target: { value: 'My Custom Title' } });
-    expect(titleInput.value).toBe('My Custom Title');
-    // Deactivate — operator's edit must survive
-    const brandSelect = screen.getByRole('combobox', { name: /active branding profile/i });
-    fireEvent.change(brandSelect, { target: { value: '' } });
-    expect(titleInput.value).toBe('My Custom Title');
   });
 });
