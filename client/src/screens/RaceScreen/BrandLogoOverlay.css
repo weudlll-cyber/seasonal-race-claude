@@ -1,0 +1,25 @@
+/* ============================================================
+   File:        BrandLogoOverlay.css
+   Path:        client/src/screens/RaceScreen/BrandLogoOverlay.css
+   Project:     RaceArena
+   Created:     2026-06-12
+   Description: Styles for the bottom-right corner brand logo overlay shown
+                during a race when an active branding profile has a logo set.
+   ============================================================ */
+
+.brand-logo-overlay {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 20;
+  /* drop-shadow follows the image's actual outline (handles transparent PNGs) */
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
+}
+
+.brand-logo-overlay__img {
+  display: block;
+  max-height: 56px;
+  width: auto;
+}

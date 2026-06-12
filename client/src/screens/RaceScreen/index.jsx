@@ -103,6 +103,7 @@ import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClas
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
+import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import './RaceScreen.css';
 
 const CANVAS_W = 1280;
@@ -1610,6 +1611,7 @@ export default function RaceScreen() {
             showWinnerList={showRpWinnerList}
             showSpeedMonitor={showTop10SpeedMonitor}
           />
+          <BrandLogoOverlay />
         </div>
 
         <aside className="race-hud">
