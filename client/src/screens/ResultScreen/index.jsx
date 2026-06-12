@@ -131,6 +131,9 @@ function ResultScreen() {
                 <div className="podium-racer">
                   <div className="podium-icon">{second.icon}</div>
                   <div className="podium-name">{second.name}</div>
+                  {second.finishTimeMs != null && (
+                    <div className="podium-finish-time">{formatRaceTime(second.finishTimeMs)}</div>
+                  )}
                 </div>
                 <div className="podium-rank">2nd</div>
               </div>
@@ -142,6 +145,9 @@ function ResultScreen() {
                 <div className="podium-racer">
                   <div className="podium-icon">{first.icon}</div>
                   <div className="podium-name">{first.name}</div>
+                  {first.finishTimeMs != null && (
+                    <div className="podium-finish-time">{formatRaceTime(first.finishTimeMs)}</div>
+                  )}
                 </div>
                 <div className="podium-rank">1st</div>
               </div>
@@ -153,6 +159,9 @@ function ResultScreen() {
                 <div className="podium-racer">
                   <div className="podium-icon">{third.icon}</div>
                   <div className="podium-name">{third.name}</div>
+                  {third.finishTimeMs != null && (
+                    <div className="podium-finish-time">{formatRaceTime(third.finishTimeMs)}</div>
+                  )}
                 </div>
                 <div className="podium-rank">3rd</div>
               </div>

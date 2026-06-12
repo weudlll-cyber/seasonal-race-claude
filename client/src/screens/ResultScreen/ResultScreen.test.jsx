@@ -190,6 +190,30 @@ describe('ResultScreen — rankings scroll panel', () => {
   });
 });
 
+describe('ResultScreen — podium finish times', () => {
+  it('shows finish time in the podium slot when finishTimeMs is present', () => {
+    // VALID_RACE_RESULTS: Alice 1st (29_340 → '29.34'), Bob 2nd (31_200 → '31.20')
+    render(<ResultScreen />);
+    expect(screen.getByText('29.34')).toBeTruthy();
+    expect(screen.getByText('31.20')).toBeTruthy();
+  });
+
+  it('omits the podium finish time element when finishTimeMs is absent', () => {
+    const noTimes = JSON.stringify({
+      finishOrder: [
+        { name: 'Alice', icon: '🐎', index: 0, progress: 100 }, // no finishTimeMs
+        { name: 'Bob', icon: '🐎', index: 1, progress: 95 },
+      ],
+      elapsedTime: 62,
+      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+    });
+    sessionStorage.setItem('raceResults', noTimes);
+    render(<ResultScreen />);
+    // No time string should appear at all — no "29.34", no "—" in the podium
+    expect(screen.queryByText(/^\d+\.\d{2}$/)).toBeNull();
+  });
+});
+
 describe('ResultScreen — per-racer finish time', () => {
   it('shows formatted finish time in the rank row when finishTimeMs is present', () => {
     sessionStorage.setItem('raceResults', FOUR_FINISHER_RESULTS);

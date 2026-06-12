@@ -74,14 +74,14 @@
   position: absolute;
   top: 20px;
   left: 20px;
-  max-width: 130px;
+  max-width: 180px;
   pointer-events: none;
 }
 
 .brand-logo-result__img {
   display: block;
-  max-height: 130px;
-  max-width: 130px;
+  max-height: 180px;
+  max-width: 180px;
   object-fit: contain;
 }
 
@@ -224,6 +224,13 @@
   word-wrap: break-word;
   max-width: 90px;
   font-size: 12px;
+}
+
+.podium-finish-time {
+  font-size: 10px;
+  font-family: monospace;
+  color: #aaa;
+  text-align: center;
 }
 
 .podium-rank {
