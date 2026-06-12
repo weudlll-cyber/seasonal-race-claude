@@ -481,13 +481,13 @@ function SetupScreen() {
                 style={{
                   position: 'absolute',
                   top: 'calc(100% + 2px)',
-                  left: 0,
+                  left: '0.85rem',
+                  right: 0,
                   fontSize: '0.72rem',
                   color: 'rgba(234,234,234,0.45)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: '100%',
                 }}
               >
                 {activeBrandProfile.subtitle}
@@ -507,6 +507,7 @@ function SetupScreen() {
               borderRadius: 'var(--radius)',
               padding: '0.15rem 0.4rem',
               cursor: 'pointer',
+              alignSelf: 'center',
             }}
             aria-label="Active branding profile"
           >
@@ -529,6 +530,7 @@ function SetupScreen() {
             marginLeft: 'auto',
             padding: '0.25rem 0.5rem',
             transition: 'color 0.2s',
+            alignSelf: 'center',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
