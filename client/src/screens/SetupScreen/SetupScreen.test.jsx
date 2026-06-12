@@ -600,4 +600,50 @@ describe('SetupScreen — brand eventName seed (B1)', () => {
     // The title must still be 'My Custom Title' — not wiped by the empty-eventName profile
     expect(titleInput.value).toBe('My Custom Title');
   });
+
+  it('deactivating (None) clears a still-brand-seeded value immediately', () => {
+    const profile = {
+      id: 'bp-deact',
+      name: 'Deact Brand',
+      eventName: 'Brand Cup',
+      primaryColor: '#e63946',
+      secondaryColor: '#f4a261',
+    };
+    storageSet(KEYS.BRANDING, [profile]);
+    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-deact' });
+    renderSetupScreen();
+    // Navigate to Settings tab — seeded value should be present
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[2]);
+    const titleInput = screen.getByPlaceholderText(/summer sprint/i);
+    expect(titleInput.value).toBe('Brand Cup');
+    // Deactivate via the branding selector
+    const brandSelect = screen.getByRole('combobox', { name: /active branding profile/i });
+    fireEvent.change(brandSelect, { target: { value: '' } });
+    expect(titleInput.value).toBe('');
+  });
+
+  it('deactivating (None) does NOT wipe a value the operator edited after seeding', () => {
+    const profile = {
+      id: 'bp-deact2',
+      name: 'Edit Brand',
+      eventName: 'Brand Cup',
+      primaryColor: '#e63946',
+      secondaryColor: '#f4a261',
+    };
+    storageSet(KEYS.BRANDING, [profile]);
+    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-deact2' });
+    renderSetupScreen();
+    // Navigate to Settings tab and edit the seeded title
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[2]);
+    const titleInput = screen.getByPlaceholderText(/summer sprint/i);
+    expect(titleInput.value).toBe('Brand Cup');
+    fireEvent.change(titleInput, { target: { value: 'My Custom Title' } });
+    expect(titleInput.value).toBe('My Custom Title');
+    // Deactivate — operator's edit must survive
+    const brandSelect = screen.getByRole('combobox', { name: /active branding profile/i });
+    fireEvent.change(brandSelect, { target: { value: '' } });
+    expect(titleInput.value).toBe('My Custom Title');
+  });
 });

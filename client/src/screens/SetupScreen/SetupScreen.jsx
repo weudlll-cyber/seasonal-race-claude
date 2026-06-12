@@ -8,7 +8,7 @@
 //              changes are reflected immediately
 // ============================================================
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
@@ -177,13 +177,25 @@ function SetupScreen() {
     }
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
-  // B1: when a brand profile is activated or switched, seed its eventName into the title field.
-  // Empty eventName on a profile is intentionally ignored to avoid wiping operator edits.
+  // Tracks the last value seeded from a brand profile so deactivation can safely clear it
+  // without touching a value the operator typed themselves (Variant Z).
+  const lastSeededEventNameRef = useRef('');
+
+  // B1/Z: seed title from active profile; clear on deactivation only if value is still brand-sourced.
   useEffect(() => {
     const id = activeSession?.activeBrandingProfileId;
     const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
     if (profile?.eventName) {
       setRaceSettings((prev) => ({ ...prev, eventName: profile.eventName }));
+      lastSeededEventNameRef.current = profile.eventName;
+    } else if (!id) {
+      setRaceSettings((prev) => {
+        if (prev.eventName && prev.eventName === lastSeededEventNameRef.current) {
+          lastSeededEventNameRef.current = '';
+          return { ...prev, eventName: '' };
+        }
+        return prev;
+      });
     }
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
@@ -385,6 +397,7 @@ function SetupScreen() {
       worldHeight: selectedTrack?.worldHeight ?? 720,
       duration: raceSettings.duration,
       eventName: raceSettings.eventName,
+      subtitle: activeBrandProfile?.subtitle ?? '',
       winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
@@ -455,14 +468,35 @@ function SetupScreen() {
           Race<span>Arena</span>
         </div>
         {raceSettings.eventName && (
-          <span
+          <div
             style={{
-              fontSize: '0.9rem',
-              color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
+              display: 'flex',
+              flexDirection: 'column',
+              paddingLeft: '0.85rem',
+              borderLeft: '0.5px solid rgba(255,255,255,0.12)',
+              lineHeight: 1.3,
             }}
           >
-            {raceSettings.eventName}
-          </span>
+            <span
+              style={{
+                fontSize: '0.95rem',
+                color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
+              }}
+            >
+              {raceSettings.eventName}
+            </span>
+            {activeBrandProfile?.subtitle && (
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'rgba(234,234,234,0.45)',
+                  marginTop: '0.1rem',
+                }}
+              >
+                {activeBrandProfile.subtitle}
+              </span>
+            )}
+          </div>
         )}
         {brandingProfiles.length > 0 && (
           <select

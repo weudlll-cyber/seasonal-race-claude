@@ -17,11 +17,10 @@ const CD_COLORS = ['#00ff55', '#33ff88', '#ffcc00', '#ff3333'];
  * Draws the race title for closed tracks above the track area.
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} shape  EditorShape instance (provides getEdgePoints).
- * @param {object} raceData  { eventName, trackName }
+ * @param {object} raceData  { eventName, trackName, subtitle }
  */
 export function drawTitle(ctx, shape, raceData) {
-  const topY = Math.min(...shape.getEdgePoints(30).outer.map((p) => p.y));
-  const titleY = 58 + (topY - 58) / 2;
+  const titleY = 44;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = 'bold 22px sans-serif';
@@ -33,13 +32,18 @@ export function drawTitle(ctx, shape, raceData) {
     CW / 2,
     titleY
   );
+  if (raceData.subtitle) {
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = 'rgba(255,215,0,0.65)';
+    ctx.fillText(raceData.subtitle, CW / 2, titleY + 22);
+  }
   ctx.shadowBlur = 0;
 }
 
 /**
  * Draws the race title for open tracks at a fixed top position.
  * @param {CanvasRenderingContext2D} ctx
- * @param {object} raceData  { eventName, trackName }
+ * @param {object} raceData  { eventName, trackName, subtitle }
  */
 export function drawTitleOpen(ctx, raceData) {
   ctx.textAlign = 'center';
@@ -49,6 +53,11 @@ export function drawTitleOpen(ctx, raceData) {
   ctx.shadowBlur = 10;
   ctx.shadowColor = '#ffd700';
   ctx.fillText(`🏆  ${raceData.eventName || 'Race'}  ·  ${raceData.trackName || ''}`, CW / 2, 38);
+  if (raceData.subtitle) {
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = 'rgba(255,215,0,0.65)';
+    ctx.fillText(raceData.subtitle, CW / 2, 60);
+  }
   ctx.shadowBlur = 0;
 }
 
