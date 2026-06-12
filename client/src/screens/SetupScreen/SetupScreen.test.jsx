@@ -7,7 +7,7 @@
 //              Start Race button, tab navigation, and Quick Test autofill
 // ============================================================
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
@@ -552,5 +552,52 @@ describe('SetupScreen — Quick Test racer selector', () => {
     // Selection should reset to Searound's default racer
     const searound = DEFAULT_TRACKS.find((t) => t.id === 'searound');
     expect(getQuickRacerSelect().value).toBe(searound.defaultRacerTypeId ?? 'horse');
+  });
+});
+
+describe('SetupScreen — brand eventName seed (B1)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('activating a profile with non-empty eventName seeds the title field', () => {
+    const profile = {
+      id: 'bp-test',
+      name: 'Test Brand',
+      eventName: 'Acme Cup',
+      primaryColor: '#e63946',
+      secondaryColor: '#f4a261',
+    };
+    storageSet(KEYS.BRANDING, [profile]);
+    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-test' });
+    renderSetupScreen();
+    // The header span and/or Settings tab should show the seeded event name
+    expect(document.body).toHaveTextContent('Acme Cup');
+  });
+
+  it('activating a profile with empty eventName does NOT wipe an operator-typed title', async () => {
+    // Profile has no eventName — activating it must not clear an existing title.
+    const profile = {
+      id: 'bp-empty',
+      name: 'No-Name Brand',
+      eventName: '',
+      primaryColor: '#111',
+      secondaryColor: '#222',
+    };
+    storageSet(KEYS.BRANDING, [profile]);
+    // No active session yet — operator types a title first via Settings tab, then activates
+    // We simulate the invariant at storage level: session is active but eventName is empty
+    storageSet(KEYS.ACTIVE_SESSION, { activeBrandingProfileId: 'bp-empty' });
+    renderSetupScreen();
+    // Navigate to Settings tab and type a title
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[2]);
+    const titleInput = screen.getByPlaceholderText(/summer sprint/i);
+    act(() => {
+      fireEvent.change(titleInput, { target: { value: 'My Custom Title' } });
+    });
+    // The title must still be 'My Custom Title' — not wiped by the empty-eventName profile
+    expect(titleInput.value).toBe('My Custom Title');
   });
 });

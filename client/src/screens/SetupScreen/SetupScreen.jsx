@@ -157,6 +157,10 @@ function SetupScreen() {
   const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
   const [activeSession, setActiveSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
 
+  const activeBrandProfile = activeSession?.activeBrandingProfileId
+    ? (brandingProfiles.find((p) => p.id === activeSession.activeBrandingProfileId) ?? null)
+    : null;
+
   // Inject brand CSS vars whenever the active profile changes.
   // Vars are set on document.documentElement so they persist through navigation.
   // Removing them lets each CSS use-site's var() fallback take over.
@@ -170,6 +174,16 @@ function SetupScreen() {
     } else {
       root.removeProperty('--brand-primary');
       root.removeProperty('--brand-secondary');
+    }
+  }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
+
+  // B1: when a brand profile is activated or switched, seed its eventName into the title field.
+  // Empty eventName on a profile is intentionally ignored to avoid wiping operator edits.
+  useEffect(() => {
+    const id = activeSession?.activeBrandingProfileId;
+    const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+    if (profile?.eventName) {
+      setRaceSettings((prev) => ({ ...prev, eventName: profile.eventName }));
     }
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
@@ -441,7 +455,12 @@ function SetupScreen() {
           Race<span>Arena</span>
         </div>
         {raceSettings.eventName && (
-          <span style={{ fontSize: '0.9rem', color: 'var(--color-muted)' }}>
+          <span
+            style={{
+              fontSize: '0.9rem',
+              color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
+            }}
+          >
             {raceSettings.eventName}
           </span>
         )}
