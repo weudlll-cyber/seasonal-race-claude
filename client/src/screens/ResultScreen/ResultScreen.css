@@ -21,6 +21,7 @@
 }
 
 .results-container {
+  position: relative; /* anchor for absolute-positioned logo */
   width: 100%;
   max-width: 900px;
   background: rgba(0, 0, 0, 0.3);
@@ -43,17 +44,17 @@
 
 .results-title {
   text-align: center;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: bold;
   color: #ffd700;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
 }
 
 /* Brand identity block */
 .brand-identity {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .brand-event-name {
@@ -68,16 +69,19 @@
   margin-top: 3px;
 }
 
-/* Brand logo */
+/* Brand logo — top-left corner, outside the vertical flow */
 .brand-logo-result {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 14px;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  max-width: 130px;
+  pointer-events: none;
 }
 
 .brand-logo-result__img {
-  max-height: 72px;
-  max-width: 200px;
+  display: block;
+  max-height: 130px;
+  max-width: 130px;
   object-fit: contain;
 }
 
@@ -85,11 +89,11 @@
   display: flex;
   justify-content: center;
   gap: 30px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   font-size: 14px;
   color: #aaa;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 12px;
+  padding-bottom: 10px;
 }
 
 /* When race-info is nested inside the brand-identity block, suppress the separator */
@@ -113,14 +117,14 @@
 .podium-section {
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .podium {
   display: flex;
   align-items: flex-end;
   gap: 20px;
-  height: 180px;
+  height: 160px;
   perspective: 1000px;
 }
 
@@ -129,13 +133,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding: 14px;
+  padding: 12px;
   border-radius: 8px 8px 0 0;
-  min-width: 100px;
+  min-width: 96px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom: none;
-  gap: 8px;
+  gap: 6px;
   animation: podiumAppear 0.6s ease-out;
 }
 
@@ -152,7 +156,7 @@
 
 /* First place - tallest, centered, gold highlight */
 .podium-slot--1st {
-  height: 150px;
+  height: 140px;
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
   border: 2px solid rgba(255, 215, 0, 0.4);
   transform: scale(1.05);
@@ -160,7 +164,7 @@
 }
 
 .podium-slot--1st .podium-medal {
-  font-size: 26px;
+  font-size: 24px;
   animation: bounce 1s ease-in-out infinite;
 }
 
@@ -170,32 +174,32 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
 }
 
 /* Second place */
 .podium-slot--2nd {
-  height: 110px;
+  height: 100px;
   background: rgba(192, 192, 192, 0.1);
   border-color: rgba(192, 192, 192, 0.3);
   order: 1;
 }
 
 .podium-slot--2nd .podium-medal {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 /* Third place */
 .podium-slot--3rd {
-  height: 90px;
+  height: 80px;
   background: rgba(205, 127, 50, 0.1);
   border-color: rgba(205, 127, 50, 0.3);
   order: 3;
 }
 
 .podium-slot--3rd .podium-medal {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .podium-medal {
@@ -206,11 +210,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .podium-icon {
-  font-size: 34px;
+  font-size: 30px;
 }
 
 .podium-name {
@@ -218,8 +222,8 @@
   color: #fff;
   text-align: center;
   word-wrap: break-word;
-  max-width: 100px;
-  font-size: 13px;
+  max-width: 90px;
+  font-size: 12px;
 }
 
 .podium-rank {
@@ -232,14 +236,14 @@
 
 /* Rankings Section — ranks 4+ only, scrollable */
 .rankings-section {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .rankings-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #fff;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
@@ -252,7 +256,7 @@
 }
 
 .rankings-scroll {
-  max-height: 140px;
+  max-height: 120px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -272,7 +276,7 @@
   grid-template-columns: 50px 40px 1fr 80px;
   gap: 15px;
   align-items: center;
-  padding: 10px 15px;
+  padding: 8px 15px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: #fff;
   font-size: 14px;
@@ -320,11 +324,11 @@
   font-weight: 500;
 }
 
-.rank-laps,
-.rank-progress {
+.rank-time {
   text-align: right;
   color: #aaa;
   font-size: 12px;
+  font-family: monospace;
 }
 
 /* Actions */
@@ -332,11 +336,11 @@
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .btn {
-  padding: 12px 30px;
+  padding: 10px 28px;
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -365,7 +369,7 @@
 /* Sponsor credit strip */
 .result-sponsor {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 16px;
   font-size: 12px;
   color: #888;
   letter-spacing: 0.5px;
@@ -379,33 +383,38 @@
   }
 
   .results-title {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  /* Hide logo on narrow viewports to avoid title overlap */
+  .brand-logo-result {
+    display: none;
   }
 
   .podium {
     gap: 10px;
-    height: 150px;
+    height: 140px;
   }
 
   .podium-slot {
-    min-width: 80px;
+    min-width: 76px;
     padding: 10px;
   }
 
   .podium-slot--1st {
-    height: 120px;
+    height: 110px;
   }
 
   .podium-slot--2nd {
-    height: 90px;
+    height: 84px;
   }
 
   .podium-slot--3rd {
-    height: 70px;
+    height: 66px;
   }
 
   .podium-icon {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .podium-name {
@@ -417,9 +426,5 @@
     grid-template-columns: 40px 30px 1fr 70px;
     gap: 10px;
     padding: 8px 10px;
-  }
-
-  .rank-laps {
-    display: none;
   }
 }

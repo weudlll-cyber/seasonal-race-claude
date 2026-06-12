@@ -28,6 +28,7 @@ import {
 import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
 import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
+import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import {
@@ -138,17 +139,6 @@ const tPos = (t) => ((t % 1) + 1) % 1;
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-// Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32).
-function formatRaceTime(ms) {
-  const hundredths = Math.floor(ms / 10) % 100;
-  const totalSecs = Math.floor(ms / 1000);
-  const secs = totalSecs % 60;
-  const mins = Math.floor(totalSecs / 60);
-  return mins > 0
-    ? `${mins}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`
-    : `${secs}.${String(hundredths).padStart(2, '0')}`;
 }
 
 export default function RaceScreen() {
@@ -1066,6 +1056,7 @@ export default function RaceScreen() {
                   index: r.index,
                   lap: r.lap ?? 1,
                   progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
+                  finishTimeMs: r.finishTimeMs ?? null,
                 })),
                 elapsedTime: Math.round((ts - st.raceStart) / 1000),
                 race: raceData,

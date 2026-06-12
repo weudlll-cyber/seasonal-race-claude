@@ -40,8 +40,24 @@ const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 const VALID_RACE_RESULTS = JSON.stringify({
   finishOrder: [
-    { name: 'Alice', icon: '🐎', color: '#f00', index: 0, lap: 1, progress: 100 },
-    { name: 'Bob', icon: '🐎', color: '#00f', index: 1, lap: 1, progress: 95 },
+    {
+      name: 'Alice',
+      icon: '🐎',
+      color: '#f00',
+      index: 0,
+      lap: 1,
+      progress: 100,
+      finishTimeMs: 29_340,
+    },
+    {
+      name: 'Bob',
+      icon: '🐎',
+      color: '#00f',
+      index: 1,
+      lap: 1,
+      progress: 95,
+      finishTimeMs: 31_200,
+    },
   ],
   elapsedTime: 62,
   race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
@@ -49,10 +65,10 @@ const VALID_RACE_RESULTS = JSON.stringify({
 
 const FOUR_FINISHER_RESULTS = JSON.stringify({
   finishOrder: [
-    { name: 'Alice', icon: '🐎', color: '#f00', index: 0, progress: 100 },
-    { name: 'Bob', icon: '🐎', color: '#00f', index: 1, progress: 95 },
-    { name: 'Carol', icon: '🐎', color: '#0f0', index: 2, progress: 90 },
-    { name: 'Dave', icon: '🐎', color: '#ff0', index: 3, progress: 85 },
+    { name: 'Alice', icon: '🐎', color: '#f00', index: 0, progress: 100, finishTimeMs: 29_340 },
+    { name: 'Bob', icon: '🐎', color: '#00f', index: 1, progress: 95, finishTimeMs: 31_200 },
+    { name: 'Carol', icon: '🐎', color: '#0f0', index: 2, progress: 90, finishTimeMs: 33_500 },
+    { name: 'Dave', icon: '🐎', color: '#ff0', index: 3, progress: 85, finishTimeMs: 35_800 },
   ],
   elapsedTime: 62,
   race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
@@ -171,5 +187,33 @@ describe('ResultScreen — rankings scroll panel', () => {
     // VALID_RACE_RESULTS has 2 finishers — no panel should appear
     render(<ResultScreen />);
     expect(screen.queryByText('Final Rankings')).toBeNull();
+  });
+});
+
+describe('ResultScreen — per-racer finish time', () => {
+  it('shows formatted finish time in the rank row when finishTimeMs is present', () => {
+    sessionStorage.setItem('raceResults', FOUR_FINISHER_RESULTS);
+    render(<ResultScreen />);
+    // Dave's finishTimeMs is 35_800 → formatRaceTime(35800) = '35.80'
+    expect(screen.getByText('35.80')).toBeTruthy();
+  });
+
+  it('shows "—" in the rank row when finishTimeMs is null or absent', () => {
+    // Ranks 4 (Dave, explicit null) and 5 (Eve, absent) both land in the scroll panel
+    const withNull = JSON.stringify({
+      finishOrder: [
+        { name: 'Alice', icon: '🐎', index: 0, progress: 100, finishTimeMs: 29_000 },
+        { name: 'Bob', icon: '🐎', index: 1, progress: 95, finishTimeMs: 31_000 },
+        { name: 'Carol', icon: '🐎', index: 2, progress: 90, finishTimeMs: 33_000 },
+        { name: 'Dave', icon: '🐎', index: 3, progress: 85, finishTimeMs: null },
+        { name: 'Eve', icon: '🐎', index: 4, progress: 80 }, // finishTimeMs absent
+      ],
+      elapsedTime: 62,
+      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+    });
+    sessionStorage.setItem('raceResults', withNull);
+    render(<ResultScreen />);
+    const dashes = screen.getAllByText('—');
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -11,6 +11,7 @@ import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
 import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
 import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../../modules/storage/defaults.js';
+import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import './ResultScreen.css';
 
 function ResultScreen() {
@@ -169,7 +170,9 @@ function ResultScreen() {
                   <span className="rank-number">#{index + 4}</span>
                   <span className="rank-icon">{racer.icon}</span>
                   <span className="rank-name">{racer.name}</span>
-                  <span className="rank-progress">{Math.round(racer.progress ?? 100)}%</span>
+                  <span className="rank-time">
+                    {racer.finishTimeMs != null ? formatRaceTime(racer.finishTimeMs) : '—'}
+                  </span>
                 </div>
               ))}
             </div>
