@@ -467,6 +467,7 @@ function SetupScreen() {
               style={{
                 display: 'block',
                 fontSize: '0.95rem',
+                fontWeight: 700,
                 color: activeBrandProfile ? 'var(--brand-primary)' : 'var(--color-muted)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
