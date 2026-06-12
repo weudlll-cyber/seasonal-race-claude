@@ -501,7 +501,16 @@ function SetupScreen() {
         {brandingProfiles.length > 0 && (
           <select
             value={activeSession?.activeBrandingProfileId ?? ''}
-            onChange={(e) => setActiveSession({ activeBrandingProfileId: e.target.value || null })}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              setActiveSession({ activeBrandingProfileId: id });
+              const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+              window.dispatchEvent(
+                new CustomEvent('racearena:brand-active', {
+                  detail: { eventName: profile?.eventName ?? null },
+                })
+              );
+            }}
             style={{
               fontSize: '0.8rem',
               background: 'var(--color-surface)',
