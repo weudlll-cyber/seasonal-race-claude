@@ -6,6 +6,7 @@
 // Description: Root application component — wires up client-side routing
 // ============================================================
 
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
 import DevScreen from './screens/DevScreen/DevScreen.jsx';
@@ -16,7 +17,12 @@ import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
-import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
+import {
+  DEFAULT_TRACKS,
+  DEFAULT_BRANDING,
+  DEFAULT_ACTIVE_SESSION,
+} from './modules/storage/defaults.js';
+import { useStorage } from './modules/storage/useStorage.js';
 
 const CURRENT_DATA_VERSION = 5;
 
@@ -66,7 +72,21 @@ function removeStalePromotedDefaults() {
   console.warn('[RaceArena] Storage migrated to v' + CURRENT_DATA_VERSION);
 })();
 
+const DEFAULT_TITLE = 'RaceArena';
+
 function App() {
+  const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
+  const [activeSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
+
+  useEffect(() => {
+    const id = activeSession?.activeBrandingProfileId;
+    const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+    document.title = profile?.eventName ? `${profile.eventName} — RaceArena` : DEFAULT_TITLE;
+    return () => {
+      document.title = DEFAULT_TITLE;
+    };
+  }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
+
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <TransitionProvider>
