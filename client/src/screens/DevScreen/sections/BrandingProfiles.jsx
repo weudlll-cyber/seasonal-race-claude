@@ -23,6 +23,9 @@ const BLANK = {
   sponsorText: '',
   logo: '', // base64 data URL
   isDefault: false,
+  logoMaxHeight: 90,
+  logoOpacity: 0.9,
+  logoCorner: 'bottom-right',
 };
 
 function BrandingProfiles() {
@@ -68,6 +71,9 @@ function BrandingProfiles() {
       secondaryColor: profile.secondaryColor,
       sponsorText: profile.sponsorText,
       logo: profile.logo,
+      logoMaxHeight: profile.logoMaxHeight ?? 90,
+      logoOpacity: profile.logoOpacity ?? 0.9,
+      logoCorner: profile.logoCorner ?? 'bottom-right',
     });
     setEditId(profile.id);
     setShowForm(true);
@@ -364,6 +370,51 @@ function BrandingProfiles() {
                   </>
                 )}
               </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Logo Size</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="range"
+                  min={40}
+                  max={160}
+                  step={4}
+                  value={form.logoMaxHeight}
+                  onChange={(e) => f('logoMaxHeight', Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', minWidth: '3rem' }}>
+                  {form.logoMaxHeight}px
+                </span>
+              </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Logo Opacity</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={form.logoOpacity}
+                  onChange={(e) => f('logoOpacity', Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', minWidth: '3rem' }}>
+                  {Math.round(form.logoOpacity * 100)}%
+                </span>
+              </div>
+            </div>
+            <div className={s.formGroup}>
+              <label className={s.label}>Logo Corner</label>
+              <select
+                className={s.input}
+                value={form.logoCorner}
+                onChange={(e) => f('logoCorner', e.target.value)}
+              >
+                <option value="bottom-right">Bottom-right</option>
+                <option value="top-right">Top-right</option>
+              </select>
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>

@@ -13,6 +13,11 @@ import { KEYS } from '../../modules/storage/storage.js';
 import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../../modules/storage/defaults.js';
 import './BrandLogoOverlay.css';
 
+const CORNER_STYLES = {
+  'bottom-right': { bottom: '16px', top: 'auto', right: '16px', left: 'auto' },
+  'top-right': { top: '16px', bottom: 'auto', right: '16px', left: 'auto' },
+};
+
 export default function BrandLogoOverlay() {
   const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
   const [activeSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
@@ -22,13 +27,18 @@ export default function BrandLogoOverlay() {
 
   if (!profile?.logo) return null;
 
+  const corner = CORNER_STYLES[profile.logoCorner] || CORNER_STYLES['bottom-right'];
+
   return (
-    <div className="brand-logo-overlay">
+    <div className="brand-logo-overlay" style={corner}>
       <img
         src={profile.logo}
         alt={profile.eventName}
         className="brand-logo-overlay__img"
-        style={{ opacity: profile.logoOpacity ?? 0.9 }}
+        style={{
+          opacity: profile.logoOpacity ?? 0.9,
+          maxHeight: (profile.logoMaxHeight ?? 90) + 'px',
+        }}
       />
     </div>
   );

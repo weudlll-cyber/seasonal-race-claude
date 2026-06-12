@@ -9,8 +9,6 @@
 
 .brand-logo-overlay {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
   pointer-events: none;
   user-select: none;
   z-index: 20;
@@ -20,6 +18,5 @@
 
 .brand-logo-overlay__img {
   display: block;
-  max-height: 80px;
   width: auto;
 }
