@@ -8,10 +8,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
-import { useStorage } from '../../modules/storage/useStorage.js';
 import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
-import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../../modules/storage/defaults.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
+import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import './ResultScreen.css';
 
 function ResultScreen() {
@@ -23,12 +22,7 @@ function ResultScreen() {
   // This ref survives the simulated unmount and prevents a double history write.
   const hasSaved = useRef(false);
 
-  const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
-  const [activeSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
-  const activeBrandId = activeSession?.activeBrandingProfileId;
-  const activeBrand = activeBrandId
-    ? (brandingProfiles.find((p) => p.id === activeBrandId) ?? null)
-    : null;
+  const activeBrand = useActiveBrandProfile();
 
   useEffect(() => {
     if (hasSaved.current) return;
