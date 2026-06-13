@@ -16,6 +16,7 @@ import TrackEditor from './screens/TrackEditor/TrackEditor.jsx';
 import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
+import { AuthProvider } from './contexts/AuthContext.jsx';
 import { storageGet, KEYS } from './modules/storage/storage.js';
 import { resolveActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
 
@@ -52,21 +53,23 @@ function App() {
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <TransitionProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/setup" replace />} />
-          <Route path="/setup" element={<SetupScreen />} />
-          <Route path="/race" element={<RaceScreen />} />
-          <Route path="/results" element={<ResultScreen />} />
-          <Route path="/dev" element={<DevScreen />} />
-          <Route path="/track-editor" element={<TrackEditor />} />
-          <Route path="/racer-editor" element={<RacerEditor />} />
-          {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
+      <AuthProvider>
+        <TransitionProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/setup" replace />} />
+            <Route path="/setup" element={<SetupScreen />} />
+            <Route path="/race" element={<RaceScreen />} />
+            <Route path="/results" element={<ResultScreen />} />
+            <Route path="/dev" element={<DevScreen />} />
+            <Route path="/track-editor" element={<TrackEditor />} />
+            <Route path="/racer-editor" element={<RacerEditor />} />
+            {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
               via /diagnose-verteilung in the address bar. Headless simulator for distribution
               analysis. Do not delete. */}
-          <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
-        </Routes>
-      </TransitionProvider>
+            <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
+          </Routes>
+        </TransitionProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

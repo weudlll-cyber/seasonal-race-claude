@@ -33,9 +33,10 @@ function withTimeout(promise, ms) {
 }
 
 export async function apiCall(url, options = {}) {
+  const { _skipAuthRedirect = false, ...rest } = options;
   let res;
   try {
-    res = await withTimeout(fetch(url, options), TIMEOUT_MS);
+    res = await withTimeout(fetch(url, { credentials: 'include', ...rest }), TIMEOUT_MS);
   } catch (err) {
     throw new Error(err.code === 'TIMEOUT' ? err.message : UNREACHABLE_MSG);
   }
@@ -47,7 +48,14 @@ export async function apiCall(url, options = {}) {
     } catch {
       // ignore parse failure
     }
-    throw new Error(errMsg);
+    const err = new Error(errMsg);
+    err.status = res.status;
+    if (res.status === 401 && !_skipAuthRedirect) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('racearena:unauthorized'));
+      }
+    }
+    throw err;
   }
   return res;
 }
