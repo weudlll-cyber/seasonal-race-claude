@@ -26,4 +26,5 @@ This index maps the documents under `docs/`.
 - [inventory-2026-05.md](inventory-2026-05.md) — May 2026 mechanics inventory (start phase + forces).
 - [LESSONS.md](LESSONS.md) — accumulated development lessons (L-numbered).
 - [AUDIT.md](AUDIT.md) — security & quality audit log (per-cycle entries).
+- [AUTH.md](AUTH.md) — authentication & authorization architecture (DESIGN, not built yet).
 - [handoff-notes.md](handoff-notes.md) — historical handoff notes.
