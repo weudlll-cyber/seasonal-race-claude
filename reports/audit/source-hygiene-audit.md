@@ -5,17 +5,21 @@
 **Scope:** `client/src/**`, `server/src/**`, `scripts/**` (light), repo-root organisation  
 **Excluded:** `*.test.*`, `*.spec.*`, `node_modules`, build output, comment accuracy (handled by separate comment-audit)
 
+> Revised 2026-06-13 after independent Plan-Claude + Copilot review; numbers re-verified against HEAD `fea93f4`.
+
 ---
 
 ## Summary
 
 | Category | Count |
 |---|---|
-| H1 — Extraction candidate | 2 |
+| H1 — Extraction candidate | 1 |
 | H2 — Mixed responsibilities | 1 |
 | H3 — Duplication | 2 |
 | H4 — Dead / unused / misfiled | 3 |
 | H5 — Leave as-is (required anti-shrink guard) | 9 |
+
+Additional findings from the independent second-review pass are listed in a dedicated section at the end of this document.
 
 ---
 
@@ -26,9 +30,9 @@ These large files are cohesive and must **not** be split.
 | File | Lines | Justification |
 |---|---|---|
 | `client/src/modules/camera/CameraDirector.js` | 2147 | Single state-machine concern: 5 camera states, transitions, and targeting. Already split in prior work. All 2147 lines serve one abstraction; private helpers are deeply intertwined with the FSM logic. |
-| `client/src/screens/RaceScreen/index.jsx` | 1691 | Orchestrator by nature — canvas, physics loop, phase management, and overlay wiring are all tightly coupled through shared refs and cannot be separated without threading prop/context plumbing that would add more complexity than it removes. Covered by integration-style tests. |
-| `client/src/modules/raceBehavior.js` | 1022 | Single physics domain (lateral avoidance + drafting + brake-to-match). Private helpers (`normalizeAngle`, `pairContact`, geometry converters) are not extracted because they are private implementation, not shared contracts. Highly tested (3 test files, 738+ test lines). |
-| `client/src/screens/SetupScreen/SetupScreen.jsx` | 1120 | Cohesive setup wizard. The three sub-concerns (player groups, track, race params) share a single form-state object; splitting would create a cross-file prop-drilling chain with no gain. |
+| `client/src/screens/RaceScreen/index.jsx` | 1691 | Core rAF/physics orchestration and canvas setup are tightly coupled through shared refs; separating them would require threading prop/context plumbing that adds more complexity than it removes. **Keep core; optional DOM-shell extraction:** the pure loading/error DOM blocks around lines 1537 and 1608 have no ref dependencies and could be extracted to small shell components later without touching the physics loop. Covered by integration-style tests. |
+| `client/src/modules/raceBehavior.js` | 1022 | Single physics domain (lateral avoidance + drafting + brake-to-match). Private helpers (`normalizeAngle`, `pairContact`, geometry converters) are not extracted because they are private implementation, not shared contracts. Highly tested (4 test files: `raceBehavior.test.js`, `raceBehaviorBrakeMatch.test.js`, `raceBehaviorConfig.test.js`, `raceBehaviorPriorityMode.test.js`; ~1599 lines total). |
+| `client/src/screens/SetupScreen/SetupScreen.jsx` | 1120 | Cohesive setup wizard. Its three concerns (player groups, track selection, race parameters) are independently stateful but share a single `handleStartRace` output boundary — there is no shared form-state object. The one plausible later extraction is the Quick Test UI block (lines 932–1104), which has its own isolated state (`quickTestCount`, `quickTestSeed`, `quickTrackId`, `quickTestRacerTypeId`) and a clean boundary. Leave as-is for now; the Quick Test block is a concrete candidate if SetupScreen grows further. |
 | `client/src/screens/TrackEditor/TrackEditor.jsx` | 1066 | Already split in prior work via custom hooks (`useViewport`, `useHistory`, `useTrackIO`). Remaining code is justified drag/viewport/geometry state. |
 | `client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx` | 1349 | Cohesive camera tuning UI (11 sections, all camera parameters). `SliderRow`, `StateProfileBlock`, `SectionHeading` are already extracted as local sub-components. Splitting by section would add 11 files with no reduction in coupling. |
 | `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` | 752 | Single domain: dynamics parameter UI. Large due to the slider-per-param pattern; all sliders are interdependent dynamics config, not separable concerns. |
@@ -113,18 +117,20 @@ Both normalize a racer's `t` coordinate (track-position fraction) to `[0, 1)` fo
 
 ## H4 — Dead / Unused / Misfiled
 
-### H4-1: 227 PNG/JPG diagnostic screenshots in repo root
+### H4-1: 63 git-tracked PNG/JPG diagnostic screenshots in repo root
 
-**Evidence:** `ls *.png *.jpg` in repo root returns 227 files (vs. the ~63 expected at spec time). Files group into diagnostic/verification runs: `check-*.png`, `cam-diag-*.png`, `luge-*.png`, `race-*.png`, `space-sprint-*.png`, etc. — all eye-check screenshots accumulated during iterative feature verification.
+**Evidence:** At HEAD, the repo root contains 227 PNG/JPG files total. Of these:
+- **63 are git-tracked** (`git ls-files | grep -E "^[^/]+\.(png|jpg)$"`)
+- **164 are git-ignored** (`.gitignore` already covers them)
+- **0 are untracked** (`git status` shows no untracked image files)
 
-**Impact:** Root-level noise hides actual project files; each `git status` shows hundreds of untracked entries; developer tools that glob the root for source files get polluted results.
+Files group into diagnostic/verification runs: `check-*.png`, `cam-diag-*.png`, `luge-*.png`, `race-*.png`, `space-sprint-*.png`, etc. — all eye-check screenshots accumulated during iterative feature verification.
 
-**Proposed fix:** One of the following (game-master decision):  
-- Add `*.png` and `*.jpg` to `.gitignore` (they are browser-taken screenshots, not version-controlled assets).  
-- Move to `reports/screenshots/` and add a `.gitkeep`; add to `.gitignore` going forward.  
+**Impact:** Root-level clutter hides actual project files. The `.gitignore` already prevents future screenshots from being tracked, but the 63 historical images that were committed before the ignore rule was added remain in git history and will travel with every clone.
 
-**Risk/effort:** Low. These files are already untracked (not in git history); moving or ignoring them has zero code impact.  
-**Priority:** High (cosmetic but distracting; easiest win in the repo).
+**Proposed fix:** Run `git rm --cached <file>` on each of the 63 tracked root images to remove them from the index (files remain on disk; `.gitignore` then covers them going forward). This is a one-shot cleanup — do NOT perform it in this audit; schedule as a separate bounded task.  
+**Risk/effort:** Low. Files stay on disk; only the git index changes. No code is touched.  
+**Priority:** Medium (the `.gitignore` already handles new files; this is a history-cleanup rather than an urgent fix).
 
 ---
 
@@ -140,11 +146,11 @@ sweep-phase3-results.txt  sweep-phase4-results.txt
 sweep-phase5-results.txt
 ```
 
-**Reason:** These are output artifacts from `scripts/` parameter sweep runs, not source. They pollute the root alongside `CLAUDE.md`, `README.md`, and `package.json`.
+**Status:** All 8 are **git-ignored** (confirmed via `git ls-files --others --ignored --exclude-standard`). They are not tracked and not untracked noise visible in `git status`. They sit in the root as local artifacts from `scripts/` parameter sweep runs.
 
-**Proposed fix:** Move to `reports/sweep-results/` (the `reports/` directory already exists). Add `*-results.txt` or `reports/sweep-results/` to `.gitignore` if sweep outputs should not be committed.  
+**Proposed fix:** Move to `reports/sweep-results/` to keep the root tidy; the `.gitignore` rule already suppresses them wherever they live. No urgency — these do not affect git state.  
 **Risk/effort:** Low.  
-**Priority:** Medium.
+**Priority:** Low.
 
 ---
 
@@ -175,13 +181,13 @@ For contrast: `ErrorBoundary`, `InfoTooltip`, `PresetThumbnail`, and `EffectConf
 
 ### Safe first (independent, well-tested, low coupling)
 
-1. **H4-1 (root images)** — zero code change; `.gitignore` edit only. Immediate quality-of-life improvement.
-2. **H4-2 (sweep results)** — move files + optional `.gitignore` line. Zero code impact.
-3. **H3-1 + H3-2 (math utilities)** — create `client/src/utils/mathUtils.js`; swap four inline `lerp`/`lerpAngle` definitions; one test file to add for the new module. These can be a single small PR.
+1. **H4-2 (sweep results)** — move files only; no git or code impact.
+2. **H3-1 + H3-2 (math utilities)** — create `client/src/utils/mathUtils.js`; swap four inline `lerp`/`lerpAngle` definitions; one test file to add for the new module. These can be a single small PR.
 
 ### Sequenced after (mild coupling)
 
-4. **H1-1 / H2-1 (camera migrations)** — extract `cameraMigrations.js`; one call site in `cameraConfig.js`. Blocked on nothing; do after math utilities to keep PRs small.
+3. **H1-1 / H2-1 (camera migrations)** — extract `cameraMigrations.js`; one call site in `cameraConfig.js`. Blocked on nothing; do after math utilities to keep PRs small.
+4. **H4-1 (root tracked images)** — `git rm --cached` pass on 63 tracked root images. Schedule as its own commit; no other changes in same PR.
 
 ### Deferred / informational
 
@@ -190,3 +196,74 @@ For contrast: `ErrorBoundary`, `InfoTooltip`, `PresetThumbnail`, and `EffectConf
 ### Independent of all others
 
 - H3-2 (`tNorm`) can be batched with H3-1 at no extra cost (same new file, adjacent lines).
+
+---
+
+## Additional Findings — Independent Second-Review Pass
+
+The following four items were surfaced during the independent Plan-Claude + Copilot review and are confirmed against HEAD. They extend the findings above; no original item is superseded.
+
+---
+
+### AF-1 (H3 — Duplication): Active-brand resolution logic repeated in three runtime surfaces
+
+The pattern `id = activeSession?.activeBrandingProfileId; profile = id ? profiles.find(p => p.id === id) ?? null : null` appears identically in:
+
+| File | Line | Context |
+|---|---|---|
+| `client/src/screens/SetupScreen/SetupScreen.jsx` | 157 | Inline in component body (reads `brandingProfiles` + `activeSession` hooks) |
+| `client/src/screens/RaceScreen/index.jsx` | 26 | Inline in component body (reads from storage via `useMemo`) |
+| `client/src/screens/RaceScreen/BrandLogoOverlay.jsx` | 22 | Inline in component body (reads `brandingProfiles` + `activeSession` hooks) |
+
+Each surface independently reads storage, resolves the active profile, and handles the null case. Any change to the resolution logic (e.g., adding a fallback, changing the null sentinel) must be applied in three places.
+
+**Proposed fix:** Extract a custom hook `useActiveBrandProfile()` in `client/src/modules/` or `client/src/hooks/` that encapsulates the two `useStorage` calls and the `find` resolution. All three call sites replace their inline resolution with a single hook call.  
+**Risk/effort:** Low. Pure React hook with no side effects; the three callers are straightforward to update.  
+**Priority:** Medium — the brand system is actively growing; this duplication will compound as more surfaces are added.
+
+---
+
+### AF-2 (H2 — Mixed Responsibilities): `App.jsx` mixes routing with storage migration side effects
+
+**File:** `client/src/App.jsx` (121 lines)  
+**Reason:** The file contains two unrelated concerns at module scope:
+1. **Storage migration IIFE** (`App.jsx:21–66`): runs `migrateStorage()` immediately on module load, mutating localStorage before the React tree is mounted.
+2. **Router composition** (`App.jsx:70`): the `App()` component that renders `BrowserRouter` + `Routes`.
+
+The IIFE executing at import time is a side effect that makes the module order-sensitive and harder to test in isolation. The migration logic has no dependency on the React tree and does not belong in the routing module.
+
+**Proposed fix:** Move `migrateStorage` and `removeStalePromotedDefaults` to `client/src/modules/storage/migrateStorage.js` (a file that already exists for tests). Call `migrateStorage()` explicitly from `client/src/main.jsx` before mounting the React root, rather than as an IIFE side effect of importing `App.jsx`.  
+**Risk/effort:** Low-medium. The logic is already tested; the move is mechanical, but the call site change in `main.jsx` must be verified to run before `ReactDOM.createRoot`.  
+**Priority:** Low (current behavior is correct; this is a structural cleanliness issue, not a bug).
+
+---
+
+### AF-3 (H4 — Possible Dead Export): `drawNameTag` exported but only referenced internally
+
+**File:** `client/src/screens/RaceScreen/drawing/racerRendering.js`  
+**Evidence:** `export function drawNameTag` at line 33 is not imported by any other production file (`grep -r` across all `client/src` returns zero external references). The only call site is `racerRendering.js:137` — within the same file.
+
+**Status: NEEDS VERIFICATION before any action.** The export may be consumed by:
+- Test files (not checked in this scan)
+- Dynamic imports not detectable by static grep
+- A future caller already planned in the branding or diagnostics work
+
+**Proposed action:** Verify with `grep -r "drawNameTag" client/src` including test files. If truly unused externally, demote to a non-exported function. Do not remove without confirming.  
+**Risk/effort:** Low (change is `export function` → `function`; fully reversible).  
+**Priority:** Low — informational until verification.
+
+---
+
+### AF-4 (H1 — Deeper Extraction): Version-branch duplication inside `cameraConfig.js` dispatch block
+
+**File:** `client/src/modules/cameraConfig.js`, lines 504–643  
+**Evidence:** The `loadCameraConfig` function contains 8 near-identical `if (stored.schemaVersion === N)` branches (versions 7–14). Each branch:
+1. Shallow-merges with `DEFAULT_CAMERA_CONFIG`
+2. Deep-merges `cameraStateProfiles` (identical 7-line block copy-pasted verbatim across all 8 branches)
+3. Chains a version-specific suffix of migration calls
+
+The deep-merge profile block (`for (const state of Object.keys(defProfiles)) { merged.cameraStateProfiles[state] = { ...defProfiles[state], ...(stored.cameraStateProfiles[state] ?? {}) }; }`) is copy-pasted identically 8 times within the dispatch function, in addition to the migration functions themselves being extracted (H1-1). This is a stronger extraction target than H1-1 alone described.
+
+**Proposed fix:** Extract a `deepMergeProfiles(stored, defaults)` helper and a `runMigrationChain(config, fromVersion)` dispatch table. The 8 branches collapse to a single parameterized call. This can be done as part of the same task as H1-1 or as a follow-on pass.  
+**Risk/effort:** Low. All branches are covered by `cameraConfig.test.js` (migration round-trip tests).  
+**Priority:** Low-medium — the duplication is in rarely-touched legacy code, but each new schema version adds another copy of the 7-line block.
