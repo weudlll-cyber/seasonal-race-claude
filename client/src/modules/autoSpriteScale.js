@@ -27,7 +27,7 @@ export const DEFAULT_AUTO_SCALE_CONFIG = {
  *
  * Track-density formula: clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale)
  *
- * A referenceValue of 23 means: at the default 140px track with 6 racers (ratio ≈ 23.3),
+ * A referenceValue of 23 means: for an illustrative 140px-wide track with 6 racers (ratio ≈ 23.3) — not an actual track (real widths range 93–300px),
  * the density factor is ≈ 1.0 (neutral — no change from default displaySize).
  *
  * @param {number} trackWidth   Track width in world pixels

@@ -540,7 +540,7 @@ renderAlpha = physicsAccum / FIXED_DT    // fraction of next step already elapse
 ```
 
 Key properties:
-- A 50 ms frame fires 3 physics steps; a 5 ms catch-up frame fires 0. Total physics time is never lost.
+- A 50 ms frame fires at most 2 physics steps (catch-up cap); a 5 ms frame fires 0. Total physics time is never lost.
 - `physicsTs` is the authoritative race clock — independent of display FPS.
 - Re-roll timestamps use `physicsTs`-relative offsets, not wall-time, so race duration is deterministic.
 
@@ -568,7 +568,7 @@ renderRacers = racers.map(r => ({
 }))
 ```
 
-`renderRacers` is passed to both `drawRacers()` and `CameraDirector.update()`. This keeps sprites and camera in sync — on 0-step frames both stay still; on 3-step frames both jump identically. Before PR #119, the camera tracked raw physics positions (jump on every step) while sprites were interpolated (1 step behind) → visible sprite-camera desync at 38 fps.
+`renderRacers` is passed to both `drawRacers()` and `CameraDirector.update()`. This keeps sprites and camera in sync — on 0-step frames both stay still; on multi-step frames (up to the 2-step catch-up cap) both jump identically. Before PR #119, the camera tracked raw physics positions (jump on every step) while sprites were interpolated (1 step behind) → visible sprite-camera desync at 38 fps.
 
 The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each physics step** (inside the while loop), so `_prev` is always exactly one step behind `curr` regardless of how many steps fire per frame.
 

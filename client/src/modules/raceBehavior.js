@@ -17,7 +17,7 @@ export const PRIORITY_MODE = Object.freeze({
   BLOCKED: 'BLOCKED',
 });
 
-// Dirt Oval track width in px — the baseline where lateralForce is visually calibrated.
+// lateralForce calibration baseline in px — a fixed anchor, close to Dirt Oval's ~93px width. Do not retune to match any specific track (see ARCHITECTURE.md).
 // Wider tracks divide lateralForce by the ratio; narrower tracks multiply it (clamped 0.1–3.0).
 const REFERENCE_TRACK_WIDTH = 98;
 

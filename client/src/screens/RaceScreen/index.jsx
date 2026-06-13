@@ -833,7 +833,7 @@ export default function RaceScreen() {
           st.slowmoTs += rawDt * effectiveSlowmoFactor;
           // ── Fixed-timestep physics accumulator ─────────────────────────────
           // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
-          // long frames (50ms) yield 3 steps, short frames (12ms) yield 0.
+          // long frames (50ms) would yield 3 steps but are capped at 2 (see catch-up cap below); short frames (12ms) yield 0.
           // Remainder carries over so no physics time is lost between frames.
           st.physicsAccum += rawDt * effectiveSlowmoFactor;
         }
