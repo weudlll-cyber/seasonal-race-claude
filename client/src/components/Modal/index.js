@@ -4,6 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Overlay modal component with title, body slot, and close handler
+// Status:      H-03 branding placeholder — intentional stub, not yet wired into the UI. Keep (not dead code).
 // ============================================================
 
 function Modal({ isOpen, title, onClose, children }) {

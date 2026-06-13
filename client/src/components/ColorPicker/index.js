@@ -4,6 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Swatch-based color picker for racer livery customisation
+// Status:      H-03 branding placeholder — intentional stub, not yet wired into the UI. Keep (not dead code).
 // ============================================================
 
 const DEFAULT_SWATCHES = [

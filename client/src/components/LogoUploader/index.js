@@ -4,6 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Drag-and-drop logo uploader for team/racer branding
+// Status:      H-03 branding placeholder — intentional stub, not yet wired into the UI. Keep (not dead code).
 // ============================================================
 
 import { useRef } from 'react';

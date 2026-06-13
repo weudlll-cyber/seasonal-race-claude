@@ -4,6 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Reusable button component with variant and size props
+// Status:      H-03 branding placeholder — intentional stub, not yet wired into the UI. Keep (not dead code).
 // ============================================================
 
 function Button({ children, variant = 'primary', size = 'md', onClick, disabled }) {

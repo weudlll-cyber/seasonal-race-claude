@@ -4,6 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Labeled text input with validation message support
+// Status:      H-03 branding placeholder — intentional stub, not yet wired into the UI. Keep (not dead code).
 // ============================================================
 
 function InputField({ label, name, value, onChange, error, type = 'text' }) {
