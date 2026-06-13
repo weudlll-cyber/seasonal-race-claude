@@ -204,6 +204,67 @@ describe('authRouter', () => {
     expect(meRes.status).toBe(401);
   });
 
+  // ── Change-1: non-EEXIST openSync error → 500 ────────────────────────────
+
+  it('setup: non-EEXIST open failure (ENOENT) → 500, no user created', async () => {
+    const nestedMarker = join(os.tmpdir(), `nodir-${randomUUID()}`, 'sub', 'marker.json');
+    const localStore = createUsersStore(usersPath);
+    const localApp = express();
+    localApp.use(express.json());
+    localApp.use(makeSession());
+    localApp.use('/api/auth', createAuthRouter({ store: localStore, setupMarkerPath: nestedMarker, getBootstrapToken: () => 'TEST-TOKEN' }));
+
+    const res = await request(localApp).post('/api/auth/setup')
+      .set('x-bootstrap-token', 'TEST-TOKEN')
+      .send({ username: 'admin', password: 'pw123' });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('setup failed');
+    expect(localStore.countUsers()).toBe(0);
+  });
+
+  // ── Change-2: logout destroy error → 500 ─────────────────────────────────
+
+  it('logout: session destroy error → 500', async () => {
+    const localApp = express();
+    localApp.use(express.json());
+    localApp.use((req, _res, next) => {
+      req.session = { userId: 'fake-id', destroy: (cb) => cb(new Error('boom')) };
+      next();
+    });
+    localApp.use('/api/auth', createAuthRouter({ store, setupMarkerPath: markerPath, getBootstrapToken: () => 'TEST-TOKEN' }));
+
+    const res = await request(localApp).post('/api/auth/logout');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('logout failed');
+  });
+
+  // ── Change-3: committed + auto-login failure → 201, no rollback ───────────
+
+  it('setup: auto-login failure after commit → 201, marker kept, user persisted', async () => {
+    const localApp = express();
+    localApp.use(express.json());
+    localApp.use(makeSession());
+    // Intercept after session is populated, override regenerate to fail
+    localApp.use((req, _res, next) => {
+      const origRegen = req.session.regenerate?.bind(req.session);
+      req.session.regenerate = (cb) => cb(new Error('regen-fail'));
+      void origRegen; // unused but documents intent
+      next();
+    });
+    localApp.use('/api/auth', createAuthRouter({ store, setupMarkerPath: markerPath, getBootstrapToken: () => 'TEST-TOKEN' }));
+
+    const res = await request(localApp).post('/api/auth/setup')
+      .set('x-bootstrap-token', 'TEST-TOKEN')
+      .send({ username: 'admin', password: 'pw123' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.username).toBe('admin');
+    expect(res.body.role).toBe('admin');
+    expect(existsSync(markerPath)).toBe(true);
+    expect(store.countUsers()).toBe(1);
+  });
+
   // ── No-leak ───────────────────────────────────────────────────────────────
 
   it('no-leak: setup/login/me success bodies contain ONLY { username, role }', async () => {

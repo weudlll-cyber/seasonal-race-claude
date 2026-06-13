@@ -76,11 +76,14 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     let fd = null;
     try {
       fd = openSync(setupMarkerPath, 'wx');
-    } catch {
-      return res.status(409).json({ error: 'setup already complete' });
+    } catch (e) {
+      if (e.code === 'EEXIST') return res.status(409).json({ error: 'setup already complete' });
+      console.error('[auth] setup marker open failed:', e.code ?? e.message);
+      return res.status(500).json({ error: 'setup failed' });
     }
 
-    // 5. Inside the gate — all failures must close fd and unlink marker
+    // 5. Inside the gate — failures before commit must close fd and unlink marker
+    let committed = false;
     try {
       // Paranoid post-gate check: users exist without marker (restore-safety path)
       if (store.countUsers() > 0) {
@@ -94,21 +97,29 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       writeFileSync(setupMarkerPath, JSON.stringify({ completedAt: new Date().toISOString(), adminId: safeAdmin.id }));
       closeSync(fd); fd = null;
 
+      // Admin + marker are durably written — setup is committed from this point on.
+      committed = true;
+
       // Auto-login (AUTH.md §4 MUST: regenerate on setup)
-      await new Promise((resolve, reject) => {
-        req.session.regenerate((err) => {
-          if (err) return reject(err);
-          req.session.userId = safeAdmin.id;
-          req.session.save((err2) => {
-            if (err2) return reject(err2);
-            res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
-            resolve();
+      try {
+        await new Promise((resolve, reject) => {
+          req.session.regenerate((err) => {
+            if (err) return reject(err);
+            req.session.userId = safeAdmin.id;
+            req.session.save((err2) => { if (err2) return reject(err2); resolve(); });
           });
         });
-      });
+        return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
+      } catch (sessErr) {
+        // Setup IS committed. Auto-login failed (rare). Do NOT roll back — the admin exists and
+        // can log in manually; the client will route to /login on the next 401 from /me.
+        console.warn('[auth] setup committed but auto-login failed:', sessErr?.code ?? sessErr?.message);
+        if (!res.headersSent) return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
+        return;
+      }
     } catch (err) {
       if (fd !== null) { try { closeSync(fd); } catch {} }
-      try { unlinkSync(setupMarkerPath); } catch {}
+      if (!committed) { try { unlinkSync(setupMarkerPath); } catch {} }  // only roll back pre-commit
       if (!res.headersSent) {
         if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE'].includes(err.code)) {
           return res.status(400).json({ error: 'invalid username or password' });
@@ -149,7 +160,11 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'not authenticated' });
     }
-    req.session.destroy(() => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('[auth] session destroy failed on logout:', err.code ?? err.message);
+        return res.status(500).json({ error: 'logout failed' });
+      }
       res.clearCookie('ra.sid');
       res.json({ ok: true });
     });
