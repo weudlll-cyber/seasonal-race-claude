@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync, statSync } from 'node:fs';
 import { join } from 'path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -131,19 +131,19 @@ describe('createUsersStore', () => {
     expect(user.createdBy).toBe('setup');
   });
 
-  it('findByUsername matches regardless of case and surrounding whitespace', async () => {
+  it('findAuthRecordByUsername matches regardless of case and surrounding whitespace', async () => {
     await store.createUser({ username: 'Alice', password: 'pass', role: 'admin' });
-    expect(store.findByUsername('ALICE')).not.toBeNull();
-    expect(store.findByUsername('  alice  ')).not.toBeNull();
+    expect(store.findAuthRecordByUsername('ALICE')).not.toBeNull();
+    expect(store.findAuthRecordByUsername('  alice  ')).not.toBeNull();
   });
 
-  it('findByUsername returns null for absent username', () => {
-    expect(store.findByUsername('nobody')).toBeNull();
+  it('findAuthRecordByUsername returns null for absent username', () => {
+    expect(store.findAuthRecordByUsername('nobody')).toBeNull();
   });
 
-  it('findByUsername returns the full record including passwordHash', async () => {
+  it('findAuthRecordByUsername returns the full record including passwordHash', async () => {
     await store.createUser({ username: 'Dave', password: 'pw', role: 'operator' });
-    const found = store.findByUsername('dave');
+    const found = store.findAuthRecordByUsername('dave');
     expect(found).toHaveProperty('passwordHash');
   });
 
@@ -177,5 +177,30 @@ describe('createUsersStore', () => {
     await expect(
       store.createUser({ username: 'grace', password: '   ', role: 'operator' })
     ).rejects.toMatchObject({ code: 'INVALID_PASSWORD' });
+  });
+
+  it('persisted hash is a valid bcrypt hash that verifies the original password (SF3)', async () => {
+    const plaintext = 'mypassword123';
+    await store.createUser({ username: 'hashtest', password: plaintext, role: 'operator' });
+    const record = store.findAuthRecordByUsername('hashtest');
+    expect(record.passwordHash).toMatch(/^\$2/);
+    expect(record.passwordHash).not.toBe(plaintext);
+    expect(await verifyPassword(plaintext, record.passwordHash)).toBe(true);
+  });
+
+  it('readUsers throws USERS_STORE_CORRUPT for a JSON object (not array) (SF2)', () => {
+    writeFileSync(tempPath, '{"not":"an array"}', 'utf8');
+    expect(() => store.readUsers()).toThrow(expect.objectContaining({ code: 'USERS_STORE_CORRUPT' }));
+  });
+
+  it('readUsers throws USERS_STORE_CORRUPT for invalid JSON (SF2)', () => {
+    writeFileSync(tempPath, 'not valid json!!!', 'utf8');
+    expect(() => store.readUsers()).toThrow(expect.objectContaining({ code: 'USERS_STORE_CORRUPT' }));
+  });
+
+  it('createUser writes credential file with mode 0o600 (SF1, POSIX only)', async () => {
+    if (process.platform === 'win32') return;
+    await store.createUser({ username: 'permtest', password: 'pw', role: 'operator' });
+    expect(statSync(tempPath).mode & 0o777).toBe(0o600);
   });
 });

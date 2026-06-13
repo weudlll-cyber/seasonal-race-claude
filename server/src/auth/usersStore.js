@@ -20,6 +20,7 @@ const BCRYPT_COST = 12;
 
 // ── Username normalization ────────────────────────────────────────────────────
 
+// NFC is the deliberate canonical form; NFKC was rejected because compatibility folding can merge visually-distinct usernames unexpectedly.
 export function normalizeUsername(raw) {
   return String(raw).trim().normalize('NFC').toLowerCase();
 }
@@ -57,14 +58,29 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     if (!existsSync(filePath)) return [];
     const raw = readFileSync(filePath, 'utf8').trim();
     if (!raw) return [];
-    return JSON.parse(raw);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const err = new Error('users.json is corrupt or not an array');
+      err.code = 'USERS_STORE_CORRUPT';
+      throw err;
+    }
+    if (!Array.isArray(parsed)) {
+      const err = new Error('users.json is corrupt or not an array');
+      err.code = 'USERS_STORE_CORRUPT';
+      throw err;
+    }
+    return parsed;
   }
 
   function countUsers() {
     return readUsers().length;
   }
 
-  function findByUsername(rawOrNormalized) {
+  /** @internal Returns the full auth record INCLUDING passwordHash. Callers that respond
+   * to a client MUST pass the result through toSafeUser first. */
+  function findAuthRecordByUsername(rawOrNormalized) {
     const normalized = normalizeUsername(rawOrNormalized);
     return readUsers().find((u) => u.usernameNormalized === normalized) ?? null;
   }
@@ -108,13 +124,14 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     // NOTE: this read-modify-write is NOT the atomic create-if-none bootstrap guard;
     // the atomic single-admin guard is added in Phase A step 3 (AUTH.md §5).
     users.push(record);
-    atomicWriteJson(filePath, users);
+    // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
+    atomicWriteJson(filePath, users, { mode: 0o600 });
     try { chmodSync(filePath, 0o600); } catch {}
 
     return toSafeUser(record);
   }
 
-  return { readUsers, countUsers, findByUsername, createUser };
+  return { readUsers, countUsers, findAuthRecordByUsername, createUser };
 }
 
 // Default instance bound to DEFAULT_USERS_PATH
