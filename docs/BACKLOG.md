@@ -761,3 +761,4 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 - i18n (English + German base) — app language is English, documentation can be both
 - Multi-tenant isolation (per-organizer track sets and branding)
 - Mobile / tablet responsive tuning
+- Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
