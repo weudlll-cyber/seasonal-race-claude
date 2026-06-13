@@ -10,11 +10,17 @@ import express from 'express';
 import cors from 'cors';
 import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
+import { createSessionMiddleware } from './auth/session.js';
+
+// Created once at module scope so all createApp instances share one store and timer.
+const sessionMiddleware = createSessionMiddleware();
 
 export function createApp() {
   const app = express();
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
+  app.use(sessionMiddleware);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

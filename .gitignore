@@ -16,6 +16,8 @@ AUDIT.md
 audit-temp/
 diagnosis/
 server/data/users.json
+server/data/sessions.sqlite
+server/data/sessions.sqlite-*
 server/data/**/*.json.tmp
 server/data/tracks-backups/
 client/tmp/
