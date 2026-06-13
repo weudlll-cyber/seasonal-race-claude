@@ -702,3 +702,71 @@ describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', (
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(2.0);
   });
 });
+
+describe('loadCameraConfig — v15 passthrough', () => {
+  it('v15 WITH cameraStateProfiles: stored field preserved, non-stored field from defaults, missing state filled from defaults', () => {
+    // LEADER_ZOOM has one override; OVERVIEW is absent from stored → must come from defaults.
+    storageGet.mockReturnValue({
+      schemaVersion: 15,
+      maxTargetScreenPx: 250,
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spriteScale: 3.0 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    // Top-level override preserved
+    expect(cfg.maxTargetScreenPx).toBe(250);
+    // Unset top-level field comes from defaults
+    expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
+    // Stored field inside the state is preserved
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
+    // Non-overridden field in the same state is filled from defaults (per-state deep merge)
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
+    );
+    // State not present in stored at all → full defaults
+    expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
+    );
+    expect(cfg.schemaVersion).toBe(15);
+  });
+
+  it('v15 WITHOUT cameraStateProfiles: top-level override merged, cameraStateProfiles equals defaults', () => {
+    storageGet.mockReturnValue({
+      schemaVersion: 15,
+      maxTargetScreenPx: 180,
+    });
+    const cfg = loadCameraConfig();
+    // Top-level override merged
+    expect(cfg.maxTargetScreenPx).toBe(180);
+    // Unset top-level field comes from defaults
+    expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
+    // Deep-merge block skipped → profiles are the defaults spread from DEFAULT_CAMERA_CONFIG
+    expect(cfg.cameraStateProfiles).toEqual(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
+    expect(cfg.schemaVersion).toBe(15);
+  });
+});
+
+describe('loadCameraConfig — normalizeCameraTransitionSeconds scalar branch', () => {
+  it('v3 config with scalar cameraTransitionSeconds is converted to object form', () => {
+    // Legacy configs stored cameraTransitionSeconds as a plain number; the migration
+    // converts it to { overview: scalar, leader/battle/comeback: from defaults }.
+    storageGet.mockReturnValue({
+      schemaVersion: 3,
+      cameraTransitionSeconds: 2.5,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(15);
+    // The scalar becomes the overview TC; other keys come from DEFAULT_CAMERA_CONFIG.
+    expect(cfg.cameraTransitionSeconds.overview).toBe(2.5);
+    expect(cfg.cameraTransitionSeconds.leader).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.leader
+    );
+    expect(cfg.cameraTransitionSeconds.battle).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.battle
+    );
+    expect(cfg.cameraTransitionSeconds.comeback).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.comeback
+    );
+  });
+});
