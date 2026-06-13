@@ -30,6 +30,18 @@ const VALID_SURFACE_CLASS = {
   config: { color: '#ff4400', sizeMin: 2, sizeMax: 5, lifetimeFrames: 20, spawnProbability: 0.5, drift: 1, gravity: 0 },
 };
 
+const VALID_TRACK = {
+  name: 'Authz Test Track',
+  icon: '🏁',
+  closed: true,
+  worldWidth: 1280,
+  worldHeight: 720,
+  centerPoints: [{ x: 100, y: 100 }, { x: 200, y: 200 }, { x: 300, y: 100 }],
+  innerPoints:  [{ x: 80,  y: 80  }, { x: 200, y: 180 }, { x: 320, y: 80  }],
+  outerPoints:  [{ x: 120, y: 120 }, { x: 200, y: 220 }, { x: 280, y: 120 }],
+  effects: [],
+};
+
 // ── Public routes ─────────────────────────────────────────────────────────────
 
 describe('PUBLIC: anonymous access', () => {
@@ -96,6 +108,26 @@ describe('ADMIN-GATED: surface-classes mutations', () => {
     expect(createRes.status).toBeLessThan(300);
     // Clean up so subsequent test runs stay idempotent.
     await adminApi.delete(`/api/surface-classes/${VALID_SURFACE_CLASS.id}`);
+  });
+});
+
+// ── CSRF Origin guard integration ────────────────────────────────────────────
+
+describe('CSRF: Origin/Referer guard sits in front of route handlers', () => {
+  it('adminAgent POST /api/tracks with bad Origin → 403 before handler', async () => {
+    const res = await adminApi.post('/api/tracks')
+      .set('Origin', 'http://evil.test')
+      .send(VALID_TRACK);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('cross-origin request rejected');
+  });
+
+  it('adminAgent POST /api/tracks with no Origin → 2xx (normal authed mutation)', async () => {
+    const res = await adminApi.post('/api/tracks').send(VALID_TRACK);
+    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBeLessThan(300);
+    // Clean up.
+    if (res.body.id) await adminApi.delete(`/api/tracks/${res.body.id}`);
   });
 });
 

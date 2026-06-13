@@ -13,6 +13,7 @@ import surfaceClassesRouter from './routes/surfaceClasses.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import { requireAuth, requireAdmin } from './auth/guards.js';
+import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -20,9 +21,10 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
-  app.use(cors());
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
   app.use(sessionMiddleware);
+  app.use(csrfOriginGuard);
   app.use(requireAuth);
   app.use(requireAdmin);
 
