@@ -30,7 +30,7 @@ const lerpAngle = (a, b, t) => {
  * @param {number} ezoom  Effective canvas zoom (used to size labels in world units).
  * @param {boolean} isRacing  True when phase === RACING (enables crown icon).
  */
-export function drawNameTag(ctx, px, py, name, isLeader, isComeback, ezoom, isRacing) {
+function drawNameTag(ctx, px, py, name, isLeader, isComeback, ezoom, isRacing) {
   const inv = 1 / ezoom;
   const fontPx = Math.max(8, Math.round(11 * inv));
   const bgH = Math.max(6, Math.round(13 * inv));
