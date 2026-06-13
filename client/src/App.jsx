@@ -18,6 +18,7 @@ import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { storageGet, storageSet, KEYS } from './modules/storage/storage.js';
 import { DEFAULT_TRACKS } from './modules/storage/defaults.js';
+import { resolveActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
 
 const CURRENT_DATA_VERSION = 5;
 
@@ -72,12 +73,13 @@ const DEFAULT_TITLE = 'RaceArena';
 function App() {
   // Read the active brand event name directly from localStorage at mount.
   // This covers page loads where a profile was already active.
-  const [brandEventName, setBrandEventName] = useState(() => {
-    const profiles = storageGet(KEYS.BRANDING, []);
-    const id = storageGet(KEYS.ACTIVE_SESSION, null)?.activeBrandingProfileId;
-    const profile = id ? (profiles.find((p) => p.id === id) ?? null) : null;
-    return profile?.eventName ?? null;
-  });
+  const [brandEventName, setBrandEventName] = useState(
+    () =>
+      resolveActiveBrandProfile(
+        storageGet(KEYS.BRANDING, []),
+        storageGet(KEYS.ACTIVE_SESSION, null)
+      )?.eventName ?? null
+  );
 
   useEffect(() => {
     document.title = brandEventName ? `${brandEventName} — RaceArena` : DEFAULT_TITLE;
