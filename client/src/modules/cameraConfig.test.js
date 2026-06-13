@@ -811,3 +811,54 @@ describe('applyMigrationsSinceV5 — runner slice logic', () => {
     expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
   });
 });
+
+describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
+  it('no-strip (v7 path): field override preserved; non-overridden field from defaults; absent state fully from defaults; spriteScale present from base', () => {
+    // v7 uses no-strip — default spriteScale is in the base and survives when the stored
+    // override does not supply one.
+    storageGet.mockReturnValue({
+      schemaVersion: 7,
+      cameraStateProfiles: {
+        LEADER_ZOOM: { trackingTC: 0.77 }, // one override; no spriteScale supplied
+      },
+    });
+    const cfg = loadCameraConfig();
+    // Override preserved
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(0.77);
+    // Non-overridden field in the same state filled from defaults
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.innerFramePct).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.innerFramePct
+    );
+    // State absent from stored → full defaults
+    expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
+    );
+    // spriteScale present from default base (not stripped); BATTLE_ZOOM was not in stored,
+    // so its spriteScale flows through the no-strip base → chain → final output.
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    );
+  });
+
+  it('strip (v5 path): field override preserved; absent state fully from defaults; stored spritePct converted to spriteScale (not shadowed by stripped base)', () => {
+    // v5 uses strip — spriteScale is removed from the default base so the stored spritePct
+    // is the sole source for conversion in migrateV6toV7 → migrateV13toV14.
+    storageGet.mockReturnValue({
+      schemaVersion: 5,
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spritePct: 0.12, trackingTC: 0.55 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    // Override preserved
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(0.55);
+    // spritePct converted: Math.round(0.12 × 720) = 86 → spriteScale = 86/36
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(86 / 36);
+    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
+    // State absent from stored → full defaults (strip only removes spriteScale from the
+    // base temporarily; absent states still get all default fields after full migration)
+    expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
+    );
+  });
+});

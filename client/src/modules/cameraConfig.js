@@ -100,6 +100,23 @@ function applyMigrationsSinceV5(config, fromVersion) {
   );
 }
 
+// Deep-merge stored per-state profile overrides onto the default profiles.
+// stripSpriteScale=true drops spriteScale from each default first, so a stored legacy
+// spritePct survives into migrateV6toV7 (the v5/v6 load paths require this).
+function mergeStateProfiles(storedProfiles, { stripSpriteScale = false } = {}) {
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const out = {};
+  for (const state of Object.keys(defProfiles)) {
+    let base = defProfiles[state];
+    if (stripSpriteScale) {
+      const { spriteScale: _omit, ...rest } = base;
+      base = rest;
+    }
+    out[state] = { ...base, ...(storedProfiles[state] ?? {}) };
+  }
+  return out;
+}
+
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
@@ -152,16 +169,9 @@ export function loadCameraConfig() {
     // v5→…→v15: reset leadInDuration; convert spritePct→spritePx; then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        // Strip spriteScale from defaults so stored spritePct survives into migrateV6toV7.
-        const { spriteScale: _defScale, ...defWithout } = defProfiles[state];
-        merged.cameraStateProfiles[state] = {
-          ...defWithout,
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles, {
+        stripSpriteScale: true,
+      });
     }
     return applyMigrationsSinceV5(merged, 5);
   }
@@ -170,16 +180,9 @@ export function loadCameraConfig() {
     // v6→…→v15: deep-merge profiles, convert spritePct→spritePx, then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        // Strip spriteScale from defaults so stored spritePct survives into migrateV6toV7.
-        const { spriteScale: _defScale, ...defWithout } = defProfiles[state];
-        merged.cameraStateProfiles[state] = {
-          ...defWithout,
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles, {
+        stripSpriteScale: true,
+      });
     }
     return applyMigrationsSinceV5(merged, 6);
   }
@@ -188,14 +191,7 @@ export function loadCameraConfig() {
     // v7→…→v15: deep-merge profiles (preserving user-tuned spritePx), then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 7);
   }
@@ -204,14 +200,7 @@ export function loadCameraConfig() {
     // v8→…→v15: deep-merge profiles, inject overviewOffsetPx, then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 8);
   }
@@ -220,14 +209,7 @@ export function loadCameraConfig() {
     // v9→…→v15: deep-merge profiles, inject leadAheadEnabled/leadOutEnabled/countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 9);
   }
@@ -236,14 +218,7 @@ export function loadCameraConfig() {
     // v10→…→v15: deep-merge profiles, inject leadOutEnabled/countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 10);
   }
@@ -252,14 +227,7 @@ export function loadCameraConfig() {
     // v11→…→v15: deep-merge profiles, inject countdown, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 11);
   }
@@ -268,14 +236,7 @@ export function loadCameraConfig() {
     // v12→v13→v14→v15: deep-merge profiles, inject stateOverlay fields, then v15.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 12);
   }
@@ -284,14 +245,7 @@ export function loadCameraConfig() {
     // v13→v14→v15: deep-merge profiles (preserving user-tuned spritePx), then full chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 13);
   }
@@ -300,14 +254,7 @@ export function loadCameraConfig() {
     // v14→v15: merge top-level fields, deep-merge profiles, inject overviewClosedTrackZoom.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
-      const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-      merged.cameraStateProfiles = {};
-      for (const state of Object.keys(defProfiles)) {
-        merged.cameraStateProfiles[state] = {
-          ...defProfiles[state],
-          ...(stored.cameraStateProfiles[state] ?? {}),
-        };
-      }
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
     }
     return applyMigrationsSinceV5(merged, 14);
   }
@@ -317,14 +264,7 @@ export function loadCameraConfig() {
   // v15: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
-    const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-    merged.cameraStateProfiles = {};
-    for (const state of Object.keys(defProfiles)) {
-      merged.cameraStateProfiles[state] = {
-        ...defProfiles[state],
-        ...(stored.cameraStateProfiles[state] ?? {}),
-      };
-    }
+    merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
   }
   return merged;
 }
