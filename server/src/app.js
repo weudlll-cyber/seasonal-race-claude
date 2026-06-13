@@ -14,6 +14,7 @@ import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
+import { loginLimiter, setupLimiter } from './auth/rateLimit.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -32,6 +33,8 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.use('/api/auth/login', loginLimiter);
+  app.use('/api/auth/setup', setupLimiter);
   app.use('/api/auth', authRouter);
   app.use('/api/tracks', tracksRouter);
   app.use('/api/surface-classes', surfaceClassesRouter);
