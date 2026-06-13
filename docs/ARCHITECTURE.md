@@ -831,7 +831,7 @@ See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summaris
 | **Track-Preset** | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`. |
 | **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`. |
 | **Server-Track** | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file). |
-| **Default-Track** | One of the 9 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
+| **Default-Track** | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
 | **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty. |
 
 ### Persistence Layer (after TLH)
@@ -847,7 +847,7 @@ The Code-Bundle initially ships with empty geometry fields (bootstrap). After th
 
 ### Default-Tracks as Server-Records (TLH-1)
 
-On every server boot, `migrateDefaultTracks()` checks which of the 9 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
+On every server boot, `migrateDefaultTracks()` checks which of the 10 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
 **Server-wins deduplication:** `getInitialTracks()` (in `trackLoader.js`, used by SetupScreen and TrackManager) merges cached server tracks with code defaults from `defaults.js`, filtering out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 9 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
 
@@ -936,7 +936,7 @@ Defined in `DEFAULT_RACE_BEHAVIOR_CONFIG` in `client/src/modules/storage/default
 
 ### Why They Are Fixed
 
-These parameters were optimized across 9 default tracks + 1 user-created track (Luger Hill) and all 20 default racer types using a 4-phase simulation sweep:
+These parameters were optimized across 10 default tracks and all 20 default racer types using a 4-phase simulation sweep:
 
 - **Phase 1 (LHS):** 200 Latin Hypercube samples on Dirt Oval + Space Sprint simultaneously
 - **Phase 2 (Refine):** Top 5 survivors refined at ±5% and ±2.5% around each winner

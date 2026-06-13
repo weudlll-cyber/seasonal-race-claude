@@ -1028,7 +1028,7 @@ export default function RaceScreen() {
             r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
 
-          // Scoreboard: update when physicsTs crosses a 100ms bucket boundary.
+          // Scoreboard: update when physicsTs crosses a 250ms bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
           // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
           // fails once racers finish because the runout-decay surge lets later

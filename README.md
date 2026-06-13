@@ -71,13 +71,13 @@ cd client && npm run dev   # starts frontend on port 3000 (separate terminal)
 | `GET /api/tracks/:id` | Full track including geometry points |
 | `GET /api/tracks/:id/background` | Binary image (JPEG/PNG) |
 
-The frontend loads server custom tracks automatically and merges them with the 9 code-defined default tracks. Background images are cached locally for offline use.
+The frontend loads server custom tracks automatically and merges them with the 10 code-defined default tracks. Background images are cached locally for offline use.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Track Editor Spec](docs/TRACK_EDITOR.md)
-- [API Reference](docs/API.md) *(Phase 5 placeholder)*
+- [API Reference](docs/API.md)
 - [Setup Guide](docs/SETUP.md)
 - [Roadmap](docs/ROADMAP.md)
 
