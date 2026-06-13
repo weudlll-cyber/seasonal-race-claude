@@ -186,14 +186,14 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 
 **Goal:** Make the system resilient. Graceful offline behavior. Manual Code-Bundle snapshot mechanism.
 
-**Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅) is partially met — but implementation is postponed until after the Camera-Director phase. Note: the default-track count has grown to 9 (Seatrack and Searound added after TLH-2). The system is currently functional without TLH-3 (server is always reachable in local-only use).
+**Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅) is partially met — but implementation is postponed until after the Camera-Director phase. Note: the default-track count has grown to 10 (Seatrack, Searound, and Luger Hill added after TLH-2). The system is currently functional without TLH-3 (server is always reachable in local-only use).
 
 **Changes:**
 - **Frontend loading chain** — `useServerTracks()` / `fetchServerTracks()`: if server unreachable → try geometry cache → if cache empty → fall back to Code-Bundle (`defaultTracks.js`). Emit `fallbackMode: 'code-bundle'` flag.
 - **Status-Banner** — When `fallbackMode === 'code-bundle'`: render top-of-page banner: "Server unavailable — showing default tracks (limited functionality)". Banner disappears when server becomes reachable again and tracks refresh successfully.
 - **Write disable in fallback mode** — Save and Delete operations in TrackManager / Track Editor show "Server required" state when in code-bundle mode.
 - **Export button** — New button in Dev-Screen "Tracks" section: "Export track snapshot". Reads current server-track list (all 10 default tracks with geometry), formats as `defaultTracks.js` module content, and presents it as a file download or clipboard copy. User manually pastes/replaces `defaultTracks.js` and commits.
-- **Code-Bundle bootstrap** — `defaultTracks.js` ships with the 10 default presets and empty geometry arrays initially. After the user has drawn all 9 geometries and run Export, the Code-Bundle is updated to include the actual geometry.
+- **Code-Bundle bootstrap** — `defaultTracks.js` ships with the 10 default presets and empty geometry arrays initially. After the user has drawn all 10 geometries and run Export, the Code-Bundle is updated to include the actual geometry.
 
 **Test scope:** Unit tests for fallback-chain logic, Status-Banner render when `fallbackMode` is set, Export button output format.
 

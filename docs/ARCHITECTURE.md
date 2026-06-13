@@ -843,13 +843,13 @@ Frontend loading order for track list:
   3. Code-Bundle (defaultTracks.js — hardcoded snapshot, bootstrap + last-resort fallback)
 ```
 
-The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 9 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
+The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 10 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
 
 ### Default-Tracks as Server-Records (TLH-1)
 
 On every server boot, `migrateDefaultTracks()` checks which of the 10 default tracks are missing from `server/data/tracks/` and creates records for any that are absent. The function is fully idempotent — it only creates missing records, never overwrites existing ones. This ensures default tracks are always present even after accidental deletion or data loss. (Before PR #58 this used a one-shot marker file `.default-tracks-seeded`; that approach was replaced because the marker prevented recovery after accidental deletion.)
 
-**Server-wins deduplication:** `getInitialTracks()` (in `trackLoader.js`, used by SetupScreen and TrackManager) merges cached server tracks with code defaults from `defaults.js`, filtering out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 9 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
+**Server-wins deduplication:** `getInitialTracks()` (in `trackLoader.js`, used by SetupScreen and TrackManager) merges cached server tracks with code defaults from `defaults.js`, filtering out any code default whose `id` matches a server track (`localTracks.filter(t => !serverIds.has(t.id))`). In practice, once `migrateDefaultTracks()` has seeded the 10 default records, the code-bundle entries in `defaults.js` are never shown to the user — the server versions (which carry real geometry, background URLs, and user edits) take precedence entirely.
 
 `DEFAULT_TRACKS` in the frontend code remains as bootstrap data and Code-Bundle source, not as the authoritative track list.
 
