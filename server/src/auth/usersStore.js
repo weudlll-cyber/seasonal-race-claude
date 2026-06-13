@@ -8,7 +8,7 @@
 
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
-import { readFileSync, existsSync, chmodSync } from 'node:fs';
+import { readFileSync, existsSync, chmodSync, statSync } from 'node:fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
@@ -126,7 +126,25 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     users.push(record);
     // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
     atomicWriteJson(filePath, users, { mode: 0o600 });
-    try { chmodSync(filePath, 0o600); } catch {}
+    try {
+      chmodSync(filePath, 0o600);
+    } catch {
+      // chmod is only load-bearing on the EPERM-overwrite fallback (≈Windows, where mode bits are
+      // ACL-based no-ops anyway). On the normal POSIX rename path the file already inherited 0o600
+      // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
+      // do NOT throw unconditionally on chmod failure — in the common rename path the file is
+      // already 0o600 and an unconditional throw would fail AFTER a successful persist (orphaned
+      // record + USERNAME_TAKEN on retry). The stat check ensures we only error in the
+      // genuinely-insecure case.
+      if (process.platform !== 'win32') {
+        const fileMode = statSync(filePath).mode & 0o777;
+        if (fileMode & 0o077) {  // any group/other permission bit set
+          const err = new Error('users.json could not be secured to 0o600');
+          err.code = 'USERS_STORE_PERM';
+          throw err;
+        }
+      }
+    }
 
     return toSafeUser(record);
   }

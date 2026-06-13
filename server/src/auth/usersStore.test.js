@@ -6,8 +6,13 @@
 // Description: Unit tests for usersStore — hashing, normalization, CRUD invariants
 // ============================================================
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, unlinkSync, writeFileSync, statSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { existsSync, unlinkSync, writeFileSync, statSync, chmodSync } from 'node:fs';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, chmodSync: vi.fn(actual.chmodSync), statSync: vi.fn(actual.statSync) };
+});
 import { join } from 'path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -100,6 +105,7 @@ describe('createUsersStore', () => {
 
   afterEach(() => {
     if (existsSync(tempPath)) unlinkSync(tempPath);
+    vi.restoreAllMocks();
   });
 
   it('readUsers returns [] and countUsers returns 0 when file is missing', () => {
@@ -202,5 +208,22 @@ describe('createUsersStore', () => {
     if (process.platform === 'win32') return;
     await store.createUser({ username: 'permtest', password: 'pw', role: 'operator' });
     expect(statSync(tempPath).mode & 0o777).toBe(0o600);
+  });
+
+  it('throws USERS_STORE_PERM when chmod fails and file is left insecure (POSIX only)', async () => {
+    if (process.platform === 'win32') return;
+    chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
+    statSync.mockReturnValueOnce({ mode: 0o644 });
+    await expect(
+      store.createUser({ username: 'permfail', password: 'pw', role: 'operator' })
+    ).rejects.toMatchObject({ code: 'USERS_STORE_PERM' });
+  });
+
+  it('does not throw when chmod fails but file is already 0o600 (POSIX only)', async () => {
+    if (process.platform === 'win32') return;
+    chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
+    statSync.mockReturnValueOnce({ mode: 0o600 });
+    const user = await store.createUser({ username: 'permsafe', password: 'pw', role: 'operator' });
+    expect(user).not.toHaveProperty('passwordHash');
   });
 });
