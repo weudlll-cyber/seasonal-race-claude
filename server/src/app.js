@@ -12,6 +12,7 @@ import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
+import { requireAuth, requireAdmin } from './auth/guards.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -22,6 +23,8 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
   app.use(sessionMiddleware);
+  app.use(requireAuth);
+  app.use(requireAdmin);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
