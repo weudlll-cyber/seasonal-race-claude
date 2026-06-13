@@ -770,3 +770,44 @@ describe('loadCameraConfig — normalizeCameraTransitionSeconds scalar branch', 
     );
   });
 });
+
+describe('applyMigrationsSinceV5 — runner slice logic', () => {
+  it('fromVersion=14 (slice(9)): only migrateV14toV15 runs — user-tuned leadInDuration preserved, schemaVersion reaches 15', () => {
+    // If the slice were wrong and migrateV5toV6 re-ran, it would reset leadInDuration to
+    // the default (0.3).  A deliberately non-default value here proves only one migration ran.
+    storageGet.mockReturnValue({
+      schemaVersion: 14,
+      cameraStateProfiles: {
+        ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+          leadInDuration: 0.9,
+        },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(15);
+    // migrateV14toV15 injected overviewClosedTrackZoom
+    expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
+    // leadInDuration must NOT have been reset (migrateV5toV6 must not have run)
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(0.9);
+  });
+
+  it('fromVersion=5 (slice(0)): full chain of 10 migrations runs — spritePct→spriteScale and all subsequent migrations applied', () => {
+    // A v5-stored config with spritePct must traverse migrateV6toV7 (spritePct→spritePx),
+    // then migrateV13toV14 (spritePx→spriteScale), then migrateV14toV15 — 10 hops total.
+    storageGet.mockReturnValue({
+      schemaVersion: 5,
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spritePct: 0.09, leadInDuration: 0.3 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.schemaVersion).toBe(15);
+    // migrateV6toV7 converted spritePct; migrateV13toV14 produced spriteScale
+    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36); // Math.round(0.09×720)=65
+    // migrateV14toV15 ran (overviewClosedTrackZoom present)
+    expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
+  });
+});

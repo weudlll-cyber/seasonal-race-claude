@@ -79,6 +79,27 @@ import {
 
 export { DEFAULT_CAMERA_CONFIG };
 
+const MIGRATION_CHAIN = [
+  migrateV5toV6,
+  migrateV6toV7,
+  migrateV7toV8,
+  migrateV8toV9,
+  migrateV9toV10,
+  migrateV10toV11,
+  migrateV11toV12,
+  migrateV12toV13,
+  migrateV13toV14,
+  migrateV14toV15,
+];
+
+// Apply migrations to bring a config from `fromVersion` (>=5) up to v15.
+function applyMigrationsSinceV5(config, fromVersion) {
+  return MIGRATION_CHAIN.slice(Math.max(0, fromVersion - 5)).reduce(
+    (cfg, migrate) => migrate(cfg),
+    config
+  );
+}
+
 export function loadCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
@@ -102,19 +123,7 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(
-            migrateV10toV11(
-              migrateV9toV10(
-                migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
-              )
-            )
-          )
-        )
-      )
-    );
+    return applyMigrationsSinceV5(migrateV3toV5(merged), 5);
   }
 
   if (stored.schemaVersion === 3) {
@@ -131,42 +140,12 @@ export function loadCameraConfig() {
       delete merged.spritePctOfCanvas;
     }
     normalizeCameraTransitionSeconds(merged);
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(
-            migrateV10toV11(
-              migrateV9toV10(
-                migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(migrateV3toV5(merged)))))
-              )
-            )
-          )
-        )
-      )
-    );
+    return applyMigrationsSinceV5(migrateV3toV5(merged), 5);
   }
 
   if (stored.schemaVersion === 4) {
     // v4→…→v15: preserve zoom/TC fields, reset phase fields, then full migration chain.
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(
-            migrateV10toV11(
-              migrateV9toV10(
-                migrateV8toV9(
-                  migrateV7toV8(
-                    migrateV6toV7(
-                      migrateV5toV6(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }))
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    );
+    return applyMigrationsSinceV5(migrateV4toV5({ ...DEFAULT_CAMERA_CONFIG, ...stored }), 5);
   }
 
   if (stored.schemaVersion === 5) {
@@ -184,17 +163,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(
-            migrateV10toV11(
-              migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(migrateV5toV6(merged)))))
-            )
-          )
-        )
-      )
-    );
+    return applyMigrationsSinceV5(merged, 5);
   }
 
   if (stored.schemaVersion === 6) {
@@ -212,15 +181,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(
-            migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(migrateV6toV7(merged)))))
-          )
-        )
-      )
-    );
+    return applyMigrationsSinceV5(merged, 6);
   }
 
   if (stored.schemaVersion === 7) {
@@ -236,13 +197,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(
-          migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(migrateV7toV8(merged)))))
-        )
-      )
-    );
+    return applyMigrationsSinceV5(merged, 7);
   }
 
   if (stored.schemaVersion === 8) {
@@ -258,11 +213,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(
-        migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(migrateV8toV9(merged)))))
-      )
-    );
+    return applyMigrationsSinceV5(merged, 8);
   }
 
   if (stored.schemaVersion === 9) {
@@ -278,9 +229,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(migrateV12toV13(migrateV11toV12(migrateV10toV11(migrateV9toV10(merged)))))
-    );
+    return applyMigrationsSinceV5(merged, 9);
   }
 
   if (stored.schemaVersion === 10) {
@@ -296,9 +245,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(
-      migrateV13toV14(migrateV12toV13(migrateV11toV12(migrateV10toV11(merged))))
-    );
+    return applyMigrationsSinceV5(merged, 10);
   }
 
   if (stored.schemaVersion === 11) {
@@ -314,7 +261,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(migrateV13toV14(migrateV12toV13(migrateV11toV12(merged))));
+    return applyMigrationsSinceV5(merged, 11);
   }
 
   if (stored.schemaVersion === 12) {
@@ -330,7 +277,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(migrateV13toV14(migrateV12toV13(merged)));
+    return applyMigrationsSinceV5(merged, 12);
   }
 
   if (stored.schemaVersion === 13) {
@@ -346,7 +293,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(migrateV13toV14(merged));
+    return applyMigrationsSinceV5(merged, 13);
   }
 
   if (stored.schemaVersion === 14) {
@@ -362,7 +309,7 @@ export function loadCameraConfig() {
         };
       }
     }
-    return migrateV14toV15(merged);
+    return applyMigrationsSinceV5(merged, 14);
   }
 
   if (stored.schemaVersion !== 15) return { ...DEFAULT_CAMERA_CONFIG };
