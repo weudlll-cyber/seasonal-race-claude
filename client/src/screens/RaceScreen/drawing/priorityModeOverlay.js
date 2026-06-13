@@ -8,9 +8,9 @@
 // ============================================================
 
 import { PRIORITY_MODE } from '../../../modules/raceBehavior.js';
+import { lerp } from '../../../utils/mathUtils.js';
 
 const CW = 1280;
-const lerp = (a, b, t) => a + (b - a) * t;
 
 /**
  * Draws the priority-mode debug overlay (rings + info box).

@@ -7,11 +7,11 @@
 //              overlays and records a 20-frame snapshot during BATTLE_ZOOM state.
 // ============================================================
 
+import { lerp } from '../../../utils/mathUtils.js';
+
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 const PHASE_RACING = 1;
-
-const lerp = (a, b, t) => a + (b - a) * t;
 
 /**
  * Draws battle-diagnostics world-space markers on the leader and records

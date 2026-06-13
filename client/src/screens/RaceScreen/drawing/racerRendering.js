@@ -8,16 +8,9 @@
 // ============================================================
 
 import { visibleTagRacers } from '../nameTagVisibility.js';
+import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
 
 const PHASE_RACING = 1;
-
-const lerp = (a, b, t) => a + (b - a) * t;
-const lerpAngle = (a, b, t) => {
-  let diff = b - a;
-  while (diff > Math.PI) diff -= 2 * Math.PI;
-  while (diff < -Math.PI) diff += 2 * Math.PI;
-  return a + diff * t;
-};
 
 /**
  * Draws the name tag above a racer in world coordinates.

@@ -29,6 +29,7 @@ import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleR
 import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
+import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import {
@@ -696,17 +697,6 @@ export default function RaceScreen() {
     diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
-
-    // ── Linear interpolation helpers (used for render interpolation) ────────
-    const lerp = (a, b, t) => a + (b - a) * t;
-    // Shortest-arc angle lerp — prevents wrap bug at track seam (t=0/t=1 on closed tracks)
-    // where plain lerp(-π, π, 0.5) = 0 (wrong); this returns ±π (correct shorter arc).
-    const lerpAngle = (a, b, t) => {
-      let diff = b - a;
-      while (diff > Math.PI) diff -= 2 * Math.PI;
-      while (diff < -Math.PI) diff += 2 * Math.PI;
-      return a + diff * t;
-    };
 
     // ── Canvas positions ────────────────────────────────────────────────────
     // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
