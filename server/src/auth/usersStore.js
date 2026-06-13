@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_USERS_PATH = join(__dirname, '../../data/users.json');
+const DEFAULT_USERS_PATH = process.env.RA_USERS_DB ?? join(__dirname, '../../data/users.json');
 
 const BCRYPT_COST = 12;
 
