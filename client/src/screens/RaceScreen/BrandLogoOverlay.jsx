@@ -8,9 +8,7 @@
 //              profile or the profile has no logo.
 // ============================================================
 
-import { useStorage } from '../../modules/storage/useStorage.js';
-import { KEYS } from '../../modules/storage/storage.js';
-import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../../modules/storage/defaults.js';
+import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import './BrandLogoOverlay.css';
 
 const CORNER_STYLES = {
@@ -19,11 +17,7 @@ const CORNER_STYLES = {
 };
 
 export default function BrandLogoOverlay() {
-  const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
-  const [activeSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
-
-  const id = activeSession?.activeBrandingProfileId;
-  const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+  const profile = useActiveBrandProfile();
 
   if (!profile?.logo) return null;
 

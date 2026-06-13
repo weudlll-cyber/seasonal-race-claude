@@ -30,6 +30,7 @@ import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
+import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import {
@@ -191,11 +192,14 @@ export default function RaceScreen() {
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
 
-  const activeBrand = useMemo(() => {
-    const profiles = storageGet(KEYS.BRANDING, []);
-    const id = storageGet(KEYS.ACTIVE_SESSION, null)?.activeBrandingProfileId;
-    return id ? (profiles.find((p) => p.id === id) ?? null) : null;
-  }, []);
+  const activeBrand = useMemo(
+    () =>
+      resolveActiveBrandProfile(
+        storageGet(KEYS.BRANDING, []),
+        storageGet(KEYS.ACTIVE_SESSION, null)
+      ),
+    []
+  );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
   const [countdown, setCountdown] = useState(3);
   const [scoreboard, setScoreboard] = useState([]);

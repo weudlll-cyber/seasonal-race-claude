@@ -38,6 +38,7 @@ import {
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -157,16 +158,13 @@ function SetupScreen() {
   const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
   const [activeSession, setActiveSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);
 
-  const activeBrandProfile = activeSession?.activeBrandingProfileId
-    ? (brandingProfiles.find((p) => p.id === activeSession.activeBrandingProfileId) ?? null)
-    : null;
+  const activeBrandProfile = resolveActiveBrandProfile(brandingProfiles, activeSession);
 
   // Inject brand CSS vars whenever the active profile changes.
   // Vars are set on document.documentElement so they persist through navigation.
   // Removing them lets each CSS use-site's var() fallback take over.
   useEffect(() => {
-    const id = activeSession?.activeBrandingProfileId;
-    const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+    const profile = resolveActiveBrandProfile(brandingProfiles, activeSession);
     const root = document.documentElement.style;
     if (profile) {
       root.setProperty('--brand-primary', profile.primaryColor);
@@ -179,8 +177,7 @@ function SetupScreen() {
 
   // Seed eventName from the active brand profile; clear unconditionally when no profile is active.
   useEffect(() => {
-    const id = activeSession?.activeBrandingProfileId;
-    const profile = id ? (brandingProfiles.find((p) => p.id === id) ?? null) : null;
+    const profile = resolveActiveBrandProfile(brandingProfiles, activeSession);
     setRaceSettings((prev) => ({ ...prev, eventName: profile?.eventName || '' }));
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
