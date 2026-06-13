@@ -11,6 +11,7 @@ import cors from 'cors';
 import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
 import { createSessionMiddleware } from './auth/session.js';
+import authRouter from './auth/authRouter.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -26,6 +27,7 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.use('/api/auth', authRouter);
   app.use('/api/tracks', tracksRouter);
   app.use('/api/surface-classes', surfaceClassesRouter);
 

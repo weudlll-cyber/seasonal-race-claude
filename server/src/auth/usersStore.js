@@ -85,6 +85,12 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     return readUsers().find((u) => u.usernameNormalized === normalized) ?? null;
   }
 
+  /** @internal Returns the full auth record INCLUDING passwordHash. Callers that respond
+   * to a client MUST pass the result through toSafeUser first. */
+  function findAuthRecordById(id) {
+    return readUsers().find((u) => u.id === id) ?? null;
+  }
+
   async function createUser({ username, password, role, createdBy }) {
     if (!username || !String(username).trim()) {
       const err = new Error('Username must not be empty');
@@ -149,7 +155,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     return toSafeUser(record);
   }
 
-  return { readUsers, countUsers, findAuthRecordByUsername, createUser };
+  return { readUsers, countUsers, findAuthRecordByUsername, findAuthRecordById, createUser };
 }
 
 // Default instance bound to DEFAULT_USERS_PATH

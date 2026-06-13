@@ -153,6 +153,19 @@ describe('createUsersStore', () => {
     expect(found).toHaveProperty('passwordHash');
   });
 
+  it('findAuthRecordById returns full record (incl. passwordHash) for existing id', async () => {
+    const safeUser = await store.createUser({ username: 'Eve', password: 'pw', role: 'operator' });
+    const found = store.findAuthRecordById(safeUser.id);
+    expect(found).not.toBeNull();
+    expect(found.id).toBe(safeUser.id);
+    expect(found.username).toBe('Eve');
+    expect(found).toHaveProperty('passwordHash');
+  });
+
+  it('findAuthRecordById returns null for unknown id', () => {
+    expect(store.findAuthRecordById('00000000-0000-0000-0000-000000000000')).toBeNull();
+  });
+
   it('rejects duplicate normalized username with USERNAME_TAKEN and does not write', async () => {
     await store.createUser({ username: 'Alice', password: 'pw1', role: 'admin' });
     await expect(
