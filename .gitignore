@@ -15,6 +15,7 @@ client/test-results/
 AUDIT.md
 audit-temp/
 diagnosis/
+server/data/users.json
 server/data/**/*.json.tmp
 server/data/tracks-backups/
 client/tmp/
