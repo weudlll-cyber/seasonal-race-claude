@@ -15,6 +15,8 @@ import ResultScreen from './screens/ResultScreen/index.jsx';
 import TrackEditor from './screens/TrackEditor/TrackEditor.jsx';
 import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
+import LoginScreen from './screens/Auth/LoginScreen.jsx';
+import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { storageGet, KEYS } from './modules/storage/storage.js';
@@ -67,6 +69,8 @@ function App() {
               via /diagnose-verteilung in the address bar. Headless simulator for distribution
               analysis. Do not delete. */}
             <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
+            <Route path="/login" element={<LoginScreen />} />
+            <Route path="/setup-admin" element={<SetupAdminScreen />} />
           </Routes>
         </TransitionProvider>
       </AuthProvider>
