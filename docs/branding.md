@@ -246,6 +246,24 @@ is rendered as a centered grey footer below the Back button
 {race?.sponsorText && <div className="result-sponsor">{race.sponsorText}</div>}
 ```
 
+### 2c. Additional lightweight surfaces (cheap branding)
+
+Four low-risk surfaces show the active brand without any per-frame canvas work
+(DOM/CSS or one-time static display only). Each degrades gracefully with no active
+profile and added no schema fields.
+
+- **Tab title** — `document.title` becomes `"{eventName} — RaceArena"` when a profile
+  is active, falling back to `"RaceArena"` otherwise. App.jsx is the single owner and
+  resets the title on profile switch / None. Driven by a scoped `racearena:brand-active`
+  DOM event dispatched only by the SetupScreen selector (no storage-layer change).
+- **Setup start button** — tinted with `var(--brand-primary)` when a profile is active.
+- **Race load / error screens** — show the profile logo and event name (DOM, one-time).
+- **Result primary button** — uses `var(--brand-primary)` with the gold gradient as fallback.
+
+Deliberately omitted (low value / data-path risk): favicon swap, Dev-Screen, state
+overlay, and per-entry history branding. Live-standings panel header branding is safe
+but deferred.
+
 ---
 
 ## 3. Files involved
@@ -264,6 +282,10 @@ is rendered as a centered grey footer below the Back button
 | [`client/src/utils/formatRaceTime.js`](../client/src/utils/formatRaceTime.js) | Shared finish-time formatter (`ss.hh` / `m:ss.hh`); used by in-race scoreboard and ResultScreen |
 | [`client/src/screens/ResultScreen/index.jsx`](../client/src/screens/ResultScreen/index.jsx) | Full result screen: brand block, top-left logo, podium with times, rank scroll panel, sponsor strip |
 | [`client/src/screens/ResultScreen/ResultScreen.css`](../client/src/screens/ResultScreen/ResultScreen.css) | Styles for the redesigned result screen |
+- `client/src/App.jsx` — owns `document.title`; listens for `racearena:brand-active`.
+- `client/src/screens/SetupScreen/SetupScreen.jsx` — dispatches `racearena:brand-active`; start-button tint.
+- `client/src/screens/ResultScreen/ResultScreen.css` — result primary button brand tint.
+- `client/src/screens/RaceScreen/index.jsx` — load/error screen logo + event name.
 
 ---
 
