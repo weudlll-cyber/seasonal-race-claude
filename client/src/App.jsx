@@ -17,6 +17,7 @@ import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
 import LoginScreen from './screens/Auth/LoginScreen.jsx';
 import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { storageGet, KEYS } from './modules/storage/storage.js';
@@ -59,16 +60,65 @@ function App() {
         <TransitionProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/setup" replace />} />
-            <Route path="/setup" element={<SetupScreen />} />
-            <Route path="/race" element={<RaceScreen />} />
-            <Route path="/results" element={<ResultScreen />} />
-            <Route path="/dev" element={<DevScreen />} />
-            <Route path="/track-editor" element={<TrackEditor />} />
-            <Route path="/racer-editor" element={<RacerEditor />} />
+            <Route
+              path="/setup"
+              element={
+                <ProtectedRoute>
+                  <SetupScreen />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/race"
+              element={
+                <ProtectedRoute>
+                  <RaceScreen />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/results"
+              element={
+                <ProtectedRoute>
+                  <ResultScreen />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dev"
+              element={
+                <ProtectedRoute>
+                  <DevScreen />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/track-editor"
+              element={
+                <ProtectedRoute>
+                  <TrackEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/racer-editor"
+              element={
+                <ProtectedRoute>
+                  <RacerEditor />
+                </ProtectedRoute>
+              }
+            />
             {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
               via /diagnose-verteilung in the address bar. Headless simulator for distribution
               analysis. Do not delete. */}
-            <Route path="/diagnose-verteilung" element={<DiagnoseVerteilung />} />
+            <Route
+              path="/diagnose-verteilung"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <DiagnoseVerteilung />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/setup-admin" element={<SetupAdminScreen />} />
           </Routes>
