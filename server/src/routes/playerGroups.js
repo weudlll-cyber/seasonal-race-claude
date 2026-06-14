@@ -1,0 +1,209 @@
+// ============================================================
+// File:        playerGroups.js
+// Path:        server/src/routes/playerGroups.js
+// Project:     RaceArena
+// Description: Player-groups API routes — CRUD (operator+) + default seed +
+//              admin promote/export (D1, §3.3 / §9 / §10b).
+//
+//              Storage model:
+//                server/data/player-groups/<id>.json — one file per group
+//
+//              isDefault transitions ONLY via POST /:id/set-default and
+//              POST /:id/clear-default (admin-only via ROUTE_POLICY in guards.js).
+//              Normal POST always stores isDefault:false.
+//              Normal PUT preserves existing.isDefault.
+//              DELETE on isDefault:true returns 403.
+// ============================================================
+
+import express from 'express';
+import { readFileSync, readdirSync, unlinkSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
+import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { attachPromoteExport } from './_defaultPromote.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+export const DATA_DIR = join(__dirname, '../../data/player-groups');
+
+const NAME_MAX = 100;
+const PLAYER_MAX = 200;
+const PLAYER_NAME_MAX = 100;
+
+if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+
+// ── In-memory store ───────────────────────────────────────────────────────────
+
+export function loadAll(dir = DATA_DIR) {
+  const map = new Map();
+  if (!existsSync(dir)) return map;
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+    try {
+      const group = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+      map.set(group.id, group);
+    } catch {
+      console.warn(`[player-groups] Failed to load ${file} — skipping`);
+    }
+  }
+  return map;
+}
+
+const groupsMap = loadAll();
+
+// ── Default seed (idempotent: only write if id absent) ────────────────────────
+
+const DEFAULT_SEED = {
+  id: 'default-example-group',
+  name: 'Example Group',
+  players: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+  isDefault: true,
+};
+
+(function seedDefaults() {
+  if (groupsMap.has(DEFAULT_SEED.id)) return;
+  const now = new Date().toISOString();
+  const record = { ...DEFAULT_SEED, createdAt: now, updatedAt: now };
+  atomicWriteJson(join(DATA_DIR, `${record.id}.json`), record);
+  groupsMap.set(record.id, record);
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function filePath(id) {
+  return join(DATA_DIR, `${id}.json`);
+}
+
+/**
+ * Validate body fields for create and update.
+ * @returns {string[]} error messages — empty array means valid
+ */
+export function validateBody(body) {
+  const errors = [];
+
+  if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
+    errors.push('name is required');
+  } else if (body.name.trim().length > NAME_MAX) {
+    errors.push(`name must be ${NAME_MAX} characters or fewer`);
+  }
+
+  if (!Array.isArray(body.players) || body.players.length === 0) {
+    errors.push('players must be a non-empty array');
+  } else {
+    if (body.players.length > PLAYER_MAX) {
+      errors.push(`players must contain at most ${PLAYER_MAX} entries`);
+    }
+    if (body.players.some((p) => typeof p !== 'string' || !p.trim())) {
+      errors.push('all player names must be non-empty strings');
+    }
+    if (body.players.some((p) => typeof p === 'string' && p.trim().length > PLAYER_NAME_MAX)) {
+      errors.push(`each player name must be ${PLAYER_NAME_MAX} characters or fewer`);
+    }
+  }
+
+  return errors;
+}
+
+function isValidId(id) {
+  return typeof id === 'string' && /^[a-z0-9_-]+$/.test(id);
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+const router = express.Router();
+
+// GET /api/player-groups
+router.get('/', (_req, res) => {
+  res.json([...groupsMap.values()]);
+});
+
+// GET /api/player-groups/:id
+router.get('/:id', (req, res) => {
+  const group = groupsMap.get(req.params.id);
+  if (!group) return res.status(404).json({ error: 'Player group not found' });
+  res.json(group);
+});
+
+// POST /api/player-groups
+// isDefault is ALWAYS set to false — body.isDefault is never used (Invariant 2).
+router.post('/', (req, res) => {
+  const errors = validateBody(req.body);
+
+  let id = req.body.id;
+  if (id !== undefined) {
+    if (!isValidId(id)) {
+      errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
+    }
+  } else {
+    id = randomUUID(); // lowercase hex + hyphens — satisfies isValidId
+  }
+
+  if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
+
+  if (groupsMap.has(id)) {
+    return res.status(409).json({ error: `Player group '${id}' already exists` });
+  }
+
+  const now = new Date().toISOString();
+  const group = {
+    id,
+    name: req.body.name.trim(),
+    players: req.body.players.map((p) => p.trim()),
+    isDefault: false, // Invariant 2: body.isDefault is never read here
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  atomicWriteJson(filePath(id), group);
+  groupsMap.set(id, group);
+  res.status(201).json(group);
+});
+
+// PUT /api/player-groups/:id
+// existing.isDefault is preserved — body.isDefault is never used (Invariant 2).
+router.put('/:id', (req, res) => {
+  const existing = groupsMap.get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Player group not found' });
+
+  const errors = validateBody(req.body);
+  if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
+
+  const now = new Date().toISOString();
+  const group = {
+    ...existing,
+    name: req.body.name.trim(),
+    players: req.body.players.map((p) => p.trim()),
+    isDefault: existing.isDefault, // Invariant 2: body.isDefault is never read here
+    updatedAt: now,
+  };
+
+  atomicWriteJson(filePath(req.params.id), group);
+  groupsMap.set(req.params.id, group);
+  res.json(group);
+});
+
+// DELETE /api/player-groups/:id
+// Returns 403 if the group is a default (Invariant 3).
+router.delete('/:id', (req, res) => {
+  const group = groupsMap.get(req.params.id);
+  if (!group) return res.status(404).json({ error: 'Player group not found' });
+  if (group.isDefault) {
+    return res.status(403).json({ error: 'Cannot delete a default player group' });
+  }
+  const path = filePath(req.params.id);
+  if (existsSync(path)) unlinkSync(path);
+  groupsMap.delete(req.params.id);
+  res.status(204).send();
+});
+
+// ── Admin: promote / demote / export-seed ────────────────────────────────────
+// Guarded admin-only via ROUTE_POLICY in guards.js (the CRUD routes above are operator+).
+
+attachPromoteExport(router, {
+  getRecord: (id) => groupsMap.get(id),
+  saveRecord: (record) => {
+    atomicWriteJson(filePath(record.id), record);
+    groupsMap.set(record.id, record);
+  },
+});
+
+export default router;

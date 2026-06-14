@@ -1,0 +1,14 @@
+{
+  "id": "default-example-group",
+  "name": "Example Group",
+  "players": [
+    "Alice",
+    "Bob",
+    "Charlie",
+    "Diana",
+    "Eve"
+  ],
+  "isDefault": true,
+  "createdAt": "2026-06-14T19:42:34.029Z",
+  "updatedAt": "2026-06-14T19:42:35.138Z"
+}

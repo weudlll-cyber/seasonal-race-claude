@@ -10,6 +10,7 @@ import express from 'express';
 import cors from 'cors';
 import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
+import playerGroupsRouter from './routes/playerGroups.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
@@ -40,6 +41,7 @@ export function createApp() {
   app.use('/api/users', usersRouter);
   app.use('/api/tracks', tracksRouter);
   app.use('/api/surface-classes', surfaceClassesRouter);
+  app.use('/api/player-groups', playerGroupsRouter);
 
   return app;
 }

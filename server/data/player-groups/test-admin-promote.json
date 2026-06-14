@@ -1,0 +1,10 @@
+{
+  "id": "test-admin-promote",
+  "name": "Promote Me",
+  "players": [
+    "X"
+  ],
+  "isDefault": true,
+  "createdAt": "2026-06-14T19:42:35.152Z",
+  "updatedAt": "2026-06-14T19:42:35.159Z"
+}
