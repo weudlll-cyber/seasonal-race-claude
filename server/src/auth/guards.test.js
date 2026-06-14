@@ -40,6 +40,13 @@ describe('requiredRole', () => {
   it('POST /api/tracks → null (operator+ route)', () => expect(requiredRole('POST', '/api/tracks')).toBeNull());
 });
 
+describe('requiredRole — /api/users policy (C3a)', () => {
+  it('GET /api/users → admin', () => expect(requiredRole('GET', '/api/users')).toBe('admin'));
+  it('POST /api/users → admin', () => expect(requiredRole('POST', '/api/users')).toBe('admin'));
+  it('DELETE /api/users/abc → admin (future sub-routes pre-gated)', () => expect(requiredRole('DELETE', '/api/users/abc')).toBe('admin'));
+  it('GET /api/users/ (trailing slash normalised) → admin', () => expect(requiredRole('GET', '/api/users/')).toBe('admin'));
+});
+
 // ── Part B — behavioural guard tests (bare harness, MemoryStore) ─────────────
 
 const fakeStore = {

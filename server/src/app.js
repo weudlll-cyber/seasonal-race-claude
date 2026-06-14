@@ -12,6 +12,7 @@ import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
+import usersRouter from './auth/usersRouter.js';
 import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
 import { loginLimiter, setupLimiter } from './auth/rateLimit.js';
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/setup', setupLimiter);
   app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
   app.use('/api/tracks', tracksRouter);
   app.use('/api/surface-classes', surfaceClassesRouter);
 

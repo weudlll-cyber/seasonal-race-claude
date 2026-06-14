@@ -20,6 +20,13 @@ export const PUBLIC_PATHS = [
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─
 
 export const ROUTE_POLICY = [
+  // All /api/users methods are admin-only — operator cannot list or manage users (AUTH.md §2).
+  {
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    test: (p) => /^\/api\/users(\/.*)?$/.test(p),
+    role: 'admin',
+    desc: 'user management — admin only (AUTH.md §2/§9)',
+  },
   // Mutating surface-classes routes are ADVANCED → admin only (§7). GET stays operator+.
   {
     methods: ['POST', 'PUT', 'DELETE', 'PATCH'],
