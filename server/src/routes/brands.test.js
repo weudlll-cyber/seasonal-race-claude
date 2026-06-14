@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
