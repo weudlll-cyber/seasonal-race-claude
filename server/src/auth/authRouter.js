@@ -17,6 +17,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(__dirname, '../../data');
 
 const DEFAULT_SETUP_MARKER = join(dataDir, 'setup-complete.json');
+// Exported so the recovery CLI can reference the same path without duplicating it.
+export const SETUP_MARKER_PATH = DEFAULT_SETUP_MARKER;
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
