@@ -2,10 +2,14 @@ node_modules
 .env
 dist
 build
-.claude/
+.claude/*
 .claude/projects/
 .claude/settings.json
 .claude/settings.local.json
+# Exception: share project skills (SKILL.md only); rest of .claude/ stays ignored
+!.claude/skills/
+!.claude/skills/*/
+!.claude/skills/**/SKILL.md
 client/coverage/
 server/coverage/
 client/playwright-report/
