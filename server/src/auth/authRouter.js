@@ -9,16 +9,8 @@
 import express from 'express';
 import { randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(__dirname, '../../data');
-
-const DEFAULT_SETUP_MARKER = join(dataDir, 'setup-complete.json');
-// Exported so the recovery CLI can reference the same path without duplicating it.
-export const SETUP_MARKER_PATH = DEFAULT_SETUP_MARKER;
+import { SETUP_MARKER_PATH } from './paths.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
@@ -39,7 +31,7 @@ function constantTimeEqual(a, b) {
 
 export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } = {}) {
   store = store ?? defaultStore;
-  setupMarkerPath = setupMarkerPath ?? DEFAULT_SETUP_MARKER;
+  setupMarkerPath = setupMarkerPath ?? SETUP_MARKER_PATH;
   getBootstrapToken = getBootstrapToken ?? (() => process.env.RA_BOOTSTRAP_TOKEN);
 
   const router = express.Router();

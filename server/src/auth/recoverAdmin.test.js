@@ -8,11 +8,13 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, writeFileSync, unlinkSync, readFileSync } from 'node:fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createUsersStore, verifyPassword } from './usersStore.js';
 import { promoteOrCreate, rearmSetup } from './recoverAdmin.js';
+import { SETUP_MARKER_PATH } from './paths.js';
 
 // ── Temp-path helpers ─────────────────────────────────────────────────────────
 
@@ -227,6 +229,21 @@ describe('Audit log — rearmSetup', () => {
 });
 
 // ── Error cases ───────────────────────────────────────────────────────────────
+
+// ── paths.js regression — marker path is byte-identical after extraction ──────
+
+describe('SETUP_MARKER_PATH (paths.js) — regression', () => {
+  it('resolves to server/data/setup-complete.json (byte-identical to prior inline computation)', () => {
+    // Recompute the reference path the same way authRouter.js used to do it
+    // (same __dirname anchor = server/src/auth/, same two-level ../../data walk).
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const reference = join(__dirname, '../../data/setup-complete.json');
+    expect(SETUP_MARKER_PATH).toBe(reference);
+    expect(SETUP_MARKER_PATH).toMatch(/[/\\]data[/\\]setup-complete\.json$/);
+  });
+});
+
+// ── promoteOrCreate — error cases ────────────────────────────────────────────
 
 describe('promoteOrCreate — error cases', () => {
   it('throws MISSING_USERNAME when username is empty string', async () => {

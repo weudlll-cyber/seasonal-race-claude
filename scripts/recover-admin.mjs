@@ -59,6 +59,9 @@ if (ACTION === 'promote' && !USERNAME) {
 
 // ── Password reader ───────────────────────────────────────────────────────────
 
+// Reads a password from stdin without echoing typed characters to the terminal.
+// Requires stdin to be a TTY; falls back to a visible readline prompt if not
+// (e.g. piped input or automated test environments) — documented best-effort.
 async function readPassword() {
   const fromEnv = process.env.RA_RECOVERY_PASSWORD;
   if (fromEnv) {
@@ -66,9 +69,43 @@ async function readPassword() {
     return fromEnv;
   }
 
-  // Interactive: readline prompt to stderr (not captured by stdout redirects).
-  // Password is NOT hidden on screen in this mode — use RA_RECOVERY_PASSWORD
-  // for a fully non-echoed flow.
+  if (process.stdin.isTTY) {
+    // TTY path: suppress terminal echo while reading, then restore it.
+    return new Promise((resolve, reject) => {
+      process.stderr.write('New password (not a CLI arg — not in shell history): ');
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.setEncoding('utf8');
+
+      let buf = '';
+      process.stdin.on('data', function onData(ch) {
+        if (ch === '\r' || ch === '\n') {
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdin.removeListener('data', onData);
+          process.stderr.write('\n');
+          resolve(buf);
+        } else if (ch === '') {
+          // Ctrl-C
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdin.removeListener('data', onData);
+          process.stderr.write('\n[recover-admin] Aborted.\n');
+          reject(new Error('Aborted by user'));
+        } else if (ch === '' || ch === '\b') {
+          // Backspace
+          buf = buf.slice(0, -1);
+        } else {
+          buf += ch;
+        }
+      });
+
+      process.stdin.on('error', reject);
+    });
+  }
+
+  // Non-TTY fallback (piped/scripted): visible readline prompt.
+  // Use RA_RECOVERY_PASSWORD env var for fully non-echoed scripted use.
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stderr });
     rl.question('New password (not a CLI arg — not in shell history): ', (answer) => {
