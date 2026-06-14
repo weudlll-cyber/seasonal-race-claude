@@ -300,7 +300,10 @@ describe('createUser — concurrency serialization (C2)', () => {
     expect(store.countUsers()).toBe(1);
   });
 
-  it('T3: a failed createUser (USERNAME_TAKEN then INVALID_ROLE) does not block subsequent successful calls', async () => {
+  // T3 guards the lock's reject-handler path: a rejected enqueue() must release
+  // the lock so subsequent calls are not deadlocked. Concurrency/TOCTOU is
+  // covered by the allSettled-based T1/T2 tests above.
+  it('T3: rejected createUser releases the lock — subsequent calls are not deadlocked', async () => {
     await store.createUser({ username: 'existing', password: 'pass-xyz', role: 'operator' });
     // Cause USERNAME_TAKEN
     await expect(
@@ -456,7 +459,11 @@ describe('updateUser', () => {
     await expect(store.updateUser(user.id, {})).rejects.toMatchObject({ code: 'EMPTY_UPDATE' });
   });
 
-  it('T3b: failed updateUser does not block subsequent calls (no deadlock)', async () => {
+  // T3b mirrors T3: guards the lock's reject-handler path for updateUser.
+  // Ensures a rejected enqueue() releases the lock (no deadlock after failure).
+  // Concurrency/TOCTOU is covered by the allSettled-based tests in the
+  // "updateUser + deleteUser — concurrency" suite below.
+  it('T3b: rejected updateUser releases the lock — subsequent calls are not deadlocked', async () => {
     const admin = await store.createUser({ username: 'noblk', password: 'pw', role: 'admin', createdBy: 'test' });
     // Fail: LAST_ADMIN
     await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({ code: 'LAST_ADMIN' });

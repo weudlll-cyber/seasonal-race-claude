@@ -92,7 +92,11 @@ describe('updateUser', () => {
   it('percent-encodes the id in the URL', async () => {
     apiCall.mockResolvedValue({ json: async () => MOCK_USER });
     await updateUser('has space', { role: 'operator' });
-    expect(apiCall).toHaveBeenCalledWith(expect.stringContaining('has%20space'), expect.anything());
+    expect(apiCall).toHaveBeenCalledWith('http://test/api/users/has%20space', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'operator' }),
+    });
   });
 
   it('propagates 409 error (last admin cannot be demoted)', async () => {
@@ -126,7 +130,7 @@ describe('deleteUser', () => {
   it('percent-encodes the id in the URL', async () => {
     apiCall.mockResolvedValue({ json: async () => MOCK_USER });
     await deleteUser('has space');
-    expect(apiCall).toHaveBeenCalledWith(expect.stringContaining('has%20space'), expect.anything());
+    expect(apiCall).toHaveBeenCalledWith('http://test/api/users/has%20space', { method: 'DELETE' });
   });
 
   it('propagates 409 error (Cannot delete the last admin)', async () => {

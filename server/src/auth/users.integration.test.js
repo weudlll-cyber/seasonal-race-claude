@@ -122,9 +122,11 @@ describe('POST /api/users', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST response body never contains passwordHash (incl. error responses)', async () => {
+  it('POST response body never contains passwordHash or sessionEpoch (incl. error responses)', async () => {
     const res = await adminApi.post('/api/users').send(NEW_USER);  // duplicate → 409
+    expect(res.status).toBe(409);
     expect(res.body).not.toHaveProperty('passwordHash');
+    expect(res.body).not.toHaveProperty('sessionEpoch');
   });
 });
 
@@ -150,10 +152,11 @@ describe('DELETE /api/users/:id', () => {
     expect(res.status).toBe(403);
   });
 
-  it('admin → 200 with safe user (no passwordHash)', async () => {
+  it('admin → 200 with safe user (no passwordHash, no sessionEpoch)', async () => {
     const res = await adminApi.delete(`/api/users/${targetId}`);
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty('passwordHash');
+    expect(res.body).not.toHaveProperty('sessionEpoch');
     expect(res.body.id).toBe(targetId);
   });
 

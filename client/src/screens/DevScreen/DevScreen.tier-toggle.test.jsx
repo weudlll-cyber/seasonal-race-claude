@@ -135,7 +135,9 @@ describe('DevScreen tier toggle — section visibility', () => {
 });
 
 describe('DevScreen tier toggle — persistence', () => {
-  it('persists view choice to localStorage', () => {
+  // admin: checks that the view-toggle selection is written to localStorage.
+  // This is NOT role-gating (C1); it tests the UI toggle persistence only.
+  it('admin: persists view toggle choice to localStorage', () => {
     renderDevScreen();
     fireEvent.click(screen.getByText('Operator'));
     expect(localStorage.getItem('racearena:devPanelView')).toBe('"operator"');
