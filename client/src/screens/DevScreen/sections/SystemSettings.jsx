@@ -17,7 +17,6 @@ import {
 import {
   DEFAULT_TRACKS,
   DEFAULT_RACE_DEFAULTS,
-  DEFAULT_PLAYER_GROUPS,
   DEFAULT_BRANDING,
   DEFAULT_RACE_HISTORY,
 } from '../../../modules/storage/defaults.js';
@@ -84,7 +83,8 @@ function SystemSettings() {
     // are active by default when no override map is present.
     storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
     storageSet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
-    storageSet(KEYS.PLAYER_GROUPS, DEFAULT_PLAYER_GROUPS);
+    // PLAYER_GROUPS intentionally omitted — groups live on the server after D2.
+    // A local reset must not re-activate the old localStorage source.
     storageSet(KEYS.BRANDING, DEFAULT_BRANDING);
     storageSet(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
     window.alert('All settings reset to defaults. The page will reload.');
