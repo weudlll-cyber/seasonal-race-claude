@@ -30,6 +30,8 @@ const createdIds = [];
 
 afterAll(async () => {
   for (const id of createdIds) {
+    // Demote first in case the test promoted the group to isDefault:true.
+    await admin.post(`/api/player-groups/${id}/clear-default`).catch(() => {});
     await admin.delete(`/api/player-groups/${id}`).catch(() => {});
   }
 });
