@@ -451,3 +451,56 @@ describe('cacheTrackGeometry — field round-trip preservation (L37)', () => {
     expect(stored.surfaceClasses).toEqual(FULL_TRACK_ALL_FIELDS.surfaceClasses);
   });
 });
+
+// ── Honesty proof: credentials:'include' on all server fetches ────────────────
+//
+// These tests were RED before the fix (fetch was called without credentials,
+// causing 401 on every server request after auth was introduced) and GREEN after.
+
+describe('fetchServerTracks — honesty proof: credentials:include (fix: was 401)', () => {
+  it('calls fetch with credentials:include for the track list request', async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => [] });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await fetchServerTracks();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/tracks'),
+      expect.objectContaining({ credentials: 'include' })
+    );
+  });
+
+  it('falls back to cache on 401 — no throw propagated to caller', async () => {
+    storageSet(CACHE_KEY, [MOCK_TRACK_SUMMARY]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+
+    const result = await fetchServerTracks();
+
+    expect(result).toEqual([MOCK_TRACK_SUMMARY]);
+  });
+});
+
+describe('cacheTrackGeometry — honesty proof: credentials:include (fix: was 401)', () => {
+  it('calls fetch with credentials:include for the track detail request', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_TRACK_FULL,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining(`/api/tracks/${MOCK_TRACK_SUMMARY.id}`),
+      expect.objectContaining({ credentials: 'include' })
+    );
+  });
+
+  it('returns null on 401 — no throw propagated to caller', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+
+    const result = await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    expect(result).toBeNull();
+  });
+});

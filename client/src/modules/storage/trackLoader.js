@@ -33,7 +33,7 @@ export function getCachedServerTracks() {
 export async function cacheTrackGeometry(summaryTrack) {
   try {
     const res = await withTimeout(
-      fetch(`${API_BASE_URL}/api/tracks/${summaryTrack.id}`),
+      fetch(`${API_BASE_URL}/api/tracks/${summaryTrack.id}`, { credentials: 'include' }),
       FETCH_TIMEOUT_MS
     );
     if (!res.ok) return null;
@@ -66,7 +66,7 @@ export async function cacheTrackGeometry(summaryTrack) {
 async function _cacheBackgroundAsync(trackId) {
   try {
     const res = await withTimeout(
-      fetch(`${API_BASE_URL}/api/tracks/${trackId}/background`),
+      fetch(`${API_BASE_URL}/api/tracks/${trackId}/background`, { credentials: 'include' }),
       FETCH_TIMEOUT_MS
     );
     if (!res.ok) return;
@@ -119,7 +119,10 @@ function purgeStaleServerGeometries(newTracks) {
  */
 export async function fetchServerTracks() {
   try {
-    const res = await withTimeout(fetch(`${API_BASE_URL}/api/tracks`), FETCH_TIMEOUT_MS);
+    const res = await withTimeout(
+      fetch(`${API_BASE_URL}/api/tracks`, { credentials: 'include' }),
+      FETCH_TIMEOUT_MS
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tracks = await res.json();
     purgeStaleServerGeometries(tracks); // A5.4 — remove cache entries for deleted tracks
