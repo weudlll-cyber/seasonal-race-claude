@@ -240,3 +240,57 @@ describe('createUsersStore', () => {
     expect(user).not.toHaveProperty('passwordHash');
   });
 });
+
+describe('createUser — concurrency serialization (C2)', () => {
+  let store;
+  let tempPath;
+
+  beforeEach(() => {
+    tempPath = makeTempPath();
+    store = createUsersStore(tempPath);
+  });
+
+  afterEach(() => {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    vi.restoreAllMocks();
+  });
+
+  it('T1: two concurrent createUser with different usernames — both are persisted', async () => {
+    await Promise.all([
+      store.createUser({ username: 'userA', password: 'passA-123', role: 'operator' }),
+      store.createUser({ username: 'userB', password: 'passB-456', role: 'operator' }),
+    ]);
+    expect(store.countUsers()).toBe(2);
+    expect(store.findAuthRecordByUsername('usera')).not.toBeNull();
+    expect(store.findAuthRecordByUsername('userb')).not.toBeNull();
+  });
+
+  it('T2: two concurrent createUser with the same username — exactly one succeeds, one rejects with USERNAME_TAKEN', async () => {
+    const results = await Promise.allSettled([
+      store.createUser({ username: 'dupuser', password: 'pass1-xxx', role: 'operator' }),
+      store.createUser({ username: 'dupuser', password: 'pass2-xxx', role: 'admin' }),
+    ]);
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatchObject({ code: 'USERNAME_TAKEN' });
+    expect(store.countUsers()).toBe(1);
+  });
+
+  it('T3: a failed createUser (USERNAME_TAKEN then INVALID_ROLE) does not block subsequent successful calls', async () => {
+    await store.createUser({ username: 'existing', password: 'pass-xyz', role: 'operator' });
+    // Cause USERNAME_TAKEN
+    await expect(
+      store.createUser({ username: 'existing', password: 'other-pw', role: 'operator' })
+    ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
+    // Cause INVALID_ROLE
+    await expect(
+      store.createUser({ username: 'newuser', password: 'pw', role: 'superuser' })
+    ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
+    // Next valid call must succeed — no deadlock
+    const user = await store.createUser({ username: 'fresh', password: 'fresh-pass', role: 'admin' });
+    expect(user).toMatchObject({ username: 'fresh', role: 'admin' });
+    expect(store.countUsers()).toBe(2);
+  });
+});

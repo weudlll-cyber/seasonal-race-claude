@@ -91,68 +91,83 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     return readUsers().find((u) => u.id === id) ?? null;
   }
 
+  // Promise-chain lock: serialises the read→check→hash→write sequence so concurrent
+  // createUser calls cannot interleave and cause lost writes or duplicate usernames.
+  // The chain always settles to resolved (via the no-op rejection handler) so a failed
+  // call never blocks its successors.
+  let lockChain = Promise.resolve();
+
   async function createUser({ username, password, role, createdBy }) {
-    if (!username || !String(username).trim()) {
-      const err = new Error('Username must not be empty');
-      err.code = 'INVALID_USERNAME';
-      throw err;
-    }
-    if (!password || !String(password).trim()) {
-      const err = new Error('Password must not be empty');
-      err.code = 'INVALID_PASSWORD';
-      throw err;
-    }
-    if (role !== 'operator' && role !== 'admin') {
-      const err = new Error('Role must be "operator" or "admin"');
-      err.code = 'INVALID_ROLE';
-      throw err;
-    }
+    async function run() {
+      if (!username || !String(username).trim()) {
+        const err = new Error('Username must not be empty');
+        err.code = 'INVALID_USERNAME';
+        throw err;
+      }
+      if (!password || !String(password).trim()) {
+        const err = new Error('Password must not be empty');
+        err.code = 'INVALID_PASSWORD';
+        throw err;
+      }
+      if (role !== 'operator' && role !== 'admin') {
+        const err = new Error('Role must be "operator" or "admin"');
+        err.code = 'INVALID_ROLE';
+        throw err;
+      }
 
-    const usernameNormalized = normalizeUsername(username);
-    const users = readUsers();
+      const usernameNormalized = normalizeUsername(username);
+      const users = readUsers();
 
-    if (users.some((u) => u.usernameNormalized === usernameNormalized)) {
-      const err = new Error('Username already taken');
-      err.code = 'USERNAME_TAKEN';
-      throw err;
-    }
+      if (users.some((u) => u.usernameNormalized === usernameNormalized)) {
+        const err = new Error('Username already taken');
+        err.code = 'USERNAME_TAKEN';
+        throw err;
+      }
 
-    const record = {
-      id: randomUUID(),
-      username: String(username).trim(),  // display form
-      usernameNormalized,                 // uniqueness key (NFC + lowercased)
-      passwordHash: await hashPassword(password),
-      role,
-      createdAt: new Date().toISOString(),
-      createdBy: createdBy ?? 'setup',
-    };
+      const record = {
+        id: randomUUID(),
+        username: String(username).trim(),  // display form
+        usernameNormalized,                 // uniqueness key (NFC + lowercased)
+        passwordHash: await hashPassword(password),
+        role,
+        createdAt: new Date().toISOString(),
+        createdBy: createdBy ?? 'setup',
+      };
 
-    // NOTE: this read-modify-write is NOT the atomic create-if-none bootstrap guard;
-    // the atomic single-admin guard is added in Phase A step 3 (AUTH.md §5).
-    users.push(record);
-    // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
-    atomicWriteJson(filePath, users, { mode: 0o600 });
-    try {
-      chmodSync(filePath, 0o600);
-    } catch {
-      // chmod is only load-bearing on the EPERM-overwrite fallback (≈Windows, where mode bits are
-      // ACL-based no-ops anyway). On the normal POSIX rename path the file already inherited 0o600
-      // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
-      // do NOT throw unconditionally on chmod failure — in the common rename path the file is
-      // already 0o600 and an unconditional throw would fail AFTER a successful persist (orphaned
-      // record + USERNAME_TAKEN on retry). The stat check ensures we only error in the
-      // genuinely-insecure case.
-      if (process.platform !== 'win32') {
-        const fileMode = statSync(filePath).mode & 0o777;
-        if (fileMode & 0o077) {  // any group/other permission bit set
-          const err = new Error('users.json could not be secured to 0o600');
-          err.code = 'USERS_STORE_PERM';
-          throw err;
+      // NOTE: this read-modify-write is NOT the atomic create-if-none bootstrap guard;
+      // the atomic single-admin guard is added in Phase A step 3 (AUTH.md §5).
+      users.push(record);
+      // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
+      atomicWriteJson(filePath, users, { mode: 0o600 });
+      try {
+        chmodSync(filePath, 0o600);
+      } catch {
+        // chmod is only load-bearing on the EPERM-overwrite fallback (≈Windows, where mode bits are
+        // ACL-based no-ops anyway). On the normal POSIX rename path the file already inherited 0o600
+        // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
+        // do NOT throw unconditionally on chmod failure — in the common rename path the file is
+        // already 0o600 and an unconditional throw would fail AFTER a successful persist (orphaned
+        // record + USERNAME_TAKEN on retry). The stat check ensures we only error in the
+        // genuinely-insecure case.
+        if (process.platform !== 'win32') {
+          const fileMode = statSync(filePath).mode & 0o777;
+          if (fileMode & 0o077) {  // any group/other permission bit set
+            const err = new Error('users.json could not be secured to 0o600');
+            err.code = 'USERS_STORE_PERM';
+            throw err;
+          }
         }
       }
+
+      return toSafeUser(record);
     }
 
-    return toSafeUser(record);
+    const result = lockChain.then(run);
+    lockChain = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
   }
 
   return { readUsers, countUsers, findAuthRecordByUsername, findAuthRecordById, createUser };
