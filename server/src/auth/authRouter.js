@@ -7,7 +7,7 @@
 // ============================================================
 
 import express from 'express';
-import { randomUUID, timingSafeEqual, createHash } from 'node:crypto';
+import { timingSafeEqual, createHash } from 'node:crypto';
 import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
