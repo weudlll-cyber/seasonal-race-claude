@@ -294,3 +294,209 @@ describe('createUser — concurrency serialization (C2)', () => {
     expect(store.countUsers()).toBe(2);
   });
 });
+
+// ── deleteUser ────────────────────────────────────────────────────────────────
+
+describe('deleteUser', () => {
+  let store;
+  let tempPath;
+
+  beforeEach(() => {
+    tempPath = makeTempPath();
+    store = createUsersStore(tempPath);
+  });
+
+  afterEach(() => {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    vi.restoreAllMocks();
+  });
+
+  it('removes the user; subsequent findAuthRecordById returns null', async () => {
+    const created = await store.createUser({ username: 'todel', password: 'pw', role: 'operator', createdBy: 'test' });
+    // Need a second admin so the delete is allowed
+    await store.createUser({ username: 'admin2', password: 'pw2', role: 'admin', createdBy: 'test' });
+    // Create another admin so we can delete the first one
+    await store.createUser({ username: 'admin1', password: 'pw1', role: 'admin', createdBy: 'test' });
+    await store.deleteUser(created.id);
+    expect(store.findAuthRecordById(created.id)).toBeNull();
+    expect(store.countUsers()).toBe(2);
+  });
+
+  it('returns the safe user record of the deleted entry (no passwordHash)', async () => {
+    const a1 = await store.createUser({ username: 'da1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ username: 'da2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const result = await store.deleteUser(a2.id);
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result.id).toBe(a2.id);
+  });
+
+  it('rejects unknown id with NOT_FOUND', async () => {
+    await expect(
+      store.deleteUser('00000000-0000-0000-0000-000000000000')
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('rejects deleting the only admin with LAST_ADMIN', async () => {
+    const admin = await store.createUser({ username: 'soleadmin', password: 'pw', role: 'admin', createdBy: 'test' });
+    await expect(store.deleteUser(admin.id)).rejects.toMatchObject({ code: 'LAST_ADMIN' });
+    expect(store.countUsers()).toBe(1);  // admin still in store
+  });
+
+  it('allows deleting an admin when ≥2 admins exist', async () => {
+    const a1 = await store.createUser({ username: 'adel1', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({ username: 'adel2', password: 'pw', role: 'admin', createdBy: 'test' });
+    await expect(store.deleteUser(a1.id)).resolves.not.toThrow();
+    expect(store.findAuthRecordById(a1.id)).toBeNull();
+    expect(store.countUsers()).toBe(1);
+  });
+});
+
+// ── updateUser ────────────────────────────────────────────────────────────────
+
+describe('updateUser', () => {
+  let store;
+  let tempPath;
+
+  beforeEach(() => {
+    tempPath = makeTempPath();
+    store = createUsersStore(tempPath);
+  });
+
+  afterEach(() => {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    vi.restoreAllMocks();
+  });
+
+  it('role change is persisted and returned without passwordHash', async () => {
+    const op = await store.createUser({ username: 'uprole', password: 'pw', role: 'operator', createdBy: 'test' });
+    const result = await store.updateUser(op.id, { role: 'admin' });
+    expect(result.role).toBe('admin');
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(store.findAuthRecordById(op.id).role).toBe('admin');
+  });
+
+  it('rejects demoting the only admin with LAST_ADMIN', async () => {
+    const admin = await store.createUser({ username: 'soleadm', password: 'pw', role: 'admin', createdBy: 'test' });
+    await expect(
+      store.updateUser(admin.id, { role: 'operator' })
+    ).rejects.toMatchObject({ code: 'LAST_ADMIN' });
+    expect(store.findAuthRecordById(admin.id).role).toBe('admin');  // unchanged
+  });
+
+  it('allows demoting an admin when ≥2 admins exist', async () => {
+    const a1 = await store.createUser({ username: 'demote1', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({ username: 'demote2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const result = await store.updateUser(a1.id, { role: 'operator' });
+    expect(result.role).toBe('operator');
+  });
+
+  it('rejects invalid role with INVALID_ROLE', async () => {
+    const op = await store.createUser({ username: 'badrole', password: 'pw', role: 'operator', createdBy: 'test' });
+    await expect(
+      store.updateUser(op.id, { role: 'superuser' })
+    ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
+  });
+
+  it('password reset: new hash verifies new password; old hash not re-used', async () => {
+    const user = await store.createUser({ username: 'resetpw', password: 'oldpass', role: 'operator', createdBy: 'test' });
+    const oldRecord = store.findAuthRecordById(user.id);
+    const oldHash = oldRecord.passwordHash;
+
+    await store.updateUser(user.id, { password: 'newpass-secure' });
+
+    const newRecord = store.findAuthRecordById(user.id);
+    expect(newRecord.passwordHash).not.toBe(oldHash);
+    expect(await verifyPassword('newpass-secure', newRecord.passwordHash)).toBe(true);
+  });
+
+  it('password reset bumps sessionEpoch on the record', async () => {
+    const user = await store.createUser({ username: 'epochtest', password: 'pw', role: 'operator', createdBy: 'test' });
+    const epochBefore = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
+    await store.updateUser(user.id, { password: 'newpassword-x' });
+    const epochAfter = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
+    expect(epochAfter).toBe(epochBefore + 1);
+  });
+
+  it('password reset returns safe user without passwordHash', async () => {
+    const user = await store.createUser({ username: 'safereset', password: 'pw', role: 'operator', createdBy: 'test' });
+    const result = await store.updateUser(user.id, { password: 'newpassword-y' });
+    expect(result).not.toHaveProperty('passwordHash');
+  });
+
+  it('rejects unknown id with NOT_FOUND', async () => {
+    await expect(
+      store.updateUser('00000000-0000-0000-0000-000000000000', { role: 'operator' })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('rejects empty update (no role, no password) with EMPTY_UPDATE', async () => {
+    const user = await store.createUser({ username: 'emptyup', password: 'pw', role: 'operator', createdBy: 'test' });
+    await expect(store.updateUser(user.id, {})).rejects.toMatchObject({ code: 'EMPTY_UPDATE' });
+  });
+
+  it('T3b: failed updateUser does not block subsequent calls (no deadlock)', async () => {
+    const admin = await store.createUser({ username: 'noblk', password: 'pw', role: 'admin', createdBy: 'test' });
+    // Fail: LAST_ADMIN
+    await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({ code: 'LAST_ADMIN' });
+    // Fail: NOT_FOUND
+    await expect(store.updateUser('no-such-id', { role: 'operator' })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    // Succeed: role is still admin, so promoting again is fine; use password reset
+    const result = await store.updateUser(admin.id, { password: 'newpw-safe' });
+    expect(result).toMatchObject({ username: 'noblk' });
+  });
+});
+
+// ── updateUser + deleteUser — concurrency / TOCTOU (C3b) ─────────────────────
+
+describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection', () => {
+  let store;
+  let tempPath;
+
+  beforeEach(() => {
+    tempPath = makeTempPath();
+    store = createUsersStore(tempPath);
+  });
+
+  afterEach(() => {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    vi.restoreAllMocks();
+  });
+
+  it('two concurrent role-demotions of two admins: exactly one allowed, ≥1 admin remains', async () => {
+    const a1 = await store.createUser({ username: 'toctou1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ username: 'toctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+
+    const results = await Promise.allSettled([
+      store.updateUser(a1.id, { role: 'operator' }),
+      store.updateUser(a2.id, { role: 'operator' }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatchObject({ code: 'LAST_ADMIN' });
+
+    const adminsRemaining = store.readUsers().filter((u) => u.role === 'admin');
+    expect(adminsRemaining.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('two concurrent deletes of two admins: exactly one allowed, ≥1 admin remains', async () => {
+    const a1 = await store.createUser({ username: 'dtoctou1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ username: 'dtoctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+
+    const results = await Promise.allSettled([
+      store.deleteUser(a1.id),
+      store.deleteUser(a2.id),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatchObject({ code: 'LAST_ADMIN' });
+
+    const adminsRemaining = store.readUsers().filter((u) => u.role === 'admin');
+    expect(adminsRemaining.length).toBeGreaterThanOrEqual(1);
+  });
+});

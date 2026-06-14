@@ -91,14 +91,44 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     return readUsers().find((u) => u.id === id) ?? null;
   }
 
-  // Promise-chain lock: serialises the read→check→hash→write sequence so concurrent
-  // createUser calls cannot interleave and cause lost writes or duplicate usernames.
-  // The chain always settles to resolved (via the no-op rejection handler) so a failed
-  // call never blocks its successors.
+  // Shared write helper — all three mutating methods use this to apply chmod.
+  // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
+  function writeUsers(users) {
+    atomicWriteJson(filePath, users, { mode: 0o600 });
+    try {
+      chmodSync(filePath, 0o600);
+    } catch {
+      // chmod is only load-bearing on the EPERM-overwrite fallback (≈Windows, where mode bits are
+      // ACL-based no-ops anyway). On the normal POSIX rename path the file already inherited 0o600
+      // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
+      if (process.platform !== 'win32') {
+        const fileMode = statSync(filePath).mode & 0o777;
+        if (fileMode & 0o077) {  // any group/other permission bit set
+          const err = new Error('users.json could not be secured to 0o600');
+          err.code = 'USERS_STORE_PERM';
+          throw err;
+        }
+      }
+    }
+  }
+
+  // Promise-chain lock: serialises ALL mutating operations (create/update/delete) so concurrent
+  // calls cannot interleave, cause lost writes, duplicate usernames, or bypass the last-admin check.
+  // The chain always settles to resolved (via the no-op rejection handler) so a failed call never
+  // blocks its successors.
   let lockChain = Promise.resolve();
 
+  function enqueue(run) {
+    const result = lockChain.then(run);
+    lockChain = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  }
+
   async function createUser({ username, password, role, createdBy }) {
-    async function run() {
+    return enqueue(async function run() {
       if (!username || !String(username).trim()) {
         const err = new Error('Username must not be empty');
         err.code = 'INVALID_USERNAME';
@@ -130,6 +160,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
         usernameNormalized,                 // uniqueness key (NFC + lowercased)
         passwordHash: await hashPassword(password),
         role,
+        sessionEpoch: 0,                    // bumped on password reset; login writes this into session
         createdAt: new Date().toISOString(),
         createdBy: createdBy ?? 'setup',
       };
@@ -137,40 +168,102 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
       // NOTE: this read-modify-write is NOT the atomic create-if-none bootstrap guard;
       // the atomic single-admin guard is added in Phase A step 3 (AUTH.md §5).
       users.push(record);
-      // POSIX mode bits are a soft no-op on Windows (ACL-based); hardens Linux/Docker deployments.
-      atomicWriteJson(filePath, users, { mode: 0o600 });
-      try {
-        chmodSync(filePath, 0o600);
-      } catch {
-        // chmod is only load-bearing on the EPERM-overwrite fallback (≈Windows, where mode bits are
-        // ACL-based no-ops anyway). On the normal POSIX rename path the file already inherited 0o600
-        // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
-        // do NOT throw unconditionally on chmod failure — in the common rename path the file is
-        // already 0o600 and an unconditional throw would fail AFTER a successful persist (orphaned
-        // record + USERNAME_TAKEN on retry). The stat check ensures we only error in the
-        // genuinely-insecure case.
-        if (process.platform !== 'win32') {
-          const fileMode = statSync(filePath).mode & 0o777;
-          if (fileMode & 0o077) {  // any group/other permission bit set
-            const err = new Error('users.json could not be secured to 0o600');
-            err.code = 'USERS_STORE_PERM';
+      writeUsers(users);
+
+      return toSafeUser(record);
+    });
+  }
+
+  async function updateUser(id, { role, password } = {}) {
+    return enqueue(async function run() {
+      const hasRole = role !== undefined && role !== null;
+      const hasPassword = password !== undefined && password !== null && password !== '';
+
+      if (!hasRole && !hasPassword) {
+        const err = new Error('updateUser requires at least one of: role, password');
+        err.code = 'EMPTY_UPDATE';
+        throw err;
+      }
+
+      const users = readUsers();
+      const idx = users.findIndex((u) => u.id === id);
+      if (idx === -1) {
+        const err = new Error('User not found');
+        err.code = 'NOT_FOUND';
+        throw err;
+      }
+
+      const record = { ...users[idx] };
+
+      if (hasRole) {
+        if (role !== 'operator' && role !== 'admin') {
+          const err = new Error('Role must be "operator" or "admin"');
+          err.code = 'INVALID_ROLE';
+          throw err;
+        }
+        // Last-admin guard: demoting the only admin is forbidden (checked inside lock against
+        // the freshly read list, so concurrent demotions cannot both pass).
+        if (record.role === 'admin' && role === 'operator') {
+          const adminCount = users.filter((u) => u.role === 'admin').length;
+          if (adminCount <= 1) {
+            const err = new Error('Cannot demote the last admin');
+            err.code = 'LAST_ADMIN';
             throw err;
           }
         }
+        record.role = role;
       }
 
-      return toSafeUser(record);
-    }
+      if (hasPassword) {
+        record.passwordHash = await hashPassword(password);
+        // Bump epoch so requireAuth invalidates sessions that predate this reset.
+        record.sessionEpoch = (record.sessionEpoch ?? 0) + 1;
+      }
 
-    const result = lockChain.then(run);
-    lockChain = result.then(
-      () => {},
-      () => {},
-    );
-    return result;
+      users[idx] = record;
+      writeUsers(users);
+      return toSafeUser(record);
+    });
   }
 
-  return { readUsers, countUsers, findAuthRecordByUsername, findAuthRecordById, createUser };
+  async function deleteUser(id) {
+    return enqueue(function run() {
+      const users = readUsers();
+      const idx = users.findIndex((u) => u.id === id);
+      if (idx === -1) {
+        const err = new Error('User not found');
+        err.code = 'NOT_FOUND';
+        throw err;
+      }
+
+      const record = users[idx];
+
+      // Last-admin guard: deleting the only admin is forbidden (checked inside lock against
+      // the freshly read list).
+      if (record.role === 'admin') {
+        const adminCount = users.filter((u) => u.role === 'admin').length;
+        if (adminCount <= 1) {
+          const err = new Error('Cannot delete the last admin');
+          err.code = 'LAST_ADMIN';
+          throw err;
+        }
+      }
+
+      users.splice(idx, 1);
+      writeUsers(users);
+      return toSafeUser(record);
+    });
+  }
+
+  return {
+    readUsers,
+    countUsers,
+    findAuthRecordByUsername,
+    findAuthRecordById,
+    createUser,
+    updateUser,
+    deleteUser,
+  };
 }
 
 // Default instance bound to DEFAULT_USERS_PATH

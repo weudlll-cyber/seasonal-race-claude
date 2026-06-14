@@ -8,7 +8,7 @@
 //              admin→allowed. Store isolation via RA_USERS_DB (test/env-setup.js).
 // ============================================================
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
@@ -117,5 +117,156 @@ describe('POST /api/users', () => {
   it('POST response body never contains passwordHash (incl. error responses)', async () => {
     const res = await adminApi.post('/api/users').send(NEW_USER);  // duplicate → 409
     expect(res.body).not.toHaveProperty('passwordHash');
+  });
+});
+
+// ── DELETE /api/users/:id (C3b) ───────────────────────────────────────────────
+
+describe('DELETE /api/users/:id', () => {
+  let targetId;
+
+  beforeAll(async () => {
+    const res = await adminApi
+      .post('/api/users')
+      .send({ username: `del-target-${Date.now()}`, password: 'del-pass-123', role: 'operator' });
+    targetId = res.body.id;
+  });
+
+  it('anonymous → 401', async () => {
+    const res = await request(app).delete(`/api/users/${targetId}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('operator → 403', async () => {
+    const res = await operatorApi.delete(`/api/users/${targetId}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('admin → 200 with safe user (no passwordHash)', async () => {
+    const res = await adminApi.delete(`/api/users/${targetId}`);
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('passwordHash');
+    expect(res.body.id).toBe(targetId);
+  });
+
+  it('deleted user is gone — subsequent DELETE returns 404', async () => {
+    const res = await adminApi.delete(`/api/users/${targetId}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('unknown id → 404', async () => {
+    const res = await adminApi.delete('/api/users/00000000-0000-0000-0000-000000000000');
+    expect(res.status).toBe(404);
+  });
+
+  it('admin DELETE last admin → 409', async () => {
+    // testadmin is the only admin in the store
+    const listRes = await adminApi.get('/api/users');
+    const testAdmin = listRes.body.find((u) => u.username === 'testadmin');
+    const res = await adminApi.delete(`/api/users/${testAdmin.id}`);
+    expect(res.status).toBe(409);
+  });
+});
+
+// ── PUT /api/users/:id (C3b) ──────────────────────────────────────────────────
+
+describe('PUT /api/users/:id', () => {
+  let targetId;
+
+  beforeAll(async () => {
+    const res = await adminApi
+      .post('/api/users')
+      .send({ username: `put-target-${Date.now()}`, password: 'put-pass-123', role: 'operator' });
+    targetId = res.body.id;
+  });
+
+  it('anonymous → 401', async () => {
+    const res = await request(app).put(`/api/users/${targetId}`).send({ role: 'admin' });
+    expect(res.status).toBe(401);
+  });
+
+  it('operator → 403', async () => {
+    const res = await operatorApi.put(`/api/users/${targetId}`).send({ role: 'admin' });
+    expect(res.status).toBe(403);
+  });
+
+  it('admin demote last admin → 409 (testadmin is sole admin; no state change)', async () => {
+    const listRes = await adminApi.get('/api/users');
+    const testAdmin = listRes.body.find((u) => u.username === 'testadmin');
+    const res = await adminApi.put(`/api/users/${testAdmin.id}`).send({ role: 'operator' });
+    expect(res.status).toBe(409);
+  });
+
+  it('admin role change → 200 with updated role (no passwordHash)', async () => {
+    // Promote put-target to admin; now testadmin + put-target = 2 admins
+    const res = await adminApi.put(`/api/users/${targetId}`).send({ role: 'admin' });
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe('admin');
+    expect(res.body).not.toHaveProperty('passwordHash');
+  });
+
+  it('admin invalid role → 400', async () => {
+    const res = await adminApi.put(`/api/users/${targetId}`).send({ role: 'superuser' });
+    expect(res.status).toBe(400);
+  });
+
+  it('admin empty body (no role, no password) → 400', async () => {
+    const res = await adminApi.put(`/api/users/${targetId}`).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('unknown id → 404', async () => {
+    const res = await adminApi
+      .put('/api/users/00000000-0000-0000-0000-000000000000')
+      .send({ role: 'operator' });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ── Session invalidation on password reset (Inv. 4) ──────────────────────────
+
+describe('C3b — Session invalidation on password reset (Inv. 4)', () => {
+  let victimId;
+  let victimAgent;
+  const victimCreds = {
+    username: `victim-${Date.now()}`,
+    password: 'victim-pass-123',
+    role: 'operator',
+  };
+
+  beforeAll(async () => {
+    // Create and log in as victim — victimAgent holds a session with old epoch
+    const createRes = await adminApi.post('/api/users').send(victimCreds);
+    victimId = createRes.body.id;
+    victimAgent = request.agent(app);
+    await victimAgent.post('/api/auth/login').send(victimCreds);
+  });
+
+  it('victim session is valid before password reset', async () => {
+    const res = await victimAgent.get('/api/auth/me');
+    expect(res.status).toBe(200);
+  });
+
+  it('admin resets victim password → 200 with no passwordHash', async () => {
+    const res = await adminApi
+      .put(`/api/users/${victimId}`)
+      .send({ password: 'new-victim-pass-456!' });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('passwordHash');
+  });
+
+  it('old victim session → 401 after password reset (Inv. 4)', async () => {
+    const res = await victimAgent.get('/api/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  it('collateral: operator session unaffected by victim password reset', async () => {
+    const res = await operatorApi.get('/api/auth/me');
+    expect(res.status).toBe(200);
+  });
+
+  it('collateral: admin session unaffected by victim password reset', async () => {
+    const res = await adminApi.get('/api/auth/me');
+    expect(res.status).toBe(200);
   });
 });

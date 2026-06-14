@@ -106,6 +106,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
           req.session.regenerate((err) => {
             if (err) return reject(err);
             req.session.userId = safeAdmin.id;
+            req.session.sessionEpoch = 0;  // new user always starts at epoch 0
             req.session.save((err2) => { if (err2) return reject(err2); resolve(); });
           });
         });
@@ -148,6 +149,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     req.session.regenerate((err) => {
       if (err) return res.status(500).json({ error: 'login failed' });
       req.session.userId = record.id;
+      req.session.sessionEpoch = record.sessionEpoch ?? 0;
       req.session.save((err2) => {
         if (err2) return res.status(500).json({ error: 'login failed' });
         res.json({ username: record.username, role: record.role });

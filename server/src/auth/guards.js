@@ -88,6 +88,13 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
       return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
     }
 
+    // Session-epoch check: password reset bumps the epoch on the record; sessions that
+    // predate the reset carry the old epoch and are rejected. Missing epoch on either side
+    // defaults to 0 so existing sessions/records are never invalidated on deploy.
+    if ((req.session.sessionEpoch ?? 0) !== (user.sessionEpoch ?? 0)) {
+      return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
+    }
+
     req.authUser = { id: user.id, username: user.username, role: user.role };  // no hash
     next();
   };
