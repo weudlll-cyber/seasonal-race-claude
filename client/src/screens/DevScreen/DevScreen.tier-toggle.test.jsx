@@ -57,6 +57,9 @@ vi.mock('./sections/SurfaceClassManager.jsx', () => ({
 vi.mock('./sections/SystemSettings.jsx', () => ({
   default: () => <div data-testid="section-system" />,
 }));
+vi.mock('./sections/UserManagementSection.jsx', () => ({
+  default: () => <div data-testid="section-usermanagement" />,
+}));
 
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import DevScreen, { isOperatorTier } from './DevScreen.jsx';
@@ -253,6 +256,20 @@ describe('DevScreen role gating — null user (C1-E)', () => {
     expect(screen.queryByText('Advanced')).toBeNull();
     // Operator sections still accessible (fail-closed, not fail-silent)
     expect(screen.getByText('Race Defaults')).toBeTruthy();
+  });
+});
+
+describe('DevScreen role gating — User Management section (C4)', () => {
+  it('admin (All view) sees "User Management" in sidebar', () => {
+    useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' } });
+    renderDevScreen();
+    expect(screen.getByText('User Management')).toBeTruthy();
+  });
+
+  it('operator does not see "User Management" in sidebar', () => {
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
+    renderDevScreen();
+    expect(screen.queryByText('User Management')).toBeNull();
   });
 });
 

@@ -27,6 +27,7 @@ import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
 import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import RubberBandSection from './sections/RubberBandSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
+import UserManagementSection from './sections/UserManagementSection.jsx';
 import s from './DevScreen.module.css';
 
 // Default-deny: only explicit 'operator' tier is operator-visible; anything else is admin-only.
@@ -155,6 +156,14 @@ const SECTIONS = [
     label: 'System',
     desc: 'Backup, restore, and factory reset',
     component: SystemSettings,
+    tier: 'advanced',
+  },
+  {
+    id: 'users',
+    icon: '👤',
+    label: 'User Management',
+    desc: 'Manage race directors — list, create, change role, reset password, delete',
+    component: UserManagementSection,
     tier: 'advanced',
   },
 ];
