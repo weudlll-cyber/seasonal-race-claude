@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import { InfoTooltip } from '../../components/InfoTooltip/index.js';
 import PlayerGroupsManager from './sections/PlayerGroupsManager.jsx';
@@ -27,6 +28,11 @@ import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import RubberBandSection from './sections/RubberBandSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import s from './DevScreen.module.css';
+
+// Default-deny: only explicit 'operator' tier is operator-visible; anything else is admin-only.
+export function isOperatorTier(tier) {
+  return tier === 'operator';
+}
 
 const SECTIONS = [
   // ── Tier 1 — Operator ────────────────────────────────────
@@ -154,6 +160,9 @@ const SECTIONS = [
 ];
 
 function DevScreen() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   const [view, setView] = useState(() => storageGet(KEYS.DEV_PANEL_VIEW) ?? 'all');
   const navigate = useNavigate();
@@ -163,19 +172,22 @@ function DevScreen() {
     storageSet(KEYS.DEV_PANEL_VIEW, newView);
     // If active section is advanced and switching to operator view, jump to first operator section
     const activeSection = SECTIONS.find((sec) => sec.id === activeId);
-    if (newView === 'operator' && activeSection?.tier === 'advanced') {
-      setActiveId(SECTIONS.find((sec) => sec.tier === 'operator').id);
+    if (newView === 'operator' && !isOperatorTier(activeSection?.tier)) {
+      setActiveId(SECTIONS.find((sec) => isOperatorTier(sec.tier)).id);
     }
   }
 
+  // Non-admin always sees only operator sections regardless of any persisted view value
+  const effectiveView = isAdmin ? view : 'operator';
+
   const visibleSections =
-    view === 'operator' ? SECTIONS.filter((sec) => sec.tier === 'operator') : SECTIONS;
+    effectiveView === 'operator' ? SECTIONS.filter((sec) => isOperatorTier(sec.tier)) : SECTIONS;
 
   const activeSection = visibleSections.find((sec) => sec.id === activeId) ?? visibleSections[0];
   const ActiveComponent = activeSection.component;
 
   // Index of first advanced section among visible sections (for tier divider)
-  const firstAdvancedIdx = visibleSections.findIndex((sec) => sec.tier === 'advanced');
+  const firstAdvancedIdx = visibleSections.findIndex((sec) => !isOperatorTier(sec.tier));
 
   return (
     <div className={s.screen}>
@@ -212,29 +224,31 @@ function DevScreen() {
           </div>
         </div>
 
-        {/* Tier Toggle */}
-        <div className={s.tierToggle}>
-          <span className={s.tierToggleLabel}>View:</span>
-          <div className={s.tierToggleBtns}>
-            <button
-              className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
-              onClick={() => handleViewChange('all')}
-            >
-              All
-            </button>
-            <button
-              className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
-              onClick={() => handleViewChange('operator')}
-            >
-              Operator
-            </button>
+        {/* Tier Toggle — admin only */}
+        {isAdmin && (
+          <div className={s.tierToggle}>
+            <span className={s.tierToggleLabel}>View:</span>
+            <div className={s.tierToggleBtns}>
+              <button
+                className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
+                onClick={() => handleViewChange('all')}
+              >
+                All
+              </button>
+              <button
+                className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
+                onClick={() => handleViewChange('operator')}
+              >
+                Operator
+              </button>
+            </div>
+            <InfoTooltip text="Switch between Operator view (everyday workflow) and All view (includes advanced tuning settings). Advanced settings are normally only used during initial setup." />
           </div>
-          <InfoTooltip text="Switch between Operator view (everyday workflow) and All view (includes advanced tuning settings). Advanced settings are normally only used during initial setup." />
-        </div>
+        )}
 
         {visibleSections.map((section, idx) => (
           <div key={section.id}>
-            {view === 'all' && idx === firstAdvancedIdx && (
+            {effectiveView === 'all' && idx === firstAdvancedIdx && (
               <div className={s.tierDivider}>
                 <span className={s.tierDividerLabel}>Advanced</span>
               </div>

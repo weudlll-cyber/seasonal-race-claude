@@ -3,13 +3,21 @@
 // Path:        client/src/screens/DevScreen/DevScreen.tier-toggle.test.jsx
 // Project:     RaceArena
 // Created:     2026-05-04
-// Description: PR-A3 tests — Tier Toggle ("All | Operator") behavior:
-//              visibility filtering, persistence, active section fallback.
+// Description: Tier Toggle ("All | Operator") behavior and Phase-C1 role gating:
+//              admin sees full toggle + advanced sections; operator is locked to
+//              operator-tier sections regardless of persisted view; null user is
+//              treated as non-admin (fail-closed).
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// ── Mock AuthContext so DevScreen can be rendered without a real AuthProvider ─
+
+vi.mock('../../contexts/AuthContext.jsx', () => ({
+  useAuth: vi.fn(),
+}));
 
 // ── Mock all section components to avoid deep render trees ───────────────────
 
@@ -50,7 +58,8 @@ vi.mock('./sections/SystemSettings.jsx', () => ({
   default: () => <div data-testid="section-system" />,
 }));
 
-import DevScreen from './DevScreen.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import DevScreen, { isOperatorTier } from './DevScreen.jsx';
 
 function renderDevScreen() {
   return render(
@@ -62,6 +71,8 @@ function renderDevScreen() {
 
 beforeEach(() => {
   localStorage.clear();
+  // Default to admin so all existing toggle tests continue to pass unchanged.
+  useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' } });
 });
 
 describe('DevScreen tier toggle — UI rendering', () => {
@@ -189,5 +200,72 @@ describe('DevScreen — section order (Race Defaults first)', () => {
   it('Race Defaults section content is shown by default', () => {
     renderDevScreen();
     expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+  });
+});
+
+// ── Phase C1 — Role-based access control ─────────────────────────────────────
+
+describe('DevScreen role gating — operator (C1-B/C)', () => {
+  it('B: operator has no view toggle in the DOM', () => {
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
+    renderDevScreen();
+    expect(screen.queryByText('All')).toBeNull();
+    // "Operator" button absent (only toggle uses that label; sidebar labels differ)
+    expect(screen.queryByRole('button', { name: 'Operator' })).toBeNull();
+  });
+
+  it('C: operator sees operator sections and no ADVANCED sections', () => {
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
+    renderDevScreen();
+    // Operator-tier sections present
+    expect(screen.getByText('Race Defaults')).toBeTruthy();
+    expect(screen.getByText('Player Groups')).toBeTruthy();
+    expect(screen.getByText('Race History')).toBeTruthy();
+    // Advanced sections absent
+    expect(screen.queryByText('Race Tuning')).toBeNull();
+    expect(screen.queryByText('Surface Classes')).toBeNull();
+    expect(screen.queryByText('System')).toBeNull();
+    // No "Advanced" divider
+    expect(screen.queryByText('Advanced')).toBeNull();
+  });
+});
+
+describe('DevScreen role gating — operator with stale localStorage (C1-D)', () => {
+  it('D: operator with devPanelView="all" in localStorage still cannot see ADVANCED sections', () => {
+    localStorage.setItem('racearena:devPanelView', JSON.stringify('all'));
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
+    renderDevScreen();
+    expect(screen.queryByText('Race Tuning')).toBeNull();
+    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByText('Advanced')).toBeNull();
+    // Operator sections still visible
+    expect(screen.getByText('Race Defaults')).toBeTruthy();
+  });
+});
+
+describe('DevScreen role gating — null user (C1-E)', () => {
+  it('E: null user is treated as non-admin — no ADVANCED sections, no view toggle', () => {
+    useAuth.mockReturnValue({ user: null });
+    renderDevScreen();
+    expect(screen.queryByText('All')).toBeNull();
+    expect(screen.queryByText('Race Tuning')).toBeNull();
+    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByText('Advanced')).toBeNull();
+    // Operator sections still accessible (fail-closed, not fail-silent)
+    expect(screen.getByText('Race Defaults')).toBeTruthy();
+  });
+});
+
+describe('DevScreen role gating — default-deny predicate (C1-F)', () => {
+  it('F: isOperatorTier is true only for explicit "operator", false for everything else', () => {
+    expect(isOperatorTier('operator')).toBe(true);
+
+    // All of these must return false (default-deny):
+    expect(isOperatorTier('advanced')).toBe(false);
+    expect(isOperatorTier(undefined)).toBe(false);
+    expect(isOperatorTier(null)).toBe(false);
+    expect(isOperatorTier('')).toBe(false);
+    expect(isOperatorTier('unknown')).toBe(false);
+    expect(isOperatorTier('OPERATOR')).toBe(false); // case-sensitive
   });
 });
