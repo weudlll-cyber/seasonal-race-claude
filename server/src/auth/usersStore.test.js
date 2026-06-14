@@ -92,6 +92,28 @@ describe('toSafeUser', () => {
       createdBy: 'setup',
     });
   });
+
+  it('strips sessionEpoch (internal field must not leak to clients)', () => {
+    const full = {
+      id: '2',
+      username: 'Bob',
+      usernameNormalized: 'bob',
+      passwordHash: '$2b$12$xyz',
+      sessionEpoch: 3,
+      role: 'operator',
+      createdAt: '2026-06-14T00:00:00.000Z',
+      createdBy: 'api',
+    };
+    const safe = toSafeUser(full);
+    expect(safe).not.toHaveProperty('sessionEpoch');
+    expect(safe).not.toHaveProperty('passwordHash');
+    expect(safe).toMatchObject({ id: '2', username: 'Bob', role: 'operator' });
+  });
+
+  it('strips sessionEpoch even when it is 0 (falsy)', () => {
+    const full = { id: '3', username: 'Carol', usernameNormalized: 'carol', passwordHash: 'h', sessionEpoch: 0, role: 'admin', createdAt: '', createdBy: '' };
+    expect(toSafeUser(full)).not.toHaveProperty('sessionEpoch');
+  });
 });
 
 describe('createUsersStore', () => {

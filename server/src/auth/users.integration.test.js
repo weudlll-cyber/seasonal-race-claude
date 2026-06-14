@@ -56,6 +56,13 @@ describe('GET /api/users', () => {
     }
   });
 
+  it('admin → no entry in the list has a sessionEpoch field', async () => {
+    const res = await adminApi.get('/api/users');
+    for (const u of res.body) {
+      expect(u).not.toHaveProperty('sessionEpoch');
+    }
+  });
+
   it('admin → list contains testadmin (seeded by beforeAll)', async () => {
     const res = await adminApi.get('/api/users');
     expect(res.body.some((u) => u.username === 'testadmin')).toBe(true);
@@ -75,10 +82,11 @@ describe('POST /api/users', () => {
     expect(res.status).toBe(403);
   });
 
-  it('admin with valid body → 201 with no passwordHash', async () => {
+  it('admin with valid body → 201 with no passwordHash and no sessionEpoch', async () => {
     const res = await adminApi.post('/api/users').send(NEW_USER);
     expect(res.status).toBe(201);
     expect(res.body).not.toHaveProperty('passwordHash');
+    expect(res.body).not.toHaveProperty('sessionEpoch');
     expect(res.body.username).toBe(NEW_USER.username);
     expect(res.body.role).toBe('operator');
   });
@@ -197,12 +205,13 @@ describe('PUT /api/users/:id', () => {
     expect(res.status).toBe(409);
   });
 
-  it('admin role change → 200 with updated role (no passwordHash)', async () => {
+  it('admin role change → 200 with updated role (no passwordHash, no sessionEpoch)', async () => {
     // Promote put-target to admin; now testadmin + put-target = 2 admins
     const res = await adminApi.put(`/api/users/${targetId}`).send({ role: 'admin' });
     expect(res.status).toBe(200);
     expect(res.body.role).toBe('admin');
     expect(res.body).not.toHaveProperty('passwordHash');
+    expect(res.body).not.toHaveProperty('sessionEpoch');
   });
 
   it('admin invalid role → 400', async () => {

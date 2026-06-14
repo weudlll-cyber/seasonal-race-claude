@@ -47,7 +47,7 @@ export async function verifyPassword(plain, hash) {
 // ── Safe projection ───────────────────────────────────────────────────────────
 
 export function toSafeUser(user) {
-  const { passwordHash: _omit, ...safe } = user;
+  const { passwordHash: _p, sessionEpoch: _e, ...safe } = user;
   return safe;
 }
 
