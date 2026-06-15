@@ -29,6 +29,7 @@ export function loadSprite(url) {
       resolve(img);
     };
     img.onerror = () => reject(new Error(`Failed to load sprite: ${url}`));
+    img.crossOrigin = 'use-credentials';
     img.src = url;
   });
 }

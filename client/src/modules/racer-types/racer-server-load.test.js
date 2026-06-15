@@ -154,8 +154,10 @@ import {
   getRacerTypeById,
   registerRacerType,
   removeRacerType,
+  warmUpAllRacerTypes,
   _resetRacersReadyForTesting,
   _resetLoadedRacerTypesForTesting,
+  _resetWarmUpForTesting,
   HorseRacerType,
 } from './index.js';
 import {
@@ -166,6 +168,8 @@ import {
   uploadRacerSprite,
 } from '../../services/racerApi.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
+import { loadSprite } from './spriteLoader.js';
+import { getCoatVariants } from './spriteTinter.js';
 
 const VALID_SERVER_CONFIG = {
   id: 'test-server-racer',
@@ -184,6 +188,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   _resetRacersReadyForTesting();
   _resetLoadedRacerTypesForTesting();
+  _resetWarmUpForTesting();
   // Default: write ops succeed
   createRacer.mockResolvedValue({});
   updateRacer.mockResolvedValue({});
@@ -508,5 +513,57 @@ describe('Honesty proof (d) — stale-on-error: fetch failure does not clear reg
     // Stale entry must still be present
     const type = getRacerType('test-server-racer');
     expect(type.config.id).toBe('test-server-racer');
+  });
+});
+
+// ── HONESTY PROOFS (D6b-Fix) — server racer warm-up ─────────────────────────
+//
+// (b) _runLoad warms up each successfully constructed server racer:
+//     non-mask → getCoatVariants called with server spriteUrl.
+//     mask-mode → loadSprite called with server spriteUrl.
+//     RED: without _warmUpRacerType(instance) in _runLoad, neither is called.
+//     GREEN: after the fix, both are called.
+// (c) warmUpAllRacerTypes (built-in path) still calls _warmUpRacerType via the
+//     helper — refactor does not change built-in warm-up behavior.
+
+describe('Honesty proof (b) — _runLoad warms up each server racer (D6b-Fix)', () => {
+  it('non-mask racer: getCoatVariants called with server spriteUrl after load (RED without warm-up call in _runLoad)', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes();
+    expect(getCoatVariants).toHaveBeenCalledWith(
+      'http://test/api/racers/test-server-racer/sprite',
+      expect.any(Array),
+      expect.any(String)
+    );
+  });
+
+  it('mask-mode racer: loadSprite called with server spriteUrl after load', async () => {
+    const maskConfig = { ...VALID_SERVER_CONFIG, tintMode: 'mask' };
+    fetchRacers.mockResolvedValue([maskConfig]);
+    await loadServerRacerTypes();
+    expect(loadSprite).toHaveBeenCalledWith('http://test/api/racers/test-server-racer/sprite');
+  });
+
+  it('empty server list: neither loadSprite nor getCoatVariants called (no server racers to warm up)', async () => {
+    fetchRacers.mockResolvedValue([]);
+    await loadServerRacerTypes();
+    expect(getCoatVariants).not.toHaveBeenCalled();
+    expect(loadSprite).not.toHaveBeenCalled();
+  });
+});
+
+describe('Honesty proof (c) — warmUpAllRacerTypes still warms built-in types after refactor (D6b-Fix)', () => {
+  it('warmUpAllRacerTypes fires getCoatVariants for built-in multiply-mode types', () => {
+    // _warmedUp was reset in beforeEach; call explicitly to verify built-in path.
+    warmUpAllRacerTypes();
+    // At least one built-in type (e.g. horse, tintMode=multiply) triggers getCoatVariants.
+    expect(getCoatVariants).toHaveBeenCalled();
+  });
+
+  it('warmUpAllRacerTypes is idempotent — second call does not fire again', () => {
+    warmUpAllRacerTypes();
+    const callsAfterFirst = getCoatVariants.mock.calls.length;
+    warmUpAllRacerTypes();
+    expect(getCoatVariants.mock.calls.length).toBe(callsAfterFirst);
   });
 });

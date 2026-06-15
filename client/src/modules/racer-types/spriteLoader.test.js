@@ -44,4 +44,27 @@ describe('spriteLoader', () => {
     await loadSprite('/test.png');
     expect(getCachedSprite('/test.png')).toBeDefined();
   });
+
+  // Honesty proof A1 (D6b-Fix): crossOrigin must be set BEFORE src to avoid canvas taint.
+  // RED without the crossOrigin assignment; GREEN with it.
+  it('A1 — sets img.crossOrigin="use-credentials" before assigning img.src', async () => {
+    let crossOriginAtSrcTime;
+    class TrackingImage {
+      constructor() {
+        this._onload = null;
+        this.crossOrigin = undefined;
+      }
+      set onload(fn) {
+        this._onload = fn;
+      }
+      set onerror(_fn) {}
+      set src(_val) {
+        crossOriginAtSrcTime = this.crossOrigin;
+        Promise.resolve().then(() => this._onload && this._onload());
+      }
+    }
+    vi.stubGlobal('Image', TrackingImage);
+    await loadSprite('/test-crossorigin.png');
+    expect(crossOriginAtSrcTime).toBe('use-credentials');
+  });
 });

@@ -391,6 +391,24 @@ export function resetRacerTypeOverride(id, fieldName) {
 
 let _warmedUp = false;
 
+function _warmUpRacerType(racerType) {
+  const cfg = racerType.config;
+  if (!cfg) return;
+  if (cfg.tintMode === 'mask') {
+    loadSprite(cfg.spriteUrl).catch(() => {});
+    if (cfg.maskUrl) loadSprite(cfg.maskUrl).catch(() => {});
+    // Preload per-coat pattern masks and dual-mask border masks.
+    const coatMasks = new Set([
+      ...(cfg.coats?.map((c) => c.patternMask).filter(Boolean) ?? []),
+      ...(cfg.coats?.map((c) => c.borderMask).filter(Boolean) ?? []),
+    ]);
+    for (const url of coatMasks) loadSprite(url).catch(() => {});
+  } else {
+    const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
+    getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch(() => {});
+  }
+}
+
 /**
  * Warm up sprite caches for all racer types — built-in and user-created.
  * - multiply-mode types: pre-tint all coat variants via getCoatVariants.
@@ -402,21 +420,7 @@ export function warmUpAllRacerTypes() {
   _warmedUp = true;
   const allTypes = [...Object.values(RACER_TYPES), ...Object.values(_loadedRacerTypes)];
   for (const racerType of allTypes) {
-    const cfg = racerType.config;
-    if (!cfg) continue;
-    if (cfg.tintMode === 'mask') {
-      loadSprite(cfg.spriteUrl).catch(() => {});
-      if (cfg.maskUrl) loadSprite(cfg.maskUrl).catch(() => {});
-      // Preload per-coat pattern masks and dual-mask border masks.
-      const coatMasks = new Set([
-        ...(cfg.coats?.map((c) => c.patternMask).filter(Boolean) ?? []),
-        ...(cfg.coats?.map((c) => c.borderMask).filter(Boolean) ?? []),
-      ]);
-      for (const url of coatMasks) loadSprite(url).catch(() => {});
-    } else {
-      const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
-      getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch(() => {});
-    }
+    _warmUpRacerType(racerType);
   }
 }
 
@@ -485,11 +489,13 @@ async function _runLoad() {
 
   for (const cfg of configs) {
     try {
-      _loadedRacerTypes[cfg.id] = new SpriteRacerType({
+      const instance = new SpriteRacerType({
         ...cfg,
         spriteUrl: `${API_BASE_URL}/api/racers/${cfg.id}/sprite`,
         trailFactory: getTrailFactory(cfg.trailStyle),
       });
+      _loadedRacerTypes[cfg.id] = instance;
+      _warmUpRacerType(instance);
     } catch (err) {
       console.error(
         `[RaceArena] loadServerRacerTypes: skipping racer "${cfg.id}" — ${err.message}`
