@@ -6,7 +6,7 @@
 // Description: Root application component — wires up client-side routing
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SetupScreen from './screens/SetupScreen/SetupScreen.jsx';
 import DevScreen from './screens/DevScreen/DevScreen.jsx';
@@ -20,22 +20,13 @@ import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
-import { storageGet, KEYS } from './modules/storage/storage.js';
-import { resolveActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
+import { useActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
 import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
 function App() {
-  // Read the active brand event name directly from localStorage at mount.
-  // This covers page loads where a profile was already active.
-  const [brandEventName, setBrandEventName] = useState(
-    () =>
-      resolveActiveBrandProfile(
-        storageGet(KEYS.BRANDING, []),
-        storageGet(KEYS.ACTIVE_SESSION, null)
-      )?.eventName ?? null
-  );
+  const brandEventName = useActiveBrandProfile()?.eventName ?? null;
 
   useEffect(() => {
     document.title = brandEventName ? `${brandEventName} — RaceArena` : DEFAULT_TITLE;
@@ -43,17 +34,6 @@ function App() {
       document.title = DEFAULT_TITLE;
     };
   }, [brandEventName]);
-
-  // Update the title when the user selects a profile in SetupScreen (same-tab, no
-  // navigation). SetupScreen dispatches 'racearena:brand-active' from the selector
-  // onChange — the only place that changes KEYS.ACTIVE_SESSION.
-  useEffect(() => {
-    function onBrandActive(e) {
-      setBrandEventName(e.detail?.eventName ?? null);
-    }
-    window.addEventListener('racearena:brand-active', onBrandActive);
-    return () => window.removeEventListener('racearena:brand-active', onBrandActive);
-  }, []);
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
