@@ -14,6 +14,9 @@
   z-index: 20;
   /* drop-shadow follows the image's actual outline (handles transparent PNGs) */
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
+  /* Own compositing layer: drop-shadow is rasterised once and composited each
+     frame instead of being recomputed while the race canvas redraws below. */
+  will-change: transform;
 }
 
 .brand-logo-overlay__img {
