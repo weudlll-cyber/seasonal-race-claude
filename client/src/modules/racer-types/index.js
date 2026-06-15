@@ -394,9 +394,6 @@ let _warmedUp = false;
 function _warmUpRacerType(racerType) {
   const cfg = racerType.config;
   if (!cfg) return;
-  console.info(
-    `[warmup] ${cfg ? racerType.config.id : '??'} spriteUrl=${cfg?.spriteUrl} tintMode=${cfg?.tintMode}`
-  );
   if (cfg.tintMode === 'mask') {
     loadSprite(cfg.spriteUrl).catch((e) =>
       console.error(`[warmup] ${cfg.id} FAILED: ${e.message}`)

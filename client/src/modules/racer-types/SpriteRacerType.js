@@ -20,7 +20,7 @@
  *   will introduce an RteManager that consumes these definitions.
  */
 
-import { getCachedSprite } from './spriteLoader.js';
+import { getCachedSprite, loadSprite } from './spriteLoader.js';
 import {
   getCoatVariants,
   tintSprite,
@@ -89,6 +89,10 @@ export class SpriteRacerType {
     // Post-spread defaults that depend on other config values.
     this.config.fallbackColor ??= this.config.primaryColor;
     this.config.defaultCoatId ??= this.config.coats[0]?.id;
+
+    // Tracks which spriteUrls have had a lazy-load kicked from the draw path.
+    // Instance-level so each racer type manages its own kick independently.
+    this._lazyKicked = new Set();
   }
 
   getEmoji() {
@@ -202,6 +206,21 @@ export class SpriteRacerType {
 
     // 3. Fallback: colored circle while sprite loads.
     if (!drawable) {
+      // Fire-and-forget lazy load on the first cache miss for this spriteUrl.
+      // The next frame will pick up the sprite automatically once it is cached.
+      if (!this._lazyKicked.has(cfg.spriteUrl)) {
+        this._lazyKicked.add(cfg.spriteUrl);
+        if (cfg.tintMode === 'mask') {
+          loadSprite(cfg.spriteUrl).catch((e) =>
+            console.error(`[lazy-kick] ${cfg.id} FAILED: ${e.message}`)
+          );
+        } else {
+          const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
+          getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch((e) =>
+            console.error(`[lazy-kick] ${cfg.id} FAILED: ${e.message}`)
+          );
+        }
+      }
       if (!_loggedFallback.has(cfg.spriteUrl)) {
         _loggedFallback.add(cfg.spriteUrl);
         console.warn(

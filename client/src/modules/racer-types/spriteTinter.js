@@ -215,14 +215,10 @@ export function tintSprite(sourceImage, tintColor, mode = 'multiply', patternId 
  */
 export async function getCoatVariants(sourceUrl, coats, tintMode = 'multiply') {
   const cacheKey = `${sourceUrl}::${tintMode}`;
-  console.info(
-    `[gcv] enter ${sourceUrl} tintMode=${tintMode} cached=${_variantCache.has(cacheKey)}`
-  );
   if (_variantCache.has(cacheKey)) {
     return _variantCache.get(cacheKey);
   }
   const img = await loadSprite(sourceUrl);
-  console.info(`[gcv] base ready ${sourceUrl}`);
 
   let resolvedMode = tintMode;
   if (tintMode === 'auto') {
@@ -241,7 +237,6 @@ export async function getCoatVariants(sourceUrl, coats, tintMode = 'multiply') {
     map.set(coat.id, coat.tint === null ? img : tintSprite(img, coat.tint, resolvedMode));
   }
   _variantCache.set(cacheKey, map);
-  console.info(`[gcv] DONE ${sourceUrl} variants=${map.size}`);
   return map;
 }
 
