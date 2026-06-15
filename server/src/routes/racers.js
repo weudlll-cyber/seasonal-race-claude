@@ -155,16 +155,26 @@ router.post('/', (req, res) => {
   }
 
   const now = new Date().toISOString();
+  const b = req.body;
   const racer = {
     id,
-    name: req.body.name.trim(),
-    emoji: req.body.emoji.trim(),
-    frameCount: req.body.frameCount,
-    basePeriodMs: req.body.basePeriodMs,
-    displaySize: req.body.displaySize,
-    trailStyle: req.body.trailStyle,
-    coats: req.body.coats,
-    primaryColor: req.body.primaryColor,
+    name: b.name.trim(),
+    emoji: b.emoji.trim(),
+    frameCount: b.frameCount,
+    basePeriodMs: b.basePeriodMs,
+    displaySize: b.displaySize,
+    trailStyle: b.trailStyle,
+    coats: b.coats,
+    primaryColor: b.primaryColor,
+    ...(b.bodyFillX !== undefined && { bodyFillX: b.bodyFillX }),
+    ...(b.bodyFillY !== undefined && { bodyFillY: b.bodyFillY }),
+    ...(b.frameWidth !== undefined && { frameWidth: b.frameWidth }),
+    ...(b.frameHeight !== undefined && { frameHeight: b.frameHeight }),
+    ...(b.tintMode !== undefined && { tintMode: b.tintMode }),
+    ...(b.defaultCoatId !== undefined && { defaultCoatId: b.defaultCoatId }),
+    ...(b.speedMultiplier !== undefined && { speedMultiplier: b.speedMultiplier }),
+    ...(b.baseRotationOffset !== undefined && { baseRotationOffset: b.baseRotationOffset }),
+    ...(b.surfaceClasses !== undefined && { surfaceClasses: b.surfaceClasses }),
     spriteFile: null,
     createdAt: now,
     updatedAt: now,
@@ -191,16 +201,26 @@ router.put('/:id', (req, res) => {
   if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
 
   const now = new Date().toISOString();
+  const b = req.body;
   const racer = {
     ...existing,
-    name: req.body.name.trim(),
-    emoji: req.body.emoji.trim(),
-    frameCount: req.body.frameCount,
-    basePeriodMs: req.body.basePeriodMs,
-    displaySize: req.body.displaySize,
-    trailStyle: req.body.trailStyle,
-    coats: req.body.coats,
-    primaryColor: req.body.primaryColor,
+    name: b.name.trim(),
+    emoji: b.emoji.trim(),
+    frameCount: b.frameCount,
+    basePeriodMs: b.basePeriodMs,
+    displaySize: b.displaySize,
+    trailStyle: b.trailStyle,
+    coats: b.coats,
+    primaryColor: b.primaryColor,
+    ...(b.bodyFillX !== undefined && { bodyFillX: b.bodyFillX }),
+    ...(b.bodyFillY !== undefined && { bodyFillY: b.bodyFillY }),
+    ...(b.frameWidth !== undefined && { frameWidth: b.frameWidth }),
+    ...(b.frameHeight !== undefined && { frameHeight: b.frameHeight }),
+    ...(b.tintMode !== undefined && { tintMode: b.tintMode }),
+    ...(b.defaultCoatId !== undefined && { defaultCoatId: b.defaultCoatId }),
+    ...(b.speedMultiplier !== undefined && { speedMultiplier: b.speedMultiplier }),
+    ...(b.baseRotationOffset !== undefined && { baseRotationOffset: b.baseRotationOffset }),
+    ...(b.surfaceClasses !== undefined && { surfaceClasses: b.surfaceClasses }),
     updatedAt: now,
   };
 

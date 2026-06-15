@@ -42,6 +42,7 @@ vi.mock('../../modules/racer-types/spritesheetBuilder.js', () => ({
 
 vi.mock('../../modules/racer-types/spriteTinter.js', () => ({
   detectTintMode: vi.fn(() => 'multiply'),
+  ensureRacerTypeWarm: vi.fn(),
 }));
 
 vi.mock('../../modules/racer-types/standardCoats.js', () => ({

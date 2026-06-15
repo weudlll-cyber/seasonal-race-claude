@@ -16,6 +16,7 @@ import {
   tintSpriteBodyAndMask,
   tintSpriteWithDualMask,
   getPatternedVariant,
+  ensureRacerTypeWarm,
   PATTERN_IDS,
   _clearTintCache,
   _clearMaskedTintCache,
@@ -576,5 +577,80 @@ describe('getCoatVariants — auto tint mode routing', () => {
     await getCoatVariants('/auto-bright.png', [{ id: 'coat1', tint: '#8B4513' }], 'auto');
     expect(compositeOps).toContain('multiply');
     expect(compositeOps).not.toContain('screen');
+  });
+});
+
+// ── ensureRacerTypeWarm (A-dedup honesty proof) ───────────────────────────────
+//
+// Tests prove the shared function handles both mask and non-mask paths correctly.
+// (a) Non-mask: kicks getCoatVariants (via loadSprite internally).
+// (b) Mask with maskUrl: kicks loadSprite for spriteUrl AND maskUrl.
+// (c) Mask with coat-level patternMask/borderMask: kicks loadSprite for each.
+// (d) Mask + lazy-kick proves masks are NOW loaded (was omitted before dedup).
+//     RED: before dedup, inline lazy-kick only loaded the base sprite.
+//     GREEN: ensureRacerTypeWarm loads base + maskUrl + coat masks.
+
+describe('ensureRacerTypeWarm — shared warm-up function (A-dedup, D6b-finalize)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadSprite.mockResolvedValue({});
+    _clearTintCache();
+  });
+
+  it('(a) non-mask: loadSprite called for spriteUrl (via getCoatVariants internally)', () => {
+    ensureRacerTypeWarm({
+      id: 'test',
+      spriteUrl: '/sprite.png',
+      coats: [{ id: 'default', tint: null }],
+      tintMode: 'multiply',
+    });
+    expect(loadSprite).toHaveBeenCalledWith('/sprite.png');
+  });
+
+  it('(b) mask with maskUrl: loadSprite called for spriteUrl and maskUrl', () => {
+    ensureRacerTypeWarm({
+      id: 'test',
+      spriteUrl: '/sprite.png',
+      maskUrl: '/mask.png',
+      coats: [],
+      tintMode: 'mask',
+    });
+    expect(loadSprite).toHaveBeenCalledWith('/sprite.png');
+    expect(loadSprite).toHaveBeenCalledWith('/mask.png');
+  });
+
+  it('(c) mask with coat patternMask/borderMask: all coat masks loaded', () => {
+    ensureRacerTypeWarm({
+      id: 'test',
+      spriteUrl: '/sprite.png',
+      coats: [
+        { id: 'a', patternMask: '/pattern-a.png' },
+        { id: 'b', borderMask: '/border-b.png' },
+        { id: 'c', patternMask: '/pattern-c.png', borderMask: '/border-c.png' },
+      ],
+      tintMode: 'mask',
+    });
+    expect(loadSprite).toHaveBeenCalledWith('/sprite.png');
+    expect(loadSprite).toHaveBeenCalledWith('/pattern-a.png');
+    expect(loadSprite).toHaveBeenCalledWith('/border-b.png');
+    expect(loadSprite).toHaveBeenCalledWith('/pattern-c.png');
+    expect(loadSprite).toHaveBeenCalledWith('/border-c.png');
+  });
+
+  it('(d) mask without maskUrl or coat masks: only loadSprite for spriteUrl', () => {
+    ensureRacerTypeWarm({
+      id: 'test',
+      spriteUrl: '/sprite.png',
+      coats: [{ id: 'default' }],
+      tintMode: 'mask',
+    });
+    expect(loadSprite).toHaveBeenCalledTimes(1);
+    expect(loadSprite).toHaveBeenCalledWith('/sprite.png');
+  });
+
+  it('null/undefined cfg → no-op (no throw)', () => {
+    expect(() => ensureRacerTypeWarm(null)).not.toThrow();
+    expect(() => ensureRacerTypeWarm(undefined)).not.toThrow();
+    expect(loadSprite).not.toHaveBeenCalled();
   });
 });

@@ -71,8 +71,7 @@ import { MantaRacerType } from './MantaRacerType.js';
 import { DolphinRacerType } from './DolphinRacerType.js';
 import { SnowmobileRacerType } from './SnowmobileRacerType.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
-import { getCoatVariants } from './spriteTinter.js';
-import { loadSprite } from './spriteLoader.js';
+import { ensureRacerTypeWarm } from './spriteTinter.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
 import { getTrailFactory } from './trailStyles.js';
 import {
@@ -391,38 +390,10 @@ export function resetRacerTypeOverride(id, fieldName) {
 
 let _warmedUp = false;
 
-function _warmUpRacerType(racerType) {
-  const cfg = racerType.config;
-  if (!cfg) return;
-  if (cfg.tintMode === 'mask') {
-    loadSprite(cfg.spriteUrl).catch((e) =>
-      console.error(`[warmup] ${cfg.id} FAILED: ${e.message}`)
-    );
-    if (cfg.maskUrl)
-      loadSprite(cfg.maskUrl).catch((e) =>
-        console.error(`[warmup] ${cfg.id} mask FAILED: ${e.message}`)
-      );
-    // Preload per-coat pattern masks and dual-mask border masks.
-    const coatMasks = new Set([
-      ...(cfg.coats?.map((c) => c.patternMask).filter(Boolean) ?? []),
-      ...(cfg.coats?.map((c) => c.borderMask).filter(Boolean) ?? []),
-    ]);
-    for (const url of coatMasks)
-      loadSprite(url).catch((e) =>
-        console.error(`[warmup] ${cfg.id} coatMask FAILED: ${e.message}`)
-      );
-  } else {
-    const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
-    getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch((e) =>
-      console.error(`[warmup] ${cfg.id} FAILED: ${e.message}`)
-    );
-  }
-}
-
 /**
  * Warm up sprite caches for all racer types — built-in and user-created.
- * - multiply-mode types: pre-tint all coat variants via getCoatVariants.
- * - mask-mode types: preload base sprite + mask sprite; tinting is on-demand.
+ * Delegates to ensureRacerTypeWarm (spriteTinter.js) which handles both
+ * mask-mode (loadSprite) and multiply-mode (getCoatVariants) paths.
  * Idempotent — safe to call multiple times.
  */
 export function warmUpAllRacerTypes() {
@@ -430,7 +401,7 @@ export function warmUpAllRacerTypes() {
   _warmedUp = true;
   const allTypes = [...Object.values(RACER_TYPES), ...Object.values(_loadedRacerTypes)];
   for (const racerType of allTypes) {
-    _warmUpRacerType(racerType);
+    ensureRacerTypeWarm(racerType.config);
   }
 }
 
@@ -505,7 +476,7 @@ async function _runLoad() {
         trailFactory: getTrailFactory(cfg.trailStyle),
       });
       _loadedRacerTypes[cfg.id] = instance;
-      _warmUpRacerType(instance);
+      ensureRacerTypeWarm(instance.config);
     } catch (err) {
       console.error(
         `[RaceArena] loadServerRacerTypes: skipping racer "${cfg.id}" — ${err.message}`

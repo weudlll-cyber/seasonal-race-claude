@@ -674,3 +674,72 @@ describe('Operator: can perform normal CRUD (operator+)', () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ── Honesty proof (C-persist) — extended config fields persisted (D6b-finalize) ─
+//
+// POST / PUT with bodyFillX, bodyFillY, frameWidth, frameHeight, tintMode,
+// defaultCoatId, speedMultiplier, baseRotationOffset, surfaceClasses →
+// saved record CONTAINS those fields.
+// spriteDataUrl must NOT appear in the saved record.
+//
+// RED: old narrow whitelist silently drops all extended fields.
+// GREEN: extended fields present in returned record.
+
+describe('Honesty proof (C-persist) — extended config fields persisted (D6b-finalize)', () => {
+  it('POST with extended fields → returned record contains them', async () => {
+    const id = 'test-racer-c-persist-post';
+    const body = {
+      ...BASE_RACER,
+      id,
+      bodyFillX: 0.398,
+      bodyFillY: 0.672,
+      frameWidth: 128,
+      frameHeight: 128,
+      tintMode: 'multiply',
+      defaultCoatId: 'black',
+      speedMultiplier: 1.2,
+      baseRotationOffset: 1.5707,
+      surfaceClasses: ['sand'],
+      spriteDataUrl: 'data:image/png;base64,abc', // must NOT appear in record
+    };
+    const res = await admin.post('/api/racers').send(body);
+    expect(res.status).toBe(201);
+    createdIds.push(id);
+    expect(res.body.bodyFillX).toBe(0.398);
+    expect(res.body.bodyFillY).toBe(0.672);
+    expect(res.body.frameWidth).toBe(128);
+    expect(res.body.frameHeight).toBe(128);
+    expect(res.body.tintMode).toBe('multiply');
+    expect(res.body.defaultCoatId).toBe('black');
+    expect(res.body.speedMultiplier).toBe(1.2);
+    expect(res.body.baseRotationOffset).toBe(1.5707);
+    expect(res.body.surfaceClasses).toEqual(['sand']);
+    expect(res.body.spriteDataUrl).toBeUndefined();
+  });
+
+  it('PUT with extended fields → updated record contains them', async () => {
+    const id = 'test-racer-c-persist-put';
+    await admin.post('/api/racers').send({ id, ...BASE_RACER });
+    createdIds.push(id);
+    const res = await admin.put(`/api/racers/${id}`).send({
+      ...BASE_RACER,
+      bodyFillX: 0.5,
+      bodyFillY: 0.8,
+      tintMode: 'screen',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.bodyFillX).toBe(0.5);
+    expect(res.body.bodyFillY).toBe(0.8);
+    expect(res.body.tintMode).toBe('screen');
+  });
+
+  it('POST without extended fields → omitted from record (no undefined entries)', async () => {
+    const id = 'test-racer-c-persist-minimal';
+    const res = await admin.post('/api/racers').send({ id, ...BASE_RACER });
+    expect(res.status).toBe(201);
+    createdIds.push(id);
+    // Extended fields absent from body must not appear in record
+    expect(res.body.bodyFillX).toBeUndefined();
+    expect(res.body.tintMode).toBeUndefined();
+  });
+});

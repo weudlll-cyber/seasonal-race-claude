@@ -437,8 +437,10 @@ export default function RaceScreen() {
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     const displaySize = racerType.config.displaySize;
-    const bodyFillNarrow = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
-    const bodyFillLong = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    const _bfNarrowRaw = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    const _bfLongRaw = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
+    const bodyFillLong = Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
     const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
     // physicalSpriteSize: frame-based scale from real track width — drives rowGapPx / rowCount (physics).
     let physicalSpriteSize = displaySize;

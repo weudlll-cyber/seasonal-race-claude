@@ -22,6 +22,7 @@ import { STANDARD_COAT_PALETTE } from '../../modules/racer-types/standardCoats.j
 import { slugify, uniqueSlug } from '../../utils/slugify.js';
 import { SpriteGeneratorPanel } from './SpriteGeneratorPanel.jsx';
 import { RacerMetadataPanel } from './RacerMetadataPanel.jsx';
+import { measureBodyFill } from './canvasUtils.js';
 import s from './RacerEditor.module.css';
 
 const DEFAULT_ANIM = {
@@ -115,6 +116,11 @@ function RacerEditor() {
     }
 
     try {
+      const measured =
+        spriteDataUrl && spriteDataUrl.startsWith('data:')
+          ? await measureBodyFill(spriteDataUrl, animConfig.frameCount)
+          : null;
+
       await registerRacerType({
         id,
         name: metadata.name.trim(),
@@ -131,6 +137,12 @@ function RacerEditor() {
         baseRotationOffset: animConfig.baseRotationOffset,
         surfaceClasses: metadata.surfaceClasses,
         tintMode,
+        ...(measured && {
+          bodyFillX: measured.bodyFillX,
+          bodyFillY: measured.bodyFillY,
+          frameWidth: measured.frameWidth,
+          frameHeight: measured.frameHeight,
+        }),
       });
       navigate('/setup');
     } catch (err) {

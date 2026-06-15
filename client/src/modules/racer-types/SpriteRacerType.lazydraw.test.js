@@ -23,6 +23,7 @@ vi.mock('./spriteTinter.js', () => {
   getCoatVariants.cached = vi.fn().mockReturnValue(undefined);
   return {
     getCoatVariants,
+    ensureRacerTypeWarm: vi.fn(),
     tintSprite: vi.fn().mockReturnValue(null),
     tintSpriteWithMask: vi.fn().mockReturnValue(null),
     tintSpriteBodyAndMask: vi.fn().mockReturnValue(null),
@@ -37,8 +38,7 @@ vi.mock('./spriteTinter.js', () => {
 // ── Imports (after mocks) ──────────────────────────────────────────────────────
 
 import { SpriteRacerType } from './SpriteRacerType.js';
-import { getCoatVariants } from './spriteTinter.js';
-import { loadSprite } from './spriteLoader.js';
+import { getCoatVariants, ensureRacerTypeWarm } from './spriteTinter.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -82,33 +82,36 @@ beforeEach(() => {
   // Reset to cache-miss state after clearAllMocks wipes the mock return values.
   getCoatVariants.cached.mockReturnValue(undefined);
   getCoatVariants.mockReturnValue(new Promise(() => {}));
-  loadSprite.mockReturnValue(new Promise(() => {}));
 });
 
 // ── Honesty proofs ─────────────────────────────────────────────────────────────
 //
-// (a) Cache miss → exactly ONE getCoatVariants call (non-mask) / loadSprite call (mask).
-//     Second frame with still-empty cache does NOT kick again (idempotent).
-//     RED: without the kick code, neither function is called.
+// (a) Cache miss → ensureRacerTypeWarm called ONCE (shared function for both
+//     mask and non-mask paths). Second frame does NOT kick again (idempotent).
+//     RED: without the kick code, ensureRacerTypeWarm is never called.
 //     GREEN: first frame calls once; second frame does not add another call.
+// (a-dedup) ensureRacerTypeWarm (not inline getCoatVariants/loadSprite) is called,
+//     proving the lazy-kick uses the same shared function as _runLoad warm-up.
 // (b) When variants are already cached (step 1 fast path), no kick fires at all.
 // (c) Two independent instances each get their own kick (instance-level tracker).
 
-describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
-  it('(a) non-mask: first draw on cache miss calls getCoatVariants exactly once', () => {
+describe('SpriteRacerType — lazy draw kick on cache miss (D6b-finalize)', () => {
+  it('(a) first draw on cache miss calls ensureRacerTypeWarm exactly once', () => {
     const instance = makeInstance();
     const ctx = makeCtx();
     instance._drawBody(ctx, RACER, 0);
-    expect(getCoatVariants).toHaveBeenCalledTimes(1);
-    expect(getCoatVariants).toHaveBeenCalledWith(SPRITE_URL, expect.any(Array), expect.any(String));
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(1);
+    expect(ensureRacerTypeWarm).toHaveBeenCalledWith(
+      expect.objectContaining({ spriteUrl: SPRITE_URL })
+    );
   });
 
-  it('(a) non-mask: second draw with cache still empty does NOT kick again (idempotent)', () => {
+  it('(a) second draw with cache still empty does NOT kick again (idempotent)', () => {
     const instance = makeInstance();
     const ctx = makeCtx();
     instance._drawBody(ctx, RACER, 0);
     instance._drawBody(ctx, RACER, 1);
-    expect(getCoatVariants).toHaveBeenCalledTimes(1);
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(1);
   });
 
   it('(a) fallback circle is drawn on cache miss (arc called)', () => {
@@ -118,20 +121,22 @@ describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
     expect(ctx.arc).toHaveBeenCalledTimes(1);
   });
 
-  it('(a) mask-mode: loadSprite kicked (not getCoatVariants) on cache miss', () => {
+  it('(a-dedup) mask-mode: ensureRacerTypeWarm called with mask config (shared function, loads masks internally)', () => {
     const instance = makeInstance({ tintMode: 'mask', maskUrl: '/mask.png' });
     const ctx = makeCtx();
     instance._drawBody(ctx, RACER, 0);
-    expect(loadSprite).toHaveBeenCalledWith(SPRITE_URL);
-    expect(getCoatVariants).not.toHaveBeenCalled();
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(1);
+    expect(ensureRacerTypeWarm).toHaveBeenCalledWith(
+      expect.objectContaining({ spriteUrl: SPRITE_URL, tintMode: 'mask' })
+    );
   });
 
-  it('(a) mask-mode: second draw does NOT kick loadSprite again (idempotent)', () => {
+  it('(a) mask-mode: second draw does NOT kick again (idempotent)', () => {
     const instance = makeInstance({ tintMode: 'mask', maskUrl: '/mask.png' });
     const ctx = makeCtx();
     instance._drawBody(ctx, RACER, 0);
     instance._drawBody(ctx, RACER, 1);
-    expect(loadSprite).toHaveBeenCalledTimes(1);
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(1);
   });
 
   it('(b) no kick when variant cache is already warm (fast path succeeds)', () => {
@@ -140,7 +145,7 @@ describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
     // Pre-fill variant cache so step 1 produces a drawable.
     getCoatVariants.cached.mockReturnValue(new Map([['default', {}]]));
     instance._drawBody(ctx, RACER, 0);
-    expect(getCoatVariants).not.toHaveBeenCalled();
+    expect(ensureRacerTypeWarm).not.toHaveBeenCalled();
   });
 
   it('(c) two instances with the same spriteUrl each get their own independent kick', () => {
@@ -149,7 +154,7 @@ describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
     const ctx = makeCtx();
     i1._drawBody(ctx, RACER, 0);
     i2._drawBody(ctx, RACER, 0);
-    expect(getCoatVariants).toHaveBeenCalledTimes(2);
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(2);
   });
 
   it('(c) kicks on the same instance with different spriteUrls are tracked independently', () => {
@@ -159,7 +164,7 @@ describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
     i1._drawBody(ctx, RACER, 0);
     i1._drawBody(ctx, RACER, 1); // same URL, no re-kick
     i2._drawBody(ctx, RACER, 0); // different URL, new kick
-    expect(getCoatVariants).toHaveBeenCalledTimes(2); // a once + b once
+    expect(ensureRacerTypeWarm).toHaveBeenCalledTimes(2); // a once + b once
   });
 });
 
@@ -204,5 +209,38 @@ describe('SpriteRacerType — bodyFillX/Y constructor defaults (D6b-Fix step1)',
     expect(Number.isFinite(Math.min(instance.config.bodyFillX, instance.config.bodyFillY))).toBe(
       true
     );
+  });
+});
+
+// ── Finite guard for bodyFillX/Y in _drawBody (D-guard, D6b-finalize) ─────────
+//
+// Honesty proofs (L126 — RED without / GREEN with the guard):
+// (d-nan) Config with explicit NaN bodyFill → guard clamps to 1.0; _drawBody does
+//         not throw; drawImage is called (render path reached, geometry is finite).
+//         RED: without guard, Math.min(NaN,NaN)=NaN → scale=NaN → drawImage with NaN args.
+// (d-zero) bodyFill=0 → guard prevents division by zero; render path succeeds.
+
+describe('SpriteRacerType — finite bodyFill guard in _drawBody (D-guard, D6b-finalize)', () => {
+  it('(d-nan) NaN bodyFill → guard clamps to 1.0; render path does not throw', () => {
+    const instance = makeInstance({ bodyFillX: NaN, bodyFillY: NaN });
+    const ctx = makeCtx();
+    // Warm variant cache so we hit the render path (not fallback circle).
+    getCoatVariants.cached.mockReturnValue(new Map([['default', { width: 128, height: 128 }]]));
+    expect(() => instance._drawBody(ctx, RACER, 0)).not.toThrow();
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('(d-zero) bodyFill=0 → guard prevents division by zero; render path succeeds', () => {
+    const instance = makeInstance({ bodyFillX: 0, bodyFillY: 0 });
+    const ctx = makeCtx();
+    getCoatVariants.cached.mockReturnValue(new Map([['default', { width: 128, height: 128 }]]));
+    expect(() => instance._drawBody(ctx, RACER, 0)).not.toThrow();
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it('(d-nan) without guard, NaN bodyFill is confirmed in config (??= does not catch NaN)', () => {
+    const instance = makeInstance({ bodyFillX: NaN, bodyFillY: NaN });
+    expect(Number.isNaN(instance.config.bodyFillX)).toBe(true);
+    expect(Number.isNaN(instance.config.bodyFillY)).toBe(true);
   });
 });

@@ -20,7 +20,7 @@
  *   will introduce an RteManager that consumes these definitions.
  */
 
-import { getCachedSprite, loadSprite } from './spriteLoader.js';
+import { getCachedSprite } from './spriteLoader.js';
 import {
   getCoatVariants,
   tintSprite,
@@ -29,14 +29,12 @@ import {
   tintSpriteWithDualMask,
   detectTintMode,
   getPatternedVariant,
+  ensureRacerTypeWarm,
 } from './spriteTinter.js';
 
 // Sleeping long-axis guard threshold (Stage 5). Inert for all 20 current racer types
 // (max ratio 2.88:1). Exported so tests can verify it never fires for current racers.
 export const BODY_LONG_AXIS_MAX_RATIO = 5.0;
-
-// One-shot fallback log per spriteUrl to avoid per-frame spam.
-const _loggedFallback = new Set();
 
 const REQUIRED_FIELDS = [
   'id',
@@ -212,22 +210,7 @@ export class SpriteRacerType {
       // The next frame will pick up the sprite automatically once it is cached.
       if (!this._lazyKicked.has(cfg.spriteUrl)) {
         this._lazyKicked.add(cfg.spriteUrl);
-        if (cfg.tintMode === 'mask') {
-          loadSprite(cfg.spriteUrl).catch((e) =>
-            console.error(`[lazy-kick] ${cfg.id} FAILED: ${e.message}`)
-          );
-        } else {
-          const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
-          getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch((e) =>
-            console.error(`[lazy-kick] ${cfg.id} FAILED: ${e.message}`)
-          );
-        }
-      }
-      if (!_loggedFallback.has(cfg.spriteUrl)) {
-        _loggedFallback.add(cfg.spriteUrl);
-        console.warn(
-          `[draw-fallback] ${cfg.id ?? cfg.spriteUrl} cachedBase=${!!getCachedSprite(cfg.spriteUrl)} variants=${!!getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply')} coat=${rawCoatId}`
-        );
+        ensureRacerTypeWarm(cfg);
       }
       ctx.fillStyle = cfg.fallbackColor;
       ctx.beginPath();
@@ -238,7 +221,8 @@ export class SpriteRacerType {
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * cfg.frameWidth;
-    const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+    const _bfNarrowRaw = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+    const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
     const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
     // displaySizeScale is now the body-narrow world-px reference divided by displaySize.
     // Dividing by bodyFillNarrow converts from body-narrow units to frame units so the

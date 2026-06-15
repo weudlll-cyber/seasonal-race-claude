@@ -7,7 +7,7 @@
 //              types use STANDARD_COAT_PALETTE instead of a single default coat.
 // ============================================================
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockRegisterRacerType, mockNavigate } = vi.hoisted(() => ({
@@ -34,6 +34,11 @@ vi.mock('../../modules/racer-types/index.js', () => ({
 vi.mock('../../utils/slugify.js', () => ({
   slugify: (str) => str.toLowerCase().replace(/\s+/g, '-'),
   uniqueSlug: (base) => base,
+}));
+
+vi.mock('./canvasUtils.js', () => ({
+  measureBodyFill: vi.fn().mockResolvedValue(null),
+  drawCheckerboard: vi.fn(),
 }));
 
 vi.mock('./SpriteGeneratorPanel.jsx', () => ({
@@ -73,12 +78,12 @@ describe('RacerEditor — save', () => {
     vi.clearAllMocks();
   });
 
-  it('saves racer type with coats equal to STANDARD_COAT_PALETTE', () => {
+  it('saves racer type with coats equal to STANDARD_COAT_PALETTE', async () => {
     render(<RacerEditor />);
     fireEvent.click(screen.getByTestId('load-sprite'));
     fireEvent.click(screen.getByTestId('set-metadata'));
     fireEvent.click(screen.getByRole('button', { name: /Save Racer/i }));
-    expect(mockRegisterRacerType).toHaveBeenCalledOnce();
+    await waitFor(() => expect(mockRegisterRacerType).toHaveBeenCalledOnce());
     const payload = mockRegisterRacerType.mock.calls[0][0];
     expect(payload.coats).toEqual(STANDARD_COAT_PALETTE);
     expect(payload.defaultCoatId).toBe(STANDARD_COAT_PALETTE[0].id);
