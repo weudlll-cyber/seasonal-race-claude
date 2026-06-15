@@ -74,12 +74,10 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
-import {
-  loadStoredRacerTypes,
-  saveStoredRacerType,
-  deleteStoredRacerType,
-} from './racerTypeStorage.js';
+import { saveStoredRacerType, deleteStoredRacerType } from './racerTypeStorage.js';
 import { getTrailFactory } from './trailStyles.js';
+import { fetchRacers } from '../../services/racerApi.js';
+import { API_BASE_URL } from '../../services/api.js';
 
 // All 20 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
@@ -138,10 +136,38 @@ export const RACER_TYPE_LABELS = {
   snowmobile: 'Snowmobile 🏂',
 };
 
-// ── Loaded racer types (user-created, stored in localStorage) ─────────────────
-// Internal registry — populated at boot by _initLoadedRacerTypes().
+// ── Loaded racer types (user-created, fetched from server in D6a) ────────────
+// Internal registry — populated by loadServerRacerTypes() after auth.
 // Not exported — all external access goes through getRacerType / listAllRacerTypes.
 const _loadedRacerTypes = {};
+
+// ── Ready signal ──────────────────────────────────────────────────────────────
+// Set to true after loadServerRacerTypes() completes (even on error / empty list).
+// Pending callbacks fire once; subsequent waitForRacersReady() calls resolve immediately.
+let _racersReady = false;
+const _racersReadyCallbacks = [];
+
+function _markRacersReady() {
+  if (_racersReady) return;
+  _racersReady = true;
+  for (const cb of _racersReadyCallbacks.splice(0)) cb();
+}
+
+export function areRacersReady() {
+  return _racersReady;
+}
+
+export function waitForRacersReady() {
+  if (_racersReady) return Promise.resolve();
+  return new Promise((resolve) => {
+    _racersReadyCallbacks.push(resolve);
+  });
+}
+
+export function _resetRacersReadyForTesting() {
+  _racersReady = false;
+  _racersReadyCallbacks.length = 0;
+}
 
 /**
  * Returns the coats array for any racer type — built-in or user-created.
@@ -169,16 +195,27 @@ export function getRacerTypeLabel(id) {
 
 /**
  * Returns a racer-type instance for the given typeId.
- * Checks built-in types first, then user-created types loaded from storage.
- * Falls back to the horse instance for unknown ids.
+ * Checks built-in types first, then user-created types loaded from server.
+ * Falls back to the horse instance for unknown ids — but logs a loud diagnostic
+ * so the failure is never silent (D6a, Inv E7).
  */
 export function getRacerType(typeId) {
-  return RACER_TYPES[typeId] ?? _loadedRacerTypes[typeId] ?? HorseRacerType;
+  if (RACER_TYPES[typeId]) return RACER_TYPES[typeId];
+  if (_loadedRacerTypes[typeId]) return _loadedRacerTypes[typeId];
+  console.error(
+    `[RaceArena] Unknown racer type "${typeId}" — falling back to horse (ready=${_racersReady})`
+  );
+  return HorseRacerType;
 }
 
 /** Alias for getRacerType — preferred in contexts where the id semantics matter. */
 export function getRacerTypeById(id) {
-  return RACER_TYPES[id] ?? _loadedRacerTypes[id] ?? HorseRacerType;
+  if (RACER_TYPES[id]) return RACER_TYPES[id];
+  if (_loadedRacerTypes[id]) return _loadedRacerTypes[id];
+  console.error(
+    `[RaceArena] Unknown racer type "${id}" — falling back to horse (ready=${_racersReady})`
+  );
+  return HorseRacerType;
 }
 
 // ── D3.5.5 tunable override infrastructure ────────────────────────────────
@@ -391,23 +428,37 @@ export function _resetLoadedRacerTypesForTesting() {
 // ── User-created type management ─────────────────────────────────────────────
 
 /**
- * Load user-created racer type configs from storage and construct SpriteRacerType
- * instances. Called once at boot. Skips invalid configs with a console warning.
+ * Fetch user-created racer configs from the server and register them as
+ * SpriteRacerType instances. Called once after auth by RacerSyncOnAuth.
+ *
+ * Per-racer errors are logged loudly but never abort the batch.
+ * On server/auth failure the ready signal is still set so the app is never
+ * permanently blocked — user racers are simply absent in that session.
  */
-function _initLoadedRacerTypes() {
-  const stored = loadStoredRacerTypes();
-  for (const cfg of stored) {
-    if (!cfg?.id) continue;
+export async function loadServerRacerTypes() {
+  let configs;
+  try {
+    configs = await fetchRacers();
+  } catch (err) {
+    console.error('[RaceArena] loadServerRacerTypes: failed to fetch from server —', err.message);
+    _markRacersReady();
+    return;
+  }
+
+  for (const cfg of configs) {
     try {
       _loadedRacerTypes[cfg.id] = new SpriteRacerType({
         ...cfg,
-        spriteUrl: cfg.spriteDataUrl,
+        spriteUrl: `${API_BASE_URL}/api/racers/${cfg.id}/sprite`,
         trailFactory: getTrailFactory(cfg.trailStyle),
       });
     } catch (err) {
-      console.warn(`[RaceArena] Skipping stored racer type "${cfg.id}": ${err.message}`);
+      console.error(
+        `[RaceArena] loadServerRacerTypes: skipping racer "${cfg.id}" — ${err.message}`
+      );
     }
   }
+  _markRacersReady();
 }
 
 /**
@@ -450,7 +501,7 @@ export function removeRacerType(id) {
 }
 
 // ── Boot sequence ────────────────────────────────────────────────────────────
-// Order matters: load user types first so override application covers them.
-_initLoadedRacerTypes();
+// User-created types are loaded async via loadServerRacerTypes() after auth.
+// Built-in overrides and warm-up run immediately at module load.
 _applyStoredTunableOverrides();
 warmUpAllRacerTypes();

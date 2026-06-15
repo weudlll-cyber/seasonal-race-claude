@@ -28,8 +28,11 @@ vi.mock('./components/ProtectedRoute.jsx', () => ({
   default: ({ children }) => children,
 }));
 
-// BrandingSyncOnAuth is a no-op — we control BRANDING directly via storageSet
+// BrandingSyncOnAuth + RacerSyncOnAuth are no-ops — we control state directly
 vi.mock('./components/BrandingSyncOnAuth.jsx', () => ({ default: () => null }));
+vi.mock('./components/RacerSyncOnAuth.jsx', () => ({ default: () => null }));
+// RacersReadyGate passes children through — no racer-load gate in tests
+vi.mock('./components/RacersReadyGate.jsx', () => ({ default: ({ children }) => children }));
 
 // AuthProvider just renders children
 vi.mock('./contexts/AuthContext.jsx', () => ({

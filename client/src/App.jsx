@@ -22,6 +22,8 @@ import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { useActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
 import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
+import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
+import RacersReadyGate from './components/RacersReadyGate.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
@@ -39,6 +41,7 @@ function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <BrandingSyncOnAuth />
+        <RacerSyncOnAuth />
         <TransitionProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/setup" replace />} />
@@ -46,7 +49,9 @@ function App() {
               path="/setup"
               element={
                 <ProtectedRoute>
-                  <SetupScreen />
+                  <RacersReadyGate>
+                    <SetupScreen />
+                  </RacersReadyGate>
                 </ProtectedRoute>
               }
             />
@@ -54,7 +59,9 @@ function App() {
               path="/race"
               element={
                 <ProtectedRoute>
-                  <RaceScreen />
+                  <RacersReadyGate>
+                    <RaceScreen />
+                  </RacersReadyGate>
                 </ProtectedRoute>
               }
             />
