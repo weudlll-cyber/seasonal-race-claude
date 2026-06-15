@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect, afterAll, beforeAll } from 'vitest';
-import { adminAgent } from '../../test/authAgent.js';
+import { adminAgent, operatorAgent } from '../../test/authAgent.js';
 import { existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -39,7 +39,10 @@ function findBackupFiles(trackId) {
 const app = createApp();
 
 let api;
-beforeAll(async () => { api = await adminAgent(app); });
+let operator;
+beforeAll(async () => {
+  [api, operator] = await Promise.all([adminAgent(app), operatorAgent(app)]);
+});
 
 // IDs created during tests — cleaned up in afterAll
 const createdIds = [];
@@ -69,11 +72,11 @@ const VALID_TRACK = {
 };
 
 afterAll(async () => {
-  // Clean up any tracks created during tests
   for (const id of createdIds) {
-    await api.delete(`/api/tracks/${id}`);
+    // Demote first in case the test promoted the track to isDefault:true.
+    await api.post(`/api/tracks/${id}/clear-default`).catch(() => {});
+    await api.delete(`/api/tracks/${id}`).catch(() => {});
   }
-  // Clean up backup files created for test tracks
   for (const id of createdIds) {
     for (const file of findBackupFiles(id)) {
       rmSync(file, { force: true });
@@ -1475,5 +1478,96 @@ describe('GET /api/tracks/:id/background — C4: X-Content-Type-Options', () => 
     const res = await api.get(`/api/tracks/${SEED['Mountainstreet']}/background`);
     expect(res.status).toBe(200);
     expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
+});
+
+// ── Admin promote / demote / export-seed (D7) ────────────────────────────────
+// HONESTY PROOF (a): set-default test is RED when attachPromoteExport is absent
+// (route returns 404); GREEN when attached (200 + isDefault:true).
+// HONESTY PROOF (b): operator-403 test is RED when guards.js entry is absent
+// (operator gets 200); GREEN when the ROUTE_POLICY entry is present (403).
+
+describe('Admin: POST /:id/set-default (D7)', () => {
+  it('admin set-default → 200 + isDefault:true, persists on GET', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await api.post(`/api/tracks/${id}/set-default`);
+    expect(res.status).toBe(200);
+    expect(res.body.isDefault).toBe(true);
+
+    const get = await api.get(`/api/tracks/${id}`);
+    expect(get.status).toBe(200);
+    expect(get.body.isDefault).toBe(true);
+  });
+
+  it('admin clear-default → isDefault:false', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    await api.post(`/api/tracks/${id}/set-default`);
+
+    const res = await api.post(`/api/tracks/${id}/clear-default`);
+    expect(res.status).toBe(200);
+    expect(res.body.isDefault).toBe(false);
+  });
+
+  it('set-default returns 404 for unknown id', async () => {
+    const res = await api.post('/api/tracks/nonexistent-d7-xyz/set-default');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('Admin: GET /:id/export-seed (D7)', () => {
+  it('export-seed with backgroundImageFile includes _backgroundAssetRelPath with correct path', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    await api
+      .post(`/api/tracks/${id}/background`)
+      .attach('background', MINIMAL_JPEG, { filename: 'bg.jpg', contentType: 'image/jpeg' });
+
+    const res = await api.get(`/api/tracks/${id}/export-seed`);
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toBeTruthy();
+    expect(res.body._backgroundAssetRelPath).toBeDefined();
+    expect(res.body._backgroundAssetRelPath).toBe(
+      `server/data/backgrounds/${res.body.backgroundImageFile}`
+    );
+  });
+
+  it('export-seed without backgroundImageFile omits _backgroundAssetRelPath', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const res = await api.get(`/api/tracks/${id}/export-seed`);
+    expect(res.status).toBe(200);
+    expect(res.body.backgroundImageFile).toBeNull();
+    expect(res.body._backgroundAssetRelPath).toBeUndefined();
+  });
+
+  it('export-seed returns 404 for unknown id', async () => {
+    const res = await api.get('/api/tracks/nonexistent-d7-xyz/export-seed');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('Operator gating: admin-only sub-routes return 403 for operator (D7)', () => {
+  it('operator POST /set-default → 403', async () => {
+    const res = await operator.post(`/api/tracks/${SEED['Dirt Oval']}/set-default`);
+    expect(res.status).toBe(403);
+  });
+
+  it('operator POST /clear-default → 403', async () => {
+    const res = await operator.post(`/api/tracks/${SEED['Dirt Oval']}/clear-default`);
+    expect(res.status).toBe(403);
+  });
+
+  it('operator GET /export-seed → 403', async () => {
+    const res = await operator.get(`/api/tracks/${SEED['Dirt Oval']}/export-seed`);
+    expect(res.status).toBe(403);
   });
 });

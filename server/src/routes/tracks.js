@@ -21,6 +21,7 @@ import { join, extname, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { attachPromoteExport } from './_defaultPromote.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '../../data/tracks');
@@ -781,6 +782,24 @@ router.post('/:id/background', (req, res, next) => {
   writeTrackBackup(track.id, updatedTrack);
 
   res.json({ backgroundImageFile: filename });
+});
+
+// ── Admin: promote / demote / export-seed ────────────────────────────────────
+// Guarded admin-only via ROUTE_POLICY in guards.js (the CRUD + background routes above are operator+).
+
+attachPromoteExport(router, {
+  getRecord: (id) => tracksMap.get(id),
+  saveRecord: (record) => {
+    atomicWriteJson(join(DATA_DIR, `${record.id}.json`), record);
+    tracksMap.set(record.id, record);
+  },
+  exportSeed: (_req, res, record) => {
+    const seed = { ...record };
+    if (record.backgroundImageFile) {
+      seed._backgroundAssetRelPath = `server/data/backgrounds/${record.backgroundImageFile}`;
+    }
+    res.json(seed);
+  },
 });
 
 export default router;

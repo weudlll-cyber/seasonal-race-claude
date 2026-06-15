@@ -50,6 +50,14 @@ export const ROUTE_POLICY = [
     role: 'admin',
     desc: 'brands promote/demote/export-seed — admin only (D3)',
   },
+  // tracks promote/demote/export-seed are admin-only (D7 §10b/§9).
+  // Regex matches ONLY the three admin sub-paths — NOT /background or CRUD (role-leak guard).
+  {
+    methods: ['GET', 'POST'],
+    test: (p) => /^\/api\/tracks\/[^/]+(\/set-default|\/clear-default|\/export-seed)$/.test(p),
+    role: 'admin',
+    desc: 'tracks promote/demote/export-seed — admin only (D7)',
+  },
 ];
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────
