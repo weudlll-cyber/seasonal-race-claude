@@ -138,13 +138,36 @@ describe('validateBody', () => {
   it('rejects id with whitespace (bodyId param)', () => {
     const errs = validateBody(BASE_RACER, 'my racer');
     expect(errs.length).toBeGreaterThan(0);
-    expect(errs.join(' ')).toMatch(/whitespace/i);
+  });
+
+  it('rejects id with path separators "../../evil" (bodyId param)', () => {
+    const errs = validateBody(BASE_RACER, '../../evil');
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it('rejects id with slash "a/b" (bodyId param)', () => {
+    const errs = validateBody(BASE_RACER, 'a/b');
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it('rejects id with ".." (bodyId param)', () => {
+    const errs = validateBody(BASE_RACER, '..');
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it('rejects id with uppercase letters (bodyId param)', () => {
+    const errs = validateBody(BASE_RACER, 'MyRacer');
+    expect(errs.length).toBeGreaterThan(0);
   });
 
   it('rejects built-in id "horse" (bodyId param)', () => {
     const errs = validateBody(BASE_RACER, 'horse');
     expect(errs.length).toBeGreaterThan(0);
     expect(errs.join(' ')).toMatch(/built-in/i);
+  });
+
+  it('accepts a valid user id with hyphens and underscore (bodyId param)', () => {
+    expect(validateBody(BASE_RACER, 'my-racer_2')).toEqual([]);
   });
 
   it('accepts a valid user id (bodyId param)', () => {
@@ -489,21 +512,52 @@ describe('Honesty proof — Built-in ID collision guard (L126)', () => {
   });
 });
 
-// ── HONESTY PROOF — id with whitespace → 400 ─────────────────────────────────
+// ── HONESTY PROOF — strict id allowlist blocks traversal + invalid chars (L126) ─
 //
-// RED without the /\s/.test(id) check; GREEN with it.
+// RED with old /\s/ check: "../../evil", "a/b", ".." all pass through and
+// atomicWriteJson writes a file outside DATA_DIR.
+// GREEN with /^[a-z0-9_-]+$/: all rejected → no file written.
 
-describe('Honesty proof — id with whitespace → 400 (L126)', () => {
-  it('[POST] body id:"my racer" (space) → 400', async () => {
+describe('Honesty proof — strict id allowlist: path traversal + invalid chars → 400 (L126)', () => {
+  it('[POST] id:"../../evil" → 400, no file written outside DATA_DIR', async () => {
+    const traversalId = '../../evil';
+    const res = await admin.post('/api/racers').send({ id: traversalId, ...BASE_RACER });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+    // No record file written at traversal target
+    const { join: pathJoin } = await import('path');
+    expect(existsSync(pathJoin(DATA_DIR, `${traversalId}.json`))).toBe(false);
+  });
+
+  it('[POST] id:"a/b" (slash) → 400', async () => {
+    const res = await admin.post('/api/racers').send({ id: 'a/b', ...BASE_RACER });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('[POST] id:".." → 400', async () => {
+    const res = await admin.post('/api/racers').send({ id: '..', ...BASE_RACER });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('[POST] id:"my racer" (space) → 400', async () => {
     const res = await admin.post('/api/racers').send({ id: 'my racer', ...BASE_RACER });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
   });
 
-  it('[POST] body id:"tab\there" (tab) → 400', async () => {
-    const res = await admin.post('/api/racers').send({ id: 'tab\there', ...BASE_RACER });
+  it('[POST] id:"MyRacer" (uppercase) → 400', async () => {
+    const res = await admin.post('/api/racers').send({ id: 'MyRacer', ...BASE_RACER });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
+  });
+
+  it('[POST] id:"my-racer_2" (valid allowlist id) → 201', async () => {
+    const id = 'my-racer-2';
+    const res = await admin.post('/api/racers').send({ id, ...BASE_RACER });
+    expect(res.status).toBe(201);
+    createdIds.push(id);
   });
 });
 

@@ -82,8 +82,8 @@ export function validateBody(body, bodyId = null) {
   const errors = [];
 
   if (bodyId !== null) {
-    if (!bodyId || typeof bodyId !== 'string' || /\s/.test(bodyId)) {
-      errors.push('id must be a non-empty string without whitespace');
+    if (!bodyId || typeof bodyId !== 'string' || !/^[a-z0-9_-]+$/.test(bodyId)) {
+      errors.push('id must contain only lowercase letters, digits, hyphen, or underscore');
     } else if (BUILTIN_SET.has(bodyId)) {
       errors.push(`id "${bodyId}" collides with a built-in racer type — choose a different id`);
     }
