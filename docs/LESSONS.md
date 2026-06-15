@@ -2417,3 +2417,67 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Consequence:** Speed-brake lateral threshold = `pxToPhysicalY(contactWidth, trackWidth)` (no multiplier). Speed-brake longitudinal threshold = `(contactLength / pathLength) × speedBrakeTMultiplier` (multiplier gives lead time). Never apply a lead-time multiplier to a same-lane filter.
 
 **Reference:** `reports/open-track-overlap/44-speedbrake-lateral-concept.md`, `reports/open-track-overlap/45-speedbrake-lateral-fix.md`. Session 2026-06-08.
+
+---
+
+## Lesson 137 — "Loads but Doesn't Render" Is a Geometry Bug, Not a Loading Bug
+
+**Context:** D6b (2026-06-15). A user-created server racer showed only fallback dots, then nothing, plus a "wild" jittering track. Many rounds chased the load/cache path (warm-up, blob loader, cache keys). Runtime logs proved the sprite fully loaded and 20 coat variants were cached — yet no sprite ever drew.
+
+**The error:** Treating "no sprite on screen" as evidence the sprite hadn't loaded. The load path was instrumented repeatedly while the actual fault sat downstream in the geometry math.
+
+**Insight:** When an asset demonstrably loads (logs/network confirm it) but still doesn't appear, the bug is in the consuming/geometry path, not the loader. The real cause here: user racers lacked `bodyFillX`/`bodyFillY` → `Math.min(undefined,undefined)=NaN` → `drawImage` ran with NaN dimensions (draws nothing) AND RaceScreen `bodyFillNarrow=NaN` propagated into `displaySizeScale`/camera/behavior (the wild track). One missing numeric field produced two unrelated-looking symptoms.
+
+**Consequence:** For "loads but doesn't render," inspect the geometry math (scale, width/height, drawImage args) BEFORE re-investigating loading/caching. Suspect a single NaN when a blank draw and a layout/camera instability appear together — they often share one root cause.
+
+**Reference:** Session 2026-06-15. Tag `backup/phaseD-d6b-complete` (584561f). `SpriteRacerType.js`, `RaceScreen/index.jsx`.
+
+---
+
+## Lesson 138 — NaN Defeats Nullish Fallbacks; Guard Numeric Geometry with Number.isFinite
+
+**Context:** D6b (2026-06-15), same bug. Several geometry nodes used `value ?? fallback` (raceBehavior, rowLayout) expecting to catch bad data; the rowLayout fallback itself recomputed to NaN.
+
+**The distinction:** `??` and `||` catch `null`/`undefined`/falsy — they do NOT catch `NaN` (`NaN ?? 5` → `NaN`). Once a `Math` operation has produced NaN, nullish defaults downstream are useless.
+
+**Insight:** Numeric pipelines need finiteness guards, not nullish guards. `Number.isFinite(x)` is the only reliable check; defaulting object fields with `??=` helps only if it runs BEFORE any arithmetic, so the operation never sees `undefined`.
+
+**Consequence:** At every numeric boundary feeding camera/physics/draw, clamp with `Number.isFinite(x) ? x : fallback` (and `> 0` where required). Default required numeric config fields at construction time. Never rely on `??` to sanitize a value that could be NaN.
+
+**Reference:** Session 2026-06-15. `SpriteRacerType.js` (scale/bodyFillNarrow guard), `RaceScreen/index.jsx`, `rowLayout.js`, `raceBehavior.js`.
+
+---
+
+## Lesson 139 — A New Data Source Must Satisfy Every Invariant the Old Code Path Guaranteed
+
+**Context:** D6b (2026-06-15). Built-in racers are code classes with measured `bodyFillX`/`bodyFillY` baked in. Migrating user racers to server-stored configs introduced a source that never carried those fields (editor didn't send, server didn't persist, constructor didn't default them). The geometry math had only ever run with built-ins, so it had never been exercised with the fields missing. 2956 green tests missed it — no fixture rendered a user racer in-race.
+
+**Insight:** Replacing a code-defined source (which implicitly guarantees a complete shape) with a data-defined source (configs from disk/network) silently drops invariants the code path took for granted. Partial constructor defaults are not enough; the new source must explicitly produce or validate every field the old path guaranteed. (See also Lesson 1: green tests don't prove the consuming path.)
+
+**Consequence:** When migrating code→data: (1) enumerate the fields the code path guaranteed; (2) produce them in the new path the same way the originals were derived (here: measure the body bounding box at creation, like the built-ins were measured); (3) persist them; (4) keep a finite construction-time default as a backstop for old records; (5) add a fixture that drives the new source through the FULL consuming path, not just CRUD.
+
+**Reference:** Session 2026-06-15. `canvasUtils.measureBodyFill`, `RacerEditor.jsx`, `server/src/routes/racers.js`, `SpriteRacerType.js`.
+
+---
+
+## Lesson 140 — Don't Add Exports to Broadly-Mocked Modules; Isolate Shared Helpers
+
+**Context:** D6b (2026-06-15). Duplicated warm-up logic was consolidated into one shared `ensureRacerTypeWarm` and placed in `spriteTinter.js` — a module mocked by 29 test files. Adding the export forced editing all 29 mock factories (Vitest strict-checks named imports against the mock factory), a fragile, noisy cascade; any future export there would re-break them.
+
+**Insight:** A module's "mock blast radius" = how many test files mock it. Adding an export to a widely-mocked module multiplies maintenance cost and fragility. A dedicated, narrowly-imported module isolates that cost.
+
+**Consequence:** Put a newly-extracted shared helper in its own small module imported only by its real consumers (here `racerWarmup.js` — blast radius 29→3). Before adding an export to an existing module, check how many tests mock it; if many, extract instead.
+
+**Reference:** Session 2026-06-15. `racerWarmup.js`, `spriteTinter.js`, `SpriteRacerType.js`, `index.js`.
+
+---
+
+## Lesson 141 — CI Is More Than Tests; Reproduce the Full Pipeline Locally
+
+**Context:** D6b (2026-06-15). Commits were pushed with local tests green, but GitHub CI went red. The CI client job runs four steps: `lint`, `format:check`, `test:coverage`, and `npm audit --audit-level=high`. The failure was a newly-published vite HIGH advisory — no code change involved.
+
+**Insight:** "Tests pass" ≠ "CI passes." Lint, format, and the security-audit gate fail independently of tests. `npm audit` queries the live advisory database, so it can redden CI on ANY commit at any time, unrelated to the diff.
+
+**Consequence:** Before pushing, run the exact CI steps locally: `npm run lint`, `npm run format:check`, `npm run test:coverage`, `npm audit --audit-level=high`. Treat an audit-only red as routine maintenance — a separate `chore(deps): npm audit fix` commit (verify patch-level bumps, re-run all four steps), not a code investigation.
+
+**Reference:** Session 2026-06-15. `.github/workflows/ci.yml`. Fix commit `e4d7c1d` (vite 8.0.10→8.0.16).
