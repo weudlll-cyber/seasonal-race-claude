@@ -27,6 +27,9 @@ const _objectUrls = new Map();
  * @returns {Promise<HTMLImageElement>}
  */
 export function loadSprite(url) {
+  console.info(
+    `[ls] enter url=${url} cacheHit=${_cache.has(url)} branch=${url.startsWith('http') ? 'http' : 'direct'}`
+  );
   if (_cache.has(url)) {
     return Promise.resolve(_cache.get(url));
   }
@@ -34,6 +37,7 @@ export function loadSprite(url) {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return fetch(url, { credentials: 'include' })
       .then((res) => {
+        console.info(`[ls] fetched ${url} status=${res.status} ok=${res.ok}`);
         if (!res.ok) {
           console.error(`[RaceArena] loadSprite: "${url}" — HTTP ${res.status} ${res.statusText}`);
           throw new Error(`loadSprite: HTTP ${res.status} for ${url}`);
@@ -43,10 +47,12 @@ export function loadSprite(url) {
       .then(
         (blob) =>
           new Promise((resolve, reject) => {
+            console.info(`[ls] blob ${url} size=${blob.size}`);
             const objectUrl = URL.createObjectURL(blob);
             _objectUrls.set(url, objectUrl);
             const img = new Image();
             img.onload = () => {
+              console.info(`[ls] ONLOAD ${url} -> cached`);
               _cache.set(url, img);
               resolve(img);
             };
@@ -62,6 +68,7 @@ export function loadSprite(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
+      console.info(`[ls] direct ONLOAD ${url}`);
       _cache.set(url, img);
       resolve(img);
     };
