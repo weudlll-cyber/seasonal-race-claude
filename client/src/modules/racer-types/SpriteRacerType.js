@@ -35,6 +35,9 @@ import {
 // (max ratio 2.88:1). Exported so tests can verify it never fires for current racers.
 export const BODY_LONG_AXIS_MAX_RATIO = 5.0;
 
+// One-shot fallback log per spriteUrl to avoid per-frame spam.
+const _loggedFallback = new Set();
+
 const REQUIRED_FIELDS = [
   'id',
   'spriteUrl',
@@ -199,6 +202,12 @@ export class SpriteRacerType {
 
     // 3. Fallback: colored circle while sprite loads.
     if (!drawable) {
+      if (!_loggedFallback.has(cfg.spriteUrl)) {
+        _loggedFallback.add(cfg.spriteUrl);
+        console.warn(
+          `[draw-fallback] ${cfg.id ?? cfg.spriteUrl} cachedBase=${!!getCachedSprite(cfg.spriteUrl)} variants=${!!getCoatVariants.cached(cfg.spriteUrl, cfg.tintMode ?? 'multiply')} coat=${rawCoatId}`
+        );
+      }
       ctx.fillStyle = cfg.fallbackColor;
       ctx.beginPath();
       ctx.arc(0, 0, (cfg.displaySize * displaySizeScale) / 2, 0, Math.PI * 2);

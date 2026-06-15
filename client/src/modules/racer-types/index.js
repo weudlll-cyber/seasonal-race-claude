@@ -394,18 +394,31 @@ let _warmedUp = false;
 function _warmUpRacerType(racerType) {
   const cfg = racerType.config;
   if (!cfg) return;
+  console.info(
+    `[warmup] ${cfg ? racerType.config.id : '??'} spriteUrl=${cfg?.spriteUrl} tintMode=${cfg?.tintMode}`
+  );
   if (cfg.tintMode === 'mask') {
-    loadSprite(cfg.spriteUrl).catch(() => {});
-    if (cfg.maskUrl) loadSprite(cfg.maskUrl).catch(() => {});
+    loadSprite(cfg.spriteUrl).catch((e) =>
+      console.error(`[warmup] ${cfg.id} FAILED: ${e.message}`)
+    );
+    if (cfg.maskUrl)
+      loadSprite(cfg.maskUrl).catch((e) =>
+        console.error(`[warmup] ${cfg.id} mask FAILED: ${e.message}`)
+      );
     // Preload per-coat pattern masks and dual-mask border masks.
     const coatMasks = new Set([
       ...(cfg.coats?.map((c) => c.patternMask).filter(Boolean) ?? []),
       ...(cfg.coats?.map((c) => c.borderMask).filter(Boolean) ?? []),
     ]);
-    for (const url of coatMasks) loadSprite(url).catch(() => {});
+    for (const url of coatMasks)
+      loadSprite(url).catch((e) =>
+        console.error(`[warmup] ${cfg.id} coatMask FAILED: ${e.message}`)
+      );
   } else {
     const blendMode = cfg.tintMode && cfg.tintMode !== 'mask' ? cfg.tintMode : 'multiply';
-    getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch(() => {});
+    getCoatVariants(cfg.spriteUrl, cfg.coats, blendMode).catch((e) =>
+      console.error(`[warmup] ${cfg.id} FAILED: ${e.message}`)
+    );
   }
 }
 
