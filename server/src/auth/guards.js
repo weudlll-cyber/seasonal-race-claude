@@ -70,6 +70,21 @@ export function normalizePath(p) {
   return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
 }
 
+// HEAD → GET: Express routes HEAD requests to the matching GET handler, so HEAD
+// must inherit the same role policy as GET. All other methods pass through as-is.
+function policyMethod(m) {
+  const upper = normalizeMethod(m);
+  return upper === 'HEAD' ? 'GET' : upper;
+}
+
+// Single policy lookup used by both requiredRole and createRequireAdmin — ensures
+// HEAD normalisation is applied identically in both callers.
+function findPolicyEntry(routePolicy, method, path) {
+  const m = policyMethod(method);
+  const p = normalizePath(path);
+  return routePolicy.find((e) => e.methods.map(normalizeMethod).includes(m) && e.test(p));
+}
+
 export function isPublicPath(method, path) {
   const m = normalizeMethod(method);
   const p = normalizePath(path);
@@ -79,11 +94,7 @@ export function isPublicPath(method, path) {
 }
 
 export function requiredRole(method, path) {
-  const m = normalizeMethod(method);
-  const p = normalizePath(path);
-  const entry = ROUTE_POLICY.find(
-    (e) => e.methods.map(normalizeMethod).includes(m) && e.test(p)
-  );
+  const entry = findPolicyEntry(ROUTE_POLICY, method, path);
   return entry?.role ?? null;
 }
 
@@ -126,11 +137,7 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
 
 export function createRequireAdmin({ routePolicy = ROUTE_POLICY } = {}) {
   return function requireAdmin(req, res, next) {
-    const path = normalizePath(req.path);
-    const method = normalizeMethod(req.method);
-    const entry = routePolicy.find(
-      (e) => e.methods.map(normalizeMethod).includes(method) && e.test(path)
-    );
+    const entry = findPolicyEntry(routePolicy, req.method, req.path);
     if (entry?.role === 'admin' && req.authUser?.role !== 'admin') {
       return res.status(403).json({ error: 'forbidden' });
     }

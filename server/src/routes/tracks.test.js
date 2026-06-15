@@ -1571,3 +1571,29 @@ describe('Operator gating: admin-only sub-routes return 403 for operator (D7)', 
     expect(res.status).toBe(403);
   });
 });
+
+// ── HEAD-gate fix — operator HEAD must be blocked on admin-only routes ────────
+// HONESTY PROOF: without the fix, operator HEAD bypasses requireAdmin (HEAD not
+// in methods list) and reaches the GET handler → 200 status. With the fix → 403.
+
+describe('HEAD admin-gate: operator HEAD on admin-only routes → 403 (HEAD-gate fix)', () => {
+  it('operator HEAD /api/tracks/:id/export-seed → 403', async () => {
+    const res = await operator.head(`/api/tracks/${SEED['Dirt Oval']}/export-seed`);
+    expect(res.status).toBe(403);
+  });
+
+  it('operator HEAD /api/brands/seasonal-entertainment/export-seed → 403', async () => {
+    const res = await operator.head('/api/brands/seasonal-entertainment/export-seed');
+    expect(res.status).toBe(403);
+  });
+
+  it('operator HEAD /api/users → 403', async () => {
+    const res = await operator.head('/api/users');
+    expect(res.status).toBe(403);
+  });
+
+  it('admin HEAD /api/tracks/:id/export-seed → 200 (gate passes for admin)', async () => {
+    const res = await api.head(`/api/tracks/${SEED['Dirt Oval']}/export-seed`);
+    expect(res.status).toBe(200);
+  });
+});

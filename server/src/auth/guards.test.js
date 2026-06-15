@@ -47,6 +47,25 @@ describe('requiredRole — /api/users policy (C3a)', () => {
   it('GET /api/users/ (trailing slash normalised) → admin', () => expect(requiredRole('GET', '/api/users/')).toBe('admin'));
 });
 
+// ── HEAD-gate fix — HEAD must inherit the GET role policy ─────────────────────
+// HONESTY PROOF: without the fix requiredRole('HEAD', ...) returns null (no match);
+// with the fix it returns 'admin', and operator HEAD → 403 in integration.
+
+describe('requiredRole — HEAD inherits GET role policy (HEAD-gate fix)', () => {
+  it('HEAD /api/tracks/foo/export-seed → admin (same as GET)', () =>
+    expect(requiredRole('HEAD', '/api/tracks/foo/export-seed')).toBe('admin'));
+  it('HEAD /api/brands/foo/export-seed → admin', () =>
+    expect(requiredRole('HEAD', '/api/brands/foo/export-seed')).toBe('admin'));
+  it('HEAD /api/player-groups/foo/export-seed → admin', () =>
+    expect(requiredRole('HEAD', '/api/player-groups/foo/export-seed')).toBe('admin'));
+  it('HEAD /api/users → admin (all-methods entry, HEAD inherits GET)', () =>
+    expect(requiredRole('HEAD', '/api/users')).toBe('admin'));
+  it('HEAD /api/surface-classes → null (GET is operator+; HEAD inherits that, NOT admin)', () =>
+    expect(requiredRole('HEAD', '/api/surface-classes')).toBeNull());
+  it('HEAD /api/surface-classes/abc → null', () =>
+    expect(requiredRole('HEAD', '/api/surface-classes/abc')).toBeNull());
+});
+
 // ── Part B — behavioural guard tests (bare harness, MemoryStore) ─────────────
 
 const fakeStore = {
