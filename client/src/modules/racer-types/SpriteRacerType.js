@@ -29,8 +29,8 @@ import {
   tintSpriteWithDualMask,
   detectTintMode,
   getPatternedVariant,
-  ensureRacerTypeWarm,
 } from './spriteTinter.js';
+import { ensureRacerTypeWarm } from './racerWarmup.js';
 
 // Sleeping long-axis guard threshold (Stage 5). Inert for all 20 current racer types
 // (max ratio 2.88:1). Exported so tests can verify it never fires for current racers.
@@ -241,6 +241,7 @@ export class SpriteRacerType {
     const scale =
       ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / guardedFillNarrow) *
       cfg.silhouetteScale;
+    if (!Number.isFinite(scale) || scale <= 0) return;
     const dw = cfg.frameWidth * scale;
     const dh = cfg.frameHeight * scale;
 

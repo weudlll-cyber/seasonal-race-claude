@@ -23,7 +23,6 @@ vi.mock('./spriteTinter.js', () => {
   getCoatVariants.cached = vi.fn().mockReturnValue(undefined);
   return {
     getCoatVariants,
-    ensureRacerTypeWarm: vi.fn(),
     tintSprite: vi.fn().mockReturnValue(null),
     tintSpriteWithMask: vi.fn().mockReturnValue(null),
     tintSpriteBodyAndMask: vi.fn().mockReturnValue(null),
@@ -35,10 +34,13 @@ vi.mock('./spriteTinter.js', () => {
   };
 });
 
+vi.mock('./racerWarmup.js', () => ({ ensureRacerTypeWarm: vi.fn() }));
+
 // ── Imports (after mocks) ──────────────────────────────────────────────────────
 
 import { SpriteRacerType } from './SpriteRacerType.js';
-import { getCoatVariants, ensureRacerTypeWarm } from './spriteTinter.js';
+import { getCoatVariants } from './spriteTinter.js';
+import { ensureRacerTypeWarm } from './racerWarmup.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

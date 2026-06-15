@@ -16,13 +16,13 @@ import {
   tintSpriteBodyAndMask,
   tintSpriteWithDualMask,
   getPatternedVariant,
-  ensureRacerTypeWarm,
   PATTERN_IDS,
   _clearTintCache,
   _clearMaskedTintCache,
   _clearPatternedVariantCache,
   _patternedVariantCacheSize,
 } from './spriteTinter.js';
+import { ensureRacerTypeWarm } from './racerWarmup.js';
 import { loadSprite } from './spriteLoader.js';
 
 vi.mock('./spriteLoader.js', () => ({
@@ -580,7 +580,7 @@ describe('getCoatVariants — auto tint mode routing', () => {
   });
 });
 
-// ── ensureRacerTypeWarm (A-dedup honesty proof) ───────────────────────────────
+// ── ensureRacerTypeWarm (A-dedup honesty proof, now in racerWarmup.js) ──────────
 //
 // Tests prove the shared function handles both mask and non-mask paths correctly.
 // (a) Non-mask: kicks getCoatVariants (via loadSprite internally).

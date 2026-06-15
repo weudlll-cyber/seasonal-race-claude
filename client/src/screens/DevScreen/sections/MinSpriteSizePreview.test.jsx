@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../../modules/racer-types/spriteTinter.js', () => {
   const getCoatVariants = vi.fn().mockResolvedValue(new Map());
   getCoatVariants.cached = vi.fn();
-  return { getCoatVariants, ensureRacerTypeWarm: vi.fn() };
+  return { getCoatVariants };
 });
 
 import { MinSpriteSizePreview } from './MinSpriteSizePreview.jsx';

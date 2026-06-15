@@ -37,7 +37,6 @@ vi.mock('./spriteTinter.js', () => {
   getCoatVariants.cached = vi.fn();
   return {
     getCoatVariants,
-    ensureRacerTypeWarm: vi.fn(),
     tintSprite: vi.fn().mockReturnValue({}),
     tintSpriteWithMask: vi.fn().mockReturnValue({}),
     tintSpriteBodyAndMask: vi.fn().mockReturnValue({}),
@@ -48,6 +47,8 @@ vi.mock('./spriteTinter.js', () => {
     _clearMaskedTintCache: vi.fn(),
   };
 });
+
+vi.mock('./racerWarmup.js', () => ({ ensureRacerTypeWarm: vi.fn() }));
 
 // Minimal stub shared by all built-in type mocks
 const _stub = vi.hoisted(() => ({
@@ -169,7 +170,7 @@ import {
   uploadRacerSprite,
 } from '../../services/racerApi.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
-import { ensureRacerTypeWarm } from './spriteTinter.js';
+import { ensureRacerTypeWarm } from './racerWarmup.js';
 
 const VALID_SERVER_CONFIG = {
   id: 'test-server-racer',

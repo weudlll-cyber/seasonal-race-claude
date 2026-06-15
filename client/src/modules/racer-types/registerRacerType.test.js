@@ -62,7 +62,7 @@ vi.mock('./SpriteRacerType.js', () => {
 vi.mock('./spriteTinter.js', () => {
   const getCoatVariants = vi.fn().mockResolvedValue(new Map());
   getCoatVariants.cached = vi.fn();
-  return { getCoatVariants, ensureRacerTypeWarm: vi.fn() };
+  return { getCoatVariants };
 });
 
 vi.mock('./spriteLoader.js', () => ({

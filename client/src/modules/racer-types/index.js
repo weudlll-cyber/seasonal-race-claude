@@ -71,7 +71,7 @@ import { MantaRacerType } from './MantaRacerType.js';
 import { DolphinRacerType } from './DolphinRacerType.js';
 import { SnowmobileRacerType } from './SnowmobileRacerType.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
-import { ensureRacerTypeWarm } from './spriteTinter.js';
+import { ensureRacerTypeWarm } from './racerWarmup.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
 import { getTrailFactory } from './trailStyles.js';
 import {
@@ -392,7 +392,7 @@ let _warmedUp = false;
 
 /**
  * Warm up sprite caches for all racer types — built-in and user-created.
- * Delegates to ensureRacerTypeWarm (spriteTinter.js) which handles both
+ * Delegates to ensureRacerTypeWarm (racerWarmup.js) which handles both
  * mask-mode (loadSprite) and multiply-mode (getCoatVariants) paths.
  * Idempotent — safe to call multiple times.
  */
