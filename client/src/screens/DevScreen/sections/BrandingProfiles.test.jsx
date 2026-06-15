@@ -26,6 +26,13 @@ vi.mock('../../../modules/branding/brandingSync.js', () => ({
   syncBrandingMirror: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Spy surface for Invariant-10 guardian: intercepts any direct storageSet call
+// that BrandingProfiles might (incorrectly) make to KEYS.BRANDING.
+vi.mock('../../../modules/storage/storage.js', () => ({
+  storageSet: vi.fn(),
+  KEYS: { BRANDING: 'racearena:branding' },
+}));
+
 import BrandingProfiles from './BrandingProfiles.jsx';
 import {
   fetchBrands,
@@ -35,6 +42,7 @@ import {
   uploadBrandLogo,
 } from '../../../services/brandApi.js';
 import { syncBrandingMirror } from '../../../modules/branding/brandingSync.js';
+import { storageSet, KEYS } from '../../../modules/storage/storage.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -422,5 +430,69 @@ describe('BrandingProfiles — tooltip render', () => {
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
     expect(tooltips.some((el) => el.textContent.includes('helps you recognize it'))).toBe(true);
     expect(tooltips.some((el) => el.textContent.includes('main accent color'))).toBe(true);
+  });
+});
+
+// ── Invariant 10: only syncBrandingMirror writes KEYS.BRANDING ───────────────
+// Guard against regressions where a future edit re-introduces a direct
+// storageSet(KEYS.BRANDING, …) call inside BrandingProfiles. syncBrandingMirror
+// is mocked to a no-op so that NO mirror write can arrive from outside the
+// component — any storageSet(KEYS.BRANDING) call therefore originates HERE.
+
+describe('BrandingProfiles — Invariant 10: only syncBrandingMirror writes KEYS.BRANDING', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchBrands.mockResolvedValue([CUSTOM_BRAND]);
+    syncBrandingMirror.mockResolvedValue(undefined); // no-op: mirror writes suppressed
+    createBrand.mockResolvedValue({ ...CUSTOM_BRAND, id: 'new-id' });
+    updateBrand.mockResolvedValue(CUSTOM_BRAND);
+    deleteBrand.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  it('create mutation never calls storageSet(KEYS.BRANDING, …)', async () => {
+    renderProfiles();
+    await waitFor(() => screen.getByText('Christmas Party'));
+
+    fireEvent.click(screen.getByText('+ New Profile'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Christmas Party'), {
+      target: { value: 'X' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('e.g. Winter Race Championship'), {
+      target: { value: 'Y' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Profile'));
+    });
+
+    expect(storageSet).not.toHaveBeenCalledWith(KEYS.BRANDING, expect.anything());
+  });
+
+  it('update mutation never calls storageSet(KEYS.BRANDING, …)', async () => {
+    renderProfiles();
+    await waitFor(() => screen.getByText('Christmas Party'));
+
+    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Christmas Party'), {
+      target: { value: 'Updated' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Save Changes'));
+    });
+
+    expect(storageSet).not.toHaveBeenCalledWith(KEYS.BRANDING, expect.anything());
+  });
+
+  it('delete mutation never calls storageSet(KEYS.BRANDING, …)', async () => {
+    renderProfiles();
+    await waitFor(() => screen.getByText('Christmas Party'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Delete'));
+    });
+
+    expect(storageSet).not.toHaveBeenCalledWith(KEYS.BRANDING, expect.anything());
   });
 });
