@@ -19,6 +19,15 @@ client/test-results/
 AUDIT.md
 audit-temp/
 diagnosis/
+# --- Runtime user-created data (server writes at runtime; never committed) ---
+server/data/racers/
+server/data/racer-sprites/
+server/data/brand-logos/*
+!server/data/brand-logos/seasonal-entertainment.jpg
+server/data/brands/*
+!server/data/brands/seasonal-entertainment.json
+server/data/player-groups/*
+!server/data/player-groups/default-example-group.json
 server/data/users.json
 server/data/setup-complete.json
 server/data/sessions.sqlite
