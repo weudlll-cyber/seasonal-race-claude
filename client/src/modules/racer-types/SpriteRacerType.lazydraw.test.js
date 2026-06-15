@@ -162,3 +162,47 @@ describe('SpriteRacerType — lazy draw kick on cache miss (D6b-Fix-3)', () => {
     expect(getCoatVariants).toHaveBeenCalledTimes(2); // a once + b once
   });
 });
+
+// ── bodyFillX/Y defaults (D6b-Fix step 1) ────────────────────────────────────
+//
+// Honesty proofs (L126 — RED without / GREEN with the ??= defaults):
+// (a) Config WITHOUT bodyFillX/Y → both default to 1.0 (finite).
+//     RED: undefined; GREEN: 1.0.
+// (b) Config WITH explicit bodyFillX/Y → values are NOT overridden.
+// (c) Math.min(bodyFillX, bodyFillY) is finite (no NaN in draw geometry).
+
+function makeInstanceNoBF(overrides = {}) {
+  return new SpriteRacerType({
+    id: 'test-bf',
+    spriteUrl: SPRITE_URL,
+    frameCount: 4,
+    basePeriodMs: 600,
+    displaySize: 40,
+    coats: [{ id: 'default', name: 'Default', tint: null }],
+    trailFactory: () => [],
+    tintMode: 'multiply',
+    primaryColor: '#ff0000',
+    ...overrides,
+  });
+}
+
+describe('SpriteRacerType — bodyFillX/Y constructor defaults (D6b-Fix step1)', () => {
+  it('(a) config without bodyFillX/Y → both default to 1.0', () => {
+    const instance = makeInstanceNoBF();
+    expect(instance.config.bodyFillX).toBe(1.0);
+    expect(instance.config.bodyFillY).toBe(1.0);
+  });
+
+  it('(b) explicit bodyFillX/Y values are NOT overridden by the ??= default', () => {
+    const instance = makeInstanceNoBF({ bodyFillX: 0.398, bodyFillY: 0.672 });
+    expect(instance.config.bodyFillX).toBe(0.398);
+    expect(instance.config.bodyFillY).toBe(0.672);
+  });
+
+  it('(c) Math.min(bodyFillX, bodyFillY) is finite after default (no NaN draw geometry)', () => {
+    const instance = makeInstanceNoBF();
+    expect(Number.isFinite(Math.min(instance.config.bodyFillX, instance.config.bodyFillY))).toBe(
+      true
+    );
+  });
+});

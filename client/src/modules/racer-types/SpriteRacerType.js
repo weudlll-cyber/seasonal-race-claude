@@ -89,6 +89,8 @@ export class SpriteRacerType {
     // Post-spread defaults that depend on other config values.
     this.config.fallbackColor ??= this.config.primaryColor;
     this.config.defaultCoatId ??= this.config.coats[0]?.id;
+    this.config.bodyFillX ??= 1.0;
+    this.config.bodyFillY ??= 1.0;
 
     // Tracks which spriteUrls have had a lazy-load kicked from the draw path.
     // Instance-level so each racer type manages its own kick independently.
