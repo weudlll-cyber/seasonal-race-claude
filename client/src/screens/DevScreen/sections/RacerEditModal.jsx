@@ -22,7 +22,6 @@ import {
   restoreTunableDefault,
   normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
-import { loadStoredRacerTypes } from '../../../modules/racer-types/racerTypeStorage.js';
 import {
   loadAutoScaleConfig,
   DEFAULT_AUTO_SCALE_CONFIG,
@@ -130,10 +129,9 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
   const resetBaseline = isBuiltIn
     ? CONFIG_SNAPSHOT[typeId]
     : (() => {
-        const stored = loadStoredRacerTypes().find((c) => c.id === typeId) ?? {};
-        return Object.fromEntries(
-          TUNABLE_FIELDS.map((f) => [f, f in stored ? stored[f] : undefined])
-        );
+        const type = getRacerType(typeId);
+        const cfg = type.config.id === typeId ? type.config : {};
+        return Object.fromEntries(TUNABLE_FIELDS.map((f) => [f, f in cfg ? cfg[f] : undefined]));
       })();
 
   // Local text state for each standard field (drives the inputs)

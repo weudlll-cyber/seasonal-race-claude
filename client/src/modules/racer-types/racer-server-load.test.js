@@ -17,7 +17,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Module mocks (must precede all imports from the mocked modules) ───────────
 
-vi.mock('../../services/racerApi.js', () => ({ fetchRacers: vi.fn() }));
+vi.mock('../../services/racerApi.js', () => ({
+  fetchRacers: vi.fn(),
+  createRacer: vi.fn(),
+  updateRacer: vi.fn(),
+  deleteRacer: vi.fn(),
+  uploadRacerSprite: vi.fn(),
+}));
 vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
 
 vi.mock('./spriteLoader.js', () => ({
@@ -146,11 +152,19 @@ import {
   waitForRacersReady,
   getRacerType,
   getRacerTypeById,
+  registerRacerType,
+  removeRacerType,
   _resetRacersReadyForTesting,
   _resetLoadedRacerTypesForTesting,
   HorseRacerType,
 } from './index.js';
-import { fetchRacers } from '../../services/racerApi.js';
+import {
+  fetchRacers,
+  createRacer,
+  updateRacer,
+  deleteRacer,
+  uploadRacerSprite,
+} from '../../services/racerApi.js';
 import { SpriteRacerType } from './SpriteRacerType.js';
 
 const VALID_SERVER_CONFIG = {
@@ -170,6 +184,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   _resetRacersReadyForTesting();
   _resetLoadedRacerTypesForTesting();
+  // Default: write ops succeed
+  createRacer.mockResolvedValue({});
+  updateRacer.mockResolvedValue({});
+  deleteRacer.mockResolvedValue(undefined);
+  uploadRacerSprite.mockResolvedValue({ spriteFile: 'test.png' });
 });
 
 // ── areRacersReady initial state ──────────────────────────────────────────────
@@ -344,5 +363,150 @@ describe('Single-flight guard — concurrent calls (D6a-Fix honesty proof)', () 
     // No permanent block: a second call (e.g. after re-auth reset) starts fresh.
     await loadServerRacerTypes();
     expect(fetchRacers).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ── HONESTY PROOFS (D6b) — server write path + registry clear ────────────────
+//
+// (a) Reload clears stale entries: racer added in load-1 is gone after load-2
+//     returns an empty list. RED without _runLoad clear (stale entry remains).
+// (b) registerRacerType: createRacer + uploadRacerSprite called; NOT localStorage.
+//     updateRacer path for existing id. File passed to uploadRacerSprite (not raw base64).
+// (c) Built-in guard: removeRacerType('horse') throws; deleteRacer not called.
+// (d) Stale-on-error: fetch failure does NOT clear existing registry entries.
+
+// 1×1 transparent PNG (valid base64 data URL for File conversion)
+const MINIMAL_PNG_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+describe('Honesty proof (a) — _runLoad clears stale registry entries (D6b)', () => {
+  it('racer absent from previous load is not retained after successful reload', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes();
+    expect(getRacerType('test-server-racer').config.id).toBe('test-server-racer');
+
+    // Simulate server having deleted the racer; reset ready so _markRacersReady fires again.
+    _resetRacersReadyForTesting();
+    fetchRacers.mockResolvedValue([]);
+    await loadServerRacerTypes();
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = getRacerType('test-server-racer');
+    expect(spy).toHaveBeenCalled(); // logged as unknown
+    expect(result).toBe(HorseRacerType); // fallback
+    spy.mockRestore();
+  });
+});
+
+describe('Honesty proof (b) — registerRacerType server write path (D6b)', () => {
+  const NEW_CONFIG = {
+    id: 'brand-new-racer',
+    name: 'Brand New',
+    emoji: '🚀',
+    spriteDataUrl: MINIMAL_PNG_DATA_URL,
+    frameCount: 4,
+    basePeriodMs: 500,
+    displaySize: 60,
+    trailStyle: 'dust',
+    coats: [{ id: 'default', name: 'Default', tint: null }],
+    primaryColor: '#ff0000',
+    speedMultiplier: 1.0,
+    tintMode: 'auto',
+  };
+
+  it('new racer: createRacer called (not updateRacer), spriteDataUrl stripped from server record', async () => {
+    fetchRacers.mockResolvedValue([]);
+    await registerRacerType(NEW_CONFIG);
+    expect(createRacer).toHaveBeenCalledTimes(1);
+    expect(updateRacer).not.toHaveBeenCalled();
+    const serverRecord = createRacer.mock.calls[0][0];
+    expect(serverRecord.id).toBe('brand-new-racer');
+    expect(serverRecord.spriteDataUrl).toBeUndefined();
+  });
+
+  it('new racer: uploadRacerSprite called with a File instance (not raw base64)', async () => {
+    fetchRacers.mockResolvedValue([]);
+    await registerRacerType(NEW_CONFIG);
+    expect(uploadRacerSprite).toHaveBeenCalledTimes(1);
+    expect(uploadRacerSprite.mock.calls[0][0]).toBe('brand-new-racer');
+    expect(uploadRacerSprite.mock.calls[0][1]).toBeInstanceOf(File);
+  });
+
+  it('existing racer: updateRacer called (not createRacer)', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes();
+    _resetRacersReadyForTesting();
+    fetchRacers.mockResolvedValue([]);
+
+    await registerRacerType({
+      ...VALID_SERVER_CONFIG,
+      name: 'Updated',
+      spriteDataUrl: MINIMAL_PNG_DATA_URL,
+    });
+    expect(updateRacer).toHaveBeenCalledTimes(1);
+    expect(createRacer).not.toHaveBeenCalled();
+  });
+
+  it('server URL as spriteDataUrl (edit mode, unchanged sprite) skips uploadRacerSprite', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes();
+    _resetRacersReadyForTesting();
+    fetchRacers.mockResolvedValue([]);
+
+    const configWithServerUrl = {
+      ...VALID_SERVER_CONFIG,
+      name: 'Updated',
+      spriteDataUrl: 'http://localhost:3000/api/racers/test-server-racer/sprite',
+    };
+    await registerRacerType(configWithServerUrl);
+    expect(uploadRacerSprite).not.toHaveBeenCalled();
+  });
+
+  it('triggers registry reload after save (fetchRacers called for reload)', async () => {
+    fetchRacers.mockResolvedValue([]);
+    await registerRacerType(NEW_CONFIG);
+    // One call for the reload triggered by registerRacerType
+    expect(fetchRacers).toHaveBeenCalledTimes(1);
+  });
+
+  it('built-in id collision throws without calling createRacer', async () => {
+    await expect(registerRacerType({ ...NEW_CONFIG, id: 'horse' })).rejects.toThrow('built-in');
+    expect(createRacer).not.toHaveBeenCalled();
+  });
+});
+
+describe('Honesty proof (c) — removeRacerType built-in guard (D6b)', () => {
+  it('removeRacerType("horse") throws and does not call deleteRacer', async () => {
+    await expect(removeRacerType('horse')).rejects.toThrow('built-in');
+    expect(deleteRacer).not.toHaveBeenCalled();
+  });
+
+  it('removeRacerType for user racer calls deleteRacer + triggers reload', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes(); // setup: 1st fetchRacers call
+    _resetRacersReadyForTesting();
+    fetchRacers.mockResolvedValue([]);
+
+    await removeRacerType('test-server-racer');
+    expect(deleteRacer).toHaveBeenCalledWith('test-server-racer');
+    // 2 total: 1 for the setup load above + 1 for the reload triggered by removeRacerType
+    expect(fetchRacers).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Honesty proof (d) — stale-on-error: fetch failure does not clear registry (D6b)', () => {
+  it('registry entries from previous load are kept when reload fetch fails', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await loadServerRacerTypes();
+    _resetRacersReadyForTesting();
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchRacers.mockRejectedValue(new Error('Network error'));
+    await loadServerRacerTypes();
+    spy.mockRestore();
+
+    // Stale entry must still be present
+    const type = getRacerType('test-server-racer');
+    expect(type.config.id).toBe('test-server-racer');
   });
 });

@@ -30,6 +30,8 @@ function RacerManager() {
   const navigate = useNavigate();
   const [overrides, setOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
   const [editTypeId, setEditTypeId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const normalized = normalizeOverrideMap(overrides);
 
@@ -65,15 +67,23 @@ function RacerManager() {
     });
   }
 
-  function handleDelete(id, label) {
+  async function handleDelete(id, label) {
     if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
-    removeRacerType(id);
-    // setOverrides triggers re-render; also removes any orphaned overrides for the deleted id
-    setOverrides((prev) => {
-      const all = { ...normalizeOverrideMap(prev) };
-      delete all[id];
-      return all;
-    });
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      await removeRacerType(id);
+      // Removes orphaned overrides and triggers re-render so listAllRacerTypes() re-runs.
+      setOverrides((prev) => {
+        const all = { ...normalizeOverrideMap(prev) };
+        delete all[id];
+        return all;
+      });
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -121,6 +131,12 @@ function RacerManager() {
             <InfoTooltip text="The smallest size at which the racer image still looks good. The app uses this to keep racers readable on big tracks where they would otherwise be tiny." />
           </span>
         </div>
+
+        {deleteError && (
+          <p style={{ color: '#e63946', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+            Delete failed: {deleteError}
+          </p>
+        )}
 
         <div className={s.rowList}>
           {types.map((type) => (
@@ -175,6 +191,7 @@ function RacerManager() {
               {!type.isBuiltIn && (
                 <button
                   onClick={() => handleDelete(type.id, type.label)}
+                  disabled={deletingId === type.id}
                   title={`Delete ${type.label}`}
                   style={{
                     background: 'none',
@@ -183,11 +200,12 @@ function RacerManager() {
                     fontSize: '0.72rem',
                     padding: '0.25rem 0.55rem',
                     borderRadius: 'var(--radius)',
-                    cursor: 'pointer',
+                    cursor: deletingId === type.id ? 'not-allowed' : 'pointer',
                     marginRight: '0.25rem',
+                    opacity: deletingId === type.id ? 0.5 : 1,
                   }}
                 >
-                  Delete
+                  {deletingId === type.id ? 'Deleting…' : 'Delete'}
                 </button>
               )}
               <label className={s.toggle} title={type.isActive ? 'Disable' : 'Enable'}>

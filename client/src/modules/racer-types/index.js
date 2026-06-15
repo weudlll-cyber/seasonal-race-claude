@@ -74,9 +74,14 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 import { getCoatVariants } from './spriteTinter.js';
 import { loadSprite } from './spriteLoader.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
-import { saveStoredRacerType, deleteStoredRacerType } from './racerTypeStorage.js';
 import { getTrailFactory } from './trailStyles.js';
-import { fetchRacers } from '../../services/racerApi.js';
+import {
+  fetchRacers,
+  createRacer,
+  updateRacer,
+  deleteRacer,
+  uploadRacerSprite,
+} from '../../services/racerApi.js';
 import { API_BASE_URL } from '../../services/api.js';
 
 // All 20 racer types are SpriteRacerType instances.
@@ -427,7 +432,21 @@ export function _resetLoadedRacerTypesForTesting() {
   }
 }
 
+/** Directly inject a type instance into the registry without going through the server. Only use in tests. */
+export function _setLoadedRacerTypeForTesting(id, instance) {
+  _loadedRacerTypes[id] = instance;
+}
+
 // ── User-created type management ─────────────────────────────────────────────
+
+function _dataUrlToFile(dataUrl, filename) {
+  const [header, data] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bytes = atob(data);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new File([arr], filename, { type: mime });
+}
 
 /**
  * Fetch user-created racer configs from the server and register them as
@@ -459,6 +478,11 @@ async function _runLoad() {
     return;
   }
 
+  // Clear stale entries only after a successful fetch (stale-on-error).
+  for (const id of Object.keys(_loadedRacerTypes)) {
+    delete _loadedRacerTypes[id];
+  }
+
   for (const cfg of configs) {
     try {
       _loadedRacerTypes[cfg.id] = new SpriteRacerType({
@@ -476,42 +500,52 @@ async function _runLoad() {
 }
 
 /**
- * Register a new user-created racer type at runtime.
- * Validates the config via racerTypeStorage, constructs the SpriteRacerType
- * instance, persists it, and adds it to the live registry.
+ * Create or update a user-created racer type on the server and reload the live registry.
+ * New id → createRacer; existing id in _loadedRacerTypes → updateRacer.
+ * spriteDataUrl (base64 data URL) is converted to a File and uploaded separately;
+ * if spriteDataUrl is already a server URL (edit mode, sprite unchanged), upload is skipped.
  *
- * @param {object} config  Must include all required storage fields (see racerTypeStorage.js).
- *   spriteDataUrl is used as spriteUrl. trailStyle resolves via getTrailFactory.
- * @returns {SpriteRacerType} The newly created type instance.
- * @throws {Error} If the id collides with a built-in type or required fields are missing.
+ * @param {object} config  Config including optional spriteDataUrl (base64 data URL).
+ * @throws {Error} If id collides with a built-in type or the server rejects the request.
  */
-export function registerRacerType(config) {
-  saveStoredRacerType(config, RACER_TYPE_IDS);
-  const instance = new SpriteRacerType({
-    ...config,
-    spriteUrl: config.spriteDataUrl,
-    trailFactory: getTrailFactory(config.trailStyle),
-  });
-  _loadedRacerTypes[config.id] = instance;
-  const blendMode =
-    instance.config.tintMode === 'auto' ? 'auto' : (instance.config.tintMode ?? 'multiply');
-  getCoatVariants(config.spriteDataUrl, config.coats, blendMode).catch(() => {});
-  return instance;
+export async function registerRacerType(config) {
+  if (RACER_TYPE_IDS.includes(config.id)) {
+    throw new Error(
+      `registerRacerType: "${config.id}" is a built-in type and cannot be overridden`
+    );
+  }
+
+  const isUpdate = config.id in _loadedRacerTypes;
+  const { spriteDataUrl, ...serverRecord } = config;
+
+  if (isUpdate) {
+    await updateRacer(config.id, serverRecord);
+  } else {
+    await createRacer(serverRecord);
+  }
+
+  if (spriteDataUrl && spriteDataUrl.startsWith('data:')) {
+    const ext = spriteDataUrl.match(/data:image\/(\w+);/)?.[1] ?? 'png';
+    const file = _dataUrlToFile(spriteDataUrl, `${config.id}.${ext}`);
+    await uploadRacerSprite(config.id, file);
+  }
+
+  await loadServerRacerTypes();
 }
 
 /**
- * Remove a user-created racer type from the live registry and from storage.
+ * Delete a user-created racer type from the server and reload the live registry.
  * Rejects built-in type IDs — those cannot be removed.
  *
  * @param {string} id  The type id to remove.
- * @throws {Error} If id is a built-in type.
+ * @throws {Error} If id is a built-in type or the server rejects the request.
  */
-export function removeRacerType(id) {
+export async function removeRacerType(id) {
   if (RACER_TYPE_IDS.includes(id)) {
     throw new Error(`removeRacerType: "${id}" is a built-in type and cannot be removed`);
   }
-  deleteStoredRacerType(id);
-  delete _loadedRacerTypes[id];
+  await deleteRacer(id);
+  await loadServerRacerTypes();
 }
 
 // ── Boot sequence ────────────────────────────────────────────────────────────

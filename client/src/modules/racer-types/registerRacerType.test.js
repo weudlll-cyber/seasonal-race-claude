@@ -2,16 +2,18 @@
 // File:        registerRacerType.test.js
 // Path:        client/src/modules/racer-types/registerRacerType.test.js
 // Project:     RaceArena
-// Description: Tests that registerRacerType triggers getCoatVariants warm-up
-//              with the correct blend mode derived from config.tintMode.
+// Description: Sanity tests for the D6b async registerRacerType.
+//              Full write-path honesty proofs (createRacer, uploadRacerSprite,
+//              stale-registry-clear, etc.) live in racer-server-load.test.js.
 // ============================================================
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Shared stub for all 12 built-in type mocks.
-// Must include all TUNABLE_FIELDS + fields read by warmUpAllRacerTypes.
+// ── Module mocks ───────────────────────────────────────────────────────────────
+
 const _stub = vi.hoisted(() => ({
   config: {
+    id: 'horse',
     coats: [{ id: 'default', name: 'Default', tint: null }],
     spriteUrl: '/mock.png',
     tintMode: 'multiply',
@@ -21,7 +23,12 @@ const _stub = vi.hoisted(() => ({
     leaderRingColor: '#ffd700',
     leaderEllipseRx: 16,
     leaderEllipseRy: 10,
+    minTargetScreenPx: 40,
+    surfaceClasses: [],
+    surfaceEffectOverrides: {},
   },
+  getEmoji: () => '🐴',
+  getSpeedMultiplier: () => 1.0,
 }));
 
 vi.mock('./HorseRacerType.js', () => ({ HorseRacerType: _stub, HORSE_COATS: [] }));
@@ -36,12 +43,20 @@ vi.mock('./RocketRacerType.js', () => ({ RocketRacerType: _stub }));
 vi.mock('./BuggyRacerType.js', () => ({ BuggyRacerType: _stub }));
 vi.mock('./MotorbikeRacerType.js', () => ({ MotorbikeRacerType: _stub }));
 vi.mock('./PlaneRacerType.js', () => ({ PlaneRacerType: _stub }));
+vi.mock('./LugeRacerType.js', () => ({ LugeRacerType: _stub }));
+vi.mock('./BeetleRacerType.js', () => ({ BeetleRacerType: _stub }));
+vi.mock('./BoarderRacerType.js', () => ({ BoarderRacerType: _stub }));
+vi.mock('./KoiRacerType.js', () => ({ KoiRacerType: _stub }));
+vi.mock('./TurtleRacerType.js', () => ({ TurtleRacerType: _stub }));
+vi.mock('./MantaRacerType.js', () => ({ MantaRacerType: _stub }));
+vi.mock('./DolphinRacerType.js', () => ({ DolphinRacerType: _stub }));
+vi.mock('./SnowmobileRacerType.js', () => ({ SnowmobileRacerType: _stub }));
 
 vi.mock('./SpriteRacerType.js', () => {
   function SpriteRacerType(cfg) {
     this.config = { ...cfg };
   }
-  return { SpriteRacerType };
+  return { SpriteRacerType, BODY_LONG_AXIS_MAX_RATIO: 5.0 };
 });
 
 vi.mock('./spriteTinter.js', () => {
@@ -53,6 +68,7 @@ vi.mock('./spriteTinter.js', () => {
 vi.mock('./spriteLoader.js', () => ({
   loadSprite: vi.fn().mockResolvedValue({}),
   getCachedSprite: vi.fn(),
+  _clearSpriteCache: vi.fn(),
 }));
 
 vi.mock('../storage/storage.js', () => ({
@@ -62,24 +78,28 @@ vi.mock('../storage/storage.js', () => ({
   STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
-vi.mock('./racerTypeStorage.js', () => ({
-  loadStoredRacerTypes: vi.fn().mockReturnValue([]),
-  saveStoredRacerType: vi.fn(),
-  deleteStoredRacerType: vi.fn(),
-}));
-
 vi.mock('./trailStyles.js', () => ({
   getTrailFactory: vi.fn().mockReturnValue(() => []),
 }));
 
+vi.mock('../../services/racerApi.js', () => ({
+  fetchRacers: vi.fn().mockResolvedValue([]),
+  createRacer: vi.fn().mockResolvedValue({}),
+  updateRacer: vi.fn().mockResolvedValue({}),
+  deleteRacer: vi.fn().mockResolvedValue(undefined),
+  uploadRacerSprite: vi.fn().mockResolvedValue({ spriteFile: 'test.png' }),
+}));
+
+vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
+
 import { registerRacerType, _resetLoadedRacerTypesForTesting } from './index.js';
-import { getCoatVariants } from './spriteTinter.js';
 
 const BASE_CONFIG = {
   id: 'test-custom',
   name: 'Test',
   emoji: '🐱',
-  spriteDataUrl: 'data:image/png;base64,abc123',
+  spriteDataUrl:
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   frameCount: 4,
   basePeriodMs: 600,
   displaySize: 40,
@@ -87,56 +107,29 @@ const BASE_CONFIG = {
   coats: [{ id: 'base', name: 'Base', tint: null }],
   defaultCoatId: 'base',
   primaryColor: '#ff0000',
+  speedMultiplier: 1.0,
+  tintMode: 'auto',
 };
 
-describe('registerRacerType — getCoatVariants warm-up', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    _resetLoadedRacerTypesForTesting();
+beforeEach(() => {
+  vi.clearAllMocks();
+  _resetLoadedRacerTypesForTesting();
+});
+
+describe('registerRacerType — D6b async server write path', () => {
+  it('is async — returns a Promise', () => {
+    const result = registerRacerType(BASE_CONFIG);
+    expect(result).toBeInstanceOf(Promise);
+    return result; // let vitest await it so unhandled rejection doesn't pollute
   });
 
-  afterEach(() => {
-    _resetLoadedRacerTypesForTesting();
+  it('rejects for built-in id collision without calling server', async () => {
+    const { createRacer } = await import('../../services/racerApi.js');
+    await expect(registerRacerType({ ...BASE_CONFIG, id: 'horse' })).rejects.toThrow('built-in');
+    expect(createRacer).not.toHaveBeenCalled();
   });
 
-  it('calls getCoatVariants with "multiply" when tintMode is absent (constructor default)', () => {
-    registerRacerType(BASE_CONFIG);
-    expect(getCoatVariants).toHaveBeenCalledWith(
-      BASE_CONFIG.spriteDataUrl,
-      BASE_CONFIG.coats,
-      'multiply'
-    );
-  });
-
-  it('calls getCoatVariants with "auto" when tintMode is explicitly "auto"', () => {
-    registerRacerType({ ...BASE_CONFIG, tintMode: 'auto' });
-    expect(getCoatVariants).toHaveBeenCalledWith(
-      BASE_CONFIG.spriteDataUrl,
-      BASE_CONFIG.coats,
-      'auto'
-    );
-  });
-
-  it('calls getCoatVariants with "screen" when tintMode is "screen"', () => {
-    registerRacerType({ ...BASE_CONFIG, id: 'test-screen', tintMode: 'screen' });
-    expect(getCoatVariants).toHaveBeenCalledWith(
-      BASE_CONFIG.spriteDataUrl,
-      BASE_CONFIG.coats,
-      'screen'
-    );
-  });
-
-  it('calls getCoatVariants with "multiply" when tintMode is "multiply"', () => {
-    registerRacerType({ ...BASE_CONFIG, id: 'test-multiply', tintMode: 'multiply' });
-    expect(getCoatVariants).toHaveBeenCalledWith(
-      BASE_CONFIG.spriteDataUrl,
-      BASE_CONFIG.coats,
-      'multiply'
-    );
-  });
-
-  it('returns a SpriteRacerType instance with the correct id', () => {
-    const instance = registerRacerType(BASE_CONFIG);
-    expect(instance.config.id).toBe('test-custom');
+  it('resolves successfully for a valid new racer', async () => {
+    await expect(registerRacerType(BASE_CONFIG)).resolves.toBeUndefined();
   });
 });

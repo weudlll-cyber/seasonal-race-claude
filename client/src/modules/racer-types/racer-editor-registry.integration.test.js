@@ -3,124 +3,102 @@
 // Path:        client/src/modules/racer-types/racer-editor-registry.integration.test.js
 // Project:     RaceArena
 // Created:     2026-05-27
+// Updated:     D6b — registerRacerType/removeRacerType are now async server-side.
+//              Tests for the write path + new-style registry injection.
+//              Full D6b honesty proofs live in racer-server-load.test.js.
 // Description: Integration tests for the user-created racer type registry
-//              (registerRacerType, removeRacerType, listAllRacerTypes,
-//              getCoatsByType, getRacerTypeLabel — Phase 1 of racer-editor).
+//              (listAllRacerTypes, getCoatsByType, getRacerTypeLabel, built-in
+//              collision guard, query functions — Phase 1 of racer-editor).
 // ============================================================
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// ── Server mocks (needed because registerRacerType/removeRacerType call racerApi) ──
+
+vi.mock('../../services/racerApi.js', () => ({
+  fetchRacers: vi.fn().mockResolvedValue([]),
+  createRacer: vi.fn().mockResolvedValue({}),
+  updateRacer: vi.fn().mockResolvedValue({}),
+  deleteRacer: vi.fn().mockResolvedValue(undefined),
+  uploadRacerSprite: vi.fn().mockResolvedValue({ spriteFile: 'test.png' }),
+}));
+
+vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
+
+// ── Minimal type stubs so SpriteRacerType can be constructed without real sprites ──
+
+vi.mock('./spriteLoader.js', () => ({
+  loadSprite: vi.fn().mockResolvedValue({}),
+  getCachedSprite: vi.fn(),
+  _clearSpriteCache: vi.fn(),
+}));
+
+vi.mock('./spriteTinter.js', () => {
+  const getCoatVariants = vi.fn().mockResolvedValue(new Map());
+  getCoatVariants.cached = vi.fn();
+  return {
+    getCoatVariants,
+    tintSprite: vi.fn().mockReturnValue({}),
+    tintSpriteWithMask: vi.fn().mockReturnValue({}),
+    tintSpriteBodyAndMask: vi.fn().mockReturnValue({}),
+    tintSpriteWithDualMask: vi.fn().mockReturnValue({}),
+    detectTintMode: vi.fn().mockReturnValue('multiply'),
+    getPatternedVariant: vi.fn().mockReturnValue(null),
+    _clearTintCache: vi.fn(),
+    _clearMaskedTintCache: vi.fn(),
+  };
+});
+
+vi.mock('./trailStyles.js', () => ({
+  getTrailFactory: vi.fn().mockReturnValue(() => []),
+}));
+
 import {
-  registerRacerType,
-  removeRacerType,
   listAllRacerTypes,
   getRacerType,
   getCoatsByType,
   getRacerTypeLabel,
   RACER_TYPE_IDS,
+  removeRacerType,
+  registerRacerType,
   _resetLoadedRacerTypesForTesting,
+  _resetRacersReadyForTesting,
+  _setLoadedRacerTypeForTesting,
 } from './index.js';
-import { loadStoredRacerTypes } from './racerTypeStorage.js';
 
-const STORAGE_KEY = 'racearena:racerTypes:v1';
-
-// Minimal valid config accepted by both racerTypeStorage and SpriteRacerType.
 const TEST_COAT = { id: 'default', name: 'Default', tint: null };
-const VALID_CONFIG = Object.freeze({
-  id: 'test-parrot',
-  name: 'Parrot',
-  emoji: '🦜',
-  spriteDataUrl: 'data:image/png;base64,abc123',
-  frameCount: 1,
-  basePeriodMs: 500,
-  displaySize: 40,
-  trailStyle: 'dust',
-  coats: [TEST_COAT],
-  primaryColor: '#00cc00',
-});
+
+// Fake SpriteRacerType-like instance injected directly into registry.
+function makeFakeType(id, name, emoji, overrides = {}) {
+  return {
+    config: {
+      id,
+      name,
+      emoji,
+      coats: [TEST_COAT],
+      speedMultiplier: 1.0,
+      displaySize: 40,
+      basePeriodMs: 600,
+      tintMode: 'multiply',
+      spriteUrl: `http://test/api/racers/${id}/sprite`,
+      surfaceClasses: [],
+      ...overrides,
+    },
+    getSpeedMultiplier: () => overrides.speedMultiplier ?? 1.0,
+    getEmoji: () => emoji,
+  };
+}
+
+const FAKE_PARROT = makeFakeType('test-parrot', 'Parrot', '🦜');
 
 beforeEach(() => {
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.clear();
   _resetLoadedRacerTypesForTesting();
+  _resetRacersReadyForTesting();
+  vi.clearAllMocks();
 });
 
-describe('registerRacerType', () => {
-  it('returns a SpriteRacerType instance', () => {
-    const instance = registerRacerType(VALID_CONFIG);
-    expect(typeof instance.getSpeedMultiplier).toBe('function');
-    expect(typeof instance.getEmoji).toBe('function');
-  });
-
-  it('makes the type visible in listAllRacerTypes', () => {
-    registerRacerType(VALID_CONFIG);
-    const all = listAllRacerTypes();
-    const found = all.find((t) => t.id === 'test-parrot');
-    expect(found).toBeTruthy();
-    expect(found.name).toContain('Parrot');
-  });
-
-  it('makes the type retrievable via getRacerType', () => {
-    registerRacerType(VALID_CONFIG);
-    const type = getRacerType('test-parrot');
-    expect(type.config.id).toBe('test-parrot');
-  });
-
-  it('registered type appears after built-ins in listAllRacerTypes', () => {
-    registerRacerType(VALID_CONFIG);
-    const all = listAllRacerTypes();
-    const builtInCount = RACER_TYPE_IDS.length;
-    expect(all.length).toBe(builtInCount + 1);
-    expect(all[all.length - 1].id).toBe('test-parrot');
-  });
-
-  it('throws when id collides with a built-in type', () => {
-    expect(() => registerRacerType({ ...VALID_CONFIG, id: 'horse' })).toThrow(
-      /collides with a built-in/
-    );
-  });
-
-  it('throws when required storage field is missing', () => {
-    const { emoji: _, ...noEmoji } = VALID_CONFIG;
-    expect(() => registerRacerType(noEmoji)).toThrow(/required field "emoji" is missing/);
-  });
-
-  it('registered type is active by default', () => {
-    registerRacerType(VALID_CONFIG);
-    const all = listAllRacerTypes();
-    const found = all.find((t) => t.id === 'test-parrot');
-    expect(found.isActive).toBe(true);
-  });
-});
-
-describe('removeRacerType', () => {
-  it('removes a registered type from the live registry', () => {
-    registerRacerType(VALID_CONFIG);
-    removeRacerType('test-parrot');
-    expect(listAllRacerTypes().find((t) => t.id === 'test-parrot')).toBeUndefined();
-  });
-
-  it('getRacerType falls back to horse for a removed id', () => {
-    registerRacerType(VALID_CONFIG);
-    removeRacerType('test-parrot');
-    const fallback = getRacerType('test-parrot');
-    expect(fallback.config.id).toBe('horse');
-  });
-
-  it('removes the type from localStorage', () => {
-    registerRacerType(VALID_CONFIG);
-    removeRacerType('test-parrot');
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    expect(stored.find((c) => c.id === 'test-parrot')).toBeUndefined();
-  });
-
-  it('throws when attempting to remove a built-in type', () => {
-    expect(() => removeRacerType('horse')).toThrow(/is a built-in type/);
-  });
-
-  it('is a no-op for unknown non-built-in id', () => {
-    // should not throw
-    expect(() => removeRacerType('no-such-type')).not.toThrow();
-  });
-});
+// ── Query functions on built-in types (unaffected by D6b) ────────────────────
 
 describe('getCoatsByType', () => {
   it('returns coats for a built-in type', () => {
@@ -129,8 +107,8 @@ describe('getCoatsByType', () => {
     expect(coats.length).toBeGreaterThan(0);
   });
 
-  it('returns coats for a registered type', () => {
-    registerRacerType(VALID_CONFIG);
+  it('returns coats for an injected user-created type', () => {
+    _setLoadedRacerTypeForTesting('test-parrot', FAKE_PARROT);
     const coats = getCoatsByType('test-parrot');
     expect(coats).toEqual([TEST_COAT]);
   });
@@ -146,8 +124,8 @@ describe('getRacerTypeLabel', () => {
     expect(label).toContain('Horse');
   });
 
-  it('returns name + emoji for a registered type', () => {
-    registerRacerType(VALID_CONFIG);
+  it('returns name + emoji for an injected user-created type', () => {
+    _setLoadedRacerTypeForTesting('test-parrot', FAKE_PARROT);
     const label = getRacerTypeLabel('test-parrot');
     expect(label).toBe('Parrot 🦜');
   });
@@ -157,44 +135,76 @@ describe('getRacerTypeLabel', () => {
   });
 });
 
-describe('edit mode — stored config round-trip', () => {
-  it('all editor-relevant fields survive a register → loadStoredRacerTypes round-trip', () => {
-    const config = {
-      ...VALID_CONFIG,
-      name: 'Space Cat',
-      emoji: '🐱',
-      speedMultiplier: 1.3,
-      displaySize: 52,
-      trailStyle: 'sparkle',
-      surfaceClasses: ['earth'],
-      primaryColor: '#ff8800',
-      frameCount: 16,
-      basePeriodMs: 900,
-      baseRotationOffset: 0.5,
-    };
-    registerRacerType(config);
-    const stored = loadStoredRacerTypes().find((c) => c.id === 'test-parrot');
-    expect(stored.name).toBe('Space Cat');
-    expect(stored.emoji).toBe('🐱');
-    expect(stored.speedMultiplier).toBe(1.3);
-    expect(stored.displaySize).toBe(52);
-    expect(stored.trailStyle).toBe('sparkle');
-    expect(stored.primaryColor).toBe('#ff8800');
-    expect(stored.frameCount).toBe(16);
-    expect(stored.basePeriodMs).toBe(900);
-    expect(stored.baseRotationOffset).toBe(0.5);
-    expect(stored.surfaceClasses).toEqual(['earth']);
+// ── Registry query after injection ───────────────────────────────────────────
+
+describe('registry queries — injected user-created type', () => {
+  beforeEach(() => {
+    _setLoadedRacerTypeForTesting('test-parrot', FAKE_PARROT);
+  });
+
+  it('makes the type visible in listAllRacerTypes', () => {
+    const all = listAllRacerTypes();
+    const found = all.find((t) => t.id === 'test-parrot');
+    expect(found).toBeTruthy();
+    expect(found.name).toContain('Parrot');
+  });
+
+  it('makes the type retrievable via getRacerType', () => {
+    const type = getRacerType('test-parrot');
+    expect(type.config.id).toBe('test-parrot');
+  });
+
+  it('injected type appears after built-ins in listAllRacerTypes', () => {
+    const all = listAllRacerTypes();
+    const builtInCount = RACER_TYPE_IDS.length;
+    expect(all.length).toBe(builtInCount + 1);
+    expect(all[all.length - 1].id).toBe('test-parrot');
+  });
+
+  it('injected type is active by default', () => {
+    const all = listAllRacerTypes();
+    const found = all.find((t) => t.id === 'test-parrot');
+    expect(found.isActive).toBe(true);
   });
 });
 
-describe('ID collision guard — editor level', () => {
-  it('registerRacerType with a built-in id throws and does not persist', () => {
-    const collidingConfig = { ...VALID_CONFIG, id: 'rocket' };
-    expect(() => registerRacerType(collidingConfig)).toThrow(/collides with a built-in/);
-    // Should not appear in storage
-    expect(loadStoredRacerTypes().find((c) => c.id === 'rocket')).toBeUndefined();
-    // Built-in 'rocket' type is unchanged
-    const rocketType = getRacerType('rocket');
-    expect(rocketType.config.id).toBe('rocket');
+// ── Built-in collision guard ──────────────────────────────────────────────────
+
+describe('registerRacerType — built-in collision guard', () => {
+  it('rejects with built-in error for a built-in id', async () => {
+    await expect(registerRacerType({ id: 'horse' })).rejects.toThrow(/built-in/);
+  });
+
+  it('does not modify the live registry on collision', async () => {
+    await registerRacerType({ id: 'rocket' }).catch(() => {});
+    expect(getRacerType('rocket').config.id).toBe('rocket'); // still the real built-in
+  });
+});
+
+// ── removeRacerType ───────────────────────────────────────────────────────────
+
+describe('removeRacerType', () => {
+  it('rejects when attempting to remove a built-in type', async () => {
+    await expect(removeRacerType('horse')).rejects.toThrow(/built-in/);
+  });
+
+  it('removes an injected type from the live registry after server delete', async () => {
+    _setLoadedRacerTypeForTesting('test-parrot', FAKE_PARROT);
+    // fetchRacers returns empty list so reload clears registry
+    const { fetchRacers } = await import('../../services/racerApi.js');
+    fetchRacers.mockResolvedValue([]);
+    await removeRacerType('test-parrot');
+    expect(listAllRacerTypes().find((t) => t.id === 'test-parrot')).toBeUndefined();
+  });
+
+  it('getRacerType falls back to horse after removal', async () => {
+    _setLoadedRacerTypeForTesting('test-parrot', FAKE_PARROT);
+    const { fetchRacers } = await import('../../services/racerApi.js');
+    fetchRacers.mockResolvedValue([]);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await removeRacerType('test-parrot');
+    const fallback = getRacerType('test-parrot');
+    expect(fallback.config.id).toBe('horse');
+    spy.mockRestore();
   });
 });

@@ -52,8 +52,8 @@ import {
   CONFIG_SNAPSHOT,
   RACER_TYPES,
   restoreTunableDefault,
-  registerRacerType,
   _resetLoadedRacerTypesForTesting,
+  _setLoadedRacerTypeForTesting,
 } from '../../../modules/racer-types/index.js';
 
 beforeEach(() => {
@@ -269,7 +269,25 @@ describe('RacerEditModal — user-created types', () => {
 
   beforeEach(() => {
     _resetLoadedRacerTypesForTesting();
-    registerRacerType(USER_TYPE);
+    // Inject a fake SpriteRacerType-like instance directly (no server round-trip).
+    _setLoadedRacerTypeForTesting('test-cat', {
+      config: {
+        id: 'test-cat',
+        name: USER_TYPE.name,
+        emoji: USER_TYPE.emoji,
+        speedMultiplier: USER_TYPE.speedMultiplier,
+        displaySize: USER_TYPE.displaySize,
+        basePeriodMs: USER_TYPE.basePeriodMs,
+        leaderRingColor: '#ffd700',
+        leaderEllipseRx: 16,
+        leaderEllipseRy: 10,
+        minTargetScreenPx: 40,
+        surfaceClasses: USER_TYPE.surfaceClasses,
+        surfaceEffectOverrides: {},
+      },
+      getSpeedMultiplier: () => USER_TYPE.speedMultiplier,
+      getEmoji: () => USER_TYPE.emoji,
+    });
   });
 
   afterEach(() => {

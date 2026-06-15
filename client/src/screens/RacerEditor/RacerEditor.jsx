@@ -12,9 +12,13 @@
 
 import { useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { registerRacerType, RACER_TYPE_IDS } from '../../modules/racer-types/index.js';
+import {
+  registerRacerType,
+  RACER_TYPE_IDS,
+  listAllRacerTypes,
+  getRacerType,
+} from '../../modules/racer-types/index.js';
 import { STANDARD_COAT_PALETTE } from '../../modules/racer-types/standardCoats.js';
-import { loadStoredRacerTypes } from '../../modules/racer-types/racerTypeStorage.js';
 import { slugify, uniqueSlug } from '../../utils/slugify.js';
 import { SpriteGeneratorPanel } from './SpriteGeneratorPanel.jsx';
 import { RacerMetadataPanel } from './RacerMetadataPanel.jsx';
@@ -48,26 +52,28 @@ const DEFAULT_METADATA = {
 
 function loadEditState(editId) {
   if (!editId) return null;
-  const stored = loadStoredRacerTypes().find((c) => c.id === editId);
-  if (!stored) return null;
+  if (RACER_TYPE_IDS.includes(editId)) return null;
+  const type = getRacerType(editId);
+  if (!type || type.config.id !== editId) return null;
+  const cfg = type.config;
   return {
     anim: {
       ...DEFAULT_ANIM,
-      frameCount: stored.frameCount ?? DEFAULT_ANIM.frameCount,
-      basePeriodMs: stored.basePeriodMs ?? DEFAULT_ANIM.basePeriodMs,
-      baseRotationOffset: stored.baseRotationOffset ?? 0,
+      frameCount: cfg.frameCount ?? DEFAULT_ANIM.frameCount,
+      basePeriodMs: cfg.basePeriodMs ?? DEFAULT_ANIM.basePeriodMs,
+      baseRotationOffset: cfg.baseRotationOffset ?? 0,
     },
     metadata: {
-      name: stored.name ?? '',
-      emoji: stored.emoji ?? '',
-      speedMultiplier: stored.speedMultiplier ?? 1.0,
-      displaySize: stored.displaySize ?? 40,
-      trailStyle: stored.trailStyle ?? 'dust',
-      surfaceClasses: Array.isArray(stored.surfaceClasses) ? stored.surfaceClasses : [],
-      primaryColor: stored.primaryColor ?? '#4488ff',
+      name: cfg.name ?? '',
+      emoji: cfg.emoji ?? '',
+      speedMultiplier: cfg.speedMultiplier ?? 1.0,
+      displaySize: cfg.displaySize ?? 40,
+      trailStyle: cfg.trailStyle ?? 'dust',
+      surfaceClasses: Array.isArray(cfg.surfaceClasses) ? cfg.surfaceClasses : [],
+      primaryColor: cfg.primaryColor ?? '#4488ff',
     },
-    spriteDataUrl: stored.spriteDataUrl ?? null,
-    tintMode: stored.tintMode ?? 'auto',
+    spriteDataUrl: cfg.spriteUrl ?? null,
+    tintMode: cfg.tintMode ?? 'auto',
   };
 }
 
@@ -83,6 +89,7 @@ function RacerEditor() {
   const [spriteDataUrl, setSpriteDataUrl] = useState(editState?.spriteDataUrl ?? null);
   const [tintMode, setTintMode] = useState(editState?.tintMode ?? 'auto');
   const [saveError, setSaveError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const canSave = !!spriteDataUrl && !!metadata.name.trim();
 
@@ -94,20 +101,21 @@ function RacerEditor() {
     setTintMode(mode);
   }, []);
 
-  function handleSave() {
+  async function handleSave() {
     setSaveError(null);
+    setIsSaving(true);
 
     let id;
     if (editId) {
       id = editId;
     } else {
       const base = slugify(metadata.name.trim()) || 'racer';
-      const existingIds = new Set([...RACER_TYPE_IDS, ...loadStoredRacerTypes().map((c) => c.id)]);
+      const existingIds = new Set(listAllRacerTypes().map((t) => t.id));
       id = uniqueSlug(base, existingIds);
     }
 
     try {
-      registerRacerType({
+      await registerRacerType({
         id,
         name: metadata.name.trim(),
         emoji: metadata.emoji,
@@ -127,6 +135,7 @@ function RacerEditor() {
       navigate('/setup');
     } catch (err) {
       setSaveError(err.message);
+      setIsSaving(false);
     }
   }
 
@@ -158,11 +167,11 @@ function RacerEditor() {
       <footer className={s.footer}>
         <button
           className={`${s.btn} ${s.btnPrimary}`}
-          disabled={!canSave}
+          disabled={!canSave || isSaving}
           onClick={handleSave}
           title={!canSave ? 'Upload a sprite and enter a name first' : undefined}
         >
-          {editId ? 'Update Racer' : 'Save Racer'}
+          {isSaving ? 'Saving…' : editId ? 'Update Racer' : 'Save Racer'}
         </button>
         <button className={`${s.btn} ${s.btnGhost}`} onClick={() => navigate(-1)}>
           Cancel

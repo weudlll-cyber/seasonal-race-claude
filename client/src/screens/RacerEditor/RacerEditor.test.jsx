@@ -27,10 +27,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 vi.mock('../../modules/racer-types/index.js', () => ({
   registerRacerType: mockRegisterRacerType,
   RACER_TYPE_IDS: ['horse', 'rocket'],
-}));
-
-vi.mock('../../modules/racer-types/racerTypeStorage.js', () => ({
-  loadStoredRacerTypes: vi.fn(() => []),
+  listAllRacerTypes: vi.fn().mockReturnValue([]),
+  getRacerType: vi.fn(),
 }));
 
 vi.mock('../../utils/slugify.js', () => ({
