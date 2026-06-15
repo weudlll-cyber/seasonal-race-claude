@@ -314,3 +314,35 @@ describe('Honesty proof (a) — getRacerType unknown-id diagnostic (L126)', () =
     spy.mockRestore();
   });
 });
+
+// ── HONESTY PROOF (D6a-Fix) — single-flight guard ────────────────────────────
+//
+// RED: no guard — two concurrent calls each call fetchRacers (count=2).
+// GREEN: in-flight promise shared — fetchRacers called exactly once (count=1).
+// Also verifies the guard clears after completion (sequential re-load works).
+
+describe('Single-flight guard — concurrent calls (D6a-Fix honesty proof)', () => {
+  it('fetchRacers called exactly once for two concurrent loadServerRacerTypes() calls', async () => {
+    fetchRacers.mockResolvedValue([]);
+    const p1 = loadServerRacerTypes();
+    const p2 = loadServerRacerTypes();
+    await Promise.all([p1, p2]);
+    expect(fetchRacers).toHaveBeenCalledTimes(1);
+  });
+
+  it('both concurrent callers resolve after the single fetch completes', async () => {
+    fetchRacers.mockResolvedValue([VALID_SERVER_CONFIG]);
+    await Promise.all([loadServerRacerTypes(), loadServerRacerTypes()]);
+    expect(areRacersReady()).toBe(true);
+    expect(getRacerType('test-server-racer')).toBeDefined();
+  });
+
+  it('after completion the in-flight guard is cleared — sequential re-call triggers fresh fetch', async () => {
+    fetchRacers.mockResolvedValue([]);
+    await loadServerRacerTypes();
+    expect(fetchRacers).toHaveBeenCalledTimes(1);
+    // No permanent block: a second call (e.g. after re-auth reset) starts fresh.
+    await loadServerRacerTypes();
+    expect(fetchRacers).toHaveBeenCalledTimes(2);
+  });
+});

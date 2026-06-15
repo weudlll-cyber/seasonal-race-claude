@@ -146,6 +146,7 @@ const _loadedRacerTypes = {};
 // Pending callbacks fire once; subsequent waitForRacersReady() calls resolve immediately.
 let _racersReady = false;
 const _racersReadyCallbacks = [];
+let _inFlightLoad = null;
 
 function _markRacersReady() {
   if (_racersReady) return;
@@ -167,6 +168,7 @@ export function waitForRacersReady() {
 export function _resetRacersReadyForTesting() {
   _racersReady = false;
   _racersReadyCallbacks.length = 0;
+  _inFlightLoad = null;
 }
 
 /**
@@ -431,11 +433,23 @@ export function _resetLoadedRacerTypesForTesting() {
  * Fetch user-created racer configs from the server and register them as
  * SpriteRacerType instances. Called once after auth by RacerSyncOnAuth.
  *
+ * Single-flight: concurrent calls (e.g. React StrictMode double-mount) share
+ * the same in-flight Promise and issue only one fetchRacers(). The guard is
+ * cleared after completion so a later re-auth can trigger a fresh load.
+ *
  * Per-racer errors are logged loudly but never abort the batch.
  * On server/auth failure the ready signal is still set so the app is never
  * permanently blocked — user racers are simply absent in that session.
  */
-export async function loadServerRacerTypes() {
+export function loadServerRacerTypes() {
+  if (_inFlightLoad) return _inFlightLoad;
+  _inFlightLoad = _runLoad().finally(() => {
+    _inFlightLoad = null;
+  });
+  return _inFlightLoad;
+}
+
+async function _runLoad() {
   let configs;
   try {
     configs = await fetchRacers();
