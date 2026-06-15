@@ -4,14 +4,24 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Create and manage branding profiles (event name, colors, logo,
-//              sponsor text); preview rendered before saving
+//              sponsor text); preview rendered before saving.
+//              Data source: server (/api/brands) — D4 migration.
+//              KEYS.BRANDING mirror is updated via syncBrandingMirror after every
+//              mutation so all other consumers (SetupScreen, RaceScreen) see the
+//              latest data without knowing about the server.
 // ============================================================
 
-import { useState, useRef } from 'react';
-import { useStorage } from '../../../modules/storage/useStorage.js';
-import { KEYS, newId } from '../../../modules/storage/storage.js';
-import { DEFAULT_BRANDING } from '../../../modules/storage/defaults.js';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import {
+  fetchBrands,
+  createBrand,
+  updateBrand,
+  deleteBrand,
+  uploadBrandLogo,
+  deleteBrandLogo,
+} from '../../../services/brandApi.js';
+import { syncBrandingMirror } from '../../../modules/branding/brandingSync.js';
 import s from '../DevScreen.module.css';
 
 const BLANK = {
@@ -21,20 +31,56 @@ const BLANK = {
   primaryColor: '#e63946',
   secondaryColor: '#f4a261',
   sponsorText: '',
-  logo: '', // base64 data URL
-  isDefault: false,
+  logo: '', // display URL: base64 for live preview of a newly chosen file, server URL for saved profile
   logoMaxHeight: 90,
   logoOpacity: 0.9,
   logoCorner: 'bottom-right',
 };
 
 function BrandingProfiles() {
-  const [profiles, setProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
+  const [brands, setBrands] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [preview, setPreview] = useState(null); // profile id being previewed
+  const [preview, setPreview] = useState(null); // brand id being previewed
+
+  // logoFile: File object to upload (null = no new file chosen)
+  // logoRemoved: user explicitly cleared the logo while editing
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoRemoved, setLogoRemoved] = useState(false);
+
   const fileRef = useRef(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setBrands(await fetchBrands());
+    } catch (e) {
+      setLoadError(e.message ?? 'Failed to load brands');
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const initial = await fetchBrands();
+        if (!cancelled) setBrands(initial);
+      } catch (e) {
+        if (!cancelled) setLoadError(e.message ?? 'Failed to load brands');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function f(key, val) {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -43,67 +89,116 @@ function BrandingProfiles() {
   function handleLogoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+    setLogoFile(file);
+    setLogoRemoved(false);
     const reader = new FileReader();
     reader.onload = (ev) => f('logo', ev.target.result);
     reader.readAsDataURL(file);
   }
 
-  function handleSave() {
-    if (!form.name.trim() || !form.eventName.trim()) return;
-    const profile = { ...form, name: form.name.trim(), eventName: form.eventName.trim() };
-
-    if (editId) {
-      setProfiles((prev) => prev.map((p) => (p.id === editId ? { ...p, ...profile } : p)));
-    } else {
-      setProfiles((prev) => [...prev, { id: newId(), ...profile }]);
-    }
-    setForm(BLANK);
-    setEditId(null);
-    setShowForm(false);
+  function handleRemoveLogo() {
+    f('logo', '');
+    setLogoFile(null);
+    setLogoRemoved(true);
   }
 
-  function handleEdit(profile) {
+  async function handleSave() {
+    if (!form.name.trim() || !form.eventName.trim()) return;
+    setActionError(null);
+
+    const record = {
+      name: form.name.trim(),
+      eventName: form.eventName.trim(),
+      subtitle: form.subtitle,
+      primaryColor: form.primaryColor,
+      secondaryColor: form.secondaryColor,
+      sponsorText: form.sponsorText,
+      logoMaxHeight: form.logoMaxHeight,
+      logoOpacity: form.logoOpacity,
+      logoCorner: form.logoCorner,
+    };
+
+    try {
+      let id;
+      if (editId) {
+        await updateBrand(editId, record);
+        id = editId;
+      } else {
+        const created = await createBrand(record);
+        id = created.id;
+      }
+
+      if (logoFile) {
+        await uploadBrandLogo(id, logoFile);
+      } else if (logoRemoved && editId) {
+        await deleteBrandLogo(editId);
+      }
+
+      await refresh();
+      await syncBrandingMirror();
+
+      setForm(BLANK);
+      setLogoFile(null);
+      setLogoRemoved(false);
+      setEditId(null);
+      setShowForm(false);
+    } catch (e) {
+      setActionError(e.message ?? 'Failed to save brand');
+    }
+  }
+
+  function handleEdit(brand) {
+    setActionError(null);
     setForm({
-      name: profile.name,
-      eventName: profile.eventName,
-      subtitle: profile.subtitle,
-      primaryColor: profile.primaryColor,
-      secondaryColor: profile.secondaryColor,
-      sponsorText: profile.sponsorText,
-      logo: profile.logo,
-      logoMaxHeight: profile.logoMaxHeight ?? 90,
-      logoOpacity: profile.logoOpacity ?? 0.9,
-      logoCorner: profile.logoCorner ?? 'bottom-right',
+      name: brand.name,
+      eventName: brand.eventName,
+      subtitle: brand.subtitle ?? '',
+      primaryColor: brand.primaryColor,
+      secondaryColor: brand.secondaryColor,
+      sponsorText: brand.sponsorText ?? '',
+      logo: brand.logo ?? '', // URL from mirror, or '' if no logo
+      logoMaxHeight: brand.logoMaxHeight ?? 90,
+      logoOpacity: brand.logoOpacity ?? 0.9,
+      logoCorner: brand.logoCorner ?? 'bottom-right',
     });
-    setEditId(profile.id);
+    setLogoFile(null);
+    setLogoRemoved(false);
+    setEditId(brand.id);
     setShowForm(true);
     setPreview(null);
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     if (!window.confirm('Delete this branding profile?')) return;
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
-    if (preview === id) setPreview(null);
-  }
-
-  function handleSetDefault(id) {
-    setProfiles((prev) => prev.map((p) => ({ ...p, isDefault: p.id === id })));
+    setActionError(null);
+    try {
+      await deleteBrand(id);
+      if (preview === id) setPreview(null);
+      await refresh();
+      await syncBrandingMirror();
+    } catch (e) {
+      // Server 403 on default brand becomes a visible error message
+      setActionError(e.message ?? 'Failed to delete brand');
+    }
   }
 
   function handleCancel() {
+    setActionError(null);
     setForm(BLANK);
+    setLogoFile(null);
+    setLogoRemoved(false);
     setEditId(null);
     setShowForm(false);
   }
 
-  const previewProfile = profiles.find((p) => p.id === preview);
+  const previewBrand = brands.find((b) => b.id === preview);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.35rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-            Branding Profiles <span className={s.badge}>{profiles.length}</span>
+            Branding Profiles <span className={s.badge}>{brands.length}</span>
           </span>
           <span className={s.spacer} />
           {!showForm && (
@@ -139,24 +234,54 @@ function BrandingProfiles() {
           </span>
         </div>
 
-        {profiles.length === 0 ? (
+        {isLoading && (
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>Loading brands…</p>
+        )}
+
+        {loadError && !isLoading && (
+          <p
+            role="alert"
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--color-danger, #c00)',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Could not load brands: {loadError}
+          </p>
+        )}
+
+        {actionError && (
+          <p
+            role="alert"
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--color-danger, #c00)',
+              marginBottom: '0.5rem',
+            }}
+          >
+            {actionError}
+          </p>
+        )}
+
+        {!isLoading && !loadError && brands.length === 0 ? (
           <p className={s.emptyState}>No branding profiles yet.</p>
         ) : (
           <div className={s.rowList}>
-            {profiles.map((profile) => (
-              <div key={profile.id} className={s.row}>
+            {brands.map((brand) => (
+              <div key={brand.id} className={s.row}>
                 <span
                   style={{
                     width: '10px',
                     height: '10px',
                     borderRadius: '50%',
-                    background: profile.primaryColor,
+                    background: brand.primaryColor,
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{profile.name}</span>
-                <span className={s.badge}>{profile.eventName}</span>
-                {profile.isDefault && (
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{brand.name}</span>
+                <span className={s.badge}>{brand.eventName}</span>
+                {brand.isDefault && (
                   <span style={{ fontSize: '0.7rem', color: '#f4a261', fontWeight: 600 }}>
                     ★ Default
                   </span>
@@ -165,25 +290,16 @@ function BrandingProfiles() {
                 <button
                   className={`${s.btn} ${s.btnGhost}`}
                   style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                  onClick={() => setPreview(preview === profile.id ? null : profile.id)}
+                  onClick={() => setPreview(preview === brand.id ? null : brand.id)}
                 >
-                  {preview === profile.id ? 'Hide Preview' : 'Preview'}
+                  {preview === brand.id ? 'Hide Preview' : 'Preview'}
                 </button>
-                {!profile.isDefault && (
-                  <button
-                    className={`${s.btn} ${s.btnGhost}`}
-                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                    onClick={() => handleSetDefault(profile.id)}
-                  >
-                    Set Default
-                  </button>
-                )}
-                <button className={s.btnIconOnly} onClick={() => handleEdit(profile)} title="Edit">
+                <button className={s.btnIconOnly} onClick={() => handleEdit(brand)} title="Edit">
                   ✏️
                 </button>
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(profile.id)}
+                  onClick={() => handleDelete(brand.id)}
                   title="Delete"
                 >
                   🗑
@@ -195,22 +311,19 @@ function BrandingProfiles() {
       </div>
 
       {/* Live preview */}
-      {previewProfile && (
-        <div
-          className={s.brandingPreview}
-          style={{ background: previewProfile.primaryColor + '18' }}
-        >
-          {previewProfile.logo && (
-            <img src={previewProfile.logo} alt="Logo" className={s.brandingPreviewLogo} />
+      {previewBrand && (
+        <div className={s.brandingPreview} style={{ background: previewBrand.primaryColor + '18' }}>
+          {previewBrand.logo && (
+            <img src={previewBrand.logo} alt="Logo" className={s.brandingPreviewLogo} />
           )}
-          <div className={s.brandingPreviewTitle} style={{ color: previewProfile.primaryColor }}>
-            {previewProfile.eventName}
+          <div className={s.brandingPreviewTitle} style={{ color: previewBrand.primaryColor }}>
+            {previewBrand.eventName}
           </div>
-          {previewProfile.subtitle && (
-            <div className={s.brandingPreviewSubtitle}>{previewProfile.subtitle}</div>
+          {previewBrand.subtitle && (
+            <div className={s.brandingPreviewSubtitle}>{previewBrand.subtitle}</div>
           )}
-          {previewProfile.sponsorText && (
-            <div className={s.brandingPreviewSponsor}>{previewProfile.sponsorText}</div>
+          {previewBrand.sponsorText && (
+            <div className={s.brandingPreviewSponsor}>{previewBrand.sponsorText}</div>
           )}
         </div>
       )}
@@ -362,7 +475,7 @@ function BrandingProfiles() {
                     />
                     <button
                       className={`${s.btnIconOnly} ${s.danger}`}
-                      onClick={() => f('logo', '')}
+                      onClick={handleRemoveLogo}
                       title="Remove logo"
                     >
                       ✕
