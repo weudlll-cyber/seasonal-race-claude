@@ -17,6 +17,7 @@ vi.mock('./storage/storage.js', () => ({
   KEYS: { RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig' },
   storageGet: vi.fn(),
   storageSet: vi.fn(),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import { storageGet, storageSet } from './storage/storage.js';

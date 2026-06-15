@@ -10,6 +10,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStorage } from './useStorage.js';
+import { storageSet } from './storage.js';
 
 const KEY = 'racearena:test-hook';
 
@@ -40,5 +41,42 @@ describe('useStorage', () => {
 
     expect(result.current[0]).toBe(15);
     expect(JSON.parse(localStorage.getItem(KEY))).toBe(15);
+  });
+
+  // ── Reactivity: external storageSet updates mounted consumers (L126 — Ursache 1 fix) ──
+
+  it('updates state when another module writes to the same key via storageSet', async () => {
+    const { result: r1 } = renderHook(() => useStorage(KEY, null));
+    const { result: r2 } = renderHook(() => useStorage(KEY, null));
+
+    await act(async () => {
+      storageSet(KEY, { updated: true });
+    });
+
+    expect(r1.current[0]).toEqual({ updated: true });
+    expect(r2.current[0]).toEqual({ updated: true });
+  });
+
+  it('does NOT update state when storageSet writes the same value (no-op guard)', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ x: 1 }));
+    const { result } = renderHook(() => useStorage(KEY, null));
+    const valueBefore = result.current[0];
+
+    await act(async () => {
+      storageSet(KEY, { x: 1 }); // same value
+    });
+
+    // Same reference means React skipped the re-render
+    expect(result.current[0]).toBe(valueBefore);
+  });
+
+  it('ignores storageSet calls for a different key', async () => {
+    const { result } = renderHook(() => useStorage(KEY, 'original'));
+
+    await act(async () => {
+      storageSet('racearena:other-key', 'irrelevant');
+    });
+
+    expect(result.current[0]).toBe('original');
   });
 });

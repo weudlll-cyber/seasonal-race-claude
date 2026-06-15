@@ -38,9 +38,13 @@ export function storageGet(key, fallback = null) {
   }
 }
 
+/** Fired by storageSet after every successful write so useStorage hooks can react. */
+export const STORAGE_CHANGE_EVENT = 'racearena:storage-change';
+
 export function storageSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key } }));
     return true;
   } catch (err) {
     console.warn('[RaceArena] localStorage write failed:', err);

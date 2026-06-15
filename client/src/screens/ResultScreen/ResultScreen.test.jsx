@@ -30,6 +30,7 @@ vi.mock('../../modules/storage/storage', () => ({
     ACTIVE_SESSION: 'racearena:activeSession',
   },
   newId: vi.fn(() => 'test-id-001'),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import ResultScreen from './index.jsx';

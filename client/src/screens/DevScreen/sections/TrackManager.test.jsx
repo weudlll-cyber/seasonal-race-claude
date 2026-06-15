@@ -83,6 +83,7 @@ vi.mock('../../../modules/track-editor/EditorShape.js', () => ({
 vi.mock('../../../modules/storage/storage.js', () => ({
   KEYS: { TRACKS: 'racearena:tracks' },
   newId: vi.fn().mockReturnValue('new-test-id'),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import { useStorage } from '../../../modules/storage/useStorage.js';

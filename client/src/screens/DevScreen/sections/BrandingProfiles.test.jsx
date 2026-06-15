@@ -31,6 +31,7 @@ vi.mock('../../../modules/branding/brandingSync.js', () => ({
 vi.mock('../../../modules/storage/storage.js', () => ({
   storageSet: vi.fn(),
   KEYS: { BRANDING: 'racearena:branding' },
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import BrandingProfiles from './BrandingProfiles.jsx';

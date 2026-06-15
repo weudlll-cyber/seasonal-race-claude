@@ -4,6 +4,7 @@ vi.mock('./storage/storage.js', () => ({
   KEYS: { CAMERA_CONFIG: 'racearena:cameraConfig' },
   storageGet: vi.fn(() => null),
   storageSet: vi.fn(),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import { storageGet, storageSet } from './storage/storage.js';

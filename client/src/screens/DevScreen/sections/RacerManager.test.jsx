@@ -33,6 +33,7 @@ vi.mock('../../../modules/storage/useStorage.js', () => ({
 
 vi.mock('../../../modules/storage/storage.js', () => ({
   KEYS: { RACER_TYPE_OVERRIDES: 'racearena:racerTypeOverrides' },
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 vi.mock('../../../modules/racer-types/index.js', () => ({

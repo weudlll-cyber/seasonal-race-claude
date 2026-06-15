@@ -15,6 +15,7 @@ vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
 vi.mock('../storage/storage.js', () => ({
   storageSet: vi.fn(),
   KEYS: { BRANDING: 'racearena:branding' },
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import { syncBrandingMirror } from './brandingSync.js';

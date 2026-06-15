@@ -14,6 +14,7 @@ vi.mock('./storage/storage.js', () => ({
   KEYS: { AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig' },
   storageGet: vi.fn(() => null),
   storageSet: vi.fn(),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 import { storageGet, storageSet } from './storage/storage.js';

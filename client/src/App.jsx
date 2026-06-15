@@ -22,7 +22,7 @@ import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { storageGet, KEYS } from './modules/storage/storage.js';
 import { resolveActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
-import { syncBrandingMirror } from './modules/branding/brandingSync.js';
+import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
@@ -44,12 +44,6 @@ function App() {
     };
   }, [brandEventName]);
 
-  // Sync the branding mirror from the server once on authenticated page load so all
-  // consumers of KEYS.BRANDING see server-fresh data. Silent on auth/network errors.
-  useEffect(() => {
-    syncBrandingMirror();
-  }, []);
-
   // Update the title when the user selects a profile in SetupScreen (same-tab, no
   // navigation). SetupScreen dispatches 'racearena:brand-active' from the selector
   // onChange — the only place that changes KEYS.ACTIVE_SESSION.
@@ -64,6 +58,7 @@ function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
+        <BrandingSyncOnAuth />
         <TransitionProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/setup" replace />} />

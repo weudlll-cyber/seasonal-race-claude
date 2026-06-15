@@ -35,6 +35,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
     ACTIVE_GROUP: 'racearena:activeGroup',
   },
   storageSet: vi.fn(),
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 vi.mock('../../../modules/storage/defaults.js', () => ({

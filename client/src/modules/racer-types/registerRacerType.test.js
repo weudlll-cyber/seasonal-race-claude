@@ -59,6 +59,7 @@ vi.mock('../storage/storage.js', () => ({
   storageGet: vi.fn().mockReturnValue(null),
   storageSet: vi.fn(),
   KEYS: { RACER_TYPE_OVERRIDES: 'test:overrides' },
+  STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
 vi.mock('./racerTypeStorage.js', () => ({
