@@ -1,16 +1,16 @@
 {
   "id": "seasonal-entertainment",
   "name": "Seasonal Entertainment",
-  "eventName": "Badge Race",
+  "eventName": "Seasonal Race",
   "subtitle": "",
-  "primaryColor": "#00CC66",
-  "secondaryColor": "#FFD700",
-  "sponsorText": "Rudahan",
+  "primaryColor": "#2e9e3f",
+  "secondaryColor": "#f4a261",
+  "sponsorText": "",
   "logoFile": "seasonal-entertainment.jpg",
   "isDefault": true,
-  "logoMaxHeight": 120,
+  "logoMaxHeight": 90,
   "logoOpacity": 0.9,
   "logoCorner": "bottom-right",
   "createdAt": "2026-06-14T22:33:14.241Z",
-  "updatedAt": "2026-06-15T22:07:12.208Z"
+  "updatedAt": "2026-06-14T22:37:47.054Z"
 }
