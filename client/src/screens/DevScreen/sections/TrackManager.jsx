@@ -8,12 +8,13 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
-import { KEYS, newId } from '../../../modules/storage/storage.js';
-import { DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
 import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
-import { deleteTrackFromServer, updateTrackOnServer } from '../../../services/trackApi.js';
+import {
+  createTrackOnServer,
+  deleteTrackFromServer,
+  updateTrackOnServer,
+} from '../../../services/trackApi.js';
 import {
   listAllRacerTypes,
   getRacerTypeLabel,
@@ -67,13 +68,9 @@ function autoMaxRacers(geom, track, rowCfg) {
 
 function TrackManager() {
   const navigate = useNavigate();
-  const [localTracks, setTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const serverTracksCtl = useServerTracksControl();
   const { classes: allSurfaceClasses } = useSurfaceClasses();
-  const serverTracks = serverTracksCtl.tracks;
-  const serverTrackIds = new Set(serverTracks.map((t) => t.id));
-  // Combined list for display: local tracks + server tracks (server deduplicates local copies)
-  const tracks = [...localTracks.filter((t) => !serverTrackIds.has(t.id)), ...serverTracks];
+  const tracks = serverTracksCtl.tracks;
   const [geometries] = useState(() =>
     listTracks().map((g) => ({ ...g, effects: getTrack(g.id)?.effects ?? [] }))
   );
@@ -94,19 +91,17 @@ function TrackManager() {
       isDefault: false,
     };
 
-    if (editId && serverTrackIds.has(editId)) {
-      setSaveError(null);
-      try {
+    setSaveError(null);
+    try {
+      if (editId) {
         await updateTrackOnServer(editId, track);
-        await serverTracksCtl.refresh();
-      } catch (err) {
-        setSaveError(err.message ?? 'Server-Fehler beim Speichern');
-        return;
+      } else {
+        await createTrackOnServer(track);
       }
-    } else if (editId) {
-      setTracks((prev) => prev.map((t) => (t.id === editId ? { ...t, ...track } : t)));
-    } else {
-      setTracks((prev) => [...prev, { id: newId(), ...track }]);
+      await serverTracksCtl.refresh();
+    } catch (err) {
+      setSaveError(err.message ?? 'Server error while saving');
+      return;
     }
     setForm(BLANK);
     setEditId(null);
@@ -144,33 +139,17 @@ function TrackManager() {
   async function handleDelete(id) {
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
     setDeleteError(null);
-    if (serverTrackIds.has(id)) {
-      try {
-        await deleteTrackFromServer(id);
-        removeCachedTrackData(null, id);
-        await serverTracksCtl.refresh();
-      } catch (err) {
-        setDeleteError(err.message ?? 'Failed to delete track');
-      }
-    } else {
-      setTracks((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await deleteTrackFromServer(id);
+      removeCachedTrackData(null, id);
+      await serverTracksCtl.refresh();
+    } catch (err) {
+      setDeleteError(err.message ?? 'Failed to delete track');
     }
   }
 
   function handleOpenTrackEditor() {
-    const isServer = serverTrackIds.has(editId);
-    if (isServer) {
-      navigate(`/track-editor?load=${editId}`);
-    } else if (form.geometryId) {
-      navigate(`/track-editor?load=${form.geometryId}`);
-    } else {
-      navigate('/track-editor');
-    }
-  }
-
-  // Only one track can be the default; toggling clears all others
-  function handleSetDefault(id) {
-    setTracks((prev) => prev.map((t) => ({ ...t, isDefault: t.id === id })));
+    navigate(`/track-editor?load=${editId}`);
   }
 
   function handleCancel() {
@@ -259,79 +238,28 @@ function TrackManager() {
           <p className={s.emptyState}>No tracks defined.</p>
         ) : (
           <div className={s.rowList}>
-            {tracks.map((track) => {
-              const isServerTrack = serverTrackIds.has(track.id);
-              return (
-                <div
-                  key={track.id}
-                  className={s.row}
-                  style={{ borderLeft: `3px solid ${track.color}` }}
+            {tracks.map((track) => (
+              <div
+                key={track.id}
+                className={s.row}
+                style={{ borderLeft: `3px solid ${track.color}` }}
+              >
+                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{track.icon}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
+                <span className={s.badge}>{track.defaultDuration}s</span>
+                <span className={s.spacer} />
+                <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
+                  ✏️
+                </button>
+                <button
+                  className={`${s.btnIconOnly} ${s.danger}`}
+                  onClick={() => handleDelete(track.id)}
+                  title="Delete from server"
                 >
-                  <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{track.icon}</span>
-                  <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
-                  <span className={s.badge}>{track.defaultDuration}s</span>
-                  <span className={s.spacer} />
-                  {!isServerTrack &&
-                    (track.isDefault ? (
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          color: '#f4a261',
-                          fontWeight: 600,
-                          padding: '0.2rem 0.5rem',
-                          border: '1px solid #f4a261',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        Default
-                      </span>
-                    ) : (
-                      <button
-                        className={`${s.btn} ${s.btnGhost}`}
-                        style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                        onClick={() => handleSetDefault(track.id)}
-                      >
-                        Set Default
-                      </button>
-                    ))}
-                  {isServerTrack ? (
-                    <>
-                      <button
-                        className={s.btnIconOnly}
-                        onClick={() => handleEdit(track)}
-                        title="Edit"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className={`${s.btnIconOnly} ${s.danger}`}
-                        onClick={() => handleDelete(track.id)}
-                        title="Delete from server"
-                      >
-                        🗑
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className={s.btnIconOnly}
-                        onClick={() => handleEdit(track)}
-                        title="Edit"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className={`${s.btnIconOnly} ${s.danger}`}
-                        onClick={() => handleDelete(track.id)}
-                        title="Delete"
-                      >
-                        🗑
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                  🗑
+                </button>
+              </div>
+            ))}
           </div>
         )}
         {deleteError && (
@@ -448,10 +376,10 @@ function TrackManager() {
                 Track Geometry
                 <InfoTooltip text="The geometry of the track itself — the line racers follow. Edit this in the Track Geometry Editor by dragging control points." />
               </label>
-              {editId && serverTrackIds.has(editId) ? (
-                // Server track: status display + editor button (no dropdown)
+              {editId ? (
+                // Existing server track: geometry status + editor button
                 (() => {
-                  const srv = serverTracks.find((t) => t.id === editId);
+                  const srv = tracks.find((t) => t.id === editId);
                   const hasGeo = srv?.geometryId != null;
                   const ptCount = (srv?.pointCount?.inner ?? 0) + (srv?.pointCount?.outer ?? 0);
                   return (
@@ -485,65 +413,11 @@ function TrackManager() {
                   );
                 })()
               ) : (
-                // Local track (legacy): original dropdown
-                <>
-                  <select
-                    className={s.select}
-                    value={form.geometryId ?? ''}
-                    onChange={(e) => f('geometryId', e.target.value || null)}
-                    disabled={geometries.length === 0}
-                  >
-                    <option value="">
-                      {geometries.length === 0
-                        ? 'No tracks drawn yet — use Track Editor to create one'
-                        : '— none —'}
-                    </option>
-                    {geometries
-                      .filter((geom) => geom.id != null)
-                      .map((geom) => (
-                        <option key={geom.id} value={geom.id}>
-                          {geom.name}
-                        </option>
-                      ))}
-                  </select>
-                  {!form.geometryId && (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--color-muted)',
-                        marginTop: '0.25rem',
-                        display: 'block',
-                      }}
-                    >
-                      No geometry yet. Go to{' '}
-                      <a href="/track-editor" style={{ color: 'var(--color-accent)' }}>
-                        Track Editor
-                      </a>{' '}
-                      to draw a track, then return here to link it.
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--color-muted)',
-                      marginTop: '0.25rem',
-                      display: 'block',
-                    }}
-                  >
-                    Background image and effects are managed in the Track Editor.
-                  </span>
-                  {editId && (
-                    <button
-                      className={`${s.btn} ${s.btnGhost}`}
-                      onClick={handleOpenTrackEditor}
-                      style={{ marginTop: '0.5rem' }}
-                      data-testid="track-geometry-btn"
-                      title="Open this track in the Track Geometry Editor"
-                    >
-                      {form.geometryId ? '📐 Edit Geometry' : '✏️ Draw Geometry'}
-                    </button>
-                  )}
-                </>
+                // New track: save metadata first, then draw in Track Editor
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
+                  Save the track metadata first, then open it in the Track Geometry Editor to draw
+                  the path.
+                </span>
               )}
             </div>
             <div className={s.formGroup}>
@@ -618,9 +492,9 @@ function TrackManager() {
             <div className={s.formGroup}>
               <label className={s.label}>World Dimensions</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-                {(editId && serverTrackIds.has(editId)) || form.geometryId
+                {editId
                   ? `${form.worldWidth}×${form.worldHeight} px`
-                  : '— (Choose Geometry)'}
+                  : '— (set after saving and drawing geometry)'}
               </span>
             </div>
 
@@ -647,11 +521,7 @@ function TrackManager() {
                   min={1}
                   max={500}
                   step={1}
-                  placeholder={
-                    (editId && serverTrackIds.has(editId)) || form.geometryId
-                      ? 'auto'
-                      : 'set geometry first'
-                  }
+                  placeholder={editId ? 'auto' : 'set geometry first'}
                   value={form.maxRacers ?? ''}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);

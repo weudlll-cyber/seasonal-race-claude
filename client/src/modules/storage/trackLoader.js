@@ -10,8 +10,7 @@
 // ============================================================
 
 import { API_BASE_URL } from '../../services/api.js';
-import { storageGet, storageSet, storageRemove, KEYS } from './storage.js';
-import { DEFAULT_TRACKS } from './defaults.js';
+import { storageGet, storageSet, storageRemove } from './storage.js';
 import { cacheBackground, getCachedBackground, removeBackgroundFromCache } from './trackCache.js';
 import { registerInIndex, unregisterFromIndex } from '../track-editor/trackStorage.js';
 import { withTimeout } from '../../utils/withTimeout.js';
@@ -136,28 +135,20 @@ export async function fetchServerTracks() {
 
 /**
  * Sync version for initial render — uses cached server tracks.
+ * Cold cache (offline, first load) → empty list; no DEFAULT_TRACKS fallback.
  * @returns {object[]}
  */
 export function getInitialTracks() {
-  const localTracks = storageGet(KEYS.TRACKS, DEFAULT_TRACKS);
-  const cached = getCachedServerTracks();
-  const serverIds = new Set(cached.map((t) => t.id));
-  return [...localTracks.filter((t) => !serverIds.has(t.id)), ...cached];
+  return getCachedServerTracks();
 }
 
 /**
  * Returns the background URL for a track.
- * Server tracks: returns cached data-URL if available (works offline),
- * otherwise the live server endpoint URL.
- * Local tracks: returns geometry's backgroundImage field as-is.
+ * Returns the cached data-URL when available (works offline), otherwise the
+ * live server endpoint URL.
  * @param {string} trackId
- * @param {string|undefined} geometryBackgroundImage  — from cached geometry
  * @returns {string}
  */
-export function getTrackBackgroundUrl(trackId, geometryBackgroundImage) {
-  const serverIds = new Set(getCachedServerTracks().map((t) => t.id));
-  if (serverIds.has(trackId)) {
-    return getCachedBackground(trackId) ?? `${API_BASE_URL}/api/tracks/${trackId}/background`;
-  }
-  return geometryBackgroundImage ?? '';
+export function getTrackBackgroundUrl(trackId) {
+  return getCachedBackground(trackId) ?? `${API_BASE_URL}/api/tracks/${trackId}/background`;
 }

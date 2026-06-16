@@ -17,7 +17,6 @@ import { useStorage } from '../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../modules/storage/useServerTracks.js';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import {
-  DEFAULT_TRACKS,
   DEFAULT_RACE_DEFAULTS,
   DEFAULT_BRANDING,
   DEFAULT_ACTIVE_SESSION,
@@ -120,40 +119,8 @@ function SetupScreen() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
-  // Read tracks and defaults from storage so Dev Panel changes propagate
-  const [storedTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
   const [racerTypeOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
-  const serverTracks = useServerTracks();
-
-  // Ensure all DEFAULT_TRACKS entries exist with current fields (handles stale localStorage).
-  // Server tracks are merged last so they override any local copy of the same ID.
-  const tracks = (() => {
-    const base = Array.isArray(storedTracks) ? storedTracks : DEFAULT_TRACKS;
-    const byId = new Map(base.map((t) => [t.id, t]));
-    for (const d of DEFAULT_TRACKS) {
-      if (!byId.has(d.id)) {
-        byId.set(d.id, d);
-      } else {
-        const existing = byId.get(d.id);
-        byId.set(d.id, {
-          ...d,
-          ...existing,
-          // Prefer stored new field, fall back through legacy field names for old localStorage data
-          defaultRacerTypeId:
-            existing.defaultRacerTypeId ??
-            existing.racerTypeId ??
-            existing.racerId ??
-            d.defaultRacerTypeId,
-          worldWidth: existing.worldWidth ?? d.worldWidth,
-          worldHeight: existing.worldHeight ?? d.worldHeight,
-        });
-      }
-    }
-    for (const st of serverTracks) {
-      byId.set(st.id, st);
-    }
-    return Array.from(byId.values());
-  })();
+  const tracks = useServerTracks();
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
   const [brandingProfiles] = useStorage(KEYS.BRANDING, DEFAULT_BRANDING);
   const [activeSession, setActiveSession] = useStorage(KEYS.ACTIVE_SESSION, DEFAULT_ACTIVE_SESSION);

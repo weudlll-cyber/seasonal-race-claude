@@ -14,11 +14,7 @@ import {
   importAllStorage,
   clearAllStorage,
 } from '../../../modules/storage/storage.js';
-import {
-  DEFAULT_TRACKS,
-  DEFAULT_RACE_DEFAULTS,
-  DEFAULT_RACE_HISTORY,
-} from '../../../modules/storage/defaults.js';
+import { DEFAULT_RACE_DEFAULTS, DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
 import s from '../DevScreen.module.css';
 
@@ -78,9 +74,9 @@ function SystemSettings() {
       return;
     clearAllStorage();
     // Re-seed defaults so the app is usable immediately after reset.
-    // Racer type overrides are intentionally not re-seeded — all 12 types
+    // Racer type overrides are intentionally not re-seeded — all types
     // are active by default when no override map is present.
-    storageSet(KEYS.TRACKS, DEFAULT_TRACKS);
+    // TRACKS live on the server — no local re-seeding (server-only after step 1).
     storageSet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
     // PLAYER_GROUPS intentionally omitted — groups live on the server after D2.
     // A local reset must not re-activate the old localStorage source.

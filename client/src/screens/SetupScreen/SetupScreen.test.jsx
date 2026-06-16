@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
 import { storageSet, KEYS } from '../../modules/storage/storage.js';
 import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom
 function renderSetupScreen() {
@@ -68,9 +69,9 @@ describe('SetupScreen', () => {
     expect(gearLink).toBeInTheDocument();
   });
 
-  it('Quick Test button is disabled when no tracks have a drawn geometry', () => {
+  it('Quick Test button is disabled when server cache is empty (cold start)', () => {
     renderSetupScreen();
-    // Default tracks all have geometryId: null — button is disabled until a track is drawn.
+    // Cold cache: no tracks in server cache → no track has geometryId → button disabled.
     const quickTestBtn = screen.getByTitle('Draw a track in the Track Editor first');
     expect(quickTestBtn).toBeDisabled();
   });
@@ -78,12 +79,12 @@ describe('SetupScreen', () => {
 
 describe('SetupScreen — override selector filters inactive racer types', () => {
   function renderWithTrackSelected() {
-    // Seed a track with a real geometryId and empty surfaceClasses so the filter
-    // does not interfere with the existing isActive-override tests.
+    // Seed server cache with a track that has a real geometryId and empty surfaceClasses
+    // so the surface-class filter does not interfere with the isActive-override tests.
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-001', surfaceClasses: [] } : t
     );
-    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    storageSet(CACHE_KEY, tracksWithGeometry);
     renderSetupScreen();
     // Navigate to Track tab and select the first track
     const tabs = screen.getAllByRole('tab');
@@ -122,7 +123,7 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
       i === 2 ? { ...t, geometryId: 'geom-air-001' } : t
     );
-    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    storageSet(CACHE_KEY, tracksWithGeometry);
     renderSetupScreen();
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[1]);
@@ -171,7 +172,7 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
     const tracksNoClasses = DEFAULT_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-hint', surfaceClasses: [] } : t
     );
-    storageSet(KEYS.TRACKS, tracksNoClasses);
+    storageSet(CACHE_KEY, tracksNoClasses);
     renderSetupScreen();
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[1]);
@@ -188,7 +189,7 @@ describe('SetupScreen — Quick Test autofill', () => {
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-quick' } : t
     );
-    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    storageSet(CACHE_KEY, tracksWithGeometry);
     renderSetupScreen();
   }
 
@@ -268,7 +269,7 @@ describe('SetupScreen — open-track Duration Slider (PR-A1)', () => {
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
       i === 1 ? { ...t, geometryId: 'geom-open-001' } : t
     );
-    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    storageSet(CACHE_KEY, tracksWithGeometry);
 
     // Seed a minimal open-track geometry into trackGeometries storage
     const geomKey = 'racearena:trackGeometries:geom-open-001';
@@ -336,7 +337,7 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
     const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-closed-001' } : t
     );
-    storageSet(KEYS.TRACKS, tracksWithGeometry);
+    storageSet(CACHE_KEY, tracksWithGeometry);
 
     const geomKey = 'racearena:trackGeometries:geom-closed-001';
     const pts = Array.from({ length: 5 }, (_, i) => ({ x: i * 50, y: 0 }));
@@ -444,7 +445,7 @@ describe('SetupScreen — Quick Test racer selector', () => {
   }
 
   function renderWithQuickTracks(trackIds = ['garden-path']) {
-    storageSet(KEYS.TRACKS, getTracksWithGeometry(trackIds));
+    storageSet(CACHE_KEY, getTracksWithGeometry(trackIds));
     renderSetupScreen();
   }
 

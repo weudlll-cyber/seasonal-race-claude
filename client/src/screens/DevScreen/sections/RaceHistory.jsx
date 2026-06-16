@@ -10,16 +10,13 @@ import { useState, useMemo } from 'react';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../../modules/storage/useServerTracks.js';
 import { KEYS } from '../../../modules/storage/storage.js';
-import { DEFAULT_RACE_HISTORY, DEFAULT_TRACKS } from '../../../modules/storage/defaults.js';
+import { DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function RaceHistory() {
   const [history, setHistory] = useStorage(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
-  const [localTracks] = useStorage(KEYS.TRACKS, DEFAULT_TRACKS);
-  const serverTracks = useServerTracks();
-  const serverTrackIds = new Set(serverTracks.map((t) => t.id));
-  const tracks = [...localTracks.filter((t) => !serverTrackIds.has(t.id)), ...serverTracks];
+  const tracks = useServerTracks();
   const [filterTrack, setFilterTrack] = useState('');
   const [filterDate, setFilterDate] = useState('');
 

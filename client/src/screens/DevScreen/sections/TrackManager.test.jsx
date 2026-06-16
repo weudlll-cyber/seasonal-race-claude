@@ -58,8 +58,9 @@ vi.mock('../../../modules/storage/trackLoader.js', () => ({
   removeCachedTrackData: vi.fn(),
 }));
 vi.mock('../../../services/trackApi.js', () => ({
-  deleteTrackFromServer: vi.fn(),
+  deleteTrackFromServer: vi.fn().mockResolvedValue(undefined),
   updateTrackOnServer: vi.fn().mockResolvedValue({}),
+  createTrackOnServer: vi.fn().mockResolvedValue({ id: 'new-server-id' }),
 }));
 
 vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
@@ -88,7 +89,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
-import { updateTrackOnServer } from '../../../services/trackApi.js';
+import { updateTrackOnServer, createTrackOnServer } from '../../../services/trackApi.js';
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import { listAllRacerTypes } from '../../../modules/racer-types/index.js';
@@ -186,8 +187,8 @@ describe('TrackManager — Edit behaviour', () => {
     vi.clearAllMocks();
   });
 
-  it('Edit on a default track opens the metadata modal', () => {
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+  it('Edit on a server track without geometry opens the metadata modal', () => {
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
 
     fireEvent.click(screen.getByTitle('Edit'));
 
@@ -221,36 +222,34 @@ describe('TrackManager — Edit behaviour', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/track-editor?load=${SERVER_TRACK.id}`);
   });
 
-  it('modal shows "Draw Geometry" button for default tracks without geometry', () => {
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+  it('modal shows "Draw Geometry" button for server tracks without geometry', () => {
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
 
     fireEvent.click(screen.getByTitle('Edit'));
 
     expect(screen.getByText(/Draw Geometry/)).toBeInTheDocument();
   });
 
-  it('"Draw Geometry" on a track without geometry navigates to /track-editor', () => {
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+  it('"Draw Geometry" on a server track without geometry navigates to /track-editor?load=<id>', () => {
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
 
     fireEvent.click(screen.getByTitle('Edit'));
     fireEvent.click(screen.getByText(/Draw Geometry/));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/track-editor');
+    expect(mockNavigate).toHaveBeenCalledWith(`/track-editor?load=${DEFAULT_TRACK.id}`);
   });
 
-  it('"Edit Geometry" on a local track with geometry navigates to /track-editor?load=<geometryId>', () => {
-    renderTrackManager({ localTracks: [LOCAL_TRACK_WITH_GEO] });
+  it('"Edit Geometry" on a server track with geometry navigates to /track-editor?load=<id>', () => {
+    renderTrackManager({ serverTracks: [LOCAL_TRACK_WITH_GEO] });
 
     fireEvent.click(screen.getByTitle('Edit'));
     fireEvent.click(screen.getByText(/Edit Geometry/));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      `/track-editor?load=${LOCAL_TRACK_WITH_GEO.geometryId}`
-    );
+    expect(mockNavigate).toHaveBeenCalledWith(`/track-editor?load=${LOCAL_TRACK_WITH_GEO.id}`);
   });
 
   it('"Add Track" modal does not show a Track Editor button', () => {
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
 
     fireEvent.click(screen.getByText('+ Add Track'));
 
@@ -398,7 +397,7 @@ describe('TrackManager — surface class pills (VRE-3)', () => {
   });
 
   it('Add Track button is disabled when surfaceClasses is empty (BLANK form)', () => {
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
     fireEvent.click(screen.getByText('+ Add Track'));
     const addBtn = screen.getByText('Add Track', { selector: 'button' });
     // Disabled because name is also empty in BLANK form — but surfaceClasses is also empty
@@ -425,6 +424,24 @@ describe('TrackManager — Track Editor hint text and no effects display (A2 UX 
     fireEvent.click(screen.getByTitle('Edit'));
 
     expect(screen.queryByText(/^Effects:/)).toBeNull();
+  });
+});
+
+describe('TrackManager — default racer type dropdown', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listAllRacerTypes).mockReturnValue([{ id: 'horse', speedMultiplier: 1.0 }]);
+  });
+
+  it('dropdown includes user-created types returned by listAllRacerTypes()', () => {
+    vi.mocked(listAllRacerTypes).mockReturnValue([
+      { id: 'horse', speedMultiplier: 1.0 },
+      { id: 'test-cat', speedMultiplier: 0.9 },
+    ]);
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(screen.getByRole('option', { name: 'Horse' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Test Cat' })).toBeTruthy();
   });
 });
 
@@ -471,13 +488,15 @@ describe('TrackManager — handleSave routes correctly for server vs local track
     expect(refreshMock).toHaveBeenCalled();
   });
 
-  it('Save on a local track writes to localStorage, does not call updateTrackOnServer', async () => {
-    const setTracksMock = vi.fn();
-    vi.mocked(useStorage).mockReturnValue([[LOCAL_TRACK_WITH_GEO], setTracksMock]);
+  // HONESTY PROOF (step-1): Add Track now calls createTrackOnServer, not localStorage.
+  // Before step-1: handleSave (editId=null) called setTracks → localStorage write.
+  // After step-1: calls createTrackOnServer → server write.
+  it('Add Track calls createTrackOnServer and does not write to localStorage (step-1 proof)', async () => {
     vi.mocked(useServerTracksControl).mockReturnValue({
       tracks: [],
-      refresh: vi.fn(),
+      refresh: vi.fn().mockResolvedValue(undefined),
     });
+    vi.mocked(createTrackOnServer).mockResolvedValue({ id: 'new-server-id' });
 
     render(
       <MemoryRouter>
@@ -485,14 +504,21 @@ describe('TrackManager — handleSave routes correctly for server vs local track
       </MemoryRouter>
     );
 
-    // LOCAL_TRACK_WITH_GEO has no surfaceClasses → initialised to [] → Save disabled
-    // Simulate the edit by clicking then toggling a surface class pill first
-    fireEvent.click(screen.getByTitle('Edit'));
+    fireEvent.click(screen.getByText('+ Add Track'));
+    // Fill in required fields
+    fireEvent.change(screen.getByPlaceholderText(/e.g. Jungle Dash/i), {
+      target: { value: 'My New Track' },
+    });
+    // Toggle a surface class pill to satisfy the surfaceClasses requirement
     const pill = within(screen.getByTestId('track-surface-class-pills')).getAllByRole('button')[0];
     fireEvent.click(pill);
-    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
 
-    expect(setTracksMock).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Add Track/i }));
+
+    await vi.waitFor(() => expect(createTrackOnServer).toHaveBeenCalled());
+    expect(createTrackOnServer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'My New Track' })
+    );
     expect(updateTrackOnServer).not.toHaveBeenCalled();
   });
 
@@ -571,23 +597,5 @@ describe('TrackManager — handleEdit geometry source (toSummary regression)', (
     expect(screen.getByText('Edit Track')).toBeInTheDocument();
     // EditorShape must NOT be called when there is no geometry
     expect(EditorShape).not.toHaveBeenCalled();
-  });
-});
-
-describe('TrackManager — default racer type dropdown', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(listAllRacerTypes).mockReturnValue([{ id: 'horse', speedMultiplier: 1.0 }]);
-  });
-
-  it('dropdown includes user-created types returned by listAllRacerTypes()', () => {
-    vi.mocked(listAllRacerTypes).mockReturnValue([
-      { id: 'horse', speedMultiplier: 1.0 },
-      { id: 'test-cat', speedMultiplier: 0.9 },
-    ]);
-    renderTrackManager({ localTracks: [DEFAULT_TRACK] });
-    fireEvent.click(screen.getByTitle('Edit'));
-    expect(screen.getByRole('option', { name: 'Horse' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Test Cat' })).toBeTruthy();
   });
 });

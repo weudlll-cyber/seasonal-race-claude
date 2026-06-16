@@ -20,9 +20,6 @@ import {
 import { cacheBackground, getCachedBackground } from './trackCache.js';
 import { storageSet, storageGet, KEYS } from './storage.js';
 import { listTracks } from '../track-editor/trackStorage.js';
-import { DEFAULT_TRACKS } from './defaults.js';
-
-const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 const MOCK_TRACK_SUMMARY = {
   id: 'test-track-1',
@@ -153,38 +150,32 @@ describe('cacheTrackGeometry', () => {
 });
 
 describe('getInitialTracks', () => {
-  it('returns DEFAULT_TRACKS when no localStorage data', () => {
+  // HONESTY PROOF (L126 — step-1): RED before change, GREEN after.
+  // Before: getInitialTracks merged KEYS.TRACKS/DEFAULT_TRACKS → non-empty when localStorage has data.
+  // After:  returns only getCachedServerTracks() → [] when cache is cold, regardless of KEYS.TRACKS.
+  it('cold cache + KEYS.TRACKS data → returns [] (no DEFAULT_TRACKS fallback, step-1 proof)', () => {
+    storageSet(KEYS.TRACKS, [{ id: 'local-only', name: 'Local Only' }]); // must be ignored after step-1
     const tracks = getInitialTracks();
-    expect(Array.isArray(tracks)).toBe(true);
-    expect(tracks.length).toBeGreaterThan(0);
+    expect(tracks).toEqual([]);
   });
 
-  it('deduplicates server tracks from local tracks', () => {
-    storageSet(KEYS.TRACKS, [{ id: 'test-track-1', name: 'Local Copy' }]);
+  it('returns cached server tracks when server cache is populated', () => {
     storageSet(CACHE_KEY, [MOCK_TRACK_SUMMARY]);
-
     const tracks = getInitialTracks();
-    const testTrack = tracks.filter((t) => t.id === 'test-track-1');
-    expect(testTrack).toHaveLength(1);
-    expect(testTrack[0].name).toBe('Test Track'); // server version wins
+    expect(tracks).toEqual([MOCK_TRACK_SUMMARY]);
   });
 });
 
 describe('getTrackBackgroundUrl', () => {
-  it('returns server URL for server tracks', () => {
-    storageSet(CACHE_KEY, [MOCK_TRACK_SUMMARY]);
-    const url = getTrackBackgroundUrl('test-track-1', '/local/path.jpg');
+  it('returns server URL for any track id (all tracks are server-only, step 1)', () => {
+    const url = getTrackBackgroundUrl('test-track-1');
     expect(url).toContain('/api/tracks/test-track-1/background');
   });
 
-  it('returns geometry backgroundImage for non-server tracks', () => {
-    const url = getTrackBackgroundUrl(DIRT_OVAL.id, `/assets/tracks/${DIRT_OVAL.id}.jpg`);
-    expect(url).toBe(`/assets/tracks/${DIRT_OVAL.id}.jpg`);
-  });
-
-  it('returns empty string when no backgroundImage and not a server track', () => {
-    const url = getTrackBackgroundUrl('unknown', undefined);
-    expect(url).toBe('');
+  it('returns cached data-URL when the background is cached (offline use)', () => {
+    cacheBackground('test-track-1', 'data:image/jpeg;base64,abc==');
+    const url = getTrackBackgroundUrl('test-track-1');
+    expect(url).toBe('data:image/jpeg;base64,abc==');
   });
 });
 
