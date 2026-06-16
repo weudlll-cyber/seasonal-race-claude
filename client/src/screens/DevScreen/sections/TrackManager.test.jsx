@@ -29,9 +29,7 @@ vi.mock('../../../modules/track-editor/trackStorage.js', () => ({
   listTracks: vi.fn().mockReturnValue([]),
   getTrack: vi.fn().mockReturnValue(null),
 }));
-vi.mock('../../../modules/storage/defaults.js', () => ({
-  DEFAULT_TRACKS: [],
-}));
+vi.mock('../../../modules/storage/defaults.js', () => ({}));
 vi.mock('../../../modules/track-effects/index.js', () => ({
   listEffects: vi.fn().mockReturnValue([]),
 }));

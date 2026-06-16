@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { resolve, dirname } from 'path';
 import { EditorShape } from '../track-editor/EditorShape.js';
 import { computeAutoScaleFactor, getEffectiveMinTargetScreenPx } from '../autoSpriteScale.js';
-import { DEFAULT_TRACKS } from '../storage/defaults.js';
+import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GEO_DIR = resolve(__dirname, '../../../../server/data/tracks');
@@ -15,7 +15,7 @@ function loadGeo(id) {
 
 const AUTO_SCALE_CFG = { referenceValue: 23, minScale: 0.65, maxScale: 2.5 };
 
-const TRACKS = DEFAULT_TRACKS.map(({ id }) => ({ id }));
+const TRACKS = SAMPLE_TRACKS.map(({ id }) => ({ id }));
 
 describe('diagnostic: track corridor widths and auto-scale', () => {
   it('logs corridorWidthPx and displaySizeScale per track', () => {
@@ -87,8 +87,8 @@ describe('diagnostic: Block-Z sprite-size regression — render-pixel trace (N=5
     const OVERVIEW_SPRITE_SCALE = 1.0; // DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spriteScale
     const FALLBACK_REF_SIZE = 36; // RaceScreen multiplies spriteScale by this to get the px floor
 
-    const gardenPath = DEFAULT_TRACKS.find((t) => t.name === 'Garden Path');
-    const riverRun = DEFAULT_TRACKS.find((t) => t.name === 'River Run');
+    const gardenPath = SAMPLE_TRACKS.find((t) => t.name === 'Garden Path');
+    const riverRun = SAMPLE_TRACKS.find((t) => t.name === 'River Run');
     const geoGarden = loadGeo(gardenPath.id);
     const geoRiver = loadGeo(riverRun.id);
     const shapeGarden = new EditorShape(geoGarden);

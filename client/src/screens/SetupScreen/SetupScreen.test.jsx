@@ -12,7 +12,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
 import { storageSet, KEYS } from '../../modules/storage/storage.js';
-import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom
@@ -81,7 +81,7 @@ describe('SetupScreen — override selector filters inactive racer types', () =>
   function renderWithTrackSelected() {
     // Seed server cache with a track that has a real geometryId and empty surfaceClasses
     // so the surface-class filter does not interfere with the isActive-override tests.
-    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+    const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-001', surfaceClasses: [] } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
@@ -120,7 +120,7 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
   // Space Sprint (index 2) has surfaceClasses: ['air'].
   // Compatible racer types: plane ['air'], dragon ['air', ...], rocket ['air', 'water'] — 3 total.
   function renderWithAirTrack() {
-    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+    const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 2 ? { ...t, geometryId: 'geom-air-001' } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
@@ -169,7 +169,7 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
   });
 
   it('does not show surface hint for a track with empty surfaceClasses', () => {
-    const tracksNoClasses = DEFAULT_TRACKS.map((t, i) =>
+    const tracksNoClasses = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-hint', surfaceClasses: [] } : t
     );
     storageSet(CACHE_KEY, tracksNoClasses);
@@ -186,7 +186,7 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
 
 describe('SetupScreen — Quick Test autofill', () => {
   function renderWithQuickTrack() {
-    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+    const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-quick' } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
@@ -266,7 +266,7 @@ describe('SetupScreen — open-track Duration Slider (PR-A1)', () => {
   // River Run (index 1) has no surfaceClasses and is an open track in this test via a mock geometry.
   // We seed a geometry that is open (closed: false) so trackIsOpen becomes true.
   function renderWithOpenTrack() {
-    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+    const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 1 ? { ...t, geometryId: 'geom-open-001' } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
@@ -334,7 +334,7 @@ describe('SetupScreen — open-track Duration Slider (PR-A1)', () => {
 
 describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
   function renderWithClosedTrack() {
-    const tracksWithGeometry = DEFAULT_TRACKS.map((t, i) =>
+    const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-closed-001' } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
@@ -437,9 +437,9 @@ describe('SetupScreen — Quick Test racer selector', () => {
 
   // Garden Path (index 3): surfaceClasses: ['grass', 'earth']
   // Searound    (index 7): surfaceClasses: ['water']
-  // DEFAULT_TRACKS index values may vary; find by id instead.
+  // SAMPLE_TRACKS index values may vary; find by id instead.
   function getTracksWithGeometry(trackIds) {
-    return DEFAULT_TRACKS.map((t) =>
+    return SAMPLE_TRACKS.map((t) =>
       trackIds.includes(t.id) ? { ...t, geometryId: `geom-${t.id}` } : t
     );
   }
@@ -503,7 +503,7 @@ describe('SetupScreen — Quick Test racer selector', () => {
     clickQuickTrack('Garden Path');
     const select = getQuickRacerSelect();
     // Garden Path defaultRacerTypeId is 'snail'; that should be the selected value
-    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    const gardenPath = SAMPLE_TRACKS.find((t) => t.id === 'garden-path');
     expect(select.value).toBe(gardenPath.defaultRacerTypeId ?? 'horse');
   });
 
@@ -511,7 +511,7 @@ describe('SetupScreen — Quick Test racer selector', () => {
     renderWithQuickTracks(['garden-path']);
     clickQuickTrack('Garden Path');
     const select = getQuickRacerSelect();
-    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    const gardenPath = SAMPLE_TRACKS.find((t) => t.id === 'garden-path');
     const defaultOpt = Array.from(select.options).find(
       (o) => o.value === (gardenPath.defaultRacerTypeId ?? 'horse')
     );
@@ -538,7 +538,7 @@ describe('SetupScreen — Quick Test racer selector', () => {
     const btn = screen.getByTitle(/Auto-fill to/);
     fireEvent.click(btn);
     const race = JSON.parse(sessionStorage.getItem('activeRace'));
-    const gardenPath = DEFAULT_TRACKS.find((t) => t.id === 'garden-path');
+    const gardenPath = SAMPLE_TRACKS.find((t) => t.id === 'garden-path');
     expect(race.racerTypeId).toBe(gardenPath.defaultRacerTypeId ?? 'horse');
   });
 
@@ -551,7 +551,7 @@ describe('SetupScreen — Quick Test racer selector', () => {
     // Switch quick-test track to Searound (horse is not water-compatible)
     clickQuickTrack('Searound');
     // Selection should reset to Searound's default racer
-    const searound = DEFAULT_TRACKS.find((t) => t.id === 'searound');
+    const searound = SAMPLE_TRACKS.find((t) => t.id === 'searound');
     expect(getQuickRacerSelect().value).toBe(searound.defaultRacerTypeId ?? 'horse');
   });
 });

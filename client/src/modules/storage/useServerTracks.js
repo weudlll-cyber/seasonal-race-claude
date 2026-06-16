@@ -4,26 +4,15 @@
 // Project:     RaceArena
 // Created:     2026-04-29
 // Description: React hook — returns server-side custom tracks, initially from
-//              cache and refreshed async on mount. Triggers one-time migration
-//              of localStorage custom tracks to server on first connect.
+//              cache and refreshed async on mount.
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { getCachedServerTracks, fetchServerTracks } from './trackLoader.js';
-import { migrateLocalTracksToServer, MIGRATION_MARKER_KEY } from './trackMigration.js';
-import { storageGet } from './storage.js';
 
 async function fetchAndMigrate(setTracks) {
   const tracks = await fetchServerTracks();
   setTracks(tracks);
-
-  // Run migration only if marker is not yet set and server responded with a list
-  if (!storageGet(MIGRATION_MARKER_KEY, false) && Array.isArray(tracks)) {
-    const serverIds = new Set(tracks.map((t) => t.id));
-    migrateLocalTracksToServer(serverIds).catch(() => {
-      // Migration errors are non-fatal — logged inside migrateLocalTracksToServer
-    });
-  }
 }
 
 /**

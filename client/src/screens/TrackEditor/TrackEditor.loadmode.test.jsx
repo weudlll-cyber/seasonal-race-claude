@@ -12,9 +12,9 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
-import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 
-const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
+const DIRT_OVAL = SAMPLE_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
 

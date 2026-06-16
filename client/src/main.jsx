@@ -10,10 +10,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary.jsx';
-import { migrateStorage } from './modules/storage/migrateStorage.js';
 import './styles/main.css';
-
-migrateStorage();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

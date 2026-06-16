@@ -35,9 +35,9 @@ vi.mock('../../modules/storage/storage', () => ({
 
 import ResultScreen from './index.jsx';
 import { storageGet, storageSet } from '../../modules/storage/storage';
-import { DEFAULT_TRACKS } from '../../modules/storage/defaults.js';
+import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 
-const DIRT_OVAL = DEFAULT_TRACKS.find((t) => t.name === 'Dirt Oval');
+const DIRT_OVAL = SAMPLE_TRACKS.find((t) => t.name === 'Dirt Oval');
 
 const VALID_RACE_RESULTS = JSON.stringify({
   finishOrder: [

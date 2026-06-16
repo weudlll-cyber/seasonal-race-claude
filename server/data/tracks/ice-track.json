@@ -1,7 +1,7 @@
 {
   "icon": "🎿",
   "description": "",
-  "defaultRacerTypeId": "motorbike",
+  "defaultRacerTypeId": "snowmobile",
   "color": "#e63946",
   "defaultDuration": 60,
   "defaultWinners": 3,
@@ -1697,6 +1697,6 @@
   "isDefault": true,
   "backgroundImageFile": "ice-track.png",
   "createdAt": "2026-06-01T23:49:27.173Z",
-  "updatedAt": "2026-06-02T00:00:13.713Z",
+  "updatedAt": "2026-06-15T14:06:36.560Z",
   "maxRacers": null
 }

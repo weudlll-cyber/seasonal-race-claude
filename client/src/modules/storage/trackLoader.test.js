@@ -18,7 +18,7 @@ import {
   CACHE_KEY,
 } from './trackLoader.js';
 import { cacheBackground, getCachedBackground } from './trackCache.js';
-import { storageSet, storageGet, KEYS } from './storage.js';
+import { storageSet, storageGet } from './storage.js';
 import { listTracks } from '../track-editor/trackStorage.js';
 
 const MOCK_TRACK_SUMMARY = {
@@ -150,11 +150,8 @@ describe('cacheTrackGeometry', () => {
 });
 
 describe('getInitialTracks', () => {
-  // HONESTY PROOF (L126 — step-1): RED before change, GREEN after.
-  // Before: getInitialTracks merged KEYS.TRACKS/DEFAULT_TRACKS → non-empty when localStorage has data.
-  // After:  returns only getCachedServerTracks() → [] when cache is cold, regardless of KEYS.TRACKS.
-  it('cold cache + KEYS.TRACKS data → returns [] (no DEFAULT_TRACKS fallback, step-1 proof)', () => {
-    storageSet(KEYS.TRACKS, [{ id: 'local-only', name: 'Local Only' }]); // must be ignored after step-1
+  it('cold cache + stale local data → returns [] (server cache is the only source)', () => {
+    storageSet('racearena:tracks', [{ id: 'local-only', name: 'Local Only' }]); // ignored
     const tracks = getInitialTracks();
     expect(tracks).toEqual([]);
   });

@@ -9,13 +9,11 @@
 export const KEYS = {
   PLAYER_GROUPS: 'racearena:playerGroups',
   RACER_TYPE_OVERRIDES: 'racearena:racerTypeOverrides',
-  TRACKS: 'racearena:tracks',
   BRANDING: 'racearena:branding',
   ACTIVE_SESSION: 'racearena:activeSession',
   RACE_DEFAULTS: 'racearena:raceDefaults',
   RACE_HISTORY: 'racearena:raceHistory',
   ACTIVE_GROUP: 'racearena:activeGroup',
-  DATA_VERSION: 'racearena:dataVersion',
   AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',
   RACE_BEHAVIOR_CONFIG: 'racearena:raceBehaviorConfig',
@@ -93,61 +91,11 @@ export function exportDiagnosticSnapshot() {
   };
 }
 
-// ── Import validation (H1) ────────────────────────────────────────────────────
-// Mirror the server-side bounds so a crafted backup cannot inject values that
-// would crash the client even before they reach the server.
-const _IMPORT_NAME_MAX = 100;
-const _IMPORT_EFFECT_COUNT_MAX = 1000;
-
-function _isValidImportEffect(e) {
-  if (!e || typeof e !== 'object' || Array.isArray(e)) return false;
-  if (e.config !== undefined) {
-    if (typeof e.config !== 'object' || e.config === null || Array.isArray(e.config)) return false;
-    if ('count' in e.config) {
-      const c = e.config.count;
-      if (
-        typeof c !== 'number' ||
-        !isFinite(c) ||
-        !Number.isInteger(c) ||
-        c < 0 ||
-        c > _IMPORT_EFFECT_COUNT_MAX
-      ) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-function _validateImportTrack(t) {
-  if (!t || typeof t !== 'object' || Array.isArray(t)) return false;
-  if (typeof t.name !== 'string' || t.name.length > _IMPORT_NAME_MAX) return false;
-  if (Array.isArray(t.effects) && !t.effects.every(_isValidImportEffect)) return false;
-  return true;
-}
-
-/** Restore a full backup object (from importAllStorage).
- *  Items that fail validation are skipped with a console warning rather than
- *  written to localStorage, so a crafted backup cannot corrupt game state. */
+/** Restore a full backup object (from exportAllStorage). */
 export function importAllStorage(data) {
   for (const [key, val] of Object.entries(data)) {
     if (!key.startsWith('racearena:')) continue;
-    if (key === KEYS.TRACKS) {
-      if (!Array.isArray(val)) {
-        console.warn('[RaceArena] importAllStorage: racearena:tracks must be an array — skipped');
-        continue;
-      }
-      const valid = val.filter((t) => {
-        if (!_validateImportTrack(t)) {
-          console.warn('[RaceArena] importAllStorage: skipping invalid track entry', t?.id ?? t);
-          return false;
-        }
-        return true;
-      });
-      storageSet(key, valid);
-    } else {
-      storageSet(key, val);
-    }
+    storageSet(key, val);
   }
 }
 
@@ -162,61 +110,3 @@ export function clearAllStorage() {
 export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
-
-// One-time migration: copy worldWidth/worldHeight from the linked geometry into each
-// track preset that has a geometryId but stale 1280×720 defaults (pre-fix/list-tracks bug).
-// Safe to call multiple times — only writes when a mismatch is found.
-(function migrateTracksWorldDimensionsFromGeometry() {
-  try {
-    const raw = localStorage.getItem('racearena:tracks');
-    if (!raw) return;
-    const tracks = JSON.parse(raw);
-    if (!Array.isArray(tracks)) return;
-    let changed = false;
-    for (const track of tracks) {
-      if (!track.geometryId) continue;
-      const geoRaw = localStorage.getItem(`racearena:trackGeometries:${track.geometryId}`);
-      if (!geoRaw) continue;
-      const geo = JSON.parse(geoRaw);
-      const geoW = geo.worldWidth ?? 1280;
-      const geoH = geo.worldHeight ?? 720;
-      if (track.worldWidth !== geoW || track.worldHeight !== geoH) {
-        track.worldWidth = geoW;
-        track.worldHeight = geoH;
-        changed = true;
-      }
-    }
-    if (changed) {
-      localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
-      console.warn(
-        '[RaceArena] Synced worldWidth/worldHeight on track presets from linked geometry.'
-      );
-    }
-  } catch {
-    // Best-effort — migration failure must not break the app.
-  }
-})();
-
-// One-time migration: backfill worldHeight: 720 on track presets that predate D10.
-// Safe to call multiple times — exits immediately if all tracks already have the field.
-(function migrateTracksAddWorldHeight() {
-  try {
-    const raw = localStorage.getItem('racearena:tracks');
-    if (!raw) return;
-    const tracks = JSON.parse(raw);
-    if (!Array.isArray(tracks)) return;
-    let changed = false;
-    for (const track of tracks) {
-      if (track.worldHeight == null) {
-        track.worldHeight = 720;
-        changed = true;
-      }
-    }
-    if (changed) {
-      localStorage.setItem('racearena:tracks', JSON.stringify(tracks));
-      console.warn('[RaceArena] Backfilled worldHeight: 720 on track presets (D10).');
-    }
-  } catch {
-    // Best-effort — migration failure must not break the app.
-  }
-})();
