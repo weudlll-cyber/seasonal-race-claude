@@ -7,7 +7,7 @@ import { computeAutoScaleFactor, getEffectiveMinTargetScreenPx } from '../autoSp
 import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const GEO_DIR = resolve(__dirname, '../../../../server/data/tracks');
+const GEO_DIR = resolve(__dirname, '../../../../server/seeds/tracks'); // Seeds (committed, CI-safe) instead of server/data/** (gitignored) — cf. C2a.
 
 function loadGeo(id) {
   return JSON.parse(readFileSync(resolve(GEO_DIR, `${id}.json`), 'utf-8'));
