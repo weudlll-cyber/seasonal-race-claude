@@ -48,7 +48,7 @@ function App() {
             <Route
               path="/setup"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowOffline>
                   <RacersReadyGate>
                     <SetupScreen />
                   </RacersReadyGate>
@@ -58,7 +58,7 @@ function App() {
             <Route
               path="/race"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowOffline>
                   <RacersReadyGate>
                     <RaceScreen />
                   </RacersReadyGate>
@@ -68,7 +68,7 @@ function App() {
             <Route
               path="/results"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowOffline>
                   <ResultScreen />
                 </ProtectedRoute>
               }
