@@ -36,7 +36,7 @@ import * as authApi from '../services/authApi.js';
 import { storageGet, storageSet, storageRemove, KEYS } from '../modules/storage/storage.js';
 
 function Consumer() {
-  const { user, loading, authState, offlineUser, login, refresh } = useAuth();
+  const { user, loading, authState, offlineUser, login, logout, refresh } = useAuth();
   if (loading) return <div data-testid="status">loading</div>;
   return (
     <div>
@@ -44,6 +44,7 @@ function Consumer() {
       <span data-testid="authState">{authState}</span>
       <span data-testid="offlineUser">{offlineUser ? offlineUser.name : 'no-hint'}</span>
       <button onClick={() => login('bob', 'pass')}>login</button>
+      <button onClick={logout}>logout</button>
       <button onClick={refresh}>refresh</button>
     </div>
   );
@@ -210,5 +211,85 @@ describe('AuthContext — reconnect via window online event', () => {
       expect(screen.getByTestId('authState').textContent).toBe('anonymous');
     });
     expect(storageRemove).toHaveBeenCalledWith(KEYS.LAST_USER);
+  });
+});
+
+// ── Race-condition: hard deauth during in-flight runRefresh ───────────────────
+//
+// L126: WITHOUT the genRef.current += 1 in logout/onUnauthorized, the delayed
+// getMe resolution would commit 'online' and overwrite the deauth — these tests
+// are RED against the unfixed code and GREEN with the fix.
+
+describe('AuthContext — hard deauth invalidates in-flight runRefresh', () => {
+  it('unauthorized event during in-flight initial refresh → state stays anonymous', async () => {
+    // getMe never resolves until we call resolveMe manually
+    let resolveMe;
+    authApi.getMe.mockReturnValue(
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      })
+    );
+
+    render(<Wrapper />);
+    // Component is loading — runRefresh/getMe is in-flight (gen=1)
+    expect(screen.getByTestId('status').textContent).toBe('loading');
+
+    // Hard deauth fires while getMe is still awaiting
+    // onUnauthorized: genRef.current += 1 → 2, sets anonymous
+    act(() => {
+      window.dispatchEvent(new CustomEvent('racearena:unauthorized'));
+    });
+
+    // Now resolve the delayed getMe with a valid user
+    // WITHOUT the fix: setUser(alice) would run → 'online' overrides the deauth
+    // WITH the fix: gen=1 !== genRef.current=2 → guard blocks, state stays anonymous
+    await act(async () => {
+      resolveMe({ username: 'alice', role: 'admin' });
+    });
+
+    // loading is now false (initial load's finally ran); state must be anonymous
+    await screen.findByText('no-user');
+    expect(screen.getByTestId('authState').textContent).toBe('anonymous');
+    expect(screen.getByTestId('status').textContent).toBe('no-user');
+  });
+
+  it('logout during in-flight reconnect refresh → state stays anonymous', async () => {
+    // Initial load completes successfully → online
+    authApi.getMe.mockResolvedValueOnce({ username: 'alice', role: 'admin' });
+    authApi.logout.mockResolvedValue();
+    render(<Wrapper />);
+    await screen.findByText('alice');
+    expect(screen.getByTestId('authState').textContent).toBe('online');
+
+    // Start a refresh (via reconnect) with a delayed getMe (gen=2)
+    let resolveMe;
+    authApi.getMe.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      })
+    );
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    // While that getMe is in-flight, user clicks logout
+    // logout finally: genRef.current += 1 → 3, sets anonymous
+    await act(async () => {
+      screen.getByText('logout').click();
+    });
+
+    // State is now anonymous from logout
+    await screen.findByText('no-user');
+    expect(screen.getByTestId('authState').textContent).toBe('anonymous');
+
+    // Resolve the delayed getMe — without the fix this would commit 'online'
+    // With the fix: gen=2 !== genRef.current=3 → guard blocks
+    await act(async () => {
+      resolveMe({ username: 'alice', role: 'admin' });
+    });
+
+    // State must remain anonymous — the stale refresh did not overwrite logout
+    expect(screen.getByTestId('authState').textContent).toBe('anonymous');
+    expect(screen.getByTestId('status').textContent).toBe('no-user');
   });
 });

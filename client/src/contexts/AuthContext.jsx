@@ -52,8 +52,8 @@ export function AuthProvider({ children }) {
       return u;
     } catch (e) {
       if (gen !== genRef.current) return null;
-      // Only a true network error (no HTTP status) with a stored hint enables offline-hint.
-      // 5xx, CORS, or any error with an HTTP status code → anonymous (no offline bypass).
+      // True network error WITHOUT HTTP status (including CORS) with a stored hint → offline-hint.
+      // Any error WITH an HTTP status (including 5xx) → anonymous (no offline bypass).
       const hint = storageGet(KEYS.LAST_USER);
       if (!e?.status && hint) {
         setUser(null);
@@ -103,6 +103,7 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } finally {
+      genRef.current += 1; // invalidate any in-flight runRefresh so it cannot commit 'online'
       setUser(null);
       setAuthState('anonymous');
       setOfflineUser(null);
@@ -114,6 +115,7 @@ export function AuthProvider({ children }) {
   // Hard deauth mid-session (401 from any API call outside /me).
   useEffect(() => {
     function onUnauthorized() {
+      genRef.current += 1; // invalidate any in-flight runRefresh so it cannot commit 'online'
       setUser(null);
       setAuthState('anonymous');
       setOfflineUser(null);
