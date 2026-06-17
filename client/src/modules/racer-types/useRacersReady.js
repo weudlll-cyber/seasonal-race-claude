@@ -13,7 +13,10 @@ export function useRacersReady() {
   const [ready, setReady] = useState(areRacersReady());
 
   useEffect(() => {
-    if (areRacersReady()) return;
+    if (areRacersReady()) {
+      setReady(true);
+      return;
+    } // sync if ready flipped between render and effect
     let cancelled = false;
     waitForRacersReady().then(() => {
       if (!cancelled) setReady(true);
