@@ -394,14 +394,14 @@ describe('BrandingProfiles — delete brand', () => {
   });
 });
 
-// ── Default brand: 403 shown as visible error ─────────────────────────────────
+// ── Default brand: client-side guard shows error immediately ─────────────────
+// (Previously tested server-side 403; now the client guard fires first so the
+//  API is never called and confirm never shown.)
 
-describe('BrandingProfiles — default brand 403 visible error', () => {
-  it('shows role=alert with server 403 message when deleting a default brand', async () => {
+describe('BrandingProfiles — default brand: client-side guard', () => {
+  it('shows German error immediately without calling confirm or deleteBrand', async () => {
     fetchBrands.mockResolvedValue([DEFAULT_BRAND]);
-    const err = Object.assign(new Error('Cannot delete a default brand'), { status: 403 });
-    deleteBrand.mockRejectedValue(err);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, 'confirm');
 
     renderProfiles();
     await waitFor(() => screen.getByText('Seasonal Entertainment'));
@@ -411,7 +411,9 @@ describe('BrandingProfiles — default brand 403 visible error', () => {
     });
 
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toMatch(/Cannot delete a default brand/i);
+    expect(alert.textContent).toMatch(/Ein Default-Brand kann nicht gelöscht werden/i);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(deleteBrand).not.toHaveBeenCalled();
   });
 });
 
@@ -506,6 +508,46 @@ describe('BrandingProfiles — Invariant 10: only syncBrandingMirror writes KEYS
 });
 
 // ── DefaultControls smoke test ────────────────────────────────────────────────
+
+// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
+// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
+// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+
+describe('BrandingProfiles — handleDelete: Default-Brand wird sofort abgelehnt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchBrands.mockResolvedValue([DEFAULT_BRAND]); // isDefault: true
+  });
+
+  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deleteBrand auf', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    renderProfiles();
+    await waitFor(() => screen.getByText('Seasonal Entertainment'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Delete'));
+    });
+
+    expect(screen.getByText(/Ein Default-Brand kann nicht gelöscht werden/i)).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(deleteBrand).not.toHaveBeenCalled();
+  });
+
+  it('normaler (nicht-default) Brand zeigt confirm und ruft API auf', async () => {
+    fetchBrands.mockResolvedValue([CUSTOM_BRAND]); // isDefault: false
+    deleteBrand.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderProfiles();
+    await waitFor(() => screen.getByText('Christmas Party'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Delete'));
+    });
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(deleteBrand).toHaveBeenCalledWith(CUSTOM_BRAND.id);
+  });
+});
 
 describe('BrandingProfiles — DefaultControls smoke test', () => {
   it('renders DefaultControls buttons per brand row for admin user', async () => {

@@ -140,7 +140,13 @@ function TrackManager() {
     setShowForm(true);
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(id, isDefault) {
+    if (isDefault) {
+      setDeleteError(
+        'Eine Default-Strecke kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
+      );
+      return;
+    }
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
     setDeleteError(null);
     try {
@@ -266,7 +272,7 @@ function TrackManager() {
                 </button>
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(track.id)}
+                  onClick={() => handleDelete(track.id, track.isDefault)}
                   title="Delete from server"
                 >
                   🗑

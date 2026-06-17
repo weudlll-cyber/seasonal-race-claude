@@ -172,7 +172,13 @@ function BrandingProfiles() {
     setPreview(null);
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(id, isDefault) {
+    if (isDefault) {
+      setActionError(
+        'Ein Default-Brand kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
+      );
+      return;
+    }
     if (!window.confirm('Delete this branding profile?')) return;
     setActionError(null);
     try {
@@ -312,7 +318,7 @@ function BrandingProfiles() {
                 />
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(brand.id)}
+                  onClick={() => handleDelete(brand.id, brand.isDefault)}
                   title="Delete"
                 >
                   🗑

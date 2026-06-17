@@ -279,14 +279,14 @@ describe('PlayerGroupsManager — delete group', () => {
   });
 });
 
-// ── Default group: 403 shown as visible error ─────────────────────────────────
+// ── Default group: client-side guard shows error immediately ─────────────────
+// (Previously tested server-side 403; now the client guard fires first so the
+//  API is never called and confirm never shown.)
 
-describe('PlayerGroupsManager — default group 403 visible error', () => {
-  it('shows role=alert with server 403 message when deleting a default group', async () => {
+describe('PlayerGroupsManager — default group: client-side guard', () => {
+  it('shows German error immediately without calling confirm or deletePlayerGroup', async () => {
     fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]);
-    const err = Object.assign(new Error('Cannot delete a default player group'), { status: 403 });
-    deletePlayerGroup.mockRejectedValue(err);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, 'confirm');
 
     renderManager();
     await waitFor(() => screen.getByText('Example Group'));
@@ -295,9 +295,10 @@ describe('PlayerGroupsManager — default group 403 visible error', () => {
       fireEvent.click(screen.getByTitle('Delete'));
     });
 
-    // Server 403 must surface as a visible alert — not a silent success
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toMatch(/Cannot delete a default player group/i);
+    expect(alert.textContent).toMatch(/Eine Default-Gruppe kann nicht gelöscht werden/i);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(deletePlayerGroup).not.toHaveBeenCalled();
   });
 });
 
@@ -329,6 +330,47 @@ describe('PlayerGroupsManager — tooltip render (pre-D2 parity)', () => {
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
     expect(tooltips.some((el) => el.textContent.includes('recognizable name'))).toBe(true);
     expect(tooltips.some((el) => el.textContent.includes('frequently races together'))).toBe(true);
+  });
+});
+
+// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
+// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
+// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+
+describe('PlayerGroupsManager — handleDelete: Default-Gruppe wird sofort abgelehnt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]); // isDefault: true
+    migrateLocalPlayerGroupsToServer.mockResolvedValue(true);
+  });
+
+  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deletePlayerGroup auf', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    renderManager();
+    await waitFor(() => screen.getByText('Example Group'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Delete'));
+    });
+
+    expect(screen.getByText(/Eine Default-Gruppe kann nicht gelöscht werden/i)).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(deletePlayerGroup).not.toHaveBeenCalled();
+  });
+
+  it('normaler (nicht-default) Eintrag zeigt confirm und ruft API auf', async () => {
+    fetchPlayerGroups.mockResolvedValue([CUSTOM_GROUP]); // isDefault: false
+    deletePlayerGroup.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderManager();
+    await waitFor(() => screen.getByText('Friday Crew'));
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle('Delete')[0]);
+    });
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(deletePlayerGroup).toHaveBeenCalledWith(CUSTOM_GROUP.id);
   });
 });
 

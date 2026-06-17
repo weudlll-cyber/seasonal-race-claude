@@ -111,7 +111,13 @@ function PlayerGroupsManager() {
     setShowForm(true);
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(id, isDefault) {
+    if (isDefault) {
+      setActionError(
+        'Eine Default-Gruppe kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
+      );
+      return;
+    }
     if (!window.confirm('Delete this player group?')) return;
     setActionError(null);
     try {
@@ -227,7 +233,7 @@ function PlayerGroupsManager() {
                 />
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(group.id)}
+                  onClick={() => handleDelete(group.id, group.isDefault)}
                   title="Delete"
                 >
                   🗑

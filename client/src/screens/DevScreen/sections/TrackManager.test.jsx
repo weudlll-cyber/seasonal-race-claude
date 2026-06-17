@@ -8,7 +8,7 @@
 //              track types, and that the Track Editor button navigates correctly.
 // ============================================================
 
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -94,7 +94,11 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
-import { updateTrackOnServer, createTrackOnServer } from '../../../services/trackApi.js';
+import {
+  updateTrackOnServer,
+  createTrackOnServer,
+  deleteTrackFromServer,
+} from '../../../services/trackApi.js';
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import { listAllRacerTypes } from '../../../modules/racer-types/index.js';
@@ -602,6 +606,49 @@ describe('TrackManager — handleEdit geometry source (toSummary regression)', (
     expect(screen.getByText('Edit Track')).toBeInTheDocument();
     // EditorShape must NOT be called when there is no geometry
     expect(EditorShape).not.toHaveBeenCalled();
+  });
+});
+
+// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
+// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
+// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+
+describe('TrackManager — handleDelete: Default-Strecke wird sofort abgelehnt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deleteTrackFromServer auf', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] }); // DEFAULT_TRACK.isDefault = true
+
+    fireEvent.click(screen.getByTitle('Delete from server'));
+
+    expect(
+      screen.getByText(/Eine Default-Strecke kann nicht gelöscht werden/i)
+    ).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(deleteTrackFromServer).not.toHaveBeenCalled();
+  });
+
+  it('normaler (nicht-default) Eintrag zeigt confirm und ruft API auf', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(useServerTracksControl).mockReturnValue({
+      tracks: [SERVER_TRACK], // SERVER_TRACK.isDefault = false
+      refresh: vi.fn().mockResolvedValue(undefined),
+    });
+    render(
+      <MemoryRouter>
+        <TrackManager />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Delete from server'));
+    });
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(deleteTrackFromServer).toHaveBeenCalledWith(SERVER_TRACK.id);
   });
 });
 
