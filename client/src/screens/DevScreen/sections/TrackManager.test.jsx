@@ -59,6 +59,13 @@ vi.mock('../../../services/trackApi.js', () => ({
   deleteTrackFromServer: vi.fn().mockResolvedValue(undefined),
   updateTrackOnServer: vi.fn().mockResolvedValue({}),
   createTrackOnServer: vi.fn().mockResolvedValue({ id: 'new-server-id' }),
+  setTrackDefault: vi.fn().mockResolvedValue({}),
+  clearTrackDefault: vi.fn().mockResolvedValue({}),
+  exportTrackSeed: vi.fn().mockResolvedValue({ id: 'dirt-oval', name: 'Dirt Oval' }),
+}));
+
+vi.mock('../../../contexts/AuthContext.jsx', () => ({
+  useAuth: vi.fn(() => ({ user: { role: 'admin' } })),
 }));
 
 vi.mock('../../../modules/surface-effects/useSurfaceClasses.js', () => ({
@@ -595,5 +602,23 @@ describe('TrackManager — handleEdit geometry source (toSummary regression)', (
     expect(screen.getByText('Edit Track')).toBeInTheDocument();
     // EditorShape must NOT be called when there is no geometry
     expect(EditorShape).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackManager — DefaultControls smoke test', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders DefaultControls buttons in each track row for admin user', () => {
+    renderTrackManager({ serverTracks: [SERVER_TRACK] });
+    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+  });
+
+  it('renders "Default entfernen" for a track with isDefault=true', () => {
+    renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
+    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
   });
 });

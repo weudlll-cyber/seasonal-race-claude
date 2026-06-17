@@ -20,6 +20,13 @@ vi.mock('../../../services/brandApi.js', () => ({
   deleteBrand: vi.fn(),
   uploadBrandLogo: vi.fn(),
   deleteBrandLogo: vi.fn(),
+  setBrandDefault: vi.fn().mockResolvedValue({}),
+  clearBrandDefault: vi.fn().mockResolvedValue({}),
+  exportBrandSeed: vi.fn().mockResolvedValue({ id: 'brand-a' }),
+}));
+
+vi.mock('../../../contexts/AuthContext.jsx', () => ({
+  useAuth: vi.fn(() => ({ user: { role: 'admin' } })),
 }));
 
 vi.mock('../../../modules/branding/brandingSync.js', () => ({
@@ -495,5 +502,24 @@ describe('BrandingProfiles — Invariant 10: only syncBrandingMirror writes KEYS
     });
 
     expect(storageSet).not.toHaveBeenCalledWith(KEYS.BRANDING, expect.anything());
+  });
+});
+
+// ── DefaultControls smoke test ────────────────────────────────────────────────
+
+describe('BrandingProfiles — DefaultControls smoke test', () => {
+  it('renders DefaultControls buttons per brand row for admin user', async () => {
+    renderProfiles();
+    await waitFor(() => screen.getByText('Christmas Party'));
+    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+  });
+
+  it('renders "Default entfernen" for brand with isDefault=true', async () => {
+    fetchBrands.mockResolvedValue([DEFAULT_BRAND]);
+    renderProfiles();
+    await waitFor(() => screen.getByText('Seasonal Entertainment'));
+    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
   });
 });

@@ -14,7 +14,11 @@ import {
   createTrackOnServer,
   deleteTrackFromServer,
   updateTrackOnServer,
+  setTrackDefault,
+  clearTrackDefault,
+  exportTrackSeed,
 } from '../../../services/trackApi.js';
+import { DefaultControls } from '../components/DefaultControls.jsx';
 import {
   listAllRacerTypes,
   getRacerTypeLabel,
@@ -248,6 +252,15 @@ function TrackManager() {
                 <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
                 <span className={s.badge}>{track.defaultDuration}s</span>
                 <span className={s.spacer} />
+                <DefaultControls
+                  id={track.id}
+                  isDefault={track.isDefault}
+                  onChanged={serverTracksCtl.refresh}
+                  setDefault={setTrackDefault}
+                  clearDefault={clearTrackDefault}
+                  exportSeed={exportTrackSeed}
+                  seedFilename={`track-${track.id}.json`}
+                />
                 <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
                   ✏️
                 </button>

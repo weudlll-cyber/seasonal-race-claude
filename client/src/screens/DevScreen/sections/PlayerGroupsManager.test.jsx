@@ -19,6 +19,13 @@ vi.mock('../../../services/playerGroupApi.js', () => ({
   createPlayerGroup: vi.fn(),
   updatePlayerGroup: vi.fn(),
   deletePlayerGroup: vi.fn(),
+  setPlayerGroupDefault: vi.fn().mockResolvedValue({}),
+  clearPlayerGroupDefault: vi.fn().mockResolvedValue({}),
+  exportPlayerGroupSeed: vi.fn().mockResolvedValue({ id: 'group-a' }),
+}));
+
+vi.mock('../../../contexts/AuthContext.jsx', () => ({
+  useAuth: vi.fn(() => ({ user: { role: 'admin' } })),
 }));
 
 vi.mock('../../../modules/storage/playerGroupMigration.js', () => ({
@@ -322,5 +329,24 @@ describe('PlayerGroupsManager — tooltip render (pre-D2 parity)', () => {
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
     expect(tooltips.some((el) => el.textContent.includes('recognizable name'))).toBe(true);
     expect(tooltips.some((el) => el.textContent.includes('frequently races together'))).toBe(true);
+  });
+});
+
+// ── DefaultControls smoke test ────────────────────────────────────────────────
+
+describe('PlayerGroupsManager — DefaultControls smoke test', () => {
+  it('renders DefaultControls buttons per group row for admin user', async () => {
+    renderManager();
+    await waitFor(() => screen.getByText('Friday Crew'));
+    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+  });
+
+  it('renders "Default entfernen" for group with isDefault=true', async () => {
+    fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]);
+    renderManager();
+    await waitFor(() => screen.getByText('Example Group'));
+    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
+    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
   });
 });

@@ -20,7 +20,11 @@ import {
   createPlayerGroup,
   updatePlayerGroup,
   deletePlayerGroup,
+  setPlayerGroupDefault,
+  clearPlayerGroupDefault,
+  exportPlayerGroupSeed,
 } from '../../../services/playerGroupApi.js';
+import { DefaultControls } from '../components/DefaultControls.jsx';
 import { migrateLocalPlayerGroupsToServer } from '../../../modules/storage/playerGroupMigration.js';
 import s from '../DevScreen.module.css';
 
@@ -212,6 +216,15 @@ function PlayerGroupsManager() {
                 >
                   ✏️
                 </button>
+                <DefaultControls
+                  id={group.id}
+                  isDefault={group.isDefault}
+                  onChanged={refresh}
+                  setDefault={setPlayerGroupDefault}
+                  clearDefault={clearPlayerGroupDefault}
+                  exportSeed={exportPlayerGroupSeed}
+                  seedFilename={`group-${group.id}.json`}
+                />
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
                   onClick={() => handleDelete(group.id)}

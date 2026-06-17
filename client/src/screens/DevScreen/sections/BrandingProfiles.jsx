@@ -20,7 +20,11 @@ import {
   deleteBrand,
   uploadBrandLogo,
   deleteBrandLogo,
+  setBrandDefault,
+  clearBrandDefault,
+  exportBrandSeed,
 } from '../../../services/brandApi.js';
+import { DefaultControls } from '../components/DefaultControls.jsx';
 import { syncBrandingMirror } from '../../../modules/branding/brandingSync.js';
 import s from '../DevScreen.module.css';
 
@@ -297,6 +301,15 @@ function BrandingProfiles() {
                 <button className={s.btnIconOnly} onClick={() => handleEdit(brand)} title="Edit">
                   ✏️
                 </button>
+                <DefaultControls
+                  id={brand.id}
+                  isDefault={brand.isDefault}
+                  onChanged={refresh}
+                  setDefault={setBrandDefault}
+                  clearDefault={clearBrandDefault}
+                  exportSeed={exportBrandSeed}
+                  seedFilename={`brand-${brand.id}.json`}
+                />
                 <button
                   className={`${s.btnIconOnly} ${s.danger}`}
                   onClick={() => handleDelete(brand.id)}

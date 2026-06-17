@@ -58,6 +58,28 @@ export async function removeTrackBackground(trackId) {
   await apiCall(`${API_BASE_URL}/api/tracks/${trackId}/background`, { method: 'DELETE' });
 }
 
+/** @returns {Promise<object>} */
+export async function setTrackDefault(id) {
+  const res = await apiCall(`${API_BASE_URL}/api/tracks/${encodeURIComponent(id)}/set-default`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+/** @returns {Promise<object>} */
+export async function clearTrackDefault(id) {
+  const res = await apiCall(`${API_BASE_URL}/api/tracks/${encodeURIComponent(id)}/clear-default`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+/** @returns {Promise<object>} */
+export async function exportTrackSeed(id) {
+  const res = await apiCall(`${API_BASE_URL}/api/tracks/${encodeURIComponent(id)}/export-seed`);
+  return res.json();
+}
+
 /**
  * Upload a background image for a track.
  * @param {string} trackId — server track ID

@@ -12,6 +12,9 @@ import {
   updateTrackOnServer,
   deleteTrackFromServer,
   uploadTrackBackground,
+  setTrackDefault,
+  clearTrackDefault,
+  exportTrackSeed,
 } from './trackApi.js';
 
 const MOCK_TRACK = {
@@ -156,5 +159,67 @@ describe('uploadTrackBackground', () => {
     );
 
     await expect(uploadTrackBackground('abc123', new Blob(['x']))).rejects.toThrow(/too large/i);
+  });
+});
+
+describe('setTrackDefault', () => {
+  it('POSTs to /api/tracks/:id/set-default and returns JSON', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...MOCK_TRACK, isDefault: true }),
+      })
+    );
+    const result = await setTrackDefault('abc123');
+    const call = fetch.mock.calls[0];
+    expect(call[0]).toMatch(/\/api\/tracks\/abc123\/set-default$/);
+    expect(call[1].method).toBe('POST');
+    expect(result.isDefault).toBe(true);
+  });
+
+  it('percent-encodes the id in the URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK }));
+    await setTrackDefault('id with space');
+    expect(fetch.mock.calls[0][0]).toMatch(/\/api\/tracks\/id%20with%20space\/set-default$/);
+  });
+});
+
+describe('clearTrackDefault', () => {
+  it('POSTs to /api/tracks/:id/clear-default and returns JSON', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ...MOCK_TRACK, isDefault: false }),
+      })
+    );
+    const result = await clearTrackDefault('abc123');
+    const call = fetch.mock.calls[0];
+    expect(call[0]).toMatch(/\/api\/tracks\/abc123\/clear-default$/);
+    expect(call[1].method).toBe('POST');
+    expect(result.isDefault).toBe(false);
+  });
+
+  it('percent-encodes the id in the URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK }));
+    await clearTrackDefault('id/slash');
+    expect(fetch.mock.calls[0][0]).toMatch(/\/api\/tracks\/id%2Fslash\/clear-default$/);
+  });
+});
+
+describe('exportTrackSeed', () => {
+  it('GETs /api/tracks/:id/export-seed and returns JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK }));
+    const result = await exportTrackSeed('abc123');
+    const call = fetch.mock.calls[0];
+    expect(call[0]).toMatch(/\/api\/tracks\/abc123\/export-seed$/);
+    expect(result).toEqual(MOCK_TRACK);
+  });
+
+  it('percent-encodes the id in the URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK }));
+    await exportTrackSeed('id with space');
+    expect(fetch.mock.calls[0][0]).toMatch(/\/api\/tracks\/id%20with%20space\/export-seed$/);
   });
 });
