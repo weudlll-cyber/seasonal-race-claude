@@ -181,7 +181,7 @@ export function useTrackIO({ serverTracksCtl, saveTimerRef }) {
     try {
       if (loadedServerId) {
         await deleteTrackFromServer(loadedServerId);
-        removeCachedTrackData(loadedGeometryId, loadedServerId);
+        removeCachedTrackData(loadedGeometryId);
         await serverTracksCtl.refresh();
       } else if (loadedGeometryId) {
         deleteTrack(loadedGeometryId);

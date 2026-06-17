@@ -9,7 +9,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useServerTracksControl } from '../../../modules/storage/useServerTracks.js';
-import { removeCachedTrackData } from '../../../modules/storage/trackLoader.js';
 import {
   createTrackOnServer,
   deleteTrackFromServer,
@@ -151,7 +150,6 @@ function TrackManager() {
     setDeleteError(null);
     try {
       await deleteTrackFromServer(id);
-      removeCachedTrackData(null, id);
       await serverTracksCtl.refresh();
     } catch (err) {
       setDeleteError(err.message ?? 'Failed to delete track');

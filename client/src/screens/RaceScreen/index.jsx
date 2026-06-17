@@ -103,7 +103,6 @@ import {
 } from '../../modules/trackLights.js';
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
-import { resolveBackgroundSrc } from '../../modules/storage/trackLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
@@ -389,9 +388,7 @@ export default function RaceScreen() {
     const worldWidth = raceData.worldWidth ?? 1280;
     const bsX = CANVAS_W / worldWidth;
     const bsY = CANVAS_H / worldHeight;
-    const bgImagePath = geometry.backgroundImage
-      ? resolveBackgroundSrc(geometry.backgroundImage)
-      : null;
+    const bgImagePath = geometry.backgroundImage ?? null;
 
     // Size and clear the bg canvas for this track (setting width/height always clears it).
     if (bgCanvasRef.current) {

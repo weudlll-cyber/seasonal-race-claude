@@ -80,9 +80,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
   → server removes server/data/tracks/<id>.json
   → server removes server/data/backgrounds/<id>.jpg (if exists)
   → server does NOT touch geometry data
-  → client: removeCachedTrackData({ trackOnly: true })
-    → removes track from useServerTracks list
-    → removes background from racearena:cache:backgrounds
+  → client: useServerTracks list refreshed via serverTracksCtl.refresh()
     → does NOT remove racearena:trackGeometries:<geometryId>
   → geometry remains as orphaned entry (harmless, preserved)
 ```
@@ -132,7 +130,6 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │                                                             │
 │  racearena:trackGeometries:<geometryId>  ← geometry cache   │
 │  racearena:trackGeometries:index         ← geometry index   │
-│  racearena:cache:backgrounds             ← bg image LRU     │
 │  racearena:tracks                        ← (legacy local)   │
 └─────────────────────────────────────────────────────────────┘
 ```

@@ -26,9 +26,6 @@ import { storageSet, KEYS } from '../storage/storage.js';
 // at 3 MB to guard against unexpectedly large logos in localStorage.
 const MAX_LOGO_DATAURL_BYTES = 3 * 1024 * 1024;
 
-// NOTE: similar blob→Data-URL logic exists in trackLoader._cacheBackgroundAsync.
-// Not merged here (L140 — different call sites, different lifecycle); worth a
-// shared util if a third consumer appears.
 async function _fetchLogoDataUrl(brandId) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/brands/${brandId}/logo`, {

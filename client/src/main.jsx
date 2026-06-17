@@ -12,6 +12,14 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary.jsx';
 import './styles/main.css';
 
+// one-time cleanup: obsolete background cache removed (images 4-10 MB exceeded localStorage limit)
+try {
+  localStorage.removeItem('racearena:cache:backgrounds');
+  localStorage.removeItem('racearena:cache:backgroundsMeta');
+} catch {
+  /* ignore */
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>

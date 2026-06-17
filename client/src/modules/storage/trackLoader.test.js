@@ -13,13 +13,9 @@ import {
   fetchServerTracks,
   cacheTrackGeometry,
   getInitialTracks,
-  getTrackBackgroundUrl,
   removeCachedTrackData,
-  resolveBackgroundSrc,
-  downscaleToJpegDataUrl,
   CACHE_KEY,
 } from './trackLoader.js';
-import { cacheBackground, getCachedBackground } from './trackCache.js';
 import { storageSet, storageGet } from './storage.js';
 import { listTracks } from '../track-editor/trackStorage.js';
 
@@ -165,78 +161,17 @@ describe('getInitialTracks', () => {
   });
 });
 
-describe('getTrackBackgroundUrl', () => {
-  it('returns server URL for any track id (all tracks are server-only, step 1)', () => {
-    const url = getTrackBackgroundUrl('test-track-1');
-    expect(url).toContain('/api/tracks/test-track-1/background');
-  });
-
-  it('returns cached data-URL when the background is cached (offline use)', () => {
-    cacheBackground('test-track-1', 'data:image/jpeg;base64,abc==');
-    const url = getTrackBackgroundUrl('test-track-1');
-    expect(url).toBe('data:image/jpeg;base64,abc==');
-  });
-});
-
 describe('removeCachedTrackData', () => {
   it('removes cached geometry from localStorage', () => {
     storageSet('racearena:trackGeometries:custom-geo-xyz', { id: 'custom-geo-xyz', name: 'X' });
-    removeCachedTrackData('custom-geo-xyz', 'track-xyz');
+    removeCachedTrackData('custom-geo-xyz');
     const after = storageGet('racearena:trackGeometries:custom-geo-xyz', null);
     expect(after).toBeNull();
   });
 
-  it('removes background from background cache', () => {
-    cacheBackground('track-xyz', 'data:image/jpeg;base64,abc==');
-    expect(getCachedBackground('track-xyz')).toBeTruthy();
-    removeCachedTrackData('custom-geo-xyz', 'track-xyz');
-    expect(getCachedBackground('track-xyz')).toBeNull();
-  });
-
-  it('is a no-op when geometry or track ID is falsy', () => {
-    expect(() => removeCachedTrackData(null, null)).not.toThrow();
-    expect(() => removeCachedTrackData(undefined, undefined)).not.toThrow();
-  });
-});
-
-describe('fetchServerTracks — purge stale geometries', () => {
-  it('preserves geometry for a track that disappeared from server (TLH-1)', async () => {
-    // Seed cache with two tracks
-    storageSet(CACHE_KEY, [
-      MOCK_TRACK_SUMMARY,
-      { id: 'old-track', geometryId: 'custom-old-geo', name: 'Old' },
-    ]);
-    const geoData = { id: 'custom-old-geo', name: 'Old' };
-    storageSet('racearena:trackGeometries:custom-old-geo', geoData);
-
-    // Server now returns only the new track (old-track removed)
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => [MOCK_TRACK_SUMMARY],
-      })
-    );
-
-    await fetchServerTracks();
-
-    // Geometry must NOT be removed — it may represent manual drawing work
-    const preserved = storageGet('racearena:trackGeometries:custom-old-geo', null);
-    expect(preserved).toEqual(geoData);
-  });
-});
-
-describe('removeCachedTrackData — TLH-1 geometry preservation', () => {
-  it('null geometryId skips geometry removal but still clears background', () => {
-    storageSet('racearena:trackGeometries:some-geo', { id: 'some-geo' });
-    cacheBackground('track-abc', 'data:image/jpeg;base64,abc==');
-
-    removeCachedTrackData(null, 'track-abc');
-
-    // Geometry must survive
-    expect(storageGet('racearena:trackGeometries:some-geo', null)).toEqual({ id: 'some-geo' });
-    // Background cleared
-    expect(getCachedBackground('track-abc')).toBeNull();
+  it('is a no-op when geometryId is falsy', () => {
+    expect(() => removeCachedTrackData(null)).not.toThrow();
+    expect(() => removeCachedTrackData(undefined)).not.toThrow();
   });
 });
 
@@ -291,7 +226,7 @@ describe('removeCachedTrackData — index cleanup (L.6-Bug2 fix)', () => {
     const before = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
     expect(before).toContain(MOCK_TRACK_FULL.geometryId);
 
-    removeCachedTrackData(MOCK_TRACK_FULL.geometryId, MOCK_TRACK_SUMMARY.id);
+    removeCachedTrackData(MOCK_TRACK_FULL.geometryId);
 
     const after = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '[]');
     expect(after).not.toContain(MOCK_TRACK_FULL.geometryId);
@@ -303,7 +238,7 @@ describe('removeCachedTrackData — index cleanup (L.6-Bug2 fix)', () => {
       vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
     );
     await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
-    removeCachedTrackData(MOCK_TRACK_FULL.geometryId, MOCK_TRACK_SUMMARY.id);
+    removeCachedTrackData(MOCK_TRACK_FULL.geometryId);
 
     const list = listTracks();
     expect(list.some((g) => g.id === MOCK_TRACK_FULL.geometryId)).toBe(false);
@@ -364,9 +299,6 @@ describe('cacheTrackGeometry — field round-trip preservation (L37)', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => FULL_TRACK_ALL_FIELDS,
-        blob: async () => {
-          throw new Error('no bg');
-        },
       })
     );
     cached = await cacheTrackGeometry({
@@ -492,235 +424,5 @@ describe('cacheTrackGeometry — honesty proof: credentials:include (fix: was 40
     const result = await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
 
     expect(result).toBeNull();
-  });
-});
-
-// ── resolveBackgroundSrc (L126 — offline background resolver) ─────────────────
-//
-// Without the fix: RaceScreen used geometry.backgroundImage directly, which is a
-// server URL — dead when offline.
-// With the fix: resolveBackgroundSrc() returns the localStorage data-URL when
-// cached, falling back to the original URL.
-
-describe('resolveBackgroundSrc — offline background resolver (L126)', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  it('server URL + cache hit → returns the cached data-URL', () => {
-    // L126: RED without the function, GREEN with it.
-    const trackId = 'dirt-oval';
-    const dataUrl = 'data:image/png;base64,abc123';
-    cacheBackground(trackId, dataUrl);
-
-    const serverUrl = `http://localhost:4000/api/tracks/${trackId}/background`;
-    expect(resolveBackgroundSrc(serverUrl)).toBe(dataUrl);
-  });
-
-  it('server URL + no cache → returns the original server URL unchanged', () => {
-    const serverUrl = 'http://localhost:4000/api/tracks/asphalt-loop/background';
-    expect(resolveBackgroundSrc(serverUrl)).toBe(serverUrl);
-  });
-
-  it('non-server path (data: URL) → returned unchanged', () => {
-    const dataUrl = 'data:image/jpeg;base64,xyzPDQ==';
-    expect(resolveBackgroundSrc(dataUrl)).toBe(dataUrl);
-  });
-
-  it('trailing-slash variant /background/ → recognized as server URL', () => {
-    const trackId = 'mountain-pass';
-    const dataUrl = 'data:image/png;base64,trailingSlash';
-    cacheBackground(trackId, dataUrl);
-
-    const serverUrl = `http://localhost:4000/api/tracks/${trackId}/background/`;
-    expect(resolveBackgroundSrc(serverUrl)).toBe(dataUrl);
-  });
-});
-
-// ── downscaleToJpegDataUrl (L126 — offline bg downscale) ─────────────────────
-//
-// Without the fix: _cacheBackgroundAsync stored the full blob as a data-URL via
-// FileReader. Default track backgrounds are 3.6–10 MB — larger than the 3 MB
-// cache limit — so they were structurally evicted immediately after writing.
-// The resolver then fell back to the (offline-dead) server URL.
-//
-// With the fix: the blob is downscaled to a JPEG (max 1280 px, q0.6, ~150–350 KB)
-// before caching. The small JPEG fits within the 3 MB limit and survives offline.
-
-describe('downscaleToJpegDataUrl — downscale hook (L126)', () => {
-  let origCreateImageBitmap;
-  let origCreateElement;
-
-  beforeEach(() => {
-    origCreateImageBitmap = globalThis.createImageBitmap;
-    origCreateElement = document.createElement.bind(document);
-  });
-
-  afterEach(() => {
-    globalThis.createImageBitmap = origCreateImageBitmap;
-    document.createElement = origCreateElement;
-    vi.restoreAllMocks();
-  });
-
-  function makeMockCanvas(toDataUrlResult) {
-    const ctx = { drawImage: vi.fn() };
-    const canvas = {
-      width: 0,
-      height: 0,
-      getContext: vi.fn(() => ctx),
-      toDataURL: vi.fn(() => toDataUrlResult),
-    };
-    return { canvas, ctx };
-  }
-
-  it('returns a data:image/jpeg URL from toDataURL', async () => {
-    const jpegUrl = 'data:image/jpeg;base64,/9j/smalljpeg';
-    const { canvas } = makeMockCanvas(jpegUrl);
-    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
-      width: 800,
-      height: 600,
-      close: vi.fn(),
-    });
-    document.createElement = vi.fn(() => canvas);
-
-    const blob = new Blob(['x'], { type: 'image/jpeg' });
-    const result = await downscaleToJpegDataUrl(blob);
-
-    expect(result).toBe(jpegUrl);
-    expect(canvas.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.6);
-  });
-
-  it('scales down when image exceeds maxDim', async () => {
-    const jpegUrl = 'data:image/jpeg;base64,scaled';
-    const { canvas } = makeMockCanvas(jpegUrl);
-    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
-      width: 3840,
-      height: 2160,
-      close: vi.fn(),
-    });
-    document.createElement = vi.fn(() => canvas);
-
-    const blob = new Blob(['x'], { type: 'image/jpeg' });
-    await downscaleToJpegDataUrl(blob, 1280);
-
-    // scale = 1280 / 3840 = 0.333…; w = round(3840 * 0.333) = 1280; h = round(2160 * 0.333) = 720
-    expect(canvas.width).toBe(1280);
-    expect(canvas.height).toBe(720);
-  });
-
-  it('does not scale up when image is smaller than maxDim', async () => {
-    const jpegUrl = 'data:image/jpeg;base64,noscale';
-    const { canvas } = makeMockCanvas(jpegUrl);
-    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
-      width: 640,
-      height: 480,
-      close: vi.fn(),
-    });
-    document.createElement = vi.fn(() => canvas);
-
-    const blob = new Blob(['x'], { type: 'image/jpeg' });
-    await downscaleToJpegDataUrl(blob, 1280);
-
-    expect(canvas.width).toBe(640);
-    expect(canvas.height).toBe(480);
-  });
-});
-
-describe('_cacheBackgroundAsync — downscale integration (L126)', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    vi.restoreAllMocks();
-  });
-
-  it('caches a small JPEG data-URL, not the raw blob (L126: was full blob → evicted)', async () => {
-    // L126: against old code (FileReader full blob), the asserted data-URL would
-    // never equal the downscaled JPEG URL — test would be RED.
-    const jpegDataUrl = 'data:image/jpeg;base64,downscaled_small';
-    const mockBlob = new Blob(['bigimage'], { type: 'image/png' });
-
-    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
-      width: 3840,
-      height: 2160,
-      close: vi.fn(),
-    });
-    const mockCanvas = {
-      width: 0,
-      height: 0,
-      getContext: vi.fn(() => ({ drawImage: vi.fn() })),
-      toDataURL: vi.fn(() => jpegDataUrl),
-    };
-    document.createElement = vi.fn(() => mockCanvas);
-
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        blob: async () => mockBlob,
-      })
-    );
-
-    // Trigger via cacheTrackGeometry which calls _cacheBackgroundAsync internally
-    const mockTrack = {
-      id: 'dirt-oval',
-      geometryId: 'geo-dirt-oval',
-      name: 'Dirt Oval',
-      worldWidth: 1280,
-      worldHeight: 720,
-    };
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            ...mockTrack,
-            backgroundImageFile: 'dirt.png',
-          }),
-        })
-        .mockResolvedValue({
-          ok: true,
-          blob: async () => mockBlob,
-        })
-    );
-
-    await cacheTrackGeometry(mockTrack);
-    // Allow the async background cache to settle
-    await new Promise((r) => setTimeout(r, 50));
-
-    const cached = getCachedBackground('dirt-oval');
-    expect(cached).toBe(jpegDataUrl);
-  });
-
-  it('cacheBackground is NOT called when createImageBitmap throws (best-effort)', async () => {
-    globalThis.createImageBitmap = vi.fn().mockRejectedValue(new Error('not supported'));
-    const mockBlob = new Blob(['x'], { type: 'image/png' });
-
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            id: 'fail-track',
-            geometryId: 'geo-fail',
-            name: 'Fail',
-            worldWidth: 1280,
-            worldHeight: 720,
-            backgroundImageFile: 'f.png',
-          }),
-        })
-        .mockResolvedValue({
-          ok: true,
-          blob: async () => mockBlob,
-        })
-    );
-
-    await cacheTrackGeometry({ id: 'fail-track', geometryId: 'geo-fail' });
-    await new Promise((r) => setTimeout(r, 50));
-
-    // No entry cached — best-effort swallowed the error
-    expect(getCachedBackground('fail-track')).toBeNull();
   });
 });

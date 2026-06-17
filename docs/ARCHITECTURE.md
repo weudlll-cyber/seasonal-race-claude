@@ -744,7 +744,6 @@ seasonal-race-claude/
 │       │   └── trackApi.js          # Write-path client: create/update/deleteTrack, uploadTrackBackground
 │       └── modules/storage/
 │           ├── trackLoader.js       # fetchServerTracks, cacheTrackGeometry, removeCachedTrackData
-│           ├── trackCache.js        # Background image cache (data-URLs, 3 MB LRU)
 │           ├── trackMigration.js    # One-time localStorage→server migration (marker prevents re-runs)
 │           └── useServerTracks.js   # React hooks: useServerTracks() + useServerTracksControl()
 ├── server/          # Node.js / Express backend, port 4000
@@ -772,8 +771,7 @@ seasonal-race-claude/
 4. `backgroundImage` in the cached geometry = the live server URL (computed from server track `id`)
 
 **Offline fallback strategy (L.4):**
-- After geometry caching, `_cacheBackgroundAsync()` fetches the background and stores it as a data-URL in `racearena:cache:backgrounds`
-- `getTrackBackgroundUrl(trackId)` returns the cached data-URL when available, server URL otherwise
+- Background images are served live from the server URL stored in `geometry.backgroundImage`; no local cache (images 4–10 MB exceed localStorage limits). Offline races run without background.
 - Cache is capped at 3 MB; oldest entries are evicted first (LRU)
 - Quota errors from `storageSet` are caught silently
 
@@ -809,8 +807,7 @@ seasonal-race-claude/
 
 **Stale-cache cleanup (L.5):**
 - `fetchServerTracks()` calls `purgeStaleServerGeometries()` before writing the fresh list to cache
-- For each track in the old cache absent from the new list, `removeCachedTrackData(geometryId, trackId)` is called
-- Removes geometry from `racearena:trackGeometries:<id>` and background from `racearena:cache:backgrounds`
+- Stale server tracks detected by comparing old vs. new list; geometry cache entries are not removed (preserved for offline races)
 
 **Phase L scope:**
 - **L.1–L.5** — ✅ all complete (see BACKLOG.md)
