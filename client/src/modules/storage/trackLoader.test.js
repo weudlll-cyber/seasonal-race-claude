@@ -15,6 +15,7 @@ import {
   getInitialTracks,
   getTrackBackgroundUrl,
   removeCachedTrackData,
+  resolveBackgroundSrc,
   CACHE_KEY,
 } from './trackLoader.js';
 import { cacheBackground, getCachedBackground } from './trackCache.js';
@@ -490,5 +491,47 @@ describe('cacheTrackGeometry — honesty proof: credentials:include (fix: was 40
     const result = await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
 
     expect(result).toBeNull();
+  });
+});
+
+// ── resolveBackgroundSrc (L126 — offline background resolver) ─────────────────
+//
+// Without the fix: RaceScreen used geometry.backgroundImage directly, which is a
+// server URL — dead when offline.
+// With the fix: resolveBackgroundSrc() returns the localStorage data-URL when
+// cached, falling back to the original URL.
+
+describe('resolveBackgroundSrc — offline background resolver (L126)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('server URL + cache hit → returns the cached data-URL', () => {
+    // L126: RED without the function, GREEN with it.
+    const trackId = 'dirt-oval';
+    const dataUrl = 'data:image/png;base64,abc123';
+    cacheBackground(trackId, dataUrl);
+
+    const serverUrl = `http://localhost:4000/api/tracks/${trackId}/background`;
+    expect(resolveBackgroundSrc(serverUrl)).toBe(dataUrl);
+  });
+
+  it('server URL + no cache → returns the original server URL unchanged', () => {
+    const serverUrl = 'http://localhost:4000/api/tracks/asphalt-loop/background';
+    expect(resolveBackgroundSrc(serverUrl)).toBe(serverUrl);
+  });
+
+  it('non-server path (data: URL) → returned unchanged', () => {
+    const dataUrl = 'data:image/jpeg;base64,xyzPDQ==';
+    expect(resolveBackgroundSrc(dataUrl)).toBe(dataUrl);
+  });
+
+  it('trailing-slash variant /background/ → recognized as server URL', () => {
+    const trackId = 'mountain-pass';
+    const dataUrl = 'data:image/png;base64,trailingSlash';
+    cacheBackground(trackId, dataUrl);
+
+    const serverUrl = `http://localhost:4000/api/tracks/${trackId}/background/`;
+    expect(resolveBackgroundSrc(serverUrl)).toBe(dataUrl);
   });
 });

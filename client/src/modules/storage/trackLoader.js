@@ -152,3 +152,23 @@ export function getInitialTracks() {
 export function getTrackBackgroundUrl(trackId) {
   return getCachedBackground(trackId) ?? `${API_BASE_URL}/api/tracks/${trackId}/background`;
 }
+
+/**
+ * Maps a server background URL to its locally-cached data-URL when available.
+ * Non-server paths (data: URLs, local paths) are returned unchanged.
+ * Offline-safe: resolves to data-URL from localStorage cache first, server URL as fallback.
+ * @param {string} backgroundImage
+ * @returns {string}
+ */
+export function resolveBackgroundSrc(backgroundImage) {
+  if (!backgroundImage || typeof backgroundImage !== 'string') return backgroundImage;
+  let pathname;
+  try {
+    pathname = new URL(backgroundImage, API_BASE_URL).pathname;
+  } catch {
+    return backgroundImage;
+  }
+  const m = pathname.match(/^\/api\/tracks\/([^/]+)\/background\/?$/);
+  if (!m) return backgroundImage;
+  return getCachedBackground(m[1]) ?? backgroundImage;
+}
