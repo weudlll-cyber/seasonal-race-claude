@@ -139,7 +139,7 @@ function chiSquareP(observed) {
 
 // ── Track loader ──────────────────────────────────────────────────────────────
 function loadTrack(trackId, racerType, nRacers, durSec) {
-  const raw   = JSON.parse(readFileSync(join(ROOT, 'server/data/tracks', `${trackId}.json`), 'utf8'));
+  const raw   = JSON.parse(readFileSync(join(ROOT, 'server/seeds/tracks', `${trackId}.json`), 'utf8'));
   const shape = new EditorShape(raw);
   const isOpen              = !!shape.isOpen;
   const pathLengthPx        = raw.pathLengthPx ?? shape.getTotalLength();

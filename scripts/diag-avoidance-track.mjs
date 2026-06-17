@@ -41,7 +41,7 @@ const MEASURE = 600;
 
 async function runTrack(trackId) {
   Math.random = mulberry32(42);
-  const data = JSON.parse(readFileSync(`./server/data/tracks/${trackId}.json`, 'utf8'));
+  const data = JSON.parse(readFileSync(`./server/seeds/tracks/${trackId}.json`, 'utf8'));
   const shape = new EditorShape(data);
   const pathLengthPx = shape.getTotalLength();
   const trackWidth = data.width ?? shape.getActualTrackWidth();

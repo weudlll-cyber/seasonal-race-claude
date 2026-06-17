@@ -52,7 +52,7 @@ const SET_A = { ...SHARED, lateralDamping: 0.25,  lateralForce: 0.012 }; // curr
 const SET_B = { ...SHARED, lateralDamping: 0.45,  lateralForce: 0.010 }; // master baseline
 
 function loadTracks() {
-  const dir = join(ROOT, 'server/data/tracks');
+  const dir = join(ROOT, 'server/seeds/tracks');
   return TRACK_SPECS.map(spec => {
     const track  = JSON.parse(readFileSync(join(dir, `${spec.trackId}.json`), 'utf8'));
     const shape  = new EditorShape(track);

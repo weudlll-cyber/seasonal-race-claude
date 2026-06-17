@@ -5,6 +5,9 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
+      - RA_CLIENT_ORIGIN=http://localhost:5173
+      - RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production
+      - RA_SESSION_SECRET=dev-secret-not-for-production
     # Volume mounts so code changes never require a full `docker compose build`.
     # Just `docker compose restart server` (or rely on --watch auto-reload below).
     #

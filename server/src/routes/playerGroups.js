@@ -16,7 +16,7 @@
 // ============================================================
 
 import express from 'express';
-import { readFileSync, readdirSync, unlinkSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { readFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';

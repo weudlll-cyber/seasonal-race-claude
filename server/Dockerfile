@@ -7,6 +7,7 @@ RUN npm install --omit=dev
 
 COPY src/ ./src/
 COPY data/ ./data/
+COPY seeds/ ./seeds/
 
 EXPOSE 4000
 

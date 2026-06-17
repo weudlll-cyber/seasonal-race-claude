@@ -5,7 +5,7 @@
 // Project:     RaceArena
 // Description: Local admin-recovery CLI (AUTH.md §9a).
 //              Host-only — no HTTP, no ports. Acts directly on
-//              server/data/users.json via the shared usersStore.
+//              DATA_ROOT/users.json (default: server/data) via the shared usersStore.
 //
 //  Usage:
 //    node scripts/recover-admin.mjs promote <username>

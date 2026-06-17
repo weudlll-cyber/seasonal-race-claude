@@ -2075,7 +2075,7 @@ const isMain =
    process.argv[1].replace(/\\/g, '/').endsWith('scripts/sim-fairness.mjs'));
 
 if (isMain) {
-  const trackDataDir = join(ROOT, 'server/data/tracks');
+  const trackDataDir = join(ROOT, 'server/seeds/tracks');
   const trackFiles = [
     'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
     'luger-hill',    // Luger hill (open)
