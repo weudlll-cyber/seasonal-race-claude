@@ -244,6 +244,11 @@ function TrackManager() {
           </span>
         </div>
 
+        {deleteError && (
+          <p style={{ color: '#f87171', fontSize: '0.8rem', margin: '0 0 0.5rem' }}>
+            {deleteError}
+          </p>
+        )}
         {tracks.length === 0 ? (
           <p className={s.emptyState}>No tracks defined.</p>
         ) : (
@@ -280,11 +285,6 @@ function TrackManager() {
               </div>
             ))}
           </div>
-        )}
-        {deleteError && (
-          <p style={{ color: '#f87171', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>
-            {deleteError}
-          </p>
         )}
       </div>
 
