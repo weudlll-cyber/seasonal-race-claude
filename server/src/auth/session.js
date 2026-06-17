@@ -10,11 +10,8 @@ import session from 'express-session';
 import Database from 'better-sqlite3';
 import sqliteStoreFactory from 'better-sqlite3-session-store';
 import { randomUUID } from 'node:crypto';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(__dirname, '../../data');
+import { join } from 'path';
+import { DATA_ROOT } from '../dataPaths.js';
 
 // PRÜFEN note: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
 // express-session function object, which is standard connect-store adapter convention.
@@ -26,7 +23,7 @@ export function createSessionMiddleware(opts = {}) {
 
   // dbPath: explicit opt > test in-memory default > env override > file default
   const dbPath = opts.dbPath
-    ?? (isTest ? ':memory:' : (process.env.RA_SESSION_DB ?? join(dataDir, 'sessions.sqlite')));
+    ?? (isTest ? ':memory:' : (process.env.RA_SESSION_DB ?? join(DATA_ROOT, 'sessions.sqlite')));
 
   // Secret resolution
   let secret = opts.secret ?? process.env.RA_SESSION_SECRET;

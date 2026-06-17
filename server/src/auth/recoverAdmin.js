@@ -12,13 +12,12 @@
 // ============================================================
 
 import { existsSync, unlinkSync, appendFileSync } from 'node:fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import defaultStore from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DEFAULT_AUDIT_LOG_PATH = join(__dirname, '../../data/recover-admin-audit.log');
+export const DEFAULT_AUDIT_LOG_PATH = join(DATA_ROOT, 'recover-admin-audit.log');
 
 function writeAuditLine(auditLogPath, record) {
   // NEVER include password or passwordHash in audit output.

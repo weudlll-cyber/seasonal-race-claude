@@ -7,11 +7,7 @@
 //              nor the recovery CLI need to recompute or duplicate it.
 // ============================================================
 
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Resolves to server/data/setup-complete.json — identical to the value
-// previously computed inline in authRouter.js (same __dirname, same join).
-export const SETUP_MARKER_PATH = join(__dirname, '../../data/setup-complete.json');
+export const SETUP_MARKER_PATH = join(DATA_ROOT, 'setup-complete.json');

@@ -17,14 +17,13 @@
 
 import express from 'express';
 import { readFileSync, readdirSync, unlinkSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DATA_DIR = join(__dirname, '../../data/player-groups');
+export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
 const NAME_MAX = 100;
 const PLAYER_MAX = 200;

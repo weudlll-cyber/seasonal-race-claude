@@ -9,12 +9,11 @@
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, existsSync, chmodSync, statSync } from 'node:fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_USERS_PATH = process.env.RA_USERS_DB ?? join(__dirname, '../../data/users.json');
+const DEFAULT_USERS_PATH = process.env.RA_USERS_DB ?? join(DATA_ROOT, 'users.json');
 
 const BCRYPT_COST = 12;
 

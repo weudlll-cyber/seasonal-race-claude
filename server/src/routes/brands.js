@@ -32,16 +32,15 @@ import {
   writeFileSync,
   createReadStream,
 } from 'fs';
-import { join, extname, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DATA_DIR = join(__dirname, '../../data/brands');
-const LOGO_DIR = join(__dirname, '../../data/brand-logos');
+export const DATA_DIR = join(DATA_ROOT, 'brands');
+const LOGO_DIR = join(DATA_ROOT, 'brand-logos');
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 if (!existsSync(LOGO_DIR)) mkdirSync(LOGO_DIR, { recursive: true });

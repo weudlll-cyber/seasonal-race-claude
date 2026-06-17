@@ -17,17 +17,16 @@ import {
   mkdirSync,
   createReadStream,
 } from 'fs';
-import { join, extname, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data/tracks');
-const BG_DIR = join(__dirname, '../../data/backgrounds');
-const BACKUP_DIR = join(__dirname, '../../data/tracks-backups');
-const DEFAULT_TRACKS_MARKER = join(__dirname, '../../data/.tlh1-defaults-migrated');
+const DATA_DIR = join(DATA_ROOT, 'tracks');
+const BG_DIR = join(DATA_ROOT, 'backgrounds');
+const BACKUP_DIR = join(DATA_ROOT, 'tracks-backups');
+const DEFAULT_TRACKS_MARKER = join(DATA_ROOT, '.tlh1-defaults-migrated');
 
 const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const MAX_BG_BYTES = 10 * 1024 * 1024; // 10 MB

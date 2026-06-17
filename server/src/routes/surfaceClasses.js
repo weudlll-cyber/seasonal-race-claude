@@ -22,12 +22,11 @@ import {
   existsSync,
   mkdirSync,
 } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data/surface-classes');
+const DATA_DIR = join(DATA_ROOT, 'surface-classes');
 
 const VALID_GENERATOR_IDS = new Set(['particle', 'cloud', 'splash', 'line']);
 
