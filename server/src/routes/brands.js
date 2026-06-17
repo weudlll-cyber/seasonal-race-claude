@@ -39,6 +39,7 @@ import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../.
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'brands');
 const LOGO_DIR = join(DATA_ROOT, 'brand-logos');
@@ -275,6 +276,7 @@ router.get('/:id/logo', (req, res) => {
   const brand = brandsMap.get(req.params.id);
   if (!brand) return res.status(404).json({ error: 'Brand not found' });
   if (!brand.logoFile) return res.status(404).json({ error: 'No logo' });
+  if (!isSafeAssetFilename(brand.logoFile)) return res.status(404).json({ error: 'Logo file missing' });
 
   const logoPath = join(LOGO_DIR, brand.logoFile);
   if (!existsSync(logoPath)) return res.status(404).json({ error: 'Logo file missing' });

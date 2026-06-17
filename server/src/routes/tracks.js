@@ -23,6 +23,7 @@ import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
 const BG_DIR = join(DATA_ROOT, 'backgrounds');
@@ -587,6 +588,7 @@ router.get('/:id/background', (req, res) => {
   const track = tracksMap.get(req.params.id);
   if (!track) return res.status(404).json({ error: 'Track not found' });
   if (!track.backgroundImageFile) return res.status(404).json({ error: 'No background' });
+  if (!isSafeAssetFilename(track.backgroundImageFile)) return res.status(404).json({ error: 'Background file missing' });
 
   const bgPath = join(BG_DIR, track.backgroundImageFile);
   if (!existsSync(bgPath)) return res.status(404).json({ error: 'Background file missing' });
