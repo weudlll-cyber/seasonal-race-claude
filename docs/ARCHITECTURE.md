@@ -772,8 +772,6 @@ seasonal-race-claude/
 
 **Offline fallback strategy (L.4):**
 - Background images are served live from the server URL stored in `geometry.backgroundImage`; no local cache (images 4–10 MB exceed localStorage limits). Offline races run without background.
-- Cache is capped at 3 MB; oldest entries are evicted first (LRU)
-- Quota errors from `storageSet` are caught silently
 
 **Atomic writes:** All JSON writes use `server/utils/atomicWriteJson.js` (write to `.tmp`, then rename; falls back to direct write on OneDrive where `renameSync` can transiently fail).
 
@@ -796,7 +794,7 @@ seasonal-race-claude/
 **Frontend write strategy (L.5):**
 - `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
 - TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Retry" button
-- TrackManager: Save (server track) → `updateTrackOnServer` + `refresh`; Save (local track) → `setTracks` (localStorage); Delete (server) → `deleteTrackFromServer` + `removeCachedTrackData`; Geometry edit → `/track-editor?load=<serverId>`
+- TrackManager: Save (server track) → `updateTrackOnServer` + `refresh`; Save (local track) → `setTracks` (localStorage); Delete (server) → `deleteTrackFromServer` + `refresh` (no client-side geometry cache purge); Geometry edit → `/track-editor?load=<serverId>`
 - **Rule:** Every mutation flow that touches a server track (identified via `serverTrackIds.has(id)`) must call the corresponding API function (`updateTrackOnServer` / `deleteTrackFromServer`) and call `refresh()` afterwards. Writing only to `localStorage` via `setTracks()` is insufficient — the `useServerTracks` fetch overwrites local state on next render.
 - **PUT validation is partial:** `validateTrackBodyForUpdate` only validates fields actually present in the request body. Geometry fields (`closed`, `centerPoints`, `innerPoints`, `outerPoints`) are optional in PUT — if omitted they are merged from the existing track. POST uses `validateTrackBodyForCreate` which is strict (all geometry fields required). This allows TrackManager to send metadata-only PUTs without re-sending the full geometry.
 
@@ -804,10 +802,6 @@ seasonal-race-claude/
 - On first server connection, `migrateLocalTracksToServer()` runs once per browser
 - Reads all custom (non-default) tracks from `KEYS.TRACKS`; POSTs each to server; converts data-URL backgrounds to Blob via `fetch(dataUrl).then(r => r.blob())` and uploads
 - Removes each track from localStorage on success; marker key `racearena:migration:tracks-to-server-v1` set only after all tracks migrated successfully
-
-**Stale-cache cleanup (L.5):**
-- `fetchServerTracks()` calls `purgeStaleServerGeometries()` before writing the fresh list to cache
-- Stale server tracks detected by comparing old vs. new list; geometry cache entries are not removed (preserved for offline races)
 
 **Phase L scope:**
 - **L.1–L.5** — ✅ all complete (see BACKLOG.md)
@@ -866,7 +860,7 @@ Before TLH, the PUT handler silently discarded any `geometryId` sent by the clie
 - **Rationale:** Geometry data is expensive to recreate. Automatic deletion on track-delete destroyed user-drawn paths in the bug that triggered TLH. An orphaned geometry harms nothing; a lost geometry cannot be recovered.
 - **Future cleanup:** A "Clean up orphaned geometries" action (optional, explicit, UI-triggered) may be added later. It is not part of TLH.
 
-On the frontend, `removeCachedTrackData` is called with `{ trackOnly: true }` — removes the track-list cache entry and the background image cache, but leaves `racearena:trackGeometries:<id>` intact.
+`removeCachedTrackData(geometryId)` removes the geometry cache entry (`racearena:trackGeometries:<geometryId>`) and unregisters it from the index. It is called only from the TrackEditor Delete flow (useTrackIO). TrackManager Delete calls only `refresh()` — geometry entries are preserved indefinitely (see rationale above).
 
 ### Draw Geometry Flow with Preset Context (TLH-2)
 

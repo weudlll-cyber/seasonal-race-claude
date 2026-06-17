@@ -145,7 +145,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Changes:**
 - **Boot migration** — One-shot: if `server/data/.default-tracks-seeded` absent, create server records for all 10 default tracks. Each record includes full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry arrays (`innerPoints: [], outerPoints: [], centerPoints: [], closed: false`). Write marker file on completion. Idempotent — safe to run twice.
 - **PUT handler** — When `geometryId` is present in request body: use client value. When absent: keep `existing.geometryId`. Remove the hardcoded `existing.geometryId` override.
-- **DELETE handler** — Remove track JSON + background image only. Do not call `removeCachedTrackData` for geometry. On the frontend, update `removeCachedTrackData` calls from Delete flow to pass `{ trackOnly: true }`.
+- **DELETE handler** — Removes track JSON + background image only. Does not call `removeCachedTrackData` for geometry. On the frontend, `removeCachedTrackData(geometryId)` is called only from TrackEditor Delete (useTrackIO); TrackManager Delete calls only `refresh()`.
 - **Auto-backup** — Before every `PUT /api/tracks/:id` and `POST /api/tracks`: write backup copy to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. No auto-cleanup.
 
 **Test scope:** Backend unit tests for PUT geometryId behavior, DELETE non-geometry-deletion, backup file creation, migration idempotency.

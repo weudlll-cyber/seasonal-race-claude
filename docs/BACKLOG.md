@@ -386,40 +386,19 @@ Additionally: Space (Custom Track) already present.
   **User vision:** Tracks that were loaded once with a running server should remain playable with
   background while offline.
 
-  **Diagnosis findings (verified in PR-A2.8 diagnosis session):**
-  - `trackCache.js` cache infrastructure is fully present
-  - Eager feeding on app start works (`fetchServerTracks` → `cacheTrackGeometry` →
-    `_cacheBackgroundAsync`)
-  - Cache writes fail silently due to 3 MB localStorage limit (images 2.9–7.7 MB as data-URL after
-    Base64 encoding — not a single image fits within the limit)
-  - RaceScreen never reads from cache (`getTrackBackgroundUrl()` exists in `trackLoader.js:173`,
-    but is not called in production code — only in tests)
-  - Background resolution is **not** coupled to the speed pipeline (classification B in diagnosis) —
-    resize would be safe for race mechanics, `worldWidth`/`worldHeight`/`pathLengthPx` are frozen in
-    the geometry JSON
+  **Resolution (2026-06-18, L.4-BgCacheRemoved):** Background-image caching removed entirely.
+  localStorage approach is structurally impossible — default backgrounds are 4–10 MB; even JPEG
+  downscale at q0.6 exceeds the 5–10 MB total quota once geometry + other data are included.
+  `trackCache.js` deleted. `_cacheBackgroundAsync`, `getTrackBackgroundUrl`, `resolveBackgroundSrc`,
+  `purgeStaleServerGeometries` all removed from `trackLoader.js`. Geometry cache kept intact.
+  Offline races run without background image. One-time localStorage cleanup in `main.jsx` removes
+  legacy `racearena:cache:backgrounds` key on first load.
 
-  **Four discussed solution alternatives:**
+  **If background offline play is required in future:** Use IndexedDB (no Base64 overhead, no
+  5 MB quota). Consumption side in RaceScreen/PresetThumbnail would need async `getBackground(id)`.
+  Effort ~4–5h. Not planned.
 
-  1. **Smart switch (resize cache + server first):** Online = server URL (original resolution), offline =
-     canvas-resized cache (1280×720, JPEG 70% ≈ 100–300 KB/image). Effort ~3–4h. Pragmatic, but
-     quality discrepancy between online and offline.
-
-  2. **IndexedDB without resize:** Original images as blob directly in IndexedDB (no Base64 overhead,
-     no quota problem). Online and offline identical in original quality. Effort ~4–5h.
-     Cleanest solution, but `getCachedBackground()` would need to become async → refactor of consumption side.
-
-  3. **Emergency option (current state):** No cache, black/gradient background when server offline.
-     Console warning (PR-A2.8) gives user a hint. Effort 0h.
-
-  4. **Hybrid (IndexedDB + smart switch):** Original in cache AND server-first for maximum robustness.
-     Effort ~5–6h.
-
-  **Recommendation if implemented:** Alternative 2 (IndexedDB) — conceptually cleanest solution, preserves
-  original quality, no risk of resolution discrepancy between upload and display. Consumption side
-  in RaceScreen/PresetThumbnail requires helper `getServerTrackIdByGeometryId()` in `trackLoader.js`.
-
-  **Priority:** Low. Camera phase and race dynamics PRs are more important. Current state
-  (PR-A2.8 console warning) is acceptable emergency behavior.
+  **Priority:** Not planned (structural impossibility resolved by removal).
 
 - **Q-27** — Background PNG compression *(Audit 2026-05-04, Severity: HIGH — deferred)*
   The 5 background images (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) are together ~11.7 MB uncompressed PNGs. Optimization to ≤500 KB/image possible (pngquant, tinypng, etc.).
