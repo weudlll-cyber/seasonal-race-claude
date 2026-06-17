@@ -2,13 +2,13 @@
 // File:        brandingSync.test.js
 // Path:        client/src/modules/branding/brandingSync.test.js
 // Project:     RaceArena
-// Description: Tests for syncBrandingMirror (D4). Verifies logoFile→URL mapping,
-//              idempotent write to KEYS.BRANDING, stale-on-error behaviour, and
-//              the honesty proof: mirror logo is NEVER base64 and NEVER empty when
-//              logoFile is set (L126 criterion from spec).
+// Description: Tests for syncBrandingMirror. Verifies data-URL logo mirror,
+//              per-brand server-URL fallback, two-stage quota fallback,
+//              stale-on-error behaviour, and the honesty proof:
+//              when logoFetch succeeds the mirror logo IS a Data-URL (L126).
 // ============================================================
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../services/brandApi.js', () => ({ fetchBrands: vi.fn() }));
 vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
@@ -38,67 +38,126 @@ const BRAND_WITHOUT_LOGO = {
   isDefault: false,
 };
 
+// Build a mock FileReader class that synchronously resolves readAsDataURL.
+function makeMockFileReaderClass(dataUrl) {
+  return class MockFileReader {
+    constructor() {
+      this.result = dataUrl;
+      this.onload = null;
+      this.onerror = null;
+    }
+    readAsDataURL() {
+      Promise.resolve().then(() => {
+        if (this.onload) this.onload();
+      });
+    }
+  };
+}
+
+// Stub global fetch + FileReader for a successful logo response.
+function stubSuccessfulLogoFetch(dataUrl = 'data:image/jpeg;base64,MOCK') {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve({ size: 100 }),
+    })
+  );
+  vi.stubGlobal('FileReader', makeMockFileReaderClass(dataUrl));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: storage writes succeed so syncBrandingMirror returns after first write.
+  storageSet.mockReturnValue(true);
+  // Default: fetch fails fast — tests that need a successful fetch call stubSuccessfulLogoFetch().
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch not stubbed in this test')));
 });
 
-// ── Logo URL mapping ──────────────────────────────────────────────────────────
-
-describe('syncBrandingMirror — logo mapping', () => {
-  it('maps logoFile → absolute URL in the mirror', async () => {
-    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
-    await syncBrandingMirror();
-    expect(storageSet).toHaveBeenCalledWith(
-      'racearena:branding',
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'seasonal-entertainment',
-          logo: 'http://test/api/brands/seasonal-entertainment/logo',
-        }),
-      ])
-    );
-  });
-
-  it('sets logo="" when logoFile is null', async () => {
-    fetchBrands.mockResolvedValue([BRAND_WITHOUT_LOGO]);
-    await syncBrandingMirror();
-    expect(storageSet).toHaveBeenCalledWith(
-      'racearena:branding',
-      expect.arrayContaining([expect.objectContaining({ id: 'plain-brand', logo: '' })])
-    );
-  });
-
-  it('handles a mix of branded and unbranded entries', async () => {
-    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO, BRAND_WITHOUT_LOGO]);
-    await syncBrandingMirror();
-    const [written] = storageSet.mock.calls[0].slice(1);
-    const withLogo = written.find((b) => b.id === 'seasonal-entertainment');
-    const withoutLogo = written.find((b) => b.id === 'plain-brand');
-    expect(withLogo.logo).toBe('http://test/api/brands/seasonal-entertainment/logo');
-    expect(withoutLogo.logo).toBe('');
-  });
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
-// ── Honesty proof (L126) ──────────────────────────────────────────────────────
+// ── Honesty proof (L126) — new contract ──────────────────────────────────────
 
 describe('syncBrandingMirror — honesty proof (L126)', () => {
-  it('mirror logo is a URL, NEVER base64, when logoFile is set', async () => {
+  it('mirror logo IS a Data-URL (data: prefix) when logo fetch succeeds', async () => {
+    stubSuccessfulLogoFetch();
     fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
     await syncBrandingMirror();
     const [, written] = storageSet.mock.calls[0];
     const brand = written.find((b) => b.id === 'seasonal-entertainment');
-    expect(brand.logo).not.toMatch(/^data:/); // not base64
-    expect(brand.logo).not.toBe(''); // not empty
-    expect(brand.logo).toMatch(/^http/); // is a URL
+    expect(brand.logo).toMatch(/^data:/);
   });
 
-  it('mirror logo is "" (not base64) when logoFile is null', async () => {
+  it('mirror logo is "" (not data-URL) when logoFile is null', async () => {
     fetchBrands.mockResolvedValue([BRAND_WITHOUT_LOGO]);
     await syncBrandingMirror();
     const [, written] = storageSet.mock.calls[0];
     const brand = written.find((b) => b.id === 'plain-brand');
     expect(brand.logo).not.toMatch(/^data:/);
     expect(brand.logo).toBe('');
+  });
+});
+
+// ── Logo fetch fallback ───────────────────────────────────────────────────────
+
+describe('syncBrandingMirror — logo fetch fallback', () => {
+  it('falls back to server URL when logo fetch returns !res.ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
+    await syncBrandingMirror();
+    const [, written] = storageSet.mock.calls[0];
+    const brand = written.find((b) => b.id === 'seasonal-entertainment');
+    expect(brand.logo).toBe('http://test/api/brands/seasonal-entertainment/logo');
+  });
+
+  it('falls back to server URL when logo fetch rejects', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
+    await syncBrandingMirror();
+    const [, written] = storageSet.mock.calls[0];
+    const brand = written.find((b) => b.id === 'seasonal-entertainment');
+    expect(brand.logo).toBe('http://test/api/brands/seasonal-entertainment/logo');
+  });
+
+  it('sets logo="" when logoFile is null (no fetch attempted)', async () => {
+    fetchBrands.mockResolvedValue([BRAND_WITHOUT_LOGO]);
+    await syncBrandingMirror();
+    const [, written] = storageSet.mock.calls[0];
+    expect(written.find((b) => b.id === 'plain-brand').logo).toBe('');
+  });
+
+  it('handles a mix: data-URL for brand with logo, "" for brand without', async () => {
+    stubSuccessfulLogoFetch();
+    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO, BRAND_WITHOUT_LOGO]);
+    await syncBrandingMirror();
+    const [, written] = storageSet.mock.calls[0];
+    expect(written.find((b) => b.id === 'seasonal-entertainment').logo).toMatch(/^data:/);
+    expect(written.find((b) => b.id === 'plain-brand').logo).toBe('');
+  });
+});
+
+// ── Two-stage quota fallback ──────────────────────────────────────────────────
+
+describe('syncBrandingMirror — two-stage quota fallback', () => {
+  it('writes URL mirror when data-URL mirror exceeds quota (storageSet false→true)', async () => {
+    stubSuccessfulLogoFetch();
+    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
+    storageSet.mockReturnValueOnce(false).mockReturnValueOnce(true);
+    await syncBrandingMirror();
+    expect(storageSet).toHaveBeenCalledTimes(2);
+    const [, secondMirror] = storageSet.mock.calls[1];
+    expect(secondMirror.find((b) => b.id === 'seasonal-entertainment').logo).toBe(
+      'http://test/api/brands/seasonal-entertainment/logo'
+    );
+  });
+
+  it('does not write anything when both storageSet calls fail', async () => {
+    fetchBrands.mockResolvedValue([BRAND_WITH_LOGO]);
+    storageSet.mockReturnValue(false);
+    await syncBrandingMirror(); // must not throw
+    expect(storageSet).toHaveBeenCalledTimes(2);
   });
 });
 
