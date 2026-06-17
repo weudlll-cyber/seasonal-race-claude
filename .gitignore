@@ -19,43 +19,10 @@ client/test-results/
 AUDIT.md
 audit-temp/
 diagnosis/
-# --- Runtime user-created data (server writes at runtime; never committed) ---
-server/data/racers/
-server/data/racer-sprites/
-server/data/brand-logos/*
-!server/data/brand-logos/seasonal-entertainment.jpg
-server/data/brands/*
-!server/data/brands/seasonal-entertainment.json
-server/data/player-groups/*
-!server/data/player-groups/default-example-group.json
-server/data/users.json
-server/data/setup-complete.json
-server/data/sessions.sqlite
-server/data/sessions.sqlite-*
-server/data/**/*.json.tmp
-server/data/tracks-backups/
-server/data/tracks/*
-!server/data/tracks/city-circuit.json
-!server/data/tracks/dirt-oval.json
-!server/data/tracks/garden-path.json
-!server/data/tracks/ice-track.json
-!server/data/tracks/luger-hill.json
-!server/data/tracks/mountainstreet.json
-!server/data/tracks/river-run.json
-!server/data/tracks/searound.json
-!server/data/tracks/seatrack.json
-!server/data/tracks/space-sprint.json
-server/data/backgrounds/*
-!server/data/backgrounds/city-circuit.png
-!server/data/backgrounds/dirt-oval.png
-!server/data/backgrounds/garden-path.png
-!server/data/backgrounds/ice-track.png
-!server/data/backgrounds/luger-hill.jpg
-!server/data/backgrounds/mountainstreet.jpg
-!server/data/backgrounds/river-run.jpg
-!server/data/backgrounds/searound.jpg
-!server/data/backgrounds/seatrack.jpg
-!server/data/backgrounds/space-sprint.jpg
+# server/data is a pure runtime dir (gitignored). Shipped defaults live in server/seeds/
+# and are copied here on boot. Keep only the README tracked.
+server/data/**
+!server/data/README.md
 client/tmp/
 docs/diagnose/*.ndjson
 # Root-level diagnostic screenshots and sweep artifacts (not part of the codebase)

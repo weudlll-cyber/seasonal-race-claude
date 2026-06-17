@@ -9,17 +9,16 @@
 import { describe, it, expect, afterAll, beforeAll } from 'vitest';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
 import { existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, unlinkSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { createApp } from '../app.js';
 import { DEFAULT_TRACK_SEEDS, detectMagicType } from './tracks.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
 const SEED = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.name, s.id]));
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data/tracks');
-const BG_DIR = join(__dirname, '../../data/backgrounds');
-const BACKUP_DIR = join(__dirname, '../../data/tracks-backups');
+const DATA_DIR = join(DATA_ROOT, 'tracks');
+const BG_DIR = join(DATA_ROOT, 'backgrounds');
+const BACKUP_DIR = join(DATA_ROOT, 'tracks-backups');
 
 function findBackupFiles(trackId) {
   if (!existsSync(BACKUP_DIR)) return [];

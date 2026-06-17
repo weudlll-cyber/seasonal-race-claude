@@ -29,8 +29,8 @@ describe('resolveDataRoot', () => {
   });
 
   it('DATA_ROOT equals resolveDataRoot() at import time', () => {
-    // DATA_ROOT was evaluated with real process.env — just confirm it is an absolute path
-    // and matches the default (RA_DATA_DIR is not set in test env for this module-level call)
+    // DATA_ROOT is fixed when dataPaths.js is first imported (env-setup sets RA_DATA_DIR
+    // to a temp dir before any module loads, so DATA_ROOT = resolve(RA_DATA_DIR)).
     expect(DATA_ROOT).toBe(resolveDataRoot(process.env));
   });
 });

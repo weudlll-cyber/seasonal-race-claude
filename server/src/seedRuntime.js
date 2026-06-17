@@ -9,7 +9,7 @@
 //              Imports only node fs/path/url + DATA_ROOT — no route/auth imports.
 // ============================================================
 
-import { readdirSync, existsSync, mkdirSync, copyFileSync, renameSync } from 'node:fs';
+import { readdirSync, existsSync, mkdirSync, copyFileSync, renameSync, statSync } from 'node:fs';
 import { resolve, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { DATA_ROOT } from './dataPaths.js';
@@ -29,10 +29,13 @@ export function seedTypeFromSnapshot(type, dataRoot = DATA_ROOT) {
   mkdirSync(destDir, { recursive: true });
   if (!existsSync(srcDir)) return;
   for (const file of readdirSync(srcDir)) {
+    if (file.endsWith('.tmp')) continue;
+    const src = join(srcDir, file);
+    if (!statSync(src).isFile()) continue;
     const dest = join(destDir, file);
     if (existsSync(dest)) continue;
     const tmp = dest + '.tmp';
-    copyFileSync(join(srcDir, file), tmp);
+    copyFileSync(src, tmp);
     renameSync(tmp, dest);
   }
 }
