@@ -38,6 +38,7 @@ import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { seedTypeFromSnapshot } from '../seedRuntime.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'brands');
 const LOGO_DIR = join(DATA_ROOT, 'brand-logos');
@@ -73,32 +74,10 @@ export function loadAll(dir = DATA_DIR) {
   return map;
 }
 
+// Copy missing default snapshots before loading the map.
+seedTypeFromSnapshot('brands');
+seedTypeFromSnapshot('brand-logos');
 const brandsMap = loadAll();
-
-// ── Default seed (idempotent: only write if id absent) ────────────────────────
-
-const DEFAULT_SEED = {
-  id: 'seasonal-entertainment',
-  name: 'Seasonal Entertainment',
-  eventName: 'Seasonal Race',
-  subtitle: '',
-  primaryColor: '#2e9e3f',
-  secondaryColor: '#f4a261',
-  sponsorText: '',
-  logoFile: 'seasonal-entertainment.jpg',
-  isDefault: true,
-  logoMaxHeight: 90,
-  logoOpacity: 0.9,
-  logoCorner: 'bottom-right',
-};
-
-(function seedDefaults() {
-  if (brandsMap.has(DEFAULT_SEED.id)) return;
-  const now = new Date().toISOString();
-  const record = { ...DEFAULT_SEED, createdAt: now, updatedAt: now };
-  atomicWriteJson(join(DATA_DIR, `${record.id}.json`), record);
-  brandsMap.set(record.id, record);
-})();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

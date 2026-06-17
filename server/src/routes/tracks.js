@@ -22,6 +22,7 @@ import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { seedTypeFromSnapshot } from '../seedRuntime.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
 const BG_DIR = join(DATA_ROOT, 'backgrounds');
@@ -84,9 +85,13 @@ function loadAllTracks() {
   return map;
 }
 
+// Copy missing default snapshots before building the in-memory map so loadAllTracks()
+// reads the rich committed files on a fresh DATA_ROOT.
+migrateDefaultTracks();
 const tracksMap = loadAllTracks();
 
-// Metadata for the 10 built-in default tracks — seeded as server records on first boot.
+// Metadata for the 10 built-in default tracks — kept for SEED_SURFACE_CLASSES /
+// SEED_TRACK_LIGHTS lookup maps and external callers (tracks.test.js).
 // Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
 export const DEFAULT_TRACK_SEEDS = [
   {
@@ -418,33 +423,14 @@ function writeTrackBackup(trackId, trackData) {
   }
 }
 
-// Seed the built-in default tracks as server records.
-// Runs on every boot but only creates tracks that are missing — idempotent for
-// existing tracks. Marker file is written once for historical reference.
+// Copy committed snapshot files (server/seeds/) into DATA_ROOT on first boot.
+// Runs before loadAllTracks() so the map sees the rich seed files immediately.
 function migrateDefaultTracks() {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-  const now = new Date().toISOString();
-  for (const seed of DEFAULT_TRACK_SEEDS) {
-    if (tracksMap.has(seed.id)) continue;
-    const track = {
-      ...seed,
-      geometryId: null,
-      backgroundImageFile: null,
-      closed: false,
-      centerPoints: [],
-      innerPoints: [],
-      outerPoints: [],
-      effects: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    atomicWriteJson(join(DATA_DIR, `${seed.id}.json`), track);
-    tracksMap.set(seed.id, track);
-    console.log(`[RaceArena] Default track seeded: ${seed.name}`);
-  }
+  seedTypeFromSnapshot('tracks');
+  seedTypeFromSnapshot('backgrounds');
+  // Legacy marker — no behavior gating; kept for operational reference only.
   if (!existsSync(DEFAULT_TRACKS_MARKER)) {
     writeFileSync(DEFAULT_TRACKS_MARKER, new Date().toISOString(), 'utf8');
-    console.log('[RaceArena] Default tracks seeded as server records (TLH-1)');
   }
 }
 
@@ -581,9 +567,6 @@ function validateTrackBodyForUpdate(body) {
   }
   return errors;
 }
-
-// TLH-1: seed default tracks after all consts are initialized.
-migrateDefaultTracks();
 
 const router = express.Router();
 

@@ -22,6 +22,7 @@ import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { seedTypeFromSnapshot } from '../seedRuntime.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
@@ -47,24 +48,9 @@ export function loadAll(dir = DATA_DIR) {
   return map;
 }
 
+// Copy missing default snapshots before loading the map.
+seedTypeFromSnapshot('player-groups');
 const groupsMap = loadAll();
-
-// ── Default seed (idempotent: only write if id absent) ────────────────────────
-
-const DEFAULT_SEED = {
-  id: 'default-example-group',
-  name: 'Example Group',
-  players: ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
-  isDefault: true,
-};
-
-(function seedDefaults() {
-  if (groupsMap.has(DEFAULT_SEED.id)) return;
-  const now = new Date().toISOString();
-  const record = { ...DEFAULT_SEED, createdAt: now, updatedAt: now };
-  atomicWriteJson(join(DATA_DIR, `${record.id}.json`), record);
-  groupsMap.set(record.id, record);
-})();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
