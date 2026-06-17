@@ -2481,3 +2481,51 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Consequence:** Before pushing, run the exact CI steps locally: `npm run lint`, `npm run format:check`, `npm run test:coverage`, `npm audit --audit-level=high`. Treat an audit-only red as routine maintenance — a separate `chore(deps): npm audit fix` commit (verify patch-level bumps, re-run all four steps), not a code investigation.
 
 **Reference:** Session 2026-06-15. `.github/workflows/ci.yml`. Fix commit `e4d7c1d` (vite 8.0.10→8.0.16).
+
+---
+
+## Lesson 142 — HEAD Inherits the GET Role Policy (Framework-Synthesized Methods Bypass Method-Listed Gates)
+
+**Context:** D7 (2026-06-16). `requireAdmin`/`requiredRole` matched only explicitly-listed methods. Express auto-routes HEAD→GET, so an operator HEAD on an admin GET route (export-seed, `/api/users`) returned 200 instead of 403 — body suppressed by HttpOnly so no data leak, but the auth gate itself was bypassed. Systemic, not endpoint-specific.
+
+**Insight:** A gate keyed on an explicit method list misses methods the framework synthesizes (HEAD from GET; sometimes OPTIONS). The policy lookup must resolve the synthesized method to its source method before checking the role.
+
+**Consequence:** Resolve the policy method once at a shared lookup (`policyMethod`: HEAD→GET) used by BOTH `requiredRole` and `requireAdmin`. Test admin GET routes with HEAD, not only GET.
+
+**Reference:** Session 2026-06-16. `guards.js`. Fix commit `e1ac1f2`.
+
+---
+
+## Lesson 143 — Verify "Stutter" Against the Prod Build First; CSS filter Over an Animating Canvas Forces Per-Frame Recomposite
+
+**Context:** 2026-06-16. Reported race stutter; the per-frame compute path was unchanged since `v-camera-perf-complete`.
+
+**Insight:** The dev build stutters structurally (unminified, React dev mode, StrictMode double-render) — not a shipping problem. Separately, a CSS `filter: drop-shadow` on a DOM layer sitting over a canvas that repaints every frame forces the compositor to re-composite that layer every frame.
+
+**Consequence:** Always reproduce perf complaints in the prod build (`npm run build` + `npm run preview`, via `localhost`) before chasing a regression. For a static overlay over an animating canvas, add `will-change: transform` (or drop the `filter`) to isolate the layer.
+
+**Reference:** Session 2026-06-16. `BrandLogoOverlay.css`. Fix commit `5cc2b9f`.
+
+---
+
+## Lesson 144 — Never Blanket `git add -A` When the Working Tree Carries Loose Data/Runtime Changes
+
+**Context:** Tracks refactor step 2 (2026-06-16). `git add -A` swept three locally-mutated default seed files (brand/group/ice-track) into the cleanup commit — files deliberately left uncommitted. Caught by diff verification; needed a restore commit.
+
+**Insight:** `-A` stages everything, including runtime artifacts and intentionally-uncommitted local edits — acute when app/tests write into the same tree as tracked data (no DATA_DIR separation).
+
+**Consequence:** In commit steps, stage specific paths (`git add <path>`) or inspect `git status --porcelain` first. Use `-A` only when the tree provably holds only the intended changes.
+
+**Reference:** Session 2026-06-16. Sweep in `d5b9d57`, restore in `55f9137`.
+
+---
+
+## Lesson 145 — Removing a localStorage Layer: Protect the Real Invariant; Plan the Test-Fixture Fallout
+
+**Context:** Tracks "server-only" refactor (2026-06-16). Removed the localStorage "local track" layer (migrations, module IIFEs, `KEYS.TRACKS`, `DEFAULT_TRACKS`).
+
+**Insight:** The risk was not the deletions but an invariant hidden in the same module — the server-track cache (eager geometry + background) IS the offline mechanism and had to stay untouched. Also a prod constant (`DEFAULT_TRACKS`) was still used by ~7 tests as a fixture; removing it without rehoming the fixture reddens CI.
+
+**Consequence:** Before deleting a storage layer, name the invariant the old path guaranteed (here: offline race-start from cache) and protect it explicitly; inventory test-only consumers of any removed prod constant and move them to a fixture.
+
+**Reference:** Session 2026-06-16. `trackLoader.js` cache, `sampleTracks.js` fixture. Commits `3d772bf`, `55f9137`.
