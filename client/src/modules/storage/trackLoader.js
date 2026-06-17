@@ -62,6 +62,29 @@ export async function cacheTrackGeometry(summaryTrack) {
   }
 }
 
+/**
+ * Downscales a blob to a JPEG data-URL that fits within the 3 MB cache limit.
+ * Default: max 1280 px on the longest side, JPEG quality 0.6 (~150–350 KB typical).
+ * Transparent areas become black — acceptable for the darkened race background.
+ * @param {Blob} blob
+ * @param {number} maxDim
+ * @param {number} quality
+ * @returns {Promise<string>}
+ */
+export async function downscaleToJpegDataUrl(blob, maxDim = 1280, quality = 0.6) {
+  const bitmap = await createImageBitmap(blob);
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  if (typeof bitmap.close === 'function') bitmap.close();
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 async function _cacheBackgroundAsync(trackId) {
   try {
     const res = await withTimeout(
@@ -70,12 +93,7 @@ async function _cacheBackgroundAsync(trackId) {
     );
     if (!res.ok) return;
     const blob = await res.blob();
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    const dataUrl = await downscaleToJpegDataUrl(blob);
     cacheBackground(trackId, dataUrl);
   } catch {
     // Background cache failure is non-critical — online URL still works

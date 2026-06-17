@@ -16,6 +16,7 @@ import {
   getTrackBackgroundUrl,
   removeCachedTrackData,
   resolveBackgroundSrc,
+  downscaleToJpegDataUrl,
   CACHE_KEY,
 } from './trackLoader.js';
 import { cacheBackground, getCachedBackground } from './trackCache.js';
@@ -533,5 +534,193 @@ describe('resolveBackgroundSrc — offline background resolver (L126)', () => {
 
     const serverUrl = `http://localhost:4000/api/tracks/${trackId}/background/`;
     expect(resolveBackgroundSrc(serverUrl)).toBe(dataUrl);
+  });
+});
+
+// ── downscaleToJpegDataUrl (L126 — offline bg downscale) ─────────────────────
+//
+// Without the fix: _cacheBackgroundAsync stored the full blob as a data-URL via
+// FileReader. Default track backgrounds are 3.6–10 MB — larger than the 3 MB
+// cache limit — so they were structurally evicted immediately after writing.
+// The resolver then fell back to the (offline-dead) server URL.
+//
+// With the fix: the blob is downscaled to a JPEG (max 1280 px, q0.6, ~150–350 KB)
+// before caching. The small JPEG fits within the 3 MB limit and survives offline.
+
+describe('downscaleToJpegDataUrl — downscale hook (L126)', () => {
+  let origCreateImageBitmap;
+  let origCreateElement;
+
+  beforeEach(() => {
+    origCreateImageBitmap = globalThis.createImageBitmap;
+    origCreateElement = document.createElement.bind(document);
+  });
+
+  afterEach(() => {
+    globalThis.createImageBitmap = origCreateImageBitmap;
+    document.createElement = origCreateElement;
+    vi.restoreAllMocks();
+  });
+
+  function makeMockCanvas(toDataUrlResult) {
+    const ctx = { drawImage: vi.fn() };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+      toDataURL: vi.fn(() => toDataUrlResult),
+    };
+    return { canvas, ctx };
+  }
+
+  it('returns a data:image/jpeg URL from toDataURL', async () => {
+    const jpegUrl = 'data:image/jpeg;base64,/9j/smalljpeg';
+    const { canvas } = makeMockCanvas(jpegUrl);
+    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
+      width: 800,
+      height: 600,
+      close: vi.fn(),
+    });
+    document.createElement = vi.fn(() => canvas);
+
+    const blob = new Blob(['x'], { type: 'image/jpeg' });
+    const result = await downscaleToJpegDataUrl(blob);
+
+    expect(result).toBe(jpegUrl);
+    expect(canvas.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.6);
+  });
+
+  it('scales down when image exceeds maxDim', async () => {
+    const jpegUrl = 'data:image/jpeg;base64,scaled';
+    const { canvas } = makeMockCanvas(jpegUrl);
+    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
+      width: 3840,
+      height: 2160,
+      close: vi.fn(),
+    });
+    document.createElement = vi.fn(() => canvas);
+
+    const blob = new Blob(['x'], { type: 'image/jpeg' });
+    await downscaleToJpegDataUrl(blob, 1280);
+
+    // scale = 1280 / 3840 = 0.333…; w = round(3840 * 0.333) = 1280; h = round(2160 * 0.333) = 720
+    expect(canvas.width).toBe(1280);
+    expect(canvas.height).toBe(720);
+  });
+
+  it('does not scale up when image is smaller than maxDim', async () => {
+    const jpegUrl = 'data:image/jpeg;base64,noscale';
+    const { canvas } = makeMockCanvas(jpegUrl);
+    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
+      width: 640,
+      height: 480,
+      close: vi.fn(),
+    });
+    document.createElement = vi.fn(() => canvas);
+
+    const blob = new Blob(['x'], { type: 'image/jpeg' });
+    await downscaleToJpegDataUrl(blob, 1280);
+
+    expect(canvas.width).toBe(640);
+    expect(canvas.height).toBe(480);
+  });
+});
+
+describe('_cacheBackgroundAsync — downscale integration (L126)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('caches a small JPEG data-URL, not the raw blob (L126: was full blob → evicted)', async () => {
+    // L126: against old code (FileReader full blob), the asserted data-URL would
+    // never equal the downscaled JPEG URL — test would be RED.
+    const jpegDataUrl = 'data:image/jpeg;base64,downscaled_small';
+    const mockBlob = new Blob(['bigimage'], { type: 'image/png' });
+
+    globalThis.createImageBitmap = vi.fn().mockResolvedValue({
+      width: 3840,
+      height: 2160,
+      close: vi.fn(),
+    });
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ({ drawImage: vi.fn() })),
+      toDataURL: vi.fn(() => jpegDataUrl),
+    };
+    document.createElement = vi.fn(() => mockCanvas);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        blob: async () => mockBlob,
+      })
+    );
+
+    // Trigger via cacheTrackGeometry which calls _cacheBackgroundAsync internally
+    const mockTrack = {
+      id: 'dirt-oval',
+      geometryId: 'geo-dirt-oval',
+      name: 'Dirt Oval',
+      worldWidth: 1280,
+      worldHeight: 720,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ...mockTrack,
+            backgroundImageFile: 'dirt.png',
+          }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          blob: async () => mockBlob,
+        })
+    );
+
+    await cacheTrackGeometry(mockTrack);
+    // Allow the async background cache to settle
+    await new Promise((r) => setTimeout(r, 50));
+
+    const cached = getCachedBackground('dirt-oval');
+    expect(cached).toBe(jpegDataUrl);
+  });
+
+  it('cacheBackground is NOT called when createImageBitmap throws (best-effort)', async () => {
+    globalThis.createImageBitmap = vi.fn().mockRejectedValue(new Error('not supported'));
+    const mockBlob = new Blob(['x'], { type: 'image/png' });
+
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            id: 'fail-track',
+            geometryId: 'geo-fail',
+            name: 'Fail',
+            worldWidth: 1280,
+            worldHeight: 720,
+            backgroundImageFile: 'f.png',
+          }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          blob: async () => mockBlob,
+        })
+    );
+
+    await cacheTrackGeometry({ id: 'fail-track', geometryId: 'geo-fail' });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // No entry cached — best-effort swallowed the error
+    expect(getCachedBackground('fail-track')).toBeNull();
   });
 });
