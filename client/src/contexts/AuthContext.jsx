@@ -28,7 +28,8 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   // Generation guard: each runRefresh call captures its own gen snapshot.
-  // Only the most-recent run may commit state (prevents races between concurrent calls).
+  // Only the authoritative (most-recent) run may commit state AND clear loading.
+  // A superseded run hits the guard and returns null without touching loading or authState.
   const genRef = useRef(0);
 
   const runRefresh = useCallback(async () => {
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
     try {
       const u = await authApi.getMe();
       if (gen !== genRef.current) return null;
+      setLoading(false); // only the authoritative run clears loading
       if (u) {
         setUser(u);
         setAuthState('online');
@@ -52,6 +54,7 @@ export function AuthProvider({ children }) {
       return u;
     } catch (e) {
       if (gen !== genRef.current) return null;
+      setLoading(false); // only the authoritative run clears loading
       // True network error WITHOUT HTTP status (including CORS) with a stored hint → offline-hint.
       // Any error WITH an HTTP status (including 5xx) → anonymous (no offline bypass).
       const hint = storageGet(KEYS.LAST_USER);
@@ -68,15 +71,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Initial load — setLoading(false) only once, in finally.
+  // Initial load — loading is cleared inside runRefresh by the authoritative run.
   useEffect(() => {
-    (async () => {
-      try {
-        await runRefresh();
-      } finally {
-        setLoading(false);
-      }
-    })();
+    void runRefresh();
   }, [runRefresh]);
 
   // Minimal reconnect: re-probe on network recovery.
@@ -107,6 +104,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setAuthState('anonymous');
       setOfflineUser(null);
+      setLoading(false); // guard may have blocked the in-flight runRefresh from clearing it
       storageRemove(KEYS.LAST_USER);
       navigate('/login');
     }
@@ -119,6 +117,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       setAuthState('anonymous');
       setOfflineUser(null);
+      setLoading(false); // guard may have blocked the in-flight runRefresh from clearing it
       storageRemove(KEYS.LAST_USER);
       navigate('/login');
     }

@@ -8,6 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { StrictMode, useEffect } from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
@@ -247,7 +248,7 @@ describe('AuthContext — hard deauth invalidates in-flight runRefresh', () => {
       resolveMe({ username: 'alice', role: 'admin' });
     });
 
-    // loading is now false (initial load's finally ran); state must be anonymous
+    // loading is false: onUnauthorized cleared it when it fired.
     await screen.findByText('no-user');
     expect(screen.getByTestId('authState').textContent).toBe('anonymous');
     expect(screen.getByTestId('status').textContent).toBe('no-user');
@@ -291,5 +292,94 @@ describe('AuthContext — hard deauth invalidates in-flight runRefresh', () => {
     // State must remain anonymous — the stale refresh did not overwrite logout
     expect(screen.getByTestId('authState').textContent).toBe('anonymous');
     expect(screen.getByTestId('status').textContent).toBe('no-user');
+  });
+});
+
+// ── Loading-race fix (L126) ────────────────────────────────────────────────────
+//
+// setLoading(false) is now inside runRefresh (after the gen guard), not in an
+// outer IIFE finally. Only the authoritative (gen-current) run clears loading.
+// A superseded run returns null at the guard without touching loading or authState.
+//
+// Without the fix: the IIFE `finally { setLoading(false) }` ran for the superseded
+// gen-1 run (before gen-2 committed) → transient loading=false+anonymous state
+// briefly visible, causing a /login flash in ProtectedRoute.
+
+describe('AuthContext — loading-race fix (L126)', () => {
+  it('gen-2 clears loading atomically with state commit; gen-1 (delayed) changes nothing', async () => {
+    storageGet.mockReturnValue({ name: 'Alice', role: 'admin' });
+
+    // Gen=1 (initial load): delayed — will be superseded by gen=2
+    // Gen=2 (online event): rejects immediately → offline-hint
+    let rejectGen1;
+    authApi.getMe
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectGen1 = () => reject(new Error('Network'));
+        })
+      )
+      .mockRejectedValueOnce(new Error('Network error'));
+
+    render(<Wrapper />);
+    expect(screen.getByTestId('status').textContent).toBe('loading');
+
+    // Trigger gen=2 (supersedes gen=1)
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    // NEW: gen=2 sets loading=false + offline-hint atomically → authState testid visible immediately.
+    // OLD: gen=2 set authState only; loading stayed true (IIFE1 held it) → authState testid invisible.
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('authState')).toBeTruthy();
+      },
+      { timeout: 300 }
+    );
+    expect(screen.getByTestId('authState').textContent).toBe('offline-hint');
+
+    // Resolve the superseded gen=1 — must not change state or flip loading.
+    await act(async () => {
+      rejectGen1();
+    });
+    expect(screen.getByTestId('authState').textContent).toBe('offline-hint');
+    expect(screen.queryByText('loading')).toBeNull();
+  });
+
+  it('StrictMode double-mount: no transient loading=false+anonymous when offline with hint', async () => {
+    storageGet.mockReturnValue({ name: 'Alice', role: 'admin' });
+    authApi.getMe.mockRejectedValue(new Error('Network error'));
+
+    // Detect the bad transient state (loading=false AND authState='anonymous') via committed renders.
+    const badStateRef = { current: false };
+
+    function StrictConsumer() {
+      const { loading, authState } = useAuth();
+      // useEffect fires on every committed render — no deps intentional.
+
+      useEffect(() => {
+        if (!loading && authState === 'anonymous') badStateRef.current = true;
+      });
+      if (loading) return <div data-testid="status">loading</div>;
+      return <span data-testid="authState">{authState}</span>;
+    }
+
+    render(
+      <StrictMode>
+        <MemoryRouter>
+          <AuthProvider>
+            <StrictConsumer />
+          </AuthProvider>
+        </MemoryRouter>
+      </StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authState')).toBeTruthy();
+    });
+    expect(screen.getByTestId('authState').textContent).toBe('offline-hint');
+    // OLD: gen-1 IIFE finally fired first → loading=false+anonymous briefly → badStateRef=true
+    // NEW: loading only clears inside runRefresh after gen guard → atomic commit → badStateRef=false
+    expect(badStateRef.current).toBe(false);
   });
 });
