@@ -24,7 +24,6 @@ import { useActiveBrandProfile } from './modules/branding/useActiveBrandProfile.
 import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
-import DebugOverlay from './components/DebugOverlay.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
@@ -41,7 +40,6 @@ function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <DebugOverlay />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
         <TransitionProvider>

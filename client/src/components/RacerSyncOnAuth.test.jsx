@@ -12,10 +12,7 @@ import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../contexts/AuthContext.jsx', () => ({ useAuth: vi.fn() }));
-vi.mock('../modules/racer-types/index.js', () => ({
-  loadServerRacerTypes: vi.fn(),
-  setRacerSyncDebug: vi.fn(),
-}));
+vi.mock('../modules/racer-types/index.js', () => ({ loadServerRacerTypes: vi.fn() }));
 
 import RacerSyncOnAuth from './RacerSyncOnAuth.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';

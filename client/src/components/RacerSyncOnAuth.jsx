@@ -15,15 +15,13 @@
 
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { loadServerRacerTypes, setRacerSyncDebug } from '../modules/racer-types/index.js';
+import { loadServerRacerTypes } from '../modules/racer-types/index.js';
 
 export default function RacerSyncOnAuth() {
   const { user, loading, authState } = useAuth();
 
   useEffect(() => {
-    const called = !loading && (user || authState === 'offline-hint');
-    setRacerSyncDebug({ ran: true, loading, authState, userPresent: !!user, called: !!called });
-    if (called) loadServerRacerTypes();
+    if (!loading && (user || authState === 'offline-hint')) loadServerRacerTypes();
   }, [user, loading, authState]);
 
   return null;

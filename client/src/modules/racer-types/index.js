@@ -152,12 +152,6 @@ let _racersReady = false;
 const _racersReadyCallbacks = [];
 let _inFlightLoad = null;
 
-let _dbgLoadCalls = 0;
-let _dbgOutcome = 'idle';
-let _dbgLastStartTs = 0;
-let _dbgLastEndTs = 0;
-let _dbgSync = { ran: false, loading: null, authState: null, userPresent: null, called: null };
-
 function _markRacersReady() {
   if (_racersReady) return;
   _racersReady = true;
@@ -460,16 +454,11 @@ export function loadServerRacerTypes() {
 }
 
 async function _runLoad() {
-  _dbgLoadCalls += 1;
-  _dbgOutcome = 'pending';
-  _dbgLastStartTs = Date.now();
   let configs;
   try {
     configs = await fetchRacers();
   } catch (err) {
     console.error('[RaceArena] loadServerRacerTypes: failed to fetch from server —', err.message);
-    _dbgOutcome = 'failed:' + (err?.message ?? 'unknown');
-    _dbgLastEndTs = Date.now();
     _markRacersReady();
     return;
   }
@@ -494,29 +483,7 @@ async function _runLoad() {
       );
     }
   }
-  _dbgOutcome = 'ok';
-  _dbgLastEndTs = Date.now();
   _markRacersReady();
-}
-
-export function getRacerLoadDebug() {
-  return {
-    calls: _dbgLoadCalls,
-    outcome: _dbgOutcome,
-    ready: _racersReady,
-    inFlight: !!_inFlightLoad,
-    waiters: _racersReadyCallbacks.length,
-    startTs: _dbgLastStartTs,
-    endTs: _dbgLastEndTs,
-  };
-}
-
-export function setRacerSyncDebug(info) {
-  _dbgSync = { ...info };
-}
-
-export function getRacerSyncDebug() {
-  return _dbgSync;
 }
 
 /**
