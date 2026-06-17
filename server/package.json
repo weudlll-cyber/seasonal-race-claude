@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch scripts/dev-start.js",
+    "restart": "node scripts/restart-dev.js",
     "test": "vitest run --no-file-parallelism"
   },
   "dependencies": {
