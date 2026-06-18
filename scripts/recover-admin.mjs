@@ -78,18 +78,24 @@ async function readPassword() {
       process.stdin.setEncoding('utf8');
 
       let buf = '';
-      process.stdin.on('data', function onData(ch) {
+
+      function cleanup() {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onData);
+        process.stdin.removeListener('error', onError);
+        process.stdin.removeListener('end', onEnd);
+        process.stdin.removeListener('close', onEnd);
+      }
+
+      function onData(ch) {
         if (ch === '\r' || ch === '\n') {
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          process.stdin.removeListener('data', onData);
+          cleanup();
           process.stderr.write('\n');
           resolve(buf);
         } else if (ch === '') {
           // Ctrl-C
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          process.stdin.removeListener('data', onData);
+          cleanup();
           process.stderr.write('\n[recover-admin] Aborted.\n');
           reject(new Error('Aborted by user'));
         } else if (ch === '' || ch === '\b') {
@@ -98,9 +104,22 @@ async function readPassword() {
         } else {
           buf += ch;
         }
-      });
+      }
 
-      process.stdin.on('error', reject);
+      function onError(err) {
+        cleanup();
+        reject(err);
+      }
+
+      function onEnd() {
+        cleanup();
+        reject(new Error('stdin closed before password entered'));
+      }
+
+      process.stdin.on('data', onData);
+      process.stdin.on('error', onError);
+      process.stdin.on('end', onEnd);
+      process.stdin.on('close', onEnd);
     });
   }
 
