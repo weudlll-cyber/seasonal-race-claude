@@ -28,9 +28,25 @@ export const corsOptions = (() => {
   return { origin: list.length ? list : false, credentials: true };
 })();
 
+// ── Strict-mode resolver ──────────────────────────────────────────────────────
+
+// RA_CSRF_STRICT overrides the environment-derived default so operators can
+// enable strict mode on a non-NODE_ENV=production host (e.g. staging).
+// 'auto'/unset → falls back to isProduction (same pattern as resolveCookieSecure).
+export function resolveCsrfStrict(isProduction) {
+  const v = process.env.RA_CSRF_STRICT;
+  if (v === 'true')  return true;
+  if (v === 'false') return false;
+  return isProduction;  // 'auto' and unset both fall through to the env default
+}
+
 // ── CSRF Origin/Referer guard ─────────────────────────────────────────────────
 
-export function createCsrfOriginGuard({ getAllowedOrigins = getAllowedClientOrigins } = {}) {
+export function createCsrfOriginGuard({
+  getAllowedOrigins = getAllowedClientOrigins,
+  strict = resolveCsrfStrict(process.env.NODE_ENV === 'production'),
+  selfOrigin = process.env.RA_PUBLIC_ORIGIN || null,
+} = {}) {
   return function csrfOriginGuard(req, res, next) {
     const path = req.path;
     if (path !== '/api' && !path.startsWith('/api/')) return next();  // scope: /api only
@@ -47,11 +63,26 @@ export function createCsrfOriginGuard({ getAllowedOrigins = getAllowedClientOrig
       }
     }
 
-    // No Origin/Referer → non-browser client (curl, server-to-server). A browser CSRF attack
-    // cannot suppress the Origin header, so absence is not a CSRF vector → allow.
-    if (!candidate) return next();
+    // No Origin/Referer: in strict mode, a browser MUST send Origin on cross-site mutations
+    // (fetch/form). Absence here means either a same-origin navigation or a non-browser client.
+    // Strict: reject to enforce the requirement; non-strict: allow (curl, server-to-server).
+    if (!candidate) {
+      if (strict) return res.status(403).json({ error: 'origin required' });
+      return next();
+    }
 
-    const self = `${req.protocol}://${req.get('host')}`;
+    // Opaque origin ('null') and malformed values are not acceptable candidates.
+    // They arise from sandboxed iframes or data: URIs — always treated as invalid.
+    if (candidate === 'null') {
+      return res.status(403).json({ error: 'cross-origin request rejected' });
+    }
+    try { new URL(candidate); } catch {
+      return res.status(403).json({ error: 'cross-origin request rejected' });
+    }
+
+    // Self is the canonical server origin: explicit RA_PUBLIC_ORIGIN when set (production),
+    // otherwise derived from the incoming Host header (dev/local).
+    const self = selfOrigin ?? `${req.protocol}://${req.get('host')}`;
     const allowed = new Set([
       normalizeOrigin(self),
       ...getAllowedOrigins().map(normalizeOrigin),
