@@ -7,6 +7,7 @@
 // ============================================================
 
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import tracksRouter from './routes/tracks.js';
 import surfaceClassesRouter from './routes/surfaceClasses.js';
@@ -26,6 +27,7 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
   app.use(sessionMiddleware);
