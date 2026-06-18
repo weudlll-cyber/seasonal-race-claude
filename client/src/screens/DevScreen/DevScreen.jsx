@@ -31,6 +31,7 @@ import UserManagementSection from './sections/UserManagementSection.jsx';
 import s from './DevScreen.module.css';
 
 // Default-deny: only explicit 'operator' tier is operator-visible; anything else is admin-only.
+// eslint-disable-next-line react-refresh/only-export-components -- small tier helper co-located with the screen; fast-refresh DX only
 export function isOperatorTier(tier) {
   return tier === 'operator';
 }

@@ -41,6 +41,7 @@ export function TransitionProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- useFadeNavigate is co-located with its TransitionProvider by design; fast-refresh DX only
 export function useFadeNavigate() {
   const ctx = useContext(TransitionContext);
   const fallback = useNavigate();
