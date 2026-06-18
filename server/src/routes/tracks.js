@@ -7,7 +7,6 @@
 // ============================================================
 
 import express from 'express';
-import multer from 'multer';
 import {
   readFileSync,
   writeFileSync,
@@ -20,6 +19,7 @@ import {
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
@@ -30,46 +30,9 @@ const BG_DIR = join(DATA_ROOT, 'backgrounds');
 const BACKUP_DIR = join(DATA_ROOT, 'tracks-backups');
 const DEFAULT_TRACKS_MARKER = join(DATA_ROOT, '.tlh1-defaults-migrated');
 
-const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-const MAX_BG_BYTES = 10 * 1024 * 1024; // 10 MB
-
-// ── Upload content validation (C4) ───────────────────────────────────────────
-
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-
-// Detect image type from magic bytes — ignores the user-supplied Content-Type header.
-// Returns the detected MIME type string, or null if the content is not a recognized image.
-export function detectMagicType(buf) {
-  if (!buf || buf.length < 12) return null;
-  // PNG: 89 50 4E 47 0D 0A 1A 0A
-  if (
-    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
-    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
-  ) return 'image/png';
-  // JPEG: FF D8 FF
-  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
-  // WebP: RIFF????WEBP
-  if (
-    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
-    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
-  ) return 'image/webp';
-  return null;
-}
-
-// multer — memory storage, 10 MB limit.
-// fileFilter rejects obviously non-image MIME types before buffering as a first guard.
-// Magic-byte validation in the route handler is the authoritative check.
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_BG_BYTES },
-  fileFilter(_req, file, cb) {
-    if (ALLOWED_IMAGE_TYPES.has(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(Object.assign(new Error('INVALID_TYPE'), { code: 'INVALID_TYPE' }));
-    }
-  },
-});
+// multer — memory storage, 10 MB limit, MIME pre-filter.
+// Magic-byte validation in the route handler is the authoritative check (C4).
+const upload = createUpload({ maxBytes: MAX_IMAGE_BYTES });
 
 // Load all tracks into memory at startup.
 function loadAllTracks() {
@@ -594,7 +557,7 @@ router.get('/:id/background', (req, res) => {
   if (!existsSync(bgPath)) return res.status(404).json({ error: 'Background file missing' });
 
   const ext = extname(track.backgroundImageFile).slice(1).toLowerCase();
-  res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream');
+  res.setHeader('Content-Type', IMAGE_MIME[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   const stream = createReadStream(bgPath);
   stream.on('error', () => {
@@ -721,7 +684,7 @@ router.post('/:id/background', (req, res, next) => {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res
           .status(413)
-          .json({ error: `File too large. Maximum ${MAX_BG_BYTES / 1024 / 1024} MB allowed.` });
+          .json({ error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.` });
       }
       if (err.code === 'INVALID_TYPE') {
         return res.status(400).json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });

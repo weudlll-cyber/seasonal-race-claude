@@ -11,7 +11,8 @@ import { adminAgent, operatorAgent } from '../../test/authAgent.js';
 import { existsSync, mkdirSync, readdirSync, rmdirSync, rmSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { createApp } from '../app.js';
-import { DEFAULT_TRACK_SEEDS, detectMagicType } from './tracks.js';
+import { DEFAULT_TRACK_SEEDS } from './tracks.js';
+import { detectMagicType } from '../../utils/imageUpload.js';
 import { DATA_ROOT } from '../dataPaths.js';
 
 const SEED = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.name, s.id]));

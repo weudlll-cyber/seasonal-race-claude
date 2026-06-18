@@ -4,8 +4,7 @@
 // Project:     RaceArena
 // Description: Shared image upload helper — magic-byte detection, MIME/type
 //              constants, and a configurable multer upload factory.
-//              Consumed by brands.js (D3). tracks.js retains its own inline
-//              copy pending a dedicated cleanup step (SPEC D3 HYGIENE note).
+//              Consumed by brands.js, racers.js, and tracks.js.
 // ============================================================
 
 import multer from 'multer';
