@@ -204,6 +204,37 @@ describe('authRouter', () => {
     expect(meRes.status).toBe(401);
   });
 
+  it('logout: response Set-Cookie clears the active cookie name (ra.sid in test env)', async () => {
+    await store.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+    const logoutRes = await agent.post('/api/auth/logout');
+    expect(logoutRes.status).toBe(200);
+    const setCookie = logoutRes.headers['set-cookie'] ?? [];
+    // In test env (NODE_ENV=test, no RA_COOKIE_SECURE=true), active name is ra.sid
+    expect(setCookie.some((c) => /^ra\.sid=/.test(c))).toBe(true);
+  });
+
+  it('logout: RA_COOKIE_SECURE=true → Set-Cookie clears __Host-ra.sid (active) and ra.sid (legacy)', async () => {
+    process.env.RA_COOKIE_SECURE = 'true';
+    try {
+      const localStore = createUsersStore(usersPath);
+      const localApp = express();
+      localApp.use(express.json());
+      localApp.use(makeSession());
+      localApp.use('/api/auth', createAuthRouter({ store: localStore, setupMarkerPath: markerPath, getBootstrapToken: () => 'TEST-TOKEN' }));
+      await localStore.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+      const localAgent = request.agent(localApp);
+      await localAgent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+      const logoutRes = await localAgent.post('/api/auth/logout');
+      expect(logoutRes.status).toBe(200);
+      const setCookie = logoutRes.headers['set-cookie'] ?? [];
+      expect(setCookie.some((c) => /^__Host-ra\.sid=/.test(c))).toBe(true);
+      expect(setCookie.some((c) => /^ra\.sid=/.test(c))).toBe(true);
+    } finally {
+      delete process.env.RA_COOKIE_SECURE;
+    }
+  });
+
   // ── Change-1: non-EEXIST openSync error → 500 ────────────────────────────
 
   it('setup: non-EEXIST open failure (ENOENT) → 500, no user created', async () => {

@@ -28,6 +28,31 @@ export function resolveCookieSecure(isProduction) {
   return isProduction;
 }
 
+// RA_COOKIE_NAME_MODE controls the session cookie name:
+//   auto (default): __Host-ra.sid when Secure is guaranteed (literal true), else ra.sid
+//   host:           always __Host-ra.sid; throws if Secure is not guaranteed
+//   legacy:         always ra.sid (transition escape hatch)
+export function resolveCookieName(secureResolved) {
+  const mode = process.env.RA_COOKIE_NAME_MODE ?? 'auto';
+  if (mode === 'legacy') return 'ra.sid';
+  if (mode === 'host') {
+    if (secureResolved !== true) {
+      const e = new Error('RA_COOKIE_NAME_MODE=host requires guaranteed Secure (RA_COOKIE_SECURE=true)');
+      e.code = 'COOKIE_NAME_MODE_INVALID';
+      throw e;
+    }
+    return '__Host-ra.sid';
+  }
+  // auto: __Host- only when Secure is guaranteed (literal true, NOT 'auto'/false)
+  return secureResolved === true ? '__Host-ra.sid' : 'ra.sid';
+}
+
+// Convenience: resolved cookie name for the current process environment (used by logout).
+export function getActiveCookieName() {
+  const secure = resolveCookieSecure(process.env.NODE_ENV === 'production');
+  return resolveCookieName(secure);
+}
+
 export function createSessionMiddleware(opts = {}) {
   const isProduction = opts.isProduction ?? (process.env.NODE_ENV === 'production');
   const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
@@ -61,13 +86,16 @@ export function createSessionMiddleware(opts = {}) {
     expired: enableSweep ? { clear: true, intervalMs: 900000 } : { clear: false },
   });
 
+  // Single resolution — reuse same value for both name and cookie.secure (no drift).
+  const cookieSecure = resolveCookieSecure(isProduction);
+
   const mw = session({
-    name: 'ra.sid',
+    name: resolveCookieName(cookieSecure),
     secret,
     store,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: resolveCookieSecure(isProduction), path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: { httpOnly: true, sameSite: 'lax', secure: cookieSecure, path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 },
   });
   mw._db = db;  // exposed for test teardown (store.client alias)
   return mw;

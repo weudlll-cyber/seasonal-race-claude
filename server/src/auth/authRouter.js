@@ -11,6 +11,7 @@ import { timingSafeEqual, createHash } from 'node:crypto';
 import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
+import { resolveCookieSecure, getActiveCookieName } from './session.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
@@ -161,7 +162,11 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
         console.error('[auth] session destroy failed on logout:', err.code ?? err.message);
         return res.status(500).json({ error: 'logout failed' });
       }
-      res.clearCookie('ra.sid');
+      const active = getActiveCookieName();
+      const secure = resolveCookieSecure(process.env.NODE_ENV === 'production');
+      res.clearCookie(active, { path: '/', httpOnly: true, sameSite: 'lax', secure });
+      // Orphan cleanup: clear legacy ra.sid when the active name has changed to __Host-ra.sid.
+      if (active !== 'ra.sid') res.clearCookie('ra.sid', { path: '/' });
       res.json({ ok: true });
     });
   });

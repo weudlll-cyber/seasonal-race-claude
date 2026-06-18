@@ -14,7 +14,7 @@ import { join } from 'path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import Database from 'better-sqlite3';
-import { createSessionMiddleware, resolveCookieSecure } from './session.js';
+import { createSessionMiddleware, resolveCookieSecure, resolveCookieName } from './session.js';
 import { createApp } from '../app.js';
 
 function makeTempDb() {
@@ -159,6 +159,49 @@ describe('resolveCookieSecure', () => {
 
   it('RA_COOKIE_SECURE unset, isProduction:true → true', () => {
     expect(resolveCookieSecure(true)).toBe(true);
+  });
+});
+
+// ── Unit: resolveCookieName ───────────────────────────────────────────────────
+
+describe('resolveCookieName', () => {
+  afterEach(() => {
+    delete process.env.RA_COOKIE_NAME_MODE;
+  });
+
+  it('auto + true → __Host-ra.sid', () => {
+    expect(resolveCookieName(true)).toBe('__Host-ra.sid');
+  });
+
+  it('auto + "auto" → ra.sid (not the literal true)', () => {
+    expect(resolveCookieName('auto')).toBe('ra.sid');
+  });
+
+  it('auto + false → ra.sid', () => {
+    expect(resolveCookieName(false)).toBe('ra.sid');
+  });
+
+  it('host + true → __Host-ra.sid', () => {
+    process.env.RA_COOKIE_NAME_MODE = 'host';
+    expect(resolveCookieName(true)).toBe('__Host-ra.sid');
+  });
+
+  it('host + false → throws COOKIE_NAME_MODE_INVALID', () => {
+    process.env.RA_COOKIE_NAME_MODE = 'host';
+    expect(() => resolveCookieName(false))
+      .toThrow(expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' }));
+  });
+
+  it('host + "auto" → throws COOKIE_NAME_MODE_INVALID', () => {
+    process.env.RA_COOKIE_NAME_MODE = 'host';
+    expect(() => resolveCookieName('auto'))
+      .toThrow(expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' }));
+  });
+
+  it('legacy → ra.sid regardless of secureResolved', () => {
+    process.env.RA_COOKIE_NAME_MODE = 'legacy';
+    expect(resolveCookieName(true)).toBe('ra.sid');
+    expect(resolveCookieName(false)).toBe('ra.sid');
   });
 });
 
