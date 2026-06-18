@@ -34,6 +34,7 @@ import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
+import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 import { BUILTIN_RACER_IDS } from '../constants/builtinRacerIds.js';
 import { isValidId } from '../../utils/isValidId.js';
 import { DATA_ROOT } from '../dataPaths.js';
@@ -252,6 +253,7 @@ router.get('/:id/sprite', (req, res) => {
   const racer = racersMap.get(req.params.id);
   if (!racer) return res.status(404).json({ error: 'Racer not found' });
   if (!racer.spriteFile) return res.status(404).json({ error: 'No sprite' });
+  if (!isSafeAssetFilename(racer.spriteFile)) return res.status(404).json({ error: 'Sprite file missing' });
 
   const spritePath = join(SPRITE_DIR, racer.spriteFile);
   if (!existsSync(spritePath)) return res.status(404).json({ error: 'Sprite file missing' });
@@ -317,7 +319,7 @@ router.delete('/:id/sprite', (req, res) => {
   const racer = racersMap.get(req.params.id);
   if (!racer) return res.status(404).json({ error: 'Racer not found' });
 
-  if (racer.spriteFile) {
+  if (racer.spriteFile && isSafeAssetFilename(racer.spriteFile)) {
     const spritePath = join(SPRITE_DIR, racer.spriteFile);
     if (existsSync(spritePath)) unlinkSync(spritePath);
   }
