@@ -5,9 +5,9 @@ services:
       - "4000:4000"
     environment:
       - PORT=4000
-      - RA_CLIENT_ORIGIN=http://localhost:5173
       - RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production
-      - RA_SESSION_SECRET=dev-secret-not-for-production
+      # RA_SESSION_SECRET and RA_CLIENT_ORIGIN come from docker-compose.override.yml
+      # (gitignored). Copy docker-compose.override.yml.example to get started.
     # Volume mounts so code changes never require a full `docker compose build`.
     # Just `docker compose restart server` (or rely on --watch auto-reload below).
     #

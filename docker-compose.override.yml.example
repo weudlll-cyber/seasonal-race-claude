@@ -1,0 +1,11 @@
+# Copy this file to docker-compose.override.yml (which is gitignored) for local dev.
+# docker-compose.override.yml is merged automatically by `docker compose up`.
+#
+# Replace the example values below with your own secrets before use.
+# Never commit docker-compose.override.yml — it contains dev secrets.
+
+services:
+  server:
+    environment:
+      - RA_SESSION_SECRET=dev-secret-not-for-production
+      - RA_CLIENT_ORIGIN=http://localhost:5173
