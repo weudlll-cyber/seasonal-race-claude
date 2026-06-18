@@ -50,8 +50,8 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       return res.status(409).json({ error: 'setup already complete' });
     }
 
-    // 2. Bootstrap-token validation (constant-time)
-    const token = req.get('x-bootstrap-token') ?? req.body?.token ?? '';
+    // 2. Bootstrap-token validation (constant-time) — header only, never body
+    const token = req.get('x-bootstrap-token') ?? '';
     const configured = getBootstrapToken();
     if (!configured) {
       console.warn('[auth] RA_BOOTSTRAP_TOKEN not set; setup disabled');

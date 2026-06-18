@@ -77,6 +77,12 @@ describe('authRouter', () => {
     expect(res.status).toBe(403);
   });
 
+  it('setup: token in req.body only (not header) → 403 — header-only enforcement', async () => {
+    const res = await agent.post('/api/auth/setup')
+      .send({ username: 'admin', password: 'pw123', token: 'TEST-TOKEN' });
+    expect(res.status).toBe(403);
+  });
+
   it('setup: wrong token → 403', async () => {
     const res = await agent.post('/api/auth/setup')
       .set('x-bootstrap-token', 'WRONG')
