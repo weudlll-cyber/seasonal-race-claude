@@ -25,6 +25,7 @@ import {
 import { join } from 'path';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { isValidId } from '../../utils/isValidId.js';
 
 const DATA_DIR = join(DATA_ROOT, 'surface-classes');
 
@@ -66,7 +67,7 @@ function filePath(id) {
  */
 function validateBody(body) {
   const errors = [];
-  if (!body.id || typeof body.id !== 'string' || !/^[a-z0-9_-]+$/.test(body.id)) {
+  if (!isValidId(body.id)) {
     errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
   }
   if (!body.label || typeof body.label !== 'string' || !body.label.trim()) {

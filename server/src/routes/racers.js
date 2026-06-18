@@ -35,6 +35,7 @@ import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
 import { BUILTIN_RACER_IDS } from '../constants/builtinRacerIds.js';
+import { isValidId } from '../../utils/isValidId.js';
 import { DATA_ROOT } from '../dataPaths.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'racers');
@@ -81,7 +82,7 @@ export function validateBody(body, bodyId = null) {
   const errors = [];
 
   if (bodyId !== null) {
-    if (!bodyId || typeof bodyId !== 'string' || !/^[a-z0-9_-]+$/.test(bodyId)) {
+    if (!isValidId(bodyId)) {
       errors.push('id must contain only lowercase letters, digits, hyphen, or underscore');
     } else if (BUILTIN_SET.has(bodyId)) {
       errors.push(`id "${bodyId}" collides with a built-in racer type — choose a different id`);

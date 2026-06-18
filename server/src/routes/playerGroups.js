@@ -23,6 +23,7 @@ import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { isValidId } from '../../utils/isValidId.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
@@ -86,10 +87,6 @@ export function validateBody(body) {
   }
 
   return errors;
-}
-
-function isValidId(id) {
-  return typeof id === 'string' && /^[a-z0-9_-]+$/.test(id);
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────

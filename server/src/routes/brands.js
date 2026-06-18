@@ -40,6 +40,7 @@ import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
+import { isValidId } from '../../utils/isValidId.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'brands');
 const LOGO_DIR = join(DATA_ROOT, 'brand-logos');
@@ -84,10 +85,6 @@ const brandsMap = loadAll();
 
 function filePath(id) {
   return join(DATA_DIR, `${id}.json`);
-}
-
-function isValidId(id) {
-  return typeof id === 'string' && /^[a-z0-9_-]+$/.test(id);
 }
 
 /**
