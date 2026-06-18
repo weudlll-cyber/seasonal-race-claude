@@ -81,7 +81,14 @@ export default [
     rules: {
       // Test files intentionally import testing utilities without using them as vars
       'no-unused-vars': 'warn',
+      'no-console': 'off',   // diagnostic/test files legitimately print
     },
+  },
+
+  // e2e/spec files: Playwright specs legitimately log diagnostic output
+  {
+    files: ['**/e2e/**', '**/*.spec.{js,jsx}'],
+    rules: { 'no-console': 'off' },
   },
 
   // Prettier must be last — disables all formatting rules that conflict
