@@ -22,13 +22,11 @@ import {
   computeBodyNarrowRef,
 } from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
-import { avg, median, p95, stddev } from './statsHelpers.js';
 import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
 import { computeClosedTrackSsf, lapsFromDuration } from './camera/lapUtils.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const REFERENCE_FPS = 62.5; // 1000ms / 16ms, same as camera/lapUtils.js
 const DT = 16; // fixed frame delta in ms (reference frame)
 const FRAMES_PER_RACE = 250; // 4000ms / 16ms = 250 frames of RACING time
 const RACE_DURATION_SECONDS = 60; // Dirt Oval target race duration — must match game's 60 s calibration

@@ -78,12 +78,10 @@ function uninstallMocks() {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('measureBodyFill (B-mess honesty proof, D6b-finalize)', () => {
-  let mockCtx;
-
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: 2-frame strip (2×128 wide, 128 tall)
-    mockCtx = installMocks(FRAME_SIZE * 2, FRAME_SIZE);
+    installMocks(FRAME_SIZE * 2, FRAME_SIZE);
   });
 
   afterEach(() => {

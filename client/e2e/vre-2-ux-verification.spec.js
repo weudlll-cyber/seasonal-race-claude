@@ -65,8 +65,6 @@ test.describe('V2 — Badge indicators', () => {
   test('no Modified or Custom badges present when backend has no overrides/custom', async ({ page }) => {
     // Clear any leftover test classes
     await page.goto('/dev');
-    const modified = page.getByText('Modified');
-    const custom = page.getByText('Custom');
     // These should be 0 unless test pollution occurred — acceptable if test ordering varies
     // We just verify the badges are badge elements (not heading/label text)
     // This is a structural check, not a strict count check

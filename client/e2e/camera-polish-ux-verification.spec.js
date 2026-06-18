@@ -187,11 +187,6 @@ test.describe('V3 — clampOffset math for zoom<1 and zoom>1', () => {
 
   // Unified formula: a = 0 - bboxMin*zoom; b = canvasSize - bboxMax*zoom
   //   clamp(val, min(a,b), max(a,b))
-  function clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
-    const a = 0 - bboxMin * zoom;
-    const b = canvasSize - bboxMax * zoom;
-    return Math.max(Math.min(a, b), Math.min(Math.max(a, b), val));
-  }
 
   test('zoom=0.3 (6000px track): camera can pan — negative target returns edge', async ({ page }) => {
     const result = await page.evaluate(() => {

@@ -798,8 +798,6 @@ describe('CameraDirector — normalized OVERVIEW zoom on closed tracks', () => {
     { t: 0.3, x: 300, y: 200, finished: false },
     { t: 0.2, x: 250, y: 180, finished: false },
   ];
-  const rs = { raceElapsed: 9000, finishedCount: 0, winner: null, finishT: 1.0 };
-
   // raceElapsed=1000 < START_PHASE_DURATION=3000ms forces the OVERVIEW transition in the start phase,
   // same pattern as the open-track normalization tests above.
   const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
@@ -4432,7 +4430,7 @@ describe('CameraDirector — T-Space zoom-mismatch fix', () => {
 describe('LEAD_CHANGE camera state', () => {
   it('transitions to LEAD_CHANGE from LEADER_ZOOM on confirmed leader swap', () => {
     const cd = new CameraDirector(1280, 720, false, null, 36);
-    const racers = [
+    const _racers = [
       { index: 0, name: 'Alice', t: 0.6, x: 400, y: 360 },
       { index: 1, name: 'Bob', t: 0.5, x: 300, y: 360 },
       { index: 2, name: 'Carol', t: 0.4, x: 200, y: 360 },

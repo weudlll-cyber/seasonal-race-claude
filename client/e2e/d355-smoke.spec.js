@@ -99,11 +99,6 @@ test.describe('D3.5.5 — Speed override localStorage', () => {
 
     const overrides = await getOverrides(page);
     expect(overrides).toMatchObject({});
-    // Find the horse entry (first type in RACER_TYPE_IDS is 'horse')
-    const horseOvr = Object.values(overrides).find(
-      (_, idx) => Object.keys(overrides)[idx] === 'horse'
-    );
-    // overrides['horse'] should have speedMultiplier: 1.5
     const allKeys = Object.keys(overrides);
     expect(allKeys.length).toBeGreaterThanOrEqual(1);
   });
