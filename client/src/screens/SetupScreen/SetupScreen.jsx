@@ -140,12 +140,14 @@ function SetupScreen() {
       root.removeProperty('--brand-primary');
       root.removeProperty('--brand-secondary');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- effect only needs activeSession.activeBrandingProfileId — the sole field resolveActiveBrandProfile reads; depending on the whole activeSession would cause needless re-runs
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
   // Seed eventName from the active brand profile; clear unconditionally when no profile is active.
   useEffect(() => {
     const profile = resolveActiveBrandProfile(brandingProfiles, activeSession);
     setRaceSettings((prev) => ({ ...prev, eventName: profile?.eventName || '' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- same as above — only activeBrandingProfileId is read via resolveActiveBrandProfile
   }, [activeSession?.activeBrandingProfileId, brandingProfiles]);
 
   // Consume any group loaded from the Dev Panel (one-shot read + clear).
@@ -201,6 +203,7 @@ function SetupScreen() {
       getRacerType(id).getSurfaceClasses()
     );
     return filtered.map((t) => t.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- racerTypeOverrides intentionally triggers recompute: listAllRacerTypes() reflects override isActive state (same RACER_TYPE_OVERRIDES storage), invisible to the deps analyzer
   }, [selectedTrack, racerTypeOverrides]);
 
   // Clear override if it's no longer compatible with the selected track's surface classes.
@@ -321,6 +324,7 @@ function SetupScreen() {
       getRacerType(id).getSurfaceClasses()
     );
     return filtered.map((t) => t.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- same as above — listAllRacerTypes() reflects racerTypeOverrides via shared storage
   }, [quickTrack, racerTypeOverrides]);
 
   // Reset racer selection when track changes and the selected type is no longer compatible.
