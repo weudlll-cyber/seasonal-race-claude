@@ -75,7 +75,7 @@ function renderDevScreen() {
 beforeEach(() => {
   localStorage.clear();
   // Default to admin so all existing toggle tests continue to pass unchanged.
-  useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' } });
+  useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' }, logout: vi.fn() });
 });
 
 describe('DevScreen tier toggle — UI rendering', () => {
@@ -286,5 +286,29 @@ describe('DevScreen role gating — default-deny predicate (C1-F)', () => {
     expect(isOperatorTier('')).toBe(false);
     expect(isOperatorTier('unknown')).toBe(false);
     expect(isOperatorTier('OPERATOR')).toBe(false); // case-sensitive
+  });
+});
+
+// ── Logout button ─────────────────────────────────────────────────────────────
+
+describe('DevScreen — logout button', () => {
+  it('renders a Log out button visible to admin', () => {
+    renderDevScreen();
+    expect(screen.getByRole('button', { name: /log out/i })).toBeTruthy();
+  });
+
+  it('renders a Log out button visible to operator', () => {
+    const mockLogout = vi.fn();
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' }, logout: mockLogout });
+    renderDevScreen();
+    expect(screen.getByRole('button', { name: /log out/i })).toBeTruthy();
+  });
+
+  it('clicking Log out calls logout() from AuthContext', () => {
+    const mockLogout = vi.fn();
+    useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' }, logout: mockLogout });
+    renderDevScreen();
+    fireEvent.click(screen.getByRole('button', { name: /log out/i }));
+    expect(mockLogout).toHaveBeenCalledOnce();
   });
 });

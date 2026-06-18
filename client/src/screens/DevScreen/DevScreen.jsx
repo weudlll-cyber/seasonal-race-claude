@@ -170,7 +170,7 @@ const SECTIONS = [
 ];
 
 function DevScreen() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
@@ -230,6 +230,18 @@ function DevScreen() {
               onClick={() => navigate('/racer-editor')}
             >
               Racer Editor →
+            </button>
+            <button
+              className={`${s.btn} ${s.btnDanger}`}
+              style={{
+                marginTop: '0.4rem',
+                fontSize: '0.72rem',
+                padding: '0.35rem 0.7rem',
+                width: '100%',
+              }}
+              onClick={() => logout()}
+            >
+              Log out
             </button>
           </div>
         </div>
