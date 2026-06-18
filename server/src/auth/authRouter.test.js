@@ -24,7 +24,7 @@ function makeSession() {
     secret: 'test',
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: false, path: '/' },
+    cookie: { httpOnly: true, sameSite: 'lax', secure: false, path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 },
   });
 }
 

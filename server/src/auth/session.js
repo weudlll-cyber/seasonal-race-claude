@@ -17,6 +17,17 @@ import { DATA_ROOT } from '../dataPaths.js';
 // express-session function object, which is standard connect-store adapter convention.
 const SqliteStore = sqliteStoreFactory(session);
 
+// RA_COOKIE_SECURE overrides the environment-derived default so operators can set secure:true
+// on non-production HTTPS or keep it false on production HTTP (e.g. behind a terminating proxy
+// that doesn't set NODE_ENV=production). 'auto' delegates to express-session's trust-proxy logic.
+export function resolveCookieSecure(isProduction) {
+  const v = process.env.RA_COOKIE_SECURE;
+  if (v === 'true')  return true;
+  if (v === 'false') return false;
+  if (v === 'auto')  return 'auto';
+  return isProduction;
+}
+
 export function createSessionMiddleware(opts = {}) {
   const isProduction = opts.isProduction ?? (process.env.NODE_ENV === 'production');
   const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
@@ -56,7 +67,7 @@ export function createSessionMiddleware(opts = {}) {
     store,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: isProduction, path: '/' },
+    cookie: { httpOnly: true, sameSite: 'lax', secure: resolveCookieSecure(isProduction), path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 },
   });
   mw._db = db;  // exposed for test teardown (store.client alias)
   return mw;

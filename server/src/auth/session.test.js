@@ -14,7 +14,7 @@ import { join } from 'path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import Database from 'better-sqlite3';
-import { createSessionMiddleware } from './session.js';
+import { createSessionMiddleware, resolveCookieSecure } from './session.js';
 import { createApp } from '../app.js';
 
 function makeTempDb() {
@@ -55,13 +55,20 @@ describe('session middleware — lifecycle', () => {
     expect(res.body.userId).toBeNull();
   });
 
-  it('POST /touch issues a cookie with correct flags (HttpOnly, SameSite=Lax, no Secure)', async () => {
+  it('POST /touch issues a cookie with correct flags (HttpOnly, SameSite=Lax, no Secure, Expires≈30d)', async () => {
     const res = await agent.post('/touch');
     const cookie = res.headers['set-cookie']?.[0] ?? '';
     expect(cookie).toMatch(/ra\.sid=/);
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/SameSite=Lax/i);
     expect(cookie).not.toMatch(/(?<![A-Za-z])Secure(?![A-Za-z])/i);
+    // express-session serialises maxAge as an Expires date; verify it's ~30 days out
+    const expiresMatch = cookie.match(/Expires=([^;]+)/i);
+    expect(expiresMatch).not.toBeNull();
+    const expiresMs = new Date(expiresMatch[1]).getTime();
+    const diffDays = (expiresMs - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(diffDays).toBeGreaterThan(29);
+    expect(diffDays).toBeLessThan(31);
   });
 
   it('POST /login regenerates session ID (anti session-fixation)', async () => {
@@ -123,6 +130,74 @@ describe('session middleware — secret policy', () => {
     } finally {
       if (saved !== undefined) process.env.RA_SESSION_SECRET = saved;
     }
+  });
+});
+
+// ── Unit: resolveCookieSecure ─────────────────────────────────────────────────
+
+describe('resolveCookieSecure', () => {
+  afterEach(() => { delete process.env.RA_COOKIE_SECURE; });
+
+  it('RA_COOKIE_SECURE=true → true, overrides isProduction:false', () => {
+    process.env.RA_COOKIE_SECURE = 'true';
+    expect(resolveCookieSecure(false)).toBe(true);
+  });
+
+  it('RA_COOKIE_SECURE=false → false, overrides isProduction:true', () => {
+    process.env.RA_COOKIE_SECURE = 'false';
+    expect(resolveCookieSecure(true)).toBe(false);
+  });
+
+  it('RA_COOKIE_SECURE=auto → "auto"', () => {
+    process.env.RA_COOKIE_SECURE = 'auto';
+    expect(resolveCookieSecure(false)).toBe('auto');
+  });
+
+  it('RA_COOKIE_SECURE unset, isProduction:false → false', () => {
+    expect(resolveCookieSecure(false)).toBe(false);
+  });
+
+  it('RA_COOKIE_SECURE unset, isProduction:true → true', () => {
+    expect(resolveCookieSecure(true)).toBe(true);
+  });
+});
+
+// ── Integration: maxAge in Set-Cookie header + rolling disabled ───────────────
+
+describe('session middleware — maxAge and rolling', () => {
+  let mw;
+  let agent;
+
+  beforeEach(() => {
+    mw = createSessionMiddleware({ secret: 'test-secret', isProduction: false, enableSweep: false });
+    const app = express();
+    app.use(express.json());
+    app.use(mw);
+    app.post('/touch', (req, res) => { req.session.userId = 'u1'; res.json({}); });
+    app.get('/me',    (req, res) => res.json({ userId: req.session.userId ?? null }));
+    agent = request.agent(app);
+  });
+
+  afterEach(() => {
+    if (mw._db) { try { mw._db.close(); } catch {} }
+  });
+
+  it('Set-Cookie Expires is ~30 days in the future (maxAge:2592000000 applied)', async () => {
+    const res = await agent.post('/touch');
+    const cookie = res.headers['set-cookie']?.[0] ?? '';
+    // express-session serialises cookie.maxAge as an Expires date in the Set-Cookie header
+    const expiresMatch = cookie.match(/Expires=([^;]+)/i);
+    expect(expiresMatch).not.toBeNull();
+    const diffDays = (new Date(expiresMatch[1]).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(diffDays).toBeGreaterThan(29);
+    expect(diffDays).toBeLessThan(31);
+  });
+
+  it('rolling is false — authenticated GET does not issue a new Set-Cookie', async () => {
+    await agent.post('/touch');
+    const res = await agent.get('/me');
+    // rolling:true would emit Set-Cookie on every request; rolling:false must not
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 });
 
