@@ -20,6 +20,7 @@ import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js'
 import {
   drawTitle,
   drawTitleOpen,
+  drawZoneBand,
   drawLapInfo,
   drawFinalLapOverlay,
   drawCountdownOverlay,
@@ -67,6 +68,8 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadRubberBandConfig } from '../../modules/rubberBandConfig.js';
+import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
+import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -422,6 +425,8 @@ export default function RaceScreen() {
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
     const rubberBandConfig = loadRubberBandConfig();
+    const raceZoneConfig = loadRaceZoneConfig();
+    const zones = resolveZones(raceZoneConfig);
     const frameTimingConfig = loadFrameTimingConfig();
     priorityConfigRef.current = loadPrioritySystemConfig();
 
@@ -949,6 +954,10 @@ export default function RaceScreen() {
             const brake = r.avoidanceActive
               ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
               : 1.0;
+            // Zone mult: position-only, type-neutral. 1.0 when zones is empty or racer is outside.
+            // Note: zones are not applied in constSpeed (D4) diagnostic mode — D4 overwrites t/vt.
+            const zt = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
+            const zoneMult = zoneMultAt(zt, zones);
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
@@ -958,7 +967,8 @@ export default function RaceScreen() {
                     brake *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    r.rubberBandMult,
+                    r.rubberBandMult *
+                    zoneMult,
                 st.finishT + 0.001
               );
             } else {
@@ -976,7 +986,8 @@ export default function RaceScreen() {
                     brake *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    r.rubberBandMult) /
+                    r.rubberBandMult *
+                    zoneMult) /
                   race_baseSpeed
                 : 0;
           }
@@ -1403,6 +1414,7 @@ export default function RaceScreen() {
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
+      if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, trackWidthPx);
       drawParticles(ctx, st.dustParticles, st.burstParticles);
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;

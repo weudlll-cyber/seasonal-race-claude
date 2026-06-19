@@ -22,6 +22,7 @@ export const KEYS = {
   RACE_DYNAMICS_CONFIG: 'racearena:raceDynamicsConfig',
   CAMERA_CONFIG: 'racearena:cameraConfig',
   RUBBER_BAND_CONFIG: 'racearena:rubberBandConfig',
+  RACE_ZONE_CONFIG: 'racearena:raceZoneConfig',
   PRIORITY_SYSTEM_CONFIG: 'racearena:prioritySystemConfig',
   FRAME_TIMING_CONFIG: 'racearena:frameTimingConfig',
   DEV_PANEL_VIEW: 'racearena:devPanelView',

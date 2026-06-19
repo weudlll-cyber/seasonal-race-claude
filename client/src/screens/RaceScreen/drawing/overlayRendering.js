@@ -144,6 +144,56 @@ export function drawCountdownOverlay(ctx, elapsed) {
 }
 
 /**
+ * Draws a semi-transparent brake-zone band across the full track width.
+ * Called inside the camera-transformed world-space pass (after track surface, before racers).
+ * Each zone is drawn as a filled corridor traced via shape.getPosition at ±0.5 lateral offset
+ * (same coord basis as racers). Seam-straddling zones are drawn as two segments.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} shape        EditorShape instance.
+ * @param {{ tStart: number, tEnd: number, mult: number }[]} zones  From resolveZones().
+ * @param {boolean} isOpenTrack
+ * @param {number}  trackWidthPx  World-pixel track width (coord reference, not used directly).
+ */
+export function drawZoneBand(ctx, shape, zones, isOpenTrack, trackWidthPx) {
+  if (zones.length === 0) return;
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#ff4040';
+  for (const z of zones) {
+    if (z.tStart <= z.tEnd) {
+      _drawZoneSegment(ctx, shape, z.tStart, z.tEnd);
+    } else {
+      // Seam-straddling zone: draw as two segments bridging the 1/0 boundary.
+      _drawZoneSegment(ctx, shape, z.tStart, 1.0);
+      _drawZoneSegment(ctx, shape, 0.0, z.tEnd);
+    }
+  }
+  ctx.restore();
+  void isOpenTrack;
+  void trackWidthPx;
+}
+
+function _drawZoneSegment(ctx, shape, tStart, tEnd) {
+  const range = tEnd - tStart;
+  if (range <= 0) return;
+  const STEPS = Math.max(16, Math.ceil(range * 600));
+  const dt = range / STEPS;
+  ctx.beginPath();
+  for (let i = 0; i <= STEPS; i++) {
+    const p = shape.getPosition(tStart + i * dt, 0.5);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  for (let i = STEPS; i >= 0; i--) {
+    const p = shape.getPosition(tStart + i * dt, -0.5);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
  * Draws the "RACE FINISHED!" full-screen overlay.
  * @param {CanvasRenderingContext2D} ctx
  */

@@ -238,6 +238,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   focalSmoothTc: 0.05,
 };
 
+export const DEFAULT_RACE_ZONE_CONFIG = {
+  enabled: false,
+  position: 0.5,
+  width: 0.05,
+  brakeStrength: 0.85,
+};
+
 export const DEFAULT_RUBBER_BAND_CONFIG = {
   // Master on/off.
   enabled: true,

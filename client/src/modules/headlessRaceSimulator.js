@@ -24,6 +24,7 @@ import {
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
 import { computeClosedTrackSsf, lapsFromDuration } from './camera/lapUtils.js';
+import { resolveZones, zoneMultAt } from './raceZones.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ export function simulateRace({
   autoScaleConfig,
   framesPerRace = FRAMES_PER_RACE,
   trackConfig = null,
+  zoneConfig = null,
 }) {
   const rng = mulberry32(seed);
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
@@ -151,6 +153,7 @@ export function simulateRace({
   const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
   const closedSsf = computeClosedTrackSsf(pathLengthPx);
   const race_baseSpeed = computeRaceBaseSpeed(finishT, raceDurationSeconds * ems * closedSsf);
+  const zones = resolveZones(zoneConfig ?? { enabled: false });
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
@@ -336,8 +339,11 @@ export function simulateRace({
 
       const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
       const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
+      // Zone mult: closed-track only in sim (headlessRaceSimulator always uses closed tracks).
+      const zt = ((r.t % 1) + 1) % 1;
+      const zoneMult = zoneMultAt(zt, zones);
       if (!r.finished) {
-        r.t = Math.min(r.t + r.baseSpeed * boost * brake * (DT / 16), finishT + 0.001);
+        r.t = Math.min(r.t + r.baseSpeed * boost * brake * (DT / 16) * zoneMult, finishT + 0.001);
       }
     }
   }

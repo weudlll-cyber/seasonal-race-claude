@@ -26,6 +26,7 @@ import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
 import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import RubberBandSection from './sections/RubberBandSection.jsx';
+import RaceZonesSection from './sections/RaceZonesSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import UserManagementSection from './sections/UserManagementSection.jsx';
 import s from './DevScreen.module.css';
@@ -101,6 +102,14 @@ const SECTIONS = [
     label: 'Rubber Band',
     desc: 'Gap-based catch-up boost for trailing racers — keeps the field compressed',
     component: RubberBandSection,
+    tier: 'advanced',
+  },
+  {
+    id: 'race-zones',
+    icon: '🚦',
+    label: 'Race Zones',
+    desc: 'Fixed brake zone that slows all racers — bunches the field (accordion effect)',
+    component: RaceZonesSection,
     tier: 'advanced',
   },
   {
