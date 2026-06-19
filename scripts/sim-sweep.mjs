@@ -213,19 +213,19 @@ console.log('');
 const trackDatas = SWEEP_TRACKS.map((tc) => loadTrack(tc.id));
 
 // ── Baseline: pre-captured (seed=42, 50 races/track, BTE=0.67 CS=0.67 CE=0.95) ──
-// Recaptured post-B0 (areaBonusMult parity fix) — area bonus now active in sim.
-// Run 1: zone=56.0% zz=0.000249 ol=0.0% ls=0.001447 so=9.1808
-// Run 2: zone=56.3% zz=0.000253 ol=0.0% ls=0.001446 so=9.1360  (used here)
+// Recaptured post-B0b (Priority System wired + DT=16 timebase parity).
+// Run 1: zone=56.5% zz=0.000071 ol=0.02% ls=0.001314 so=9.2771
+// Run 2: zone=57.2% zz=0.000071 ol=0.02% ls=0.001318 so=9.2829  (used here)
 const baseline = {
-  zoneSuccess:  0.563,
-  zigzag:       0.000253,
+  zoneSuccess:  0.572,
+  zigzag:       0.000071,
   overlapRate:  0.000,
-  lateralSpeed: 0.001446,
-  stableOvt:    9.1360,
+  lateralSpeed: 0.001318,
+  stableOvt:    9.2829,
   perTrack: [
-    { zoneSuccess: 0.596, zigzag: 0.000195, overlapRate: 0.000, lateralSpeed: 0.001472, stableOvt: 5.5790 },
-    { zoneSuccess: 0.478, zigzag: 0.000229, overlapRate: 0.000, lateralSpeed: 0.001562, stableOvt: 9.7480 },
-    { zoneSuccess: 0.605, zigzag: 0.000334, overlapRate: 0.000, lateralSpeed: 0.001304, stableOvt: 12.0809 },
+    { zoneSuccess: 0.626, zigzag: 0.000074, overlapRate: 0.000, lateralSpeed: 0.001456, stableOvt: 5.6570 },
+    { zoneSuccess: 0.474, zigzag: 0.000072, overlapRate: 0.000, lateralSpeed: 0.001496, stableOvt: 9.5793 },
+    { zoneSuccess: 0.613, zigzag: 0.000069, overlapRate: 0.000, lateralSpeed: 0.001003, stableOvt: 12.6124 },
   ],
 };
 console.log('── BASELINE (pre-captured, seed=42, 50 races/track, BTE=0.67 CS=0.67 CE=0.95) ──');
