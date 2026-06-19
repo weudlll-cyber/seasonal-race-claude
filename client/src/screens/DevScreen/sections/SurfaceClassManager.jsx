@@ -145,7 +145,7 @@ function ConfigFields({ schema, config, onChange }) {
 // ── Main section ──────────────────────────────────────────────────────────────
 
 function SurfaceClassManager() {
-  const { classes, refresh, isLoading, error: fetchError } = useSurfaceClasses();
+  const { classes, refresh, isLoading, error: loadError } = useSurfaceClasses();
 
   const [selectedId, setSelectedId] = useState(null);
   const [isNew, setIsNew] = useState(false);
@@ -318,9 +318,9 @@ function SurfaceClassManager() {
             </p>
           )}
 
-          {fetchError && (
+          {loadError && (
             <p style={{ fontSize: '0.75rem', color: '#e63946', marginBottom: '0.5rem' }}>
-              {fetchError}
+              {loadError}
             </p>
           )}
 

@@ -1,3 +1,10 @@
+// ============================================================
+// File:        useActiveBrandProfile.js
+// Path:        client/src/modules/branding/useActiveBrandProfile.js
+// Project:     RaceArena
+// Description: Hook and pure resolver for the currently-active branding profile.
+// ============================================================
+
 import { useStorage } from '../storage/useStorage.js';
 import { KEYS } from '../storage/storage.js';
 import { DEFAULT_BRANDING, DEFAULT_ACTIVE_SESSION } from '../storage/defaults.js';

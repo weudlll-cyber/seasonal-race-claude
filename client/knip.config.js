@@ -10,7 +10,6 @@
 /** @type {import('knip').KnipConfig} */
 const config = {
   entry: [
-    'src/main.jsx',
     // Intentional stubs — planned features, not dead code:
     'src/components/Button/index.js',       // generic UI primitive
     'src/components/Modal/index.js',        // generic UI primitive

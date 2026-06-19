@@ -40,7 +40,7 @@ function RoleBadge({ role }) {
 function UserManagementSection() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [mutationError, setMutationError] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
 
@@ -57,9 +57,9 @@ function UserManagementSection() {
     try {
       const data = await fetchUsers();
       setUsers(data);
-      setFetchError(null);
+      setLoadError(null);
     } catch (e) {
-      setFetchError(e.message ?? 'Failed to load users');
+      setLoadError(e.message ?? 'Failed to load users');
     } finally {
       setIsLoading(false);
     }
@@ -166,9 +166,9 @@ function UserManagementSection() {
 
         {isLoading && users.length === 0 && <p className={s.emptyState}>Loading…</p>}
 
-        {fetchError && (
+        {loadError && (
           <p role="alert" style={{ fontSize: '0.78rem', color: '#e63946', marginBottom: '0.5rem' }}>
-            {fetchError}
+            {loadError}
           </p>
         )}
 

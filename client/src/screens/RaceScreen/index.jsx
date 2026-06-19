@@ -111,9 +111,6 @@ import './RaceScreen.css';
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
-// Keep legacy aliases used throughout this file
-const CW = CANVAS_W;
-const CH = CANVAS_H;
 
 const RACER_COLORS = [
   '#ff6b35',
@@ -769,7 +766,7 @@ export default function RaceScreen() {
       const smoothDt = st.smoothDt;
       for (const inst of effectsRef.current) inst.update(smoothDt);
 
-      ctx.clearRect(0, 0, CW, CH);
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
       // ── Phase advancement ──
       if (st.phase === PHASE.COUNTDOWN) {
@@ -1474,10 +1471,10 @@ export default function RaceScreen() {
       if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(CW - 172, 8, 164, 22);
+        ctx.fillRect(CANVAS_W - 172, 8, 164, 22);
         ctx.font = '11px monospace';
         ctx.fillStyle = '#4fc3f7';
-        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CW - 168, 24);
+        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CANVAS_W - 168, 24);
         ctx.restore();
       }
 
@@ -1486,7 +1483,7 @@ export default function RaceScreen() {
         const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
         const minimapHighlights =
           showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
-        renderMinimap(ctx, shape, st.racers, leaderIdx, CW, CH, minimapHighlights);
+        renderMinimap(ctx, shape, st.racers, leaderIdx, CANVAS_W, CANVAS_H, minimapHighlights);
       }
 
       // Perf-log bracket 5: after all drawing — record the completed frame.
@@ -1595,8 +1592,8 @@ export default function RaceScreen() {
           />
           <canvas
             ref={canvasRef}
-            width={CW}
-            height={CH}
+            width={CANVAS_W}
+            height={CANVAS_H}
             className="race-canvas"
             style={{ position: 'relative' }}
           />

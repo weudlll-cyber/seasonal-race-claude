@@ -1,6 +1,6 @@
 // ============================================================
-// File:        index.js
-// Path:        client/src/screens/ResultScreen/index.js
+// File:        index.jsx
+// Path:        client/src/screens/ResultScreen/index.jsx
 // Project:     RaceArena
 // Created:     2026-04-20
 // Description: Post-race results screen — podium, rankings, and history tracking

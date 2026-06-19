@@ -1,4 +1,9 @@
-// Shared interpolation helpers — single source of truth (see Lessons on "one source").
+// ============================================================
+// File:        mathUtils.js
+// Path:        client/src/utils/mathUtils.js
+// Project:     RaceArena
+// Description: Shared interpolation helpers — single source of truth (see Lessons on "one source").
+// ============================================================
 
 // Linear interpolation.
 export const lerp = (a, b, t) => a + (b - a) * t;
