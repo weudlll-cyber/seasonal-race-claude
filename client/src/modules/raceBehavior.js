@@ -894,7 +894,20 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           //   (3) lpy defined: fresh leader physicalY available this frame.
           // Ramps from lateralForce×strength at |yDiff|=0 down to 0 at |yDiff|=2×honestHalfSpan.
           const lpy = _sameLaneLeaderPhysY.get(r.index);
-          if (inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined) {
+          // Stage D fires on two mutually-exclusive paths:
+          //  (1) speedBrakePath (existing): trailer braking directly behind a leader.
+          //  (2) persistentPath (OVL-B): a pair stuck in OVERLAP mode beyond overlapClearTimeout
+          //      — the alongside locks the speed-brake path deliberately excludes. Mutually
+          //      exclusive via !speedBrakePath, so a racer never gets both in one frame.
+          const speedBrakePath = inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined;
+          const persistentPath =
+            !speedBrakePath &&
+            inSameLane &&
+            lpy !== undefined &&
+            !!priorityExtras &&
+            r.currentMode === PRIORITY_MODE.OVERLAP &&
+            (r.currentModeFrameCount ?? 0) >= (config.overlapClearTimeout ?? 120);
+          if (speedBrakePath || persistentPath) {
             const tw = getTrackWidthAtTpx(r);
             if (tw > 0) {
               const honestHalfSpan = pxToPhysicalY(r.drawnBodyWidthPx ?? r.frameSizePx ?? 0, tw);
@@ -902,8 +915,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
                 const absYDiff = Math.abs(r.physicalY - lpy);
                 const clearanceSpan = 2 * honestHalfSpan;
                 const gapRatio = Math.max(0, (clearanceSpan - absYDiff) / clearanceSpan);
-                const gapForce = config.lateralForce * (config.gapForceStrength ?? 1.0) * gapRatio;
-                // Safety ceiling: total Stage B injection ≤ lateralForce × gapForceCap.
+                const strength = persistentPath
+                  ? (config.overlapClearStrength ?? 0)
+                  : (config.gapForceStrength ?? 1.0);
+                const gapForce = config.lateralForce * strength * gapRatio;
                 const cap = config.lateralForce * (config.gapForceCap ?? 1.5);
                 injected = Math.min(injected + gapForce, cap);
               }

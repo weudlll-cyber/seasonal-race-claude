@@ -411,4 +411,10 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // gapForceCap: max Stage B total injection as a multiple of lateralForce (safety ceiling).
   gapForceStrength: 1.0,
   gapForceCap: 1.5,
+  // OVL-B persistent-overlap clearance (open tracks only). Reuses the Stage D ramp/cap but
+  // on a second, mutually-exclusive path for pairs stuck in OVERLAP mode (alongside locks
+  // the speed-brake path deliberately excludes). overlapClearStrength = 0.0 → inactive (no-op) until
+  // tuned. overlapClearTimeout = consecutive OVERLAP frames before the path engages.
+  overlapClearStrength: 0.0,
+  overlapClearTimeout: 120,
 };
