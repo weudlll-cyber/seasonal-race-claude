@@ -415,6 +415,6 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // to the non-same-lane member of a locked pair (the leader, unpushed by Stage D), so
   // both sides separate simultaneously. overlapEscapeStrength = 0.0 → no-op until tuned.
   // overlapEscapeTimeout: consecutive OVERLAP frames before the escape engages.
-  overlapEscapeStrength: 0.0,
+  overlapEscapeStrength: 0.25,
   overlapEscapeTimeout: 120,
 };
