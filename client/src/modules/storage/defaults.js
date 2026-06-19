@@ -411,4 +411,10 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // gapForceCap: max Stage B total injection as a multiple of lateralForce (safety ceiling).
   gapForceStrength: 1.0,
   gapForceCap: 1.5,
+  // OVL-C: symmetric sustained-OVERLAP escape. Applies a free-side-aware lateral impulse
+  // to the non-same-lane member of a locked pair (the leader, unpushed by Stage D), so
+  // both sides separate simultaneously. overlapEscapeStrength = 0.0 → no-op until tuned.
+  // overlapEscapeTimeout: consecutive OVERLAP frames before the escape engages.
+  overlapEscapeStrength: 0.0,
+  overlapEscapeTimeout: 120,
 };

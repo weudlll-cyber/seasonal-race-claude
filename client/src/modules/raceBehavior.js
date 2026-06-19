@@ -61,6 +61,10 @@ const _sameLaneLeaderPhysY = new Map();
 // _sameLaneLeaderObj: per-trailer leader object for the most-constraining leader —
 // used only to derive the stable tie-break side at relPos ≈ 0 (pairTieDir).
 const _sameLaneLeaderObj = new Map();
+// OVL-C: per-step free-side direction + partner physicalY for the sustained-OVERLAP escape.
+// Populated in the free-lane overlap block once dirA/dirB are final; cleared every step.
+const _ovlcEscapeDir = new Map(); // racerIndex → free-side direction (±1); absent = blocked
+const _ovlcPartnerY = new Map(); // racerIndex → overlapping partner physicalY (ramp source)
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -123,6 +127,9 @@ export function initRacerBehavior(racer) {
   // approachCommitDir: −1 (left), 0 (none), +1 (right). Debounced to prevent zigzag.
   racer.approachCommitDir = 0;
   racer.approachCommitFrames = 0;
+  // OVL-C: escape latch (open tracks only). Mirrors approachCommitDir debounce.
+  racer.escapeCommitDir = 0;
+  racer.escapeCommitFrames = 0;
 }
 
 /**
@@ -362,6 +369,8 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _approachForceMag.clear();
   _sameLaneLeaderPhysY.clear();
   _sameLaneLeaderObj.clear();
+  _ovlcEscapeDir.clear();
+  _ovlcPartnerY.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -649,6 +658,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             if (dirB > 0) dRawPos.set(rB.index, dRawPos.get(rB.index) + forceMag);
             else if (dirB < 0) dRawNeg.set(rB.index, dRawNeg.get(rB.index) + forceMag);
           }
+          // OVL-C: record free-side direction and partner Y for the escape.
+          // All overlapping pairs write; last-written wins when multiple pairs overlap.
+          if (dirA !== 0) _ovlcEscapeDir.set(rA.index, dirA);
+          _ovlcPartnerY.set(rA.index, rB.physicalY);
+          if (dirB !== 0) _ovlcEscapeDir.set(rB.index, dirB);
+          _ovlcPartnerY.set(rB.index, rA.physicalY);
         }
       }
 
@@ -910,6 +925,58 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             }
           }
           delta += r.approachCommitDir * injected;
+        }
+      }
+
+      // ── OVL-C: symmetric sustained-OVERLAP escape ─────────────────────────
+      // Targets the non-same-lane (leader) member of a locked pair — the racer
+      // that Stage D doesn't reach. !inSameLane ensures a pair never gets both.
+      if (
+        !inSameLane &&
+        !!priorityExtras &&
+        r.currentMode === PRIORITY_MODE.OVERLAP &&
+        (r.currentModeFrameCount ?? 0) >= (config.overlapEscapeTimeout ?? 120)
+      ) {
+        const rawEscDir = _ovlcEscapeDir.get(r.index) ?? 0;
+        const escTimeout = config.brakeHoldTimeoutFrames ?? 90;
+        if (rawEscDir !== 0) {
+          if (rawEscDir === r.escapeCommitDir) {
+            r.escapeCommitFrames++;
+          } else {
+            r.escapeCommitFrames--;
+            if (r.escapeCommitFrames <= 0) {
+              r.escapeCommitDir = rawEscDir;
+              r.escapeCommitFrames = 1;
+            }
+          }
+          if (r.escapeCommitFrames >= escTimeout) {
+            r.escapeCommitDir = 0;
+            r.escapeCommitFrames = 0;
+          }
+        } else {
+          // Recorded side is zero (blocked or no overlap partner) — release latch immediately.
+          r.escapeCommitDir = 0;
+          r.escapeCommitFrames = 0;
+        }
+      } else if (r.escapeCommitDir !== 0) {
+        // No longer eligible: gentle decay, same pattern as approachCommitDir.
+        const dbDecay = config.brakeReleaseDebounceFrames ?? 3;
+        r.escapeCommitFrames = Math.max(0, r.escapeCommitFrames - dbDecay);
+        if (r.escapeCommitFrames === 0) r.escapeCommitDir = 0;
+      }
+      if (r.escapeCommitDir !== 0) {
+        const partnerY = _ovlcPartnerY.get(r.index);
+        const tw = getTrackWidthAtTpx(r);
+        if (partnerY !== undefined && tw > 0) {
+          const honestHH = pxToPhysicalY(r.drawnBodyWidthPx ?? r.frameSizePx ?? 0, tw);
+          if (honestHH > 0) {
+            const clearSpan = 2 * honestHH;
+            const absYDiff = Math.abs(r.physicalY - partnerY);
+            const gapRatio = Math.max(0, (clearSpan - absYDiff) / clearSpan);
+            const escForce = config.lateralForce * (config.overlapEscapeStrength ?? 0) * gapRatio;
+            const escCap = config.lateralForce * (config.gapForceCap ?? 1.5);
+            delta += r.escapeCommitDir * Math.min(escForce, escCap);
+          }
         }
       }
     }
