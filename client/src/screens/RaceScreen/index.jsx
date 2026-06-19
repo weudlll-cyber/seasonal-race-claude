@@ -426,7 +426,7 @@ export default function RaceScreen() {
     const dynamicsConfig = loadRaceDynamicsConfig();
     const rubberBandConfig = loadRubberBandConfig();
     const raceZoneConfig = loadRaceZoneConfig();
-    const zones = resolveZones(raceZoneConfig);
+    const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
     priorityConfigRef.current = loadPrioritySystemConfig();
 
@@ -955,8 +955,9 @@ export default function RaceScreen() {
               ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
               : 1.0;
             // Zone mult: position-only, type-neutral. 1.0 when zones is empty or racer is outside.
+            // cf (course fraction) = 0 at start, 1 at finish; open maps r.t onto [0,1] via finishT.
             // Note: zones are not applied in constSpeed (D4) diagnostic mode — D4 overwrites t/vt.
-            const zt = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
+            const zt = isOpenTrack ? r.t / st.finishT : tPos(r.t);
             const zoneMult = zoneMultAt(zt, zones);
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
@@ -1414,7 +1415,7 @@ export default function RaceScreen() {
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
-      if (zones.length > 0) drawZoneBand(ctx, shape, zones);
+      if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, st.finishT);
       drawParticles(ctx, st.dustParticles, st.burstParticles);
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;

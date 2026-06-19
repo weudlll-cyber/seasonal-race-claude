@@ -153,7 +153,7 @@ export function simulateRace({
   const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
   const closedSsf = computeClosedTrackSsf(pathLengthPx);
   const race_baseSpeed = computeRaceBaseSpeed(finishT, raceDurationSeconds * ems * closedSsf);
-  const zones = resolveZones(zoneConfig ?? { enabled: false });
+  const zones = resolveZones(zoneConfig ?? { enabled: false }, false);
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;

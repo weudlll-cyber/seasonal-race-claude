@@ -10,16 +10,25 @@
 /**
  * Build the active zone list from a validated config.
  * Returns an empty array when disabled (caller sees no-op without branching).
+ * tStart/tEnd are in course-fraction (cf) space: 0 = start, 1 = finish/lap.
  *
- * @param {object} config  Validated raceZoneConfig (from loadRaceZoneConfig).
+ * @param {object}  config       Validated raceZoneConfig (from loadRaceZoneConfig).
+ * @param {boolean} isOpenTrack  True for open tracks (clamp to [0,1], no wrap).
  * @returns {{ tStart: number, tEnd: number, mult: number }[]}
  */
-export function resolveZones(config) {
+export function resolveZones(config, isOpenTrack) {
   if (!config || !config.enabled) return [];
   const half = config.width / 2;
-  // Normalize to [0,1) so seam zones wrap correctly on closed tracks.
-  const tStart = (((config.position - half) % 1) + 1) % 1;
-  const tEnd = (((config.position + half) % 1) + 1) % 1;
+  let tStart, tEnd;
+  if (isOpenTrack) {
+    // Open tracks: course-fraction is bounded [0,1]; clamp so the zone never wraps.
+    tStart = Math.max(0, config.position - half);
+    tEnd = Math.min(1, config.position + half);
+  } else {
+    // Closed tracks: normalize to [0,1) so seam zones wrap correctly at the start/finish line.
+    tStart = (((config.position - half) % 1) + 1) % 1;
+    tEnd = (((config.position + half) % 1) + 1) % 1;
+  }
   return [{ tStart, tEnd, mult: config.brakeStrength }];
 }
 

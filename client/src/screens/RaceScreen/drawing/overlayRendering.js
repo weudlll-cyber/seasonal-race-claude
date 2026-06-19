@@ -147,19 +147,25 @@ export function drawCountdownOverlay(ctx, elapsed) {
  * Draws a semi-transparent brake-zone band spanning the full track width.
  * Called inside the camera-transformed world-space pass (after track surface, before racers).
  * shape.getPosition(t, offset) takes a NORMALIZED lateral offset: ±0.5 = track edges.
- * Seam-straddling zones are drawn as two segments.
+ * Zone tStart/tEnd are in course-fraction (cf) space; mapped to geometry-t before sampling.
+ * Open tracks: single segment (no seam); closed: seam-straddling drawn as two segments.
  *
  * @param {CanvasRenderingContext2D} ctx
- * @param {object} shape  EditorShape instance.
+ * @param {object}  shape        EditorShape instance.
  * @param {{ tStart: number, tEnd: number, mult: number }[]} zones  From resolveZones().
+ * @param {boolean} isOpenTrack
+ * @param {number}  finishT      Geometry-t of the finish line (open: <1; closed: lap count).
  */
-export function drawZoneBand(ctx, shape, zones) {
+export function drawZoneBand(ctx, shape, zones, isOpenTrack, finishT) {
   if (zones.length === 0) return;
   ctx.save();
   ctx.globalAlpha = 0.22;
   ctx.fillStyle = '#ff4040';
   for (const z of zones) {
-    if (z.tStart <= z.tEnd) {
+    if (isOpenTrack) {
+      // cf → geometry-t: scale by finishT. Open zones are clamped so no seam possible.
+      _drawZoneSegment(ctx, shape, z.tStart * finishT, z.tEnd * finishT);
+    } else if (z.tStart <= z.tEnd) {
       _drawZoneSegment(ctx, shape, z.tStart, z.tEnd);
     } else {
       // Seam-straddling zone: draw as two segments bridging the 1/0 boundary.
