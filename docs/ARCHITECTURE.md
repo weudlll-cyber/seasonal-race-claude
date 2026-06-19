@@ -427,9 +427,9 @@ Two special subsets are identified from the shuffle:
 
 A seeded PRNG provides deterministic results for the same race setup.
 
-### bereichsBonusMult (Physics-Loop)
+### areaBonusMult (Physics-Loop)
 
-`bereichsBonusMult` is computed per racer each physics step: `1.0 + BASE_DELTA × bonusStrengthMultiplier`. It scales `effectiveSpeed` multiplicatively. After a racer crosses the finish line (`OUTCOME` phase), `bereichsBonusMult` fades from its current value to 1.0 over 1500 ms using `easeInOutCubic` — preventing abrupt speed changes at the finish.
+`areaBonusMult` is computed per racer each physics step: `1.0 + BASE_DELTA × bonusStrengthMultiplier`. It scales `effectiveSpeed` multiplicatively. After a racer crosses the finish line (`OUTCOME` phase), `areaBonusMult` fades from its current value to 1.0 over 1500 ms using `easeInOutCubic` — preventing abrupt speed changes at the finish.
 
 `racePlanBonusStrengthMultiplier` (default 2.0) is tunable in Dev Screen → Race Tuning → "Race Plan Bonus" and is persisted in `raceDynamicsConfig`.
 
@@ -443,7 +443,7 @@ trajectoryMult += gain × error × FIXED_DT / 1000
 trajectoryMult = clamp(trajectoryMult, 0.85, 1.10)
 ```
 
-`effectiveSpeed = baseSpeed × spreadFactor × bereichsBonusMult × trajectoryMult`
+`effectiveSpeed = baseSpeed × spreadFactor × areaBonusMult × trajectoryMult`
 
 The window [0.85, 1.10] was chosen empirically: wider windows cause "Cobra-Sprint" overshoot (racers race past target area); narrower windows lose corrective power.
 
@@ -491,7 +491,7 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 
 **Key files:**
 - `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
-- `screens/RaceScreen/index.jsx` — Race Plan activation, `bereichsBonusMult` in physics loop, fade logic
+- `screens/RaceScreen/index.jsx` — Race Plan activation, `areaBonusMult` in physics loop, fade logic
 - `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
 - `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
 - `scripts/param-sweep-full.mjs` — 8-parameter Latin Hypercube Sampling sweep

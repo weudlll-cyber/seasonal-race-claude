@@ -365,7 +365,7 @@ export function runSingleRace({
         trajectoryMultTarget:     1.0,
         trajectoryMultPrev:       1.0,
         trajectoryMultTransStart: 0,
-        bereichsBonusMult:        1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
+        areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
         rubberBandMult:           1.0,
         rubberBandMultPrev:       1.0,
         rubberBandMultTarget:     1.0,
@@ -724,9 +724,9 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
-          // trajectoryMult + bereichsBonusMult: both 1.0 when Race Plan inactive
+          // trajectoryMult + areaBonusMult: both 1.0 when Race Plan inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.bereichsBonusMult * r.rubberBandMult * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (DT / 16);
         }
       }
 
