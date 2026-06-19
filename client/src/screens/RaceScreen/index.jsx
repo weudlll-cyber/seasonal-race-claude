@@ -29,7 +29,7 @@ import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleR
 import { drawRacers } from './drawing/racerRendering.js';
 import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
-import { lerp, lerpAngle } from '../../utils/mathUtils.js';
+import { lerp, lerpAngle, easeInOutCubic } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
@@ -138,10 +138,6 @@ const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 const FIXED_DT = 16;
 
 const tPos = (t) => ((t % 1) + 1) % 1;
-
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
 
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();

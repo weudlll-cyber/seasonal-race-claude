@@ -10,6 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { computeSpeedBonus } from '../../modules/rowLayout.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from '../../modules/storage/defaults.js';
+import { easeInOutCubic } from '../../utils/mathUtils.js';
 
 // ── Shared math helpers (mirrored from RaceScreen/index.jsx) ──────────────────
 // Defined locally so tests don't depend on the React component module graph.
@@ -19,8 +20,6 @@ const computeRollInterval = (targetDuration) => {
   const rollCount = computeRollCount(targetDuration);
   return (0.8 * targetDuration * 1000) / rollCount; // ms
 };
-
-const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -47,32 +46,6 @@ describe('rollInterval formula — last roll at ~80% of targetDuration', () => {
     const intervals = [30, 60, 90, 120].map(computeRollInterval);
     for (const iv of intervals) {
       expect(iv / 1000).toBeCloseTo(12, 5);
-    }
-  });
-});
-
-// ── easeInOutCubic ────────────────────────────────────────────────────────────
-
-describe('easeInOutCubic', () => {
-  it('t=0 → 0', () => expect(easeInOutCubic(0)).toBeCloseTo(0, 10));
-  it('t=0.5 → 0.5', () => expect(easeInOutCubic(0.5)).toBeCloseTo(0.5, 10));
-  it('t=1 → 1', () => expect(easeInOutCubic(1)).toBeCloseTo(1, 10));
-
-  it('is monotone increasing', () => {
-    const steps = 100;
-    let prev = easeInOutCubic(0);
-    for (let i = 1; i <= steps; i++) {
-      const curr = easeInOutCubic(i / steps);
-      expect(curr).toBeGreaterThanOrEqual(prev);
-      prev = curr;
-    }
-  });
-
-  it('output is always in [0, 1] for t ∈ [0, 1]', () => {
-    for (let i = 0; i <= 100; i++) {
-      const val = easeInOutCubic(i / 100);
-      expect(val).toBeGreaterThanOrEqual(0);
-      expect(val).toBeLessThanOrEqual(1);
     }
   });
 });

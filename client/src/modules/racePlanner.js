@@ -11,9 +11,7 @@
 //   createTrajectoryController(racePlan) → TrajectoryController
 // ============================================================
 
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
+import { easeInOutCubic } from '../utils/mathUtils.js';
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 function mulberry32(seed) {

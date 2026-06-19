@@ -8,10 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_RUBBER_BAND_CONFIG } from '../../modules/storage/defaults.js';
-
-// ── Shared math helpers (mirrored from RaceScreen/index.jsx) ──────────────────
-
-const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+import { easeInOutCubic } from '../../utils/mathUtils.js';
 
 // Returns true when the leader-to-2nd gap exceeds the threshold.
 function shouldBoostNonLeaders(leaderGap, gapThreshold) {
