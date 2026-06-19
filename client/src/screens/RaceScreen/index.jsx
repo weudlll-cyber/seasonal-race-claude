@@ -1414,7 +1414,7 @@ export default function RaceScreen() {
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
-      if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, trackWidthPx);
+      if (zones.length > 0) drawZoneBand(ctx, shape, zones);
       drawParticles(ctx, st.dustParticles, st.burstParticles);
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;
