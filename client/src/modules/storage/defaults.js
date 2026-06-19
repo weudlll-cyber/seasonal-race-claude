@@ -19,7 +19,6 @@ export const DEFAULT_RACE_DEFAULTS = {
   language: 'en',
 };
 
-export const DEFAULT_PLAYER_GROUPS = [];
 export const DEFAULT_BRANDING = [];
 export const DEFAULT_ACTIVE_SESSION = { activeBrandingProfileId: null };
 export const DEFAULT_RACE_HISTORY = [];

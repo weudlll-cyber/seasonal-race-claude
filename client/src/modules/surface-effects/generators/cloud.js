@@ -38,7 +38,7 @@ function _createBlobSprite(endSize, color) {
   }
 }
 
-export const configSchema = [
+const configSchema = [
   { key: 'color', type: 'color', default: '#cccccc', label: 'Color' },
   {
     key: 'startSize',
@@ -77,7 +77,7 @@ export const configSchema = [
   },
 ];
 
-export const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
+const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
 const START_ALPHA = 0.6;
 
@@ -86,7 +86,7 @@ const START_ALPHA = 0.6;
  * @param {object} config
  * @param {object} [_racer]
  */
-export function create(config, _racer) {
+function create(config, _racer) {
   const blobSprite = _createBlobSprite(config.endSize, config.color);
 
   return {

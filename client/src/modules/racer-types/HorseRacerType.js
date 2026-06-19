@@ -11,7 +11,7 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 
 const SPRITE_URL = '/assets/racers/horse-trot.png';
 
-export const HORSE_COATS = [
+const HORSE_COATS = [
   { id: 'cream', name: 'Cream', tint: null },
   { id: 'bay', name: 'Bay', tint: '#8B4513' },
   { id: 'chestnut', name: 'Chestnut', tint: '#A0522D' },

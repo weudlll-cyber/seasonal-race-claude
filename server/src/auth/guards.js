@@ -19,7 +19,7 @@ export const PUBLIC_PATHS = [
 
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─
 
-export const ROUTE_POLICY = [
+const ROUTE_POLICY = [
   // All /api/users methods are admin-only — operator cannot list or manage users (AUTH.md §2).
   {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -62,11 +62,11 @@ export const ROUTE_POLICY = [
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────
 
-export function normalizeMethod(m) {
+function normalizeMethod(m) {
   return String(m).toUpperCase();
 }
 
-export function normalizePath(p) {
+function normalizePath(p) {
   return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
 }
 

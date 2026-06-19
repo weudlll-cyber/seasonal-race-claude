@@ -28,9 +28,9 @@
 //              registerRacerType / removeRacerType manage the lifecycle.
 // ============================================================
 
-export { HorseRacerType, HORSE_COATS } from './HorseRacerType.js';
-export { DuckRacerType, DUCK_COATS } from './DuckRacerType.js';
-export { SnailRacerType, SNAIL_COATS } from './SnailRacerType.js';
+export { HorseRacerType } from './HorseRacerType.js';
+export { DuckRacerType } from './DuckRacerType.js';
+export { SnailRacerType } from './SnailRacerType.js';
 export { ElephantRacerType } from './ElephantRacerType.js';
 export { GiraffeRacerType } from './GiraffeRacerType.js';
 export { SnakeRacerType } from './SnakeRacerType.js';
@@ -48,8 +48,6 @@ export { TurtleRacerType } from './TurtleRacerType.js';
 export { MantaRacerType } from './MantaRacerType.js';
 export { DolphinRacerType } from './DolphinRacerType.js';
 export { SnowmobileRacerType } from './SnowmobileRacerType.js';
-export { SpriteRacerType } from './SpriteRacerType.js';
-
 import { HorseRacerType } from './HorseRacerType.js';
 import { DuckRacerType } from './DuckRacerType.js';
 import { SnailRacerType } from './SnailRacerType.js';

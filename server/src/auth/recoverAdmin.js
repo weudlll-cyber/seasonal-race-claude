@@ -17,7 +17,7 @@ import defaultStore from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { DATA_ROOT } from '../dataPaths.js';
 
-export const DEFAULT_AUDIT_LOG_PATH = join(DATA_ROOT, 'recover-admin-audit.log');
+const DEFAULT_AUDIT_LOG_PATH = join(DATA_ROOT, 'recover-admin-audit.log');
 
 function writeAuditLine(auditLogPath, record) {
   // NEVER include password or passwordHash in audit output.

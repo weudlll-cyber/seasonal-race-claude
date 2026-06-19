@@ -10,7 +10,7 @@ import defaultStore from '../src/auth/usersStore.js';
 
 // Ensures a user with the given role exists in the default store (the same instance the auth
 // router uses, bound to RA_USERS_DB), then logs in and returns a cookie-carrying agent.
-export async function loginAgent(app, { username, password, role }) {
+async function loginAgent(app, { username, password, role }) {
   try {
     await defaultStore.createUser({ username, password, role, createdBy: 'setup' });
   } catch (e) {

@@ -8,7 +8,7 @@
 //              Renders in world coordinates (camera transform applied by caller).
 // ============================================================
 
-export const configSchema = [
+const configSchema = [
   { key: 'color', type: 'color', default: '#333333', label: 'Color' },
   {
     key: 'thickness',
@@ -30,7 +30,7 @@ export const configSchema = [
   },
 ];
 
-export const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
+const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
 const START_ALPHA = 0.7;
 
@@ -40,7 +40,7 @@ const START_ALPHA = 0.7;
  * @param {object} config
  * @param {object} [_racer]
  */
-export function create(config, _racer) {
+function create(config, _racer) {
   let lastX = null;
   let lastY = null;
   const fadePerFrame = START_ALPHA / config.lifetimeFrames;

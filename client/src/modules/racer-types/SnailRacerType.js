@@ -13,7 +13,7 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 
 const SPRITE_URL = '/assets/racers/snail-crawl.png';
 
-export const SNAIL_COATS = [
+const SNAIL_COATS = [
   { id: 'garden', name: 'Garden Snail', tint: null },
   { id: 'roman', name: 'Roman Snail', tint: '#A89060' },
   { id: 'banded', name: 'Banded', tint: '#7A6238' },

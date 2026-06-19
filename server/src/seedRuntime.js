@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 import { DATA_ROOT } from './dataPaths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-export const SEEDS_ROOT = resolve(__dirname, '../seeds');
+const SEEDS_ROOT = resolve(__dirname, '../seeds');
 
 /**
  * Copy all files from server/seeds/<type>/ into DATA_ROOT/<type>/ when missing.

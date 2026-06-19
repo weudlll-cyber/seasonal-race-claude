@@ -16,13 +16,6 @@ import { KOI_COATS } from './koiCoats.js';
 
 const SPRITE_URL = '/assets/racers/koi-swim.png';
 
-export const PATTERNS = [
-  '/assets/racers/koi-mask-kohaku.png',
-  '/assets/racers/koi-mask-sanke.png',
-  '/assets/racers/koi-mask-showa.png',
-  '/assets/racers/koi-mask-ogon.png',
-];
-
 export const KoiRacerType = new SpriteRacerType({
   id: 'koi',
   emoji: '🐟',

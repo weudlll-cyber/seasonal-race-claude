@@ -52,9 +52,8 @@ const MAX_INVERSE_ZOOM = 10.0; // ceiling for inverse (targetSize-based) zoom; r
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
-// migration divisor for legacy/countdown conversion; exported so RaceScreen can compute the
-// sprite-size floor as spriteScale × FALLBACK_REFERENCE_SPRITE_SIZE (= px equivalent).
-export const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
+// migration divisor for legacy/countdown conversion; px equivalent used in the scale formulae below.
+const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
 // Scale defaults used when no config (or no cameraStateProfiles) is provided.
 // Match DEFAULT_CAMERA_CONFIG values (v14): LEADER=1.81, BATTLE=2.81, COMEBACK=1.39.
 const DEFAULT_SPRITE_SCALE = {

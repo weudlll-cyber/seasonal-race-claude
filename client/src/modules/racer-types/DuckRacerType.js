@@ -11,7 +11,7 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 
 const SPRITE_URL = '/assets/racers/duck-walk.png';
 
-export const DUCK_COATS = [
+const DUCK_COATS = [
   { id: 'yellow', name: 'Yellow', tint: null },
   { id: 'white', name: 'White', tint: '#E8E0D0' },
   { id: 'mallard', name: 'Mallard', tint: '#6B4423' },

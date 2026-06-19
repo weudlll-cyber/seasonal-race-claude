@@ -7,7 +7,7 @@
 //              Renders in world coordinates (camera transform applied by caller).
 // ============================================================
 
-export const configSchema = [
+const configSchema = [
   { key: 'color', type: 'color', default: '#4499cc', label: 'Color' },
   { key: 'count', type: 'range', min: 1, max: 8, step: 1, default: 3, label: 'Count' },
   {
@@ -58,7 +58,7 @@ export const configSchema = [
   },
 ];
 
-export const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
+const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
 const START_ALPHA = 0.85;
 const BURST_SPEED = 2.5;
@@ -68,7 +68,7 @@ const BURST_SPEED = 2.5;
  * @param {object} config
  * @param {object} [_racer]
  */
-export function create(config, _racer) {
+function create(config, _racer) {
   return {
     spawn(x, y, speed, angle) {
       if (Math.random() > config.spawnProbability) return [];

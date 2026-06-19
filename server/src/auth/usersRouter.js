@@ -11,7 +11,7 @@
 import express from 'express';
 import defaultStore, { toSafeUser } from './usersStore.js';
 
-export function createUsersRouter({ store } = {}) {
+function createUsersRouter({ store } = {}) {
   store = store ?? defaultStore;
 
   const router = express.Router();

@@ -7,7 +7,7 @@
 //              Renders in world coordinates (camera transform applied by caller).
 // ============================================================
 
-export const configSchema = [
+const configSchema = [
   { key: 'color', type: 'color', default: '#aaaaaa', label: 'Color' },
   { key: 'sizeMin', type: 'range', min: 0.5, max: 10, step: 0.5, default: 2, label: 'Size Min' },
   { key: 'sizeMax', type: 'range', min: 0.5, max: 15, step: 0.5, default: 4, label: 'Size Max' },
@@ -33,7 +33,7 @@ export const configSchema = [
   { key: 'gravity', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0, label: 'Gravity' },
 ];
 
-export const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
+const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
 const START_ALPHA = 0.8;
 
@@ -42,7 +42,7 @@ const START_ALPHA = 0.8;
  * @param {object} config — merged configSchema values
  * @param {object} [_racer] — reserved for VRE-3 per-racer customisation
  */
-export function create(config, _racer) {
+function create(config, _racer) {
   return {
     /**
      * Spawn 0 or 1 particle per call based on spawnProbability.
