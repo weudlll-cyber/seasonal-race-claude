@@ -58,6 +58,9 @@ const _forwardRight = new Set();
 const _sameLaneApproach = new Set();
 const _approachForceMag = new Map();
 const _sameLaneLeaderPhysY = new Map();
+// _sameLaneLeaderObj: per-trailer leader object for the most-constraining leader —
+// used only to derive the stable tie-break side at relPos ≈ 0 (pairTieDir).
+const _sameLaneLeaderObj = new Map();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -147,6 +150,19 @@ function stablePairBit(a, b) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0) & 1;
+}
+
+// Deterministic tie-break side for a near-coincident same-lane pair (relPos ≈ 0).
+// Shared stablePairBit gives the pair one bit; r.index < leader.index flips it for
+// exactly one member, so the two members of a mutually-approaching pair commit to
+// OPPOSITE sides — stable across frames (no zigzag), unlike per-racer index parity
+// which can steer a trailer toward its leader. Guards an absent leader ref by
+// retaining the previous parity behavior.
+function pairTieDir(r, leader) {
+  if (!leader) return (r.index & 1) === 0 ? 1 : -1;
+  const bit = stablePairBit(r, leader);
+  const first = r.index < leader.index;
+  return (bit === 1 ? first : !first) ? 1 : -1;
 }
 
 // ── physicalY ↔ world-pixel helpers ─────────────────────────────────────────
@@ -345,6 +361,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _sameLaneApproach.clear();
   _approachForceMag.clear();
   _sameLaneLeaderPhysY.clear();
+  _sameLaneLeaderObj.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -662,6 +679,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           // forceMag selection applies to the direction reference.
           if (forceMag >= (_approachForceMag.get(trailer.index) ?? 0)) {
             _sameLaneLeaderPhysY.set(trailer.index, leader.physicalY);
+            _sameLaneLeaderObj.set(trailer.index, leader);
           }
         }
       }
@@ -814,7 +832,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         if (lpy !== undefined) {
           const relPos = r.physicalY - lpy;
           const naturalDir =
-            Math.abs(relPos) >= 1e-6 ? (relPos >= 0 ? 1 : -1) : (r.index & 1) === 0 ? 1 : -1;
+            Math.abs(relPos) >= 1e-6
+              ? relPos >= 0
+                ? 1
+                : -1
+              : pairTieDir(r, _sameLaneLeaderObj.get(r.index));
           const naturalFwdBlocked =
             naturalDir > 0 ? _forwardRight.has(r.index) : _forwardLeft.has(r.index);
           const oppFwdBlocked =
