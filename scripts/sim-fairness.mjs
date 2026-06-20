@@ -115,6 +115,8 @@ const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW ? (() => {
   try { return JSON.parse(BEHAVIOR_OVERRIDE_RAW); }
   catch { console.error('⚠️  --behavior: invalid JSON, ignoring'); return {}; }
 })() : {};
+// --selfcheck: run synthetic validation of BS-1 fairness metrics and exit (no sim run).
+const SELFCHECK = argv.includes('--selfcheck');
 
 // ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
 const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
@@ -1361,6 +1363,556 @@ export function computeZoneSuccessRate(raceEntries) {
   };
 }
 
+// ── BS-1: Extended fairness statistics ─────────────────────────────────────────
+// Adds: top-3-by-row screening, per-band Spearman ordinal trend (permutation p),
+// within-band emergence metric, band-integrity gate, Holm/BH correction.
+
+/**
+ * Holm-Bonferroni step-down correction (controls FWER).
+ * Use for confirmatory family: per-track × (top3-by-row + per-band ordinal).
+ * @param {number[]} pValues raw p-values
+ * @returns {number[]} adjusted p-values in the same order as input
+ */
+function holmCorrect(pValues) {
+  const n = pValues.length;
+  if (n === 0) return [];
+  const idx = pValues.map((p, i) => ({ p, i })).sort((a, b) => a.p - b.p);
+  const adj = new Array(n);
+  let runMax = 0;
+  for (let k = 0; k < n; k++) {
+    runMax = Math.max(runMax, Math.min(1, (n - k) * idx[k].p));
+    adj[idx[k].i] = runMax;
+  }
+  return adj;
+}
+
+/**
+ * Benjamini-Hochberg step-up correction (controls FDR).
+ * Use for exploratory drill-down outputs only — never for pass/fail decisions.
+ * @param {number[]} pValues raw p-values
+ * @returns {number[]} adjusted p-values in the same order as input
+ */
+function bhCorrect(pValues) {
+  const n = pValues.length;
+  if (n === 0) return [];
+  const idx = pValues.map((p, i) => ({ p, i })).sort((a, b) => b.p - a.p);
+  const adj = new Array(n);
+  let runMin = 1;
+  for (let k = 0; k < n; k++) {
+    runMin = Math.min(runMin, Math.min(1, (n / (n - k)) * idx[k].p));
+    adj[idx[k].i] = runMin;
+  }
+  return adj;
+}
+
+/** Convert values to average ranks (1-indexed; ties share the average rank). */
+function rankArray(arr) {
+  const sorted = arr.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+  const out = new Array(arr.length);
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1][0] === sorted[i][0]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) out[sorted[k][1]] = avg;
+    i = j + 1;
+  }
+  return out;
+}
+
+function pearsonOfRanks(rx, ry) {
+  const n = rx.length;
+  if (n < 2) return 0;
+  const mx = rx.reduce((s, v) => s + v, 0) / n;
+  const my = ry.reduce((s, v) => s + v, 0) / n;
+  let num = 0,
+    dx2 = 0,
+    dy2 = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = rx[i] - mx,
+      dy = ry[i] - my;
+    num += dx * dy;
+    dx2 += dx * dx;
+    dy2 += dy * dy;
+  }
+  return dx2 > 0 && dy2 > 0 ? num / Math.sqrt(dx2 * dy2) : 0;
+}
+
+/** Spearman rank-correlation coefficient. */
+function spearman(xs, ys) {
+  return pearsonOfRanks(rankArray(xs), rankArray(ys));
+}
+
+/**
+ * Two-tailed permutation p-value for |Spearman r| (xs are shuffled).
+ * Returns 1 when n < 4 (too few data points for a meaningful test).
+ */
+function spearmanPermP(xs, ys, observedR, nPerm, prng) {
+  if (xs.length < 4) return 1;
+  let count = 0;
+  const pxs = [...xs];
+  for (let p = 0; p < nPerm; p++) {
+    for (let i = pxs.length - 1; i > 0; i--) {
+      const j = Math.floor(prng() * (i + 1));
+      const tmp = pxs[i];
+      pxs[i] = pxs[j];
+      pxs[j] = tmp;
+    }
+    if (Math.abs(spearman(pxs, ys)) >= Math.abs(observedR)) count++;
+  }
+  return (count + 1) / (nPerm + 1);
+}
+
+/**
+ * Band-integrity gate: non-inferiority check on zone success rate.
+ * Flags OK iff pooledRate >= baselineRate − marginPP AND no per-track rate
+ * is worse by more than 2 × marginPP relative to its track baseline.
+ *
+ * @param {number}   pooledRate       current pooled zone success rate (0–1)
+ * @param {number}   baselineRate     rate at bandStrictness 1.0
+ * @param {number[]} [trackRates]     per-track current rates (same order as trackBaselines)
+ * @param {number[]} [trackBaselines] per-track baseline rates
+ * @param {number}   [marginPP=0.02]  allowed drop as a fraction (0.02 = 2 pp)
+ * @returns {{ ok: boolean, pooledOK: boolean, tracksFailed: number }}
+ */
+export function bandIntegrityOK(
+  pooledRate,
+  baselineRate,
+  trackRates = [],
+  trackBaselines = [],
+  marginPP = 0.02,
+) {
+  const pooledOK = pooledRate >= baselineRate - marginPP;
+  const tracksFailed = trackRates.filter((r, i) => {
+    const base = trackBaselines[i] ?? baselineRate;
+    return r < base - 2 * marginPP;
+  }).length;
+  return { ok: pooledOK && tracksFailed === 0, pooledOK, tracksFailed };
+}
+
+/**
+ * Extended fairness statistics for bandStrictness sweep analysis.
+ *
+ * Each entry represents one racer in one race. Required fields:
+ *   startRowIndex {number}      0-based row index
+ *   finalRank     {number}      1-based final position
+ *   targetBandIdx {number}      0-based band index (0=B1 … 4=B5)
+ *   targetRank    {number|null} exact target rank (required for emergence metric)
+ *   raceKey       {string}      unique race identifier (e.g. `${trackId}-${seed}-${raceIdx}`)
+ *   trackId       {string}      track identifier (for per-track stratification)
+ *
+ * Callers mapping from rawData: raceKey = `${e.trackId}-${e.seed}-${e.raceIdx}`,
+ * targetBandIdx = e.sollBereich - 1, targetRank = e.sollRank.
+ *
+ * @param {object[]} entries   per-racer per-race records (see above)
+ * @param {number[]} rowSizes  racer count per row
+ * @param {object}  [opts]
+ * @param {number[]}  [opts.bandEdges]  split points; defaults to BAND_EDGES
+ * @param {number}   [opts.nPerm=499]  permutations for Spearman p-value
+ * @param {Function} [opts.prng]        PRNG for permutations; defaults to Math.random
+ * @returns {{ pooled, perTrack, confirmatory, exploratory, anyConfirmatoryFlagged }}
+ */
+export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
+  const bandEdges = opts.bandEdges ?? BAND_EDGES;
+  const nBands = bandEdges.length + 1;
+  const nPerm = opts.nPerm ?? 499;
+  const prng = opts.prng ?? Math.random;
+
+  const totalRacers = rowSizes.reduce((s, v) => s + v, 0);
+  const nRows = rowSizes.length;
+  const trackIds = [...new Set(entries.map((e) => e.trackId ?? 'unknown'))];
+
+  // ── 1. Top-3-by-row (screening stat) ──────────────────────────────────────
+  // NOTE: top-3 within a race are correlated — treat as a signal, not an independence proof.
+  // Use per-band ordinal tests for confirmation.
+  function computeTop3ByRow(subset) {
+    const nR = new Set(subset.map((e) => e.raceKey)).size;
+    const obs = new Array(nRows).fill(0);
+    for (const e of subset) {
+      if (e.finalRank <= 3 && e.startRowIndex < nRows) obs[e.startRowIndex]++;
+    }
+    const exp = rowSizes.map((sz) => (nR * 3 * sz) / totalRacers);
+    let chiSq = 0;
+    for (let i = 0; i < nRows; i++) if (exp[i] > 0) chiSq += (obs[i] - exp[i]) ** 2 / exp[i];
+    return { obs, exp, chiSq, df: nRows - 1, pRaw: chiSqPValue(chiSq, nRows - 1), nRaces: nR };
+  }
+
+  // ── 2. Per-band Spearman ordinal trend ─────────────────────────────────────
+  // For each target band: tests whether start-row-index predicts within-band finishing position.
+  // Permutation p avoids expected-cell-count assumptions that plague small-n chi-square cells.
+  function computePerBandOrdinal(subset) {
+    return Array.from({ length: nBands }, (_, bi) => {
+      const band = subset.filter((e) => e.targetBandIdx === bi);
+      if (band.length < 4) return { bandIdx: bi, n: band.length, r: null, pRaw: 1 };
+
+      const byRace = new Map();
+      for (const e of band) {
+        if (!byRace.has(e.raceKey)) byRace.set(e.raceKey, []);
+        byRace.get(e.raceKey).push(e);
+      }
+      const startRows = [],
+        withinPos = [];
+      for (const group of byRace.values()) {
+        const sorted = [...group].sort((a, b) => a.finalRank - b.finalRank);
+        sorted.forEach((e, pos) => {
+          startRows.push(e.startRowIndex);
+          withinPos.push(pos + 1);
+        });
+      }
+      const r = spearman(startRows, withinPos);
+      return { bandIdx: bi, n: band.length, r, pRaw: spearmanPermP(startRows, withinPos, r, nPerm, prng) };
+    });
+  }
+
+  // ── 3. Within-band emergence metric ────────────────────────────────────────
+  // Mean |Δ within-band position| between target-rank order and actual final-rank order.
+  // ~0 at bandStrictness=1.0 (controller enforces exact rank); rises as strictness falls.
+  // Matched by targetRank (unique per racer per race since targetRanks form a permutation).
+  function computeWithinBandEmergence(subset) {
+    return Array.from({ length: nBands }, (_, bi) => {
+      const band = subset.filter((e) => e.targetBandIdx === bi && e.targetRank != null);
+      if (band.length < 2) return { bandIdx: bi, n: 0, meanAbsDelta: null };
+
+      const byRace = new Map();
+      for (const e of band) {
+        if (!byRace.has(e.raceKey)) byRace.set(e.raceKey, []);
+        byRace.get(e.raceKey).push(e);
+      }
+      let totalDelta = 0,
+        totalN = 0;
+      for (const group of byRace.values()) {
+        if (group.length < 2) continue;
+        const byTarget = [...group].sort((a, b) => a.targetRank - b.targetRank);
+        const byActual = [...group].sort((a, b) => a.finalRank - b.finalRank);
+        const targetPos = new Map(byTarget.map((e, i) => [e.targetRank, i + 1]));
+        const actualPos = new Map(byActual.map((e, i) => [e.targetRank, i + 1]));
+        for (const [tr, tp] of targetPos) {
+          const ap = actualPos.get(tr);
+          if (ap != null) {
+            totalDelta += Math.abs(tp - ap);
+            totalN++;
+          }
+        }
+      }
+      return { bandIdx: bi, n: totalN, meanAbsDelta: totalN > 0 ? totalDelta / totalN : null };
+    });
+  }
+
+  // ── Pooled + per-track ─────────────────────────────────────────────────────
+  const pooled = {
+    top3: computeTop3ByRow(entries),
+    ordinal: computePerBandOrdinal(entries),
+    emergence: computeWithinBandEmergence(entries),
+  };
+
+  const perTrack = trackIds.map((tid) => {
+    const sub = entries.filter((e) => (e.trackId ?? 'unknown') === tid);
+    return {
+      trackId: tid,
+      top3: computeTop3ByRow(sub),
+      ordinal: computePerBandOrdinal(sub),
+      emergence: computeWithinBandEmergence(sub),
+    };
+  });
+
+  // ── 4. Multiple-testing corrections ────────────────────────────────────────
+  // Confirmatory family: per-track × (top3 + per-band ordinal) — these tests drive pass/fail.
+  // Holm controls FWER at α=0.05; a flagged test survives family-wise correction.
+  const confirmatory = [];
+  for (const tr of perTrack) {
+    confirmatory.push({
+      label: `${tr.trackId}|top3`,
+      p: tr.top3.pRaw,
+      trackId: tr.trackId,
+      test: 'top3',
+      r: null,
+    });
+    for (const b of tr.ordinal) {
+      confirmatory.push({
+        label: `${tr.trackId}|B${b.bandIdx + 1}|ordinal`,
+        p: b.pRaw,
+        trackId: tr.trackId,
+        test: 'ordinal',
+        bandIdx: b.bandIdx,
+        r: b.r,
+      });
+    }
+  }
+  const holmAdj = holmCorrect(confirmatory.map((c) => c.p));
+  confirmatory.forEach((c, i) => {
+    c.pHolm = holmAdj[i];
+  });
+
+  // Exploratory: pooled + all confirmatory, BH-corrected (drill-down only — not for pass/fail).
+  const exploratory = [
+    { label: 'pooled|top3', p: pooled.top3.pRaw },
+    ...pooled.ordinal.map((b) => ({ label: `pooled|B${b.bandIdx + 1}|ordinal`, p: b.pRaw ?? 1 })),
+    ...confirmatory.map((c) => ({ label: c.label, p: c.p })),
+  ];
+  const bhAdj = bhCorrect(exploratory.map((e) => e.p));
+  exploratory.forEach((e, i) => {
+    e.pBH = bhAdj[i];
+  });
+
+  return {
+    pooled,
+    perTrack,
+    confirmatory,
+    exploratory,
+    anyConfirmatoryFlagged: confirmatory.some((c) => c.pHolm < 0.05),
+  };
+}
+
+/**
+ * Synthetic validation (--selfcheck mode).
+ * Builds synthetic race results and confirms the metrics fire on injected unfairness.
+ *
+ * Conditions:
+ *   A) FAIR          — finalRank independent of startRowIndex → all tests clear after Holm.
+ *   B) UNFAIR        — row order determines final rank → top-3 and ordinal flag.
+ *   C) WITHIN-BAND   — band assignment proportional; within-band positions ordered by row →
+ *                       ordinal flags; zoneSuccessRate stays 100%.
+ */
+function runFairnessSelfCheck() {
+  const SC_SEED = 42;
+  const SC_RACES = 150;
+  const SC_N = 50;
+  const ROW_SIZES = [17, 17, 16];
+  const N_PERM = 499;
+  const TID = 'synth';
+
+  function scShuffle(arr, prng) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(prng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function bandIdxOf(rank) {
+    for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+    return BAND_EDGES.length;
+  }
+
+  // Base racer list (index + startRowIndex; finalRank assigned per condition)
+  const baseRacers = [];
+  let racerIdx = 0;
+  for (let row = 0; row < ROW_SIZES.length; row++) {
+    for (let j = 0; j < ROW_SIZES[row]; j++) {
+      baseRacers.push({ racerIndex: racerIdx++, startRowIndex: row });
+    }
+  }
+
+  // Assign a random permutation of targetRanks (1..SC_N) each race
+  function withTargets(prng) {
+    const ranks = scShuffle(
+      Array.from({ length: SC_N }, (_, i) => i + 1),
+      prng,
+    );
+    return baseRacers.map((r, i) => ({
+      ...r,
+      targetRank: ranks[i],
+      targetBandIdx: bandIdxOf(ranks[i]),
+    }));
+  }
+
+  // Condition A: FAIR — shuffle finalRanks independently of startRowIndex
+  function genFair(prng) {
+    const entries = [];
+    for (let race = 0; race < SC_RACES; race++) {
+      const racers = withTargets(prng);
+      const finalRanks = scShuffle(
+        Array.from({ length: SC_N }, (_, i) => i + 1),
+        prng,
+      );
+      racers.forEach((r, i) =>
+        entries.push({ ...r, finalRank: finalRanks[i], raceKey: `A-${race}`, trackId: TID }),
+      );
+    }
+    return entries;
+  }
+
+  // Condition B: UNFAIR — row order directly determines final rank
+  function genUnfair(prng) {
+    const entries = [];
+    for (let race = 0; race < SC_RACES; race++) {
+      const racers = withTargets(prng);
+      const sorted = [...racers].sort((a, b) =>
+        a.startRowIndex !== b.startRowIndex ? a.startRowIndex - b.startRowIndex : prng() - 0.5,
+      );
+      sorted.forEach((r, i) =>
+        entries.push({ ...r, finalRank: i + 1, raceKey: `B-${race}`, trackId: TID }),
+      );
+    }
+    return entries;
+  }
+
+  // Condition C: WITHIN-BAND-ONLY — band assignment proportional to row size;
+  // within each band positions are assigned in start-row order → zoneSuccessRate = 100%.
+  function genWithinBand(prng) {
+    const entries = [];
+    for (let race = 0; race < SC_RACES; race++) {
+      const racers = withTargets(prng);
+      const byBand = new Map();
+      for (const r of racers) {
+        if (!byBand.has(r.targetBandIdx)) byBand.set(r.targetBandIdx, []);
+        byBand.get(r.targetBandIdx).push(r);
+      }
+      const finalRankOf = new Map();
+      for (const [bi, group] of byBand) {
+        const lo = bi === 0 ? 1 : BAND_EDGES[bi - 1] + 1;
+        const sorted = [...group].sort((a, b) =>
+          a.startRowIndex !== b.startRowIndex ? a.startRowIndex - b.startRowIndex : prng() - 0.5,
+        );
+        sorted.forEach((r, pos) => finalRankOf.set(r.racerIndex, lo + pos));
+      }
+      for (const r of racers) {
+        entries.push({
+          ...r,
+          finalRank: finalRankOf.get(r.racerIndex) ?? SC_N,
+          raceKey: `C-${race}`,
+          trackId: TID,
+        });
+      }
+    }
+    return entries;
+  }
+
+  function zoneSuccess(entries) {
+    let hits = 0,
+      total = 0;
+    for (const e of entries) {
+      if (e.targetBandIdx == null) continue;
+      total++;
+      if (bandIdxOf(e.finalRank) === e.targetBandIdx) hits++;
+    }
+    return total > 0 ? hits / total : null;
+  }
+
+  // ── Run all three conditions ───────────────────────────────────────────────
+  process.stdout.write(
+    '\nBS-1 self-check: generating conditions A/B/C (' +
+      SC_RACES +
+      ' races × 3)...',
+  );
+  const prngMain = makePRNG(SC_SEED);
+  const entriesA = genFair(prngMain);
+  const entriesB = genUnfair(prngMain);
+  const entriesC = genWithinBand(prngMain);
+  process.stdout.write(' done.\nRunning extended stats (3 conditions × ' + N_PERM + ' permutations × 5 bands)...\n');
+
+  const resA = computeExtendedFairnessStats(entriesA, ROW_SIZES, {
+    nPerm: N_PERM,
+    prng: makePRNG(SC_SEED + 10),
+  });
+  process.stdout.write('  Condition A done\n');
+  const resB = computeExtendedFairnessStats(entriesB, ROW_SIZES, {
+    nPerm: N_PERM,
+    prng: makePRNG(SC_SEED + 20),
+  });
+  process.stdout.write('  Condition B done\n');
+  const resC = computeExtendedFairnessStats(entriesC, ROW_SIZES, {
+    nPerm: N_PERM,
+    prng: makePRNG(SC_SEED + 30),
+  });
+  process.stdout.write('  Condition C done\n');
+
+  const zrA = zoneSuccess(entriesA);
+  const zrB = zoneSuccess(entriesB);
+  const zrC = zoneSuccess(entriesC);
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  const SEP = '═'.repeat(72);
+
+  console.log('\n' + SEP);
+  console.log('BS-1 SYNTHETIC VALIDATION RESULTS');
+  console.log(
+    '  Races/condition: ' +
+      SC_RACES +
+      '  Racers: ' +
+      SC_N +
+      '  Rows: ' +
+      ROW_SIZES.join('/') +
+      '  Seed: ' +
+      SC_SEED,
+  );
+  console.log('  Permutations: ' + N_PERM + '  α=0.05  Correction: Holm (confirmatory), BH (exploratory)');
+  console.log(SEP);
+
+  function printCond(label, desc, res, zr) {
+    console.log('\n── Condition ' + label + ': ' + desc);
+    const flagged = res.confirmatory.filter((c) => c.pHolm < 0.05);
+    console.log(
+      '  Confirmatory (Holm): ' +
+        res.confirmatory.length +
+        ' tests  →  ' +
+        flagged.length +
+        ' flagged at α=0.05',
+    );
+    if (flagged.length > 0) {
+      for (const c of flagged) {
+        const rStr = c.r != null ? '  r=' + c.r.toFixed(3) : '';
+        console.log(
+          '    ✗ ' + c.label + rStr + '  pRaw=' + c.p.toFixed(3) + '  pHolm=' + c.pHolm.toFixed(3),
+        );
+      }
+    } else {
+      console.log('    ✓ none flagged (all clear)');
+    }
+    const t3 = res.pooled.top3;
+    console.log(
+      '  Top-3-by-row (pooled, screening):  obs=[' +
+        t3.obs.join(',') +
+        ']  exp=[' +
+        t3.exp.map((v) => v.toFixed(1)).join(',') +
+        ']  χ²=' +
+        t3.chiSq.toFixed(2) +
+        '  pRaw=' +
+        t3.pRaw.toFixed(3),
+    );
+    const ordSig = res.pooled.ordinal.filter((b) => b.r != null && b.pRaw < 0.05);
+    if (ordSig.length > 0) {
+      console.log(
+        '  Per-band ordinal (pooled pre-Holm signals): ' +
+          ordSig.map((b) => 'B' + (b.bandIdx + 1) + ' r=' + b.r.toFixed(3) + ' p=' + b.pRaw.toFixed(3)).join('  '),
+      );
+    } else {
+      console.log('  Per-band ordinal (pooled pre-Holm): no signals (p≥0.05 all bands)');
+    }
+    const emg = res.pooled.emergence.filter((e) => e.meanAbsDelta != null);
+    if (emg.length > 0) {
+      console.log(
+        '  Within-band emergence (meanAbsDelta): ' +
+          emg.map((e) => 'B' + (e.bandIdx + 1) + '=' + e.meanAbsDelta.toFixed(2)).join('  '),
+      );
+    }
+    if (zr != null) {
+      console.log('  Zone success rate: ' + (zr * 100).toFixed(1) + '%');
+    }
+  }
+
+  printCond('A', 'FAIR — no row effect', resA, zrA);
+  printCond('B', 'UNFAIR — row order determines final rank', resB, zrB);
+  printCond('C', 'WITHIN-BAND-ONLY — band assignment proportional, within-band ordered by row', resC, zrC);
+
+  // Verdict
+  const aPass = !resA.anyConfirmatoryFlagged;
+  const bPass = resB.anyConfirmatoryFlagged;
+  const cPass = resC.anyConfirmatoryFlagged && zrC != null && zrC >= 0.98;
+
+  console.log('\n' + SEP);
+  console.log('VERDICT');
+  console.log('  A) FAIR → no flag (no false positive):      ' + (aPass ? '✓ PASS' : '✗ FAIL'));
+  console.log('  B) UNFAIR → flagged:                        ' + (bPass ? '✓ PASS' : '✗ FAIL (effect not detected)'));
+  console.log('  C) WITHIN-BAND → flagged + zone≥98%:        ' + (cPass ? '✓ PASS' : '✗ FAIL'));
+  const allPass = aPass && bPass && cPass;
+  console.log('\n  Overall: ' + (allPass ? '✓ ALL PASS — metrics have real detection power' : '✗ ONE OR MORE FAILED'));
+  console.log(SEP + '\n');
+
+  if (!allPass) process.exit(1);
+}
+
 // Wilson-Hilferty chi-square p-value approximation (upper tail)
 function chiSqPValue(x, k) {
   if (k <= 0 || x < 0) return 1;
@@ -2081,6 +2633,7 @@ const isMain =
    process.argv[1].replace(/\\/g, '/').endsWith('scripts/sim-fairness.mjs'));
 
 if (isMain) {
+  if (SELFCHECK) { runFairnessSelfCheck(); process.exit(0); }
   const trackDataDir = join(ROOT, 'server/seeds/tracks');
   const trackFiles = [
     'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
