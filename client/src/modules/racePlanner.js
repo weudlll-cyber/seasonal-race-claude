@@ -69,6 +69,7 @@ const DEFAULT_CONTROLLER_PARAMS = {
   gain: 2.0,
   maxMult: 1.1,
   minMult: 0.85,
+  bandStrictness: 1.0,
 };
 
 const DEFAULT_PULK_TARGET_SPREAD = 0.005;
@@ -232,7 +233,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  */
 export function createTrajectoryController(racePlan) {
   const plan = racePlan;
-  const { gain, maxMult, minMult } = plan.controllerParams;
+  const { gain, maxMult, minMult, bandStrictness } = plan.controllerParams;
   const { pulkStart, pulkEnd, transEnd, corrStart, corrEnd } = plan._phases;
 
   const rng = plan.seed > 0 ? mulberry32(plan.seed + 0x9e3779b9) : Math.random;
@@ -318,16 +319,26 @@ export function createTrajectoryController(racePlan) {
 
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - targetRank;
+      // Band bounds computed once — used for both steering blend and corridor telemetry.
+      const [areaLo, areaHi] = getAreaBounds(targetRank);
+      // bandError: signed distance outside the target band (0 when already inside).
+      const bandError =
+        currentRank < areaLo
+          ? currentRank - areaLo
+          : currentRank > areaHi
+            ? currentRank - areaHi
+            : 0;
+      // Blended error: bandStrictness=1.0 ≡ rankError (no-op); =0.0 steers only to band edge.
+      const error = bandStrictness * rankError + (1 - bandStrictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(1.0 + gain * (rankError / nActive) + noise, minMult, maxMult);
+      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
 
-      // Telemetry uses r.trajectoryMult — the smoothed value from the previous physics step
+      // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
       _corridorViolationSum += Math.abs(rankError);
       if (Math.abs(rankError) > _corridorViolationMax) _corridorViolationMax = Math.abs(rankError);
 
-      const [areaLo, areaHi] = getAreaBounds(targetRank);
       if (currentRank >= areaLo && currentRank <= areaHi) _racersInCorridorCount++;
 
       if (tm(r) > 1.0 + NOISE_THRESH) _bidirectionalBoostCount++;
