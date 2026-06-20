@@ -29,14 +29,24 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+// Single-source band split points: ranks 1–5=B1, 6–15=B2, 16–25=B3, 26–40=B4, 41+=B5.
+export const BAND_EDGES = [5, 15, 25, 40];
+
+// Maps a rank to its 0-based band index (0=B1 … 4=B5).
+function rankToBandIndex(rank) {
+  for (let i = 0; i < BAND_EDGES.length; i++) {
+    if (rank <= BAND_EDGES[i]) return i;
+  }
+  return BAND_EDGES.length;
+}
+
 // Returns [lo, hi] rank bounds for the area containing the given targetRank.
 // Area 1: 1-5, B2: 6-15, B3: 16-25, B4: 26-40, B5: 41+
 function getAreaBounds(targetRank) {
-  if (targetRank <= 5) return [1, 5];
-  if (targetRank <= 15) return [6, 15];
-  if (targetRank <= 25) return [16, 25];
-  if (targetRank <= 40) return [26, 40];
-  return [41, Infinity];
+  const i = rankToBandIndex(targetRank);
+  const lo = i === 0 ? 1 : BAND_EDGES[i - 1] + 1;
+  const hi = i < BAND_EDGES.length ? BAND_EDGES[i] : Infinity;
+  return [lo, hi];
 }
 
 // ── Phase 3A M2v2 defaults ────────────────────────────────────────────────────
@@ -82,11 +92,8 @@ function computeAreaBonusMap(multiplier) {
 }
 
 function getAreaBonus(targetRank, bonusMap) {
-  if (targetRank <= 5) return bonusMap.B1;
-  if (targetRank <= 15) return bonusMap.B2;
-  if (targetRank <= 25) return bonusMap.B3;
-  if (targetRank <= 40) return bonusMap.B4;
-  return bonusMap.B5;
+  const keys = ['B1', 'B2', 'B3', 'B4', 'B5'];
+  return bonusMap[keys[rankToBandIndex(targetRank)]];
 }
 
 // ── createRacePlan ────────────────────────────────────────────────────────────

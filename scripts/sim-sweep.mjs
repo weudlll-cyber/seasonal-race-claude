@@ -28,7 +28,7 @@ import {
   DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_RACE_DYNAMICS_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
-import { createRacePlan, createTrajectoryController } from '../client/src/modules/racePlanner.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 import { runSingleRace, computeFinishT, RACER_CONFIGS } from './sim-fairness.mjs';
 
@@ -53,11 +53,10 @@ const BASELINE_PARAMS = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function zoneOf(rank) {
-  if (rank <= 5)  return 0;
-  if (rank <= 15) return 1;
-  if (rank <= 25) return 2;
-  if (rank <= 40) return 3;
-  return 4;
+  for (let i = 0; i < BAND_EDGES.length; i++) {
+    if (rank <= BAND_EDGES[i]) return i;
+  }
+  return BAND_EDGES.length;
 }
 
 function zoneSuccessRate(items) {

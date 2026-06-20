@@ -139,7 +139,7 @@ import {
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
-import { createRacePlan, createTrajectoryController } from '../client/src/modules/racePlanner.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
@@ -1324,11 +1324,10 @@ export function computeZoneSuccessRate(raceEntries) {
   ];
 
   function getZoneIdx(rank) {
-    if (rank <= 5)  return 0;
-    if (rank <= 15) return 1;
-    if (rank <= 25) return 2;
-    if (rank <= 40) return 3;
-    return 4;
+    for (let i = 0; i < BAND_EDGES.length; i++) {
+      if (rank <= BAND_EDGES[i]) return i;
+    }
+    return BAND_EDGES.length;
   }
 
   const hits  = [0, 0, 0, 0, 0];
@@ -2299,9 +2298,9 @@ if (isMain) {
           // Collect raw data
           for (const r of result) {
             const sollRank = raceSollRankMap?.get(r.racerIndex) ?? null;
-            const sollBereich = sollRank != null ? (
-              sollRank <= 5 ? 1 : sollRank <= 15 ? 2 : sollRank <= 25 ? 3 : sollRank <= 40 ? 4 : 5
-            ) : null;
+            const sollBereich = sollRank != null
+              ? (BAND_EDGES.findIndex((e) => sollRank <= e) + 1 || BAND_EDGES.length + 1)
+              : null;
             rawData.push({
               trackId,
               trackName,
@@ -2609,11 +2608,10 @@ if (isMain) {
   const zoneRows = rawData.filter((r) => r.sollBereich != null);
   if (RACE_PLAN_ACTIVE && zoneRows.length > 0) {
     function zoneIdxOf(rank) {
-      if (rank <= 5)  return 0;
-      if (rank <= 15) return 1;
-      if (rank <= 25) return 2;
-      if (rank <= 40) return 3;
-      return 4;
+      for (let i = 0; i < BAND_EDGES.length; i++) {
+        if (rank <= BAND_EDGES[i]) return i;
+      }
+      return BAND_EDGES.length;
     }
     const ZNAMES = ['B1 (1–5)', 'B2 (6–15)', 'B3 (16–25)', 'B4 (26–40)', 'B5 (41+)'];
 
