@@ -429,6 +429,133 @@ describe('createTrajectoryController — getPhase', () => {
   });
 });
 
+// ── Leader-progress phase clock (C0) ──────────────────────────────────────────
+
+describe('createTrajectoryController — leader-progress phase clock', () => {
+  // Defaults: pulkStart=0.25, pulkEnd=0.5, corridorStart=0.55, corridorEnd=0.95.
+  it('getPhase selects by fraction when phaseProgress is supplied (elapsedMs ignored)', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+
+    // elapsedMs=0 would be PRE_PULK on the legacy path; phaseProgress drives the result instead.
+    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME'); // 0.55 <= 0.6 < 0.95
+    expect(ctrl.getPhase(0, 0.3)).toBe('PULK'); // 0.25 <= 0.3 < 0.5
+    expect(ctrl.getPhase(0, 0.1)).toBe('PRE_PULK'); // < 0.25
+    expect(ctrl.getPhase(0, 0.97)).toBe('FINAL'); // >= 0.95
+  });
+
+  it('honours phase boundaries as fractions [0,1]', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    // Fraction boundaries are single-sourced from the absolute ms phases.
+    const pulkStart = plan._phases.pulkStart / TARGET_DUR_MS;
+    const pulkEnd = plan._phases.pulkEnd / TARGET_DUR_MS;
+    const corrStart = plan._phases.corrStart / TARGET_DUR_MS;
+    const corrEnd = plan._phases.corrEnd / TARGET_DUR_MS;
+    expect(ctrl.getPhase(0, pulkStart - 0.001)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, pulkStart)).toBe('PULK');
+    expect(ctrl.getPhase(0, pulkEnd)).toBe('TRANSITION');
+    expect(ctrl.getPhase(0, corrStart)).toBe('OUTCOME');
+    expect(ctrl.getPhase(0, corrEnd)).toBe('FINAL');
+  });
+
+  it('phaseProgress=null preserves the legacy elapsedMs behaviour (open bit-identical)', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const { corrStart } = plan._phases;
+
+    // Legacy path: elapsedMs against absolute ms boundaries.
+    expect(ctrl.getPhase(0)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, null)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(corrStart)).toBe('OUTCOME');
+    expect(ctrl.getPhase(corrStart, null)).toBe('OUTCOME');
+
+    // Red-without / green-with proof: same elapsedMs=0, but a non-null fraction in OUTCOME range
+    // flips the phase — confirming the new clock is actually consulted.
+    expect(ctrl.getPhase(0)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME');
+  });
+
+  it('derives the fraction boundaries single-source (postStartHold reflected, ties to L126)', () => {
+    // postStartHold raises pulkStart to 20000ms → fraction 20000/60000 ≈ 0.333 (not the raw 0.25).
+    const holdMs = 20_000;
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { postStartHoldMs: holdMs },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const pulkStartFrac = plan._phases.pulkStart / TARGET_DUR_MS; // 0.333…
+    expect(ctrl.getPhase(0, pulkStartFrac - 0.01)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, pulkStartFrac + 0.01)).toBe('PULK');
+    // Raw 0.25 would be PULK if the boundary were not single-sourced from the ms value.
+    expect(ctrl.getPhase(0, 0.3)).toBe('PRE_PULK');
+  });
+
+  it('computePulkBiasedTarget gates on phaseProgress when supplied', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers(70, 14);
+    const pulkIdx = plan.pulkRacerIds[0];
+    const spreadMin = 0.5;
+    const spreadMax = 1.5;
+    const raw = 1.0;
+
+    // elapsedMs=0 (PRE_PULK on legacy) but phaseProgress=0.3 (PULK) → bias path is active.
+    const biased = ctrl.computePulkBiasedTarget(pulkIdx, raw, spreadMin, spreadMax, racers, 0, 0.3);
+    // Outside PULK (phaseProgress=0.6 = OUTCOME) → raw is returned unchanged.
+    const passthrough = ctrl.computePulkBiasedTarget(
+      pulkIdx,
+      raw,
+      spreadMin,
+      spreadMax,
+      racers,
+      0,
+      0.6
+    );
+    expect(passthrough).toBe(raw);
+    // In PULK the function runs its bias logic (may equal raw if pulk is centred, but it executed
+    // the PULK branch rather than the early return — at minimum it stays within clamp bounds).
+    expect(biased).toBeGreaterThanOrEqual(spreadMin);
+    expect(biased).toBeLessThanOrEqual(spreadMax);
+  });
+});
+
+// ── Monotonic progressClock (C0 game/sim loop invariant) ──────────────────────
+
+describe('monotonic progressClock invariant', () => {
+  // Mirrors the inline clock update in index.jsx / sim-fairness.mjs:
+  //   progressClock = min(1, max(progressClock, rawProgress)) — only when an unfinished leader exists.
+  function step(progressClock, leaderT, finishT) {
+    const rawProgress = leaderT > -Infinity ? leaderT / finishT : 0;
+    if (leaderT > -Infinity) return Math.min(1, Math.max(progressClock, rawProgress));
+    return progressClock; // no unfinished racer → unchanged
+  }
+
+  it('never regresses when rawProgress drops (leader finishes, next leader is further back)', () => {
+    const finishT = 1.0;
+    let clock = 0;
+    // Leader climbs to 0.9 …
+    clock = step(clock, 0.3, finishT);
+    expect(clock).toBeCloseTo(0.3);
+    clock = step(clock, 0.9, finishT);
+    expect(clock).toBeCloseTo(0.9);
+    // … leader finishes; new highest unfinished racer is only at 0.6 → rawProgress falls.
+    clock = step(clock, 0.6, finishT);
+    expect(clock).toBeCloseTo(0.9); // held at the maximum, did NOT regress
+  });
+
+  it('clamps to 1 and leaves clock unchanged when no unfinished racer remains', () => {
+    const finishT = 1.0;
+    let clock = step(0.95, 1.4, finishT); // overshoot clamps to 1
+    expect(clock).toBe(1);
+    clock = step(clock, -Infinity, finishT); // all finished → unchanged
+    expect(clock).toBe(1);
+  });
+});
+
 // ── computePulkBiasedTarget ───────────────────────────────────────────────────
 
 describe('createTrajectoryController — computePulkBiasedTarget', () => {

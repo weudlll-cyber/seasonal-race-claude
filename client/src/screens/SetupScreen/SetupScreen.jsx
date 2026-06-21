@@ -357,7 +357,7 @@ function SetupScreen() {
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
       targetDuration: trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
-      racePlanEnabled: trackIsOpen && effectiveOpenTrackDuration >= 60,
+      racePlanEnabled: (trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration) >= 60,
       racePlanSeed: 0,
       timestamp: new Date().toISOString(),
     };
@@ -406,7 +406,7 @@ function SetupScreen() {
       targetLaps: quickIsOpen ? undefined : quickLaps,
       targetDuration: quickIsOpen ? raceDefaults.duration : quickClosedDuration,
       trackSurfaceClasses: track.surfaceClasses ?? [],
-      racePlanEnabled: quickIsOpen && raceDefaults.duration >= 60,
+      racePlanEnabled: (quickIsOpen ? raceDefaults.duration : quickClosedDuration) >= 60,
       racePlanSeed: quickTestSeed,
       timestamp: new Date().toISOString(),
     };

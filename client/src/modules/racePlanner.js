@@ -236,6 +236,17 @@ export function createTrajectoryController(racePlan) {
   const { gain, maxMult, minMult, bandStrictness } = plan.controllerParams;
   const { pulkStart, pulkEnd, transEnd, corrStart, corrEnd } = plan._phases;
 
+  // Phase-boundary FRACTIONS [0,1] for the leader-progress phase clock.
+  // Single-source: derived from the same absolute ms boundaries used by the elapsedMs path
+  // (no second copy of pulkStart/corridorStart) — keeps both clocks in lock-step, including
+  // any postStartHold offset baked into pulkStart.
+  const _dur = plan._targetDurationMs > 0 ? plan._targetDurationMs : 1;
+  const pulkStartFrac = pulkStart / _dur;
+  const pulkEndFrac = pulkEnd / _dur;
+  const transEndFrac = transEnd / _dur;
+  const corrStartFrac = corrStart / _dur;
+  const corrEndFrac = corrEnd / _dur;
+
   const rng = plan.seed > 0 ? mulberry32(plan.seed + 0x9e3779b9) : Math.random;
 
   // Per-race telemetry counters (reset via collectTelemetry)
@@ -251,7 +262,17 @@ export function createTrajectoryController(racePlan) {
   let _bidirectionalBrakeCount = 0;
   let _racersBlockedCount = 0;
 
-  function getPhase(elapsedMs) {
+  // Phase clock: when phaseProgress (leader-progress fraction [0,1]) is supplied, phase
+  // selection runs on the fraction boundaries; when null, the legacy elapsedMs ms-boundary
+  // path is used unchanged (open stays bit-identical).
+  function getPhase(elapsedMs, phaseProgress = null) {
+    if (phaseProgress != null) {
+      if (phaseProgress < pulkStartFrac) return 'PRE_PULK';
+      if (phaseProgress < pulkEndFrac) return 'PULK';
+      if (phaseProgress < corrStartFrac) return 'TRANSITION';
+      if (phaseProgress < corrEndFrac) return 'OUTCOME';
+      return 'FINAL';
+    }
     if (elapsedMs < pulkStart) return 'PRE_PULK';
     if (elapsedMs < pulkEnd) return 'PULK';
     if (elapsedMs < corrStart) return 'TRANSITION';
@@ -263,8 +284,10 @@ export function createTrajectoryController(racePlan) {
    * Controller-Pass: sets r.trajectoryMult on every racer.
    * In OUTCOME phase every racer gets a bidirectional correction toward their targetRank.
    *
-   * @param {Array}  racers    live racer objects (must have .index, .t, .finished, .avoidanceActive)
-   * @param {number} elapsedMs physicsTs in ms from race start
+   * @param {Array}  racers        live racer objects (must have .index, .t, .finished, .avoidanceActive)
+   * @param {number} elapsedMs     physicsTs in ms from race start (real-time easing/fade duration)
+   * @param {number} [phaseProgress] leader-progress fraction [0,1]; when set, drives phase selection
+   *                                  and the area-bonus fade trigger. null = legacy elapsedMs path.
    */
   function _setTarget(r, newTarget, elapsedMs) {
     if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > 0.001) {
@@ -274,9 +297,13 @@ export function createTrajectoryController(racePlan) {
     }
   }
 
-  function update(racers, elapsedMs) {
+  function update(racers, elapsedMs, phaseProgress = null) {
     // ── areaBonusMult: full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
-    if (elapsedMs < transEnd) {
+    // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
+    // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
+    const fadeNotStarted =
+      phaseProgress != null ? phaseProgress < transEndFrac : elapsedMs < transEnd;
+    if (fadeNotStarted) {
       for (const r of racers) {
         r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
       }
@@ -292,7 +319,7 @@ export function createTrajectoryController(racePlan) {
     }
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
-    if (getPhase(elapsedMs) !== 'OUTCOME') {
+    if (getPhase(elapsedMs, phaseProgress) !== 'OUTCOME') {
       for (const r of racers) _setTarget(r, 1.0, elapsedMs);
       return;
     }
@@ -363,10 +390,19 @@ export function createTrajectoryController(racePlan) {
    * @param {number} spreadMax   BASE_SPEED_MAX / BASE_SPEED_MEAN
    * @param {Array}  racers      all racers
    * @param {number} elapsedMs
+   * @param {number} [phaseProgress] leader-progress fraction [0,1]; null = legacy elapsedMs path
    * @returns {number}  biased pre-clamp value; caller applies final clamp
    */
-  function computePulkBiasedTarget(racerIndex, rawSample, spreadMin, spreadMax, racers, elapsedMs) {
-    if (getPhase(elapsedMs) !== 'PULK') return rawSample;
+  function computePulkBiasedTarget(
+    racerIndex,
+    rawSample,
+    spreadMin,
+    spreadMax,
+    racers,
+    elapsedMs,
+    phaseProgress = null
+  ) {
+    if (getPhase(elapsedMs, phaseProgress) !== 'PULK') return rawSample;
     if (!plan.pulkRacerIds.includes(racerIndex)) return rawSample;
 
     const thisRacer = racers.find((r) => r.index === racerIndex);

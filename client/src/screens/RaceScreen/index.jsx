@@ -568,6 +568,8 @@ export default function RaceScreen() {
       maxLaps,
       finishT,
       finalLapStartTs: null,
+      // Monotonic leader-progress phase clock (never regresses when the leader finishes).
+      progressClock: 0,
       racers: raceData.racers.map((r, i) => {
         const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
         const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
@@ -657,7 +659,7 @@ export default function RaceScreen() {
     const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
 
     // ── Race Plan controller ─────────────────────────────────────────────────
-    const racePlanEnabled = isOpenTrack && !!raceData.racePlanEnabled && targetDuration >= 60;
+    const racePlanEnabled = !!raceData.racePlanEnabled && targetDuration >= 60;
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
@@ -849,8 +851,20 @@ export default function RaceScreen() {
             r._prevAngle = r.angle;
           }
 
+          // Monotonic phase-progress clock (leader progress, never regresses when leader finishes).
+          // Separate from the rubber-band leader scan below (which is non-monotonic by design).
+          let _leaderT = -Infinity;
+          for (const r of st.racers) {
+            if (!r.finished && r.t > _leaderT) _leaderT = r.t;
+          }
+          const _rawProgress = _leaderT > -Infinity ? _leaderT / st.finishT : 0;
+          if (_leaderT > -Infinity) {
+            st.progressClock = Math.min(1, Math.max(st.progressClock, _rawProgress));
+          }
+          // (no unfinished racer: leave progressClock unchanged)
+
           // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
-          if (racePlanController) racePlanController.update(st.racers, physicsTs);
+          if (racePlanController) racePlanController.update(st.racers, physicsTs, st.progressClock);
 
           // ── trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern) ──
           if (racePlanController) {
@@ -916,7 +930,8 @@ export default function RaceScreen() {
                       BASE_SPEED_MIN / BASE_SPEED_MEAN,
                       BASE_SPEED_MAX / BASE_SPEED_MEAN,
                       st.racers,
-                      physicsTs
+                      physicsTs,
+                      st.progressClock
                     )
                   : rawSample;
                 const newTarget = Math.max(
@@ -1108,7 +1123,7 @@ export default function RaceScreen() {
                 ring.idx++;
               }
               const d = diagDataRef.current;
-              d.rpPhase = racePlanController.getPhase(physicsTs);
+              d.rpPhase = racePlanController.getPhase(physicsTs, st.progressClock);
               d.rpTs = physicsTs;
               d.rpReRollActive = physicsTs < lastRollDeadline;
               d.rpSfMin = sfMin;
