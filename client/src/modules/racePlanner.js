@@ -261,6 +261,12 @@ export function createTrajectoryController(racePlan) {
   let _bidirectionalBoostCount = 0;
   let _bidirectionalBrakeCount = 0;
   let _racersBlockedCount = 0;
+  // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
+  // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
+  // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
+  // moment instead of the absolute transEnd ms boundary (the two diverge once the phase clock
+  // runs on leader-progress rather than wall-time).
+  let _fadeStartMs = null;
 
   // Phase clock: when phaseProgress (leader-progress fraction [0,1]) is supplied, phase
   // selection runs on the fraction boundaries; when null, the legacy elapsedMs ms-boundary
@@ -308,9 +314,23 @@ export function createTrajectoryController(racePlan) {
         r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
       }
     } else {
-      const elapsedFade = elapsedMs - transEnd;
+      // Anchor the real-time fade ramp at the moment the trigger fired so elapsedFade starts at 0.
+      //  • Legacy (null) path: the clock IS elapsedMs and the trigger boundary is exactly transEnd,
+      //    so anchor there → bit-identical to the original behaviour (elapsedFade >= 0 always here).
+      //  • Progress path: the trigger boundary in ms is not known ahead of time (it depends on when
+      //    leader-progress crosses transEndFrac), so capture elapsedMs on the first triggered step.
+      let fadeAnchorMs;
+      if (phaseProgress != null) {
+        if (_fadeStartMs === null) _fadeStartMs = elapsedMs;
+        fadeAnchorMs = _fadeStartMs;
+      } else {
+        fadeAnchorMs = transEnd;
+      }
+      const elapsedFade = elapsedMs - fadeAnchorMs;
+      // Math.max(0, …): lower-clamp safety net — guarantees the cubic ease never sees a negative
+      // argument (which previously blew areaBonusMult up to 5–556× / negative). Upper Math.min(1.0).
       const easedProgress = easeInOutCubic(
-        Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration)
+        Math.max(0, Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration))
       );
       for (const r of racers) {
         const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;

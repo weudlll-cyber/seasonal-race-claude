@@ -395,7 +395,8 @@ export function runSingleRace({
     const DT          = 16; // ms per frame — matches game FIXED_DT (index.jsx:138)
     const maxTime     = Math.max(targetSeconds * 3, 600) * 1000; // safety cap: 3× or 10 min
     let raceTs        = 0;
-    let progressClock = 0; // monotonic leader-progress phase clock (mirrors index.jsx)
+    let raceProgress = 0; // monotonic leader track-progress [0,1]; drives WHEN phases switch
+                          // (route-based, mirrors index.jsx). Distinct from raceTs (stopwatch ms).
     let finishedCount = 0;
 
     // Mixing-quota: fraction of Row-1 racers that have overtaken at least one Row-0
@@ -575,7 +576,7 @@ export function runSingleRace({
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
-      // ── Monotonic phase-progress clock (leader progress, mirrors index.jsx) ──
+      // ── Monotonic leader track-progress [0,1] — drives WHEN phases switch (mirrors index.jsx) ──
       // Computed once per step before Pass 1 so the pulk-bias hook and the controller-pass
       // share the same value (Pass 1 never mutates r.t). The rubber-band leader scan below
       // is a separate, non-monotonic quantity by design.
@@ -583,7 +584,7 @@ export function runSingleRace({
         let _leaderT = -Infinity;
         for (const r of racers) { if (!r.finished && r.t > _leaderT) _leaderT = r.t; }
         const _rawProgress = _leaderT > -Infinity ? _leaderT / finishT : 0;
-        if (_leaderT > -Infinity) progressClock = Math.min(1, Math.max(progressClock, _rawProgress));
+        if (_leaderT > -Infinity) raceProgress = Math.min(1, Math.max(raceProgress, _rawProgress));
       }
 
       // ── Pass 1: re-rolls + spreadFactor transitions + baseSpeed update ─────────
@@ -599,7 +600,7 @@ export function runSingleRace({
                 r.index, rawTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                racers, raceTs, progressClock
+                racers, raceTs, raceProgress
               )
             : rawTarget;
           const newTarget   = Math.max(
@@ -633,7 +634,7 @@ export function runSingleRace({
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
       if (racePlanController) {
-        racePlanController.update(racers, raceTs, progressClock);
+        racePlanController.update(racers, raceTs, raceProgress);
         // easeInOutCubic transition — mirrors index.jsx pattern, same parameters
         const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
         for (const r of racers) {
@@ -680,7 +681,7 @@ export function runSingleRace({
       }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
-      if (racePlanController && racePlanController.getPhase(raceTs, progressClock) === 'OUTCOME') {
+      if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
         for (const r of racers) {
           if (r.finished) continue;
           let ring = tmRings.get(r.index);
@@ -787,7 +788,7 @@ export function runSingleRace({
 
       // Phase-3B: COMEBACK rank tracking (during OUTCOME phase)
       if (cbCfg && racePlanController) {
-        const phase     = racePlanController.getPhase(raceTs, progressClock);
+        const phase     = racePlanController.getPhase(raceTs, raceProgress);
         const isOutcome = phase === 'OUTCOME';
 
         if (isOutcome && cbOutcomeStartMs === null)                              cbOutcomeStartMs = raceTs;

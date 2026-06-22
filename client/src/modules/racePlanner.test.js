@@ -406,6 +406,41 @@ describe('createTrajectoryController — areaBonusMult', () => {
       expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
     }
   });
+
+  // C0-fix regression: with the leader-progress phase clock the fade TRIGGER can fire while the
+  // wall-clock elapsedMs is still well below transEnd (leader ahead of median pace). The old code
+  // computed elapsedFade = elapsedMs - transEnd → NEGATIVE → unclamped easeInOutCubic(4·t³) blew
+  // areaBonusMult up to 5–556× (or negative), teleporting/reversing racers. The fade must instead
+  // be anchored at the trigger moment so areaBonusMult always stays in-band.
+  it('does NOT blow up areaBonusMult when the progress trigger fires before elapsedMs reaches transEnd', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    // transEnd = 0.75 × 60000 = 45000ms; transEndFrac = 0.75.
+    // phaseProgress=0.80 fires the fade; elapsedMs=20000 is far below transEnd (leader 25000ms ahead).
+    ctrl.update(racers, 20_000, 0.8);
+    for (const r of racers) {
+      const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
+      // In-band: between origBonus and 1.0 (here exactly origBonus, since elapsedFade starts at 0).
+      expect(Number.isFinite(r.areaBonusMult)).toBe(true);
+      expect(r.areaBonusMult).toBeGreaterThanOrEqual(Math.min(1.0, origBonus) - 0.001);
+      expect(r.areaBonusMult).toBeLessThanOrEqual(Math.max(1.0, origBonus) + 0.001);
+      // Hard guard against the old blow-up / negative-speed regression.
+      expect(r.areaBonusMult).toBeGreaterThan(0.9);
+      expect(r.areaBonusMult).toBeLessThan(1.1);
+    }
+  });
+
+  it('completes the fade _areaBonusFadeDuration real ms after the trigger, regardless of elapsedMs−transEnd', () => {
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeRacers();
+    // Trigger fires at elapsedMs=20000 (well before transEnd=45000): anchors _fadeStartMs=20000.
+    ctrl.update(racers, 20_000, 0.8);
+    // One full fade duration later in real ms → fade complete → areaBonusMult == 1.0.
+    ctrl.update(racers, 20_000 + plan._areaBonusFadeDuration + 100, 0.82);
+    for (const r of racers) {
+      expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
+    }
+  });
 });
 
 // ── createTrajectoryController — phase transitions ────────────────────────────
@@ -523,15 +558,15 @@ describe('createTrajectoryController — leader-progress phase clock', () => {
   });
 });
 
-// ── Monotonic progressClock (C0 game/sim loop invariant) ──────────────────────
+// ── Monotonic raceProgress (C0 game/sim loop invariant) ───────────────────────
 
-describe('monotonic progressClock invariant', () => {
-  // Mirrors the inline clock update in index.jsx / sim-fairness.mjs:
-  //   progressClock = min(1, max(progressClock, rawProgress)) — only when an unfinished leader exists.
-  function step(progressClock, leaderT, finishT) {
+describe('monotonic raceProgress invariant', () => {
+  // Mirrors the inline update in index.jsx / sim-fairness.mjs:
+  //   raceProgress = min(1, max(raceProgress, rawProgress)) — only when an unfinished leader exists.
+  function step(raceProgress, leaderT, finishT) {
     const rawProgress = leaderT > -Infinity ? leaderT / finishT : 0;
-    if (leaderT > -Infinity) return Math.min(1, Math.max(progressClock, rawProgress));
-    return progressClock; // no unfinished racer → unchanged
+    if (leaderT > -Infinity) return Math.min(1, Math.max(raceProgress, rawProgress));
+    return raceProgress; // no unfinished racer → unchanged
   }
 
   it('never regresses when rawProgress drops (leader finishes, next leader is further back)', () => {
