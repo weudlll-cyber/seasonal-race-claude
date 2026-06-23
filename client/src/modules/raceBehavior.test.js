@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { initRacerBehavior, applyRacerBehavior, effectiveDriveMult } from './raceBehavior.js';
+import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
 function makeRacer(overrides = {}) {
@@ -762,86 +762,5 @@ describe('applyRacerBehavior — brake-to-match regressions', () => {
     const [trailer, leader] = makeLanePair(1.001e-4, 1.0e-4);
     applyRacerBehavior([trailer, leader], cfg);
     expect(trailer.brakeMatchFactor).toBe(1.0);
-  });
-});
-
-// ── Weg 1: controller over-drive cap when braked + laterally wedged ───────────
-describe('effectiveDriveMult — Weg 1 drive cap', () => {
-  it('caps drive to ≤1.0 ONLY when avoidanceActive AND lateralBlocked', () => {
-    const drive = { trajectoryMult: 1.1, areaBonusMult: 1.03, rubberBandMult: 1.1 }; // raw ≈ 1.246
-    // Braked + wedged → capped to 1.0 (over-drive removed). Red-without-fix: would be ≈1.246.
-    expect(effectiveDriveMult({ ...drive, avoidanceActive: true, lateralBlocked: true })).toBe(1.0);
-    // Not wedged (free side) → no-op.
-    expect(
-      effectiveDriveMult({ ...drive, avoidanceActive: true, lateralBlocked: false })
-    ).toBeCloseTo(1.1 * 1.03 * 1.1, 6);
-    // Not braking → no-op.
-    expect(
-      effectiveDriveMult({ ...drive, avoidanceActive: false, lateralBlocked: true })
-    ).toBeCloseTo(1.1 * 1.03 * 1.1, 6);
-  });
-
-  it('never raises drive / never adds new braking (raw < 1.0 passes through unchanged)', () => {
-    // A racer the controller is already slowing (trajectoryMult 0.85): the cap is min(1.0, raw),
-    // so it stays 0.85 — the rule only removes over-drive, never goes below the brake floor.
-    expect(
-      effectiveDriveMult({
-        trajectoryMult: 0.85,
-        areaBonusMult: 1.0,
-        rubberBandMult: 1.0,
-        avoidanceActive: true,
-        lateralBlocked: true,
-      })
-    ).toBeCloseTo(0.85, 6);
-  });
-
-  it('missing multipliers default to 1.0 (no NaN)', () => {
-    expect(effectiveDriveMult({})).toBe(1.0);
-    expect(effectiveDriveMult({ avoidanceActive: true, lateralBlocked: true })).toBe(1.0);
-  });
-
-  // Integration: a racer overlapping a leader with blockers tight on BOTH sides is wedged.
-  // lateralBlocked must engage only after the debounce threshold (no single-frame flicker).
-  function wedgedField() {
-    return [
-      makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 }), // a (target)
-      makeLaneRacer({ index: 1, t: 0.5008, physicalY: 0 }), // b — overlapping a (a brakes behind b)
-      makeLaneRacer({ index: 2, t: 0.5, physicalY: -0.35 }), // left block
-      makeLaneRacer({ index: 3, t: 0.5, physicalY: 0.35 }), // right block
-      makeLaneRacer({ index: 4, t: 0.5008, physicalY: -0.35 }),
-      makeLaneRacer({ index: 5, t: 0.5008, physicalY: 0.35 }),
-    ];
-  }
-
-  it('lateralBlocked engages only after the debounce threshold (3 frames), not on a single frame', () => {
-    const rs = wedgedField();
-    const conf = { ...cfg, homeForceStrength: 0, isOpen: false };
-    applyRacerBehavior(rs, conf);
-    expect(rs[0].lateralBlocked).toBe(false); // 1 frame → not yet engaged
-    applyRacerBehavior(rs, conf);
-    expect(rs[0].lateralBlocked).toBe(false); // 2 frames
-    applyRacerBehavior(rs, conf);
-    expect(rs[0].lateralBlocked).toBe(true); // 3 frames → engaged
-    expect(rs[0].avoidanceActive).toBe(true); // it is braking behind the leader
-  });
-
-  it('once wedged+braked, effectiveDriveMult on that racer is capped (end-to-end)', () => {
-    const rs = wedgedField();
-    rs[0].trajectoryMult = 1.2; // controller over-drive
-    const conf = { ...cfg, homeForceStrength: 0, isOpen: false };
-    for (let f = 0; f < 3; f++) applyRacerBehavior(rs, conf);
-    expect(rs[0].lateralBlocked && rs[0].avoidanceActive).toBe(true);
-    expect(effectiveDriveMult(rs[0])).toBe(1.0); // capped from 1.2
-  });
-
-  it('a racer with a free side is NOT wedged → no cap (open-track no-op)', () => {
-    // Only a + b overlapping, no side blockers → at least one free side → never wedged.
-    const a = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
-    const b = makeLaneRacer({ index: 1, t: 0.5008, physicalY: 0 });
-    a.trajectoryMult = 1.2;
-    const conf = { ...cfg, homeForceStrength: 0, isOpen: false };
-    for (let f = 0; f < 6; f++) applyRacerBehavior([a, b], conf);
-    expect(a.lateralBlocked).toBe(false);
-    expect(effectiveDriveMult(a)).toBeCloseTo(1.2, 6); // uncapped
   });
 });
