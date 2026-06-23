@@ -2529,3 +2529,63 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Consequence:** Before deleting a storage layer, name the invariant the old path guaranteed (here: offline race-start from cache) and protect it explicitly; inventory test-only consumers of any removed prod constant and move them to a fixture.
 
 **Reference:** Session 2026-06-16. `trackLoader.js` cache, `sampleTracks.js` fixture. Commits `3d772bf`, `55f9137`.
+
+---
+
+## Lesson 146 — When Converting a Clock, Audit Every Subtraction in the Old Unit, Not Just the One You Changed
+
+**Context:** C0 controller-on-closed, feat/race-action (commit 712f334, 2026-06-20). The phase clock was converted from elapsed-time (elapsedMs) to leader-track-progress (raceProgress = leaderT / finishT) so the Race Plan controller could run on closed tracks. The conversion at the phase-selection site was correct. But the areaBonus fade duration still anchored on a millisecond subtraction (elapsedMs - transEnd). Once the trigger was progress-based but the anchor stayed ms-based, the subtraction could go negative when the leader was ahead of the time schedule → easeInOutCubic with unclamped t < 0 evaluates 4t³ (negative, unbounded) → areaBonusMult exploded to 5×–556× or went negative → racers teleported/reversed. The phase-selection conversion looked complete; the bug was in a different ms-subtraction nobody re-examined.
+
+**Insight:** Replacing one time base with another is not a single-site edit. Every expression that subtracts or compares in the old unit is a conversion site, including ones that look unrelated to the change (a fade duration is conceptually separate from phase selection, but both read the clock). A partial conversion leaves a mixed-unit expression that is silently wrong only in the regime where the two clocks diverge (here: leader ahead of schedule), so it passes casual testing.
+
+**Consequence:** When converting a clock or unit, grep for every use of the old variable and classify each as "converted," "intentionally still old," or "missed." Add a guard (Math.max(0, …)) on any easing input that could go negative after the change. The bug was found by the sim (empirical 33.6× → 1.03× after fix), not by code review — PC and Copilot both missed it reading the diff, because the offending subtraction was outside the lines that changed.
+
+**Reference:** client/src/screens/RaceScreen/index.jsx (raceProgress dual-clock, ~line 869); commits 14f3c6f (C0), 712f334 (C0-fix). Session 2026-06-20.
+
+---
+
+## Lesson 147 — Raw p-Values from a Multi-Combo Sweep Are Meaningless Without Correction
+
+**Context:** C0 fairness sweep, feat/race-action (2026-06-20). A 76-combo fairness sweep (track × racer × duration) raw-flagged 3 combos at p 0.005–0.010. Read individually each looked like a real start-position bias. But at 76 independent tests with α = 0.05, the expected number of false positives is ~3.8 — so 3 flags is fewer than chance predicts. None survived Holm, Bonferroni, or Benjamini-Hochberg correction. The flags also scattered across unrelated tracks/racers and non-front rows (8/3/6), and direction flipped within the same track×racer by duration — the fingerprint of seed noise, not a structural effect.
+
+**Insight:** A single p < 0.05 means "unlikely under the null for one test." Run 76 tests and you will see several such values even when every null is true. The raw p-value is not the probability the effect is real; without a multiple-testing correction it tells you almost nothing in a sweep. Two independent checks separate noise from signal: (1) a family-wise or FDR correction (Holm/Bonferroni/BH), and (2) a pattern check — do the flags cluster on a coherent mechanism (e.g. front rows, one track) or scatter randomly and flip direction across conditions?
+
+**Consequence:** Any sweep that tests many combos must report corrected significance, not raw p-values, and must state the expected false-positive count (n_tests × α) alongside the observed flag count. A flag count at or below the expected false-positive rate is consistent with no real effect. Before declaring a fairness regression, require both: survives correction AND shows a consistent, mechanism-plausible pattern.
+
+**Reference:** scripts/sim-fairness.mjs (Holm correction in fairness metrics, commit bfe5f08). Session 2026-06-20.
+
+---
+
+## Lesson 148 — An Aggregate Attribution Does Not Transfer to a Subset Without Separate Measurement
+
+**Context:** Overlap-on-closed investigation, feat/race-action (2026-06-20). An earlier controller-on/off comparison measured the controller adding ~24% to total overlap (+1.15pp; Ø 4.80% with vs 3.65% without). This was used to argue the long, stuck locks were also mostly pre-existing. The owner caught the contradiction: that 24% was the aggregate over all locks, which are 68.8% short (<90fr). A length-bucketed on/off run told a different story: long locks (>300fr) are 81% pre-existing (geometry/wedging), but the "ride to the finish together" pairs are +230% controller-driven (6.1 → 20.0 per race). The aggregate number was true and the subset claim derived from it was false.
+
+**Insight:** "The controller adds X% to the total" describes a weighted average dominated by the most common category. It says nothing about a rare subset (long locks, finish-bundling) unless that subset is measured separately. Carrying an aggregate attribution onto a specific sub-phenomenon is a category error — the same mechanism can be a minor contributor overall and the dominant contributor within one slice.
+
+**Consequence:** When attributing a sub-phenomenon (long locks, end-of-race behavior) to a cause, measure that subset directly — do not reuse an aggregate statistic. Bucket the metric (here: by lock-length and by end-reason) before assigning cause. Related to Lesson 128, but the failure is narrower: not "plausible vs measured," but "aggregate ≠ subset."
+
+**Reference:** Lock diagnosis scripts/diag-locks.mjs (length-bucketed, end-reason tagged); controller AN/AUS comparison, 60s default racers. Session 2026-06-20.
+
+---
+
+## Lesson 149 — One Shared Read-Value Prevents Divergence Better Than Capping in Two Places
+
+**Context:** Overlap Weg 1, feat/race-action (commit f7c295f, 2026-06-20). The rule "cap controller over-drive when a racer is braking and laterally wedged" had to clamp trajectoryMult × areaBonusMult × rubberBandMult to ≤ 1.0. That product feeds two sites: the brake-match denominator (trailerDenom, raceBehavior.js) and the t-update (r.t += … × drive, index.jsx + sim). Capping each site independently would let brake-match compute its cap from the uncapped drive while the actual advance used the capped one — a silent divergence where the two systems disagree about how fast the racer is going.
+
+**Insight:** When the same derived value is consumed at more than one site, the safe design is a single function both sites call, not the same transformation written twice. Two parallel clamps are two things that can drift apart under future edits; one shared reader cannot. The consistency is structural, not a matter of remembering to keep both copies in sync.
+
+**Consequence:** Export one accessor (effectiveDriveMult(r)) and route every consumer through it — the brake-match denominator, the game t-update, the sim t-update, and the camera lookahead (r.vt) all read the identical capped value. Game/sim parity then follows automatically because both call the same function with the same one-frame-lag inputs. Never apply the same cap or transform at two call sites.
+
+**Reference:** client/src/modules/raceBehavior.js:123 (effectiveDriveMult), read at raceBehavior.js:560-561 (brake-match), index.jsx t-update, sim-fairness.mjs t-update. Commit f7c295f. Session 2026-06-20.
+
+---
+
+## Lesson 150 — Re-Evaluate a Historical Safety Decision When Its Preconditions Have Changed
+
+**Context:** Overlap-on-closed, feat/race-action (2026-06-20). The strict brake-match cap (leaderBrake) is deliberately weakened to 1.0 on closed tracks (raceBehavior.js ~562) because, per Report 14, the tighter cap caused chain-lock for beetle/boarder on Dirt Oval. Git history shows that weakening was committed 2026-06-05, when the controller existed (2026-05-20) but did NOT run on closed tracks — the closed controller (C0) was only introduced this session. The fairness concern that justified the weakening was decided in a world where nothing self-corrected a racer held back by the brake; today the C0 controller's P-regulator boosts a fallen-behind racer once it is free.
+
+**Insight:** A safety mitigation encodes the conditions present when it was written. When the surrounding system changes (here: a self-correcting controller now runs on the same tracks), the original justification may no longer hold — but the mitigation stays in the code as if it were timeless. "We weakened this for safety" is not a permanent verdict; it is a decision relative to a context that can expire.
+
+**Consequence:** When a code comment cites a past regression as the reason for a conservative setting, check whether the preconditions still hold before treating the setting as immovable. If the context has changed, the correct next step is a measured trial under today's conditions (re-enable the strict path, sweep with the original regression's canaries — here beetle/boarder × Dirt Oval — plus chain-lock metrics), not blind trust in either the old caution or the new optimism. Measure, don't assume the old reason still applies.
+
+**Reference:** client/src/modules/raceBehavior.js ~562 (leaderBrake closed weakening + Report 14 comment); brake-match commit 1f43ee9 (2026-06-05) vs controller commit 596a1b2 (2026-05-20). Session 2026-06-20.
