@@ -28,6 +28,12 @@ const STUCK_P_THRESH = 0.008; // minimum totalPressure (rawPos + rawNeg) to qual
 const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near-cancel)
 const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
 
+// Lateral-wedge debounce (Weg 1): a racer counts as "blocked" for the drive cap only after a few
+// consistent wedged frames, and releases with the same hysteresis — prevents single-frame flicker
+// from toggling the cap (speed jitter). Mirrors the commit-latch debounce idiom used elsewhere.
+const LATERAL_BLOCK_THRESH = 3; // consecutive wedged frames before lateralBlocked engages
+const LATERAL_BLOCK_CAP = 6; // counter ceiling → releases a few free frames after saturation
+
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
 // Eliminates ~10 new Map/Set allocations per physics step (~37,500 per 60s race).
 // Each call clears + repopulates; no stale values leak between steps.
@@ -65,6 +71,9 @@ const _sameLaneLeaderObj = new Map();
 // Populated in the free-lane overlap block once dirA/dirB are final; cleared every step.
 const _ovlcEscapeDir = new Map(); // racerIndex → free-side direction (±1); absent = blocked
 const _ovlcPartnerY = new Map(); // racerIndex → overlapping partner physicalY (ramp source)
+// Weg 1: per-step set of racers that are overlapping AND have no free lateral side (wedged).
+// Debounced into racer.lateralBlocked in the apply-deltas loop; cleared every step.
+const _wedgedSet = new Set();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -95,6 +104,25 @@ export function computeBrakeMatchFactor(
   if (trailerDenom <= leaderFwdSpeed * (1 + minDifferential)) return 1.0;
   const rawFactor = leaderFwdSpeed / trailerDenom;
   return rawFactor * (1 - safetyMargin);
+}
+
+/**
+ * Effective controller/boost drive multiplier (trajectoryMult × areaBonusMult × rubberBandMult),
+ * capped to ≤1.0 when the racer is braking (avoidanceActive) AND laterally wedged (no free side).
+ * (Weg 1) Keeps the collision brake's precedence: a braked, boxed-in racer is not additionally
+ * accelerated into the body ahead. Over-drive removal ONLY — it never reduces drive below the raw
+ * value (min, not a new brake), so net speed never drops below the existing brake floor.
+ * Topology-neutral: on open a free side almost always exists → lateralBlocked rarely set → no-op.
+ * SINGLE SOURCE: read by BOTH the brake-match denominator (below) and the t-update (index.jsx + sim)
+ * so the cap can never diverge between the brake-match cap and the actual advance.
+ *
+ * @param {{trajectoryMult?:number, areaBonusMult?:number, rubberBandMult?:number,
+ *          avoidanceActive?:boolean, lateralBlocked?:boolean}} r
+ * @returns {number}
+ */
+export function effectiveDriveMult(r) {
+  const raw = (r.trajectoryMult ?? 1.0) * (r.areaBonusMult ?? 1.0) * (r.rubberBandMult ?? 1.0);
+  return r.avoidanceActive && r.lateralBlocked ? Math.min(1.0, raw) : raw;
 }
 
 /**
@@ -130,6 +158,10 @@ export function initRacerBehavior(racer) {
   // OVL-C: escape latch (all tracks). Mirrors approachCommitDir debounce.
   racer.escapeCommitDir = 0;
   racer.escapeCommitFrames = 0;
+  // Weg 1: debounced "braking with no free lateral side" flag, read by effectiveDriveMult to cap
+  // the controller over-drive. One-frame-lag cross-file pattern, same as avoidanceActive.
+  racer.lateralBlocked = false;
+  racer.lateralBlockedFrames = 0;
 }
 
 /**
@@ -371,6 +403,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _sameLaneLeaderObj.clear();
   _ovlcEscapeDir.clear();
   _ovlcPartnerY.clear();
+  _wedgedSet.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
@@ -522,18 +555,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
           const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
           const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-          const leaderRawSpeed =
-            (leader.baseSpeed ?? 0) *
-            boostL *
-            (leader.trajectoryMult ?? 1.0) *
-            (leader.areaBonusMult ?? 1.0) *
-            (leader.rubberBandMult ?? 1.0);
-          const trailerDenom =
-            (trailer.baseSpeed ?? 0) *
-            boostT *
-            (trailer.trajectoryMult ?? 1.0) *
-            (trailer.areaBonusMult ?? 1.0) *
-            (trailer.rubberBandMult ?? 1.0);
+          // Weg 1: read the (possibly capped) drive via effectiveDriveMult so the brake-match cap
+          // and the actual t-update advance use the IDENTICAL drive value (no divergence).
+          const leaderRawSpeed = (leader.baseSpeed ?? 0) * boostL * effectiveDriveMult(leader);
+          const trailerDenom = (trailer.baseSpeed ?? 0) * boostT * effectiveDriveMult(trailer);
           // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
           // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
           // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
@@ -619,6 +644,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
 
           const aBlocked = !aLeftFree && !aRightFree;
           const bBlocked = !bLeftFree && !bRightFree;
+
+          // Weg 1: this racer is overlapping AND has no free side → wedged (debounced below).
+          if (aBlocked) _wedgedSet.add(rA.index);
+          if (bBlocked) _wedgedSet.add(rB.index);
 
           if (!aBlocked && !bBlocked) {
             if (aLeftFree && aRightFree && bLeftFree && bRightFree) {
@@ -1000,6 +1029,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     if (clamped !== newY) r.physicalYVelocity = 0;
     r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
+
+    // Weg 1: debounce the wedged signal into r.lateralBlocked (hysteresis prevents flicker).
+    r.lateralBlockedFrames = _wedgedSet.has(r.index)
+      ? Math.min(LATERAL_BLOCK_CAP, r.lateralBlockedFrames + 1)
+      : Math.max(0, r.lateralBlockedFrames - 1);
+    r.lateralBlocked = r.lateralBlockedFrames >= LATERAL_BLOCK_THRESH;
 
     // ── Brake-to-match hold state update ──────────────────────────────────
     // Constants read once per racer for clarity; values from config with safe defaults.

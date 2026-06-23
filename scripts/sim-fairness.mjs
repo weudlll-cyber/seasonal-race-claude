@@ -124,7 +124,11 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
-import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
+import {
+  applyRacerBehavior,
+  initRacerBehavior,
+  effectiveDriveMult,
+} from '../client/src/modules/raceBehavior.js';
 import {
   computeBodyNarrowRef,
   computeEvenRowLayout,
@@ -741,8 +745,10 @@ export function runSingleRace({
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
           // trajectoryMult + areaBonusMult: both 1.0 when Race Plan inactive
+          // Weg 1: effectiveDriveMult caps trajectoryMult×areaBonusMult×rubberBandMult to ≤1.0 when
+          // braking AND laterally wedged (parity with index.jsx). No-op otherwise.
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * effectiveDriveMult(r) * (DT / 16);
         }
       }
 

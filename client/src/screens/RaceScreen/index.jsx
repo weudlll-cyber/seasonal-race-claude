@@ -56,7 +56,11 @@ import {
   loadRaceBehaviorConfig,
   computeEffectiveBrakeFactor,
 } from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
+import {
+  initRacerBehavior,
+  applyRacerBehavior,
+  effectiveDriveMult,
+} from '../../modules/raceBehavior.js';
 import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
   computeRacerLayout,
@@ -979,15 +983,11 @@ export default function RaceScreen() {
             const zoneMult = zoneMultAt(zt, zones);
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
+              // Weg 1: effectiveDriveMult caps trajectoryMult×areaBonusMult×rubberBandMult to ≤1.0
+              // when this racer is braking AND laterally wedged (no free side) — so the controller
+              // over-drive cannot accelerate a boxed-in body into the racer ahead. No-op otherwise.
               r.t = Math.min(
-                r.t +
-                  r.baseSpeed *
-                    boost *
-                    brake *
-                    r.trajectoryMult *
-                    r.areaBonusMult *
-                    r.rubberBandMult *
-                    zoneMult,
+                r.t + r.baseSpeed * boost * brake * effectiveDriveMult(r) * zoneMult,
                 st.finishT + 0.001
               );
             } else {
@@ -1000,14 +1000,7 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed *
-                    boost *
-                    brake *
-                    r.trajectoryMult *
-                    r.areaBonusMult *
-                    r.rubberBandMult *
-                    zoneMult) /
-                  race_baseSpeed
+                ? (r.baseSpeed * boost * brake * effectiveDriveMult(r) * zoneMult) / race_baseSpeed
                 : 0;
           }
           // D4: equalize all non-finished racers to the mean delta-t
