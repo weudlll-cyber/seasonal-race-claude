@@ -270,15 +270,26 @@ describe('applyRacerBehavior — avoidance', () => {
     expect(r1.physicalY).toBeCloseTo(-0.05, 5);
   });
 
-  it('avoidance skips when both racers share the same physicalY (yDiff≈0)', () => {
-    // yDiff=0 → avoidance direction skip. isOpen:false disables Stage B (open-track only)
-    // so this test isolates avoidance behavior only.
-    // dT=0.029: longPx=34.8 — gate passes (< 37.2), free-lane tHalfSpan=0.0258 < dT → no overlap.
-    const r1 = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
-    const r2 = makeLaneRacer({ index: 1, t: 0.529, physicalY: 0 });
+  it('yDiff≈0: trailer de-stacks deterministically, leader holds (closed, asymmetric)', () => {
+    // De-stacking now runs on closed tracks. With both bodies in the same lane (yDiff=0),
+    // Stage B acts on the TRAILER only — trailer yields, leader holds (the asymmetric
+    // avoidance design). The trailer is pushed to a deterministic side via the stable
+    // tie-direction (stablePairBit + index), so the stack resolves; the leader stays put.
+    // (Symmetric opposite-direction separation needs a true overlap, dT ≤ 0.0258; here
+    // dT=0.029 sits in the gate zone, so only the Stage-B trailer push fires.)
+    const r1 = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 }); // trailer (lower t)
+    const r2 = makeLaneRacer({ index: 1, t: 0.529, physicalY: 0 }); // leader
     applyRacerBehavior([r1, r2], { ...cfg, homeForceStrength: 0, isOpen: false });
-    expect(r1.physicalY).toBe(0);
-    expect(r2.physicalY).toBe(0);
+    expect(r1.physicalY).toBeLessThan(0); // trailer de-stacks to the deterministic tie-side
+    expect(r1.physicalY).toBeCloseTo(-0.00194, 5); // measured magnitude (regression guard)
+    expect(r2.physicalY).toBe(0); // leader holds
+
+    // Determinism: identical inputs → identical de-stack (no randomness).
+    const s1 = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
+    const s2 = makeLaneRacer({ index: 1, t: 0.529, physicalY: 0 });
+    applyRacerBehavior([s1, s2], { ...cfg, homeForceStrength: 0, isOpen: false });
+    expect(s1.physicalY).toBe(r1.physicalY);
+    expect(s2.physicalY).toBe(r2.physicalY);
   });
 
   it('asymmetric: trailer yields, leader physicalY unchanged', () => {
@@ -434,24 +445,36 @@ describe('applyRacerBehavior — free-lane separation', () => {
     expect(b.physicalY).toBeGreaterThan(0.03);
   });
 
-  it('all sides blocked: no additional free-lane action (force logic fallback)', () => {
-    const a = makeLaneRacer({ index: 40, t: 0.5, physicalY: 0.0 });
-    const b = makeLaneRacer({ index: 41, t: 0.501, physicalY: 0.0 });
-    const blockALeft = makeLaneRacer({ index: 42, t: 0.5, physicalY: -40 / 140 });
-    const blockARight = makeLaneRacer({ index: 43, t: 0.5, physicalY: 40 / 140 });
-    const blockBLeft = makeLaneRacer({ index: 44, t: 0.501, physicalY: -40 / 140 });
-    const blockBRight = makeLaneRacer({ index: 45, t: 0.501, physicalY: 40 / 140 });
+  it('yDiff≈0 with all sides blocked: central pair de-stacks deterministically (closed)', () => {
+    // De-stacking now runs on closed tracks. The central overlapping pair (a, b) both sit
+    // at physicalY=0; each is a trailer in some pair (a behind b; b ahead of its same-t
+    // blockers by index tie-break), so Stage B pushes both to the deterministic tie-side.
+    // Previously this asserted "no movement" via isOpen:false disabling Stage B — that
+    // isolation is gone. The result is bounded and reproducible (no randomness).
+    const make = () => {
+      const a = makeLaneRacer({ index: 40, t: 0.5, physicalY: 0.0 });
+      const b = makeLaneRacer({ index: 41, t: 0.501, physicalY: 0.0 });
+      const blockALeft = makeLaneRacer({ index: 42, t: 0.5, physicalY: -40 / 140 });
+      const blockARight = makeLaneRacer({ index: 43, t: 0.5, physicalY: 40 / 140 });
+      const blockBLeft = makeLaneRacer({ index: 44, t: 0.501, physicalY: -40 / 140 });
+      const blockBRight = makeLaneRacer({ index: 45, t: 0.501, physicalY: 40 / 140 });
+      applyRacerBehavior([a, b, blockALeft, blockARight, blockBLeft, blockBRight], {
+        ...cfg,
+        homeForceStrength: 0,
+        isOpen: false,
+      });
+      return { a, b };
+    };
+    const { a, b } = make();
+    expect(a.physicalY).toBeLessThan(0); // de-stacks to the deterministic tie-side
+    expect(b.physicalY).toBeLessThan(0);
+    expect(a.physicalY).toBeCloseTo(-0.002736, 5); // measured magnitude (regression guard)
+    expect(b.physicalY).toBeCloseTo(-0.00191086, 5);
 
-    // isOpen: false scopes to closed-track / free-lane-separation behavior only;
-    // Stage B (same-lane commit) is open-track only and must not affect this assertion.
-    applyRacerBehavior([a, b, blockALeft, blockARight, blockBLeft, blockBRight], {
-      ...cfg,
-      homeForceStrength: 0,
-      isOpen: false,
-    });
-
-    expect(a.physicalY).toBe(0);
-    expect(b.physicalY).toBe(0);
+    // Determinism: identical inputs → identical de-stack.
+    const second = make();
+    expect(second.a.physicalY).toBe(a.physicalY);
+    expect(second.b.physicalY).toBe(b.physicalY);
   });
 
   it('exact same physicalY uses deterministic tie direction', () => {
@@ -651,7 +674,11 @@ describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
   // Fix latPx across both racers so latFraction is identical → only lateralScale varies.
   // dT=0.029 chosen so: longPx=34.8 is inside gate (< longTrigger=37.2) but outside
   // free-lane zone (> contactLength=31), isolating pure avoidance force.
-  // isOpen:false disables Stage B so approachCommitDir stays 0 on both racers.
+  // De-stacking now runs on all tracks, so Stage B is no longer flag-gated. The
+  // scale-ratio test (below) isolates pure base avoidance via GEOMETRY instead: it uses
+  // a lateral offset large enough that Stage B's same-lane gate (|yDiff| < sameLaneHH)
+  // does not fire. The two clamp tests keep a small latPx but compare EQUAL-latPx pairs,
+  // so any Stage-B force is identical on both sides and cancels in the equality.
   // contactWidth=28 (drawnBodyWidthPx from makeLaneRacer) → latTrigger=33.6px.
   // rA (index=0) is trailer (lower index, same t) → pushed in positive direction by avoidance.
   function avoidDeltaFixedPx(trackW, latPxTarget) {
@@ -661,16 +688,17 @@ describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
     const rB = makeLaneRacer({ index: 1, t: 0.529, trackWidthPx: trackW });
     rA.physicalY = physicalYOffset;
     rB.physicalY = -physicalYOffset;
-    applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0, isOpen: false });
+    applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0 });
     return rA.physicalY - physicalYOffset;
   }
 
   it('scale = 1.0 at reference width (98 px), 0.5 at double reference (196 px)', () => {
-    // Same latPx=7 → same latFraction → only lateralScale differs (1.0 vs 0.5).
-    // derivation: latPx=7 < latTrigger=33.6 ✓; lateralScale98=98/98=1.0; scale196=0.5.
-    // delta196 / delta98 = 0.5.
-    const delta98 = avoidDeltaFixedPx(98, 7);
-    const delta196 = avoidDeltaFixedPx(196, 7);
+    // Isolate base avoidance scaling via geometry: latPx=15 ≥ 14 keeps Stage B silent
+    // (|yDiff| = 4·latPx/trackW ≥ sameLaneHH = 56/trackW ⇔ latPx ≥ 14), while the gate
+    // still fires (gate latPx = 2·latPx = 30 < latTrigger 33.6). Same latPx → same
+    // latFraction → only lateralScale differs (98/98=1.0 vs 98/196=0.5) → ratio 0.5.
+    const delta98 = avoidDeltaFixedPx(98, 15);
+    const delta196 = avoidDeltaFixedPx(196, 15);
     expect(delta98).toBeGreaterThan(0); // gate fires, force non-zero at reference width
     expect(delta196).toBeCloseTo(delta98 * 0.5, 10);
   });

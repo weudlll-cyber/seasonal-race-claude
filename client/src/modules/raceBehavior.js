@@ -123,11 +123,11 @@ export function initRacerBehavior(racer) {
   racer.brakeMatchFactor = 1.0;
   racer.brakeMatchFrames = 0;
   racer.brakeReleaseFrames = 0;
-  // Step-2 Stage B: lateral commitment state (open tracks only).
+  // Step-2 Stage B: lateral commitment state (all tracks).
   // approachCommitDir: −1 (left), 0 (none), +1 (right). Debounced to prevent zigzag.
   racer.approachCommitDir = 0;
   racer.approachCommitFrames = 0;
-  // OVL-C: escape latch (open tracks only). Mirrors approachCommitDir debounce.
+  // OVL-C: escape latch (all tracks). Mirrors approachCommitDir debounce.
   racer.escapeCommitDir = 0;
   racer.escapeCommitFrames = 0;
 }
@@ -433,11 +433,12 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
       const dY = rA.physicalY - rB.physicalY;
 
-      // ── Step-2 clearance accumulators (Stage A — open tracks only) ────────────
+      // ── Step-2 clearance accumulators (Stage A — all tracks) ──────────────────
       // Runs BEFORE Y-rejection so the clearance corridor is not clipped by the
       // avoidance gate. Uses its own geometric gate (2 × honest half-span).
       // Not yet consumed — populated here for budget measurement only.
-      if (config.isOpen !== false) {
+      // Bare block (no isOpen gate): de-stacking now runs on closed tracks too.
+      {
         const twA = getTrackWidthAtTpx(rA);
         const twB = getTrackWidthAtTpx(rB);
         const pairTW = Math.max(twA, twB);
@@ -672,11 +673,11 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
       const yDiff = trailer.physicalY - leader.physicalY;
 
-      // ── Step-2 Stage B: same-lane approach detection (open tracks only) ────────
+      // ── Step-2 Stage B: same-lane approach detection (all tracks) ─────────────
       // Fires when the trailer is within one honest body half-span of the leader laterally.
       // Stores this trailer as needing a committed side choice, plus the current forceMag
       // for magnitude-bounded force injection in the apply-deltas loop.
-      if (config.isOpen !== false && trackWidth > 0) {
+      if (trackWidth > 0) {
         const sameLaneHH = pxToPhysicalY(
           Math.max(
             trailer.drawnBodyWidthPx ?? trailer.frameSizePx ?? 0,
@@ -828,9 +829,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
     }
 
-    // ── Step-2 Stage B: lateral commitment (open tracks only) ─────────────────
+    // ── Step-2 Stage B/C/D + OVL-C: lateral commitment + escape (all tracks) ──
     // Consume the Stage A/B accumulators to update the committed side and inject force.
-    if (config.isOpen !== false) {
+    // Bare block (no isOpen gate): the active de-stacking now runs on closed tracks too.
+    {
       const inSameLane = _sameLaneApproach.has(r.index);
       if (inSameLane) {
         // Leader-relative direction: steer to the side the trailer is already on,
