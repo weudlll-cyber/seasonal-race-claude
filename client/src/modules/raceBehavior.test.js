@@ -688,7 +688,11 @@ describe('applyRacerBehavior — track-relative lateralForce scaling', () => {
     const rB = makeLaneRacer({ index: 1, t: 0.529, trackWidthPx: trackW });
     rA.physicalY = physicalYOffset;
     rB.physicalY = -physicalYOffset;
-    applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0 });
+    // commitDirDeadZoneY: 0 isolates lateralScale — the tiny latPx here yields relPos values
+    // that would otherwise straddle the default dead-zone (pairTieDir vs sign(relPos)) across the
+    // two compared track widths. With the dead-zone off, both sides use sign(relPos) and any
+    // Stage-B force is identical on both, cancelling in the equality.
+    applyRacerBehavior([rA, rB], { ...cfg, homeForceStrength: 0, commitDirDeadZoneY: 0 });
     return rA.physicalY - physicalYOffset;
   }
 

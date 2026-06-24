@@ -849,7 +849,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         if (lpy !== undefined) {
           const relPos = r.physicalY - lpy;
           const naturalDir =
-            Math.abs(relPos) >= 1e-6
+            Math.abs(relPos) >= (config.commitDirDeadZoneY ?? 0.04)
               ? relPos >= 0
                 ? 1
                 : -1

@@ -403,12 +403,17 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // brakeHoldEscapeReleaseDurationFrames: frames of forced brake-release after timeout.
   // brakeHoldEscapeCooldownFrames: frames after escape before re-lock is allowed.
   // brakeReleaseDebounceFrames: consecutive clear frames needed to exit hold.
+  // commitDirDeadZoneY: |relPos| band (physicalY) within which the de-stacking commit
+  //   direction holds the stable pairTieDir side instead of sign(relPos). Prevents the
+  //   sign flip at relPos≈0 (home force pulling racers through center) that drives the
+  //   slow lateral pendulum limit-cycle. Outside the band, sign(relPos) applies as before.
   speedMatchMinDifferential: 0.005,
   speedMatchSafetyMargin: 0.001,
   brakeHoldTimeoutFrames: 90,
   brakeHoldEscapeReleaseDurationFrames: 15,
   brakeHoldEscapeCooldownFrames: 60,
   brakeReleaseDebounceFrames: 3,
+  commitDirDeadZoneY: 0.04,
   // Step-2 Stage D: gap-clearing force (open tracks only).
   // Adds a self-limiting proportional lateral impulse when two racers are in a same-lane
   // approach, targeting honest body clearance (|yDiff| ≥ honestBodyWidthPx / trackWidth).
