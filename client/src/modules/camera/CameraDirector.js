@@ -1893,6 +1893,19 @@ export class CameraDirector {
         ? this.targetZoom * OPEN_TRACK_BASE_ZOOM
         : this.targetZoom * this._bsX;
       const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
+      if (this.state === 'LEADER_ZOOM') {
+        console.log('[CAM_DBG]', {
+          visCount,
+          activeCount: racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0,
+          effZoom: +effZoom.toFixed(4),
+          thisZoom: +this.zoom.toFixed(4),
+          targetZoom: +this.targetZoom.toFixed(4),
+          bsX: +this._bsX.toFixed(4),
+          offsetX: +this.offsetX.toFixed(1),
+          targetOffX: +this.targetOffsetX.toFixed(1),
+          floor: this._leaderPhaseZoomFloor != null ? +this._leaderPhaseZoomFloor.toFixed(4) : null,
+        });
+      }
       const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
       const visTarget = Math.min(this._minRacersVisible, activeCount);
       // Initialize floor to natural targetZoom on first frame of this phase.
