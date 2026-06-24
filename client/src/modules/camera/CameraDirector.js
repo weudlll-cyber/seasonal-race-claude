@@ -1879,32 +1879,20 @@ export class CameraDirector {
     // Also stops early when all active (non-finished) racers are already visible, even if that
     // count is below minRacersVisible — prevents ratcheting to the hard floor with small fields.
     // One-directional within a phase: floor only decrements, never increments.
-    // TEMP DEBUG: unconditional per-frame trajectory log — fires in BOTH 'entry' and
-    // 'tracking' so we can see whether this.zoom climbs to leaderZoom before tracking
-    // begins (the ratchet block below only runs in 'tracking' due to the entry guard).
-    if (this.state === 'LEADER_ZOOM') {
-      console.log('[CAM_DBG2E]', {
-        lerpPhase: this._lerpPhase,
-        thisZoom: +this.zoom.toFixed(4),
-        targetZoom: +this.targetZoom.toFixed(4),
-        floor: this._leaderPhaseZoomFloor != null ? +this._leaderPhaseZoomFloor.toFixed(4) : null,
-        bsX: +this._bsX.toFixed(4),
-      });
-    }
     if (
       this._minRacersVisible > 0 &&
-      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE) &&
-      this._lerpPhase === 'tracking'
+      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE)
     ) {
-      // Fix A: use targetZoom (not this.zoom) to evaluate visibility. During entry phase
-      // this.zoom is still low (camera zooming in from OVERVIEW), so using this.zoom would
-      // show all racers as visible and prevent the floor from decrementing. Using targetZoom
-      // (the resolved leaderZoom) correctly represents the intended zoom level, so the floor
-      // starts ratcheting down from the first LEADER_ZOOM frame. This ensures entry converges
-      // to the correct tracking zoom instead of overshooting to the raw config value.
-      const effZoom = this._isOpenTrack
-        ? this.targetZoom * OPEN_TRACK_BASE_ZOOM
-        : this.targetZoom * this._bsX;
+      // Evaluate visibility at the LIVE zoom (this.zoom), not the target zoom. The pan offset
+      // (this.offsetX) is computed by _setClosedTrackTargets / _setOpenTrackTargets at
+      // currEffZoom = this.zoom × bsX (or × BASE for open), so the visibility test must use the
+      // same zoom to stay geometrically consistent. Using targetZoom while this.zoom is still
+      // lerping makes effZoom and this.offsetX disagree, mapping every racer off-screen
+      // (visCount = 0) and ratcheting the floor to its hard minimum (whole field shown).
+      // During entry this.zoom is low (wide view from OVERVIEW) → most racers count as visible →
+      // floor holds at its initial value; once this.zoom reaches leaderZoom and fewer than
+      // visTarget racers are genuinely on-screen, the floor ratchets down until visTarget reappear.
+      const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
       const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
       const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
       const visTarget = Math.min(this._minRacersVisible, activeCount);
@@ -1929,18 +1917,6 @@ export class CameraDirector {
       }
       // Apply floor: targetZoom cannot exceed floor (prevents zoom-in mid-phase).
       this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
-      // TEMP DEBUG: post-clamp trajectory + visibility (tracking-phase only).
-      if (this.state === 'LEADER_ZOOM') {
-        console.log('[CAM_DBG2]', {
-          lerpPhase: this._lerpPhase,
-          thisZoom: +this.zoom.toFixed(4),
-          targetZoom: +this.targetZoom.toFixed(4),
-          floor: this._leaderPhaseZoomFloor != null ? +this._leaderPhaseZoomFloor.toFixed(4) : null,
-          visCount,
-          visTarget,
-          effZoom: +effZoom.toFixed(4),
-        });
-      }
     }
   }
 
