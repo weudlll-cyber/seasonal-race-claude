@@ -1879,6 +1879,18 @@ export class CameraDirector {
     // Also stops early when all active (non-finished) racers are already visible, even if that
     // count is below minRacersVisible — prevents ratcheting to the hard floor with small fields.
     // One-directional within a phase: floor only decrements, never increments.
+    // TEMP DEBUG: unconditional per-frame trajectory log — fires in BOTH 'entry' and
+    // 'tracking' so we can see whether this.zoom climbs to leaderZoom before tracking
+    // begins (the ratchet block below only runs in 'tracking' due to the entry guard).
+    if (this.state === 'LEADER_ZOOM') {
+      console.log('[CAM_DBG2E]', {
+        lerpPhase: this._lerpPhase,
+        thisZoom: +this.zoom.toFixed(4),
+        targetZoom: +this.targetZoom.toFixed(4),
+        floor: this._leaderPhaseZoomFloor != null ? +this._leaderPhaseZoomFloor.toFixed(4) : null,
+        bsX: +this._bsX.toFixed(4),
+      });
+    }
     if (
       this._minRacersVisible > 0 &&
       (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE) &&
@@ -1917,6 +1929,18 @@ export class CameraDirector {
       }
       // Apply floor: targetZoom cannot exceed floor (prevents zoom-in mid-phase).
       this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
+      // TEMP DEBUG: post-clamp trajectory + visibility (tracking-phase only).
+      if (this.state === 'LEADER_ZOOM') {
+        console.log('[CAM_DBG2]', {
+          lerpPhase: this._lerpPhase,
+          thisZoom: +this.zoom.toFixed(4),
+          targetZoom: +this.targetZoom.toFixed(4),
+          floor: this._leaderPhaseZoomFloor != null ? +this._leaderPhaseZoomFloor.toFixed(4) : null,
+          visCount,
+          visTarget,
+          effZoom: +effZoom.toFixed(4),
+        });
+      }
     }
   }
 
