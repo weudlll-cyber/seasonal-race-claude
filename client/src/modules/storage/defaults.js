@@ -37,7 +37,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 15,
+  schemaVersion: 16,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -231,6 +231,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   leaderMinZoom: 0.4,
   // Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5%/frame at 60 fps.
   zoomOutStepPerFrame: 0.005,
+  // World-size-independent zoom-out floor for LEADER_ZOOM / LEAD_CHANGE, as a fraction of the
+  // configured leader zoom. floor = max(blackScreenFloor, leaderMinZoomFraction × leaderZoom).
+  // 1.0 = camera stays pinned at leader zoom (no zoom-out); 0.6 = may zoom out to 60% of leader
+  // zoom; low values approach whole-world zoom on large tracks. Range: 0.1–1.0.
+  leaderMinZoomFraction: 0.6,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.

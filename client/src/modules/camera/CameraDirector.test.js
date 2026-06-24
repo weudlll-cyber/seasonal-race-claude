@@ -5596,7 +5596,7 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
     { x: 400, y: 200, t: 0.7, index: 2, finished: false },
   ];
 
-  function makeDir(min = 3, floor = 0.4, step = 0.01) {
+  function makeDir(min = 3, floor = 0.4, step = 0.01, fraction = 0.6) {
     const dir = new CameraDirector(
       WORLD_W,
       CANVAS_H,
@@ -5604,6 +5604,7 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
       {
         minRacersVisible: min,
         leaderMinZoom: floor,
+        leaderMinZoomFraction: fraction,
         zoomOutStepPerFrame: step,
       },
       36
@@ -5633,8 +5634,9 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
   });
 
   it('floor stops at 1.0 on closed track regardless of leaderMinZoom=0.4', () => {
-    // Closed track (WORLD_W=1280, isOpenTrack=false): effectiveFloor = max(0.4, 1.0) = 1.0.
-    const dir = makeDir(3, 0.4, 0.01);
+    // Closed track (WORLD_W=1280, isOpenTrack=false). Fraction floor disabled (leaderMinZoomFraction=0)
+    // to isolate the black-screen clamp: effectiveFloor = max(1.0, 0) = 1.0.
+    const dir = makeDir(3, 0.4, 0.01, 0);
     dir._leaderPhaseZoomFloor = 1.01; // one step above effective floor=1.0
     dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
     expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
@@ -5643,13 +5645,32 @@ describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
     expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
   });
 
+  it('floor stops at leaderMinZoomFraction × leaderZoom when that dominates', () => {
+    // Default fraction 0.6: effectiveFloor = max(1.0, 0.6 × leaderZoom) — world-independent cap.
+    const dir = makeDir(3, 0.4, 0.01, 0.6);
+    const expectedFloor = Math.max(1.0, 0.6 * dir._leaderZoom);
+    expect(expectedFloor).toBeGreaterThan(1.0); // precondition: fraction floor dominates here
+    dir._leaderPhaseZoomFloor = expectedFloor + 0.01;
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(expectedFloor, 4);
+    // Already at fraction floor — must not descend further
+    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
+    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(expectedFloor, 4);
+  });
+
   it('floor stops at leaderMinZoom on open track (no closed-track clamp)', () => {
-    // Open track: effectiveFloor = leaderMinZoom = 0.4 (no 1.0 clamp applied).
+    // Open track with fraction floor disabled (leaderMinZoomFraction=0): effectiveFloor =
+    // max(leaderMinZoom, 0) = 0.4 (no 1.0 clamp applied).
     const openDir = new CameraDirector(
       WORLD_W,
       CANVAS_H,
       true, // isOpenTrack
-      { minRacersVisible: 3, leaderMinZoom: 0.4, zoomOutStepPerFrame: 0.01 },
+      {
+        minRacersVisible: 3,
+        leaderMinZoom: 0.4,
+        leaderMinZoomFraction: 0,
+        zoomOutStepPerFrame: 0.01,
+      },
       36
     );
     openDir.state = CAM_STATE.LEADER_ZOOM;

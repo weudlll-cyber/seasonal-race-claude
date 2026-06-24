@@ -302,3 +302,13 @@ export function migrateV14toV15(config) {
     schemaVersion: 15,
   };
 }
+
+// v15→v16: add leaderMinZoomFraction at its default. All other fields pass through unchanged.
+export function migrateV15toV16(config) {
+  return {
+    ...config,
+    leaderMinZoomFraction:
+      config.leaderMinZoomFraction ?? DEFAULT_CAMERA_CONFIG.leaderMinZoomFraction,
+    schemaVersion: 16,
+  };
+}

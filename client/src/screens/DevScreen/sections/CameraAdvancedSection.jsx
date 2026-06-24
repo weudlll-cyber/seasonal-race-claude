@@ -690,6 +690,17 @@ function CameraAdvancedSection() {
             tip="Minimum non-finished racers that must be visible in LEADER_ZOOM / LEAD_CHANGE. Camera zooms out until this count is met or the floor is hit. 0 = disabled. Default 8."
           />
           <SliderRow
+            label="Leader min zoom fraction"
+            testId="regie-leader-min-zoom-fraction"
+            min={0.1}
+            max={1.0}
+            step={0.05}
+            value={config.leaderMinZoomFraction ?? 0.6}
+            onChange={(e) => set('leaderMinZoomFraction', parseFloat(e.target.value))}
+            display={(config.leaderMinZoomFraction ?? 0.6).toFixed(2)}
+            tip="Minimum zoom as a fraction of leader zoom. 1.0 = camera stays pinned at leader zoom (no zoom-out). 0.6 = camera may zoom out to 60% of leader zoom. Low values approach whole-world zoom on large tracks. Default 0.60."
+          />
+          <SliderRow
             label="Leader min zoom (floor)"
             testId="regie-leader-min-zoom"
             min={0.1}

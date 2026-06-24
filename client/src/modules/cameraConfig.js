@@ -57,6 +57,9 @@
 //              Schema v15 (2026-05-26): adds overviewClosedTrackZoom (default 1.3) — zoom multiplier
 //              that gives the OVERVIEW camera pan room on closed tracks (mirrors OPEN_TRACK_BASE_ZOOM).
 //              v14→v15 migration injects the field at its default.
+//              Schema v16 (2026-06-24): adds leaderMinZoomFraction (default 0.6) — world-size-
+//              independent LEADER_ZOOM / LEAD_CHANGE zoom-out floor, expressed as a fraction of
+//              the leader zoom. v15→v16 migration injects the field at its default.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -75,6 +78,7 @@ import {
   migrateV12toV13,
   migrateV13toV14,
   migrateV14toV15,
+  migrateV15toV16,
 } from './cameraMigrations.js';
 
 export { DEFAULT_CAMERA_CONFIG };
@@ -90,9 +94,10 @@ const MIGRATION_CHAIN = [
   migrateV12toV13,
   migrateV13toV14,
   migrateV14toV15,
+  migrateV15toV16,
 ];
 
-// Apply migrations to bring a config from `fromVersion` (>=5) up to v15.
+// Apply migrations to bring a config from `fromVersion` (>=5) up to v16.
 function applyMigrationsSinceV5(config, fromVersion) {
   return MIGRATION_CHAIN.slice(Math.max(0, fromVersion - 5)).reduce(
     (cfg, migrate) => migrate(cfg),
@@ -251,7 +256,8 @@ export function loadCameraConfig() {
   }
 
   if (stored.schemaVersion === 14) {
-    // v14→v15: merge top-level fields, deep-merge profiles, inject overviewClosedTrackZoom.
+    // v14→v16: merge top-level fields, deep-merge profiles, inject overviewClosedTrackZoom +
+    // leaderMinZoomFraction via the migration chain.
     const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
     if (stored.cameraStateProfiles) {
       merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
@@ -259,9 +265,18 @@ export function loadCameraConfig() {
     return applyMigrationsSinceV5(merged, 14);
   }
 
-  if (stored.schemaVersion !== 15) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 15) {
+    // v15→v16: merge top-level fields, deep-merge profiles, inject leaderMinZoomFraction.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
+    }
+    return applyMigrationsSinceV5(merged, 15);
+  }
 
-  // v15: merge top-level fields, then deep-merge cameraStateProfiles.
+  if (stored.schemaVersion !== 16) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v16: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
@@ -270,5 +285,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 15 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 16 });
 }

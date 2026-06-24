@@ -436,6 +436,7 @@ export class CameraDirector {
     this._overviewMinEffZoom = t.overviewMinEffZoom ?? 0;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
+    this._leaderMinZoomFraction = config?.leaderMinZoomFraction ?? 0.6;
     this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
     this._focalSmoothTc = config?.focalSmoothTc ?? 0.05;
     // Pre-compute per-60fps EMA base factor from TC. 0 when TC=0 (disabled).
@@ -1900,12 +1901,15 @@ export class CameraDirector {
       if (this._leaderPhaseZoomFloor === null) {
         this._leaderPhaseZoomFloor = this.targetZoom;
       }
-      // On closed tracks cam.zoom must stay >= 1.0: below that, _setClosedTrackTargets
-      // computes the pan offset at minEffZoom=bsX but rendering uses the lower effZoom,
-      // squeezing the world into the top-left corner of the canvas (black screen bug).
+      // World-size-independent floor: leaderMinZoomFraction × leaderZoom keeps the camera from
+      // zooming out below a fixed fraction of the leader zoom (effZoom = fraction × spriteScale,
+      // identical visual scale on every world). On closed tracks cam.zoom must also stay >= 1.0:
+      // below that, _setClosedTrackTargets computes the pan offset at minEffZoom=bsX but rendering
+      // uses the lower effZoom, squeezing the world into the top-left corner (black screen bug).
+      const fractionFloor = this._leaderMinZoomFraction * this._leaderZoom;
       const effectiveFloor = this._isOpenTrack
-        ? this._leaderMinZoom
-        : Math.max(this._leaderMinZoom, 1.0);
+        ? Math.max(this._leaderMinZoom, fractionFloor)
+        : Math.max(1.0, fractionFloor);
       // Ratchet floor down when under-visible and above effective hard floor.
       // dt-scaled so zoom-out speed is time-proportional (=1.0 at 16.67ms/60fps).
       if (visCount < visTarget && this._leaderPhaseZoomFloor > effectiveFloor) {
