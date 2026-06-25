@@ -427,4 +427,18 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // overlapEscapeTimeout: consecutive OVERLAP frames before the escape engages.
   overlapEscapeStrength: 0.25,
   overlapEscapeTimeout: 120,
+  // ── Hard position separation (Layer 2 of the physics redesign) ──────────────
+  // A positional, force-independent anti-penetration pass that runs as the ABSOLUTE
+  // LAST step of applyRacerBehavior — after every force (L1–L11) and after the
+  // velocity/clamp integration. It guarantees two bodies never interpenetrate by
+  // resolving a fraction of any residual body overlap each frame. When enabled it also
+  // skips the L4 commit-injection + L5 gap-force for overlapping pairs (they would fight
+  // the separation → twitch; see HARDSEP-JITTER-DIAGNOSIS). Opt-in for testing.
+  //   hardSeparationEnabled:    master switch. Default false = zero behavior change
+  //                             (reproduces the pre-feature baseline exactly).
+  //   hardSeparationRelaxation: fraction of the overlap resolved per frame (0–1).
+  //                             0.15 spreads the correction over several frames so it
+  //                             reads as a smooth nudge, never a hard snap.
+  hardSeparationEnabled: false,
+  hardSeparationRelaxation: 0.15,
 };

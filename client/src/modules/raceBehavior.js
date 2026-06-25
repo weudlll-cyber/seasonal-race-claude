@@ -897,7 +897,15 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
 
       // Inject committed lateral force + Stage D gap-clearing force into this frame's delta.
-      if (r.approachCommitDir !== 0) {
+      // ── Layer-2 hand-off ───────────────────────────────────────────────────
+      // When hard position separation owns non-penetration, the L4 commit-injection and
+      // L5 gap-force would FIGHT it on overlapping pairs: L4/L5 push two same-lane bodies
+      // together (their original anti-pass-through role), the separation pass pushes them
+      // apart → tug-of-war → visible twitch (measured in HARDSEP-JITTER-DIAGNOSIS).
+      // So skip L4/L5 for a racer currently in true body overlap. The code stays live for
+      // the non-overlap avoidance decision until Layer 1 (soft steering) replaces it.
+      const suppressOverlapForces = config.hardSeparationEnabled && overlapSet.has(r.index);
+      if (r.approachCommitDir !== 0 && !suppressOverlapForces) {
         const fMag = _approachForceMag.get(r.index) ?? 0;
         if (fMag > 0) {
           let injected = fMag;
@@ -1108,6 +1116,92 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
 
       follower.draftingBoostActive = true;
       break;
+    }
+  }
+
+  // ── Hard position separation (Layer 2 of the physics redesign) ────────────
+  // ABSOLUTE LAST step of applyRacerBehavior: runs after every force (L1–L11), after the
+  // velocity/clamp integration above, and after the drafting flags. A force-independent
+  // POSITIONAL pass that guarantees two bodies never interpenetrate, resolving only a
+  // `relaxation` fraction of any residual overlap per frame (smooth, never a snap).
+  // Symmetric (each racer half) → fairness-neutral. All tracks, no isOpen branch.
+  // Opt-in: config.hardSeparationEnabled (default false → block skipped, zero change).
+  if (config.hardSeparationEnabled) {
+    const relax = Number.isFinite(config.hardSeparationRelaxation)
+      ? Math.max(0, Math.min(1, config.hardSeparationRelaxation))
+      : 0.15;
+    const capY = Math.min(config.maxLateral, 1.0);
+    const EPS = 1e-9;
+    for (let i = 0; i < active.length; i++) {
+      for (let j = i + 1; j < active.length; j++) {
+        const rA = active[i];
+        const rB = active[j];
+        // Reuse the canonical 2-body geometry (sum-of-half-sizes) and track metrics.
+        const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+        if (contactWidth <= 0 || contactLength <= 0 || pairTW <= 0 || pairPL <= 0) continue;
+
+        // True body overlap — identical definition to overlapSet (both axes, NO buffer).
+        let dT = Math.abs(rA.t - rB.t);
+        if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
+        const dYphys = rA.physicalY - rB.physicalY;
+        const latPx = Math.abs(dYphys) * (pairTW / 2);
+        const longPx = dT * pairPL;
+        if (latPx >= contactWidth || longPx >= contactLength) continue; // not overlapping → skip
+
+        // ── Primary: symmetric lateral separation ──────────────────────────────
+        // Push apart until latPx reaches contactWidth; resolve only `relax` this frame.
+        const overlapY = pxToPhysicalY(contactWidth - latPx, pairTW); // physicalY units, > 0
+        const halfPushY = 0.5 * overlapY * relax;
+        // Higher physicalY moves out (+), the other in (−). Stable tie-break at dY≈0.
+        const signA = dYphys > EPS ? 1 : dYphys < -EPS ? -1 : stablePairBit(rA, rB) === 0 ? -1 : 1;
+        const signB = -signA;
+        const newYA = rA.physicalY + signA * halfPushY;
+        const newYB = rB.physicalY + signB * halfPushY;
+
+        if (newYA >= -capY && newYA <= capY && newYB >= -capY && newYB <= capY) {
+          // Lateral has room: apply the symmetric push.
+          rA.physicalY = newYA;
+          rB.physicalY = newYB;
+          // Cancel any velocity that OPPOSES the correction so the pre-existing velocity
+          // does not re-close the gap next frame. Velocity already separating is kept.
+          if ((rA.physicalYVelocity ?? 0) * signA < 0) rA.physicalYVelocity = 0;
+          if ((rB.physicalYVelocity ?? 0) * signB < 0) rB.physicalYVelocity = 0;
+          continue;
+        }
+
+        // ── Emergency: longitudinal separation (lateral blocked by the boundary) ─
+        // Open the t-gap until longPx reaches contactLength. Natural order (front +t,
+        // back −t) ALWAYS opens the gap → guarantees non-penetration.
+        //
+        // DESIGN NOTE: direction is natural-order primary, controller intent only a
+        // tie-break at dT≈0. A literal per-racer-intent rule cannot guarantee separation
+        // when both racers share an intent direction — pushing a trailer that "wants to
+        // overtake" forward THROUGH its leader is exactly the pass-through this layer
+        // exists to prevent. Non-penetration is the GOAL, so it wins. Intent is read from
+        // r.trajectoryMult (the controller's own output — exactly 1.0 outside OUTCOME, so a
+        // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
+        const overlapT = (contactLength - longPx) / pairPL; // t-units, > 0
+        const halfPushT = 0.5 * overlapT * relax;
+        let sd = rB.t - rA.t; // signed shortest-arc delta A→B
+        if (sd > 0.5) sd -= 1;
+        else if (sd < -0.5) sd += 1;
+        let frontIsA;
+        if (sd < -EPS)
+          frontIsA = true; // A ahead
+        else if (sd > EPS)
+          frontIsA = false; // B ahead
+        else {
+          // dT≈0: front/back unclear → controller intent (OUTCOME), else stable index.
+          const intentA = (rA.trajectoryMult ?? 1) - 1;
+          const intentB = (rB.trajectoryMult ?? 1) - 1;
+          frontIsA =
+            intentA - intentB > EPS ? true : intentB - intentA > EPS ? false : rA.index < rB.index;
+        }
+        const front = frontIsA ? rA : rB;
+        const back = frontIsA ? rB : rA;
+        front.t += halfPushT;
+        back.t -= halfPushT;
+      }
     }
   }
 }
