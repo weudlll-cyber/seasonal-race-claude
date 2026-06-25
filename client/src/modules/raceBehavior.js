@@ -9,6 +9,8 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
+import { easeInOutCubic } from '../utils/mathUtils.js';
+
 // Priority-system mode constants. Exported so RaceScreen can read them for the debug overlay.
 export const PRIORITY_MODE = Object.freeze({
   NORMAL: 'NORMAL',
@@ -904,6 +906,13 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // apart → tug-of-war → visible twitch (measured in HARDSEP-JITTER-DIAGNOSIS).
       // So skip L4/L5 for a racer currently in true body overlap. The code stays live for
       // the non-overlap avoidance decision until Layer 1 (soft steering) replaces it.
+      //
+      // Tolerance note (Refinement 4): this stays bound to overlapSet (true contact, NO
+      // tolerance band) rather than the separation pass's tolerance-shrunk trigger — the
+      // conservative choice. If it were gated on the tolerance instead, L4/L5 would re-
+      // activate inside the tolerance band and push the bodies BACK into deeper overlap
+      // until the separation pass re-engages → oscillation around the boundary. Keeping it
+      // on the full overlapSet means L4/L5 never re-deepen a contact the separation tolerates.
       const suppressOverlapForces = config.hardSeparationEnabled && overlapSet.has(r.index);
       if (r.approachCommitDir !== 0 && !suppressOverlapForces) {
         const fMag = _approachForceMag.get(r.index) ?? 0;
@@ -1130,78 +1139,106 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     const relax = Number.isFinite(config.hardSeparationRelaxation)
       ? Math.max(0, Math.min(1, config.hardSeparationRelaxation))
       : 0.15;
+    // Warmup ramp: separation strength eases 0→full over avoidanceWarmupMs at race start.
+    // Reuses the SAME value (avoidanceWarmupMs) and SAME shape (easeInOutCubic) as the
+    // open-track brake warmup in computeEffectiveBrakeFactor — but applied here to BOTH
+    // open AND closed tracks (deliberate unification). raceElapsedMs comes from the
+    // already-passed priorityExtras.currentTs (no new parameter). When no clock is
+    // available (legacy/test callers without priorityExtras) → full strength.
+    const raceElapsedMs = priorityExtras?.currentTs;
+    const warmupMs = config.avoidanceWarmupMs;
+    const warmupScale =
+      Number.isFinite(raceElapsedMs) && warmupMs > 0
+        ? easeInOutCubic(Math.min(1, raceElapsedMs / warmupMs))
+        : 1;
+    const effectiveRelax = relax * warmupScale;
+    // Overlap tolerance (dead-zone): bodies may overlap by up to this fraction of the
+    // contact distance before separation engages, and separation only restores the gap to
+    // that boundary (soft stop). 0 = separate on the slightest touch back to full contact.
+    const tol = Math.max(0, Math.min(1, config.hardSeparationTolerancePct ?? 0.1));
     const capY = Math.min(config.maxLateral, 1.0);
     const EPS = 1e-9;
-    for (let i = 0; i < active.length; i++) {
-      for (let j = i + 1; j < active.length; j++) {
-        const rA = active[i];
-        const rB = active[j];
-        // Reuse the canonical 2-body geometry (sum-of-half-sizes) and track metrics.
-        const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
-        if (contactWidth <= 0 || contactLength <= 0 || pairTW <= 0 || pairPL <= 0) continue;
+    // warmupScale 0 (race start) or relax 0 → no separation at all (also no velocity touch).
+    if (effectiveRelax > 0)
+      for (let i = 0; i < active.length; i++) {
+        for (let j = i + 1; j < active.length; j++) {
+          const rA = active[i];
+          const rB = active[j];
+          // Reuse the canonical 2-body geometry (sum-of-half-sizes) and track metrics.
+          const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+          if (contactWidth <= 0 || contactLength <= 0 || pairTW <= 0 || pairPL <= 0) continue;
+          // Separation targets sit one tolerance band inside true contact (soft stop).
+          const latTarget = contactWidth * (1 - tol);
+          const longTarget = contactLength * (1 - tol);
 
-        // True body overlap — identical definition to overlapSet (both axes, NO buffer).
-        let dT = Math.abs(rA.t - rB.t);
-        if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
-        const dYphys = rA.physicalY - rB.physicalY;
-        const latPx = Math.abs(dYphys) * (pairTW / 2);
-        const longPx = dT * pairPL;
-        if (latPx >= contactWidth || longPx >= contactLength) continue; // not overlapping → skip
+          // Body overlap BEYOND the tolerance band (both axes). Same overlapSet shape,
+          // shrunk by the tolerance dead-zone.
+          let dT = Math.abs(rA.t - rB.t);
+          if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
+          const dYphys = rA.physicalY - rB.physicalY;
+          const latPx = Math.abs(dYphys) * (pairTW / 2);
+          const longPx = dT * pairPL;
+          if (latPx >= latTarget || longPx >= longTarget) continue; // within tolerance → skip
 
-        // ── Primary: symmetric lateral separation ──────────────────────────────
-        // Push apart until latPx reaches contactWidth; resolve only `relax` this frame.
-        const overlapY = pxToPhysicalY(contactWidth - latPx, pairTW); // physicalY units, > 0
-        const halfPushY = 0.5 * overlapY * relax;
-        // Higher physicalY moves out (+), the other in (−). Stable tie-break at dY≈0.
-        const signA = dYphys > EPS ? 1 : dYphys < -EPS ? -1 : stablePairBit(rA, rB) === 0 ? -1 : 1;
-        const signB = -signA;
-        const newYA = rA.physicalY + signA * halfPushY;
-        const newYB = rB.physicalY + signB * halfPushY;
+          // ── Primary: symmetric lateral separation (soft-stop at the tolerance boundary) ─
+          // Push apart until latPx reaches latTarget; resolve only effectiveRelax this frame.
+          const overlapY = pxToPhysicalY(latTarget - latPx, pairTW); // physicalY units, > 0
+          const halfPushY = 0.5 * overlapY * effectiveRelax;
+          // Higher physicalY moves out (+), the other in (−). Stable tie-break at dY≈0.
+          const signA =
+            dYphys > EPS ? 1 : dYphys < -EPS ? -1 : stablePairBit(rA, rB) === 0 ? -1 : 1;
+          const signB = -signA;
+          const newYA = rA.physicalY + signA * halfPushY;
+          const newYB = rB.physicalY + signB * halfPushY;
 
-        if (newYA >= -capY && newYA <= capY && newYB >= -capY && newYB <= capY) {
-          // Lateral has room: apply the symmetric push.
-          rA.physicalY = newYA;
-          rB.physicalY = newYB;
-          // Cancel any velocity that OPPOSES the correction so the pre-existing velocity
-          // does not re-close the gap next frame. Velocity already separating is kept.
-          if ((rA.physicalYVelocity ?? 0) * signA < 0) rA.physicalYVelocity = 0;
-          if ((rB.physicalYVelocity ?? 0) * signB < 0) rB.physicalYVelocity = 0;
-          continue;
+          if (newYA >= -capY && newYA <= capY && newYB >= -capY && newYB <= capY) {
+            // Lateral has room: apply the symmetric push.
+            rA.physicalY = newYA;
+            rB.physicalY = newYB;
+            // Cancel any velocity that OPPOSES the correction so the pre-existing velocity
+            // does not re-close the gap next frame. Velocity already separating is kept.
+            if ((rA.physicalYVelocity ?? 0) * signA < 0) rA.physicalYVelocity = 0;
+            if ((rB.physicalYVelocity ?? 0) * signB < 0) rB.physicalYVelocity = 0;
+            continue;
+          }
+
+          // ── Emergency: longitudinal separation (lateral blocked by the boundary) ─
+          // Open the t-gap until longPx reaches longTarget. Natural order (front +t,
+          // back −t) ALWAYS opens the gap → guarantees non-penetration.
+          //
+          // DESIGN NOTE: direction is natural-order primary, controller intent only a
+          // tie-break at dT≈0. A literal per-racer-intent rule cannot guarantee separation
+          // when both racers share an intent direction — pushing a trailer that "wants to
+          // overtake" forward THROUGH its leader is exactly the pass-through this layer
+          // exists to prevent. Non-penetration is the GOAL, so it wins. Intent is read from
+          // r.trajectoryMult (the controller's own output — exactly 1.0 outside OUTCOME, so a
+          // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
+          const overlapT = (longTarget - longPx) / pairPL; // t-units, > 0
+          const halfPushT = 0.5 * overlapT * effectiveRelax;
+          let sd = rB.t - rA.t; // signed shortest-arc delta A→B
+          if (sd > 0.5) sd -= 1;
+          else if (sd < -0.5) sd += 1;
+          let frontIsA;
+          if (sd < -EPS)
+            frontIsA = true; // A ahead
+          else if (sd > EPS)
+            frontIsA = false; // B ahead
+          else {
+            // dT≈0: front/back unclear → controller intent (OUTCOME), else stable index.
+            const intentA = (rA.trajectoryMult ?? 1) - 1;
+            const intentB = (rB.trajectoryMult ?? 1) - 1;
+            frontIsA =
+              intentA - intentB > EPS
+                ? true
+                : intentB - intentA > EPS
+                  ? false
+                  : rA.index < rB.index;
+          }
+          const front = frontIsA ? rA : rB;
+          const back = frontIsA ? rB : rA;
+          front.t += halfPushT;
+          back.t -= halfPushT;
         }
-
-        // ── Emergency: longitudinal separation (lateral blocked by the boundary) ─
-        // Open the t-gap until longPx reaches contactLength. Natural order (front +t,
-        // back −t) ALWAYS opens the gap → guarantees non-penetration.
-        //
-        // DESIGN NOTE: direction is natural-order primary, controller intent only a
-        // tie-break at dT≈0. A literal per-racer-intent rule cannot guarantee separation
-        // when both racers share an intent direction — pushing a trailer that "wants to
-        // overtake" forward THROUGH its leader is exactly the pass-through this layer
-        // exists to prevent. Non-penetration is the GOAL, so it wins. Intent is read from
-        // r.trajectoryMult (the controller's own output — exactly 1.0 outside OUTCOME, so a
-        // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
-        const overlapT = (contactLength - longPx) / pairPL; // t-units, > 0
-        const halfPushT = 0.5 * overlapT * relax;
-        let sd = rB.t - rA.t; // signed shortest-arc delta A→B
-        if (sd > 0.5) sd -= 1;
-        else if (sd < -0.5) sd += 1;
-        let frontIsA;
-        if (sd < -EPS)
-          frontIsA = true; // A ahead
-        else if (sd > EPS)
-          frontIsA = false; // B ahead
-        else {
-          // dT≈0: front/back unclear → controller intent (OUTCOME), else stable index.
-          const intentA = (rA.trajectoryMult ?? 1) - 1;
-          const intentB = (rB.trajectoryMult ?? 1) - 1;
-          frontIsA =
-            intentA - intentB > EPS ? true : intentB - intentA > EPS ? false : rA.index < rB.index;
-        }
-        const front = frontIsA ? rA : rB;
-        const back = frontIsA ? rB : rA;
-        front.t += halfPushT;
-        back.t -= halfPushT;
       }
-    }
   }
 }
