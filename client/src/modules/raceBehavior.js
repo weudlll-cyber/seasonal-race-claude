@@ -899,21 +899,20 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
 
       // Inject committed lateral force + Stage D gap-clearing force into this frame's delta.
-      // ── Layer-2 hand-off ───────────────────────────────────────────────────
-      // When hard position separation owns non-penetration, the L4 commit-injection and
-      // L5 gap-force would FIGHT it on overlapping pairs: L4/L5 push two same-lane bodies
-      // together (their original anti-pass-through role), the separation pass pushes them
-      // apart → tug-of-war → visible twitch (measured in HARDSEP-JITTER-DIAGNOSIS).
-      // So skip L4/L5 for a racer currently in true body overlap. The code stays live for
-      // the non-overlap avoidance decision until Layer 1 (soft steering) replaces it.
-      //
-      // Tolerance note (Refinement 4): this stays bound to overlapSet (true contact, NO
-      // tolerance band) rather than the separation pass's tolerance-shrunk trigger — the
-      // conservative choice. If it were gated on the tolerance instead, L4/L5 would re-
-      // activate inside the tolerance band and push the bodies BACK into deeper overlap
-      // until the separation pass re-engages → oscillation around the boundary. Keeping it
-      // on the full overlapSet means L4/L5 never re-deepen a contact the separation tolerates.
-      const suppressOverlapForces = config.hardSeparationEnabled && overlapSet.has(r.index);
+      // ── Optional L4/L5 hand-off to hard separation (OFF by default) ──────────
+      // Skipping L4 (commit-injection) + L5 (gap-force) for overlapping pairs drives
+      // pass-throughs near zero, BUT it introduces a start-row fairness bias on open
+      // tracks: L4/L5 resolve the dense start-pack overlaps in a position-neutral way,
+      // and letting the hard separation do it instead biases by start position
+      // (SIM-HARDSEP-FINAL / SIM-L4L5-RESTORE — keeping L4/L5 active restored fairness on
+      // 3/4 regressed combos). So the default is FALSE: L4/L5 stay active and the hard
+      // separation acts only as a backstop (fair; pass-throughs still far below baseline).
+      // Gated on overlapSet (true contact, no tolerance band) when enabled, so L4/L5 do
+      // not re-deepen a contact the separation tolerates.
+      const suppressOverlapForces =
+        config.hardSeparationEnabled &&
+        config.hardSeparationSuppressOverlapForces &&
+        overlapSet.has(r.index);
       if (r.approachCommitDir !== 0 && !suppressOverlapForces) {
         const fMag = _approachForceMag.get(r.index) ?? 0;
         if (fMag > 0) {

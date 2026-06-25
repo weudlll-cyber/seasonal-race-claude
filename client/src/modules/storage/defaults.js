@@ -431,9 +431,8 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // A positional, force-independent anti-penetration pass that runs as the ABSOLUTE
   // LAST step of applyRacerBehavior — after every force (L1–L11) and after the
   // velocity/clamp integration. It resolves a fraction of any residual body overlap
-  // each frame. When enabled it also skips the L4 commit-injection + L5 gap-force for
-  // overlapping pairs (they would fight the separation → twitch; see HARDSEP-JITTER-
-  // DIAGNOSIS). Opt-in for testing.
+  // each frame, acting as a BACKSTOP behind the normal avoidance/free-lane forces.
+  // Opt-in for testing.
   //   hardSeparationEnabled:    master switch. Default false = zero behavior change
   //                             (reproduces the pre-feature baseline exactly).
   //   hardSeparationRelaxation: fraction of the (beyond-tolerance) overlap resolved per
@@ -447,7 +446,14 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //                             and separation only pushes back to that tolerance boundary
   //                             (soft stop) — not to full contact. Avoids constant micro-
   //                             corrections on lightly-touching pairs. 0.10 = 10%.
+  //   hardSeparationSuppressOverlapForces: when true, skips the L4 commit-injection + L5
+  //                             gap-force for overlapping pairs. This drives pass-throughs
+  //                             near zero but INTRODUCES a start-row fairness bias on open
+  //                             tracks (SIM-HARDSEP-FINAL / SIM-L4L5-RESTORE). Default
+  //                             FALSE = keep L4/L5 active (hard separation is a pure
+  //                             backstop): fair, with pass-throughs still far below baseline.
   hardSeparationEnabled: false,
   hardSeparationRelaxation: 0.15,
   hardSeparationTolerancePct: 0.1,
+  hardSeparationSuppressOverlapForces: false,
 };
