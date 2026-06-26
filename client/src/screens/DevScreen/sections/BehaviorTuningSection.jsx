@@ -78,6 +78,17 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
     }));
   }
 
+  function resetSoftSteering() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      softSteeringEnabled: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringEnabled,
+      softSteeringSymmetric: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringSymmetric,
+      softSteeringStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength,
+      softSteeringClearancePct: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct,
+      softSteeringHysteresisY: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringHysteresisY,
+    }));
+  }
+
   function resetAll() {
     setBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
   }
@@ -415,6 +426,134 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               }
               disabled={!behaviorConfig.enabled}
               onChange={(e) => setBehavior('stuckModeSuppress', e.target.checked)}
+            />
+          </div>
+        </div>
+      </SubCard>
+
+      {/* ── Layer 1 — Soft Steering ── */}
+      <SubCard
+        title="Layer 1 — Soft Steering"
+        onReset={resetSoftSteering}
+        resetTestId="reset-soft-steering"
+        subtitle="Experimental replacement for the home + avoidance + free-lane + commit + gap forces (L1–L5): each racer is pulled toward a single target position by one spring instead of summing five separate forces. Off by default (exact prior behavior). The hard-separation backstop and the sustained-overlap escape stay active. Not calibrated — run a fairness sweep before drawing conclusions."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Enabled
+              <InfoTooltip text="Master switch for Layer 1. Off = exact prior behavior (all five legacy lateral forces run). On = those forces are suppressed and a single target spring steers each racer." />
+            </label>
+            <input
+              type="checkbox"
+              aria-label="Soft Steering Enabled"
+              checked={
+                behaviorConfig.softSteeringEnabled ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringEnabled
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => setBehavior('softSteeringEnabled', e.target.checked)}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Symmetric (both yield)
+              <InfoTooltip text="Off = asymmetric: only the trailer (rear racer) steers around the obstacle, the leader holds its line (matches the legacy avoidance design). On = both racers of a pair steer around each other. The fairness sweep decides which is better." />
+            </label>
+            <input
+              type="checkbox"
+              aria-label="Soft Steering Symmetric"
+              checked={
+                behaviorConfig.softSteeringSymmetric ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringSymmetric
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => setBehavior('softSteeringSymmetric', e.target.checked)}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Strength
+              <InfoTooltip text="Spring constant: each frame the racer moves a fraction of the way toward its target (delta += (target − position) × strength). Higher = snappier steering, lower = gentler. Not calibrated — sweep first." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Soft Steering Strength"
+              min={0.005}
+              max={0.2}
+              step={0.005}
+              value={
+                behaviorConfig.softSteeringStrength ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v > 0) setBehavior('softSteeringStrength', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Clearance (% of body)
+              <InfoTooltip text="Extra gap to the obstacle beyond one contact width, as a fraction of that width. 0 = aim exactly at the contact distance; 0.5 = aim 50% further out. A tuning lever for the sweep." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Soft Steering Clearance Pct"
+              min={0.0}
+              max={0.5}
+              step={0.05}
+              value={
+                behaviorConfig.softSteeringClearancePct ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0) setBehavior('softSteeringClearancePct', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Hysteresis Y
+              <InfoTooltip text="Dead-zone around the obstacle's centerline within which the chosen side stays fixed, preventing a left/right pendulum when a racer sits near the obstacle's line. Analogous to the commit dead-zone." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Soft Steering Hysteresis Y"
+              min={0.0}
+              max={0.1}
+              step={0.005}
+              value={
+                behaviorConfig.softSteeringHysteresisY ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringHysteresisY
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0) setBehavior('softSteeringHysteresisY', v);
+              }}
             />
           </div>
         </div>

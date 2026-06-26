@@ -87,7 +87,15 @@ export function loadRaceBehaviorConfig() {
     !(merged.brakeHoldTimeoutFrames > 0) ||
     !(merged.brakeHoldEscapeReleaseDurationFrames > 0) ||
     !(merged.brakeHoldEscapeCooldownFrames > 0) ||
-    !(merged.brakeReleaseDebounceFrames > 0)
+    !(merged.brakeReleaseDebounceFrames > 0) ||
+    // Layer 1 (Soft Steering): positive-float guards. Lenient by design —
+    // clearancePct and hysteresisY default to 0.0, so they allow 0; strength must be > 0.
+    !isFinite(merged.softSteeringStrength) ||
+    merged.softSteeringStrength <= 0 ||
+    !isFinite(merged.softSteeringClearancePct) ||
+    merged.softSteeringClearancePct < 0 ||
+    !isFinite(merged.softSteeringHysteresisY) ||
+    merged.softSteeringHysteresisY < 0
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

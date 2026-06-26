@@ -458,4 +458,30 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   hardSeparationRelaxation: 0.15,
   hardSeparationTolerancePct: 0.1,
   hardSeparationSuppressOverlapForces: false,
+  // ── Layer 1 (Soft Steering) — single target + spring per racer ──────────────
+  // Flag-gated replacement for L1 (home) + L2 (avoidance) + L3 (free-lane) +
+  // L4 (commit-injection) + L5 (Stage-D gap). When OFF (default) the behavior is
+  // byte-identical to before: all L1–L5 paths run unchanged. When ON, those five
+  // layers are suppressed and each racer is pulled toward one per-step target by a
+  // single spring. L6 (OVL-C), L7/L8, L10/L11 and the hard-separation backstop are
+  // unchanged. See the Layer-1 spec + the F1/F2 findings in KRAEFTE-LANDKARTE.md.
+  //   softSteeringEnabled:    master switch. FALSE = exact prior behavior (no-op).
+  //   softSteeringSymmetric:  FALSE = asymmetric (only the trailer, lower t, gets a
+  //                           target; the leader holds its line — consistent with L2
+  //                           today). TRUE = both members of a pair get a target.
+  //                           The sweep decides which is fairer; not fixed in advance.
+  //   softSteeringStrength:   spring constant: delta += (target - physicalY) * strength.
+  //                           NOT calibrated; sweep required before drawing conclusions.
+  //   softSteeringClearancePct: extra gap beyond one contact width, as a fraction of the
+  //                           contact width (0.0 = exactly contact distance, analogous to
+  //                           avoidanceBufferPct). A tuning lever for the sweep.
+  //   softSteeringHysteresisY: dead-zone around relPos≈0 within which the side choice is
+  //                           held stable (prevents the pendulum limit-cycle near the
+  //                           obstacle's centerline). Analogous to commitDirDeadZoneY;
+  //                           uses pairTieDir as the tie-break.
+  softSteeringEnabled: false,
+  softSteeringSymmetric: false,
+  softSteeringStrength: 0.05,
+  softSteeringClearancePct: 0.0,
+  softSteeringHysteresisY: 0.04,
 };

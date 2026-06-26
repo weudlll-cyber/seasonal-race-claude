@@ -67,6 +67,12 @@ const _sameLaneLeaderObj = new Map();
 // Populated in the free-lane overlap block once dirA/dirB are final; cleared every step.
 const _ovlcEscapeDir = new Map(); // racerIndex → free-side direction (±1); absent = blocked
 const _ovlcPartnerY = new Map(); // racerIndex → overlapping partner physicalY (ramp source)
+// Layer 1 (Soft Steering): per-step target + selection state. Only consumed when
+// config.softSteeringEnabled. Cleared + re-initialised every step like every map above.
+// _ssTarget:   racerIndex → target physicalY (default 0 = centerline / home-equivalent).
+// _ssForceMag: racerIndex → strongest forceMag seen this step (most-constraining wins).
+const _ssTarget = new Map();
+const _ssForceMag = new Map();
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -373,12 +379,16 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   _sameLaneLeaderObj.clear();
   _ovlcEscapeDir.clear();
   _ovlcPartnerY.clear();
+  _ssTarget.clear();
+  _ssForceMag.clear();
   for (const r of active) {
     _yDeltas.set(r.index, 0);
     _yAvoidDeltas.set(r.index, 0);
     _yFreeLaneDeltas.set(r.index, 0);
     _freeLaneCounts.set(r.index, 0);
     _neighborCounts.set(r.index, 0);
+    _ssTarget.set(r.index, 0);
+    _ssForceMag.set(r.index, 0);
   }
   // Accumulate physicalY deltas from home force + avoidance
   const yDeltas = _yDeltas;
@@ -589,6 +599,34 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       const longFraction = 1 - longPx / longTrigger;
       const forceMag = config.lateralForce * Math.min(latFraction, longFraction);
 
+      // ── Layer 1 (Soft Steering) §4a: non-overlap target accumulation ────────
+      // INSERT-ONLY, flag-gated. For the most-constraining obstacle (highest forceMag),
+      // store a target one contact width to the side it is already on. Asymmetric
+      // (trailer only) unless softSteeringSymmetric. The overlap block (§4b) may later
+      // override this for the same pair (it uses >= so overlap wins on equal forceMag).
+      if (config.softSteeringEnabled && trackWidth > 0) {
+        const contactOffsetY =
+          pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));
+        const ssCap = Math.min(config.maxLateral, 1.0);
+        const ssHystY = config.softSteeringHysteresisY ?? 0.04;
+        const assignSoftTarget = (self, obstacle) => {
+          if (forceMag <= (_ssForceMag.get(self.index) ?? 0)) return; // strict: most-constraining wins
+          const rel = self.physicalY - obstacle.physicalY;
+          const dir = Math.abs(rel) >= ssHystY ? (rel >= 0 ? 1 : -1) : pairTieDir(self, obstacle);
+          let target = obstacle.physicalY + dir * contactOffsetY;
+          if (target < -ssCap) target = -ssCap;
+          else if (target > ssCap) target = ssCap;
+          _ssTarget.set(self.index, target);
+          _ssForceMag.set(self.index, forceMag);
+        };
+        if (config.softSteeringSymmetric) {
+          assignSoftTarget(rA, rB);
+          assignSoftTarget(rB, rA);
+        } else {
+          assignSoftTarget(trailer, leader);
+        }
+      }
+
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
       // impulses based on local left/right free-space checks.
 
@@ -647,19 +685,59 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             dirB = chooseSingleSideDirection(bLeftFree, bRightFree) || bGeomDir;
           }
 
-          if (dirA !== 0) {
-            yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
-            freeLaneCounts.set(rA.index, freeLaneCounts.get(rA.index) + 1);
+          // ── Layer 1 (Soft Steering) §4b: overlap target override ───────────
+          // Runs after dirA/dirB are final. The forceMag compare uses >= so an overlap
+          // result overrides the §4a non-overlap target of the same pair on equal
+          // forceMag. Both sides blocked → hold (target = current physicalY) → spring
+          // delta ≈ 0, which replaces L9 (stuck suppression) for this case. F2: the
+          // OVL-C population below is NOT guarded, so L6 keeps its inputs when on.
+          if (config.softSteeringEnabled && trackWidth > 0) {
+            const ssOffsetY =
+              pxToPhysicalY(contactWidth, trackWidth) *
+              (1 + (config.softSteeringClearancePct ?? 0));
+            const ssCap2 = Math.min(config.maxLateral, 1.0);
+            const overrideSoftTarget = (self, obstacle, dir, geomDir, blocked) => {
+              if (forceMag < (_ssForceMag.get(self.index) ?? 0)) return; // >= : overlap wins on tie
+              let target;
+              if (blocked) {
+                target = self.physicalY; // both sides blocked → hold position
+              } else {
+                const d = dir !== 0 ? dir : geomDir;
+                target = obstacle.physicalY + d * ssOffsetY;
+                if (target < -ssCap2) target = -ssCap2;
+                else if (target > ssCap2) target = ssCap2;
+              }
+              _ssTarget.set(self.index, target);
+              _ssForceMag.set(self.index, forceMag);
+            };
+            if (config.softSteeringSymmetric) {
+              overrideSoftTarget(rA, rB, dirA, aGeomDir, aBlocked);
+              overrideSoftTarget(rB, rA, dirB, bGeomDir, bBlocked);
+            } else if (trailer.index === rA.index) {
+              overrideSoftTarget(rA, rB, dirA, aGeomDir, aBlocked);
+            } else {
+              overrideSoftTarget(rB, rA, dirB, bGeomDir, bBlocked);
+            }
           }
-          if (dirB !== 0) {
-            yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
-            freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
-          }
-          if (dRawPos !== null) {
-            if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
-            else if (dirA < 0) dRawNeg.set(rA.index, dRawNeg.get(rA.index) + forceMag);
-            if (dirB > 0) dRawPos.set(rB.index, dRawPos.get(rB.index) + forceMag);
-            else if (dirB < 0) dRawNeg.set(rB.index, dRawNeg.get(rB.index) + forceMag);
+
+          // §5: L3 free-lane force writes — suppressed when soft steering is on.
+          // The dirA/dirB + isSideFree computation above and the OVL-C population
+          // below stay unguarded (F2) so L6 keeps working.
+          if (!config.softSteeringEnabled) {
+            if (dirA !== 0) {
+              yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
+              freeLaneCounts.set(rA.index, freeLaneCounts.get(rA.index) + 1);
+            }
+            if (dirB !== 0) {
+              yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
+              freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
+            }
+            if (dRawPos !== null) {
+              if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
+              else if (dirA < 0) dRawNeg.set(rA.index, dRawNeg.get(rA.index) + forceMag);
+              if (dirB > 0) dRawPos.set(rB.index, dRawPos.get(rB.index) + forceMag);
+              else if (dirB < 0) dRawNeg.set(rB.index, dRawNeg.get(rB.index) + forceMag);
+            }
           }
           // OVL-C: record free-side direction and partner Y for the escape.
           // All overlapping pairs write; last-written wins when multiple pairs overlap.
@@ -703,20 +781,23 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
 
       if (Math.abs(yDiff) < 1e-6) continue;
-      const pushDir = yDiff >= 0 ? 1 : -1;
-      yAvoidDeltas.set(
-        trailer.index,
-        yAvoidDeltas.get(trailer.index) + pushDir * forceMag * lateralScale
-      );
-      neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
-      if (dRawPos !== null) {
-        const scaled = forceMag * lateralScale;
-        if (pushDir > 0) {
-          dRawPos.set(trailer.index, dRawPos.get(trailer.index) + scaled);
-          if (dCntPos !== null) dCntPos.set(trailer.index, dCntPos.get(trailer.index) + 1);
-        } else {
-          dRawNeg.set(trailer.index, dRawNeg.get(trailer.index) + scaled);
-          if (dCntNeg !== null) dCntNeg.set(trailer.index, dCntNeg.get(trailer.index) + 1);
+      // §5: L2 avoidance push — suppressed when soft steering is on.
+      if (!config.softSteeringEnabled) {
+        const pushDir = yDiff >= 0 ? 1 : -1;
+        yAvoidDeltas.set(
+          trailer.index,
+          yAvoidDeltas.get(trailer.index) + pushDir * forceMag * lateralScale
+        );
+        neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
+        if (dRawPos !== null) {
+          const scaled = forceMag * lateralScale;
+          if (pushDir > 0) {
+            dRawPos.set(trailer.index, dRawPos.get(trailer.index) + scaled);
+            if (dCntPos !== null) dCntPos.set(trailer.index, dCntPos.get(trailer.index) + 1);
+          } else {
+            dRawNeg.set(trailer.index, dRawNeg.get(trailer.index) + scaled);
+            if (dCntNeg !== null) dCntNeg.set(trailer.index, dCntNeg.get(trailer.index) + 1);
+          }
         }
       }
     }
@@ -759,57 +840,65 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   }
 
   // ── Home force — spring toward centerline ─────────────────────────────────
-  if (priorityExtras) {
-    // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED.
-    // Escape hatch: after blockedTimeoutFrames consecutive BLOCKED frames, apply a
-    // reduced home force (blockedEscapeForce × homeForceStrength) so racers can exit
-    // a permanently-blocked corridor in high-density racing.
-    const { blockedTimeoutFrames = 0, blockedEscapeForce = 0 } = priorityExtras;
-    for (const r of active) {
-      let homeContrib = 0;
-      if (r.currentMode === PRIORITY_MODE.NORMAL) {
-        homeContrib = -r.physicalY * config.homeForceStrength;
-      } else if (
-        r.currentMode === PRIORITY_MODE.BLOCKED &&
-        blockedTimeoutFrames > 0 &&
-        (r.currentModeFrameCount ?? 0) >= blockedTimeoutFrames
-      ) {
-        // Escape hatch: gentle pull back toward center after prolonged BLOCKED state
-        homeContrib = -r.physicalY * config.homeForceStrength * blockedEscapeForce;
+  // §6: L1 home force + the sqrt(N) avoidance/free-lane normalization are suppressed
+  // when soft steering is on — the single spring (below) replaces them. The priority-
+  // mode computation above is NOT guarded (L6/OVL-C reads r.currentMode).
+  if (!config.softSteeringEnabled) {
+    if (priorityExtras) {
+      // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED.
+      // Escape hatch: after blockedTimeoutFrames consecutive BLOCKED frames, apply a
+      // reduced home force (blockedEscapeForce × homeForceStrength) so racers can exit
+      // a permanently-blocked corridor in high-density racing.
+      const { blockedTimeoutFrames = 0, blockedEscapeForce = 0 } = priorityExtras;
+      for (const r of active) {
+        let homeContrib = 0;
+        if (r.currentMode === PRIORITY_MODE.NORMAL) {
+          homeContrib = -r.physicalY * config.homeForceStrength;
+        } else if (
+          r.currentMode === PRIORITY_MODE.BLOCKED &&
+          blockedTimeoutFrames > 0 &&
+          (r.currentModeFrameCount ?? 0) >= blockedTimeoutFrames
+        ) {
+          // Escape hatch: gentle pull back toward center after prolonged BLOCKED state
+          homeContrib = -r.physicalY * config.homeForceStrength * blockedEscapeForce;
+        }
+        yDeltas.set(r.index, homeContrib);
       }
-      yDeltas.set(r.index, homeContrib);
+    } else {
+      // Legacy path: homeForceReductionOnOverlap (unchanged behavior for existing tests)
+      const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
+        ? config.homeForceReductionOnOverlap
+        : 1;
+      const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
+      for (const r of active) {
+        const factor = overlapSet.has(r.index) ? overlapFactor : 1;
+        yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
+      }
     }
-  } else {
-    // Legacy path: homeForceReductionOnOverlap (unchanged behavior for existing tests)
-    const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
-      ? config.homeForceReductionOnOverlap
-      : 1;
-    const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
-    for (const r of active) {
-      const factor = overlapSet.has(r.index) ? overlapFactor : 1;
-      yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
-    }
-  }
 
-  // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
-  // Prevents stacking explosion when many pairs overlap simultaneously (e.g. race start
-  // with 40 racers where each racer can overlap 10+ neighbors at once).
-  for (const r of active) {
-    const count = neighborCounts.get(r.index);
-    const avoid =
-      count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
-    const flCount = freeLaneCounts.get(r.index);
-    const freeLane =
-      flCount > 1
-        ? yFreeLaneDeltas.get(r.index) / Math.sqrt(flCount)
-        : yFreeLaneDeltas.get(r.index);
-    yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
-    yDeltas.set(r.index, yDeltas.get(r.index) + freeLane);
+    // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
+    // Prevents stacking explosion when many pairs overlap simultaneously (e.g. race start
+    // with 40 racers where each racer can overlap 10+ neighbors at once).
+    for (const r of active) {
+      const count = neighborCounts.get(r.index);
+      const avoid =
+        count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
+      const flCount = freeLaneCounts.get(r.index);
+      const freeLane =
+        flCount > 1
+          ? yFreeLaneDeltas.get(r.index) / Math.sqrt(flCount)
+          : yFreeLaneDeltas.get(r.index);
+      yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
+      yDeltas.set(r.index, yDeltas.get(r.index) + freeLane);
+    }
   }
 
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
-  const stuckSuppress = (config.stuckModeSuppress ?? false) && dRawPos !== null;
+  // §6: L9 stuck suppression also off when soft steering is on — the §4b blocked-both-
+  // sides case (target = current physicalY → delta ≈ 0) covers the hold behavior.
+  const stuckSuppress =
+    (config.stuckModeSuppress ?? false) && dRawPos !== null && !config.softSteeringEnabled;
   for (const r of active) {
     let delta = yDeltas.get(r.index) ?? 0;
 
@@ -913,7 +1002,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         config.hardSeparationEnabled &&
         config.hardSeparationSuppressOverlapForces &&
         overlapSet.has(r.index);
-      if (r.approachCommitDir !== 0 && !suppressOverlapForces) {
+      if (r.approachCommitDir !== 0 && !suppressOverlapForces && !config.softSteeringEnabled) {
         const fMag = _approachForceMag.get(r.index) ?? 0;
         if (fMag > 0) {
           let injected = fMag;
@@ -997,6 +1086,18 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           }
         }
       }
+    }
+
+    // ── Layer 1 (Soft Steering) §6: single target spring ────────────────────
+    // Replaces L1+L2+L3+L4+L5 when enabled. Pulls the racer toward its per-step
+    // target: centerline (0) when no obstacle, beside the most-constraining obstacle
+    // otherwise, or the current position (hold) when both sides are blocked. Runs
+    // after L6 (OVL-C, which stays active as a transition buffer) and before the
+    // velocity/damping integration below.
+    if (config.softSteeringEnabled) {
+      const target = _ssTarget.get(r.index) ?? r.physicalY;
+      const strength = config.softSteeringStrength ?? config.homeForceStrength;
+      delta += (target - r.physicalY) * strength;
     }
 
     // Accumulate lateral forces into velocity, then damp
