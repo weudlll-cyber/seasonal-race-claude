@@ -43,7 +43,10 @@ function makeLaneRacer(overrides = {}) {
   return racer;
 }
 
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+// Pin the hard-separation backstop OFF for the force-isolation tests below: it is
+// default-on in production but would perturb physicalY here. The dedicated
+// 'hard position separation' describe block opts back in explicitly (ON vs OFF).
+const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, hardSeparationEnabled: false };
 
 // ── initRacerBehavior ──────────────────────────────────────────────────────
 
@@ -792,7 +795,7 @@ describe('hard position separation', () => {
     hardSeparationRelaxation: relax,
   });
 
-  it('flag OFF (default): zero effect — overlapping pair stays overlapping', () => {
+  it('flag OFF (explicit): zero effect — overlapping pair stays overlapping', () => {
     const [a, b] = overlapPair();
     applyRacerBehavior([a, b], { ...cfg, hardSeparationEnabled: false });
     expect(gapPx(a, b)).toBeLessThan(latTargetPx); // still interpenetrating, pass did not run

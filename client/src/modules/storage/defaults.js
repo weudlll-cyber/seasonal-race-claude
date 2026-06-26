@@ -277,7 +277,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   racePlanBonusTransitionEnd: 0.75,
   racePlanBonusFadeDuration: 1500,
   racePlanCorridorStart: 0.55,
-  racePlanCorridorEnd: 0.95,
+  racePlanCorridorEnd: 1.0,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {
@@ -433,8 +433,10 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // velocity/clamp integration. It resolves a fraction of any residual body overlap
   // each frame, acting as a BACKSTOP behind the normal avoidance/free-lane forces.
   // Opt-in for testing.
-  //   hardSeparationEnabled:    master switch. Default false = zero behavior change
-  //                             (reproduces the pre-feature baseline exactly).
+  //   hardSeparationEnabled:    master switch. Default TRUE = hard separation active as a
+  //                             pure backstop (verified fair + effective across the full
+  //                             track×racer matrix). Set FALSE to reproduce the pre-feature
+  //                             baseline exactly (zero behavior change).
   //   hardSeparationRelaxation: fraction of the (beyond-tolerance) overlap resolved per
   //                             frame (0–1). 0.15 spreads the correction over several
   //                             frames so it reads as a smooth nudge, never a hard snap.
@@ -452,7 +454,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //                             tracks (SIM-HARDSEP-FINAL / SIM-L4L5-RESTORE). Default
   //                             FALSE = keep L4/L5 active (hard separation is a pure
   //                             backstop): fair, with pass-throughs still far below baseline.
-  hardSeparationEnabled: false,
+  hardSeparationEnabled: true,
   hardSeparationRelaxation: 0.15,
   hardSeparationTolerancePct: 0.1,
   hardSeparationSuppressOverlapForces: false,

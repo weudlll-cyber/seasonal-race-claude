@@ -1133,7 +1133,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   // POSITIONAL pass that guarantees two bodies never interpenetrate, resolving only a
   // `relaxation` fraction of any residual overlap per frame (smooth, never a snap).
   // Symmetric (each racer half) → fairness-neutral. All tracks, no isOpen branch.
-  // Opt-in: config.hardSeparationEnabled (default false → block skipped, zero change).
+  // Gated by config.hardSeparationEnabled (default TRUE → backstop active; set false to skip).
   if (config.hardSeparationEnabled) {
     const relax = Number.isFinite(config.hardSeparationRelaxation)
       ? Math.max(0, Math.min(1, config.hardSeparationRelaxation))
