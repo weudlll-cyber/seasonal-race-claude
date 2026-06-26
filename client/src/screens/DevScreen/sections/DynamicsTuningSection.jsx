@@ -597,7 +597,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               value={Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                const end = (dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100;
+                const end =
+                  (dynamicsConfig.racePlanCorridorEnd ??
+                    DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd) * 100;
                 if (v >= 50 && v <= end) setDynamics('racePlanCorridorStart', v / 100);
               }}
             />
@@ -608,7 +610,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               P-Controller ends (% race)
-              <InfoTooltip text="The trajectory P-controller deactivates at this point (FINAL phase begins). Must be >= P-Controller starts. Default: 95%" />
+              <InfoTooltip text="The trajectory P-controller deactivates at this point (FINAL phase begins). Must be >= P-Controller starts. Default: 100%" />
             </label>
             <input
               type="number"
@@ -617,7 +619,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={50}
               max={100}
               step={5}
-              value={Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}
+              value={Math.round(
+                (dynamicsConfig.racePlanCorridorEnd ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd) * 100
+              )}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 50 && v <= 100) {
@@ -668,9 +673,21 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           {'  |  Controller: '}
           <strong>{Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}%</strong>
           {'→'}
-          <strong>{Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}%</strong>
+          <strong>
+            {Math.round(
+              (dynamicsConfig.racePlanCorridorEnd ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd) * 100
+            )}
+            %
+          </strong>
           {'  |  Final: '}
-          <strong>{Math.round((dynamicsConfig.racePlanCorridorEnd ?? 0.95) * 100)}%</strong>
+          <strong>
+            {Math.round(
+              (dynamicsConfig.racePlanCorridorEnd ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd) * 100
+            )}
+            %
+          </strong>
           {'→100%'}
         </p>
       </SubCard>
