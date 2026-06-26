@@ -104,7 +104,7 @@ describe('createRacePlan', () => {
     expect(plan.phaseFractions.pulkStart).toBe(0.25);
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
     expect(plan.phaseFractions.transitionEnd).toBe(0.75);
-    expect(plan.phaseFractions.corridorEnd).toBe(0.95);
+    expect(plan.phaseFractions.corridorEnd).toBe(1.0);
   });
 
   it('absolute phase times are derived from targetDurationMs', () => {
@@ -467,16 +467,17 @@ describe('createTrajectoryController — getPhase', () => {
 // ── Leader-progress phase clock (C0) ──────────────────────────────────────────
 
 describe('createTrajectoryController — leader-progress phase clock', () => {
-  // Defaults: pulkStart=0.25, pulkEnd=0.5, corridorStart=0.55, corridorEnd=0.95.
+  // Defaults: pulkStart=0.25, pulkEnd=0.5, corridorStart=0.55, corridorEnd=1.0.
   it('getPhase selects by fraction when phaseProgress is supplied (elapsedMs ignored)', () => {
     const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     const ctrl = createTrajectoryController(plan);
 
     // elapsedMs=0 would be PRE_PULK on the legacy path; phaseProgress drives the result instead.
-    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME'); // 0.55 <= 0.6 < 0.95
+    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME'); // 0.55 <= 0.6 < 1.0
     expect(ctrl.getPhase(0, 0.3)).toBe('PULK'); // 0.25 <= 0.3 < 0.5
     expect(ctrl.getPhase(0, 0.1)).toBe('PRE_PULK'); // < 0.25
-    expect(ctrl.getPhase(0, 0.97)).toBe('FINAL'); // >= 0.95
+    expect(ctrl.getPhase(0, 0.97)).toBe('OUTCOME'); // corridorEnd=1.0 → P-controller active until the line
+    expect(ctrl.getPhase(0, 1.0)).toBe('FINAL'); // >= corridorEnd (1.0)
   });
 
   it('honours phase boundaries as fractions [0,1]', () => {
@@ -711,9 +712,9 @@ describe('createRacePlan — timing parameter defaults', () => {
     expect(plan._phases.corrStart).toBeCloseTo(0.55 * TARGET_DUR_MS, 0);
   });
 
-  it('_phases.corrEnd defaults to 0.95 × targetDurationMs', () => {
+  it('_phases.corrEnd defaults to 1.0 × targetDurationMs', () => {
     const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
-    expect(plan._phases.corrEnd).toBeCloseTo(0.95 * TARGET_DUR_MS, 0);
+    expect(plan._phases.corrEnd).toBeCloseTo(1.0 * TARGET_DUR_MS, 0);
   });
 
   it('_areaBonusFadeDuration defaults to 1500ms', () => {

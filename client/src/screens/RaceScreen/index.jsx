@@ -680,7 +680,7 @@ export default function RaceScreen() {
           bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
-          corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 0.95,
+          corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
         },
         racePlanSeed
       );

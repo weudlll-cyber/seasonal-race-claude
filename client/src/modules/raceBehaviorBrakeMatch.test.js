@@ -53,6 +53,9 @@ const cfg = {
   speedBrakeTMultiplier: 1.5,
   brakeMatchActivationTMultiplier: 1.5,
   brakeMatchActivationYThreshold: 0.18,
+  // Pin the hard-separation backstop OFF: these tests isolate brake-to-match
+  // state logic; the positional separation pass (default-on) would perturb physicalY.
+  hardSeparationEnabled: false,
 };
 
 // Config variant that freezes physicalY: no lateral forces fire.

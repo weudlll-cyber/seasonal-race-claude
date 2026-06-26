@@ -56,7 +56,7 @@ const DEFAULT_PHASE_FRACTIONS = {
   pulkEnd: 0.5,
   transitionEnd: 0.75,
   corridorStart: 0.55,
-  corridorEnd: 0.95,
+  corridorEnd: 1.0,
   midToLateSwitchFraction: 0.85,
 };
 

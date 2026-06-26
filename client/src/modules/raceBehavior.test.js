@@ -43,7 +43,10 @@ function makeLaneRacer(overrides = {}) {
   return racer;
 }
 
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+// Pin the hard-separation backstop OFF for the force-isolation tests below: it is
+// default-on in production but would perturb physicalY here. The dedicated
+// 'hard position separation' describe block opts back in explicitly (ON vs OFF).
+const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, hardSeparationEnabled: false };
 
 // ── initRacerBehavior ──────────────────────────────────────────────────────
 
@@ -766,5 +769,157 @@ describe('applyRacerBehavior — brake-to-match regressions', () => {
     const [trailer, leader] = makeLanePair(1.001e-4, 1.0e-4);
     applyRacerBehavior([trailer, leader], cfg);
     expect(trailer.brakeMatchFactor).toBe(1.0);
+  });
+});
+
+// ── Hard position separation (Layer 2, behind hardSeparationEnabled flag) ────
+// Isolated by comparing ON vs OFF on identical inputs: any difference is caused
+// solely by the separation pass (every other force is identical between the two).
+
+describe('hard position separation', () => {
+  // Bodies: contactWidth = 28px, contactLength = 31px, trackWidth 140, pathLength 1200.
+  // Tolerance (default 0.10) → separation engages/stops one band inside contact:
+  //   latTargetPx = 28 × (1 − 0.10) = 25.2px.
+  const CONTACT_W = 28;
+  const latTargetPx = CONTACT_W * (1 - cfg.hardSeparationTolerancePct); // 25.2
+  // True overlap: same t (dT=0), physicalY 0.02 apart → 1.4px ≪ latTarget → deep overlap.
+  const overlapPair = () => [
+    makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.01 }),
+    makeLaneRacer({ index: 1, t: 0.5, physicalY: -0.01 }),
+  ];
+  const gapPx = (a, b) => Math.abs(a.physicalY - b.physicalY) * (140 / 2);
+  // No-clock callers (no priorityExtras) → warmupScale = 1 (full strength).
+  const onFull = (relax = 1.0) => ({
+    ...cfg,
+    hardSeparationEnabled: true,
+    hardSeparationRelaxation: relax,
+  });
+
+  it('flag OFF (explicit): zero effect — overlapping pair stays overlapping', () => {
+    const [a, b] = overlapPair();
+    applyRacerBehavior([a, b], { ...cfg, hardSeparationEnabled: false });
+    expect(gapPx(a, b)).toBeLessThan(latTargetPx); // still interpenetrating, pass did not run
+  });
+
+  it('flag ON vs OFF: ON opens the gap to the tolerance boundary, OFF does not', () => {
+    const [aOff, bOff] = overlapPair();
+    const [aOn, bOn] = overlapPair();
+    applyRacerBehavior([aOff, bOff], { ...cfg, hardSeparationEnabled: false });
+    applyRacerBehavior([aOn, bOn], onFull(1.0));
+    expect(gapPx(aOn, bOn)).toBeGreaterThan(gapPx(aOff, bOff));
+    expect(gapPx(aOn, bOn)).toBeGreaterThanOrEqual(latTargetPx - 1e-6); // separated to tolerance
+  });
+
+  it('flag ON: separation is symmetric — each racer moves an equal, opposite amount', () => {
+    // Zero the lateral forces so the ONLY thing moving physicalY is the separation pass.
+    const noForce = {
+      ...onFull(1.0),
+      lateralForce: 0,
+      homeForceStrength: 0,
+      softRepulsionStrength: 0,
+    };
+    const [a, b] = overlapPair(); // +0.01 / −0.01, symmetric about 0
+    applyRacerBehavior([a, b], noForce);
+    expect(gapPx(a, b)).toBeGreaterThanOrEqual(latTargetPx - 1e-6); // separated
+    expect(a.physicalY + b.physicalY).toBeCloseTo(0, 9); // midpoint preserved
+    expect(Math.abs(a.physicalY - 0.01)).toBeCloseTo(Math.abs(b.physicalY + 0.01), 9); // equal travel
+  });
+
+  it('flag ON: relaxation < 1 resolves only a fraction per frame (smooth, no snap)', () => {
+    const [aOff, bOff] = overlapPair();
+    const [aHalf, bHalf] = overlapPair();
+    const [aFull, bFull] = overlapPair();
+    applyRacerBehavior([aOff, bOff], { ...cfg, hardSeparationEnabled: false });
+    applyRacerBehavior([aHalf, bHalf], onFull(0.5));
+    applyRacerBehavior([aFull, bFull], onFull(1.0));
+    expect(gapPx(aHalf, bHalf)).toBeGreaterThan(gapPx(aOff, bOff));
+    expect(gapPx(aHalf, bHalf)).toBeLessThan(gapPx(aFull, bFull));
+  });
+
+  it('flag ON: soft stop — separation halts at the tolerance boundary, not full contact', () => {
+    const noForce = {
+      ...onFull(1.0),
+      lateralForce: 0,
+      homeForceStrength: 0,
+      softRepulsionStrength: 0,
+    };
+    const [a, b] = overlapPair();
+    applyRacerBehavior([a, b], noForce);
+    expect(gapPx(a, b)).toBeCloseTo(latTargetPx, 5); // exactly the tolerance boundary (25.2)
+    expect(gapPx(a, b)).toBeLessThan(CONTACT_W); // NOT pushed to full contact (28)
+  });
+
+  it('flag ON: does NOT engage when the overlap is within the tolerance dead-zone', () => {
+    const noForce = {
+      ...onFull(1.0),
+      lateralForce: 0,
+      homeForceStrength: 0,
+      softRepulsionStrength: 0,
+    };
+    // 0.19 → gap 26.6px: inside the tolerance band (25.2 < 26.6 < 28) → no separation.
+    const a = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.19 });
+    const b = makeLaneRacer({ index: 1, t: 0.5, physicalY: -0.19 });
+    applyRacerBehavior([a, b], noForce);
+    expect(a.physicalY).toBeCloseTo(0.19, 9); // untouched
+    expect(b.physicalY).toBeCloseTo(-0.19, 9);
+  });
+
+  it('warmup ramp: no separation at raceElapsedMs=0 (warmupScale 0), on open AND closed', () => {
+    const base = {
+      ...onFull(1.0),
+      lateralForce: 0,
+      homeForceStrength: 0,
+      softRepulsionStrength: 0,
+      avoidanceWarmupMs: 3000,
+    };
+    for (const isOpen of [true, false]) {
+      const [a, b] = overlapPair();
+      // priorityExtras supplies currentTs → the warmup clock. currentTs=0 → scale 0.
+      applyRacerBehavior([a, b], { ...base, isOpen }, { currentTs: 0, cooldownMs: 500 });
+      expect(a.physicalY).toBeCloseTo(0.01, 9); // unchanged — strength ramped to 0
+      expect(b.physicalY).toBeCloseTo(-0.01, 9);
+    }
+  });
+
+  it('warmup ramp: half warmup separates less than full warmup', () => {
+    const base = {
+      ...onFull(1.0),
+      lateralForce: 0,
+      homeForceStrength: 0,
+      softRepulsionStrength: 0,
+      avoidanceWarmupMs: 3000,
+    };
+    const [aH, bH] = overlapPair();
+    const [aF, bF] = overlapPair();
+    applyRacerBehavior([aH, bH], base, { currentTs: 1500, cooldownMs: 500 }); // half warmup
+    applyRacerBehavior([aF, bF], base, { currentTs: 3000, cooldownMs: 500 }); // full warmup
+    expect(gapPx(aH, bH)).toBeGreaterThan(gapPx(overlapPair()[0], overlapPair()[1])); // some effect
+    expect(gapPx(aH, bH)).toBeLessThan(gapPx(aF, bF)); // but weaker than full
+  });
+
+  it('flag ON: never pushes a racer past the maxLateral boundary; uses longitudinal emergency', () => {
+    // Both pinned at the outer boundary in the same lane → lateral push has no room.
+    const cap = Math.min(cfg.maxLateral, 1.0);
+    const a = makeLaneRacer({ index: 0, t: 0.5, physicalY: cap });
+    const b = makeLaneRacer({ index: 1, t: 0.5001, physicalY: cap });
+    const dtBefore = Math.abs(a.t - b.t);
+    applyRacerBehavior([a, b], onFull(1.0));
+    expect(Math.abs(a.physicalY)).toBeLessThanOrEqual(cap + 1e-9);
+    expect(Math.abs(b.physicalY)).toBeLessThanOrEqual(cap + 1e-9);
+    expect(Math.abs(a.t - b.t)).toBeGreaterThan(dtBefore); // emergency opened the t-gap
+  });
+
+  it('flag ON vs OFF: a well-separated pair is bit-identical (pass is a no-op)', () => {
+    const mk = () => [
+      makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.6 }),
+      makeLaneRacer({ index: 1, t: 0.5, physicalY: -0.6 }),
+    ];
+    const [aOff, bOff] = mk();
+    const [aOn, bOn] = mk();
+    applyRacerBehavior([aOff, bOff], { ...cfg, hardSeparationEnabled: false });
+    applyRacerBehavior([aOn, bOn], onFull(1.0));
+    // 84px apart ≫ 28px contact → no overlap → ON and OFF must match exactly.
+    expect(aOn.physicalY).toBe(aOff.physicalY);
+    expect(bOn.physicalY).toBe(bOff.physicalY);
   });
 });

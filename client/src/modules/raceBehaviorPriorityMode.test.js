@@ -48,7 +48,9 @@ function makeLaneRacer(overrides = {}) {
   return racer;
 }
 
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
+// Pin the hard-separation backstop OFF: these tests isolate priority-mode home-force
+// behavior; the positional separation pass (default-on) would perturb physicalY.
+const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, hardSeparationEnabled: false };
 
 // Isolates home-force effect: avoidance and soft-repulsion zeroed, home-force
 // active at a known value so mode-based suspension is observable.
