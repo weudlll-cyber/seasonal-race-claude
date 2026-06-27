@@ -19,60 +19,29 @@ export const PRIORITY_MODE = Object.freeze({
   BLOCKED: 'BLOCKED',
 });
 
-// lateralForce calibration baseline in px — a fixed anchor, close to Dirt Oval's ~93px width. Do not retune to match any specific track (see ARCHITECTURE.md).
-// Wider tracks divide lateralForce by the ratio; narrower tracks multiply it (clamped 0.1–3.0).
-const REFERENCE_TRACK_WIDTH = 98;
-
-// Stuck-mode thresholds (match diagnosis-recommended band from diag-stuck-mode.mjs).
-// A racer is "stuck" when bilateral avoidance forces nearly cancel, leaving it motionless.
-// Used by stuckModeSuppress: when all three conditions hold, lateral delta is zeroed.
-const STUCK_P_THRESH = 0.008; // minimum totalPressure (rawPos + rawNeg) to qualify
-const STUCK_BALANCE_RATIO = 0.25; // max |rawPos - rawNeg| / totalPressure (near-cancel)
-const STUCK_VEL_THRESH = 0.0015; // max |physicalYVelocity| to consider the racer motionless
-
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
-// Eliminates ~10 new Map/Set allocations per physics step (~37,500 per 60s race).
-// Each call clears + repopulates; no stale values leak between steps.
-const _yDeltas = new Map();
-const _yAvoidDeltas = new Map();
-const _yFreeLaneDeltas = new Map();
-const _freeLaneCounts = new Map();
+// Eliminates per-step Map/Set allocations. Each call clears + repopulates; no stale
+// values leak between steps.
 const _overlapSet = new Set();
-const _neighborCounts = new Map();
 const _speedBrakeSet = new Set();
 const _brakeMatchCaps = new Map();
 const _brakeMatchLeaderIdxs = new Map();
-const _dRawPos = new Map();
-const _dRawNeg = new Map();
-const _dCntPos = new Map();
-const _dCntNeg = new Map();
-// Step-2 clearance accumulators (Stage A — populated, not yet consumed).
-// Sets of racer index: which racers have a neighbor in each directional corridor.
-// Populated before Y-rejection so the corridor is not clipped by the avoidance gate.
-const _approachLeft = new Set();
-const _approachRight = new Set();
-const _forwardLeft = new Set();
-const _forwardRight = new Set();
-// Step-2 Stage B: same-lane detection (open tracks, post-Y-rejection pair loop body).
-// _sameLaneApproach:    trailer indices that have a leader nearly directly ahead this step.
-// _approachForceMag:    per-trailer max forceMag seen for same-lane pairs (force scaling).
-// _sameLaneLeaderPhysY: per-trailer leader physicalY — primary direction source for commit.
-const _sameLaneApproach = new Set();
-const _approachForceMag = new Map();
-const _sameLaneLeaderPhysY = new Map();
-// _sameLaneLeaderObj: per-trailer leader object for the most-constraining leader —
-// used only to derive the stable tie-break side at relPos ≈ 0 (pairTieDir).
-const _sameLaneLeaderObj = new Map();
 // OVL-C: per-step free-side direction + partner physicalY for the sustained-OVERLAP escape.
-// Populated in the free-lane overlap block once dirA/dirB are final; cleared every step.
+// Populated in the overlap block once dirA/dirB are final; cleared every step.
 const _ovlcEscapeDir = new Map(); // racerIndex → free-side direction (±1); absent = blocked
 const _ovlcPartnerY = new Map(); // racerIndex → overlapping partner physicalY (ramp source)
-// Layer 1 (Soft Steering): per-step target + selection state. Only consumed when
-// config.softSteeringEnabled. Cleared + re-initialised every step like every map above.
-// _ssTarget:   racerIndex → target physicalY (default 0 = centerline / home-equivalent).
+// Same-lane trailer set — kept solely as the OVL-C `!inSameLane` gate input (leader-only
+// escape). Removed in Commit B together with OVL-C; the L4/L5 consumers are already gone.
+const _sameLaneApproach = new Set();
+// Layer 1 (Soft Steering): per-step target + selection state.
+// _ssTarget:   racerIndex → target physicalY (default 0 = centerline).
 // _ssForceMag: racerIndex → strongest forceMag seen this step (most-constraining wins).
 const _ssTarget = new Map();
 const _ssForceMag = new Map();
+
+// Layer 1 spring-constant fallback when config.softSteeringStrength is absent
+// (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
+const SOFT_STEERING_STRENGTH_FALLBACK = 0.03;
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -131,11 +100,7 @@ export function initRacerBehavior(racer) {
   racer.brakeMatchFactor = 1.0;
   racer.brakeMatchFrames = 0;
   racer.brakeReleaseFrames = 0;
-  // Step-2 Stage B: lateral commitment state (all tracks).
-  // approachCommitDir: −1 (left), 0 (none), +1 (right). Debounced to prevent zigzag.
-  racer.approachCommitDir = 0;
-  racer.approachCommitFrames = 0;
-  // OVL-C: escape latch (all tracks). Mirrors approachCommitDir debounce.
+  // OVL-C: escape latch (kept until Commit B removes OVL-C). Debounced direction hold.
   racer.escapeCommitDir = 0;
   racer.escapeCommitFrames = 0;
 }
@@ -333,20 +298,19 @@ function _computeBlockedMode(r, active) {
  * }>} racers
  * @param {{
  *   enabled: boolean,
- *   homeForceStrength: number,
- *   homeForceReductionOnOverlap: number,
  *   comfortThreshold: number, softRepulsionStrength: number,
  *   avoidanceBufferPct: number,
  *   lateralForce: number, maxLateral: number,
  *   speedBrakeYThreshold: number, speedBrakeTMultiplier: number,
  *   speedBrakeFactor: number,
+ *   softSteeringStrength: number, softSteeringSymmetric: boolean,
  *   draftingMaxDistance: number, draftingConeAngle: number, draftingBoost: number
  * }} config
  * @param {{ cooldownMs: number, currentTs: number, blockedTimeoutFrames?: number, blockedEscapeForce?: number }|undefined} priorityExtras
- *   Optional. When provided, activates the 4-mode priority system for Home Force (Phase 2).
- *   When omitted, falls back to the legacy homeForceReductionOnOverlap behavior.
+ *   Optional. When provided, computes the 4-mode priority state consumed by OVL-C and
+ *   the debug overlay (the legacy home force it once gated has been removed).
  */
-export function applyRacerBehavior(racers, config, priorityExtras, diagOut = null) {
+export function applyRacerBehavior(racers, config, priorityExtras) {
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
@@ -360,79 +324,25 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
   for (const r of active) r.draftingBoostActive = false;
 
   // Clear + repopulate pre-allocated module-level structures (no per-step allocation).
-  _yDeltas.clear();
-  _yAvoidDeltas.clear();
-  _yFreeLaneDeltas.clear();
-  _freeLaneCounts.clear();
   _overlapSet.clear();
-  _neighborCounts.clear();
   _speedBrakeSet.clear();
   _brakeMatchCaps.clear();
   _brakeMatchLeaderIdxs.clear();
-  _approachLeft.clear();
-  _approachRight.clear();
-  _forwardLeft.clear();
-  _forwardRight.clear();
-  _sameLaneApproach.clear();
-  _approachForceMag.clear();
-  _sameLaneLeaderPhysY.clear();
-  _sameLaneLeaderObj.clear();
   _ovlcEscapeDir.clear();
   _ovlcPartnerY.clear();
+  _sameLaneApproach.clear();
   _ssTarget.clear();
   _ssForceMag.clear();
   for (const r of active) {
-    _yDeltas.set(r.index, 0);
-    _yAvoidDeltas.set(r.index, 0);
-    _yFreeLaneDeltas.set(r.index, 0);
-    _freeLaneCounts.set(r.index, 0);
-    _neighborCounts.set(r.index, 0);
     _ssTarget.set(r.index, 0);
     _ssForceMag.set(r.index, 0);
   }
-  // Accumulate physicalY deltas from home force + avoidance
-  const yDeltas = _yDeltas;
-  // Avoidance accumulated separately for sqrt(neighborCount) normalization (A3/B3)
-  const yAvoidDeltas = _yAvoidDeltas;
-  // Free-lane separation impulses — normalized by sqrt(freeLaneCount) to prevent
-  // stacking explosion at race start where many pairs overlap simultaneously.
-  const yFreeLaneDeltas = _yFreeLaneDeltas;
-  const freeLaneCounts = _freeLaneCounts;
   const overlapSet = _overlapSet;
-  const neighborCounts = _neighborCounts;
   const speedBrakeSet = _speedBrakeSet;
   // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
   const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
   const brakeMatchLeaderIdxs = _brakeMatchLeaderIdxs; // trailer.index → leader.index for that cap
-  // rawPos/rawNeg: pre-normalization avoidance + free-lane force magnitudes by direction.
-  // Reuse pre-allocated module-level maps when needed; null signals "not needed" to inner loops.
-  // cntPos/cntNeg: pair-force counts — only needed for external diagnostic output.
-  const needsBreakdown = diagOut !== null || (config.stuckModeSuppress ?? false);
-  let dRawPos = null;
-  let dRawNeg = null;
-  let dCntPos = null;
-  let dCntNeg = null;
-  if (needsBreakdown) {
-    _dRawPos.clear();
-    _dRawNeg.clear();
-    for (const r of active) {
-      _dRawPos.set(r.index, 0);
-      _dRawNeg.set(r.index, 0);
-    }
-    dRawPos = _dRawPos;
-    dRawNeg = _dRawNeg;
-  }
-  if (diagOut !== null) {
-    _dCntPos.clear();
-    _dCntNeg.clear();
-    for (const r of active) {
-      _dCntPos.set(r.index, 0);
-      _dCntNeg.set(r.index, 0);
-    }
-    dCntPos = _dCntPos;
-    dCntNeg = _dCntNeg;
-  }
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
@@ -444,37 +354,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       let dT = Math.abs(rA.t - rB.t);
       if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
       const dY = rA.physicalY - rB.physicalY;
-
-      // ── Step-2 clearance accumulators (Stage A — all tracks) ──────────────────
-      // Runs BEFORE Y-rejection so the clearance corridor is not clipped by the
-      // avoidance gate. Uses its own geometric gate (2 × honest half-span).
-      // Not yet consumed — populated here for budget measurement only.
-      // Bare block (no isOpen gate): de-stacking now runs on closed tracks too.
-      {
-        const twA = getTrackWidthAtTpx(rA);
-        const twB = getTrackWidthAtTpx(rB);
-        const pairTW = Math.max(twA, twB);
-        if (pairTW > 0) {
-          const rAHH = pxToPhysicalY(rA.drawnBodyWidthPx ?? rA.frameSizePx ?? 0, pairTW);
-          const rBHH = pxToPhysicalY(rB.drawnBodyWidthPx ?? rB.frameSizePx ?? 0, pairTW);
-          const pairHH = Math.max(rAHH, rBHH);
-          if (pairHH > 0 && Math.abs(dY) < 2 * pairHH) {
-            const aIsAhead = rA.t >= rB.t;
-            const front = aIsAhead ? rA : rB;
-            const back = aIsAhead ? rB : rA;
-            const lateralDelta = front.physicalY - back.physicalY;
-            if (lateralDelta > 0) {
-              _approachRight.add(back.index);
-              _approachLeft.add(front.index);
-            } else if (lateralDelta < 0) {
-              _approachLeft.add(back.index);
-              _approachRight.add(front.index);
-            }
-            if (lateralDelta > pairHH) _forwardRight.add(back.index);
-            else if (lateralDelta < -pairHH) _forwardLeft.add(back.index);
-          }
-        }
-      }
 
       // Body geometry for the speed-brake — both axes body-based (reports 43/45).
       // Frame size kept as fallback when body dims are absent.
@@ -588,11 +467,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // Two-axis AND: both axes must be inside the buffered contact zone.
       if (latPx >= latTrigger || longPx >= longTrigger) continue;
 
-      // Track-relative scaling: wider tracks get proportionally weaker lateralForce
-      // so the pixel-space force is consistent across all track widths.
-      const lateralScale =
-        pairTW > 0 ? Math.max(0.1, Math.min(3.0, REFERENCE_TRACK_WIDTH / pairTW)) : 1.0;
-
       // Proximity-scaled lateral force: min penetration fraction across both axes.
       // Decays from lateralForce (centers touching) to 0 (at the trigger boundary).
       const latFraction = 1 - latPx / latTrigger;
@@ -604,7 +478,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       // store a target one contact width to the side it is already on. Asymmetric
       // (trailer only) unless softSteeringSymmetric. The overlap block (§4b) may later
       // override this for the same pair (it uses >= so overlap wins on equal forceMag).
-      if (config.softSteeringEnabled && trackWidth > 0) {
+      if (trackWidth > 0) {
         const contactOffsetY =
           pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));
         const ssCap = Math.min(config.maxLateral, 1.0);
@@ -691,7 +565,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           // forceMag. Both sides blocked → hold (target = current physicalY) → spring
           // delta ≈ 0, which replaces L9 (stuck suppression) for this case. F2: the
           // OVL-C population below is NOT guarded, so L6 keeps its inputs when on.
-          if (config.softSteeringEnabled && trackWidth > 0) {
+          if (trackWidth > 0) {
             const ssOffsetY =
               pxToPhysicalY(contactWidth, trackWidth) *
               (1 + (config.softSteeringClearancePct ?? 0));
@@ -720,25 +594,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
             }
           }
 
-          // §5: L3 free-lane force writes — suppressed when soft steering is on.
-          // The dirA/dirB + isSideFree computation above and the OVL-C population
-          // below stay unguarded (F2) so L6 keeps working.
-          if (!config.softSteeringEnabled) {
-            if (dirA !== 0) {
-              yFreeLaneDeltas.set(rA.index, yFreeLaneDeltas.get(rA.index) + dirA * forceMag);
-              freeLaneCounts.set(rA.index, freeLaneCounts.get(rA.index) + 1);
-            }
-            if (dirB !== 0) {
-              yFreeLaneDeltas.set(rB.index, yFreeLaneDeltas.get(rB.index) + dirB * forceMag);
-              freeLaneCounts.set(rB.index, freeLaneCounts.get(rB.index) + 1);
-            }
-            if (dRawPos !== null) {
-              if (dirA > 0) dRawPos.set(rA.index, dRawPos.get(rA.index) + forceMag);
-              else if (dirA < 0) dRawNeg.set(rA.index, dRawNeg.get(rA.index) + forceMag);
-              if (dirB > 0) dRawPos.set(rB.index, dRawPos.get(rB.index) + forceMag);
-              else if (dirB < 0) dRawNeg.set(rB.index, dRawNeg.get(rB.index) + forceMag);
-            }
-          }
           // OVL-C: record free-side direction and partner Y for the escape.
           // All overlapping pairs write; last-written wins when multiple pairs overlap.
           if (dirA !== 0) _ovlcEscapeDir.set(rA.index, dirA);
@@ -748,16 +603,10 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
         }
       }
 
-      // Push trailer away from leader's physicalY.
-      // When yDiff ≈ 0 there is no meaningful push direction — skip to avoid all trailers
-      // rushing toward positive physicalY (the degenerate yDiff≥0 branch).
-      const yDiff = trailer.physicalY - leader.physicalY;
-
-      // ── Step-2 Stage B: same-lane approach detection (all tracks) ─────────────
-      // Fires when the trailer is within one honest body half-span of the leader laterally.
-      // Stores this trailer as needing a committed side choice, plus the current forceMag
-      // for magnitude-bounded force injection in the apply-deltas loop.
+      // OVL-C input only: mark the trailer same-lane so L6 stays leader-only
+      // (BEHALTEN-A — removed in Commit B with OVL-C). Same condition as before.
       if (trackWidth > 0) {
+        const yDiff = trailer.physicalY - leader.physicalY;
         const sameLaneHH = pxToPhysicalY(
           Math.max(
             trailer.drawnBodyWidthPx ?? trailer.frameSizePx ?? 0,
@@ -765,47 +614,14 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           ),
           trackWidth
         );
-        if (sameLaneHH > 0 && Math.abs(yDiff) < sameLaneHH) {
-          _sameLaneApproach.add(trailer.index);
-          if (forceMag > (_approachForceMag.get(trailer.index) ?? 0)) {
-            _approachForceMag.set(trailer.index, forceMag);
-          }
-          // Store leader physicalY for the deadlock-break fallback in apply-deltas.
-          // Most-constraining leader (highest forceMag) wins so the same priority as
-          // forceMag selection applies to the direction reference.
-          if (forceMag >= (_approachForceMag.get(trailer.index) ?? 0)) {
-            _sameLaneLeaderPhysY.set(trailer.index, leader.physicalY);
-            _sameLaneLeaderObj.set(trailer.index, leader);
-          }
-        }
-      }
-
-      if (Math.abs(yDiff) < 1e-6) continue;
-      // §5: L2 avoidance push — suppressed when soft steering is on.
-      if (!config.softSteeringEnabled) {
-        const pushDir = yDiff >= 0 ? 1 : -1;
-        yAvoidDeltas.set(
-          trailer.index,
-          yAvoidDeltas.get(trailer.index) + pushDir * forceMag * lateralScale
-        );
-        neighborCounts.set(trailer.index, neighborCounts.get(trailer.index) + 1);
-        if (dRawPos !== null) {
-          const scaled = forceMag * lateralScale;
-          if (pushDir > 0) {
-            dRawPos.set(trailer.index, dRawPos.get(trailer.index) + scaled);
-            if (dCntPos !== null) dCntPos.set(trailer.index, dCntPos.get(trailer.index) + 1);
-          } else {
-            dRawNeg.set(trailer.index, dRawNeg.get(trailer.index) + scaled);
-            if (dCntNeg !== null) dCntNeg.set(trailer.index, dCntNeg.get(trailer.index) + 1);
-          }
-        }
+        if (sameLaneHH > 0 && Math.abs(yDiff) < sameLaneHH) _sameLaneApproach.add(trailer.index);
       }
     }
   }
 
   // ── Priority-mode computation (Phase 2) ───────────────────────────────────
-  // When priorityExtras is provided, each racer gets a mode that controls whether
-  // Home Force contributes. When omitted (legacy), falls back to homeForceReductionOnOverlap.
+  // When priorityExtras is provided, each racer gets a mode (NORMAL/OVERLAP/COOLDOWN/
+  // BLOCKED) consumed by OVL-C and the debug overlay. Skipped entirely when omitted.
   if (priorityExtras) {
     const { cooldownMs, currentTs } = priorityExtras;
 
@@ -839,201 +655,16 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
     }
   }
 
-  // ── Home force — spring toward centerline ─────────────────────────────────
-  // §6: L1 home force + the sqrt(N) avoidance/free-lane normalization are suppressed
-  // when soft steering is on — the single spring (below) replaces them. The priority-
-  // mode computation above is NOT guarded (L6/OVL-C reads r.currentMode).
-  if (!config.softSteeringEnabled) {
-    if (priorityExtras) {
-      // Priority-mode path: home force = 0 for OVERLAP / COOLDOWN / BLOCKED.
-      // Escape hatch: after blockedTimeoutFrames consecutive BLOCKED frames, apply a
-      // reduced home force (blockedEscapeForce × homeForceStrength) so racers can exit
-      // a permanently-blocked corridor in high-density racing.
-      const { blockedTimeoutFrames = 0, blockedEscapeForce = 0 } = priorityExtras;
-      for (const r of active) {
-        let homeContrib = 0;
-        if (r.currentMode === PRIORITY_MODE.NORMAL) {
-          homeContrib = -r.physicalY * config.homeForceStrength;
-        } else if (
-          r.currentMode === PRIORITY_MODE.BLOCKED &&
-          blockedTimeoutFrames > 0 &&
-          (r.currentModeFrameCount ?? 0) >= blockedTimeoutFrames
-        ) {
-          // Escape hatch: gentle pull back toward center after prolonged BLOCKED state
-          homeContrib = -r.physicalY * config.homeForceStrength * blockedEscapeForce;
-        }
-        yDeltas.set(r.index, homeContrib);
-      }
-    } else {
-      // Legacy path: homeForceReductionOnOverlap (unchanged behavior for existing tests)
-      const overlapFactorRaw = Number.isFinite(config.homeForceReductionOnOverlap)
-        ? config.homeForceReductionOnOverlap
-        : 1;
-      const overlapFactor = Math.max(0, Math.min(1, overlapFactorRaw));
-      for (const r of active) {
-        const factor = overlapSet.has(r.index) ? overlapFactor : 1;
-        yDeltas.set(r.index, -r.physicalY * config.homeForceStrength * factor);
-      }
-    }
-
-    // Anti-stacking: normalize avoidance and free-lane sums by sqrt(N).
-    // Prevents stacking explosion when many pairs overlap simultaneously (e.g. race start
-    // with 40 racers where each racer can overlap 10+ neighbors at once).
-    for (const r of active) {
-      const count = neighborCounts.get(r.index);
-      const avoid =
-        count > 1 ? yAvoidDeltas.get(r.index) / Math.sqrt(count) : yAvoidDeltas.get(r.index);
-      const flCount = freeLaneCounts.get(r.index);
-      const freeLane =
-        flCount > 1
-          ? yFreeLaneDeltas.get(r.index) / Math.sqrt(flCount)
-          : yFreeLaneDeltas.get(r.index);
-      yDeltas.set(r.index, yDeltas.get(r.index) + avoid);
-      yDeltas.set(r.index, yDeltas.get(r.index) + freeLane);
-    }
-  }
-
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
-  // §6: L9 stuck suppression also off when soft steering is on — the §4b blocked-both-
-  // sides case (target = current physicalY → delta ≈ 0) covers the hold behavior.
-  const stuckSuppress =
-    (config.stuckModeSuppress ?? false) && dRawPos !== null && !config.softSteeringEnabled;
   for (const r of active) {
-    let delta = yDeltas.get(r.index) ?? 0;
+    let delta = 0;
 
-    // Stuck-mode suppression: when bilaterally sandwiched (equal pressure from both sides and
-    // near-zero velocity), suppress all lateral delta so the racer waits rather than jittering.
-    // Normal behavior resumes the moment the stuck condition clears (space opens).
-    if (stuckSuppress) {
-      const rp = dRawPos.get(r.index);
-      const rn = dRawNeg.get(r.index);
-      const totalP = rp + rn;
-      if (totalP > STUCK_P_THRESH) {
-        const imbalance = Math.abs(rp - rn) / totalP;
-        if (
-          imbalance < STUCK_BALANCE_RATIO &&
-          Math.abs(r.physicalYVelocity ?? 0) < STUCK_VEL_THRESH
-        ) {
-          delta = 0;
-        }
-      }
-    }
-
-    // ── Step-2 Stage B/C/D + OVL-C: lateral commitment + escape (all tracks) ──
+    // ── OVL-C: sustained-OVERLAP escape (all tracks) ──────────────────────────
     // Consume the Stage A/B accumulators to update the committed side and inject force.
     // Bare block (no isOpen gate): the active de-stacking now runs on closed tracks too.
     {
       const inSameLane = _sameLaneApproach.has(r.index);
-      if (inSameLane) {
-        // Leader-relative direction: steer to the side the trailer is already on,
-        // away from this specific leader. Removes the t-blind corridor false-positive
-        // (_approachLeft/Right) that deadlocked 91.5% of dense-field triggers and caused
-        // Stage B force to cancel the natural avoidance push instead of reinforcing it.
-        // Stage C two-part override: switch from naturalDir only when (a) natural side
-        // has a forward obstacle AND (b) the opposite side is clear both AHEAD and
-        // ADJACENTLY — preventing a switch into a lane with a racer right beside us.
-        // _approachLeft/Right used here only as a gate on the switch, never as the
-        // primary direction source (no force-cancellation risk on the primary case).
-        let desiredDir = 0;
-        const lpy = _sameLaneLeaderPhysY.get(r.index);
-        if (lpy !== undefined) {
-          const relPos = r.physicalY - lpy;
-          const naturalDir =
-            Math.abs(relPos) >= (config.commitDirDeadZoneY ?? 0.04)
-              ? relPos >= 0
-                ? 1
-                : -1
-              : pairTieDir(r, _sameLaneLeaderObj.get(r.index));
-          const naturalFwdBlocked =
-            naturalDir > 0 ? _forwardRight.has(r.index) : _forwardLeft.has(r.index);
-          const oppFwdBlocked =
-            naturalDir > 0 ? _forwardLeft.has(r.index) : _forwardRight.has(r.index);
-          // Part 1 (adjacent): is the opposite side free right now?
-          const oppApproachBlocked =
-            naturalDir > 0 ? _approachLeft.has(r.index) : _approachRight.has(r.index);
-          desiredDir =
-            naturalFwdBlocked && !oppFwdBlocked && !oppApproachBlocked ? -naturalDir : naturalDir;
-        }
-
-        const commitTimeout = config.brakeHoldTimeoutFrames ?? 90;
-        if (desiredDir !== 0) {
-          if (desiredDir === r.approachCommitDir) {
-            r.approachCommitFrames++;
-          } else {
-            // Debounce direction flip: decay the counter before switching.
-            r.approachCommitFrames--;
-            if (r.approachCommitFrames <= 0) {
-              r.approachCommitDir = desiredDir;
-              r.approachCommitFrames = 1;
-            }
-          }
-          if (r.approachCommitFrames >= commitTimeout) {
-            // Anti-starvation: abandon commit after too many consecutive frames.
-            r.approachCommitDir = 0;
-            r.approachCommitFrames = 0;
-          }
-        } else {
-          // desiredDir still 0: no leader physicalY available — decay gently.
-          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - 1);
-          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
-        }
-      } else {
-        // No same-lane leader: decay commitment over bmDebounce frames.
-        const dbDecay = config.brakeReleaseDebounceFrames ?? 3;
-        if (r.approachCommitDir !== 0) {
-          r.approachCommitFrames = Math.max(0, r.approachCommitFrames - dbDecay);
-          if (r.approachCommitFrames === 0) r.approachCommitDir = 0;
-        }
-      }
-
-      // Inject committed lateral force + Stage D gap-clearing force into this frame's delta.
-      // ── Optional L4/L5 hand-off to hard separation (OFF by default) ──────────
-      // Skipping L4 (commit-injection) + L5 (gap-force) for overlapping pairs drives
-      // pass-throughs near zero, BUT it introduces a start-row fairness bias on open
-      // tracks: L4/L5 resolve the dense start-pack overlaps in a position-neutral way,
-      // and letting the hard separation do it instead biases by start position
-      // (SIM-HARDSEP-FINAL / SIM-L4L5-RESTORE — keeping L4/L5 active restored fairness on
-      // 3/4 regressed combos). So the default is FALSE: L4/L5 stay active and the hard
-      // separation acts only as a backstop (fair; pass-throughs still far below baseline).
-      // Gated on overlapSet (true contact, no tolerance band) when enabled, so L4/L5 do
-      // not re-deepen a contact the separation tolerates.
-      const suppressOverlapForces =
-        config.hardSeparationEnabled &&
-        config.hardSeparationSuppressOverlapForces &&
-        overlapSet.has(r.index);
-      if (r.approachCommitDir !== 0 && !suppressOverlapForces && !config.softSteeringEnabled) {
-        const fMag = _approachForceMag.get(r.index) ?? 0;
-        if (fMag > 0) {
-          let injected = fMag;
-          // ── Step-2 Stage D: self-limiting honest-clearance force ───────────────
-          // Proportional push toward one honest body width of lateral separation.
-          // Three gates ensure this only fires in the genuine direct-behind pass scenario:
-          //   (1) inSameLane: leader is within sameLaneHH laterally, leaderPhysY is fresh.
-          //   (2) speedBrakeSet: trailer is actively decelerating behind a leader (close in T).
-          //       Excludes "alongside" pairs (similar track position, large T separation) that
-          //       would otherwise get extra lateral push causing zigzag and excess contact.
-          //   (3) lpy defined: fresh leader physicalY available this frame.
-          // Ramps from lateralForce×strength at |yDiff|=0 down to 0 at |yDiff|=2×honestHalfSpan.
-          const lpy = _sameLaneLeaderPhysY.get(r.index);
-          if (inSameLane && speedBrakeSet.has(r.index) && lpy !== undefined) {
-            const tw = getTrackWidthAtTpx(r);
-            if (tw > 0) {
-              const honestHalfSpan = pxToPhysicalY(r.drawnBodyWidthPx ?? r.frameSizePx ?? 0, tw);
-              if (honestHalfSpan > 0) {
-                const absYDiff = Math.abs(r.physicalY - lpy);
-                const clearanceSpan = 2 * honestHalfSpan;
-                const gapRatio = Math.max(0, (clearanceSpan - absYDiff) / clearanceSpan);
-                const gapForce = config.lateralForce * (config.gapForceStrength ?? 1.0) * gapRatio;
-                // Safety ceiling: total Stage B injection ≤ lateralForce × gapForceCap.
-                const cap = config.lateralForce * (config.gapForceCap ?? 1.5);
-                injected = Math.min(injected + gapForce, cap);
-              }
-            }
-          }
-          delta += r.approachCommitDir * injected;
-        }
-      }
 
       // ── OVL-C: symmetric sustained-OVERLAP escape ─────────────────────────
       // Targets the non-same-lane (leader) member of a locked pair — the racer
@@ -1066,7 +697,7 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           r.escapeCommitFrames = 0;
         }
       } else if (r.escapeCommitDir !== 0) {
-        // No longer eligible: gentle decay, same pattern as approachCommitDir.
+        // No longer eligible: gentle decay of the escape latch.
         const dbDecay = config.brakeReleaseDebounceFrames ?? 3;
         r.escapeCommitFrames = Math.max(0, r.escapeCommitFrames - dbDecay);
         if (r.escapeCommitFrames === 0) r.escapeCommitDir = 0;
@@ -1088,17 +719,14 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
       }
     }
 
-    // ── Layer 1 (Soft Steering) §6: single target spring ────────────────────
-    // Replaces L1+L2+L3+L4+L5 when enabled. Pulls the racer toward its per-step
-    // target: centerline (0) when no obstacle, beside the most-constraining obstacle
+    // ── Layer 1 (Soft Steering): single target spring ───────────────────────
+    // The sole lateral force model. Pulls the racer toward its per-step target:
+    // centerline (0) when no obstacle, beside the most-constraining obstacle
     // otherwise, or the current position (hold) when both sides are blocked. Runs
-    // after L6 (OVL-C, which stays active as a transition buffer) and before the
-    // velocity/damping integration below.
-    if (config.softSteeringEnabled) {
-      const target = _ssTarget.get(r.index) ?? r.physicalY;
-      const strength = config.softSteeringStrength ?? config.homeForceStrength;
-      delta += (target - r.physicalY) * strength;
-    }
+    // after L6 (OVL-C transition buffer) and before the velocity/damping integration.
+    const target = _ssTarget.get(r.index) ?? r.physicalY;
+    const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
+    delta += (target - r.physicalY) * strength;
 
     // Accumulate lateral forces into velocity, then damp
     r.physicalYVelocity = ((r.physicalYVelocity ?? 0) + delta) * damping;
@@ -1184,17 +812,6 @@ export function applyRacerBehavior(racers, config, priorityExtras, diagOut = nul
           r.brakeReleaseFrames = 0;
         }
       }
-    }
-
-    if (diagOut) {
-      diagOut.set(r.index, {
-        rawPos: dRawPos.get(r.index),
-        rawNeg: dRawNeg.get(r.index),
-        cntPos: dCntPos !== null ? dCntPos.get(r.index) : 0,
-        cntNeg: dCntNeg !== null ? dCntNeg.get(r.index) : 0,
-        netDelta: yDeltas.get(r.index) ?? 0, // pre-suppression physics balance
-        velAfter: r.physicalYVelocity,
-      });
     }
   }
 

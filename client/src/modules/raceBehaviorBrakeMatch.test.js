@@ -11,7 +11,7 @@
 //   makeRacer sets no drawnBodyLengthPx → fallback brakeContactLength = frameSizePx = 40px.
 //   40/20000 × 1.5 = 0.003. Pair dT must be < 0.003 to enter the brake zone.
 //   Tests use dT=0.0015 (leader at t+0.0015).
-//   Anti-trap tests also set lateralForce=0 + homeForceStrength=0 so physicalY stays at 0
+//   Anti-trap tests rely on softSteeringStrength=0 (inherited) so physicalY stays at 0
 //   across all 90 frames (no free-lane push drifts the pair out of the brake zone).
 // ============================================================
 
@@ -56,15 +56,15 @@ const cfg = {
   // Pin the hard-separation backstop OFF: these tests isolate brake-to-match
   // state logic; the positional separation pass (default-on) would perturb physicalY.
   hardSeparationEnabled: false,
-  // softSteeringEnabled pinned false: these verify the legacy brake/avoidance path,
-  // which is now the opt-out path (the default flipped to true). See storage/defaults.js.
-  softSteeringEnabled: false,
+  // softSteeringStrength pinned 0: the soft-steering spring is the unconditional lateral
+  // model now; neutralizing it isolates the brake-to-match state logic under test.
+  softSteeringStrength: 0,
 };
 
-// Config variant that freezes physicalY: no lateral forces fire.
-// Used for anti-trap tests where we need the pair to stay in the brake zone
-// for all 90 frames without lateral drift.
-const cfgFrozen = { ...cfg, lateralForce: 0, homeForceStrength: 0 };
+// Config variant for anti-trap tests where we need the pair to stay in the brake zone
+// for all 90 frames without lateral drift. physicalY is frozen via the inherited
+// softSteeringStrength=0 (set on the shared cfg above), so no separate overrides are needed.
+const cfgFrozen = { ...cfg };
 
 // Pair in brake zone: trailer t=0.5000, leader t=0.5015 → dT=0.0015 < dynamicBrakeT=0.003
 function makePair(trailerSpeed = 1.2e-4, leaderSpeed = 1.0e-4) {
@@ -276,7 +276,7 @@ describe('brake-match state — multi-leader selection', () => {
 // ── anti-trap: timeout → escape → cooldown ───────────────────────────────────
 
 describe('brake-match state — anti-trap', () => {
-  // cfgFrozen (lateralForce=0, homeForceStrength=0) keeps physicalY=0 so the pair
+  // cfgFrozen (softSteeringStrength=0, inherited) keeps physicalY=0 so the pair
   // stays inside the brake zone for all 90+ frames.
 
   it('brakeMatchFrames goes negative after brakeHoldTimeoutFrames hold frames', () => {

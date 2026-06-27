@@ -147,7 +147,7 @@ function PrioritySystemSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Escape Force (fraction)
-              <InfoTooltip text="Fraction of homeForceStrength applied during the escape hatch phase. 0.3 = 30% of normal home force. Higher values pull racers back to center more aggressively but may increase collision risk." />
+              <InfoTooltip text="Legacy control for the blocked-escape home force, which has been removed — currently has no effect (the priority system is slated for removal)." />
             </label>
             <input
               type="number"

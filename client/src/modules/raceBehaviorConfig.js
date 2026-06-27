@@ -59,9 +59,6 @@ export function loadRaceBehaviorConfig() {
   if (
     merged.startSpreadRange <= 0 ||
     merged.startSpreadRange > 1 ||
-    merged.homeForceStrength <= 0 ||
-    merged.homeForceReductionOnOverlap < 0 ||
-    merged.homeForceReductionOnOverlap > 1 ||
     merged.comfortThreshold <= 0 ||
     merged.comfortThreshold >= 1 ||
     merged.softRepulsionStrength <= 0 ||

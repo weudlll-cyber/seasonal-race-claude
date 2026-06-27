@@ -290,10 +290,10 @@ export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {
   lookaheadFrames: 30,
   // Cooldown in ms after overlap ends before home force re-activates
   cooldownMs: 500,
-  // After this many consecutive BLOCKED frames, apply a reduced home force as an escape hatch.
-  // 0 = disabled (home force stays off for the entire BLOCKED duration).
+  // blockedTimeoutFrames / blockedEscapeForce: scaled the blocked-escape home force, which
+  // the Layer-1 cleanup removed — now inert (priority mode is still computed for OVL-C + the
+  // debug overlay). Removed together with the priority system in Commit B.
   blockedTimeoutFrames: 60,
-  // Fraction of homeForceStrength applied during the escape hatch (0 = none, 1 = full).
   blockedEscapeForce: 0.3,
 };
 
@@ -323,11 +323,6 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // Start-phase brake ramp: on open tracks, speedBrakeFactor is eased in over this window (ms).
   // 0 = no ramp (full braking from frame 1). Has no effect on closed tracks.
   avoidanceWarmupMs: 3000,
-  // Stuck-mode suppression: when a racer is bilaterally sandwiched (equal pressure from both
-  // sides, near-zero velocity), suppress all lateral delta so the racer holds position and
-  // waits for a gap rather than jittering. Resumes normal behavior the moment space opens.
-  // Independent of the 8-parameter group below.
-  stuckModeSuppress: true,
 
   /*
    * PHYSICS PARAMETERS — DO NOT CHANGE WITHOUT RUNNING A FULL SIM SWEEP
@@ -339,8 +334,6 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    * Current values (Phase 5 winner, established 2026-06-03):
    *   lateralForce:                0.011400
    *   lateralDamping:              0.160000
-   *   homeForceStrength:           0.030000
-   *   homeForceReductionOnOverlap: 0.300000
    *   avoidanceDistance:           0.180000
    *   speedBrakeFactor:            0.945000
    *   speedBrakeTMultiplier:       1.500000  (restored — avoidanceActive zone, all tracks)
@@ -371,10 +364,6 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   lateralForce: 0.0114,
   // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
   lateralDamping: 0.16,
-  homeForceStrength: 0.03,
-  // While a racer is in geometric overlap, reduce home force so free-lane can separate.
-  // 1.0 = no reduction, 0.0 = home force off during overlap.
-  homeForceReductionOnOverlap: 0.3,
   // avoidanceDistance: RETIRED from browser gate (report 39 — geometric gate replaces it).
   // Kept for sim script backward compat. Browser now uses avoidanceBufferPct (above).
   avoidanceDistance: 0.18,
@@ -403,23 +392,14 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // brakeHoldEscapeReleaseDurationFrames: frames of forced brake-release after timeout.
   // brakeHoldEscapeCooldownFrames: frames after escape before re-lock is allowed.
   // brakeReleaseDebounceFrames: consecutive clear frames needed to exit hold.
-  // commitDirDeadZoneY: |relPos| band (physicalY) within which the de-stacking commit
-  //   direction holds the stable pairTieDir side instead of sign(relPos). Prevents the
-  //   sign flip at relPos≈0 (home force pulling racers through center) that drives the
-  //   slow lateral pendulum limit-cycle. Outside the band, sign(relPos) applies as before.
   speedMatchMinDifferential: 0.005,
   speedMatchSafetyMargin: 0.001,
   brakeHoldTimeoutFrames: 90,
   brakeHoldEscapeReleaseDurationFrames: 15,
   brakeHoldEscapeCooldownFrames: 60,
   brakeReleaseDebounceFrames: 3,
-  commitDirDeadZoneY: 0.04,
-  // Step-2 Stage D: gap-clearing force (open tracks only).
-  // Adds a self-limiting proportional lateral impulse when two racers are in a same-lane
-  // approach, targeting honest body clearance (|yDiff| ≥ honestBodyWidthPx / trackWidth).
-  // gapForceStrength: scale on lateralForce for the gap impulse (0 = off → Stage C behavior).
-  // gapForceCap: max Stage B total injection as a multiple of lateralForce (safety ceiling).
-  gapForceStrength: 1.0,
+  // gapForceCap: ceiling on the OVL-C escape impulse as a multiple of lateralForce
+  // (kept until Commit B removes OVL-C).
   gapForceCap: 1.5,
   // OVL-C: symmetric sustained-OVERLAP escape. Applies a free-side-aware lateral impulse
   // to the non-same-lane member of a locked pair (the leader, unpushed by Stage D), so
@@ -448,38 +428,23 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //                             and separation only pushes back to that tolerance boundary
   //                             (soft stop) — not to full contact. Avoids constant micro-
   //                             corrections on lightly-touching pairs. 0.10 = 10%.
-  //   hardSeparationSuppressOverlapForces: when true, skips the L4 commit-injection + L5
-  //                             gap-force for overlapping pairs. This drives pass-throughs
-  //                             near zero but INTRODUCES a start-row fairness bias on open
-  //                             tracks (SIM-HARDSEP-FINAL / SIM-L4L5-RESTORE). Default
-  //                             FALSE = keep L4/L5 active (hard separation is a pure
-  //                             backstop): fair, with pass-throughs still far below baseline.
   hardSeparationEnabled: true,
   hardSeparationRelaxation: 0.15,
   hardSeparationTolerancePct: 0.1,
-  hardSeparationSuppressOverlapForces: false,
   // ── Layer 1 (Soft Steering) — single target + spring per racer ──────────────
-  // Flag-gated replacement for L1 (home) + L2 (avoidance) + L3 (free-lane) +
-  // L4 (commit-injection) + L5 (Stage-D gap). When OFF (default) the behavior is
-  // byte-identical to before: all L1–L5 paths run unchanged. When ON, those five
-  // layers are suppressed and each racer is pulled toward one per-step target by a
-  // single spring. L6 (OVL-C), L7/L8, L10/L11 and the hard-separation backstop are
-  // unchanged. See the Layer-1 spec + the F1/F2 findings in KRAEFTE-LANDKARTE.md.
-  //   softSteeringEnabled:    master switch. FALSE = exact prior behavior (no-op).
+  // The sole lateral-force model: replaces the former L1 (home) + L2 (avoidance) +
+  // L3 (free-lane) + L4 (commit-injection) + L5 (Stage-D gap). Each racer is pulled
+  // toward one per-step target by a single spring. L6 (OVL-C), L7/L8, L10/L11 and the
+  // hard-separation backstop are unchanged.
   //   softSteeringSymmetric:  FALSE = asymmetric (only the trailer, lower t, gets a
-  //                           target; the leader holds its line — consistent with L2
-  //                           today). TRUE = both members of a pair get a target.
-  //                           The sweep decides which is fairer; not fixed in advance.
+  //                           target; the leader holds its line). TRUE = both members
+  //                           of a pair get a target. (Sweep chose TRUE.)
   //   softSteeringStrength:   spring constant: delta += (target - physicalY) * strength.
-  //                           NOT calibrated; sweep required before drawing conclusions.
   //   softSteeringClearancePct: extra gap beyond one contact width, as a fraction of the
-  //                           contact width (0.0 = exactly contact distance, analogous to
-  //                           avoidanceBufferPct). A tuning lever for the sweep.
+  //                           contact width (0.0 = exactly contact distance).
   //   softSteeringHysteresisY: dead-zone around relPos≈0 within which the side choice is
   //                           held stable (prevents the pendulum limit-cycle near the
-  //                           obstacle's centerline). Analogous to commitDirDeadZoneY;
-  //                           uses pairTieDir as the tie-break.
-  softSteeringEnabled: true,
+  //                           obstacle's centerline). Uses pairTieDir as the tie-break.
   softSteeringSymmetric: true,
   softSteeringStrength: 0.03,
   softSteeringClearancePct: 0.0,

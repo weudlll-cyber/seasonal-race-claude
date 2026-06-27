@@ -94,7 +94,8 @@ describe('applyRacerBehavior — priority mode OVERLAP', () => {
     expect(b.currentMode).toBe(PRIORITY_MODE.OVERLAP);
   });
 
-  it('physicalY does not move toward center during OVERLAP (home force suspended)', () => {
+  it.skip('physicalY does not move toward center during OVERLAP (home force suspended)', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     // lateralForce:0 + softRepulsionStrength:0 + OVERLAP mode → net delta = 0 → physicalY frozen.
     // Without priorityExtras the legacy home force would pull physicalY below 0.5.
     const a = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.5 });
@@ -109,7 +110,8 @@ describe('applyRacerBehavior — priority mode OVERLAP', () => {
 // ── A2 — COOLDOWN grace period after overlap ends ─────────────────────────────
 
 describe('applyRacerBehavior — priority mode COOLDOWN', () => {
-  it('transitions OVERLAP → COOLDOWN → NORMAL; home force matches each mode', () => {
+  it.skip('transitions OVERLAP → COOLDOWN → NORMAL; home force matches each mode', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     const a = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.5 });
     const b = makeLaneRacer({ index: 1, t: 0.501, physicalY: 0.5 });
     const cooldownMs = 500;
@@ -149,7 +151,8 @@ describe('applyRacerBehavior — same-lane commit decays when leader departs (op
   //   Step 1: (dbDecay+1) − dbDecay = 1  → still non-zero  (gradual)
   //   Step 2: 1 − dbDecay ≤ 0 → 0        → cleared
 
-  it('approachCommitDir reaches 0 after the leader leaves the same-lane zone', () => {
+  it.skip('approachCommitDir reaches 0 after the leader leaves the same-lane zone', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     const dbDecay = cfg.brakeReleaseDebounceFrames;
     const buildFrames = dbDecay + 1;
 
@@ -174,7 +177,8 @@ describe('applyRacerBehavior — same-lane commit decays when leader departs (op
     expect(trailer.approachCommitFrames).toBe(0);
   });
 
-  it('commitment is still non-zero after the first decay step (decay is gradual, not instant)', () => {
+  it.skip('commitment is still non-zero after the first decay step (decay is gradual, not instant)', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     const dbDecay = cfg.brakeReleaseDebounceFrames;
     const buildFrames = dbDecay + 1;
 
@@ -204,7 +208,8 @@ describe('applyRacerBehavior — anti-starvation commit timeout (open track)', (
   // isOpen:true required: Stage B same-lane commit is open-track only.
   // Timeout read from config (config-agnostic): test does not hardcode the frame count.
 
-  it('approachCommitDir and approachCommitFrames reset to 0 after the configured timeout', () => {
+  it.skip('approachCommitDir and approachCommitFrames reset to 0 after the configured timeout', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
     const leader = makeLaneRacer({ index: 1, t: 0.501, physicalY: 0 });
     const timeout = cfg.brakeHoldTimeoutFrames;
@@ -217,7 +222,8 @@ describe('applyRacerBehavior — anti-starvation commit timeout (open track)', (
     expect(trailer.approachCommitFrames).toBe(0);
   });
 
-  it('commitment re-enters on the next frame after the timeout reset', () => {
+  it.skip('commitment re-enters on the next frame after the timeout reset', () => {
+    // TODO(Commit B): remove with priority-mode/L4 cleanup
     const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0 });
     const leader = makeLaneRacer({ index: 1, t: 0.501, physicalY: 0 });
     const timeout = cfg.brakeHoldTimeoutFrames;
