@@ -46,7 +46,13 @@ function makeLaneRacer(overrides = {}) {
 // Pin the hard-separation backstop OFF for the force-isolation tests below: it is
 // default-on in production but would perturb physicalY here. The dedicated
 // 'hard position separation' describe block opts back in explicitly (ON vs OFF).
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, hardSeparationEnabled: false };
+// softSteeringEnabled pinned false: these tests verify the legacy L1–L5 force model,
+// which is now the opt-out path (the default flipped to true). See storage/defaults.js.
+const cfg = {
+  ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+  hardSeparationEnabled: false,
+  softSteeringEnabled: false,
+};
 
 // ── initRacerBehavior ──────────────────────────────────────────────────────
 

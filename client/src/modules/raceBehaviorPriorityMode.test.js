@@ -50,7 +50,13 @@ function makeLaneRacer(overrides = {}) {
 
 // Pin the hard-separation backstop OFF: these tests isolate priority-mode home-force
 // behavior; the positional separation pass (default-on) would perturb physicalY.
-const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, hardSeparationEnabled: false };
+// softSteeringEnabled pinned false too: these verify the legacy L1–L5 home-force path,
+// which is now the opt-out path (the default flipped to true). See storage/defaults.js.
+const cfg = {
+  ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+  hardSeparationEnabled: false,
+  softSteeringEnabled: false,
+};
 
 // Isolates home-force effect: avoidance and soft-repulsion zeroed, home-force
 // active at a known value so mode-based suspension is observable.

@@ -56,6 +56,9 @@ const cfg = {
   // Pin the hard-separation backstop OFF: these tests isolate brake-to-match
   // state logic; the positional separation pass (default-on) would perturb physicalY.
   hardSeparationEnabled: false,
+  // softSteeringEnabled pinned false: these verify the legacy brake/avoidance path,
+  // which is now the opt-out path (the default flipped to true). See storage/defaults.js.
+  softSteeringEnabled: false,
 };
 
 // Config variant that freezes physicalY: no lateral forces fire.

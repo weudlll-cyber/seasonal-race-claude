@@ -479,9 +479,9 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //                           held stable (prevents the pendulum limit-cycle near the
   //                           obstacle's centerline). Analogous to commitDirDeadZoneY;
   //                           uses pairTieDir as the tie-break.
-  softSteeringEnabled: false,
-  softSteeringSymmetric: false,
-  softSteeringStrength: 0.05,
+  softSteeringEnabled: true,
+  softSteeringSymmetric: true,
+  softSteeringStrength: 0.03,
   softSteeringClearancePct: 0.0,
   softSteeringHysteresisY: 0.04,
 };
