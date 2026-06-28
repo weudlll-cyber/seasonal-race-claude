@@ -118,8 +118,8 @@ export const DEFAULT_TRACK_SEEDS = [
     difficulty: 'easy',
     surfaceClasses: ['grass', 'earth'],
     trackLights: { color: '#ffdd66', style: 'steady', speed: 1.0 },
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 3072,
+    worldHeight: 2047,
     isDefault: true,
   },
   {
