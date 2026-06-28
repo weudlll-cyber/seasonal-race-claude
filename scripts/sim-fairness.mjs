@@ -135,7 +135,6 @@ import {
 import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf } from '../client/src/modules/camera/lapUtils.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
-  DEFAULT_PRIORITY_SYSTEM_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_ROW_LAYOUT_CONFIG,
@@ -925,13 +924,7 @@ export function runSingleRace({
       }
       computePositions();
       if (frameHook) _frameDiagOut.clear();
-      applyRacerBehavior(racers, behaviorConfig, {
-        lookaheadFrames:      DEFAULT_PRIORITY_SYSTEM_CONFIG.lookaheadFrames,
-        cooldownMs:           DEFAULT_PRIORITY_SYSTEM_CONFIG.cooldownMs,
-        currentTs:            raceTs,
-        blockedTimeoutFrames: DEFAULT_PRIORITY_SYSTEM_CONFIG.blockedTimeoutFrames,
-        blockedEscapeForce:   DEFAULT_PRIORITY_SYSTEM_CONFIG.blockedEscapeForce,
-      }, _frameDiagOut);
+      applyRacerBehavior(racers, behaviorConfig, { currentTs: raceTs }, _frameDiagOut);
       if (frameHook) frameHook(raceTs, _frameDiagOut, racers);
       // Lite stats: always-on, low-overhead per-frame counters
       {

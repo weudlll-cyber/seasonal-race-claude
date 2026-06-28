@@ -285,18 +285,6 @@ export const DEFAULT_FRAME_TIMING_CONFIG = {
   renderInterpolation: true,
 };
 
-export const DEFAULT_PRIORITY_SYSTEM_CONFIG = {
-  // Lookahead: number of frames the path-clear corridor is projected into the future
-  lookaheadFrames: 30,
-  // Cooldown in ms after overlap ends before home force re-activates
-  cooldownMs: 500,
-  // blockedTimeoutFrames / blockedEscapeForce: scaled the blocked-escape home force, which
-  // the Layer-1 cleanup removed — now inert (priority mode is still computed for OVL-C + the
-  // debug overlay). Removed together with the priority system in Commit B.
-  blockedTimeoutFrames: 60,
-  blockedEscapeForce: 0.3,
-};
-
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   enabled: true,
   // Start layout — initial lateral spread at race start
@@ -398,15 +386,6 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   brakeHoldEscapeReleaseDurationFrames: 15,
   brakeHoldEscapeCooldownFrames: 60,
   brakeReleaseDebounceFrames: 3,
-  // gapForceCap: ceiling on the OVL-C escape impulse as a multiple of lateralForce
-  // (kept until Commit B removes OVL-C).
-  gapForceCap: 1.5,
-  // OVL-C: symmetric sustained-OVERLAP escape. Applies a free-side-aware lateral impulse
-  // to the non-same-lane member of a locked pair (the leader, unpushed by Stage D), so
-  // both sides separate simultaneously. overlapEscapeStrength = 0.0 → no-op until tuned.
-  // overlapEscapeTimeout: consecutive OVERLAP frames before the escape engages.
-  overlapEscapeStrength: 0.25,
-  overlapEscapeTimeout: 120,
   // ── Hard position separation (Layer 2 of the physics redesign) ──────────────
   // A positional, force-independent anti-penetration pass that runs as the ABSOLUTE
   // LAST step of applyRacerBehavior — after every force (L1–L11) and after the

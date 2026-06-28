@@ -28,7 +28,6 @@ import {
 } from './drawing/overlayRendering.js';
 import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
 import { drawRacers } from './drawing/racerRendering.js';
-import { drawPriorityModeOverlay } from './drawing/priorityModeOverlay.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle, easeInOutCubic } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
@@ -57,7 +56,6 @@ import {
   computeEffectiveBrakeFactor,
 } from '../../modules/raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
-import { loadPrioritySystemConfig } from '../../modules/prioritySystemConfig.js';
 import {
   computeRacerLayout,
   computeBodyNarrowRef,
@@ -181,9 +179,6 @@ export default function RaceScreen() {
     rpTop10: [],
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
-  // Priority-system debug overlay (toggled by hotkey M)
-  const showModeOverlayRef = useRef(false);
-  const priorityConfigRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -322,17 +317,6 @@ export default function RaceScreen() {
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  // ── Hotkey M: toggle priority-mode debug overlay ─────────────────────────
-  useEffect(() => {
-    function onKey(e) {
-      if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        showModeOverlayRef.current = !showModeOverlayRef.current;
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
   // ── Load race session data ───────────────────────────────────────────────
   useEffect(() => {
     try {
@@ -428,7 +412,6 @@ export default function RaceScreen() {
     const raceZoneConfig = loadRaceZoneConfig();
     const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
-    priorityConfigRef.current = loadPrioritySystemConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -1023,19 +1006,7 @@ export default function RaceScreen() {
             }
           }
           computePositions();
-          applyRacerBehavior(
-            st.racers,
-            behaviorConfig,
-            priorityConfigRef.current
-              ? {
-                  lookaheadFrames: priorityConfigRef.current.lookaheadFrames,
-                  cooldownMs: priorityConfigRef.current.cooldownMs,
-                  currentTs: physicsTs,
-                  blockedTimeoutFrames: priorityConfigRef.current.blockedTimeoutFrames,
-                  blockedEscapeForce: priorityConfigRef.current.blockedEscapeForce,
-                }
-              : undefined
-          );
+          applyRacerBehavior(st.racers, behaviorConfig, { currentTs: physicsTs });
           for (const r of st.racers) {
             if (r.finished) continue;
             if (r.t >= st.finishT) {
@@ -1475,20 +1446,6 @@ export default function RaceScreen() {
         drawTitle(ctx, shape, raceData);
         drawLapInfo(ctx, st.racers, st.maxLaps);
         drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
-      }
-
-      // ── Priority-mode debug overlay (hotkey M) ──
-      if (showModeOverlayRef.current && st.phase === PHASE.RACING) {
-        drawPriorityModeOverlay(
-          ctx,
-          st.racers,
-          frameEffZoom,
-          isOpenTrack,
-          cam,
-          bsY,
-          frameTimingConfig.renderInterpolation,
-          renderAlpha
-        );
       }
 
       // ── Phase overlays ──

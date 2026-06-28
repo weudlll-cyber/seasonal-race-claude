@@ -24,7 +24,6 @@ import RaceTuningSection from './sections/RaceTuningSection.jsx';
 import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
-import PrioritySystemSection from './sections/PrioritySystemSection.jsx';
 import RubberBandSection from './sections/RubberBandSection.jsx';
 import RaceZonesSection from './sections/RaceZonesSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
@@ -110,14 +109,6 @@ const SECTIONS = [
     label: 'Race Zones',
     desc: 'Fixed brake zone that slows all racers — bunches the field (accordion effect)',
     component: RaceZonesSection,
-    tier: 'advanced',
-  },
-  {
-    id: 'priority-system',
-    icon: '🎯',
-    label: 'Priority System',
-    desc: 'Home-force cooldown and lookahead for anti-collision priority logic',
-    component: PrioritySystemSection,
     tier: 'advanced',
   },
   {

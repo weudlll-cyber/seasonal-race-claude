@@ -432,7 +432,7 @@ describe('hard position separation', () => {
     for (const isOpen of [true, false]) {
       const [a, b] = overlapPair();
       // priorityExtras supplies currentTs → the warmup clock. currentTs=0 → scale 0.
-      applyRacerBehavior([a, b], { ...base, isOpen }, { currentTs: 0, cooldownMs: 500 });
+      applyRacerBehavior([a, b], { ...base, isOpen }, { currentTs: 0 });
       expect(a.physicalY).toBeCloseTo(0.01, 9); // unchanged — strength ramped to 0
       expect(b.physicalY).toBeCloseTo(-0.01, 9);
     }
@@ -447,8 +447,8 @@ describe('hard position separation', () => {
     };
     const [aH, bH] = overlapPair();
     const [aF, bF] = overlapPair();
-    applyRacerBehavior([aH, bH], base, { currentTs: 1500, cooldownMs: 500 }); // half warmup
-    applyRacerBehavior([aF, bF], base, { currentTs: 3000, cooldownMs: 500 }); // full warmup
+    applyRacerBehavior([aH, bH], base, { currentTs: 1500 }); // half warmup
+    applyRacerBehavior([aF, bF], base, { currentTs: 3000 }); // full warmup
     expect(gapPx(aH, bH)).toBeGreaterThan(gapPx(overlapPair()[0], overlapPair()[1])); // some effect
     expect(gapPx(aH, bH)).toBeLessThan(gapPx(aF, bF)); // but weaker than full
   });
