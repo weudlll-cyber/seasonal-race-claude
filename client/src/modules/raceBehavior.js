@@ -9,7 +9,7 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
-import { easeInOutCubic } from '../utils/mathUtils.js';
+import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT } from '../utils/mathUtils.js';
 
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
 // Eliminates per-step Map/Set allocations. Each call clears + repopulates; no stale
@@ -88,12 +88,6 @@ export function initRacerBehavior(racer) {
  */
 function normalizeAngle(a) {
   return Math.atan2(Math.sin(a), Math.cos(a));
-}
-
-function shortestArcDeltaT(a, b) {
-  let dT = Math.abs(a - b);
-  if (dT > 0.5) dT = 1 - dT;
-  return dT;
 }
 
 function stablePairBit(a, b) {
@@ -259,9 +253,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const rA = active[i];
       const rB = active[j];
 
-      // Anisotropic distance in (t, physicalY) space
-      let dT = Math.abs(rA.t - rB.t);
-      if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
+      // Anisotropic distance in (t, physicalY) space — lap-normalized shortest arc.
+      const dT = shortestArcDeltaT(rA.t, rB.t);
       const dY = rA.physicalY - rB.physicalY;
 
       // Body geometry for the speed-brake — both axes body-based (reports 43/45).
@@ -679,8 +672,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
           // Body overlap BEYOND the tolerance band (both axes). Same body-overlap
           // geometry as the soft-steering pass, shrunk by the tolerance dead-zone.
-          let dT = Math.abs(rA.t - rB.t);
-          if (dT > 0.5) dT = 1 - dT; // shortest arc on closed tracks
+          const dT = shortestArcDeltaT(rA.t, rB.t);
           const dYphys = rA.physicalY - rB.physicalY;
           const latPx = Math.abs(dYphys) * (pairTW / 2);
           const longPx = dT * pairPL;
@@ -721,9 +713,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
           const overlapT = (longTarget - longPx) / pairPL; // t-units, > 0
           const halfPushT = 0.5 * overlapT * effectiveRelax;
-          let sd = rB.t - rA.t; // signed shortest-arc delta A→B
-          if (sd > 0.5) sd -= 1;
-          else if (sd < -0.5) sd += 1;
+          const sd = signedArcDeltaT(rA.t, rB.t); // signed shortest-arc A→B (positive = B ahead)
           let frontIsA;
           if (sd < -EPS)
             frontIsA = true; // A ahead

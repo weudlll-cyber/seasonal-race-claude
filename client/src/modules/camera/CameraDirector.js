@@ -11,6 +11,7 @@
 import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
+import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import {
   computeTimingFromConfig,
   BATTLE_PULK_THRESHOLD_PX,
@@ -1337,11 +1338,12 @@ export class CameraDirector {
           const ri = sorted[i],
             rj = sorted[j],
             rk = sorted[k];
-          // Temporal condition
+          // Temporal condition — lap-normalized shortest arc (raw t accumulates across
+          // laps; co-located racers across the start/finish seam must read as near).
           if (
-            Math.abs(ri.t - rj.t) > tThr ||
-            Math.abs(ri.t - rk.t) > tThr ||
-            Math.abs(rj.t - rk.t) > tThr
+            shortestArcDeltaT(ri.t, rj.t) > tThr ||
+            shortestArcDeltaT(ri.t, rk.t) > tThr ||
+            shortestArcDeltaT(rj.t, rk.t) > tThr
           )
             continue;
           // Spatial condition
@@ -1363,7 +1365,10 @@ export class CameraDirector {
             if (candMax - candMin > maxRankSpan) continue;
             let fits = true;
             for (const gm of group) {
-              if (Math.abs(gm.t - re.t) > tThr || (gm.x - re.x) ** 2 + (gm.y - re.y) ** 2 >= thr2) {
+              if (
+                shortestArcDeltaT(gm.t, re.t) > tThr ||
+                (gm.x - re.x) ** 2 + (gm.y - re.y) ** 2 >= thr2
+              ) {
                 fits = false;
                 break;
               }
