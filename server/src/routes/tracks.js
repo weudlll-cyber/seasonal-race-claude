@@ -134,8 +134,8 @@ export const DEFAULT_TRACK_SEEDS = [
     difficulty: 'hard',
     surfaceClasses: ['asphalt'],
     trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
-    worldWidth: 1280,
-    worldHeight: 720,
+    worldWidth: 3072,
+    worldHeight: 2047,
     isDefault: true,
   },
   {
