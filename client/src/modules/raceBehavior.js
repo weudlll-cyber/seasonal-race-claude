@@ -395,12 +395,12 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           _ssTarget.set(self.index, target);
           _ssForceMag.set(self.index, forceMag);
         };
-        if (config.softSteeringSymmetric) {
-          assignSoftTarget(rA, rB);
-          assignSoftTarget(rB, rA);
-        } else {
-          assignSoftTarget(trailer, leader);
-        }
+        // §4a is always asymmetric: trailer yields to leader, leader
+        // holds its line. The leader's target stays 0 (centerline reset
+        // at line 241) so the home spring pulls it back to centre when
+        // no body overlap is active. softSteeringSymmetric applies only
+        // to §4b (actual body contact), where both racers must separate.
+        assignSoftTarget(trailer, leader);
       }
 
       // Free-lane separation: when racers overlap, add deterministic, smooth lateral
