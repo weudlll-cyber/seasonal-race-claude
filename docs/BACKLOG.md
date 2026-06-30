@@ -5,6 +5,34 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Race-Action Arc (feat/race-action) — June 2026
+
+Catch-up for the period since the last backlog refresh. Full per-commit detail is in
+ROADMAP.md (**Phase D** and **Phase R** sections); only hashes are repeated here. All hashes
+verified against `git log` / `git tag`.
+
+**✅ Completed**
+- **Phase D — server-side storage migration** (groups/brands/racers): D1 `999f45e`, D2 `c263106`, D3 `6f4deb3`, D4 `ee3735d`, D5 `6aa8bc1`, D6a `5d75d12`, D6b `d22ecee` (2026-06-14/15).
+- **Lateral physics redesign** — Layer 1 Soft Steering (`35b6b29` → default `8ad6a62`) + Layer 2 Hard Separation (`82c1806`/`f535fc2`/`0815aac`/`07bf2f1`/`bf44a8b`); legacy forces removed in Commit A `bc68c37` + Commit B `f311622` (2026-06-25/28).
+- **Controller on closed tracks** — C0 leader-progress phase clock `14f3c6f`, C0-fix `712f334` (2026-06-21/22).
+- **Closed-track geometry expansion (3072px world)** — garden-path `8f73dc7`, dirt-oval `72da109`, city-circuit `1b3260e`, ice-track `b06d946`; cumulative-t fix `9a4148e` (2026-06-28/30).
+- **§4a soft-steering asymmetric fix** `aef203a` + cleanup/regression test `0b33f3c` (2026-06-30).
+- **Sim browser-parity** — passThroughCount telemetry `f7b6100`, finishT/speed parity `8f57cba`, shared-config defaults `9cfa953` (2026-06-30).
+- **Reviewed, no fix needed** — controller-on-closed phase timing confirmed correct (leader-progress based, `14f3c6f`); sim determinism verified resolved (likely side-effect of Commit A `bc68c37`, no commit to cite).
+- **Cleanup-C (auth)** — items 7-8 `3729d1c` (tag `backup/cleanup-c-paths-cli`), item 9 dead `randomUUID` import removed `0dda9db` (tag `backup/cleanup-c-dead-import`), recover-admin hardening follow-up `16d3bf9` (tag `backup/recover-admin-hardening`). All committed **and tagged** — supersedes the older "awaiting Copilot review + tag" status. Verified: `randomUUID` now appears only in `*.test.js`, not production `authRouter.js`.
+
+**🔜 / ⏳ Open**
+- **Re-Gate on `9cfa953`** ⏳ in progress — re-run all four closed tracks under the corrected browser-faithful config (corridorEnd=1.0, bonusMult=2.0); discards the provisional `8f57cba`-era sweeps.
+- **Master-merge** of `feat/race-action` → `master` — pending.
+- **sim-fairness.mjs telemetry comment cleanup** — the passThroughCount declaration comment still says "NOT committed to the feature branch"; now stale (it is committed). Drop that clause.
+- **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — `trackClosedSsf` + the closed branch of `trackNaturalBase` are computed-but-unused-for-closed after `8f57cba`; the outer `expectedMinSF` derivation uses global `N_RACERS` instead of per-combo `nRacersForCombo`. Bundle both cleanups (entangled).
+- **Browser `index.jsx` inert `??` fallback mismatches** (lines ~662-666) — duplicated literals; `bonusStrengthMultiplier ?? 1.0` mismatches the real shared default 2.0 (inert today, latent trap).
+- **`rubberBandEndgameThreshold` field split** — browser cross-reuses `DEFAULT_CAMERA_CONFIG.endgameThreshold` (0.9) for the rubber-band endgame gate (`index.jsx:876`); split into a dedicated rubber-band field. Browser-side change.
+- **Renn-Action "make it more exciting" decision** — design decision pending: Slipstream vs Hazard-Zonen direction.
+- **Doc-refresh task** (this one) — mark done once the five doc commits land.
+
+---
+
 ## Phase L — Local Backend
 
 | Item | Status | Description |
@@ -30,7 +58,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Hot — next PR
 
-### 1 — Camera Phase + RaceScreen Refactor 🔜 Hot — Concept ✅ (PR #60) — Implementation starts with PR-A1
+### 1 — Camera Phase + RaceScreen Refactor ✅ Shipped (PR-A1…PR-F) — only PR-G (UI bugs) open
+
+> **Status update:** This is the May 2026 camera rebuild, and it has effectively shipped — all of
+> PR-A1, PR-A2(-Diagnose), PR-A3, Phase 4, PR-B, PR-C, PR-D, PR-E, PR-F are ✅ (see list below),
+> and Bug A/B/C are all fixed. The **only** remaining sub-item is **PR-G (UI bugs: Cancel Race +
+> Fullscreen API)**. Not to be confused with later camera-polish work (e.g. leader-zoom floor
+> `9db8188`, ratchet fix `9339e3d`, 2026-06-24). Kept under "Hot" only for the open PR-G remainder.
 
 **Concept documentation sprint fully completed. PR #60 merged 2026-05-03.**
 Authoritative specification in `docs/CAMERA_DIRECTOR.md` (13 sections, all §13.2 questions UI-1–UI-8 answered).
