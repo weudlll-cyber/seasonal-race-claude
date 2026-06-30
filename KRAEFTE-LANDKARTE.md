@@ -18,6 +18,13 @@
 > **L11** (damping). `applyRacerBehavior(racers, config, priorityExtras)` still takes a third
 > argument, now reduced to `{ currentTs }` — read **only** by the Hard-Separation warmup ramp.
 > All longitudinal forces (Section A) are unchanged.
+>
+> **STATUS (post `aef203a` + geometry expansion).** §4a (non-overlap soft target) is now
+> **unconditionally asymmetric** — only the trailer receives a target from the leader; the leader
+> holds its line — **regardless of `softSteeringSymmetric`** (fix `aef203a`, 2026-06-30). §4b
+> (overlap override) remains governed by `softSteeringSymmetric` as before. The four closed tracks
+> were rebuilt on the 3072px world: garden-path `8f73dc7`, dirt-oval `72da109`, city-circuit
+> `1b3260e`, ice-track `b06d946`. See **L0a** below for the §4a/§4b detail.
 
 ## Scope and reading order
 
@@ -174,6 +181,11 @@ the historical record; removed ones are marked **REMOVED**.
 - **Magnitude**: `softSteeringStrength` **0.03** × `(target − physicalY)`. Single force, never diluted.
 - **Config**: `softSteeringStrength`, `softSteeringSymmetric`, `softSteeringHysteresisY` **0.04**,
   `softSteeringClearancePct`.
+- **§4a vs §4b asymmetry (post `aef203a`)**: §4a (non-overlap) is **always asymmetric** — only the
+  trailer is assigned a target beside the leader; the leader's target stays at the centerline (0) —
+  **independent of `softSteeringSymmetric`**. §4b (overlap override) is the part still governed by
+  `softSteeringSymmetric`: `true` → both members of an overlapping pair separate, `false` → trailer
+  only. So `softSteeringSymmetric` affects **only §4b**, never §4a.
 
 ### L0b. Layer 2 — Hard Separation (positional backstop) — **ACTIVE / LIVE**
 - **Code**: the final block of `applyRacerBehavior`, gated by `hardSeparationEnabled`.
