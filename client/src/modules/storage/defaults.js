@@ -251,15 +251,32 @@ export const DEFAULT_RACE_ZONE_CONFIG = {
 };
 
 export const DEFAULT_RUBBER_BAND_CONFIG = {
-  // Master on/off.
-  enabled: true,
-  // Flat speed boost applied to every non-leader when the leader's gap exceeds the threshold.
-  // 0.10 = all non-leaders run 10% faster while boost is active.
-  flatBoost: 0.1,
-  // Time in ms to ease from 1.0 to the boost target and back.
+  // Master on/off. DEFAULT-OFF: this "cap the lead" redesign stays off until the
+  // fairness sweep (band-reach Δ ≤ 1pp, 0 Holm-unfair) licenses it default-on.
+  enabled: false,
+  // "Cap the lead" — brake front-breakaway racers toward a max gap from the field
+  // median (raw cumulative-t). A racer is braked proportionally once its own gap to
+  // the median exceeds brakeThreshold; eligibility is gap-based, not "is leader".
+  //   brakeFactor = 1 - maxBrake * clamp((myGap - brakeThreshold) / gapScale, 0, 1)
+  // brakeThreshold: gap (fraction of finishT) at which the cap engages. 0.03 sits
+  //   above typical lead-group spread → a contested lead is NOT braked, only a lone
+  //   runaway (10× the legacy over-sensitive 0.003). Sweep-calibratable.
+  brakeThreshold: 0.03,
+  // gapScale: proportional ramp width; full brake reached at gap ≈ brakeThreshold +
+  //   gapScale (≈ 0.055). Soft onset (no discontinuity at the threshold).
+  gapScale: 0.025,
+  // maxBrake: max slowdown (floor 1 - maxBrake). 0.10 nets only −1% against the
+  //   controller's +10% recovery authority (clamp 1.10), so it cannot eject a
+  //   deep-B1 racer across a band boundary. NOTE: 0.15 is the post-sweep ceiling —
+  //   do NOT expose 0.15 in the DevScreen slider yet (locked at 0.10 until the sweep).
+  maxBrake: 0.1,
+  // Time in ms to ease rubberBandMult toward a new target (temporal smoother only,
+  // NOT a phase term) — prevents the brake snapping on/off.
   boostRampMs: 2000,
-  // Gap between leader and 2nd place (as fraction of finishT) that activates the boost.
-  gapThreshold: 0.003,
+  // Hard-off: rubber-band fully off above this leader-progress fraction, giving the
+  // P-controller a clean final window. Dedicated field (was cross-borrowed from
+  // DEFAULT_CAMERA_CONFIG.endgameThreshold — backlog #2, now split).
+  rubberBandEndgameThreshold: 0.9,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {

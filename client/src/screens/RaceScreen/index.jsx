@@ -66,6 +66,7 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadRubberBandConfig } from '../../modules/rubberBandConfig.js';
+import { applyRubberBand } from '../../modules/raceRubberBand.js';
 import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
 import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -868,43 +869,11 @@ export default function RaceScreen() {
             }
           }
 
-          // ── Rubber-band: flat catch-up boost for all non-leaders ─────────────
-          if (rubberBandConfig.enabled) {
-            const leaderT = st.racers.reduce(
-              (best, r2) => (!r2.finished && r2.t > best ? r2.t : best),
-              -Infinity
-            );
-            const leaderProgress = leaderT > -Infinity ? leaderT / st.finishT : 0;
-            const endgameThreshold = cameraConfigRef.current.endgameThreshold ?? 0.9;
-            if (leaderT > 0 && leaderProgress < endgameThreshold) {
-              const secondT = st.racers.reduce(
-                (best, r2) => (!r2.finished && r2.t < leaderT && r2.t > best ? r2.t : best),
-                -Infinity
-              );
-              const leaderGap = secondT > -Infinity ? (leaderT - secondT) / st.finishT : 0;
-              const boostActive = leaderGap > rubberBandConfig.gapThreshold;
-              for (const r of st.racers) {
-                if (r.finished) {
-                  r.rubberBandMult = 1.0;
-                  continue;
-                }
-                const isLeader = r.t === leaderT;
-                const newTarget = !isLeader && boostActive ? 1.0 + rubberBandConfig.flatBoost : 1.0;
-                if (Math.abs(newTarget - r.rubberBandMultTarget) > 0.001) {
-                  r.rubberBandMultPrev = r.rubberBandMult;
-                  r.rubberBandMultTarget = newTarget;
-                  r.rubberBandTransStart = physicsTs;
-                }
-                const elapsed = physicsTs - r.rubberBandTransStart;
-                r.rubberBandMult =
-                  elapsed < rubberBandConfig.boostRampMs
-                    ? r.rubberBandMultPrev +
-                      (r.rubberBandMultTarget - r.rubberBandMultPrev) *
-                        easeInOutCubic(elapsed / rubberBandConfig.boostRampMs)
-                    : r.rubberBandMultTarget;
-              }
-            }
-          }
+          // ── Rubber-band: cap-the-lead (median-gap proportional brake) ──────────
+          // Brakes front-breakaway racers toward a max gap from the field median so
+          // the field stays catchable, without pulling the legitimate winner into the
+          // pack. Logic shared with sim-fairness.mjs via raceRubberBand.js (parity).
+          applyRubberBand(st.racers, st.finishT, physicsTs, rubberBandConfig);
 
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────

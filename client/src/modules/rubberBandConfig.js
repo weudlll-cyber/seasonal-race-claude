@@ -17,10 +17,14 @@ export function loadRubberBandConfig() {
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_RUBBER_BAND_CONFIG };
   const merged = { ...DEFAULT_RUBBER_BAND_CONFIG, ...stored };
   if (
-    merged.flatBoost < 0 ||
+    merged.brakeThreshold < 0 ||
+    merged.brakeThreshold >= 1 ||
+    !(merged.gapScale > 0) ||
+    merged.maxBrake < 0 ||
+    merged.maxBrake > 0.15 ||
     merged.boostRampMs <= 0 ||
-    merged.gapThreshold < 0 ||
-    merged.gapThreshold >= 1
+    !(merged.rubberBandEndgameThreshold > 0) ||
+    merged.rubberBandEndgameThreshold > 1
   ) {
     return { ...DEFAULT_RUBBER_BAND_CONFIG };
   }

@@ -57,6 +57,7 @@ import {
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
+import { applyRubberBand } from '../client/src/modules/raceRubberBand.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -101,19 +102,27 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Rubber-band catch-up ─────────────────────────────────────────────────────
+// ── Rubber-band "cap the lead" ───────────────────────────────────────────────
 // Defaults read directly from the shared DEFAULT_RUBBER_BAND_CONFIG (same source the
-// browser uses), not hand-mirrored. --rubber-band=false / --rbFlatBoost etc. still override.
+// browser uses), not hand-mirrored. The trigger/effect logic is the shared helper
+// raceRubberBand.applyRubberBand (single-source parity, L129). CLI flags still override.
+// rubberBandEndgameThreshold is now a dedicated shared field (was cross-borrowed from
+// DEFAULT_CAMERA_CONFIG.endgameThreshold — backlog #2, split with this redesign).
 const RUBBER_BAND_ACTIVE   = argVal('rubber-band', String(DEFAULT_RUBBER_BAND_CONFIG.enabled)) !== 'false';
-const RB_FLAT_BOOST        = Number(argVal('rbFlatBoost',    String(DEFAULT_RUBBER_BAND_CONFIG.flatBoost)));
-const RB_GAP_THRESHOLD     = Number(argVal('rbGapThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.gapThreshold)));
-const RB_RAMP_MS           = Number(argVal('rbRampMs',       String(DEFAULT_RUBBER_BAND_CONFIG.boostRampMs)));
-// RB_ENDGAME_THRESHOLD: kept as a hardcoded literal by design. The browser cross-reuses
-// DEFAULT_CAMERA_CONFIG.endgameThreshold (0.9) for this rubber-band gate (index.jsx:876) —
-// a known architectural smell (rubber-band reading a camera-config field). Splitting it into
-// a dedicated rubberBandEndgameThreshold field is a browser-side change tracked separately in
-// the HANDOFF.md backlog; do NOT import DEFAULT_CAMERA_CONFIG here just for this value.
-const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', '0.9'));
+const RB_BRAKE_THRESHOLD   = Number(argVal('rbBrakeThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.brakeThreshold)));
+const RB_GAP_SCALE         = Number(argVal('rbGapScale',       String(DEFAULT_RUBBER_BAND_CONFIG.gapScale)));
+const RB_MAX_BRAKE         = Number(argVal('rbMaxBrake',       String(DEFAULT_RUBBER_BAND_CONFIG.maxBrake)));
+const RB_RAMP_MS           = Number(argVal('rbRampMs',         String(DEFAULT_RUBBER_BAND_CONFIG.boostRampMs)));
+const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandEndgameThreshold)));
+// Single cfg object passed to the shared applyRubberBand helper (same shape the browser passes).
+const RUBBER_BAND_CFG = {
+  enabled:                    RUBBER_BAND_ACTIVE,
+  brakeThreshold:             RB_BRAKE_THRESHOLD,
+  gapScale:                   RB_GAP_SCALE,
+  maxBrake:                   RB_MAX_BRAKE,
+  boostRampMs:                RB_RAMP_MS,
+  rubberBandEndgameThreshold: RB_ENDGAME_THRESHOLD,
+};
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -684,35 +693,11 @@ export function runSingleRace({
         for (const r of racers) r.trajectoryMult = 1.0;
       }
 
-      // ── Rubber-band: flat catch-up boost for all non-leaders (mirrors index.jsx) ──
-      if (RUBBER_BAND_ACTIVE) {
-        let leaderT = -Infinity;
-        for (const r of racers) { if (!r.finished && r.t > leaderT) leaderT = r.t; }
-        const leaderProgress = leaderT > -Infinity ? leaderT / finishT : 0;
-        if (leaderT > -Infinity && leaderProgress < RB_ENDGAME_THRESHOLD) {
-          let secondT = -Infinity;
-          for (const r of racers) {
-            if (!r.finished && r.t < leaderT && r.t > secondT) secondT = r.t;
-          }
-          const leaderGap = secondT > -Infinity ? (leaderT - secondT) / finishT : 0;
-          const boostActive = leaderGap > RB_GAP_THRESHOLD;
-          for (const r of racers) {
-            if (r.finished) { r.rubberBandMult = 1.0; continue; }
-            const isLeader = r.t === leaderT;
-            const newTarget = !isLeader && boostActive ? 1.0 + RB_FLAT_BOOST : 1.0;
-            if (Math.abs(newTarget - r.rubberBandMultTarget) > 0.001) {
-              r.rubberBandMultPrev = r.rubberBandMult;
-              r.rubberBandMultTarget = newTarget;
-              r.rubberBandTransStart = raceTs;
-            }
-            const el = raceTs - r.rubberBandTransStart;
-            r.rubberBandMult = el < RB_RAMP_MS
-              ? r.rubberBandMultPrev + (r.rubberBandMultTarget - r.rubberBandMultPrev) * easeInOutCubic(el / RB_RAMP_MS)
-              : r.rubberBandMultTarget;
-            if (r.rubberBandMult > 1.001) r.rbActivatedThisRace = true;
-          }
-        }
-      }
+      // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
+      // Identical mechanism to the browser (raceRubberBand.applyRubberBand) so the sweep
+      // measures the real thing. rbActivated telemetry now tracks BRAKING (mult < 1).
+      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG);
+      for (const r of racers) { if (r.rubberBandMult < 0.999) r.rbActivatedThisRace = true; }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
       if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
@@ -2728,7 +2713,7 @@ if (isMain) {
   if (RACE_PLAN_ACTIVE) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
-  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (boost=${RB_FLAT_BOOST} gap=${RB_GAP_THRESHOLD} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
+  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
