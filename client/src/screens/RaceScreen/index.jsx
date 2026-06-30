@@ -658,8 +658,10 @@ export default function RaceScreen() {
         planRacers,
         finishT,
         targetDuration * 1000,
+        // Last-resort ?? fallbacks: must mirror DEFAULT_RACE_DYNAMICS_CONFIG (defaults.js) exactly,
+        // so a future shared-default change cannot silently re-introduce drift here.
         {
-          bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0,
+          bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
           bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
@@ -685,7 +687,7 @@ export default function RaceScreen() {
     diagDataRef.current.rpRows = rowLayout.totalRows;
     diagDataRef.current.rpRacersPerRow = rowLayout.racersPerRow;
     diagDataRef.current.rpNRacers = nRacers;
-    diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0;
+    diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
