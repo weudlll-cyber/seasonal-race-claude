@@ -545,7 +545,7 @@ export function runSingleRace({
       : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
-    // ── passThroughCount (sim-only, NOT committed to the feature branch) ──────────
+    // ── passThroughCount (sim-only telemetry) ────────────────────────────────────
     // Counts lateral pass-through events: the sign of a pair's lateral gap (dY) FLIPS
     // while their bodies are longitudinally overlapping (dT_px < drawnBodyLengthPx) —
     // i.e. one body crossed THROUGH the other instead of going around it (illegal),
@@ -2766,10 +2766,6 @@ if (isMain) {
   const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
   const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
-  const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
-  const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-  const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (N_RACERS + 1);
-  const race_baseSpeed  = BASE_SPEED_MEAN / expectedMinSF;
 
   const allResults = [];
   const rawData    = [];
@@ -2812,8 +2808,9 @@ if (isMain) {
         //   (mirrors index.jsx). Do NOT route closed tracks through computeFinishT — that reintroduces
         //   the ~4.2-lap-vs-2-lap divergence this fix removed.
         const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
-        const trackClosedSsf = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
-        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed / trackClosedSsf;
+        // trackNaturalBase is only meaningful for OPEN tracks (consumed by computeFinishT below,
+        // which is open-track-only). Closed tracks derive finishT from lapsFromDuration directly.
+        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : undefined;
         const finishT = isOpen
           ? computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen)
           : lapsFromDuration(durationSec);
