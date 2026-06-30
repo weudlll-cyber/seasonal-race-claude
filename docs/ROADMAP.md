@@ -355,6 +355,69 @@ Dev Screen Row Start section: 4 tunable parameters (`pixelsPerRacer`, `rowGapMul
 
 ---
 
+## Phase D — Server-Side Storage Migration (groups / brands / racers) ✅ Complete (2026-06-14/15)
+
+Concept `b51c064` (2026-06-14). Moves player-groups, branding, and user racers from localStorage
+to the server with one-time client migration. All hashes verified against git log.
+
+- **D1** — Player-Groups server-side store + CRUD (operator+) + default seed + promote/export — `999f45e` (2026-06-14)
+- **D2** — Player-Groups client reads/writes from server + one-time localStorage migration + reset-path fix — `c263106` (2026-06-14)
+- **D3** — Brands server-side store + CRUD + logo-as-file + default seed + promote/export — `6f4deb3` (2026-06-15)
+- **D4** — Brands client reads/writes from server + synced KEYS.BRANDING mirror — `ee3735d` (2026-06-15)
+- **D5** — Racers server-side store + CRUD + sprite-as-file + built-in id collision guard — `6aa8bc1` (2026-06-15)
+- **D6a** — Racers loaded from server (async) + ready loading-gate + unknown-id diagnostic — `5d75d12` (2026-06-15)
+- **D6b** — Racers server-side create/update/delete via racerApi + sprite upload + registry-clear-on-reload — `d22ecee` (2026-06-15)
+
+## Phase R — Lateral Physics Redesign & Race-Action Controller ✅ Mostly complete (June 2026)
+
+The `feat/race-action` arc. Stable anchor: `stable/pre-overlap-closed-20jun` (= `712f334`).
+Every entry below verified against `git log` / `git tag` (hash + date + scope). HEAD at time of
+writing: `9cfa953` (2026-06-30). **Master-merge of `feat/race-action` is still pending.**
+
+**R.0 — Sim/browser fairness parity + overlap-escape experiments (2026-06-19/20)**
+- B0 — sim rename `bereichsBonusMult → areaBonusMult` for browser parity — `1683716` (2026-06-19)
+- B0b — wire Priority System + `DT=16` for avoidance/timebase parity — `b7a0453` (2026-06-19)
+- OVL-A — deterministic tie-break side for near-coincident same-lane pairs — `7e2c6b5` (2026-06-19)
+- OVL-B — persistent-overlap clearance path (added `d118000`, reverted `1a08242`) (2026-06-20)
+- OVL-C — symmetric sustained-overlap escape (`e1a745d`), activated at strength 0.25 (`ca578a2`) (2026-06-20) — later removed in Commit B
+- B1 — band-steering blend with `bandStrictness` (default 1.0 = no-op) — `3202d92` (2026-06-20)
+- B2 — single-source band edges (behaviour-identical) — `14f2840` (2026-06-20)
+- BS-1 — fairness metrics (top-3, per-band ordinal, track-strat, Holm) + synthetic validation — `bfe5f08` (2026-06-20)
+
+**R.1 — Controller on closed tracks (2026-06-21/22)**
+- C0 — enable controller on closed tracks via **leader-progress phase clock** — `14f3c6f` (2026-06-21)
+- C0-fix — anchor areaBonus fade at trigger moment + rename `progressClock → raceProgress` — `712f334` (2026-06-22)
+- Overlap de-stacking on closed tracks + re-scoped isolation tests — `5451172` (2026-06-23)
+- "Weg 1" controller over-drive cap (added `f7c295f` 2026-06-23, reverted `b59152b` 2026-06-24)
+
+**R.2 — Lateral physics redesign: Layer 1 Soft Steering + Layer 2 Hard Separation (2026-06-25/28)**
+- Layer 2 Hard Separation behind flag — `82c1806`; warmup ramp + tolerance + soft stop — `f535fc2`; pure backstop keeping L4/L5 — `0815aac` (all 2026-06-25)
+- Enable hard separation + `corridorEnd=1.0` by default — `07bf2f1`; DevScreen corridorEnd fallback aligned to 1.0 — `ba70bb5`; merge (verified fair + effective) — `bf44a8b` (all 2026-06-26)
+- Layer 1 Soft Steering force (flag-gated, no-op default) — `35b6b29` (2026-06-26); activated as default — `8ad6a62` (2026-06-27)
+- **Cleanup Commit A** — remove legacy L1-L5 / L9 / sqrt(N) lateral forces — `bc68c37` (2026-06-27)
+- **Cleanup Commit B** — remove L6 OVL-C + 4-mode priority system — `f311622` (2026-06-28)
+
+**R.3 — Closed-track geometry expansion to 3072px world (2026-06-28/30)**
+- garden-path (width 198) — `8f73dc7` (2026-06-28); dirt-oval (width 178) — `72da109` (2026-06-29); city-circuit (width 197) — `1b3260e` (2026-06-30); ice-track (width 211) — `b06d946` (2026-06-30)
+- Cumulative-t shortest-arc gate fix (closed tracks) — `9a4148e` (2026-06-29)
+
+**R.4 — §4a soft-steering asymmetric fix (2026-06-30)**
+- §4a always asymmetric (trailer-only target, independent of `softSteeringSymmetric`) — `aef203a` (2026-06-30)
+- Stale §4a comment cleanup + asymmetry regression test — `0b33f3c` (2026-06-30)
+
+**R.5 — Sim browser-parity hardening (2026-06-30)**
+- `passThroughCount` event detector telemetry — `f7b6100` (2026-06-30)
+- Closed-track `finishT`/speed match browser (`lapsFromDuration` + `computeRaceBaseSpeed`) — `8f57cba` (2026-06-30)
+- Read Race-Plan/rubber-band CLI defaults from shared DevScreen config (corridorEnd, bonusMult, race-plan default) — `9cfa953` (2026-06-30)
+
+**R.6 — Reviewed, confirmed correct, no fix needed (2026-06-30)**
+- Controller-on-closed phase timing — design-reviewed and confirmed correct: phases run on the leader-progress clock (`raceProgress = leaderT/finishT`), so they are independent of `targetDuration`/`closedSsf`. The mechanism dates to C0 (`14f3c6f`); no new fix required.
+- Sim determinism — verified empirically (2026-06-30) as no longer an issue; likely a side-effect of Commit A (`bc68c37`) removing the legacy force layers. No specific fix commit to cite.
+
+**Open (not yet complete):**
+- **Re-Gate** all four closed tracks on `9cfa953` (clean browser-faithful config) — in progress.
+- **Master-merge** of `feat/race-action` into `master` — pending.
+
 ## Session Log
 
 | Date | Entry |
