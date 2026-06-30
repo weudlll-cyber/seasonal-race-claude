@@ -95,6 +95,16 @@ const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAU
 const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
+// reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
+// test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
+// Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
+const DYNAMICS_OVERRIDES = {
+  reRollVariationPercent:        Number(argVal('reRollVariationPercent',     String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent))),
+  reRollTransitionDuration:      Number(argVal('reRollTransitionDuration',   String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration))),
+  reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
+  reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
+  trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
+};
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
 const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
@@ -290,7 +300,7 @@ export function runSingleRace({
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
-    const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
+    const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...DYNAMICS_OVERRIDES };
 
     // N-calibrated base speed — mirrors RaceScreen/index.jsx computeRaceBaseSpeed call
     // term-for-term, for BOTH finishT and speed (open and closed). Speed is back-solved
@@ -2714,6 +2724,7 @@ if (isMain) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
   console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
+  console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
@@ -2742,7 +2753,7 @@ if (isMain) {
       console.log(`   Schwellen: ${V4_THRESHOLDS.map((t) => t + '%').join(' → ')} Überholungen`);
     }
     console.log(`   Bonus-Schedule: ${V4_BOOST_SCHEDULE.join(' → ')}`);
-    console.log(`   Übergänge: easeInOutCubic über ${DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration}s (wie Re-Roll)`);
+    console.log(`   Übergänge: easeInOutCubic über ${DYNAMICS_OVERRIDES.reRollTransitionDuration}s (wie Re-Roll)`);
   }
   console.log('');
 
