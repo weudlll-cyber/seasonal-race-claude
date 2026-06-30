@@ -519,6 +519,15 @@ export function runSingleRace({
       : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
     let honestOverlapPairTotal  = 0;
+    // ── passThroughCount (sim-only, NOT committed to the feature branch) ──────────
+    // Counts lateral pass-through events: the sign of a pair's lateral gap (dY) FLIPS
+    // while their bodies are longitudinally overlapping (dT_px < drawnBodyLengthPx) —
+    // i.e. one body crossed THROUGH the other instead of going around it (illegal),
+    // as opposed to a legal overtake (which happens with longitudinal clearance).
+    // Window: [behaviorConfig.avoidanceWarmupMs, race end] — the first warmup window is
+    // intentionally uncontrolled (start pack), so it is excluded.
+    let passThroughCount        = 0;
+    const passThroughPrevSign   = new Map(); // pairKey → last non-zero sign of (ra.physicalY - rb.physicalY)
     // Lapping instrumentation (closed tracks only, Part 1 verification):
     // maxRealSpread: max(t_leading - t_trailing) seen during the race, in laps (1.0 = one full lap).
     // honestSameLapFrames: honest overlap where |ra.t - rb.t| < 1.0 (same or seam-adjacent lap).
@@ -1007,6 +1016,33 @@ export function runSingleRace({
             }
           }
         }
+        // ── passThroughCount detector (sim-only) ─────────────────────────────────
+        // Window starts after the configured warmup (avoidanceWarmupMs), not a fixed 5s.
+        if (raceTs >= behaviorConfig.avoidanceWarmupMs) {
+          for (let a = 0; a < racers.length; a++) {
+            if (racers[a].finished) continue;
+            for (let b = a + 1; b < racers.length; b++) {
+              if (racers[b].finished) continue;
+              const ra = racers[a], rb = racers[b];
+              const diff = ra.physicalY - rb.physicalY;
+              const sign = diff > 0 ? 1 : diff < 0 ? -1 : 0;
+              const key = ra.index * 1000 + rb.index;
+              const prev = passThroughPrevSign.get(key);
+              if (sign !== 0 && prev !== undefined && prev !== 0 && sign !== prev) {
+                let dT_px;
+                if (isOpen) {
+                  dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
+                } else {
+                  const ta = ((ra.t % 1) + 1) % 1, tb = ((rb.t % 1) + 1) % 1;
+                  const dn = Math.abs(ta - tb);
+                  dT_px = Math.min(dn, 1 - dn) * pathLengthPx;
+                }
+                if (dT_px < drawnBodyLengthPx) passThroughCount++; // crossed through, not around
+              }
+              if (sign !== 0) passThroughPrevSign.set(key, sign);
+            }
+          }
+        }
         // brakeMatchFailureCount: open-track pass-through telemetry (after 4s warmup).
         // Fires when brake-to-match is engaged on a trailer AND the trailer still advances
         // faster than its locked leader for 5 consecutive frames while in the brake zone.
@@ -1178,6 +1214,7 @@ export function runSingleRace({
     results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
     results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
+    results.passThroughCount             = passThroughCount;        // sim-only: lateral pass-through events (post-warmup)
     results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
     results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
     results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
@@ -2902,6 +2939,7 @@ if (isMain) {
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
+          passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,
           // Lapping instrumentation (closed tracks):
           maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
           maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
