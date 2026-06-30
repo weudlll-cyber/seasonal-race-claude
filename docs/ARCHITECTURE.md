@@ -314,8 +314,8 @@ spreadMaxFactor  = BASE_SPEED_MAX / BASE_SPEED_MEAN
 // N-calibrated: E[min of n U(spreadMin, spreadMax)] = spreadMin + range / (n+1)
 expectedMinSpreadFactor = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1)
 
-race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier)
-               = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier)
+race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier × closedSsf)
+               = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier × closedSsf)
 
 r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult
 ```
@@ -335,6 +335,12 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMul
   cancels out and arrives exactly at `targetDuration`.
 - `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
   into the T argument so it cancels out in each racer's actual finish time.
+- `closedSsf` — closed-track path-length normalization: `closedSsf = pathLengthPx / REFERENCE_CLOSED_PATH_PX`
+  (3200), computed via `computeClosedTrackSsf` (lapUtils.js). **`closedSsf = 1` for open tracks**, so the
+  formula above is the *single* correct one for both track types — there is no separate open/closed
+  `race_baseSpeed` formula. For closed tracks it is pre-multiplied into the T argument so the field's
+  on-screen pace stays comparable across closed tracks of differing path length. This matches
+  `RaceScreen/index.jsx` (~line 487) and the now-unified `sim-fairness.mjs` formula (post `8f57cba`).
 
 **speedBonus (rowLayout.js) — Back-Row Positional Compensation:**
 `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)`
