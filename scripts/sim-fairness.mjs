@@ -34,6 +34,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dir = dirname(__filename);
 const ROOT = join(__dir, '..');
 
+// ── Game modules (same code the browser uses) ─────────────────────────────────
+// Imported above the CLI-arg block so the arg defaults below can read from the
+// shared DevScreen config objects directly (no hand-mirrored literals).
+import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
+import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
+import {
+  computeBodyNarrowRef,
+  computeEvenRowLayout,
+  computeRacerLayout,
+  computeRowPhysicalY,
+  computeSpeedBonus,
+} from '../client/src/modules/rowLayout.js';
+import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf, lapsFromDuration } from '../client/src/modules/camera/lapUtils.js';
+import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
+import {
+  DEFAULT_BASE_SPEED_CONFIG,
+  DEFAULT_RACE_BEHAVIOR_CONFIG,
+  DEFAULT_RACE_DYNAMICS_CONFIG,
+  DEFAULT_ROW_LAYOUT_CONFIG,
+  DEFAULT_RUBBER_BAND_CONFIG,
+} from '../client/src/modules/storage/defaults.js';
+import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
+import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
+
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
 function argVal(key, def) {
@@ -54,16 +79,21 @@ const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30
 // ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
 // --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
 //             n=0 (default): non-deterministic (Math.random()), exploration only
-// --race-plan=true|false  (default false): activate Race Plan controller
-// --bonusMult=<x>  Bereichs-Bonus strength multiplier (default 1.0 = original values)
-// Race Plan timing (fraction of race duration, mirroring racePlanBonusTransitionEnd etc. in defaults.js)
+// --race-plan=true|false  (default true): activate Race Plan controller. Default true is
+//   browser-faithful — the browser's controller is always active (no off-switch);
+//   --race-plan=false stays available as an explicit opt-out for sweep experiments.
+// --bonusMult=<x>  Bereichs-Bonus strength multiplier.
+// Race Plan timing/strength defaults are READ DIRECTLY from the shared DevScreen config
+// (DEFAULT_RACE_DYNAMICS_CONFIG), not hand-mirrored here — so a change to the shared default
+// propagates automatically and these defaults can never silently drift from the browser.
+// The argVal(name, default) override is preserved, so --bonusMult / --corridorEnd etc. still work.
 const GLOBAL_SEED             = Number(argVal('seed', '0'));
-const RACE_PLAN_ACTIVE        = argVal('race-plan', 'false') === 'true';
-const BONUS_MULT              = Number(argVal('bonusMult',            '1.0'));
-const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd',   '0.75'));
-const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',    '1500'));
-const RP_CORRIDOR_START       = Number(argVal('corridorStart',        '0.55'));
-const RP_CORRIDOR_END         = Number(argVal('corridorEnd',          '0.95'));
+const RACE_PLAN_ACTIVE        = argVal('race-plan', 'true') !== 'false';
+const BONUS_MULT              = Number(argVal('bonusMult',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)));
+const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd)));
+const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
+const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
+const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
 const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
@@ -71,12 +101,18 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Rubber-band catch-up (mirrors DEFAULT_RUBBER_BAND_CONFIG in browser) ─────
-// Default true = matches game default (enabled:true). Use --rubber-band=false to disable.
-const RUBBER_BAND_ACTIVE   = argVal('rubber-band', 'true') !== 'false';
-const RB_FLAT_BOOST        = Number(argVal('rbFlatBoost',        '0.10'));
-const RB_GAP_THRESHOLD     = Number(argVal('rbGapThreshold',     '0.003'));
-const RB_RAMP_MS           = Number(argVal('rbRampMs',           '2000'));
+// ── Rubber-band catch-up ─────────────────────────────────────────────────────
+// Defaults read directly from the shared DEFAULT_RUBBER_BAND_CONFIG (same source the
+// browser uses), not hand-mirrored. --rubber-band=false / --rbFlatBoost etc. still override.
+const RUBBER_BAND_ACTIVE   = argVal('rubber-band', String(DEFAULT_RUBBER_BAND_CONFIG.enabled)) !== 'false';
+const RB_FLAT_BOOST        = Number(argVal('rbFlatBoost',    String(DEFAULT_RUBBER_BAND_CONFIG.flatBoost)));
+const RB_GAP_THRESHOLD     = Number(argVal('rbGapThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.gapThreshold)));
+const RB_RAMP_MS           = Number(argVal('rbRampMs',       String(DEFAULT_RUBBER_BAND_CONFIG.boostRampMs)));
+// RB_ENDGAME_THRESHOLD: kept as a hardcoded literal by design. The browser cross-reuses
+// DEFAULT_CAMERA_CONFIG.endgameThreshold (0.9) for this rubber-band gate (index.jsx:876) —
+// a known architectural smell (rubber-band reading a camera-config field). Splitting it into
+// a dedicated rubberBandEndgameThreshold field is a browser-side change tracked separately in
+// the HANDOFF.md backlog; do NOT import DEFAULT_CAMERA_CONFIG here just for this value.
 const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', '0.9'));
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
@@ -121,28 +157,6 @@ const SELFCHECK = argv.includes('--selfcheck');
 // ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
 const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
 const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
-
-// ── Game modules (same code the browser uses) ─────────────────────────────────
-import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
-import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
-import {
-  computeBodyNarrowRef,
-  computeEvenRowLayout,
-  computeRacerLayout,
-  computeRowPhysicalY,
-  computeSpeedBonus,
-} from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf, lapsFromDuration } from '../client/src/modules/camera/lapUtils.js';
-import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
-import {
-  DEFAULT_BASE_SPEED_CONFIG,
-  DEFAULT_RACE_BEHAVIOR_CONFIG,
-  DEFAULT_RACE_DYNAMICS_CONFIG,
-  DEFAULT_ROW_LAYOUT_CONFIG,
-} from '../client/src/modules/storage/defaults.js';
-import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
-import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
-import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
