@@ -132,7 +132,8 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf } from '../client/src/modules/camera/lapUtils.js';
+import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf, lapsFromDuration } from '../client/src/modules/camera/lapUtils.js';
+import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -190,12 +191,18 @@ export const RACER_CONFIGS = {
 
 // ── Duration variants (seconds) ───────────────────────────────────────────────
 // --dur overrides to a single arbitrary duration (enables e.g. --dur=60 / --dur=90)
-export const DURATION_VARIANTS = DUR_FILTER ? [Number(DUR_FILTER)] : [30, 120];
+export const DURATION_VARIANTS = DUR_FILTER ? [Number(DUR_FILTER)] : [30, 60, 120];
 
-// ── Compute adjusted finishT ──────────────────────────────────────────────────
+// ── Compute adjusted finishT (OPEN TRACKS ONLY) ───────────────────────────────
 /**
- * Returns the finishT (t-space target) for a race of targetSeconds duration.
+ * Returns the finishT (t-space target) for an OPEN-track race of targetSeconds.
  * baseSpeed stays at the natural N-calibrated value; only the finish line moves.
+ *
+ * IMPORTANT: This is OPEN-TRACK ONLY. Closed tracks must NOT use this function —
+ * they use lapsFromDuration(durationSec) for the finish line (the lap-count bucket,
+ * matching RaceScreen/index.jsx, headlessRaceSimulator.js, and sim-race-visual.mjs).
+ * Reusing computeFinishT for closed tracks reintroduces the ~4.2-lap-vs-2-lap
+ * divergence this fix removed — do not do it.
  *
  * For open tracks finishT is capped at (1 - runoutZone) since the track
  * has a physical end. The effective race will then be shorter than targetSeconds
@@ -262,18 +269,23 @@ export function runSingleRace({
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG };
 
-    // N-calibrated base speed — mirrors index.jsx computeRaceBaseSpeed formula.
-    // Open tracks: speed derived from finishT/targetSeconds so physical race lasts exactly
-    // targetSeconds; re-roll schedule (keyed to targetSeconds) then fires the correct count.
-    // Closed tracks: closedSsf normalizes race_baseSpeed by path length so all closed tracks
-    // produce comparable on-screen speeds — mirrors the closedSsf change in RaceScreen/index.jsx.
+    // N-calibrated base speed — mirrors RaceScreen/index.jsx computeRaceBaseSpeed call
+    // term-for-term, for BOTH finishT and speed (open and closed). Speed is back-solved
+    // from finishT so the median racer reaches the finish line in targetSeconds.
+    // Open tracks: finishT is the capped distance (computeFinishT); closedSsf = 1.
+    // Closed tracks: finishT is the lapsFromDuration bucket; closedSsf normalizes the
+    // back-solved speed by path length so all closed tracks share comparable on-screen
+    // pace — same single formula as index.jsx (closedSsf = 1 collapses it to the open case).
+    // speedMultiplier sits in the denominator here and is re-multiplied at lines 335/629,
+    // cancelling to net M⁰ for closed tracks — matching the browser's M-free closed pace.
     const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
     const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
     const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
     const closedSsf       = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
-    const race_baseSpeed  = isOpen
-      ? finishT / (REFERENCE_FPS * targetSeconds * expectedMinSF * speedMultiplier)
-      : BASE_SPEED_MEAN / (expectedMinSF * closedSsf);
+    const race_baseSpeed  = computeRaceBaseSpeed(
+      finishT,
+      targetSeconds * expectedMinSF * speedMultiplier * closedSsf
+    );
 
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
@@ -2778,12 +2790,19 @@ if (isMain) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
         // Phase-1: use topology-specific racer count (open vs closed).
         const nRacersForCombo = isOpen ? N_RACERS_OPEN : N_RACERS_CLOSED;
-        // Open tracks: natural speed = BASE_SPEED_MEAN / ssf so traversal time is track-length-invariant.
-        // Closed tracks: closedSsf normalizes speed by path length — same pattern as open ssf.
+        // Open tracks: finishT = capped natural-distance (computeFinishT) at N-calibrated speed;
+        //   trackNaturalBase = BASE_SPEED_MEAN / trackSsf so traversal time is length-invariant.
+        // Closed tracks: finishT = lapsFromDuration(durationSec) — the SAME lap-count bucket as
+        //   RaceScreen/index.jsx, headlessRaceSimulator.js, and sim-race-visual.mjs. closedSsf does
+        //   NOT enter the finish line; it normalizes the back-solved speed only, inside runSingleRace
+        //   (mirrors index.jsx). Do NOT route closed tracks through computeFinishT — that reintroduces
+        //   the ~4.2-lap-vs-2-lap divergence this fix removed.
         const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
         const trackClosedSsf = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
         const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : race_baseSpeed / trackClosedSsf;
-        const finishT = computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen);
+        const finishT = isOpen
+          ? computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen)
+          : lapsFromDuration(durationSec);
 
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
         // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
