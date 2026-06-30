@@ -2589,3 +2589,75 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Consequence:** When a code comment cites a past regression as the reason for a conservative setting, check whether the preconditions still hold before treating the setting as immovable. If the context has changed, the correct next step is a measured trial under today's conditions (re-enable the strict path, sweep with the original regression's canaries — here beetle/boarder × Dirt Oval — plus chain-lock metrics), not blind trust in either the old caution or the new optimism. Measure, don't assume the old reason still applies.
 
 **Reference:** client/src/modules/raceBehavior.js ~562 (leaderBrake closed weakening + Report 14 comment); brake-match commit 1f43ee9 (2026-06-05) vs controller commit 596a1b2 (2026-05-20). Session 2026-06-20.
+
+---
+
+## Lesson 151 — A Stale Handoff Document Misleads More Than No Handoff At All
+
+**Context:** feat/race-action, 2026-06-30. The handoff notes stated HEAD was `b06d946` and listed the "§4a soft-steering asymmetric fix" as an open next step. In reality `aef203a` (the §4a fix) was already committed, verified, and on `origin/feat/race-action` — `b06d946` was its parent. A session nearly re-derived a full implementation spec for an already-solved bug; it was caught only by a read-only origin-fetch sanity check before the spec was written. The same pattern recurred twice the same session: a controller-on-closed phase-timing "known issue" turned out already correct (the phase clock is leader-progress based, `14f3c6f` / tag `backup/c0-controller-closed-20jun`, so it is immune to `closedSsf`), and a long-flagged sim-determinism blocker turned out resolved.
+
+**Insight:** A handoff doc is trusted precisely because it claims to be current — so a stale one is more dangerous than none, because it directs confident action toward work that no longer exists. The author's own recollection is not a substitute for the repository state; "what I remember being open" and "what `git log`/origin actually show" diverge silently once commits land without the doc being updated in the same breath.
+
+**Consequence:** Update a living handoff in the **same session as the commit it describes**, never batched at session end. And any reader — including the doc's own author — must re-verify each load-bearing claim (HEAD hash, "open" status of a named fix) against `origin` before acting on it. A `git fetch` + `git log --oneline origin/<branch>` + `git tag --contains` costs seconds; re-deriving a spec for a shipped fix costs a session.
+
+**Reference:** §4a fix `aef203a` (already on origin while the handoff claimed it open at HEAD `b06d946`); controller-on-closed `14f3c6f` + tag `backup/c0-controller-closed-20jun`. Session 2026-06-30, feat/race-action HEAD `9cfa953`.
+
+---
+
+## Lesson 152 — Before Spec'ing a Fix for a "Known Open Bug," Prove It Still Exists With a Read-Only Review
+
+**Context:** feat/race-action, 2026-06-30. Three documented/suspected bugs this session — the §4a asymmetry, the controller-on-closed phase timing, and a sim-determinism blocker — were each scheduled for an implementation spec. A cheap read-only design review run first found that all three were already fixed or never real: §4a was already asymmetric in source (`aef203a`), the controller already used a `closedSsf`-immune leader-progress clock, and determinism was no longer reproducible.
+
+**Insight:** The expensive failure mode is not writing a wrong fix; it is writing a correct fix for a bug that is no longer there. The cost asymmetry is stark — a read-only review that reads the current source and confirms the defect is minutes of work, while an unnecessary implementation spec plus its review, commit, and verification is most of a session. The review also produces the artifact (line numbers, current behavior) that a real fix would have needed anyway, so it is never wasted even when the bug *is* real.
+
+**Consequence:** Gate every "fix a known bug" task behind a read-only review that reproduces or re-locates the defect in the current source first. Treat a documented bug as a hypothesis to test, not a fact to act on — especially when the documentation predates recent merges.
+
+**Reference:** Read-only reviews of §4a (`aef203a`), controller phase-timing (`14f3c6f`), and determinism, all 2026-06-30. Pattern companion to [Lesson 151]. Session 2026-06-30.
+
+---
+
+## Lesson 153 — One Hardcoded-Default Mismatch Is a Signal to Audit the Whole File, Not Patch the One Field
+
+**Context:** feat/race-action, 2026-06-30. `sim-fairness.mjs` hardcoded its CLI default for `corridorEnd` at 0.95 while the shared `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` was 1.0 — found while reviewing the controller phase timing. Rather than patch only that field, a full audit of the same file's hardcoded-CLI-default pattern was run; it found a second, more consequential mismatch: `bonusMult` defaulted to 1.0 while the shared `racePlanBonusStrengthMultiplier` was 2.0 — half the area-bonus strength the browser actually uses.
+
+**Insight:** A single instance of a copy-the-value-into-a-literal anti-pattern is rarely unique; the same hand wrote the same pattern for every neighbouring field, and the ones that happen to still match are silent today but are the next drift. Patching only the field that was caught fixes the symptom and ships the rest of the latent class — here, the single-field fix would have produced a sweep that still ran at half the real bonus strength.
+
+**Consequence:** When you find one hardcoded value that should have come from a shared source, audit every sibling in the same file/pattern before fixing — then convert them all to read from the shared source so the whole class becomes structurally impossible, not just the one instance. Distinguish "override mechanism with a wrong baked-in default" from "currently-matching duplicate" (drift risk) and fix both.
+
+**Reference:** `corridorEnd` (0.95 vs shared 1.0) found first; full audit found `bonusMult` (1.0 vs shared 2.0); both fixed by reading from shared config in `9cfa953`. Session 2026-06-30.
+
+---
+
+## Lesson 154 — When Unifying Two Formula Branches, Trace Every Factor's Apply-Site Across the Whole Chain, Not Just the Formula's Algebra
+
+**Context:** feat/race-action, 2026-06-30. `sim-fairness.mjs` had separate open/closed `race_baseSpeed` branches; the proposal unified them into one `computeRaceBaseSpeed(finishT, targetSeconds × expectedMinSF × speedMultiplier × closedSsf)` call. The open branch had applied `speedMultiplier` only as a later post-multiply; the unified formula also placed it in the denominator. Checking that the formula reduced correctly for the open case (`closedSsf=1`) was not enough — it looked like a double-application of `speedMultiplier`.
+
+**Insight:** A formula's correctness is not contained in the formula; it lives in the full chain of where each factor is introduced and consumed. The `speedMultiplier` in the denominator was cancelled by the existing post-multiply at the apply sites (net `M⁰`, matching the browser's own racer-type-independent closed pace) — but proving that required tracing every downstream read of `race_baseSpeed` (both `baseSpeed` apply sites plus the `vt` ratio reads), not just simplifying the expression. A factor that "appears twice" can be a cancellation or a double-count; only the call-chain trace tells you which.
+
+**Consequence:** Before merging two branches into one expression, enumerate every site that consumes the result and confirm each factor's net exponent end-to-end. Verify against an independent reference implementation (here the browser's `index.jsx` apply sites) rather than against the algebra alone.
+
+**Reference:** Unified `race_baseSpeed` in `8f57cba`; apply sites `sim-fairness.mjs` (baseSpeed init + re-roll) and `vt` ratio reads; cross-checked against `RaceScreen/index.jsx`. Session 2026-06-30.
+
+---
+
+## Lesson 155 — Two Edits That Are a Matched Pair Must Land in One Commit — Prove What Happens If Only One Ships
+
+**Context:** feat/race-action, 2026-06-30. The closed-track parity fix was two coupled edits: closed `finishT` → `lapsFromDuration(durationSec)`, and `race_baseSpeed` → the unified `computeRaceBaseSpeed` form. They are correct only together. Applying the speed-formula change alone against the old `computeFinishT`-derived `finishT` produces a result off by a factor of `1/(expectedMinSF × closedSsf)` — no error, no crash, just a silently wrong speed.
+
+**Insight:** Coupled correctness is invisible in a diff that shows each edit in isolation; each looks locally reasonable. A multi-part fix where the parts are only jointly correct has a failure mode that no test of either part alone will catch — and a reviewer approving them as "two small changes" can wave through a broken intermediate state if they are split across commits or landed out of order.
+
+**Consequence:** Before splitting or sequencing a multi-part change, algebraically (or empirically) check whether each part is independently correct or only correct as a pair. If only-as-a-pair, land them in a single commit and say so in the message; never let a half-applied intermediate exist on the branch. The matched-pair fix shipped as one commit `8f57cba`.
+
+**Reference:** `finishT` (lapsFromDuration) + `race_baseSpeed` (computeRaceBaseSpeed) unified in `8f57cba`; the single-edit-only result is wrong by `1/(E·S)`. Session 2026-06-30.
+
+---
+
+## Lesson 156 — To Measure an Exact Drawn Dimension, Read the Geometry Data, Not the Rendered Pixels
+
+**Context:** feat/race-action, 2026-06-30. Verifying whether a track's configured width matched what was actually drawn. Pixel-colour analysis of the rendered background image gave only a rough, ambiguous range (anti-aliasing, lighting, and overlay artefacts blur the boundary). The track's own stored geometry — `innerPoints` / `outerPoints` / `centerPoints` arrays plus an explicit `width` field in the track JSON — gave an exact, uniform answer at every sampled inner/outer point-pair.
+
+**Insight:** When a quantity exists both as structured source-of-truth data and as something inferred from a rendered/visual proxy, the proxy carries every downstream rendering distortion as measurement noise; the structured data carries none. Reaching for the screenshot when the geometry array is right there trades an exact answer for an estimate, for no benefit.
+
+**Consequence:** Prefer the structured source of truth (the geometry arrays / config field) over an inferred or visual proxy whenever both are available. Use pixel analysis only when there is no structured source — and treat any range it yields as an estimate, not a measurement.
+
+**Reference:** Track geometry in `server/seeds/tracks/*.json` (`innerPoints`/`outerPoints`/`centerPoints` + `width`), consumed via `EditorShape`; closed-track geometry-expansion work (`8f73dc7`/`72da109`/`1b3260e`/`b06d946`). Session 2026-06-30.
