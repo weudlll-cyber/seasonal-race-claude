@@ -9,6 +9,7 @@
 5. [The 8 Interdependent Parameters](#5-the-8-interdependent-parameters)
 6. [Known Limitations](#6-known-limitations)
 7. [Lessons Learned](#7-lessons-learned)
+8. [Closed-Track finishT, Speed & Shared-Config Defaults](#8-closed-track-finisht-speed--shared-config-defaults)
 
 ---
 
@@ -564,4 +565,81 @@ Phase 2 scoring consistently showed that `racePlanSuccessRate` and lateral quali
 
 ---
 
-*Last updated: 2026-05-31. See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
+## 8. Closed-Track finishT, Speed & Shared-Config Defaults
+
+This section documents the closed-track finish-line / speed mechanism and the shared-config
+default wiring as they exist after the June 2026 parity work (`8f57cba`, `9cfa953`). The intent
+is that `sim-fairness.mjs` is a faithful predictor of the browser — every player-facing tunable
+is sourced from the same module the browser/DevScreen use, never hand-mirrored.
+
+### finishT on closed tracks = `lapsFromDuration(durationSec)`
+
+Closed-track `finishT` is the **lap-count bucket** `lapsFromDuration(durationSec)` from
+`client/src/modules/camera/lapUtils.js`:
+
+| duration | laps |
+|----------|------|
+| < 60 s   | 1    |
+| 60–89 s  | 2    |
+| 90–119 s | 3    |
+| ≥ 120 s  | 4    |
+
+This is the **same function the browser always used** (`RaceScreen/index.jsx`), and the same one
+`headlessRaceSimulator.js` and `sim-race-visual.mjs` use. Before `8f57cba`, `sim-fairness.mjs`
+instead derived closed-track `finishT` from a continuous natural-distance formula
+(`computeFinishT`), which produced ≈4.2 laps for a 60 s race instead of 2 — i.e. the fairness
+gates were measured over ~2× the real lap count and ~2× the on-screen speed. `8f57cba` switched
+the closed branch to `lapsFromDuration`. **`computeFinishT` is now OPEN-TRACK ONLY** — do not
+route closed tracks through it (a comment in the source warns against reintroducing the bug).
+
+### race_baseSpeed — single unified formula (both topologies)
+
+`sim-fairness.mjs` now back-solves speed via the shared `computeRaceBaseSpeed` helper, identical
+term-for-term to the browser. See the master formula in
+[ARCHITECTURE.md](ARCHITECTURE.md) (`race_baseSpeed` section) — not duplicated here. Key point:
+`closedSsf = pathLengthPx / 3200` enters the speed denominator (and `closedSsf = 1` for open),
+so a single formula covers both track types. The `speedMultiplier` in the denominator cancels
+the post-multiply, giving the browser's racer-type-independent base pace on closed tracks.
+
+### DURATION_VARIANTS = `[30, 60, 120]`
+
+The default sweep duration set is `[30, 60, 120]` (was `[30, 120]`). **60 s was added** because it
+is the actual default player-facing scenario (default race duration → `lapsFromDuration(60) = 2`
+laps), which the prior `[30, 120]` set never exercised. `--dur=<n>` still overrides to a single
+duration.
+
+### Shared-config CLI defaults (no hand-mirrored literals) — `9cfa953`
+
+As of `9cfa953`, the Race-Plan and rubber-band CLI-arg defaults are **read from the shared
+DevScreen config objects at module load**, not from hardcoded literals — so a change to the shared
+default propagates to the sim automatically and can never silently drift from the browser. The
+`argVal(name, default)` override is preserved (e.g. `--corridorEnd=0.9` still works for experiments):
+
+| CLI flag | default source |
+|----------|----------------|
+| `--bonusMult` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier` (2.0) |
+| `--bonusTransitionEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd` (0.75) |
+| `--bonusFadeDuration` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration` (1500) |
+| `--corridorStart` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart` (0.55) |
+| `--corridorEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` (1.0) |
+| `--rubber-band` / `--rbFlatBoost` / `--rbGapThreshold` / `--rbRampMs` | `DEFAULT_RUBBER_BAND_CONFIG` (enabled/flatBoost/gapThreshold/boostRampMs) |
+
+Before `9cfa953`, `corridorEnd` defaulted to a hardcoded `0.95` (vs shared `1.0`) and `bonusMult`
+to `1.0` (vs shared `2.0`) — both silently wrong vs the browser. This is now structurally
+impossible for these fields.
+
+**Exception — `RB_ENDGAME_THRESHOLD` stays a hardcoded literal (0.9)** by design. The browser
+sources its rubber-band endgame gate from `DEFAULT_CAMERA_CONFIG.endgameThreshold` (a camera-config
+field cross-reused for gameplay, `index.jsx:876`) — a known architectural smell. Splitting it into
+a dedicated `rubberBandEndgameThreshold` field is a browser-side change tracked separately in the
+backlog; the sim does not import camera config just for this value.
+
+### `--race-plan` default is now `true` (browser-faithful)
+
+`--race-plan` defaults to **`true`** as of `9cfa953` — the browser's controller is always active
+(there is no off-switch). `--race-plan=false` remains available as an explicit opt-out for sweep
+experiments (baseline / controller-off comparisons).
+
+---
+
+*Last updated: 2026-06-30. See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
