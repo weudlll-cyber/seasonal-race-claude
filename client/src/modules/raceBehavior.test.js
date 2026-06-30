@@ -479,3 +479,36 @@ describe('hard position separation', () => {
     expect(bOn.physicalY).toBe(bOff.physicalY);
   });
 });
+
+// ── Layer 1 (Soft Steering) §4a asymmetry (regression for aef203a) ──────────
+// §4a (non-overlap target) must ALWAYS be trailer-only: the trailer yields beside
+// the leader, the leader holds its centerline. softSteeringSymmetric is a §4b-only
+// flag; it must not make §4a push the leader outward. Before aef203a, symmetric=true
+// pinned a leader at the outer edge whenever a follower sat directly behind it.
+describe('Layer 1 soft steering — §4a asymmetry', () => {
+  // Bodies (makeLaneRacer): contactWidth 28px, contactLength 31px, trackWidth 140,
+  // pathLength 1200. Gate (×1.2): latPx<33.6 (|dY|<0.48) AND longPx<37.2 (dT<0.031).
+  // Overlap (§4b): dT ≤ 31/1200 = 0.02583 AND |dY| ≤ 28/70 = 0.40.
+  // dT = 0.028 is inside the §4a gate (longPx 33.6 < 37.2) but past the §4b overlap
+  // window (0.028 > 0.02583) → §4a fires, §4b does not. The §4a target offset is
+  // pxToPhysicalY(28, 140) = 0.40, so the trailer is pulled toward +0.40 (away from
+  // the leader at centerline), while the leader's target stays 0.
+  const softCfg = {
+    ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+    hardSeparationEnabled: false, // isolate the soft-steering spring
+    softRepulsionStrength: 0, // no boundary repulsion to confound physicalY
+    softSteeringSymmetric: true, // the flag under test: must NOT affect §4a
+  };
+
+  it('symmetric flag ON: leader holds centerline, only the trailer yields (§4a trailer-only)', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.4, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.428, physicalY: 0.0 });
+    applyRacerBehavior([trailer, leader], softCfg);
+    // Leader received no §4a target → target 0 → spring delta 0 → stays exactly centered.
+    expect(leader.physicalY).toBe(0);
+    // Trailer received a §4a target toward +0.40 → springs away from the leader's side.
+    expect(trailer.physicalY).toBeGreaterThan(0.05);
+    // Gap widened (trailer moved away, leader did not move toward it).
+    expect(trailer.physicalY - leader.physicalY).toBeGreaterThan(0.05);
+  });
+});

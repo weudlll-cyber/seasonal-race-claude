@@ -376,10 +376,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const forceMag = config.lateralForce * Math.min(latFraction, longFraction);
 
       // ── Layer 1 (Soft Steering) §4a: non-overlap target accumulation ────────
-      // INSERT-ONLY, flag-gated. For the most-constraining obstacle (highest forceMag),
-      // store a target one contact width to the side it is already on. Asymmetric
-      // (trailer only) unless softSteeringSymmetric. The overlap block (§4b) may later
-      // override this for the same pair (it uses >= so overlap wins on equal forceMag).
+      // INSERT-ONLY. For the most-constraining obstacle (highest forceMag), store a
+      // target one contact width to the side it is already on. Always asymmetric
+      // (trailer only) regardless of softSteeringSymmetric — see lines 398-402. The
+      // overlap block (§4b) may later override this for the same pair (it uses >= so
+      // overlap wins on equal forceMag).
       if (trackWidth > 0) {
         const contactOffsetY =
           pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));

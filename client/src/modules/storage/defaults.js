@@ -415,9 +415,11 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // L3 (free-lane) + L4 (commit-injection) + L5 (Stage-D gap). Each racer is pulled
   // toward one per-step target by a single spring. L6 (OVL-C), L7/L8, L10/L11 and the
   // hard-separation backstop are unchanged.
-  //   softSteeringSymmetric:  FALSE = asymmetric (only the trailer, lower t, gets a
-  //                           target; the leader holds its line). TRUE = both members
-  //                           of a pair get a target. (Sweep chose TRUE.)
+  //   softSteeringSymmetric:  Applies ONLY to the §4b body-overlap case. TRUE = both
+  //                           members of an overlapping pair get a target during body
+  //                           overlap; FALSE = only the trailer (lower t) does. The §4a
+  //                           non-overlap case is ALWAYS trailer-only regardless of this
+  //                           flag (the leader holds its line). (Sweep chose TRUE.)
   //   softSteeringStrength:   spring constant: delta += (target - physicalY) * strength.
   //   softSteeringClearancePct: extra gap beyond one contact width, as a fraction of the
   //                           contact width (0.0 = exactly contact distance).
