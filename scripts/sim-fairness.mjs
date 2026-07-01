@@ -354,10 +354,15 @@ export function runSingleRace({
     }
     const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
 
-    // Re-roll schedule keyed to targetSeconds (the intended race length).
-    const rollCount        = Math.max(2, Math.floor(targetSeconds / dynamicsConfig.reRollIntervalDivisor));
-    const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * targetSeconds * 1000) / rollCount;
-    const lastRollDeadline = targetSeconds * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+    // Re-roll schedule keyed to the REALIZED race duration (parity with browser). Closed tracks:
+    // the engine stretches targetSeconds by expectedMinSF × closedSsf, so keying on targetSeconds
+    // front-loaded re-rolls into the first ~half; realizedDurationSec spreads them across the whole
+    // race. Reuses the SAME expectedMinSF/closedSsf already computed for base speed (no second calc).
+    // Open tracks: realizedDurationSec == targetSeconds (closedSsf=1 collapses the factor), unchanged.
+    const realizedDurationSec = isOpen ? targetSeconds : targetSeconds * expectedMinSF * closedSsf;
+    const rollCount        = Math.max(2, Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor));
+    const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * realizedDurationSec * 1000) / rollCount;
+    const lastRollDeadline = realizedDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
 
     // Init racers
     const racers = Array.from({ length: nRacers }, (_, i) => {
@@ -625,11 +630,15 @@ export function runSingleRace({
     // ── Phase-3A: Naturalness metrics state ──────────────────────────────────
     const JERK_BASESPEED_EPSILON = 1e-5;
     const JERK_HIGH_THRESHOLD    = 0.05; // calibrated post-baseline; ≈ 95th-pct jerk
-    const stablePhaseStartMs     = Math.max(0, 0.25 * targetSeconds * 1000);
-    const stablePhaseEndMs       = 0.95 * targetSeconds * 1000;
+    // Diagnostic-only windows (telemetry counters, NOT control) — based on the realized race
+    // duration so post-fix re-gate telemetry lines up with the actual race timeline on closed
+    // tracks. Reuses realizedDurationSec (same source as the re-roll schedule). Does not affect
+    // race behavior or fairness stats (band-reach/Holm use finish ranks).
+    const stablePhaseStartMs     = Math.max(0, 0.25 * realizedDurationSec * 1000);
+    const stablePhaseEndMs       = 0.95 * realizedDurationSec * 1000;
     const PULK_T_THRESHOLD       = pathLengthPx > 0 ? 200 / pathLengthPx : 0.01;
-    const pulkWindowStartMs      = 0.25 * targetSeconds * 1000;
-    const pulkWindowEndMs        = 0.50 * targetSeconds * 1000;
+    const pulkWindowStartMs      = 0.25 * realizedDurationSec * 1000;
+    const pulkWindowEndMs        = 0.50 * realizedDurationSec * 1000;
     const natPrevEffSpeed        = new Map(); // racerIndex → prev effective speed
     const natPrevT               = new Map(); // racerIndex → t before Pass-2
     let natJerkSum = 0, natJerkMax = 0, natJerkSteps = 0, natJerkHighCount = 0;

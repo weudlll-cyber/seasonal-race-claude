@@ -509,13 +509,18 @@ export default function RaceScreen() {
     );
     const rowLayout = computeEvenRowLayout(nRacers, rowCount);
 
-    // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of targetDuration.
+    // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of the REALIZED race
+    // duration (raceData.estimatedDurationSec). On closed tracks the engine stretches the nominal
+    // targetDuration by ems×closedSsf, so keying the cadence on targetDuration front-loaded all
+    // re-rolls into the first ~half of the race; the realized duration spreads them across the whole
+    // race. Open tracks: estimatedDurationSec == targetDuration, so behavior is unchanged.
+    const rerollDurationSec = raceData.estimatedDurationSec ?? targetDuration;
     const rollCount = Math.max(
       2,
-      Math.floor(targetDuration / dynamicsConfig.reRollIntervalDivisor)
+      Math.floor(rerollDurationSec / dynamicsConfig.reRollIntervalDivisor)
     );
     const rollInterval =
-      ((dynamicsConfig.reRollLastPositionPercent / 100) * targetDuration * 1000) / rollCount;
+      ((dynamicsConfig.reRollLastPositionPercent / 100) * rerollDurationSec * 1000) / rollCount;
 
     // Ensure surface-class registry has the latest cached server data.
     // Code defaults are always present; this picks up any user-defined overrides.
@@ -801,8 +806,10 @@ export default function RaceScreen() {
       } else if (st.phase === PHASE.RACING) {
         // Re-Roll config constants (read once per rAF, shared across all physics steps).
         // lastRollDeadline is relative to physicsTs which starts at 0 at RACING entry.
+        // Keyed on the REALIZED race duration (rerollDurationSec) so the last-roll cutoff lands at
+        // the same race fraction on closed tracks (where realized ≠ nominal targetDuration).
         const lastRollDeadline =
-          targetDuration * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+          rerollDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
         const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
         // D4: snapshot t before all physics steps so constSpeed can equalize deltas
