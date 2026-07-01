@@ -253,7 +253,7 @@ export const DEFAULT_RACE_ZONE_CONFIG = {
 export const DEFAULT_RUBBER_BAND_CONFIG = {
   // Master on/off. DEFAULT-OFF: this "cap the lead" redesign stays off until the
   // fairness sweep (band-reach Δ ≤ 1pp, 0 Holm-unfair) licenses it default-on.
-  enabled: false,
+  enabled: true,
   // "Cap the lead" — brake front-breakaway racers toward a max gap from the field
   // median (raw cumulative-t). A racer is braked proportionally once its own gap to
   // the median exceeds brakeThreshold; eligibility is gap-based, not "is leader".
@@ -280,11 +280,11 @@ export const DEFAULT_RUBBER_BAND_CONFIG = {
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
-  reRollVariationPercent: 58,
-  reRollTransitionDuration: 5.0,
-  reRollIntervalDivisor: 15,
-  reRollLastPositionPercent: 80,
-  trajectoryTransitionDuration: 1.5,
+  reRollVariationPercent: 75,
+  reRollTransitionDuration: 3.0,
+  reRollIntervalDivisor: 10,
+  reRollLastPositionPercent: 95,
+  trajectoryTransitionDuration: 1.0,
   // Race Plan area bonus strength: validated at 2.0 (B1=+6%, B5=-2%). Range 0.5–3.0.
   racePlanBonusStrengthMultiplier: 2.0,
   // Race Plan timing — fraction of race duration (0–1), applied in racePlanner.js.

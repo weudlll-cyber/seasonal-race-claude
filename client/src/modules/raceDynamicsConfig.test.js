@@ -30,11 +30,11 @@ beforeEach(() => {
 describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
   it('has expected default values', () => {
     expect(DEFAULT_RACE_DYNAMICS_CONFIG).toEqual({
-      reRollVariationPercent: 58,
-      reRollTransitionDuration: 5.0,
-      reRollIntervalDivisor: 15,
-      reRollLastPositionPercent: 80,
-      trajectoryTransitionDuration: 1.5,
+      reRollVariationPercent: 75,
+      reRollTransitionDuration: 3.0,
+      reRollIntervalDivisor: 10,
+      reRollLastPositionPercent: 95,
+      trajectoryTransitionDuration: 1.0,
       racePlanBonusStrengthMultiplier: 2.0,
       racePlanBonusTransitionEnd: 0.75,
       racePlanBonusFadeDuration: 1500,
@@ -60,7 +60,7 @@ describe('loadRaceDynamicsConfig', () => {
     storageGet.mockReturnValue({ reRollVariationPercent: 50 });
     const cfg = loadRaceDynamicsConfig();
     expect(cfg.reRollVariationPercent).toBe(50);
-    expect(cfg.reRollTransitionDuration).toBe(5.0);
+    expect(cfg.reRollTransitionDuration).toBe(3.0);
   });
 
   it('returns defaults when stored value is not an object', () => {
@@ -100,7 +100,7 @@ describe('loadRaceDynamicsConfig', () => {
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     storageGet.mockReturnValue({ reRollVariationPercent: 100 });
     loadRaceDynamicsConfig();
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent).toBe(58);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent).toBe(75);
   });
 
   it('accepts valid custom values', () => {

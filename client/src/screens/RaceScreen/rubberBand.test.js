@@ -55,8 +55,8 @@ describe('DEFAULT_RUBBER_BAND_CONFIG', () => {
     expect(DEFAULT_RUBBER_BAND_CONFIG).not.toHaveProperty('gapThreshold');
   });
 
-  it('is DEFAULT-OFF (pending fairness sweep)', () => {
-    expect(DEFAULT_RUBBER_BAND_CONFIG.enabled).toBe(false);
+  it('is DEFAULT-ON (fairness sweep passed at maxBrake 0.10)', () => {
+    expect(DEFAULT_RUBBER_BAND_CONFIG.enabled).toBe(true);
   });
 
   it('defaults are within valid ranges; maxBrake locked at ≤ 0.10', () => {
