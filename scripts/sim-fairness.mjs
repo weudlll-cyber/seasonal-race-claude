@@ -104,6 +104,14 @@ const DYNAMICS_OVERRIDES = {
   reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
   reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
   trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
+  // PULK-surge overrides (default OFF) — lets a future re-gate enable the surge from the CLI
+  // without touching any committed default. Same shared-default + argVal pattern (no drift).
+  pulkSurgeEnabled:              argVal('pulkSurgeEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled)) === 'true',
+  pulkSurgeFraction:      Number(argVal('pulkSurgeFraction',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeFraction))),
+  pulkSurgeBonus:         Number(argVal('pulkSurgeBonus',          String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus))),
+  pulkSurgeRampInMs:      Number(argVal('pulkSurgeRampInMs',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampInMs))),
+  pulkSurgeRampOutMs:     Number(argVal('pulkSurgeRampOutMs',      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampOutMs))),
+  pulkBrakeExemptStrength: Number(argVal('pulkBrakeExemptStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength))),
 };
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
@@ -133,6 +141,12 @@ const RUBBER_BAND_CFG = {
   boostRampMs:                RB_RAMP_MS,
   rubberBandEndgameThreshold: RB_ENDGAME_THRESHOLD,
 };
+
+// ── PULK-surge (default OFF) ─────────────────────────────────────────────────
+// SURGE_ENABLED gates both the cohesion-bias bypass and the rubber-band exemption; when the
+// Race Plan is inactive or the flag is off, surge is a no-op (pulkSurgeMult stays 1.0).
+const SURGE_ENABLED       = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.pulkSurgeEnabled;
+const SURGE_BRAKE_EXEMPT  = SURGE_ENABLED ? DYNAMICS_OVERRIDES.pulkBrakeExemptStrength : 0;
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -412,6 +426,10 @@ export function runSingleRace({
         trajectoryMultTarget:     1.0,
         trajectoryMultPrev:       1.0,
         trajectoryMultTransStart: 0,
+        pulkSurgeMult:            1.0, // PULK-surge: set by controller.update(); 1.0 when surge disabled
+        pulkSurgeMultPrev:        1.0,
+        pulkSurgeMultTarget:      1.0,
+        pulkSurgeMultTransStart:  0,
         areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
         rubberBandMult:           1.0,
         rubberBandMultPrev:       1.0,
@@ -648,7 +666,8 @@ export function runSingleRace({
         if (raceTs >= r.nextRollTime && raceTs < lastRollDeadline) {
           const rawTarget   = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
           // Phase-3A: pulk-bias hook (active when Race Plan is running, wired in E-Step 5)
-          const biasedTarget = racePlanController
+          // Bypassed when the surge mechanic owns PULK (parity with browser) — surge replaces cohesion.
+          const biasedTarget = (racePlanController && !SURGE_ENABLED)
             ? racePlanController.computePulkBiasedTarget(
                 r.index, rawTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
@@ -706,7 +725,7 @@ export function runSingleRace({
       // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
       // Identical mechanism to the browser (raceRubberBand.applyRubberBand) so the sweep
       // measures the real thing. rbActivated telemetry now tracks BRAKING (mult < 1).
-      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG);
+      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG, SURGE_BRAKE_EXEMPT);
       for (const r of racers) { if (r.rubberBandMult < 0.999) r.rbActivatedThisRace = true; }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
@@ -769,9 +788,9 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
-          // trajectoryMult + areaBonusMult: both 1.0 when Race Plan inactive
+          // trajectoryMult + areaBonusMult + pulkSurgeMult: all 1.0 when Race Plan / surge inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -2846,6 +2865,12 @@ if (isMain) {
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
+              pulkSurgeEnabled:        DYNAMICS_OVERRIDES.pulkSurgeEnabled,
+              pulkSurgeFraction:       DYNAMICS_OVERRIDES.pulkSurgeFraction,
+              pulkSurgeBonus:          DYNAMICS_OVERRIDES.pulkSurgeBonus,
+              pulkSurgeRampInMs:       DYNAMICS_OVERRIDES.pulkSurgeRampInMs,
+              pulkSurgeRampOutMs:      DYNAMICS_OVERRIDES.pulkSurgeRampOutMs,
+              pulkBrakeExemptStrength: DYNAMICS_OVERRIDES.pulkBrakeExemptStrength,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

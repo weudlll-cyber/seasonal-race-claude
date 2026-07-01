@@ -145,6 +145,61 @@ describe('createRacePlan', () => {
     expect(plan.seed).toBe(0);
     expect(plan.pulkRacerIds).toHaveLength(3);
   });
+
+  // ── PULK-surge selection (default-off flag) ─────────────────────────────────
+  const SURGE_CFG = { pulkSurgeEnabled: true, pulkSurgeFraction: 0.2 };
+
+  it('surge OFF by default: surgeRacerIds empty and cohesion path unchanged', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const off = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, seed);
+      // No surge set built when disabled
+      expect(off.surgeRacerIds).toBeUndefined();
+      // Cohesion selection is exactly the same as with surge config passed (surge must not touch it)
+      const on = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, seed);
+      expect(on.pulkRacerIds).toEqual(off.pulkRacerIds);
+      expect(on.pulkRacerIds).toHaveLength(3);
+      expect(on.pulkRacerIds).not.toContain(on.winnerRacerId);
+    }
+  });
+
+  it('surge selection is deterministic for a fixed seed', () => {
+    const p1 = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, BASE_SEED);
+    const p2 = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, BASE_SEED);
+    expect([...p1.surgeRacerIds].sort((a, b) => a - b)).toEqual(
+      [...p2.surgeRacerIds].sort((a, b) => a - b)
+    );
+  });
+
+  it('surge selects ceil(fraction * N) racers', () => {
+    const N = BASE_RACERS.length; // 70
+    const expected = Math.ceil(0.2 * N); // 14
+    for (let seed = 1; seed <= 20; seed++) {
+      const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, seed);
+      expect(plan.surgeRacerIds.size).toBe(expected);
+    }
+  });
+
+  it('surge CAN include the winner (no winner exclusion)', () => {
+    let winnerSelectedAtLeastOnce = false;
+    for (let seed = 1; seed <= 40; seed++) {
+      const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, seed);
+      if (plan.surgeRacerIds.has(plan.winnerRacerId)) winnerSelectedAtLeastOnce = true;
+    }
+    // With fraction 0.2 over 40 seeds, the winner (~20% chance/seed) must appear at least once.
+    expect(winnerSelectedAtLeastOnce).toBe(true);
+  });
+
+  it('surge selection does NOT correlate with startRowIndex (spans all rows)', () => {
+    const rowByIndex = new Map(BASE_RACERS.map((r) => [r.index, r.startRowIndex]));
+    const rowsRepresented = new Set();
+    for (let seed = 1; seed <= 30; seed++) {
+      const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, seed);
+      for (const idx of plan.surgeRacerIds) rowsRepresented.add(rowByIndex.get(idx));
+    }
+    // BASE_RACERS has 5 rows (0–4). Uniform selection over all indices must reach nearly every row,
+    // proving surge is not confined to specific start rows.
+    expect(rowsRepresented.size).toBeGreaterThanOrEqual(4);
+  });
 });
 
 // ── createTrajectoryController — P-controller arithmetic ─────────────────────

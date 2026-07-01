@@ -624,6 +624,10 @@ export default function RaceScreen() {
           trajectoryMultTarget: 1.0,
           trajectoryMultPrev: 1.0,
           trajectoryMultTransStart: 0,
+          pulkSurgeMult: 1.0,
+          pulkSurgeMultPrev: 1.0,
+          pulkSurgeMultTarget: 1.0,
+          pulkSurgeMultTransStart: 0,
           areaBonusMult: 1.0,
           rubberBandMult: 1.0,
           rubberBandMultPrev: 1.0,
@@ -647,6 +651,12 @@ export default function RaceScreen() {
     // ── Race Plan controller ─────────────────────────────────────────────────
     const racePlanEnabled =
       !!raceData.racePlanEnabled && targetDuration >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
+    // PULK-surge gating (loop-scope so the rAF loop can read it): only when the Race Plan runs
+    // AND the surge flag is on. Drives the cohesion-bias bypass and the rubber-band exemption.
+    const pulkSurgeEnabled = racePlanEnabled && (dynamicsConfig.pulkSurgeEnabled ?? false);
+    const pulkBrakeExemptStrength = pulkSurgeEnabled
+      ? (dynamicsConfig.pulkBrakeExemptStrength ?? 0.5)
+      : 0;
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
@@ -668,6 +678,12 @@ export default function RaceScreen() {
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
+          pulkSurgeEnabled: dynamicsConfig.pulkSurgeEnabled ?? false,
+          pulkSurgeFraction: dynamicsConfig.pulkSurgeFraction ?? 0.2,
+          pulkSurgeBonus: dynamicsConfig.pulkSurgeBonus ?? 0.1,
+          pulkSurgeRampInMs: dynamicsConfig.pulkSurgeRampInMs ?? 1200,
+          pulkSurgeRampOutMs: dynamicsConfig.pulkSurgeRampOutMs ?? 1200,
+          pulkBrakeExemptStrength: dynamicsConfig.pulkBrakeExemptStrength ?? 0.5,
         },
         racePlanSeed
       );
@@ -874,24 +890,33 @@ export default function RaceScreen() {
           // Brakes front-breakaway racers toward a max gap from the field median so
           // the field stays catchable, without pulling the legitimate winner into the
           // pack. Logic shared with sim-fairness.mjs via raceRubberBand.js (parity).
-          applyRubberBand(st.racers, st.finishT, physicsTs, rubberBandConfig);
+          applyRubberBand(
+            st.racers,
+            st.finishT,
+            physicsTs,
+            rubberBandConfig,
+            pulkBrakeExemptStrength
+          );
 
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
               if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
                 const rawSample = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
-                const biasedSample = racePlanController
-                  ? racePlanController.computePulkBiasedTarget(
-                      r.index,
-                      rawSample,
-                      BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                      BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                      st.racers,
-                      physicsTs,
-                      st.raceProgress
-                    )
-                  : rawSample;
+                // Bypass cohesion bias when the surge mechanic owns PULK (PART D): with surge on,
+                // the surge pass replaces the cohesion PULK bias, so skip computePulkBiasedTarget.
+                const biasedSample =
+                  racePlanController && !pulkSurgeEnabled
+                    ? racePlanController.computePulkBiasedTarget(
+                        r.index,
+                        rawSample,
+                        BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                        BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                        st.racers,
+                        physicsTs,
+                        st.raceProgress
+                      )
+                    : rawSample;
                 const newTarget = Math.max(
                   BASE_SPEED_MIN / BASE_SPEED_MEAN,
                   Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedSample)
@@ -942,6 +967,7 @@ export default function RaceScreen() {
                     r.trajectoryMult *
                     r.areaBonusMult *
                     r.rubberBandMult *
+                    (r.pulkSurgeMult ?? 1.0) *
                     zoneMult,
                 st.finishT + 0.001
               );
@@ -961,6 +987,7 @@ export default function RaceScreen() {
                     r.trajectoryMult *
                     r.areaBonusMult *
                     r.rubberBandMult *
+                    (r.pulkSurgeMult ?? 1.0) *
                     zoneMult) /
                   race_baseSpeed
                 : 0;

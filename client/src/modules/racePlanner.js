@@ -134,6 +134,15 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const corridorConfig = { ...DEFAULT_CORRIDOR_CONFIG, ...(config.corridorConfig ?? {}) };
   const controllerParams = { ...DEFAULT_CONTROLLER_PARAMS, ...(config.controllerParams ?? {}) };
 
+  // PULK-surge config (default OFF — the cohesion PULK bias below stays the fallback).
+  // Last-resort ?? fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG (defaults.js) exactly.
+  const pulkSurgeEnabled = config.pulkSurgeEnabled ?? false;
+  const pulkSurgeFraction = config.pulkSurgeFraction ?? 0.2;
+  const pulkSurgeBonus = config.pulkSurgeBonus ?? 0.1;
+  const pulkSurgeRampInMs = config.pulkSurgeRampInMs ?? 1200;
+  const pulkSurgeRampOutMs = config.pulkSurgeRampOutMs ?? 1200;
+  const pulkBrakeExemptStrength = config.pulkBrakeExemptStrength ?? 0.5;
+
   // M2v2: assign random targetRank 1..n to each racer via Fisher-Yates shuffle
   const n = racers.length;
   const rankPool = Array.from({ length: n }, (_, i) => i + 1);
@@ -173,6 +182,23 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   }
   const pulkRacerIds = shuffled.slice(0, 3).map((r) => r.index);
 
+  // PULK-surge selection (only when enabled). Cohesion selection above is UNCHANGED — it is
+  // the fallback. Surge uses a SEPARATE, dedicated RNG stream seeded from racePlanSeed XORed
+  // with a fixed constant that is distinct from BOTH the target-rank shuffle stream (seed) and
+  // the controller-noise stream (seed + 0x9e3779b9), so surge membership cannot correlate with
+  // the target-rank assignment. Uniform over ALL indices: winner NOT excluded, no row/rank filter.
+  let surgeRacerIds;
+  if (pulkSurgeEnabled) {
+    const surgeRng = seed > 0 ? mulberry32((seed ^ 0x5bf03635) >>> 0) : Math.random;
+    const surgePool = racers.map((r) => r.index);
+    for (let i = surgePool.length - 1; i > 0; i--) {
+      const j = Math.floor(surgeRng() * (i + 1));
+      [surgePool[i], surgePool[j]] = [surgePool[j], surgePool[i]];
+    }
+    const surgeCount = Math.ceil(pulkSurgeFraction * n);
+    surgeRacerIds = new Set(surgePool.slice(0, surgeCount));
+  }
+
   // Absolute phase boundaries in ms
   const postStartHoldMs = config.postStartHoldMs ?? 0;
   const phases = {
@@ -197,6 +223,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     seed,
     winnerRacerId,
     pulkRacerIds,
+    surgeRacerIds,
+    _pulkSurgeEnabled: pulkSurgeEnabled,
+    _pulkSurgeFraction: pulkSurgeFraction,
+    _pulkSurgeBonus: pulkSurgeBonus,
+    _pulkSurgeRampInMs: pulkSurgeRampInMs,
+    _pulkSurgeRampOutMs: pulkSurgeRampOutMs,
+    _pulkBrakeExemptStrength: pulkBrakeExemptStrength,
     phaseFractions,
     corridorConfig,
     controllerParams,
@@ -261,6 +294,10 @@ export function createTrajectoryController(racePlan) {
   let _bidirectionalBoostCount = 0;
   let _bidirectionalBrakeCount = 0;
   let _racersBlockedCount = 0;
+  // PULK-surge telemetry (PART H): steps where a surger is actively surging, and the summed
+  // absolute applied delta |pulkSurgeMult - 1| over those steps.
+  let _surgeStepCount = 0;
+  let _surgeAppliedDeltaSum = 0;
   // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
   // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
   // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
@@ -336,6 +373,42 @@ export function createTrajectoryController(racePlan) {
         const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
         r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
       }
+    }
+
+    // ── PULK-surge pass (PART D) ────────────────────────────────────────────────
+    // Default-off no-op: when the surge mechanic is disabled every racer's pulkSurgeMult stays
+    // pinned at 1.0 and the cohesion PULK bias (computePulkBiasedTarget) owns PULK unchanged.
+    // When enabled, surgers get +pulkSurgeBonus during the PULK phase: ramp-in on entering PULK,
+    // ramp-out on leaving. Eased with the SAME easeInOutCubic Prev/Target/TransStart structure as
+    // trajectoryMult; the ramp duration differs (in vs out) so it is stored per-racer.
+    if (plan._pulkSurgeEnabled) {
+      const inPulk = getPhase(elapsedMs, phaseProgress) === 'PULK';
+      for (const r of racers) {
+        const isSurger = plan.surgeRacerIds ? plan.surgeRacerIds.has(r.index) : false;
+        const surging = isSurger && inPulk && !r.finished;
+        const newTarget = surging ? 1.0 + plan._pulkSurgeBonus : 1.0;
+        const rampMs = surging ? plan._pulkSurgeRampInMs : plan._pulkSurgeRampOutMs;
+        if (Math.abs(newTarget - (r.pulkSurgeMultTarget ?? 1.0)) > 0.001) {
+          r.pulkSurgeMultPrev = r.pulkSurgeMult ?? 1.0;
+          r.pulkSurgeMultTarget = newTarget;
+          r.pulkSurgeMultTransStart = elapsedMs;
+          r._pulkSurgeTransDur = rampMs;
+        }
+        const dur = r._pulkSurgeTransDur ?? 1;
+        const elapsedSurge = elapsedMs - (r.pulkSurgeMultTransStart ?? 0);
+        r.pulkSurgeMult =
+          elapsedSurge < dur
+            ? (r.pulkSurgeMultPrev ?? 1.0) +
+              ((r.pulkSurgeMultTarget ?? 1.0) - (r.pulkSurgeMultPrev ?? 1.0)) *
+                easeInOutCubic(elapsedSurge / dur)
+            : (r.pulkSurgeMultTarget ?? 1.0);
+        if (surging) {
+          _surgeStepCount++;
+          _surgeAppliedDeltaSum += Math.abs(r.pulkSurgeMult - 1);
+        }
+      }
+    } else {
+      for (const r of racers) r.pulkSurgeMult = 1.0;
     }
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
@@ -461,6 +534,9 @@ export function createTrajectoryController(racePlan) {
       bidirectionalBrakeFraction:
         _racerStepCount > 0 ? _bidirectionalBrakeCount / _racerStepCount : 0,
       racersBlockedInOutcome: _racerStepCount > 0 ? _racersBlockedCount / _racerStepCount : 0,
+      // PULK-surge (cohesion telemetry above is retained — cohesion still exists as the fallback).
+      surgeEventCount: _surgeStepCount,
+      surgeAppliedDeltaMean: _surgeStepCount > 0 ? _surgeAppliedDeltaSum / _surgeStepCount : 0,
     };
     _winnerBlockedInOutcome = 0;
     _winnerStepCount = 0;
@@ -473,6 +549,8 @@ export function createTrajectoryController(racePlan) {
     _bidirectionalBoostCount = 0;
     _bidirectionalBrakeCount = 0;
     _racersBlockedCount = 0;
+    _surgeStepCount = 0;
+    _surgeAppliedDeltaSum = 0;
     return tel;
   }
 

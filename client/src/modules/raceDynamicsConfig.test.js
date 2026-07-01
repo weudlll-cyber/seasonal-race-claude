@@ -41,13 +41,20 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
+      pulkSurgeEnabled: false,
+      pulkSurgeFraction: 0.2,
+      pulkSurgeBonus: 0.1,
+      pulkSurgeRampInMs: 1200,
+      pulkSurgeRampOutMs: 1200,
+      pulkBrakeExemptStrength: 0.5,
     });
   });
 
-  it('all defaults are positive numbers', () => {
+  it('all numeric defaults are positive numbers (surge flag is boolean)', () => {
     for (const val of Object.values(DEFAULT_RACE_DYNAMICS_CONFIG)) {
-      expect(val).toBeGreaterThan(0);
+      if (typeof val === 'number') expect(val).toBeGreaterThan(0);
     }
+    expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled).toBe('boolean');
   });
 });
 

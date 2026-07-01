@@ -76,8 +76,11 @@ export function rubberBandTargetMult(myGap, cfg) {
  * @param {number} finishT
  * @param {number} nowMs   physics timestamp (ms) for the temporal ramp
  * @param {object} cfg     { enabled, brakeThreshold, gapScale, maxBrake, boostRampMs, rubberBandEndgameThreshold }
+ * @param {number} [surgeExemptStrength] 0 = surgers fully braked (default, no behaviour change);
+ *                                        1 = surgers fully exempt from the rubber-band brake.
+ *                                        Only affects racers currently surging (pulkSurgeMult > 1).
  */
-export function applyRubberBand(racers, finishT, nowMs, cfg) {
+export function applyRubberBand(racers, finishT, nowMs, cfg, surgeExemptStrength = 0) {
   if (!cfg || !cfg.enabled) return;
 
   let leaderT = -Infinity;
@@ -97,6 +100,12 @@ export function applyRubberBand(racers, finishT, nowMs, cfg) {
     if (braking && medianT !== null && finishT > 0) {
       const myGap = (r.t - medianT) / finishT;
       if (myGap > cfg.brakeThreshold) target = rubberBandTargetMult(myGap, cfg);
+    }
+    // Partial brake exemption for surgers: blend the brake target toward 1.0 (no brake) by
+    // surgeExemptStrength. At 0 the target is unchanged; at 1.0 the surger is fully exempt.
+    // The surge pass (racePlanner update) runs before this in the loop, so pulkSurgeMult is set.
+    if (surgeExemptStrength > 0 && (r.pulkSurgeMult ?? 1.0) > 1.0001) {
+      target = 1 - (1 - target) * (1 - surgeExemptStrength);
     }
     if (Math.abs(target - r.rubberBandMultTarget) > 0.001) {
       r.rubberBandMultPrev = r.rubberBandMult;
