@@ -12,6 +12,7 @@ import {
   lapProgress,
   currentLap,
   estimatedSecondsPerLap,
+  estimateClosedTrackDurationSec,
   openTrackDurationRange,
   computeClosedTrackSsf,
   REFERENCE_CLOSED_PATH_PX,
@@ -79,6 +80,35 @@ describe('estimatedSecondsPerLap', () => {
     const base = estimatedSecondsPerLap(1.0);
     const fast = estimatedSecondsPerLap(2.0);
     expect(fast).toBeCloseTo(base / 2, 3);
+  });
+});
+
+describe('estimateClosedTrackDurationSec', () => {
+  // Validated against runSingleRace (median finisher, N=40, 2 laps, seeds 1–3) within <1%.
+  // Assertions use a ~5% tolerance around the measured realized durations.
+  const within5 = (actual, expected) => Math.abs(actual - expected) / expected <= 0.05;
+
+  it('city-circuit (motorbike, 6130px, 2 laps) ≈ 51.5s realized', () => {
+    const s = estimateClosedTrackDurationSec(2, 6130, 1.05, 40);
+    expect(within5(s, 51.5)).toBe(true);
+  });
+
+  it('dirt-oval (horse, 6541px, 2 laps) ≈ 58.5s realized', () => {
+    const s = estimateClosedTrackDurationSec(2, 6541, 1.0, 40);
+    expect(within5(s, 58.5)).toBe(true);
+  });
+
+  it('ice-track (snowmobile, 6065px, 2 laps) ≈ 49.3s realized', () => {
+    const s = estimateClosedTrackDurationSec(2, 6065, 1.1, 40);
+    expect(within5(s, 49.3)).toBe(true);
+  });
+
+  it('scales with laps and path length; longer track → longer realized duration', () => {
+    const short = estimateClosedTrackDurationSec(2, 3200, 1.0, 40);
+    const long = estimateClosedTrackDurationSec(2, 6400, 1.0, 40);
+    expect(long).toBeCloseTo(short * 2, 5); // closedSsf doubles
+    const oneLap = estimateClosedTrackDurationSec(1, 3200, 1.0, 40);
+    expect(short).toBeCloseTo(oneLap * 2, 5); // laps double
   });
 });
 

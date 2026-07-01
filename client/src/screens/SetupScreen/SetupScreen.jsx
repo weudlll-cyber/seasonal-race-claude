@@ -31,6 +31,7 @@ import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
   estimatedSecondsPerLap,
+  estimateClosedTrackDurationSec,
   lapsFromDuration,
   openTrackDurationRange,
 } from '../../modules/camera/lapUtils.js';
@@ -304,12 +305,42 @@ function SetupScreen() {
   }, [selectedLaps, selectedTrack, racerTypeOverride, raceSettings.duration, trackIsOpen]);
 
   // Effective closed-track duration: user override clamped to range, or natural duration.
+  // This is the NOMINAL targetDuration fed to the engine (unchanged by this fix).
   const effectiveClosedDuration = useMemo(() => {
     if (!closedTrackSliderRange) return raceSettings.duration;
     const { min, max, natural } = closedTrackSliderRange;
     if (closedTrackDuration === null) return natural;
     return Math.max(min, Math.min(max, closedTrackDuration));
   }, [closedTrackDuration, closedTrackSliderRange, raceSettings.duration]);
+
+  // Realized closed-track wall-clock duration for the "Estimated duration" display. The engine
+  // scales the nominal targetDuration by ems×closedSsf, so the real race is length-aware (≈2× the
+  // nominal after the closed-track world expansion). Display-only — does not affect the engine.
+  const closedRealizedDurationSec = useMemo(() => {
+    if (!selectedTrack || trackIsOpen || !selectedTrack.geometryId) return null;
+    const geom = getTrack(selectedTrack.geometryId);
+    if (!geom?.pathLengthPx) return null;
+    const effectiveLaps = selectedLaps ?? lapsFromDuration(raceSettings.duration);
+    const racerType = getRacerType(
+      racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+    );
+    const speedMultiplier = racerType?.getSpeedMultiplier() ?? 1.0;
+    return Math.round(
+      estimateClosedTrackDurationSec(
+        effectiveLaps,
+        geom.pathLengthPx,
+        speedMultiplier,
+        players.length
+      )
+    );
+  }, [
+    selectedLaps,
+    selectedTrack,
+    racerTypeOverride,
+    raceSettings.duration,
+    trackIsOpen,
+    players.length,
+  ]);
 
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
@@ -344,6 +375,18 @@ function SetupScreen() {
       ? preferredId
       : (filteredRacerTypeIds[0] ?? preferredId);
     const effectiveLaps = selectedLaps ?? lapsFromDuration(raceSettings.duration);
+    // Realized wall-clock duration for display + gating (closed tracks: engine scales the nominal
+    // targetDuration by ems×closedSsf). Does NOT change targetDuration (the nominal engine input).
+    const startSpeedMultiplier = getRacerType(effectiveTypeId)?.getSpeedMultiplier() ?? 1.0;
+    const startGeom = selectedTrack?.geometryId ? getTrack(selectedTrack.geometryId) : null;
+    const estimatedDurationSec = trackIsOpen
+      ? effectiveOpenTrackDuration
+      : estimateClosedTrackDurationSec(
+          effectiveLaps,
+          startGeom?.pathLengthPx ?? 0,
+          startSpeedMultiplier,
+          players.length
+        );
     const race = {
       racers: players,
       trackId: selectedTrackId,
@@ -360,9 +403,11 @@ function SetupScreen() {
       raceMode: trackIsOpen ? 'time' : 'laps',
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
       targetDuration: trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration,
+      // Realized wall-clock estimate — used for the setup display and the racePlanEnabled gate
+      // (setup + runtime). targetDuration above stays the nominal engine input (unchanged race).
+      estimatedDurationSec,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
-      racePlanEnabled:
-        (trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration) >= racePlanMinDur,
+      racePlanEnabled: estimatedDurationSec >= racePlanMinDur,
       racePlanSeed: 0,
       timestamp: new Date().toISOString(),
     };
@@ -396,6 +441,16 @@ function SetupScreen() {
     const quickClosedDuration = Math.round(
       estimatedSecondsPerLap(quickSpeedMultiplier) * quickLaps
     );
+    // Realized wall-clock duration for display + gating; targetDuration below stays nominal.
+    const quickGeom = track.geometryId ? getTrack(track.geometryId) : null;
+    const quickEstimatedDurationSec = quickIsOpen
+      ? raceDefaults.duration
+      : estimateClosedTrackDurationSec(
+          quickLaps,
+          quickGeom?.pathLengthPx ?? 0,
+          quickSpeedMultiplier,
+          testPlayers.length
+        );
     const race = {
       racers: testPlayers,
       trackId: track.id,
@@ -410,9 +465,10 @@ function SetupScreen() {
       raceMode: quickIsOpen ? 'time' : 'laps',
       targetLaps: quickIsOpen ? undefined : quickLaps,
       targetDuration: quickIsOpen ? raceDefaults.duration : quickClosedDuration,
+      // Realized wall-clock estimate — display + racePlanEnabled gate (setup + runtime).
+      estimatedDurationSec: quickEstimatedDurationSec,
       trackSurfaceClasses: track.surfaceClasses ?? [],
-      racePlanEnabled:
-        (quickIsOpen ? raceDefaults.duration : quickClosedDuration) >= racePlanMinDur,
+      racePlanEnabled: quickEstimatedDurationSec >= racePlanMinDur,
       racePlanSeed: quickTestSeed,
       timestamp: new Date().toISOString(),
     };
@@ -840,7 +896,8 @@ function SetupScreen() {
                           display: 'block',
                         }}
                       >
-                        * auto · Estimated duration: {effectiveClosedDuration}s
+                        * auto · Estimated duration:{' '}
+                        {closedRealizedDurationSec ?? effectiveClosedDuration}s
                       </span>
                     </div>
                   )}

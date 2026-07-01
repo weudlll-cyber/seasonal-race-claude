@@ -92,6 +92,41 @@ export function computeClosedTrackSsf(pathLengthPx) {
   return pathLengthPx / REFERENCE_CLOSED_PATH_PX;
 }
 
+/**
+ * Realized median-racer wall-clock duration for a CLOSED-track race, in seconds.
+ *
+ * The engine feeds a NOMINAL targetDuration (= estimatedSecondsPerLap × laps, length-blind) and
+ * then scales the realized pace by ems (N-calibrated expected-min spread) and closedSsf (path
+ * length). So the actual race lasts nominalTargetDur × ems × closedSsf — which, after the closed-
+ * track world expansion (closedSsf ≈ 1.9–2.0), is ~2× the nominal. This helper reproduces that
+ * realized duration for the setup DISPLAY and racePlanEnabled gate ONLY; it does NOT change the
+ * engine inputs (estimatedSecondsPerLap stays the nominal targetDuration). Validated against
+ * runSingleRace within <1% (city-circuit 51.5s, dirt-oval 58.5s, ice-track 49.3s).
+ *
+ * @param {number} laps
+ * @param {number} pathLengthPx
+ * @param {number} [speedMultiplier=1.0]
+ * @param {number} [nRacers=40]
+ * @param {object} [baseSpeedConfig=DEFAULT_BASE_SPEED_CONFIG]
+ * @returns {number} realized wall-clock seconds for the median racer
+ */
+export function estimateClosedTrackDurationSec(
+  laps,
+  pathLengthPx,
+  speedMultiplier = 1.0,
+  nRacers = 40,
+  baseSpeedConfig = DEFAULT_BASE_SPEED_CONFIG
+) {
+  const baseSpeedMean = (baseSpeedConfig.min + baseSpeedConfig.max) / 2;
+  // Nominal targetDuration the engine receives (length-blind): estimatedSecondsPerLap × laps.
+  const nominalTargetDur = laps / (baseSpeedMean * speedMultiplier * REFERENCE_FPS);
+  // N-calibrated expected-minimum spread factor (mirrors RaceScreen/index.jsx term-for-term).
+  const spreadMin = baseSpeedConfig.min / baseSpeedMean;
+  const spreadMax = baseSpeedConfig.max / baseSpeedMean;
+  const ems = spreadMin + (spreadMax - spreadMin) / (nRacers + 1);
+  return nominalTargetDur * ems * computeClosedTrackSsf(pathLengthPx);
+}
+
 // Slider range [min, max] for the open-track duration picker.
 // max = natural traversal time of the track given its path length and mean base speed,
 // accounting for runoutZone.

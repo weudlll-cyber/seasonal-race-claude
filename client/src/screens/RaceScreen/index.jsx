@@ -649,8 +649,13 @@ export default function RaceScreen() {
     const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
 
     // ── Race Plan controller ─────────────────────────────────────────────────
+    // Gate on the realized wall-clock duration (raceData.estimatedDurationSec) — for closed tracks
+    // the engine scales the nominal targetDuration by ems×closedSsf, so targetDuration under-reads
+    // the real race length. Defensive fallback to targetDuration for older raceData without the field.
     const racePlanEnabled =
-      !!raceData.racePlanEnabled && targetDuration >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
+      !!raceData.racePlanEnabled &&
+      (raceData.estimatedDurationSec ?? targetDuration) >=
+        (dynamicsConfig.racePlanMinDurationSec ?? 30);
     // PULK-surge gating (loop-scope so the rAF loop can read it): only when the Race Plan runs
     // AND the surge flag is on. Drives the cohesion-bias bypass and the rubber-band exemption.
     const pulkSurgeEnabled = racePlanEnabled && (dynamicsConfig.pulkSurgeEnabled ?? false);
