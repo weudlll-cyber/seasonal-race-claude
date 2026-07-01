@@ -295,6 +295,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   racePlanBonusFadeDuration: 1500,
   racePlanCorridorStart: 0.55,
   racePlanCorridorEnd: 1.0,
+  // Minimum race duration (s) at/above which the Race Plan controller runs.
+  // Below this the race falls back to raw physics (no target-rank sorting).
+  // Sim-validated fair down to 30s; DevScreen-adjustable.
+  racePlanMinDurationSec: 30,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

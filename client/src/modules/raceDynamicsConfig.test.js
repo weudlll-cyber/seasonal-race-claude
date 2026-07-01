@@ -40,6 +40,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanBonusFadeDuration: 1500,
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
+      racePlanMinDurationSec: 30,
     });
   });
 

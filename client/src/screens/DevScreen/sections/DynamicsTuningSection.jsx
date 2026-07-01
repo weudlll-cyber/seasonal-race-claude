@@ -121,6 +121,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       racePlanBonusFadeDuration: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration,
       racePlanCorridorStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart,
       racePlanCorridorEnd: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
+      racePlanMinDurationSec: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanMinDurationSec,
     }));
   }
 
@@ -634,6 +635,28 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                     racePlanCorridorStart: Math.min(curStart, newEnd),
                   }));
                 }
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Race Plan min duration (s)
+              <InfoTooltip text="Minimum race duration for the Race Plan controller. Below this, races run on raw physics (no fairness sorting)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Race Plan minimum duration seconds"
+              min={0}
+              max={120}
+              step={5}
+              value={dynamicsConfig.racePlanMinDurationSec ?? 30}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 120) setDynamics('racePlanMinDurationSec', v);
               }}
             />
           </div>

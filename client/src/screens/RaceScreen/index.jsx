@@ -645,7 +645,8 @@ export default function RaceScreen() {
     const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
 
     // ── Race Plan controller ─────────────────────────────────────────────────
-    const racePlanEnabled = !!raceData.racePlanEnabled && targetDuration >= 60;
+    const racePlanEnabled =
+      !!raceData.racePlanEnabled && targetDuration >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
