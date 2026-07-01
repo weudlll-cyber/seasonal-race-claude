@@ -37,6 +37,7 @@ import {
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import styles from './SetupScreen.module.css';
 
@@ -163,6 +164,9 @@ function SetupScreen() {
   }, []);
 
   const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
+  // Race-plan enable threshold — single source with the runtime gate (index.jsx reads the same
+  // racePlanMinDurationSec). Last-resort ?? 30 mirrors the runtime gate's fallback and the default.
+  const [racePlanMinDur] = useState(() => loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30);
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
@@ -357,7 +361,8 @@ function SetupScreen() {
       targetLaps: trackIsOpen ? undefined : effectiveLaps,
       targetDuration: trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
-      racePlanEnabled: (trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration) >= 60,
+      racePlanEnabled:
+        (trackIsOpen ? effectiveOpenTrackDuration : effectiveClosedDuration) >= racePlanMinDur,
       racePlanSeed: 0,
       timestamp: new Date().toISOString(),
     };
@@ -406,7 +411,8 @@ function SetupScreen() {
       targetLaps: quickIsOpen ? undefined : quickLaps,
       targetDuration: quickIsOpen ? raceDefaults.duration : quickClosedDuration,
       trackSurfaceClasses: track.surfaceClasses ?? [],
-      racePlanEnabled: (quickIsOpen ? raceDefaults.duration : quickClosedDuration) >= 60,
+      racePlanEnabled:
+        (quickIsOpen ? raceDefaults.duration : quickClosedDuration) >= racePlanMinDur,
       racePlanSeed: quickTestSeed,
       timestamp: new Date().toISOString(),
     };
