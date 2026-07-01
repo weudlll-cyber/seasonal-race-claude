@@ -23,7 +23,26 @@ export function loadRaceDynamicsConfig() {
     merged.reRollIntervalDivisor <= 0 ||
     merged.reRollLastPositionPercent <= 0 ||
     merged.reRollLastPositionPercent > 100 ||
-    merged.trajectoryTransitionDuration <= 0
+    merged.trajectoryTransitionDuration <= 0 ||
+    // PULK-surge fields: reject the whole stored object to defaults if any is out of range
+    // (same whole-object-reject pattern as the legacy fields above). Bounds are validation
+    // limits; the fallback values come from DEFAULT_RACE_DYNAMICS_CONFIG (single source).
+    typeof merged.pulkSurgeEnabled !== 'boolean' ||
+    typeof merged.pulkSurgeFraction !== 'number' ||
+    merged.pulkSurgeFraction < 0 ||
+    merged.pulkSurgeFraction > 0.5 ||
+    typeof merged.pulkSurgeBonus !== 'number' ||
+    merged.pulkSurgeBonus < 0 ||
+    merged.pulkSurgeBonus > 0.12 ||
+    typeof merged.pulkSurgeRampInMs !== 'number' ||
+    merged.pulkSurgeRampInMs < 0 ||
+    merged.pulkSurgeRampInMs > 5000 ||
+    typeof merged.pulkSurgeRampOutMs !== 'number' ||
+    merged.pulkSurgeRampOutMs < 0 ||
+    merged.pulkSurgeRampOutMs > 5000 ||
+    typeof merged.pulkBrakeExemptStrength !== 'number' ||
+    merged.pulkBrakeExemptStrength < 0 ||
+    merged.pulkBrakeExemptStrength > 1
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

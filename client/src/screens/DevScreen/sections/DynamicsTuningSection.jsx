@@ -125,6 +125,18 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  function resetPulkSurge() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      pulkSurgeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled,
+      pulkSurgeFraction: DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeFraction,
+      pulkSurgeBonus: DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus,
+      pulkSurgeRampInMs: DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampInMs,
+      pulkSurgeRampOutMs: DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampOutMs,
+      pulkBrakeExemptStrength: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength,
+    }));
+  }
+
   function resetFrameTiming() {
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
@@ -713,6 +725,152 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           </strong>
           {'→100%'}
         </p>
+      </SubCard>
+
+      {/* ── Block 4c: PULK Surge ── */}
+      <SubCard
+        title="PULK Surge"
+        onReset={resetPulkSurge}
+        resetTestId="reset-pulk-surge"
+        subtitle="Optional PULK-phase action mechanic (default OFF). When enabled, it REPLACES the cohesion PULK bias: a random subset of racers (including the winner) briefly surges forward during the PULK phase, then the P-controller reels non-winners back to their target ranks — so who wins is unchanged, only the mid-race action differs."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="PULK Surge Enabled"
+              checked={dynamicsConfig.pulkSurgeEnabled ?? false}
+              onChange={(e) => setDynamics('pulkSurgeEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable PULK Surge
+            <InfoTooltip text="Replace the cohesion PULK bias with the surge mechanic: a random subset (incl. the winner) briefly surges forward during PULK, then the controller reels non-winners back." />
+          </label>
+        </div>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Surge fraction
+              <InfoTooltip text="Fraction of the field selected to surge (uniform, includes the winner)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Surge fraction"
+              min={0}
+              max={0.5}
+              step={0.05}
+              value={
+                dynamicsConfig.pulkSurgeFraction ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeFraction
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.5) setDynamics('pulkSurgeFraction', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Surge bonus
+              <InfoTooltip text="Forward speed bonus applied to surgers during PULK (capped at 0.12 for fairness/naturalness)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Surge bonus"
+              min={0}
+              max={0.12}
+              step={0.01}
+              value={dynamicsConfig.pulkSurgeBonus ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.12) setDynamics('pulkSurgeBonus', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Surge ramp-in (ms)
+              <InfoTooltip text="Ease-in duration when a surger enters the PULK phase." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Surge ramp-in"
+              min={0}
+              max={2000}
+              step={100}
+              value={
+                dynamicsConfig.pulkSurgeRampInMs ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampInMs
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 2000) setDynamics('pulkSurgeRampInMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Surge ramp-out (ms)
+              <InfoTooltip text="Ease-out duration as the PULK phase ends and the surge fades back to normal." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Surge ramp-out"
+              min={0}
+              max={2000}
+              step={100}
+              value={
+                dynamicsConfig.pulkSurgeRampOutMs ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampOutMs
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 2000) setDynamics('pulkSurgeRampOutMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Surge brake-exempt
+              <InfoTooltip text="0 = surgers fully braked by rubber-band, 1 = fully exempt during PULK (0.5 default)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Surge brake-exempt"
+              min={0}
+              max={1}
+              step={0.1}
+              value={
+                dynamicsConfig.pulkBrakeExemptStrength ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setDynamics('pulkBrakeExemptStrength', v);
+              }}
+            />
+          </div>
+        </div>
       </SubCard>
 
       {/* ── Block 10: Frame Timing ── */}

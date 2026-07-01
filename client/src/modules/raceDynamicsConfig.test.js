@@ -123,6 +123,42 @@ describe('loadRaceDynamicsConfig', () => {
     expect(cfg.reRollIntervalDivisor).toBe(10);
     expect(cfg.reRollLastPositionPercent).toBe(70);
   });
+
+  it('returns defaults when pulkSurgeBonus is out of range (0.9 > 0.12)', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkSurgeBonus: 0.9 });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    expect(cfg.pulkSurgeBonus).toBe(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus);
+  });
+
+  it('returns defaults when pulkBrakeExemptStrength is out of range (5 > 1)', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkBrakeExemptStrength: 5 });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    expect(cfg.pulkBrakeExemptStrength).toBe(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength);
+  });
+
+  it('falls back to default (false) when pulkSurgeEnabled is not a boolean', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkSurgeEnabled: 'yes' });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    expect(cfg.pulkSurgeEnabled).toBe(false);
+  });
+
+  it('accepts valid in-range surge values', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      pulkSurgeEnabled: true,
+      pulkSurgeFraction: 0.3,
+      pulkSurgeBonus: 0.08,
+      pulkBrakeExemptStrength: 0.7,
+    });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg.pulkSurgeEnabled).toBe(true);
+    expect(cfg.pulkSurgeFraction).toBe(0.3);
+    expect(cfg.pulkSurgeBonus).toBe(0.08);
+    expect(cfg.pulkBrakeExemptStrength).toBe(0.7);
+  });
 });
 
 describe('saveRaceDynamicsConfig', () => {
