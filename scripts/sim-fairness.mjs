@@ -1297,6 +1297,8 @@ export function runSingleRace({
         winnerBlockedFractionInOutcome: 0,
         planBiasDeltaMean: 0,
         pulkBiasEventCount: 0,
+        surgeEventCount: 0,
+        surgeAppliedDeltaMean: 0,
       }),
       // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
       tmDelta5sMax,
@@ -2980,6 +2982,8 @@ if (isMain) {
           winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
           planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
           pulkBiasEventCount:     raceResults.reduce((s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0), 0) / raceResults.length,
+          surgeEventCount:        raceResults.reduce((s, r) => s + (r.naturalness?.surgeEventCount ?? 0), 0) / raceResults.length,
+          surgeAppliedDeltaMean:  raceResults.reduce((s, r) => s + (r.naturalness?.surgeAppliedDeltaMean ?? 0), 0) / raceResults.length,
           racersInCorridorFraction: raceResults.reduce((s, r) => s + (r.naturalness?.racersInCorridorFraction ?? 0), 0) / raceResults.length,
           corridorViolationMean:  raceResults.reduce((s, r) => s + (r.naturalness?.corridorViolationMean ?? 0), 0) / raceResults.length,
           corridorViolationMax:   Math.max(...raceResults.map((r) => r.naturalness?.corridorViolationMax ?? 0)),

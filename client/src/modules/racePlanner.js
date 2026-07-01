@@ -189,6 +189,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // the target-rank assignment. Uniform over ALL indices: winner NOT excluded, no row/rank filter.
   let surgeRacerIds;
   if (pulkSurgeEnabled) {
+    // seed>0: dedicated stream decoupled from the target-rank shuffle (mulberry32(seed)) for
+    // reproducible sim runs. seed===0 (browser live default): intentionally Math.random =
+    // fresh random surge selection each race; selection is index-based so it stays start-row
+    // independent regardless of RNG source (fairness is unaffected — surge never touches target rank).
     const surgeRng = seed > 0 ? mulberry32((seed ^ 0x5bf03635) >>> 0) : Math.random;
     const surgePool = racers.map((r) => r.index);
     for (let i = surgePool.length - 1; i > 0; i--) {
