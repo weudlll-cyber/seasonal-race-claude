@@ -93,7 +93,7 @@ describe('resolveTrailEmitter — match found', () => {
 
 // ── No-match / fallback path ──────────────────────────────────────────────────
 
-describe('resolveTrailEmitter — no match → null (Heimat-Trail)', () => {
+describe('resolveTrailEmitter — no match → null (native trail)', () => {
   test('returns null when racer classes and track classes do not overlap', () => {
     const rt = makeRacerType(['asphalt']);
     const emitter = resolveTrailEmitter(rt, ['water']);

@@ -290,7 +290,7 @@ export class SpriteRacerType {
   /**
    * Returns the surfaceClasses array — the Surface-Class IDs this racer type
    * is compatible with. An empty array means the racer always uses its
-   * Heimat-Trail (trailFactory) regardless of track surface classes.
+   * native trail (trailFactory) regardless of track surface classes.
    */
   getSurfaceClasses() {
     return this.config.surfaceClasses ?? [];

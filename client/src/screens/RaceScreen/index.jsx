@@ -1249,14 +1249,14 @@ export default function RaceScreen() {
               r.surfaceEmitter.spawn(r.surfaceParticles, spawnX, spawnY, r.baseSpeed, r.angle, ts);
               r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
             } else {
-              // Heimat-Trail fallback: trailFactory-based particles pooled globally
+              // native trail fallback: trailFactory-based particles pooled globally
               st.dustParticles.push(
                 ...rt.getTrailParticles(spawnX, spawnY, r.baseSpeed, r.angle, ts)
               );
             }
           }
         }
-        // Advance Heimat-Trail dustParticles — in-place mutation + swap-remove (no allocation).
+        // Advance native trail dustParticles — in-place mutation + swap-remove (no allocation).
         {
           let i = 0;
           while (i < st.dustParticles.length) {

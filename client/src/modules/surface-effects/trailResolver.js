@@ -14,7 +14,7 @@ import { resolveActiveSurfaceClass, getGeneratorForClass } from './registry.js';
  * Returns a generator emitter { spawn, update, render } when the racer type
  * has at least one surface class matching the track's surface classes.
  * Returns null when no class matches — caller should fall back to the
- * racer type's trailFactory (Heimat-Trail).
+ * racer type's trailFactory (native trail).
  *
  * Each call creates a fresh emitter instance. This is intentional: stateful
  * generators (line.js) close over internal position state and must not be

@@ -200,7 +200,7 @@ function SetupScreen() {
   const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
 
   // Filter racer types to those compatible with the selected track's surface classes.
-  // Types with empty surfaceClasses are always included (Heimat-Trail fallback).
+  // Types with empty surfaceClasses are always included (native trail fallback).
   const filteredRacerTypeIds = useMemo(() => {
     const allTypes = listAllRacerTypes().filter((t) => t.isActive);
     if (!selectedTrack?.surfaceClasses?.length) return allTypes.map((t) => t.id);

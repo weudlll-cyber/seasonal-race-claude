@@ -231,7 +231,7 @@ describe('filterRacerTypesForTrack', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('always includes racers with empty surfaceClasses (Heimat-Trail fallback)', () => {
+  it('always includes racers with empty surfaceClasses (native trail fallback)', () => {
     const racerTypes = [{ id: 'legacy' }];
     const result = filterRacerTypesForTrack(racerTypes, ['earth'], () => []);
     expect(result).toHaveLength(1);

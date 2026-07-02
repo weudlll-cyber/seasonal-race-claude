@@ -82,7 +82,7 @@ export function getGeneratorForClass(classId) {
  *
  * @param {string[]} racerClasses  — surfaceClasses from the racer type config
  * @param {string[]} trackClasses  — surfaceClasses from the track preset
- * @returns {object|null}          — resolved SurfaceClass or null (→ Heimat-Trail)
+ * @returns {object|null}          — resolved SurfaceClass or null (→ native trail)
  */
 export function resolveActiveSurfaceClass(racerClasses, trackClasses) {
   if (!Array.isArray(racerClasses) || !Array.isArray(trackClasses)) return null;
@@ -101,7 +101,7 @@ export function resolveActiveSurfaceClass(racerClasses, trackClasses) {
  *
  * A racer is compatible when it has ≥1 class overlapping with the track's classes.
  * Racers with an empty surfaceClasses array are never filtered — they always show up
- * (backwards-compatible: they always use their Heimat-Trail).
+ * (backwards-compatible: they always use their native trail).
  *
  * Edge-case: if trackSurfaceClasses is empty or missing, all racers are returned
  * (legacy tracks without the field remain fully compatible with all racers).
