@@ -6,7 +6,15 @@
 //              Use for: tire tracks on asphalt, ice scratches, snail trails.
 //              Stateful: remembers the previous spawn position to draw segments.
 //              Renders in world coordinates (camera transform applied by caller).
+//              render() batches all live segments into a few stroke() calls grouped by
+//              coarse alpha tier (colour + thickness are constant per emitter) + viewport
+//              cull, instead of one stroke() per segment.
 // ============================================================
+
+import { cullBounds, isSegmentVisible } from './spriteHelpers.js';
+
+// Number of coarse alpha buckets: collapses ~100–150 per-segment strokes into ≤ this many.
+const ALPHA_BUCKETS = 4;
 
 const configSchema = [
   { key: 'color', type: 'color', default: '#333333', label: 'Color' },
@@ -89,15 +97,39 @@ function create(config, _racer) {
     },
 
     render(ctx, particles) {
+      const n = particles.length;
+      if (n === 0) return;
+      // Colour + thickness are constant for every segment of one emitter (copied from config
+      // at spawn), so set them once. Only alpha varies → bucket segments into a few coarse
+      // alpha tiers and stroke each tier's accumulated path in a single stroke() call.
       ctx.lineCap = 'round';
-      for (const p of particles) {
-        ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = p.thickness;
-        ctx.beginPath();
-        ctx.moveTo(p.x1, p.y1);
-        ctx.lineTo(p.x2, p.y2);
-        ctx.stroke();
+      ctx.strokeStyle = config.color;
+      ctx.lineWidth = config.thickness;
+      const halfThick = config.thickness / 2;
+      const cull = cullBounds(ctx);
+      for (let b = 0; b < ALPHA_BUCKETS; b++) {
+        let began = false;
+        for (let i = 0; i < n; i++) {
+          const p = particles[i];
+          // Bucket the segment by its fade level (alpha ∈ (0, START_ALPHA]).
+          const bucket = Math.min(
+            ALPHA_BUCKETS - 1,
+            Math.max(0, Math.floor((p.alpha / START_ALPHA) * ALPHA_BUCKETS))
+          );
+          if (bucket !== b) continue;
+          if (!isSegmentVisible(cull, p.x1, p.y1, p.x2, p.y2, halfThick)) continue;
+          if (!began) {
+            ctx.beginPath();
+            began = true;
+          }
+          ctx.moveTo(p.x1, p.y1);
+          ctx.lineTo(p.x2, p.y2);
+        }
+        if (began) {
+          // Representative alpha = midpoint of this bucket's fade range.
+          ctx.globalAlpha = ((b + 0.5) / ALPHA_BUCKETS) * START_ALPHA;
+          ctx.stroke();
+        }
       }
       ctx.globalAlpha = 1;
     },

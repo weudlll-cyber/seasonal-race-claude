@@ -7,36 +7,10 @@
 //              Renders in world coordinates (camera transform applied by caller).
 // ============================================================
 
-// Pre-render a soft radial-gradient puff to an offscreen canvas once per generator instance.
-// drawImage a scaled copy per particle is much cheaper than arc+fill+globalAlpha on a large canvas.
-function _hexToRgba(hex, a) {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(200,216,232,${a})`;
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function _createBlobSprite(endSize, color) {
-  const s = Math.ceil(endSize) * 2 + 2;
-  try {
-    const canvas =
-      typeof OffscreenCanvas !== 'undefined'
-        ? new OffscreenCanvas(s, s)
-        : Object.assign(document.createElement('canvas'), { width: s, height: s });
-    const ctx2d = canvas.getContext('2d');
-    const cx = s / 2;
-    const grad = ctx2d.createRadialGradient(cx, cx, 0, cx, cx, cx);
-    grad.addColorStop(0, _hexToRgba(color, 0.9));
-    grad.addColorStop(0.55, _hexToRgba(color, 0.4));
-    grad.addColorStop(1, _hexToRgba(color, 0));
-    ctx2d.fillStyle = grad;
-    ctx2d.fillRect(0, 0, s, s);
-    return canvas;
-  } catch {
-    return null;
-  }
-}
+// Pre-rendered soft radial-gradient puff + viewport cull are shared with the other
+// generators — see spriteHelpers.js. Blitting a scaled copy per particle is much cheaper
+// than arc+fill+globalAlpha on a large canvas.
+import { createBlobSprite, cullBounds, isVisible } from './spriteHelpers.js';
 
 const configSchema = [
   { key: 'color', type: 'color', default: '#cccccc', label: 'Color' },
@@ -87,7 +61,7 @@ const START_ALPHA = 0.6;
  * @param {object} [_racer]
  */
 function create(config, _racer) {
-  const blobSprite = _createBlobSprite(config.endSize, config.color);
+  const blobSprite = createBlobSprite(config.endSize, config.color);
 
   return {
     // Spawn 0 or 1 blob per call, appended IN PLACE into `out` (the racer's array).
@@ -134,16 +108,10 @@ function create(config, _racer) {
     },
 
     render(ctx, particles) {
-      // Viewport cull: skip blobs entirely outside the canvas.
-      const { a: ez, e: ox, f: oy } = ctx.getTransform();
-      const cw = ctx.canvas.width;
-      const ch = ctx.canvas.height;
+      // Viewport cull: skip blobs entirely outside the canvas (shared helper).
+      const cull = cullBounds(ctx);
       for (const p of particles) {
-        const sr = p.r * ez;
-        const sx = p.x * ez + ox;
-        if (sx + sr < 0 || sx - sr > cw) continue;
-        const sy = p.y * ez + oy;
-        if (sy + sr < 0 || sy - sr > ch) continue;
+        if (!isVisible(cull, p.x, p.y, p.r)) continue;
         ctx.globalAlpha = Math.max(0, p.alpha);
         if (blobSprite) {
           // Blit pre-rendered soft gradient puff — much cheaper than arc+fill per particle.

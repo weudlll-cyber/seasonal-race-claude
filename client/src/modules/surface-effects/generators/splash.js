@@ -5,7 +5,11 @@
 // Description: Surface-effect generator — fast particles with gravity.
 //              Use for: mud splatter, water droplets.
 //              Renders in world coordinates (camera transform applied by caller).
+//              Draws a pre-rendered soft droplet sprite (shared with cloud) + viewport
+//              cull, instead of an arc+fill path per droplet.
 // ============================================================
+
+import { createBlobSprite, cullBounds, isVisible } from './spriteHelpers.js';
 
 const configSchema = [
   { key: 'color', type: 'color', default: '#4499cc', label: 'Color' },
@@ -69,6 +73,10 @@ const BURST_SPEED = 2.5;
  * @param {object} [_racer]
  */
 function create(config, _racer) {
+  // Pre-render the droplet sprite ONCE per emitter (cached by this instance's color/size),
+  // sized to the largest droplet radius. Never rebuilt per frame.
+  const dropletSprite = createBlobSprite(config.sizeMax, config.color);
+
   return {
     // Spawn `count` droplets per call, appended IN PLACE into `out` (the racer's array).
     // Replaces Array.from(new array) with a direct loop; per-droplet spawn logic and RNG
@@ -123,12 +131,20 @@ function create(config, _racer) {
     },
 
     render(ctx, particles) {
+      // Viewport cull (shared helper); blit the pre-rendered soft droplet per particle instead
+      // of arc+fill. Fallback to arc+fill when no offscreen sprite is available (e.g. headless).
+      const cull = cullBounds(ctx);
       for (const p of particles) {
+        if (!isVisible(cull, p.x, p.y, p.r)) continue;
         ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
-        ctx.fill();
+        if (dropletSprite) {
+          ctx.drawImage(dropletSprite, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.globalAlpha = 1;
     },

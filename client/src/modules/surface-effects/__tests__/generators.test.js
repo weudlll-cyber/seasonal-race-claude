@@ -256,6 +256,9 @@ describe('line generator', () => {
       strokeStyle: '',
       lineWidth: 1,
       lineCap: '',
+      // line render now viewport-culls (shared helper) → needs transform + canvas size.
+      getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 1280, height: 720 },
       beginPath: () => {},
       moveTo: () => {},
       lineTo: () => {},
