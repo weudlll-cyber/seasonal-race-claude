@@ -1313,42 +1313,6 @@ function CameraAdvancedSection() {
             tip: 'Per-frame phase timing (physics/camera/render/other ms). Shows live P50/P90/P99/max + worst-50 spikes top-left. Takes effect on the next race.',
           },
           {
-            key: 'diagHideBgCanvas',
-            testId: 'diag-hide-bg-canvas-toggle',
-            label: 'DIAG: hide background canvas',
-            tip: 'TEMPORARY compositing probe. When ON, the world-sized (≤3072×2048) background canvas is skipped and display:none’d — the world canvas still renders. Watch the perf HUD "other"/physics-ms-per-real-second to attribute the ~44ms cost. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
-            key: 'diagHideMainCanvasDraw',
-            testId: 'diag-hide-main-canvas-draw-toggle',
-            label: 'DIAG: hide main race canvas draw',
-            tip: 'TEMPORARY compositing probe. When ON, the main-canvas scene draw (clearRect + full render) is skipped while physics, camera, and the perf accounting keep running — so the HUD shows what the main-canvas draw+GPU-flush costs. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
-            key: 'diagHideSurfaceTrails',
-            testId: 'diag-hide-surface-trails-toggle',
-            label: 'DIAG: hide surface-trail particles',
-            tip: 'TEMPORARY paint probe. When ON, skips painting the per-racer surface particles (splash/line/cloud) while they still spawn/update. Watch the perf HUD to attribute the main-draw cost. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
-            key: 'diagHideParticles',
-            testId: 'diag-hide-particles-toggle',
-            label: 'DIAG: hide dust/burst particles',
-            tip: 'TEMPORARY paint probe. When ON, skips painting the dust + burst particles while they still spawn/update. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
-            key: 'diagHideRacerTrails',
-            testId: 'diag-hide-racer-trails-toggle',
-            label: 'DIAG: hide racer trails',
-            tip: 'TEMPORARY paint probe. When ON, skips only the coloured trail-dot loop inside drawRacers; sprites and name tags still draw and the trail history still updates. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
-            key: 'diagHideRacerSprites',
-            testId: 'diag-hide-racer-sprites-toggle',
-            label: 'DIAG: hide racer sprites',
-            tip: 'TEMPORARY paint probe. When ON, skips only the racer sprite blits (the ~40 drawImages) inside drawRacers; trails and name tags still draw. Takes effect on the next race. Default OFF = normal.',
-          },
-          {
             key: 'showBattleDiag',
             testId: 'battle-diag-toggle',
             label: 'Show BATTLE diagnostics',

@@ -78,12 +78,7 @@ export function drawRacers(
   effectiveScale,
   ezoom,
   renderAlpha,
-  interpolationEnabled,
-  // DIAG per-piece paint probes (default false). Gate ONLY the paint of each piece — the trail
-  // history state (r.trail push/shift) still updates regardless, so toggling changes nothing but
-  // whether the piece is painted.
-  diagHideRacerTrails = false,
-  diagHideRacerSprites = false
+  interpolationEnabled
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -107,31 +102,27 @@ export function drawRacers(
     const renderAngle = doInterp
       ? lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha)
       : r.angle;
-    if (!diagHideRacerTrails) {
-      for (let i = 0; i < r.trail.length; i++) {
-        const frac = (i + 1) / r.trail.length;
-        ctx.globalAlpha = frac * 0.4 * dimAlpha;
-        ctx.fillStyle = r.color;
-        ctx.beginPath();
-        ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    for (let i = 0; i < r.trail.length; i++) {
+      const frac = (i + 1) / r.trail.length;
+      ctx.globalAlpha = frac * 0.4 * dimAlpha;
+      ctx.fillStyle = r.color;
+      ctx.beginPath();
+      ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.globalAlpha = dimAlpha;
     const rIsComeback = r === comebackRacer;
-    if (!diagHideRacerSprites) {
-      racerType.drawRacer(
-        ctx,
-        renderX,
-        renderY,
-        renderAngle,
-        r,
-        r === leader,
-        st.slowmoTs ?? st.lastTs ?? 0,
-        effectiveScale,
-        rIsComeback
-      );
-    }
+    racerType.drawRacer(
+      ctx,
+      renderX,
+      renderY,
+      renderAngle,
+      r,
+      r === leader,
+      st.slowmoTs ?? st.lastTs ?? 0,
+      effectiveScale,
+      rIsComeback
+    );
     if (tagSet.has(r) || rIsComeback) {
       const tagName = showRpStartRowCfg
         ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
