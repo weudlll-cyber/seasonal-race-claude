@@ -129,6 +129,10 @@ export const DEFAULT_CAMERA_CONFIG = {
   showTop10SpeedMonitor: false,
   enableFrameLog: false, // frame-by-frame ring buffer for jitter post-analysis (default OFF)
   enablePerfLog: false, // per-frame phase timing (physics/camera/render) for stutter diagnosis (default OFF)
+  // TEMPORARY compositing-cost probes (default OFF = normal rendering). Flip one to attribute the
+  // non-bracketed "other" cost to the background canvas vs the main canvas. Remove after diagnosis.
+  diagHideBgCanvas: false, // DIAG: hide the world-sized (≤3072×2048) background canvas (skip its per-frame transform + display:none)
+  diagHideMainCanvasDraw: false, // DIAG: skip the main-canvas scene draw (clearRect + full render); physics/perf keep running
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state

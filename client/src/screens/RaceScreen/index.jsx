@@ -212,6 +212,11 @@ export default function RaceScreen() {
   const showBattleDiag = cameraConfig.showBattleDiag ?? false;
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
+  // TEMPORARY compositing-cost probes (default OFF). Read once at mount (take effect on next race,
+  // like the other camera diagnostics). They gate ONLY pixel drawing/compositing — never physics,
+  // camera math, or the perf accounting — so "other"/physics-ms-per-real-second stay measurable.
+  const diagHideBgCanvas = cameraConfig.diagHideBgCanvas ?? false;
+  const diagHideMainCanvasDraw = cameraConfig.diagHideMainCanvasDraw ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
   const [overlayText, setOverlayText] = useState(null);
@@ -794,7 +799,8 @@ export default function RaceScreen() {
       const smoothDt = st.smoothDt;
       for (const inst of effectsRef.current) inst.update(smoothDt);
 
-      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      // DIAG probe: skip the main-canvas clear+draw to measure its draw+GPU-flush cost.
+      if (!diagHideMainCanvasDraw) ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
       // ── Phase advancement ──
       if (st.phase === PHASE.COUNTDOWN) {
@@ -1406,7 +1412,9 @@ export default function RaceScreen() {
           }
         }
       }
-      if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
+      // DIAG probe: when hiding the bg canvas, skip its per-frame transform write (the element is
+      // also display:none'd below, removing the ≤6.3MP layer from compositing entirely).
+      if (!diagHideBgCanvas && bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frameEffZoom * (worldWidth / CANVAS_W) : cam.zoom;
         const bgScaleY = isOpenTrack ? frameEffZoom * (worldHeight / CANVAS_H) : cam.zoom;
         bgCanvasRef.current.style.transform = `translate3d(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%, 0) scale3d(${bgScaleX}, ${bgScaleY}, 1)`;
@@ -1414,93 +1422,100 @@ export default function RaceScreen() {
 
       // Pan and zoom are now computed by CameraDirector for both open and closed tracks.
       // cam.offsetX/offsetY are the canvas-space offsets; the scale differs by track topology.
-      ctx.save();
-      ctx.translate(cam.offsetX, cam.offsetY);
-      if (isOpenTrack) {
-        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        ctx.scale(effZoom, effZoom);
-      } else {
-        ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
-      }
-      drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight, bgCanvasReady);
-      for (const inst of effectsRef.current) {
+      // DIAG probe: the entire main-canvas scene draw is gated so we can measure its draw+GPU-flush
+      // cost. Physics, camera math, and the perf accounting all ran already and are unaffected.
+      if (!diagHideMainCanvasDraw) {
         ctx.save();
-        inst.render(ctx);
+        ctx.translate(cam.offsetX, cam.offsetY);
+        if (isOpenTrack) {
+          const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
+          ctx.scale(effZoom, effZoom);
+        } else {
+          ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
+        }
+        drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight, bgCanvasReady);
+        for (const inst of effectsRef.current) {
+          ctx.save();
+          inst.render(ctx);
+          ctx.restore();
+        }
+        if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
+        drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
+        if (isOpenTrack && st.finishT < 1)
+          drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
+        if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, st.finishT);
+        drawParticles(ctx, st.dustParticles, st.burstParticles);
+        drawSurfaceTrails(ctx, st.racers);
+        const focusFactor = st.focusFadeProgress ?? 0;
+        const livePulkGroup =
+          focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
+        drawRacers(
+          ctx,
+          st,
+          racerTypeRef.current,
+          cameraConfigRef.current.tagVisibleMaxCount,
+          cameraConfigRef.current.battleFocusDarkening,
+          camDirRef.current?.hudState ?? null,
+          camDirRef.current?.comebackLockedRacerIndex ?? null,
+          focusFactor,
+          livePulkGroup,
+          showRpStartRowCfg,
+          assignmentByRacer,
+          frameDisplayScale,
+          frameEffZoom,
+          renderAlpha,
+          frameTimingConfig.renderInterpolation
+        );
+        drawBattleDiagMarkers(
+          ctx,
+          st,
+          camDirRef.current?.hudState ?? null,
+          cam,
+          frameEffZoom,
+          renderAlpha,
+          frameTimingConfig.renderInterpolation,
+          isOpenTrack,
+          bsY,
+          leaderDiagRef.current
+        );
         ctx.restore();
-      }
-      if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
-      drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
-      if (isOpenTrack && st.finishT < 1)
-        drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
-      if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, st.finishT);
-      drawParticles(ctx, st.dustParticles, st.burstParticles);
-      drawSurfaceTrails(ctx, st.racers);
-      const focusFactor = st.focusFadeProgress ?? 0;
-      const livePulkGroup =
-        focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
-      drawRacers(
-        ctx,
-        st,
-        racerTypeRef.current,
-        cameraConfigRef.current.tagVisibleMaxCount,
-        cameraConfigRef.current.battleFocusDarkening,
-        camDirRef.current?.hudState ?? null,
-        camDirRef.current?.comebackLockedRacerIndex ?? null,
-        focusFactor,
-        livePulkGroup,
-        showRpStartRowCfg,
-        assignmentByRacer,
-        frameDisplayScale,
-        frameEffZoom,
-        renderAlpha,
-        frameTimingConfig.renderInterpolation
-      );
-      drawBattleDiagMarkers(
-        ctx,
-        st,
-        camDirRef.current?.hudState ?? null,
-        cam,
-        frameEffZoom,
-        renderAlpha,
-        frameTimingConfig.renderInterpolation,
-        isOpenTrack,
-        bsY,
-        leaderDiagRef.current
-      );
-      ctx.restore();
-      if (isOpenTrack) {
-        drawTitleOpen(ctx, raceData);
-      } else {
-        drawTitle(ctx, shape, raceData);
-        drawLapInfo(ctx, st.racers, st.maxLaps);
-        drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
-      }
+        if (isOpenTrack) {
+          drawTitleOpen(ctx, raceData);
+        } else {
+          drawTitle(ctx, shape, raceData);
+          drawLapInfo(ctx, st.racers, st.maxLaps);
+          drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
+        }
 
-      // ── Phase overlays ──
-      if (st.phase === PHASE.COUNTDOWN) {
-        setCountdown(drawCountdownOverlay(ctx, ts - st.countdownStart));
-      } else if (st.phase === PHASE.FINISHED) {
-        drawFinishedOverlay(ctx);
-      }
+        // ── Phase overlays ──
+        if (st.phase === PHASE.COUNTDOWN) {
+          setCountdown(drawCountdownOverlay(ctx, ts - st.countdownStart));
+        } else if (st.phase === PHASE.FINISHED) {
+          drawFinishedOverlay(ctx);
+        }
 
-      // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────
-      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(CANVAS_W - 172, 8, 164, 22);
-        ctx.font = '11px monospace';
-        ctx.fillStyle = '#4fc3f7';
-        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CANVAS_W - 168, 24);
-        ctx.restore();
-      }
+        // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────
+        if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          ctx.fillRect(CANVAS_W - 172, 8, 164, 22);
+          ctx.font = '11px monospace';
+          ctx.fillStyle = '#4fc3f7';
+          ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CANVAS_W - 168, 24);
+          ctx.restore();
+        }
 
-      // ── PiP minimap (RACING and FINISHED only) ──
-      if (st.phase !== PHASE.COUNTDOWN) {
-        const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
-        const minimapHighlights =
-          showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
-        renderMinimap(ctx, shape, st.racers, leaderIdx, CANVAS_W, CANVAS_H, minimapHighlights);
-      }
+        // ── PiP minimap (RACING and FINISHED only) ──
+        if (st.phase !== PHASE.COUNTDOWN) {
+          const leaderIdx = st.racers.reduce(
+            (best, r, i) => (r.t > st.racers[best].t ? i : best),
+            0
+          );
+          const minimapHighlights =
+            showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
+          renderMinimap(ctx, shape, st.racers, leaderIdx, CANVAS_W, CANVAS_H, minimapHighlights);
+        }
+      } // end DIAG main-canvas draw gate
 
       // Perf-log bracket 5: after all drawing — record the completed frame.
       if (enablePerfLog && perfLogRef.current) {
@@ -1608,6 +1623,8 @@ export default function RaceScreen() {
               height: '100%',
               transformOrigin: '0 0',
               willChange: 'transform',
+              // DIAG probe: display:none removes the ≤6.3MP background layer from compositing entirely.
+              display: diagHideBgCanvas ? 'none' : undefined,
             }}
           />
           <canvas
