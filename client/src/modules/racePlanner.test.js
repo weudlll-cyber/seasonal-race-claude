@@ -179,14 +179,16 @@ describe('createRacePlan', () => {
     }
   });
 
-  it('surge CAN include the winner (no winner exclusion)', () => {
-    let winnerSelectedAtLeastOnce = false;
+  it('surge NEVER includes target ranks 1–3 (winner + podium excluded)', () => {
     for (let seed = 1; seed <= 40; seed++) {
       const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SURGE_CFG, seed);
-      if (plan.surgeRacerIds.has(plan.winnerRacerId)) winnerSelectedAtLeastOnce = true;
+      // Read ranks from the plan's own target-rank data — no surger may have rank 1, 2, or 3.
+      for (const idx of plan.surgeRacerIds) {
+        expect(plan._racerTargetRank.get(idx)).toBeGreaterThanOrEqual(4);
+      }
+      // The winner (target rank 1) is in particular never selected.
+      expect(plan.surgeRacerIds.has(plan.winnerRacerId)).toBe(false);
     }
-    // With fraction 0.2 over 40 seeds, the winner (~20% chance/seed) must appear at least once.
-    expect(winnerSelectedAtLeastOnce).toBe(true);
   });
 
   it('surge selection does NOT correlate with startRowIndex (spans all rows)', () => {

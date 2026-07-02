@@ -186,7 +186,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // the fallback. Surge uses a SEPARATE, dedicated RNG stream seeded from racePlanSeed XORed
   // with a fixed constant that is distinct from BOTH the target-rank shuffle stream (seed) and
   // the controller-noise stream (seed + 0x9e3779b9), so surge membership cannot correlate with
-  // the target-rank assignment. Uniform over ALL indices: winner NOT excluded, no row/rank filter.
+  // the target-rank assignment. Eligibility EXCLUDES target ranks 1–3 (winner + podium): those
+  // racers are already at their target rank, so the controller does not reel them back — surging
+  // them yields a runaway, not the surge-then-caught drama. Only racers that WILL be reeled back
+  // (target rank ≥ 4) are eligible; the RNG pick among them is unchanged (still rank-decoupled).
   let surgeRacerIds;
   if (pulkSurgeEnabled) {
     // seed>0: dedicated stream decoupled from the target-rank shuffle (mulberry32(seed)) for
@@ -194,7 +197,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // fresh random surge selection each race; selection is index-based so it stays start-row
     // independent regardless of RNG source (fairness is unaffected — surge never touches target rank).
     const surgeRng = seed > 0 ? mulberry32((seed ^ 0x5bf03635) >>> 0) : Math.random;
-    const surgePool = racers.map((r) => r.index);
+    // Deterministic pre-filter: only racers with target rank ≥ 4 are eligible (excludes the
+    // winner + podium, ranks 1–3, which the controller does not reel back). Uses the already-
+    // computed racerTargetRank map — no rank recomputation. Small fields where the eligible pool
+    // is smaller than surgeCount (or empty, e.g. ≤3 racers) simply surge whoever is eligible.
+    const surgePool = racers
+      .map((r) => r.index)
+      .filter((idx) => (racerTargetRank.get(idx) ?? 4) > 3);
     for (let i = surgePool.length - 1; i > 0; i--) {
       const j = Math.floor(surgeRng() * (i + 1));
       [surgePool[i], surgePool[j]] = [surgePool[j], surgePool[i]];
