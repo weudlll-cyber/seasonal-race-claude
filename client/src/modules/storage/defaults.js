@@ -299,8 +299,9 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Below this the race falls back to raw physics (no target-rank sorting).
   // Sim-validated fair down to 30s; DevScreen-adjustable.
   racePlanMinDurationSec: 30,
-  // PULK-surge mechanic (default OFF — cohesion PULK bias runs unchanged when disabled).
-  pulkSurgeEnabled: false, // when true, REPLACES the cohesion PULK bias with the surge mechanic
+  // PULK-surge mechanic (default ON — full-matrix fairness re-gate passed). It is the default PULK
+  // mechanic; the cohesion PULK bias is the fallback used only when this is toggled OFF in the DevScreen.
+  pulkSurgeEnabled: true, // when true (default), REPLACES the cohesion PULK bias with the surge mechanic
   pulkSurgeFraction: 0.2, // fraction of the field selected to surge (uniform, incl. the winner)
   pulkSurgeBonus: 0.1, // +speed bonus applied to surgers during PULK (0..0.12 safe envelope)
   pulkSurgeRampInMs: 1200, // ease-in duration when a surger enters PULK

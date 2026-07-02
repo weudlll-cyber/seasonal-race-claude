@@ -41,7 +41,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
-      pulkSurgeEnabled: false,
+      pulkSurgeEnabled: true,
       pulkSurgeFraction: 0.2,
       pulkSurgeBonus: 0.1,
       pulkSurgeRampInMs: 1200,
@@ -138,11 +138,11 @@ describe('loadRaceDynamicsConfig', () => {
     expect(cfg.pulkBrakeExemptStrength).toBe(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength);
   });
 
-  it('falls back to default (false) when pulkSurgeEnabled is not a boolean', () => {
+  it('falls back to default (true) when pulkSurgeEnabled is not a boolean', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkSurgeEnabled: 'yes' });
     const cfg = loadRaceDynamicsConfig();
     expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    expect(cfg.pulkSurgeEnabled).toBe(false);
+    expect(cfg.pulkSurgeEnabled).toBe(true);
   });
 
   it('accepts valid in-range surge values', () => {

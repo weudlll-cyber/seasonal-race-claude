@@ -134,7 +134,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const corridorConfig = { ...DEFAULT_CORRIDOR_CONFIG, ...(config.corridorConfig ?? {}) };
   const controllerParams = { ...DEFAULT_CONTROLLER_PARAMS, ...(config.controllerParams ?? {}) };
 
-  // PULK-surge config (default OFF — the cohesion PULK bias below stays the fallback).
+  // PULK-surge config (default ON — the cohesion PULK bias below is the toggle-off fallback).
   // Last-resort ?? fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG (defaults.js) exactly.
   const pulkSurgeEnabled = config.pulkSurgeEnabled ?? false;
   const pulkSurgeFraction = config.pulkSurgeFraction ?? 0.2;
@@ -380,9 +380,10 @@ export function createTrajectoryController(racePlan) {
     }
 
     // ── PULK-surge pass (PART D) ────────────────────────────────────────────────
-    // Default-off no-op: when the surge mechanic is disabled every racer's pulkSurgeMult stays
-    // pinned at 1.0 and the cohesion PULK bias (computePulkBiasedTarget) owns PULK unchanged.
-    // When enabled, surgers get +pulkSurgeBonus during the PULK phase: ramp-in on entering PULK,
+    // Surge is the default PULK mechanic. When it is toggled OFF (DevScreen) every racer's
+    // pulkSurgeMult stays pinned at 1.0 and the cohesion PULK bias (computePulkBiasedTarget) owns
+    // PULK unchanged — that path is the fallback.
+    // When enabled (default), surgers get +pulkSurgeBonus during the PULK phase: ramp-in on entering PULK,
     // ramp-out on leaving. Eased with the SAME easeInOutCubic Prev/Target/TransStart structure as
     // trajectoryMult; the ramp duration differs (in vs out) so it is stored per-racer.
     if (plan._pulkSurgeEnabled) {
