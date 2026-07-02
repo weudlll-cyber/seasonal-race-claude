@@ -348,7 +348,10 @@ export default function RaceScreen() {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
-    ctx.imageSmoothingQuality = 'high';
+    // 'low' (was 'high'): the 40 racer sprites are rotated + downscaled 128px→~40px blits/frame;
+    // 'high' forces expensive per-pixel resampling on every one. 'low' uses a cheaper sampler —
+    // imperceptible on small fast-moving sprites. Smoothing stays ENABLED (default). See perf HUD.
+    ctx.imageSmoothingQuality = 'low';
     const nRacers = raceData.racers.length;
 
     const typeId = raceData.racerTypeId || 'horse';
