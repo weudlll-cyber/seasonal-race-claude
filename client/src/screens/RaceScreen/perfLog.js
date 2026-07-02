@@ -28,6 +28,11 @@ export function createPerfLog() {
       measured: 0, // physics+prep+camera+render (ms)
       other: 0, // total - measured (GC, scheduler, GPU flush)
       nRacers: 0,
+      // Framerate-dependence diagnostics (read-only mirrors of the physics accumulator state):
+      physSteps: 0, // FIXED_DT catch-up steps executed this frame (index.jsx ~857, capped at 2)
+      physAdvancedMs: 0, // physics-time advanced this frame = physSteps × FIXED_DT (ms)
+      physAccum: 0, // st.physicsAccum after the catch-up loop (backlog, ms)
+      capHit: 0, // 1 if the step cap was reached AND accum ≥ FIXED_DT remained (fell further behind)
     })),
     ringHead: 0,
     ringCount: 0,
@@ -49,8 +54,26 @@ export function createPerfLog() {
  * @param {number} tCam        performance.now() after camDir.update
  * @param {number} tRend       performance.now() after all drawing
  * @param {number} nRacers     racer count this frame
+ * @param {number} physSteps   FIXED_DT catch-up steps executed this frame (0 on non-physics frames)
+ * @param {number} physAdvancedMs physics-time advanced this frame (physSteps × FIXED_DT, ms)
+ * @param {number} physAccum    st.physicsAccum after the catch-up loop (backlog, ms)
+ * @param {number} capHit       1 if the step cap was reached and backlog remained, else 0
  */
-export function recordPerfFrame(log, ts, rawDt, t0, tPhys, tPreCam, tCam, tRend, nRacers) {
+export function recordPerfFrame(
+  log,
+  ts,
+  rawDt,
+  t0,
+  tPhys,
+  tPreCam,
+  tCam,
+  tRend,
+  nRacers,
+  physSteps = 0,
+  physAdvancedMs = 0,
+  physAccum = 0,
+  capHit = 0
+) {
   const physMs = tPhys - t0;
   const prepMs = tPreCam - tPhys;
   const camMs = tCam - tPreCam;
@@ -70,6 +93,10 @@ export function recordPerfFrame(log, ts, rawDt, t0, tPhys, tPreCam, tCam, tRend,
   slot.measured = measured;
   slot.other = other;
   slot.nRacers = nRacers;
+  slot.physSteps = physSteps;
+  slot.physAdvancedMs = physAdvancedMs;
+  slot.physAccum = physAccum;
+  slot.capHit = capHit;
 
   log.ringHead = (log.ringHead + 1) % RING_SIZE;
   if (log.ringCount < RING_SIZE) log.ringCount++;
@@ -161,11 +188,56 @@ export function getPerfStats(log) {
 }
 
 /**
+ * Framerate-dependence stats over the ring window. Answers: does physics keep pace with
+ * wall-clock time? Called from the HUD poll (not per-frame).
+ *
+ * physMsPerRealSec — the KEY metric. Sum of physics-time advanced ÷ sum of wall-clock time × 1000.
+ *   ~1000 ⇒ framerate-independent. <1000 under load ⇒ physics falling behind (catch-up cap starving
+ *   it); >1000 ⇒ catching up after load drops. NOTE: intentional BATTLE slowmo also lowers this
+ *   (physics advances slower by design), so read it together with capHits to separate the two.
+ */
+export function getPhysicsPaceStats(log) {
+  const n = log.ringCount;
+  if (n === 0) return null;
+  const start = log.ringCount < RING_SIZE ? 0 : log.ringHead;
+
+  let sumSteps = 0;
+  let maxSteps = 0;
+  let capHits = 0;
+  let sumAdvanced = 0;
+  let sumTotal = 0;
+  for (let k = 0; k < n; k++) {
+    const f = log.ring[(start + k) % RING_SIZE];
+    sumSteps += f.physSteps;
+    if (f.physSteps > maxSteps) maxSteps = f.physSteps;
+    capHits += f.capHit;
+    sumAdvanced += f.physAdvancedMs;
+    sumTotal += f.total;
+  }
+  const last = log.ring[(start + n - 1) % RING_SIZE];
+  // Backlog trend: current accum vs the accum ~1 s (≈60 frames) earlier, clamped to the window.
+  const back = log.ring[(start + Math.max(0, n - 1 - 60)) % RING_SIZE];
+
+  return {
+    n,
+    meanSteps: sumSteps / n,
+    maxSteps,
+    capHits,
+    capHitRate: capHits / n,
+    physMsPerRealSec: sumTotal > 0 ? (sumAdvanced * 1000) / sumTotal : 0,
+    currentAccumMs: last.physAccum,
+    accumTrendMs: last.physAccum - back.physAccum,
+    nRacers: last.nRacers,
+  };
+}
+
+/**
  * Serialize the log to JSON for clipboard/download.
  * Includes stats, top-50 spikes, and last 120 frames for context.
  */
 export function exportPerfLog(log) {
   const stats = getPerfStats(log);
+  const paceStats = getPhysicsPaceStats(log);
   const n = Math.min(log.ringCount, 120);
   const start =
     log.ringCount < RING_SIZE
@@ -185,6 +257,9 @@ export function exportPerfLog(log) {
       render: +f.render.toFixed(2),
       other: +f.other.toFixed(2),
       nRacers: f.nRacers,
+      physSteps: f.physSteps,
+      physAccum: +f.physAccum.toFixed(2),
+      capHit: f.capHit,
     });
   }
 
@@ -216,8 +291,14 @@ export function exportPerfLog(log) {
         other: 'total - measured — GC pauses, scheduler jitter, GPU flush (ms)',
         sumCheck:
           'physics + prep + camera + render ≈ measured ≈ total (other should be small on smooth frames)',
+        physMsPerRealSec:
+          'physics-time advanced per real second (~1000 = framerate-independent; <1000 = physics behind, >1000 = catching up; slowmo also lowers it)',
+        physSteps: 'FIXED_DT catch-up steps this frame (capped at 2)',
+        physAccum: 'physics backlog after the catch-up loop (ms)',
+        capHit: 'cap reached and backlog ≥ FIXED_DT remained (physics fell further behind)',
       },
       stats,
+      paceStats,
       spikes,
       recentFrames: frames,
     },

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { getPerfStats, exportPerfLog, SPIKE_MIN_MS } from './perfLog.js';
+import { getPerfStats, getPhysicsPaceStats, exportPerfLog, SPIKE_MIN_MS } from './perfLog.js';
 
 const POLL_MS = 200;
 const SPARKLINE_W = 180;
@@ -32,6 +32,24 @@ function fmt(ms) {
   return ms.toFixed(1);
 }
 
+// Physics-pace colouring: green near 1000 ms/s (framerate-independent), amber/red when physics
+// drifts behind (<) or races ahead (>) real time. (BATTLE slowmo also pulls this below 1000.)
+function paceColor(msPerSec) {
+  const d = Math.abs(msPerSec - 1000);
+  if (d <= 30) return '#4caf50';
+  if (d <= 100) return '#f9a825';
+  return '#ef5350';
+}
+function paceLabel(msPerSec) {
+  if (msPerSec >= 970 && msPerSec <= 1030) return 'OK';
+  return msPerSec < 970 ? 'BEHIND' : 'AHEAD';
+}
+function trendArrow(dMs) {
+  if (dMs > 1) return '↑ rising';
+  if (dMs < -1) return '↓ draining';
+  return '→ steady';
+}
+
 /**
  * @param {{ perfLogRef: React.MutableRefObject, visible: boolean }} props
  *   perfLogRef — ref pointing at the live perfLog object from createPerfLog().
@@ -39,6 +57,7 @@ function fmt(ms) {
 export default function PerfLogHUD({ perfLogRef, visible }) {
   const canvasRef = useRef(null);
   const [stats, setStats] = useState(null);
+  const [pace, setPace] = useState(null);
   const [spikes, setSpikes] = useState([]);
   const [frameCount, setFrameCount] = useState(0);
   const [copyStatus, setCopyStatus] = useState('');
@@ -53,6 +72,7 @@ export default function PerfLogHUD({ perfLogRef, visible }) {
       setFrameCount(log.frameIdx);
       const s = getPerfStats(log);
       setStats(s);
+      setPace(getPhysicsPaceStats(log));
 
       // Spike list: sort and take top SPIKE_DISPLAY
       const sorted = [...log.spikes].sort((a, b) => b.total - a.total);
@@ -164,6 +184,36 @@ export default function PerfLogHUD({ perfLogRef, visible }) {
       <div style={{ color: COL.header, fontWeight: 700, letterSpacing: '0.05em' }}>
         PERF LOG{frameCount > 0 ? ` · ${frameCount} frames` : ' · waiting…'}
       </div>
+
+      {/* Physics pace — framerate-dependence diagnosis (the key section) */}
+      {pace && (
+        <div
+          style={{
+            fontSize: '9px',
+            lineHeight: '1.5',
+            borderTop: '1px solid #333',
+            paddingTop: '4px',
+          }}
+        >
+          <div style={{ color: COL.header, fontWeight: 700 }}>PHYSICS PACE</div>
+          <div
+            style={{ color: paceColor(pace.physMsPerRealSec), fontWeight: 700, fontSize: '11px' }}
+            title="Physics-time advanced per real second. ~1000 = framerate-independent. Falls below under load (physics behind), rises above when load drops (catching up). BATTLE slowmo also lowers it."
+          >
+            {pace.physMsPerRealSec.toFixed(0)} ms/real-s · {paceLabel(pace.physMsPerRealSec)}
+          </div>
+          <div>
+            steps/frame: mean {pace.meanSteps.toFixed(2)} · max {pace.maxSteps}
+          </div>
+          <div style={{ color: pace.capHits > 0 ? COL.spike : '#bbb' }}>
+            cap-hits: {pace.capHits} ({(pace.capHitRate * 100).toFixed(1)}%)
+          </div>
+          <div>
+            backlog: {pace.currentAccumMs.toFixed(1)}ms · {trendArrow(pace.accumTrendMs)}
+          </div>
+          <div style={{ color: COL.muted }}>active racers: {pace.nRacers}</div>
+        </div>
+      )}
 
       {/* Sparkline legend */}
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', fontSize: '9px' }}>

@@ -775,6 +775,12 @@ export default function RaceScreen() {
       const t0 = enablePerfLog ? performance.now() : 0;
       // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
       let tPhys = t0;
+      // Perf-log pace counters for this frame (read-only mirrors of the physics
+      // accumulator; 0 on non-RACING frames). Fed into recordPerfFrame when enablePerfLog is on.
+      let hudPhysSteps = 0;
+      let hudPhysAdvancedMs = 0;
+      let hudPhysAccumMs = 0;
+      let hudCapHit = 0;
       // Render-interpolation alpha: set in RACING branch after accumulator.
       // 0 for non-RACING phases → lerp falls back to current value.
       let renderAlpha = 0;
@@ -853,6 +859,8 @@ export default function RaceScreen() {
         // Cap catch-up at 2 steps per rAF — prevents the stall→many-steps→longer-stall
         // death spiral that causes STATUS_ACCESS_VIOLATION at ~14s under load.
         // Fairness is unaffected: sim tests physics in sim time, not wall-clock time.
+        // Perf-log pace: physicsTs before the loop, so step count = (Δ physicsTs)/FIXED_DT (read-only).
+        const _physicsTsBeforeLoop = st.physicsTs;
         let _catchupSteps = 0;
         while (st.physicsAccum >= FIXED_DT && _catchupSteps++ < 2) {
           st.physicsTs += FIXED_DT;
@@ -1180,6 +1188,15 @@ export default function RaceScreen() {
           st.physicsAccum -= FIXED_DT;
         }
         // ── End physics accumulator ──────────────────────────────────────────
+        // Perf-log pace read-out (read-only; does not touch the accumulator/cap).
+        // Steps actually run = Δ physicsTs / FIXED_DT. capHit = the cap was reached AND backlog
+        // ≥ FIXED_DT still remains (physics wanted another step but the < 2 cap starved it).
+        if (enablePerfLog) {
+          hudPhysSteps = (st.physicsTs - _physicsTsBeforeLoop) / FIXED_DT;
+          hudPhysAdvancedMs = hudPhysSteps * FIXED_DT;
+          hudPhysAccumMs = st.physicsAccum;
+          hudCapHit = st.physicsAccum >= FIXED_DT ? 1 : 0;
+        }
         // Perf-log bracket 2: after physics while-loop (includes EMA + clearRect overhead).
         if (enablePerfLog) tPhys = performance.now();
 
@@ -1496,7 +1513,11 @@ export default function RaceScreen() {
           tPreCam,
           tCam,
           performance.now(),
-          st.racers.length
+          st.racers.length,
+          hudPhysSteps,
+          hudPhysAdvancedMs,
+          hudPhysAccumMs,
+          hudCapHit
         );
       }
       rafRef.current = requestAnimationFrame(loop);
