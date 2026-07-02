@@ -229,6 +229,38 @@ function chooseFreeLaneDir(trailer, leader, active, halfSpan, tHalf, cap) {
   return 0;
 }
 
+// Parity-safe per-step forward t-advance components for a pair — the SAME speed model the
+// physics loop uses to advance r.t (baseSpeed × drafting boost × trajectory × areaBonus ×
+// rubberBand; the brake / pulk / zone terms are applied separately by the caller). All
+// fields are parity-safe: browser and sim advance t by an identical per-step amount, so a
+// closing rate derived from them is identical in both. Returns:
+//   trailerDenom   — the trailer's UNBRAKED forward speed (its t-advance when not braking).
+//   leaderRawSpeed — the leader's unbraked forward speed.
+//   leaderBrake    — the leader's CURRENT effective brake (open tracks only; report 09/14),
+//                    so leaderRawSpeed × leaderBrake is the leader's actual advance.
+// Consumed by the brake-to-match cap AND the look-before-brake closing-rate gate.
+function pairForwardSpeeds(trailer, leader, config) {
+  const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+  const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+  const leaderRawSpeed =
+    (leader.baseSpeed ?? 0) *
+    boostL *
+    (leader.trajectoryMult ?? 1.0) *
+    (leader.areaBonusMult ?? 1.0) *
+    (leader.rubberBandMult ?? 1.0);
+  const trailerDenom =
+    (trailer.baseSpeed ?? 0) *
+    boostT *
+    (trailer.trajectoryMult ?? 1.0) *
+    (trailer.areaBonusMult ?? 1.0) *
+    (trailer.rubberBandMult ?? 1.0);
+  const leaderBrake =
+    config.isOpen !== false && leader.avoidanceActive
+      ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+      : 1.0;
+  return { trailerDenom, leaderRawSpeed, leaderBrake };
+}
+
 /**
  * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
  * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
@@ -330,30 +362,66 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           : 0.014;
       if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         // ── Look before you brake ─────────────────────────────────────────────
-        // The trailer is same-lane and closing on a slower leader inside the brake
-        // zone. Before committing to the speed brake, check for a genuinely free side
-        // (same isSideFree geometry the overlap resolver uses). If a side is free AND
-        // there is still longitudinal room to clear, commit to that side EARLY and
-        // pass at speed — do NOT brake. Non-penetration is preserved by three coupled
-        // guarantees, all keyed on parity-safe (t, physicalY) fields only:
-        //   (a) isSideFree is re-evaluated every frame — the instant a third racer
-        //       closes the lane, dir → 0 and the exact brake path below re-engages;
-        //   (b) the pass is only allowed while dT > reengage margin (a fraction of the
-        //       body-contact length beyond touching). Once the gap keeps closing
-        //       without the trailer having cleared (still same-lane at that margin),
-        //       this branch stops firing and the brake re-engages with lead time;
-        //   (c) the end-of-function hard-separation pass remains the unconditional
-        //       positional backstop. So the brake is only ever dropped when a lane is
-        //       genuinely free and being taken; overlap can never increase.
+        // The trailer is same-lane and closing on a slower leader inside the brake zone.
+        // Before committing to the speed brake, check for a genuinely free side (same
+        // isSideFree geometry the overlap resolver uses). If a side is free AND the brake
+        // can still be re-engaged in time should the trailer fail to clear, commit to that
+        // side EARLY and pass at speed — do NOT brake. Non-penetration is STRUCTURAL, not
+        // delegated to the hard-separation backstop; it is guaranteed by four couplings,
+        // all keyed on parity-safe (t, physicalY, per-step speed) fields only:
+        //   (a) isSideFree is re-evaluated every frame — the instant a third racer closes
+        //       the lane, dir → 0 and the exact brake path below re-engages.
+        //   (b) LAG-SAFE LONGITUDINAL RE-ENGAGE (the NO-GO fix). The physics loop applies
+        //       the brake one frame late (index.jsx: avoidanceActive/brakeMatchFactor are
+        //       read on the step AFTER they are written). So suppression is only safe while
+        //       there is enough longitudinal lead that, after the unbraked lag frame(s), a
+        //       re-engaged brake still prevents contact. The required lead scales with the
+        //       WORST-CASE per-step closing rate vClose (trailer unbraked vs leader at least
+        //       at its brake floor): dT must exceed lbTHalf + lagFrames × vClose. Because
+        //       one unbraked lag frame closes by ≤ vClose < lagFrames × vClose, the gap
+        //       stays above lbTHalf until the brake bites — overlap cannot occur. The fixed
+        //       ×multiplier margin stays as a floor for slow/near-speed pairs.
+        //   (c) ACHIEVED lateral progress: suppression additionally requires the trailer is
+        //       not moving toward the leader's side (losing clearance). Measured from the
+        //       trailer's own lateral velocity — "free this frame" is not enough.
+        //   (d) Only pass a genuinely SLOWER leader (a real overtake), so racers do not
+        //       weave around same-speed traffic (gated by requireSlowerLeader).
+        // The hard-separation pass remains ONLY as a last-resort catch, never the guarantee.
         let takeFreeLane = false;
         if (config.lookBeforeBrakeEnabled !== false && trackWidth > 0 && pathLength > 0) {
           const lbHalfSpan = pxToPhysicalY(brakeContactWidth, trackWidth);
           const lbTHalf = brakeContactLength / pathLength;
           const lbCap = Math.min(config.maxLateral, 1.0);
-          const reengageT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
-          if (dT > reengageT) {
+          const reengageFloorT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
+
+          // Worst-case per-step longitudinal closing rate (parity-safe). Assume the leader
+          // will be at least at the brake floor next frame even if it is not braking now, so
+          // vClose is never underestimated (conservative — re-engages earlier, never later).
+          const { trailerDenom, leaderRawSpeed, leaderBrake } = pairForwardSpeeds(
+            trailer,
+            leader,
+            config
+          );
+          const leaderBrakeWorst = Math.min(leaderBrake, config.speedBrakeFactor ?? 0.945);
+          const vClose = Math.max(0, trailerDenom - leaderRawSpeed * leaderBrakeWorst);
+          const lagFrames = config.lookBeforeBrakeLagFrames ?? 2;
+          // Effective re-engage threshold: the larger of the fixed floor and the lag-safe
+          // dynamic margin. Suppress only while dT is above it.
+          const safeReengageT = Math.max(reengageFloorT, lbTHalf + lagFrames * vClose);
+
+          // (d) real-overtake precondition: trailer must be meaningfully faster (raw speeds).
+          const minDiff = config.speedMatchMinDifferential ?? 0.005;
+          const slowerLeaderOk =
+            config.lookBeforeBrakeRequireSlowerLeader === false ||
+            trailerDenom > leaderRawSpeed * (1 + minDiff);
+
+          if (dT > safeReengageT && slowerLeaderOk) {
             const dir = chooseFreeLaneDir(trailer, leader, active, lbHalfSpan, lbTHalf, lbCap);
-            if (dir !== 0) {
+            // (c) achieved progress: do not suppress while diverging from the chosen side
+            // (physicalYVelocity is last frame's post-damping value — parity-safe). Frame-1
+            // velocity ≈ 0 passes; a negative (toward-leader) velocity re-engages the brake.
+            const vLatToward = (trailer.physicalYVelocity ?? 0) * dir;
+            if (dir !== 0 && vLatToward >= 0) {
               takeFreeLane = true;
               // Record this pass for the trailer. Nearest leader (lowest dT) wins so a
               // trailer sandwiched between two leaders steers around the closer one.
@@ -397,31 +465,19 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
           }
           if (inBrakeMatchZone) {
-            // Brake-to-match: compute leader-speed cap for this pair.
+            // Brake-to-match: compute leader-speed cap for this pair. Speeds come from the
+            // shared parity-safe helper (same model the look-before-brake gate uses).
             // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
-            const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
-            const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-            const leaderRawSpeed =
-              (leader.baseSpeed ?? 0) *
-              boostL *
-              (leader.trajectoryMult ?? 1.0) *
-              (leader.areaBonusMult ?? 1.0) *
-              (leader.rubberBandMult ?? 1.0);
-            const trailerDenom =
-              (trailer.baseSpeed ?? 0) *
-              boostT *
-              (trailer.trajectoryMult ?? 1.0) *
-              (trailer.areaBonusMult ?? 1.0) *
-              (trailer.rubberBandMult ?? 1.0);
             // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
             // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
             // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
             // baseline cap — the 5.8%-tighter corrected cap causes chain-lock for beetle
             // and boarder on Dirt Oval.
-            const leaderBrake =
-              config.isOpen !== false && leader.avoidanceActive
-                ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
-                : 1.0;
+            const { trailerDenom, leaderRawSpeed, leaderBrake } = pairForwardSpeeds(
+              trailer,
+              leader,
+              config
+            );
             const cap = computeBrakeMatchFactor(
               leaderRawSpeed * leaderBrake,
               trailerDenom,

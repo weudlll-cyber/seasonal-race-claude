@@ -521,15 +521,17 @@ describe('Layer 1 soft steering — §4a asymmetry', () => {
 });
 
 // ── Look before you brake (this feature) ────────────────────────────────────
-// Contract: a trailer closing on a slower leader in the SAME lane takes a genuinely
-// free side EARLY and passes at speed (no brake), but still brakes exactly as before
-// when no side is free — so non-penetration is preserved. Geometry (makeLaneRacer):
-//   lbHalfSpan  = pxToPhysicalY(28,140)      = 0.40   (same-lane / free-lane width)
+// Contract: a trailer closing on a genuinely SLOWER leader in the SAME lane takes a free
+// side EARLY and passes at speed (no brake), but still brakes exactly as before when no
+// side is free — AND re-engages the brake early enough that, even with the physics loop's
+// one-frame brake-application lag, the bodies never overlap if it fails to clear.
+// Geometry (makeLaneRacer):
+//   lbHalfSpan  = pxToPhysicalY(28,140)      = 0.40    (same-lane / free-lane width)
 //   lbTHalf     = 31/1200                     = 0.02583 (body-contact longitudinal)
 //   dynamicBrakeT (×1.5)                      = 0.03875 (brake-zone entry)
-//   reengageT (×1.2 default)                  = 0.03100 (pass allowed only while dT > this)
-// A dT of 0.035 sits in the pass window (0.031, 0.03875]; a dT of 0.020 is past the
-// re-engage margin (too close to clear → brake).
+//   reengage floor (×1.2 default)             = 0.03100 (min lead; dynamic lag margin adds more)
+// Pairs that expect a pass give the trailer a higher baseSpeed than the leader (a real
+// overtake — required by lookBeforeBrakeRequireSlowerLeader).
 describe('applyRacerBehavior — look before you brake', () => {
   // Feature ON (default). Hard separation + boundary repulsion off to read physicalY cleanly.
   const lbCfg = {
@@ -537,11 +539,16 @@ describe('applyRacerBehavior — look before you brake', () => {
     hardSeparationEnabled: false,
     softRepulsionStrength: 0,
   };
+  const LB_THALF = 31 / 1200; // body-contact longitudinal half-span (dT units)
+  // Faster trailer (real overtake); slow closing so the fixed floor governs these unit checks.
+  const overtakePair = (trailerT, leaderT, trailerY = 0.05, leaderY = 0.0) => [
+    makeLaneRacer({ index: 0, t: trailerT, physicalY: trailerY, baseSpeed: 1.2e-4 }),
+    makeLaneRacer({ index: 1, t: leaderT, physicalY: leaderY, baseSpeed: 1.0e-4 }),
+  ];
 
   it('free lane in the pass window: trailer does NOT brake and steers toward the free side', () => {
     // 2 racers → both sides free. Trailer above leader → commits to the outer (+) side.
-    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
-    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // dT=0.035 (pass window)
+    const [trailer, leader] = overtakePair(0.5, 0.535); // dT=0.035 (pass window)
     applyRacerBehavior([trailer, leader], lbCfg);
     expect(trailer.avoidanceActive).toBe(false); // brake suppressed — passing at speed
     expect(trailer.physicalY).toBeGreaterThan(0.05); // decisive move toward the free (+) side
@@ -550,8 +557,7 @@ describe('applyRacerBehavior — look before you brake', () => {
 
   it('both sides blocked: trailer brakes exactly as before (non-penetration preserved)', () => {
     // Same pass-window geometry, but blockers pin BOTH free targets (±0.40) at the trailer's t.
-    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
-    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // dT=0.035
+    const [trailer, leader] = overtakePair(0.5, 0.535, 0.0, 0.0); // dT=0.035
     const leftBlock = makeLaneRacer({ index: 2, t: 0.5, physicalY: -0.4 });
     const rightBlock = makeLaneRacer({ index: 3, t: 0.5, physicalY: 0.4 });
     applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
@@ -561,22 +567,34 @@ describe('applyRacerBehavior — look before you brake', () => {
   it('re-engage: past the margin without lateral clearance, the brake comes back', () => {
     // Free lane exists, but the leader is inside the re-engage margin (dT=0.020 < 0.031):
     // too close to clear, so the pass is not taken and the brake re-engages with lead time.
-    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
-    const leader = makeLaneRacer({ index: 1, t: 0.52, physicalY: 0.0 }); // dT=0.020
+    const [trailer, leader] = overtakePair(0.5, 0.52); // dT=0.020
     applyRacerBehavior([trailer, leader], lbCfg);
     expect(trailer.avoidanceActive).toBe(true); // brake re-engaged despite a free side
   });
 
+  it('same-speed traffic: with requireSlowerLeader (default), a not-faster follower brakes', () => {
+    // Trailer NOT faster than the leader → not a real overtake → no pass, plain brake.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05, baseSpeed: 1.0e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    applyRacerBehavior([trailer, leader], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true); // same speed → don't weave, just brake
+    // Toggling the precondition off lets it take the free lane again.
+    const [t2, l2] = [
+      makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05, baseSpeed: 1.0e-4 }),
+      makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0, baseSpeed: 1.0e-4 }),
+    ];
+    applyRacerBehavior([t2, l2], { ...lbCfg, lookBeforeBrakeRequireSlowerLeader: false });
+    expect(t2.avoidanceActive).toBe(false); // precondition off → passes
+  });
+
   it('feature OFF: same free-lane pair brakes (pre-feature behavior restored)', () => {
-    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
-    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // pass window
+    const [trailer, leader] = overtakePair(0.5, 0.535); // pass window
     applyRacerBehavior([trailer, leader], { ...lbCfg, lookBeforeBrakeEnabled: false });
     expect(trailer.avoidanceActive).toBe(true); // gate off → always brakes in the zone
   });
 
   it('latch: the committed leader + side is held stable across frames (no zigzag)', () => {
-    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
-    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 });
+    const [trailer, leader] = overtakePair(0.5, 0.535);
     applyRacerBehavior([trailer, leader], lbCfg);
     expect(trailer.passLeaderIndex).toBe(1); // latched onto this leader
     const committedSide = trailer.passDir;
@@ -586,5 +604,83 @@ describe('applyRacerBehavior — look before you brake', () => {
       applyRacerBehavior([trailer, leader], lbCfg);
       expect(trailer.passDir).toBe(committedSide);
     }
+  });
+
+  // ── The NO-GO scenario: structural non-penetration under the one-frame brake lag ──
+  // These tests reproduce index.jsx's physics-loop ordering AND its one-frame brake-
+  // application lag: each step advances t using the flags written by the PREVIOUS
+  // applyRacerBehavior, THEN recomputes behavior. hardSeparation is OFF so the positional
+  // backstop cannot mask a failure — non-penetration must come from the brake coupling
+  // alone. passStrength ≈ 0 pins the trailer laterally so it can NEVER clear, forcing the
+  // lag-safe longitudinal re-engage to carry the whole guarantee.
+  const brakeFloor = DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor; // 0.945
+  const advanceWithLag = (r) => {
+    // Mirror index.jsx: brake read from the flag written on the PREVIOUS applyRacerBehavior.
+    const brake = r.avoidanceActive ? Math.min(brakeFloor, r.brakeMatchFactor ?? brakeFloor) : 1.0;
+    r.t += (r.baseSpeed ?? 0) * brake; // trajectory/area/rubberBand default to 1.0 (makeLaneRacer)
+  };
+
+  it('NO-GO: a closer that never clears laterally still never overlaps (lag-safe re-engage)', () => {
+    // Brakeable regime (trailer ~5% faster): once the brake engages it separates, so any
+    // overlap here would be a genuine look-before-brake regression, not a floor-brake limit.
+    // Re-engage floor pinned to ×1.0 so the DYNAMIC lag margin (lbTHalf + lagFrames×vClose)
+    // is the sole protector — the tightest exercise of the lag math.
+    const cfg = {
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      hardSeparationEnabled: false,
+      softRepulsionStrength: 0,
+      lookBeforeBrakePassStrength: 0.0001, // effectively cannot clear sideways
+      lookBeforeBrakeReengageTMultiplier: 1.0, // floor at contact → dynamic margin only
+    };
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0, baseSpeed: 1.05e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.5 + 0.027, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    applyRacerBehavior([trailer, leader], cfg); // prime the flags for the first advance
+    let minGap = Math.abs(trailer.t - leader.t);
+    let sawSuppress = false;
+    let sawBrake = false;
+    for (let i = 0; i < 400; i++) {
+      advanceWithLag(trailer);
+      advanceWithLag(leader);
+      applyRacerBehavior([trailer, leader], cfg);
+      minGap = Math.min(minGap, Math.abs(trailer.t - leader.t));
+      // Same lane (physicalY ~0), so longitudinal contact is the overlap axis.
+      expect(Math.abs(trailer.t - leader.t)).toBeGreaterThanOrEqual(LB_THALF); // never overlap
+      if (!trailer.avoidanceActive) sawSuppress = true;
+      if (trailer.avoidanceActive) sawBrake = true;
+    }
+    expect(sawSuppress).toBe(true); // it really did suppress in the pass window …
+    expect(sawBrake).toBe(true); // … then the brake really re-engaged (scenario exercised)
+    expect(minGap).toBeLessThan(LB_THALF * 1.2); // and it genuinely approached the boundary
+  });
+
+  it('NO-GO contrast: lag-safe re-engage fires before overlap where the lag-blind margin does not', () => {
+    // Same lag-simulated ordering, fast closer. Compare the gap AT the moment the brake
+    // first re-engages: lagFrames=2 (default) re-engages BEFORE overlap; lagFrames=0
+    // (the pre-fix, lag-blind margin) re-engages one frame too late → already overlapping.
+    const reengageGap = (lagFrames) => {
+      const cfg = {
+        ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+        hardSeparationEnabled: false,
+        softRepulsionStrength: 0,
+        lookBeforeBrakePassStrength: 0.0001,
+        lookBeforeBrakeReengageTMultiplier: 1.0, // floor at contact → isolate the lag margin
+        lookBeforeBrakeLagFrames: lagFrames,
+      };
+      const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0, baseSpeed: 6.0e-4 });
+      const leader = makeLaneRacer({ index: 1, t: 0.5 + 0.038, physicalY: 0.0, baseSpeed: 1.0e-4 });
+      applyRacerBehavior([trailer, leader], cfg);
+      for (let i = 0; i < 400; i++) {
+        advanceWithLag(trailer);
+        advanceWithLag(leader);
+        applyRacerBehavior([trailer, leader], cfg);
+        if (trailer.avoidanceActive) return Math.abs(trailer.t - leader.t); // gap at first re-engage
+      }
+      return Math.abs(trailer.t - leader.t);
+    };
+    const gapLagSafe = reengageGap(2);
+    const gapLagBlind = reengageGap(0);
+    expect(gapLagSafe).toBeGreaterThanOrEqual(LB_THALF); // fix: re-engages before overlap
+    expect(gapLagBlind).toBeLessThan(LB_THALF); // pre-fix: one frame late → already overlapping
+    expect(gapLagSafe).toBeGreaterThan(gapLagBlind); // lag-safe keeps more lead
   });
 });

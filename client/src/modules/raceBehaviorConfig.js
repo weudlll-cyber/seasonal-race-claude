@@ -100,7 +100,11 @@ export function loadRaceBehaviorConfig() {
     merged.lookBeforeBrakePassStrength <= 0 ||
     !isFinite(merged.lookBeforeBrakeReengageTMultiplier) ||
     merged.lookBeforeBrakeReengageTMultiplier < 1 ||
-    merged.lookBeforeBrakeReengageTMultiplier >= merged.speedBrakeTMultiplier
+    merged.lookBeforeBrakeReengageTMultiplier >= merged.speedBrakeTMultiplier ||
+    // lookBeforeBrakeLagFrames: whole frames of worst-case closing reserved for the
+    // one-frame brake-application lag; ≥ 1 (at least the lag frame itself).
+    !isFinite(merged.lookBeforeBrakeLagFrames) ||
+    merged.lookBeforeBrakeLagFrames < 1
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

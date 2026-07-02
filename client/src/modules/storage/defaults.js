@@ -474,14 +474,26 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //                           passing (≫ softSteeringStrength so the racer clears the
   //                           leader sideways before longitudinal contact — the "commit"
   //                           half of the non-penetration coupling).
-  //   lookBeforeBrakeReengageTMultiplier: longitudinal re-engage margin as a multiple of
-  //                           the body-contact length (dT units). The pass is allowed only
-  //                           while dT > this × contactLength/pathLength; once the gap
-  //                           keeps closing past it without lateral clearance the brake
-  //                           re-engages with lead time. Must be < speedBrakeTMultiplier
-  //                           (1.5) so a pass window exists, and ≥ ~1.0 so the brake still
-  //                           re-engages before actual body contact. Tunable for the sweep.
+  //   lookBeforeBrakeReengageTMultiplier: FLOOR longitudinal re-engage margin as a multiple
+  //                           of the body-contact length (dT units). The pass is allowed
+  //                           only while dT exceeds the effective threshold, which is the
+  //                           larger of this floor and the lag-safe dynamic margin below.
+  //                           Must be < speedBrakeTMultiplier (1.5) so a pass window exists,
+  //                           and ≥ ~1.0 so the brake re-engages before body contact.
+  //   lookBeforeBrakeLagFrames: the physics loop applies the speed brake one frame late
+  //                           (avoidanceActive/brakeMatchFactor are read the step AFTER they
+  //                           are written). The dynamic re-engage margin reserves this many
+  //                           frames of worst-case closing (lbTHalf + lagFrames × vClose) so
+  //                           that even a one-frame-late brake still prevents contact — the
+  //                           non-penetration guarantee is structural, not backstop-delegated.
+  //                           2 = one lag frame + one frame of margin. Raise for more safety.
+  //   lookBeforeBrakeRequireSlowerLeader: only take the pass path when the trailer is
+  //                           genuinely faster than the leader (a real overtake), so racers
+  //                           don't weave around same-speed traffic. Uses raw parity-safe
+  //                           speeds and the speedMatchMinDifferential threshold.
   lookBeforeBrakeEnabled: true,
   lookBeforeBrakePassStrength: 0.5,
   lookBeforeBrakeReengageTMultiplier: 1.2,
+  lookBeforeBrakeLagFrames: 2,
+  lookBeforeBrakeRequireSlowerLeader: true,
 };

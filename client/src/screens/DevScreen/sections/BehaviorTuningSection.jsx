@@ -78,6 +78,9 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       lookBeforeBrakePassStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakePassStrength,
       lookBeforeBrakeReengageTMultiplier:
         DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeReengageTMultiplier,
+      lookBeforeBrakeLagFrames: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeLagFrames,
+      lookBeforeBrakeRequireSlowerLeader:
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeRequireSlowerLeader,
     }));
   }
 
@@ -481,6 +484,51 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
                 const v = Number(e.target.value);
                 if (isFinite(v) && v >= 1) setBehavior('lookBeforeBrakeReengageTMultiplier', v);
               }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Lag-Safety Frames
+              <InfoTooltip text="The brake takes effect one frame after it is decided. This reserves that many frames of worst-case closing as extra lead before the brake re-engages, so a racer that fails to clear still brakes in time and never overlaps — the anti-overlap guarantee, not the last-resort separation. 2 = one lag frame plus one frame of margin. Higher = safer / passes a touch less aggressively." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Look Before Brake Lag Frames"
+              min={1}
+              max={5}
+              step={1}
+              value={
+                behaviorConfig.lookBeforeBrakeLagFrames ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeLagFrames
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 1) setBehavior('lookBeforeBrakeLagFrames', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Only Pass Slower Racers
+              <InfoTooltip text="On = only take a free lane when the racer ahead is genuinely slower (a real overtake), so racers don't weave around same-speed traffic for no gain. Off = take a free lane behind any same-lane racer in the brake zone." />
+            </label>
+            <input
+              type="checkbox"
+              aria-label="Look Before Brake Require Slower Leader"
+              checked={
+                behaviorConfig.lookBeforeBrakeRequireSlowerLeader ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeRequireSlowerLeader
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => setBehavior('lookBeforeBrakeRequireSlowerLeader', e.target.checked)}
             />
           </div>
         </div>
