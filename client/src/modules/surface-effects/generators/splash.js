@@ -70,20 +70,23 @@ const BURST_SPEED = 2.5;
  */
 function create(config, _racer) {
   return {
-    spawn(x, y, speed, angle) {
-      if (Math.random() > config.spawnProbability) return [];
+    // Spawn `count` droplets per call, appended IN PLACE into `out` (the racer's array).
+    // Replaces Array.from(new array) with a direct loop; per-droplet spawn logic and RNG
+    // call order are byte-identical to the prior Array.from body (visually unchanged).
+    spawn(out, x, y, speed, angle) {
+      if (Math.random() > config.spawnProbability) return;
       const count = Math.max(1, Math.round(config.count));
       const fadePerFrame = START_ALPHA / config.lifetimeFrames;
       const burstSpeed = BURST_SPEED + speed * 0.5;
 
-      return Array.from({ length: count }, () => {
+      for (let k = 0; k < count; k++) {
         const halfSpread = config.spreadAngle / 2;
         // Splash spreads around the backward direction with spreadAngle half-cone
         const spreadDir = angle + Math.PI + (Math.random() - 0.5) * config.spreadAngle * 2;
         const r = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin);
         const s = burstSpeed * (0.5 + Math.random() * 0.5);
         void halfSpread; // used implicitly via spreadDir
-        return {
+        out.push({
           x: x + (Math.random() - 0.5) * 4,
           y: y + (Math.random() - 0.5) * 4,
           vx: Math.cos(spreadDir) * s,
@@ -93,21 +96,30 @@ function create(config, _racer) {
           alpha: START_ALPHA,
           fadePerFrame,
           color: config.color,
-        };
-      });
+        });
+      }
     },
 
+    // Advance IN PLACE + swap-remove dead (same idiom as dust/burst). No new array,
+    // no per-particle rematerialization. y uses the OLD vy (updated after), r shrinks,
+    // alpha fades — byte-identical to the prior map body. Returns the same array.
     update(particles, dt = 1) {
-      return particles
-        .map((p) => ({
-          ...p,
-          x: p.x + p.vx * dt,
-          y: p.y + p.vy * dt + p.gy * dt,
-          vy: p.vy + p.gy * dt,
-          r: p.r * (1 - 0.015 * dt),
-          alpha: p.alpha - p.fadePerFrame * dt,
-        }))
-        .filter((p) => p.alpha > 0 && p.r > 0.2);
+      let i = 0;
+      while (i < particles.length) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt + p.gy * dt;
+        p.vy += p.gy * dt;
+        p.r *= 1 - 0.015 * dt;
+        p.alpha -= p.fadePerFrame * dt;
+        if (p.alpha > 0 && p.r > 0.2) {
+          i++;
+        } else {
+          particles[i] = particles[particles.length - 1];
+          particles.length--;
+        }
+      }
+      return particles;
     },
 
     render(ctx, particles) {

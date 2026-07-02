@@ -45,43 +45,54 @@ const START_ALPHA = 0.8;
 function create(config, _racer) {
   return {
     /**
-     * Spawn 0 or 1 particle per call based on spawnProbability.
-     * @returns {object[]}
+     * Spawn 0 or 1 particle per call based on spawnProbability, appended IN PLACE
+     * into `out` (the racer's live-particle array). Allocation-free at the seam: no
+     * intermediate array, only a genuinely-new object when a particle actually spawns.
+     * Spawn-decision logic and RNG call order are unchanged (visually identical).
+     * @param {object[]} out — array to append into
      */
-    spawn(x, y, _speed, angle) {
-      if (Math.random() > config.spawnProbability) return [];
+    spawn(out, x, y, _speed, angle) {
+      if (Math.random() > config.spawnProbability) return;
       const r = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin);
       const fadePerFrame = START_ALPHA / config.lifetimeFrames;
-      return [
-        {
-          x: x + (Math.random() - 0.5) * 6,
-          y: y + (Math.random() - 0.5) * 6,
-          vx: Math.cos(angle + Math.PI) * config.drift + (Math.random() - 0.5) * 0.8,
-          vy: Math.sin(angle + Math.PI) * config.drift + (Math.random() - 0.5) * 0.8,
-          gy: config.gravity,
-          r,
-          alpha: START_ALPHA,
-          fadePerFrame,
-          color: config.color,
-        },
-      ];
+      out.push({
+        x: x + (Math.random() - 0.5) * 6,
+        y: y + (Math.random() - 0.5) * 6,
+        vx: Math.cos(angle + Math.PI) * config.drift + (Math.random() - 0.5) * 0.8,
+        vy: Math.sin(angle + Math.PI) * config.drift + (Math.random() - 0.5) * 0.8,
+        gy: config.gravity,
+        r,
+        alpha: START_ALPHA,
+        fadePerFrame,
+        color: config.color,
+      });
     },
 
     /**
-     * Advance all particles by dt frames; return only still-alive ones.
+     * Advance all particles by dt frames IN PLACE, removing dead ones via
+     * swap-with-last + length-- (same allocation-free idiom as the dust/burst advance
+     * blocks in RaceScreen). No new array and no per-particle rematerialization — each
+     * live particle's own fields are mutated. Motion/alpha math is byte-identical to the
+     * prior map body. Returns the same array instance.
      * @param {object[]} particles
      * @param {number} [dt=1]
-     * @returns {object[]}
+     * @returns {object[]} the same array, advanced and compacted
      */
     update(particles, dt = 1) {
-      return particles
-        .map((p) => ({
-          ...p,
-          x: p.x + p.vx * dt,
-          y: p.y + p.vy * dt + p.gy * dt,
-          alpha: p.alpha - p.fadePerFrame * dt,
-        }))
-        .filter((p) => p.alpha > 0);
+      let i = 0;
+      while (i < particles.length) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt + p.gy * dt;
+        p.alpha -= p.fadePerFrame * dt;
+        if (p.alpha > 0) {
+          i++;
+        } else {
+          particles[i] = particles[particles.length - 1];
+          particles.length--;
+        }
+      }
+      return particles;
     },
 
     /**

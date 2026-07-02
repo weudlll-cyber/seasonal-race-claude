@@ -56,30 +56,34 @@ describe('resolveTrailEmitter — match found', () => {
     const e1 = resolveTrailEmitter(rt, ['asphalt']);
     const e2 = resolveTrailEmitter(rt, ['asphalt']);
 
-    // First call on each emitter initialises lastX/lastY — returns []
-    expect(e1.spawn(10, 20)).toEqual([]);
-    expect(e2.spawn(50, 60)).toEqual([]);
+    // First call on each emitter initialises lastX/lastY — appends nothing
+    const o1 = [];
+    e1.spawn(o1, 10, 20);
+    expect(o1.length).toBe(0);
+    const o2 = [];
+    e2.spawn(o2, 50, 60);
+    expect(o2.length).toBe(0);
 
     // Second call on e1 draws from (10,20) to (15,25)
-    const seg1 = e1.spawn(15, 25);
-    expect(seg1.length).toBe(1);
-    expect(seg1[0].x1).toBe(10);
-    expect(seg1[0].y1).toBe(20);
+    e1.spawn(o1, 15, 25);
+    expect(o1.length).toBe(1);
+    expect(o1[0].x1).toBe(10);
+    expect(o1[0].y1).toBe(20);
 
     // e2 draws from its own last position (50,60), not e1's
-    const seg2 = e2.spawn(55, 65);
-    expect(seg2.length).toBe(1);
-    expect(seg2[0].x1).toBe(50);
-    expect(seg2[0].y1).toBe(60);
+    e2.spawn(o2, 55, 65);
+    expect(o2.length).toBe(1);
+    expect(o2[0].x1).toBe(50);
+    expect(o2[0].y1).toBe(60);
   });
 
-  test('splash emitter returns particles with correct shape', () => {
+  test('splash emitter appends particles with correct shape', () => {
     const rt = makeRacerType(['water']); // water → splash generator
     const emitter = resolveTrailEmitter(rt, ['water']);
     // spawn is probabilistic; run multiple times to get at least one particle
-    let particles = [];
+    const particles = [];
     for (let i = 0; i < 50; i++) {
-      particles.push(...emitter.spawn(100, 100, 0.001, 0));
+      emitter.spawn(particles, 100, 100, 0.001, 0);
     }
     expect(particles.length).toBeGreaterThan(0);
     expect(particles[0]).toHaveProperty('x');
@@ -130,15 +134,14 @@ describe('resolveTrailEmitter — emitter lifecycle', () => {
   test('update returns only still-alive particles', () => {
     const rt = makeRacerType(['earth']); // earth → cloud generator
     const emitter = resolveTrailEmitter(rt, ['earth']);
-    let particles = [];
+    const particles = [];
     for (let i = 0; i < 100; i++) {
-      particles.push(...emitter.spawn(0, 0, 0.001, 0));
+      emitter.spawn(particles, 0, 0, 0.001, 0);
     }
     const alive = particles.length;
-    // After many frames of updates, particles should fade out
-    let p = [...particles];
-    for (let f = 0; f < 200; f++) p = emitter.update(p, 1);
-    expect(p.length).toBeLessThan(alive);
+    // After many frames of in-place updates, particles should fade out (compacted in place)
+    for (let f = 0; f < 200; f++) emitter.update(particles, 1);
+    expect(particles.length).toBeLessThan(alive);
   });
 
   test('render does not throw with empty particle array', () => {
@@ -171,8 +174,8 @@ describe('resolveTrailEmitter — performance smoke', () => {
     const start = performance.now();
     for (let frame = 0; frame < 60; frame++) {
       for (const e of emitters) {
-        e.particles.push(...e.emitter.spawn(Math.random() * 1280, Math.random() * 720, 0.001, 0));
-        e.particles = e.emitter.update(e.particles, 1);
+        e.emitter.spawn(e.particles, Math.random() * 1280, Math.random() * 720, 0.001, 0);
+        e.emitter.update(e.particles, 1);
       }
     }
     const elapsed = performance.now() - start;

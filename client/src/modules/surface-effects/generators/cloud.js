@@ -90,38 +90,47 @@ function create(config, _racer) {
   const blobSprite = _createBlobSprite(config.endSize, config.color);
 
   return {
-    spawn(x, y, _speed, angle) {
-      if (Math.random() > config.spawnProbability) return [];
+    // Spawn 0 or 1 blob per call, appended IN PLACE into `out` (the racer's array).
+    // Allocation-free at the seam; spawn-decision logic and RNG call order unchanged.
+    spawn(out, x, y, _speed, angle) {
+      if (Math.random() > config.spawnProbability) return;
       const fadePerFrame = START_ALPHA / config.lifetimeFrames;
       const growPerFrame = (config.endSize - config.startSize) / config.lifetimeFrames;
       const driftAngle =
         config.driftDirection === 'back' ? angle + Math.PI : Math.random() * Math.PI * 2;
       const driftSpeed = 0.4 + Math.random() * 0.4;
-      return [
-        {
-          x: x + (Math.random() - 0.5) * 8,
-          y: y + (Math.random() - 0.5) * 8,
-          vx: Math.cos(driftAngle) * driftSpeed,
-          vy: Math.sin(driftAngle) * driftSpeed,
-          r: config.startSize,
-          growPerFrame,
-          alpha: START_ALPHA,
-          fadePerFrame,
-          color: config.color,
-        },
-      ];
+      out.push({
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: Math.cos(driftAngle) * driftSpeed,
+        vy: Math.sin(driftAngle) * driftSpeed,
+        r: config.startSize,
+        growPerFrame,
+        alpha: START_ALPHA,
+        fadePerFrame,
+        color: config.color,
+      });
     },
 
+    // Advance IN PLACE + swap-remove dead (same idiom as dust/burst). No new array,
+    // no per-particle rematerialization; motion/grow/alpha math byte-identical to the
+    // prior map body. Returns the same array instance.
     update(particles, dt = 1) {
-      return particles
-        .map((p) => ({
-          ...p,
-          x: p.x + p.vx * dt,
-          y: p.y + p.vy * dt,
-          r: p.r + p.growPerFrame * dt,
-          alpha: p.alpha - p.fadePerFrame * dt,
-        }))
-        .filter((p) => p.alpha > 0);
+      let i = 0;
+      while (i < particles.length) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.r += p.growPerFrame * dt;
+        p.alpha -= p.fadePerFrame * dt;
+        if (p.alpha > 0) {
+          i++;
+        } else {
+          particles[i] = particles[particles.length - 1];
+          particles.length--;
+        }
+      }
+      return particles;
     },
 
     render(ctx, particles) {

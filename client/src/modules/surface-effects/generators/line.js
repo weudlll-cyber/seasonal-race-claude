@@ -46,14 +46,17 @@ function create(config, _racer) {
   const fadePerFrame = START_ALPHA / config.lifetimeFrames;
 
   return {
-    spawn(x, y) {
+    // Stateful: emits a segment from the previous spawn position to the current one,
+    // appended IN PLACE into `out`. First call records position and emits nothing.
+    // The last-position segment logic is unchanged (visually identical).
+    spawn(out, x, y) {
       if (lastX === null) {
         // First call: record position, emit nothing (no previous point)
         lastX = x;
         lastY = y;
-        return [];
+        return;
       }
-      const segment = {
+      out.push({
         x1: lastX,
         y1: lastY,
         x2: x,
@@ -62,16 +65,27 @@ function create(config, _racer) {
         fadePerFrame,
         color: config.color,
         thickness: config.thickness,
-      };
+      });
       lastX = x;
       lastY = y;
-      return [segment];
     },
 
+    // Fade IN PLACE + swap-remove dead (same idiom as dust/burst). No new array,
+    // no per-segment rematerialization; alpha math byte-identical to the prior map body.
+    // Returns the same array instance.
     update(particles, dt = 1) {
-      return particles
-        .map((p) => ({ ...p, alpha: p.alpha - p.fadePerFrame * dt }))
-        .filter((p) => p.alpha > 0);
+      let i = 0;
+      while (i < particles.length) {
+        const p = particles[i];
+        p.alpha -= p.fadePerFrame * dt;
+        if (p.alpha > 0) {
+          i++;
+        } else {
+          particles[i] = particles[particles.length - 1];
+          particles.length--;
+        }
+      }
+      return particles;
     },
 
     render(ctx, particles) {

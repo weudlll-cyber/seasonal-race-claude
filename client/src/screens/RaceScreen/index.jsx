@@ -1243,11 +1243,11 @@ export default function RaceScreen() {
             const spawnX = r.x;
             const spawnY = r.y;
             if (r.surfaceEmitter) {
-              // Surface-class trail: each racer drives its own emitter
-              r.surfaceParticles.push(
-                ...r.surfaceEmitter.spawn(spawnX, spawnY, r.baseSpeed, r.angle, ts)
-              );
-              r.surfaceParticles = r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
+              // Surface-class trail: each racer drives its own emitter. spawn appends new
+              // particles IN PLACE into r.surfaceParticles and update advances/compacts it
+              // in place (swap-remove) — no per-frame array/object churn, array identity kept.
+              r.surfaceEmitter.spawn(r.surfaceParticles, spawnX, spawnY, r.baseSpeed, r.angle, ts);
+              r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
             } else {
               // Heimat-Trail fallback: trailFactory-based particles pooled globally
               st.dustParticles.push(

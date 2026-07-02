@@ -77,9 +77,9 @@ export function SurfaceClassPreview({ generatorId, config }) {
 
       // Angle 0 = moving right; particles drift backwards (angle + π handled inside generators)
       const angle = 0;
-      const spawned = state.inst.spawn(state.x, RACER_Y, SPEED_PX_PER_S, angle);
-      state.pool.push(...spawned);
-      state.pool = state.inst.update(state.pool, dt);
+      // In-place emitter contract: spawn appends into the pool, update advances/compacts it.
+      state.inst.spawn(state.pool, state.x, RACER_Y, SPEED_PX_PER_S, angle);
+      state.inst.update(state.pool, dt);
 
       // Render
       ctx.fillStyle = BG_COLOR;

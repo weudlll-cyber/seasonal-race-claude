@@ -52,33 +52,36 @@ describe('Generator contract — all generators', () => {
 
       it('update([]) returns empty array', () => {
         const inst = gen.create(gen.defaultConfig);
+        // In-place contract: update mutates and returns the SAME array instance.
         expect(inst.update([])).toEqual([]);
       });
 
       it('update advances alpha (particles fade over time)', () => {
-        // Force-spawn by bypassing probability
+        // Force-spawn by bypassing probability. spawn appends into `out` in place.
         const inst = gen.create({ ...gen.defaultConfig, spawnProbability: 1 });
-        const initial = inst.spawn(100, 100, 1, 0);
-        if (initial.length === 0) return; // line generator first-call returns []
-        const advanced = inst.update(initial, 1);
-        if (advanced.length > 0) {
-          // alpha must have decreased
-          expect(advanced[0].alpha).toBeLessThan(initial[0].alpha);
+        const out = [];
+        inst.spawn(out, 100, 100, 1, 0);
+        if (out.length === 0) return; // line generator first-call emits nothing
+        const alphaBefore = out[0].alpha;
+        inst.update(out, 1);
+        if (out.length > 0) {
+          // alpha must have decreased (particle mutated in place)
+          expect(out[0].alpha).toBeLessThan(alphaBefore);
         }
       });
 
       it('update removes dead particles (alpha ≤ 0) after enough steps', () => {
         const inst = gen.create({ ...gen.defaultConfig, spawnProbability: 1, lifetimeFrames: 5 });
-        // Prime the line generator
-        inst.spawn(0, 0, 1, 0);
-        const initial = inst.spawn(10, 10, 1, 0);
-        if (initial.length === 0) return;
-        let pool = initial;
+        const out = [];
+        // Prime the line generator (first call emits nothing), then spawn.
+        inst.spawn(out, 0, 0, 1, 0);
+        inst.spawn(out, 10, 10, 1, 0);
+        if (out.length === 0) return;
         for (let i = 0; i < 200; i++) {
-          pool = inst.update(pool, 1);
-          if (pool.length === 0) break;
+          inst.update(out, 1); // mutates `out` in place (swap-remove)
+          if (out.length === 0) break;
         }
-        expect(pool.length).toBe(0);
+        expect(out.length).toBe(0);
       });
     });
   }
@@ -87,34 +90,40 @@ describe('Generator contract — all generators', () => {
 // ── Particle-specific ────────────────────────────────────────────────────────
 
 describe('particle generator', () => {
-  it('spawn returns 0 or 1 particle', () => {
+  it('spawn appends 0 or 1 particle', () => {
     const inst = particle.create(particle.defaultConfig);
     for (let i = 0; i < 20; i++) {
-      const p = inst.spawn(0, 0, 1, 0);
-      expect(p.length).toBeGreaterThanOrEqual(0);
-      expect(p.length).toBeLessThanOrEqual(1);
+      const out = [];
+      inst.spawn(out, 0, 0, 1, 0);
+      expect(out.length).toBeGreaterThanOrEqual(0);
+      expect(out.length).toBeLessThanOrEqual(1);
     }
   });
 
-  it('spawn with probability 1 always returns a particle', () => {
+  it('spawn with probability 1 always appends a particle', () => {
     const inst = particle.create({ ...particle.defaultConfig, spawnProbability: 1 });
-    const p = inst.spawn(50, 50, 1, 0);
-    expect(p.length).toBe(1);
-    expect(typeof p[0].x).toBe('number');
-    expect(typeof p[0].alpha).toBe('number');
-    expect(typeof p[0].color).toBe('string');
+    const out = [];
+    inst.spawn(out, 50, 50, 1, 0);
+    expect(out.length).toBe(1);
+    expect(typeof out[0].x).toBe('number');
+    expect(typeof out[0].alpha).toBe('number');
+    expect(typeof out[0].color).toBe('string');
   });
 
-  it('spawn with probability 0 always returns empty', () => {
+  it('spawn with probability 0 always appends nothing', () => {
     const inst = particle.create({ ...particle.defaultConfig, spawnProbability: 0 });
     for (let i = 0; i < 10; i++) {
-      expect(inst.spawn(0, 0, 1, 0).length).toBe(0);
+      const out = [];
+      inst.spawn(out, 0, 0, 1, 0);
+      expect(out.length).toBe(0);
     }
   });
 
   it('spawned particle has expected fields', () => {
     const inst = particle.create({ ...particle.defaultConfig, spawnProbability: 1 });
-    const [p] = inst.spawn(10, 20, 1, Math.PI);
+    const out = [];
+    inst.spawn(out, 10, 20, 1, Math.PI);
+    const [p] = out;
     expect(p).toHaveProperty('x');
     expect(p).toHaveProperty('y');
     expect(p).toHaveProperty('vx');
@@ -143,9 +152,11 @@ describe('particle generator', () => {
 describe('cloud generator', () => {
   it('particle radius grows with each update step', () => {
     const inst = cloud.create({ ...cloud.defaultConfig, spawnProbability: 1 });
-    const [p0] = inst.spawn(0, 0, 1, 0);
-    const [p1] = inst.update([p0], 1);
-    if (p1) expect(p1.r).toBeGreaterThan(p0.r);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    const rBefore = out[0].r;
+    inst.update(out, 1);
+    if (out[0]) expect(out[0].r).toBeGreaterThan(rBefore);
   });
 
   it('startSize < endSize produces positive growPerFrame', () => {
@@ -155,58 +166,69 @@ describe('cloud generator', () => {
       startSize: 3,
       endSize: 12,
     });
-    const [p] = inst.spawn(0, 0, 1, 0);
-    expect(p.growPerFrame).toBeGreaterThan(0);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    expect(out[0].growPerFrame).toBeGreaterThan(0);
   });
 });
 
 // ── Splash-specific ──────────────────────────────────────────────────────────
 
 describe('splash generator', () => {
-  it('spawn with count=4 returns up to 4 particles when probability=1', () => {
+  it('spawn with count=4 appends up to 4 particles when probability=1', () => {
     const inst = splash.create({ ...splash.defaultConfig, count: 4, spawnProbability: 1 });
-    const ps = inst.spawn(0, 0, 1, 0);
-    expect(ps.length).toBe(4);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    expect(out.length).toBe(4);
   });
 
   it('particles have gy (gravity) field', () => {
     const inst = splash.create({ ...splash.defaultConfig, spawnProbability: 1 });
-    const [p] = inst.spawn(0, 0, 1, 0);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    const [p] = out;
     expect(typeof p.gy).toBe('number');
     expect(p.gy).toBeGreaterThan(0);
   });
 
   it('vy increases each frame (gravity accelerates downward)', () => {
     const inst = splash.create({ ...splash.defaultConfig, spawnProbability: 1, gravity: 0.2 });
-    const [p0] = inst.spawn(0, 0, 1, 0);
-    const [p1] = inst.update([{ ...p0, vy: 0 }], 1);
-    if (p1) expect(p1.vy).toBeGreaterThan(0);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    out[0].vy = 0; // reset to isolate gravity's effect
+    inst.update(out, 1);
+    if (out[0]) expect(out[0].vy).toBeGreaterThan(0);
   });
 });
 
 // ── Line-specific ────────────────────────────────────────────────────────────
 
 describe('line generator', () => {
-  it('first spawn call returns empty (no previous position)', () => {
+  it('first spawn call appends nothing (no previous position)', () => {
     const inst = line.create(line.defaultConfig);
-    expect(inst.spawn(0, 0, 1, 0)).toEqual([]);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    expect(out.length).toBe(0);
   });
 
-  it('second spawn call returns one segment', () => {
+  it('second spawn call appends one segment', () => {
     const inst = line.create(line.defaultConfig);
-    inst.spawn(0, 0, 1, 0);
-    const segs = inst.spawn(10, 10, 1, 0);
-    expect(segs.length).toBe(1);
-    expect(segs[0]).toHaveProperty('x1', 0);
-    expect(segs[0]).toHaveProperty('y1', 0);
-    expect(segs[0]).toHaveProperty('x2', 10);
-    expect(segs[0]).toHaveProperty('y2', 10);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    inst.spawn(out, 10, 10, 1, 0);
+    expect(out.length).toBe(1);
+    expect(out[0]).toHaveProperty('x1', 0);
+    expect(out[0]).toHaveProperty('y1', 0);
+    expect(out[0]).toHaveProperty('x2', 10);
+    expect(out[0]).toHaveProperty('y2', 10);
   });
 
   it('segment has alpha, color, thickness', () => {
     const inst = line.create({ ...line.defaultConfig, color: '#ff0000', thickness: 2 });
-    inst.spawn(0, 0, 1, 0);
-    const [seg] = inst.spawn(5, 5, 1, 0);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    inst.spawn(out, 5, 5, 1, 0);
+    const [seg] = out;
     expect(seg.color).toBe('#ff0000');
     expect(seg.thickness).toBe(2);
     expect(typeof seg.alpha).toBe('number');
@@ -216,15 +238,19 @@ describe('line generator', () => {
   it('each new create() instance has independent state', () => {
     const a = line.create(line.defaultConfig);
     const b = line.create(line.defaultConfig);
-    a.spawn(0, 0, 1, 0);
-    // b was never primed — should return []
-    expect(b.spawn(10, 10, 1, 0)).toEqual([]);
+    a.spawn([], 0, 0, 1, 0);
+    // b was never primed — should append nothing
+    const outB = [];
+    b.spawn(outB, 10, 10, 1, 0);
+    expect(outB.length).toBe(0);
   });
 
   it('render draws line segments without throwing', () => {
     const inst = line.create(line.defaultConfig);
-    inst.spawn(0, 0, 1, 0);
-    const [seg] = inst.spawn(10, 10, 1, 0);
+    const out = [];
+    inst.spawn(out, 0, 0, 1, 0);
+    inst.spawn(out, 10, 10, 1, 0);
+    const [seg] = out;
     const ctx = {
       globalAlpha: 1,
       strokeStyle: '',
