@@ -217,6 +217,12 @@ export default function RaceScreen() {
   // camera math, or the perf accounting — so "other"/physics-ms-per-real-second stay measurable.
   const diagHideBgCanvas = cameraConfig.diagHideBgCanvas ?? false;
   const diagHideMainCanvasDraw = cameraConfig.diagHideMainCanvasDraw ?? false;
+  // Per-piece paint probes (default OFF). Gate only the paint call for each piece — particle
+  // spawn/update state, physics, camera, and perf accounting all run identically.
+  const diagHideSurfaceTrails = cameraConfig.diagHideSurfaceTrails ?? false;
+  const diagHideParticles = cameraConfig.diagHideParticles ?? false;
+  const diagHideRacerTrails = cameraConfig.diagHideRacerTrails ?? false;
+  const diagHideRacerSprites = cameraConfig.diagHideRacerSprites ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
   const [overlayText, setOverlayText] = useState(null);
@@ -1444,8 +1450,9 @@ export default function RaceScreen() {
         if (isOpenTrack && st.finishT < 1)
           drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
         if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, st.finishT);
-        drawParticles(ctx, st.dustParticles, st.burstParticles);
-        drawSurfaceTrails(ctx, st.racers);
+        // DIAG per-piece paint gates: skip only the painting; particle state already advanced.
+        if (!diagHideParticles) drawParticles(ctx, st.dustParticles, st.burstParticles);
+        if (!diagHideSurfaceTrails) drawSurfaceTrails(ctx, st.racers);
         const focusFactor = st.focusFadeProgress ?? 0;
         const livePulkGroup =
           focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
@@ -1464,7 +1471,9 @@ export default function RaceScreen() {
           frameDisplayScale,
           frameEffZoom,
           renderAlpha,
-          frameTimingConfig.renderInterpolation
+          frameTimingConfig.renderInterpolation,
+          diagHideRacerTrails,
+          diagHideRacerSprites
         );
         drawBattleDiagMarkers(
           ctx,

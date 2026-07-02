@@ -133,6 +133,12 @@ export const DEFAULT_CAMERA_CONFIG = {
   // non-bracketed "other" cost to the background canvas vs the main canvas. Remove after diagnosis.
   diagHideBgCanvas: false, // DIAG: hide the world-sized (≤3072×2048) background canvas (skip its per-frame transform + display:none)
   diagHideMainCanvasDraw: false, // DIAG: skip the main-canvas scene draw (clearRect + full render); physics/perf keep running
+  // TEMPORARY per-piece paint probes (default OFF). Each skips ONLY the painting of one piece of
+  // the main-canvas scene draw (spawn/update state + physics + perf keep running). Remove after diagnosis.
+  diagHideSurfaceTrails: false, // DIAG: skip drawSurfaceTrails (per-racer splash/line/cloud surface particles)
+  diagHideParticles: false, // DIAG: skip drawParticles (dust + burst particles)
+  diagHideRacerTrails: false, // DIAG: skip the colored trail-dot loop inside drawRacers (sprite + tag still draw)
+  diagHideRacerSprites: false, // DIAG: skip the racer sprite blits inside drawRacers (trails + tags still draw)
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
