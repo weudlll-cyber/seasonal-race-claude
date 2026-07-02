@@ -92,7 +92,15 @@ export function loadRaceBehaviorConfig() {
     !isFinite(merged.softSteeringClearancePct) ||
     merged.softSteeringClearancePct < 0 ||
     !isFinite(merged.softSteeringHysteresisY) ||
-    merged.softSteeringHysteresisY < 0
+    merged.softSteeringHysteresisY < 0 ||
+    // Look-before-brake: pass strength must be > 0; re-engage margin must be ≥ 1 (a
+    // margin below the touching distance would drop the brake past contact) and < the
+    // brake-zone multiplier (else no pass window exists).
+    !isFinite(merged.lookBeforeBrakePassStrength) ||
+    merged.lookBeforeBrakePassStrength <= 0 ||
+    !isFinite(merged.lookBeforeBrakeReengageTMultiplier) ||
+    merged.lookBeforeBrakeReengageTMultiplier < 1 ||
+    merged.lookBeforeBrakeReengageTMultiplier >= merged.speedBrakeTMultiplier
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

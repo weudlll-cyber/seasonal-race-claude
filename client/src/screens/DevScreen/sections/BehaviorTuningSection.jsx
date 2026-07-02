@@ -71,6 +71,16 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
     }));
   }
 
+  function resetLookBeforeBrake() {
+    setBehaviorConfig((prev) => ({
+      ...prev,
+      lookBeforeBrakeEnabled: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeEnabled,
+      lookBeforeBrakePassStrength: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakePassStrength,
+      lookBeforeBrakeReengageTMultiplier:
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeReengageTMultiplier,
+    }));
+  }
+
   function resetSoftSteering() {
     setBehaviorConfig((prev) => ({
       ...prev,
@@ -387,6 +397,89 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (isFinite(v) && v >= 0) setBehavior('avoidanceWarmupMs', v);
+              }}
+            />
+          </div>
+        </div>
+      </SubCard>
+
+      {/* ── Look Before You Brake ── */}
+      <SubCard
+        title="Look Before You Brake"
+        onReset={resetLookBeforeBrake}
+        resetTestId="reset-look-before-brake"
+        subtitle="When a racer catches a slower racer directly ahead and there is a free lane to the side, it commits to that lane early and passes at speed — instead of braking first and only steering aside once it has caught up. If both sides are blocked it still brakes exactly as before, so racers never overlap."
+        disabled={!behaviorConfig.enabled}
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Enabled
+              <InfoTooltip text="On = take a free lane and pass at speed when one exists. Off = pre-feature behavior (always brake behind a slower racer in the same lane, even with a free lane). The fairness sweep verifies overlap does not increase either way." />
+            </label>
+            <input
+              type="checkbox"
+              aria-label="Look Before Brake Enabled"
+              checked={
+                behaviorConfig.lookBeforeBrakeEnabled ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeEnabled
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => setBehavior('lookBeforeBrakeEnabled', e.target.checked)}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Pass Strength
+              <InfoTooltip text="How decisively a racer swerves into the free lane while passing. Higher = snappier, clears the slower racer sooner (more likely to pass at speed). Lower = gentler, and if it cannot clear in time the brake re-engages. Much stronger than the general Soft Steering spring by design." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Look Before Brake Pass Strength"
+              min={0.05}
+              max={1.0}
+              step={0.05}
+              value={
+                behaviorConfig.lookBeforeBrakePassStrength ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakePassStrength
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v > 0) setBehavior('lookBeforeBrakePassStrength', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Re-engage Margin
+              <InfoTooltip text="How much longitudinal room (as a multiple of the two bodies' contact length) a racer keeps before the brake comes back if it has not yet cleared into the free lane. Higher = brake re-engages earlier (safer, fewer passes). Lower = commits longer to the pass. Must sit between 1.0 and the Speed Brake zone multiplier (1.5)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Look Before Brake Reengage Multiplier"
+              min={1.0}
+              max={1.5}
+              step={0.05}
+              value={
+                behaviorConfig.lookBeforeBrakeReengageTMultiplier ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeReengageTMultiplier
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 1) setBehavior('lookBeforeBrakeReengageTMultiplier', v);
               }}
             />
           </div>

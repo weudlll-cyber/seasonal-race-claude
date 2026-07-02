@@ -459,4 +459,29 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   softSteeringStrength: 0.03,
   softSteeringClearancePct: 0.0,
   softSteeringHysteresisY: 0.04,
+  // ── Look before you brake ───────────────────────────────────────────────────
+  // When a racer closes on a slower racer in the same lane AND a side is genuinely
+  // free (same isSideFree geometry as the overlap resolver), it commits to that free
+  // side EARLY — inside the brake zone, not only at overlap — and passes at speed
+  // instead of braking first and evading later. The speed brake is only dropped when a
+  // lane is truly free and being taken; when both sides are blocked, braking is exactly
+  // as before, so non-penetration is preserved (the hard-separation pass is still the
+  // final positional backstop). Lives entirely in raceBehavior.js; browser/sim parity is
+  // automatic (both import that module and provide the same geometry fields).
+  //   lookBeforeBrakeEnabled: master switch. TRUE = take a free lane and pass at speed.
+  //                           FALSE = pre-feature behavior (always brake in the zone).
+  //   lookBeforeBrakePassStrength: spring constant for the decisive lateral commit while
+  //                           passing (≫ softSteeringStrength so the racer clears the
+  //                           leader sideways before longitudinal contact — the "commit"
+  //                           half of the non-penetration coupling).
+  //   lookBeforeBrakeReengageTMultiplier: longitudinal re-engage margin as a multiple of
+  //                           the body-contact length (dT units). The pass is allowed only
+  //                           while dT > this × contactLength/pathLength; once the gap
+  //                           keeps closing past it without lateral clearance the brake
+  //                           re-engages with lead time. Must be < speedBrakeTMultiplier
+  //                           (1.5) so a pass window exists, and ≥ ~1.0 so the brake still
+  //                           re-engages before actual body contact. Tunable for the sweep.
+  lookBeforeBrakeEnabled: true,
+  lookBeforeBrakePassStrength: 0.5,
+  lookBeforeBrakeReengageTMultiplier: 1.2,
 };

@@ -48,10 +48,16 @@ function makeLaneRacer(overrides = {}) {
 // 'hard position separation' describe block opts back in explicitly (ON vs OFF).
 // softSteeringStrength pinned 0: the soft-steering spring is the unconditional lateral
 // model now, so we neutralize it here to isolate the kept force mechanisms under test.
+// lookBeforeBrakeEnabled pinned OFF: the look-before-brake gate would, in a 2-racer
+// scenario, always find a free lane and SUPPRESS the brake, hiding the underlying speed-
+// brake / brake-to-match / soft-steering mechanisms these tests isolate. Disabling it
+// keeps these tests exercising the pre-feature brake path directly (feature-off == the
+// prior behavior). The new free-lane contract is covered in its own describe block below.
 const cfg = {
   ...DEFAULT_RACE_BEHAVIOR_CONFIG,
   hardSeparationEnabled: false,
   softSteeringStrength: 0,
+  lookBeforeBrakeEnabled: false,
 };
 
 // ── initRacerBehavior ──────────────────────────────────────────────────────
@@ -498,6 +504,7 @@ describe('Layer 1 soft steering — §4a asymmetry', () => {
     hardSeparationEnabled: false, // isolate the soft-steering spring
     softRepulsionStrength: 0, // no boundary repulsion to confound physicalY
     softSteeringSymmetric: true, // the flag under test: must NOT affect §4a
+    lookBeforeBrakeEnabled: false, // isolate §4a from the free-lane pass override
   };
 
   it('symmetric flag ON: leader holds centerline, only the trailer yields (§4a trailer-only)', () => {
@@ -510,5 +517,74 @@ describe('Layer 1 soft steering — §4a asymmetry', () => {
     expect(trailer.physicalY).toBeGreaterThan(0.05);
     // Gap widened (trailer moved away, leader did not move toward it).
     expect(trailer.physicalY - leader.physicalY).toBeGreaterThan(0.05);
+  });
+});
+
+// ── Look before you brake (this feature) ────────────────────────────────────
+// Contract: a trailer closing on a slower leader in the SAME lane takes a genuinely
+// free side EARLY and passes at speed (no brake), but still brakes exactly as before
+// when no side is free — so non-penetration is preserved. Geometry (makeLaneRacer):
+//   lbHalfSpan  = pxToPhysicalY(28,140)      = 0.40   (same-lane / free-lane width)
+//   lbTHalf     = 31/1200                     = 0.02583 (body-contact longitudinal)
+//   dynamicBrakeT (×1.5)                      = 0.03875 (brake-zone entry)
+//   reengageT (×1.2 default)                  = 0.03100 (pass allowed only while dT > this)
+// A dT of 0.035 sits in the pass window (0.031, 0.03875]; a dT of 0.020 is past the
+// re-engage margin (too close to clear → brake).
+describe('applyRacerBehavior — look before you brake', () => {
+  // Feature ON (default). Hard separation + boundary repulsion off to read physicalY cleanly.
+  const lbCfg = {
+    ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+    hardSeparationEnabled: false,
+    softRepulsionStrength: 0,
+  };
+
+  it('free lane in the pass window: trailer does NOT brake and steers toward the free side', () => {
+    // 2 racers → both sides free. Trailer above leader → commits to the outer (+) side.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // dT=0.035 (pass window)
+    applyRacerBehavior([trailer, leader], lbCfg);
+    expect(trailer.avoidanceActive).toBe(false); // brake suppressed — passing at speed
+    expect(trailer.physicalY).toBeGreaterThan(0.05); // decisive move toward the free (+) side
+    expect(leader.physicalY).toBe(0); // leader holds its line
+  });
+
+  it('both sides blocked: trailer brakes exactly as before (non-penetration preserved)', () => {
+    // Same pass-window geometry, but blockers pin BOTH free targets (±0.40) at the trailer's t.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0 });
+    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // dT=0.035
+    const leftBlock = makeLaneRacer({ index: 2, t: 0.5, physicalY: -0.4 });
+    const rightBlock = makeLaneRacer({ index: 3, t: 0.5, physicalY: 0.4 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true); // no free lane → brake, just like before
+  });
+
+  it('re-engage: past the margin without lateral clearance, the brake comes back', () => {
+    // Free lane exists, but the leader is inside the re-engage margin (dT=0.020 < 0.031):
+    // too close to clear, so the pass is not taken and the brake re-engages with lead time.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.52, physicalY: 0.0 }); // dT=0.020
+    applyRacerBehavior([trailer, leader], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true); // brake re-engaged despite a free side
+  });
+
+  it('feature OFF: same free-lane pair brakes (pre-feature behavior restored)', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 }); // pass window
+    applyRacerBehavior([trailer, leader], { ...lbCfg, lookBeforeBrakeEnabled: false });
+    expect(trailer.avoidanceActive).toBe(true); // gate off → always brakes in the zone
+  });
+
+  it('latch: the committed leader + side is held stable across frames (no zigzag)', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0 });
+    applyRacerBehavior([trailer, leader], lbCfg);
+    expect(trailer.passLeaderIndex).toBe(1); // latched onto this leader
+    const committedSide = trailer.passDir;
+    expect(committedSide).not.toBe(0);
+    // Re-run several frames; the committed side must never flip.
+    for (let i = 0; i < 4; i++) {
+      applyRacerBehavior([trailer, leader], lbCfg);
+      expect(trailer.passDir).toBe(committedSide);
+    }
   });
 });

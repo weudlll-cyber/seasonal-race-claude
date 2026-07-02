@@ -22,6 +22,12 @@ const _brakeMatchLeaderIdxs = new Map();
 // _ssForceMag: racerIndex → strongest forceMag seen this step (most-constraining wins).
 const _ssTarget = new Map();
 const _ssForceMag = new Map();
+// Look-before-brake: per-step pass candidate per trailer.
+// trailer.index → { leaderIndex, dir, targetY, dT }. Populated in the pair loop when a
+// trailer can pass a slower leader through a free lane; consumed in the apply-deltas loop
+// to drive decisive lateral steering and update the pass latch. Nearest leader (lowest dT)
+// wins, mirroring the brake-match most-constraining-leader rule.
+const _passCandidate = new Map();
 
 // Layer 1 spring-constant fallback when config.softSteeringStrength is absent
 // (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
@@ -79,6 +85,13 @@ export function initRacerBehavior(racer) {
   racer.brakeMatchFactor = 1.0;
   racer.brakeMatchFrames = 0;
   racer.brakeReleaseFrames = 0;
+  // Look-before-brake latch (this feature). When the trailer commits to passing a
+  // slower leader through a free lane instead of braking, it locks the leader and the
+  // chosen side so the choice is stable across frames (no left/right zigzag). -1 / 0 =
+  // no pass committed. Written by the apply loop from the per-frame pass candidate,
+  // read one frame later by chooseFreeLaneDir (same one-frame-lag pattern as brakeMatch).
+  racer.passLeaderIndex = -1;
+  racer.passDir = 0;
 }
 
 /**
@@ -190,6 +203,32 @@ function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan,
   return true;
 }
 
+// Look-before-brake side selection with a deterministic hold (latch).
+// Returns the committed free side for the trailer to pass its leader: -1 (inner), +1
+// (outer), or 0 (neither side free → must brake). Uses the SAME isSideFree geometry as
+// the overlap free-lane resolver, so "free now" means the same thing in both places.
+//
+// Latch (req 4): if the trailer already committed to this leader last frame and that side
+// is still free, keep it — this is the short deterministic hold that prevents a frame-to-
+// frame left/right flip-flop. When both sides are free with no prior commitment, the side
+// is chosen by the same deterministic geometric tie-break as §4a soft steering (the side
+// the trailer is already on, pairTieDir at a dead centerline tie) — no new randomness.
+function chooseFreeLaneDir(trailer, leader, active, halfSpan, tHalf, cap) {
+  const leftFree = isSideFree(trailer, leader, active, -1, halfSpan, tHalf, cap);
+  const rightFree = isSideFree(trailer, leader, active, 1, halfSpan, tHalf, cap);
+  // Hold: honor the existing latch while its side remains free.
+  if (trailer.passLeaderIndex === leader.index) {
+    if (trailer.passDir === -1 && leftFree) return -1;
+    if (trailer.passDir === 1 && rightFree) return 1;
+  }
+  if (leftFree && rightFree) {
+    return chooseGeometricDirection(trailer, leader, stablePairBit(trailer, leader));
+  }
+  if (leftFree) return -1;
+  if (rightFree) return 1;
+  return 0;
+}
+
 /**
  * Apply avoidance + drafting forces for one frame. Mutates racer state in-place.
  * Must be called AFTER world positions (r.x, r.y, r.angle) have been computed for
@@ -237,6 +276,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   _brakeMatchLeaderIdxs.clear();
   _ssTarget.clear();
   _ssForceMag.clear();
+  _passCandidate.clear();
   for (const r of active) {
     _ssTarget.set(r.index, 0);
     _ssForceMag.set(r.index, 0);
@@ -289,66 +329,113 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           ? (brakeContactLength / pathLength) * config.speedBrakeTMultiplier
           : 0.014;
       if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
-        speedBrakeSet.add(trailer.index);
-
-        // ── Brake-to-match cap ──────────────────────────────────────────────────
-        // Open tracks: narrower activation zone (brakeMatchActivation*) prevents chain
-        // lock without affecting closed-track pack dynamics.
-        // Closed tracks: wide zone (same thresholds as outer if) — restores the
-        // pre-rebuild baseline that passed all closed combos. Report 14: removing
-        // brake-match from closed tracks caused giraffe + boarder regressions.
-        let inBrakeMatchZone;
-        if (config.isOpen !== false) {
-          const bmMultiplier =
-            config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
-          const dynamicBrakeMatchT =
-            brakeContactLength > 0 && pathLength > 0
-              ? (brakeContactLength / pathLength) * bmMultiplier
-              : 0.014;
-          const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
-          inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
-        } else {
-          inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
-        }
-        if (inBrakeMatchZone) {
-          // Brake-to-match: compute leader-speed cap for this pair.
-          // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
-          const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
-          const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
-          const leaderRawSpeed =
-            (leader.baseSpeed ?? 0) *
-            boostL *
-            (leader.trajectoryMult ?? 1.0) *
-            (leader.areaBonusMult ?? 1.0) *
-            (leader.rubberBandMult ?? 1.0);
-          const trailerDenom =
-            (trailer.baseSpeed ?? 0) *
-            boostT *
-            (trailer.trajectoryMult ?? 1.0) *
-            (trailer.areaBonusMult ?? 1.0) *
-            (trailer.rubberBandMult ?? 1.0);
-          // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
-          // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
-          // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
-          // baseline cap — the 5.8%-tighter corrected cap causes chain-lock for beetle
-          // and boarder on Dirt Oval.
-          const leaderBrake =
-            config.isOpen !== false && leader.avoidanceActive
-              ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
-              : 1.0;
-          const cap = computeBrakeMatchFactor(
-            leaderRawSpeed * leaderBrake,
-            trailerDenom,
-            config.speedMatchMinDifferential ?? 0.005,
-            config.speedMatchSafetyMargin ?? 0.001
-          );
-          // Track the most constraining leader (lowest cap). Tie-break: first-found
-          // (lower pair indices) wins because strict < never updates on equal caps.
-          if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
-            brakeMatchCaps.set(trailer.index, cap);
-            brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+        // ── Look before you brake ─────────────────────────────────────────────
+        // The trailer is same-lane and closing on a slower leader inside the brake
+        // zone. Before committing to the speed brake, check for a genuinely free side
+        // (same isSideFree geometry the overlap resolver uses). If a side is free AND
+        // there is still longitudinal room to clear, commit to that side EARLY and
+        // pass at speed — do NOT brake. Non-penetration is preserved by three coupled
+        // guarantees, all keyed on parity-safe (t, physicalY) fields only:
+        //   (a) isSideFree is re-evaluated every frame — the instant a third racer
+        //       closes the lane, dir → 0 and the exact brake path below re-engages;
+        //   (b) the pass is only allowed while dT > reengage margin (a fraction of the
+        //       body-contact length beyond touching). Once the gap keeps closing
+        //       without the trailer having cleared (still same-lane at that margin),
+        //       this branch stops firing and the brake re-engages with lead time;
+        //   (c) the end-of-function hard-separation pass remains the unconditional
+        //       positional backstop. So the brake is only ever dropped when a lane is
+        //       genuinely free and being taken; overlap can never increase.
+        let takeFreeLane = false;
+        if (config.lookBeforeBrakeEnabled !== false && trackWidth > 0 && pathLength > 0) {
+          const lbHalfSpan = pxToPhysicalY(brakeContactWidth, trackWidth);
+          const lbTHalf = brakeContactLength / pathLength;
+          const lbCap = Math.min(config.maxLateral, 1.0);
+          const reengageT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
+          if (dT > reengageT) {
+            const dir = chooseFreeLaneDir(trailer, leader, active, lbHalfSpan, lbTHalf, lbCap);
+            if (dir !== 0) {
+              takeFreeLane = true;
+              // Record this pass for the trailer. Nearest leader (lowest dT) wins so a
+              // trailer sandwiched between two leaders steers around the closer one.
+              const prev = _passCandidate.get(trailer.index);
+              if (!prev || dT < prev.dT) {
+                const offsetY = lbHalfSpan * (1 + (config.softSteeringClearancePct ?? 0));
+                let targetY = leader.physicalY + dir * offsetY;
+                if (targetY < -lbCap) targetY = -lbCap;
+                else if (targetY > lbCap) targetY = lbCap;
+                _passCandidate.set(trailer.index, {
+                  leaderIndex: leader.index,
+                  dir,
+                  targetY,
+                  dT,
+                });
+              }
+            }
           }
         }
+
+        if (!takeFreeLane) {
+          speedBrakeSet.add(trailer.index);
+
+          // ── Brake-to-match cap ──────────────────────────────────────────────────
+          // Open tracks: narrower activation zone (brakeMatchActivation*) prevents chain
+          // lock without affecting closed-track pack dynamics.
+          // Closed tracks: wide zone (same thresholds as outer if) — restores the
+          // pre-rebuild baseline that passed all closed combos. Report 14: removing
+          // brake-match from closed tracks caused giraffe + boarder regressions.
+          let inBrakeMatchZone;
+          if (config.isOpen !== false) {
+            const bmMultiplier =
+              config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
+            const dynamicBrakeMatchT =
+              brakeContactLength > 0 && pathLength > 0
+                ? (brakeContactLength / pathLength) * bmMultiplier
+                : 0.014;
+            const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
+            inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
+          } else {
+            inBrakeMatchZone = true; // closed: already inside wide-zone if, all pairs qualify
+          }
+          if (inBrakeMatchZone) {
+            // Brake-to-match: compute leader-speed cap for this pair.
+            // All multipliers default to 1.0 if missing (e.g. unit tests or race-plan off).
+            const boostL = leader.draftingBoostActive ? config.draftingBoost : 1.0;
+            const boostT = trailer.draftingBoostActive ? config.draftingBoost : 1.0;
+            const leaderRawSpeed =
+              (leader.baseSpeed ?? 0) *
+              boostL *
+              (leader.trajectoryMult ?? 1.0) *
+              (leader.areaBonusMult ?? 1.0) *
+              (leader.rubberBandMult ?? 1.0);
+            const trailerDenom =
+              (trailer.baseSpeed ?? 0) *
+              boostT *
+              (trailer.trajectoryMult ?? 1.0) *
+              (trailer.areaBonusMult ?? 1.0) *
+              (trailer.rubberBandMult ?? 1.0);
+            // leaderBrake: open tracks only (report 09 bypass fix, report 14 scoping).
+            // On open tracks, cap targets leader's ACTUAL advance (rawSpeed × 0.945 when
+            // avoidanceActive). On closed tracks leaderBrake=1.0 preserves the pre-rebuild
+            // baseline cap — the 5.8%-tighter corrected cap causes chain-lock for beetle
+            // and boarder on Dirt Oval.
+            const leaderBrake =
+              config.isOpen !== false && leader.avoidanceActive
+                ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+                : 1.0;
+            const cap = computeBrakeMatchFactor(
+              leaderRawSpeed * leaderBrake,
+              trailerDenom,
+              config.speedMatchMinDifferential ?? 0.005,
+              config.speedMatchSafetyMargin ?? 0.001
+            );
+            // Track the most constraining leader (lowest cap). Tie-break: first-found
+            // (lower pair indices) wins because strict < never updates on equal caps.
+            if (cap < (brakeMatchCaps.get(trailer.index) ?? 1.0)) {
+              brakeMatchCaps.set(trailer.index, cap);
+              brakeMatchLeaderIdxs.set(trailer.index, leader.index);
+            }
+          }
+        } // end if (!takeFreeLane)
       }
 
       // ── Geometric avoidance gate (report 38/39) ──────────────────────────────
@@ -502,14 +589,34 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   for (const r of active) {
     let delta = 0;
 
-    // ── Layer 1 (Soft Steering): single target spring ───────────────────────
-    // The sole lateral force model. Pulls the racer toward its per-step target:
-    // centerline (0) when no obstacle, beside the most-constraining obstacle
-    // otherwise, or the current position (hold) when both sides are blocked. Runs
-    // before the velocity/damping integration.
-    const target = _ssTarget.get(r.index) ?? r.physicalY;
-    const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
-    delta += (target - r.physicalY) * strength;
+    // ── Look-before-brake pass steering (req 3 + 4) ─────────────────────────
+    // When this racer committed to passing a slower leader through a free lane, drive
+    // it toward the free side with a DECISIVE spring (lookBeforeBrakePassStrength ≫ the
+    // gentle soft-steering constant) so it actually clears sideways before it reaches
+    // longitudinal contact — the "commit" half of the non-penetration coupling. The
+    // pass spring REPLACES the soft-steering spring this frame (it aims at the verified-
+    // free side, which the naive §4a target may not). The latch (passLeaderIndex/passDir)
+    // is written here from the per-step candidate and read one frame later by
+    // chooseFreeLaneDir to hold the chosen side stable (no zigzag). No candidate → clear
+    // the latch and fall back to the normal soft-steering spring.
+    const passCand = _passCandidate.get(r.index);
+    if (passCand) {
+      r.passLeaderIndex = passCand.leaderIndex;
+      r.passDir = passCand.dir;
+      const passStrength = config.lookBeforeBrakePassStrength ?? 0.5;
+      delta += (passCand.targetY - r.physicalY) * passStrength;
+    } else {
+      r.passLeaderIndex = -1;
+      r.passDir = 0;
+      // ── Layer 1 (Soft Steering): single target spring ───────────────────────
+      // The sole lateral force model. Pulls the racer toward its per-step target:
+      // centerline (0) when no obstacle, beside the most-constraining obstacle
+      // otherwise, or the current position (hold) when both sides are blocked. Runs
+      // before the velocity/damping integration.
+      const target = _ssTarget.get(r.index) ?? r.physicalY;
+      const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
+      delta += (target - r.physicalY) * strength;
+    }
 
     // Accumulate lateral forces into velocity, then damp
     r.physicalYVelocity = ((r.physicalYVelocity ?? 0) + delta) * damping;

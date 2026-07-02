@@ -59,6 +59,12 @@ const cfg = {
   // softSteeringStrength pinned 0: the soft-steering spring is the unconditional lateral
   // model now; neutralizing it isolates the brake-to-match state logic under test.
   softSteeringStrength: 0,
+  // lookBeforeBrakeEnabled pinned OFF: these 2- and 3-racer pairs always have a free
+  // lane, so the look-before-brake gate would suppress the very brake this suite tests.
+  // Disabling it keeps the brake-to-match state machine (hold, debounce, anti-trap, cap
+  // computation) under test — that machinery is unchanged by the look-before-brake gate,
+  // which only decides WHETHER to brake, not how braking speed-matches once engaged.
+  lookBeforeBrakeEnabled: false,
 };
 
 // Config variant for anti-trap tests where we need the pair to stay in the brake zone
