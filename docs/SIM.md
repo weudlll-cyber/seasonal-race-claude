@@ -100,6 +100,20 @@ With `--seed=N` (N > 0), race `i` uses seed `(N−1)×N_RACES + i + 1`. This mak
 
 `--seed=0` (the default) uses `Math.random()` for exploration. Never use seed 0 for parameter comparisons.
 
+> **Determinism fix (2026-07, commit `3f9a055`).** Before this fix, `--seed` did NOT
+> fully control a run: the start-row shuffle (`rowLayout.js` → `RandomHelper.shuffle`)
+> used global `Math.random()` and ran *before* the per-race seeded scope, so two runs
+> with the same `--seed` produced different start-row assignments. The fix makes
+> `shuffle(array, rng = Math.random)` take an optional RNG (default `Math.random`, so the
+> **browser game is byte-for-byte unchanged**); the sim now seeds the combo row-layout RNG
+> before the race loop. `--seed=N` now controls the *whole* batch. Verify with a same-seed
+> double-run: two runs at the same seed must be **bit-identical** (identical SHA256).
+>
+> **Gate methodology.** A hard "band-reach ≥70% per track on ONE 50-race run" gate is a
+> coin-flip for tracks whose band sits near 70% (mid-field B3 does on several tracks:
+> seed variance ≈ ±1.5–2.5pp). Use **pooled multi-seed data (~300 races/track, e.g. 6×50)**
+> for pass/fail decisions; paired HEAD-vs-baseline per seed to isolate a change's effect.
+
 ### Race Plan mode
 
 ```sh
