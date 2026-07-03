@@ -66,6 +66,17 @@ export const OVERLAY_TEMPLATES = {
     'Watch out — {newLeader} has taken over from {previousLeader}!',
     '{newLeader} pushes past {previousLeader} — can they hold it?',
   ],
+  // 15a-predictive winner text — shown on the persistent overlay channel when the winner crosses
+  // during a photo-finish. Picked deterministically per race via selectWinnerText (racePlanSeed),
+  // NOT the Math.random() selectors above.
+  PHOTO_FINISH_WINNER: [
+    '{name} takes it — by a nose!',
+    'Photo finish — {name} wins it!',
+    '{name} steals it at the line!',
+    'By inches… {name}!',
+    '{name} edges ahead — what a finish!',
+    'Too close to call… {name} wins!',
+  ],
 };
 
 // Returns true when every {variable} placeholder in `template` has a
@@ -111,6 +122,32 @@ export function selectOverlayText(stateKey, variables = {}, lastIndexByState = {
   const candidates = usable.length > 1 ? usable.filter(({ i }) => i !== lastIdx) : usable;
 
   const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  return { text: resolveTemplate(pick.tmpl, variables), index: pick.i };
+}
+
+/**
+ * Deterministic template pick for `stateKey`, seeded by the race seed so a given race always
+ * shows the same line. Separate from the Math.random() selectors above (those are intentionally
+ * unchanged). Used for the photo-finish winner text.
+ *
+ * @param {string} stateKey - OVERLAY_TEMPLATES key (e.g. 'PHOTO_FINISH_WINNER')
+ * @param {Object} variables - Variable bindings, e.g. { name: 'Max' }
+ * @param {number} seed - deterministic seed (e.g. racePlanSeed)
+ * @returns {{ text: string, index: number } | null}
+ */
+export function selectWinnerText(stateKey, variables = {}, seed = 0) {
+  const pool = OVERLAY_TEMPLATES[stateKey];
+  if (!pool || pool.length === 0) return null;
+  const usable = pool
+    .map((tmpl, i) => ({ tmpl, i }))
+    .filter(({ tmpl }) => hasAllVars(tmpl, variables));
+  if (usable.length === 0) return null;
+  // Small integer hash of the seed → deterministic index in [0, usable.length).
+  let x = (seed | 0) ^ 0x9e3779b9;
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  x = (x ^ (x >>> 16)) >>> 0;
+  const pick = usable[x % usable.length];
   return { text: resolveTemplate(pick.tmpl, variables), index: pick.i };
 }
 

@@ -95,6 +95,7 @@ import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
 import {
   selectOverlayText,
   selectOverlayTextNoRepeat,
+  selectWinnerText,
 } from '../../modules/stateOverlayTemplates.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
@@ -216,6 +217,11 @@ export default function RaceScreen() {
   // ── State-overlay narrative text ─────────────────────────────────────────
   const [overlayText, setOverlayText] = useState(null);
   const overlayTimerRef = useRef(null);
+  // 15a-predictive: persistent winner-text channel. Separate from overlayText — NOT touched by the
+  // [camState, phase] state-overlay effect and NOT auto-cleared by stateOverlayDurationMs, so it
+  // survives the PHOTO_FINISH→FINISH_OVERVIEW change and holds until race end / new race.
+  const [winnerOverlayText, setWinnerOverlayText] = useState(null);
+  const winnerTextFiredRef = useRef(false); // once-latch: winner text fires exactly once per race
   // Per-race no-repeat tracking: Set<number> of used template indices per state key.
   // Reset at race start via phase transition. OVERVIEW/COMEBACK use last-index anti-repeat;
   // BATTLE_ZOOM uses the full Set to prevent any repeat within one race.
@@ -310,6 +316,15 @@ export default function RaceScreen() {
 
     return () => clearTimeout(overlayTimerRef.current);
   }, [camState, phase]);
+
+  // 15a-predictive: the persistent winner text survives FINISH_OVERVIEW (still RACING) and is
+  // cleared only when the race phase ends (leaderboard / navigation) — never by the effect above.
+  useEffect(() => {
+    if (phase !== PHASE.RACING) {
+      setWinnerOverlayText(null);
+      winnerTextFiredRef.current = false;
+    }
+  }, [phase]);
 
   // ── Fullscreen listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -540,6 +555,9 @@ export default function RaceScreen() {
     overlayUsedBattleIndicesRef.current.clear();
     overlayUsedComebackIndicesRef.current.clear();
     overlayUsedLeadChangeIndicesRef.current.clear();
+    // 15a-predictive: reset the persistent winner-text channel for the new race.
+    winnerTextFiredRef.current = false;
+    setWinnerOverlayText(null);
 
     g.current = {
       phase: PHASE.COUNTDOWN,
@@ -552,6 +570,7 @@ export default function RaceScreen() {
       slowmoFadeProgress: 0,
       slowmoActive: false,
       slowmoStartWallTs: 0,
+      slowmoIsPhotoFinish: false, // 15a-predictive: current slowmo was triggered by PHOTO_FINISH (releases without min-duration)
       slowmoTs: null,
       focusFadeProgress: 0,
       finishedCount: 0,
@@ -844,9 +863,17 @@ export default function RaceScreen() {
           if (isSlowmoState && !st.slowmoActive) {
             st.slowmoActive = true;
             st.slowmoStartWallTs = ts;
+            st.slowmoIsPhotoFinish = isPhotoFinish;
           }
-          if (!isSlowmoState && st.slowmoActive && ts - st.slowmoStartWallTs >= smMinDurMs) {
-            st.slowmoActive = false;
+          if (!isSlowmoState && st.slowmoActive) {
+            // 15a-predictive: a PHOTO_FINISH slowmo releases IMMEDIATELY when the shot ends
+            // (state left PHOTO_FINISH on the 2nd crossing) so normal speed returns for the
+            // zoom-out. BATTLE slowmo keeps its min-duration guard unchanged.
+            const releaseOk = st.slowmoIsPhotoFinish || ts - st.slowmoStartWallTs >= smMinDurMs;
+            if (releaseOk) {
+              st.slowmoActive = false;
+              st.slowmoIsPhotoFinish = false;
+            }
           }
           const fadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
           st.slowmoFadeProgress = st.slowmoActive
@@ -1370,6 +1397,19 @@ export default function RaceScreen() {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
       }
+      // 15a-predictive winner text: fire ONCE the winner has crossed during the photo-finish shot.
+      // Gating on hudState==='PHOTO_FINISH' scopes it to the photo-finish only; finishedCount>=1
+      // covers 0→1 AND a 0→2 same-frame jump; the ref latch guarantees a single fire. Deterministic
+      // per race via racePlanSeed. Set on the persistent channel (no auto-clear).
+      if (newHudState === 'PHOTO_FINISH' && !winnerTextFiredRef.current && st.finishedCount >= 1) {
+        winnerTextFiredRef.current = true;
+        const w = raceState.winner;
+        const name = w?.name ?? w?.id ?? null;
+        if (name) {
+          const res = selectWinnerText('PHOTO_FINISH_WINNER', { name }, racePlanSeed);
+          if (res) setWinnerOverlayText(res.text);
+        }
+      }
       // Perf probe: record camera state + zoom alongside the inter-rAF gap captured by recordFrame.
       recordFrameCamera(camDirRef.current.state, cam.zoom);
       // Perf-log bracket 4: after camera director update.
@@ -1628,7 +1668,8 @@ export default function RaceScreen() {
             style={{ position: 'relative' }}
           />
           <CameraStateHUD camState={camState} visible={showCameraStateHud} />
-          <StateOverlay text={overlayText} />
+          {/* Winner text (persistent) takes precedence over the transient state overlay — one banner. */}
+          <StateOverlay text={winnerOverlayText ?? overlayText} />
           <CameraDiagnosticsHUD
             cameraRef={camDirRef}
             diagRef={diagDataRef}

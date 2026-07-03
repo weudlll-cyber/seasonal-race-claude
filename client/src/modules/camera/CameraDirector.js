@@ -153,6 +153,9 @@ export class CameraDirector {
     this.stateEnteredAt = 0;
     this._inFinishDrama = false;
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
+    this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
+    this._photoFinishEnterPending = false; // 15a-predictive: set by update() when the gate decides to enter; consumed by _pickNextState
+    this._prevFinishedCount = 0; // 15a-predictive: previous-frame finishedCount, for event-driven end + winner-text edge (director side)
     this._inFinishMode = false;
     this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
@@ -432,6 +435,7 @@ export class CameraDirector {
     this._photoFinishEnabled = t.photoFinishEnabled;
     this._photoFinishCloseThresholdT = t.photoFinishCloseThresholdT;
     this._photoFinishDurationMs = t.photoFinishDurationMs;
+    this._photoFinishLeadProgress = t.photoFinishLeadProgress;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -664,6 +668,31 @@ export class CameraDirector {
     // state (COMEBACK, BATTLE, etc.) can block the drama pulse from starting.
     const forceFinishDrama =
       raceState.finishedCount > 0 && !this._inFinishMode && this._finishMomentExpiry === null;
+    // 15a-predictive: evaluate the one-shot pre-line gate ONCE, here in update() where the bypass
+    // flags live, so the latch is set independent of any transition. Same idiom as
+    // forceFinishDrama/finishDramaExpired (all OR-ed into the holdGate check below). The holdGate is
+    // bypassed ONLY on entry (top-2 close) — a not-close result sets the latch but leaves
+    // minStateHold behaviour untouched. The actual PHOTO_FINISH transition is produced by
+    // _pickNextState via the _photoFinishEnterPending flag.
+    let photoFinishGateReady = false;
+    if (
+      !this._photoFinishGateDone &&
+      this._photoFinishEnabled &&
+      raceState.finishedCount === 0 &&
+      this._diagLeaderProgress >= this._photoFinishLeadProgress
+    ) {
+      this._photoFinishGateDone = true; // single check — never re-evaluated
+      const ord = [...racers].sort((a, b) => b.t - a.t);
+      if (
+        ord.length >= 2 &&
+        shortestArcDeltaT(ord[0].t, ord[1].t) <= this._photoFinishCloseThresholdT
+      ) {
+        this._photoFinishEnterPending = true; // consumed by _pickNextState to enter PHOTO_FINISH
+        photoFinishGateReady = true; // bypass holdGate so the entry is frame-exact
+      }
+    }
+    const photoFinishEndReady =
+      this._inPhotoFinish && (raceState.finishedCount >= 2 || ts >= this._finishMomentExpiry);
     const prevState = this.state;
     let _diagTransitioned = false;
     // Early BATTLE exit: leave when the original group disperses after battleMinDurationMs.
@@ -693,7 +722,14 @@ export class CameraDirector {
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
     // until a different state is detected — no stateCap blocker.
     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
-    if (!_diagTransitioned && (stateAge >= holdGate || finishDramaExpired || forceFinishDrama)) {
+    if (
+      !_diagTransitioned &&
+      (stateAge >= holdGate ||
+        finishDramaExpired ||
+        forceFinishDrama ||
+        photoFinishGateReady ||
+        photoFinishEndReady)
+    ) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
       // when battleMaxDurationMs expires while hasBattle is still true.
       if (this.state === CAM_STATE.BATTLE_ZOOM) {
@@ -927,7 +963,29 @@ export class CameraDirector {
     const hasBattle = this._isPulk(racers);
     const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
 
-    // Priority 1: Finish override — drama pulse on first finish, then FINISH_OVERVIEW mode
+    // Priority 0 — 15a-predictive photo-finish lifecycle guard. Once entered (either by the
+    // pre-line gate below OR the first-crossing fallback), the director OWNS the state until the
+    // EVENT-DRIVEN end: 2nd crossing (finishedCount >= 2 — covers 1→2 and 0→2 same-frame) or the
+    // safety cap (photoFinishDurationMs). Hoisted ABOVE the finishedCount>0 block so it also
+    // governs a pre-line entry while finishedCount is still 0. Hands off to FINISH_OVERVIEW
+    // exactly as the drama does. The winner-text edge is detected in RaceScreen.
+    if (this._inPhotoFinish) {
+      if (raceState.finishedCount >= 2 || ts >= this._finishMomentExpiry) {
+        this._inPhotoFinish = false;
+        this._inFinishMode = true;
+        this._finishModeStartTs = ts;
+        return {
+          nextState: CAM_STATE.OVERVIEW,
+          reason: 'photo-finish: end (2nd crossing / safety cap) → FINISH_OVERVIEW',
+          data: {},
+        };
+      }
+      return null; // hold the photo-finish shot — no other transition may fire
+    }
+
+    // Priority 1: Finish override — drama pulse on first finish, then FINISH_OVERVIEW mode.
+    // Reached only when NOT already in a photo-finish (guard above), so the first-crossing
+    // photo-finish here is a pure fallback (fires only if the pre-line gate did not enter).
     if (raceState.finishedCount > 0) {
       if (this._inFinishMode) return null; // finishMode is absolute — no further transitions allowed
       if (this._finishMomentExpiry === null) {
@@ -970,8 +1028,24 @@ export class CameraDirector {
         return null; // drama still active, no state change
       }
     }
+
+    // Priority 1.5 — one-shot pre-line photo-finish ENTRY. The gate decision (latch + top-2
+    // closeness) is made once in update() (where the bypass flags live); here we only consume the
+    // pending-entry flag so the transition is produced in the normal place. When it does NOT fire,
+    // execution falls through to the normal priority chain with no retry and no minStateHold churn.
+    if (this._photoFinishEnterPending) {
+      this._photoFinishEnterPending = false;
+      this._finishMomentExpiry = ts + this._photoFinishDurationMs; // SAFETY CAP — event-driven end normally fires first
+      this._inPhotoFinish = true;
+      return {
+        nextState: CAM_STATE.PHOTO_FINISH,
+        reason: 'photo-finish: pre-line gate (top-2 close)',
+        data: {},
+      };
+    }
+
     // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
-    else if (raceState.raceElapsed < START_PHASE_DURATION) {
+    if (raceState.raceElapsed < START_PHASE_DURATION) {
       return {
         nextState: CAM_STATE.OVERVIEW,
         reason: 'start-phase: raceElapsed < 3000ms',

@@ -211,8 +211,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   // photoFinishEnabled=false reproduces the classic single-winner finish exactly.
   photoFinishEnabled: true, // master switch for the photo-finish group shot
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
-  photoFinishDurationMs: 2000, // ms the photo-finish shot holds before FINISH_OVERVIEW (parallels finishDramaDurationMs)
+  photoFinishDurationMs: 2000, // ms the photo-finish shot holds as a SAFETY CAP (event-driven end normally fires on the 2nd crossing)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
+  photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
   countdownDurationMs: 4000, // matches the default race countdown duration

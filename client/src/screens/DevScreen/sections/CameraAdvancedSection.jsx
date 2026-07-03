@@ -1142,6 +1142,20 @@ function CameraAdvancedSection() {
         </label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
+            label="Lead-progress gate"
+            testId="photo-finish-lead-progress"
+            min={0.85}
+            max={0.999}
+            step={0.001}
+            value={config.photoFinishLeadProgress ?? 0.97}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 0.85 && v <= 0.999) set('photoFinishLeadProgress', v);
+            }}
+            display={(config.photoFinishLeadProgress ?? 0.97).toFixed(3)}
+            tip="Predictive gate: leader progress (fraction of the finish, 0–1) at which the one-shot close-check fires BEFORE the line. Higher = later/closer to the line. Default 0.97."
+          />
+          <SliderRow
             label="Closeness threshold (t)"
             testId="photo-finish-threshold"
             min={0.005}
