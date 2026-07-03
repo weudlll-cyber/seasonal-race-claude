@@ -9,6 +9,8 @@
 //              time. No import from CameraDirector.js — avoids circular dep.
 // ============================================================
 
+import { shortestArcDeltaT } from '../../utils/mathUtils.js';
+
 export const diagMixin = {
   // ── Lead-change diagnostics ───────────────────────────────────────────────
 
@@ -123,8 +125,8 @@ export const diagMixin = {
       ? this._findByIndex(racers, this._battleLockedRacerIndex, this._battleLockedRacer)
       : this._battleLockedRacer;
 
-    // Pairwise spatial/temporal distances for the entry group (live positions).
-    const groupPairwiseSpatial = [];
+    // Pairwise lap-normalized arc distances for the entry group (live positions). 15b: arc only,
+    // scale-independent — no world-px distance in the diag.
     const groupPairwiseTemporal = [];
     for (let a = 0; a < groupRacers.length; a++) {
       for (let b = a + 1; b < groupRacers.length; b++) {
@@ -133,23 +135,21 @@ export const diagMixin = {
         const nameA = ra?.name ?? ra?.id ?? '?';
         const nameB = rb?.name ?? rb?.id ?? '?';
         if (ra && rb) {
-          const dist = Math.round(Math.sqrt((ra.x - rb.x) ** 2 + (ra.y - rb.y) ** 2));
-          const dt = +Math.abs(ra.t - rb.t).toFixed(4);
-          groupPairwiseSpatial.push({ a: nameA, b: nameB, dist });
+          const dt = +shortestArcDeltaT(ra.t, rb.t).toFixed(4);
           groupPairwiseTemporal.push({ a: nameA, b: nameB, dt });
         }
       }
     }
 
-    // Q1: isolation check for DiagHUD display
+    // Q1: isolation check for DiagHUD display (arc)
     let isGroupIsolated = true;
-    if (racers && groupRacers.length > 0 && this._battleIsolationThresholdPx > 0) {
-      const isoThr2 = this._battleIsolationThresholdPx * this._battleIsolationThresholdPx;
+    if (racers && groupRacers.length > 0 && this._battleIsolationThresholdT > 0) {
+      const isoThrT = this._battleIsolationThresholdT;
       const groupSet = new Set(groupRacers.map((r) => r));
       for (const ro of racers) {
         if (groupSet.has(ro)) continue;
         for (const gm of groupRacers) {
-          if ((gm.x - ro.x) ** 2 + (gm.y - ro.y) ** 2 < isoThr2) {
+          if (shortestArcDeltaT(gm.t, ro.t) < isoThrT) {
             isGroupIsolated = false;
             break;
           }
@@ -168,11 +168,9 @@ export const diagMixin = {
       currentGroupRacers: currentGroup ?? [],
       isPulkNow: currentGroup !== null,
       isGroupIsolated,
-      isolationThresholdPx: this._battleIsolationThresholdPx,
-      groupPairwiseSpatial,
+      isolationThresholdT: this._battleIsolationThresholdT,
       groupPairwiseTemporal,
-      spatialThreshold: this._battlePulkThresholdPx,
-      temporalThreshold: this._battlePulkThresholdT,
+      closenessThresholdT: this._battlePulkThresholdT,
     };
   },
 

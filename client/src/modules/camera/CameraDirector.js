@@ -12,11 +12,7 @@ import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
-import {
-  computeTimingFromConfig,
-  BATTLE_PULK_THRESHOLD_PX,
-  BATTLE_PULK_THRESHOLD_T,
-} from './cameraTimingComputation.js';
+import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -37,7 +33,6 @@ const _MAX_STATE_DURATION = 8000; // fallback when no config provided
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
 const _ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
 // Single source in cameraTimingComputation.js; aliased here with underscore convention.
-const _BATTLE_PULK_THRESHOLD_PX = BATTLE_PULK_THRESHOLD_PX;
 const _BATTLE_PULK_THRESHOLD_T = BATTLE_PULK_THRESHOLD_T;
 const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
 const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
@@ -369,10 +364,9 @@ export class CameraDirector {
    */
   _computeTimingConfig(config) {
     const t = computeTimingFromConfig(config);
-    this._battlePulkThresholdPx = t.battlePulkThresholdPx;
     this._battlePulkThresholdT = t.battlePulkThresholdT;
     this._battleMinDurationMs = t.battleMinDurationMs;
-    this._battleIsolationThresholdPx = t.battleIsolationThresholdPx;
+    this._battleIsolationThresholdT = t.battleIsolationThresholdT;
     this._battleMaxGroupSize = t.battleMaxGroupSize;
     this._battleMaxGroupRankSpan = t.battleMaxGroupRankSpan;
     this._battleMinTopN = t.battleMinTopN;
@@ -957,7 +951,7 @@ export class CameraDirector {
     const ordered = [...racers].sort((a, b) => b.t - a.t);
     const leader = ordered[0];
     const leaderProgress = leader && raceState.finishT > 0 ? leader.t / raceState.finishT : 0;
-    // Pulk condition: ≥3 of top-10 within battlePulkThresholdPx of each other.
+    // Pulk condition: ≥3 of top-10 within battlePulkThresholdT (lap fraction) of each other.
     // Hysteresis is provided by battleMinDurationMs (state stays active once entered).
     const hasBattle = this._isPulk(racers);
     const battleCooledDown = ts - this._lastBattleExitTs >= this._battleCooldownMs;
@@ -1087,7 +1081,7 @@ export class CameraDirector {
         candidates.push({
           state: CAM_STATE.BATTLE_ZOOM,
           weight: this._battleWeight,
-          reason: `battle: pulk (threshold=${this._battlePulkThresholdPx}px)`,
+          reason: `battle: pulk (arc<=${this._battlePulkThresholdT})`,
         });
       }
 
@@ -1416,8 +1410,9 @@ export class CameraDirector {
 
   /**
    * Finds the first group of ≥3 racers that simultaneously satisfy all BATTLE conditions:
-   *   1. Spatial    — all pairwise euclidean distances < battlePulkThresholdPx
-   *   2. Temporal   — all pairwise |t_i − t_j| < battlePulkThresholdT (similar projected ETA)
+   *   1. Closeness  — all pairwise lap-normalized arc distances shortestArcDeltaT ≤ battlePulkThresholdT
+   *                   (scale-independent; replaced the world-px test in 15b)
+   *   2. Isolation  — no non-member within battleIsolationThresholdT (lap fraction) of any member
    *   3. Positional — frontmost group racer at rank 3 or worse (P1/P2 are LEADER territory);
    *                   seed-triple rank span ≤ 3; frontmost rank ≤ battleMinTopN
    *   4. Expansion  — greedy expansion capped at battleMaxGroupRankSpan total rank span
@@ -1431,9 +1426,11 @@ export class CameraDirector {
     const sorted = [...racers].sort((a, b) => b.t - a.t);
     const n = sorted.length;
     if (n < 3) return null;
-    const thr2 = this._battlePulkThresholdPx * this._battlePulkThresholdPx;
+    // 15b: closeness is the lap-normalized arc distance only (scale-independent — one knob
+    // means the same on-track closeness on every track, unlike world-px which varied 1.5–4.9%
+    // of a lap across the 3072–6144px worlds and rejected every real cluster).
     const tThr = this._battlePulkThresholdT;
-    const isoThr2 = this._battleIsolationThresholdPx * this._battleIsolationThresholdPx;
+    const isoThrT = this._battleIsolationThresholdT;
     const maxSize = this._battleMaxGroupSize ?? 6;
     const maxRankSpan = this._battleMaxGroupRankSpan ?? 5;
     // i >= 2: frontmost battle racer must be at rank 3 or worse (P1/P2 are LEADER territory).
@@ -1445,18 +1442,14 @@ export class CameraDirector {
           const ri = sorted[i],
             rj = sorted[j],
             rk = sorted[k];
-          // Temporal condition — lap-normalized shortest arc (raw t accumulates across
-          // laps; co-located racers across the start/finish seam must read as near).
+          // Closeness condition — lap-normalized shortest arc (raw t accumulates across laps;
+          // co-located racers across the start/finish seam must read as near). Sole spatial gate.
           if (
             shortestArcDeltaT(ri.t, rj.t) > tThr ||
             shortestArcDeltaT(ri.t, rk.t) > tThr ||
             shortestArcDeltaT(rj.t, rk.t) > tThr
           )
             continue;
-          // Spatial condition
-          if ((ri.x - rj.x) ** 2 + (ri.y - rj.y) ** 2 >= thr2) continue;
-          if ((ri.x - rk.x) ** 2 + (ri.y - rk.y) ** 2 >= thr2) continue;
-          if ((rj.x - rk.x) ** 2 + (rj.y - rk.y) ** 2 >= thr2) continue;
           // Q2: greedy expansion — add adjacent-rank racers (index >= 2, not P1/P2) up to maxSize.
           // Track rank span: reject candidates that would push (maxIdx - minIdx) > maxRankSpan.
           const group = [ri, rj, rk];
@@ -1472,10 +1465,7 @@ export class CameraDirector {
             if (candMax - candMin > maxRankSpan) continue;
             let fits = true;
             for (const gm of group) {
-              if (
-                shortestArcDeltaT(gm.t, re.t) > tThr ||
-                (gm.x - re.x) ** 2 + (gm.y - re.y) ** 2 >= thr2
-              ) {
+              if (shortestArcDeltaT(gm.t, re.t) > tThr) {
                 fits = false;
                 break;
               }
@@ -1487,14 +1477,15 @@ export class CameraDirector {
               maxGroupIdx = candMax;
             }
           }
-          // Q1: isolation check — skip when threshold is 0 (disabled)
-          if (this._battleIsolationThresholdPx > 0) {
+          // Q1: isolation check (arc) — reject when any non-member is within isoThrT (lap
+          // fraction) of any member. Skip when threshold is 0 (disabled).
+          if (isoThrT > 0) {
             let isolated = true;
             outer: for (let o = 0; o < n; o++) {
               if (groupSet.has(o)) continue;
               const ro = sorted[o];
               for (const gm of group) {
-                if ((gm.x - ro.x) ** 2 + (gm.y - ro.y) ** 2 < isoThr2) {
+                if (shortestArcDeltaT(gm.t, ro.t) < isoThrT) {
                   isolated = false;
                   break outer;
                 }
@@ -1531,9 +1522,10 @@ export class CameraDirector {
   }
 
   /**
-   * Q3 exit condition: returns true while the original locked battle group is still spatially
-   * cohesive (all pairwise distances < battlePulkThresholdPx). Returns true for empty groups
-   * so tests that set state directly never get spurious early exits.
+   * Q3 exit condition: returns true while the original locked battle group is still cohesive
+   * (all pairwise arc distances <= battlePulkThresholdT — 15b: same scale-independent measure
+   * as entry, so BATTLE enters AND exits on arc, no world-px). Returns true for empty groups so
+   * tests that set state directly never get spurious early exits.
    * @param {Array} racers
    * @returns {boolean}
    */
@@ -1546,12 +1538,12 @@ export class CameraDirector {
       return this._isPulk(racers); // no stored group → fall back to any-pulk check (backward compat)
     const group = this._findGroupRacers(racers);
     if (group.length < this._battleGroupRacerIndices.length) return false;
-    const thr2 = this._battlePulkThresholdPx * this._battlePulkThresholdPx;
+    const tThr = this._battlePulkThresholdT;
     for (let a = 0; a < group.length; a++) {
       for (let b = a + 1; b < group.length; b++) {
         const ra = group[a],
           rb = group[b];
-        if ((ra.x - rb.x) ** 2 + (ra.y - rb.y) ** 2 >= thr2) return false;
+        if (shortestArcDeltaT(ra.t, rb.t) > tThr) return false;
       }
     }
     return true;

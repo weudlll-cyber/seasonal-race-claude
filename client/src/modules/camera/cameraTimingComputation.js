@@ -11,8 +11,7 @@
 
 // Fallback constants — single source of truth; imported by CameraDirector.js.
 const MAX_STATE_DURATION = 8000;
-export const BATTLE_PULK_THRESHOLD_PX = 200;
-export const BATTLE_PULK_THRESHOLD_T = 0.12;
+export const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
 const BATTLE_COOLDOWN_MS = 8000;
@@ -55,10 +54,9 @@ function tcToLerpFactor(tc) {
  */
 export function computeTimingFromConfig(config) {
   // ── Global tunables ───────────────────────────────────────────────────────
-  const battlePulkThresholdPx = config?.battlePulkThresholdPx ?? BATTLE_PULK_THRESHOLD_PX;
   const battlePulkThresholdT = config?.battlePulkThresholdT ?? BATTLE_PULK_THRESHOLD_T;
   const battleMinDurationMs = config?.battleMinDurationMs ?? BATTLE_MIN_DURATION_MS;
-  const battleIsolationThresholdPx = config?.battleIsolationThresholdPx ?? 0;
+  const battleIsolationThresholdT = config?.battleIsolationThresholdT ?? 0;
   const battleMaxGroupSize = Math.max(3, Math.min(6, config?.battleMaxGroupSize ?? 6));
   const battleMaxGroupRankSpan = config?.battleMaxGroupRankSpan ?? 5;
   const battleMinTopN = config?.battleMinTopN ?? 10;
@@ -283,10 +281,9 @@ export function computeTimingFromConfig(config) {
   const overviewStartDelay = config?.overviewStartDelay ?? 15;
 
   return {
-    battlePulkThresholdPx,
     battlePulkThresholdT,
     battleMinDurationMs,
-    battleIsolationThresholdPx,
+    battleIsolationThresholdT,
     battleMaxGroupSize,
     battleMaxGroupRankSpan,
     battleMinTopN,

@@ -1008,10 +1008,10 @@ describe('CameraDirector — spritePctOfCanvas config (legacy v2 path)', () => {
 // ── CameraDirector — Block X: battle trigger tunables ────────────────────────
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battlePulkThresholdPx=200, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
+  it('no config: fallback _maxStateDuration=8000, _battlePulkThresholdT=0.05, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
     const cd = new CameraDirector();
     expect(cd._maxStateDuration).toBe(8000);
-    expect(cd._battlePulkThresholdPx).toBe(200);
+    expect(cd._battlePulkThresholdT).toBe(0.05);
     expect(cd._battleMinDurationMs).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.85);
     expect(cd._postStartHoldMs).toBe(7000);
@@ -1030,13 +1030,13 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 9000; // overview cooldown not expired
-    // 3 racers within 200px at ranks 3/4/5 → _isPulk=true → hasBattle=true → P4 fires
+    // 3 racers arc-close at ranks 3/4/5 → _isPulk=true → hasBattle=true → P4 fires
     const racers = [
       { t: 0.7, x: 9000, y: 300, finished: false }, // P1 — leader
       { t: 0.65, x: 8500, y: 300, finished: false }, // P2 — leader
       { t: 0.5, x: 500, y: 300, finished: false }, // P3 — battle group frontmost
-      { t: 0.46, x: 460, y: 300, finished: false }, // P4 — 40px from P3
-      { t: 0.42, x: 420, y: 300, finished: false }, // P5 — 80px from P3, 40px from P4
+      { t: 0.48, x: 460, y: 300, finished: false }, // P4 — arc 0.02 from P3
+      { t: 0.46, x: 420, y: 300, finished: false }, // P5 — arc 0.04 from P3, 0.02 from P4
       { t: 0.2, x: 200, y: 300, finished: false },
     ];
     cd.update(
@@ -1084,8 +1084,8 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       { t: 0.92, x: 9000, y: 300, finished: false }, // P1 — leader (92% < 0.95 → no endgame)
       { t: 0.91, x: 8500, y: 300, finished: false }, // P2 — leader
       { t: 0.9, x: 500, y: 300, finished: false }, // P3 — battle group frontmost
-      { t: 0.86, x: 460, y: 300, finished: false }, // P4 — 40px from P3
-      { t: 0.82, x: 420, y: 300, finished: false }, // P5 — 80px from P3, 40px from P4
+      { t: 0.88, x: 460, y: 300, finished: false }, // P4 — arc 0.02 from P3
+      { t: 0.86, x: 420, y: 300, finished: false }, // P5 — arc 0.04 from P3, 0.02 from P4
       { t: 0.5, x: 200, y: 300, finished: false },
     ];
     cd.update(
@@ -1103,12 +1103,12 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     expect(cd._maxStateDuration).toBe(8000); // pctConfig.maxStateDuration = 8000
     cd.updateConfig({
       ...pctConfig,
-      battlePulkThresholdPx: 150,
+      battlePulkThresholdT: 0.08,
       battleMinDurationMs: 1500,
       maxStateDuration: 3000,
       endgameThreshold: 0.9,
     });
-    expect(cd._battlePulkThresholdPx).toBe(150);
+    expect(cd._battlePulkThresholdT).toBe(0.08);
     expect(cd._battleMinDurationMs).toBe(1500);
     expect(cd._maxStateDuration).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.9);
@@ -3237,23 +3237,24 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
       { x: 9000, y: 300, t: 0.7 }, // P1 — leader
       { x: 8500, y: 300, t: 0.65 }, // P2 — leader
       { x: 500, y: 300, t: 0.5 }, // P3 — close to P4
-      { x: 510, y: 300, t: 0.49 }, // P4 — 10px from P3
-      { x: 900, y: 300, t: 0.48 }, // P5 — 400px from P3 — far
+      { x: 510, y: 300, t: 0.49 }, // P4 — arc 0.01 from P3
+      { x: 900, y: 300, t: 0.4 }, // P5 — arc 0.10 from P3 — far (> default 0.05)
     ];
     expect(cd._isPulk(racers)).toBe(false);
   });
 
-  it('_isPulk: custom threshold via config (battle group at ranks 3/4/5)', () => {
-    // With threshold=50px: P3–P4 are 10px apart, P5 is 80px away → no pulk.
-    // With threshold=100px: P5 is 80px < 100px → pulk of 3.
-    const tight = new CameraDirector(1280, 720, false, { battlePulkThresholdPx: 50 });
-    const wide = new CameraDirector(1280, 720, false, { battlePulkThresholdPx: 100 });
+  it('_isPulk: custom arc threshold via config (battle group at ranks 3/4/5)', () => {
+    // Arc gaps: P3–P4 = 0.01, P3–P5 = 0.04, P4–P5 = 0.03.
+    // With threshold=0.02: P3–P5 (0.04) > 0.02 → no triple → no pulk.
+    // With threshold=0.05: all pairwise ≤ 0.04 < 0.05 → pulk of 3.
+    const tight = new CameraDirector(1280, 720, false, { battlePulkThresholdT: 0.02 });
+    const wide = new CameraDirector(1280, 720, false, { battlePulkThresholdT: 0.05 });
     const racers = [
       { x: 9000, y: 300, t: 0.7 }, // P1 — leader
       { x: 8500, y: 300, t: 0.65 }, // P2 — leader
       { x: 500, y: 300, t: 0.5 }, // P3
-      { x: 510, y: 300, t: 0.49 }, // P4 — 10px from P3
-      { x: 580, y: 300, t: 0.48 }, // P5 — 80px from P3
+      { x: 510, y: 300, t: 0.49 }, // P4 — arc 0.01 from P3
+      { x: 580, y: 300, t: 0.46 }, // P5 — arc 0.04 from P3
     ];
     expect(tight._isPulk(racers)).toBe(false);
     expect(wide._isPulk(racers)).toBe(true);
@@ -3445,33 +3446,31 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
 
 describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   it('_isPulk: fails when 3 racers are spatially close but T values differ too much (temporal fails)', () => {
-    const cd = new CameraDirector(); // battlePulkThresholdT = 0.12 default
+    const cd = new CameraDirector(); // battlePulkThresholdT = 0.05 default
     // Two leaders + battle candidates at ranks 3/4/5, but P4/P5 T far from P3
     const racers = [
       { x: 9000, y: 300, t: 0.9 }, // P1 — leader
       { x: 8500, y: 300, t: 0.85 }, // P2 — leader
       { x: 500, y: 300, t: 0.5 }, // P3 — battle candidate
-      { x: 505, y: 300, t: 0.1 }, // P4 — |P3-P4|=0.4 > 0.12 → temporal fail
+      { x: 505, y: 300, t: 0.1 }, // P4 — |P3-P4|=0.4 > 0.05 → temporal fail
       { x: 510, y: 300, t: 0.09 }, // P5
     ];
     expect(cd._isPulk(racers)).toBe(false);
   });
 
-  it('_isPulk: fails when rank span > 3 (positional condition fails)', () => {
+  it('_isPulk: fails when the top group is arc-spread (no 3 within closeness)', () => {
     const cd = new CameraDirector();
-    // 7 racers: P1/P2 leaders, P3/P4/P5/P6 spread spatially, P7 close to P3 but span=4
-    // No triple starting at rank 3+ can satisfy all three conditions simultaneously.
+    // Ranks 3–7 evenly arc-spread by 0.10 — no 3 consecutive are within the 0.05 closeness.
+    // (In arc space, arc-close ⟺ rank-adjacent, so a spread field yields no valid seed triple.)
     const racers = [
       { x: 9000, y: 300, t: 0.9, finished: false }, // P1 — leader
       { x: 8500, y: 300, t: 0.85, finished: false }, // P2 — leader
-      { x: 500, y: 300, t: 0.5, finished: false }, // P3 — close to P7 spatially
-      { x: 2000, y: 300, t: 0.48, finished: false }, // P4 — far spatially
-      { x: 2100, y: 300, t: 0.46, finished: false }, // P5 — far spatially
-      { x: 2200, y: 300, t: 0.44, finished: false }, // P6 — far spatially
-      { x: 510, y: 300, t: 0.42, finished: false }, // P7 — close to P3, but rank span P3→P7=4>3
+      { x: 500, y: 300, t: 0.5, finished: false }, // P3
+      { x: 505, y: 300, t: 0.4, finished: false }, // P4 — arc 0.10 from P3
+      { x: 510, y: 300, t: 0.3, finished: false }, // P5 — arc 0.10 from P4
+      { x: 515, y: 300, t: 0.2, finished: false }, // P6
+      { x: 520, y: 300, t: 0.1, finished: false }, // P7
     ];
-    // P3/P4/P5 close in rank (span=2) but P4/P5 far spatially → spatial fail
-    // P3/P7 close spatially, T-close, but rank span=4 > 3 → no valid triple
     expect(cd._isPulk(racers)).toBe(false);
   });
 
@@ -3507,7 +3506,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
       { x: 9000, y: 300, t: 0.9 }, // P1 — leader
       { x: 8500, y: 300, t: 0.85 }, // P2 — leader
       { x: 500, y: 300, t: 0.5 }, // P3
-      { x: 505, y: 300, t: 0.1 }, // P4 — |P3-P4|=0.4 > 0.12 → temporal fail
+      { x: 505, y: 300, t: 0.1 }, // P4 — |P3-P4|=0.4 > 0.05 → temporal fail
       { x: 510, y: 300, t: 0.09 }, // P5
     ];
     expect(cd._detectPulkGroup(racers)).toBeNull();
@@ -4575,11 +4574,11 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
     expect(cd._isOriginalGroupStillValid([r0, r1, r2])).toBe(true);
   });
 
-  it('returns false when any pair in the stored group exceeds spatial threshold', () => {
+  it('returns false when any pair in the stored group exceeds the arc closeness threshold', () => {
     const cd = new CameraDirector();
     const r0 = { index: 0, t: 0.5, x: 500, y: 300 };
     const r1 = { index: 1, t: 0.48, x: 510, y: 300 };
-    const r2 = { index: 2, t: 0.46, x: 1000, y: 300 }; // 500px from r0 → dispersed
+    const r2 = { index: 2, t: 0.3, x: 520, y: 300 }; // arc 0.20 from r0 → dispersed (> 0.05)
     cd._battleGroupRacers = [r0, r1, r2];
     cd._battleGroupRacerIndices = [0, 1, 2];
     expect(cd._isOriginalGroupStillValid([r0, r1, r2])).toBe(false);
@@ -4607,13 +4606,13 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
     );
     expect(cd.state).toBe(CAM_STATE.BATTLE_ZOOM);
     expect(cd._battleGroupRacerIndices.length).toBeGreaterThanOrEqual(3);
-    // Disperse group: move r2 far away, stateAge >= battleMinDurationMs (3000)
+    // Disperse group: move r2 far away in arc, stateAge >= battleMinDurationMs (3000)
     const dispersed = [
       leader1,
       leader2,
       r0,
       r1,
-      { ...r2, x: 2000 }, // 1480px from r0 → group invalid
+      { ...r2, t: 0.3 }, // arc 0.20 from r0 → group invalid (> 0.05)
     ];
     cd.update(
       dispersed,
@@ -4629,46 +4628,46 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
 // ── CameraDirector — Q1: isolation condition ──────────────────────────────────
 
 describe('CameraDirector — Q1: isolation condition', () => {
-  it('isolation disabled by default (threshold=0): BATTLE fires with nearby non-group racer', () => {
-    const cd = new CameraDirector(); // default battleIsolationThresholdPx = 0
+  it('isolation disabled by default (threshold=0): BATTLE fires with arc-near non-group racer', () => {
+    const cd = new CameraDirector(); // default battleIsolationThresholdT = 0 (no config → disabled)
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
-      { t: 0.5, x: 500, y: 300 }, // P3 — group
+      { t: 0.5, x: 500, y: 300 }, // P3 — group (arc gaps ≤ 0.04 < closeness 0.05)
       { t: 0.48, x: 510, y: 300 }, // P4 — group
       { t: 0.46, x: 520, y: 300 }, // P5 — group
-      { t: 0.2, x: 620, y: 300 }, // P6 — 100px from P5 (would fail at threshold=150)
+      { t: 0.4, x: 620, y: 300 }, // P6 — arc 0.06 from P5 (not in group; would fail isolation ≥0.06, but off)
     ];
     expect(cd._detectPulkGroup(racers)).not.toBeNull();
   });
 
   it('isolation threshold configurable via config', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdPx: 150 });
-    expect(cd._battleIsolationThresholdPx).toBe(150);
+    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdT: 0.075 });
+    expect(cd._battleIsolationThresholdT).toBe(0.075);
   });
 
-  it('BATTLE blocked when non-group racer is within isolation threshold', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdPx: 150 });
+  it('BATTLE blocked when non-group racer is within isolation threshold (arc)', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdT: 0.075 });
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
       { t: 0.5, x: 500, y: 300 }, // P3 — group
       { t: 0.48, x: 510, y: 300 }, // P4 — group
       { t: 0.46, x: 520, y: 300 }, // P5 — group
-      { t: 0.2, x: 600, y: 300 }, // P6 — 80px from P5 < 150px threshold → isolation fails
+      { t: 0.4, x: 600, y: 300 }, // P6 — arc 0.06 from P5 (>closeness, <0.075) → isolation fails
     ];
     expect(cd._detectPulkGroup(racers)).toBeNull();
   });
 
-  it('BATTLE passes when all non-group racers are outside isolation threshold', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdPx: 150 });
+  it('BATTLE passes when all non-group racers are outside isolation threshold (arc)', () => {
+    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdT: 0.075 });
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
       { t: 0.5, x: 500, y: 300 }, // P3 — group
       { t: 0.48, x: 510, y: 300 }, // P4 — group
       { t: 0.46, x: 520, y: 300 }, // P5 — group
-      { t: 0.2, x: 800, y: 300 }, // P6 — 280px from P5 > 150px → passes
+      { t: 0.3, x: 800, y: 300 }, // P6 — arc 0.16 from P5 > 0.075 → passes
     ];
     expect(cd._detectPulkGroup(racers)).not.toBeNull();
   });
@@ -4698,9 +4697,9 @@ describe('CameraDirector — Q2: greedy group expansion', () => {
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
       { t: 0.5, x: 500, y: 300 }, // P3
-      { t: 0.48, x: 510, y: 300 }, // P4
-      { t: 0.46, x: 520, y: 300 }, // P5
-      { t: 0.44, x: 530, y: 300 }, // P6 — 30px from P3, Δt=0.06 < 0.12 → fits
+      { t: 0.49, x: 510, y: 300 }, // P4
+      { t: 0.48, x: 520, y: 300 }, // P5
+      { t: 0.47, x: 530, y: 300 }, // P6 — arc 0.03 from P3 < closeness 0.05 → fits
     ];
     const group = cd._detectPulkGroup(racers);
     expect(group).not.toBeNull();

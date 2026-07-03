@@ -50,8 +50,8 @@ function minimalProfiles() {
 describe('computeTimingFromConfig — null config (all defaults)', () => {
   const t = computeTimingFromConfig(null);
 
-  it('uses fallback battlePulkThresholdPx', () => expect(t.battlePulkThresholdPx).toBe(200));
-  it('uses fallback battlePulkThresholdT', () => expect(t.battlePulkThresholdT).toBe(0.12));
+  it('uses fallback battlePulkThresholdT', () => expect(t.battlePulkThresholdT).toBe(0.05));
+  it('uses fallback battleIsolationThresholdT', () => expect(t.battleIsolationThresholdT).toBe(0));
   it('uses fallback battleMinDurationMs', () => expect(t.battleMinDurationMs).toBe(3000));
   it('uses fallback endgameThreshold', () => expect(t.endgameThreshold).toBe(0.85));
   it('uses fallback battleCooldownMs', () => expect(t.battleCooldownMs).toBe(8000));
@@ -100,11 +100,13 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
 });
 
 describe('computeTimingFromConfig — explicit global tunables', () => {
-  it('reads battlePulkThresholdPx from config', () => {
-    expect(computeTimingFromConfig({ battlePulkThresholdPx: 120 }).battlePulkThresholdPx).toBe(120);
-  });
   it('reads battlePulkThresholdT from config', () => {
     expect(computeTimingFromConfig({ battlePulkThresholdT: 0.08 }).battlePulkThresholdT).toBe(0.08);
+  });
+  it('reads battleIsolationThresholdT from config', () => {
+    expect(
+      computeTimingFromConfig({ battleIsolationThresholdT: 0.09 }).battleIsolationThresholdT
+    ).toBe(0.09);
   });
   it('reads endgameThreshold from config', () => {
     expect(computeTimingFromConfig({ endgameThreshold: 0.9 }).endgameThreshold).toBe(0.9);

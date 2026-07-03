@@ -391,29 +391,6 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Pulk Threshold (px)
-              <InfoTooltip
-                text={`BATTLE triggers when ≥3 of the top-10 racers are within this distance of each other. Currently: ${config.battlePulkThresholdPx ?? 200}px.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={20}
-              max={500}
-              step={10}
-              value={config.battlePulkThresholdPx ?? 200}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 20 && v <= 500) set('battlePulkThresholdPx', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               BATTLE Min Hold (ms)
               <InfoTooltip
                 text={`Minimum BATTLE duration after entry, even if the cluster dissolves. Currently: ${config.battleMinDurationMs ?? 3000}ms.`}
@@ -460,18 +437,32 @@ function CameraAdvancedSection() {
           style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}
         >
           <SliderRow
-            label="Isolation (px)"
-            testId="battle-isolation-threshold-px"
-            min={0}
-            max={500}
-            step={10}
-            value={config.battleIsolationThresholdPx ?? 0}
+            label="Pulk Closeness (lap %)"
+            testId="battle-pulk-threshold-t"
+            min={0.01}
+            max={0.15}
+            step={0.005}
+            value={config.battlePulkThresholdT ?? 0.05}
             onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (v >= 0 && v <= 500) set('battleIsolationThresholdPx', v);
+              const v = parseFloat(e.target.value);
+              if (v >= 0.01 && v <= 0.15) set('battlePulkThresholdT', v);
             }}
-            display={`${config.battleIsolationThresholdPx ?? 0}px`}
-            tip="Minimum gap between group racer and non-group racer. 0 = disabled. Recommendation: 1.5 × pulk threshold."
+            display={`${((config.battlePulkThresholdT ?? 0.05) * 100).toFixed(1)}%`}
+            tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Default 0.05 (5% of a lap)."
+          />
+          <SliderRow
+            label="Isolation (lap %)"
+            testId="battle-isolation-threshold-t"
+            min={0}
+            max={0.2}
+            step={0.005}
+            value={config.battleIsolationThresholdT ?? 0.075}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 0 && v <= 0.2) set('battleIsolationThresholdT', v);
+            }}
+            display={`${((config.battleIsolationThresholdT ?? 0.075) * 100).toFixed(1)}%`}
+            tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Default 0.075."
           />
           <SliderRow
             label="Max. group size"

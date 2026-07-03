@@ -312,3 +312,22 @@ export function migrateV15toV16(config) {
     schemaVersion: 16,
   };
 }
+
+// v16→v17 (15b): BATTLE closeness world-px → arc-fraction. Strip the dead px thresholds
+// (battlePulkThresholdPx / battleIsolationThresholdPx), migrate the old 0.12 closeness default
+// to the new arc default (0.05) while preserving any non-default user value, and inject the arc
+// isolation knob at its default. All other fields pass through unchanged.
+export function migrateV16toV17(config) {
+  // eslint-disable-next-line no-unused-vars
+  const { battlePulkThresholdPx, battleIsolationThresholdPx, ...rest } = config;
+  return {
+    ...rest,
+    battlePulkThresholdT:
+      config.battlePulkThresholdT === 0.12
+        ? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT
+        : (config.battlePulkThresholdT ?? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT),
+    battleIsolationThresholdT:
+      config.battleIsolationThresholdT ?? DEFAULT_CAMERA_CONFIG.battleIsolationThresholdT,
+    schemaVersion: 17,
+  };
+}

@@ -60,6 +60,10 @@
 //              Schema v16 (2026-06-24): adds leaderMinZoomFraction (default 0.6) — world-size-
 //              independent LEADER_ZOOM / LEAD_CHANGE zoom-out floor, expressed as a fraction of
 //              the leader zoom. v15→v16 migration injects the field at its default.
+//              Schema v17 (15b): BATTLE closeness world-px → arc-fraction (scale-independent).
+//              Removes battlePulkThresholdPx / battleIsolationThresholdPx; battlePulkThresholdT
+//              default 0.12→0.05; adds battleIsolationThresholdT (default 0.075). v16→v17 migration
+//              strips the px fields, migrates the old 0.12 closeness to 0.05, injects the arc knob.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
@@ -79,6 +83,7 @@ import {
   migrateV13toV14,
   migrateV14toV15,
   migrateV15toV16,
+  migrateV16toV17,
 } from './cameraMigrations.js';
 
 export { DEFAULT_CAMERA_CONFIG };
@@ -95,9 +100,10 @@ const MIGRATION_CHAIN = [
   migrateV13toV14,
   migrateV14toV15,
   migrateV15toV16,
+  migrateV16toV17,
 ];
 
-// Apply migrations to bring a config from `fromVersion` (>=5) up to v16.
+// Apply migrations to bring a config from `fromVersion` (>=5) up to v17.
 function applyMigrationsSinceV5(config, fromVersion) {
   return MIGRATION_CHAIN.slice(Math.max(0, fromVersion - 5)).reduce(
     (cfg, migrate) => migrate(cfg),
@@ -274,9 +280,19 @@ export function loadCameraConfig() {
     return applyMigrationsSinceV5(merged, 15);
   }
 
-  if (stored.schemaVersion !== 16) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 16) {
+    // v16→v17 (15b): merge top-level fields, deep-merge profiles, then run the arc-closeness
+    // migration (strips battlePulkThresholdPx / battleIsolationThresholdPx, sets arc defaults).
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
+    }
+    return applyMigrationsSinceV5(merged, 16);
+  }
 
-  // v16: merge top-level fields, then deep-merge cameraStateProfiles.
+  if (stored.schemaVersion !== 17) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v17: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
@@ -285,5 +301,5 @@ export function loadCameraConfig() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 16 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 17 });
 }

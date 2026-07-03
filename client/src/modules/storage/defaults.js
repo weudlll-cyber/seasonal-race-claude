@@ -37,7 +37,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 16,
+  schemaVersion: 17,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
   // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
@@ -133,13 +133,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
   endgameThreshold: 0.9,
-  // Pulk condition: BATTLE triggers when ≥3 of the top-10 racers are within this world-pixel distance.
-  battlePulkThresholdPx: 200,
-  // Temporal threshold: maximum |t_i − t_j| between any pair of group members (track-parameter units).
-  battlePulkThresholdT: 0.12,
-  // Isolation threshold: no non-group racer may be closer than this to any group member.
-  // 0 = disabled (default). Suggested value: 1.5 × battlePulkThresholdPx = 300.
-  battleIsolationThresholdPx: 300,
+  // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
+  // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one
+  // value means the same on-track closeness on every track (replaced the world-px test that
+  // rejected every cluster on the expanded 3072–6144px worlds).
+  battlePulkThresholdT: 0.05,
+  // Isolation threshold (arc): no non-group racer may be within this lap fraction of any group
+  // member. 0 = disabled. Suggested ≈ 1.5 × battlePulkThresholdT.
+  battleIsolationThresholdT: 0.075,
   // Maximum number of racers that can form the battle group (3–6). Greedy expansion adds
   // adjacent-rank racers until the group reaches this cap or no more qualify.
   battleMaxGroupSize: 6,

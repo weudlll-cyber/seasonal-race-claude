@@ -97,17 +97,19 @@ export default function BattleDiagHUD({ cameraRef, racersRef, visible }) {
         Isolation:{' '}
         <span
           style={
-            diag.isolationThresholdPx > 0
+            diag.isolationThresholdT > 0
               ? diag.isGroupIsolated
                 ? { color: VALID_COLOR }
                 : { color: INVALID_COLOR }
               : { color: '#888' }
           }
         >
-          {diag.isolationThresholdPx > 0 ? (diag.isGroupIsolated ? '✓' : '✗') : 'off'}
+          {diag.isolationThresholdT > 0 ? (diag.isGroupIsolated ? '✓' : '✗') : 'off'}
         </span>
-        {diag.isolationThresholdPx > 0 && (
-          <span style={{ color: '#666', marginLeft: '4px' }}>({diag.isolationThresholdPx}px)</span>
+        {diag.isolationThresholdT > 0 && (
+          <span style={{ color: '#666', marginLeft: '4px' }}>
+            ({(diag.isolationThresholdT * 100).toFixed(1)}% lap)
+          </span>
         )}
       </div>
       <div>
@@ -134,7 +136,7 @@ export default function BattleDiagHUD({ cameraRef, racersRef, visible }) {
       <div style={{ color: '#666', marginTop: '2px' }}>
         Any pulk now: {diag.isPulkNow ? '✓' : '✗'}
       </div>
-      {diag.groupPairwiseSpatial?.length > 0 && (
+      {diag.groupPairwiseTemporal?.length > 0 && (
         <div
           style={{
             color: '#555',
@@ -144,22 +146,12 @@ export default function BattleDiagHUD({ cameraRef, racersRef, visible }) {
           }}
         >
           <div>
-            Spatial:{' '}
-            <span style={{ color: '#aaa' }}>
-              {diag.groupPairwiseSpatial.map((p) => `${p.a}↔${p.b}=${p.dist}px`).join(', ')}
-            </span>
-            {'  '}
-            <span style={{ color: diag.spatialThreshold != null ? '#666' : '#555' }}>
-              (thr {diag.spatialThreshold}px)
-            </span>
-          </div>
-          <div>
-            Temporal:{' '}
+            Arc gap:{' '}
             <span style={{ color: '#aaa' }}>
               {diag.groupPairwiseTemporal.map((p) => `${p.a}↔${p.b}=Δ${p.dt}`).join(', ')}
             </span>
             {'  '}
-            <span style={{ color: '#666' }}>(thr {diag.temporalThreshold})</span>
+            <span style={{ color: '#666' }}>(thr {diag.closenessThresholdT})</span>
           </div>
         </div>
       )}
