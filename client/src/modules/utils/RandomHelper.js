@@ -9,10 +9,15 @@
 /**
  * Fisher-Yates in-place shuffle — uniform distribution over all permutations.
  * Returns the same array reference (mutated) for convenience.
+ *
+ * @param {Array}    array
+ * @param {Function} [rng=Math.random]  source of uniform [0,1) values. Defaults to
+ *   Math.random so all existing (browser) callers are byte-for-byte unchanged; the
+ *   headless sim passes a deterministic PRNG so a --seed reproduces the exact permutation.
  */
-export function shuffle(array) {
+export function shuffle(array, rng = Math.random) {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;

@@ -38,12 +38,12 @@ export function computeRacersPerRow(trackWidthPx, frameSizePx) {
  *   assignments: Array<{ racerIndex: number, rowIndex: number, indexInRow: number }>
  * }}
  */
-export function computeRowLayout(racerCount, racersPerRow) {
+export function computeRowLayout(racerCount, racersPerRow, rng = Math.random) {
   const perRow = Math.max(1, racersPerRow);
   const totalRows = Math.ceil(racerCount / perRow);
 
   const indices = Array.from({ length: racerCount }, (_, i) => i);
-  shuffle(indices);
+  shuffle(indices, rng);
 
   const assignments = indices.map((racerIndex, position) => ({
     racerIndex,
@@ -183,14 +183,14 @@ export function computeRacerLayout(effectiveWidth, nRacers, displaySize, config)
  *   assignments: Array<{ racerIndex: number, rowIndex: number, indexInRow: number }>
  * }}
  */
-export function computeEvenRowLayout(racerCount, rowCount) {
+export function computeEvenRowLayout(racerCount, rowCount, rng = Math.random) {
   const rows = Math.max(1, rowCount);
   const bigRPR = Math.ceil(racerCount / rows);
   const smallRPR = Math.floor(racerCount / rows);
   const bigCount = racerCount - smallRPR * rows; // rows with bigRPR
 
   const indices = Array.from({ length: racerCount }, (_, i) => i);
-  shuffle(indices);
+  shuffle(indices, rng);
 
   const bigSection = bigCount * bigRPR;
   const assignments = indices.map((racerIndex, position) => {

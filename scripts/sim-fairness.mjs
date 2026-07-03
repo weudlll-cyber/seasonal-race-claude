@@ -210,6 +210,20 @@ export function makePRNG(seed) {
   };
 }
 
+// Deterministic combo seed for the main-loop start-row shuffle (comboRowLayout). Derived
+// from track+racer+global seed via FNV-1a so a given --seed reproduces the exact start-row
+// assignment for every combo — the missing piece that made --seed control the FULL batch
+// (the shuffle was previously drawn from unseeded Math.random in the main loop).
+export function comboLayoutSeed(trackId, racerType, globalSeed) {
+  let h = 0x811c9dc5;
+  const str = `${trackId}|${racerType}|${globalSeed}`;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) || 1; // never 0 (makePRNG on 0 still works, but keep it non-zero)
+}
+
 // ── Speed transition easing (mirrors index.jsx) ───────────────────────────────
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -2857,7 +2871,13 @@ if (isMain) {
         const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
         const totalRows            = comboLayout.rowCount;
         const rowSizes             = comboLayout.layout;
-        const comboRowLayout       = computeEvenRowLayout(nRacersForCombo, totalRows);
+        // Seed the start-row shuffle deterministically when running a reproducible batch
+        // (GLOBAL_SEED>0). GLOBAL_SEED=0 (exploration) keeps Math.random. This is what makes
+        // --seed control the FULL batch — including the race-plan's start-row assignment.
+        const comboLayoutRng       = GLOBAL_SEED > 0
+          ? makePRNG(comboLayoutSeed(trackId, racerType, GLOBAL_SEED))
+          : Math.random;
+        const comboRowLayout       = computeEvenRowLayout(nRacersForCombo, totalRows, comboLayoutRng);
 
         process.stdout.write(
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
