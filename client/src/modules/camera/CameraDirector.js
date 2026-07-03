@@ -24,6 +24,9 @@ export const CAM_STATE = {
   BATTLE_ZOOM: 'BATTLE_ZOOM',
   COMEBACK_ZOOM: 'COMEBACK_ZOOM',
   LEAD_CHANGE: 'LEAD_CHANGE',
+  // Photo-Finish (15a): tight top-2 group shot at a close finish. Dedicated state (Option B),
+  // not a reuse of BATTLE_ZOOM; reuses BATTLE's arc-midpoint pan + group spriteScale for framing.
+  PHOTO_FINISH: 'PHOTO_FINISH',
 };
 
 // Base zoom multiplier for open tracks — applied in the render path (effectiveZoom),
@@ -149,6 +152,7 @@ export class CameraDirector {
     this.state = CAM_STATE.OVERVIEW;
     this.stateEnteredAt = 0;
     this._inFinishDrama = false;
+    this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._inFinishMode = false;
     this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
@@ -425,6 +429,9 @@ export class CameraDirector {
     this._finishOverviewZoomOutDurationMs = t.finishOverviewZoomOutDurationMs;
     this._finishPauseMs = t.finishPauseMs;
     this._finishOverviewLookbackPx = t.finishOverviewLookbackPx;
+    this._photoFinishEnabled = t.photoFinishEnabled;
+    this._photoFinishCloseThresholdT = t.photoFinishCloseThresholdT;
+    this._photoFinishDurationMs = t.photoFinishDurationMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -744,6 +751,10 @@ export class CameraDirector {
         case CAM_STATE.LEAD_CHANGE:
           fT = fr[0]?.t ?? null;
           break;
+        case CAM_STATE.PHOTO_FINISH:
+          // Track the arc-midpoint T of the top-2 finishers (deterministic, no live group).
+          fT = fr.length > 1 ? (fr[0].t + fr[1].t) / 2 : (fr[0]?.t ?? null);
+          break;
         case CAM_STATE.OVERVIEW:
           // FINISH_OVERVIEW: _camT is anchored to lookbackT (set in _transition).
           // Skip T-space tracking so the leader's runout movement does not overwrite
@@ -920,6 +931,24 @@ export class CameraDirector {
     if (raceState.finishedCount > 0) {
       if (this._inFinishMode) return null; // finishMode is absolute — no further transitions allowed
       if (this._finishMomentExpiry === null) {
+        // 15a single decision point: at the first crossing, choose the PHOTO_FINISH group shot
+        // when the top-2 finishers cross essentially together, else the classic single-winner
+        // drama. Gap measured with the same lap-normalized helper BATTLE uses (shortestArcDeltaT),
+        // top-2 only (ordered is already sorted by .t desc). Both paths share the expiry/lock
+        // lifecycle below, so neither can re-trigger and both hand off to FINISH_OVERVIEW.
+        const closeFinish =
+          this._photoFinishEnabled &&
+          ordered.length >= 2 &&
+          shortestArcDeltaT(ordered[0].t, ordered[1].t) <= this._photoFinishCloseThresholdT;
+        if (closeFinish) {
+          this._finishMomentExpiry = ts + this._photoFinishDurationMs;
+          this._inPhotoFinish = true;
+          return {
+            nextState: CAM_STATE.PHOTO_FINISH,
+            reason: 'finish: photo-finish (top-2 close)',
+            data: {},
+          };
+        }
         this._finishMomentExpiry = ts + this._finishDramaDurationMs;
         this._inFinishDrama = true;
         return {
@@ -929,6 +958,7 @@ export class CameraDirector {
         };
       } else if (ts >= this._finishMomentExpiry) {
         this._inFinishDrama = false;
+        this._inPhotoFinish = false;
         this._inFinishMode = true;
         this._finishModeStartTs = ts;
         return {
@@ -1220,6 +1250,10 @@ export class CameraDirector {
           }
           case CAM_STATE.LEAD_CHANGE:
             focusT = ordered[0]?.t ?? 0; // focus on the new leader
+            break;
+          case CAM_STATE.PHOTO_FINISH:
+            // Arc-midpoint T of the top-2 finishers, so the entry pan converges on the pair.
+            focusT = ordered.length > 1 ? (ordered[0].t + ordered[1].t) / 2 : (ordered[0]?.t ?? 0);
             break;
           case CAM_STATE.OVERVIEW:
             focusT = ordered[0]?.t ?? 0; // leader's T; T-space lerp targets leader position
@@ -1801,6 +1835,36 @@ export class CameraDirector {
             this._camT !== null && this._shape && this._observerPhase !== 'follow'
               ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
               : battleFallback;
+          if (panTarget) {
+            this._setClosedTrackTargets(
+              panTarget,
+              this._battleZoom * this._bsX,
+              frameSize,
+              canvasH
+            );
+          }
+        }
+        break;
+      }
+
+      case CAM_STATE.PHOTO_FINISH: {
+        // 15a: tight top-2 group shot. Reuses BATTLE's fixed group zoom and the arc-midpoint pan
+        // primitive, but on the DETERMINISTIC top-2 focus racers (getPanTarget of focusRacers[0..1])
+        // — NOT the live battle-group detection. _camT (top-2 midpoint T, set on entry/tracking)
+        // pans along the racing line; falls back to the arc-midpoint when _camT is unset.
+        this.targetZoom = this._battleZoom;
+        const pfFallback = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
+        if (this._isOpenTrack) {
+          const panTarget =
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
+              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
+              : pfFallback;
+          if (panTarget) this._setOpenTrackTargets(panTarget, this._battleZoom, frameSize);
+        } else {
+          const panTarget =
+            this._camT !== null && this._shape && this._observerPhase !== 'follow'
+              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
+              : pfFallback;
           if (panTarget) {
             this._setClosedTrackTargets(
               panTarget,

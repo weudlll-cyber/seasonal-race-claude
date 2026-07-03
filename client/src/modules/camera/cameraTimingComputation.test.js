@@ -81,6 +81,7 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'LEADER_ZOOM',
       'LEAD_CHANGE',
       'OVERVIEW',
+      'PHOTO_FINISH',
     ]);
   });
   it('lfOverview matches tcToLerpFactor(1.5)', () => {

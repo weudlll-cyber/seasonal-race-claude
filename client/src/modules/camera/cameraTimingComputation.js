@@ -201,6 +201,8 @@ export function computeTimingFromConfig(config) {
     BATTLE_ZOOM: tcBattle,
     COMEBACK_ZOOM: tcComeback,
     LEAD_CHANGE: tcLeadChange,
+    // Photo-Finish reuses BATTLE framing timing (tight group shot).
+    PHOTO_FINISH: tcBattle,
   };
 
   const lfOverview = tcToLerpFactor(tcOverview);
@@ -214,6 +216,7 @@ export function computeTimingFromConfig(config) {
     BATTLE_ZOOM: lfBattle,
     COMEBACK_ZOOM: lfComeback,
     LEAD_CHANGE: lfLeadChange,
+    PHOTO_FINISH: lfBattle,
   };
 
   const lfEntryOverview = tcToLerpFactor(tcEntryOverview);
@@ -227,6 +230,7 @@ export function computeTimingFromConfig(config) {
     BATTLE_ZOOM: lfEntryBattle,
     COMEBACK_ZOOM: lfEntryComeback,
     LEAD_CHANGE: lfEntryLeadChange,
+    PHOTO_FINISH: lfEntryBattle,
   };
 
   const entryConvergenceZoom = config?.entryConvergenceZoom ?? 0.05;
@@ -258,6 +262,11 @@ export function computeTimingFromConfig(config) {
   const finishOverviewZoomOutDurationMs = config?.finishOverviewZoomOutDurationMs ?? 3000;
   const finishPauseMs = config?.finishPauseMs ?? 2500;
   const finishOverviewLookbackPx = config?.finishOverviewLookbackPx ?? 300;
+  // Photo-Finish (15a): top-2 close-finish group shot. Camera-only; slow-motion factor is read
+  // in the RaceScreen render loop (not a director tunable).
+  const photoFinishEnabled = config?.photoFinishEnabled ?? true;
+  const photoFinishCloseThresholdT = config?.photoFinishCloseThresholdT ?? 0.03;
+  const photoFinishDurationMs = config?.photoFinishDurationMs ?? 2000;
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
   const comebackCooldownMs = config?.comebackCooldownMs ?? 10000;
@@ -338,6 +347,9 @@ export function computeTimingFromConfig(config) {
     finishOverviewZoomOutDurationMs,
     finishPauseMs,
     finishOverviewLookbackPx,
+    photoFinishEnabled,
+    photoFinishCloseThresholdT,
+    photoFinishDurationMs,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,

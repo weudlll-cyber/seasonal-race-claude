@@ -830,15 +830,22 @@ export default function RaceScreen() {
         // Slows down physics (and sprite animation) during BATTLE_ZOOM.
         // Camera path (smoothDt) is intentionally unaffected.
         {
-          const isBattleZoom = camDirRef.current?.hudState === 'BATTLE_ZOOM';
-          const smFactor = cameraConfigRef.current.battleSlowmoFactor ?? 0.5;
+          const hud = camDirRef.current?.hudState;
+          const isBattleZoom = hud === 'BATTLE_ZOOM';
+          // 15a: the photo-finish shot reuses the same slow-motion path as BATTLE (uniform,
+          // global time-dilation — headless sim is sim-time based, fairness unaffected).
+          const isPhotoFinish = hud === 'PHOTO_FINISH';
+          const isSlowmoState = isBattleZoom || isPhotoFinish;
+          const smFactor = isPhotoFinish
+            ? (cameraConfigRef.current.photoFinishSlowmoFactor ?? 0.5)
+            : (cameraConfigRef.current.battleSlowmoFactor ?? 0.5);
           const smMinDurMs = (cameraConfigRef.current.battleSlowmoMinDuration ?? 2.0) * 1000;
           const smFadeDurMs = (cameraConfigRef.current.battleSlowmoFadeDuration ?? 0.3) * 1000;
-          if (isBattleZoom && !st.slowmoActive) {
+          if (isSlowmoState && !st.slowmoActive) {
             st.slowmoActive = true;
             st.slowmoStartWallTs = ts;
           }
-          if (!isBattleZoom && st.slowmoActive && ts - st.slowmoStartWallTs >= smMinDurMs) {
+          if (!isSlowmoState && st.slowmoActive && ts - st.slowmoStartWallTs >= smMinDurMs) {
             st.slowmoActive = false;
           }
           const fadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;

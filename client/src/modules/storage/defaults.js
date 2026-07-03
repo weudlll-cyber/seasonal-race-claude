@@ -205,6 +205,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
   finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
+  // Photo-Finish (15a): when the first two finishers cross essentially together, show a tight
+  // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
+  // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.
+  // photoFinishEnabled=false reproduces the classic single-winner finish exactly.
+  photoFinishEnabled: true, // master switch for the photo-finish group shot
+  photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
+  photoFinishDurationMs: 2000, // ms the photo-finish shot holds before FINISH_OVERVIEW (parallels finishDramaDurationMs)
+  photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
   countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
   countdownDurationMs: 4000, // matches the default race countdown duration

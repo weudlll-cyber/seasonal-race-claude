@@ -1113,6 +1113,79 @@ function CameraAdvancedSection() {
         </div>
       </div>
 
+      {/* ── 8b. Photo-Finish (15a) ── */}
+      <div className={s.card}>
+        <SectionHeading>8b · Photo-Finish</SectionHeading>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          When the first two finishers cross essentially together, show a tight top-2 group shot
+          with slow-motion instead of the single-winner drama pulse. Camera-only. Off = today&apos;s
+          behaviour exactly.
+        </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="photo-finish-enabled"
+            checked={config.photoFinishEnabled ?? true}
+            onChange={(e) => set('photoFinishEnabled', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Enable photo-finish shot</span>
+          <InfoTooltip text="When off, a close finish uses the classic single-winner drama pulse (today's behaviour)." />
+        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <SliderRow
+            label="Closeness threshold (t)"
+            testId="photo-finish-threshold"
+            min={0.005}
+            max={0.15}
+            step={0.005}
+            value={config.photoFinishCloseThresholdT ?? 0.03}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 0.005 && v <= 0.15) set('photoFinishCloseThresholdT', v);
+            }}
+            display={(config.photoFinishCloseThresholdT ?? 0.03).toFixed(3)}
+            tip="Max lap-normalised t-gap between the top-2 finishers to trigger the photo-finish shot (same unit family as the BATTLE temporal threshold). Larger = triggers more often. Default 0.03."
+          />
+          <SliderRow
+            label="Shot duration (ms)"
+            testId="photo-finish-duration"
+            min={100}
+            max={5000}
+            step={100}
+            value={config.photoFinishDurationMs ?? 2000}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 100 && v <= 5000) set('photoFinishDurationMs', v);
+            }}
+            display={String(config.photoFinishDurationMs ?? 2000)}
+            tip="How long the photo-finish group shot holds before FINISH_OVERVIEW begins. Default 2000ms."
+          />
+          <SliderRow
+            label="Slowmo factor"
+            testId="photo-finish-slowmo-factor"
+            min={0.1}
+            max={1.0}
+            step={0.05}
+            value={config.photoFinishSlowmoFactor ?? 0.5}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v >= 0.1 && v <= 1.0) set('photoFinishSlowmoFactor', v);
+            }}
+            display={(config.photoFinishSlowmoFactor ?? 0.5).toFixed(2)}
+            tip="Physics slow-motion during the photo-finish shot. 1.0 = normal, 0.5 = half speed. Default 0.5."
+          />
+        </div>
+      </div>
+
       {/* ── 9. Zoom-Profile pro State ── */}
       <div className={s.card}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
