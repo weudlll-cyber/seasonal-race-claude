@@ -155,7 +155,6 @@ export class CameraDirector {
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
     this._photoFinishEnterPending = false; // 15a-predictive: set by update() when the gate decides to enter; consumed by _pickNextState
-    this._prevFinishedCount = 0; // 15a-predictive: previous-frame finishedCount, for event-driven end + winner-text edge (director side)
     this._inFinishMode = false;
     this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
@@ -434,7 +433,6 @@ export class CameraDirector {
     this._finishOverviewLookbackPx = t.finishOverviewLookbackPx;
     this._photoFinishEnabled = t.photoFinishEnabled;
     this._photoFinishCloseThresholdT = t.photoFinishCloseThresholdT;
-    this._photoFinishDurationMs = t.photoFinishDurationMs;
     this._photoFinishLeadProgress = t.photoFinishLeadProgress;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
@@ -692,7 +690,8 @@ export class CameraDirector {
       }
     }
     const photoFinishEndReady =
-      this._inPhotoFinish && (raceState.finishedCount >= 2 || ts >= this._finishMomentExpiry);
+      this._inPhotoFinish &&
+      (raceState.finishedCount >= 2 || raceState.finishedCount >= racers.length);
     const prevState = this.state;
     let _diagTransitioned = false;
     // Early BATTLE exit: leave when the original group disperses after battleMinDurationMs.
@@ -965,18 +964,20 @@ export class CameraDirector {
 
     // Priority 0 — 15a-predictive photo-finish lifecycle guard. Once entered (either by the
     // pre-line gate below OR the first-crossing fallback), the director OWNS the state until the
-    // EVENT-DRIVEN end: 2nd crossing (finishedCount >= 2 — covers 1→2 and 0→2 same-frame) or the
-    // safety cap (photoFinishDurationMs). Hoisted ABOVE the finishedCount>0 block so it also
-    // governs a pre-line entry while finishedCount is still 0. Hands off to FINISH_OVERVIEW
-    // exactly as the drama does. The winner-text edge is detected in RaceScreen.
+    // EVENT-DRIVEN end: the 2nd racer crosses (finishedCount >= 2 — covers 1→2 and 0→2 same-frame),
+    // or the logical safety net that ALL racers have finished (finishedCount >= racers.length).
+    // There is NO wall-clock cap: under the photo-finish slowmo a wall-time timer expired during
+    // the approach BEFORE the winner crossed, ending the shot early and eating the winner text.
+    // Hoisted ABOVE the finishedCount>0 block so it also governs a pre-line entry while
+    // finishedCount is still 0. Hands off to FINISH_OVERVIEW exactly as the drama does.
     if (this._inPhotoFinish) {
-      if (raceState.finishedCount >= 2 || ts >= this._finishMomentExpiry) {
+      if (raceState.finishedCount >= 2 || raceState.finishedCount >= racers.length) {
         this._inPhotoFinish = false;
         this._inFinishMode = true;
         this._finishModeStartTs = ts;
         return {
           nextState: CAM_STATE.OVERVIEW,
-          reason: 'photo-finish: end (2nd crossing / safety cap) → FINISH_OVERVIEW',
+          reason: 'photo-finish: end (2nd crossing / all finished) → FINISH_OVERVIEW',
           data: {},
         };
       }
@@ -999,8 +1000,7 @@ export class CameraDirector {
           ordered.length >= 2 &&
           shortestArcDeltaT(ordered[0].t, ordered[1].t) <= this._photoFinishCloseThresholdT;
         if (closeFinish) {
-          this._finishMomentExpiry = ts + this._photoFinishDurationMs;
-          this._inPhotoFinish = true;
+          this._inPhotoFinish = true; // ends on crossings only (hoisted guard) — no wall-clock cap
           return {
             nextState: CAM_STATE.PHOTO_FINISH,
             reason: 'finish: photo-finish (top-2 close)',
@@ -1035,8 +1035,7 @@ export class CameraDirector {
     // execution falls through to the normal priority chain with no retry and no minStateHold churn.
     if (this._photoFinishEnterPending) {
       this._photoFinishEnterPending = false;
-      this._finishMomentExpiry = ts + this._photoFinishDurationMs; // SAFETY CAP — event-driven end normally fires first
-      this._inPhotoFinish = true;
+      this._inPhotoFinish = true; // ends on crossings only (hoisted guard) — no wall-clock cap
       return {
         nextState: CAM_STATE.PHOTO_FINISH,
         reason: 'photo-finish: pre-line gate (top-2 close)',

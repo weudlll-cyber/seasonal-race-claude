@@ -1170,20 +1170,6 @@ function CameraAdvancedSection() {
             tip="Max lap-normalised t-gap between the top-2 finishers to trigger the photo-finish shot (same unit family as the BATTLE temporal threshold). Larger = triggers more often. Default 0.03."
           />
           <SliderRow
-            label="Shot duration (ms)"
-            testId="photo-finish-duration"
-            min={100}
-            max={5000}
-            step={100}
-            value={config.photoFinishDurationMs ?? 2000}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (v >= 100 && v <= 5000) set('photoFinishDurationMs', v);
-            }}
-            display={String(config.photoFinishDurationMs ?? 2000)}
-            tip="How long the photo-finish group shot holds before FINISH_OVERVIEW begins. Default 2000ms."
-          />
-          <SliderRow
             label="Slowmo factor"
             testId="photo-finish-slowmo-factor"
             min={0.1}

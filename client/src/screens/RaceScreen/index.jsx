@@ -1393,15 +1393,21 @@ export default function RaceScreen() {
 
       // Sync camera HUD state — only triggers React re-render on actual state change
       const newHudState = camDirRef.current.hudState;
+      const prevHudState = prevHudStateRef.current; // capture before the sync overwrites it
       if (newHudState !== prevHudStateRef.current) {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
       }
       // 15a-predictive winner text: fire ONCE the winner has crossed during the photo-finish shot.
-      // Gating on hudState==='PHOTO_FINISH' scopes it to the photo-finish only; finishedCount>=1
-      // covers 0→1 AND a 0→2 same-frame jump; the ref latch guarantees a single fire. Deterministic
-      // per race via racePlanSeed. Set on the persistent channel (no auto-clear).
-      if (newHudState === 'PHOTO_FINISH' && !winnerTextFiredRef.current && st.finishedCount >= 1) {
+      // Scoped to the photo-finish only: fire while hudState IS 'PHOTO_FINISH', OR on the frame the
+      // shot resolves AWAY from it (prevHudState was 'PHOTO_FINISH') so a 0→2 same-frame end can't
+      // lose the text. finishedCount>=1 covers 0→1 and 0→2; the ref latch guarantees a single fire.
+      // Deterministic per race via racePlanSeed. Set on the persistent channel (no auto-clear).
+      if (
+        (newHudState === 'PHOTO_FINISH' || prevHudState === 'PHOTO_FINISH') &&
+        !winnerTextFiredRef.current &&
+        st.finishedCount >= 1
+      ) {
         winnerTextFiredRef.current = true;
         const w = raceState.winner;
         const name = w?.name ?? w?.id ?? null;

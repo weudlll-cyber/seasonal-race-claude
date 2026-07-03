@@ -266,7 +266,6 @@ export function computeTimingFromConfig(config) {
   // in the RaceScreen render loop (not a director tunable).
   const photoFinishEnabled = config?.photoFinishEnabled ?? true;
   const photoFinishCloseThresholdT = config?.photoFinishCloseThresholdT ?? 0.03;
-  const photoFinishDurationMs = config?.photoFinishDurationMs ?? 2000;
   const photoFinishLeadProgress = config?.photoFinishLeadProgress ?? 0.97;
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
@@ -350,7 +349,6 @@ export function computeTimingFromConfig(config) {
     finishOverviewLookbackPx,
     photoFinishEnabled,
     photoFinishCloseThresholdT,
-    photoFinishDurationMs,
     photoFinishLeadProgress,
     comebackCooldownMs,
     leadChangeCooldownMs,
