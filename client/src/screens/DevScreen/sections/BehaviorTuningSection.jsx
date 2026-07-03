@@ -81,6 +81,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       lookBeforeBrakeLagFrames: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeLagFrames,
       lookBeforeBrakeRequireSlowerLeader:
         DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeRequireSlowerLeader,
+      lookBeforeBrakeMinDifferential: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeMinDifferential,
     }));
   }
 
@@ -529,6 +530,32 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               }
               disabled={!behaviorConfig.enabled}
               onChange={(e) => setBehavior('lookBeforeBrakeRequireSlowerLeader', e.target.checked)}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Min Overtake Differential
+              <InfoTooltip text="How much faster (as a fraction of speed) a racer must be than the one ahead before it will take a free lane and pass. Dedicated to look-before-brake — independent of the brake-to-match threshold. Higher = only clearly faster racers pass, so the mid-field weaves less. 0.005 = 0.5% (default, matches the previous shared threshold); 0.02 = 2%." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Look Before Brake Min Differential"
+              min={0.001}
+              max={0.1}
+              step={0.005}
+              value={
+                behaviorConfig.lookBeforeBrakeMinDifferential ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeMinDifferential
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v > 0) setBehavior('lookBeforeBrakeMinDifferential', v);
+              }}
             />
           </div>
         </div>

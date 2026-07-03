@@ -410,7 +410,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           const safeReengageT = Math.max(reengageFloorT, lbTHalf + lagFrames * vClose);
 
           // (d) real-overtake precondition: trailer must be meaningfully faster (raw speeds).
-          const minDiff = config.speedMatchMinDifferential ?? 0.005;
+          // Uses the DEDICATED lookBeforeBrakeMinDifferential (decoupled from brake-to-match's
+          // speedMatchMinDifferential); falls back to speedMatchMinDifferential then 0.005 so a
+          // config predating this knob is byte-identical to the old shared-threshold behaviour.
+          const minDiff =
+            config.lookBeforeBrakeMinDifferential ?? config.speedMatchMinDifferential ?? 0.005;
           const slowerLeaderOk =
             config.lookBeforeBrakeRequireSlowerLeader === false ||
             trailerDenom > leaderRawSpeed * (1 + minDiff);

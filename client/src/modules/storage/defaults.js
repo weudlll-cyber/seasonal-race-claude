@@ -490,10 +490,18 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   //   lookBeforeBrakeRequireSlowerLeader: only take the pass path when the trailer is
   //                           genuinely faster than the leader (a real overtake), so racers
   //                           don't weave around same-speed traffic. Uses raw parity-safe
-  //                           speeds and the speedMatchMinDifferential threshold.
+  //                           speeds and the lookBeforeBrakeMinDifferential threshold.
+  //   lookBeforeBrakeMinDifferential: fractional speed excess above which the LBB pass path
+  //                           is allowed (real-overtake bar). DEDICATED to look-before-brake
+  //                           so it is DECOUPLED from brake-to-match's speedMatchMinDifferential.
+  //                           Default 0.005 is byte-identical to the value the LBB gate used
+  //                           when it read speedMatchMinDifferential (0.005) — zero behaviour
+  //                           change. Raise (e.g. 0.02) to restrict LBB to genuinely faster
+  //                           trailers without altering brake-to-match engagement.
   lookBeforeBrakeEnabled: true,
   lookBeforeBrakePassStrength: 0.5,
   lookBeforeBrakeReengageTMultiplier: 1.2,
   lookBeforeBrakeLagFrames: 2,
   lookBeforeBrakeRequireSlowerLeader: true,
+  lookBeforeBrakeMinDifferential: 0.005,
 };

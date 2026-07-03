@@ -104,7 +104,11 @@ export function loadRaceBehaviorConfig() {
     // lookBeforeBrakeLagFrames: whole frames of worst-case closing reserved for the
     // one-frame brake-application lag; ≥ 1 (at least the lag frame itself).
     !isFinite(merged.lookBeforeBrakeLagFrames) ||
-    merged.lookBeforeBrakeLagFrames < 1
+    merged.lookBeforeBrakeLagFrames < 1 ||
+    // lookBeforeBrakeMinDifferential: dedicated real-overtake bar for the LBB pass path;
+    // must be > 0 (same positivity guard as speedMatchMinDifferential).
+    !isFinite(merged.lookBeforeBrakeMinDifferential) ||
+    merged.lookBeforeBrakeMinDifferential <= 0
   ) {
     return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
   }

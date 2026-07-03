@@ -184,6 +184,13 @@ const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW ? (() => {
   try { return JSON.parse(BEHAVIOR_OVERRIDE_RAW); }
   catch { console.error('⚠️  --behavior: invalid JSON, ignoring'); return {}; }
 })() : {};
+// Dedicated per-run overrides for the two look-before-brake knobs swept during tuning.
+// Fold into BEHAVIOR_OVERRIDE so they flow through the same behaviorConfig merge path as
+// --behavior. Absent → no key added → default (0.005 / 1.2) preserved byte-identically.
+const LBB_MINDIFF_RAW  = argVal('lbbMinDiff', null);
+const LBB_REENGAGE_RAW = argVal('lbbReengage', null);
+if (LBB_MINDIFF_RAW  !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeMinDifferential     = Number(LBB_MINDIFF_RAW);
+if (LBB_REENGAGE_RAW !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeReengageTMultiplier = Number(LBB_REENGAGE_RAW);
 // --selfcheck: run synthetic validation of BS-1 fairness metrics and exit (no sim run).
 const SELFCHECK = argv.includes('--selfcheck');
 
