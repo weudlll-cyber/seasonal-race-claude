@@ -125,9 +125,24 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   if (config.corridorStart !== undefined) phaseFractions.corridorStart = config.corridorStart;
   if (config.corridorEnd !== undefined) phaseFractions.corridorEnd = config.corridorEnd;
 
-  // Enforce constraint: corridorStart <= corridorEnd (clamp silently).
-  phaseFractions.corridorStart = Math.min(
-    phaseFractions.corridorStart ?? phaseFractions.transitionEnd,
+  // Phase-boundary hardening (Stage A): keep the boundaries ordered the way the ordered
+  // getPhase branches below assume — pulkStart <= pulkEnd <= corridorStart <= corridorEnd —
+  // so no consumer sees an inverted TRANSITION or a negative span. A span that would be <= 0
+  // degenerates cleanly to a zero-duration phase (never NaN, never inverted). Monotonic clamp
+  // chain anchored on corridorEnd as the ceiling; it SUPERSEDES the former corridorStart <=
+  // corridorEnd clamp (min against corridorEnd is preserved as the upper bound). No-op for
+  // well-ordered configs — the defaults (0.25/0.5/0.55/1.0) are unchanged. Single source: the
+  // sim imports createRacePlan (sim-fairness.mjs:59), so browser and sim inherit this identically.
+  // No hardcoded fractions — every bound reads the live resolved phaseFractions.
+  const resolvedCorridorStart = phaseFractions.corridorStart ?? phaseFractions.transitionEnd;
+  phaseFractions.pulkEnd = clamp(
+    phaseFractions.pulkEnd,
+    phaseFractions.pulkStart,
+    phaseFractions.corridorEnd
+  );
+  phaseFractions.corridorStart = clamp(
+    resolvedCorridorStart,
+    phaseFractions.pulkEnd,
     phaseFractions.corridorEnd
   );
 

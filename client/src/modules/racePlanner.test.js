@@ -521,6 +521,72 @@ describe('createTrajectoryController — getPhase', () => {
   });
 });
 
+// ── Phase-boundary hardening (Stage A): corridorStart >= pulkEnd, well-ordered spans ──
+
+describe('createRacePlan — phase-boundary hardening', () => {
+  it('(a) corridorStart below pulkEnd is clamped up to pulkEnd; TRANSITION not inverted', () => {
+    // corridorStart=0.4 < pulkEnd=0.5 → effective corridorStart floored to 0.5.
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.4 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.5); // clamped up to pulkEnd
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
+
+    // Ordered, no inversion: PRE_PULK → PULK → (zero-span TRANSITION) → OUTCOME → FINAL.
+    const ctrl = createTrajectoryController(plan);
+    expect(ctrl.getPhase(0, 0.1)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, 0.3)).toBe('PULK');
+    expect(ctrl.getPhase(0, 0.49)).toBe('PULK'); // still PULK just below pulkEnd
+    expect(ctrl.getPhase(0, 0.5)).toBe('OUTCOME'); // OUTCOME starts exactly at pulkEnd
+    expect(ctrl.getPhase(0, 0.99)).toBe('OUTCOME');
+    expect(ctrl.getPhase(0, 1.0)).toBe('FINAL');
+  });
+
+  it('(b) corridorStart == pulkEnd → TRANSITION span is zero, never returned; no NaN', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.5 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.5);
+    // Zero-duration TRANSITION: pulkEnd and corrStart coincide in ms.
+    expect(plan._phases.corrStart).toBe(plan._phases.pulkEnd);
+    expect(Number.isFinite(plan._phases.corrStart)).toBe(true);
+
+    const ctrl = createTrajectoryController(plan);
+    // Sweep the fraction range: TRANSITION must never appear; OUTCOME starts at 0.5.
+    for (let p = 0; p <= 1.0; p += 0.02) {
+      expect(ctrl.getPhase(0, p)).not.toBe('TRANSITION');
+    }
+    expect(ctrl.getPhase(0, 0.49)).toBe('PULK');
+    expect(ctrl.getPhase(0, 0.5)).toBe('OUTCOME');
+  });
+
+  it('(c) well-ordered config is unchanged (regression guard: default fractions byte-identical)', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    expect(plan.phaseFractions.pulkStart).toBe(0.25);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
+    expect(plan.phaseFractions.corridorStart).toBe(0.55);
+    expect(plan.phaseFractions.corridorEnd).toBe(1.0);
+    // A well-ordered non-default corridorStart passes through untouched.
+    const plan2 = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { corridorStart: 0.7 },
+      BASE_SEED
+    );
+    expect(plan2.phaseFractions.corridorStart).toBe(0.7);
+    expect(plan2.phaseFractions.pulkEnd).toBe(0.5);
+  });
+});
+
 // ── Leader-progress phase clock (C0) ──────────────────────────────────────────
 
 describe('createTrajectoryController — leader-progress phase clock', () => {
