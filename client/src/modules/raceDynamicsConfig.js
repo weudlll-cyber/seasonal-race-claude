@@ -42,7 +42,30 @@ export function loadRaceDynamicsConfig() {
     merged.pulkSurgeRampOutMs > 5000 ||
     typeof merged.pulkBrakeExemptStrength !== 'number' ||
     merged.pulkBrakeExemptStrength < 0 ||
-    merged.pulkBrakeExemptStrength > 1
+    merged.pulkBrakeExemptStrength > 1 ||
+    // Governor fields (Stage B): same whole-object-reject pattern; bounds are validation
+    // limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG (single source).
+    typeof merged.governorEnabled !== 'boolean' ||
+    typeof merged.governorDrama !== 'number' ||
+    merged.governorDrama < 0 ||
+    merged.governorDrama > 1 ||
+    typeof merged.governorKMin !== 'number' ||
+    merged.governorKMin < 0 ||
+    typeof merged.governorKMax !== 'number' ||
+    merged.governorKMax < merged.governorKMin ||
+    typeof merged.governorAMin !== 'number' ||
+    merged.governorAMin < 0 ||
+    typeof merged.governorAMax !== 'number' ||
+    merged.governorAMax < merged.governorAMin ||
+    typeof merged.governorFrequency !== 'number' ||
+    merged.governorFrequency <= 0 ||
+    typeof merged.governorGapRef !== 'number' ||
+    merged.governorGapRef <= 0 ||
+    typeof merged.governorMaxEffect !== 'number' ||
+    merged.governorMaxEffect < 0 ||
+    merged.governorMaxEffect > 0.5 ||
+    typeof merged.governorMaxStepPerFrame !== 'number' ||
+    merged.governorMaxStepPerFrame <= 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

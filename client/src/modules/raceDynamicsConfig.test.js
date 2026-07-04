@@ -47,6 +47,16 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       pulkSurgeRampInMs: 1200,
       pulkSurgeRampOutMs: 1200,
       pulkBrakeExemptStrength: 0.5,
+      governorEnabled: false,
+      governorDrama: 0.5,
+      governorKMin: 0.04,
+      governorKMax: 0.1,
+      governorAMin: 0.005,
+      governorAMax: 0.02,
+      governorFrequency: 3,
+      governorGapRef: 0.03,
+      governorMaxEffect: 0.12,
+      governorMaxStepPerFrame: 0.01,
     });
   });
 

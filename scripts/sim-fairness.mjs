@@ -58,6 +58,7 @@ import {
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { applyRubberBand, computeMedianT } from '../client/src/modules/raceRubberBand.js';
+import { applyGovernor } from '../client/src/modules/raceGovernor.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -112,6 +113,18 @@ const DYNAMICS_OVERRIDES = {
   pulkSurgeRampInMs:      Number(argVal('pulkSurgeRampInMs',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampInMs))),
   pulkSurgeRampOutMs:     Number(argVal('pulkSurgeRampOutMs',      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampOutMs))),
   pulkBrakeExemptStrength: Number(argVal('pulkBrakeExemptStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength))),
+  // Pre-OUTCOME Field Governor (Stage B) — same shared-default + argVal pattern (no drift).
+  // Default OFF; a sweep enables it via --governorEnabled=true and tunes --governorDrama etc.
+  governorEnabled:         argVal('governorEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled)) === 'true',
+  governorDrama:      Number(argVal('governorDrama',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama))),
+  governorKMin:       Number(argVal('governorKMin',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorKMin))),
+  governorKMax:       Number(argVal('governorKMax',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorKMax))),
+  governorAMin:       Number(argVal('governorAMin',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin))),
+  governorAMax:       Number(argVal('governorAMax',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax))),
+  governorFrequency:  Number(argVal('governorFrequency',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency))),
+  governorGapRef:     Number(argVal('governorGapRef',       String(DEFAULT_RACE_DYNAMICS_CONFIG.governorGapRef))),
+  governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
+  governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
 };
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
@@ -477,6 +490,7 @@ export function runSingleRace({
         rubberBandMultTarget:     1.0,
         rubberBandTransStart:     0,
         rbActivatedThisRace:      false,
+        governorMult:             1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -703,6 +717,26 @@ export function runSingleRace({
     let   bkPeakDecomp     = null;
     const bkEverSurged = breakawayDiag ? new Set() : null;
 
+    // ── Pre-OUTCOME Field Governor (Stage B) — parity with the browser ─────────
+    // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
+    // (a separate cohesion source). Phase fractions + seed from the controller (live
+    // boundaries, single source). Default OFF → governorMult stays 1.0 (byte-identical).
+    const governorEnabled = !!racePlanController && (dynamicsConfig.governorEnabled ?? false);
+    const govCfg = {
+      enabled: governorEnabled,
+      drama: dynamicsConfig.governorDrama ?? 0.5,
+      kMin: dynamicsConfig.governorKMin ?? 0.04,
+      kMax: dynamicsConfig.governorKMax ?? 0.1,
+      aMin: dynamicsConfig.governorAMin ?? 0.005,
+      aMax: dynamicsConfig.governorAMax ?? 0.02,
+      frequency: dynamicsConfig.governorFrequency ?? 3,
+      gapRef: dynamicsConfig.governorGapRef ?? 0.03,
+      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+    };
+    const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
+    const govSeed = racePlanController?.seed ?? 0;
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -784,8 +818,24 @@ export function runSingleRace({
       // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
       // Identical mechanism to the browser (raceRubberBand.applyRubberBand) so the sweep
       // measures the real thing. rbActivated telemetry now tracks BRAKING (mult < 1).
-      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG, SURGE_BRAKE_EXEMPT);
+      // A5: when the governor also runs, compute the field median once and share it with both.
+      const govPhase =
+        governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
+      const sharedMedianT = governorEnabled ? computeMedianT(racers) : undefined;
+      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG, SURGE_BRAKE_EXEMPT, sharedMedianT);
       for (const r of racers) { if (r.rubberBandMult < 0.999) r.rbActivatedThisRace = true; }
+
+      // ── Pre-OUTCOME Field Governor (Stage B; default OFF, parallel to surge/RB) ──
+      if (governorEnabled && govFractions) {
+        applyGovernor(
+          racers,
+          finishT,
+          govPhase,
+          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed },
+          govCfg,
+          sharedMedianT
+        );
+      }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
       if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
@@ -847,9 +897,9 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
-          // trajectoryMult + areaBonusMult + pulkSurgeMult: all 1.0 when Race Plan / surge inactive
+          // trajectoryMult + areaBonusMult + pulkSurgeMult + governorMult: all 1.0 when inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
         }
       }
 

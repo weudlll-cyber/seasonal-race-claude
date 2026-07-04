@@ -1400,6 +1400,12 @@ function CameraAdvancedSection() {
             label: 'Show RUBBER-BAND diagnostics',
             tip: 'Live rubber-band cfg (thresholds/brake/ramp) next to the leader’s brake window, gap vs threshold, applied brake, and surge-exempt state. Bottom-center.',
           },
+          {
+            key: 'showGovernorDiag',
+            testId: 'governor-diag-toggle',
+            label: 'Show GOVERNOR diagnostics',
+            tip: 'Pre-OUTCOME field governor: resolved phase fade (pulkEnd → corrStart), Action/k/A, and leader/straggler gap + cohesion/shuffle/mult. Top-center.',
+          },
         ].map(({ key, testId, label, tip }) => (
           <label
             key={key}

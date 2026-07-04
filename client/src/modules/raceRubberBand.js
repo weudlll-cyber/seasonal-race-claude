@@ -79,8 +79,17 @@ export function rubberBandTargetMult(myGap, cfg) {
  * @param {number} [surgeExemptStrength] 0 = surgers fully braked (default, no behaviour change);
  *                                        1 = surgers fully exempt from the rubber-band brake.
  *                                        Only affects racers currently surging (pulkSurgeMult > 1).
+ * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
+ *   the governor (A5 — avoids a second sort/step). Omit → computed internally (byte-identical).
  */
-export function applyRubberBand(racers, finishT, nowMs, cfg, surgeExemptStrength = 0) {
+export function applyRubberBand(
+  racers,
+  finishT,
+  nowMs,
+  cfg,
+  surgeExemptStrength = 0,
+  sharedMedianT
+) {
   if (!cfg || !cfg.enabled) return;
 
   let leaderT = -Infinity;
@@ -89,7 +98,12 @@ export function applyRubberBand(racers, finishT, nowMs, cfg, surgeExemptStrength
 
   // braking window: active until the leader crosses the hard-off point.
   const braking = leaderT > 0 && leaderProgress < cfg.rubberBandEndgameThreshold;
-  const medianT = braking ? computeMedianT(racers) : null;
+  // Reuse the shared per-step median when provided (A5), else compute it here (byte-identical).
+  const medianT = braking
+    ? sharedMedianT !== undefined
+      ? sharedMedianT
+      : computeMedianT(racers)
+    : null;
 
   for (const r of racers) {
     if (r.finished) {

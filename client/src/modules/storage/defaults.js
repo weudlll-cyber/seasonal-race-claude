@@ -133,6 +133,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
   showRubberBandDiag: false, // RUBBER-BAND diagnostics overlay: live cfg + leader brake window/gap/mult/exempt
+  showGovernorDiag: false, // GOVERNOR diagnostics overlay: resolved phase fade + leader/straggler cohesion/shuffle/mult
   endgameThreshold: 0.9,
   // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
   // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one
@@ -318,6 +319,23 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   pulkSurgeRampInMs: 1200, // ease-in duration when a surger enters PULK
   pulkSurgeRampOutMs: 1200, // ease-out duration as PULK ends
   pulkBrakeExemptStrength: 0.5, // 0=surgers fully braked, 1=fully exempt from rubber-band during PULK
+  // ── Pre-OUTCOME Field Governor (Stage B) — DEFAULT OFF; runs alongside surge/RB ──────
+  // A single per-racer speed multiplier (raceGovernor.js) = cohesion (mean-reverting to the
+  // field median, symmetric/position-coupled) + bounded zero-mean shuffle (rank-decoupled),
+  // phase-gated and faded to exactly 1.0 by OUTCOME. Lives here (the shared persisted dynamics
+  // config the physics reads) so DevScreen AND the future SetupScreen bind the SAME governorDrama
+  // key — single source, no second copy. governorDrama is the ONE owner "action" knob; the rest
+  // are expert knobs for the sweep. NOTE: sweet-spot tuning is deferred to the governor sweep.
+  governorEnabled: false, // master switch (default OFF — nothing changes until enabled)
+  governorDrama: 0.5, // 0..1 owner "action" slider: more → less cohesion (k↓) + more shuffle (A↑)
+  governorKMin: 0.04, // cohesion strength at max drama (floor: keeps equilibrium spread < gapRef)
+  governorKMax: 0.1, // cohesion strength at min drama (cap: within the ±maxEffect envelope)
+  governorAMin: 0.005, // shuffle amplitude at min drama (floor > 0 → never a dead train)
+  governorAMax: 0.02, // shuffle amplitude at max drama (< kMin so max-drama spread stays bounded)
+  governorFrequency: 3, // shuffle oscillation cycles over progress[0,1] — INDEPENDENT of drama (expert)
+  governorGapRef: 0.03, // gap (fraction of finishT) at which cohesion saturates (≈ breakaway threshold)
+  governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
+  governorMaxStepPerFrame: 0.01, // rate-limit on per-step governorMult change → smooth speed, no jump
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

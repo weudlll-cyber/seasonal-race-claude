@@ -137,6 +137,22 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  function resetGovernor() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      governorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled,
+      governorDrama: DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama,
+      governorKMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorKMin,
+      governorKMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorKMax,
+      governorAMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin,
+      governorAMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax,
+      governorFrequency: DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency,
+      governorGapRef: DEFAULT_RACE_DYNAMICS_CONFIG.governorGapRef,
+      governorMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect,
+      governorMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame,
+    }));
+  }
+
   function resetFrameTiming() {
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
@@ -870,6 +886,144 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
+        </div>
+      </SubCard>
+
+      {/* ── Block 4d: Pre-OUTCOME Field Governor (Stage B) ── */}
+      <SubCard
+        title="Field Governor (pre-OUTCOME)"
+        onReset={resetGovernor}
+        resetTestId="reset-governor"
+        subtitle="Pre-OUTCOME field governor (default OFF): keeps the field together (cohesion to the median) while injecting bounded shuffle (overtakes/drop-backs) — no lone breakaway, no train. Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Runs alongside surge + rubber-band. ‘Action’ is the one owner knob; the rest are expert/sweep knobs."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Governor Enabled"
+              checked={dynamicsConfig.governorEnabled ?? false}
+              onChange={(e) => setDynamics('governorEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable Field Governor
+            <InfoTooltip text="Master switch (default OFF). When on, the governor runs in PRE_PULK+PULK and fades to 1.0 by OUTCOME. Does not touch target ranks or the OUTCOME controller." />
+          </label>
+        </div>
+        <div className={s.formGroup} style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Action ({Math.round((dynamicsConfig.governorDrama ?? 0.5) * 100)}%)
+            <InfoTooltip text="The single owner control. Left = calmer/tighter field (more cohesion, less shuffle). Right = livelier (less cohesion, more shuffle overtakes). Extremes are bounded so it never breaks away or freezes into a train." />
+          </label>
+          <input
+            type="range"
+            aria-label="Governor Action (drama)"
+            min={0}
+            max={1}
+            step={0.05}
+            value={dynamicsConfig.governorDrama ?? DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 1) setDynamics('governorDrama', v);
+            }}
+            style={{ width: '100%', cursor: 'pointer' }}
+          />
+        </div>
+        <div className={s.formGrid}>
+          {[
+            {
+              key: 'governorKMin',
+              label: 'k min (max-drama cohesion)',
+              min: 0,
+              max: 0.5,
+              step: 0.005,
+              tip: 'Cohesion strength at max Action. Floor keeps the field bounded even when Action is high.',
+            },
+            {
+              key: 'governorKMax',
+              label: 'k max (min-drama cohesion)',
+              min: 0,
+              max: 0.5,
+              step: 0.005,
+              tip: 'Cohesion strength at min Action. Higher = tighter field / more train-like at low Action.',
+            },
+            {
+              key: 'governorAMin',
+              label: 'A min (min-drama shuffle)',
+              min: 0,
+              max: 0.2,
+              step: 0.005,
+              tip: 'Shuffle amplitude at min Action. Keep > 0 so there is always some movement (no dead train).',
+            },
+            {
+              key: 'governorAMax',
+              label: 'A max (max-drama shuffle)',
+              min: 0,
+              max: 0.2,
+              step: 0.005,
+              tip: 'Shuffle amplitude at max Action. Keep below k min so max-Action spread stays bounded.',
+            },
+            {
+              key: 'governorFrequency',
+              label: 'Shuffle frequency',
+              min: 0.5,
+              max: 12,
+              step: 0.5,
+              tip: 'Oscillation cycles across the race — INDEPENDENT of Action (expert). Higher = quicker weave.',
+            },
+            {
+              key: 'governorGapRef',
+              label: 'Gap ref',
+              min: 0.005,
+              max: 0.1,
+              step: 0.005,
+              tip: 'Gap (fraction of the race) at which cohesion saturates. ≈ the breakaway threshold.',
+            },
+            {
+              key: 'governorMaxEffect',
+              label: 'Max effect (±)',
+              min: 0.02,
+              max: 0.2,
+              step: 0.01,
+              tip: 'Outer clamp on the per-racer speed effect — the realism guarantee (±). Governor never exceeds this.',
+            },
+            {
+              key: 'governorMaxStepPerFrame',
+              label: 'Max step / frame',
+              min: 0.001,
+              max: 0.05,
+              step: 0.001,
+              tip: 'Slew limit: how fast governorMult may change per step. Lower = smoother speed changes.',
+            },
+          ].map(({ key, label, min, max, step, tip }) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={label}
+                min={min}
+                max={max}
+                step={step}
+                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
         </div>
       </SubCard>
 

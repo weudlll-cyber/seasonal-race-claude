@@ -66,7 +66,8 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadRubberBandConfig } from '../../modules/rubberBandConfig.js';
-import { applyRubberBand } from '../../modules/raceRubberBand.js';
+import { applyRubberBand, computeMedianT } from '../../modules/raceRubberBand.js';
+import { applyGovernor } from '../../modules/raceGovernor.js';
 import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
 import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -92,6 +93,7 @@ import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
 import RubberBandDiagHUD from './RubberBandDiagHUD.jsx';
+import GovernorDiagHUD from './GovernorDiagHUD.jsx';
 import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
 import {
   selectOverlayText,
@@ -155,6 +157,8 @@ export default function RaceScreen() {
   // Live rubber-band cfg + surge-exempt strength handed to applyRubberBand this race,
   // exposed read-only to RubberBandDiagHUD so it shows what physics actually uses.
   const rubberBandDiagRef = useRef(null);
+  // Live governor cfg + resolved phase-binding snapshot for GovernorDiagHUD (read-only).
+  const governorDiagRef = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
@@ -217,6 +221,7 @@ export default function RaceScreen() {
   const showBattleDiag = cameraConfig.showBattleDiag ?? false;
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
   const showRubberBandDiag = cameraConfig.showRubberBandDiag ?? false;
+  const showGovernorDiag = cameraConfig.showGovernorDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
@@ -665,6 +670,9 @@ export default function RaceScreen() {
           rubberBandMultPrev: 1.0,
           rubberBandMultTarget: 1.0,
           rubberBandTransStart: 0,
+          // Governor (Stage B): single multiplier, slew-limited in-place (no separate
+          // prev/target transition fields — the rate limiter reads governorMult itself).
+          governorMult: 1.0,
         };
         initRacerBehavior(racer);
         racer.physicalY = computeRowPhysicalY(
@@ -742,6 +750,26 @@ export default function RaceScreen() {
     if (racePlanEnabled && rpPlanInfo?.b1Indices) {
       camDirRef.current.updateRacePlan(rpPlanInfo.b1Indices);
     }
+
+    // ── Pre-OUTCOME Field Governor (Stage B) setup ─────────────────────────────
+    // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
+    // (A1 — it is a separate cohesion source, not routed through the surge-gated pulk
+    // bias). Phase fractions come from the controller (live boundaries, single source).
+    const governorEnabled = racePlanEnabled && (dynamicsConfig.governorEnabled ?? false);
+    const govCfg = {
+      enabled: governorEnabled,
+      drama: dynamicsConfig.governorDrama ?? 0.5,
+      kMin: dynamicsConfig.governorKMin ?? 0.04,
+      kMax: dynamicsConfig.governorKMax ?? 0.1,
+      aMin: dynamicsConfig.governorAMin ?? 0.005,
+      aMax: dynamicsConfig.governorAMax ?? 0.02,
+      frequency: dynamicsConfig.governorFrequency ?? 3,
+      gapRef: dynamicsConfig.governorGapRef ?? 0.03,
+      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+    };
+    const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
+    const govSeed = racePlanController?.seed ?? 0;
 
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
@@ -958,13 +986,48 @@ export default function RaceScreen() {
           // Brakes front-breakaway racers toward a max gap from the field median so
           // the field stays catchable, without pulling the legitimate winner into the
           // pack. Logic shared with sim-fairness.mjs via raceRubberBand.js (parity).
+          // A5: when the governor also runs, compute the field median ONCE this step and
+          // share it with both (no double sort). Governor OFF → call is byte-identical.
+          const govPhase =
+            governorEnabled && racePlanController
+              ? racePlanController.getPhase(physicsTs, st.raceProgress)
+              : null;
+          const sharedMedianT = governorEnabled ? computeMedianT(st.racers) : undefined;
           applyRubberBand(
             st.racers,
             st.finishT,
             physicsTs,
             rubberBandConfig,
-            pulkBrakeExemptStrength
+            pulkBrakeExemptStrength,
+            sharedMedianT
           );
+
+          // ── Pre-OUTCOME Field Governor (Stage B; default OFF, parallel to surge/RB) ──
+          if (governorEnabled && govFractions) {
+            applyGovernor(
+              st.racers,
+              st.finishT,
+              govPhase,
+              {
+                progress: st.raceProgress,
+                pulkEndFrac: govFractions.pulkEndFrac,
+                corrStartFrac: govFractions.corrStartFrac,
+                seed: govSeed,
+              },
+              govCfg,
+              sharedMedianT
+            );
+            // Read-only snapshot for the Governor Diag HUD (cheap per-frame object).
+            governorDiagRef.current = {
+              cfg: govCfg,
+              phase: govPhase,
+              progress: st.raceProgress,
+              pulkEndFrac: govFractions.pulkEndFrac,
+              corrStartFrac: govFractions.corrStartFrac,
+              seed: govSeed,
+              finishT: st.finishT,
+            };
+          }
 
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
@@ -1036,6 +1099,7 @@ export default function RaceScreen() {
                     r.areaBonusMult *
                     r.rubberBandMult *
                     (r.pulkSurgeMult ?? 1.0) *
+                    (r.governorMult ?? 1.0) *
                     zoneMult,
                 st.finishT + 0.001
               );
@@ -1703,6 +1767,12 @@ export default function RaceScreen() {
             racersRef={g}
             rubberBandDiagRef={rubberBandDiagRef}
             visible={showRubberBandDiag && !(winnerOverlayText ?? overlayText)}
+          />
+          {/* Top-center; the bottom-center slot is taken by the RubberBand HUD (A7). */}
+          <GovernorDiagHUD
+            racersRef={g}
+            governorDiagRef={governorDiagRef}
+            visible={showGovernorDiag}
           />
           <LeadChangeDiagHUD cameraRef={camDirRef} visible={showLeadChangeDiag} />
           <RacePlanHUD

@@ -14,7 +14,9 @@
 import { easeInOutCubic } from '../utils/mathUtils.js';
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
-function mulberry32(seed) {
+// Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
+// introducing a second RNG — with its own distinct XOR-seed constant.
+export function mulberry32(seed) {
   let s = seed >>> 0;
   return () => {
     s += 0x6d2b79f5;
@@ -583,5 +585,19 @@ export function createTrajectoryController(racePlan) {
     return tel;
   }
 
-  return { update, computePulkBiasedTarget, getPhase, collectTelemetry };
+  // Live phase-boundary fractions [0,1], single-sourced from the same _phases the phase
+  // clock uses (no second copy). Consumed by the pre-OUTCOME governor (raceGovernor.js) so
+  // its fade binds to the CURRENT boundaries — moves automatically when the owner edits them.
+  function getPhaseFractions() {
+    return { pulkStartFrac, pulkEndFrac, transEndFrac, corrStartFrac, corrEndFrac };
+  }
+
+  return {
+    update,
+    computePulkBiasedTarget,
+    getPhase,
+    getPhaseFractions,
+    collectTelemetry,
+    seed: plan.seed,
+  };
 }
