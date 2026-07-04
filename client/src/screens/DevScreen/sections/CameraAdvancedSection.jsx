@@ -456,13 +456,13 @@ function CameraAdvancedSection() {
             min={0}
             max={0.2}
             step={0.005}
-            value={config.battleIsolationThresholdT ?? 0.075}
+            value={config.battleIsolationThresholdT ?? 0}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 0.2) set('battleIsolationThresholdT', v);
             }}
-            display={`${((config.battleIsolationThresholdT ?? 0.075) * 100).toFixed(1)}%`}
-            tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Default 0.075."
+            display={`${((config.battleIsolationThresholdT ?? 0) * 100).toFixed(1)}%`}
+            tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Ships disabled (default 0)."
           />
           <SliderRow
             label="Max. group size"

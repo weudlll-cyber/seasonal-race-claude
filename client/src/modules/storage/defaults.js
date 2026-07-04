@@ -139,8 +139,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   // rejected every cluster on the expanded 3072–6144px worlds).
   battlePulkThresholdT: 0.05,
   // Isolation threshold (arc): no non-group racer may be within this lap fraction of any group
-  // member. 0 = disabled. Suggested ≈ 1.5 × battlePulkThresholdT.
-  battleIsolationThresholdT: 0.075,
+  // member. Ships disabled (0 = off; raise via DevScreen to re-enable the "isolated duel" filter).
+  // When re-enabled, a value ≈ 1.5 × battlePulkThresholdT is suggested.
+  battleIsolationThresholdT: 0,
   // Maximum number of racers that can form the battle group (3–6). Greedy expansion adds
   // adjacent-rank racers until the group reaches this cap or no more qualify.
   battleMaxGroupSize: 6,

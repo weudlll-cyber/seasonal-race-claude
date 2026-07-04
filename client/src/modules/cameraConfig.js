@@ -62,7 +62,7 @@
 //              the leader zoom. v15→v16 migration injects the field at its default.
 //              Schema v17 (15b): BATTLE closeness world-px → arc-fraction (scale-independent).
 //              Removes battlePulkThresholdPx / battleIsolationThresholdPx; battlePulkThresholdT
-//              default 0.12→0.05; adds battleIsolationThresholdT (default 0.075). v16→v17 migration
+//              default 0.12→0.05; adds battleIsolationThresholdT (default 0). v16→v17 migration
 //              strips the px fields, migrates the old 0.12 closeness to 0.05, injects the arc knob.
 // ============================================================
 

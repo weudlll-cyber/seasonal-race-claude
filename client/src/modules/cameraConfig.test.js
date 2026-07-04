@@ -150,7 +150,7 @@ describe('loadCameraConfig — v16→v17 migration (BATTLE arc closeness)', () =
     expect(cfg.battlePulkThresholdPx).toBeUndefined();
     expect(cfg.battleIsolationThresholdPx).toBeUndefined();
     expect(cfg.battlePulkThresholdT).toBe(0.05);
-    expect(cfg.battleIsolationThresholdT).toBe(0.075);
+    expect(cfg.battleIsolationThresholdT).toBe(0);
   });
 
   it('preserves a non-default user closeness value through v16→v17', () => {
