@@ -484,6 +484,15 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // and deterministic (advanced one fixed 16ms physics step per call, no wall-clock).
   laneTargetEaseMs: 200,
   lateralVelocityResetSoftness: 0.5,
+  // maxLateralSpeedPerStep (Stage A3): uniform per-step cap on lateral motion (physicalY
+  // units per 16ms step), applied to dodge-outs AND returns alike — no sideways "jump".
+  // The look-before-brake dodge trigger is derived from this cap so a capped glide always
+  // clears in time; if it can't, the racer brakes and waits. Very large → no cap (reproduces
+  // the prior near-instant dodge). HANDOFF: the sweet-spot (field-fanning vs brake-frequency
+  // vs glide-feel) is tuned in the governor sweep, NOT here — 0.028 is a mild default that
+  // sits just below today's ~0.033/step dodge peak so the jump visibly softens while keeping
+  // honestOverlap at/below baseline (sim-checked: overlapRate 0, honestOverlap −0.7%).
+  maxLateralSpeedPerStep: 0.028,
   // ── Look before you brake ───────────────────────────────────────────────────
   // When a racer closes on a slower racer in the same lane AND a side is genuinely
   // free (same isSideFree geometry as the overlap resolver), it commits to that free

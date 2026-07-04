@@ -82,6 +82,7 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       lookBeforeBrakeRequireSlowerLeader:
         DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeRequireSlowerLeader,
       lookBeforeBrakeMinDifferential: DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeMinDifferential,
+      maxLateralSpeedPerStep: DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralSpeedPerStep,
     }));
   }
 
@@ -484,6 +485,32 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (isFinite(v) && v >= 1) setBehavior('lookBeforeBrakeReengageTMultiplier', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Lateral Speed
+              <InfoTooltip text="Uniform cap on how far a racer moves sideways per physics step (dodge-out and return alike) — stops the instant sideways 'jump'. Lower = smoother glide, but the dodge must start earlier (racers may brake and wait more, and the pack can fan out a little). Very large = no cap (near-instant dodge, prior behavior). Sweet-spot is tuned with the governor sweep." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Max Lateral Speed Per Step"
+              min={0.005}
+              max={1.0}
+              step={0.005}
+              value={
+                behaviorConfig.maxLateralSpeedPerStep ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralSpeedPerStep
+              }
+              disabled={!behaviorConfig.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v > 0) setBehavior('maxLateralSpeedPerStep', v);
               }}
             />
           </div>

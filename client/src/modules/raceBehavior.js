@@ -41,6 +41,18 @@ const LATERAL_STEP_MS = 16;
 const LANE_TARGET_EASE_MS_FALLBACK = 200;
 const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
 
+// Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
+// units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
+// constant. Mirrors the defaults.js value for partial-config callers (sim/unit). The dodge
+// trigger (dT_start) is derived from this cap so a capped glide always clears in time.
+// NOTE: vLatMax's sweet-spot (field-fanning vs brake-frequency vs glide-feel) is tuned in
+// the governor sweep, NOT here — this fallback is a mild, conservative default. 0.028 sits
+// modestly below today's front-loaded dodge peak (~0.033/step = pass spring 0.5 × damping
+// 0.16), so it visibly caps the "jump" into a glide while the derived dodge trigger widens
+// only slightly (closing rates are small vs the longitudinal contact span → little fanning),
+// and keeps honestOverlap at/below baseline with overlapRate 0 (sim-checked).
+const MAX_LATERAL_SPEED_PER_STEP_FALLBACK = 0.028;
+
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
  *
@@ -388,6 +400,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     _ssForceMag.set(r.index, 0);
   }
   const speedBrakeSet = _speedBrakeSet;
+  // Look-ahead lane-change (Stage A3): uniform per-step lateral-speed cap. Read once so the
+  // SAME constant feeds both the dodge trigger (dT_start below) and the integrator step clamp.
+  const vLatMax = Math.max(0, config.maxLateralSpeedPerStep ?? MAX_LATERAL_SPEED_PER_STEP_FALLBACK);
   // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
   const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
@@ -482,6 +497,17 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           // Effective re-engage threshold: the larger of the fixed floor and the lag-safe
           // dynamic margin. Suppress only while dT is above it.
           const safeReengageT = Math.max(reengageFloorT, lbTHalf + lagFrames * vClose);
+          // Look-ahead lane-change (Stage A3): the dodge now glides at the uniform vLatMax cap,
+          // so it must START early enough to traverse one body-width sideways (lbHalfSpan) at
+          // that capped speed before longitudinal contact. tLat = steps to clear sideways;
+          // dT_start = lbTHalf + vClose × (tLat + lagFrames) is the gap at which to commit.
+          // Kept as a FLOOR over safeReengageT (never fires later than the brake-lag margin
+          // required today), so dT_start >= safeReengageT always — the dodge triggers earlier,
+          // never later. Reuses the existing lbHalfSpan / lbTHalf / vClose / lagFrames — no
+          // second copy of the geometry. When the side can't be cleared in time the gate stays
+          // shut and the trailer brakes (option A: wait, never squeeze).
+          const tLat = vLatMax > 0 ? lbHalfSpan / vLatMax : Infinity;
+          const dTStart = Math.max(safeReengageT, lbTHalf + vClose * (tLat + lagFrames));
 
           // (d) real-overtake precondition: trailer must be meaningfully faster (raw speeds).
           // Uses the DEDICATED lookBeforeBrakeMinDifferential (decoupled from brake-to-match's
@@ -493,7 +519,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             config.lookBeforeBrakeRequireSlowerLeader === false ||
             trailerDenom > leaderRawSpeed * (1 + minDiff);
 
-          if (dT > safeReengageT && slowerLeaderOk) {
+          if (dT > dTStart && slowerLeaderOk) {
             const dir = chooseFreeLaneDir(trailer, leader, active, lbHalfSpan, lbTHalf, lbCap);
             // (c) achieved progress: do not suppress while diverging from the chosen side
             // (physicalYVelocity is last frame's post-damping value — parity-safe). Frame-1
@@ -783,6 +809,20 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     if (absY >= config.comfortThreshold && absY < 1.0) {
       const pen = (absY - config.comfortThreshold) / (1.0 - config.comfortThreshold);
       newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
+    }
+
+    // Stage A3: uniform per-step lateral-speed cap. Clamp the NET step magnitude to vLatMax
+    // (dodge-out AND return alike) so lateral motion never exceeds the constant speed the
+    // look-ahead trigger (dTStart) is derived from — the fast, front-loaded pass "jump" is
+    // limited into a glide without weakening the spring. Sync physicalYVelocity to the CLAMPED
+    // step so the spring cannot bank unspent force and lurch on release. When the step is
+    // already within vLatMax (e.g. the gentle return) this is a no-op; vLatMax very large →
+    // never clamps → reproduces the prior near-instant dodge (escape hatch / regression).
+    const preCapStep = newY - r.physicalY;
+    if (Math.abs(preCapStep) > vLatMax) {
+      const cappedStep = preCapStep > 0 ? vLatMax : -vLatMax;
+      newY = r.physicalY + cappedStep;
+      r.physicalYVelocity = cappedStep;
     }
 
     // maxLateral cap + hard boundary clamp. Stage A2: the position clamp stays HARD

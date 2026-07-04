@@ -731,6 +731,9 @@ describe('applyRacerBehavior — look before you brake', () => {
         lookBeforeBrakePassStrength: 0.0001,
         lookBeforeBrakeReengageTMultiplier: 1.0, // floor at contact → isolate the lag margin
         lookBeforeBrakeLagFrames: lagFrames,
+        // Stage A3: neutralize the look-ahead lateral-clearance term (dT_start) so this test
+        // isolates the LAG margin — very large vLatMax → tLat → 0 → dT_start = safeReengageT.
+        maxLateralSpeedPerStep: 1e9,
       };
       const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.0, baseSpeed: 6.0e-4 });
       const leader = makeLaneRacer({ index: 1, t: 0.5 + 0.038, physicalY: 0.0, baseSpeed: 1.0e-4 });
@@ -748,5 +751,74 @@ describe('applyRacerBehavior — look before you brake', () => {
     expect(gapLagSafe).toBeGreaterThanOrEqual(LB_THALF); // fix: re-engages before overlap
     expect(gapLagBlind).toBeLessThan(LB_THALF); // pre-fix: one frame late → already overlapping
     expect(gapLagSafe).toBeGreaterThan(gapLagBlind); // lag-safe keeps more lead
+  });
+});
+
+// ── Stage A3: look-ahead lane-change (uniform lateral-speed cap, glide-or-brake) ──
+describe('applyRacerBehavior — look-ahead lane-change (Stage A3)', () => {
+  // Hard-sep + repulsion off to read physicalY cleanly; LBB on (default).
+  const a3 = (over = {}) => ({
+    ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+    hardSeparationEnabled: false,
+    softRepulsionStrength: 0,
+    ...over,
+  });
+  // Faster trailer above a slower leader, free lane both sides (2 racers).
+  const pair = (dTgap, tBase = 5e-4, lBase = 3e-4, trailerY = 0.05) => [
+    makeLaneRacer({ index: 0, t: 0.5, physicalY: trailerY, baseSpeed: tBase }),
+    makeLaneRacer({ index: 1, t: 0.5 + dTgap, physicalY: 0.0, baseSpeed: lBase }),
+  ];
+
+  it('(a) the dodge step is clamped to vLatMax — no single-frame full-lane move', () => {
+    // Slow closing so the pass fires at this gap regardless of the cap; measure the STEP.
+    const [tSmall, lSmall] = pair(0.037, 1.2e-4, 1.0e-4);
+    applyRacerBehavior([tSmall, lSmall], a3({ maxLateralSpeedPerStep: 0.01 }));
+    expect(tSmall.physicalY - 0.05).toBeLessThanOrEqual(0.01 + 1e-9); // step capped
+    expect(tSmall.physicalY).toBeGreaterThan(0.05); // still gliding toward the free side
+  });
+
+  it('(d) very large vLatMax reproduces the prior near-instant dodge (escape hatch)', () => {
+    const [tBig, lBig] = pair(0.037, 1.2e-4, 1.0e-4);
+    applyRacerBehavior([tBig, lBig], a3({ maxLateralSpeedPerStep: 10 }));
+    // Uncapped: the 0.5 pass spring moves ~0.028 in one frame — far past the 0.01 cap case.
+    expect(tBig.physicalY - 0.05).toBeGreaterThan(0.02);
+  });
+
+  it('(b) look-ahead: a smaller vLatMax needs more lead → brakes where a large cap passes', () => {
+    // Fast closing (big vClose) at a fixed in-zone gap. Large cap → dodge fits → pass (no brake).
+    const [tFast, lFast] = pair(0.035, 8e-4, 3e-4);
+    applyRacerBehavior([tFast, lFast], a3({ maxLateralSpeedPerStep: 10 }));
+    expect(tFast.avoidanceActive).toBe(false); // passes at speed
+
+    // Small cap → the glide can't clear in time → dodge trigger stays shut → brake and wait.
+    const [tSlow, lSlow] = pair(0.035, 8e-4, 3e-4);
+    applyRacerBehavior([tSlow, lSlow], a3({ maxLateralSpeedPerStep: 0.01 }));
+    expect(tSlow.avoidanceActive).toBe(true); // wait-and-brake (option A)
+  });
+
+  it('(decisions) dir/latch identical across cap values for a fixed passing scenario', () => {
+    const [tDef, lDef] = pair(0.037, 1.2e-4, 1.0e-4);
+    applyRacerBehavior([tDef, lDef], a3()); // default cap
+    const [tBig, lBig] = pair(0.037, 1.2e-4, 1.0e-4);
+    applyRacerBehavior([tBig, lBig], a3({ maxLateralSpeedPerStep: 10 }));
+    expect(tDef.passDir).toBe(tBig.passDir);
+    expect(tDef.passLeaderIndex).toBe(tBig.passLeaderIndex);
+    expect(tDef.passDir).not.toBe(0); // sanity: it really is a committed pass
+  });
+
+  it('(c) side unsafe mid-dodge → brake, no snap (step stays within vLatMax)', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.537, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    const cfg3 = a3({ maxLateralSpeedPerStep: 0.025 });
+    // Frame 1: free lane → pass commits.
+    applyRacerBehavior([trailer, leader], cfg3);
+    expect(trailer.passDir).not.toBe(0);
+    const yAfter1 = trailer.physicalY;
+    // Frame 2: block BOTH sides at the trailer's t → no free lane → brake, never a snap.
+    const leftBlock = makeLaneRacer({ index: 2, t: 0.5, physicalY: -0.4, baseSpeed: 1.0e-4 });
+    const rightBlock = makeLaneRacer({ index: 3, t: 0.5, physicalY: 0.4, baseSpeed: 1.0e-4 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], cfg3);
+    expect(trailer.avoidanceActive).toBe(true); // brake-and-wait
+    expect(Math.abs(trailer.physicalY - yAfter1)).toBeLessThanOrEqual(0.025 + 1e-9); // capped, no snap-back
   });
 });
