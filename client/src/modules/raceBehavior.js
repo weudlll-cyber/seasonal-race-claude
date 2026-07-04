@@ -33,6 +33,14 @@ const _passCandidate = new Map();
 // (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
 const SOFT_STEERING_STRENGTH_FALLBACK = 0.03;
 
+// Lateral feel smoothing (Stage A2). Fallbacks mirror defaults.js for partial-config
+// callers (sim/unit). LATERAL_STEP_MS is the fixed physics step (index.jsx FIXED_DT /
+// sim DT = 16ms); the target ease advances one step per applyRacerBehavior call, so it
+// is deterministic and browser/sim parity-safe without reading any wall-clock.
+const LATERAL_STEP_MS = 16;
+const LANE_TARGET_EASE_MS_FALLBACK = 200;
+const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
+
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
  *
@@ -92,6 +100,72 @@ export function initRacerBehavior(racer) {
   // read one frame later by chooseFreeLaneDir (same one-frame-lag pattern as brakeMatch).
   racer.passLeaderIndex = -1;
   racer.passDir = 0;
+  // Lateral lane-change target smoothing (Stage A2, FEEL only). ssEasedTarget is the
+  // smoothed target fed to the steering spring; it eases toward the raw per-step target
+  // whenever that target FLIPS (lane change / pass commit), so the spring never sees a
+  // step. Snapshot easeInOutCubic transition (same shape as the re-roll / warmup easing).
+  // ssTargetGoal = undefined marks "first observation" → the first frame snaps (no
+  // startup transient). The steering DECISION is unchanged; only the target motion eases.
+  racer.ssEasedTarget = 0;
+  racer.ssTargetGoal = undefined;
+  racer.ssTargetFrom = 0;
+  racer.ssTargetProg = 1;
+}
+
+/**
+ * Ease the effective lateral steering target toward the raw per-step target (Stage A2,
+ * FEEL only). Advances one fixed physics step per call, so it is deterministic and
+ * browser/sim parity-safe (both step at LATERAL_STEP_MS). A constant target is a no-op
+ * after the first call — only a target FLIP starts a fresh easeInOutCubic ramp. The
+ * steering DECISION (which lane / whether to pass) is decided by the caller and is NOT
+ * affected; this smooths only the target's motion so the spring never sees a jump.
+ *
+ * @param {object} r          racer (holds ssEasedTarget / ssTargetGoal / ssTargetFrom / ssTargetProg)
+ * @param {number} rawTarget  the discontinuous per-step target the caller would otherwise use
+ * @param {number} easeMs     ramp duration; <= 0 disables smoothing (snap = pre-Stage-A2)
+ * @returns {number} the eased target to feed into the steering spring this frame
+ */
+function smoothLaneTarget(r, rawTarget, easeMs) {
+  // First observation: snap (no startup transient) — byte-identical to frame 1 pre-smoothing.
+  if (r.ssTargetGoal === undefined) {
+    r.ssTargetGoal = rawTarget;
+    r.ssTargetFrom = rawTarget;
+    r.ssEasedTarget = rawTarget;
+    r.ssTargetProg = 1;
+    return rawTarget;
+  }
+  // Disabled (easeMs <= 0): snap — byte-identical to pre-Stage-A2 steering.
+  if (!(easeMs > 0)) {
+    r.ssTargetGoal = rawTarget;
+    r.ssEasedTarget = rawTarget;
+    r.ssTargetProg = 1;
+    return rawTarget;
+  }
+  // Target flip → decide ease vs snap. SAFETY (Stage A2 addendum P1/P3): ease ONLY a
+  // RELAXING move — one whose target magnitude SHRINKS toward centerline (the racer is
+  // returning after an obstacle cleared; no body to out-run, so smoothing is free). A move
+  // that INCREASES lateral offset is an avoidance/dodge commit that must clear the body in
+  // time; easing it delays clearance and inflates overlap / pass-through (measured), so it
+  // is SNAPPED decisively — identical to the pre-Stage-A2 dodge. This confines smoothing to
+  // the safe half (the return weave) and keeps passThroughCount at/below baseline.
+  if (Math.abs(rawTarget - r.ssTargetGoal) > 1e-4) {
+    const relaxing = Math.abs(rawTarget) < Math.abs(r.ssEasedTarget) - 1e-9;
+    if (!relaxing) {
+      r.ssTargetFrom = rawTarget;
+      r.ssTargetGoal = rawTarget;
+      r.ssEasedTarget = rawTarget;
+      r.ssTargetProg = 1;
+      return rawTarget; // decisive dodge — no ease
+    }
+    r.ssTargetFrom = r.ssEasedTarget;
+    r.ssTargetGoal = rawTarget;
+    r.ssTargetProg = 0;
+  }
+  const easeFrames = Math.max(1, Math.round(easeMs / LATERAL_STEP_MS));
+  r.ssTargetProg = Math.min(1, r.ssTargetProg + 1 / easeFrames);
+  r.ssEasedTarget =
+    r.ssTargetFrom + (r.ssTargetGoal - r.ssTargetFrom) * easeInOutCubic(r.ssTargetProg);
+  return r.ssEasedTarget;
 }
 
 /**
@@ -646,6 +720,12 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
+  // Stage A2 feel knobs (read once; used in this loop and the hard-separation pass below).
+  const laneTargetEaseMs = config.laneTargetEaseMs ?? LANE_TARGET_EASE_MS_FALLBACK;
+  const velResetKeep = Math.max(
+    0,
+    Math.min(1, config.lateralVelocityResetSoftness ?? VELOCITY_RESET_SOFTNESS_FALLBACK)
+  );
   for (const r of active) {
     let delta = 0;
 
@@ -659,12 +739,24 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     // is written here from the per-step candidate and read one frame later by
     // chooseFreeLaneDir to hold the chosen side stable (no zigzag). No candidate → clear
     // the latch and fall back to the normal soft-steering spring.
+    // Resolve this frame's steering DECISION (branch + latch + raw target + spring
+    // strength) exactly as before — nothing here changes which lane is chosen. The raw
+    // target is then eased (smoothLaneTarget) so the spring never sees a discontinuous
+    // flip; the latch writes (passLeaderIndex/passDir) are untouched, so chooseFreeLaneDir
+    // reads the identical stable side one frame later.
     const passCand = _passCandidate.get(r.index);
     if (passCand) {
       r.passLeaderIndex = passCand.leaderIndex;
       r.passDir = passCand.dir;
       const passStrength = config.lookBeforeBrakePassStrength ?? 0.5;
-      delta += (passCand.targetY - r.physicalY) * passStrength;
+      // Stage A2: the pass commit is SAFETY-CRITICAL — it must clear the racer sideways
+      // BEFORE longitudinal contact (the non-penetration "commit" half). So it is NOT
+      // eased; steer decisively to the free side exactly as before. Passing easeMs=0 also
+      // SYNCS the smoothing state to this target, so a later return to soft steering eases
+      // from the true current target rather than a stale value. (Verified: easing the pass
+      // target inflated passThroughCount/overlap — smoothing is confined to §4a below.)
+      const passTarget = smoothLaneTarget(r, passCand.targetY, 0);
+      delta += (passTarget - r.physicalY) * passStrength;
     } else {
       r.passLeaderIndex = -1;
       r.passDir = 0;
@@ -673,9 +765,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // centerline (0) when no obstacle, beside the most-constraining obstacle
       // otherwise, or the current position (hold) when both sides are blocked. Runs
       // before the velocity/damping integration.
-      const target = _ssTarget.get(r.index) ?? r.physicalY;
+      const rawTarget = _ssTarget.get(r.index) ?? r.physicalY;
       const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
-      delta += (target - r.physicalY) * strength;
+      // Stage A2: ease the effective soft-steering target toward the (possibly flipped) raw
+      // target so the spring integrates a smooth weave, not a snap. This is FEEL only — the
+      // §4a lane choice (rawTarget) is unchanged; only its motion is smoothed.
+      const easedTarget = smoothLaneTarget(r, rawTarget, laneTargetEaseMs);
+      delta += (easedTarget - r.physicalY) * strength;
     }
 
     // Accumulate lateral forces into velocity, then damp
@@ -689,10 +785,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       newY -= Math.sign(newY) * config.softRepulsionStrength * pen * pen;
     }
 
-    // maxLateral cap + hard boundary clamp; reset velocity on boundary hit
+    // maxLateral cap + hard boundary clamp. Stage A2: the position clamp stays HARD
+    // (physicalY pinned to the cap); the velocity is DAMPED toward 0 (retain velResetKeep)
+    // instead of hard-zeroed, so a moving racer eases to a stop at the wall rather than
+    // stopping dead mid-move. velResetKeep = 0 reproduces the pre-Stage-A2 hard reset.
     const cap = Math.min(config.maxLateral, 1.0);
     const clamped = Math.max(-cap, Math.min(cap, newY));
-    if (clamped !== newY) r.physicalYVelocity = 0;
+    if (clamped !== newY) r.physicalYVelocity *= velResetKeep;
     r.physicalY = clamped;
     r.avoidanceActive = speedBrakeSet.has(r.index);
 
@@ -863,6 +962,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             rB.physicalY = newYB;
             // Cancel any velocity that OPPOSES the correction so the pre-existing velocity
             // does not re-close the gap next frame. Velocity already separating is kept.
+            // Stage A2 NOTE: this reset is deliberately LEFT HARD (not softened). It is an
+            // anti-re-overlap SAFETY, not a wall-stop feel artifact — softening it would let
+            // a racer re-close into overlap and break the hard-separation guarantee. Only the
+            // boundary-clamp velocity reset (a pure wall-stop artifact) is softened this stage.
             if ((rA.physicalYVelocity ?? 0) * signA < 0) rA.physicalYVelocity = 0;
             if ((rB.physicalYVelocity ?? 0) * signB < 0) rB.physicalYVelocity = 0;
             continue;

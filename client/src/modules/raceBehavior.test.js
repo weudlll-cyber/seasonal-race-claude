@@ -306,13 +306,79 @@ describe('applyRacerBehavior — drafting cone', () => {
 // ── Lateral velocity + damping ──────────────────────────────────────────────
 
 describe('applyRacerBehavior — lateral velocity + damping', () => {
-  it('velocity is reset to 0 when physicalY is clamped at the boundary', () => {
+  it('velocity eases toward 0 (softened) at the boundary; position clamp stays hard (Stage A2)', () => {
     const r = makeRacer();
     r.physicalY = 2.0; // beyond maxLateral — will be clamped
     r.physicalYVelocity = 0.5; // outward momentum
+    // cfg carries the default lateralVelocityResetSoftness (0.5): velocity is damped, not hard-zeroed.
     applyRacerBehavior([r], { ...cfg, softRepulsionStrength: 0 });
+    expect(Math.abs(r.physicalYVelocity)).toBeLessThan(0.5); // reduced toward 0
+    expect(r.physicalYVelocity).not.toBe(0); // but NOT hard-zeroed at default softness
+    expect(r.physicalY).toBeLessThanOrEqual(cfg.maxLateral); // position clamp is still hard
+  });
+
+  it('velocity is hard-zeroed at the boundary when softness = 0 (opt-out = pre-Stage-A2)', () => {
+    const r = makeRacer();
+    r.physicalY = 2.0;
+    r.physicalYVelocity = 0.5;
+    applyRacerBehavior([r], { ...cfg, softRepulsionStrength: 0, lateralVelocityResetSoftness: 0 });
     expect(r.physicalYVelocity).toBe(0);
     expect(r.physicalY).toBeLessThanOrEqual(cfg.maxLateral);
+  });
+});
+
+// ── Stage A2: lateral lane-change target smoothing (FEEL only) ──────────────
+describe('applyRacerBehavior — lateral target smoothing (Stage A2)', () => {
+  const a2Cfg = {
+    ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+    hardSeparationEnabled: false,
+    softRepulsionStrength: 0,
+    lookBeforeBrakeEnabled: false, // isolate the §4a soft-steering target
+    laneTargetEaseMs: 200,
+  };
+
+  it('a dodge-out snaps decisively (safety); the return-to-center eases over frames', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.4, physicalY: 0.05 });
+    const leader = makeLaneRacer({ index: 1, t: 0.428, physicalY: 0.0 }); // ahead → §4a dodge target ~+0.40
+    // Frame 1: dodge-out (target magnitude grows from 0) → SNAPS decisively (must clear in time).
+    applyRacerBehavior([trailer, leader], a2Cfg);
+    const dodged = trailer.ssEasedTarget;
+    expect(dodged).toBeGreaterThan(0.2); // snapped out to the free side, not eased
+    // Leader clears far ahead → §4a target returns to centerline (0): a RELAXING move → EASES.
+    leader.t = 0.95;
+    applyRacerBehavior([trailer, leader], a2Cfg);
+    const afterReturn = trailer.ssEasedTarget;
+    expect(afterReturn).toBeLessThan(dodged); // began returning
+    expect(afterReturn).toBeGreaterThan(0); // but did NOT snap to 0 — eased
+    // Subsequent frames converge monotonically toward center.
+    let prev = afterReturn;
+    for (let i = 0; i < 12; i++) {
+      applyRacerBehavior([trailer, leader], a2Cfg);
+      expect(trailer.ssEasedTarget).toBeLessThanOrEqual(prev + 1e-9);
+      prev = trailer.ssEasedTarget;
+    }
+    expect(prev).toBeLessThan(afterReturn); // eased further toward center
+  });
+
+  it('smoothing does NOT change the decision (dir/latch) on the decision frame', () => {
+    const base = {
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      hardSeparationEnabled: false,
+      softRepulsionStrength: 0,
+    };
+    const mk = () => [
+      makeLaneRacer({ index: 0, t: 0.5, physicalY: 0.05, baseSpeed: 1.2e-4 }),
+      makeLaneRacer({ index: 1, t: 0.535, physicalY: 0.0, baseSpeed: 1.0e-4 }),
+    ];
+    // Smoothing ON (default) vs OFF (snap) → dir/latch/brake identical on the decision frame.
+    const pairSmooth = mk();
+    applyRacerBehavior(pairSmooth, { ...base, laneTargetEaseMs: 200 });
+    const pairSnap = mk();
+    applyRacerBehavior(pairSnap, { ...base, laneTargetEaseMs: 0 });
+    expect(pairSmooth[0].passDir).toBe(pairSnap[0].passDir);
+    expect(pairSmooth[0].passLeaderIndex).toBe(pairSnap[0].passLeaderIndex);
+    expect(pairSmooth[0].avoidanceActive).toBe(pairSnap[0].avoidanceActive);
+    expect(pairSmooth[1].passDir).toBe(pairSnap[1].passDir);
   });
 });
 

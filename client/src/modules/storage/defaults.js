@@ -470,6 +470,20 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   softSteeringStrength: 0.03,
   softSteeringClearancePct: 0.0,
   softSteeringHysteresisY: 0.04,
+  // ── Lateral feel smoothing (Stage A2) — FEEL only; avoidance DECISIONS unchanged ──
+  // laneTargetEaseMs: when the lateral steering target flips (a new free-lane / pass
+  //   candidate), the EFFECTIVE target eases toward it over this long via easeInOutCubic,
+  //   so the steering spring never sees a discontinuous jump — no lane snap. A constant
+  //   target is a no-op (only flips ease). 0 = disabled (snap = pre-Stage-A2 behavior).
+  //   Kept short so a committed pass still clears the leader in time.
+  // lateralVelocityResetSoftness: fraction of lateral velocity RETAINED where a boundary
+  //   clamp or an overlap correction would previously hard-zero it (0 = hard zero =
+  //   pre-Stage-A2; higher = softer ease-off). The position clamp and the overlap
+  //   separation stay HARD — only the velocity handling softens, so non-penetration holds.
+  // Both are parity-safe (raceBehavior.js is the single source; browser + sim import it)
+  // and deterministic (advanced one fixed 16ms physics step per call, no wall-clock).
+  laneTargetEaseMs: 200,
+  lateralVelocityResetSoftness: 0.5,
   // ── Look before you brake ───────────────────────────────────────────────────
   // When a racer closes on a slower racer in the same lane AND a side is genuinely
   // free (same isSideFree geometry as the overlap resolver), it commits to that free
