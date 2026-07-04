@@ -132,6 +132,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
+  showRubberBandDiag: false, // RUBBER-BAND diagnostics overlay: live cfg + leader brake window/gap/mult/exempt
   endgameThreshold: 0.9,
   // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
   // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one

@@ -91,6 +91,7 @@ import { createPerfLog, recordPerfFrame } from './perfLog.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
+import RubberBandDiagHUD from './RubberBandDiagHUD.jsx';
 import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
 import {
   selectOverlayText,
@@ -151,6 +152,9 @@ export default function RaceScreen() {
   const finishNavTimerRef = useRef(null);
 
   const g = useRef(null);
+  // Live rubber-band cfg + surge-exempt strength handed to applyRubberBand this race,
+  // exposed read-only to RubberBandDiagHUD so it shows what physics actually uses.
+  const rubberBandDiagRef = useRef(null);
   const shapeRef = useRef(null);
   const racerTypeRef = useRef(null);
   const camDirRef = useRef(null);
@@ -212,6 +216,7 @@ export default function RaceScreen() {
   const enablePerfLog = cameraConfig.enablePerfLog ?? false;
   const showBattleDiag = cameraConfig.showBattleDiag ?? false;
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
+  const showRubberBandDiag = cameraConfig.showRubberBandDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
 
   // ── State-overlay narrative text ─────────────────────────────────────────
@@ -689,6 +694,12 @@ export default function RaceScreen() {
     const pulkBrakeExemptStrength = pulkSurgeEnabled
       ? (dynamicsConfig.pulkBrakeExemptStrength ?? 0.5)
       : 0;
+    // Expose the exact cfg + exempt strength passed to applyRubberBand (read-only) for the
+    // RUBBER-BAND DIAG HUD — cause (settings) shown next to effect (leader brake).
+    rubberBandDiagRef.current = {
+      cfg: rubberBandConfig,
+      surgeExemptStrength: pulkBrakeExemptStrength,
+    };
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
@@ -1687,6 +1698,12 @@ export default function RaceScreen() {
           <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
+          {/* Bottom-center; hidden while a center state/finish banner shows so they never stack. */}
+          <RubberBandDiagHUD
+            racersRef={g}
+            rubberBandDiagRef={rubberBandDiagRef}
+            visible={showRubberBandDiag && !(winnerOverlayText ?? overlayText)}
+          />
           <LeadChangeDiagHUD cameraRef={camDirRef} visible={showLeadChangeDiag} />
           <RacePlanHUD
             diagRef={diagDataRef}
