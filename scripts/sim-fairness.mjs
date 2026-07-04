@@ -57,7 +57,7 @@ import {
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
-import { applyRubberBand } from '../client/src/modules/raceRubberBand.js';
+import { applyRubberBand, computeMedianT } from '../client/src/modules/raceRubberBand.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -198,6 +198,19 @@ const SELFCHECK = argv.includes('--selfcheck');
 const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
 const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 
+// ── Breakaway causal diagnostic (--breakaway-diag) ───────────────────────────
+// Read-only observation gated entirely behind this boolean flag, so a normal
+// fairness run is byte-identical to before (no extra columns, no extra output).
+// Records the pre-OUTCOME lone-breakaway signal: leader-gap over progress, the
+// peak pre-OUTCOME gap, and WHO leads at that peak (target rank + surge history +
+// multiplier decomposition). Raw output → results/breakaway-diag/. --diagLabel
+// names the output file so ablation arms don't overwrite each other.
+const BREAKAWAY_DIAG = argv.includes('--breakaway-diag');
+const DIAG_LABEL     = argVal('diagLabel', 'run');
+// Progress boundary below which a gap counts as "pre-OUTCOME" — read from config
+// (racePlanCorridorStart) so it tracks the same OUTCOME onset the controller uses.
+const BREAKAWAY_CORRIDOR_START = RP_CORRIDOR_START;
+
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
   let s = seed >>> 0;
@@ -325,6 +338,8 @@ export function runSingleRace({
   racePlanController = null,   // Phase-3A: TrajectoryController instance or null
   comebackAnalysisConfig = null,  // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
   frameHook = null,            // diag: called after applyRacerBehavior each frame — (raceTs, diagOut, racers)
+  breakawayDiag = false,       // --breakaway-diag: record the pre-OUTCOME breakaway signal (read-only)
+  racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -674,6 +689,20 @@ export function runSingleRace({
     // frameHook support: reusable Map cleared before each applyRacerBehavior call
     const _frameDiagOut = frameHook ? new Map() : null;
 
+    // ── Breakaway causal diagnostic state (--breakaway-diag; read-only) ───────
+    // bkGapBins: one snapshot per 5% progress bin (leader gap to median + to 2nd).
+    // bkPeak*: the max gap-to-median seen while progress < corridorStart, plus WHO
+    // led there and their multiplier decomposition at that frame. bkEverSurged:
+    // racer indices whose pulkSurgeMult ever exceeded 1 (surge participation).
+    const bkGapBins   = breakawayDiag ? [] : null;
+    let   bkNextBin   = 0;                 // next 5% bin index (0..20) still to record
+    let   bkPeakGap   = -Infinity;         // max pre-OUTCOME (leaderT - medianT)/finishT
+    let   bkPeakProgress   = 0;
+    let   bkPeakLeaderIdx  = -1;
+    let   bkPeakGap2nd     = 0;
+    let   bkPeakDecomp     = null;
+    const bkEverSurged = breakawayDiag ? new Set() : null;
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -821,6 +850,54 @@ export function runSingleRace({
           // trajectoryMult + areaBonusMult + pulkSurgeMult: all 1.0 when Race Plan / surge inactive
           r.t +=
             r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (DT / 16);
+        }
+      }
+
+      // ── Breakaway causal diagnostic (--breakaway-diag; read-only) ────────────
+      // Pure observation on the post-Pass-2 t values with this frame's multipliers
+      // still in place. Records the leader's gap to the field median (single source:
+      // computeMedianT) and to 2nd place, binned by progress, and captures the
+      // pre-OUTCOME peak-gap frame (who + why). No mutation of race state.
+      if (breakawayDiag) {
+        for (const r of racers) {
+          if ((r.pulkSurgeMult ?? 1.0) > 1.0001) bkEverSurged.add(r.index);
+        }
+        let leader = null, second = null;
+        for (const r of racers) {
+          if (r.finished) continue;
+          if (!leader || r.t > leader.t) { second = leader; leader = r; }
+          else if (!second || r.t > second.t) { second = r; }
+        }
+        if (leader) {
+          const medT   = computeMedianT(racers);
+          const gapMed = medT !== null && finishT > 0 ? (leader.t - medT) / finishT : 0;
+          const gap2nd = second && finishT > 0 ? (leader.t - second.t) / finishT : 0;
+          // 5% progress bins — record each bin at its first crossing (raceProgress is
+          // the monotonic start-of-frame leader progress computed at the top of the loop).
+          while (bkNextBin <= 20 && raceProgress >= bkNextBin * 0.05) {
+            bkGapBins.push({
+              bin:       +(bkNextBin * 0.05).toFixed(2),
+              progress:  +raceProgress.toFixed(4),
+              gapMedian: +gapMed.toFixed(5),
+              gap2nd:    +gap2nd.toFixed(5),
+              leaderIdx: leader.index,
+            });
+            bkNextBin++;
+          }
+          // Peak pre-OUTCOME gap-to-median + decomposition of the leader's multipliers.
+          if (raceProgress < BREAKAWAY_CORRIDOR_START && gapMed > bkPeakGap) {
+            bkPeakGap        = gapMed;
+            bkPeakProgress   = raceProgress;
+            bkPeakLeaderIdx  = leader.index;
+            bkPeakGap2nd     = gap2nd;
+            bkPeakDecomp = {
+              spreadFactor:   +leader.spreadFactor.toFixed(4),   // base-speed spread/re-roll component
+              speedBonusMult: +(leader.speedBonusMult ?? 1.0).toFixed(4),
+              areaBonusMult:  +(leader.areaBonusMult ?? 1.0).toFixed(4),
+              rubberBandMult: +(leader.rubberBandMult ?? 1.0).toFixed(4),
+              pulkSurgeMult:  +(leader.pulkSurgeMult ?? 1.0).toFixed(4),
+            };
+          }
         }
       }
 
@@ -1359,6 +1436,26 @@ export function runSingleRace({
       };
     } else {
       results.comebackDiag = null;
+    }
+
+    // Breakaway diagnostic — attached ONLY when the flag is on, so the results object
+    // (and every downstream column) is unchanged for a normal fairness run.
+    if (breakawayDiag) {
+      const targetRankOf = (idx) =>
+        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+      results.breakawayDiag = {
+        gapBins:              bkGapBins,
+        peakPreOutcomeGap:    bkPeakGap > -Infinity ? +bkPeakGap.toFixed(5) : 0,
+        peakProgress:         +bkPeakProgress.toFixed(4),
+        peakGap2nd:           +bkPeakGap2nd.toFixed(5),
+        peakLeaderIdx:        bkPeakLeaderIdx,
+        peakLeaderTargetRank: targetRankOf(bkPeakLeaderIdx),
+        peakLeaderEverSurged: bkPeakLeaderIdx >= 0 ? bkEverSurged.has(bkPeakLeaderIdx) : false,
+        peakDecomposition:    bkPeakDecomp,
+        corridorStart:        BREAKAWAY_CORRIDOR_START,
+        // breakaway flag: peak gap exceeds the gap the rubber-band already tolerates (0.03).
+        isBreakaway:          bkPeakGap > 0.03,
+      };
     }
 
     return results;
@@ -2816,6 +2913,7 @@ if (isMain) {
 
   const allResults = [];
   const rawData    = [];
+  const breakawayAgg = BREAKAWAY_DIAG ? [] : null;  // per-combo breakaway aggregates (--breakaway-diag)
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
@@ -2941,6 +3039,8 @@ if (isMain) {
             comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
               ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
               : null,
+            breakawayDiag:      BREAKAWAY_DIAG,
+            racerTargetRankMap: raceSollRankMap,
           });
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3083,6 +3183,65 @@ if (isMain) {
           })(),
         } : null;
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, nRacers: nRacersForCombo });
+
+        // ── Breakaway causal diagnostic aggregation (per combo) ─────────────────
+        if (BREAKAWAY_DIAG) {
+          const diags = raceResults.map((r) => r.breakawayDiag).filter(Boolean);
+          const nD    = diags.length;
+          const mean  = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+          const median = (arr) => {
+            if (!arr.length) return 0;
+            const s = [...arr].sort((a, b) => a - b);
+            const m = Math.floor(s.length / 2);
+            return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+          };
+          const peaks   = diags.map((d) => d.peakPreOutcomeGap);
+          const ranks   = diags.map((d) => d.peakLeaderTargetRank).filter((v) => v != null);
+          const rankHist = {};                       // targetRank → count of races where that rank led the peak
+          for (const rk of ranks) rankHist[rk] = (rankHist[rk] ?? 0) + 1;
+          const breakawayN = diags.filter((d) => d.isBreakaway).length;
+          const surgedN    = diags.filter((d) => d.peakLeaderEverSurged).length;
+          const decomps    = diags.map((d) => d.peakDecomposition).filter(Boolean);
+          // Mean gap curve over the 5% progress bins (averaged across races that reached each bin).
+          const binMap = new Map();                  // bin → { gapMedianSum, gap2ndSum, n }
+          for (const d of diags) {
+            for (const b of d.gapBins) {
+              const e = binMap.get(b.bin) ?? { gapMedianSum: 0, gap2ndSum: 0, n: 0 };
+              e.gapMedianSum += b.gapMedian; e.gap2ndSum += b.gap2nd; e.n++;
+              binMap.set(b.bin, e);
+            }
+          }
+          const gapCurve = [...binMap.entries()].sort((a, b) => a[0] - b[0]).map(([bin, e]) => ({
+            bin,
+            gapMedianMean: +(e.gapMedianSum / e.n).toFixed(5),
+            gap2ndMean:    +(e.gap2ndSum / e.n).toFixed(5),
+            nRaces:        e.n,
+          }));
+          breakawayAgg.push({
+            trackId, trackName, isOpen, racerType, durationSec, nRaces: nD,
+            breakawayRate:      nD ? +(breakawayN / nD).toFixed(3) : 0,
+            peakGapMean:        +mean(peaks).toFixed(5),
+            peakGapMedian:      +median(peaks).toFixed(5),
+            peakLeaderRankDist: rankHist,
+            rank1Share:         ranks.length ? +(( rankHist[1] ?? 0) / ranks.length).toFixed(3) : 0,
+            rankGe4Share:       ranks.length ? +(ranks.filter((r) => r >= 4).length / ranks.length).toFixed(3) : 0,
+            peakLeaderSurgedShare: nD ? +(surgedN / nD).toFixed(3) : 0,
+            meanDecompositionAtPeak: {
+              spreadFactor:   +mean(decomps.map((d) => d.spreadFactor)).toFixed(4),
+              speedBonusMult: +mean(decomps.map((d) => d.speedBonusMult)).toFixed(4),
+              areaBonusMult:  +mean(decomps.map((d) => d.areaBonusMult)).toFixed(4),
+              rubberBandMult: +mean(decomps.map((d) => d.rubberBandMult)).toFixed(4),
+              pulkSurgeMult:  +mean(decomps.map((d) => d.pulkSurgeMult)).toFixed(4),
+            },
+            gapCurve,
+            // Context only (nothing ships): band-reach exact/top-5 for B1 target racers.
+            bandReachContext: {
+              fairChanceExactRate: avgNaturalness?.fairChanceExactRate ?? null,
+              fairChanceTop5Rate:  avgNaturalness?.fairChanceTop5Rate ?? null,
+              chiSqP:              stats?.pValue ?? null,
+            },
+          });
+        }
 
         // Phase-3B: COMEBACK analysis report (printed per combo when flag active)
         if (COMEBACK_ANALYSIS && raceResults.some((r) => r.comebackDiag)) {
@@ -3363,6 +3522,36 @@ if (isMain) {
   const mdPath  = join(OUT_DIR, 'fairness-report.md');
   writeFileSync(mdPath, report);
   console.log(`Bericht → ${mdPath}`);
+
+  // ── Breakaway causal diagnostic output (--breakaway-diag) ───────────────────
+  // Self-contained: only runs when the flag is on. Raw aggregates → results/breakaway-diag/
+  // (a dir outside OUT_DIR, not committed). One file per arm, named by --diagLabel.
+  if (BREAKAWAY_DIAG) {
+    const bkDir = join(ROOT, 'results', 'breakaway-diag');
+    mkdirSync(bkDir, { recursive: true });
+    const bkPath = join(bkDir, `breakaway-${DIAG_LABEL}.json`);
+    writeFileSync(bkPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
+        arms: {
+          bonusMult: BONUS_MULT, reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled, rbMaxBrake: RB_MAX_BRAKE,
+        },
+      },
+      combos: breakawayAgg,
+    }, null, 2));
+    console.log(`\n=== Breakaway-Diag (${DIAG_LABEL}) ===  → ${bkPath}`);
+    for (const c of breakawayAgg) {
+      console.log(
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
+        `breakawayRate=${(c.breakawayRate * 100).toFixed(0)}%  peakGapØ=${c.peakGapMean.toFixed(4)}  ` +
+        `rank1=${(c.rank1Share * 100).toFixed(0)}%  rank≥4=${(c.rankGe4Share * 100).toFixed(0)}%  ` +
+        `surged=${(c.peakLeaderSurgedShare * 100).toFixed(0)}%  ` +
+        `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult} ` +
+        `rb=${c.meanDecompositionAtPeak.rubberBandMult} surge=${c.meanDecompositionAtPeak.pulkSurgeMult}]`
+      );
+    }
+  }
 
   // Print quick summary
   const unfair = allResults.filter((r) => r.stats.pValue < 0.05);
