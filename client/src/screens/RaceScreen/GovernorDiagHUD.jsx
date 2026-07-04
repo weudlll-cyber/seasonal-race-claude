@@ -18,7 +18,8 @@
 
 import { computeMedianT } from '../../modules/raceRubberBand.js';
 import {
-  governorDramaToKA,
+  governorActionToParams,
+  governorRestoringForce,
   governorShufflePhase,
   governorPhaseWeight,
 } from '../../modules/raceGovernor.js';
@@ -67,30 +68,44 @@ function buildView(diag, state) {
   const cfg = diag.cfg;
   const racers = state.racers ?? [];
   const finishT = state.finishT ?? diag.finishT ?? 0;
+  const oneLenT = diag.oneLenT ?? 0;
   const activePhase =
     diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
 
-  const { k, A } = governorDramaToKA(cfg.drama, cfg);
+  const { lengthBound, A } = governorActionToParams(cfg.drama, cfg);
+  const gapBoundT = lengthBound * oneLenT;
   const w = activePhase
     ? governorPhaseWeight(diag.progress, diag.pulkEndFrac, diag.corrStartFrac)
     : 0;
-  const gapRef = cfg.gapRef > 0 ? cfg.gapRef : 0.03;
+  const k0 = cfg.k0 ?? 0.03;
+  const maxEffect = cfg.maxEffect ?? 0.12;
   const f = cfg.frequency ?? 3;
 
-  // Leader (max t) and straggler (min t) among live racers.
+  // Leader (max t), straggler (min t), and field-length p90−p10 among live racers.
   let leader = null;
   let straggler = null;
+  const liveTs = [];
   for (const r of racers) {
     if (r.finished) continue;
+    liveTs.push(r.t);
     if (!leader || r.t > leader.t) leader = r;
     if (!straggler || r.t < straggler.t) straggler = r;
   }
   const medianT = computeMedianT(racers);
+  liveTs.sort((a, b) => a - b);
+  const q = (p) =>
+    liveTs.length ? liveTs[Math.min(liveTs.length - 1, Math.floor(p * (liveTs.length - 1)))] : 0;
+  const fieldLen =
+    liveTs.length > 1 && finishT > 0 && oneLenT > 0 ? (q(0.9) - q(0.1)) / finishT / oneLenT : 0;
+  const leaderGapLen =
+    leader && medianT !== null && finishT > 0 && oneLenT > 0
+      ? (leader.t - medianT) / finishT / oneLenT
+      : 0;
 
   const breakdown = (r) => {
     if (!r || medianT === null || finishT <= 0) return null;
     const gap = (r.t - medianT) / finishT;
-    const cohesion = -k * Math.max(-1, Math.min(1, gap / gapRef));
+    const cohesion = gapBoundT > 0 ? -governorRestoringForce(gap / gapBoundT, k0, maxEffect) : 0;
     const shuffle =
       A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed));
     return {
@@ -107,9 +122,12 @@ function buildView(diag, state) {
     phase: diag.phase,
     activePhase,
     w,
-    k,
     A,
     drama: cfg.drama,
+    lengthBound,
+    gapBoundT,
+    leaderGapLen,
+    fieldLen,
     pulkEndFrac: diag.pulkEndFrac,
     corrStartFrac: diag.corrStartFrac,
     leader: breakdown(leader),
@@ -174,7 +192,14 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
       </div>
       <div style={{ color: CFG_COLOR }}>
         Action {pct(v.drama)}
-        {'  '}k={f4(v.k)} A={f4(v.A)}
+        {'  '}bound {v.lengthBound.toFixed(1)}len ({f4(v.gapBoundT)}t)
+        {'  '}A={f4(v.A)}
+      </div>
+      <div>
+        <span style={{ color: v.leaderGapLen > v.lengthBound ? BRAKE_COLOR : ON_COLOR }}>
+          leader→median {v.leaderGapLen.toFixed(2)}len
+        </span>
+        {'  '}field(p90−p10) {v.fieldLen.toFixed(2)}len
       </div>
       <div style={SEP_STYLE}>── field (cohesion + shuffle) ──</div>
       {racerLine('Leader:', v.leader, BRAKE_COLOR)}

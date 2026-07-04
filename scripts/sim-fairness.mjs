@@ -117,12 +117,13 @@ const DYNAMICS_OVERRIDES = {
   // Default OFF; a sweep enables it via --governorEnabled=true and tunes --governorDrama etc.
   governorEnabled:         argVal('governorEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled)) === 'true',
   governorDrama:      Number(argVal('governorDrama',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama))),
-  governorKMin:       Number(argVal('governorKMin',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorKMin))),
-  governorKMax:       Number(argVal('governorKMax',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorKMax))),
+  governorK0:         Number(argVal('governorK0',           String(DEFAULT_RACE_DYNAMICS_CONFIG.governorK0))),
+  governorLengthBoundMin:   Number(argVal('governorLengthBoundMin',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundMin))),
+  governorLengthBoundMax:   Number(argVal('governorLengthBoundMax',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundMax))),
+  governorLengthBoundFloor: Number(argVal('governorLengthBoundFloor', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundFloor))),
   governorAMin:       Number(argVal('governorAMin',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin))),
   governorAMax:       Number(argVal('governorAMax',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax))),
   governorFrequency:  Number(argVal('governorFrequency',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency))),
-  governorGapRef:     Number(argVal('governorGapRef',       String(DEFAULT_RACE_DYNAMICS_CONFIG.governorGapRef))),
   governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
   governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
 };
@@ -725,17 +726,35 @@ export function runSingleRace({
     const govCfg = {
       enabled: governorEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
-      kMin: dynamicsConfig.governorKMin ?? 0.04,
-      kMax: dynamicsConfig.governorKMax ?? 0.1,
+      k0: dynamicsConfig.governorK0 ?? 0.03,
+      lengthBoundMin: dynamicsConfig.governorLengthBoundMin ?? 2.0,
+      lengthBoundMax: dynamicsConfig.governorLengthBoundMax ?? 3.2,
+      lengthBoundFloor: dynamicsConfig.governorLengthBoundFloor ?? 2.0,
       aMin: dynamicsConfig.governorAMin ?? 0.005,
       aMax: dynamicsConfig.governorAMax ?? 0.02,
       frequency: dynamicsConfig.governorFrequency ?? 3,
-      gapRef: dynamicsConfig.governorGapRef ?? 0.03,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // oneLenT = mean racer-length as t-fraction (mean drawnBodyLengthPx / pathLengthPx) — the
+    // unit the governor length bound uses. Constant per race → compute once (parity: same
+    // formula as the browser). Also reused by the leader→median / field-length sim metrics.
+    const govOneLenT = (() => {
+      if (!racers.length || !(pathLengthPx > 0)) return 0;
+      const meanLen = racers.reduce((s, r) => s + (r.drawnBodyLengthPx ?? 0), 0) / racers.length;
+      return meanLen / pathLengthPx;
+    })();
+
+    // ── Governor bound metrics (Stage-B redesign; reporting only, feeds the sweep) ─────
+    // Tracked whenever the Race Plan runs (cheap): leader→median gap in racer-lengths (mean
+    // over steps + max) and field-length p90−p10 (also in lengths). Measured in the pre-OUTCOME
+    // window (where the governor acts) so the sweep sees the bound holding / not stringing out.
+    let govGapLenSum = 0;
+    let govGapLenSteps = 0;
+    let govGapLenMax = 0;
+    let govFieldLenSum = 0;
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -831,10 +850,25 @@ export function runSingleRace({
           racers,
           finishT,
           govPhase,
-          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed },
+          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, oneLenT: govOneLenT },
           govCfg,
           sharedMedianT
         );
+        // Bound metrics (reporting only): leader→median gap + field-length p90−p10, in lengths.
+        if (govPhase && govOneLenT > 0 && finishT > 0 && sharedMedianT !== null) {
+          const live = racers.filter((r) => !r.finished);
+          if (live.length > 1) {
+            let leaderT = -Infinity;
+            for (const r of live) if (r.t > leaderT) leaderT = r.t;
+            const gapLen = (leaderT - sharedMedianT) / finishT / govOneLenT;
+            govGapLenSum += gapLen;
+            govGapLenSteps += 1;
+            if (gapLen > govGapLenMax) govGapLenMax = gapLen;
+            const sorted = live.map((r) => r.t).sort((a, b) => a - b);
+            const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
+            govFieldLenSum += (q(0.9) - q(0.1)) / finishT / govOneLenT;
+          }
+        }
       }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
@@ -1413,6 +1447,10 @@ export function runSingleRace({
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
     results.passThroughCount             = passThroughCount;        // sim-only: lateral pass-through events (post-warmup)
     results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
+    // Governor bound metrics (Stage-B redesign; reporting only). 0 when governor is off.
+    results.govGapLenMean = govGapLenSteps > 0 ? govGapLenSum / govGapLenSteps : 0; // leader→median, lengths
+    results.govGapLenMax = govGapLenMax;                                            // leader→median peak, lengths
+    results.govFieldLenMean = govGapLenSteps > 0 ? govFieldLenSum / govGapLenSteps : 0; // field p90−p10, lengths
     results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
     results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
     results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
@@ -3184,6 +3222,10 @@ if (isMain) {
           // Lapping instrumentation (closed tracks):
           maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
           maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
+          // Governor bound metrics (Stage-B redesign; reporting only, 0 when governor off):
+          govGapLenMean:           raceResults.reduce((s, r) => s + (r.govGapLenMean ?? 0), 0) / raceResults.length,
+          govGapLenMax:            Math.max(...raceResults.map((r) => r.govGapLenMax ?? 0)),
+          govFieldLenMean:         raceResults.reduce((s, r) => s + (r.govFieldLenMean ?? 0), 0) / raceResults.length,
           honestSameLapFraction:   (() => {
             const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
             return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;

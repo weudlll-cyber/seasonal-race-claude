@@ -759,17 +759,27 @@ export default function RaceScreen() {
     const govCfg = {
       enabled: governorEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
-      kMin: dynamicsConfig.governorKMin ?? 0.04,
-      kMax: dynamicsConfig.governorKMax ?? 0.1,
+      k0: dynamicsConfig.governorK0 ?? 0.03,
+      lengthBoundMin: dynamicsConfig.governorLengthBoundMin ?? 2.0,
+      lengthBoundMax: dynamicsConfig.governorLengthBoundMax ?? 3.2,
+      lengthBoundFloor: dynamicsConfig.governorLengthBoundFloor ?? 2.0,
       aMin: dynamicsConfig.governorAMin ?? 0.005,
       aMax: dynamicsConfig.governorAMax ?? 0.02,
       frequency: dynamicsConfig.governorFrequency ?? 3,
-      gapRef: dynamicsConfig.governorGapRef ?? 0.03,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // oneLenT = mean racer-length as a t-fraction (mean drawnBodyLengthPx / pathLengthPx) —
+    // the unit the governor's length bound is measured in. Constant per race → compute once.
+    // Reuses the geometry already on each racer (drawnBodyLengthPx / pathLengthPx).
+    const govOneLenT = (() => {
+      const rs = g.current.racers;
+      if (!rs.length || !(pathLengthPx > 0)) return 0;
+      const meanLen = rs.reduce((s, r) => s + (r.drawnBodyLengthPx ?? 0), 0) / rs.length;
+      return meanLen / pathLengthPx;
+    })();
 
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
@@ -1013,6 +1023,7 @@ export default function RaceScreen() {
                 pulkEndFrac: govFractions.pulkEndFrac,
                 corrStartFrac: govFractions.corrStartFrac,
                 seed: govSeed,
+                oneLenT: govOneLenT,
               },
               govCfg,
               sharedMedianT
@@ -1026,6 +1037,7 @@ export default function RaceScreen() {
               corrStartFrac: govFractions.corrStartFrac,
               seed: govSeed,
               finishT: st.finishT,
+              oneLenT: govOneLenT,
             };
           }
 

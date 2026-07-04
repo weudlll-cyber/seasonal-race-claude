@@ -327,15 +327,19 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // key — single source, no second copy. governorDrama is the ONE owner "action" knob; the rest
   // are expert knobs for the sweep. NOTE: sweet-spot tuning is deferred to the governor sweep.
   governorEnabled: false, // master switch (default OFF — nothing changes until enabled)
-  governorDrama: 0.5, // 0..1 owner "action" slider: more → less cohesion (k↓) + more shuffle (A↑)
-  governorKMin: 0.04, // cohesion strength at max drama (floor: keeps equilibrium spread < gapRef)
-  governorKMax: 0.1, // cohesion strength at min drama (cap: within the ±maxEffect envelope)
-  governorAMin: 0.005, // shuffle amplitude at min drama (floor > 0 → never a dead train)
-  governorAMax: 0.02, // shuffle amplitude at max drama (< kMin so max-drama spread stays bounded)
-  governorFrequency: 3, // shuffle oscillation cycles over progress[0,1] — INDEPENDENT of drama (expert)
-  governorGapRef: 0.03, // gap (fraction of finishT) at which cohesion saturates (≈ breakaway threshold)
+  governorDrama: 0.5, // 0..1 owner "Action" slider: more → WIDER length bound + more shuffle
+  governorK0: 0.03, // cohesion softness (slope near center) — FIXED, not mapped by Action
+  // Length bound (leader→median) in mean-racer-LENGTHS, scaled by Action. Floor ~2: a 1-length
+  // field jams in the speed-brake zone (speedBrakeTMultiplier 1.5 > 1 length) → constant
+  // pre-OUTCOME braking. Sweet-spot / floor tuning is deferred to the governor sweep.
+  governorLengthBoundMin: 2.0, // bound at Action 0 (tight field)
+  governorLengthBoundMax: 3.2, // bound at Action 100 (wider, still bounded)
+  governorLengthBoundFloor: 2.0, // hard min-spread floor — the sweep may raise, never lower below
+  governorAMin: 0.005, // shuffle amplitude at min Action (floor > 0 → never a dead train)
+  governorAMax: 0.02, // shuffle amplitude at max Action (more in-field movement)
+  governorFrequency: 3, // shuffle oscillation cycles over progress[0,1] — INDEPENDENT of Action (expert)
   governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
-  governorMaxStepPerFrame: 0.01, // rate-limit on per-step governorMult change → smooth speed, no jump
+  governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

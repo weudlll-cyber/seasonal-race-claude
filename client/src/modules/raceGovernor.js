@@ -4,11 +4,13 @@
 // Project:     RaceArena
 // Description: Pre-OUTCOME Field Governor (Stage B core). A single per-racer speed
 //              multiplier r.governorMult carrying TWO internal components:
-//                • COHESION — mean-reverting to the field MEDIAN. Position-coupled and
-//                  symmetric (brakes racers ahead of the median, lifts racers behind).
-//                  Generalizes the existing symmetric seed computePulkBiasedTarget
-//                  (racePlanner.js) from 3 pulk racers at re-roll events to ALL active
-//                  racers every step, expressed as a speed multiplier.
+//                • COHESION — a PROGRESSIVE rubber-band restoring force on the gap to the
+//                  field MEDIAN. Position-coupled and symmetric (brakes racers ahead of the
+//                  median, lifts racers behind). SOFT near the median (shuffle free to move
+//                  racers) and progressively STIFFER toward an Action-scaled bound expressed
+//                  in mean-racer-LENGTHS (leader→median), reaching ~maxEffect at the bound
+//                  with no flat spot below it — a rubber-band, not a wall. Two-sided closing
+//                  keeps each racer within ±maxEffect while the median rises to meet a leader.
 //                • SHUFFLE — bounded, zero-mean oscillation with a per-racer phase from a
 //                  DEDICATED seeded stream (rank-DECOUPLED: derived from racer index +
 //                  seed, never from the target-rank assignment). No Math.random.
@@ -63,20 +65,43 @@ export function governorShufflePhase(index, seed) {
 }
 
 /**
- * Map the single owner "drama" scalar (0..1) to the internal (k, A) endpoints. More drama →
- * LESS cohesion (k down) + MORE shuffle (A up). Endpoints are floored/capped by config so at
- * max drama the equilibrium spread (~gapRef·A/k) stays below the breakaway gap and at min
- * drama A stays > 0 (no dead train). Realism is enforced by the outer clamp, not here.
+ * Map the single owner "Action" scalar (0..1) to the length-bound (in mean-racer-lengths)
+ * and the shuffle amplitude. Higher Action → WIDER bound (more room) + MORE shuffle. The
+ * cohesion softness k0 is FIXED (not mapped) so the field is never a dead train (low Action)
+ * and never leaks (high Action) — the OLD backwards drama→k map (high drama lowered k) is
+ * retired. The bound is hard-floored at lengthBoundFloor: a ~1-length field jams inside the
+ * speed-brake zone (speedBrakeTMultiplier 1.5 > 1 length) → constant pre-OUTCOME braking, so
+ * the safe floor is ~2 lengths (sweep may raise, never below the floor).
  *
- * @param {number} drama 0..1
- * @param {{kMin:number,kMax:number,aMin:number,aMax:number}} cfg
- * @returns {{k:number, A:number}}
+ * @param {number} drama 0..1 (the Action slider)
+ * @param {{lengthBoundMin:number, lengthBoundMax:number, lengthBoundFloor:number,
+ *          aMin:number, aMax:number}} cfg
+ * @returns {{lengthBound:number, A:number}}
  */
-export function governorDramaToKA(drama, cfg) {
+export function governorActionToParams(drama, cfg) {
   const d = clamp(drama ?? 0, 0, 1);
-  const k = cfg.kMax - (cfg.kMax - cfg.kMin) * d;
+  const rawBound = cfg.lengthBoundMin + (cfg.lengthBoundMax - cfg.lengthBoundMin) * d;
+  const lengthBound = Math.max(cfg.lengthBoundFloor ?? 0, rawBound);
   const A = cfg.aMin + (cfg.aMax - cfg.aMin) * d;
-  return { k, A };
+  return { lengthBound, A };
+}
+
+/**
+ * Progressive rubber-band restoring force for a gap normalized by the bound, x = gap/gapBound.
+ * Rational barrier: ≈ k0·x near the center (soft — shuffle dominates, racers move freely),
+ * diverging as |x| → 1 and clamped at maxEffect (stiff at the bound, no flat spot below it, no
+ * hard step). Symmetric in sign, so it brakes a leader (x>0) and lifts a straggler (x<0) with
+ * equal, opposite magnitude. Returned as a SIGNED force to SUBTRACT from 1.0 (positive = brake).
+ *
+ * @param {number} x        gap / gapBound  (clamped internally to ±0.999 to keep the barrier finite)
+ * @param {number} k0       softness (slope near center)
+ * @param {number} maxEffect outer force cap (the realism envelope)
+ * @returns {number} signed force in [−maxEffect, +maxEffect]
+ */
+export function governorRestoringForce(x, k0, maxEffect) {
+  const xc = clamp(x, -0.999, 0.999);
+  const a = Math.abs(xc);
+  return Math.sign(xc) * Math.min(maxEffect, k0 * (a / (1 - a)));
 }
 
 /**
@@ -110,9 +135,12 @@ export function governorPhaseWeight(progress, pulkEndFrac, corrStartFrac) {
  * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult)
  * @param {number} finishT
  * @param {string} phase    getPhase() result: 'PRE_PULK'|'PULK'|'TRANSITION'|'OUTCOME'|'FINAL'
- * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number}} phaseCtx
- * @param {{enabled:boolean, drama:number, kMin:number, kMax:number, aMin:number, aMax:number,
- *          frequency:number, gapRef:number, maxEffect:number, maxStepPerFrame:number}} cfg
+ * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number,
+ *          oneLenT:number}} phaseCtx  oneLenT = mean(drawnBodyLengthPx)/pathLengthPx — the
+ *          racer-length in t-fraction units the length bound is measured in.
+ * @param {{enabled:boolean, drama:number, k0:number, lengthBoundMin:number,
+ *          lengthBoundMax:number, lengthBoundFloor:number, aMin:number, aMax:number,
+ *          frequency:number, maxEffect:number, maxStepPerFrame:number}} cfg
  * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
  *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
  */
@@ -133,14 +161,16 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     return;
   }
 
-  const { progress, pulkEndFrac, corrStartFrac, seed } = phaseCtx;
+  const { progress, pulkEndFrac, corrStartFrac, seed, oneLenT } = phaseCtx;
   const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
-  const { k, A } = governorDramaToKA(cfg.drama, cfg);
-  const gapRef = cfg.gapRef > 0 ? cfg.gapRef : 0.03;
+  const { lengthBound, A } = governorActionToParams(cfg.drama, cfg);
   const maxEffect = cfg.maxEffect ?? 0.12;
+  const k0 = cfg.k0 ?? 0.03;
   const maxStep = cfg.maxStepPerFrame ?? 0.01;
   const f = cfg.frequency ?? 3;
   const twoPiF = 2 * Math.PI * f;
+  // Length bound → t-fraction gap bound (leader→median). Guard a degenerate geometry.
+  const gapBound = oneLenT > 0 ? lengthBound * oneLenT : 0;
 
   for (const r of racers) {
     if (r.finished) {
@@ -148,8 +178,10 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
       continue;
     }
     const gap = (r.t - medianT) / finishT;
-    // Cohesion: mean-reverting, symmetric, position-coupled (ahead → brake, behind → lift).
-    const cohesion = -k * clamp(gap / gapRef, -1, 1);
+    // Cohesion: progressive rubber-band restoring force on the gap to the median, normalized
+    // by the bound. Soft near center, stiff at the bound; symmetric (ahead → brake, behind →
+    // lift). Subtract the signed force from 1.0. gapBound<=0 → no cohesion (geometry guard).
+    const cohesion = gapBound > 0 ? -governorRestoringForce(gap / gapBound, k0, maxEffect) : 0;
     // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase.
     const shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
     const target = clamp(1 + w * (cohesion + shuffle), 1 - maxEffect, 1 + maxEffect);
