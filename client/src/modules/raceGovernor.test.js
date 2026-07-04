@@ -2,17 +2,16 @@
 // File:        raceGovernor.test.js
 // Path:        client/src/modules/raceGovernor.test.js
 // Project:     RaceArena
-// Description: Unit tests for the Pre-OUTCOME Field Governor (progressive rubber-band
-//              redesign). Covers: barrier curve (soft→stiff, monotonic, reaches maxEffect
-//              at the bound, no flat spot below it), both-sides symmetry, Action→(bound,A)
-//              map with k0 fixed + min-floor, length→t bound conversion, structural
-//              OUTCOME-off, exact fade (incl. near-zero span), slew smoothness, determinism.
+// Description: Unit tests for the Pre-OUTCOME Field Governor — Stage 1 dead-zoned
+//              edge-limiter. Covers: EXACTLY-1.0 inside the dead zone (middle free),
+//              symmetric edge brake/lift past the bound, group-escape closure, tail lift,
+//              track+duration-independent spacing bound, Action→(spacings,A) map, the
+//              barrier curve, structural OUTCOME-off, exact fade, slew, determinism.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
 import {
   applyGovernor,
-  governorShufflePhase,
   governorActionToParams,
   governorRestoringForce,
   governorPhaseWeight,
@@ -22,15 +21,18 @@ const CFG = {
   enabled: true,
   drama: 0.5,
   k0: 0.03,
-  lengthBoundMin: 2.0,
-  lengthBoundMax: 3.2,
-  lengthBoundFloor: 2.0,
+  spacingMin: 2.0,
+  spacingMax: 4.0,
+  boundFloorFraction: 0.0, // 0 in tests so the spacing bound is exercised directly (not floored)
+  rampWidth: 0.5,
   aMin: 0.005,
   aMax: 0.02,
   frequency: 3,
   maxEffect: 0.12,
-  maxStepPerFrame: 0.01,
+  maxStepPerFrame: 0.02,
 };
+// No-shuffle variant to isolate the edge force (dead zone must read EXACTLY 1.0).
+const NOSHUF = { ...CFG, aMin: 0, aMax: 0 };
 
 const mkRacers = (ts) => ts.map((t, i) => ({ index: i, t, finished: false, governorMult: 1.0 }));
 const ctx = (over = {}) => ({
@@ -38,141 +40,127 @@ const ctx = (over = {}) => ({
   pulkEndFrac: 0.5,
   corrStartFrac: 0.55,
   seed: 1,
-  oneLenT: 0.01,
   ...over,
 });
+const runN = (racers, cfg, n, over) => {
+  for (let i = 0; i < n; i++) applyGovernor(racers, 1.0, 'PULK', ctx(over), cfg);
+};
 
-describe('governorRestoringForce — barrier curve', () => {
-  const k0 = 0.03;
-  const me = 0.12;
-  it('is 0 at center and soft near center (≈ k0·x/(1−x))', () => {
-    expect(governorRestoringForce(0, k0, me)).toBe(0);
-    expect(governorRestoringForce(0.1, k0, me)).toBeCloseTo(k0 * (0.1 / 0.9), 4);
-  });
-  it('is monotonic non-decreasing and strictly rising in the soft region (no flat spot below cap)', () => {
-    let prev = -1;
-    for (let x = 0; x <= 0.99; x += 0.03) {
-      const f = governorRestoringForce(x, k0, me);
-      expect(f).toBeGreaterThanOrEqual(prev - 1e-12);
-      prev = f;
-    }
-    expect(governorRestoringForce(0.5, k0, me)).toBeGreaterThan(
-      governorRestoringForce(0.3, k0, me)
-    );
-  });
-  it('reaches maxEffect near the bound and is symmetric', () => {
-    expect(governorRestoringForce(0.999, k0, me)).toBeCloseTo(me, 6);
-    expect(governorRestoringForce(-0.4, k0, me)).toBeCloseTo(
-      -governorRestoringForce(0.4, k0, me),
+describe('governorRestoringForce — barrier curve (unchanged)', () => {
+  it('0 at center, soft near center, reaches maxEffect near |x|=1, symmetric', () => {
+    expect(governorRestoringForce(0, 0.03, 0.12)).toBe(0);
+    expect(governorRestoringForce(0.1, 0.03, 0.12)).toBeCloseTo(0.03 * (0.1 / 0.9), 4);
+    expect(governorRestoringForce(0.999, 0.03, 0.12)).toBeCloseTo(0.12, 6);
+    expect(governorRestoringForce(-0.4, 0.03, 0.12)).toBeCloseTo(
+      -governorRestoringForce(0.4, 0.03, 0.12),
       9
     );
   });
 });
 
-describe('governorActionToParams — bound + shuffle up, k0 fixed, floor', () => {
-  it('Action raises the length bound AND shuffle amplitude', () => {
+describe('governorActionToParams — spacings + shuffle up with Action', () => {
+  it('Action raises the spacing bound AND shuffle amplitude', () => {
     const lo = governorActionToParams(0, CFG);
     const hi = governorActionToParams(1, CFG);
-    expect(lo.lengthBound).toBeCloseTo(2.0, 6);
-    expect(hi.lengthBound).toBeCloseTo(3.2, 6);
-    expect(hi.lengthBound).toBeGreaterThan(lo.lengthBound);
+    expect(lo.spacings).toBeCloseTo(2.0, 6);
+    expect(hi.spacings).toBeCloseTo(4.0, 6);
     expect(hi.A).toBeGreaterThan(lo.A);
-  });
-  it('min-floor cannot go below the safe minimum', () => {
-    const floored = governorActionToParams(0, {
-      ...CFG,
-      lengthBoundMin: 1.0,
-      lengthBoundFloor: 2.0,
-    });
-    expect(floored.lengthBound).toBeCloseTo(2.0, 6); // 1.0 requested, clamped up to the floor
   });
 });
 
-describe('applyGovernor — structural OUTCOME-off (a)', () => {
-  it('governorMult is EXACTLY 1.0 in OUTCOME/FINAL for every corridorStart', () => {
-    for (const corr of [0.5, 0.55, 0.7, 0.9]) {
-      const racers = mkRacers([0.5, 0.3, 0.7]);
-      racers.forEach((r) => (r.governorMult = 0.8));
-      applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: corr, corrStartFrac: corr }), CFG);
-      racers.forEach((r) => expect(r.governorMult).toBe(1.0));
-      applyGovernor(racers, 1.0, 'FINAL', ctx({ progress: 1.0, corrStartFrac: corr }), CFG);
-      racers.forEach((r) => expect(r.governorMult).toBe(1.0));
-    }
-  });
-  it('disabled → all governorMult pinned to 1.0', () => {
-    const racers = mkRacers([0.6, 0.4]);
-    racers.forEach((r) => (r.governorMult = 0.9));
-    applyGovernor(racers, 1.0, 'PULK', ctx(), { ...CFG, enabled: false });
+describe('applyGovernor — dead zone (a): EXACTLY 1.0 in the middle', () => {
+  it('a racer well inside the bound gets governorMult EXACTLY 1.0 (no residual pull)', () => {
+    // 10 racers within ±0.018; bound (drama .5 → 3 spacings / 10) = 0.3 ≫ any gap → all free.
+    const racers = mkRacers([0.518, 0.514, 0.51, 0.506, 0.502, 0.498, 0.494, 0.49, 0.486, 0.482]);
+    runN(racers, NOSHUF, 20);
     racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
 });
 
-describe('applyGovernor — two-sided symmetry + length→t bound conversion (b, d)', () => {
-  it('brakes the leader (<1), lifts the straggler (>1), symmetric about 1.0', () => {
-    const noShuffle = { ...CFG, aMin: 0, aMax: 0 };
-    const racers = mkRacers([0.6, 0.4]); // median 0.5 → gaps ±0.1 (well past bound → full force)
-    for (let i = 0; i < 40; i++) applyGovernor(racers, 1.0, 'PULK', ctx(), noShuffle);
-    expect(racers[0].governorMult).toBeLessThan(1.0);
-    expect(racers[1].governorMult).toBeGreaterThan(1.0);
-    expect(racers[0].governorMult + racers[1].governorMult).toBeCloseTo(2.0, 6);
+describe('applyGovernor — edge engages past the bound (b, c, d)', () => {
+  it('(b) a lone leader far past the bound is braked; a lone tail is lifted; middle free', () => {
+    const cfg = { ...NOSHUF, spacingMin: 1, spacingMax: 1 }; // 1 spacing; 3 racers → bound ≈ 0.333
+    const racers = mkRacers([0.9, 0.5, 0.1]); // gaps ±0.4 ≫ bound → past the edge
+    runN(racers, cfg, 40);
+    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
+    expect(racers[2].governorMult).toBeGreaterThan(1.0); // tail lifted
+    expect(racers[1].governorMult).toBe(1.0); // median racer inside dead zone → untouched
   });
-  it('the bound is measured in lengths via oneLenT (racer beyond bound → full brake)', () => {
-    // drama 0 → bound 2.0 len; oneLenT 0.01 → gapBound 0.02 t. Leader 0.05 above median = 5 len ≫ bound.
-    const noShuffle = { ...CFG, drama: 0, aMin: 0, aMax: 0 };
-    const racers = mkRacers([0.55, 0.5, 0.45]); // median 0.5, leader gap +0.05
-    for (let i = 0; i < 40; i++)
-      applyGovernor(racers, 1.0, 'PULK', ctx({ oneLenT: 0.01 }), noShuffle);
-    expect(racers[0].governorMult).toBeCloseTo(1 - CFG.maxEffect, 3); // clamped to full brake
+
+  it('(c) group escape: leader AND 2nd both beyond median+bound are BOTH braked', () => {
+    const cfg = { ...NOSHUF, spacingMin: 1, spacingMax: 1 };
+    const racers = mkRacers([0.9, 0.88, 0.2, 0.18, 0.16]); // two escape together, three trail
+    runN(racers, cfg, 40);
+    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
+    expect(racers[1].governorMult).toBeLessThan(1.0); // 2nd ALSO braked (median-referenced)
+  });
+
+  it('(d) a far-back tail racer is lifted', () => {
+    const cfg = { ...NOSHUF, spacingMin: 1, spacingMax: 1 };
+    const racers = mkRacers([0.55, 0.5, 0.45, 0.1]); // last racer far behind median
+    runN(racers, cfg, 40);
+    expect(racers[3].governorMult).toBeGreaterThan(1.0);
   });
 });
 
-describe('governorShufflePhase — zero-mean, deterministic, rank-decoupled (c)', () => {
-  it('ensemble of sin(phase) is ~zero-mean over many racers', () => {
-    let sum = 0;
-    const N = 500;
-    for (let i = 0; i < N; i++) sum += Math.sin(governorShufflePhase(i, 1));
-    expect(Math.abs(sum / N)).toBeLessThan(0.15);
-  });
-  it('is deterministic and varies by index/seed', () => {
-    expect(governorShufflePhase(5, 1)).toBe(governorShufflePhase(5, 1));
-    expect(governorShufflePhase(5, 1)).not.toBe(governorShufflePhase(6, 1));
-    expect(governorShufflePhase(5, 1)).not.toBe(governorShufflePhase(5, 2));
-  });
-});
-
-describe('governorPhaseWeight — exact fade to 1.0, incl. near-zero span (d)', () => {
-  it('is 1.0 before the fade window and EXACTLY 0 at corrStart', () => {
-    expect(governorPhaseWeight(0.3, 0.5, 0.55)).toBe(1.0);
-    expect(governorPhaseWeight(0.55, 0.5, 0.55)).toBe(0);
-    expect(governorPhaseWeight(0.9, 0.5, 0.55)).toBe(0);
-  });
-  it('near-zero TRANSITION span: fade widens backward, reaches 0 at corrStart, no jump', () => {
-    expect(governorPhaseWeight(0.5, 0.5, 0.5)).toBe(0);
-    const wMid = governorPhaseWeight(0.47, 0.5, 0.5);
-    expect(wMid).toBeGreaterThan(0);
-    expect(wMid).toBeLessThan(1);
-    expect(governorPhaseWeight(0.44, 0.5, 0.5)).toBe(1.0);
-  });
-});
-
-describe('applyGovernor — slew-limited smoothness (e)', () => {
-  it('per-step change never exceeds maxStepPerFrame', () => {
-    const racers = mkRacers([0.9, 0.5, 0.1]);
-    let prev = racers.map((r) => r.governorMult);
-    for (let i = 0; i < 60; i++) {
-      applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 + i * 0.004 }), CFG);
-      racers.forEach((r, j) => {
-        expect(Math.abs(r.governorMult - prev[j])).toBeLessThanOrEqual(CFG.maxStepPerFrame + 1e-9);
-      });
-      prev = racers.map((r) => r.governorMult);
+describe('applyGovernor — track+duration-independent bound (e)', () => {
+  it('same spacing layout gives the same brake on short vs long / few- vs many-lap races', () => {
+    const cfg = { ...NOSHUF, spacingMin: 1, spacingMax: 1 };
+    const layout = [0.6, 0.5, 0.4]; // relative layout; gaps scale with finishT
+    const shortR = mkRacers(layout.map((t) => t * 0.2)); // finishT 0.2 (few laps)
+    const longR = mkRacers(layout.map((t) => t * 5.0)); // finishT 5.0 (many laps)
+    for (let i = 0; i < 40; i++) {
+      applyGovernor(shortR, 0.2, 'PULK', ctx(), cfg);
+      applyGovernor(longR, 5.0, 'PULK', ctx(), cfg);
+    }
+    for (let j = 0; j < 3; j++) {
+      expect(shortR[j].governorMult).toBeCloseTo(longR[j].governorMult, 9);
     }
   });
 });
 
-describe('applyGovernor — determinism / parity (f)', () => {
-  it('two identical seeded sequences produce byte-identical governorMult', () => {
+describe('applyGovernor — structural OUTCOME-off (f)', () => {
+  it('EXACTLY 1.0 in OUTCOME for every corridorStart; disabled → 1.0', () => {
+    for (const corr of [0.5, 0.55, 0.7, 0.9]) {
+      const racers = mkRacers([0.9, 0.5, 0.1]);
+      racers.forEach((r) => (r.governorMult = 0.7));
+      applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: corr, corrStartFrac: corr }), CFG);
+      racers.forEach((r) => expect(r.governorMult).toBe(1.0));
+    }
+    const off = mkRacers([0.9, 0.1]);
+    off.forEach((r) => (r.governorMult = 0.9));
+    applyGovernor(off, 1.0, 'PULK', ctx(), { ...CFG, enabled: false });
+    off.forEach((r) => expect(r.governorMult).toBe(1.0));
+  });
+});
+
+describe('governorPhaseWeight — exact fade (unchanged)', () => {
+  it('1.0 before the window, EXACTLY 0 at corrStart, eased near-zero span', () => {
+    expect(governorPhaseWeight(0.3, 0.5, 0.55)).toBe(1.0);
+    expect(governorPhaseWeight(0.55, 0.5, 0.55)).toBe(0);
+    expect(governorPhaseWeight(0.5, 0.5, 0.5)).toBe(0);
+    const wMid = governorPhaseWeight(0.47, 0.5, 0.5);
+    expect(wMid).toBeGreaterThan(0);
+    expect(wMid).toBeLessThan(1);
+  });
+});
+
+describe('applyGovernor — slew smoothness (g) + determinism (h)', () => {
+  it('per-step change never exceeds maxStepPerFrame', () => {
+    const cfg = { ...CFG, spacingMin: 1, spacingMax: 1 };
+    const racers = mkRacers([0.95, 0.5, 0.05]);
+    let prev = racers.map((r) => r.governorMult);
+    for (let i = 0; i < 60; i++) {
+      applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 + i * 0.004 }), cfg);
+      racers.forEach((r, j) =>
+        expect(Math.abs(r.governorMult - prev[j])).toBeLessThanOrEqual(cfg.maxStepPerFrame + 1e-9)
+      );
+      prev = racers.map((r) => r.governorMult);
+    }
+  });
+  it('two identical seeded sequences are byte-identical', () => {
     const run = () => {
-      const racers = mkRacers([0.8, 0.6, 0.4, 0.2]);
+      const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1]);
       const out = [];
       for (let i = 0; i < 25; i++) {
         applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.05 + i * 0.01, seed: 42 }), CFG);

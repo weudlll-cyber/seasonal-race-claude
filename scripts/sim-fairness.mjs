@@ -727,9 +727,10 @@ export function runSingleRace({
       enabled: governorEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
       k0: dynamicsConfig.governorK0 ?? 0.03,
-      lengthBoundMin: dynamicsConfig.governorLengthBoundMin ?? 2.0,
-      lengthBoundMax: dynamicsConfig.governorLengthBoundMax ?? 3.2,
-      lengthBoundFloor: dynamicsConfig.governorLengthBoundFloor ?? 2.0,
+      spacingMin: dynamicsConfig.governorSpacingMin ?? 2.0,
+      spacingMax: dynamicsConfig.governorSpacingMax ?? 4.0,
+      boundFloorFraction: dynamicsConfig.governorBoundFloorFraction ?? 0.03,
+      rampWidth: dynamicsConfig.governorRampWidth ?? 0.5,
       aMin: dynamicsConfig.governorAMin ?? 0.005,
       aMax: dynamicsConfig.governorAMax ?? 0.02,
       frequency: dynamicsConfig.governorFrequency ?? 3,
@@ -738,23 +739,19 @@ export function runSingleRace({
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
-    // oneLenT = mean racer-length as t-fraction (mean drawnBodyLengthPx / pathLengthPx) — the
-    // unit the governor length bound uses. Constant per race → compute once (parity: same
-    // formula as the browser). Also reused by the leader→median / field-length sim metrics.
-    const govOneLenT = (() => {
-      if (!racers.length || !(pathLengthPx > 0)) return 0;
-      const meanLen = racers.reduce((s, r) => s + (r.drawnBodyLengthPx ?? 0), 0) / racers.length;
-      return meanLen / pathLengthPx;
-    })();
 
-    // ── Governor bound metrics (Stage-B redesign; reporting only, feeds the sweep) ─────
-    // Tracked whenever the Race Plan runs (cheap): leader→median gap in racer-lengths (mean
-    // over steps + max) and field-length p90−p10 (also in lengths). Measured in the pre-OUTCOME
-    // window (where the governor acts) so the sweep sees the bound holding / not stringing out.
-    let govGapLenSum = 0;
-    let govGapLenSteps = 0;
-    let govGapLenMax = 0;
-    let govFieldLenSum = 0;
+    // ── Governor edge-limiter metrics (Stage 1; reporting only, feeds the sweep) ─────
+    // In inter-racer SPACINGS (track+duration-independent): leader→median (CONTROL signal,
+    // mean+max) and leader→2nd (DIAGNOSTIC), plus field-length p90−p10 and a position-change
+    // rate (adjacent rank swaps/step) so the "liveliness returned" gate is measurable.
+    let govGapSpSum = 0; // leader→median, spacings
+    let govGapSpSteps = 0;
+    let govGapSpMax = 0;
+    let govGap2ndSpSum = 0; // leader→2nd, spacings (diagnostic)
+    let govFieldSpSum = 0; // field p90−p10, spacings
+    let govRankSwaps = 0; // adjacent t-order swaps between steps (position-change rate)
+    let govRankSwapSteps = 0;
+    let govPrevOrder = null; // previous step's live-racer index order (by t)
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -850,23 +847,38 @@ export function runSingleRace({
           racers,
           finishT,
           govPhase,
-          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, oneLenT: govOneLenT },
+          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed },
           govCfg,
           sharedMedianT
         );
-        // Bound metrics (reporting only): leader→median gap + field-length p90−p10, in lengths.
-        if (govPhase && govOneLenT > 0 && finishT > 0 && sharedMedianT !== null) {
-          const live = racers.filter((r) => !r.finished);
+        // Edge-limiter metrics (reporting only), in inter-racer SPACINGS (1 spacing = 1/nLive):
+        // leader→median (control) + leader→2nd (diagnostic) + field p90−p10 + rank-swap rate.
+        if (govPhase && finishT > 0 && sharedMedianT !== null) {
+          const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
           if (live.length > 1) {
-            let leaderT = -Infinity;
-            for (const r of live) if (r.t > leaderT) leaderT = r.t;
-            const gapLen = (leaderT - sharedMedianT) / finishT / govOneLenT;
-            govGapLenSum += gapLen;
-            govGapLenSteps += 1;
-            if (gapLen > govGapLenMax) govGapLenMax = gapLen;
-            const sorted = live.map((r) => r.t).sort((a, b) => a - b);
-            const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
-            govFieldLenSum += (q(0.9) - q(0.1)) / finishT / govOneLenT;
+            const nLive = live.length;
+            const leaderT = live[0].t;
+            const secondT = live[1].t;
+            govGapSpSum += ((leaderT - sharedMedianT) / finishT) * nLive; // spacings
+            govGap2ndSpSum += ((leaderT - secondT) / finishT) * nLive;
+            govGapSpSteps += 1;
+            const gapSp = ((leaderT - sharedMedianT) / finishT) * nLive;
+            if (gapSp > govGapSpMax) govGapSpMax = gapSp;
+            const p = (frac) => live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t;
+            govFieldSpSum += ((p(0.1) - p(0.9)) / finishT) * nLive; // p0.1(top) − p0.9(back), spacings
+            // Position-change rate: adjacent-rank swaps vs the previous step's order.
+            const order = live.map((r) => r.index);
+            if (govPrevOrder) {
+              const posPrev = new Map(govPrevOrder.map((idx, i) => [idx, i]));
+              let swaps = 0;
+              for (let i = 0; i < order.length; i++) {
+                const pp = posPrev.get(order[i]);
+                if (pp !== undefined && pp !== i) swaps++;
+              }
+              govRankSwaps += swaps;
+              govRankSwapSteps += 1;
+            }
+            govPrevOrder = order;
           }
         }
       }
@@ -1447,10 +1459,12 @@ export function runSingleRace({
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
     results.passThroughCount             = passThroughCount;        // sim-only: lateral pass-through events (post-warmup)
     results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
-    // Governor bound metrics (Stage-B redesign; reporting only). 0 when governor is off.
-    results.govGapLenMean = govGapLenSteps > 0 ? govGapLenSum / govGapLenSteps : 0; // leader→median, lengths
-    results.govGapLenMax = govGapLenMax;                                            // leader→median peak, lengths
-    results.govFieldLenMean = govGapLenSteps > 0 ? govFieldLenSum / govGapLenSteps : 0; // field p90−p10, lengths
+    // Governor edge-limiter metrics (Stage 1; reporting only, in spacings). 0 when off.
+    results.govGapSpMean = govGapSpSteps > 0 ? govGapSpSum / govGapSpSteps : 0; // leader→median, spacings
+    results.govGapSpMax = govGapSpMax;                                          // leader→median peak, spacings
+    results.govGap2ndSpMean = govGapSpSteps > 0 ? govGap2ndSpSum / govGapSpSteps : 0; // leader→2nd, spacings
+    results.govFieldSpMean = govGapSpSteps > 0 ? govFieldSpSum / govGapSpSteps : 0; // field p90−p10, spacings
+    results.govRankSwapRate = govRankSwapSteps > 0 ? govRankSwaps / govRankSwapSteps : 0; // swaps/step
     results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
     results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
     results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
@@ -3222,10 +3236,12 @@ if (isMain) {
           // Lapping instrumentation (closed tracks):
           maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
           maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
-          // Governor bound metrics (Stage-B redesign; reporting only, 0 when governor off):
-          govGapLenMean:           raceResults.reduce((s, r) => s + (r.govGapLenMean ?? 0), 0) / raceResults.length,
-          govGapLenMax:            Math.max(...raceResults.map((r) => r.govGapLenMax ?? 0)),
-          govFieldLenMean:         raceResults.reduce((s, r) => s + (r.govFieldLenMean ?? 0), 0) / raceResults.length,
+          // Governor edge-limiter metrics (Stage 1; reporting only, spacings; 0 when governor off):
+          govGapSpMean:            raceResults.reduce((s, r) => s + (r.govGapSpMean ?? 0), 0) / raceResults.length,
+          govGapSpMax:             Math.max(...raceResults.map((r) => r.govGapSpMax ?? 0)),
+          govGap2ndSpMean:         raceResults.reduce((s, r) => s + (r.govGap2ndSpMean ?? 0), 0) / raceResults.length,
+          govFieldSpMean:          raceResults.reduce((s, r) => s + (r.govFieldSpMean ?? 0), 0) / raceResults.length,
+          govRankSwapRate:         raceResults.reduce((s, r) => s + (r.govRankSwapRate ?? 0), 0) / raceResults.length,
           honestSameLapFraction:   (() => {
             const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
             return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;

@@ -143,9 +143,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       governorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled,
       governorDrama: DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama,
       governorK0: DEFAULT_RACE_DYNAMICS_CONFIG.governorK0,
-      governorLengthBoundMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundMin,
-      governorLengthBoundMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundMax,
-      governorLengthBoundFloor: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthBoundFloor,
+      governorSpacingMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorSpacingMin,
+      governorSpacingMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorSpacingMax,
+      governorBoundFloorFraction: DEFAULT_RACE_DYNAMICS_CONFIG.governorBoundFloorFraction,
+      governorRampWidth: DEFAULT_RACE_DYNAMICS_CONFIG.governorRampWidth,
       governorAMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin,
       governorAMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax,
       governorFrequency: DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency,
@@ -895,7 +896,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="Field Governor (pre-OUTCOME)"
         onReset={resetGovernor}
         resetTestId="reset-governor"
-        subtitle="Pre-OUTCOME field governor (default OFF): keeps the field together (cohesion to the median) while injecting bounded shuffle (overtakes/drop-backs) — no lone breakaway, no train. Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Runs alongside surge + rubber-band. ‘Action’ is the one owner knob; the rest are expert/sweep knobs."
+        subtitle="Pre-OUTCOME edge-limiter (default OFF): a DEAD ZONE leaves the middle of the field FREE (re-roll makes natural groups/battles) and only clamps the EDGES — a leader too far ahead of the median or a tail too far behind. One symmetric rule; the bound is in inter-racer spacings (track-independent). Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Front-pack bias + comeback are later stages. ‘Action’ is the one owner knob (wider dead zone + more shuffle); the rest are expert/sweep knobs."
       >
         <div style={{ marginBottom: '0.75rem' }}>
           <label
@@ -939,35 +940,43 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           {[
             {
               key: 'governorK0',
-              label: 'Cohesion softness k0',
+              label: 'Edge softness k0',
               min: 0.005,
               max: 0.15,
               step: 0.005,
-              tip: 'Slope of the restoring force near the center. Higher = stiffer field even at small gaps. Fixed (not scaled by Action).',
+              tip: 'Slope of the barrier just past the bound. Higher = stiffer edge. Zero inside the dead zone regardless. Fixed (not scaled by Action).',
             },
             {
-              key: 'governorLengthBoundFloor',
-              label: 'Bound floor (lengths)',
-              min: 1.0,
-              max: 5.0,
-              step: 0.1,
-              tip: 'Hard minimum on the leader→median bound in racer-lengths. Below ~2 the field jams in the brake zone → visible late corrections. The sweep may raise, never lower below this.',
+              key: 'governorSpacingMin',
+              label: 'Bound @ Action 0 (spacings)',
+              min: 0.5,
+              max: 10,
+              step: 0.5,
+              tip: 'Dead-zone bound (leader→median) at min Action, in mean inter-racer spacings (track-independent). Tighter field. Must be ≤ the Action-100 bound.',
             },
             {
-              key: 'governorLengthBoundMin',
-              label: 'Bound @ Action 0 (lengths)',
-              min: 1.0,
-              max: 6.0,
-              step: 0.1,
-              tip: 'Leader→median bound at min Action (tight field). Must be ≥ the floor.',
+              key: 'governorSpacingMax',
+              label: 'Bound @ Action 100 (spacings)',
+              min: 0.5,
+              max: 12,
+              step: 0.5,
+              tip: 'Dead-zone bound at max Action (wider dead zone → field spreads more, still bounded). Must be ≥ the Action-0 bound.',
             },
             {
-              key: 'governorLengthBoundMax',
-              label: 'Bound @ Action 100 (lengths)',
-              min: 1.0,
-              max: 8.0,
+              key: 'governorBoundFloorFraction',
+              label: 'Bound floor (race-fraction)',
+              min: 0.005,
+              max: 0.2,
+              step: 0.005,
+              tip: 'Absolute floor on the bound as a fraction of the race, so a tiny field on a huge track can’t make the dead zone vanish.',
+            },
+            {
+              key: 'governorRampWidth',
+              label: 'Edge ramp width',
+              min: 0.1,
+              max: 2.0,
               step: 0.1,
-              tip: 'Leader→median bound at max Action (wider, still bounded). Must be ≥ the Action-0 bound.',
+              tip: 'How many bound-widths past the edge the barrier takes to reach full brake (maxEffect). Larger = softer edge.',
             },
             {
               key: 'governorAMin',

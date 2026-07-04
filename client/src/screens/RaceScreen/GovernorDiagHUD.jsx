@@ -68,49 +68,53 @@ function buildView(diag, state) {
   const cfg = diag.cfg;
   const racers = state.racers ?? [];
   const finishT = state.finishT ?? diag.finishT ?? 0;
-  const oneLenT = diag.oneLenT ?? 0;
   const activePhase =
     diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
 
-  const { lengthBound, A } = governorActionToParams(cfg.drama, cfg);
-  const gapBoundT = lengthBound * oneLenT;
+  const { spacings, A } = governorActionToParams(cfg.drama, cfg);
   const w = activePhase
     ? governorPhaseWeight(diag.progress, diag.pulkEndFrac, diag.corrStartFrac)
     : 0;
   const k0 = cfg.k0 ?? 0.03;
   const maxEffect = cfg.maxEffect ?? 0.12;
+  const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
   const f = cfg.frequency ?? 3;
 
-  // Leader (max t), straggler (min t), and field-length p90−p10 among live racers.
-  let leader = null;
-  let straggler = null;
-  const liveTs = [];
-  for (const r of racers) {
-    if (r.finished) continue;
-    liveTs.push(r.t);
-    if (!leader || r.t > leader.t) leader = r;
-    if (!straggler || r.t < straggler.t) straggler = r;
-  }
+  // Leader (max t), 2nd, straggler (min t), field-length p90−p10 among live racers.
+  const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+  const nLive = live.length;
+  const leader = live[0] ?? null;
+  const second = live[1] ?? null;
+  const straggler = live[nLive - 1] ?? null;
   const medianT = computeMedianT(racers);
-  liveTs.sort((a, b) => a - b);
-  const q = (p) =>
-    liveTs.length ? liveTs[Math.min(liveTs.length - 1, Math.floor(p * (liveTs.length - 1)))] : 0;
-  const fieldLen =
-    liveTs.length > 1 && finishT > 0 && oneLenT > 0 ? (q(0.9) - q(0.1)) / finishT / oneLenT : 0;
-  const leaderGapLen =
-    leader && medianT !== null && finishT > 0 && oneLenT > 0
-      ? (leader.t - medianT) / finishT / oneLenT
-      : 0;
+
+  // Dead-zone bound (leader→median) as a race-fraction: M spacings, one spacing = 1/nLive.
+  const boundFraction = Math.max(
+    cfg.boundFloorFraction ?? 0.02,
+    nLive > 0 ? spacings / nLive : Infinity
+  );
+  const toSpacings = (dt) => (finishT > 0 ? (dt / finishT) * nLive : 0); // t-gap → spacings
+  const p = (frac) => (nLive ? live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t : 0);
+  const fieldSp = nLive > 1 ? toSpacings(p(0.1) - p(0.9)) : 0;
+  const leaderGapSp = leader && medianT !== null ? toSpacings(leader.t - medianT) : 0;
+  const leader2ndSp = leader && second ? toSpacings(leader.t - second.t) : 0;
+  const boundSp = boundFraction * nLive; // the bound expressed in spacings (≈ spacings, unless floored)
 
   const breakdown = (r) => {
     if (!r || medianT === null || finishT <= 0) return null;
     const gap = (r.t - medianT) / finishT;
-    const cohesion = gapBoundT > 0 ? -governorRestoringForce(gap / gapBoundT, k0, maxEffect) : 0;
+    const x = gap / boundFraction;
+    const ax = Math.abs(x);
+    const inDeadZone = ax <= 1;
+    const cohesion = inDeadZone
+      ? 0
+      : -governorRestoringForce((Math.sign(x) * (ax - 1)) / rampWidth, k0, maxEffect);
     const shuffle =
       A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed));
     return {
       name: r.name ?? r.id ?? `#${r.index}`,
-      gap,
+      gapSp: toSpacings(gap),
+      inDeadZone,
       cohesion: w * cohesion,
       shuffle: w * shuffle,
       mult: r.governorMult ?? 1.0,
@@ -124,10 +128,11 @@ function buildView(diag, state) {
     w,
     A,
     drama: cfg.drama,
-    lengthBound,
-    gapBoundT,
-    leaderGapLen,
-    fieldLen,
+    boundSp,
+    boundFraction,
+    leaderGapSp,
+    leader2ndSp,
+    fieldSp,
     pulkEndFrac: diag.pulkEndFrac,
     corrStartFrac: diag.corrStartFrac,
     leader: breakdown(leader),
@@ -141,9 +146,13 @@ function racerLine(label, b, color) {
     <div>
       {label} <span style={{ color: '#ffd700' }}>{b.name}</span>
       {'  gap '}
-      <span style={{ color: b.gap > 0 ? BRAKE_COLOR : LIFT_COLOR }}>
-        {b.gap >= 0 ? '+' : ''}
-        {pct(b.gap, 1)}
+      <span style={{ color: b.gapSp > 0 ? BRAKE_COLOR : LIFT_COLOR }}>
+        {b.gapSp >= 0 ? '+' : ''}
+        {b.gapSp.toFixed(1)}sp
+      </span>
+      {'  '}
+      <span style={{ color: b.inDeadZone ? ON_COLOR : BRAKE_COLOR }}>
+        {b.inDeadZone ? 'free' : 'edge'}
       </span>
       {'  coh '}
       <span style={{ color }}>{f4(b.cohesion)}</span>
@@ -192,14 +201,15 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
       </div>
       <div style={{ color: CFG_COLOR }}>
         Action {pct(v.drama)}
-        {'  '}bound {v.lengthBound.toFixed(1)}len ({f4(v.gapBoundT)}t)
+        {'  '}bound {v.boundSp.toFixed(1)}sp ({f4(v.boundFraction)}t)
         {'  '}A={f4(v.A)}
       </div>
       <div>
-        <span style={{ color: v.leaderGapLen > v.lengthBound ? BRAKE_COLOR : ON_COLOR }}>
-          leader→median {v.leaderGapLen.toFixed(2)}len
+        <span style={{ color: v.leaderGapSp > v.boundSp ? BRAKE_COLOR : ON_COLOR }}>
+          leader→median {v.leaderGapSp.toFixed(1)}sp
         </span>
-        {'  '}field(p90−p10) {v.fieldLen.toFixed(2)}len
+        {'  '}leader→2nd {v.leader2ndSp.toFixed(1)}sp
+        {'  '}field(p10−p90) {v.fieldSp.toFixed(1)}sp
       </div>
       <div style={SEP_STYLE}>── field (cohesion + shuffle) ──</div>
       {racerLine('Leader:', v.leader, BRAKE_COLOR)}

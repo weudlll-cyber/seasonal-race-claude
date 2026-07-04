@@ -4,13 +4,17 @@
 // Project:     RaceArena
 // Description: Pre-OUTCOME Field Governor (Stage B core). A single per-racer speed
 //              multiplier r.governorMult carrying TWO internal components:
-//                • COHESION — a PROGRESSIVE rubber-band restoring force on the gap to the
-//                  field MEDIAN. Position-coupled and symmetric (brakes racers ahead of the
-//                  median, lifts racers behind). SOFT near the median (shuffle free to move
-//                  racers) and progressively STIFFER toward an Action-scaled bound expressed
-//                  in mean-racer-LENGTHS (leader→median), reaching ~maxEffect at the bound
-//                  with no flat spot below it — a rubber-band, not a wall. Two-sided closing
-//                  keeps each racer within ±maxEffect while the median rises to meet a leader.
+//                • EDGE-LIMITER (Stage 1) — a DEAD-ZONED restoring force on the gap to the
+//                  field MEDIAN. ZERO force inside the bound (the whole middle of the field →
+//                  re-roll variation runs free → natural groups/battles), and only PAST the
+//                  bound does a symmetric progressive barrier engage (brake a leader too far
+//                  ahead, lift a tail too far behind). ONE symmetric rule covers front-lone,
+//                  front-GROUP (median-referenced: a leader+2nd both beyond the bound are both
+//                  braked) and tail-fragmentation. The bound is in TRACK+DURATION-INDEPENDENT
+//                  units — M mean inter-racer spacings (M/nActive as a race-fraction), scaled
+//                  by Action — retiring the laps-mismatched racer-length bound. Position-
+//                  coupled, ±maxEffect clamp. Continuous median-pull (the field-flattener) is
+//                  gone. Front-pack bias + comeback are LATER stages (2a/2b); shuffle stays.
 //                • SHUFFLE — bounded, zero-mean oscillation with a per-racer phase from a
 //                  DEDICATED seeded stream (rank-DECOUPLED: derived from racer index +
 //                  seed, never from the target-rank assignment). No Math.random.
@@ -65,25 +69,23 @@ export function governorShufflePhase(index, seed) {
 }
 
 /**
- * Map the single owner "Action" scalar (0..1) to the length-bound (in mean-racer-lengths)
- * and the shuffle amplitude. Higher Action → WIDER bound (more room) + MORE shuffle. The
- * cohesion softness k0 is FIXED (not mapped) so the field is never a dead train (low Action)
- * and never leaks (high Action) — the OLD backwards drama→k map (high drama lowered k) is
- * retired. The bound is hard-floored at lengthBoundFloor: a ~1-length field jams inside the
- * speed-brake zone (speedBrakeTMultiplier 1.5 > 1 length) → constant pre-OUTCOME braking, so
- * the safe floor is ~2 lengths (sweep may raise, never below the floor).
+ * Map the single owner "Action" scalar (0..1) to the dead-zone bound (in mean inter-racer
+ * SPACINGS) and the shuffle amplitude. Higher Action → WIDER bound (leader may sit more
+ * spacings ahead before the edge engages) + MORE shuffle. The barrier softness k0 is FIXED
+ * (not mapped by Action). "Spacings" is a track+duration-independent unit: one spacing =
+ * 1/nActive of the race, so a bound of M spacings = M/nActive as a race-fraction — the same
+ * relative gap on a short few-lap track and a long many-lap track (retires the racer-length
+ * bound, whose effective size scaled with 1/laps).
  *
  * @param {number} drama 0..1 (the Action slider)
- * @param {{lengthBoundMin:number, lengthBoundMax:number, lengthBoundFloor:number,
- *          aMin:number, aMax:number}} cfg
- * @returns {{lengthBound:number, A:number}}
+ * @param {{spacingMin:number, spacingMax:number, aMin:number, aMax:number}} cfg
+ * @returns {{spacings:number, A:number}}
  */
 export function governorActionToParams(drama, cfg) {
   const d = clamp(drama ?? 0, 0, 1);
-  const rawBound = cfg.lengthBoundMin + (cfg.lengthBoundMax - cfg.lengthBoundMin) * d;
-  const lengthBound = Math.max(cfg.lengthBoundFloor ?? 0, rawBound);
+  const spacings = cfg.spacingMin + (cfg.spacingMax - cfg.spacingMin) * d;
   const A = cfg.aMin + (cfg.aMax - cfg.aMin) * d;
-  return { lengthBound, A };
+  return { spacings, A };
 }
 
 /**
@@ -135,11 +137,9 @@ export function governorPhaseWeight(progress, pulkEndFrac, corrStartFrac) {
  * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult)
  * @param {number} finishT
  * @param {string} phase    getPhase() result: 'PRE_PULK'|'PULK'|'TRANSITION'|'OUTCOME'|'FINAL'
- * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number,
- *          oneLenT:number}} phaseCtx  oneLenT = mean(drawnBodyLengthPx)/pathLengthPx — the
- *          racer-length in t-fraction units the length bound is measured in.
- * @param {{enabled:boolean, drama:number, k0:number, lengthBoundMin:number,
- *          lengthBoundMax:number, lengthBoundFloor:number, aMin:number, aMax:number,
+ * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number}} phaseCtx
+ * @param {{enabled:boolean, drama:number, k0:number, spacingMin:number, spacingMax:number,
+ *          boundFloorFraction:number, rampWidth:number, aMin:number, aMax:number,
  *          frequency:number, maxEffect:number, maxStepPerFrame:number}} cfg
  * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
  *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
@@ -161,16 +161,24 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     return;
   }
 
-  const { progress, pulkEndFrac, corrStartFrac, seed, oneLenT } = phaseCtx;
+  const { progress, pulkEndFrac, corrStartFrac, seed } = phaseCtx;
   const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
-  const { lengthBound, A } = governorActionToParams(cfg.drama, cfg);
+  const { spacings, A } = governorActionToParams(cfg.drama, cfg);
   const maxEffect = cfg.maxEffect ?? 0.12;
   const k0 = cfg.k0 ?? 0.03;
   const maxStep = cfg.maxStepPerFrame ?? 0.01;
+  const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
   const f = cfg.frequency ?? 3;
   const twoPiF = 2 * Math.PI * f;
-  // Length bound → t-fraction gap bound (leader→median). Guard a degenerate geometry.
-  const gapBound = oneLenT > 0 ? lengthBound * oneLenT : 0;
+  // Track+duration-independent dead-zone bound (leader→median) as a race-fraction: M mean
+  // inter-racer spacings, one spacing = 1/nActive. Floored so a tiny field on a huge track
+  // can't make the bound vanish. gap = (r.t - medianT)/finishT is in the same race-fraction.
+  let nActive = 0;
+  for (const r of racers) if (!r.finished) nActive++;
+  const boundFraction = Math.max(
+    cfg.boundFloorFraction ?? 0.02,
+    nActive > 0 ? spacings / nActive : Infinity
+  );
 
   for (const r of racers) {
     if (r.finished) {
@@ -178,11 +186,15 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
       continue;
     }
     const gap = (r.t - medianT) / finishT;
-    // Cohesion: progressive rubber-band restoring force on the gap to the median, normalized
-    // by the bound. Soft near center, stiff at the bound; symmetric (ahead → brake, behind →
-    // lift). Subtract the signed force from 1.0. gapBound<=0 → no cohesion (geometry guard).
-    const cohesion = gapBound > 0 ? -governorRestoringForce(gap / gapBound, k0, maxEffect) : 0;
-    // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase.
+    const x = gap / boundFraction;
+    const ax = Math.abs(x);
+    // DEAD ZONE: zero force inside the bound (|x| ≤ 1) — the whole middle of the field runs
+    // free (re-roll + shuffle move racers, governorMult stays EXACTLY 1.0 there). Only PAST
+    // the bound does the symmetric progressive barrier engage on the excess (brake ahead,
+    // lift behind). Median-referenced, so a leader+2nd group both beyond the bound both brake.
+    const cohesion =
+      ax <= 1 ? 0 : -governorRestoringForce((Math.sign(x) * (ax - 1)) / rampWidth, k0, maxEffect);
+    // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase (Stage-1 keeps this as-is).
     const shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
     const target = clamp(1 + w * (cohesion + shuffle), 1 - maxEffect, 1 + maxEffect);
     // Rate-limit toward the target so the applied speed eases (never a sudden switch); the
