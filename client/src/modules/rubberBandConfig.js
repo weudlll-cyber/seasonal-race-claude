@@ -21,10 +21,15 @@ export function loadRubberBandConfig() {
     merged.brakeThreshold >= 1 ||
     !(merged.gapScale > 0) ||
     merged.maxBrake < 0 ||
-    merged.maxBrake > 0.15 ||
+    // Brake-1: ceiling widened 0.15 → 0.18 so the tip-focus sweep can explore up to −18%
+    // (the −15% that reels in the worst permanent breakaway, plus headroom). Default stays 0.10.
+    merged.maxBrake > 0.18 ||
     merged.boostRampMs <= 0 ||
     !(merged.rubberBandEndgameThreshold > 0) ||
-    merged.rubberBandEndgameThreshold > 1
+    merged.rubberBandEndgameThreshold > 1 ||
+    // Tip-focus dead-zone (fraction of finishT); 0 = off (legacy). Finite and in [0, 1).
+    !(merged.rubberBandTipThreshold >= 0) ||
+    merged.rubberBandTipThreshold >= 1
   ) {
     return { ...DEFAULT_RUBBER_BAND_CONFIG };
   }

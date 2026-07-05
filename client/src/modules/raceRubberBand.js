@@ -75,7 +75,11 @@ export function rubberBandTargetMult(myGap, cfg) {
  * @param {Array} racers   live racer objects with .t/.finished + rubberBandMult* state
  * @param {number} finishT
  * @param {number} nowMs   physics timestamp (ms) for the temporal ramp
- * @param {object} cfg     { enabled, brakeThreshold, gapScale, maxBrake, boostRampMs, rubberBandEndgameThreshold }
+ * @param {object} cfg     { enabled, brakeThreshold, gapScale, maxBrake, boostRampMs,
+ *                           rubberBandEndgameThreshold, rubberBandTipThreshold }
+ *                         rubberBandTipThreshold > 0 → TIP-FOCUS: brake only the instantaneous
+ *                         leader on the leader→2nd gap (dead-zoned by tipThreshold); ≤ 0 → legacy
+ *                         median-gap brake on all ahead-of-median racers.
  * @param {number} [surgeExemptStrength] 0 = surgers fully braked (default, no behaviour change);
  *                                        1 = surgers fully exempt from the rubber-band brake.
  *                                        Only affects racers currently surging (pulkSurgeMult > 1).
@@ -98,12 +102,53 @@ export function applyRubberBand(
 
   // braking window: active until the leader crosses the hard-off point.
   const braking = leaderT > 0 && leaderProgress < cfg.rubberBandEndgameThreshold;
-  // Reuse the shared per-step median when provided (A5), else compute it here (byte-identical).
-  const medianT = braking
-    ? sharedMedianT !== undefined
-      ? sharedMedianT
-      : computeMedianT(racers)
-    : null;
+
+  // Brake-1 TIP-FOCUS: when rubberBandTipThreshold > 0, brake ONLY the instantaneous
+  // front-tip (the current leader), keyed on the leader→2nd gap, so a real breakaway is
+  // reined in without uniformly slowing every ahead-of-median racer. The leader→2nd gap is
+  // dead-zoned by tipThreshold (a normal close front runs free) and ramped/capped by the SAME
+  // gapScale/maxBrake as the legacy path (rubberBandTargetMult reused). tipThreshold ≤ 0 (default)
+  // → the legacy median-gap brake below runs, byte-identical to before.
+  const tipThreshold = cfg.rubberBandTipThreshold ?? 0;
+  const tipFocus = tipThreshold > 0;
+  let tipLeaderIndex = -1; // index of the front-tip racer to brake (tip-focus only)
+  let tipTarget = 1.0; // its brake target
+  if (tipFocus && braking && finishT > 0) {
+    // Single pass for the leader (max t) and the 2nd-place t among non-finished racers.
+    let l1 = null,
+      l1t = -Infinity,
+      l2t = -Infinity;
+    for (const r of racers) {
+      if (r.finished) continue;
+      if (r.t > l1t) {
+        l2t = l1t;
+        l1 = r;
+        l1t = r.t;
+      } else if (r.t > l2t) {
+        l2t = r.t;
+      }
+    }
+    if (l1 && l2t > -Infinity) {
+      const tipGap = (l1t - l2t) / finishT; // leader→2nd, fraction of finishT
+      if (tipGap > tipThreshold) {
+        tipLeaderIndex = l1.index;
+        tipTarget = rubberBandTargetMult(tipGap, {
+          brakeThreshold: tipThreshold,
+          gapScale: cfg.gapScale,
+          maxBrake: cfg.maxBrake,
+        });
+      }
+    }
+  }
+
+  // Legacy median-gap path only: reuse the shared per-step median when provided (A5), else
+  // compute it here (byte-identical). Tip-focus does not need the median.
+  const medianT =
+    braking && !tipFocus
+      ? sharedMedianT !== undefined
+        ? sharedMedianT
+        : computeMedianT(racers)
+      : null;
 
   for (const r of racers) {
     if (r.finished) {
@@ -111,7 +156,10 @@ export function applyRubberBand(
       continue;
     }
     let target = 1.0;
-    if (braking && medianT !== null && finishT > 0) {
+    if (tipFocus) {
+      // Only the instantaneous front-tip is braked; the rest of the field runs free.
+      if (braking && r.index === tipLeaderIndex) target = tipTarget;
+    } else if (braking && medianT !== null && finishT > 0) {
       const myGap = (r.t - medianT) / finishT;
       if (myGap > cfg.brakeThreshold) target = rubberBandTargetMult(myGap, cfg);
     }

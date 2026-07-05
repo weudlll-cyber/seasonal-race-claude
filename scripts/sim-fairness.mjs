@@ -40,6 +40,12 @@
 //                        knobs; unset → no-op (byte-identical). Realized knobs → JSON meta.action /
 //                        meta.directorKnobs. Pair with --governorEnabled=true --governorDirectorEnabled=true.
 //
+//   Brake-1 tip-focus leader-brake (reuse rubber-band; read-only sweep knobs):
+//     --rbMaxBrake=<0..0.18>            leader-brake strength (default 0.10; ceiling widened to 0.18).
+//     --rubberBandTipThreshold=<0..1>   >0 → brake ONLY the instantaneous leader on the leader→2nd
+//                                       gap (dead-zone, fraction of finishT); 0 = legacy median-gap
+//                                       brake (byte-identical). Pair with --rbMaxBrake + the director.
+//
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
 //   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
@@ -208,6 +214,9 @@ const RB_GAP_SCALE         = Number(argVal('rbGapScale',       String(DEFAULT_RU
 const RB_MAX_BRAKE         = Number(argVal('rbMaxBrake',       String(DEFAULT_RUBBER_BAND_CONFIG.maxBrake)));
 const RB_RAMP_MS           = Number(argVal('rbRampMs',         String(DEFAULT_RUBBER_BAND_CONFIG.boostRampMs)));
 const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandEndgameThreshold)));
+// Brake-1 tip-focus dead-zone (fraction of finishT); 0 = off (legacy median-gap brake). Default
+// read from the shared config (0) so a no-flag run is byte-identical; the sweep sets it > 0.
+const RB_TIP_THRESHOLD     = Number(argVal('rubberBandTipThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandTipThreshold)));
 // Single cfg object passed to the shared applyRubberBand helper (same shape the browser passes).
 const RUBBER_BAND_CFG = {
   enabled:                    RUBBER_BAND_ACTIVE,
@@ -216,6 +225,7 @@ const RUBBER_BAND_CFG = {
   maxBrake:                   RB_MAX_BRAKE,
   boostRampMs:                RB_RAMP_MS,
   rubberBandEndgameThreshold: RB_ENDGAME_THRESHOLD,
+  rubberBandTipThreshold:     RB_TIP_THRESHOLD,
 };
 
 // ── PULK-surge (default OFF) ─────────────────────────────────────────────────
@@ -3152,7 +3162,7 @@ if (isMain) {
   if (RACE_PLAN_ACTIVE) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
-  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
+  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD}${RB_TIP_THRESHOLD > 0 ? ` TIP-FOCUS(leader→2nd)=${RB_TIP_THRESHOLD}` : ''})` : '❌ deaktiviert'}`);
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director cast=${ACTION_KNOBS.governorDirectorCastSize} dwell=${ACTION_KNOBS.governorDirectorDwell.toFixed(3)} pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} (anchorOffset=${DYNAMICS_OVERRIDES.governorDirectorAnchorOffset} settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);

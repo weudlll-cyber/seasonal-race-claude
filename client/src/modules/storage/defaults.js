@@ -289,6 +289,12 @@ export const DEFAULT_RUBBER_BAND_CONFIG = {
   // P-controller a clean final window. Dedicated field (was cross-borrowed from
   // DEFAULT_CAMERA_CONFIG.endgameThreshold — backlog #2, now split).
   rubberBandEndgameThreshold: 0.9,
+  // Brake-1 TIP-FOCUS (default OFF = 0). When > 0, the brake targets ONLY the instantaneous
+  // front-tip (the current leader), keyed on the leader→2nd gap (fraction of finishT) with this
+  // as its dead-zone, instead of braking every ahead-of-median racer. Holds a real breakaway
+  // without uniformly slowing the field. 0 → legacy median-gap behaviour (byte-identical).
+  // Experimental; tuned by the Brake-1 sweep, nothing ships on.
+  rubberBandTipThreshold: 0,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {
