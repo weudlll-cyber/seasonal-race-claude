@@ -439,6 +439,35 @@ Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1
 
 ---
 
+### The Action axis (`--action=<0..1>`) — director sweep coupling
+
+**Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default; lives in the sweep layer). One owner-facing scalar `action` (0 = calm → 1 = wild) — the prototype of the future SetupScreen "Action" slider — coupled to the contest-injector (director) knobs. Unset → no-op (byte-identical run). Realized knobs are surfaced in the JSON `meta.action` / `meta.directorKnobs` and the config log. Single source: `ACTION_COUPLING` + `actionToDirectorKnobs()` in `sim-fairness.mjs`.
+
+**Coupling (endpoints + interpolation):**
+
+| Director knob | action=0 | action=1 | Interpolation |
+|---|---|---|---|
+| `PullStrength` | 0.03 | 0.12 | linear (action↑ → stronger anchor pull) |
+| `Dwell` | 0.16 | 0.04 | linear (action↑ → shorter dwell = faster cast turnover) |
+| `CastSize` | 4 | 2 | `round(4 − 2·action)` (loose pack → tight duel; 3 at mid) |
+| `AnchorOffset` | 2.0 | 2.0 | **FIXED** at config default (anchor spread handled separately) |
+| `Settling` | 0.05 | 0.05 | **FIXED** at config default (fairness parameter, never on the axis) |
+
+The endpoints bracket the shipped director default (cast 3 / dwell 0.08 / pull 0.06), so the default sits inside the swept range. The axis is monotonic 0→1 = calm→wild.
+
+**Round-1 (coarse) sweep matrix** — per-track default racer, established open=60 / closed=40 count, but a **uniform 60 s** duration for all tracks (equal length for comparability, deliberately NOT each track's own `defaultDuration`):
+
+| Track | Topology | Racer | Racers | Duration |
+|---|---|---|---|---|
+| searound | closed | manta | 40 | 60 s |
+| garden-path | closed | snail | 40 | 60 s |
+| mountainstreet | open | boarder | 60 | 60 s |
+| seatrack | open | dolphin | 60 | 60 s |
+
+Each (track × action-point) runs **30 distinct seeds** (`--seed=1 --races=30` → seeds 1–30). Governor tail-lift ON + director ON, surge + rubber-band OFF (clean base), no spread-cap. Coarse pass = 8 action-points evenly across `[0,1]`; a `--racer` that is surface-incompatible with its track **errors** (never a silent skip). Raw + aggregated tables land under `results/action-sweep-r1/`. Read: locate the *attractive but still fair* region — high `leadChangeRate` / `podiumShuffleRate` with `rankVsP1Frac` LOW and band-reach (B3 zone-success) ≥ 70%.
+
+---
+
 ## 4. Parameter Sweep Methodology
 
 ### Two-phase approach

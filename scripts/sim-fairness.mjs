@@ -32,6 +32,14 @@
 //                        reuses the governor gaps, so pair with --governorEnabled/-DirectorEnabled.
 //     --diagLabel=<name> names the raw diagnostic output file (both diags share this).
 //
+//   Action axis (Action-sweep R1; read-only sweep hypothesis — NOT a shipped default):
+//     --action=<0..1>    single "action" scalar (0=calm → 1=wild) coupled to the contest-injector
+//                        (director) knobs: action↑ → PullStrength 0.03→0.12, Dwell 0.16→0.04
+//                        (faster turnover), CastSize 4→2 (integer). AnchorOffset + Settling stay at
+//                        config defaults (fixed, not on the axis). Overrides those three director
+//                        knobs; unset → no-op (byte-identical). Realized knobs → JSON meta.action /
+//                        meta.directorKnobs. Pair with --governorEnabled=true --governorDirectorEnabled=true.
+//
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
 //   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
@@ -150,6 +158,37 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorPullStrength: Number(argVal('governorDirectorPullStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength))),
   governorDirectorSettling:     Number(argVal('governorDirectorSettling',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling))),
 };
+
+// ── Action axis (Action-sweep R1; --action=<0..1>) — SINGLE source of the coupling ──────────
+// One owner-facing scalar `action` ∈ [0,1] (0 = calm → 1 = wild), the prototype of the future
+// SetupScreen "Action" slider. It couples to the contest-injector (director) knobs via the table
+// below: action↑ → stronger + faster spotlight over a tighter cast. AnchorOffset + Settling are
+// FIXED at their config defaults this round (NOT on the axis — anchor spread + fairness are handled
+// separately). This is a SWEEP HYPOTHESIS: it lives here in the sweep layer, never in shipped
+// defaults. When --action is unset the block is a no-op → a no-flag run is byte-identical.
+// Endpoints are chosen so the shipped director default (cast 3 / dwell 0.08 / pull 0.06) sits inside
+// the swept range. Realized knob values are surfaced (meta + config log) so a flat knob can later be
+// pinned to a constant.
+const ACTION_COUPLING = {
+  pullStrength: { at0: 0.03, at1: 0.12 }, // action↑ → stronger pull (per racer-length of anchor gap)
+  dwell:        { at0: 0.16, at1: 0.04 }, // action↑ → SHORTER dwell (faster cast turnover)
+  castSize:     { at0: 4,    at1: 2 },    // action↑ → smaller cast (loose pack → tight duel), integer
+  // FIXED (not on the axis): governorDirectorAnchorOffset, governorDirectorSettling → config defaults.
+};
+const ACTION_RAW = argVal('action', null);
+const ACTION = ACTION_RAW !== null ? Math.max(0, Math.min(1, Number(ACTION_RAW))) : null;
+function actionToDirectorKnobs(a) {
+  const lerp = (e) => e.at0 + (e.at1 - e.at0) * a;
+  return {
+    governorDirectorPullStrength: lerp(ACTION_COUPLING.pullStrength),
+    governorDirectorDwell:        lerp(ACTION_COUPLING.dwell),
+    governorDirectorCastSize:     Math.round(lerp(ACTION_COUPLING.castSize)),
+  };
+}
+// Realized director knobs at this action-point (null when --action unset). Overrides the three
+// axis knobs in DYNAMICS_OVERRIDES; AnchorOffset/Settling are left untouched (fixed defaults).
+const ACTION_KNOBS = ACTION !== null ? actionToDirectorKnobs(ACTION) : null;
+if (ACTION_KNOBS) Object.assign(DYNAMICS_OVERRIDES, ACTION_KNOBS);
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
 const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
@@ -3115,6 +3154,9 @@ if (isMain) {
   }
   console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD})` : '❌ deaktiviert'}`);
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
+  if (ACTION !== null) {
+    console.log(`Action axis            : action=${ACTION.toFixed(3)} → director cast=${ACTION_KNOBS.governorDirectorCastSize} dwell=${ACTION_KNOBS.governorDirectorDwell.toFixed(3)} pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} (anchorOffset=${DYNAMICS_OVERRIDES.governorDirectorAnchorOffset} settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
+  }
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
@@ -3179,9 +3221,22 @@ if (isMain) {
     const trackSurfaces = track.surfaceClasses ?? [];
     for (const [racerType, cfg] of Object.entries(RACER_CONFIGS)) {
       if (RACER_FILTER && racerType !== RACER_FILTER) continue;
-      // Skip racers incompatible with this track's surface (empty surfaceClasses = no restriction)
-      if (cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
-          !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s))) continue;
+      // Racers incompatible with this track's surface (empty surfaceClasses = no restriction).
+      const surfaceIncompatible = cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
+          !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s));
+      if (surfaceIncompatible) {
+        // An EXPLICITLY requested racer (--racer=<id>) must ERROR, never silently skip — a silent
+        // skip would yield 0 combos and a misleading "all fair" run. The default all-racers loop
+        // (no --racer) still skips incompatible pairings as before.
+        if (RACER_FILTER) {
+          throw new Error(
+            `Racer '${racerType}' is surface-incompatible with track '${trackId}': ` +
+            `racer surfaces [${cfg.surfaceClasses.join(', ')}] ∩ track [${trackSurfaces.join(', ')}] = ∅. ` +
+            `Refusing to silently skip an explicitly-requested racer.`
+          );
+        }
+        continue;
+      }
       const { speedMultiplier, displaySize, bodyFillX, bodyFillY } = cfg;
 
       for (const durationSec of DURATION_VARIANTS) {
@@ -3825,7 +3880,7 @@ if (isMain) {
 
   // Write JSON
   const jsonPath = join(OUT_DIR, 'fairness-data.json');
-  writeFileSync(jsonPath, JSON.stringify({ meta: { nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS }, results: allResults, rawData }, null, 2));
+  writeFileSync(jsonPath, JSON.stringify({ meta: { nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS, governorDirectorAnchorOffset: DYNAMICS_OVERRIDES.governorDirectorAnchorOffset, governorDirectorSettling: DYNAMICS_OVERRIDES.governorDirectorSettling } } : {}) }, results: allResults, rawData }, null, 2));
   console.log(`JSON → ${jsonPath}`);
 
   // Write Markdown report
