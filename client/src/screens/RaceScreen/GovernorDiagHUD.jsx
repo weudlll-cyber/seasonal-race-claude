@@ -7,8 +7,9 @@
 //              pulkEnd XX% → corrStart XX%" — so the owner SEES the fade window follow a
 //              corridorStart edit; (2) the Action (drama) value and resolved k/A; and (3)
 //              for the current LEADER and a trailing STRAGGLER, the gap-to-median, the
-//              cohesion vs shuffle contribution, and the applied governorMult — so both
-//              halves (brake-leader AND lift-straggler) are visible.
+//              cohesion vs shuffle contribution, and the applied governorMult — so the
+//              tail-lift on the straggler is visible AND the leader confirms the governor
+//              never brakes it (cohesion stays 0 at or ahead of the median, Stage C).
 //              Passive DOM sibling of the race canvas (like RubberBandDiagHUD): renders
 //              nothing when its toggle is off, never touches the render loop. Reuses the
 //              governor's exported pure helpers + computeMedianT (single source — the HUD
@@ -104,17 +105,17 @@ function buildView(diag, state) {
     if (!r || medianT === null || lenScale <= 0) return null;
     const gapLengths = toLengths(r.t, medianT);
     const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
-    const ax = Math.abs(x);
-    const inDeadZone = ax <= 1;
-    const cohesion = inDeadZone
-      ? 0
-      : -governorRestoringForce((Math.sign(x) * (ax - 1)) / rampWidth, k0, maxEffect);
+    // TAIL-LIFT ONLY (parity with applyGovernor): lift only racers past the bound BEHIND the
+    // median (x < −1); everyone at or ahead of the median gets exactly 0 — no leader-brake.
+    const behindExcess = x < -1 ? -x - 1 : 0;
+    const lifted = behindExcess > 0;
+    const cohesion = lifted ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
     const shuffle =
       A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed));
     return {
       name: r.name ?? r.id ?? `#${r.index}`,
       gapLen: gapLengths,
-      inDeadZone,
+      lifted,
       cohesion: w * cohesion,
       shuffle: w * shuffle,
       mult: r.governorMult ?? 1.0,
@@ -145,14 +146,12 @@ function racerLine(label, b, color) {
     <div>
       {label} <span style={{ color: '#ffd700' }}>{b.name}</span>
       {'  gap '}
-      <span style={{ color: b.gapLen > 0 ? BRAKE_COLOR : LIFT_COLOR }}>
+      <span style={{ color: b.gapLen < 0 ? LIFT_COLOR : CFG_COLOR }}>
         {b.gapLen >= 0 ? '+' : ''}
         {b.gapLen.toFixed(1)}len
       </span>
       {'  '}
-      <span style={{ color: b.inDeadZone ? ON_COLOR : BRAKE_COLOR }}>
-        {b.inDeadZone ? 'free' : 'edge'}
-      </span>
+      <span style={{ color: b.lifted ? LIFT_COLOR : ON_COLOR }}>{b.lifted ? 'lift' : 'free'}</span>
       {'  coh '}
       <span style={{ color }}>{f4(b.cohesion)}</span>
       {'  shf '}
@@ -204,14 +203,14 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
         {'  '}A={f4(v.A)}
       </div>
       <div>
-        <span style={{ color: v.leaderGapLen > v.boundLengths ? BRAKE_COLOR : ON_COLOR }}>
-          leader→median {v.leaderGapLen.toFixed(1)}len
-        </span>
+        {/* Neutral measurements — the governor no longer acts on the leader; these feed the
+            later tip-leash layer + the sweep. */}
+        <span style={{ color: CFG_COLOR }}>leader→median {v.leaderGapLen.toFixed(1)}len</span>
         {'  '}leader→2nd {v.leader2ndLen.toFixed(1)}len
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
       </div>
       <div style={SEP_STYLE}>── field (cohesion + shuffle) ──</div>
-      {racerLine('Leader:', v.leader, BRAKE_COLOR)}
+      {racerLine('Leader:', v.leader, CFG_COLOR)}
       {racerLine('Straggler:', v.straggler, LIFT_COLOR)}
     </div>
   );

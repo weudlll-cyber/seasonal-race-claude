@@ -754,11 +754,12 @@ export function runSingleRace({
       return n > 0 ? sum / n : 0;
     })();
 
-    // ── Governor edge-limiter metrics (Stage 1; reporting only, feeds the sweep) ─────
+    // ── Governor tail-lift / field-shape metrics (Stage C; reporting only, feeds the sweep) ─
     // In TRUE RACER-LENGTHS (arc-distance / body length — lap-count- + track-independent):
-    // leader→median (CONTROL signal, mean+max) and leader→2nd (DIAGNOSTIC), plus field-length
-    // p90−p10 and a position-change rate (adjacent rank swaps/step) so the "liveliness
-    // returned" gate is measurable.
+    // leader→median and leader→2nd (both now DIAGNOSTIC field-shape measures — the governor's
+    // active signal is the BEHIND-median gap after the leader-brake was retired; these are kept
+    // for the later tip-leash + the sweep), plus field-length p90−p10 and a position-change rate
+    // (adjacent rank swaps/step) so the "liveliness returned" gate is measurable.
     const govLenScale = govMeanBodyLen > 0 ? pathLengthPx / govMeanBodyLen : 0;
     let govGapLenSum = 0; // leader→median, racer-lengths
     let govGapLenSteps = 0;
@@ -867,9 +868,10 @@ export function runSingleRace({
           govCfg,
           sharedMedianT
         );
-        // Edge-limiter metrics (reporting only), in TRUE RACER-LENGTHS (arc-distance / body
-        // length — same metric the governor regulates): leader→median (control) + leader→2nd
-        // (diagnostic) + field p90−p10 + rank-swap rate.
+        // Field-shape metrics (reporting only), in TRUE RACER-LENGTHS (arc-distance / body
+        // length — the racer-length unit the governor's tail-lift uses): leader→median +
+        // leader→2nd (both diagnostic now — the tail-lift acts on the behind-median gap) +
+        // field p90−p10 + rank-swap rate.
         if (govPhase && govLenScale > 0 && sharedMedianT !== null) {
           const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
           if (live.length > 1) {

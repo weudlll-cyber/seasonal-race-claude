@@ -4,17 +4,19 @@
 // Project:     RaceArena
 // Description: Pre-OUTCOME Field Governor (Stage B core). A single per-racer speed
 //              multiplier r.governorMult carrying TWO internal components:
-//                • EDGE-LIMITER (Stage 1) — a DEAD-ZONED restoring force on the arc-distance
+//                • TAIL-LIFT (Stage C) — a DEAD-ZONED restoring force on the arc-distance
 //                  gap to the field MEDIAN, measured in TRUE RACER-LENGTHS (arc-px / mean body
 //                  length), NOT finishT. ZERO force inside the bound (the whole middle of the
-//                  field → re-roll variation runs free → natural groups/battles); only PAST the
-//                  bound does a symmetric progressive barrier engage (brake a leader too far
-//                  ahead, lift a tail too far behind). Median-referenced: bounding leader→median
-//                  ≤ N lengths gives leader→2nd ≤ N for free (2nd sits between). The length unit
-//                  is lap-count- AND track-independent (one lap = one lap; a body is fixed px) —
-//                  retiring the finishT divisor that UNDER-reported closed multi-lap gaps by
-//                  ~maxLaps. Position-coupled, ±maxEffect clamp. Front-pack bias + comeback are
-//                  LATER stages (2a/2b); shuffle stays.
+//                  field → re-roll variation runs free → natural groups/battles); only when a
+//                  racer falls PAST the bound BEHIND the median does a progressive barrier lift
+//                  it back toward the field. ONE-SIDED: a racer at or ahead of the median gets
+//                  exactly zero at every distance — the governor never brakes the leader (the
+//                  ahead-median brake was RETIRED in Stage C; the contested front is a later
+//                  race-director layer). The length unit is lap-count- AND track-independent
+//                  (one lap = one lap; a body is fixed px) — retiring the finishT divisor that
+//                  UNDER-reported closed multi-lap gaps by ~maxLaps. Position-coupled (gap to
+//                  median), ±maxEffect clamp. Front-pack bias + comeback are LATER stages;
+//                  shuffle stays.
 //                • SHUFFLE — bounded, zero-mean oscillation with a per-racer phase from a
 //                  DEDICATED seeded stream (rank-DECOUPLED: derived from racer index +
 //                  seed, never from the target-rank assignment). No Math.random.
@@ -89,8 +91,8 @@ export function arcT(a, b, isOpen) {
 
 /**
  * Map the single owner "Action" scalar (0..1) to the dead-zone bound (in TRUE RACER-LENGTHS)
- * and the shuffle amplitude. Higher Action → WIDER bound (leader may sit more racer-lengths
- * ahead of the median before the edge engages) + MORE shuffle. The barrier softness k0 is
+ * and the shuffle amplitude. Higher Action → WIDER bound (a racer may fall more racer-lengths
+ * BEHIND the median before the tail-lift engages) + MORE shuffle. The barrier softness k0 is
  * FIXED (not mapped by Action). The length bound is floored (lenFloor) so it can't vanish.
  *
  * @param {number} drama 0..1 (the Action slider)
@@ -108,8 +110,8 @@ export function governorActionToParams(drama, cfg) {
  * Progressive rubber-band restoring force for a gap normalized by the bound, x = gap/gapBound.
  * Rational barrier: ≈ k0·x near the center (soft — shuffle dominates, racers move freely),
  * diverging as |x| → 1 and clamped at maxEffect (stiff at the bound, no flat spot below it, no
- * hard step). Symmetric in sign, so it brakes a leader (x>0) and lifts a straggler (x<0) with
- * equal, opposite magnitude. Returned as a SIGNED force to SUBTRACT from 1.0 (positive = brake).
+ * hard step). Magnitude grows with |x|; sign follows x. Generic (symmetric) barrier math —
+ * Stage C feeds it only the LIFT (positive) direction, since the ahead-median brake is retired.
  *
  * @param {number} x        gap / gapBound  (clamped internally to ±0.999 to keep the barrier finite)
  * @param {number} k0       softness (slope near center)
@@ -204,13 +206,16 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     // visible on-track arc in racer-lengths). Field is sub-lap pre-OUTCOME so sign is exact.
     const gapLengths = Math.sign(r.t - medianT) * arcT(r.t, medianT, isOpen) * lenScale;
     const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
-    const ax = Math.abs(x);
-    // DEAD ZONE: zero force inside the bound (|x| ≤ 1) — the whole middle of the field runs
-    // free (re-roll + shuffle move racers, governorMult stays EXACTLY 1.0 there). Only PAST
-    // the bound does the symmetric progressive barrier engage on the excess (brake ahead,
-    // lift behind). Median-referenced, so a leader+2nd group both beyond the bound both brake.
+    // TAIL-LIFT ONLY: the cohesion force acts solely on racers BEHIND the median (x < 0).
+    // A racer that falls more than the bound behind (x < −1) gets a progressive lift back
+    // toward the field on the excess; inside the bound it runs free (DEAD ZONE → the whole
+    // middle of the field moves on re-roll + shuffle, governorMult stays EXACTLY 1.0). Racers
+    // AT or AHEAD of the median (x ≥ 0) get EXACTLY ZERO at every distance — the governor
+    // never brakes the leader (the ahead-median brake was retired; front contest is a later
+    // race-director layer). Same racer-length unit, ±maxEffect clamp and slew-limit as before.
+    const behindExcess = x < -1 ? -x - 1 : 0; // how far past the bound behind the median (bound-widths)
     const cohesion =
-      ax <= 1 ? 0 : -governorRestoringForce((Math.sign(x) * (ax - 1)) / rampWidth, k0, maxEffect);
+      behindExcess > 0 ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
     // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase (Stage-1 keeps this as-is).
     const shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
     const target = clamp(1 + w * (cohesion + shuffle), 1 - maxEffect, 1 + maxEffect);

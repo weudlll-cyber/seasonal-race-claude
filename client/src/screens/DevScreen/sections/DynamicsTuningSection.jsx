@@ -920,7 +920,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Action ({Math.round((dynamicsConfig.governorDrama ?? 0.5) * 100)}%)
-            <InfoTooltip text="The single owner control. Left = calmer/tighter field (more cohesion, less shuffle). Right = livelier (less cohesion, more shuffle overtakes). Extremes are bounded so it never breaks away or freezes into a train." />
+            <InfoTooltip text="The single owner control. Left = tighter tail (stragglers lifted sooner, less shuffle). Right = livelier (wider tail dead-zone, more shuffle overtakes). The tail-lift keeps stragglers in the picture; it never brakes the leader." />
           </label>
           <input
             type="range"
@@ -952,7 +952,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0.5,
               max: 10,
               step: 0.5,
-              tip: 'Dead-zone bound (leader→median) at min Action, in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Tighter field. Must be ≤ the Action-100 bound.',
+              tip: 'Dead-zone bound (how far a racer may fall behind the median before the tail-lift engages) at min Action, in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Tighter tail. Must be ≤ the Action-100 bound.',
             },
             {
               key: 'governorLengthMax',
@@ -976,7 +976,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0.1,
               max: 2.0,
               step: 0.1,
-              tip: 'How many bound-widths past the edge the barrier takes to reach full brake (maxEffect). Larger = softer edge.',
+              tip: 'How many bound-widths past the edge the barrier takes to reach full lift (maxEffect). Larger = softer edge.',
             },
             {
               key: 'governorAMin',

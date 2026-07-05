@@ -2,13 +2,14 @@
 // File:        raceGovernor.test.js
 // Path:        client/src/modules/raceGovernor.test.js
 // Project:     RaceArena
-// Description: Unit tests for the Pre-OUTCOME Field Governor — Stage 1 dead-zoned
-//              edge-limiter. Covers: the arc-distance helper (closed wrap / open raw),
-//              EXACTLY-1.0 inside the dead zone (middle free), symmetric edge brake/lift
-//              past the bound, group-escape closure, tail lift, TRUE-racer-length bound
-//              measured via arc-distance (LAP-COUNT + finishT independent), Action→(lengths,A)
-//              map, the median-referencing property (leader→median≤N ⟹ leader→2nd≤N),
-//              barrier curve, structural OUTCOME-off, exact fade, slew, determinism.
+// Description: Unit tests for the Pre-OUTCOME Field Governor — Stage C dead-zoned
+//              TAIL-LIFT. Covers: the arc-distance helper (closed wrap / open raw),
+//              EXACTLY-1.0 inside the dead zone (middle free), ONE-SIDED edge (a racer past
+//              the bound BEHIND the median is lifted; a leader ahead of the median is NEVER
+//              braked, even escaping in a group — the ahead-median brake was retired),
+//              TRUE-racer-length bound measured via arc-distance (LAP-COUNT + finishT
+//              independent), Action→(lengths,A) map, barrier curve, structural OUTCOME-off,
+//              exact fade, slew, determinism.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
@@ -104,22 +105,22 @@ describe('applyGovernor — dead zone: EXACTLY 1.0 in the middle', () => {
   });
 });
 
-describe('applyGovernor — edge engages past the bound', () => {
-  it('(b) a lone leader far past the bound is braked; a lone tail is lifted; middle free', () => {
+describe('applyGovernor — one-sided edge: lift behind, never brake ahead', () => {
+  it('(b) a lone leader far past the bound is NOT braked; a lone tail is lifted; middle free', () => {
     const cfg = { ...NOSHUF, lenMin: 0.2, lenMax: 0.2 }; // bound 0.2 lengths
     const racers = mkRacers([0.9, 0.5, 0.1]); // gaps ±0.4 lengths ≫ bound → past the edge
     runN(racers, cfg, 40);
-    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
+    expect(racers[0].governorMult).toBe(1.0); // leader ahead of median → NEVER braked (Stage C)
     expect(racers[2].governorMult).toBeGreaterThan(1.0); // tail lifted
     expect(racers[1].governorMult).toBe(1.0); // median racer inside dead zone → untouched
   });
 
-  it('(c) group escape: leader AND 2nd both beyond median+bound are BOTH braked', () => {
+  it('(c) group escape: leader AND 2nd both far beyond median+bound are BOTH left free (no brake)', () => {
     const cfg = { ...NOSHUF, lenMin: 0.2, lenMax: 0.2 };
-    const racers = mkRacers([0.9, 0.88, 0.2, 0.18, 0.16]); // two escape together, three trail
+    const racers = mkRacers([0.9, 0.88, 0.2, 0.18, 0.16]); // two escape together, three trail near median
     runN(racers, cfg, 40);
-    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
-    expect(racers[1].governorMult).toBeLessThan(1.0); // 2nd ALSO braked (median-referenced)
+    expect(racers[0].governorMult).toBe(1.0); // leader far ahead of median → not braked (Stage C)
+    expect(racers[1].governorMult).toBe(1.0); // 2nd also ahead of median → not braked
   });
 
   it('(d) a far-back tail racer is lifted', () => {
@@ -131,9 +132,9 @@ describe('applyGovernor — edge engages past the bound', () => {
 });
 
 describe('applyGovernor — LAP-COUNT + finishT independent (arc-length bound)', () => {
-  it('same within-lap layout gives the same brake regardless of lap number OR finishT', () => {
+  it('same within-lap layout gives the same lift regardless of lap number OR finishT', () => {
     const cfg = { ...NOSHUF, lenMin: 0.2, lenMax: 0.2 };
-    const layout = [0.8, 0.5, 0.2]; // within-lap positions; leader arc 0.3 > 0.2 bound → bites
+    const layout = [0.8, 0.5, 0.2]; // within-lap positions; tail arc 0.3 behind median > 0.2 bound → bites
     // Closed track. lap0 vs +3 laps; finishT differs (irrelevant now — bound uses pathLengthPx).
     const lap0 = mkRacers(layout);
     const lap3 = mkRacers(layout.map((t) => t + 3));
@@ -144,12 +145,12 @@ describe('applyGovernor — LAP-COUNT + finishT independent (arc-length bound)',
     for (let j = 0; j < 3; j++) {
       expect(lap0[j].governorMult).toBeCloseTo(lap3[j].governorMult, 9);
     }
-    // And the leader IS actually braked (proves the bound bites on the true within-lap arc,
+    // And the tail IS actually lifted (proves the bound bites on the true within-lap arc,
     // not a finishT-shrunk gap that would read as inside the dead zone).
-    expect(lap0[0].governorMult).toBeLessThan(1.0);
+    expect(lap0[2].governorMult).toBeGreaterThan(1.0);
   });
 
-  it('closed-track bound is scale-independent: same body-length layout on a 2× track ⇒ same brake', () => {
+  it('closed-track bound is scale-independent: same body-length layout on a 2× track ⇒ same lift', () => {
     const cfg = { ...NOSHUF, lenMin: 1.0, lenMax: 1.0 }; // 1 racer-length bound
     // Small track: pathLengthPx 100, body 10 → lenScale 10; a 0.1-t arc = 1 length.
     const small = mkRacers([0.65, 0.5, 0.35]);
@@ -173,25 +174,6 @@ describe('applyGovernor — LAP-COUNT + finishT independent (arc-length bound)',
     }
     for (let j = 0; j < 3; j++) {
       expect(small[j].governorMult).toBeCloseTo(big[j].governorMult, 9);
-    }
-  });
-});
-
-describe('median-referencing — leader→median ≤ N ⟹ leader→2nd ≤ N', () => {
-  it('bounding the leader→median arc bounds leader→2nd for free (2nd sits between)', () => {
-    // 2nd is 2nd-highest, median is the middle racer → 2nd.t ≥ median.t, so the leader→2nd arc
-    // is never larger than the leader→median arc (both measured the same way).
-    const fields = [
-      [0.9, 0.7, 0.5, 0.3, 0.1],
-      [0.62, 0.6, 0.5, 0.4, 0.38],
-      [0.8, 0.79, 0.5, 0.2, 0.19],
-    ];
-    for (const ts of fields) {
-      const live = [...ts].sort((a, b) => b - a);
-      const median = live[Math.floor((live.length - 1) / 2)];
-      const leaderMedian = arcT(live[0], median, true);
-      const leader2nd = arcT(live[0], live[1], true);
-      expect(leader2nd).toBeLessThanOrEqual(leaderMedian + 1e-12);
     }
   });
 });

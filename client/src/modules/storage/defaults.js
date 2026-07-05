@@ -319,9 +319,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   pulkSurgeRampInMs: 1200, // ease-in duration when a surger enters PULK
   pulkSurgeRampOutMs: 1200, // ease-out duration as PULK ends
   pulkBrakeExemptStrength: 0.5, // 0=surgers fully braked, 1=fully exempt from rubber-band during PULK
-  // ── Pre-OUTCOME Field Governor (Stage B) — DEFAULT OFF; runs alongside surge/RB ──────
-  // A single per-racer speed multiplier (raceGovernor.js) = cohesion (mean-reverting to the
-  // field median, symmetric/position-coupled) + bounded zero-mean shuffle (rank-decoupled),
+  // ── Pre-OUTCOME Field Governor (Stage C) — DEFAULT OFF; runs alongside surge/RB ──────
+  // A single per-racer speed multiplier (raceGovernor.js) = TAIL-LIFT cohesion (one-sided,
+  // mean-reverting toward the field median but ONLY for racers BEHIND it — the ahead-median
+  // leader-brake was retired in Stage C) + bounded zero-mean shuffle (rank-decoupled),
   // phase-gated and faded to exactly 1.0 by OUTCOME. Lives here (the shared persisted dynamics
   // config the physics reads) so DevScreen AND the future SetupScreen bind the SAME governorDrama
   // key — single source, no second copy. governorDrama is the ONE owner "action" knob; the rest
@@ -329,16 +330,16 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorEnabled: false, // master switch (default OFF — nothing changes until enabled)
   governorDrama: 0.5, // 0..1 owner "Action" slider: more → WIDER dead-zone bound + more shuffle
   governorK0: 0.03, // edge-barrier softness (slope just past the bound) — FIXED, not mapped by Action
-  // Dead-zone bound (leader→median) in TRUE RACER-LENGTHS — arc-distance to the median × one-lap
-  // px / mean body length. Lap-count- AND track-independent (a lap is a lap, a body is fixed px),
-  // retiring the finishT divisor that UNDER-reported closed multi-lap gaps by ~maxLaps (a HUD
-  // "0.6sp" was really a visibly detached leader). Inside the bound: ZERO force (middle runs free).
-  // Scaled by Action. Sweet-spot tuning deferred to the governor sweep. Default targets the owner's
-  // "≤ ~2–3 racers between 1st and 2nd": at Action 0.5 the bound is ~2.5 lengths (leader→median),
-  // and median-referenced so leader→2nd ≤ that for free (2nd sits between). Floored (lenFloor) so
-  // a degenerate tiny field can't zero it. The catch is Action-dependent and modest against the
-  // tailwind (soft barrier); the sweet-spot (these + k0/maxEffect) is the governor sweep's job.
-  governorLengthMin: 2.0, // bound (racer-lengths) at Action 0 (tight — ~2 lengths leader→median)
+  // Dead-zone bound (how far a racer may fall BEHIND the median before the tail-lift engages)
+  // in TRUE RACER-LENGTHS — arc-distance to the median × one-lap px / mean body length.
+  // Lap-count- AND track-independent (a lap is a lap, a body is fixed px), retiring the finishT
+  // divisor that UNDER-reported closed multi-lap gaps by ~maxLaps (a HUD "0.6sp" was really a
+  // visibly detached straggler). Inside the bound: ZERO force (middle runs free). Racers ahead
+  // of the median are never touched. Scaled by Action. Sweet-spot tuning deferred to the
+  // governor sweep. Floored (lenFloor) so a degenerate tiny field can't zero it. The catch is
+  // Action-dependent and modest (soft barrier); the sweet-spot (these + k0/maxEffect) is the
+  // governor sweep's job.
+  governorLengthMin: 2.0, // bound (racer-lengths) at Action 0 (tight — lift ~2 lengths behind median)
   governorLengthMax: 3.0, // bound (racer-lengths) at Action 100 (looser dead zone — field spreads more)
   governorLengthFloor: 1.0, // absolute floor on the bound (racer-lengths) — degenerate field can't zero it
   governorRampWidth: 0.5, // how many bound-widths past the edge the barrier takes to reach maxEffect
