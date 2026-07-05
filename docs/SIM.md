@@ -423,7 +423,7 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 | `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is *not* secretly the assigned winner. Action must not come from bias. | — | must stay LOW |
 
 **Calibration reference (acceptance check — the metric must agree with the owner's eye):**
-The **seed-1 Searound × Manta** case (surge + rubber-band OFF, governor + director ON) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees:
+The **seed-1 Searound × Manta** case (surge + rubber-band OFF, governor + director ON) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
 
 ```
 node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1 --seed=1 \
@@ -431,7 +431,11 @@ node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1
      --front-action --diagLabel=calib --out=client/tmp/calib
 ```
 
-→ `leadChangeRate ≈ 0.0007` (≈0.07 %), `podiumShuffleRate ≈ 0.004` (≈0.4 %), `gapMedLenMean ≈ 20` racer-lengths (leader far ahead of the median = lone breakaway), `gap2ndLenMean ≈ 4.7`. All contest dimensions read LOW. Any future "action" mechanism must move `leadChangeRate` / `podiumShuffleRate` up **without** raising `unpredictability.*`.
+Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1**, surge OFF (default), rubber-band OFF (`--rubber-band=false`), governor + director ON. Measured at HEAD `b930b1b`:
+
+→ `leadChangeRate ≈ 0.0007` (≈0.07 %), `podiumShuffleRate ≈ 0.004` (≈0.4 %), `gapMedLenMean ≈ 20.4` racer-lengths (leader far ahead of the median = lone breakaway), `gap2ndLenMean ≈ 4.7`. All contest dimensions read LOW.
+
+**`gapMedLenMean` is a MEAN, not a peak — it scales with `--dur`.** It is the mean leader→median gap over the whole pre-OUTCOME window, so a longer race (more early-window steps of an ever-widening breakaway) reads a larger mean. Same case at **`--dur=60`**: `gapMedLenMean ≈ 11` len (mean) while the *peak* `stats.governorShape.govGapLenMax ≈ 22` len; at `--dur=120` the mean is ≈ 20 vs peak ≈ 37. When comparing runs, hold `--dur` fixed (or compare `govGapLenMax` peaks). Any future "action" mechanism must move `leadChangeRate` / `podiumShuffleRate` up **without** raising `unpredictability.*`.
 
 ---
 

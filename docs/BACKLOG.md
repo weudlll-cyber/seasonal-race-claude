@@ -20,6 +20,7 @@ verified against `git log` / `git tag`.
 - **Sim browser-parity** — passThroughCount telemetry `f7b6100`, finishT/speed parity `8f57cba`, shared-config defaults `9cfa953` (2026-06-30).
 - **Reviewed, no fix needed** — controller-on-closed phase timing confirmed correct (leader-progress based, `14f3c6f`); sim determinism verified resolved (likely side-effect of Commit A `bc68c37`, no commit to cite).
 - **Cleanup-C (auth)** — items 7-8 `3729d1c` (tag `backup/cleanup-c-paths-cli`), item 9 dead `randomUUID` import removed `0dda9db` (tag `backup/cleanup-c-dead-import`), recover-admin hardening follow-up `16d3bf9` (tag `backup/recover-admin-hardening`). All committed **and tagged** — supersedes the older "awaiting Copilot review + tag" status. Verified: `randomUUID` now appears only in `*.test.js`, not production `authRouter.js`.
+- **Governor vision-pivot → race-action director** (all default OFF; anchor `d9c9cd3` = `stable/pre-governor-04jul`). Governor core `307d6dc`/`294550a`/`0da9048`/`24c99b6`/`9947892`; **Stage C** leader-brake retired → pure tail-lift `a0105ed`; **Stage A1** contest-injector director (rank-blind, own master + `DIRECTOR_SEED_XOR`) `a7e4a64`; **Sim-1** front-action metric + governor telemetry propagation fix (read-only) `b930b1b`. Full detail in ROADMAP §R.7. The pivot: the governor no longer *bounds/brakes the field* — it *stages an unpredictable-but-fair front* (a limiter cannot create a contest; see LESSONS 160).
 
 **🔜 / ⏳ Open**
 - **Re-Gate on `9cfa953`** ⏳ in progress — re-run all four closed tracks under the corrected browser-faithful config (corridorEnd=1.0, bonusMult=2.0); discards the provisional `8f57cba`-era sweeps.
@@ -28,8 +29,15 @@ verified against `git log` / `git tag`.
 - **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — `trackClosedSsf` + the closed branch of `trackNaturalBase` are computed-but-unused-for-closed after `8f57cba`; the outer `expectedMinSF` derivation uses global `N_RACERS` instead of per-combo `nRacersForCombo`. Bundle both cleanups (entangled).
 - **Browser `index.jsx` inert `??` fallback mismatches** (lines ~662-666) — duplicated literals; `bonusStrengthMultiplier ?? 1.0` mismatches the real shared default 2.0 (inert today, latent trap).
 - **`rubberBandEndgameThreshold` field split** — browser cross-reuses `DEFAULT_CAMERA_CONFIG.endgameThreshold` (0.9) for the rubber-band endgame gate (`index.jsx:876`); split into a dedicated rubber-band field. Browser-side change.
-- **Renn-Action "make it more exciting" decision** — design decision pending: Slipstream vs Hazard-Zonen direction.
-- **Doc-refresh task** (this one) — mark done once the five doc commits land.
+- **Race-action direction decision** — ✅ **RESOLVED / SUPERSEDED** by the governor vision-pivot: the direction is the **race-action director** (contest-injector staging an unpredictable front), not the earlier Slipstream-vs-Hazard-Zones question. See ROADMAP §R.7.
+- **Governor/director — open items (from the pivot):**
+  - **Stage C2 — generous front spread-cap** — allow a wide-but-bounded front spread without a runaway lone breakaway.
+  - **A1b — anchor-to-front** — raise/track the director anchor toward the real front (currently median + fixed offset) so the cast contests the true lead.
+  - **The Action sweep** — now that front-action is measurable (Sim-1 `--front-action`), sweep the 15 governor/director values for lead-change/podium-shuffle up while `unpredictability.*` stays LOW and fairness holds.
+  - **DevScreen knob-reduction** — pin barrier/safety internals (K0, RampWidth, Frequency, LengthFloor, MaxEffect, MaxStepPerFrame, AMin, AMax) to constants; keep ~5 action levers → one SetupScreen **"Action" slider**.
+  - **OUTCOME decompression** — ensure the OUTCOME controller cleanly resolves the assigned order after the director clusters the front.
+- **`results/` not gitignored** (hygiene, reported by Sim-1) — `results/` is untracked but **not** in `.gitignore`, yet it holds diagnostic output (`results/breakaway-diag/`, `results/front-action/`). A stray `git add -A` would commit it. Add `results/` to `.gitignore` (or redirect the diag writers under the gitignored `client/tmp/`).
+- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
 
 ---
 

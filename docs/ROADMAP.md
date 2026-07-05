@@ -416,7 +416,24 @@ writing: `9cfa953` (2026-06-30). **Master-merge of `feat/race-action` is still p
 
 **Open (not yet complete):**
 - **Re-Gate** all four closed tracks on `9cfa953` (clean browser-faithful config) — in progress.
-- **Master-merge** of `feat/race-action` into `master` — pending.
+- **Master-merge** of `feat/race-action` into `master` — pending (master frozen at `ab71825`).
+
+**R.7 — Governor vision-pivot: the race-action director (July 2026)**
+
+The pivot: the pre-OUTCOME governor is **no longer a field-order limiter**. It is a **RACE DIRECTOR** staging an exciting, *unpredictable-but-fair* front — lead changes you cannot read the result from — while the true finishing order is still imposed **after** the fade by the OUTCOME controller. Core realisation: **a limiter can only bound a gap; it cannot create a contest** (see LESSONS 160). The eventual winner stays **decorrelated** from early front-running. Anchor: `d9c9cd3` = tag `stable/pre-governor-04jul` (surge + rubber-band intact, no governor). All default **OFF**.
+
+*Done (with commits):*
+- Governor core — `governorMult` (dead-zoned median cohesion + bounded shuffle), phase-gated + faded to 1.0 at OUTCOME, single "Action" knob, Governor Diag HUD — `307d6dc`; progressive barrier + racer-length bound + sim metrics — `294550a`; dead-zoned edge-limiter (middle runs free) — `0da9048`; dead-zone tightened — `24c99b6`; **bound in TRUE racer-lengths**, retire the `finishT` divisor — `9947892`.
+- **Stage C — leader-brake RETIRED** (`a0105ed`): the ahead-median cohesion/brake is gone; the governor is now **pure tail-lift** (behind-median only, dead-zoned) and **never brakes the leader**. This is the pivot from "bound the field" to "stage a contest".
+- **Stage A1 — contest-injector "director"** (`a7e4a64`): rank-blind seeded round-robin spotlight (own master `governorDirectorEnabled`, own `DIRECTOR_SEED_XOR` stream) pulls a rotating cast mean-reverting toward a front anchor = median + offset. Distinct from the CameraDirector. Default OFF.
+- **Sim-1 — front-action metric + telemetry propagation fix** (`b930b1b`, read-only, no gameplay change): `--front-action` (leadChanges, distinctP1, leadChangeRate, podiumShuffleRate, front-reach gaps, targetRank-vs-front unpredictability correlation) + `results[].stats.governorShape` + rawData; makes the target experience **measurable** before any tuning.
+
+*Pending (design intent, NOT yet built):*
+- **Stage C2 — generous front spread-cap**: allow a wide but bounded front spread (so the contest has room) without letting it become a runaway lone breakaway.
+- **A1b — anchor-to-front**: raise/track the director anchor toward the actual front (currently median + fixed offset) so the featured cast contests the true lead, not mid-pack.
+- **The Action sweep**: now that front-action is measurable (Sim-1), sweep the 15 governor/director values for `leadChangeRate`/`podiumShuffleRate` up while `unpredictability.*` stays LOW and the fairness gate holds.
+- **DevScreen knob-reduction**: pin the barrier/safety internals (K0, RampWidth, Frequency, LengthFloor, MaxEffect, MaxStepPerFrame, AMin, AMax) to constants; keep only the few owner-facing action levers → **~5 DevScreen knobs + one SetupScreen "Action" slider**.
+- **OUTCOME decompression**: after the front contest, ensure the OUTCOME controller can still resolve the assigned order cleanly (decompress the field the director clustered).
 
 ## Session Log
 

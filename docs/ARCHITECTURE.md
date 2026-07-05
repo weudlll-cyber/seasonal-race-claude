@@ -504,6 +504,34 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - `scripts/sweep-lateral.mjs` — targeted 2D sweep `lateralDamping × lateralForce`
 - `scripts/compare-zones.mjs` — zone success rate comparison between two parameter sets
 
+## Pre-OUTCOME Race-Action Director (Stage B/C/A1 — default OFF)
+
+> **Naming.** The mechanism in this section is the **contest-injector** (a.k.a. the *race-action director*), a **longitudinal speed layer** in `modules/raceGovernor.js`. It is **DISTINCT from the CameraDirector** (the camera state machine under "Camera System → Director System" below, which only chooses shots and never touches physics). Where this doc says "director" inside this section it means the contest-injector; the camera one is always written "CameraDirector".
+
+**The design pivot (why this exists).** The pre-OUTCOME layer is a **race director** whose job is an exciting, *unpredictable* front you cannot read the result from — while the true finishing order is still imposed **later**, after this layer fades, by the OUTCOME controller (Race Plan `trajectoryMult`, above). Priority order of "race action": (1) lead **changes at the FRONT** (P1/P2/P3 trade), (2) midfield movement, (3) comebacks both directions, (4) everyone looks capable. The eventual winner must be **decorrelated** from early front-running. The earlier framing — a governor that *bounds/brakes the field* to hold it together — was retired: **a limiter can only bound a gap; it cannot create a contest** (see LESSONS). The ahead-median **leader-brake was removed in Stage C** (`a0105ed`); the governor now **never brakes the leader**.
+
+The layer is applied as a per-racer multiplier `r.governorMult` in the physics step, alongside `rubberBandMult` and `pulkSurgeMult` (`index.jsx` t-update, ~`:1127-1137`). It carries **two independently-gated masters, both default OFF**, and both **structurally faded to EXACTLY 1.0 before `corridorStart`** (and pinned to 1.0 in OUTCOME/FINAL), inside a `±maxEffect` clamp and a per-frame slew-limit (`maxStepPerFrame`). With both masters off, `governorMult` stays 1.0 and the race is byte-identical to the pre-governor engine.
+
+### Master 1 — Tail-lift cohesion (`governorEnabled`)
+
+A **dead-zoned, one-sided restoring force** on the arc-distance gap to the field **median**, measured in **true racer-lengths** (arc-px ÷ mean drawn body length — lap-count- and track-independent; the old `finishT` divisor that under-reported closed multi-lap gaps was retired in `9947892`). Inside the bound the whole middle of the field runs **free** (`governorMult` exactly 1.0 → natural re-roll groups/battles). Only a racer that falls **more than the bound behind the median** gets a progressive lift back toward the field; racers **at or ahead of the median get exactly zero** — it lifts stragglers, never touches the leader. A bounded, zero-mean **shuffle** (per-racer phase from a dedicated seeded stream, rank-decoupled) rides on top. Source: `applyGovernor` tail-lift branch, `raceGovernor.js:311-328`.
+
+### Master 2 — Contest-injector / race-action director (`governorDirectorEnabled`)
+
+A **rank-blind, seeded round-robin spotlight** (`a7e4a64`). The live field is ordered once by `directorStreamKey(index, seed)` — a stable per-race permutation on its **own** dedicated stream (`DIRECTOR_SEED_XOR`, **distinct** from the tail-lift's `GOVERNOR_SEED_XOR`), keyed on **index + seed only, never `targetRank`** — and a window of `castSize` consecutive racers is featured, advancing one cast every `dwell` of leader-progress. A featured racer gets a **mean-reverting pull toward a front anchor** = field median + `anchorOffset` racer-lengths, so the cast **clusters in the front band** and the re-roll decides the instantaneous P1 → visible lead changes. Non-featured racers get exactly zero. New spotlights stop a **settling** window before the fade, so the field is already relaxing toward its natural distribution by `corridorStart`. Because the featured set is rank-blind, the assigned winner is sometimes not featured — the front contest stays decorrelated from the result. Source: `directorFeaturedSet` (`raceGovernor.js:194-210`) + the director branch of `applyGovernor` (`:330-339`).
+
+### Shared fade / clamp / OUTCOME-pin
+
+Both masters (and the shuffle) share one phase-weight `w(progress)` that eases to **exactly 0 at `corrStartFrac`** (`governorPhaseWeight`, `raceGovernor.js:166-171`), one `±maxEffect` outer clamp, and one per-frame slew-limit. When the phase is not PRE_PULK/PULK/TRANSITION, both masters are off, `finishT ≤ 0`, or there is no live median, every `governorMult` is pinned to **exactly 1.0** — structurally, independent of the fade math (`applyGovernor` guard, `:256-262`).
+
+### Knobs (DevScreen; all default OFF/neutral)
+
+Tail-lift: `governorEnabled`, `governorDrama` (the single "Action" scalar → bound width + shuffle), plus barrier/safety internals `governorK0`, `governorRampWidth`, `governorFrequency`, `governorLengthMin/Max/Floor`, `governorAMin/AMax`, `governorMaxEffect`, `governorMaxStepPerFrame`. Director: `governorDirectorEnabled`, `governorDirectorCastSize`, `governorDirectorDwell`, `governorDirectorAnchorOffset`, `governorDirectorPullStrength`, `governorDirectorSettling`. A later step will **pin the barrier/safety internals to constants** and keep only the few owner-facing action levers (→ ~5 DevScreen knobs + one SetupScreen "Action" slider — see ROADMAP).
+
+### Sim parity + measurement
+
+`sim-fairness.mjs` runs the identical `applyGovernor` (single source, like the rubber-band) and adds the read-only **`--front-action`** metric + `results[].stats.governorShape` telemetry to *measure* the front contest (Sim-1, `b930b1b`). See [SIM.md](SIM.md) for the metric fields and the pinned calibration case.
+
 ## Race Behavior System (D7b — lane-free)
 
 Racer lateral movement is governed by `modules/raceBehavior.js`. All racers share a continuous `physicalY ∈ [-1.0, +1.0]` in normalized track-width space (0 = centerline, ±1 = boundary). `initRacerBehavior` sets every racer to `physicalY = 0` at race start.
