@@ -329,19 +329,18 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorEnabled: false, // master switch (default OFF — nothing changes until enabled)
   governorDrama: 0.5, // 0..1 owner "Action" slider: more → WIDER dead-zone bound + more shuffle
   governorK0: 0.03, // edge-barrier softness (slope just past the bound) — FIXED, not mapped by Action
-  // Dead-zone bound (leader→median) in mean inter-racer SPACINGS (one spacing = 1/nActive of the
-  // race → track+duration-independent). Inside the bound: ZERO force (middle runs free). Scaled
-  // by Action. Sweet-spot tuning deferred to the governor sweep.
-  // Tightened (was 2.0/4.0) so a small front GROUP is caught: sim showed the neighbor-gap rule
-  // RELOCATED rather than closed rips, and the MEDIAN bound is what actually pulls a detached
-  // group back to the pack — so the fix is a tighter median bound, not a new rule. Sim also showed
-  // the natural pre-OUTCOME leader→median is ~1.2–1.6 spacings, so a 1.5-spacing bound is a NO-OP;
-  // ~1.0 is the tightest end that actually bites while keeping the field lively (swaps unchanged,
-  // band-reach ≥70%). The catch is Action-dependent (bites at low Action) and modest against the
+  // Dead-zone bound (leader→median) in TRUE RACER-LENGTHS — arc-distance to the median × one-lap
+  // px / mean body length. Lap-count- AND track-independent (a lap is a lap, a body is fixed px),
+  // retiring the finishT divisor that UNDER-reported closed multi-lap gaps by ~maxLaps (a HUD
+  // "0.6sp" was really a visibly detached leader). Inside the bound: ZERO force (middle runs free).
+  // Scaled by Action. Sweet-spot tuning deferred to the governor sweep. Default targets the owner's
+  // "≤ ~2–3 racers between 1st and 2nd": at Action 0.5 the bound is ~2.5 lengths (leader→median),
+  // and median-referenced so leader→2nd ≤ that for free (2nd sits between). Floored (lenFloor) so
+  // a degenerate tiny field can't zero it. The catch is Action-dependent and modest against the
   // tailwind (soft barrier); the sweet-spot (these + k0/maxEffect) is the governor sweep's job.
-  governorSpacingMin: 1.0, // bound at Action 0 (tight — bites the ~1.2–1.6-spacing group escape)
-  governorSpacingMax: 2.5, // bound at Action 100 (looser dead zone — field spreads more)
-  governorBoundFloorFraction: 0.03, // absolute floor on the bound (race-fraction) — tiny field can't zero it
+  governorLengthMin: 2.0, // bound (racer-lengths) at Action 0 (tight — ~2 lengths leader→median)
+  governorLengthMax: 3.0, // bound (racer-lengths) at Action 100 (looser dead zone — field spreads more)
+  governorLengthFloor: 1.0, // absolute floor on the bound (racer-lengths) — degenerate field can't zero it
   governorRampWidth: 0.5, // how many bound-widths past the edge the barrier takes to reach maxEffect
   governorAMin: 0.005, // shuffle amplitude at min Action (modest texture)
   governorAMax: 0.02, // shuffle amplitude at max Action (more in-field movement)

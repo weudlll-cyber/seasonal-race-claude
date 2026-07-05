@@ -143,9 +143,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       governorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled,
       governorDrama: DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama,
       governorK0: DEFAULT_RACE_DYNAMICS_CONFIG.governorK0,
-      governorSpacingMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorSpacingMin,
-      governorSpacingMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorSpacingMax,
-      governorBoundFloorFraction: DEFAULT_RACE_DYNAMICS_CONFIG.governorBoundFloorFraction,
+      governorLengthMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMin,
+      governorLengthMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMax,
+      governorLengthFloor: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthFloor,
       governorRampWidth: DEFAULT_RACE_DYNAMICS_CONFIG.governorRampWidth,
       governorAMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin,
       governorAMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax,
@@ -896,7 +896,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="Field Governor (pre-OUTCOME)"
         onReset={resetGovernor}
         resetTestId="reset-governor"
-        subtitle="Pre-OUTCOME edge-limiter (default OFF): a DEAD ZONE leaves the middle of the field FREE (re-roll makes natural groups/battles) and only clamps the EDGES — a leader too far ahead of the median or a tail too far behind. One symmetric rule; the bound is in inter-racer spacings (track-independent). Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Front-pack bias + comeback are later stages. ‘Action’ is the one owner knob (wider dead zone + more shuffle); the rest are expert/sweep knobs."
+        subtitle="Pre-OUTCOME edge-limiter (default OFF): a DEAD ZONE leaves the middle of the field FREE (re-roll makes natural groups/battles) and only clamps the EDGES — a leader too far ahead of the median or a tail too far behind. One symmetric rule; the bound is in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Front-pack bias + comeback are later stages. ‘Action’ is the one owner knob (wider dead zone + more shuffle); the rest are expert/sweep knobs."
       >
         <div style={{ marginBottom: '0.75rem' }}>
           <label
@@ -947,28 +947,28 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'Slope of the barrier just past the bound. Higher = stiffer edge. Zero inside the dead zone regardless. Fixed (not scaled by Action).',
             },
             {
-              key: 'governorSpacingMin',
-              label: 'Bound @ Action 0 (spacings)',
+              key: 'governorLengthMin',
+              label: 'Bound @ Action 0 (racer-lengths)',
               min: 0.5,
               max: 10,
               step: 0.5,
-              tip: 'Dead-zone bound (leader→median) at min Action, in mean inter-racer spacings (track-independent). Tighter field. Must be ≤ the Action-100 bound.',
+              tip: 'Dead-zone bound (leader→median) at min Action, in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Tighter field. Must be ≤ the Action-100 bound.',
             },
             {
-              key: 'governorSpacingMax',
-              label: 'Bound @ Action 100 (spacings)',
+              key: 'governorLengthMax',
+              label: 'Bound @ Action 100 (racer-lengths)',
               min: 0.5,
               max: 12,
               step: 0.5,
-              tip: 'Dead-zone bound at max Action (wider dead zone → field spreads more, still bounded). Must be ≥ the Action-0 bound.',
+              tip: 'Dead-zone bound at max Action, in racer-lengths (wider dead zone → field spreads more, still bounded). Must be ≥ the Action-0 bound.',
             },
             {
-              key: 'governorBoundFloorFraction',
-              label: 'Bound floor (race-fraction)',
-              min: 0.005,
-              max: 0.2,
-              step: 0.005,
-              tip: 'Absolute floor on the bound as a fraction of the race, so a tiny field on a huge track can’t make the dead zone vanish.',
+              key: 'governorLengthFloor',
+              label: 'Bound floor (racer-lengths)',
+              min: 0.5,
+              max: 5,
+              step: 0.5,
+              tip: 'Absolute floor on the bound in racer-lengths, so a degenerate tiny field can’t make the dead zone vanish.',
             },
             {
               key: 'governorRampWidth',

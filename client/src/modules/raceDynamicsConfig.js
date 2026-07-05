@@ -51,12 +51,12 @@ export function loadRaceDynamicsConfig() {
     merged.governorDrama > 1 ||
     typeof merged.governorK0 !== 'number' ||
     merged.governorK0 <= 0 ||
-    typeof merged.governorSpacingMin !== 'number' ||
-    merged.governorSpacingMin <= 0 ||
-    typeof merged.governorSpacingMax !== 'number' ||
-    merged.governorSpacingMax < merged.governorSpacingMin ||
-    typeof merged.governorBoundFloorFraction !== 'number' ||
-    merged.governorBoundFloorFraction <= 0 ||
+    typeof merged.governorLengthMin !== 'number' ||
+    merged.governorLengthMin <= 0 ||
+    typeof merged.governorLengthMax !== 'number' ||
+    merged.governorLengthMax < merged.governorLengthMin ||
+    typeof merged.governorLengthFloor !== 'number' ||
+    merged.governorLengthFloor <= 0 ||
     typeof merged.governorRampWidth !== 'number' ||
     merged.governorRampWidth <= 0 ||
     typeof merged.governorAMin !== 'number' ||

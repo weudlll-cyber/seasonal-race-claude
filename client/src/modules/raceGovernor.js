@@ -4,17 +4,17 @@
 // Project:     RaceArena
 // Description: Pre-OUTCOME Field Governor (Stage B core). A single per-racer speed
 //              multiplier r.governorMult carrying TWO internal components:
-//                • EDGE-LIMITER (Stage 1) — a DEAD-ZONED restoring force on the gap to the
-//                  field MEDIAN. ZERO force inside the bound (the whole middle of the field →
-//                  re-roll variation runs free → natural groups/battles), and only PAST the
+//                • EDGE-LIMITER (Stage 1) — a DEAD-ZONED restoring force on the arc-distance
+//                  gap to the field MEDIAN, measured in TRUE RACER-LENGTHS (arc-px / mean body
+//                  length), NOT finishT. ZERO force inside the bound (the whole middle of the
+//                  field → re-roll variation runs free → natural groups/battles); only PAST the
 //                  bound does a symmetric progressive barrier engage (brake a leader too far
-//                  ahead, lift a tail too far behind). ONE symmetric rule covers front-lone,
-//                  front-GROUP (median-referenced: a leader+2nd both beyond the bound are both
-//                  braked) and tail-fragmentation. The bound is in TRACK+DURATION-INDEPENDENT
-//                  units — M mean inter-racer spacings (M/nActive as a race-fraction), scaled
-//                  by Action — retiring the laps-mismatched racer-length bound. Position-
-//                  coupled, ±maxEffect clamp. Continuous median-pull (the field-flattener) is
-//                  gone. Front-pack bias + comeback are LATER stages (2a/2b); shuffle stays.
+//                  ahead, lift a tail too far behind). Median-referenced: bounding leader→median
+//                  ≤ N lengths gives leader→2nd ≤ N for free (2nd sits between). The length unit
+//                  is lap-count- AND track-independent (one lap = one lap; a body is fixed px) —
+//                  retiring the finishT divisor that UNDER-reported closed multi-lap gaps by
+//                  ~maxLaps. Position-coupled, ±maxEffect clamp. Front-pack bias + comeback are
+//                  LATER stages (2a/2b); shuffle stays.
 //                • SHUFFLE — bounded, zero-mean oscillation with a per-racer phase from a
 //                  DEDICATED seeded stream (rank-DECOUPLED: derived from racer index +
 //                  seed, never from the target-rank assignment). No Math.random.
@@ -69,23 +69,39 @@ export function governorShufflePhase(index, seed) {
 }
 
 /**
- * Map the single owner "Action" scalar (0..1) to the dead-zone bound (in mean inter-racer
- * SPACINGS) and the shuffle amplitude. Higher Action → WIDER bound (leader may sit more
- * spacings ahead before the edge engages) + MORE shuffle. The barrier softness k0 is FIXED
- * (not mapped by Action). "Spacings" is a track+duration-independent unit: one spacing =
- * 1/nActive of the race, so a bound of M spacings = M/nActive as a race-fraction — the same
- * relative gap on a short few-lap track and a long many-lap track (retires the racer-length
- * bound, whose effective size scaled with 1/laps).
+ * Track-arc distance between two cumulative-t values, as a lap fraction (× pathLengthPx →
+ * px). CLOSED: the within-lap min-arc (tPos wrap) — the sim's verified honest-gap form
+ * (sim-fairness.mjs) — so racers on different laps still measure their VISIBLE on-track arc.
+ * OPEN: raw |a − b| (t is a monotonic path-fraction, no wrap). Unsigned magnitude.
+ *
+ * @param {number} a cumulative-t
+ * @param {number} b cumulative-t
+ * @param {boolean} isOpen open-track flag
+ * @returns {number} arc distance in lap-fraction units
+ */
+export function arcT(a, b, isOpen) {
+  if (isOpen) return Math.abs(a - b);
+  const pa = ((a % 1) + 1) % 1;
+  const pb = ((b % 1) + 1) % 1;
+  const d = Math.abs(pa - pb);
+  return Math.min(d, 1 - d);
+}
+
+/**
+ * Map the single owner "Action" scalar (0..1) to the dead-zone bound (in TRUE RACER-LENGTHS)
+ * and the shuffle amplitude. Higher Action → WIDER bound (leader may sit more racer-lengths
+ * ahead of the median before the edge engages) + MORE shuffle. The barrier softness k0 is
+ * FIXED (not mapped by Action). The length bound is floored (lenFloor) so it can't vanish.
  *
  * @param {number} drama 0..1 (the Action slider)
- * @param {{spacingMin:number, spacingMax:number, aMin:number, aMax:number}} cfg
- * @returns {{spacings:number, A:number}}
+ * @param {{lenMin:number, lenMax:number, lenFloor:number, aMin:number, aMax:number}} cfg
+ * @returns {{lengths:number, A:number}}
  */
 export function governorActionToParams(drama, cfg) {
   const d = clamp(drama ?? 0, 0, 1);
-  const spacings = cfg.spacingMin + (cfg.spacingMax - cfg.spacingMin) * d;
+  const lengths = Math.max(cfg.lenFloor ?? 1, cfg.lenMin + (cfg.lenMax - cfg.lenMin) * d);
   const A = cfg.aMin + (cfg.aMax - cfg.aMin) * d;
-  return { spacings, A };
+  return { lengths, A };
 }
 
 /**
@@ -137,9 +153,12 @@ export function governorPhaseWeight(progress, pulkEndFrac, corrStartFrac) {
  * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult)
  * @param {number} finishT
  * @param {string} phase    getPhase() result: 'PRE_PULK'|'PULK'|'TRANSITION'|'OUTCOME'|'FINAL'
- * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number}} phaseCtx
- * @param {{enabled:boolean, drama:number, k0:number, spacingMin:number, spacingMax:number,
- *          boundFloorFraction:number, rampWidth:number, aMin:number, aMax:number,
+ * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number,
+ *          pathLengthPx:number, meanBodyLen:number, isOpen:boolean}} phaseCtx  pathLengthPx =
+ *          one lap in px; meanBodyLen = mean drawnBodyLengthPx (racer-length unit); isOpen
+ *          selects the arc wrap. The bound is measured in racer-lengths via these — no finishT.
+ * @param {{enabled:boolean, drama:number, k0:number, lenMin:number, lenMax:number,
+ *          lenFloor:number, rampWidth:number, aMin:number, aMax:number,
  *          frequency:number, maxEffect:number, maxStepPerFrame:number}} cfg
  * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
  *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
@@ -161,32 +180,30 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     return;
   }
 
-  const { progress, pulkEndFrac, corrStartFrac, seed } = phaseCtx;
+  const { progress, pulkEndFrac, corrStartFrac, seed, pathLengthPx, meanBodyLen, isOpen } =
+    phaseCtx;
   const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
-  const { spacings, A } = governorActionToParams(cfg.drama, cfg);
+  const { lengths: boundLengths, A } = governorActionToParams(cfg.drama, cfg);
   const maxEffect = cfg.maxEffect ?? 0.12;
   const k0 = cfg.k0 ?? 0.03;
   const maxStep = cfg.maxStepPerFrame ?? 0.01;
   const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
   const f = cfg.frequency ?? 3;
   const twoPiF = 2 * Math.PI * f;
-  // Track+duration-independent dead-zone bound (leader→median) as a race-fraction: M mean
-  // inter-racer spacings, one spacing = 1/nActive. Floored so a tiny field on a huge track
-  // can't make the bound vanish. gap = (r.t - medianT)/finishT is in the same race-fraction.
-  let nActive = 0;
-  for (const r of racers) if (!r.finished) nActive++;
-  const boundFraction = Math.max(
-    cfg.boundFloorFraction ?? 0.02,
-    nActive > 0 ? spacings / nActive : Infinity
-  );
+  // gap in TRUE RACER-LENGTHS: arc-distance to the median × one-lap px / mean body length.
+  // Lap-count- and track-independent (retires the finishT divisor that under-reported closed
+  // multi-lap gaps). Guard a degenerate geometry (no px/body → no cohesion).
+  const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0;
 
   for (const r of racers) {
     if (r.finished) {
       r.governorMult = 1.0;
       continue;
     }
-    const gap = (r.t - medianT) / finishT;
-    const x = gap / boundFraction;
+    // Signed arc-length gap to the median (sign = ahead/behind by cumulative t; magnitude =
+    // visible on-track arc in racer-lengths). Field is sub-lap pre-OUTCOME so sign is exact.
+    const gapLengths = Math.sign(r.t - medianT) * arcT(r.t, medianT, isOpen) * lenScale;
+    const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
     const ax = Math.abs(x);
     // DEAD ZONE: zero force inside the bound (|x| ≤ 1) — the whole middle of the field runs
     // free (re-roll + shuffle move racers, governorMult stays EXACTLY 1.0 there). Only PAST

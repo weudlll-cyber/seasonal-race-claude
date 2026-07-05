@@ -760,9 +760,9 @@ export default function RaceScreen() {
       enabled: governorEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
       k0: dynamicsConfig.governorK0 ?? 0.03,
-      spacingMin: dynamicsConfig.governorSpacingMin ?? 2.0,
-      spacingMax: dynamicsConfig.governorSpacingMax ?? 4.0,
-      boundFloorFraction: dynamicsConfig.governorBoundFloorFraction ?? 0.03,
+      lenMin: dynamicsConfig.governorLengthMin ?? 2.0,
+      lenMax: dynamicsConfig.governorLengthMax ?? 3.0,
+      lenFloor: dynamicsConfig.governorLengthFloor ?? 1.0,
       rampWidth: dynamicsConfig.governorRampWidth ?? 0.5,
       aMin: dynamicsConfig.governorAMin ?? 0.005,
       aMax: dynamicsConfig.governorAMax ?? 0.02,
@@ -772,6 +772,20 @@ export default function RaceScreen() {
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // Mean drawn body length (px) over the field — the racer-length unit for the governor's
+    // arc-distance bound. Computed once per race (bodies are fixed per racer). Guarded > 0.
+    const govMeanBodyLen = (() => {
+      const rs = g.current.racers;
+      let sum = 0,
+        n = 0;
+      for (const r of rs) {
+        if (r.drawnBodyLengthPx > 0) {
+          sum += r.drawnBodyLengthPx;
+          n++;
+        }
+      }
+      return n > 0 ? sum / n : 0;
+    })();
 
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
@@ -1015,6 +1029,9 @@ export default function RaceScreen() {
                 pulkEndFrac: govFractions.pulkEndFrac,
                 corrStartFrac: govFractions.corrStartFrac,
                 seed: govSeed,
+                pathLengthPx,
+                meanBodyLen: govMeanBodyLen,
+                isOpen: isOpenTrack,
               },
               govCfg,
               sharedMedianT
@@ -1028,6 +1045,9 @@ export default function RaceScreen() {
               corrStartFrac: govFractions.corrStartFrac,
               seed: govSeed,
               finishT: st.finishT,
+              pathLengthPx,
+              meanBodyLen: govMeanBodyLen,
+              isOpen: isOpenTrack,
             };
           }
 
