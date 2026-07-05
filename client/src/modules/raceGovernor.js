@@ -43,6 +43,12 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
 // mulberry32(seed), surge uses (seed ^ 0x5bf03635), controller noise uses (seed + 0x9e3779b9).
 const GOVERNOR_SEED_XOR = 0x27d4eb2f;
 
+// Director (contest-injector) featured-cast stream constant. Its OWN dedicated XOR, DISTINCT
+// from GOVERNOR_SEED_XOR and every other per-race stream above, so the rotating featured cast
+// is rank-BLIND: membership is keyed on racer index + (seed ^ this) and can never correlate
+// with the target-rank assignment. No Math.random on this path.
+const DIRECTOR_SEED_XOR = 0x6b7f1e35;
+
 // Minimum fade span (progress fraction) for the TRANSITION ease-out. If the LIVE
 // (corrStartFrac − pulkEndFrac) span is smaller (owner shortened the OUTCOME onset), the
 // fade widens BACKWARD into PULK so w still reaches exactly 0 at corrStart — no
@@ -68,6 +74,23 @@ function clamp(v, lo, hi) {
 export function governorShufflePhase(index, seed) {
   const streamSeed = ((((seed >>> 0) ^ GOVERNOR_SEED_XOR) >>> 0) + (index >>> 0)) >>> 0;
   return mulberry32(streamSeed)() * 2 * Math.PI;
+}
+
+/**
+ * Deterministic per-racer sort key in [0, 1) for the DIRECTOR featured-cast rotation. Keyed on
+ * the racer index and (seed ^ DIRECTOR_SEED_XOR) via the shared mulberry32 helper (no new RNG,
+ * no Math.random). Rank-BLIND: never derived from the target-rank assignment, and on a distinct
+ * stream from the governor shuffle. Sorting the field by this key yields a STABLE seed-shuffled
+ * order (fixed per race) that the round-robin marches the spotlight through — so which racers are
+ * featured is unpredictable and uncorrelated with who is assigned to win.
+ *
+ * @param {number} index racer index (stable per race; uncorrelated with target rank)
+ * @param {number} seed  race plan seed (0 in a live browser race → still deterministic per index)
+ * @returns {number} sort key in [0, 1)
+ */
+export function directorStreamKey(index, seed) {
+  const streamSeed = ((((seed >>> 0) ^ DIRECTOR_SEED_XOR) >>> 0) + (index >>> 0)) >>> 0;
+  return mulberry32(streamSeed)();
 }
 
 /**
@@ -136,21 +159,71 @@ export function governorRestoringForce(x, k0, maxEffect) {
  * @param {number} corrStartFrac live OUTCOME-start (corridorStart) fraction
  * @returns {number} weight in [0,1]
  */
+export function governorFadeStart(pulkEndFrac, corrStartFrac) {
+  return corrStartFrac - Math.max(corrStartFrac - pulkEndFrac, MIN_FADE_SPAN);
+}
+
 export function governorPhaseWeight(progress, pulkEndFrac, corrStartFrac) {
-  const fadeSpan = Math.max(corrStartFrac - pulkEndFrac, MIN_FADE_SPAN);
-  const fadeStart = corrStartFrac - fadeSpan;
+  const fadeStart = governorFadeStart(pulkEndFrac, corrStartFrac);
   if (progress <= fadeStart) return 1.0;
   if (progress >= corrStartFrac) return 0.0;
-  return 1 - easeInOutCubic((progress - fadeStart) / fadeSpan);
+  return 1 - easeInOutCubic((progress - fadeStart) / (corrStartFrac - fadeStart));
+}
+
+/**
+ * DIRECTOR contest-injector — the currently FEATURED cast (a Set of racer indices) for this step,
+ * or null when nothing is featured (director off, degenerate field, or inside the settling window).
+ * Rank-BLIND, seed-shuffled round-robin: the live field is ordered ONCE by directorStreamKey (a
+ * stable per-race permutation), and the spotlight marches a window of `castSize` consecutive racers
+ * through that order, advancing one cast every `dwell` of leader-progress. Over a full pass every
+ * racer is featured once, in shuffled order; a short window features only some — which is intended
+ * (the assigned winner is sometimes not featured in the first half).
+ *
+ * SETTLING: no cast is featured at/after `cutoff` (progress), so new spotlights stop a settling
+ * window before the fade begins and the field is already relaxing toward its natural re-roll
+ * distribution by corridorStart. Purely progress- + seed-based → deterministic, browser/sim parity.
+ *
+ * @param {Array}  racers    live racer objects (.index, .finished)
+ * @param {number} seed      race plan seed
+ * @param {number} progress  leader-progress fraction [0,1]
+ * @param {number} castSize  featured cast size (≥1)
+ * @param {number} dwell     spotlight dwell as a progress fraction (>0): how long a cast holds
+ * @param {number} cutoff    settling cutoff (progress): no new cast at/after this point
+ * @returns {Set<number>|null} featured racer indices, or null when nothing is featured
+ */
+export function directorFeaturedSet(racers, seed, progress, castSize, dwell, cutoff) {
+  if (progress >= cutoff || castSize <= 0 || dwell <= 0) return null;
+  const live = [];
+  for (const r of racers) if (!r.finished) live.push(r.index);
+  const n = live.length;
+  if (n === 0) return null;
+  const cast = Math.min(castSize, n);
+  // Stable seed-shuffled order (rank-blind): sort live indices by the director stream key.
+  const order = live
+    .map((idx) => ({ idx, key: directorStreamKey(idx, seed) }))
+    .sort((a, b) => (a.key !== b.key ? a.key - b.key : a.idx - b.idx));
+  const slot = Math.floor(progress / dwell);
+  const start = (((slot * cast) % n) + n) % n; // window start in the shuffled order (wraps)
+  const featured = new Set();
+  for (let j = 0; j < cast; j++) featured.add(order[(start + j) % n].idx);
+  return featured;
 }
 
 /**
  * Apply the field governor for one physics step, mutating r.governorMult per active racer.
  * Caller multiplies r.governorMult into the t-advance (alongside rubberBandMult / pulkSurgeMult).
  *
- * STRUCTURAL OUTCOME-off: when the phase is not PRE_PULK/PULK/TRANSITION (or the governor is
- * disabled, or finishT<=0, or no live median), every governorMult is pinned to EXACTLY 1.0 —
- * so "1.0 in OUTCOME for every phase configuration" holds independent of the fade math.
+ * Carries THREE independent, separately-gated pre-OUTCOME terms, summed into one governorMult:
+ *   • TAIL-LIFT cohesion + SHUFFLE — gated by cfg.enabled (the governor master).
+ *   • DIRECTOR contest-injector pull — gated by cfg.directorEnabled (its own master, so the
+ *     spotlight can be eye-tested ALONE with the tail-lift off). Featured racers get a
+ *     mean-reverting pull toward a front anchor (median + offset); non-featured get zero.
+ * All three share the SAME phase-weight fade (→ exactly 0 at corrStart), ±maxEffect clamp, and
+ * per-frame slew-limit — no new fade math.
+ *
+ * STRUCTURAL OUTCOME-off: when the phase is not PRE_PULK/PULK/TRANSITION (or BOTH masters are
+ * off, or finishT<=0, or no live median), every governorMult is pinned to EXACTLY 1.0 — so
+ * "1.0 in OUTCOME for every phase configuration" holds independent of the fade math.
  *
  * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult)
  * @param {number} finishT
@@ -161,21 +234,27 @@ export function governorPhaseWeight(progress, pulkEndFrac, corrStartFrac) {
  *          selects the arc wrap. The bound is measured in racer-lengths via these — no finishT.
  * @param {{enabled:boolean, drama:number, k0:number, lenMin:number, lenMax:number,
  *          lenFloor:number, rampWidth:number, aMin:number, aMax:number,
- *          frequency:number, maxEffect:number, maxStepPerFrame:number}} cfg
+ *          frequency:number, maxEffect:number, maxStepPerFrame:number,
+ *          directorEnabled:boolean, directorCastSize:number, directorDwell:number,
+ *          directorAnchorOffset:number, directorPullStrength:number,
+ *          directorSettling:number}} cfg
  * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
  *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
  */
 export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedianT) {
   const activePhase = phase === 'PRE_PULK' || phase === 'PULK' || phase === 'TRANSITION';
+  const tailLiftOn = !!(cfg && cfg.enabled);
+  const directorOn = !!(cfg && cfg.directorEnabled);
+  const anyOn = tailLiftOn || directorOn;
   const medianT =
-    activePhase && cfg && cfg.enabled && finishT > 0
+    activePhase && anyOn && finishT > 0
       ? sharedMedianT !== undefined
         ? sharedMedianT
         : computeMedianT(racers)
       : null;
 
-  // Structural OUTCOME/FINAL-off, disabled, or no median → pin exactly 1.0.
-  if (!activePhase || !cfg || !cfg.enabled || finishT <= 0 || medianT === null) {
+  // Structural OUTCOME/FINAL-off, both masters off, or no median → pin exactly 1.0.
+  if (!activePhase || !anyOn || finishT <= 0 || medianT === null) {
     for (const r of racers) {
       if (!r.finished) r.governorMult = 1.0;
     }
@@ -197,6 +276,28 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
   // multi-lap gaps). Guard a degenerate geometry (no px/body → no cohesion).
   const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0;
 
+  // ── DIRECTOR (contest-injector) — featured cast for this step (rank-blind, seed-shuffled) ──
+  // Computed ONCE per call (not per racer). Null when the director is off, geometry degenerate,
+  // or we are inside the settling window (no new spotlight before the fade). The featured pull
+  // is mean-reverting toward a front anchor = median + anchorOffset (racer-lengths), so the cast
+  // CLUSTERS in the front band and the re-roll decides the instantaneous P1 → visible lead
+  // changes. anchorOffset/pullStrength/cast/dwell/settling are all knobs (defaults.js).
+  const anchorOffset = cfg.directorAnchorOffset ?? 2.0;
+  const pullStrength = cfg.directorPullStrength ?? 0.06;
+  const settling = cfg.directorSettling ?? 0.05;
+  const directorCutoff = governorFadeStart(pulkEndFrac, corrStartFrac) - settling;
+  const featured =
+    directorOn && lenScale > 0
+      ? directorFeaturedSet(
+          racers,
+          seed,
+          progress,
+          cfg.directorCastSize ?? 3,
+          cfg.directorDwell ?? 0.08,
+          directorCutoff
+        )
+      : null;
+
   for (const r of racers) {
     if (r.finished) {
       r.governorMult = 1.0;
@@ -204,21 +305,40 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     }
     // Signed arc-length gap to the median (sign = ahead/behind by cumulative t; magnitude =
     // visible on-track arc in racer-lengths). Field is sub-lap pre-OUTCOME so sign is exact.
+    // Shared by the tail-lift (gap to median) and the director (gap to the front anchor).
     const gapLengths = Math.sign(r.t - medianT) * arcT(r.t, medianT, isOpen) * lenScale;
-    const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
+
+    // ── TAIL-LIFT + SHUFFLE (governor master: cfg.enabled) ──
     // TAIL-LIFT ONLY: the cohesion force acts solely on racers BEHIND the median (x < 0).
     // A racer that falls more than the bound behind (x < −1) gets a progressive lift back
     // toward the field on the excess; inside the bound it runs free (DEAD ZONE → the whole
     // middle of the field moves on re-roll + shuffle, governorMult stays EXACTLY 1.0). Racers
     // AT or AHEAD of the median (x ≥ 0) get EXACTLY ZERO at every distance — the governor
-    // never brakes the leader (the ahead-median brake was retired; front contest is a later
-    // race-director layer). Same racer-length unit, ±maxEffect clamp and slew-limit as before.
-    const behindExcess = x < -1 ? -x - 1 : 0; // how far past the bound behind the median (bound-widths)
-    const cohesion =
-      behindExcess > 0 ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
-    // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase (Stage-1 keeps this as-is).
-    const shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
-    const target = clamp(1 + w * (cohesion + shuffle), 1 - maxEffect, 1 + maxEffect);
+    // never brakes the leader (the ahead-median brake was retired; front contest is the
+    // director layer below). Same racer-length unit, ±maxEffect clamp and slew-limit as before.
+    let cohesion = 0;
+    let shuffle = 0;
+    if (tailLiftOn) {
+      const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
+      const behindExcess = x < -1 ? -x - 1 : 0; // how far past the bound behind the median (bound-widths)
+      cohesion =
+        behindExcess > 0 ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
+      // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase.
+      shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
+    }
+
+    // ── DIRECTOR contest-injector pull (director master: cfg.directorEnabled) ──
+    // A featured racer is pulled, mean-reverting, toward the front anchor = median + anchorOffset
+    // (racer-lengths ahead). anchorGap > 0 = ahead of the anchor → gentle pull back; < 0 = behind
+    // → pull forward, up to ±maxEffect. Non-featured racers get exactly zero. Position/seed-coupled
+    // only (gap to median, rank-blind featured set) — never targetRank.
+    let director = 0;
+    if (featured && featured.has(r.index)) {
+      const anchorGap = gapLengths - anchorOffset;
+      director = clamp(-pullStrength * anchorGap, -maxEffect, maxEffect);
+    }
+
+    const target = clamp(1 + w * (cohesion + shuffle + director), 1 - maxEffect, 1 + maxEffect);
     // Rate-limit toward the target so the applied speed eases (never a sudden switch); the
     // per-frame change is hard-bounded by maxStep.
     const prev = r.governorMult ?? 1.0;

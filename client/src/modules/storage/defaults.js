@@ -348,6 +348,20 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorFrequency: 3, // shuffle oscillation cycles over progress[0,1] — INDEPENDENT of Action (expert)
   governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
   governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
+  // ── Contest-injector "director" (Stage A1) — DEFAULT OFF; own master, summed into governorMult ──
+  // A rank-BLIND rotating spotlight: a small cast (~2–3) is featured at any moment and pulled,
+  // mean-reverting, toward a front anchor (median + offset). The cast turns over every `dwell` of
+  // leader-progress in a seed-shuffled order, so which racers contend the front keeps changing and
+  // the assigned winner is NOT predictable from the early front. Featured membership is keyed on
+  // racer index + a dedicated director stream (raceGovernor.js DIRECTOR_SEED_XOR) — never targetRank.
+  // Shares the governor's phase-weight fade (→ 1.0 by OUTCOME), ±maxEffect clamp and slew-limit.
+  // Independent of the tail-lift master so it can be eye-tested alone. Sweet-spot tuning deferred.
+  governorDirectorEnabled: false, // director master switch (default OFF — independent of the tail-lift)
+  governorDirectorCastSize: 3, // how many racers are featured (held in the front band) at once
+  governorDirectorDwell: 0.08, // spotlight dwell as a fraction of leader-progress before the cast turns over
+  governorDirectorAnchorOffset: 2.0, // front anchor = median + this many racer-lengths ahead
+  governorDirectorPullStrength: 0.06, // speed force per racer-length of anchor gap (pre ±maxEffect clamp)
+  governorDirectorSettling: 0.05, // settling window (progress) before the fade: no new cast is featured
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

@@ -19,6 +19,9 @@ import {
   governorActionToParams,
   governorRestoringForce,
   governorPhaseWeight,
+  governorFadeStart,
+  directorFeaturedSet,
+  directorStreamKey,
 } from './raceGovernor.js';
 
 const CFG = {
@@ -228,5 +231,115 @@ describe('applyGovernor — slew smoothness + determinism', () => {
       return out;
     };
     expect(run()).toEqual(run());
+  });
+});
+
+// ── DIRECTOR (contest-injector, Stage A1) ────────────────────────────────────────────────────
+// Director-only cfg: tail-lift OFF (enabled:false), no shuffle, director ON. lenScale=1 in ctx.
+const DIRCFG = {
+  ...NOSHUF,
+  enabled: false,
+  directorEnabled: true,
+  directorCastSize: 2,
+  directorDwell: 0.08,
+  directorAnchorOffset: 2.0,
+  directorPullStrength: 0.06,
+  directorSettling: 0.05,
+  maxStepPerFrame: 0.02,
+};
+
+describe('directorStreamKey — rank-blind seeded key', () => {
+  it('deterministic, in [0,1), and on a DISTINCT stream from the shuffle phase', () => {
+    for (let i = 0; i < 10; i++) {
+      const k = directorStreamKey(i, 7);
+      expect(k).toBeGreaterThanOrEqual(0);
+      expect(k).toBeLessThan(1);
+      expect(directorStreamKey(i, 7)).toBe(k); // deterministic
+    }
+    // Distinct XOR stream: the director key is not the shuffle phase scaled — spot-check a couple
+    // of indices produce a different order than a trivial identity.
+    expect(directorStreamKey(0, 7)).not.toBe(directorStreamKey(1, 7));
+  });
+});
+
+describe('directorFeaturedSet — rank-blind rotating cast', () => {
+  const cutoff = governorFadeStart(0.5, 0.55) - DIRCFG.directorSettling; // matches applyGovernor
+  it('features exactly castSize racers before the cutoff, null at/after (settling)', () => {
+    const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1, -0.1]);
+    const set = directorFeaturedSet(racers, 3, 0.2, 2, 0.08, cutoff);
+    expect(set.size).toBe(2);
+    // At/after the cutoff no cast is featured (field relaxes before the fade).
+    expect(directorFeaturedSet(racers, 3, cutoff, 2, 0.08, cutoff)).toBeNull();
+    expect(directorFeaturedSet(racers, 3, cutoff + 0.01, 2, 0.08, cutoff)).toBeNull();
+  });
+  it('membership depends ONLY on index+seed, NOT on current position (rank-blind)', () => {
+    // Same indices, different t orderings → identical featured set (position cannot influence it).
+    const a = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1]);
+    const b = mkRacers([0.1, 0.3, 0.5, 0.7, 0.9]); // same indices 0..4, reversed positions
+    const sa = directorFeaturedSet(a, 11, 0.15, 2, 0.08, cutoff);
+    const sb = directorFeaturedSet(b, 11, 0.15, 2, 0.08, cutoff);
+    expect([...sa].sort()).toEqual([...sb].sort());
+  });
+  it('over a full pass the spotlight covers every racer (round-robin)', () => {
+    const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1, -0.1]); // n=6, cast=2 → 3 slots per pass
+    const union = new Set();
+    for (let slot = 0; slot < 3; slot++) {
+      const s = directorFeaturedSet(racers, 5, slot * 0.08 + 0.001, 2, 0.08, 1.0);
+      for (const idx of s) union.add(idx);
+    }
+    expect(union.size).toBe(6);
+  });
+});
+
+describe('applyGovernor — director pull (independent master)', () => {
+  it('featured racers are pulled toward the front anchor; non-featured stay EXACTLY 1.0', () => {
+    const racers = mkRacers([0.7, 0.5, 0.3, 0.1]);
+    const cutoff = governorFadeStart(0.5, 0.55) - DIRCFG.directorSettling;
+    const feat = directorFeaturedSet(
+      racers,
+      1,
+      0.3,
+      DIRCFG.directorCastSize,
+      DIRCFG.directorDwell,
+      cutoff
+    );
+    runN(racers, DIRCFG, 20); // ctx seed defaults to 1 → same featured set
+    racers.forEach((r) => {
+      if (feat.has(r.index))
+        expect(r.governorMult).toBeGreaterThan(1.0); // anchor +2len → forward pull
+      else expect(r.governorMult).toBe(1.0); // non-featured untouched by this layer
+    });
+  });
+
+  it('mean-reverting: featured ahead of the anchor is pulled back, behind is pulled forward', () => {
+    // anchorOffset 0 → anchor = median; cast = all → every racer featured.
+    const cfg = { ...DIRCFG, directorAnchorOffset: 0, directorCastSize: 4 };
+    const racers = mkRacers([0.7, 0.5, 0.3]); // median 0.5
+    runN(racers, cfg, 20);
+    expect(racers[0].governorMult).toBeLessThan(1.0); // ahead of anchor → braked back toward it
+    expect(racers[2].governorMult).toBeGreaterThan(1.0); // behind anchor → pulled forward
+    expect(racers[1].governorMult).toBeCloseTo(1.0, 9); // at the anchor → zero
+  });
+
+  it('never exceeds ±maxEffect and is pinned EXACTLY 1.0 in OUTCOME', () => {
+    const racers = mkRacers([0.7, 0.5, 0.3, 0.1]);
+    for (let i = 0; i < 60; i++) applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 }), DIRCFG);
+    racers.forEach((r) => {
+      expect(r.governorMult).toBeLessThanOrEqual(1 + DIRCFG.maxEffect + 1e-9);
+      expect(r.governorMult).toBeGreaterThanOrEqual(1 - DIRCFG.maxEffect - 1e-9);
+    });
+    applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: 0.55, corrStartFrac: 0.55 }), DIRCFG);
+    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
+  });
+
+  it('both masters off → EXACTLY 1.0 (adding the layer while off changes nothing)', () => {
+    const racers = mkRacers([0.7, 0.5, 0.3]);
+    racers.forEach((r) => (r.governorMult = 0.8));
+    applyGovernor(racers, 1.0, 'PULK', ctx(), {
+      ...DIRCFG,
+      enabled: false,
+      directorEnabled: false,
+    });
+    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
 });

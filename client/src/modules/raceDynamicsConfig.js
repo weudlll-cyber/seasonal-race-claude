@@ -69,7 +69,19 @@ export function loadRaceDynamicsConfig() {
     merged.governorMaxEffect < 0 ||
     merged.governorMaxEffect > 0.5 ||
     typeof merged.governorMaxStepPerFrame !== 'number' ||
-    merged.governorMaxStepPerFrame <= 0
+    merged.governorMaxStepPerFrame <= 0 ||
+    // Contest-injector "director" fields (Stage A1): same whole-object-reject pattern.
+    typeof merged.governorDirectorEnabled !== 'boolean' ||
+    typeof merged.governorDirectorCastSize !== 'number' ||
+    merged.governorDirectorCastSize < 1 ||
+    typeof merged.governorDirectorDwell !== 'number' ||
+    merged.governorDirectorDwell <= 0 ||
+    typeof merged.governorDirectorAnchorOffset !== 'number' ||
+    merged.governorDirectorAnchorOffset < 0 ||
+    typeof merged.governorDirectorPullStrength !== 'number' ||
+    merged.governorDirectorPullStrength < 0 ||
+    typeof merged.governorDirectorSettling !== 'number' ||
+    merged.governorDirectorSettling < 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

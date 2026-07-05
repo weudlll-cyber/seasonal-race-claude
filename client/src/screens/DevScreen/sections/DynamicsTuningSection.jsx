@@ -152,6 +152,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       governorFrequency: DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency,
       governorMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect,
       governorMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame,
+      governorDirectorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled,
+      governorDirectorCastSize: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCastSize,
+      governorDirectorDwell: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorDwell,
+      governorDirectorAnchorOffset: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorAnchorOffset,
+      governorDirectorPullStrength: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength,
+      governorDirectorSettling: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling,
     }));
   }
 
@@ -911,7 +917,23 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ cursor: 'pointer' }}
             />
             Enable Field Governor
-            <InfoTooltip text="Master switch (default OFF). When on, the governor runs in PRE_PULK+PULK and fades to 1.0 by OUTCOME. Does not touch target ranks or the OUTCOME controller." />
+            <InfoTooltip text="Master switch (default OFF). When on, the tail-lift runs in PRE_PULK+PULK and fades to 1.0 by OUTCOME. Does not touch target ranks or the OUTCOME controller." />
+          </label>
+        </div>
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Governor Director Enabled"
+              checked={dynamicsConfig.governorDirectorEnabled ?? false}
+              onChange={(e) => setDynamics('governorDirectorEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable Director (contest injector)
+            <InfoTooltip text="Own master switch (default OFF), independent of the tail-lift so it can be eye-tested alone. Rotates a small rank-blind cast through the front band so the lead visibly changes. Fades to 1.0 by OUTCOME; never touches target ranks." />
           </label>
         </div>
         <div className={s.formGroup} style={{ marginBottom: '0.75rem' }}>
@@ -1017,6 +1039,46 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               max: 0.05,
               step: 0.001,
               tip: 'Slew limit: how fast governorMult may change per step. Lower = smoother speed changes.',
+            },
+            {
+              key: 'governorDirectorCastSize',
+              label: 'Director: cast size',
+              min: 1,
+              max: 8,
+              step: 1,
+              tip: 'How many racers are featured (held in the front band) at once. ~2–3 gives a close, contested front. Director must be enabled below.',
+            },
+            {
+              key: 'governorDirectorDwell',
+              label: 'Director: spotlight dwell',
+              min: 0.02,
+              max: 0.3,
+              step: 0.01,
+              tip: 'How long a featured cast holds before it turns over, as a fraction of race progress. Smaller = the front cast changes more often (more lead changes).',
+            },
+            {
+              key: 'governorDirectorAnchorOffset',
+              label: 'Director: anchor offset (lengths)',
+              min: 0,
+              max: 6,
+              step: 0.5,
+              tip: 'The front anchor the featured cast is pulled toward = field median + this many racer-lengths ahead. Larger = the contested front sits further ahead of the pack.',
+            },
+            {
+              key: 'governorDirectorPullStrength',
+              label: 'Director: pull strength',
+              min: 0.01,
+              max: 0.12,
+              step: 0.01,
+              tip: 'Speed force per racer-length of gap to the anchor (before the ±max-effect clamp). Higher = the cast is dragged into the front band faster (bigger comebacks).',
+            },
+            {
+              key: 'governorDirectorSettling',
+              label: 'Director: settling window',
+              min: 0,
+              max: 0.2,
+              step: 0.01,
+              tip: 'How long before the OUTCOME fade (in race progress) the spotlight stops featuring new casts, so the field relaxes toward its natural order before the controller imposes the result.',
             },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>

@@ -24,7 +24,11 @@ import {
   governorRestoringForce,
   governorShufflePhase,
   governorPhaseWeight,
+  governorFadeStart,
+  directorFeaturedSet,
 } from '../../modules/raceGovernor.js';
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const PANEL_STYLE = {
   position: 'absolute',
@@ -57,6 +61,7 @@ const OFF_COLOR = '#888';
 const CFG_COLOR = '#bfe0bf';
 const BRAKE_COLOR = '#ff9a3c';
 const LIFT_COLOR = '#6fd0ff';
+const DIRECTOR_COLOR = '#ffd166';
 
 const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
 const f4 = (v) => (v == null ? '—' : v.toFixed(4));
@@ -85,6 +90,25 @@ function buildView(diag, state) {
   const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
   const f = cfg.frequency ?? 3;
 
+  // Director (contest-injector) featured cast for this step — recomputed from the SAME exported
+  // helper the physics uses (single source), so the readout matches who is actually featured.
+  const directorOn = !!cfg.directorEnabled;
+  const anchorOffset = cfg.directorAnchorOffset ?? 2.0;
+  const pullStrength = cfg.directorPullStrength ?? 0.06;
+  const directorCutoff =
+    governorFadeStart(diag.pulkEndFrac, diag.corrStartFrac) - (cfg.directorSettling ?? 0.05);
+  const featured =
+    directorOn && activePhase && lenScale > 0
+      ? directorFeaturedSet(
+          racers,
+          diag.seed,
+          diag.progress,
+          cfg.directorCastSize ?? 3,
+          cfg.directorDwell ?? 0.08,
+          directorCutoff
+        )
+      : null;
+
   // Leader (max t), 2nd, straggler (min t), field-length p90−p10 among live racers.
   const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
   const nLive = live.length;
@@ -109,18 +133,32 @@ function buildView(diag, state) {
     // median (x < −1); everyone at or ahead of the median gets exactly 0 — no leader-brake.
     const behindExcess = x < -1 ? -x - 1 : 0;
     const lifted = behindExcess > 0;
-    const cohesion = lifted ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
-    const shuffle =
-      A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed));
+    const cohesion =
+      cfg.enabled && lifted ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
+    const shuffle = cfg.enabled
+      ? A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed))
+      : 0;
+    // Director pull toward the front anchor (median + offset) — only for a featured racer.
+    const isFeatured = !!(featured && featured.has(r.index));
+    const director = isFeatured
+      ? clamp(-pullStrength * (gapLengths - anchorOffset), -maxEffect, maxEffect)
+      : 0;
     return {
       name: r.name ?? r.id ?? `#${r.index}`,
       gapLen: gapLengths,
       lifted,
+      featured: isFeatured,
       cohesion: w * cohesion,
       shuffle: w * shuffle,
+      director: w * director,
       mult: r.governorMult ?? 1.0,
     };
   };
+
+  // Featured-cast names (for the director readout) — order by current t so the eye can map them.
+  const featuredNames = featured
+    ? live.filter((r) => featured.has(r.index)).map((r) => r.name ?? r.id ?? `#${r.index}`)
+    : [];
 
   return {
     enabled: !!cfg.enabled,
@@ -135,6 +173,10 @@ function buildView(diag, state) {
     fieldLen,
     pulkEndFrac: diag.pulkEndFrac,
     corrStartFrac: diag.corrStartFrac,
+    directorOn,
+    anchorOffset,
+    directorCutoff,
+    featuredNames,
     leader: breakdown(leader),
     straggler: breakdown(straggler),
   };
@@ -151,11 +193,15 @@ function racerLine(label, b, color) {
         {b.gapLen.toFixed(1)}len
       </span>
       {'  '}
-      <span style={{ color: b.lifted ? LIFT_COLOR : ON_COLOR }}>{b.lifted ? 'lift' : 'free'}</span>
+      <span style={{ color: b.featured ? DIRECTOR_COLOR : b.lifted ? LIFT_COLOR : ON_COLOR }}>
+        {b.featured ? 'feat' : b.lifted ? 'lift' : 'free'}
+      </span>
       {'  coh '}
       <span style={{ color }}>{f4(b.cohesion)}</span>
       {'  shf '}
       <span style={{ color }}>{f4(b.shuffle)}</span>
+      {'  dir '}
+      <span style={{ color: DIRECTOR_COLOR }}>{f4(b.director)}</span>
       {'  mult '}
       <span style={{ color: b.mult < 1 ? BRAKE_COLOR : b.mult > 1 ? LIFT_COLOR : OFF_COLOR }}>
         {b.mult.toFixed(3)}
@@ -209,7 +255,23 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
         {'  '}leader→2nd {v.leader2ndLen.toFixed(1)}len
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
       </div>
-      <div style={SEP_STYLE}>── field (cohesion + shuffle) ──</div>
+      <div style={{ color: v.directorOn ? DIRECTOR_COLOR : OFF_COLOR }}>
+        director {v.directorOn ? 'ON' : 'off'}
+        {v.directorOn && (
+          <>
+            {'  anchor +'}
+            {v.anchorOffset.toFixed(1)}len{'  stops '}
+            {pct(v.directorCutoff)}
+            {'  cast '}
+            {v.activePhase && v.featuredNames.length
+              ? `[${v.featuredNames.join(', ')}]`
+              : v.activePhase
+                ? '(settling)'
+                : '—'}
+          </>
+        )}
+      </div>
+      <div style={SEP_STYLE}>── field (coh + shuffle + director) ──</div>
       {racerLine('Leader:', v.leader, CFG_COLOR)}
       {racerLine('Straggler:', v.straggler, LIFT_COLOR)}
     </div>

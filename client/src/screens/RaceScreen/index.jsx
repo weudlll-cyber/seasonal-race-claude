@@ -755,9 +755,15 @@ export default function RaceScreen() {
     // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
     // (A1 — it is a separate cohesion source, not routed through the surge-gated pulk
     // bias). Phase fractions come from the controller (live boundaries, single source).
-    const governorEnabled = racePlanEnabled && (dynamicsConfig.governorEnabled ?? false);
+    const governorTailLiftEnabled = racePlanEnabled && (dynamicsConfig.governorEnabled ?? false);
+    const governorDirectorEnabled =
+      racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
+    // The governor call runs when EITHER term is on (the director has its own master, so it can be
+    // eye-tested alone). applyGovernor gates cohesion/shuffle on cfg.enabled and the director pull
+    // on cfg.directorEnabled independently.
+    const governorEnabled = governorTailLiftEnabled || governorDirectorEnabled;
     const govCfg = {
-      enabled: governorEnabled,
+      enabled: governorTailLiftEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
       k0: dynamicsConfig.governorK0 ?? 0.03,
       lenMin: dynamicsConfig.governorLengthMin ?? 2.0,
@@ -769,6 +775,12 @@ export default function RaceScreen() {
       frequency: dynamicsConfig.governorFrequency ?? 3,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+      directorEnabled: governorDirectorEnabled,
+      directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
+      directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
+      directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
+      directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
+      directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;

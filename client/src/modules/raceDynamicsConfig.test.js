@@ -59,6 +59,12 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorFrequency: 3,
       governorMaxEffect: 0.12,
       governorMaxStepPerFrame: 0.01,
+      governorDirectorEnabled: false,
+      governorDirectorCastSize: 3,
+      governorDirectorDwell: 0.08,
+      governorDirectorAnchorOffset: 2.0,
+      governorDirectorPullStrength: 0.06,
+      governorDirectorSettling: 0.05,
     });
   });
 

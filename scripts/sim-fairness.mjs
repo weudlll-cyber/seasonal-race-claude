@@ -127,6 +127,13 @@ const DYNAMICS_OVERRIDES = {
   governorFrequency:  Number(argVal('governorFrequency',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency))),
   governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
   governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
+  // Contest-injector "director" (Stage A1) — own master + knobs; default OFF, same argVal pattern.
+  governorDirectorEnabled:      argVal('governorDirectorEnabled',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled)) === 'true',
+  governorDirectorCastSize:     Number(argVal('governorDirectorCastSize',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCastSize))),
+  governorDirectorDwell:        Number(argVal('governorDirectorDwell',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorDwell))),
+  governorDirectorAnchorOffset: Number(argVal('governorDirectorAnchorOffset', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorAnchorOffset))),
+  governorDirectorPullStrength: Number(argVal('governorDirectorPullStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength))),
+  governorDirectorSettling:     Number(argVal('governorDirectorSettling',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling))),
 };
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
@@ -723,9 +730,14 @@ export function runSingleRace({
     // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
     // (a separate cohesion source). Phase fractions + seed from the controller (live
     // boundaries, single source). Default OFF → governorMult stays 1.0 (byte-identical).
-    const governorEnabled = !!racePlanController && (dynamicsConfig.governorEnabled ?? false);
+    const governorTailLiftEnabled = !!racePlanController && (dynamicsConfig.governorEnabled ?? false);
+    const governorDirectorEnabled =
+      !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false);
+    // Governor call runs when EITHER term is on (director has its own master — parity with the
+    // browser). applyGovernor gates cohesion/shuffle vs the director pull independently.
+    const governorEnabled = governorTailLiftEnabled || governorDirectorEnabled;
     const govCfg = {
-      enabled: governorEnabled,
+      enabled: governorTailLiftEnabled,
       drama: dynamicsConfig.governorDrama ?? 0.5,
       k0: dynamicsConfig.governorK0 ?? 0.03,
       lenMin: dynamicsConfig.governorLengthMin ?? 2.0,
@@ -737,6 +749,12 @@ export function runSingleRace({
       frequency: dynamicsConfig.governorFrequency ?? 3,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+      directorEnabled: governorDirectorEnabled,
+      directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
+      directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
+      directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
+      directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
+      directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
