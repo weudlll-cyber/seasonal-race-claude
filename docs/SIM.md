@@ -389,6 +389,52 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 ---
 
+### Governor field-shape telemetry (`stats.governorShape`)
+
+**Flag:** surfaced automatically when the governor ran (`--governorEnabled=true` or `--governorDirectorEnabled=true`).
+
+**Fields (all in *racer-lengths* — arc-distance ÷ mean drawn body length, so they are lap-count- and track-independent):**
+
+| Field | Meaning |
+|---|---|
+| `govGapLenMean` | mean leader→**median** gap (large = the leader is far ahead of the pack) |
+| `govGapLenMax` | peak leader→median gap over the race |
+| `govGap2ndLenMean` | mean leader→**2nd** gap (small = a close, contested front) |
+| `govFieldLenMean` | field spread p10−p90 (how strung-out the pack is) |
+| `govRankSwapRate` | adjacent rank swaps per step (raw position churn across the whole field) |
+
+**Where it lives:** per race in `rawData[]` (identical across racers of a race) and aggregated per combo in `results[].stats.governorShape`. It is computed by the governor block in `runSingleRace` (single source: `arcT` + the governor's `lenScale`); this doc-stage only *propagates* it — the earlier code computed the values on the per-race result **array** but the `rawData` spread emitted per-racer **elements**, so they were dropped (and the combo copy was mis-filed under `avgNaturalness`). Nothing about *how* they are computed changed.
+
+---
+
+### Front-action metric (`results[].frontAction`)
+
+**Flag:** `--front-action` (read-only observer, breakaway-diag pattern — a run without the flag is byte-identical). Raw per-combo aggregates are also written to `results/front-action/front-action-<diagLabel>.json`.
+
+**What it measures:** the owner's priority-1 experience — a *contested, lead-changing FRONT* — over the **pre-OUTCOME / governor-active window only** (`progress < corridorStart`). It is the sweep's action objective.
+
+| Field | Meaning | Static procession | Contested front |
+|---|---|---|---|
+| `leadChangesMean` | P1-identity changes per race | ~0–1 | many |
+| `distinctP1Mean` | # of racers who ever hold P1 | 1–2 | several |
+| `leadChangeRate` | P1 changes ÷ pre-OUTCOME step | ~0 | high |
+| `podiumShuffleRate` | fraction of steps where the ordered top-3 changes (a fight for the LEAD vs churn deep in the field) | ~0 | high |
+| `gap2ndLenMean` / `gapMedLenMean` | **front reach** — leader→2nd / leader→median in racer-lengths (*reuses the governor gaps*); a close front is small gap2nd, a lone breakaway is large gapMed | — | small gap2nd |
+| `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is *not* secretly the assigned winner. Action must not come from bias. | — | must stay LOW |
+
+**Calibration reference (acceptance check — the metric must agree with the owner's eye):**
+The **seed-1 Searound × Manta** case (surge + rubber-band OFF, governor + director ON) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees:
+
+```
+node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1 --seed=1 \
+     --governorEnabled=true --governorDirectorEnabled=true --rubber-band=false \
+     --front-action --diagLabel=calib --out=client/tmp/calib
+```
+
+→ `leadChangeRate ≈ 0.0007` (≈0.07 %), `podiumShuffleRate ≈ 0.004` (≈0.4 %), `gapMedLenMean ≈ 20` racer-lengths (leader far ahead of the median = lone breakaway), `gap2ndLenMean ≈ 4.7`. All contest dimensions read LOW. Any future "action" mechanism must move `leadChangeRate` / `podiumShuffleRate` up **without** raising `unpredictability.*`.
+
+---
+
 ## 4. Parameter Sweep Methodology
 
 ### Two-phase approach
@@ -453,6 +499,15 @@ Where `pMin` is the minimum p-value across all tested tracks. Higher score is be
 - 10 races per combo (Phase 1) is too few to distinguish small differences in p-value. Phase 2 with 100 races is required before applying any result to the game.
 - The sweep tests three specific tracks. A winner may perform differently on tracks not in the test set.
 - All combos are tested with `--seed=42` (deterministic). The seed 42 was chosen for the sweep; results may differ with other seeds. Browser validation always uses live (unseeded) runs.
+
+### Governor/director action sweep — objective (upcoming)
+
+Now that front-action is *measurable* (`results[].frontAction` above), the next sweep optimizes the 15 governor/director DevScreen values for **front-action** (`leadChangeRate` / `podiumShuffleRate` up) subject to the **unpredictability** counter-metric staying LOW and the existing fairness gate holding. Its second output is a **knob-reduction** decision:
+
+- **Candidates to PIN to fixed constants** — barrier-shape + safety internals that should not be owner-facing: `governorK0`, `governorRampWidth`, `governorFrequency`, `governorLengthFloor`, `governorMaxEffect`, `governorMaxStepPerFrame`, `governorAMin`, `governorAMax`. The sweep confirms front-action is insensitive to these across their range → they become constants.
+- **Candidates to KEEP as owner-facing "action" levers** — the few that actually move `leadChangeRate` / `podiumShuffleRate` (expected: director cast size / dwell / pull strength / anchor offset, and governor drama / length band). These feed the later cleanup step that reduces the DevScreen to **~5 well-explained knobs plus a single SetupScreen "Action" slider**.
+
+This is documentation of the objective only — **no DevScreen change and no default change** happens in the measurement step that added the metric.
 
 ---
 

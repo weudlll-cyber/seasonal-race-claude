@@ -20,6 +20,21 @@
 // Usage:
 //   node scripts/sim-fairness.mjs [--races=50] [--racers=40]
 //                                  [--out=client/tmp]
+//                                  [--track=<id>] [--racer=<id>] [--dur=<sec>] [--seed=<n>]
+//
+//   Read-only diagnostics (flag-gated; a run without them is byte-identical):
+//     --breakaway-diag   record the pre-OUTCOME lone-breakaway signal (leader-gap over
+//                        progress, peak gap + who led). Raw → results/breakaway-diag/.
+//     --front-action     record the pre-OUTCOME FRONT-ACTION metric: P1 lead changes,
+//                        distinct P1 holders, top-3 podium shuffle, leader→2nd / leader→median
+//                        racer-length gaps (front reach), and a per-racer targetRank-vs-front
+//                        unpredictability correlation. Raw → results/front-action/. Front reach
+//                        reuses the governor gaps, so pair with --governorEnabled/-DirectorEnabled.
+//     --diagLabel=<name> names the raw diagnostic output file (both diags share this).
+//
+//   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
+//   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
+//   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
 //
 // Output:
 //   <out>/fairness-data.json   — machine-readable raw data
@@ -233,6 +248,22 @@ const DIAG_LABEL     = argVal('diagLabel', 'run');
 // (racePlanCorridorStart) so it tracks the same OUTCOME onset the controller uses.
 const BREAKAWAY_CORRIDOR_START = RP_CORRIDOR_START;
 
+// ── Front-action metric (--front-action) ─────────────────────────────────────
+// Read-only observer (breakaway-diag pattern). Over the pre-OUTCOME / governor-active
+// window (progress < corridorStart = BREAKAWAY_CORRIDOR_START) it counts P1 lead changes,
+// distinct P1 holders and top-3 podium shuffle, and per-racer front-running fractions for
+// an unpredictability (front-vs-targetRank) correlation. Fully flag-gated → a no-flag run
+// is byte-identical (no extra per-step work, no extra columns, no extra output). Front-reach
+// reuses the governor's leader→2nd / leader→median racer-length gaps (governor must be on for
+// those to be non-zero). Raw aggregates → results/front-action/ (named by --diagLabel).
+const FRONT_ACTION = argv.includes('--front-action');
+
+// Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate) is
+// surfaced to rawData + the combo stats ONLY when the governor actually ran, so a governor-off
+// fairness run stays byte-identical (no new columns). Mirrors the surge/RB "active" gates.
+const GOVERNOR_ON = RACE_PLAN_ACTIVE &&
+  (DYNAMICS_OVERRIDES.governorEnabled || DYNAMICS_OVERRIDES.governorDirectorEnabled);
+
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
   let s = seed >>> 0;
@@ -361,6 +392,7 @@ export function runSingleRace({
   comebackAnalysisConfig = null,  // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
   frameHook = null,            // diag: called after applyRacerBehavior each frame — (raceTs, diagOut, racers)
   breakawayDiag = false,       // --breakaway-diag: record the pre-OUTCOME breakaway signal (read-only)
+  frontAction = false,         // --front-action: record pre-OUTCOME front-action metric (read-only)
   racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
 }) {
   const savedRandom = Math.random;
@@ -788,6 +820,20 @@ export function runSingleRace({
     let govRankSwapSteps = 0;
     let govPrevOrder = null; // previous step's live-racer index order (by t)
 
+    // ── Front-action observer state (--front-action; read-only) ───────────────
+    // Pre-OUTCOME P1/top-3 churn + per-racer front-running fractions. All gated on the
+    // flag: when off the Sets/Maps stay null and the per-step block below is skipped,
+    // so a no-flag run does zero extra work and is byte-identical.
+    let   faSteps            = 0;   // pre-OUTCOME steps observed
+    let   faLeadChanges      = 0;   // P1 identity changes step-to-step
+    let   faPrevP1           = -1;  // previous step's P1 racer index
+    const faP1Set            = frontAction ? new Set() : null; // distinct P1 holders
+    const faP1StepsByIdx     = frontAction ? new Map() : null; // index → steps spent in P1
+    const faTop3StepsByIdx   = frontAction ? new Map() : null; // index → steps spent in top-3
+    let   faPrevTop3         = null; // previous step's ordered top-3 indices
+    let   faTop3ShuffleCount = 0;   // steps where the ordered top-3 changed
+    let   faTop3CompareSteps = 0;   // steps compared against a previous top-3
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -917,6 +963,38 @@ export function runSingleRace({
             }
             govPrevOrder = order;
           }
+        }
+      }
+
+      // ── Front-action observer (--front-action; read-only, pre-OUTCOME window) ──
+      // Same window the breakaway diag / governor use: progress < corridorStart. Counts
+      // P1 lead changes + distinct P1 holders + top-3 podium shuffle, and per-racer time
+      // at the front — the owner's priority-1 "contested, lead-changing front" signal. No
+      // force, no state written back to racers; pure observation (mirrors the governor's own
+      // live-order read at :894). Front-reach gaps are reused from the governor block above.
+      if (frontAction && raceProgress < BREAKAWAY_CORRIDOR_START) {
+        const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
+        if (live.length > 0) {
+          faSteps++;
+          const p1 = live[0].index;
+          if (faPrevP1 >= 0 && p1 !== faPrevP1) faLeadChanges++;
+          faPrevP1 = p1;
+          faP1Set.add(p1);
+          faP1StepsByIdx.set(p1, (faP1StepsByIdx.get(p1) ?? 0) + 1);
+          const nTop = Math.min(3, live.length);
+          const top3 = [];
+          for (let i = 0; i < nTop; i++) {
+            const idx = live[i].index;
+            top3.push(idx);
+            faTop3StepsByIdx.set(idx, (faTop3StepsByIdx.get(idx) ?? 0) + 1);
+          }
+          if (faPrevTop3) {
+            const changed = top3.length !== faPrevTop3.length ||
+              top3.some((idx, i) => idx !== faPrevTop3[i]);
+            if (changed) faTop3ShuffleCount++;
+            faTop3CompareSteps++;
+          }
+          faPrevTop3 = top3;
         }
       }
 
@@ -1594,6 +1672,31 @@ export function runSingleRace({
         corridorStart:        BREAKAWAY_CORRIDOR_START,
         // breakaway flag: peak gap exceeds the gap the rubber-band already tolerates (0.03).
         isBreakaway:          bkPeakGap > 0.03,
+      };
+    }
+
+    // Front-action metric — attached ONLY when the flag is on, so the results object (and
+    // every downstream column) is unchanged for a normal fairness run. Front-reach reuses the
+    // governor's already-computed racer-length gaps (results.govGap2ndLenMean / govGapLenMean).
+    if (frontAction) {
+      const targetRankOf = (idx) =>
+        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+      results.frontAction = {
+        steps:             faSteps,
+        leadChanges:       faLeadChanges,
+        distinctP1:        faP1Set.size,
+        leadChangeRate:    faSteps > 0 ? faLeadChanges / faSteps : 0,        // P1 changes / step
+        podiumShuffleRate: faTop3CompareSteps > 0 ? faTop3ShuffleCount / faTop3CompareSteps : 0,
+        // Front-reach (racer-lengths) — reuse the governor gaps; 0 when the governor is off.
+        gap2ndLenMean:     results.govGap2ndLenMean, // leader→2nd   (small = close, contested front)
+        gapMedLenMean:     results.govGapLenMean,     // leader→median (large = lone breakaway)
+        // Per-racer front-running time vs assigned targetRank → unpredictability correlation.
+        perRacer: racers.map((r) => ({
+          index:      r.index,
+          targetRank: targetRankOf(r.index),
+          p1Frac:     faSteps > 0 ? (faP1StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
+          top3Frac:   faSteps > 0 ? (faTop3StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
+        })),
       };
     }
 
@@ -3053,6 +3156,7 @@ if (isMain) {
   const allResults = [];
   const rawData    = [];
   const breakawayAgg = BREAKAWAY_DIAG ? [] : null;  // per-combo breakaway aggregates (--breakaway-diag)
+  const frontActionAgg = FRONT_ACTION ? [] : null;  // per-combo front-action aggregates (--front-action)
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
@@ -3179,6 +3283,7 @@ if (isMain) {
               ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
               : null,
             breakawayDiag:      BREAKAWAY_DIAG,
+            frontAction:        FRONT_ACTION,
             racerTargetRankMap: raceSollRankMap,
           });
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
@@ -3237,11 +3342,36 @@ if (isMain) {
               sollRank,
               sollBereich,
               ...r,
+              // PART-1 propagation fix: the governor field-shape telemetry is set on the per-race
+              // result ARRAY (result.govGapLenMean …), not on the per-racer element `r` spread
+              // above — so `...r` alone dropped it from rawData. Pull it from the array here.
+              // Per-race value (identical across racers in a race). Only when the governor ran →
+              // a governor-off run adds no columns and stays byte-identical.
+              ...(GOVERNOR_ON ? {
+                govGapLenMean:    result.govGapLenMean,
+                govGapLenMax:     result.govGapLenMax,
+                govGap2ndLenMean: result.govGap2ndLenMean,
+                govFieldLenMean:  result.govFieldLenMean,
+                govRankSwapRate:  result.govRankSwapRate,
+              } : {}),
             });
           }
         }
 
         const stats = computeFairnessStats(raceResults, totalRows, rowSizes);
+        // PART-1: surface the governor field-shape telemetry on results[].stats (racer-lengths).
+        // These per-race values are set on the result ARRAY, so `r.govGapLenMean` reads correctly
+        // here (unlike the per-racer rawData spread). Gated on GOVERNOR_ON → a governor-off run
+        // leaves `stats` byte-identical (no governorShape key).
+        if (GOVERNOR_ON && raceResults.length > 0) {
+          stats.governorShape = {
+            govGapLenMean:    raceResults.reduce((s, r) => s + (r.govGapLenMean ?? 0), 0) / raceResults.length,
+            govGapLenMax:     Math.max(...raceResults.map((r) => r.govGapLenMax ?? 0)),
+            govGap2ndLenMean: raceResults.reduce((s, r) => s + (r.govGap2ndLenMean ?? 0), 0) / raceResults.length,
+            govFieldLenMean:  raceResults.reduce((s, r) => s + (r.govFieldLenMean ?? 0), 0) / raceResults.length,
+            govRankSwapRate:  raceResults.reduce((s, r) => s + (r.govRankSwapRate ?? 0), 0) / raceResults.length,
+          };
+        }
         const avgMixingQuota = mixingQuotas.length > 0
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
@@ -3273,12 +3403,10 @@ if (isMain) {
           // Lapping instrumentation (closed tracks):
           maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
           maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
-          // Governor edge-limiter metrics (Stage 1; reporting only, racer-lengths; 0 when governor off):
-          govGapLenMean:           raceResults.reduce((s, r) => s + (r.govGapLenMean ?? 0), 0) / raceResults.length,
-          govGapLenMax:            Math.max(...raceResults.map((r) => r.govGapLenMax ?? 0)),
-          govGap2ndLenMean:        raceResults.reduce((s, r) => s + (r.govGap2ndLenMean ?? 0), 0) / raceResults.length,
-          govFieldLenMean:         raceResults.reduce((s, r) => s + (r.govFieldLenMean ?? 0), 0) / raceResults.length,
-          govRankSwapRate:         raceResults.reduce((s, r) => s + (r.govRankSwapRate ?? 0), 0) / raceResults.length,
+          // NOTE: the governor field-shape metrics (govGapLen*/govGap2ndLen*/govFieldLen*/
+          // govRankSwapRate) previously lived here but were dead (no reader) and mis-filed under
+          // "naturalness". PART-1 relocates them to the surfaced, governor-gated stats.governorShape
+          // block below (see allResults.push) so they actually reach results[].stats.
           honestSameLapFraction:   (() => {
             const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
             return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;
@@ -3327,7 +3455,46 @@ if (isMain) {
             });
           })(),
         } : null;
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, nRacers: nRacersForCombo });
+
+        // ── Front-action aggregation (per combo; --front-action) ────────────────
+        // Aggregates the per-race front-action metric + a pooled unpredictability correlation
+        // (|Spearman| between each racer's targetRank and its early front-running time). LOW
+        // correlation = the early leader is not secretly the assigned winner. null when off.
+        let frontActionCombo = null;
+        if (FRONT_ACTION) {
+          const fas  = raceResults.map((r) => r.frontAction).filter(Boolean);
+          const nF   = fas.length;
+          const mean = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+          // Pool (targetRank, front-time) pairs across every racer in every race of the combo.
+          const tr = [], p1f = [], t3f = [];
+          for (const fa of fas) {
+            for (const pr of fa.perRacer) {
+              if (pr.targetRank == null) continue;
+              tr.push(pr.targetRank); p1f.push(pr.p1Frac); t3f.push(pr.top3Frac);
+            }
+          }
+          // spearman() is tie-safe (returns 0 when a side has no variance) → no NaN. Need ≥4
+          // pairs for a meaningful rank correlation, else report 0 (undetermined).
+          const corrP1   = tr.length >= 4 ? Math.abs(spearman(tr, p1f)) : 0;
+          const corrTop3 = tr.length >= 4 ? Math.abs(spearman(tr, t3f)) : 0;
+          frontActionCombo = {
+            trackId, trackName, isOpen, racerType, durationSec, nRaces: nF,
+            leadChangesMean:   +mean(fas.map((d) => d.leadChanges)).toFixed(3),
+            distinctP1Mean:    +mean(fas.map((d) => d.distinctP1)).toFixed(3),
+            leadChangeRate:    +mean(fas.map((d) => d.leadChangeRate)).toFixed(5),
+            podiumShuffleRate: +mean(fas.map((d) => d.podiumShuffleRate)).toFixed(5),
+            gap2ndLenMean:     +mean(fas.map((d) => d.gap2ndLenMean)).toFixed(3),  // leader→2nd
+            gapMedLenMean:     +mean(fas.map((d) => d.gapMedLenMean)).toFixed(3),  // leader→median
+            unpredictability: {
+              rankVsP1Frac:   +corrP1.toFixed(3),
+              rankVsTop3Frac: +corrTop3.toFixed(3),
+              nPairs:         tr.length,
+            },
+          };
+          frontActionAgg.push(frontActionCombo);
+        }
+
+        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, frontAction: frontActionCombo, nRacers: nRacersForCombo });
 
         // ── Breakaway causal diagnostic aggregation (per combo) ─────────────────
         if (BREAKAWAY_DIAG) {
@@ -3694,6 +3861,39 @@ if (isMain) {
         `surged=${(c.peakLeaderSurgedShare * 100).toFixed(0)}%  ` +
         `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult} ` +
         `rb=${c.meanDecompositionAtPeak.rubberBandMult} surge=${c.meanDecompositionAtPeak.pulkSurgeMult}]`
+      );
+    }
+  }
+
+  // ── Front-action metric output (--front-action) ─────────────────────────────
+  // Self-contained: only runs when the flag is on. Raw aggregates → results/front-action/
+  // (a dir outside OUT_DIR, not committed). One file per arm, named by --diagLabel.
+  if (FRONT_ACTION) {
+    const faDir = join(ROOT, 'results', 'front-action');
+    mkdirSync(faDir, { recursive: true });
+    const faPath = join(faDir, `front-action-${DIAG_LABEL}.json`);
+    writeFileSync(faPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
+        governorOn: GOVERNOR_ON,
+        arms: {
+          governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
+          governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
+          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled, rubberBand: RUBBER_BAND_ACTIVE,
+        },
+      },
+      combos: frontActionAgg,
+    }, null, 2));
+    console.log(`\n=== Front-Action (${DIAG_LABEL}) ===  → ${faPath}`);
+    console.log('  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;');
+    console.log('   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)');
+    for (const c of frontActionAgg) {
+      console.log(
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
+        `leadΔ=${c.leadChangesMean.toFixed(1)}  distinctP1=${c.distinctP1Mean.toFixed(1)}  ` +
+        `shuffle=${(c.podiumShuffleRate * 100).toFixed(1)}%  ` +
+        `gap2nd=${c.gap2ndLenMean.toFixed(1)}  gapMed=${c.gapMedLenMean.toFixed(1)}  ` +
+        `corr[P1=${c.unpredictability.rankVsP1Frac.toFixed(2)} top3=${c.unpredictability.rankVsTop3Frac.toFixed(2)}]`
       );
     }
   }
