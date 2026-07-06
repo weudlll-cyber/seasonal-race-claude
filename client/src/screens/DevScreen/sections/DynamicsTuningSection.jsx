@@ -161,6 +161,17 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  function resetRankAction() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      showTargetMode: DEFAULT_RACE_DYNAMICS_CONFIG.showTargetMode,
+      showEngagement: DEFAULT_RACE_DYNAMICS_CONFIG.showEngagement,
+      showFrontBand: DEFAULT_RACE_DYNAMICS_CONFIG.showFrontBand,
+      showWanderDwell: DEFAULT_RACE_DYNAMICS_CONFIG.showWanderDwell,
+      showFrontConcentration: DEFAULT_RACE_DYNAMICS_CONFIG.showFrontConcentration,
+    }));
+  }
+
   function resetFrameTiming() {
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
@@ -1104,6 +1115,53 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
             </div>
           ))}
+        </div>
+      </SubCard>
+
+      {/* ── Block 4e: Rank-Action candidate (experimental eye-test) ── */}
+      <SubCard
+        title="Rank-Action candidate (experimental)"
+        onReset={resetRankAction}
+        resetTestId="reset-rank-action"
+        subtitle="EXPERIMENTAL, default OFF. Reuses the OUTCOME controller pre-OUTCOME, aimed at a rank-blind wandering SHOW-rank (a rotating cast contests the front), then hands off to the true finishing order at corridorStart. One ‘Action’ slider = ENGAGEMENT: 0 = calm baseline (controller neutral), 1 = full show-target (~2× overtaking). Fair by design (areaBonus phase-decoupled; winner decorrelated from the early front). Turn the other pre-OUTCOME mechanics (Field Governor, and any rubber-band/surge) OFF to eye-test this alone."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Rank-Action Show-Target Enabled"
+              checked={dynamicsConfig.showTargetMode ?? false}
+              onChange={(e) => setDynamics('showTargetMode', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable Rank-Action (show-target)
+            <InfoTooltip text="Master switch (default OFF). When on, the OUTCOME P-controller runs from the start toward a rank-blind wandering show-rank until corridorStart, then switches to the true target ranks. No new speed authority; areaBonus is phase-decoupled so the winner stays decorrelated from the early front." />
+          </label>
+        </div>
+        <div className={s.formGroup} style={{ marginBottom: '0.5rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Action ({Math.round((dynamicsConfig.showEngagement ?? 1.0) * 100)}%)
+            <InfoTooltip text="The single owner control (ENGAGEMENT). Left = calm (controller neutral pre-OUTCOME, a gentle procession). Right = wild (full show-target steering, ~2× overtaking). Rises monotonically calm→wild; the speed authority (±clamp) never changes." />
+          </label>
+          <input
+            type="range"
+            aria-label="Rank-Action Engagement"
+            min={0}
+            max={1}
+            step={0.05}
+            value={dynamicsConfig.showEngagement ?? DEFAULT_RACE_DYNAMICS_CONFIG.showEngagement}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 1) setDynamics('showEngagement', v);
+            }}
+            style={{ width: '100%', cursor: 'pointer' }}
+          />
         </div>
       </SubCard>
 

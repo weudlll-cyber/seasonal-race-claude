@@ -735,11 +735,12 @@ export default function RaceScreen() {
           pulkSurgeRampInMs: dynamicsConfig.pulkSurgeRampInMs ?? 1200,
           pulkSurgeRampOutMs: dynamicsConfig.pulkSurgeRampOutMs ?? 1200,
           pulkBrakeExemptStrength: dynamicsConfig.pulkBrakeExemptStrength ?? 0.5,
-          // Rank-Proto (experimental, default OFF): show-target controller mode + its params.
+          // Rank-Proto (experimental, default OFF): show-target controller mode + the engagement slider.
           showTargetMode: dynamicsConfig.showTargetMode ?? false,
+          showEngagement: dynamicsConfig.showEngagement ?? 1.0,
           showFrontBand: dynamicsConfig.showFrontBand ?? 8,
           showWanderDwell: dynamicsConfig.showWanderDwell ?? 0.06,
-          showFrontConcentration: dynamicsConfig.showFrontConcentration ?? 8,
+          showFrontConcentration: dynamicsConfig.showFrontConcentration ?? 3,
         },
         racePlanSeed
       );

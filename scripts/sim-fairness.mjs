@@ -56,13 +56,12 @@
 //   Rank-Proto (experimental, default OFF): show-target controller mode (reuses the OUTCOME
 //   P-controller pre-OUTCOME aimed at a rank-blind wandering show-rank; areaBonus phase-decoupled):
 //     --showTargetMode=true   enable the show-target controller mode.
-//     --action=<0..1>         calm→wild scalar → show levers via actionToShowLevers (Stufe 2b:
-//                             FRONT-CONCENTRATION 8→1, frontBand/dwell FIXED); controller authority
-//                             (minMult/maxMult/gain) is NEVER on the slider.
-//     --showFrontBand=<n>     featured pool size (overrides --action; default 8).
-//     --showWanderDwell=<f>   progress per featured-window rotation (overrides --action; default 0.06).
-//     --showFrontConcentration=<n>  distinct front show-ranks the featured target (overrides --action;
-//                             8=spread/calm, 1=all fight for rank 1/wild; default 8).
+//     --action=<0..1>         ENGAGEMENT slider (Stufe 2c): how strongly the pre-OUTCOME controller
+//                             steers toward the show-target. 0=neutral/calm baseline, 1=full/wild
+//                             (~2× overtaking). Monotonic. Controller authority NEVER on the slider.
+//     --showEngagement=<0..1> engagement directly (alias of --action for the show-target).
+//     --showFrontBand / --showWanderDwell / --showFrontConcentration  FIXED shape (probe overrides;
+//                             defaults 8 / 0.06 / 3).
 //
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
@@ -238,22 +237,17 @@ const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_
 // Brake-1 tip-focus dead-zone (fraction of finishT); 0 = off (legacy median-gap brake). Default
 // read from the shared config (0) so a no-flag run is byte-identical; the sweep sets it > 0.
 const RB_TIP_THRESHOLD     = Number(argVal('rubberBandTipThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandTipThreshold)));
-// Rank-Proto (experimental, default OFF): show-target controller mode + its levers.
-// Stufe 2b: --action (0..1) drives the show-target levers via the SHARED actionToShowLevers coupling
-// (calm→wild: FRONT-CONCENTRATION 8→1, with frontBand + dwell held FIXED); explicit
-// --showFrontBand/--showWanderDwell/--showFrontConcentration override it, so the sweep can use the
-// coupled scalar OR isolate a single lever. Falls back to the fixed 8/0.06/8 mid setting otherwise.
+// Rank-Proto (experimental, default OFF): show-target controller mode + the ENGAGEMENT action slider.
+// Stufe 2c: --action (0..1) drives ENGAGEMENT (how strongly the pre-OUTCOME controller steers toward
+// the show-target: 0=neutral/baseline, 1=full/wild) — monotonic by construction. The show-target SHAPE
+// (frontBand/wanderDwell/frontConcentration) is FIXED; explicit --show* flags still override for probes.
 const SHOW_TARGET_MODE = argVal('showTargetMode', 'false') === 'true';
-const _showFromAction = ACTION !== null ? actionToShowLevers(ACTION) : null;
-const SHOW_FRONT_BAND = argVal('showFrontBand', null) !== null
-  ? Number(argVal('showFrontBand'))
-  : (_showFromAction ? _showFromAction.showFrontBand : 8);
-const SHOW_WANDER_DWELL = argVal('showWanderDwell', null) !== null
-  ? Number(argVal('showWanderDwell'))
-  : (_showFromAction ? _showFromAction.showWanderDwell : 0.06);
-const SHOW_FRONT_CONCENTRATION = argVal('showFrontConcentration', null) !== null
-  ? Number(argVal('showFrontConcentration'))
-  : (_showFromAction ? _showFromAction.showFrontConcentration : 8);
+const SHOW_ENGAGEMENT = argVal('showEngagement', null) !== null
+  ? Number(argVal('showEngagement'))
+  : (ACTION !== null ? actionToShowLevers(ACTION).showEngagement : 1.0);
+const SHOW_FRONT_BAND = Number(argVal('showFrontBand', '8'));
+const SHOW_WANDER_DWELL = Number(argVal('showWanderDwell', '0.06'));
+const SHOW_FRONT_CONCENTRATION = Number(argVal('showFrontConcentration', '3'));
 // Single cfg object passed to the shared applyRubberBand helper (same shape the browser passes).
 const RUBBER_BAND_CFG = {
   enabled:                    RUBBER_BAND_ACTIVE,
@@ -3207,7 +3201,7 @@ if (isMain) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director cast=${ACTION_KNOBS.governorDirectorCastSize} dwell=${ACTION_KNOBS.governorDirectorDwell.toFixed(3)} pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} (anchorOffset=${DYNAMICS_OVERRIDES.governorDirectorAnchorOffset} settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
   if (SHOW_TARGET_MODE) {
-    console.log(`Show-target (Rank-Proto): ON — frontBand=${SHOW_FRONT_BAND} wanderDwell=${SHOW_WANDER_DWELL} frontConcentration=${SHOW_FRONT_CONCENTRATION}${ACTION !== null ? ` (from action=${ACTION.toFixed(3)})` : ''}; areaBonus phase-decoupled; controller authority FIXED`);
+    console.log(`Show-target (Rank-Proto): ON — engagement=${SHOW_ENGAGEMENT.toFixed(3)}${ACTION !== null ? ` (from action=${ACTION.toFixed(3)})` : ''} [FIXED shape: frontBand=${SHOW_FRONT_BAND} wanderDwell=${SHOW_WANDER_DWELL} frontConcentration=${SHOW_FRONT_CONCENTRATION}]; areaBonus phase-decoupled; controller authority FIXED`);
   }
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
@@ -3359,6 +3353,7 @@ if (isMain) {
               pulkBrakeExemptStrength: DYNAMICS_OVERRIDES.pulkBrakeExemptStrength,
               // Rank-Proto (experimental, default OFF): show-target controller mode + its params.
               showTargetMode:          SHOW_TARGET_MODE,
+              showEngagement:          SHOW_ENGAGEMENT,
               showFrontBand:           SHOW_FRONT_BAND,
               showWanderDwell:         SHOW_WANDER_DWELL,
               showFrontConcentration:  SHOW_FRONT_CONCENTRATION,

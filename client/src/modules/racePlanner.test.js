@@ -240,6 +240,41 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
     for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
   });
 
+  it('show-target ENGAGEMENT: 0 → neutral pre-OUTCOME (calm baseline); 1 → steering active', () => {
+    const mk = () =>
+      BASE_RACERS.map((r, i) => ({
+        ...r,
+        t: 0.1 + i * 0.005,
+        finished: false,
+        trajectoryMult: 1.0,
+        trajectoryMultTarget: 1.0,
+        trajectoryMultPrev: 1.0,
+        trajectoryMultTransStart: 0,
+      }));
+    // engagement 0 → controller neutral pre-OUTCOME: every target is exactly 1.0.
+    const p0 = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { showTargetMode: true, showEngagement: 0 },
+      BASE_SEED
+    );
+    const r0 = mk();
+    createTrajectoryController(p0).update(r0, 5000, 0.1); // phaseProgress 0.1 → pre-OUTCOME
+    for (const r of r0) expect(r.trajectoryMultTarget).toBeCloseTo(1.0, 9);
+    // engagement 1 → full show-target steering: at least one target bent away from neutral.
+    const p1 = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { showTargetMode: true, showEngagement: 1 },
+      BASE_SEED
+    );
+    const r1 = mk();
+    createTrajectoryController(p1).update(r1, 5000, 0.1);
+    expect(r1.some((r) => Math.abs(r.trajectoryMultTarget - 1.0) > 1e-6)).toBe(true);
+  });
+
   it('clamps trajectoryMultTarget to [minMult, maxMult] in OUTCOME phase', () => {
     const ctrl = createTrajectoryController(plan);
     const outcomeMs = plan._phases.transEnd + 1000;
@@ -570,25 +605,24 @@ describe('computeShowRanks', () => {
   });
 });
 
-describe('actionToShowLevers (Stufe 2b — front-concentration coupling)', () => {
-  it('calm (0) → spread (conc=band); wild (1) → conc=1 (all fight for rank 1); pool/rotation FIXED', () => {
-    const calm = actionToShowLevers(0);
-    const wild = actionToShowLevers(1);
-    expect(calm.showFrontConcentration).toBe(8);
-    expect(wild.showFrontConcentration).toBe(1);
-    // frontBand + wanderDwell do NOT widen/speed with action (fixed).
-    expect(calm.showFrontBand).toBe(wild.showFrontBand);
-    expect(calm.showWanderDwell).toBe(wild.showWanderDwell);
+describe('actionToShowLevers (Stufe 2c — engagement coupling)', () => {
+  it('action maps 1:1 to engagement (the ONLY action-driven quantity); no shape levers returned', () => {
+    expect(actionToShowLevers(0).showEngagement).toBe(0);
+    expect(actionToShowLevers(0.5).showEngagement).toBeCloseTo(0.5, 6);
+    expect(actionToShowLevers(1).showEngagement).toBe(1);
+    // The dead Stufe-2 shape coupling is gone — no frontBand/dwell/concentration on the action path.
+    expect(actionToShowLevers(0.5).showFrontConcentration).toBeUndefined();
+    expect(actionToShowLevers(0.5).showFrontBand).toBeUndefined();
   });
 
-  it('concentration is monotonic non-increasing as action rises', () => {
-    const c = [0, 0.25, 0.5, 0.75, 1].map((a) => actionToShowLevers(a).showFrontConcentration);
-    for (let i = 1; i < c.length; i++) expect(c[i]).toBeLessThanOrEqual(c[i - 1]);
+  it('is monotonic non-decreasing as action rises', () => {
+    const e = [0, 0.25, 0.5, 0.75, 1].map((a) => actionToShowLevers(a).showEngagement);
+    for (let i = 1; i < e.length; i++) expect(e[i]).toBeGreaterThanOrEqual(e[i - 1]);
   });
 
   it('clamps action outside [0,1]', () => {
-    expect(actionToShowLevers(-1)).toEqual(actionToShowLevers(0));
-    expect(actionToShowLevers(5)).toEqual(actionToShowLevers(1));
+    expect(actionToShowLevers(-1).showEngagement).toBe(0);
+    expect(actionToShowLevers(5).showEngagement).toBe(1);
   });
 });
 

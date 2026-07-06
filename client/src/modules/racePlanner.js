@@ -39,29 +39,23 @@ function clamp(v, lo, hi) {
 // rest follow in current t-rank order, so featured racers are pulled forward (charge to the front)
 // and the incumbents are displaced back (braked) — a two-sided front contest expressed as a target.
 const SHOW_SEED_XOR = 0x9e3779b1; // dedicated stream (distinct from GOVERNOR/DIRECTOR salts)
-const DEFAULT_SHOW_FRONT_BAND = 8; // how many racers are drawn into the front contest at a time
-const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation (FIXED, moderate)
-const DEFAULT_SHOW_FRONT_CONCENTRATION = 8; // distinct front show-ranks the featured target (=band → spread)
+// FIXED show-target shape (no longer on the action slider — Stufe 2/2b proved the shape levers have
+// low leverage). frontConcentration=3 gives a tight front cluster so the (closed-track) front actually
+// contests when engaged (Stufe-2b: best closed leadΔ + B3). The ACTION slider is now ENGAGEMENT (2c).
+const DEFAULT_SHOW_FRONT_BAND = 8; // racers drawn into the front contest (pool size)
+const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation
+const DEFAULT_SHOW_FRONT_CONCENTRATION = 3; // distinct front show-ranks the featured target (tight cluster)
+const DEFAULT_SHOW_ENGAGEMENT = 1.0; // how strongly the pre-OUTCOME controller steers toward the show-target
 
-// ── Action-scalar coupling (Stufe 2b): ONE action∈[0,1] (calm→wild) → show-target levers ─────
-// Reshaped after Stufe 2 proved WIDENING the band DILUTES the P1 fight (non-monotonic). Now the
-// primary intensity lever is FRONT-CONCENTRATION: how tightly the featured cast targets the very
-// front. Higher action → fewer distinct front show-ranks → more racers competing for rank 1 (a duel
-// at the front) → more lead changes. The pool size (frontBand) and rotation (wanderDwell) stay FIXED
-// — they do NOT widen with action (widening was the Stufe-2 mistake). The slider shapes ONLY the
-// show-target concentration; the speed authority (minMult/maxMult/gain) is FIXED and never on it.
-//   action↑ → frontConcentration 8(spread, calm) → 1(all fight for rank 1, wild).
-const SHOW_ACTION_ENDPOINTS = {
-  frontConcentration: { at0: 8, at1: 1 },
-};
+// ── Action-scalar coupling (Stufe 2c): ONE action∈[0,1] = ENGAGEMENT (calm→wild) ─────────────
+// The ONLY action-driven quantity is ENGAGEMENT: how strongly the pre-OUTCOME controller steers
+// toward the show-target. action 0 → engagement 0 (controller neutral pre-OUTCOME = calm baseline);
+// action 1 → engagement 1 (full Stufe-1 show-target = wild, ~2× overtaking). The blend is applied in
+// update() (target = 1 + engagement·(showTarget − 1)), so front-action rises MONOTONICALLY from
+// baseline to full by construction. The show-target SHAPE (band/dwell/concentration) stays FIXED —
+// engagement, not shape, is the lever. Speed authority (minMult/maxMult/gain) is NEVER on the slider.
 export function actionToShowLevers(action) {
-  const a = Math.max(0, Math.min(1, action));
-  const lerp = (e) => e.at0 + (e.at1 - e.at0) * a;
-  return {
-    showFrontBand: DEFAULT_SHOW_FRONT_BAND, // FIXED pool — NOT widened by action
-    showWanderDwell: DEFAULT_SHOW_WANDER_DWELL, // FIXED rotation
-    showFrontConcentration: Math.round(lerp(SHOW_ACTION_ENDPOINTS.frontConcentration)),
-  };
+  return { showEngagement: Math.max(0, Math.min(1, action)) };
 }
 
 // Rank-blind per-racer key in [0,1) for the show-window shuffle (index+seed only, never targetRank).
@@ -362,6 +356,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _showFrontBand: config.showFrontBand ?? DEFAULT_SHOW_FRONT_BAND,
     _showWanderDwell: config.showWanderDwell ?? DEFAULT_SHOW_WANDER_DWELL,
     _showFrontConcentration: config.showFrontConcentration ?? DEFAULT_SHOW_FRONT_CONCENTRATION,
+    _showEngagement: config.showEngagement ?? DEFAULT_SHOW_ENGAGEMENT,
   };
 }
 
@@ -562,6 +557,10 @@ export function createTrajectoryController(racePlan) {
         plan._showWanderDwell,
         plan._showFrontConcentration
       );
+      // ENGAGEMENT blend (Stufe 2c): scale the show-target steering from neutral (0) to full (1) so
+      // the action slider raises front-action MONOTONICALLY from baseline to full. engagement 0 →
+      // every target = 1.0 (controller neutral pre-OUTCOME = calm baseline); 1 → full show-rank steer.
+      const engagement = plan._showEngagement;
       for (let i = 0; i < nShow; i++) {
         const r = activeShow[i];
         const currentRank = i + 1;
@@ -569,7 +568,10 @@ export function createTrajectoryController(racePlan) {
         const error = currentRank - showRank; // positive → ranked worse than show-target → boost
         const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
         const rawTarget = clamp(1.0 + gain * (error / nShow) + noise, minMult, maxMult);
-        _setTarget(r, rawTarget, elapsedMs);
+        // Blend toward neutral (1.0) by (1 − engagement). Authority (the clamp) is unchanged; only the
+        // fraction of it applied pre-OUTCOME scales with the slider. engagement=1 ⇒ rawTarget (full).
+        const blendedTarget = 1.0 + engagement * (rawTarget - 1.0);
+        _setTarget(r, blendedTarget, elapsedMs);
       }
       return;
     }

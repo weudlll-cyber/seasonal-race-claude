@@ -68,9 +68,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorLeaderBrake: 0,
       governorDirectorChallengerBoost: 0,
       showTargetMode: false,
+      showEngagement: 1.0,
       showFrontBand: 8,
       showWanderDwell: 0.06,
-      showFrontConcentration: 8,
+      showFrontConcentration: 3,
     });
   });
 
