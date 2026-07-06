@@ -67,6 +67,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorSettling: 0.05,
       governorDirectorLeaderBrake: 0,
       governorDirectorChallengerBoost: 0,
+      showTargetMode: false,
+      showFrontBand: 8,
+      showWanderDwell: 0.06,
     });
   });
 
@@ -79,6 +82,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       else expect(val).toBeGreaterThan(0);
     }
     expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled).toBe('boolean');
+    expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.showTargetMode).toBe('boolean');
   });
 });
 

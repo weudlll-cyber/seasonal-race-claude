@@ -53,6 +53,12 @@
 //     --bonusMult=<x>   areaBonus (Race-Plan band bonus) strength multiplier — the fairness knob.
 //                       2.0 = shipped (+6% B1), 1.0 = half, 0 = off. Swept to trade corrP1 vs band-reach.
 //
+//   Rank-Proto (experimental, default OFF): show-target controller mode (reuses the OUTCOME
+//   P-controller pre-OUTCOME aimed at a rank-blind wandering show-rank; areaBonus phase-decoupled):
+//     --showTargetMode=true   enable the show-target controller mode.
+//     --showFrontBand=<n>     front contest width (racers featured at the front; default 8).
+//     --showWanderDwell=<f>   leader-progress per featured-window rotation (default 0.06).
+//
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
 //   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
@@ -227,6 +233,10 @@ const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_
 // Brake-1 tip-focus dead-zone (fraction of finishT); 0 = off (legacy median-gap brake). Default
 // read from the shared config (0) so a no-flag run is byte-identical; the sweep sets it > 0.
 const RB_TIP_THRESHOLD     = Number(argVal('rubberBandTipThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandTipThreshold)));
+// Rank-Proto (experimental, default OFF): show-target controller mode + its fixed mid-intensity params.
+const SHOW_TARGET_MODE = argVal('showTargetMode', 'false') === 'true';
+const SHOW_FRONT_BAND  = Number(argVal('showFrontBand', '8'));
+const SHOW_WANDER_DWELL = Number(argVal('showWanderDwell', '0.06'));
 // Single cfg object passed to the shared applyRubberBand helper (same shape the browser passes).
 const RUBBER_BAND_CFG = {
   enabled:                    RUBBER_BAND_ACTIVE,
@@ -3327,6 +3337,10 @@ if (isMain) {
               pulkSurgeRampInMs:       DYNAMICS_OVERRIDES.pulkSurgeRampInMs,
               pulkSurgeRampOutMs:      DYNAMICS_OVERRIDES.pulkSurgeRampOutMs,
               pulkBrakeExemptStrength: DYNAMICS_OVERRIDES.pulkBrakeExemptStrength,
+              // Rank-Proto (experimental, default OFF): show-target controller mode + its params.
+              showTargetMode:          SHOW_TARGET_MODE,
+              showFrontBand:           SHOW_FRONT_BAND,
+              showWanderDwell:         SHOW_WANDER_DWELL,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

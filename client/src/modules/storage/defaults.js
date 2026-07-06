@@ -374,6 +374,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // side may reach −0.15 (naturalness-safe: only slows); boost side stays capped at +maxEffect (~0.12).
   governorDirectorLeaderBrake: 0, // brake on the instantaneous P1 (racer-lengths-independent; ≤ 0.15)
   governorDirectorChallengerBoost: 0, // forward boost cap on featured challengers toward the leader (≤ maxEffect)
+  // Rank-Proto (experimental, DEFAULT OFF): reuse the OUTCOME P-controller pre-OUTCOME aimed at a
+  // rank-blind wandering SHOW-rank (no new speed authority), switching to the true targetRank at
+  // corridorStart. areaBonus is phase-decoupled in this mode (0 pre-OUTCOME). Position/seed only.
+  showTargetMode: false, // master switch (default OFF — nothing changes until enabled)
+  showFrontBand: 8, // how many racers contest the front (show-ranks 1..this) at a time
+  showWanderDwell: 0.06, // leader-progress per featured-window rotation (how fast the front reshuffles)
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

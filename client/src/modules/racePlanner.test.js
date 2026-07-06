@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRacePlan, createTrajectoryController } from './racePlanner.js';
+import { createRacePlan, createTrajectoryController, computeShowRanks } from './racePlanner.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -497,6 +497,46 @@ describe('createTrajectoryController — areaBonusMult', () => {
     for (const r of racers) {
       expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
     }
+  });
+});
+
+// ── Rank-Proto: computeShowRanks (rank-blind wandering show-target) ───────────
+describe('computeShowRanks', () => {
+  const mk = (n) => Array.from({ length: n }, (_, i) => ({ index: i, t: (n - i) * 0.01 })); // rank order = index
+
+  it('returns a valid 1..N permutation of show-ranks', () => {
+    const active = mk(20);
+    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06);
+    const vals = [...ranks.values()].sort((a, b) => a - b);
+    expect(vals).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
+  });
+
+  it('exactly frontBand racers get front show-ranks (1..frontBand)', () => {
+    const active = mk(20);
+    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06);
+    const front = [...ranks.entries()].filter(([, r]) => r <= 8);
+    expect(front.length).toBe(8);
+  });
+
+  it('is rank-blind: featured set depends on seed, not current t-order', () => {
+    const a = computeShowRanks(mk(20), 1, 0.1, 8, 0.06);
+    const b = computeShowRanks(mk(20), 2, 0.1, 8, 0.06);
+    const frontA = new Set([...a.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
+    const frontB = new Set([...b.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
+    // Different seed → different featured front set (not identical).
+    expect([...frontA].some((i) => !frontB.has(i))).toBe(true);
+  });
+
+  it('wanders: the featured front set rotates as progress advances', () => {
+    const early = computeShowRanks(mk(40), 5, 0.02, 8, 0.06);
+    const late = computeShowRanks(mk(40), 5, 0.5, 8, 0.06);
+    const fe = new Set([...early.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
+    const fl = new Set([...late.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
+    expect([...fl].some((i) => !fe.has(i))).toBe(true);
+  });
+
+  it('empty field → empty map', () => {
+    expect(computeShowRanks([], 1, 0.1, 8, 0.06).size).toBe(0);
   });
 });
 

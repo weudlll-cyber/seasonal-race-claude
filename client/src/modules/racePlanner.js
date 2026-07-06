@@ -31,6 +31,53 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+// ── Rank-Proto (experimental, default OFF): SHOW-target generator ─────────────
+// The ONLY new piece for the rank/show-target controller mode. Before corridorStart the OUTCOME
+// P-controller is aimed at a rank-blind, seed-driven, WANDERING show-rank instead of being pinned
+// to trajectoryMult 1.0 — reusing the SAME gain/clamp/error (no new speed authority). NEVER derived
+// from targetRank: a rotating seed window of `frontBand` racers takes the front show-ranks and the
+// rest follow in current t-rank order, so featured racers are pulled forward (charge to the front)
+// and the incumbents are displaced back (braked) — a two-sided front contest expressed as a target.
+const SHOW_SEED_XOR = 0x9e3779b1; // dedicated stream (distinct from GOVERNOR/DIRECTOR salts)
+const DEFAULT_SHOW_FRONT_BAND = 8; // how many racers contest the front at a time
+const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation
+
+// Rank-blind per-racer key in [0,1) for the show-window shuffle (index+seed only, never targetRank).
+function showStreamKey(index, seed) {
+  const streamSeed = ((((seed >>> 0) ^ SHOW_SEED_XOR) >>> 0) + (index >>> 0)) >>> 0;
+  return mulberry32(streamSeed)();
+}
+
+/**
+ * Show-rank per active racer (Map index→rank, 1=front). Rank-blind + seed-driven + wandering.
+ * @param {Array} active   non-finished racers, SORTED by t descending (current-rank order)
+ * @param {number} seed
+ * @param {number} progress leader-progress fraction [0,1]
+ * @param {number} frontBand featured window size (front contest width)
+ * @param {number} wanderDwell progress per rotation (>0)
+ * @returns {Map<number, number>} racerIndex → show-rank
+ */
+export function computeShowRanks(active, seed, progress, frontBand, wanderDwell) {
+  const out = new Map();
+  const n = active.length;
+  if (n === 0) return out;
+  const band = Math.min(Math.max(1, frontBand), n);
+  // Stable seed-shuffled order of the field (rank-blind permutation).
+  const order = active
+    .map((r) => ({ idx: r.index, key: showStreamKey(r.index, seed) }))
+    .sort((a, b) => (a.key !== b.key ? a.key - b.key : a.idx - b.idx));
+  // Rotating featured window of `band` racers in that shuffled order.
+  const slot = wanderDwell > 0 ? Math.floor(progress / wanderDwell) : 0;
+  const start = (((slot * band) % n) + n) % n;
+  const featured = new Set();
+  for (let j = 0; j < band; j++) featured.add(order[(start + j) % n].idx);
+  // Front show-ranks 1..band to the featured (seed order); the rest follow in CURRENT t-rank order.
+  let rank = 1;
+  for (const o of order) if (featured.has(o.idx)) out.set(o.idx, rank++);
+  for (const r of active) if (!featured.has(r.index)) out.set(r.index, rank++);
+  return out;
+}
+
 // Single-source band split points: ranks 1–5=B1, 6–15=B2, 16–25=B3, 26–40=B4, 41+=B5.
 export const BAND_EDGES = [5, 15, 25, 40];
 
@@ -273,6 +320,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
       config.bonusFadeDuration ?? config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
+    // Rank-Proto (experimental, default OFF): show-target controller mode + its show params.
+    _showTargetMode: config.showTargetMode ?? false,
+    _showFrontBand: config.showFrontBand ?? DEFAULT_SHOW_FRONT_BAND,
+    _showWanderDwell: config.showWanderDwell ?? DEFAULT_SHOW_WANDER_DWELL,
   };
 }
 
@@ -371,39 +422,47 @@ export function createTrajectoryController(racePlan) {
   }
 
   function update(racers, elapsedMs, phaseProgress = null) {
-    // ── areaBonusMult: full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
-    // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
-    // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
-    const fadeNotStarted =
-      phaseProgress != null ? phaseProgress < transEndFrac : elapsedMs < transEnd;
-    if (fadeNotStarted) {
-      for (const r of racers) {
-        r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
-      }
+    const _preOutcome = getPhase(elapsedMs, phaseProgress) !== 'OUTCOME';
+    // Rank-Proto: PHASE-DECOUPLE areaBonus in show-target mode — 0-effect (1.0) before corridorStart,
+    // full from corridorStart on. Removes the targetRank-coupled early-front correlation leak without
+    // a new constant (reuses the existing corridorStart gate). Default OFF → existing behaviour.
+    if (plan._showTargetMode && _preOutcome) {
+      for (const r of racers) r.areaBonusMult = 1.0;
     } else {
-      // Anchor the real-time fade ramp at the moment the trigger fired so elapsedFade starts at 0.
-      //  • Legacy (null) path: the clock IS elapsedMs and the trigger boundary is exactly transEnd,
-      //    so anchor there → bit-identical to the original behaviour (elapsedFade >= 0 always here).
-      //  • Progress path: the trigger boundary in ms is not known ahead of time (it depends on when
-      //    leader-progress crosses transEndFrac), so capture elapsedMs on the first triggered step.
-      let fadeAnchorMs;
-      if (phaseProgress != null) {
-        if (_fadeStartMs === null) _fadeStartMs = elapsedMs;
-        fadeAnchorMs = _fadeStartMs;
+      // ── areaBonusMult: full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
+      // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
+      // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
+      const fadeNotStarted =
+        phaseProgress != null ? phaseProgress < transEndFrac : elapsedMs < transEnd;
+      if (fadeNotStarted) {
+        for (const r of racers) {
+          r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
+        }
       } else {
-        fadeAnchorMs = transEnd;
+        // Anchor the real-time fade ramp at the moment the trigger fired so elapsedFade starts at 0.
+        //  • Legacy (null) path: the clock IS elapsedMs and the trigger boundary is exactly transEnd,
+        //    so anchor there → bit-identical to the original behaviour (elapsedFade >= 0 always here).
+        //  • Progress path: the trigger boundary in ms is not known ahead of time (it depends on when
+        //    leader-progress crosses transEndFrac), so capture elapsedMs on the first triggered step.
+        let fadeAnchorMs;
+        if (phaseProgress != null) {
+          if (_fadeStartMs === null) _fadeStartMs = elapsedMs;
+          fadeAnchorMs = _fadeStartMs;
+        } else {
+          fadeAnchorMs = transEnd;
+        }
+        const elapsedFade = elapsedMs - fadeAnchorMs;
+        // Math.max(0, …): lower-clamp safety net — guarantees the cubic ease never sees a negative
+        // argument (which previously blew areaBonusMult up to 5–556× / negative). Upper Math.min(1.0).
+        const easedProgress = easeInOutCubic(
+          Math.max(0, Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration))
+        );
+        for (const r of racers) {
+          const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
+          r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
+        }
       }
-      const elapsedFade = elapsedMs - fadeAnchorMs;
-      // Math.max(0, …): lower-clamp safety net — guarantees the cubic ease never sees a negative
-      // argument (which previously blew areaBonusMult up to 5–556× / negative). Upper Math.min(1.0).
-      const easedProgress = easeInOutCubic(
-        Math.max(0, Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration))
-      );
-      for (const r of racers) {
-        const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
-        r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
-      }
-    }
+    } // end show-target areaBonus decouple guard
 
     // ── PULK-surge pass (PART D) ────────────────────────────────────────────────
     // Surge is the default PULK mechanic. When it is toggled OFF (DevScreen) every racer's
@@ -443,8 +502,36 @@ export function createTrajectoryController(racePlan) {
     }
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
-    if (getPhase(elapsedMs, phaseProgress) !== 'OUTCOME') {
-      for (const r of racers) _setTarget(r, 1.0, elapsedMs);
+    if (_preOutcome) {
+      if (!plan._showTargetMode) {
+        for (const r of racers) _setTarget(r, 1.0, elapsedMs);
+        return;
+      }
+      // Rank-Proto SHOW-TARGET: reuse the SAME P-controller (gain/clamp/error/noise) aimed at a
+      // rank-blind wandering show-rank instead of pinning to 1.0. No new speed authority. The
+      // OUTCOME branch below (true targetRank) is UNCHANGED and takes over at corridorStart.
+      const activeShow = racers
+        .filter((r) => !r.finished)
+        .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
+      for (const r of racers) if (r.finished) _setTarget(r, 1.0, elapsedMs);
+      const nShow = activeShow.length;
+      if (nShow === 0) return;
+      const showRanks = computeShowRanks(
+        activeShow,
+        plan.seed,
+        phaseProgress ?? 0,
+        plan._showFrontBand,
+        plan._showWanderDwell
+      );
+      for (let i = 0; i < nShow; i++) {
+        const r = activeShow[i];
+        const currentRank = i + 1;
+        const showRank = showRanks.get(r.index) ?? currentRank;
+        const error = currentRank - showRank; // positive → ranked worse than show-target → boost
+        const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
+        const rawTarget = clamp(1.0 + gain * (error / nShow) + noise, minMult, maxMult);
+        _setTarget(r, rawTarget, elapsedMs);
+      }
       return;
     }
 
