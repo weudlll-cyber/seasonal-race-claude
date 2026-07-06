@@ -185,6 +185,46 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorChallengerBoost: Number(argVal('governorDirectorChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost))),
 };
 
+// ── STRIP-DOWN harness (read-only, sim-only; every flag defaults → byte-identical) ───────────
+// Measures how much accumulated pre-OUTCOME steering (areaBonus + start-row SPEED bonus) can be
+// deleted while the unchanged OUTCOME P-controller keeps the finish fair. Nothing here touches the
+// browser or any shipped default; a no-flag run is bit-identical to a normal fairness run.
+//
+//   --rerollVariant=1|2   re-roll TARGET draw only (transition machinery unchanged for both):
+//                         1 = current + (rand−0.5)·2·halfWidth      → byte-identical "sticks".
+//                         2 = current + v·(freshDrawAroundMean − current), v = variationPercent/100,
+//                             freshDrawAroundMean = fresh uniform draw over the natural band → "wanders"
+//                             (mean-reverting; a +8% racer whose fresh draw is −8% lands ~−4%). Both
+//                             are clamped to the natural band by the SAME existing clamp below.
+//   --areaBonusPulk=<x> / --areaBonusPost=<x>   areaBonus STRENGTH (bonusStrengthMultiplier units,
+//                         2.0 = shipped) BEFORE / from PULK-end (0.5). Unset → no phase split.
+//   --rowBonusEarly / --rowBonusPulk / --rowBonusPost   start-row SPEED-bonus STRENGTH (1.0 = full,
+//                         0 = off) in chaos (0→0.25) / PULK (0.25→0.5) / after (0.5→). Implemented as a
+//                         per-frame envelope on the baked-in speedBonusMult (baseSpeed math), SIM ONLY.
+//                         Unset → full everywhere (byte-identical). tStart grid handicap is untouched.
+//   --strip-metrics       attach dual-window action (PULK 0.25→0.55, OUTCOME 0.55→1.0) + worst-case
+//                         assigned-winner + bonus↔leader sample. Raw per-combo → results/strip-down/.
+const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
+const AREA_BONUS_PULK_RAW = argVal('areaBonusPulk', null);
+const AREA_BONUS_POST_RAW = argVal('areaBonusPost', null);
+const AREA_SPLIT_ACTIVE   = AREA_BONUS_PULK_RAW !== null || AREA_BONUS_POST_RAW !== null;
+const AREA_BONUS_PULK     = Number(AREA_BONUS_PULK_RAW ?? String(BONUS_MULT));
+const AREA_BONUS_POST     = Number(AREA_BONUS_POST_RAW ?? String(BONUS_MULT));
+const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was built with (post-scale base)
+const ROW_EARLY_RAW       = argVal('rowBonusEarly', null);
+const ROW_PULK_RAW        = argVal('rowBonusPulk', null);
+const ROW_POST_RAW        = argVal('rowBonusPost', null);
+const ROW_SPLIT_ACTIVE    = ROW_EARLY_RAW !== null || ROW_PULK_RAW !== null || ROW_POST_RAW !== null;
+const ROW_BONUS_EARLY     = Number(ROW_EARLY_RAW ?? '1');
+const ROW_BONUS_PULK      = Number(ROW_PULK_RAW  ?? '1');
+const ROW_BONUS_POST      = Number(ROW_POST_RAW  ?? '1');
+const STRIP_METRICS       = argv.includes('--strip-metrics');
+// Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
+// the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
+const SD_PULK_START   = 0.25;                 // chaos → PULK boundary (row-bonus early/pulk split)
+const SD_PULK_END     = 0.5;                  // PULK → post boundary (bonus re-introduction point)
+const SD_CORR_START   = RP_CORRIDOR_START;    // 0.55 — PULK action-window upper bound = OUTCOME start
+
 // ── Action axis (Action-sweep R1; --action=<0..1>) — SINGLE source of the coupling ──────────
 // One owner-facing scalar `action` ∈ [0,1] (0 = calm → 1 = wild), the prototype of the future
 // SetupScreen "Action" slider. It couples to the contest-injector (director) knobs via the table
@@ -563,6 +603,7 @@ export function runSingleRace({
         t:                     tStart,
         tStart,
         initialSpeedBonusMult: speedBonusMult,
+        rawRowBonus:           speedBonus, // STRIP-DOWN: raw start-row speed bonus (speedBonusMult−1) for the phase envelope
         initialGap:            0,
         spreadFactor,
         speedBonusMult,
@@ -916,6 +957,25 @@ export function runSingleRace({
     let   faTop3ShuffleCount = 0;   // steps where the ordered top-3 changed
     let   faTop3CompareSteps = 0;   // steps compared against a previous top-3
 
+    // ── STRIP-DOWN dual-window observer state (--strip-metrics; read-only) ─────
+    // Two separate action windows: PULK [0.25,0.55) and OUTCOME [0.55,1.0). Plus worst-case
+    // assigned-winner tracking (rank entering OUTCOME + late-surge proxy) and a per-racer
+    // areaBonus sample for the bonus↔leader correlation. Gated on the flag → no-flag = byte-identical.
+    const mkWin = () => ({ steps: 0, leadChanges: 0, prevP1: -1, p1Set: new Set(),
+      p1Steps: new Map(), top3Steps: new Map(), prevTop3: null, shuffle: 0, compareSteps: 0 });
+    const smPulk = STRIP_METRICS ? mkWin() : null; // action window 0.25→0.55
+    const smOut  = STRIP_METRICS ? mkWin() : null; // action window 0.55→1.0
+    const smAreaSample = STRIP_METRICS ? new Map() : null; // index → areaBonusMult sampled once in PULK
+    // Assigned winner = the racer with targetRank 1 (null when no plan / not passed).
+    let   smWinnerIdx = -1;
+    if (STRIP_METRICS && racerTargetRankMap) {
+      for (const [idx, rank] of racerTargetRankMap.entries()) if (rank === 1) { smWinnerIdx = idx; break; }
+    }
+    let   smWinnerRankAt055    = null; // winner's live rank at the first OUTCOME step (far back = drew badly)
+    let   smWinnerMaxTraj      = 1.0;  // winner's peak trajectoryMult during OUTCOME (late-surge proxy)
+    let   smWinnerOutcomeSteps = 0;    // winner OUTCOME steps observed
+    let   smWinnerCeilSteps    = 0;    // winner OUTCOME steps at controller ceiling (≥1.09 = straining)
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -936,7 +996,15 @@ export function runSingleRace({
       for (const r of racers) {
         if (r.finished) continue;
         if (raceTs >= r.nextRollTime && raceTs < lastRollDeadline) {
-          const rawTarget   = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+          // Re-roll TARGET draw. Variant 1 (default) = byte-identical step from the current value.
+          // Variant 2 = mean-reverting wander: pull the current advantage a fraction v toward a fresh
+          // uniform draw over the natural band. Only the target math differs; the easeInOutCubic
+          // transition + band clamp below are shared by both variants.
+          const rawTarget = REROLL_VARIANT === 2
+            ? r.spreadFactor +
+                (dynamicsConfig.reRollVariationPercent / 100) *
+                  (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN) - r.spreadFactor)
+            : r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
           // Phase-3A: pulk-bias hook (active when Race Plan is running, wired in E-Step 5)
           // Bypassed when the surge mechanic owns PULK (parity with browser) — surge replaces cohesion.
           const biasedTarget = (racePlanController && !SURGE_ENABLED)
@@ -992,6 +1060,18 @@ export function runSingleRace({
         }
       } else {
         for (const r of racers) r.trajectoryMult = 1.0;
+      }
+
+      // ── STRIP-DOWN: areaBonus phase-split (read-only; sim-only; --areaBonusPulk/Post) ──
+      // Re-scale the controller's areaBonusMult to a phase-dependent STRENGTH: areaBonusPulk before
+      // PULK-end (0.5), areaBonusPost from 0.5 on. Because the plan was built at AREA_REF_STRENGTH
+      // (=BONUS_MULT) and the band delta scales linearly with strength, scale = phaseStrength/ref.
+      // The scale commutes with the transEnd fade (both linear in areaBonusMult−1), so the fade shape
+      // is preserved. Inactive (no flag) → untouched → byte-identical.
+      if (AREA_SPLIT_ACTIVE) {
+        const phaseStrength = raceProgress < SD_PULK_END ? AREA_BONUS_PULK : AREA_BONUS_POST;
+        const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
+        for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
       }
 
       // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
@@ -1080,6 +1160,51 @@ export function runSingleRace({
         }
       }
 
+      // ── STRIP-DOWN dual-window observer (--strip-metrics; read-only) ───────────
+      // Same pre-Pass-2 live-order read as front-action, but split into two pinned windows and
+      // extended with worst-case-winner tracking. Pure observation; nothing written back to racers.
+      if (STRIP_METRICS) {
+        const inPulk = raceProgress >= SD_PULK_START && raceProgress < SD_CORR_START;
+        const inOut  = raceProgress >= SD_CORR_START && raceProgress < 1.0;
+        if (inPulk || inOut) {
+          const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
+          if (live.length > 0) {
+            const W = inPulk ? smPulk : smOut;
+            W.steps++;
+            const p1 = live[0].index;
+            if (W.prevP1 >= 0 && p1 !== W.prevP1) W.leadChanges++;
+            W.prevP1 = p1;
+            W.p1Set.add(p1);
+            W.p1Steps.set(p1, (W.p1Steps.get(p1) ?? 0) + 1);
+            const nTop = Math.min(3, live.length);
+            const top3 = [];
+            for (let i = 0; i < nTop; i++) {
+              const idx = live[i].index;
+              top3.push(idx);
+              W.top3Steps.set(idx, (W.top3Steps.get(idx) ?? 0) + 1);
+            }
+            if (W.prevTop3) {
+              const changed = top3.length !== W.prevTop3.length || top3.some((idx, i) => idx !== W.prevTop3[i]);
+              if (changed) W.shuffle++;
+              W.compareSteps++;
+            }
+            W.prevTop3 = top3;
+            // areaBonus sample: capture each racer's applied areaBonusMult once, during PULK.
+            if (inPulk) for (const r of racers) if (!smAreaSample.has(r.index)) smAreaSample.set(r.index, r.areaBonusMult);
+            // Worst-case assigned winner: rank entering OUTCOME + peak controller boost (late surge).
+            if (smWinnerIdx >= 0 && inOut) {
+              const w = racers.find((r) => r.index === smWinnerIdx);
+              if (w && !w.finished) {
+                if (smWinnerRankAt055 === null) smWinnerRankAt055 = live.findIndex((r) => r.index === smWinnerIdx) + 1;
+                smWinnerOutcomeSteps++;
+                if (w.trajectoryMult > smWinnerMaxTraj) smWinnerMaxTraj = w.trajectoryMult;
+                if (w.trajectoryMult >= 1.09) smWinnerCeilSteps++;
+              }
+            }
+          }
+        }
+      }
+
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
       if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
         for (const r of racers) {
@@ -1140,9 +1265,20 @@ export function runSingleRace({
             const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
             tefMult = targetBonusMult / r.initialSpeedBonusMult;
           }
+          // STRIP-DOWN: start-row speed-bonus phase envelope (read-only; sim-only). baseSpeed bakes in
+          // the FULL speedBonusMult (=1+rawRowBonus); rowEnvMult corrects it to the phase strength s:
+          // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
+          // s = early (chaos <0.25) / pulk (0.25–0.5) / post (≥0.5). Inactive → 1.0 → byte-identical.
+          let rowEnvMult = 1.0;
+          if (ROW_SPLIT_ACTIVE && r.rawRowBonus > 0) {
+            const s = raceProgress < SD_PULK_START ? ROW_BONUS_EARLY
+                    : raceProgress < SD_PULK_END   ? ROW_BONUS_PULK
+                    :                                ROW_BONUS_POST;
+            rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
+          }
           // trajectoryMult + areaBonusMult + pulkSurgeMult + governorMult: all 1.0 when inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -1778,6 +1914,52 @@ export function runSingleRace({
           targetRank: targetRankOf(r.index),
           p1Frac:     faSteps > 0 ? (faP1StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
           top3Frac:   faSteps > 0 ? (faTop3StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
+        })),
+      };
+    }
+
+    // ── STRIP-DOWN metrics — attached ONLY when --strip-metrics is on (else results unchanged) ──
+    if (STRIP_METRICS) {
+      const targetRankOf = (idx) =>
+        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+      const bandOf = (rank) => {
+        if (rank == null) return null;
+        for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
+        return BAND_EDGES.length;
+      };
+      const winStats = (W) => ({
+        steps:         W.steps,
+        leadChanges:   W.leadChanges,
+        distinctP1:    W.p1Set.size,
+        // dominant-leader time-share: fraction of window steps held by the single most-frequent P1.
+        leaderShare:   W.steps > 0 ? Math.max(0, ...[...W.p1Steps.values()]) / W.steps : 0,
+        top3ShuffleRate: W.compareSteps > 0 ? W.shuffle / W.compareSteps : 0,
+      });
+      results.stripMetrics = {
+        pulk:    winStats(smPulk),
+        outcome: winStats(smOut),
+        winner: {
+          idx:            smWinnerIdx,
+          targetRank:     targetRankOf(smWinnerIdx),
+          rankAt055:      smWinnerRankAt055,
+          finalRank:      smWinnerIdx >= 0 ? (racers.find((r) => r.index === smWinnerIdx)?.finishRank ?? null) : null,
+          maxTrajMult:    +smWinnerMaxTraj.toFixed(4),
+          outcomeCeilFrac: smWinnerOutcomeSteps > 0 ? +(smWinnerCeilSteps / smWinnerOutcomeSteps).toFixed(4) : 0,
+        },
+        // Per-racer rows for band-reach, start-row fairness, and bonus↔leader correlation (computed
+        // downstream). pulk/outcome shares are per-window; areaSample is the applied areaBonusMult in
+        // PULK; rowBonus is the raw start-row speed bonus. All read-only observations.
+        perRacer: racers.map((r) => ({
+          index:        r.index,
+          startRowIndex: r.startRowIndex,
+          targetRank:   targetRankOf(r.index),
+          targetBand:   bandOf(targetRankOf(r.index)), // 0-based band index
+          finalRank:    r.finishRank,
+          pulkP1Frac:   smPulk.steps > 0 ? (smPulk.p1Steps.get(r.index) ?? 0) / smPulk.steps : 0,
+          pulkTop3Frac: smPulk.steps > 0 ? (smPulk.top3Steps.get(r.index) ?? 0) / smPulk.steps : 0,
+          outP1Frac:    smOut.steps  > 0 ? (smOut.p1Steps.get(r.index) ?? 0)  / smOut.steps  : 0,
+          areaSample:   +((smAreaSample.get(r.index) ?? 1.0)).toFixed(4),
+          rowBonus:     +(r.rawRowBonus ?? 0).toFixed(5),
         })),
       };
     }
@@ -3245,6 +3427,7 @@ if (isMain) {
   const rawData    = [];
   const breakawayAgg = BREAKAWAY_DIAG ? [] : null;  // per-combo breakaway aggregates (--breakaway-diag)
   const frontActionAgg = FRONT_ACTION ? [] : null;  // per-combo front-action aggregates (--front-action)
+  const stripAgg = STRIP_METRICS ? [] : null;       // per-combo raw strip-down dumps (--strip-metrics)
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
@@ -3599,6 +3782,17 @@ if (isMain) {
             },
           };
           frontActionAgg.push(frontActionCombo);
+        }
+
+        // ── STRIP-DOWN raw dump (per combo; --strip-metrics) ────────────────────
+        // Raw per-race stripMetrics + combo meta. All aggregation (band-reach, start-row fairness,
+        // dual-window action means, worst-case winner, bonus↔leader correlation) is done downstream
+        // from this dump so the fairness definitions stay explicit and inspectable.
+        if (STRIP_METRICS) {
+          stripAgg.push({
+            trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
+            races: raceResults.map((r) => r.stripMetrics).filter(Boolean),
+          });
         }
 
         allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, frontAction: frontActionCombo, nRacers: nRacersForCombo });
@@ -4001,6 +4195,44 @@ if (isMain) {
         `shuffle=${(c.podiumShuffleRate * 100).toFixed(1)}%  ` +
         `gap2nd=${c.gap2ndLenMean.toFixed(1)}  gapMed=${c.gapMedLenMean.toFixed(1)}  ` +
         `corr[P1=${c.unpredictability.rankVsP1Frac.toFixed(2)} top3=${c.unpredictability.rankVsTop3Frac.toFixed(2)}]`
+      );
+    }
+  }
+
+  // ── STRIP-DOWN raw output (--strip-metrics) ─────────────────────────────────
+  // Self-contained: only when the flag is on. Raw per-combo dumps → results/strip-down/ (not
+  // committed). One file per arm, named by --diagLabel. Analysis is done downstream from these.
+  if (STRIP_METRICS) {
+    const sdDir = join(ROOT, 'results', 'strip-down');
+    mkdirSync(sdDir, { recursive: true });
+    const sdPath = join(sdDir, `strip-${DIAG_LABEL}.json`);
+    writeFileSync(sdPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        pulkStart: SD_PULK_START, pulkEnd: SD_PULK_END, corridorStart: SD_CORR_START,
+        rerollVariant: REROLL_VARIANT,
+        reRoll: {
+          variationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+          transitionDuration: DYNAMICS_OVERRIDES.reRollTransitionDuration,
+          intervalDivisor: DYNAMICS_OVERRIDES.reRollIntervalDivisor,
+          lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
+        },
+        areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
+        rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
+        rubberBand: RUBBER_BAND_ACTIVE, governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
+        pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
+      },
+      combos: stripAgg,
+    }, null, 2));
+    console.log(`\n=== Strip-Down (${DIAG_LABEL}) ===  → ${sdPath}`);
+    for (const c of stripAgg) {
+      const nR = c.races.length;
+      const mean = (f) => (nR ? c.races.reduce((s, r) => s + f(r), 0) / nR : 0);
+      console.log(
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
+        `PULK[leadΔ=${mean((r) => r.pulk.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.pulk.distinctP1).toFixed(1)} lShare=${(mean((r) => r.pulk.leaderShare) * 100).toFixed(0)}%]  ` +
+        `OUT[leadΔ=${mean((r) => r.outcome.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.outcome.distinctP1).toFixed(1)}]  ` +
+        `winRankAt055=${mean((r) => r.winner.rankAt055 ?? 0).toFixed(1)}`
       );
     }
   }
