@@ -277,6 +277,10 @@ const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_
 // Brake-1 tip-focus dead-zone (fraction of finishT); 0 = off (legacy median-gap brake). Default
 // read from the shared config (0) so a no-flag run is byte-identical; the sweep sets it > 0.
 const RB_TIP_THRESHOLD     = Number(argVal('rubberBandTipThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandTipThreshold)));
+// PULK-action: lower progress gate so the rubber-band can be confined to the PULK+ window (>= this
+// fraction), leaving the chaos phase untouched. Paired with --rbEndgameThreshold to bound the upper
+// edge. 0 = no lower gate (byte-identical). Read-only sim-only sweep knob.
+const RB_START_THRESHOLD   = Number(argVal('rbStartThreshold', '0'));
 // Rank-Proto (experimental, default OFF): show-target controller mode + the ENGAGEMENT action slider.
 // Stufe 2c: --action (0..1) drives ENGAGEMENT (how strongly the pre-OUTCOME controller steers toward
 // the show-target: 0=neutral/baseline, 1=full/wild) — monotonic by construction. The show-target SHAPE
@@ -975,6 +979,14 @@ export function runSingleRace({
     let   smWinnerMaxTraj      = 1.0;  // winner's peak trajectoryMult during OUTCOME (late-surge proxy)
     let   smWinnerOutcomeSteps = 0;    // winner OUTCOME steps observed
     let   smWinnerCeilSteps    = 0;    // winner OUTCOME steps at controller ceiling (≥1.09 = straining)
+    // Naturalness: does an action tool push a racer's speed past the +8% natural re-roll ceiling?
+    // natFactor = spreadFactor × tool mults (governor boost/brake + rubber-band + areaBonus), excluding
+    // the row bonus (0 in PULK anyway) and drafting/brake physics. >1.08 = faster than the fastest
+    // natural (re-roll-only) racer → the eye may read "too fast". Sampled over PULK racer-steps.
+    const NAT_CEIL    = BASE_SPEED_MAX / BASE_SPEED_MEAN; // natural re-roll ceiling (max spreadFactor ≈ 1.081)
+    let   smNatMax    = 1.0;
+    let   smNatSteps  = 0;
+    let   smNatExceed = 0; // racer-steps whose speed factor beats the natural ceiling (tool over-speed)
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -1082,6 +1094,11 @@ export function runSingleRace({
         governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
       const sharedMedianT = governorEnabled ? computeMedianT(racers) : undefined;
       applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG, SURGE_BRAKE_EXEMPT, sharedMedianT);
+      // PULK-action: confine the rubber-band to progress >= rbStartThreshold (leave chaos untouched).
+      // Overrides the just-computed mult back to 1.0 below the gate. 0 (default) → no-op → byte-identical.
+      if (RB_START_THRESHOLD > 0 && raceProgress < RB_START_THRESHOLD) {
+        for (const r of racers) r.rubberBandMult = 1.0;
+      }
       for (const r of racers) { if (r.rubberBandMult < 0.999) r.rbActivatedThisRace = true; }
 
       // ── Pre-OUTCOME Field Governor (Stage B; default OFF, parallel to surge/RB) ──
@@ -1191,6 +1208,16 @@ export function runSingleRace({
             W.prevTop3 = top3;
             // areaBonus sample: capture each racer's applied areaBonusMult once, during PULK.
             if (inPulk) for (const r of racers) if (!smAreaSample.has(r.index)) smAreaSample.set(r.index, r.areaBonusMult);
+            // Naturalness (PULK-proper [0.25,0.5) only — before the areaBonus restore at 0.5, so this
+            // isolates the ACTION TOOLS' contribution cleanly): re-roll advantage × tool mults. In this
+            // window bonuses are 0, so natFactor = spreadFactor × governor × rubberBand. >1.08 = a tool
+            // pushed the racer past the natural re-roll ceiling (max spreadFactor ≈ 1.081).
+            if (inPulk && raceProgress < SD_PULK_END) for (const r of racers) if (!r.finished) {
+              const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.rubberBandMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
+              smNatSteps++;
+              if (nf > smNatMax) smNatMax = nf;
+              if (nf > NAT_CEIL * 1.001) smNatExceed++; // > natural ceiling (+0.1% float margin) = tool over-speed
+            }
             // Worst-case assigned winner: rank entering OUTCOME + peak controller boost (late surge).
             if (smWinnerIdx >= 0 && inOut) {
               const w = racers.find((r) => r.index === smWinnerIdx);
@@ -1945,6 +1972,10 @@ export function runSingleRace({
           finalRank:      smWinnerIdx >= 0 ? (racers.find((r) => r.index === smWinnerIdx)?.finishRank ?? null) : null,
           maxTrajMult:    +smWinnerMaxTraj.toFixed(4),
           outcomeCeilFrac: smWinnerOutcomeSteps > 0 ? +(smWinnerCeilSteps / smWinnerOutcomeSteps).toFixed(4) : 0,
+        },
+        naturalness: {
+          maxSpeedFactor: +smNatMax.toFixed(4),                                  // peak spreadFactor×tool-mults in PULK
+          exceedFrac:     smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
         },
         // Per-racer rows for band-reach, start-row fairness, and bonus↔leader correlation (computed
         // downstream). pulk/outcome shares are per-window; areaSample is the applied areaBonusMult in
