@@ -8,7 +8,12 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRacePlan, createTrajectoryController, computeShowRanks } from './racePlanner.js';
+import {
+  createRacePlan,
+  createTrajectoryController,
+  computeShowRanks,
+  actionToShowLevers,
+} from './racePlanner.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -537,6 +542,29 @@ describe('computeShowRanks', () => {
 
   it('empty field → empty map', () => {
     expect(computeShowRanks([], 1, 0.1, 8, 0.06).size).toBe(0);
+  });
+});
+
+describe('actionToShowLevers (Stufe 2 coupling)', () => {
+  it('calm (0) → narrow duel / slow rotation; wild (1) → wide pack / fast rotation', () => {
+    const calm = actionToShowLevers(0);
+    const wild = actionToShowLevers(1);
+    expect(calm.showFrontBand).toBe(3);
+    expect(wild.showFrontBand).toBe(10);
+    expect(calm.showWanderDwell).toBeCloseTo(0.12, 6);
+    expect(wild.showWanderDwell).toBeCloseTo(0.04, 6);
+  });
+
+  it('is monotonic (width up, dwell down) as action rises', () => {
+    const a = actionToShowLevers(0.25);
+    const b = actionToShowLevers(0.75);
+    expect(b.showFrontBand).toBeGreaterThanOrEqual(a.showFrontBand);
+    expect(b.showWanderDwell).toBeLessThan(a.showWanderDwell);
+  });
+
+  it('clamps action outside [0,1]', () => {
+    expect(actionToShowLevers(-1)).toEqual(actionToShowLevers(0));
+    expect(actionToShowLevers(5)).toEqual(actionToShowLevers(1));
   });
 });
 

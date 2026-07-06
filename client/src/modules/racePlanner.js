@@ -42,6 +42,24 @@ const SHOW_SEED_XOR = 0x9e3779b1; // dedicated stream (distinct from GOVERNOR/DI
 const DEFAULT_SHOW_FRONT_BAND = 8; // how many racers contest the front at a time
 const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation
 
+// ── Action-scalar coupling (Stufe 2): ONE action∈[0,1] (calm→wild) → show-target levers ─────
+// The slider shapes ONLY the show-target (front-contest WIDTH + rotation SPEED); the speed
+// authority (minMult/maxMult/gain) stays FIXED and is NEVER on the slider. Single source shared
+// by sim (--action) and the future SetupScreen slider. Endpoints: width 3(duel)→10(pack),
+// dwell 0.12(slow rotation)→0.04(fast rotation).
+const SHOW_ACTION_ENDPOINTS = {
+  frontBand: { at0: 3, at1: 10 },
+  wanderDwell: { at0: 0.12, at1: 0.04 },
+};
+export function actionToShowLevers(action) {
+  const a = Math.max(0, Math.min(1, action));
+  const lerp = (e) => e.at0 + (e.at1 - e.at0) * a;
+  return {
+    showFrontBand: Math.round(lerp(SHOW_ACTION_ENDPOINTS.frontBand)),
+    showWanderDwell: lerp(SHOW_ACTION_ENDPOINTS.wanderDwell),
+  };
+}
+
 // Rank-blind per-racer key in [0,1) for the show-window shuffle (index+seed only, never targetRank).
 function showStreamKey(index, seed) {
   const streamSeed = ((((seed >>> 0) ^ SHOW_SEED_XOR) >>> 0) + (index >>> 0)) >>> 0;
