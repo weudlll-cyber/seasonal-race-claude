@@ -543,23 +543,47 @@ describe('computeShowRanks', () => {
   it('empty field → empty map', () => {
     expect(computeShowRanks([], 1, 0.1, 8, 0.06).size).toBe(0);
   });
-});
 
-describe('actionToShowLevers (Stufe 2 coupling)', () => {
-  it('calm (0) → narrow duel / slow rotation; wild (1) → wide pack / fast rotation', () => {
-    const calm = actionToShowLevers(0);
-    const wild = actionToShowLevers(1);
-    expect(calm.showFrontBand).toBe(3);
-    expect(wild.showFrontBand).toBe(10);
-    expect(calm.showWanderDwell).toBeCloseTo(0.12, 6);
-    expect(wild.showWanderDwell).toBeCloseTo(0.04, 6);
+  it('concentration=1 → ALL featured target rank 1 (direct fight for the lead)', () => {
+    const active = mk(20);
+    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06, 1);
+    const atOne = [...ranks.entries()].filter(([, r]) => r === 1);
+    expect(atOne.length).toBe(8); // all 8 featured share show-rank 1
   });
 
-  it('is monotonic (width up, dwell down) as action rises', () => {
-    const a = actionToShowLevers(0.25);
-    const b = actionToShowLevers(0.75);
-    expect(b.showFrontBand).toBeGreaterThanOrEqual(a.showFrontBand);
-    expect(b.showWanderDwell).toBeLessThan(a.showWanderDwell);
+  it('concentration=band (default) reproduces the legacy spread 1..band', () => {
+    const withDefault = computeShowRanks(mk(20), 7, 0.1, 8, 0.06); // conc omitted → band
+    const explicit = computeShowRanks(mk(20), 7, 0.1, 8, 0.06, 8);
+    expect([...withDefault.entries()]).toEqual([...explicit.entries()]);
+    const front = [...withDefault.entries()]
+      .filter(([, r]) => r <= 8)
+      .map(([, r]) => r)
+      .sort();
+    expect(front).toEqual([1, 2, 3, 4, 5, 6, 7, 8]); // spread, one per rank
+  });
+
+  it('lower concentration → fewer distinct front show-ranks among the featured', () => {
+    const distinctFront = (conc) =>
+      new Set([...computeShowRanks(mk(30), 3, 0.1, 8, 0.06, conc).values()].filter((r) => r <= 8))
+        .size;
+    expect(distinctFront(2)).toBeLessThan(distinctFront(8));
+  });
+});
+
+describe('actionToShowLevers (Stufe 2b — front-concentration coupling)', () => {
+  it('calm (0) → spread (conc=band); wild (1) → conc=1 (all fight for rank 1); pool/rotation FIXED', () => {
+    const calm = actionToShowLevers(0);
+    const wild = actionToShowLevers(1);
+    expect(calm.showFrontConcentration).toBe(8);
+    expect(wild.showFrontConcentration).toBe(1);
+    // frontBand + wanderDwell do NOT widen/speed with action (fixed).
+    expect(calm.showFrontBand).toBe(wild.showFrontBand);
+    expect(calm.showWanderDwell).toBe(wild.showWanderDwell);
+  });
+
+  it('concentration is monotonic non-increasing as action rises', () => {
+    const c = [0, 0.25, 0.5, 0.75, 1].map((a) => actionToShowLevers(a).showFrontConcentration);
+    for (let i = 1; i < c.length; i++) expect(c[i]).toBeLessThanOrEqual(c[i - 1]);
   });
 
   it('clamps action outside [0,1]', () => {

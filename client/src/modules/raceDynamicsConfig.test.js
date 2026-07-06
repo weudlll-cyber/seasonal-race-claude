@@ -70,6 +70,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       showTargetMode: false,
       showFrontBand: 8,
       showWanderDwell: 0.06,
+      showFrontConcentration: 8,
     });
   });
 

@@ -378,8 +378,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // rank-blind wandering SHOW-rank (no new speed authority), switching to the true targetRank at
   // corridorStart. areaBonus is phase-decoupled in this mode (0 pre-OUTCOME). Position/seed only.
   showTargetMode: false, // master switch (default OFF — nothing changes until enabled)
-  showFrontBand: 8, // how many racers contest the front (show-ranks 1..this) at a time
+  showFrontBand: 8, // how many racers are drawn into the front contest (pool size) at a time
   showWanderDwell: 0.06, // leader-progress per featured-window rotation (how fast the front reshuffles)
+  showFrontConcentration: 8, // Stufe-2b intensity lever: distinct front show-ranks the featured target
+  //   (= frontBand → spread/calm; 1 → all featured fight for rank 1/wild). Driven by the action slider.
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

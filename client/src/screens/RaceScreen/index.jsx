@@ -739,6 +739,7 @@ export default function RaceScreen() {
           showTargetMode: dynamicsConfig.showTargetMode ?? false,
           showFrontBand: dynamicsConfig.showFrontBand ?? 8,
           showWanderDwell: dynamicsConfig.showWanderDwell ?? 0.06,
+          showFrontConcentration: dynamicsConfig.showFrontConcentration ?? 8,
         },
         racePlanSeed
       );

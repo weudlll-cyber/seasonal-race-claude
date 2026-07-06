@@ -39,24 +39,28 @@ function clamp(v, lo, hi) {
 // rest follow in current t-rank order, so featured racers are pulled forward (charge to the front)
 // and the incumbents are displaced back (braked) — a two-sided front contest expressed as a target.
 const SHOW_SEED_XOR = 0x9e3779b1; // dedicated stream (distinct from GOVERNOR/DIRECTOR salts)
-const DEFAULT_SHOW_FRONT_BAND = 8; // how many racers contest the front at a time
-const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation
+const DEFAULT_SHOW_FRONT_BAND = 8; // how many racers are drawn into the front contest at a time
+const DEFAULT_SHOW_WANDER_DWELL = 0.06; // leader-progress per featured-window rotation (FIXED, moderate)
+const DEFAULT_SHOW_FRONT_CONCENTRATION = 8; // distinct front show-ranks the featured target (=band → spread)
 
-// ── Action-scalar coupling (Stufe 2): ONE action∈[0,1] (calm→wild) → show-target levers ─────
-// The slider shapes ONLY the show-target (front-contest WIDTH + rotation SPEED); the speed
-// authority (minMult/maxMult/gain) stays FIXED and is NEVER on the slider. Single source shared
-// by sim (--action) and the future SetupScreen slider. Endpoints: width 3(duel)→10(pack),
-// dwell 0.12(slow rotation)→0.04(fast rotation).
+// ── Action-scalar coupling (Stufe 2b): ONE action∈[0,1] (calm→wild) → show-target levers ─────
+// Reshaped after Stufe 2 proved WIDENING the band DILUTES the P1 fight (non-monotonic). Now the
+// primary intensity lever is FRONT-CONCENTRATION: how tightly the featured cast targets the very
+// front. Higher action → fewer distinct front show-ranks → more racers competing for rank 1 (a duel
+// at the front) → more lead changes. The pool size (frontBand) and rotation (wanderDwell) stay FIXED
+// — they do NOT widen with action (widening was the Stufe-2 mistake). The slider shapes ONLY the
+// show-target concentration; the speed authority (minMult/maxMult/gain) is FIXED and never on it.
+//   action↑ → frontConcentration 8(spread, calm) → 1(all fight for rank 1, wild).
 const SHOW_ACTION_ENDPOINTS = {
-  frontBand: { at0: 3, at1: 10 },
-  wanderDwell: { at0: 0.12, at1: 0.04 },
+  frontConcentration: { at0: 8, at1: 1 },
 };
 export function actionToShowLevers(action) {
   const a = Math.max(0, Math.min(1, action));
   const lerp = (e) => e.at0 + (e.at1 - e.at0) * a;
   return {
-    showFrontBand: Math.round(lerp(SHOW_ACTION_ENDPOINTS.frontBand)),
-    showWanderDwell: lerp(SHOW_ACTION_ENDPOINTS.wanderDwell),
+    showFrontBand: DEFAULT_SHOW_FRONT_BAND, // FIXED pool — NOT widened by action
+    showWanderDwell: DEFAULT_SHOW_WANDER_DWELL, // FIXED rotation
+    showFrontConcentration: Math.round(lerp(SHOW_ACTION_ENDPOINTS.frontConcentration)),
   };
 }
 
@@ -71,15 +75,26 @@ function showStreamKey(index, seed) {
  * @param {Array} active   non-finished racers, SORTED by t descending (current-rank order)
  * @param {number} seed
  * @param {number} progress leader-progress fraction [0,1]
- * @param {number} frontBand featured window size (front contest width)
+ * @param {number} frontBand featured window size (racers drawn into the front contest)
  * @param {number} wanderDwell progress per rotation (>0)
+ * @param {number} [frontConcentration] distinct front show-ranks the featured cast targets — the
+ *   Stufe-2b intensity lever. `band` (default) → featured spread across 1..band (legacy, byte-identical);
+ *   `1` → ALL featured target rank 1 (a direct fight for the lead). Non-featured always follow behind.
  * @returns {Map<number, number>} racerIndex → show-rank
  */
-export function computeShowRanks(active, seed, progress, frontBand, wanderDwell) {
+export function computeShowRanks(
+  active,
+  seed,
+  progress,
+  frontBand,
+  wanderDwell,
+  frontConcentration
+) {
   const out = new Map();
   const n = active.length;
   if (n === 0) return out;
   const band = Math.min(Math.max(1, frontBand), n);
+  const conc = Math.min(Math.max(1, frontConcentration ?? band), band); // default = band → legacy spread
   // Stable seed-shuffled order of the field (rank-blind permutation).
   const order = active
     .map((r) => ({ idx: r.index, key: showStreamKey(r.index, seed) }))
@@ -89,9 +104,13 @@ export function computeShowRanks(active, seed, progress, frontBand, wanderDwell)
   const start = (((slot * band) % n) + n) % n;
   const featured = new Set();
   for (let j = 0; j < band; j++) featured.add(order[(start + j) % n].idx);
-  // Front show-ranks 1..band to the featured (seed order); the rest follow in CURRENT t-rank order.
-  let rank = 1;
-  for (const o of order) if (featured.has(o.idx)) out.set(o.idx, rank++);
+  // Featured → a tight FRONT cluster: show-ranks cycle through 1..conc (conc<band → several racers
+  // share the very-front ranks → they compete for the lead). conc=band ⇒ 1..band (legacy spread).
+  // Non-featured always follow behind the pool (band+1..N, current t-rank order) so the incumbent
+  // leader, when unfeatured, is displaced back (braked) — the two-sided contest is preserved.
+  let j = 0;
+  for (const o of order) if (featured.has(o.idx)) out.set(o.idx, 1 + (j++ % conc));
+  let rank = band + 1;
   for (const r of active) if (!featured.has(r.index)) out.set(r.index, rank++);
   return out;
 }
@@ -342,6 +361,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _showTargetMode: config.showTargetMode ?? false,
     _showFrontBand: config.showFrontBand ?? DEFAULT_SHOW_FRONT_BAND,
     _showWanderDwell: config.showWanderDwell ?? DEFAULT_SHOW_WANDER_DWELL,
+    _showFrontConcentration: config.showFrontConcentration ?? DEFAULT_SHOW_FRONT_CONCENTRATION,
   };
 }
 
@@ -539,7 +559,8 @@ export function createTrajectoryController(racePlan) {
         plan.seed,
         phaseProgress ?? 0,
         plan._showFrontBand,
-        plan._showWanderDwell
+        plan._showWanderDwell,
+        plan._showFrontConcentration
       );
       for (let i = 0; i < nShow; i++) {
         const r = activeShow[i];
