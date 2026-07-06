@@ -781,6 +781,8 @@ export default function RaceScreen() {
       directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
       directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
       directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
+      directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
+      directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;

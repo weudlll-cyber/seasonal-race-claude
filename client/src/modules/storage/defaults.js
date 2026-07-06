@@ -368,6 +368,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorAnchorOffset: 2.0, // front anchor = median + this many racer-lengths ahead
   governorDirectorPullStrength: 0.06, // speed force per racer-length of anchor gap (pre ±maxEffect clamp)
   governorDirectorSettling: 0.05, // settling window (progress) before the fade: no new cast is featured
+  // Action-1 TWO-SIDED contest (default OFF = both 0 → legacy one-sided anchor pull, byte-identical).
+  // When either > 0: brake the instantaneous leader by leaderBrake AND boost the featured challengers
+  // toward it (up to challengerBoost, gain = pullStrength). Rank-blind (position + seed only). Brake
+  // side may reach −0.15 (naturalness-safe: only slows); boost side stays capped at +maxEffect (~0.12).
+  governorDirectorLeaderBrake: 0, // brake on the instantaneous P1 (racer-lengths-independent; ≤ 0.15)
+  governorDirectorChallengerBoost: 0, // forward boost cap on featured challengers toward the leader (≤ maxEffect)
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

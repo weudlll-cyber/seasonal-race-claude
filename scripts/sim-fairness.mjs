@@ -46,6 +46,13 @@
 //                                       gap (dead-zone, fraction of finishT); 0 = legacy median-gap
 //                                       brake (byte-identical). Pair with --rbMaxBrake + the director.
 //
+//   Action-1 two-sided contest director (read-only sweep knobs; default 0 → legacy one-sided pull):
+//     --governorDirectorLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
+//     --governorDirectorChallengerBoost=<0..0.12>  forward boost cap on featured challengers toward
+//                                                  the leader. Either > 0 → two-sided contest mode.
+//     --bonusMult=<x>   areaBonus (Race-Plan band bonus) strength multiplier — the fairness knob.
+//                       2.0 = shipped (+6% B1), 1.0 = half, 0 = off. Swept to trade corrP1 vs band-reach.
+//
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
 //   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
@@ -163,6 +170,9 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorAnchorOffset: Number(argVal('governorDirectorAnchorOffset', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorAnchorOffset))),
   governorDirectorPullStrength: Number(argVal('governorDirectorPullStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength))),
   governorDirectorSettling:     Number(argVal('governorDirectorSettling',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling))),
+  // Action-1 two-sided contest (default 0 → legacy one-sided anchor pull). Sweep sets these > 0.
+  governorDirectorLeaderBrake:     Number(argVal('governorDirectorLeaderBrake',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake))),
+  governorDirectorChallengerBoost: Number(argVal('governorDirectorChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost))),
 };
 
 // ── Action axis (Action-sweep R1; --action=<0..1>) — SINGLE source of the coupling ──────────
@@ -836,6 +846,8 @@ export function runSingleRace({
       directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
       directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
       directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
+      directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
+      directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;

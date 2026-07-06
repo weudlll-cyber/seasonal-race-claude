@@ -65,12 +65,18 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorAnchorOffset: 2.0,
       governorDirectorPullStrength: 0.06,
       governorDirectorSettling: 0.05,
+      governorDirectorLeaderBrake: 0,
+      governorDirectorChallengerBoost: 0,
     });
   });
 
-  it('all numeric defaults are positive numbers (surge flag is boolean)', () => {
-    for (const val of Object.values(DEFAULT_RACE_DYNAMICS_CONFIG)) {
-      if (typeof val === 'number') expect(val).toBeGreaterThan(0);
+  it('all numeric defaults are positive (surge flag boolean); two-sided contest knobs default 0 (off)', () => {
+    // Action-1 two-sided contest knobs are OFF-at-0 by default (byte-identical legacy path).
+    const offAtZero = new Set(['governorDirectorLeaderBrake', 'governorDirectorChallengerBoost']);
+    for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
+      if (typeof val !== 'number') continue;
+      if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
+      else expect(val).toBeGreaterThan(0);
     }
     expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled).toBe('boolean');
   });

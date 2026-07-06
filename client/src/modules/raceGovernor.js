@@ -237,7 +237,11 @@ export function directorFeaturedSet(racers, seed, progress, castSize, dwell, cut
  *          frequency:number, maxEffect:number, maxStepPerFrame:number,
  *          directorEnabled:boolean, directorCastSize:number, directorDwell:number,
  *          directorAnchorOffset:number, directorPullStrength:number,
- *          directorSettling:number}} cfg
+ *          directorSettling:number, directorLeaderBrake:number,
+ *          directorChallengerBoost:number}} cfg
+ *   directorLeaderBrake / directorChallengerBoost (Action-1): both 0 (default) → legacy one-sided
+ *   anchor pull; either > 0 → TWO-SIDED contest (brake instantaneous leader − leaderBrake, boost
+ *   featured challengers toward it + up to challengerBoost). Rank-blind (position + seed only).
  * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
  *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
  */
@@ -298,6 +302,29 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
         )
       : null;
 
+  // ── TWO-SIDED CONTEST (Action-1) — brake the instantaneous leader + boost the featured
+  // challengers TOWARD the leader (not a fixed median anchor). Active when either strength > 0;
+  // both 0 (default) → the legacy one-sided anchor pull below runs, byte-identical. The one-sided
+  // ±12% pull could not force overtakes against the permanent ±15% spread; braking P1 AND boosting
+  // a chaser gives a ~27% relative closing rate. Position-coupled (P1 = current leader by t) +
+  // seed-driven rotation (the featured cast) — NEVER targetRank. Brake side may reach −leaderBrake
+  // (≤ 0.15, naturalness-safe: only slows); boost side stays capped at +maxEffect (≤ ~0.12).
+  const leaderBrake = directorOn ? (cfg.directorLeaderBrake ?? 0) : 0;
+  const challengerBoost = directorOn ? (cfg.directorChallengerBoost ?? 0) : 0;
+  const twoSided = leaderBrake > 0 || challengerBoost > 0;
+  // Instantaneous leader (max cumulative-t among live racers) — the front-tip to brake.
+  let leaderT = -Infinity;
+  let leaderIndex = -1;
+  if (twoSided) {
+    for (const r of racers) {
+      if (!r.finished && r.t > leaderT) {
+        leaderT = r.t;
+        leaderIndex = r.index;
+      }
+    }
+  }
+  const twoSidedLoBound = 1 - Math.max(maxEffect, leaderBrake);
+
   for (const r of racers) {
     if (r.finished) {
       r.governorMult = 1.0;
@@ -327,18 +354,32 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
       shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
     }
 
-    // ── DIRECTOR contest-injector pull (director master: cfg.directorEnabled) ──
-    // A featured racer is pulled, mean-reverting, toward the front anchor = median + anchorOffset
-    // (racer-lengths ahead). anchorGap > 0 = ahead of the anchor → gentle pull back; < 0 = behind
-    // → pull forward, up to ±maxEffect. Non-featured racers get exactly zero. Position/seed-coupled
-    // only (gap to median, rank-blind featured set) — never targetRank.
+    // ── DIRECTOR contest-injector (director master: cfg.directorEnabled) ──
     let director = 0;
-    if (featured && featured.has(r.index)) {
+    let loBound = 1 - maxEffect;
+    if (twoSided) {
+      // TWO-SIDED CONTEST: brake the instantaneous leader; boost featured challengers toward it.
+      if (r.index === leaderIndex) {
+        // Brake the front-tip (down to −leaderBrake). Naturalness-safe: braking only slows.
+        director = -leaderBrake;
+        loBound = twoSidedLoBound;
+      } else if (featured && featured.has(r.index)) {
+        // Boost a featured challenger toward the leader — mean-reverting on the gap BEHIND the
+        // leader (racer-lengths, ≥ 0), gain = pullStrength, capped at challengerBoost (≤ maxEffect).
+        // The median-gap brake keeps the field tight, so the featured cast is near the front → the
+        // boost contests P1. Whoever overtakes becomes the new (braked) leader → the lead rotates.
+        const gapBehindLeader = arcT(leaderT, r.t, isOpen) * lenScale;
+        director = Math.min(challengerBoost, pullStrength * gapBehindLeader);
+      }
+    } else if (featured && featured.has(r.index)) {
+      // LEGACY one-sided anchor pull (both two-sided strengths 0): mean-reverting toward the front
+      // anchor = median + anchorOffset. Non-featured racers get exactly zero. Byte-identical to Stage A1.
       const anchorGap = gapLengths - anchorOffset;
       director = clamp(-pullStrength * anchorGap, -maxEffect, maxEffect);
     }
 
-    const target = clamp(1 + w * (cohesion + shuffle + director), 1 - maxEffect, 1 + maxEffect);
+    // Boost side always capped at +maxEffect; brake side may reach −leaderBrake in two-sided mode.
+    const target = clamp(1 + w * (cohesion + shuffle + director), loBound, 1 + maxEffect);
     // Rate-limit toward the target so the applied speed eases (never a sudden switch); the
     // per-frame change is hard-bounded by maxStep.
     const prev = r.governorMult ?? 1.0;

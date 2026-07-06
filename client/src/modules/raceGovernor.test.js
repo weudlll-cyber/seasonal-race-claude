@@ -343,3 +343,61 @@ describe('applyGovernor — director pull (independent master)', () => {
     racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
 });
+
+// ── Action-1 TWO-SIDED contest (leader brake + challenger boost) ──────────────
+describe('applyGovernor — Action-1 two-sided contest', () => {
+  // castSize ≥ N → the whole field is featured (deterministic: every non-leader is a challenger).
+  const TWO = {
+    ...DIRCFG,
+    directorCastSize: 10,
+    directorSettling: 0,
+    directorLeaderBrake: 0.15,
+    directorChallengerBoost: 0.1,
+    directorPullStrength: 0.06,
+  };
+  const runTwo = (racers, cfg, n = 40) => {
+    for (let i = 0; i < n; i++) applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 }), cfg);
+  };
+
+  it('brakes the instantaneous leader and boosts the challengers behind it', () => {
+    const racers = mkRacers([0.5, 0.3, 0.1]); // idx0 leader, idx1/idx2 challengers
+    runTwo(racers, TWO);
+    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
+    expect(racers[1].governorMult).toBeGreaterThan(1.0); // challenger boosted toward leader
+    expect(racers[2].governorMult).toBeGreaterThan(1.0);
+  });
+
+  it('brake side reaches below the symmetric −maxEffect floor (asymmetric, down to −leaderBrake)', () => {
+    const racers = mkRacers([0.5, 0.3, 0.1]);
+    runTwo(racers, TWO, 80);
+    expect(racers[0].governorMult).toBeLessThan(1 - TWO.maxEffect + 1e-9); // below 0.88
+    expect(racers[0].governorMult).toBeGreaterThanOrEqual(1 - TWO.directorLeaderBrake - 1e-9); // ≥ 0.85
+  });
+
+  it('challenger boost never exceeds +maxEffect (natural ceiling) and is capped at challengerBoost', () => {
+    // Gap 2.9 lengths × pullStrength 0.06 = 0.174 > challengerBoost 0.10 → saturates at the cap.
+    const racers = mkRacers([3.0, 0.1, 0.05]);
+    runTwo(racers, TWO, 80);
+    racers.forEach((r) => expect(r.governorMult).toBeLessThanOrEqual(1 + TWO.maxEffect + 1e-9));
+    expect(racers[1].governorMult).toBeCloseTo(1 + TWO.directorChallengerBoost, 2); // capped at +0.10
+  });
+
+  it('still fades to EXACTLY 1.0 in OUTCOME', () => {
+    const racers = mkRacers([0.5, 0.3, 0.1]);
+    racers.forEach((r) => (r.governorMult = 0.9));
+    applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: 0.55, corrStartFrac: 0.55 }), TWO);
+    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
+  });
+
+  it('both strengths 0 → byte-identical to omitting them (legacy one-sided anchor pull)', () => {
+    const a = mkRacers([0.5, 0.3, 0.1]);
+    const b = mkRacers([0.5, 0.3, 0.1]);
+    const withZeros = { ...TWO, directorLeaderBrake: 0, directorChallengerBoost: 0 };
+    const omitted = { ...TWO };
+    delete omitted.directorLeaderBrake;
+    delete omitted.directorChallengerBoost;
+    runTwo(a, withZeros, 25);
+    runTwo(b, omitted, 25);
+    a.forEach((r, i) => expect(r.governorMult).toBeCloseTo(b[i].governorMult, 12));
+  });
+});
