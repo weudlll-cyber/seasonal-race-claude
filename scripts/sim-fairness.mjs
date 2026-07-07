@@ -1005,6 +1005,8 @@ export function runSingleRace({
     if (STRIP_METRICS && racerTargetRankMap) {
       for (const [idx, rank] of racerTargetRankMap.entries()) if (rank === 1) { smWinnerIdx = idx; break; }
     }
+    let   smWinnerRankAt025    = null; // winner's live rank at PULK start (0.25) — is he already deep before the scramble?
+    let   smWinnerRankAt050    = null; // winner's live rank at PULK end (0.50) — did the PULK contest push him deep?
     let   smWinnerRankAt055    = null; // winner's live rank at the first OUTCOME step (far back = drew badly)
     let   smWinnerMaxTraj      = 1.0;  // winner's peak trajectoryMult during OUTCOME (late-surge proxy)
     let   smWinnerOutcomeSteps = 0;    // winner OUTCOME steps observed
@@ -1263,6 +1265,13 @@ export function runSingleRace({
               smNatSteps++;
               if (nf > smNatMax) smNatMax = nf;
               if (nf > NAT_CEIL * 1.001) smNatExceed++; // > natural ceiling (+0.1% float margin) = tool over-speed
+            }
+            // Assigned-winner journey: capture his live rank at PULK start (0.25) and PULK end (0.50)
+            // so we can see whether he starts deep or the PULK contest buries him.
+            if (smWinnerIdx >= 0) {
+              const wrank = live.findIndex((r) => r.index === smWinnerIdx) + 1; // 0 if finished/not live
+              if (smWinnerRankAt025 === null && raceProgress >= SD_PULK_START) smWinnerRankAt025 = wrank;
+              if (smWinnerRankAt050 === null && raceProgress >= SD_PULK_END) smWinnerRankAt050 = wrank;
             }
             // Worst-case assigned winner: rank entering OUTCOME + peak controller boost (late surge).
             if (smWinnerIdx >= 0 && inOut) {
@@ -2018,6 +2027,8 @@ export function runSingleRace({
         winner: {
           idx:            smWinnerIdx,
           targetRank:     targetRankOf(smWinnerIdx),
+          rankAt025:      smWinnerRankAt025,
+          rankAt050:      smWinnerRankAt050,
           rankAt055:      smWinnerRankAt055,
           finalRank:      smWinnerIdx >= 0 ? (racers.find((r) => r.index === smWinnerIdx)?.finishRank ?? null) : null,
           maxTrajMult:    +smWinnerMaxTraj.toFixed(4),
