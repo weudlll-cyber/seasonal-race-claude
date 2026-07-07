@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "g10_30-city-circuit",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "city-circuit",
+      "trackName": "City Circuit",
+      "isOpen": false,
+      "racerType": "motorbike",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 40.5,
+      "distinctP1Mean": 7.433,
+      "leadChangeRate": 0.01137,
+      "podiumShuffleRate": 0.02149,
+      "gap2ndLenMean": 1.456,
+      "gapMedLenMean": 8.155,
+      "unpredictability": {
+        "rankVsP1Frac": 0.085,
+        "rankVsTop3Frac": 0.084,
+        "nPairs": 1200
+      }
+    }
+  ]
+}

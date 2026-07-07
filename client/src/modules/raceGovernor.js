@@ -25,18 +25,36 @@
 //              math), and rate-limited per step so speed changes are smooth.
 //
 //              Shared by the browser engine (RaceScreen/index.jsx) and the headless sim
-//              (sim-fairness.mjs) so both measure the identical mechanism (single source,
-//              like raceRubberBand.js). Reuses computeMedianT (imported — no re-impl) and
+//              (sim-fairness.mjs) so both measure the identical mechanism (single source).
+//              Owns computeMedianT (the sole shared field-median consumer) and reuses
 //              easeInOutCubic. Deterministic + browser/sim parity: all inputs (t, median,
 //              progress, seed, index) are deterministic and no Math.random is used.
-//
-//              Stage B ships DEFAULT OFF and runs ALONGSIDE surge + rubber-band; nothing
-//              is replaced. Deactivating surge/RB is a separate later stage.
 // ============================================================
 
-import { computeMedianT } from './raceRubberBand.js';
 import { mulberry32 } from './racePlanner.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
+
+/**
+ * Median of non-finished racers' RAW cumulative-t. Relocated here (from the retired
+ * raceRubberBand.js) because the field governor / director is now the sole consumer of the
+ * shared per-step field median (the browser + sim precompute it once and hand it to
+ * applyGovernor via sharedMedianT).
+ *
+ * CRITICAL: raw cumulative-t, NOT tPos / ((t % 1) + 1) % 1 — the governor measures the
+ * race-DISTANCE gap to the field, so a racer a full lap ahead must show a large positive gap.
+ *
+ * @param {Array<{t:number, finished:boolean}>} racers
+ * @returns {number|null} median raw-t, or null if no non-finished racers
+ */
+export function computeMedianT(racers) {
+  const ts = [];
+  for (const r of racers) if (!r.finished) ts.push(r.t);
+  if (ts.length === 0) return null;
+  ts.sort((a, b) => a - b);
+  const n = ts.length;
+  // Mean of the two central order-statistics for even N, single middle for odd N.
+  return n % 2 ? ts[(n - 1) / 2] : (ts[n / 2 - 1] + ts[n / 2]) / 2;
+}
 
 // Governor shuffle-phase seed constant. MUST differ from the other per-race streams so the
 // shuffle phase cannot correlate with the target-rank assignment: target-rank shuffle uses
@@ -276,7 +294,7 @@ export function smartFeaturedPick(
 
 /**
  * Apply the field governor for one physics step, mutating r.governorMult per active racer.
- * Caller multiplies r.governorMult into the t-advance (alongside rubberBandMult / pulkSurgeMult).
+ * Caller multiplies r.governorMult into the t-advance (alongside pulkSurgeMult).
  *
  * Carries THREE independent, separately-gated pre-OUTCOME terms, summed into one governorMult:
  *   • TAIL-LIFT cohesion + SHUFFLE — gated by cfg.enabled (the governor master).
@@ -307,8 +325,8 @@ export function smartFeaturedPick(
  *   directorLeaderBrake / directorChallengerBoost (Action-1): both 0 (default) → legacy one-sided
  *   anchor pull; either > 0 → TWO-SIDED contest (brake instantaneous leader − leaderBrake, boost
  *   featured challengers toward it + up to challengerBoost). Rank-blind (position + seed only).
- * @param {number} [sharedMedianT] field median for this step, precomputed once and shared with
- *   the rubber-band (A5 — avoids a second sort/step). Omit → computed internally.
+ * @param {number} [sharedMedianT] field median for this step, precomputed once by the caller
+ *   (avoids a second sort/step). Omit → computed internally.
  */
 export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedianT) {
   const activePhase = phase === 'PRE_PULK' || phase === 'PULK' || phase === 'TRANSITION';

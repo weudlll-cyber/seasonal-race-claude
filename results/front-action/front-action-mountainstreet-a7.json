@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "mountainstreet-a7",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": true,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": true,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "mountainstreet",
+      "trackName": "Mountainstreet",
+      "isOpen": true,
+      "racerType": "boarder",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 2.4,
+      "distinctP1Mean": 3.167,
+      "leadChangeRate": 0.00147,
+      "podiumShuffleRate": 0.00598,
+      "gap2ndLenMean": 1.68,
+      "gapMedLenMean": 11.02,
+      "unpredictability": {
+        "rankVsP1Frac": 0.161,
+        "rankVsTop3Frac": 0.198,
+        "nPairs": 1800
+      }
+    }
+  ]
+}

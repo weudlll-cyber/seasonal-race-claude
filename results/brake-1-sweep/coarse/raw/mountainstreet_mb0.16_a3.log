@@ -1,0 +1,54 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 30
+Teilnehmer pro Rennen  : 60
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 30 × 20 × 10 × 1 = 6000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\coarse\raw\mountainstreet_mb0.16_a3
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (cap-the-lead: brakeThreshold=0.03 gapScale=0.025 maxBrake=0.16 ramp=2000ms endgame=0.9 TIP-FOCUS(leader→2nd)=0.01)
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+Action axis            : action=1.000 → director cast=2 dwell=0.040 pull=0.120 (anchorOffset=2 settling=0.05 FIXED)
+
+── Mountainstreet (mountainstreet) — open=true path=15665px width=300px
+   boarder    60s  finishT=0.500  rows=3  sf=0.71  χ²=2.6 p=0.272 [265s]
+     1.5×-Gate: ❌ FAIL  (R0=37%(e33%)✓ R1=20%(e33%)✗ R2=43%(e33%)✓)
+     Avoidance: R0=40501Ø  R1=46967Ø  R2=47823Ø  Lateral=150031Ø  R1≥1×vorne=20.0/20Ø
+     Re-Rolls: Ø 5.3 pro Racer  Physische Renndauer: Ø 59.4s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=100.0%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=61.1%  viol=Ø7.8/max59  boost=40.8%  brake=55.8%  blocked=56.9%  wBlocked=31.8%  Δ5sMax=0.250  oscN=19.9Ø
+     FairChance: B1exact=20.0%  B1top5=79.3%  (gap: top5-exact=59.3%)
+     LateralQ: overlap=0.0%  honest=2.0%  resolution=Ø0.0fr  zigzag=0.000032  latSpd=0.000328  brake=62.8%  bmFail=1372(leaderBraked=1244)  stableOvt=13.702  outcomeReached=100%
+     FairChance by row: R0:exact=26%/top5=81%(n=47)  R1:exact=17%/top5=78%(n=46)  R2:exact=18%/top5=79%(n=57)
+
+
+Simulation abgeschlossen in 264.7s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |       119 |      150 |   79.3% |           0 |          0 |        — |   79.3% |     0.0% |
+| B2 (6–15) |       236 |      300 |   78.7% |           0 |          0 |        — |   78.7% |     0.0% |
+| B3 (16–25) |       211 |      300 |   70.3% |           0 |          0 |        — |   70.3% |     0.0% |
+| B4 (26–40) |       319 |      450 |   70.9% |           0 |          0 |        — |   70.9% |     0.0% |
+| B5 (41+)  |       523 |      600 |   87.2% |           0 |          0 |        — |   87.2% |     0.0% |
+| OVERALL   |           |          |         |             |            |          |   78.2% |     0.0% |
+
+--- Per-Track Zone Success ---
+  Mountainstreet   (open  )  B1=79%  B2=79%  B3=70%  B4=71%  B5=87%
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\coarse\raw\mountainstreet_mb0.16_a3\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\coarse\raw\mountainstreet_mb0.16_a3\fairness-report.md
+
+=== Front-Action (mountainstreet-mb0.16-a3) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\front-action\front-action-mountainstreet-mb0.16-a3.json
+  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;
+   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)
+  Mountainstreet   (open  )  leadΔ=2.1  distinctP1=2.8  shuffle=0.5%  gap2nd=1.5  gapMed=10.8  corr[P1=0.14 top3=0.19]
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

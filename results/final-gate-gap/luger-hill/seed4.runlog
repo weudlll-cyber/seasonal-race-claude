@@ -1,0 +1,48 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 50
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 50 × 20 × 10 × 1 = 10000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\luger-hill\seed4
+Seed                   : 4 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (cap-the-lead: brakeThreshold=0.03 gapScale=0.025 maxBrake=0.1 ramp=2000ms endgame=0.9)
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Luger hill (luger-hill) — open=true path=10347px width=250px
+   luge       60s  finishT=0.833  rows=5  sf=0.74  χ²=1.4 p=0.845 [72s]
+     1.5×-Gate: ✅ PASS  (R0=14%(e20%)✓ R1=24%(e20%)✓ R2=22%(e20%)✓ R3=20%(e20%)✓ R4=20%(e20%)✓)
+     Avoidance: R0=15036Ø  R1=17537Ø  R2=17951Ø  Lateral=93198Ø  R1≥1×vorne=7.9/8Ø
+     Re-Rolls: Ø 5.1 pro Racer  Physische Renndauer: Ø 56.7s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=98.3%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=64.7%  viol=Ø5.7/max39  boost=41.1%  brake=54.4%  blocked=63.3%  wBlocked=34.4%  Δ5sMax=0.250  oscN=16.3Ø
+     FairChance: B1exact=31.6%  B1top5=85.6%  (gap: top5-exact=54.0%)
+     LateralQ: overlap=0.0%  honest=3.0%  resolution=Ø0.0fr  zigzag=0.000072  latSpd=0.000336  brake=65.4%  bmFail=30(leaderBraked=19)  stableOvt=9.982  outcomeReached=100%
+     FairChance by row: R0:exact=33%/top5=85%(n=48)  R1:exact=37%/top5=91%(n=46)  R2:exact=33%/top5=87%(n=54)  R3:exact=35%/top5=80%(n=49)  R4:exact=21%/top5=85%(n=53)
+
+
+Simulation abgeschlossen in 71.9s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |       214 |      250 |   85.6% |           0 |          0 |        — |   85.6% |    30.6% |
+| B2 (6–15) |       407 |      500 |   81.4% |           0 |          0 |        — |   81.4% |    39.8% |
+| B3 (16–25) |       360 |      500 |   72.0% |           0 |          0 |        — |   72.0% |    15.7% |
+| B4 (26–40) |       665 |      750 |   88.7% |           0 |          0 |        — |   88.7% |    18.8% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |        — |
+| OVERALL   |           |          |         |             |            |          |   82.3% |    24.3% |
+
+--- Per-Track Zone Success ---
+  Luger hill       (open  )  B1=86%  B2=81%  B3=72%  B4=89%  B5=—
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\luger-hill\seed4\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\luger-hill\seed4\fairness-report.md
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

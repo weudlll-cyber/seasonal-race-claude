@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "A-luger-hill",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "luger-hill",
+      "trackName": "Luger hill",
+      "isOpen": true,
+      "racerType": "luge",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 20.767,
+      "distinctP1Mean": 5.833,
+      "leadChangeRate": 0.01269,
+      "podiumShuffleRate": 0.02666,
+      "gap2ndLenMean": 0.78,
+      "gapMedLenMean": 7.258,
+      "unpredictability": {
+        "rankVsP1Frac": 0.043,
+        "rankVsTop3Frac": 0.024,
+        "nPairs": 1800
+      }
+    }
+  ]
+}

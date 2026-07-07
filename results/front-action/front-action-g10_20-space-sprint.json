@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "g10_20-space-sprint",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "space-sprint",
+      "trackName": "Space Sprint",
+      "isOpen": true,
+      "racerType": "rocket",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 25.7,
+      "distinctP1Mean": 8.267,
+      "leadChangeRate": 0.01465,
+      "podiumShuffleRate": 0.036,
+      "gap2ndLenMean": 1.502,
+      "gapMedLenMean": 10.72,
+      "unpredictability": {
+        "rankVsP1Frac": 0.115,
+        "rankVsTop3Frac": 0.106,
+        "nPairs": 1800
+      }
+    }
+  ]
+}

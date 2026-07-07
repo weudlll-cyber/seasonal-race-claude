@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "p6-garden-path",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "garden-path",
+      "trackName": "Garden Path",
+      "isOpen": false,
+      "racerType": "snail",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 32.367,
+      "distinctP1Mean": 7.733,
+      "leadChangeRate": 0.01186,
+      "podiumShuffleRate": 0.02408,
+      "gap2ndLenMean": 1.847,
+      "gapMedLenMean": 10.138,
+      "unpredictability": {
+        "rankVsP1Frac": 0.234,
+        "rankVsTop3Frac": 0.226,
+        "nPairs": 1200
+      }
+    }
+  ]
+}

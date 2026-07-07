@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "g5_30-seatrack",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": false
+    }
+  },
+  "combos": [
+    {
+      "trackId": "seatrack",
+      "trackName": "Seatrack",
+      "isOpen": true,
+      "racerType": "dolphin",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 25.433,
+      "distinctP1Mean": 7.2,
+      "leadChangeRate": 0.0145,
+      "podiumShuffleRate": 0.0343,
+      "gap2ndLenMean": 1.039,
+      "gapMedLenMean": 6.853,
+      "unpredictability": {
+        "rankVsP1Frac": 0.101,
+        "rankVsTop3Frac": 0.099,
+        "nPairs": 1800
+      }
+    }
+  ]
+}

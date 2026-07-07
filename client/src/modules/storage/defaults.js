@@ -132,7 +132,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
-  showRubberBandDiag: false, // RUBBER-BAND diagnostics overlay: live cfg + leader brake window/gap/mult/exempt
   showGovernorDiag: false, // GOVERNOR diagnostics overlay: resolved phase fade + leader/straggler cohesion/shuffle/mult
   endgameThreshold: 0.9,
   // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
@@ -260,41 +259,6 @@ export const DEFAULT_RACE_ZONE_CONFIG = {
   position: 0.5,
   width: 0.05,
   brakeStrength: 0.85,
-};
-
-export const DEFAULT_RUBBER_BAND_CONFIG = {
-  // Master on/off. DEFAULT-OFF: this "cap the lead" redesign stays off until the
-  // fairness sweep (band-reach Δ ≤ 1pp, 0 Holm-unfair) licenses it default-on.
-  enabled: true,
-  // "Cap the lead" — brake front-breakaway racers toward a max gap from the field
-  // median (raw cumulative-t). A racer is braked proportionally once its own gap to
-  // the median exceeds brakeThreshold; eligibility is gap-based, not "is leader".
-  //   brakeFactor = 1 - maxBrake * clamp((myGap - brakeThreshold) / gapScale, 0, 1)
-  // brakeThreshold: gap (fraction of finishT) at which the cap engages. 0.03 sits
-  //   above typical lead-group spread → a contested lead is NOT braked, only a lone
-  //   runaway (10× the legacy over-sensitive 0.003). Sweep-calibratable.
-  brakeThreshold: 0.03,
-  // gapScale: proportional ramp width; full brake reached at gap ≈ brakeThreshold +
-  //   gapScale (≈ 0.055). Soft onset (no discontinuity at the threshold).
-  gapScale: 0.025,
-  // maxBrake: max slowdown (floor 1 - maxBrake). 0.10 nets only −1% against the
-  //   controller's +10% recovery authority (clamp 1.10), so it cannot eject a
-  //   deep-B1 racer across a band boundary. NOTE: 0.15 is the post-sweep ceiling —
-  //   do NOT expose 0.15 in the DevScreen slider yet (locked at 0.10 until the sweep).
-  maxBrake: 0.1,
-  // Time in ms to ease rubberBandMult toward a new target (temporal smoother only,
-  // NOT a phase term) — prevents the brake snapping on/off.
-  boostRampMs: 2000,
-  // Hard-off: rubber-band fully off above this leader-progress fraction, giving the
-  // P-controller a clean final window. Dedicated field (was cross-borrowed from
-  // DEFAULT_CAMERA_CONFIG.endgameThreshold — backlog #2, now split).
-  rubberBandEndgameThreshold: 0.9,
-  // Brake-1 TIP-FOCUS (default OFF = 0). When > 0, the brake targets ONLY the instantaneous
-  // front-tip (the current leader), keyed on the leader→2nd gap (fraction of finishT) with this
-  // as its dead-zone, instead of braking every ahead-of-median racer. Holds a real breakaway
-  // without uniformly slowing the field. 0 → legacy median-gap behaviour (byte-identical).
-  // Experimental; tuned by the Brake-1 sweep, nothing ships on.
-  rubberBandTipThreshold: 0,
 };
 
 export const DEFAULT_RACE_DYNAMICS_CONFIG = {

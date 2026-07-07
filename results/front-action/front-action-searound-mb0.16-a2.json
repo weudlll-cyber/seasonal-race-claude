@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "searound-mb0.16-a2",
+    "nRaces": 30,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": true,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": true,
+      "pulkSurgeEnabled": false,
+      "rubberBand": true
+    }
+  },
+  "combos": [
+    {
+      "trackId": "searound",
+      "trackName": "Searound",
+      "isOpen": false,
+      "racerType": "manta",
+      "durationSec": 60,
+      "nRaces": 30,
+      "leadChangesMean": 2.067,
+      "distinctP1Mean": 2.867,
+      "leadChangeRate": 0.00072,
+      "podiumShuffleRate": 0.00392,
+      "gap2ndLenMean": 2.402,
+      "gapMedLenMean": 13.266,
+      "unpredictability": {
+        "rankVsP1Frac": 0.121,
+        "rankVsTop3Frac": 0.181,
+        "nPairs": 1200
+      }
+    }
+  ]
+}

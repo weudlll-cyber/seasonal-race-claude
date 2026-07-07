@@ -1,0 +1,204 @@
+{
+  "meta": {
+    "label": "areaoff__garden-path",
+    "nRaces": 150,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "arms": {
+      "bonusMult": 0,
+      "reRollVariationPercent": 75,
+      "pulkSurgeEnabled": true,
+      "rbMaxBrake": 0.1
+    }
+  },
+  "combos": [
+    {
+      "trackId": "garden-path",
+      "trackName": "Garden Path",
+      "isOpen": false,
+      "racerType": "snail",
+      "durationSec": 60,
+      "nRaces": 150,
+      "breakawayRate": 0.98,
+      "peakGapMean": 0.04635,
+      "peakGapMedian": 0.0465,
+      "peakLeaderRankDist": {
+        "1": 2,
+        "3": 1,
+        "4": 3,
+        "5": 4,
+        "6": 1,
+        "7": 3,
+        "8": 4,
+        "9": 8,
+        "10": 5,
+        "11": 3,
+        "12": 6,
+        "13": 2,
+        "14": 2,
+        "15": 3,
+        "16": 2,
+        "17": 6,
+        "18": 3,
+        "19": 4,
+        "21": 5,
+        "22": 2,
+        "23": 3,
+        "24": 3,
+        "25": 7,
+        "26": 6,
+        "27": 1,
+        "28": 2,
+        "29": 5,
+        "30": 5,
+        "31": 5,
+        "32": 4,
+        "33": 6,
+        "34": 3,
+        "35": 4,
+        "36": 5,
+        "37": 3,
+        "38": 6,
+        "39": 7,
+        "40": 6
+      },
+      "rank1Share": 0.013,
+      "rankGe4Share": 0.98,
+      "peakLeaderSurgedShare": 0.833,
+      "meanDecompositionAtPeak": {
+        "spreadFactor": 1.0497,
+        "speedBonusMult": 1.0023,
+        "areaBonusMult": 1,
+        "rubberBandMult": 0.9728,
+        "pulkSurgeMult": 1.01
+      },
+      "gapCurve": [
+        {
+          "bin": 0,
+          "gapMedianMean": 0.00423,
+          "gap2ndMean": 0,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.05,
+          "gapMedianMean": 0.00851,
+          "gap2ndMean": 0.00063,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.1,
+          "gapMedianMean": 0.01316,
+          "gap2ndMean": 0.00152,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.15,
+          "gapMedianMean": 0.01676,
+          "gap2ndMean": 0.00269,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.2,
+          "gapMedianMean": 0.01986,
+          "gap2ndMean": 0.00325,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.25,
+          "gapMedianMean": 0.02298,
+          "gap2ndMean": 0.00347,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.3,
+          "gapMedianMean": 0.02601,
+          "gap2ndMean": 0.00358,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.35,
+          "gapMedianMean": 0.0297,
+          "gap2ndMean": 0.00416,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.4,
+          "gapMedianMean": 0.03413,
+          "gap2ndMean": 0.00508,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.45,
+          "gapMedianMean": 0.03876,
+          "gap2ndMean": 0.00615,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.5,
+          "gapMedianMean": 0.04363,
+          "gap2ndMean": 0.00696,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.55,
+          "gapMedianMean": 0.04564,
+          "gap2ndMean": 0.00678,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.6,
+          "gapMedianMean": 0.04105,
+          "gap2ndMean": 0.00584,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.65,
+          "gapMedianMean": 0.03708,
+          "gap2ndMean": 0.00483,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.7,
+          "gapMedianMean": 0.03549,
+          "gap2ndMean": 0.00527,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.75,
+          "gapMedianMean": 0.03562,
+          "gap2ndMean": 0.00644,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.8,
+          "gapMedianMean": 0.03604,
+          "gap2ndMean": 0.0073,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.85,
+          "gapMedianMean": 0.03681,
+          "gap2ndMean": 0.00815,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.9,
+          "gapMedianMean": 0.03771,
+          "gap2ndMean": 0.00892,
+          "nRaces": 150
+        },
+        {
+          "bin": 0.95,
+          "gapMedianMean": 0.03961,
+          "gap2ndMean": 0.00989,
+          "nRaces": 150
+        }
+      ],
+      "bandReachContext": {
+        "fairChanceExactRate": 0.28133333333333327,
+        "fairChanceTop5Rate": 0.7639999999999983,
+        "chiSqP": 0.3051699018473426
+      }
+    }
+  ]
+}

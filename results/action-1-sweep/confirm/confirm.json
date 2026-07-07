@@ -1,0 +1,98 @@
+[
+  {
+    "track": "searound",
+    "open": false,
+    "nRaces": 100,
+    "leadΔ": 23.752,
+    "podium": 26.045,
+    "distP1": 8.69,
+    "stableOvt": 8.381,
+    "gapMed": 6,
+    "gapMax": 17.8,
+    "corrP1": 0.11,
+    "corrT3": 0.095,
+    "bands": [
+      0.822,
+      0.785,
+      0.71,
+      0.8886666666666667,
+      null
+    ],
+    "startP": 0.2627656997420271,
+    "startPHolm": 0.788,
+    "holmUnfair": false,
+    "fair": true
+  },
+  {
+    "track": "garden-path",
+    "open": false,
+    "nRaces": 100,
+    "leadΔ": 32.827,
+    "podium": 35.708,
+    "distP1": 8.68,
+    "stableOvt": 8.285,
+    "gapMed": 6.9,
+    "gapMax": 18.2,
+    "corrP1": 0.096,
+    "corrT3": 0.096,
+    "bands": [
+      0.852,
+      0.809,
+      0.711,
+      0.882,
+      null
+    ],
+    "startP": 0.36245687216846423,
+    "startPHolm": 0.788,
+    "holmUnfair": false,
+    "fair": true
+  },
+  {
+    "track": "mountainstreet",
+    "open": true,
+    "nRaces": 100,
+    "leadΔ": 36.794,
+    "podium": 40.391,
+    "distP1": 8.34,
+    "stableOvt": 18.514,
+    "gapMed": 5,
+    "gapMax": 12,
+    "corrP1": 0.124,
+    "corrT3": 0.1,
+    "bands": [
+      0.75,
+      0.756,
+      0.703,
+      0.726,
+      0.879
+    ],
+    "startP": 0.6185008913877557,
+    "startPHolm": 0.788,
+    "holmUnfair": false,
+    "fair": true
+  },
+  {
+    "track": "seatrack",
+    "open": true,
+    "nRaces": 100,
+    "leadΔ": 35.68,
+    "podium": 39.363,
+    "distP1": 8.7,
+    "stableOvt": 18.64,
+    "gapMed": 5,
+    "gapMax": 11.2,
+    "corrP1": 0.118,
+    "corrT3": 0.11,
+    "bands": [
+      0.822,
+      0.78,
+      0.702,
+      0.718,
+      0.872
+    ],
+    "startP": 0.08891451183324517,
+    "startPHolm": 0.356,
+    "holmUnfair": false,
+    "fair": true
+  }
+]

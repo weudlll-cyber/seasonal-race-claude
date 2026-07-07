@@ -24,7 +24,6 @@ import RaceTuningSection from './sections/RaceTuningSection.jsx';
 import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
-import RubberBandSection from './sections/RubberBandSection.jsx';
 import RaceZonesSection from './sections/RaceZonesSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import UserManagementSection from './sections/UserManagementSection.jsx';
@@ -93,14 +92,6 @@ const SECTIONS = [
     label: 'Race Tuning',
     desc: 'Physics and dynamics — speed range, re-rolls, avoidance, drafting',
     component: RaceTuningSection,
-    tier: 'advanced',
-  },
-  {
-    id: 'rubber-band',
-    icon: '🔁',
-    label: 'Rubber Band',
-    desc: 'Gap-based catch-up boost for trailing racers — keeps the field compressed',
-    component: RubberBandSection,
     tier: 'advanced',
   },
   {

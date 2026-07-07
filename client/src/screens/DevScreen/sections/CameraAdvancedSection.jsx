@@ -1395,12 +1395,6 @@ function CameraAdvancedSection() {
             tip: 'Current and previous leader, pending status, minGap and debounce.',
           },
           {
-            key: 'showRubberBandDiag',
-            testId: 'rubber-band-diag-toggle',
-            label: 'Show RUBBER-BAND diagnostics',
-            tip: 'Live rubber-band cfg (thresholds/brake/ramp) next to the leader’s brake window, gap vs threshold, applied brake, and surge-exempt state. Bottom-center.',
-          },
-          {
             key: 'showGovernorDiag',
             testId: 'governor-diag-toggle',
             label: 'Show GOVERNOR diagnostics',

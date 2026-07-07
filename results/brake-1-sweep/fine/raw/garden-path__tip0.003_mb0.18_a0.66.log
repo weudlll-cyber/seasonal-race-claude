@@ -1,0 +1,49 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 30
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 30 × 20 × 10 × 1 = 6000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\fine\raw\garden-path__tip0.003_mb0.18_a0.66
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (cap-the-lead: brakeThreshold=0.03 gapScale=0.025 maxBrake=0.18 ramp=2000ms endgame=0.9 TIP-FOCUS(leader→2nd)=0.003)
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+Action axis            : action=0.660 → director cast=3 dwell=0.081 pull=0.089 (anchorOffset=2 settling=0.05 FIXED)
+
+── Garden Path (garden-path) — open=false path=4773px width=198px
+   snail      60s  finishT=2.000  rows=3  sf=0.77  χ²=0.3 p=0.847 [195s]
+     LateralQ: honest=2.2%  overlap=0.0%  maxSpread=0.257laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=40.0%  B1top5=84.7%  (gap: top5-exact=44.7%)
+     FairChance by row: R0:exact=38%/top5=95%(n=55)  R1:exact=45%/top5=84%(n=44)  R2:exact=37%/top5=75%(n=51)
+
+
+Simulation abgeschlossen in 195.0s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |         0 |        0 |       — |         127 |        150 |    84.7% |   84.7% |     8.7% |
+| B2 (6–15) |         0 |        0 |       — |         237 |        300 |    79.0% |   79.0% |     7.9% |
+| B3 (16–25) |         0 |        0 |       — |         202 |        300 |    67.3% |   67.3% |     1.0% |
+| B4 (26–40) |         0 |        0 |       — |         391 |        450 |    86.9% |   86.9% |     0.0% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |        — |
+| OVERALL   |           |          |         |             |            |          |   79.8% |     3.3% |
+
+--- Per-Track Zone Success ---
+  Garden Path      (closed)  B1=85%  B2=79%  B3=67%  B4=87%  B5=—
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\fine\raw\garden-path__tip0.003_mb0.18_a0.66\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\brake-1-sweep\fine\raw\garden-path__tip0.003_mb0.18_a0.66\fairness-report.md
+
+=== Front-Action (run) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\front-action\front-action-run.json
+  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;
+   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)
+  Garden Path      (closed)  leadΔ=2.6  distinctP1=3.2  shuffle=0.4%  gap2nd=2.1  gapMed=13.8  corr[P1=0.21 top3=0.23]
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

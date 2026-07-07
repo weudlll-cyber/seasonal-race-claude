@@ -316,8 +316,8 @@ function chooseFreeLaneDir(trailer, leader, active, halfSpan, tHalf, cap) {
 }
 
 // Parity-safe per-step forward t-advance components for a pair — the SAME speed model the
-// physics loop uses to advance r.t (baseSpeed × drafting boost × trajectory × areaBonus ×
-// rubberBand; the brake / pulk / zone terms are applied separately by the caller). All
+// physics loop uses to advance r.t (baseSpeed × drafting boost × trajectory × areaBonus;
+// the brake / pulk / zone terms are applied separately by the caller). All
 // fields are parity-safe: browser and sim advance t by an identical per-step amount, so a
 // closing rate derived from them is identical in both. Returns:
 //   trailerDenom   — the trailer's UNBRAKED forward speed (its t-advance when not braking).
@@ -332,14 +332,12 @@ function pairForwardSpeeds(trailer, leader, config) {
     (leader.baseSpeed ?? 0) *
     boostL *
     (leader.trajectoryMult ?? 1.0) *
-    (leader.areaBonusMult ?? 1.0) *
-    (leader.rubberBandMult ?? 1.0);
+    (leader.areaBonusMult ?? 1.0);
   const trailerDenom =
     (trailer.baseSpeed ?? 0) *
     boostT *
     (trailer.trajectoryMult ?? 1.0) *
-    (trailer.areaBonusMult ?? 1.0) *
-    (trailer.rubberBandMult ?? 1.0);
+    (trailer.areaBonusMult ?? 1.0);
   const leaderBrake =
     config.isOpen !== false && leader.avoidanceActive
       ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)

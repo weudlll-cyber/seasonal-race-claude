@@ -1,0 +1,53 @@
+[00:56:52] BATCH A launch: Stage 0 + Stage 1 (16 runs)
+[00:56:52] START s0-v1-searound
+[00:58:16] DONE  s0-v1-searound rc=0 (84s)
+[00:58:16] START s0-v1-garden-path
+[00:59:24] DONE  s0-v1-garden-path rc=0 (68s)
+[00:59:24] START s0-v1-mountainstreet
+[01:00:48] DONE  s0-v1-mountainstreet rc=0 (84s)
+[01:00:48] START s0-v1-seatrack
+[01:02:12] DONE  s0-v1-seatrack rc=0 (84s)
+[01:02:12] START s0-v2-searound
+[01:03:20] DONE  s0-v2-searound rc=0 (68s)
+[01:03:20] START s0-v2-garden-path
+[01:04:25] DONE  s0-v2-garden-path rc=0 (65s)
+[01:04:25] START s0-v2-mountainstreet
+[01:06:05] DONE  s0-v2-mountainstreet rc=0 (100s)
+[01:06:05] START s0-v2-seatrack
+[01:07:51] DONE  s0-v2-seatrack rc=0 (106s)
+[01:07:51] STAGE s0 COMPLETE
+[01:07:51] START s1-v1-searound
+[01:08:59] DONE  s1-v1-searound rc=0 (68s)
+[01:08:59] START s1-v1-garden-path
+[01:10:22] DONE  s1-v1-garden-path rc=0 (83s)
+[01:10:22] START s1-v1-mountainstreet
+[01:11:55] DONE  s1-v1-mountainstreet rc=0 (93s)
+[01:11:55] START s1-v1-seatrack
+[01:13:27] DONE  s1-v1-seatrack rc=0 (92s)
+[01:13:28] START s1-v2-searound
+[01:16:03] DONE  s1-v2-searound rc=0 (155s)
+[01:16:03] START s1-v2-garden-path
+[01:18:20] DONE  s1-v2-garden-path rc=0 (137s)
+[01:18:20] START s1-v2-mountainstreet
+[01:21:17] DONE  s1-v2-mountainstreet rc=0 (177s)
+[01:21:17] START s1-v2-seatrack
+[01:24:12] DONE  s1-v2-seatrack rc=0 (175s)
+[01:24:13] STAGE s1 COMPLETE
+[01:24:58] BATCH B launch: Stage 2 + Stage 3 (16 runs), areaBonus=0/2.0
+[01:24:58] START s2-v1-searound
+[01:27:03] DONE  s2-v1-searound rc=0 (125s)
+[01:27:03] START s2-v1-garden-path
+[01:29:09] DONE  s2-v1-garden-path rc=0 (126s)
+[01:29:09] START s2-v1-mountainstreet
+[01:32:04] DONE  s2-v1-mountainstreet rc=0 (175s)
+[01:32:04] START s2-v1-seatrack
+[01:35:07] DONE  s2-v1-seatrack rc=0 (183s)
+[01:35:07] START s2-v2-searound
+[01:37:10] DONE  s2-v2-searound rc=0 (123s)
+[01:37:10] START s2-v2-garden-path
+[01:38:50] DONE  s2-v2-garden-path rc=0 (101s)
+[01:38:51] START s2-v2-mountainstreet
+[01:39:10] DONE  s2-v2-mountainstreet rc=127 (19s)
+[01:39:10] START s2-v2-seatrack
+[01:41:33] DONE  s2-v2-seatrack rc=0 (143s)
+[01:41:33] STAGE s2 COMPLETE

@@ -1,0 +1,110 @@
+{
+  "head": "b7d7c7d",
+  "tracks": 10,
+  "seedsPerTrack": 6,
+  "racesPerTrack": 300,
+  "rowSizesByTrack": {
+    "dirt-oval": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "river-run": [
+      20,
+      20
+    ],
+    "space-sprint": [
+      14,
+      13,
+      13
+    ],
+    "luger-hill": [
+      8,
+      8,
+      8,
+      8,
+      8
+    ],
+    "garden-path": [
+      14,
+      13,
+      13
+    ],
+    "seatrack": [
+      14,
+      13,
+      13
+    ],
+    "city-circuit": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "mountainstreet": [
+      20,
+      20
+    ],
+    "searound": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+    ],
+    "ice-track": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "primary_bandReach": {
+    "threshold": 0.7,
+    "bindingZone": "B3 (always the tightest)",
+    "perTrackB3": {
+      "dirt-oval": 71.13,
+      "river-run": 71.03,
+      "space-sprint": 72.27,
+      "luger-hill": 70.4,
+      "garden-path": 69.97,
+      "seatrack": 71.87,
+      "city-circuit": 70.13,
+      "mountainstreet": 72.5,
+      "searound": 69.9,
+      "ice-track": 70.13
+    },
+    "failing": [
+      "garden-path",
+      "searound"
+    ],
+    "pass": false
+  },
+  "secondary_startRowBias": {
+    "test": "computeFairnessStats (native chi-square wins-by-row vs fair share), pooled 300 races/track",
+    "perTrackP": {
+      "dirt-oval": 0.5434,
+      "river-run": 0.6489,
+      "space-sprint": 0.1355,
+      "luger-hill": 0.5437,
+      "garden-path": 0.8322,
+      "seatrack": 0.0888,
+      "city-circuit": 0.6576,
+      "mountainstreet": 0.2467,
+      "searound": 0.744,
+      "ice-track": 0.9742
+    },
+    "minRawP": 0.0888,
+    "unfairTracks": [],
+    "holmNote": "Holm never lowers p; minRawP > 0.05 ⇒ all Holm-adjusted p > 0.05 ⇒ 0 Holm-unfair",
+    "pass": true
+  },
+  "exploratory_ordinal_NOT_A_GATE": {
+    "note": "per-band Spearman; over-powers at N=300 (flags |r|~0.03). Effect sizes negligible.",
+    "maxAbsR": 0.155
+  },
+  "overallGate": "FAILED"
+}

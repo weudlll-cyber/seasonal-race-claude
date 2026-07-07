@@ -373,7 +373,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  *   // Each physics step:
  *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
  *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * dt
+ *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * dt
  *
  * @param {object} racePlan  output of createRacePlan
  * @returns {object} TrajectoryController

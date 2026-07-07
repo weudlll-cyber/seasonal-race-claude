@@ -3,7 +3,7 @@
 // Path:        client/src/modules/raceZoneConfig.js
 // Project:     RaceArena
 // Created:     2026-06-19
-// Description: Storage CRUD for race-zone config. Mirrors rubberBandConfig.js pattern.
+// Description: Storage CRUD for race-zone config.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';

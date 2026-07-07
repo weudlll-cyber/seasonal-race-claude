@@ -1,0 +1,154 @@
+{
+  "head": "b7d7c7d",
+  "tracks": 10,
+  "seedsPerTrack": 6,
+  "racesPerTrack": 300,
+  "rowSizesByTrack": {
+    "dirt-oval": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "river-run": [
+      20,
+      20
+    ],
+    "space-sprint": [
+      14,
+      13,
+      13
+    ],
+    "luger-hill": [
+      8,
+      8,
+      8,
+      8,
+      8
+    ],
+    "garden-path": [
+      14,
+      13,
+      13
+    ],
+    "seatrack": [
+      14,
+      13,
+      13
+    ],
+    "city-circuit": [
+      10,
+      10,
+      10,
+      10
+    ],
+    "mountainstreet": [
+      20,
+      20
+    ],
+    "searound": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+    ],
+    "ice-track": [
+      10,
+      10,
+      10,
+      10
+    ]
+  },
+  "primary_bandReach": {
+    "threshold": 0.7,
+    "bindingZone": "B3 (always the tightest)",
+    "perTrackB3": {
+      "dirt-oval": 71.13,
+      "river-run": 71.03,
+      "space-sprint": 72.27,
+      "luger-hill": 70.4,
+      "garden-path": 69.97,
+      "seatrack": 71.87,
+      "city-circuit": 70.13,
+      "mountainstreet": 72.5,
+      "searound": 69.9,
+      "ice-track": 70.13
+    },
+    "failing": [
+      "garden-path",
+      "searound"
+    ],
+    "pass": false
+  },
+  "secondary_startRowBias": {
+    "test": "computeFairnessStats (native chi-square wins-by-row vs fair share), pooled 300 races/track",
+    "perTrackP": {
+      "dirt-oval": 0.5434,
+      "river-run": 0.6489,
+      "space-sprint": 0.1355,
+      "luger-hill": 0.5437,
+      "garden-path": 0.8322,
+      "seatrack": 0.0888,
+      "city-circuit": 0.6576,
+      "mountainstreet": 0.2467,
+      "searound": 0.744,
+      "ice-track": 0.9742
+    },
+    "minRawP": 0.0888,
+    "unfairTracks": [],
+    "holmNote": "Holm never lowers p; minRawP > 0.05 ⇒ all Holm-adjusted p > 0.05 ⇒ 0 Holm-unfair",
+    "pass": true
+  },
+  "exploratory_ordinal_NOT_A_GATE": {
+    "note": "per-band Spearman; over-powers at N=300 (flags |r|~0.03). Effect sizes negligible.",
+    "maxAbsR": 0.155
+  },
+  "overallGate": "FAILED"
+}
+
+============ PRIMARY — BAND-REACH (pooled 300 races/track, threshold 70%) ============
+track            races  overall  B1     B2     B3     B4    B3-pass
+dirt-oval          300  81.83  85.47  80.40  71.13  88.71   PASS
+river-run          300  81.77  85.73  80.70  71.03  88.31   PASS
+space-sprint       300  82.14  84.93  80.47  72.27  88.91   PASS
+luger-hill         300  81.30  85.07  79.90  70.40  88.24   PASS
+garden-path        300  80.80  84.40  78.50  69.97  88.36   FAIL (69.97%)
+seatrack           300  82.08  85.60  80.00  71.87  89.11   PASS
+city-circuit       300  81.44  86.53  80.43  70.13  87.96   PASS
+mountainstreet     300  82.52  85.73  81.00  72.50  89.13   PASS
+searound           300  80.61  83.07  78.57  69.90  88.29   FAIL (69.90%)
+ice-track          300  81.39  86.27  79.67  70.13  88.42   PASS
+PRIMARY: FAIL — B3<70% on: garden-path, searound
+
+============ SECONDARY — START-ROW BIAS (native chi-square, pooled 300) ============
+track            chi²p   fair?
+dirt-oval        0.5434   fair
+river-run        0.6489   fair
+space-sprint     0.1355   fair
+luger-hill       0.5437   fair
+garden-path      0.8322   fair
+seatrack         0.0888   fair
+city-circuit     0.6576   fair
+mountainstreet   0.2467   fair
+searound         0.7440   fair
+ice-track        0.9742   fair
+SECONDARY: PASS — min raw p=0.0888; Holm-adjusted ≥ raw ⇒ 0 Holm-unfair
+
+[context, not a gate] per-band ordinal Spearman max|r| across all tracks = 0.155 (negligible; large-N over-flagging — see exploratory_ordinal above)
+
+---- CONTEXT ONLY (not a gate criterion): honestOverlap% per track ----
+dirt-oval        2.52% (mean over 6 racer×seed rows)
+river-run        2.95% (mean over 6 racer×seed rows)
+space-sprint     2.18% (mean over 6 racer×seed rows)
+luger-hill       3.00% (mean over 6 racer×seed rows)
+garden-path      2.17% (mean over 6 racer×seed rows)
+seatrack         1.97% (mean over 6 racer×seed rows)
+city-circuit     2.52% (mean over 6 racer×seed rows)
+mountainstreet   1.90% (mean over 6 racer×seed rows)
+searound         3.75% (mean over 6 racer×seed rows)
+ice-track        2.38% (mean over 6 racer×seed rows)
+
+>>> OVERALL GATE: FAILED ❌

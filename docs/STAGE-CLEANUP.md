@@ -79,4 +79,5 @@ of something used (must survive / be extracted), (c) truly dead.
 
 | Stage | HEAD | Removed | Fingerprint match | Tests | Kept-because-shared |
 |-------|------|---------|-------------------|-------|---------------------|
-| 0 | (this commit) | — (map + baseline only) | ref `72cfbdb4…` | 3067 ✓ | — |
+| 0 | — | — (map + baseline only) | ref `72cfbdb4…` | 3067 ✓ | — |
+| 1 | (this commit) | `raceRubberBand.js`, `rubberBandConfig.js`, `RubberBandSection`, `RubberBandDiagHUD`, `DEFAULT_RUBBER_BAND_CONFIG`, `RUBBER_BAND_CONFIG` key, `showRubberBandDiag`, all `r.rubberBandMult*` state + t-update factor, sim rubber-band + telemetry, DevScreen/HUD controls, 2 test files | `72cfbdb4…` ✓ | 3040 ✓ | `computeMedianT` relocated into `raceGovernor.js` (director's field-median source) |

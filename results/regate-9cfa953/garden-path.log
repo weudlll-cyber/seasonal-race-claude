@@ -1,0 +1,182 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 50
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 50 × 20 × 10 × 3 = 30000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\regate-9cfa953\garden-path
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (boost=0.1 gap=0.003 ramp=2000ms endgame=0.9)
+
+── Garden Path (garden-path) — open=false path=4773px width=198px
+   horse      30s  finishT=1.000  rows=4  sf=0.80  χ²=3.0 p=0.399 [76s]
+     LateralQ: honest=4.9%  overlap=0.0%  maxSpread=0.172laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=20.0%  B1top5=69.2%  (gap: top5-exact=49.2%)
+     FairChance by row: R0:exact=24%/top5=70%(n=54)  R1:exact=22%/top5=69%(n=59)  R2:exact=15%/top5=60%(n=62)  R3:exact=20%/top5=76%(n=75)
+   horse      60s  finishT=2.000  rows=4  sf=0.80  χ²=3.6 p=0.308 [316s]
+     LateralQ: honest=3.4%  overlap=0.0%  maxSpread=0.299laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=27.6%  B1top5=76.8%  (gap: top5-exact=49.2%)
+     FairChance by row: R0:exact=23%/top5=89%(n=70)  R1:exact=31%/top5=72%(n=68)  R2:exact=31%/top5=67%(n=48)  R3:exact=27%/top5=77%(n=64)
+   horse      120s  finishT=4.000  rows=4  sf=0.80  χ²=1.4 p=0.719 [817s]
+     LateralQ: honest=2.4%  overlap=0.0%  maxSpread=0.570laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=26.4%  B1top5=82.4%  (gap: top5-exact=56.0%)
+     FairChance by row: R0:exact=29%/top5=77%(n=48)  R1:exact=31%/top5=83%(n=59)  R2:exact=20%/top5=82%(n=71)  R3:exact=28%/top5=86%(n=72)
+   duck       30s  finishT=1.000  rows=3  sf=0.75  χ²=0.5 p=0.791 [942s]
+     LateralQ: honest=4.8%  overlap=0.0%  maxSpread=0.163laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=22.4%  B1top5=74.4%  (gap: top5-exact=52.0%)
+     FairChance by row: R0:exact=25%/top5=81%(n=102)  R1:exact=26%/top5=69%(n=78)  R2:exact=16%/top5=70%(n=70)
+   duck       60s  finishT=2.000  rows=3  sf=0.75  χ²=3.0 p=0.217 [1146s]
+     LateralQ: honest=3.2%  overlap=0.0%  maxSpread=0.260laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.0%  B1top5=75.6%  (gap: top5-exact=47.6%)
+     FairChance by row: R0:exact=44%/top5=78%(n=78)  R1:exact=21%/top5=75%(n=73)  R2:exact=21%/top5=74%(n=99)
+   duck       120s  finishT=4.000  rows=3  sf=0.75  χ²=1.9 p=0.388 [1561s]
+     LateralQ: honest=2.2%  overlap=0.0%  maxSpread=0.578laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.0%  B1top5=76.8%  (gap: top5-exact=48.8%)
+     FairChance by row: R0:exact=29%/top5=86%(n=97)  R1:exact=39%/top5=76%(n=80)  R2:exact=15%/top5=66%(n=73)
+   snail      30s  finishT=1.000  rows=3  sf=0.77  χ²=0.1 p=0.922 [1639s]
+     LateralQ: honest=3.1%  overlap=0.0%  maxSpread=0.148laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=29.6%  B1top5=77.6%  (gap: top5-exact=48.0%)
+     FairChance by row: R0:exact=31%/top5=73%(n=89)  R1:exact=25%/top5=75%(n=80)  R2:exact=32%/top5=85%(n=81)
+   snail      60s  finishT=2.000  rows=3  sf=0.77  χ²=0.7 p=0.713 [1875s]
+     LateralQ: honest=2.3%  overlap=0.0%  maxSpread=0.264laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=25.6%  B1top5=72.8%  (gap: top5-exact=47.2%)
+     FairChance by row: R0:exact=21%/top5=73%(n=84)  R1:exact=26%/top5=70%(n=86)  R2:exact=30%/top5=76%(n=80)
+   snail      120s  finishT=4.000  rows=3  sf=0.77  χ²=1.5 p=0.469 [2289s]
+     LateralQ: honest=1.8%  overlap=0.0%  maxSpread=0.495laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=34.4%  B1top5=84.8%  (gap: top5-exact=50.4%)
+     FairChance by row: R0:exact=35%/top5=86%(n=93)  R1:exact=33%/top5=84%(n=87)  R2:exact=34%/top5=84%(n=70)
+   elephant   30s  finishT=1.000  rows=4  sf=0.85  χ²=6.0 p=0.110 [2378s]
+     LateralQ: honest=3.7%  overlap=0.0%  maxSpread=0.162laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=23.6%  B1top5=75.6%  (gap: top5-exact=52.0%)
+     FairChance by row: R0:exact=31%/top5=77%(n=71)  R1:exact=19%/top5=77%(n=57)  R2:exact=16%/top5=72%(n=50)  R3:exact=25%/top5=75%(n=72)
+   elephant   60s  finishT=2.000  rows=4  sf=0.85  χ²=1.7 p=0.646 [2598s]
+     LateralQ: honest=2.7%  overlap=0.0%  maxSpread=0.258laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=26.8%  B1top5=72.0%  (gap: top5-exact=45.2%)
+     FairChance by row: R0:exact=34%/top5=87%(n=67)  R1:exact=20%/top5=56%(n=64)  R2:exact=27%/top5=68%(n=60)  R3:exact=25%/top5=76%(n=59)
+   elephant   120s  finishT=4.000  rows=4  sf=0.85  χ²=1.4 p=0.719 [2980s]
+     LateralQ: honest=2.1%  overlap=0.0%  maxSpread=0.573laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=33.2%  B1top5=84.0%  (gap: top5-exact=50.8%)
+     FairChance by row: R0:exact=28%/top5=88%(n=57)  R1:exact=39%/top5=91%(n=54)  R2:exact=31%/top5=81%(n=72)  R3:exact=36%/top5=79%(n=67)
+   giraffe    30s  finishT=1.000  rows=4  sf=0.78  χ²=3.6 p=0.308 [3077s]
+     LateralQ: honest=2.5%  overlap=0.0%  maxSpread=0.157laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=20.0%  B1top5=73.6%  (gap: top5-exact=53.6%)
+     FairChance by row: R0:exact=24%/top5=73%(n=67)  R1:exact=22%/top5=77%(n=60)  R2:exact=21%/top5=73%(n=66)  R3:exact=12%/top5=72%(n=57)
+   giraffe    60s  finishT=2.000  rows=4  sf=0.78  χ²=0.7 p=0.868 [3311s]
+     LateralQ: honest=2.0%  overlap=0.0%  maxSpread=0.264laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=26.8%  B1top5=80.4%  (gap: top5-exact=53.6%)
+     FairChance by row: R0:exact=34%/top5=84%(n=61)  R1:exact=18%/top5=73%(n=66)  R2:exact=30%/top5=81%(n=64)  R3:exact=25%/top5=85%(n=59)
+   giraffe    120s  finishT=4.000  rows=4  sf=0.78  χ²=5.5 p=0.136 [3739s]
+     LateralQ: honest=1.7%  overlap=0.0%  maxSpread=0.547laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=41.6%  B1top5=87.6%  (gap: top5-exact=46.0%)
+     FairChance by row: R0:exact=45%/top5=86%(n=65)  R1:exact=24%/top5=89%(n=54)  R2:exact=50%/top5=84%(n=62)  R3:exact=45%/top5=91%(n=69)
+   snake      30s  finishT=1.000  rows=4  sf=0.85  χ²=3.3 p=0.351 [3872s]
+     LateralQ: honest=4.6%  overlap=0.0%  maxSpread=0.161laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=22.4%  B1top5=71.6%  (gap: top5-exact=49.2%)
+     FairChance by row: R0:exact=23%/top5=82%(n=62)  R1:exact=32%/top5=77%(n=53)  R2:exact=19%/top5=69%(n=67)  R3:exact=18%/top5=60%(n=68)
+   snake      60s  finishT=2.000  rows=4  sf=0.85  χ²=0.4 p=0.936 [4132s]
+     LateralQ: honest=3.3%  overlap=0.0%  maxSpread=0.301laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=33.6%  B1top5=74.4%  (gap: top5-exact=40.8%)
+     FairChance by row: R0:exact=44%/top5=74%(n=61)  R1:exact=35%/top5=72%(n=57)  R2:exact=32%/top5=75%(n=71)  R3:exact=23%/top5=77%(n=61)
+   snake      120s  finishT=4.000  rows=4  sf=0.85  χ²=4.1 p=0.252 [4612s]
+     LateralQ: honest=2.3%  overlap=0.0%  maxSpread=0.515laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=31.6%  B1top5=84.8%  (gap: top5-exact=53.2%)
+     FairChance by row: R0:exact=34%/top5=87%(n=53)  R1:exact=29%/top5=89%(n=72)  R2:exact=35%/top5=82%(n=62)  R3:exact=29%/top5=81%(n=63)
+   dragon     30s  finishT=1.000  rows=4  sf=0.75  χ²=0.4 p=0.936 [4752s]
+     LateralQ: honest=8.5%  overlap=0.0%  maxSpread=0.175laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=20.4%  B1top5=70.4%  (gap: top5-exact=50.0%)
+     FairChance by row: R0:exact=25%/top5=67%(n=61)  R1:exact=15%/top5=73%(n=60)  R2:exact=20%/top5=61%(n=70)  R3:exact=22%/top5=81%(n=59)
+   dragon     60s  finishT=2.000  rows=4  sf=0.75  χ²=0.4 p=0.936 [5020s]
+     LateralQ: honest=5.9%  overlap=0.0%  maxSpread=0.289laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.8%  B1top5=72.4%  (gap: top5-exact=43.6%)
+     FairChance by row: R0:exact=39%/top5=78%(n=51)  R1:exact=26%/top5=70%(n=73)  R2:exact=27%/top5=75%(n=64)  R3:exact=26%/top5=68%(n=62)
+   dragon     120s  finishT=4.000  rows=4  sf=0.75  χ²=6.5 p=0.089 [5479s]
+     LateralQ: honest=3.7%  overlap=0.0%  maxSpread=0.623laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=34.4%  B1top5=81.6%  (gap: top5-exact=47.2%)
+     FairChance by row: R0:exact=32%/top5=86%(n=71)  R1:exact=42%/top5=88%(n=48)  R2:exact=36%/top5=74%(n=72)  R3:exact=29%/top5=81%(n=59)
+   buggy      30s  finishT=1.000  rows=3  sf=0.71  χ²=0.2 p=0.887 [5561s]
+     LateralQ: honest=4.8%  overlap=0.0%  maxSpread=0.161laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=23.6%  B1top5=74.8%  (gap: top5-exact=51.2%)
+     FairChance by row: R0:exact=24%/top5=75%(n=85)  R1:exact=29%/top5=72%(n=82)  R2:exact=18%/top5=77%(n=83)
+   buggy      60s  finishT=2.000  rows=3  sf=0.71  χ²=2.1 p=0.359 [5710s]
+     LateralQ: honest=3.1%  overlap=0.0%  maxSpread=0.293laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=26.8%  B1top5=78.0%  (gap: top5-exact=51.2%)
+     FairChance by row: R0:exact=27%/top5=81%(n=96)  R1:exact=25%/top5=73%(n=83)  R2:exact=28%/top5=79%(n=71)
+   buggy      120s  finishT=4.000  rows=3  sf=0.71  χ²=2.1 p=0.359 [5903s]
+     LateralQ: honest=2.3%  overlap=0.0%  maxSpread=0.628laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=29.2%  B1top5=78.8%  (gap: top5-exact=49.6%)
+     FairChance by row: R0:exact=34%/top5=80%(n=88)  R1:exact=25%/top5=73%(n=75)  R2:exact=28%/top5=83%(n=87)
+   motorbike  30s  finishT=1.000  rows=4  sf=0.90  χ²=1.7 p=0.646 [5953s]
+     LateralQ: honest=4.2%  overlap=0.0%  maxSpread=0.155laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=26.8%  B1top5=69.2%  (gap: top5-exact=42.4%)
+     FairChance by row: R0:exact=26%/top5=74%(n=69)  R1:exact=25%/top5=71%(n=48)  R2:exact=30%/top5=59%(n=61)  R3:exact=26%/top5=72%(n=72)
+   motorbike  60s  finishT=2.000  rows=4  sf=0.90  χ²=4.6 p=0.205 [6048s]
+     LateralQ: honest=3.0%  overlap=0.0%  maxSpread=0.283laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=24.4%  B1top5=79.2%  (gap: top5-exact=54.8%)
+     FairChance by row: R0:exact=29%/top5=94%(n=52)  R1:exact=28%/top5=78%(n=64)  R2:exact=17%/top5=69%(n=65)  R3:exact=25%/top5=78%(n=69)
+   motorbike  120s  finishT=4.000  rows=4  sf=0.90  χ²=7.8 p=0.050 [6230s]
+     LateralQ: honest=2.3%  overlap=0.0%  maxSpread=0.555laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=23.6%  B1top5=80.8%  (gap: top5-exact=57.2%)
+     FairChance by row: R0:exact=27%/top5=87%(n=52)  R1:exact=32%/top5=81%(n=57)  R2:exact=24%/top5=85%(n=71)  R3:exact=14%/top5=73%(n=70)
+   beetle     30s  finishT=1.000  rows=3  sf=0.71  χ²=1.2 p=0.554 [6278s]
+     LateralQ: honest=4.1%  overlap=0.0%  maxSpread=0.155laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=25.2%  B1top5=76.4%  (gap: top5-exact=51.2%)
+     FairChance by row: R0:exact=28%/top5=76%(n=83)  R1:exact=33%/top5=82%(n=76)  R2:exact=16%/top5=73%(n=91)
+   beetle     60s  finishT=2.000  rows=3  sf=0.71  χ²=1.6 p=0.460 [6371s]
+     LateralQ: honest=2.8%  overlap=0.0%  maxSpread=0.339laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.4%  B1top5=80.8%  (gap: top5-exact=52.4%)
+     FairChance by row: R0:exact=27%/top5=79%(n=85)  R1:exact=31%/top5=82%(n=88)  R2:exact=27%/top5=82%(n=77)
+   beetle     120s  finishT=4.000  rows=3  sf=0.71  χ²=0.2 p=0.900 [6562s]
+     LateralQ: honest=2.1%  overlap=0.0%  maxSpread=0.564laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.0%  B1top5=82.0%  (gap: top5-exact=54.0%)
+     FairChance by row: R0:exact=25%/top5=84%(n=77)  R1:exact=35%/top5=82%(n=79)  R2:exact=24%/top5=80%(n=94)
+   boarder    30s  finishT=1.000  rows=3  sf=0.67  χ²=1.2 p=0.554 [6611s]
+     LateralQ: honest=4.2%  overlap=0.0%  maxSpread=0.162laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=31.6%  B1top5=71.2%  (gap: top5-exact=39.6%)
+     FairChance by row: R0:exact=38%/top5=77%(n=84)  R1:exact=25%/top5=63%(n=83)  R2:exact=31%/top5=73%(n=83)
+   boarder    60s  finishT=2.000  rows=3  sf=0.67  χ²=3.8 p=0.150 [6800s]
+     LateralQ: honest=3.0%  overlap=0.0%  maxSpread=0.269laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=27.2%  B1top5=77.2%  (gap: top5-exact=50.0%)
+     FairChance by row: R0:exact=29%/top5=84%(n=90)  R1:exact=30%/top5=75%(n=76)  R2:exact=23%/top5=71%(n=84)
+   boarder    120s  finishT=4.000  rows=3  sf=0.67  χ²=1.2 p=0.554 [7121s]
+     LateralQ: honest=2.2%  overlap=0.0%  maxSpread=0.571laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=28.4%  B1top5=82.0%  (gap: top5-exact=53.6%)
+     FairChance by row: R0:exact=38%/top5=83%(n=77)  R1:exact=23%/top5=77%(n=97)  R2:exact=26%/top5=87%(n=76)
+   snowmobile 30s  finishT=1.000  rows=4  sf=0.72  χ²=3.3 p=0.351 [7218s]
+     LateralQ: honest=3.7%  overlap=0.0%  maxSpread=0.186laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=30.4%  B1top5=72.8%  (gap: top5-exact=42.4%)
+     FairChance by row: R0:exact=29%/top5=71%(n=69)  R1:exact=34%/top5=79%(n=61)  R2:exact=28%/top5=70%(n=61)  R3:exact=31%/top5=71%(n=59)
+   snowmobile 60s  finishT=2.000  rows=4  sf=0.72  χ²=4.9 p=0.179 [7423s]
+     LateralQ: honest=2.7%  overlap=0.0%  maxSpread=0.262laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=25.6%  B1top5=76.0%  (gap: top5-exact=50.4%)
+     FairChance by row: R0:exact=25%/top5=79%(n=61)  R1:exact=25%/top5=68%(n=63)  R2:exact=30%/top5=79%(n=61)  R3:exact=23%/top5=78%(n=65)
+   snowmobile 120s  finishT=4.000  rows=4  sf=0.72  χ²=2.3 p=0.512 [7710s]
+     LateralQ: honest=2.0%  overlap=0.0%  maxSpread=0.571laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=31.6%  B1top5=81.6%  (gap: top5-exact=50.0%)
+     FairChance by row: R0:exact=36%/top5=88%(n=64)  R1:exact=37%/top5=83%(n=65)  R2:exact=34%/top5=83%(n=59)  R3:exact=19%/top5=73%(n=62)
+
+
+Simulation abgeschlossen in 7710.5s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |         0 |        0 |       — |        6949 |       9000 |    77.2% |   77.2% |    99.2% |
+| B2 (6–15) |         0 |        0 |       — |       12812 |      18000 |    71.2% |   71.2% |    99.0% |
+| B3 (16–25) |         0 |        0 |       — |       11278 |      18000 |    62.7% |   62.7% |    99.2% |
+| B4 (26–40) |         0 |        0 |       — |       22822 |      27000 |    84.5% |   84.5% |    99.4% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |        — |
+| OVERALL   |           |          |         |             |            |          |   74.8% |    99.2% |
+
+--- Per-Track Zone Success ---
+  Garden Path      (closed)  B1=77%  B2=71%  B3=63%  B4=85%  B5=—
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\regate-9cfa953\garden-path\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\regate-9cfa953\garden-path\fairness-report.md
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 36
+Fair (p≥0.05)        : 36
+Unfair (p<0.05)      : 0

@@ -1,0 +1,55 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 30
+Teilnehmer pro Rennen  : 60
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 30 × 20 × 10 × 1 = 6000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\rank-proto-stufe2\raw\p2_seatrack_a1.0
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ❌ deaktiviert
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+Action axis            : action=1.000 → director cast=2 dwell=0.040 pull=0.120 (anchorOffset=2 settling=0.05 FIXED)
+Show-target (Rank-Proto): ON — frontBand=10 wanderDwell=0.04000000000000001 (from action=1.000); areaBonus phase-decoupled; controller authority FIXED
+
+── Seatrack (seatrack) — open=true path=12256px width=300px
+   dolphin    60s  finishT=0.735  rows=4  sf=0.73  χ²=2.5 p=0.472 [381s]
+     1.5×-Gate: ✅ PASS  (R0=23%(e25%)✓ R1=23%(e25%)✓ R2=17%(e25%)✓ R3=37%(e25%)✓)
+     Avoidance: R0=39794Ø  R1=43215Ø  R2=45634Ø  Lateral=161921Ø  R1≥1×vorne=15.0/15Ø
+     Re-Rolls: Ø 5.5 pro Racer  Physische Renndauer: Ø 60.6s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=100.0%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=60.4%  viol=Ø8.2/max59  boost=45.0%  brake=53.3%  blocked=74.2%  wBlocked=41.1%  Δ5sMax=0.250  oscN=29.7Ø
+     FairChance: B1exact=27.3%  B1top5=81.3%  (gap: top5-exact=54.0%)
+     LateralQ: overlap=0.0%  honest=3.7%  resolution=Ø0.0fr  zigzag=0.000020  latSpd=0.000219  brake=78.2%  bmFail=14066(leaderBraked=13661)  stableOvt=27.801  outcomeReached=100%
+     FairChance by row: R0:exact=22%/top5=78%(n=32)  R1:exact=30%/top5=86%(n=43)  R2:exact=23%/top5=70%(n=30)  R3:exact=31%/top5=87%(n=45)
+
+
+Simulation abgeschlossen in 381.3s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |       122 |      150 |   81.3% |           0 |          0 |        — |   81.3% |     0.0% |
+| B2 (6–15) |       226 |      300 |   75.3% |           0 |          0 |        — |   75.3% |     0.0% |
+| B3 (16–25) |       204 |      300 |   68.0% |           0 |          0 |        — |   68.0% |     0.0% |
+| B4 (26–40) |       322 |      450 |   71.6% |           0 |          0 |        — |   71.6% |     0.0% |
+| B5 (41+)  |       524 |      600 |   87.3% |           0 |          0 |        — |   87.3% |     0.0% |
+| OVERALL   |           |          |         |             |            |          |   77.7% |     0.0% |
+
+--- Per-Track Zone Success ---
+  Seatrack         (open  )  B1=81%  B2=75%  B3=68%  B4=72%  B5=87%
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\rank-proto-stufe2\raw\p2_seatrack_a1.0\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\rank-proto-stufe2\raw\p2_seatrack_a1.0\fairness-report.md
+
+=== Front-Action (run) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\front-action\front-action-run.json
+  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;
+   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)
+  Seatrack         (open  )  leadΔ=6.8  distinctP1=6.1  shuffle=1.8%  gap2nd=0.0  gapMed=0.0  corr[P1=0.01 top3=0.02]
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

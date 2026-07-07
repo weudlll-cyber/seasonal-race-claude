@@ -1,0 +1,53 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 30
+Teilnehmer pro Rennen  : 60
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 30 × 20 × 10 × 1 = 6000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\action-1-sweep\coarse\raw\seatrack__ab1_strmild_mb0.14
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (cap-the-lead: brakeThreshold=0.01 gapScale=0.025 maxBrake=0.14 ramp=2000ms endgame=0.9)
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Seatrack (seatrack) — open=true path=12256px width=300px
+   dolphin    60s  finishT=0.735  rows=4  sf=0.73  χ²=3.9 p=0.275 [266s]
+     1.5×-Gate: ❌ FAIL  (R0=20%(e25%)✓ R1=30%(e25%)✓ R2=13%(e25%)✗ R3=37%(e25%)✓)
+     Avoidance: R0=34700Ø  R1=38627Ø  R2=40287Ø  Lateral=149764Ø  R1≥1×vorne=14.9/15Ø
+     Re-Rolls: Ø 5.3 pro Racer  Physische Renndauer: Ø 58.2s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=99.7%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=60.4%  viol=Ø8.3/max59  boost=43.1%  brake=54.0%  blocked=69.7%  wBlocked=32.4%  Δ5sMax=0.250  oscN=30.4Ø
+     FairChance: B1exact=32.7%  B1top5=79.3%  (gap: top5-exact=46.7%)
+     LateralQ: overlap=0.0%  honest=2.6%  resolution=Ø0.0fr  zigzag=0.000028  latSpd=0.000277  brake=72.1%  bmFail=3108(leaderBraked=2958)  stableOvt=17.464  outcomeReached=100%
+     FairChance by row: R0:exact=25%/top5=72%(n=32)  R1:exact=47%/top5=88%(n=43)  R2:exact=30%/top5=73%(n=30)  R3:exact=27%/top5=80%(n=45)
+
+
+Simulation abgeschlossen in 266.5s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |       119 |      150 |   79.3% |           0 |          0 |        — |   79.3% |    71.0% |
+| B2 (6–15) |       226 |      300 |   75.3% |           0 |          0 |        — |   75.3% |    67.6% |
+| B3 (16–25) |       207 |      300 |   69.0% |           0 |          0 |        — |   69.0% |    59.1% |
+| B4 (26–40) |       334 |      450 |   74.2% |           0 |          0 |        — |   74.2% |    31.0% |
+| B5 (41+)  |       529 |      600 |   88.2% |           0 |          0 |        — |   88.2% |    45.1% |
+| OVERALL   |           |          |         |             |            |          |   78.6% |    50.6% |
+
+--- Per-Track Zone Success ---
+  Seatrack         (open  )  B1=79%  B2=75%  B3=69%  B4=74%  B5=88%
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\action-1-sweep\coarse\raw\seatrack__ab1_strmild_mb0.14\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\action-1-sweep\coarse\raw\seatrack__ab1_strmild_mb0.14\fairness-report.md
+
+=== Front-Action (run) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\front-action\front-action-run.json
+  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;
+   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)
+  Seatrack         (open  )  leadΔ=577.0  distinctP1=7.9  shuffle=36.0%  gap2nd=0.6  gapMed=5.4  corr[P1=0.22 top3=0.20]
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

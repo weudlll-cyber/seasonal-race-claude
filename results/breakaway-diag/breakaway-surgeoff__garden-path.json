@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "label": "surgeoff__garden-path",
+    "nRaces": 40,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "arms": {
+      "bonusMult": 2,
+      "reRollVariationPercent": 75,
+      "pulkSurgeEnabled": false,
+      "rbMaxBrake": 0.1
+    }
+  },
+  "combos": [
+    {
+      "trackId": "garden-path",
+      "trackName": "Garden Path",
+      "isOpen": false,
+      "racerType": "snail",
+      "durationSec": 60,
+      "nRaces": 40,
+      "breakawayRate": 0.975,
+      "peakGapMean": 0.04598,
+      "peakGapMedian": 0.04519,
+      "peakLeaderRankDist": {
+        "1": 4,
+        "2": 7,
+        "3": 4,
+        "4": 6,
+        "5": 1,
+        "7": 1,
+        "8": 2,
+        "9": 3,
+        "10": 3,
+        "12": 1,
+        "13": 1,
+        "14": 1,
+        "15": 3,
+        "18": 1,
+        "22": 1,
+        "24": 1
+      },
+      "rank1Share": 0.1,
+      "rankGe4Share": 0.625,
+      "peakLeaderSurgedShare": 0,
+      "meanDecompositionAtPeak": {
+        "spreadFactor": 1.0562,
+        "speedBonusMult": 1.0021,
+        "areaBonusMult": 1.0495,
+        "rubberBandMult": 0.9652,
+        "pulkSurgeMult": 1
+      },
+      "gapCurve": [
+        {
+          "bin": 0,
+          "gapMedianMean": 0.00424,
+          "gap2ndMean": 0,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.05,
+          "gapMedianMean": 0.00926,
+          "gap2ndMean": 0.00084,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.1,
+          "gapMedianMean": 0.01447,
+          "gap2ndMean": 0.00207,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.15,
+          "gapMedianMean": 0.01851,
+          "gap2ndMean": 0.00314,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.2,
+          "gapMedianMean": 0.02216,
+          "gap2ndMean": 0.00375,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.25,
+          "gapMedianMean": 0.02583,
+          "gap2ndMean": 0.0042,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.3,
+          "gapMedianMean": 0.02966,
+          "gap2ndMean": 0.00419,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.35,
+          "gapMedianMean": 0.03352,
+          "gap2ndMean": 0.00426,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.4,
+          "gapMedianMean": 0.03716,
+          "gap2ndMean": 0.00427,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.45,
+          "gapMedianMean": 0.0404,
+          "gap2ndMean": 0.00459,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.5,
+          "gapMedianMean": 0.04311,
+          "gap2ndMean": 0.00495,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.55,
+          "gapMedianMean": 0.0455,
+          "gap2ndMean": 0.00537,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.6,
+          "gapMedianMean": 0.04555,
+          "gap2ndMean": 0.00649,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.65,
+          "gapMedianMean": 0.04561,
+          "gap2ndMean": 0.00768,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.7,
+          "gapMedianMean": 0.04602,
+          "gap2ndMean": 0.00821,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.75,
+          "gapMedianMean": 0.04704,
+          "gap2ndMean": 0.00888,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.8,
+          "gapMedianMean": 0.0468,
+          "gap2ndMean": 0.00977,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.85,
+          "gapMedianMean": 0.04567,
+          "gap2ndMean": 0.00918,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.9,
+          "gapMedianMean": 0.0449,
+          "gap2ndMean": 0.00832,
+          "nRaces": 40
+        },
+        {
+          "bin": 0.95,
+          "gapMedianMean": 0.0465,
+          "gap2ndMean": 0.00913,
+          "nRaces": 40
+        }
+      ],
+      "bandReachContext": {
+        "fairChanceExactRate": 0.32000000000000006,
+        "fairChanceTop5Rate": 0.8400000000000002,
+        "chiSqP": 0.9178562307343535
+      }
+    }
+  ]
+}

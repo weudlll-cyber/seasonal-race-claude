@@ -40,12 +40,6 @@
 //                        knobs; unset → no-op (byte-identical). Realized knobs → JSON meta.action /
 //                        meta.directorKnobs. Pair with --governorEnabled=true --governorDirectorEnabled=true.
 //
-//   Brake-1 tip-focus leader-brake (reuse rubber-band; read-only sweep knobs):
-//     --rbMaxBrake=<0..0.18>            leader-brake strength (default 0.10; ceiling widened to 0.18).
-//     --rubberBandTipThreshold=<0..1>   >0 → brake ONLY the instantaneous leader on the leader→2nd
-//                                       gap (dead-zone, fraction of finishT); 0 = legacy median-gap
-//                                       brake (byte-identical). Pair with --rbMaxBrake + the director.
-//
 //   Action-1 two-sided contest director (read-only sweep knobs; default 0 → legacy one-sided pull):
 //     --governorDirectorLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
 //     --governorDirectorChallengerBoost=<0..0.12>  forward boost cap on featured challengers toward
@@ -99,12 +93,10 @@ import {
   DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_ROW_LAYOUT_CONFIG,
-  DEFAULT_RUBBER_BAND_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES, actionToShowLevers } from '../client/src/modules/racePlanner.js';
-import { applyRubberBand, computeMedianT } from '../client/src/modules/raceRubberBand.js';
-import { applyGovernor, arcT } from '../client/src/modules/raceGovernor.js';
+import { applyGovernor, arcT, computeMedianT } from '../client/src/modules/raceGovernor.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -291,25 +283,6 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Rubber-band "cap the lead" ───────────────────────────────────────────────
-// Defaults read directly from the shared DEFAULT_RUBBER_BAND_CONFIG (same source the
-// browser uses), not hand-mirrored. The trigger/effect logic is the shared helper
-// raceRubberBand.applyRubberBand (single-source parity, L129). CLI flags still override.
-// rubberBandEndgameThreshold is now a dedicated shared field (was cross-borrowed from
-// DEFAULT_CAMERA_CONFIG.endgameThreshold — backlog #2, split with this redesign).
-const RUBBER_BAND_ACTIVE   = argVal('rubber-band', String(DEFAULT_RUBBER_BAND_CONFIG.enabled)) !== 'false';
-const RB_BRAKE_THRESHOLD   = Number(argVal('rbBrakeThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.brakeThreshold)));
-const RB_GAP_SCALE         = Number(argVal('rbGapScale',       String(DEFAULT_RUBBER_BAND_CONFIG.gapScale)));
-const RB_MAX_BRAKE         = Number(argVal('rbMaxBrake',       String(DEFAULT_RUBBER_BAND_CONFIG.maxBrake)));
-const RB_RAMP_MS           = Number(argVal('rbRampMs',         String(DEFAULT_RUBBER_BAND_CONFIG.boostRampMs)));
-const RB_ENDGAME_THRESHOLD = Number(argVal('rbEndgameThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandEndgameThreshold)));
-// Brake-1 tip-focus dead-zone (fraction of finishT); 0 = off (legacy median-gap brake). Default
-// read from the shared config (0) so a no-flag run is byte-identical; the sweep sets it > 0.
-const RB_TIP_THRESHOLD     = Number(argVal('rubberBandTipThreshold', String(DEFAULT_RUBBER_BAND_CONFIG.rubberBandTipThreshold)));
-// PULK-action: lower progress gate so the rubber-band can be confined to the PULK+ window (>= this
-// fraction), leaving the chaos phase untouched. Paired with --rbEndgameThreshold to bound the upper
-// edge. 0 = no lower gate (byte-identical). Read-only sim-only sweep knob.
-const RB_START_THRESHOLD   = Number(argVal('rbStartThreshold', '0'));
 // Rank-Proto (experimental, default OFF): show-target controller mode + the ENGAGEMENT action slider.
 // Stufe 2c: --action (0..1) drives ENGAGEMENT (how strongly the pre-OUTCOME controller steers toward
 // the show-target: 0=neutral/baseline, 1=full/wild) — monotonic by construction. The show-target SHAPE
@@ -321,22 +294,11 @@ const SHOW_ENGAGEMENT = argVal('showEngagement', null) !== null
 const SHOW_FRONT_BAND = Number(argVal('showFrontBand', '8'));
 const SHOW_WANDER_DWELL = Number(argVal('showWanderDwell', '0.06'));
 const SHOW_FRONT_CONCENTRATION = Number(argVal('showFrontConcentration', '3'));
-// Single cfg object passed to the shared applyRubberBand helper (same shape the browser passes).
-const RUBBER_BAND_CFG = {
-  enabled:                    RUBBER_BAND_ACTIVE,
-  brakeThreshold:             RB_BRAKE_THRESHOLD,
-  gapScale:                   RB_GAP_SCALE,
-  maxBrake:                   RB_MAX_BRAKE,
-  boostRampMs:                RB_RAMP_MS,
-  rubberBandEndgameThreshold: RB_ENDGAME_THRESHOLD,
-  rubberBandTipThreshold:     RB_TIP_THRESHOLD,
-};
 
 // ── PULK-surge (default OFF) ─────────────────────────────────────────────────
-// SURGE_ENABLED gates both the cohesion-bias bypass and the rubber-band exemption; when the
-// Race Plan is inactive or the flag is off, surge is a no-op (pulkSurgeMult stays 1.0).
+// SURGE_ENABLED gates the cohesion-bias bypass; when the Race Plan is inactive or the flag is
+// off, surge is a no-op (pulkSurgeMult stays 1.0).
 const SURGE_ENABLED       = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.pulkSurgeEnabled;
-const SURGE_BRAKE_EXEMPT  = SURGE_ENABLED ? DYNAMICS_OVERRIDES.pulkBrakeExemptStrength : 0;
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -680,11 +642,6 @@ export function runSingleRace({
         pulkSurgeMultTarget:      1.0,
         pulkSurgeMultTransStart:  0,
         areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
-        rubberBandMult:           1.0,
-        rubberBandMultPrev:       1.0,
-        rubberBandMultTarget:     1.0,
-        rubberBandTransStart:     0,
-        rbActivatedThisRace:      false,
         governorMult:             1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
       };
       initRacerBehavior(r);
@@ -1023,7 +980,7 @@ export function runSingleRace({
     let   smWinnerOutcomeSteps = 0;    // winner OUTCOME steps observed
     let   smWinnerCeilSteps    = 0;    // winner OUTCOME steps at controller ceiling (≥1.09 = straining)
     // Naturalness: does an action tool push a racer's speed past the +8% natural re-roll ceiling?
-    // natFactor = spreadFactor × tool mults (governor boost/brake + rubber-band + areaBonus), excluding
+    // natFactor = spreadFactor × tool mults (governor boost/brake + areaBonus), excluding
     // the row bonus (0 in PULK anyway) and drafting/brake physics. >1.08 = faster than the fastest
     // natural (re-roll-only) racer → the eye may read "too fast". Sampled over PULK racer-steps.
     const NAT_CEIL    = BASE_SPEED_MAX / BASE_SPEED_MEAN; // natural re-roll ceiling (max spreadFactor ≈ 1.081)
@@ -1036,8 +993,7 @@ export function runSingleRace({
 
       // ── Monotonic leader track-progress [0,1] — drives WHEN phases switch (mirrors index.jsx) ──
       // Computed once per step before Pass 1 so the pulk-bias hook and the controller-pass
-      // share the same value (Pass 1 never mutates r.t). The rubber-band leader scan below
-      // is a separate, non-monotonic quantity by design.
+      // share the same value (Pass 1 never mutates r.t).
       {
         let _leaderT = -Infinity;
         for (const r of racers) { if (!r.finished && r.t > _leaderT) _leaderT = r.t; }
@@ -1140,13 +1096,13 @@ export function runSingleRace({
             const scale = AREA_REF_STRENGTH > 0 ? strength / AREA_REF_STRENGTH : 0;
             r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
             // Naturalness safety cap: bound the FULL PULK speed product (spreadFactor × governor ×
-            // rubber-band × areaBonus) at the natural ceiling. The governor updates AFTER this block, so
+            // areaBonus) at the natural ceiling. The governor updates AFTER this block, so
             // use this frame's governorMult (last frame's value) plus its max per-frame slew, so the wash
             // shrinks to ~0 for a racer already governor-boosted (they can't be washed AND boosted over
             // the ceiling). Deep, un-featured racers (governorMult ≈ 1) still get the full wash.
             if (r.spreadFactor > 0) {
               const govSlew = (r.governorMult ?? 1) + (dynamicsConfig.governorMaxStepPerFrame ?? 0.01);
-              const otherMults = r.spreadFactor * Math.max(govSlew, 1e-6) * (r.rubberBandMult ?? 1);
+              const otherMults = r.spreadFactor * Math.max(govSlew, 1e-6);
               r.areaBonusMult = Math.min(r.areaBonusMult, NAT_CEIL_LOCAL / otherMults);
             }
           }
@@ -1161,22 +1117,13 @@ export function runSingleRace({
         }
       }
 
-      // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
-      // Identical mechanism to the browser (raceRubberBand.applyRubberBand) so the sweep
-      // measures the real thing. rbActivated telemetry now tracks BRAKING (mult < 1).
-      // A5: when the governor also runs, compute the field median once and share it with both.
+      // Field median for the governor/director: computed once per step and shared with
+      // applyGovernor (no double sort). Undefined when the governor is off.
       const govPhase =
         governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
       const sharedMedianT = governorEnabled ? computeMedianT(racers) : undefined;
-      applyRubberBand(racers, finishT, raceTs, RUBBER_BAND_CFG, SURGE_BRAKE_EXEMPT, sharedMedianT);
-      // PULK-action: confine the rubber-band to progress >= rbStartThreshold (leave chaos untouched).
-      // Overrides the just-computed mult back to 1.0 below the gate. 0 (default) → no-op → byte-identical.
-      if (RB_START_THRESHOLD > 0 && raceProgress < RB_START_THRESHOLD) {
-        for (const r of racers) r.rubberBandMult = 1.0;
-      }
-      for (const r of racers) { if (r.rubberBandMult < 0.999) r.rbActivatedThisRace = true; }
 
-      // ── Pre-OUTCOME Field Governor (Stage B; default OFF, parallel to surge/RB) ──
+      // ── Pre-OUTCOME Field Governor / director (default OFF) ──
       if (governorEnabled && govFractions) {
         applyGovernor(
           racers,
@@ -1297,10 +1244,10 @@ export function runSingleRace({
             if (inPulk) for (const r of racers) if (!smAreaSample.has(r.index)) smAreaSample.set(r.index, r.areaBonusMult);
             // Naturalness (PULK-proper [0.25,0.5) only — before the areaBonus restore at 0.5, so this
             // isolates the ACTION TOOLS' contribution cleanly): re-roll advantage × tool mults. In this
-            // window bonuses are 0, so natFactor = spreadFactor × governor × rubberBand. >1.08 = a tool
+            // window bonuses are 0, so natFactor = spreadFactor × governor × areaBonus. >1.08 = a tool
             // pushed the racer past the natural re-roll ceiling (max spreadFactor ≈ 1.081).
             if (inPulk && raceProgress < SD_PULK_END) for (const r of racers) if (!r.finished) {
-              const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.rubberBandMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
+              const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
               smNatSteps++;
               if (nf > smNatMax) smNatMax = nf;
               if (nf > NAT_CEIL * 1.001) smNatExceed++; // > natural ceiling (+0.1% float margin) = tool over-speed
@@ -1399,7 +1346,7 @@ export function runSingleRace({
           }
           // trajectoryMult + areaBonusMult + pulkSurgeMult + governorMult: all 1.0 when inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * r.rubberBandMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -1444,7 +1391,6 @@ export function runSingleRace({
               spreadFactor:   +leader.spreadFactor.toFixed(4),   // base-speed spread/re-roll component
               speedBonusMult: +(leader.speedBonusMult ?? 1.0).toFixed(4),
               areaBonusMult:  +(leader.areaBonusMult ?? 1.0).toFixed(4),
-              rubberBandMult: +(leader.rubberBandMult ?? 1.0).toFixed(4),
               pulkSurgeMult:  +(leader.pulkSurgeMult ?? 1.0).toFixed(4),
             };
           }
@@ -1892,7 +1838,6 @@ export function runSingleRace({
       finalT:        r.t,
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
-      rbActivated:   r.rbActivatedThisRace,
     }));
     // Attach mixing-quota and v4 diagnostics as non-iterable properties.
     results.mixingQuota     = mixingQuota;
@@ -3509,7 +3454,6 @@ if (isMain) {
   if (RACE_PLAN_ACTIVE) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
-  console.log(`Rubber-Band            : ${RUBBER_BAND_ACTIVE ? `✅ aktiv (cap-the-lead: brakeThreshold=${RB_BRAKE_THRESHOLD} gapScale=${RB_GAP_SCALE} maxBrake=${RB_MAX_BRAKE} ramp=${RB_RAMP_MS}ms endgame=${RB_ENDGAME_THRESHOLD}${RB_TIP_THRESHOLD > 0 ? ` TIP-FOCUS(leader→2nd)=${RB_TIP_THRESHOLD}` : ''})` : '❌ deaktiviert'}`);
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director cast=${ACTION_KNOBS.governorDirectorCastSize} dwell=${ACTION_KNOBS.governorDirectorDwell.toFixed(3)} pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} (anchorOffset=${DYNAMICS_OVERRIDES.governorDirectorAnchorOffset} settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
@@ -3975,7 +3919,6 @@ if (isMain) {
               spreadFactor:   +mean(decomps.map((d) => d.spreadFactor)).toFixed(4),
               speedBonusMult: +mean(decomps.map((d) => d.speedBonusMult)).toFixed(4),
               areaBonusMult:  +mean(decomps.map((d) => d.areaBonusMult)).toFixed(4),
-              rubberBandMult: +mean(decomps.map((d) => d.rubberBandMult)).toFixed(4),
               pulkSurgeMult:  +mean(decomps.map((d) => d.pulkSurgeMult)).toFixed(4),
             },
             gapCurve,
@@ -4208,8 +4151,8 @@ if (isMain) {
     const ZNAMES = ['B1 (1–5)', 'B2 (6–15)', 'B3 (16–25)', 'B4 (26–40)', 'B5 (41+)'];
 
     console.log('\n=== Zone Success Rate (Race Plan) ===');
-    console.log('| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |');
-    console.log('|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|');
+    console.log('| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |');
+    console.log('|-----------|-----------|----------|---------|-------------|------------|----------|---------|');
 
     for (let zi = 0; zi < 5; zi++) {
       const b = zi + 1;
@@ -4222,20 +4165,13 @@ if (isMain) {
       const oPct   = openG.length ? (oHits  / openG.length  * 100).toFixed(1) + '%' : '—';
       const cPct   = closG.length ? (cHits  / closG.length  * 100).toFixed(1) + '%' : '—';
       const allPct = grp.length   ? (allHit / grp.length    * 100).toFixed(1) + '%' : '—';
-      // RB-Fail%: among racers who FAILED their zone target AND had RB active
-      const failed = grp.filter((r) => zoneIdxOf(r.finalRank) !== zi);
-      const rbFail = failed.filter((r) => r.rbActivated).length;
-      const rbPct  = failed.length ? (rbFail / failed.length * 100).toFixed(1) + '%' : '—';
-      console.log(`| ${ZNAMES[zi].padEnd(9)} | ${String(oHits).padStart(9)} | ${String(openG.length).padStart(8)} | ${oPct.padStart(7)} | ${String(cHits).padStart(11)} | ${String(closG.length).padStart(10)} | ${cPct.padStart(8)} | ${allPct.padStart(7)} | ${rbPct.padStart(8)} |`);
+      console.log(`| ${ZNAMES[zi].padEnd(9)} | ${String(oHits).padStart(9)} | ${String(openG.length).padStart(8)} | ${oPct.padStart(7)} | ${String(cHits).padStart(11)} | ${String(closG.length).padStart(10)} | ${cPct.padStart(8)} | ${allPct.padStart(7)} |`);
     }
 
     // Overall row
     const allHits2  = zoneRows.filter((r) => zoneIdxOf(r.finalRank) === (r.sollBereich - 1)).length;
-    const allFailed = zoneRows.filter((r) => zoneIdxOf(r.finalRank) !== (r.sollBereich - 1));
-    const allRbFail = allFailed.filter((r) => r.rbActivated).length;
     const overallPct = (allHits2 / zoneRows.length * 100).toFixed(1) + '%';
-    const overallRb  = allFailed.length ? (allRbFail / allFailed.length * 100).toFixed(1) + '%' : '—';
-    console.log(`| ${'OVERALL'.padEnd(9)} | ${' '.repeat(9)} | ${' '.repeat(8)} | ${' '.repeat(7)} | ${' '.repeat(11)} | ${' '.repeat(10)} | ${' '.repeat(8)} | ${overallPct.padStart(7)} | ${overallRb.padStart(8)} |`);
+    console.log(`| ${'OVERALL'.padEnd(9)} | ${' '.repeat(9)} | ${' '.repeat(8)} | ${' '.repeat(7)} | ${' '.repeat(11)} | ${' '.repeat(10)} | ${' '.repeat(8)} | ${overallPct.padStart(7)} |`);
 
     // Per-track breakdown
     const trackIds = [...new Set(zoneRows.map((r) => r.trackId))];
@@ -4280,7 +4216,7 @@ if (isMain) {
         label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
         arms: {
           bonusMult: BONUS_MULT, reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
-          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled, rbMaxBrake: RB_MAX_BRAKE,
+          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
         },
       },
       combos: breakawayAgg,
@@ -4293,7 +4229,7 @@ if (isMain) {
         `rank1=${(c.rank1Share * 100).toFixed(0)}%  rank≥4=${(c.rankGe4Share * 100).toFixed(0)}%  ` +
         `surged=${(c.peakLeaderSurgedShare * 100).toFixed(0)}%  ` +
         `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult} ` +
-        `rb=${c.meanDecompositionAtPeak.rubberBandMult} surge=${c.meanDecompositionAtPeak.pulkSurgeMult}]`
+        `surge=${c.meanDecompositionAtPeak.pulkSurgeMult}]`
       );
     }
   }
@@ -4312,7 +4248,7 @@ if (isMain) {
         arms: {
           governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
           governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
-          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled, rubberBand: RUBBER_BAND_ACTIVE,
+          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
         },
       },
       combos: frontActionAgg,
@@ -4351,7 +4287,7 @@ if (isMain) {
         },
         areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
         rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
-        rubberBand: RUBBER_BAND_ACTIVE, governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
+        governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
         pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
       },
       combos: stripAgg,

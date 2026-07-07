@@ -10,16 +10,15 @@
 //              cohesion vs shuffle contribution, and the applied governorMult — so the
 //              tail-lift on the straggler is visible AND the leader confirms the governor
 //              never brakes it (cohesion stays 0 at or ahead of the median, Stage C).
-//              Passive DOM sibling of the race canvas (like RubberBandDiagHUD): renders
-//              nothing when its toggle is off, never touches the render loop. Reuses the
-//              governor's exported pure helpers + computeMedianT (single source — the HUD
-//              recomputes the breakdown rather than the governor exposing internals).
-//              Placement: TOP-CENTER (the bottom-center slot holds the RubberBand HUD).
+//              Passive DOM sibling of the race canvas: renders nothing when its toggle is
+//              off, never touches the render loop. Reuses the governor's exported pure
+//              helpers + computeMedianT (single source — the HUD recomputes the breakdown
+//              rather than the governor exposing internals). Placement: TOP-CENTER.
 // ============================================================
 
-import { computeMedianT } from '../../modules/raceRubberBand.js';
 import {
   arcT,
+  computeMedianT,
   governorActionToParams,
   governorRestoringForce,
   governorShufflePhase,

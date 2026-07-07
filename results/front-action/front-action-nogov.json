@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "label": "nogov",
+    "nRaces": 2,
+    "seed": 1,
+    "corridorStart": 0.55,
+    "governorOn": false,
+    "arms": {
+      "governorEnabled": false,
+      "governorDirectorEnabled": false,
+      "pulkSurgeEnabled": true,
+      "rubberBand": true
+    }
+  },
+  "combos": [
+    {
+      "trackId": "dirt-oval",
+      "trackName": "Dirt Oval",
+      "isOpen": false,
+      "racerType": "horse",
+      "durationSec": 30,
+      "nRaces": 2,
+      "leadChangesMean": 2,
+      "distinctP1Mean": 3,
+      "leadChangeRate": 0.00114,
+      "podiumShuffleRate": 0.00568,
+      "gap2ndLenMean": 0,
+      "gapMedLenMean": 0,
+      "unpredictability": {
+        "rankVsP1Frac": 0.122,
+        "rankVsTop3Frac": 0.051,
+        "nPairs": 80
+      }
+    }
+  ]
+}

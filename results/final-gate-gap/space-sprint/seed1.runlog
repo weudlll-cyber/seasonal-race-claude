@@ -1,0 +1,48 @@
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 50
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 50 × 20 × 10 × 1 = 10000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\space-sprint\seed1
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Rubber-Band            : ✅ aktiv (cap-the-lead: brakeThreshold=0.03 gapScale=0.025 maxBrake=0.1 ramp=2000ms endgame=0.9)
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Space Sprint (space-sprint) — open=true path=19772px width=300px
+   rocket     60s  finishT=0.495  rows=3  sf=0.87  χ²=2.5 p=0.284 [73s]
+     1.5×-Gate: ✅ PASS  (R0=34%(e35%)✓ R1=42%(e33%)✓ R2=24%(e33%)✓)
+     Avoidance: R0=24003Ø  R1=26153Ø  R2=27648Ø  Lateral=81511Ø  R1≥1×vorne=12.9/14Ø
+     Re-Rolls: Ø 5.2 pro Racer  Physische Renndauer: Ø 57.8s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=99.2%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=64.8%  viol=Ø5.7/max39  boost=41.8%  brake=53.8%  blocked=56.1%  wBlocked=36.4%  Δ5sMax=0.250  oscN=17.4Ø
+     FairChance: B1exact=38.8%  B1top5=84.8%  (gap: top5-exact=46.0%)
+     LateralQ: overlap=0.0%  honest=2.2%  resolution=Ø0.0fr  zigzag=0.000043  latSpd=0.000241  brake=56.0%  bmFail=244(leaderBraked=191)  stableOvt=9.500  outcomeReached=100%
+     FairChance by row: R0:exact=42%/top5=84%(n=83)  R1:exact=36%/top5=83%(n=88)  R2:exact=38%/top5=87%(n=79)
+
+
+Simulation abgeschlossen in 73.4s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   | RB-Fail% |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|----------|
+| B1 (1–5)  |       212 |      250 |   84.8% |           0 |          0 |        — |   84.8% |    31.6% |
+| B2 (6–15) |       416 |      500 |   83.2% |           0 |          0 |        — |   83.2% |    35.7% |
+| B3 (16–25) |       380 |      500 |   76.0% |           0 |          0 |        — |   76.0% |    15.8% |
+| B4 (26–40) |       676 |      750 |   90.1% |           0 |          0 |        — |   90.1% |    20.3% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |        — |
+| OVERALL   |           |          |         |             |            |          |   84.2% |    24.1% |
+
+--- Per-Track Zone Success ---
+  Space Sprint     (open  )  B1=85%  B2=83%  B3=76%  B4=90%  B5=—
+
+JSON → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\space-sprint\seed1\fairness-data.json
+Bericht → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\final-gate-gap\space-sprint\seed1\fairness-report.md
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

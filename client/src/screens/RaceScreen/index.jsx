@@ -65,9 +65,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { loadRubberBandConfig } from '../../modules/rubberBandConfig.js';
-import { applyRubberBand, computeMedianT } from '../../modules/raceRubberBand.js';
-import { applyGovernor } from '../../modules/raceGovernor.js';
+import { applyGovernor, computeMedianT } from '../../modules/raceGovernor.js';
 import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
 import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -92,7 +90,6 @@ import { createPerfLog, recordPerfFrame } from './perfLog.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
-import RubberBandDiagHUD from './RubberBandDiagHUD.jsx';
 import GovernorDiagHUD from './GovernorDiagHUD.jsx';
 import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
 import {
@@ -154,9 +151,6 @@ export default function RaceScreen() {
   const finishNavTimerRef = useRef(null);
 
   const g = useRef(null);
-  // Live rubber-band cfg + surge-exempt strength handed to applyRubberBand this race,
-  // exposed read-only to RubberBandDiagHUD so it shows what physics actually uses.
-  const rubberBandDiagRef = useRef(null);
   // Live governor cfg + resolved phase-binding snapshot for GovernorDiagHUD (read-only).
   const governorDiagRef = useRef(null);
   const shapeRef = useRef(null);
@@ -220,7 +214,6 @@ export default function RaceScreen() {
   const enablePerfLog = cameraConfig.enablePerfLog ?? false;
   const showBattleDiag = cameraConfig.showBattleDiag ?? false;
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
-  const showRubberBandDiag = cameraConfig.showRubberBandDiag ?? false;
   const showGovernorDiag = cameraConfig.showGovernorDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
 
@@ -437,7 +430,6 @@ export default function RaceScreen() {
     behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
-    const rubberBandConfig = loadRubberBandConfig();
     const raceZoneConfig = loadRaceZoneConfig();
     // ── PULK-action preview (one-toggle eye-test; default OFF) ───────────────────────────────────
     // When dynamicsConfig.pulkActionPreview is set, FORCE the whole N8/D0.6 winning set in code so a
@@ -462,7 +454,6 @@ export default function RaceScreen() {
         rowBonusPulk: 0,
         rowBonusPost: 1,
       });
-      rubberBandConfig.enabled = false; // rubber-band off (separate config object)
     }
     const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
@@ -692,10 +683,6 @@ export default function RaceScreen() {
           pulkSurgeMultTarget: 1.0,
           pulkSurgeMultTransStart: 0,
           areaBonusMult: 1.0,
-          rubberBandMult: 1.0,
-          rubberBandMultPrev: 1.0,
-          rubberBandMultTarget: 1.0,
-          rubberBandTransStart: 0,
           // Governor (Stage B): single multiplier, slew-limited in-place (no separate
           // prev/target transition fields — the rate limiter reads governorMult itself).
           governorMult: 1.0,
@@ -723,17 +710,8 @@ export default function RaceScreen() {
       (raceData.estimatedDurationSec ?? targetDuration) >=
         (dynamicsConfig.racePlanMinDurationSec ?? 30);
     // PULK-surge gating (loop-scope so the rAF loop can read it): only when the Race Plan runs
-    // AND the surge flag is on. Drives the cohesion-bias bypass and the rubber-band exemption.
+    // AND the surge flag is on. Drives the cohesion-bias bypass.
     const pulkSurgeEnabled = racePlanEnabled && (dynamicsConfig.pulkSurgeEnabled ?? false);
-    const pulkBrakeExemptStrength = pulkSurgeEnabled
-      ? (dynamicsConfig.pulkBrakeExemptStrength ?? 0.5)
-      : 0;
-    // Expose the exact cfg + exempt strength passed to applyRubberBand (read-only) for the
-    // RUBBER-BAND DIAG HUD — cause (settings) shown next to effect (leader brake).
-    rubberBandDiagRef.current = {
-      cfg: rubberBandConfig,
-      surgeExemptStrength: pulkBrakeExemptStrength,
-    };
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
@@ -1047,8 +1025,7 @@ export default function RaceScreen() {
           }
 
           // Monotonic leader track-progress [0,1] — drives WHEN phases switch (route-based).
-          // Never regresses when the leader finishes. Separate from the rubber-band leader scan
-          // below (which is non-monotonic by design).
+          // Never regresses when the leader finishes.
           let _leaderT = -Infinity;
           for (const r of st.racers) {
             if (!r.finished && r.t > _leaderT) _leaderT = r.t;
@@ -1090,27 +1067,15 @@ export default function RaceScreen() {
             for (const r of st.racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
           }
 
-          // ── Rubber-band: cap-the-lead (median-gap proportional brake) ──────────
-          // Brakes front-breakaway racers toward a max gap from the field median so
-          // the field stays catchable, without pulling the legitimate winner into the
-          // pack. Logic shared with sim-fairness.mjs via raceRubberBand.js (parity).
-          // A5: when the governor also runs, compute the field median ONCE this step and
-          // share it with both (no double sort). Governor OFF → call is byte-identical.
+          // Field median for the governor/director: computed ONCE per step and shared with
+          // applyGovernor (no double sort). Undefined when the governor is off.
           const govPhase =
             governorEnabled && racePlanController
               ? racePlanController.getPhase(physicsTs, st.raceProgress)
               : null;
           const sharedMedianT = governorEnabled ? computeMedianT(st.racers) : undefined;
-          applyRubberBand(
-            st.racers,
-            st.finishT,
-            physicsTs,
-            rubberBandConfig,
-            pulkBrakeExemptStrength,
-            sharedMedianT
-          );
 
-          // ── Pre-OUTCOME Field Governor (Stage B; default OFF, parallel to surge/RB) ──
+          // ── Pre-OUTCOME Field Governor / director (default OFF) ──
           if (governorEnabled && govFractions) {
             applyGovernor(
               st.racers,
@@ -1227,7 +1192,6 @@ export default function RaceScreen() {
                     rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    r.rubberBandMult *
                     (r.pulkSurgeMult ?? 1.0) *
                     (r.governorMult ?? 1.0) *
                     zoneMult,
@@ -1249,7 +1213,6 @@ export default function RaceScreen() {
                     rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    r.rubberBandMult *
                     (r.pulkSurgeMult ?? 1.0) *
                     zoneMult) /
                   race_baseSpeed
@@ -1893,13 +1856,6 @@ export default function RaceScreen() {
           <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
-          {/* Bottom-center; hidden while a center state/finish banner shows so they never stack. */}
-          <RubberBandDiagHUD
-            racersRef={g}
-            rubberBandDiagRef={rubberBandDiagRef}
-            visible={showRubberBandDiag && !(winnerOverlayText ?? overlayText)}
-          />
-          {/* Top-center; the bottom-center slot is taken by the RubberBand HUD (A7). */}
           <GovernorDiagHUD
             racersRef={g}
             governorDiagRef={governorDiagRef}
