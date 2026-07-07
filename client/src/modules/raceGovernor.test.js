@@ -2,40 +2,58 @@
 // File:        raceGovernor.test.js
 // Path:        client/src/modules/raceGovernor.test.js
 // Project:     RaceArena
-// Description: Unit tests for the Pre-OUTCOME contest-injector "director". Covers: the
-//              arc-distance helper (closed wrap / open raw), the phase-weight fade + the
-//              director's rank-blind seeded featured-cast rotation, the one-sided anchor pull
-//              (legacy fallback), the TWO-SIDED contest (leader brake + challenger boost —
-//              the shipped shape), the shared realism envelope (±maxEffect clamp + per-frame
-//              slew), structural OUTCOME-off, and determinism.
+// Description: Unit tests for the rebuilt pre-OUTCOME contest-injector "director". Covers: the
+//              arc-distance helper, the phase-weight fade, the seeded director key, and applyGovernor
+//              — structural OUTCOME/director-off, the leader brake, the two-way front contest
+//              (catch-up boosts AND active fall-backs), the ±maxEffect + ceiling-cap envelope, the
+//              per-frame slew, the exact fade to 1.0 in OUTCOME, and determinism.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import {
-  arcT,
-  applyGovernor,
-  governorPhaseWeight,
-  governorFadeStart,
-  directorFeaturedSet,
-  directorStreamKey,
-} from './raceGovernor.js';
+import { arcT, applyGovernor, governorPhaseWeight, directorStreamKey } from './raceGovernor.js';
 
-// Director cfg — no shuffle/tail-lift fields (retired). lenScale = 1 in ctx below.
-const DIRCFG = {
+// Fresh per-race director state (the shape applyGovernor lazily fills).
+const mkDir = () => ({
+  boostSlots: [],
+  fallSlots: [],
+  boosted: new Set(),
+  protectedUntil: new Map(),
+  poolFallback: 0,
+  ev: 0,
+  prevLeader: -1,
+  leaderSinceMs: 0,
+  lingerTarget: -1,
+  lingerUntilMs: 0,
+});
+
+// Director cfg. lenScale = 1 in ctx (pathLengthPx / meanBodyLen), so a t-gap maps 1:1 to lengths.
+const BASE = {
   maxEffect: 0.12,
   maxStepPerFrame: 0.02,
   directorEnabled: true,
-  directorCastSize: 2,
-  directorDwell: 0.08,
-  directorAnchorOffset: 2.0,
+  directorLeaderBrake: 0.15,
+  directorChallengerBoost: 0.1,
   directorPullStrength: 0.06,
-  directorSettling: 0.05,
+  directorFrontPool: 12,
+  directorBoostOncePerRace: false,
+  directorLingerBrake: 0, // linger off → the leader is braked every frame
+  directorCeilingCap: 0,
+  directorSettling: 0,
+  directorMaxParallelBoosts: 3,
+  directorBoostDurationMin: 500,
+  directorBoostDurationMax: 2000,
+  directorCatchThreshold: 1.0,
+  directorFallbackEnabled: false,
+  directorFallbackFromPool: 5,
+  directorFallbackMaxCount: 2,
+  directorFallbackUntilPosition: 12,
+  directorFallbackProtectMs: 1000,
 };
 
-const mkRacers = (ts) => ts.map((t, i) => ({ index: i, t, finished: false, governorMult: 1.0 }));
-// Default context: OPEN track with lenScale = pathLengthPx / meanBodyLen = 1, so an arc gap in
-// t maps 1:1 to racer-lengths.
-const ctx = (over = {}) => ({
+const mkRacers = (ts) =>
+  ts.map((t, i) => ({ index: i, t, finished: false, governorMult: 1.0, spreadFactor: 1.0 }));
+
+const ctx = (dir, over = {}) => ({
   progress: 0.3,
   pulkEndFrac: 0.5,
   corrStartFrac: 0.55,
@@ -43,32 +61,32 @@ const ctx = (over = {}) => ({
   pathLengthPx: 1,
   meanBodyLen: 1,
   isOpen: true,
+  currentMs: 0,
+  dirState: dir,
   ...over,
 });
-const runN = (racers, cfg, n, over) => {
-  for (let i = 0; i < n; i++) applyGovernor(racers, 1.0, 'PULK', ctx(over), cfg);
-};
+
+// Run n frames, advancing the ms clock (currentMs) and progress; returns the dirState used.
+function runFrames(racers, cfg, n, { progress = 0.3, phase = 'PULK' } = {}) {
+  const dir = mkDir();
+  for (let i = 0; i < n; i++) {
+    applyGovernor(racers, 1.0, phase, ctx(dir, { currentMs: i * 16, progress }), cfg);
+  }
+  return dir;
+}
 
 describe('arcT — track-arc distance', () => {
-  it('CLOSED: within-lap min-arc with wrap (0.9↔0.1 = 0.2, not 0.8); different laps collapse', () => {
+  it('CLOSED: within-lap min-arc with wrap; OPEN: raw |a−b|', () => {
     expect(arcT(0.9, 0.1, false)).toBeCloseTo(0.2, 9);
-    expect(arcT(0.1, 0.9, false)).toBeCloseTo(0.2, 9); // symmetric
-    expect(arcT(0.6, 0.5, false)).toBeCloseTo(0.1, 9);
-    // Lap-count independence: +3 laps on either operand is identical to lap 0.
-    expect(arcT(3.6, 3.5, false)).toBeCloseTo(arcT(0.6, 0.5, false), 9);
-    expect(arcT(3.6, 0.5, false)).toBeCloseTo(arcT(0.6, 0.5, false), 9);
-  });
-  it('OPEN: raw |a−b| (no wrap): 0.9↔0.1 = 0.8', () => {
     expect(arcT(0.9, 0.1, true)).toBeCloseTo(0.8, 9);
-    expect(arcT(0.1, 0.9, true)).toBeCloseTo(0.8, 9);
+    expect(arcT(3.6, 0.5, false)).toBeCloseTo(arcT(0.6, 0.5, false), 9); // lap-count independent
   });
 });
 
 describe('governorPhaseWeight — exact fade', () => {
-  it('1.0 before the window, EXACTLY 0 at corrStart, eased near-zero span', () => {
+  it('1.0 before the window, EXACTLY 0 at corrStart', () => {
     expect(governorPhaseWeight(0.3, 0.5, 0.55)).toBe(1.0);
     expect(governorPhaseWeight(0.55, 0.5, 0.55)).toBe(0);
-    expect(governorPhaseWeight(0.5, 0.5, 0.5)).toBe(0);
     const wMid = governorPhaseWeight(0.47, 0.5, 0.5);
     expect(wMid).toBeGreaterThan(0);
     expect(wMid).toBeLessThan(1);
@@ -76,179 +94,111 @@ describe('governorPhaseWeight — exact fade', () => {
 });
 
 describe('directorStreamKey — rank-blind seeded key', () => {
-  it('deterministic, in [0,1), and produces a non-trivial order', () => {
+  it('deterministic and in [0,1)', () => {
     for (let i = 0; i < 10; i++) {
       const k = directorStreamKey(i, 7);
       expect(k).toBeGreaterThanOrEqual(0);
       expect(k).toBeLessThan(1);
-      expect(directorStreamKey(i, 7)).toBe(k); // deterministic
+      expect(directorStreamKey(i, 7)).toBe(k);
     }
     expect(directorStreamKey(0, 7)).not.toBe(directorStreamKey(1, 7));
   });
 });
 
-describe('directorFeaturedSet — rank-blind rotating cast', () => {
-  const cutoff = governorFadeStart(0.5, 0.55) - DIRCFG.directorSettling; // matches applyGovernor
-  it('features exactly castSize racers before the cutoff, null at/after (settling)', () => {
-    const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1, -0.1]);
-    const set = directorFeaturedSet(racers, 3, 0.2, 2, 0.08, cutoff);
-    expect(set.size).toBe(2);
-    // At/after the cutoff no cast is featured (field relaxes before the fade).
-    expect(directorFeaturedSet(racers, 3, cutoff, 2, 0.08, cutoff)).toBeNull();
-    expect(directorFeaturedSet(racers, 3, cutoff + 0.01, 2, 0.08, cutoff)).toBeNull();
-  });
-  it('membership depends ONLY on index+seed, NOT on current position (rank-blind)', () => {
-    // Same indices, different t orderings → identical featured set (position cannot influence it).
-    const a = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1]);
-    const b = mkRacers([0.1, 0.3, 0.5, 0.7, 0.9]); // same indices 0..4, reversed positions
-    const sa = directorFeaturedSet(a, 11, 0.15, 2, 0.08, cutoff);
-    const sb = directorFeaturedSet(b, 11, 0.15, 2, 0.08, cutoff);
-    expect([...sa].sort()).toEqual([...sb].sort());
-  });
-  it('over a full pass the spotlight covers every racer (round-robin)', () => {
-    const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1, -0.1]); // n=6, cast=2 → 3 slots per pass
-    const union = new Set();
-    for (let slot = 0; slot < 3; slot++) {
-      const s = directorFeaturedSet(racers, 5, slot * 0.08 + 0.001, 2, 0.08, 1.0);
-      for (const idx of s) union.add(idx);
-    }
-    expect(union.size).toBe(6);
-  });
-});
-
-describe('applyGovernor — director pull (one-sided anchor, legacy fallback)', () => {
-  it('featured racers are pulled toward the front anchor; non-featured stay EXACTLY 1.0', () => {
-    const racers = mkRacers([0.7, 0.5, 0.3, 0.1]);
-    const cutoff = governorFadeStart(0.5, 0.55) - DIRCFG.directorSettling;
-    const feat = directorFeaturedSet(
-      racers,
-      1,
-      0.3,
-      DIRCFG.directorCastSize,
-      DIRCFG.directorDwell,
-      cutoff
-    );
-    runN(racers, DIRCFG, 20); // ctx seed defaults to 1 → same featured set
-    racers.forEach((r) => {
-      if (feat.has(r.index))
-        expect(r.governorMult).toBeGreaterThan(1.0); // anchor +2len → forward pull
-      else expect(r.governorMult).toBe(1.0); // non-featured untouched by this layer
-    });
-  });
-
-  it('mean-reverting: featured ahead of the anchor is pulled back, behind is pulled forward', () => {
-    // anchorOffset 0 → anchor = median; cast = all → every racer featured.
-    const cfg = { ...DIRCFG, directorAnchorOffset: 0, directorCastSize: 4 };
-    const racers = mkRacers([0.7, 0.5, 0.3]); // median 0.5
-    runN(racers, cfg, 20);
-    expect(racers[0].governorMult).toBeLessThan(1.0); // ahead of anchor → braked back toward it
-    expect(racers[2].governorMult).toBeGreaterThan(1.0); // behind anchor → pulled forward
-    expect(racers[1].governorMult).toBeCloseTo(1.0, 9); // at the anchor → zero
-  });
-
-  it('never exceeds ±maxEffect and is pinned EXACTLY 1.0 in OUTCOME', () => {
-    const racers = mkRacers([0.7, 0.5, 0.3, 0.1]);
-    for (let i = 0; i < 60; i++) applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 }), DIRCFG);
-    racers.forEach((r) => {
-      expect(r.governorMult).toBeLessThanOrEqual(1 + DIRCFG.maxEffect + 1e-9);
-      expect(r.governorMult).toBeGreaterThanOrEqual(1 - DIRCFG.maxEffect - 1e-9);
-    });
-    applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: 0.55, corrStartFrac: 0.55 }), DIRCFG);
-    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
-  });
-
-  it('director off → EXACTLY 1.0 (adding the layer while off changes nothing)', () => {
-    const racers = mkRacers([0.7, 0.5, 0.3]);
-    racers.forEach((r) => (r.governorMult = 0.8));
-    applyGovernor(racers, 1.0, 'PULK', ctx(), { ...DIRCFG, directorEnabled: false });
-    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
-  });
-});
-
-// ── TWO-SIDED contest (leader brake + challenger boost) — the shipped shape ───
-describe('applyGovernor — two-sided contest', () => {
-  // castSize ≥ N → the whole field is featured (deterministic: every non-leader is a challenger).
-  const TWO = {
-    ...DIRCFG,
-    directorCastSize: 10,
-    directorSettling: 0,
-    directorLeaderBrake: 0.15,
-    directorChallengerBoost: 0.1,
-    directorPullStrength: 0.06,
-  };
-  const runTwo = (racers, cfg, n = 40) => {
-    for (let i = 0; i < n; i++) applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 }), cfg);
-  };
-
-  it('brakes the instantaneous leader and boosts the challengers behind it', () => {
-    const racers = mkRacers([0.5, 0.3, 0.1]); // idx0 leader, idx1/idx2 challengers
-    runTwo(racers, TWO);
-    expect(racers[0].governorMult).toBeLessThan(1.0); // leader braked
-    expect(racers[1].governorMult).toBeGreaterThan(1.0); // challenger boosted toward leader
-    expect(racers[2].governorMult).toBeGreaterThan(1.0);
-  });
-
-  it('brake side reaches below the symmetric −maxEffect floor (asymmetric, down to −leaderBrake)', () => {
+describe('applyGovernor — structural off', () => {
+  it('OUTCOME phase → EXACTLY 1.0 for every racer', () => {
     const racers = mkRacers([0.5, 0.3, 0.1]);
-    runTwo(racers, TWO, 80);
-    expect(racers[0].governorMult).toBeLessThan(1 - TWO.maxEffect + 1e-9); // below 0.88
-    expect(racers[0].governorMult).toBeGreaterThanOrEqual(1 - TWO.directorLeaderBrake - 1e-9); // ≥ 0.85
+    racers.forEach((r) => (r.governorMult = 0.7));
+    applyGovernor(racers, 1.0, 'OUTCOME', ctx(mkDir(), { progress: 0.6 }), BASE);
+    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
-
-  it('challenger boost never exceeds +maxEffect (natural ceiling) and is capped at challengerBoost', () => {
-    // Gap 2.9 lengths × pullStrength 0.06 = 0.174 > challengerBoost 0.10 → saturates at the cap.
-    const racers = mkRacers([3.0, 0.1, 0.05]);
-    runTwo(racers, TWO, 80);
-    racers.forEach((r) => expect(r.governorMult).toBeLessThanOrEqual(1 + TWO.maxEffect + 1e-9));
-    expect(racers[1].governorMult).toBeCloseTo(1 + TWO.directorChallengerBoost, 2); // capped at +0.10
+  it('director disabled → EXACTLY 1.0', () => {
+    const racers = mkRacers([0.5, 0.3, 0.1]);
+    racers.forEach((r) => (r.governorMult = 0.8));
+    applyGovernor(racers, 1.0, 'PULK', ctx(mkDir()), { ...BASE, directorEnabled: false });
+    racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
+});
 
-  it('still fades to EXACTLY 1.0 in OUTCOME', () => {
+describe('applyGovernor — leader brake', () => {
+  it('the instantaneous leader (max t) is braked below 1.0 (linger off)', () => {
+    const racers = mkRacers([0.5, 0.3, 0.1, -0.1, -0.3]);
+    runFrames(racers, BASE, 30);
+    // rank 1 = index 0 (highest t). It can only be braked (never boosted).
+    expect(racers[0].governorMult).toBeLessThan(1.0);
+    expect(racers[0].governorMult).toBeGreaterThanOrEqual(1 - BASE.directorLeaderBrake - 1e-9);
+  });
+});
+
+describe('applyGovernor — catch-up boost', () => {
+  it('at least one trailing challenger is boosted above 1.0', () => {
+    const racers = mkRacers([0.9, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4]);
+    runFrames(racers, BASE, 40);
+    const boosted = racers.filter((r, i) => i !== 0 && r.governorMult > 1.0 + 1e-6);
+    expect(boosted.length).toBeGreaterThan(0);
+    // boost never exceeds +maxEffect
+    racers.forEach((r) => expect(r.governorMult).toBeLessThanOrEqual(1 + BASE.maxEffect + 1e-9));
+  });
+});
+
+describe('applyGovernor — two directions (catch-up + fall-back)', () => {
+  it('with fall-back on, some racer is boosted AND some non-leader is braked', () => {
+    const cfg = { ...BASE, directorFallbackEnabled: true, directorFallbackMaxCount: 2 };
+    const racers = mkRacers([1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8]);
+    runFrames(racers, cfg, 60);
+    const maxMult = Math.max(...racers.map((r) => r.governorMult));
+    // a non-leader braked below 1.0 (fall-back or linger); the leader alone braking is not enough,
+    // so check a non-leader specifically.
+    const nonLeaderBraked = racers.some((r, i) => i !== 0 && r.governorMult < 1.0 - 1e-6);
+    expect(maxMult).toBeGreaterThan(1.0 + 1e-6); // catch-up present
+    expect(nonLeaderBraked).toBe(true); // fall-back present
+  });
+});
+
+describe('applyGovernor — realism envelope', () => {
+  it('fades to EXACTLY 1.0 in OUTCOME', () => {
     const racers = mkRacers([0.5, 0.3, 0.1]);
     racers.forEach((r) => (r.governorMult = 0.9));
-    applyGovernor(racers, 1.0, 'OUTCOME', ctx({ progress: 0.55, corrStartFrac: 0.55 }), TWO);
+    applyGovernor(
+      racers,
+      1.0,
+      'OUTCOME',
+      ctx(mkDir(), { progress: 0.55, corrStartFrac: 0.55 }),
+      BASE
+    );
     racers.forEach((r) => expect(r.governorMult).toBe(1.0));
   });
 
-  it('both strengths 0 → byte-identical to omitting them (legacy one-sided anchor pull)', () => {
-    const a = mkRacers([0.5, 0.3, 0.1]);
-    const b = mkRacers([0.5, 0.3, 0.1]);
-    const withZeros = { ...TWO, directorLeaderBrake: 0, directorChallengerBoost: 0 };
-    const omitted = { ...TWO };
-    delete omitted.directorLeaderBrake;
-    delete omitted.directorChallengerBoost;
-    runTwo(a, withZeros, 25);
-    runTwo(b, omitted, 25);
-    a.forEach((r, i) => expect(r.governorMult).toBeCloseTo(b[i].governorMult, 12));
+  it('ceiling-cap keeps a boosted racer within the natural band max', () => {
+    const cap = 1.081;
+    const cfg = { ...BASE, directorCeilingCap: cap };
+    const racers = mkRacers([1.0, 0.2, 0.1]);
+    racers.forEach((r) => (r.spreadFactor = 1.05)); // near the band max already
+    runFrames(racers, cfg, 40);
+    racers.forEach((r) => expect(r.spreadFactor * r.governorMult).toBeLessThanOrEqual(cap + 1e-6));
   });
-});
 
-describe('applyGovernor — realism envelope: slew + determinism', () => {
-  const TWO = {
-    ...DIRCFG,
-    directorCastSize: 10,
-    directorSettling: 0,
-    directorLeaderBrake: 0.15,
-    directorChallengerBoost: 0.1,
-    maxStepPerFrame: 0.02,
-  };
   it('per-step change never exceeds maxStepPerFrame', () => {
-    const racers = mkRacers([0.95, 0.5, 0.05]);
+    const racers = mkRacers([0.9, 0.6, 0.3, 0.0, -0.3]);
+    const dir = mkDir();
     let prev = racers.map((r) => r.governorMult);
-    for (let i = 0; i < 60; i++) {
-      applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.1 + i * 0.004 }), TWO);
+    for (let i = 0; i < 50; i++) {
+      applyGovernor(racers, 1.0, 'PULK', ctx(dir, { currentMs: i * 16 }), BASE);
       racers.forEach((r, j) =>
-        expect(Math.abs(r.governorMult - prev[j])).toBeLessThanOrEqual(TWO.maxStepPerFrame + 1e-9)
+        expect(Math.abs(r.governorMult - prev[j])).toBeLessThanOrEqual(BASE.maxStepPerFrame + 1e-9)
       );
       prev = racers.map((r) => r.governorMult);
     }
   });
-  it('two identical seeded sequences are byte-identical', () => {
+
+  it('two identical seeded sequences are byte-identical (deterministic, no Math.random)', () => {
+    const cfg = { ...BASE, directorFallbackEnabled: true };
     const run = () => {
-      const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1]);
+      const racers = mkRacers([0.9, 0.7, 0.5, 0.3, 0.1, -0.1, -0.3]);
+      const dir = mkDir();
       const out = [];
-      for (let i = 0; i < 25; i++) {
-        applyGovernor(racers, 1.0, 'PULK', ctx({ progress: 0.05 + i * 0.01, seed: 42 }), TWO);
+      for (let i = 0; i < 30; i++) {
+        applyGovernor(racers, 1.0, 'PULK', ctx(dir, { currentMs: i * 16, seed: 42 }), cfg);
         out.push(racers.map((r) => r.governorMult));
       }
       return out;

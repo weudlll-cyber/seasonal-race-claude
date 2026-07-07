@@ -65,7 +65,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { applyGovernor, computeMedianT } from '../../modules/raceGovernor.js';
+import { applyGovernor } from '../../modules/raceGovernor.js';
 import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
 import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -728,19 +728,26 @@ export default function RaceScreen() {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
       directorEnabled,
-      directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
-      directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
-      directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
       directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
       directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
       directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
       directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
-      // PULK-action smart-boost knobs (parity with sim-fairness.mjs; default off/neutral).
-      directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 0,
+      directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
       directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
       directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
       directorCeilingCap:
         (dynamicsConfig.governorDirectorCeilingCap ?? false) ? BASE_SPEED_MAX / BASE_SPEED_MEAN : 0,
+      // Event-driven catch-up (parity with sim-fairness.mjs).
+      directorMaxParallelBoosts: dynamicsConfig.governorDirectorMaxParallelBoosts ?? 3,
+      directorBoostDurationMin: dynamicsConfig.governorDirectorBoostDurationMin ?? 1500,
+      directorBoostDurationMax: dynamicsConfig.governorDirectorBoostDurationMax ?? 4000,
+      directorCatchThreshold: dynamicsConfig.governorDirectorCatchThreshold ?? 2.0,
+      // Active fall-back (the second direction).
+      directorFallbackEnabled: dynamicsConfig.governorDirectorFallbackEnabled ?? false,
+      directorFallbackFromPool: dynamicsConfig.governorDirectorFallbackFromPool ?? 5,
+      directorFallbackMaxCount: dynamicsConfig.governorDirectorFallbackMaxCount ?? 2,
+      directorFallbackUntilPosition: dynamicsConfig.governorDirectorFallbackUntilPosition ?? 12,
+      directorFallbackProtectMs: dynamicsConfig.governorDirectorFallbackProtectMs ?? 2500,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
@@ -760,13 +767,16 @@ export default function RaceScreen() {
     // (pulkStart 0.25 / pulkEnd 0.5) are unchanged, so this is byte-identical to the pinned values.
     const PHASE_CHAOS_END = govFractions?.pulkStartFrac ?? 0.25;
     const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
-    // Per-race SMART-boost director state (front-pool pick rotation + linger-brake). Mutated across
-    // frames by applyGovernor. Unused when the smart knobs are off.
+    // Per-race director state — catch-up + fall-back slots, boost-once pool, protection windows,
+    // linger-brake, and the seeded event counter. applyGovernor lazily fills the slot arrays; the
+    // fields below just seed the shape (mutated across frames).
     const dirState = {
-      slot: -1,
-      featuredIdx: -1,
+      boostSlots: [],
+      fallSlots: [],
       boosted: new Set(),
+      protectedUntil: new Map(),
       poolFallback: 0,
+      ev: 0,
       prevLeader: -1,
       leaderSinceMs: 0,
       lingerTarget: -1,
@@ -1011,15 +1021,14 @@ export default function RaceScreen() {
             for (const r of st.racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
           }
 
-          // Field median for the director: computed ONCE per step and shared with
-          // applyGovernor (no double sort). Undefined when the director is off.
+          // Director phase (drives the pre-OUTCOME contest gate + the fade). The director uses the
+          // live rank sort + gap-to-leader, not the field median, so no median is precomputed.
           const govPhase =
             directorEnabled && racePlanController
               ? racePlanController.getPhase(physicsTs, st.raceProgress)
               : null;
-          const sharedMedianT = directorEnabled ? computeMedianT(st.racers) : undefined;
 
-          // ── Pre-OUTCOME contest-injector "director" (default OFF) ──
+          // ── Pre-OUTCOME contest-injector "director" ──
           if (directorEnabled && govFractions) {
             applyGovernor(
               st.racers,
@@ -1033,11 +1042,10 @@ export default function RaceScreen() {
                 pathLengthPx,
                 meanBodyLen: govMeanBodyLen,
                 isOpen: isOpenTrack,
-                currentMs: physicsTs, // PULK-action: ms clock for the linger-brake / hold timing
-                dirState, // PULK-action: per-race smart-boost state (front-pool + linger)
+                currentMs: physicsTs, // ms clock for durations / linger / protection windows
+                dirState, // per-race director state (catch-up + fall-back slots)
               },
-              govCfg,
-              sharedMedianT
+              govCfg
             );
             // Read-only snapshot for the Governor Diag HUD (cheap per-frame object).
             governorDiagRef.current = {

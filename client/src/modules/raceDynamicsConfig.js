@@ -35,16 +35,38 @@ export function loadRaceDynamicsConfig() {
     merged.governorMaxStepPerFrame <= 0 ||
     // Contest-injector "director" fields: same whole-object-reject pattern.
     typeof merged.governorDirectorEnabled !== 'boolean' ||
-    typeof merged.governorDirectorCastSize !== 'number' ||
-    merged.governorDirectorCastSize < 1 ||
-    typeof merged.governorDirectorDwell !== 'number' ||
-    merged.governorDirectorDwell <= 0 ||
-    typeof merged.governorDirectorAnchorOffset !== 'number' ||
-    merged.governorDirectorAnchorOffset < 0 ||
     typeof merged.governorDirectorPullStrength !== 'number' ||
     merged.governorDirectorPullStrength < 0 ||
     typeof merged.governorDirectorSettling !== 'number' ||
-    merged.governorDirectorSettling < 0
+    merged.governorDirectorSettling < 0 ||
+    typeof merged.governorDirectorLeaderBrake !== 'number' ||
+    merged.governorDirectorLeaderBrake < 0 ||
+    typeof merged.governorDirectorChallengerBoost !== 'number' ||
+    merged.governorDirectorChallengerBoost < 0 ||
+    typeof merged.governorDirectorFrontPool !== 'number' ||
+    merged.governorDirectorFrontPool < 0 ||
+    typeof merged.governorDirectorBoostOncePerRace !== 'boolean' ||
+    typeof merged.governorDirectorLingerBrake !== 'number' ||
+    merged.governorDirectorLingerBrake < 0 ||
+    typeof merged.governorDirectorCeilingCap !== 'boolean' ||
+    // Event-driven catch-up + active fall-back (rebuild).
+    typeof merged.governorDirectorMaxParallelBoosts !== 'number' ||
+    merged.governorDirectorMaxParallelBoosts < 0 ||
+    typeof merged.governorDirectorBoostDurationMin !== 'number' ||
+    merged.governorDirectorBoostDurationMin < 0 ||
+    typeof merged.governorDirectorBoostDurationMax !== 'number' ||
+    merged.governorDirectorBoostDurationMax < 0 ||
+    typeof merged.governorDirectorCatchThreshold !== 'number' ||
+    merged.governorDirectorCatchThreshold < 0 ||
+    typeof merged.governorDirectorFallbackEnabled !== 'boolean' ||
+    typeof merged.governorDirectorFallbackFromPool !== 'number' ||
+    merged.governorDirectorFallbackFromPool < 0 ||
+    typeof merged.governorDirectorFallbackMaxCount !== 'number' ||
+    merged.governorDirectorFallbackMaxCount < 0 ||
+    typeof merged.governorDirectorFallbackUntilPosition !== 'number' ||
+    merged.governorDirectorFallbackUntilPosition < 0 ||
+    typeof merged.governorDirectorFallbackProtectMs !== 'number' ||
+    merged.governorDirectorFallbackProtectMs < 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

@@ -294,32 +294,36 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // SAME keys — single source, no second copy.
   governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
   governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
-  // A small cast (~2–3) is featured at any moment and pulled toward a front anchor (median +
-  // offset). The cast turns over every `dwell` of leader-progress in a seed-shuffled order, so
-  // which racers contend the front keeps changing and the assigned winner is NOT predictable from
-  // the early front. Featured membership is keyed on racer index + a dedicated director stream
-  // (raceGovernor.js DIRECTOR_SEED_XOR) — never targetRank.
-  // SHIPPED DEFAULT: the winning PULK-action contest is ON out of the box (director enabled +
-  // two-sided smart-boost + phase-split bonuses). The winning "N8/D0.6" set, promoted from the
-  // former pulkActionPreview shim, sim-validated across the full track × racer matrix.
+  // SHIPPED DEFAULT: the PULK-action front contest is ON out of the box — an event-driven two-way
+  // director (raceGovernor.js): event-driven catch-ups TOWARD the leader + active fall-backs OUT of
+  // the front group + a leader-catch brake. Rank-blind (position + seed only, never targetRank),
+  // faded to nothing by OUTCOME so the finish order (fairness) is delegated to the OUTCOME
+  // controller + the naturalness ceiling-cap. Values below are a starting set for the owner
+  // eye-test; they are DevScreen-tunable.
   governorDirectorEnabled: true, // director master switch — ON (the shipped front contest)
-  governorDirectorCastSize: 3, // legacy whole-field cast size (used only when frontPool = 0)
-  governorDirectorDwell: 0.08, // spotlight dwell as a fraction of leader-progress before the cast turns over
-  governorDirectorAnchorOffset: 2.0, // legacy one-sided anchor = median + this many racer-lengths ahead
-  governorDirectorPullStrength: 0.06, // speed force per racer-length of gap (challenger-boost gain + anchor pull)
-  governorDirectorSettling: 0.05, // settling window (progress) before the fade: no new cast is featured
-  // TWO-SIDED contest: brake the instantaneous leader by leaderBrake AND boost the featured
-  // challenger toward it (up to challengerBoost, gain = pullStrength). Rank-blind (position + seed
-  // only). Brake side may reach −0.15 (naturalness-safe: only slows); boost side capped at +maxEffect.
-  governorDirectorLeaderBrake: 0.1, // brake on the instantaneous P1 (≤ 0.15)
-  governorDirectorChallengerBoost: 0.06, // forward boost cap on the featured challenger toward the leader
-  // Smart-boost: per dwell slot pick ONE challenger from the front `frontPool` positions (leader
-  // excluded), boost-once-per-race so the action rotates, and hold a linger-brake on the just-
-  // overtaken old leader so each pass settles. Ceiling-cap keeps a boosted racer at the natural band max.
-  governorDirectorFrontPool: 8, // boost pool = front N on-track positions (leader excluded)
-  governorDirectorBoostOncePerRace: true, // a boosted racer leaves the pool for the rest of PULK
+  governorDirectorPullStrength: 0.06, // catch-up boost gain: speed force per racer-length of gap behind the leader
+  governorDirectorSettling: 0.05, // settling window (progress) before the fade: stop starting new events
+  // Leader-catch: brake the instantaneous P1; linger-brake the just-overtaken old leader.
+  governorDirectorLeaderBrake: 0.1, // brake on P1 (also the fall-back brake magnitude; ≤ 0.15)
+  governorDirectorChallengerBoost: 0.06, // forward boost cap on a catching challenger toward the leader
   governorDirectorLingerBrake: 0.6, // seconds the just-overtaken old leader keeps the brake
-  governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max (naturalness)
+  governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
+  // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
+  // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
+  // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at
+  // once; the in-flight count VARIES as random durations start/end. boostOncePerRace rotates the action.
+  governorDirectorFrontPool: 8, // catch-up pool = front N on-track positions (leader excluded)
+  governorDirectorBoostOncePerRace: true, // a challenger leaves the pool after its catch-up turn
+  governorDirectorMaxParallelBoosts: 3, // max simultaneous catch-ups (actual number varies over time)
+  governorDirectorBoostDurationMin: 1500, // ms: min random catch-up duration (also the min idle gap)
+  governorDirectorBoostDurationMax: 4000, // ms: max random catch-up duration / safety timeout
+  governorDirectorCatchThreshold: 2.0, // racer-lengths behind the leader that counts as "caught up"
+  // Active fall-back (the second direction): push racer(s) OUT of the front group to open gaps.
+  governorDirectorFallbackEnabled: true, // master switch for the fall-back mechanism
+  governorDirectorFallbackFromPool: 5, // fall-back pool = front N positions (leader excluded) to pick fallers from
+  governorDirectorFallbackMaxCount: 2, // max simultaneous fall-backs (count varies over time)
+  governorDirectorFallbackUntilPosition: 12, // brake the faller until it drops PAST this rank, then release
+  governorDirectorFallbackProtectMs: 2500, // ms a released faller is NOT eligible as a catch-up target
   // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
   // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
   // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.

@@ -3,27 +3,17 @@
 // Path:        client/src/screens/RaceScreen/GovernorDiagHUD.jsx
 // Project:     RaceArena
 // Description: Pre-OUTCOME contest-injector "director" diagnostics overlay for the DevPanel.
-//              Shows, live: (1) the RESOLVED phase binding — "active (PULK) — fades
-//              pulkEnd XX% → corrStart XX%" — so the owner SEES the fade window follow a
-//              corridorStart edit; (2) the director state (cast + anchor/settling) and the
-//              featured cast for this step; and (3) for the current LEADER and a trailing
-//              STRAGGLER, the gap-to-median, whether they are featured, the director pull,
-//              and the applied governorMult. Passive DOM sibling of the race canvas: renders
-//              nothing when its toggle is off, never touches the render loop. Reuses the
-//              governor's exported pure helpers + computeMedianT (single source — the HUD
-//              recomputes the breakdown rather than the governor exposing internals).
-//              Placement: TOP-CENTER.
+//              Shows, live: (1) the RESOLVED phase binding — "active (PULK) — fades pulkEnd XX%
+//              → corrStart XX%, w=…" — so the owner SEES the fade window follow a corridorStart
+//              edit; (2) the director state (leader→2nd gap + field spread, in racer-lengths); and
+//              (3) for the current LEADER and a trailing STRAGGLER, the gap to the leader and the
+//              applied governorMult (brake < 1 / boost > 1). Passive DOM sibling of the race
+//              canvas: renders nothing when its toggle is off, never touches the render loop.
+//              Reuses the director's exported pure helpers (arcT, phase-weight fade). The director
+//              no longer uses the field median, so no median is read here. Placement: TOP-CENTER.
 // ============================================================
 
-import {
-  arcT,
-  computeMedianT,
-  governorPhaseWeight,
-  governorFadeStart,
-  directorFeaturedSet,
-} from '../../modules/raceGovernor.js';
-
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+import { arcT, governorPhaseWeight } from '../../modules/raceGovernor.js';
 
 const PANEL_STYLE = {
   position: 'absolute',
@@ -56,16 +46,12 @@ const OFF_COLOR = '#888';
 const CFG_COLOR = '#bfe0bf';
 const BRAKE_COLOR = '#ff9a3c';
 const LIFT_COLOR = '#6fd0ff';
-const DIRECTOR_COLOR = '#ffd166';
 
 const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
-const f4 = (v) => (v == null ? '—' : v.toFixed(4));
 
 /**
- * Build the plain view snapshot from the live race state + the director diag snapshot.
- * Pure (no refs). Recomputes the featured cast + per-racer director pull from the SAME
- * exported helpers the physics uses, so the readout matches the physics as closely as a
- * read-only recompute can (the applied mult, r.governorMult, is always exact).
+ * Build the plain view snapshot from the live race state + the director diag snapshot. Pure (no
+ * refs). Reads only position + the applied governorMult, so the readout always matches the physics.
  */
 function buildView(diag, state) {
   const cfg = diag.cfg;
@@ -80,100 +66,45 @@ function buildView(diag, state) {
   const w = activePhase
     ? governorPhaseWeight(diag.progress, diag.pulkEndFrac, diag.corrStartFrac)
     : 0;
-  const maxEffect = cfg.maxEffect ?? 0.12;
 
-  // Director (contest-injector) featured cast for this step — recomputed from the SAME exported
-  // helper the physics uses (single source), so the readout matches who is actually featured.
-  const directorOn = !!cfg.directorEnabled;
-  const anchorOffset = cfg.directorAnchorOffset ?? 2.0;
-  const pullStrength = cfg.directorPullStrength ?? 0.06;
-  const directorCutoff =
-    governorFadeStart(diag.pulkEndFrac, diag.corrStartFrac) - (cfg.directorSettling ?? 0.05);
-  const featured =
-    directorOn && activePhase && lenScale > 0
-      ? directorFeaturedSet(
-          racers,
-          diag.seed,
-          diag.progress,
-          cfg.directorCastSize ?? 3,
-          cfg.directorDwell ?? 0.08,
-          directorCutoff
-        )
-      : null;
-
-  // Leader (max t), 2nd, straggler (min t), field-length p90−p10 among live racers.
   const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
   const nLive = live.length;
   const leader = live[0] ?? null;
   const second = live[1] ?? null;
   const straggler = live[nLive - 1] ?? null;
-  const medianT = computeMedianT(racers);
-
-  // Arc-distance in TRUE RACER-LENGTHS (same metric the governor regulates). Signed by the
-  // cumulative-t order (ahead = +, behind = −), magnitude = visible on-track arc / body length.
-  const toLengths = (a, b) => Math.sign(a - b) * arcT(a, b, isOpen) * lenScale;
+  const arcLen = (a, b) => (leader ? arcT(a, b, isOpen) * lenScale : 0);
   const p = (frac) => (nLive ? live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t : 0);
-  const fieldLen = nLive > 1 ? toLengths(p(0.1), p(0.9)) : 0;
-  const leaderGapLen = leader && medianT !== null ? toLengths(leader.t, medianT) : 0;
-  const leader2ndLen = leader && second ? toLengths(leader.t, second.t) : 0;
 
-  const breakdown = (r) => {
-    if (!r || medianT === null || lenScale <= 0) return null;
-    const gapLengths = toLengths(r.t, medianT);
-    // Director pull toward the front anchor (median + offset) — only for a featured racer.
-    // Best-effort recompute of the legacy one-sided anchor pull; the applied mult below is exact.
-    const isFeatured = !!(featured && featured.has(r.index));
-    const director = isFeatured
-      ? clamp(-pullStrength * (gapLengths - anchorOffset), -maxEffect, maxEffect)
-      : 0;
-    return {
-      name: r.name ?? r.id ?? `#${r.index}`,
-      gapLen: gapLengths,
-      featured: isFeatured,
-      director: w * director,
-      mult: r.governorMult ?? 1.0,
-    };
-  };
-
-  // Featured-cast names (for the director readout) — order by current t so the eye can map them.
-  const featuredNames = featured
-    ? live.filter((r) => featured.has(r.index)).map((r) => r.name ?? r.id ?? `#${r.index}`)
-    : [];
+  const line = (r) =>
+    r
+      ? {
+          name: r.name ?? r.id ?? `#${r.index}`,
+          gapLen: leader ? arcLen(leader.t, r.t) : 0, // 0 for the leader; positive behind it
+          mult: r.governorMult ?? 1.0,
+        }
+      : null;
 
   return {
     phase: diag.phase,
     activePhase,
     w,
-    leaderGapLen,
-    leader2ndLen,
-    fieldLen,
+    directorOn: !!cfg.directorEnabled,
+    leader2ndLen: leader && second ? arcLen(leader.t, second.t) : 0,
+    fieldLen: nLive > 1 ? arcLen(p(0.1), p(0.9)) : 0,
     pulkEndFrac: diag.pulkEndFrac,
     corrStartFrac: diag.corrStartFrac,
-    directorOn,
-    anchorOffset,
-    directorCutoff,
-    featuredNames,
-    leader: breakdown(leader),
-    straggler: breakdown(straggler),
+    leader: line(leader),
+    straggler: line(straggler),
   };
 }
 
-function racerLine(label, b, color) {
+function racerLine(label, b) {
   if (!b) return null;
   return (
     <div>
       {label} <span style={{ color: '#ffd700' }}>{b.name}</span>
-      {'  gap '}
-      <span style={{ color: b.gapLen < 0 ? LIFT_COLOR : CFG_COLOR }}>
-        {b.gapLen >= 0 ? '+' : ''}
-        {b.gapLen.toFixed(1)}len
-      </span>
-      {'  '}
-      <span style={{ color: b.featured ? DIRECTOR_COLOR : ON_COLOR }}>
-        {b.featured ? 'feat' : 'free'}
-      </span>
-      {'  dir '}
-      <span style={{ color: color ?? DIRECTOR_COLOR }}>{f4(b.director)}</span>
+      {'  behind '}
+      <span style={{ color: CFG_COLOR }}>{b.gapLen.toFixed(1)}len</span>
       {'  mult '}
       <span style={{ color: b.mult < 1 ? BRAKE_COLOR : b.mult > 1 ? LIFT_COLOR : OFF_COLOR }}>
         {b.mult.toFixed(3)}
@@ -205,7 +136,9 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
       <div>
         {v.activePhase ? (
           <>
-            <span style={{ color: ON_COLOR }}>active ({v.phase})</span>
+            <span style={{ color: v.directorOn ? ON_COLOR : OFF_COLOR }}>
+              {v.directorOn ? 'active' : 'off'} ({v.phase})
+            </span>
             <span style={{ color: CFG_COLOR }}>
               {'  '}fades pulkEnd {pct(v.pulkEndFrac)} → corrStart {pct(v.corrStartFrac)}
               {'  '}w={v.w.toFixed(2)}
@@ -216,29 +149,12 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
         )}
       </div>
       <div>
-        <span style={{ color: CFG_COLOR }}>leader→median {v.leaderGapLen.toFixed(1)}len</span>
-        {'  '}leader→2nd {v.leader2ndLen.toFixed(1)}len
+        <span style={{ color: CFG_COLOR }}>leader→2nd {v.leader2ndLen.toFixed(1)}len</span>
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
       </div>
-      <div style={{ color: v.directorOn ? DIRECTOR_COLOR : OFF_COLOR }}>
-        director {v.directorOn ? 'ON' : 'off'}
-        {v.directorOn && (
-          <>
-            {'  anchor +'}
-            {v.anchorOffset.toFixed(1)}len{'  stops '}
-            {pct(v.directorCutoff)}
-            {'  cast '}
-            {v.activePhase && v.featuredNames.length
-              ? `[${v.featuredNames.join(', ')}]`
-              : v.activePhase
-                ? '(settling)'
-                : '—'}
-          </>
-        )}
-      </div>
-      <div style={SEP_STYLE}>── director pull + applied mult ──</div>
-      {racerLine('Leader:', v.leader, CFG_COLOR)}
-      {racerLine('Straggler:', v.straggler, LIFT_COLOR)}
+      <div style={SEP_STYLE}>── gap behind leader + applied mult ──</div>
+      {racerLine('Leader:', v.leader)}
+      {racerLine('Straggler:', v.straggler)}
     </div>
   );
 }
