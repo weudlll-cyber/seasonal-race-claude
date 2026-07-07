@@ -431,28 +431,6 @@ export default function RaceScreen() {
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
     const raceZoneConfig = loadRaceZoneConfig();
-    // ── PULK-action preview (one-toggle eye-test; default OFF) ───────────────────────────────────
-    // When dynamicsConfig.pulkActionPreview is set, FORCE the whole N8/D0.6 winning set in code so a
-    // stale racearena:raceDynamicsConfig in localStorage can't override it (the localStorage trap). All
-    // OFF by default → shipped behaviour byte-identical until the owner flips this one flag.
-    if (dynamicsConfig.pulkActionPreview) {
-      Object.assign(dynamicsConfig, {
-        governorDirectorEnabled: true,
-        governorDirectorLeaderBrake: 0.1,
-        governorDirectorChallengerBoost: 0.06,
-        governorDirectorCeilingCap: true,
-        governorDirectorFrontPool: 8,
-        governorDirectorBoostOncePerRace: true,
-        governorDirectorLingerBrake: 0.6,
-        phaseSplitBonusEnabled: true,
-        areaBonusEarly: 1.0,
-        areaBonusPulk: 0,
-        areaBonusPost: 1.0,
-        rowBonusEarly: 1,
-        rowBonusPulk: 0,
-        rowBonusPost: 1,
-      });
-    }
     const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
 
@@ -765,10 +743,9 @@ export default function RaceScreen() {
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
-    // ── PULK-action phase-split bonuses (parity with sim-fairness.mjs; default OFF byte-identical) ──
-    // areaBonus/rowBonus strength gated by race phase: chaos (<0.25) EARLY, PULK (0.25–0.5) PULK, post
-    // (≥0.5) POST. areaRefStrength = the plan's band-bonus strength (scale = phaseStrength / ref, mirrors
-    // the sim). Boundaries 0.25/0.5 are the fixed values the sim uses. Read once per race.
+    // ── PULK-action phase-split bonuses (parity with sim-fairness.mjs) ──
+    // areaBonus/rowBonus strength gated by race phase: chaos EARLY, PULK, post POST.
+    // areaRefStrength = the plan's band-bonus strength (scale = phaseStrength / ref, mirrors the sim).
     const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
     const areaRefStrength = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0;
     const areaBonusEarly = dynamicsConfig.areaBonusEarly ?? areaRefStrength;
@@ -777,8 +754,11 @@ export default function RaceScreen() {
     const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
     const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
     const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
-    const PHASE_CHAOS_END = 0.25;
-    const PHASE_PULK_END = 0.5;
+    // Phase-split boundaries follow the LIVE plan phase fractions (single source: the controller),
+    // NOT hardcoded literals — so if the owner moves the PULK phase the bonuses follow it. Defaults
+    // (pulkStart 0.25 / pulkEnd 0.5) are unchanged, so this is byte-identical to the pinned values.
+    const PHASE_CHAOS_END = govFractions?.pulkStartFrac ?? 0.25;
+    const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
     // Per-race SMART-boost director state (front-pool pick rotation + linger-brake). Mutated across
     // frames by applyGovernor. Unused when the smart knobs are off.
     const dirState = {

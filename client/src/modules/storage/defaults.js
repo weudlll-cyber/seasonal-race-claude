@@ -295,36 +295,37 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // which racers contend the front keeps changing and the assigned winner is NOT predictable from
   // the early front. Featured membership is keyed on racer index + a dedicated director stream
   // (raceGovernor.js DIRECTOR_SEED_XOR) — never targetRank.
-  governorDirectorEnabled: false, // director master switch (default OFF)
-  governorDirectorCastSize: 3, // how many racers are featured (held in the front band) at once
+  // SHIPPED DEFAULT: the winning PULK-action contest is ON out of the box (director enabled +
+  // two-sided smart-boost + phase-split bonuses). The winning "N8/D0.6" set, promoted from the
+  // former pulkActionPreview shim, sim-validated across the full track × racer matrix.
+  governorDirectorEnabled: true, // director master switch — ON (the shipped front contest)
+  governorDirectorCastSize: 3, // legacy whole-field cast size (used only when frontPool = 0)
   governorDirectorDwell: 0.08, // spotlight dwell as a fraction of leader-progress before the cast turns over
-  governorDirectorAnchorOffset: 2.0, // front anchor = median + this many racer-lengths ahead
-  governorDirectorPullStrength: 0.06, // speed force per racer-length of anchor gap (pre ±maxEffect clamp)
+  governorDirectorAnchorOffset: 2.0, // legacy one-sided anchor = median + this many racer-lengths ahead
+  governorDirectorPullStrength: 0.06, // speed force per racer-length of gap (challenger-boost gain + anchor pull)
   governorDirectorSettling: 0.05, // settling window (progress) before the fade: no new cast is featured
-  // Action-1 TWO-SIDED contest (default OFF = both 0 → legacy one-sided anchor pull, byte-identical).
-  // When either > 0: brake the instantaneous leader by leaderBrake AND boost the featured challengers
-  // toward it (up to challengerBoost, gain = pullStrength). Rank-blind (position + seed only). Brake
-  // side may reach −0.15 (naturalness-safe: only slows); boost side stays capped at +maxEffect (~0.12).
-  governorDirectorLeaderBrake: 0, // brake on the instantaneous P1 (racer-lengths-independent; ≤ 0.15)
-  governorDirectorChallengerBoost: 0, // forward boost cap on featured challengers toward the leader (≤ maxEffect)
-  // PULK-action smart-boost knobs (DEFAULT OFF/neutral — no effect until governorDirectorEnabled + these).
-  governorDirectorFrontPool: 0, // boost pool = front N on-track positions (leader excluded); 0 = legacy whole-field
-  governorDirectorBoostOncePerRace: false, // a boosted racer leaves the pool for the rest of PULK
-  governorDirectorLingerBrake: 0, // seconds the just-overtaken old leader keeps the brake (0 = instant)
-  governorDirectorCeilingCap: false, // cap a boosted racer's resulting speed at the natural band max (naturalness)
-  // PULK-action phase-split bonuses (DEFAULT OFF — bonuses full all race, byte-identical). When enabled,
-  // areaBonus/rowBonus strength is gated by race phase (chaos EARLY / PULK / post POST). areaBonus strengths
-  // are in bonusStrengthMultiplier units (2.0 = shipped full); rowBonus strengths are fractions (1 = full).
-  phaseSplitBonusEnabled: false,
-  areaBonusEarly: 2.0,
-  areaBonusPulk: 2.0,
-  areaBonusPost: 2.0,
+  // TWO-SIDED contest: brake the instantaneous leader by leaderBrake AND boost the featured
+  // challenger toward it (up to challengerBoost, gain = pullStrength). Rank-blind (position + seed
+  // only). Brake side may reach −0.15 (naturalness-safe: only slows); boost side capped at +maxEffect.
+  governorDirectorLeaderBrake: 0.1, // brake on the instantaneous P1 (≤ 0.15)
+  governorDirectorChallengerBoost: 0.06, // forward boost cap on the featured challenger toward the leader
+  // Smart-boost: per dwell slot pick ONE challenger from the front `frontPool` positions (leader
+  // excluded), boost-once-per-race so the action rotates, and hold a linger-brake on the just-
+  // overtaken old leader so each pass settles. Ceiling-cap keeps a boosted racer at the natural band max.
+  governorDirectorFrontPool: 8, // boost pool = front N on-track positions (leader excluded)
+  governorDirectorBoostOncePerRace: true, // a boosted racer leaves the pool for the rest of PULK
+  governorDirectorLingerBrake: 0.6, // seconds the just-overtaken old leader keeps the brake
+  governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max (naturalness)
+  // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
+  // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
+  // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.
+  phaseSplitBonusEnabled: true,
+  areaBonusEarly: 1.0,
+  areaBonusPulk: 0,
+  areaBonusPost: 1.0,
   rowBonusEarly: 1,
-  rowBonusPulk: 1,
+  rowBonusPulk: 0,
   rowBonusPost: 1,
-  // One-toggle eye-test: when true, RaceScreen FORCES the full N8/D0.6 winning set in code (overriding any
-  // stale localStorage), so the owner can preview PULK-action with a single flag. DEFAULT OFF.
-  pulkActionPreview: false,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

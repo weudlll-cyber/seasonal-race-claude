@@ -43,39 +43,32 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanMinDurationSec: 30,
       governorMaxEffect: 0.12,
       governorMaxStepPerFrame: 0.01,
-      governorDirectorEnabled: false,
+      // SHIPPED DEFAULT: the winning PULK-action contest (director + two-sided smart-boost + phase-split).
+      governorDirectorEnabled: true,
       governorDirectorCastSize: 3,
       governorDirectorDwell: 0.08,
       governorDirectorAnchorOffset: 2.0,
       governorDirectorPullStrength: 0.06,
       governorDirectorSettling: 0.05,
-      governorDirectorLeaderBrake: 0,
-      governorDirectorChallengerBoost: 0,
-      // PULK-action smart-boost + phase-split + preview (all OFF/neutral by default).
-      governorDirectorFrontPool: 0,
-      governorDirectorBoostOncePerRace: false,
-      governorDirectorLingerBrake: 0,
-      governorDirectorCeilingCap: false,
-      phaseSplitBonusEnabled: false,
-      areaBonusEarly: 2.0,
-      areaBonusPulk: 2.0,
-      areaBonusPost: 2.0,
+      governorDirectorLeaderBrake: 0.1,
+      governorDirectorChallengerBoost: 0.06,
+      governorDirectorFrontPool: 8,
+      governorDirectorBoostOncePerRace: true,
+      governorDirectorLingerBrake: 0.6,
+      governorDirectorCeilingCap: true,
+      phaseSplitBonusEnabled: true,
+      areaBonusEarly: 1.0,
+      areaBonusPulk: 0,
+      areaBonusPost: 1.0,
       rowBonusEarly: 1,
-      rowBonusPulk: 1,
+      rowBonusPulk: 0,
       rowBonusPost: 1,
-      pulkActionPreview: false,
     });
   });
 
-  it('all numeric defaults are positive; two-sided contest knobs default 0 (off)', () => {
-    // Action-1 two-sided contest knobs are OFF-at-0 by default (byte-identical legacy path).
-    const offAtZero = new Set([
-      'governorDirectorLeaderBrake',
-      'governorDirectorChallengerBoost',
-      // PULK-action smart-boost knobs — OFF-at-0 by default (legacy path byte-identical).
-      'governorDirectorFrontPool',
-      'governorDirectorLingerBrake',
-    ]);
+  it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {
+    // The winning phase-split turns the area/row bonuses OFF during the PULK window (0 is valid).
+    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk']);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);

@@ -212,8 +212,11 @@ const DIRECTOR_BOOST_ONCE   = argVal('directorBoostOncePerRace', 'off') === 'on'
 const DIRECTOR_LINGER_BRAKE = Number(argVal('directorLingerBrake', '0'));
 // Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
 // the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
-const SD_PULK_START   = 0.25;                 // chaos → PULK boundary (row-bonus early/pulk split)
-const SD_PULK_END     = 0.5;                  // PULK → post boundary (bonus re-introduction point)
+const SD_PULK_START   = 0.25;                 // chaos → PULK boundary — strip-metrics OBSERVATION only
+const SD_PULK_END     = 0.5;                  // PULK → post boundary — strip-metrics OBSERVATION only
+// NOTE: the phase-split MECHANIC (areaBonus/rowBonus) reads the LIVE plan pulkStart/pulkEnd fractions
+// per race (see pulkStartLive/pulkEndLive) so bonuses follow the phases; SD_* above are the pinned
+// strip-down observation checkpoints. Both equal 0.25/0.5 by default → byte-identical.
 const SD_CORR_START   = RP_CORRIDOR_START;    // 0.55 — PULK action-window upper bound = OUTCOME start
 const SM_HOLD_MS      = 750;                   // a P1 change counts as a CLEAN overtake only if the new
                                                // leader holds P1 ≥ this long (filters flicker vs raw leadΔ)
@@ -842,6 +845,12 @@ export function runSingleRace({
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
+    // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
+    // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
+    // (The strip-metrics OBSERVATION windows below intentionally stay on the pinned SD_* constants.)
+    const pulkStartLive = govFractions?.pulkStartFrac ?? SD_PULK_START;
+    const pulkEndLive   = govFractions?.pulkEndFrac ?? SD_PULK_END;
     // PULK-action-3: per-race SMART-boost director state (front-pool pick rotation + linger-brake).
     // Created once per race, mutated across frames by applyGovernor. Unused when smart features are off.
     const dirState = { slot: -1, featuredIdx: -1, boosted: new Set(), poolFallback: 0,
@@ -1013,7 +1022,7 @@ export function runSingleRace({
       // The scale commutes with the transEnd fade (both linear in areaBonusMult−1), so the fade shape
       // is preserved. Inactive (no flag) → untouched → byte-identical.
       if (AREA_SPLIT_ACTIVE) {
-        const inPulkPhase = raceProgress >= SD_PULK_START && raceProgress < SD_PULK_END;
+        const inPulkPhase = raceProgress >= pulkStartLive && raceProgress < pulkEndLive;
         if (AREA_PULK_GATE_ACTIVE && inPulkPhase) {
           // POSITION-GATED PULK areaBonus: strength depends on each racer's CURRENT on-track rank —
           // off up front (unpredictable), full when deep (rescue the stranded winner). Naturalness cap
@@ -1040,10 +1049,11 @@ export function runSingleRace({
             }
           }
         } else {
-          // 3-phase: chaos (<0.25) → EARLY, PULK (0.25–0.5) → PULK, post (≥0.5) → POST. EARLY defaults to
-          // PULK when --areaBonusEarly is absent, collapsing to the prior 2-phase behaviour (byte-identical).
-          const phaseStrength = raceProgress < SD_PULK_START ? AREA_BONUS_EARLY
-                              : raceProgress < SD_PULK_END   ? AREA_BONUS_PULK
+          // 3-phase: chaos (<pulkStart) → EARLY, PULK (pulkStart..pulkEnd) → PULK, post (≥pulkEnd) →
+          // POST. EARLY defaults to PULK when --areaBonusEarly is absent, collapsing to the prior
+          // 2-phase behaviour (byte-identical). Boundaries follow the live plan phase fractions.
+          const phaseStrength = raceProgress < pulkStartLive ? AREA_BONUS_EARLY
+                              : raceProgress < pulkEndLive   ? AREA_BONUS_PULK
                               :                                AREA_BONUS_POST;
           const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
           for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
@@ -1269,11 +1279,12 @@ export function runSingleRace({
           // STRIP-DOWN: start-row speed-bonus phase envelope (read-only; sim-only). baseSpeed bakes in
           // the FULL speedBonusMult (=1+rawRowBonus); rowEnvMult corrects it to the phase strength s:
           // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
-          // s = early (chaos <0.25) / pulk (0.25–0.5) / post (≥0.5). Inactive → 1.0 → byte-identical.
+          // s = early (chaos <pulkStart) / pulk (pulkStart..pulkEnd) / post (≥pulkEnd), following the
+          // live plan phase fractions. Inactive → 1.0 → byte-identical.
           let rowEnvMult = 1.0;
           if (ROW_SPLIT_ACTIVE && r.rawRowBonus > 0) {
-            const s = raceProgress < SD_PULK_START ? ROW_BONUS_EARLY
-                    : raceProgress < SD_PULK_END   ? ROW_BONUS_PULK
+            const s = raceProgress < pulkStartLive ? ROW_BONUS_EARLY
+                    : raceProgress < pulkEndLive   ? ROW_BONUS_PULK
                     :                                ROW_BONUS_POST;
             rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
           }
