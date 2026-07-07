@@ -33,3 +33,7 @@ docs/diagnose/*.ndjson
 # Sim raw data JSON files (too large for GitHub, reproduced via sim-fairness.mjs --seed=1)
 reports/clean-state-2026-06-04/sim-phase2/fairness-data.json
 docs/HANDOFF.md
+# Sim/sweep raw output — reproduced on demand via scripts/sim-fairness.mjs; never committed.
+results/
+# Stray scratch stylesheet dump (leading-underscore; not imported anywhere).
+client/_ul.css
