@@ -72,12 +72,31 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       showFrontBand: 8,
       showWanderDwell: 0.06,
       showFrontConcentration: 3,
+      // PULK-action smart-boost + phase-split + preview (all OFF/neutral by default).
+      governorDirectorFrontPool: 0,
+      governorDirectorBoostOncePerRace: false,
+      governorDirectorLingerBrake: 0,
+      governorDirectorCeilingCap: false,
+      phaseSplitBonusEnabled: false,
+      areaBonusEarly: 2.0,
+      areaBonusPulk: 2.0,
+      areaBonusPost: 2.0,
+      rowBonusEarly: 1,
+      rowBonusPulk: 1,
+      rowBonusPost: 1,
+      pulkActionPreview: false,
     });
   });
 
   it('all numeric defaults are positive (surge flag boolean); two-sided contest knobs default 0 (off)', () => {
     // Action-1 two-sided contest knobs are OFF-at-0 by default (byte-identical legacy path).
-    const offAtZero = new Set(['governorDirectorLeaderBrake', 'governorDirectorChallengerBoost']);
+    const offAtZero = new Set([
+      'governorDirectorLeaderBrake',
+      'governorDirectorChallengerBoost',
+      // PULK-action smart-boost knobs — OFF-at-0 by default (legacy path byte-identical).
+      'governorDirectorFrontPool',
+      'governorDirectorLingerBrake',
+    ]);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);

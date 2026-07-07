@@ -439,6 +439,31 @@ export default function RaceScreen() {
     const dynamicsConfig = loadRaceDynamicsConfig();
     const rubberBandConfig = loadRubberBandConfig();
     const raceZoneConfig = loadRaceZoneConfig();
+    // ── PULK-action preview (one-toggle eye-test; default OFF) ───────────────────────────────────
+    // When dynamicsConfig.pulkActionPreview is set, FORCE the whole N8/D0.6 winning set in code so a
+    // stale racearena:raceDynamicsConfig in localStorage can't override it (the localStorage trap). All
+    // OFF by default → shipped behaviour byte-identical until the owner flips this one flag.
+    if (dynamicsConfig.pulkActionPreview) {
+      Object.assign(dynamicsConfig, {
+        governorDirectorEnabled: true,
+        governorDirectorLeaderBrake: 0.1,
+        governorDirectorChallengerBoost: 0.06,
+        governorDirectorCeilingCap: true,
+        governorDirectorFrontPool: 8,
+        governorDirectorBoostOncePerRace: true,
+        governorDirectorLingerBrake: 0.6,
+        governorEnabled: false, // tail-lift off
+        pulkSurgeEnabled: false, // surge off (else it suppresses the contest + the parity-verified config)
+        phaseSplitBonusEnabled: true,
+        areaBonusEarly: 1.0,
+        areaBonusPulk: 0,
+        areaBonusPost: 1.0,
+        rowBonusEarly: 1,
+        rowBonusPulk: 0,
+        rowBonusPost: 1,
+      });
+      rubberBandConfig.enabled = false; // rubber-band off (separate config object)
+    }
     const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
 
@@ -626,6 +651,7 @@ export default function RaceScreen() {
           icon: trackEmoji ?? r.icon,
           spreadFactor,
           speedBonusMult,
+          rawRowBonus: speedBonus, // PULK-action: raw start-row bonus for the phase-split envelope (parity with sim)
           baseSpeed: race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
           spreadFactorPrev: spreadFactor,
           spreadFactorTarget: spreadFactor,
@@ -789,9 +815,41 @@ export default function RaceScreen() {
       directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
       directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
       directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
+      // PULK-action smart-boost knobs (parity with sim-fairness.mjs; default off/neutral).
+      directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 0,
+      directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
+      directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
+      directorCeilingCap:
+        (dynamicsConfig.governorDirectorCeilingCap ?? false) ? BASE_SPEED_MAX / BASE_SPEED_MEAN : 0,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // ── PULK-action phase-split bonuses (parity with sim-fairness.mjs; default OFF byte-identical) ──
+    // areaBonus/rowBonus strength gated by race phase: chaos (<0.25) EARLY, PULK (0.25–0.5) PULK, post
+    // (≥0.5) POST. areaRefStrength = the plan's band-bonus strength (scale = phaseStrength / ref, mirrors
+    // the sim). Boundaries 0.25/0.5 are the fixed values the sim uses. Read once per race.
+    const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
+    const areaRefStrength = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0;
+    const areaBonusEarly = dynamicsConfig.areaBonusEarly ?? areaRefStrength;
+    const areaBonusPulk = dynamicsConfig.areaBonusPulk ?? areaRefStrength;
+    const areaBonusPost = dynamicsConfig.areaBonusPost ?? areaRefStrength;
+    const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
+    const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
+    const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
+    const PHASE_CHAOS_END = 0.25;
+    const PHASE_PULK_END = 0.5;
+    // Per-race SMART-boost director state (front-pool pick rotation + linger-brake). Mutated across
+    // frames by applyGovernor. Unused when the smart knobs are off.
+    const dirState = {
+      slot: -1,
+      featuredIdx: -1,
+      boosted: new Set(),
+      poolFallback: 0,
+      prevLeader: -1,
+      leaderSinceMs: 0,
+      lingerTarget: -1,
+      lingerUntilMs: 0,
+    };
     // Mean drawn body length (px) over the field — the racer-length unit for the governor's
     // arc-distance bound. Computed once per race (bodies are fixed per racer). Guarded > 0.
     const govMeanBodyLen = (() => {
@@ -1018,6 +1076,20 @@ export default function RaceScreen() {
             }
           }
 
+          // ── PULK-action: areaBonus phase-split (parity with sim; default OFF byte-identical) ──
+          // Re-scale the controller's areaBonusMult to a phase-dependent STRENGTH: EARLY (<0.25) /
+          // PULK (0.25–0.5) / POST (≥0.5). scale = phaseStrength/areaRefStrength — mirrors sim exactly.
+          if (phaseSplitBonusEnabled) {
+            const phaseStrength =
+              st.raceProgress < PHASE_CHAOS_END
+                ? areaBonusEarly
+                : st.raceProgress < PHASE_PULK_END
+                  ? areaBonusPulk
+                  : areaBonusPost;
+            const scale = areaRefStrength > 0 ? phaseStrength / areaRefStrength : 0;
+            for (const r of st.racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
+          }
+
           // ── Rubber-band: cap-the-lead (median-gap proportional brake) ──────────
           // Brakes front-breakaway racers toward a max gap from the field median so
           // the field stays catchable, without pulling the legitimate winner into the
@@ -1052,6 +1124,8 @@ export default function RaceScreen() {
                 pathLengthPx,
                 meanBodyLen: govMeanBodyLen,
                 isOpen: isOpenTrack,
+                currentMs: physicsTs, // PULK-action: ms clock for the linger-brake / hold timing
+                dirState, // PULK-action: per-race smart-boost state (front-pool + linger)
               },
               govCfg,
               sharedMedianT
@@ -1130,6 +1204,19 @@ export default function RaceScreen() {
             // Note: zones are not applied in constSpeed (D4) diagnostic mode — D4 overwrites t/vt.
             const zt = isOpenTrack ? r.t / st.finishT : tPos(r.t);
             const zoneMult = zoneMultAt(zt, zones);
+            // PULK-action: start-row bonus phase envelope (parity with sim; default 1.0 = no-op). baseSpeed
+            // bakes in the FULL speedBonusMult; rowEnvMult corrects it to the phase strength s (EARLY/PULK/
+            // POST): effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
+            let rowEnvMult = 1.0;
+            if (phaseSplitBonusEnabled && r.rawRowBonus > 0) {
+              const s =
+                st.raceProgress < PHASE_CHAOS_END
+                  ? rowBonusEarly
+                  : st.raceProgress < PHASE_PULK_END
+                    ? rowBonusPulk
+                    : rowBonusPost;
+              rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
+            }
             if (!r.finished) {
               // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
               r.t = Math.min(
@@ -1137,6 +1224,7 @@ export default function RaceScreen() {
                   r.baseSpeed *
                     boost *
                     brake *
+                    rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
                     r.rubberBandMult *
@@ -1158,6 +1246,7 @@ export default function RaceScreen() {
                 ? (r.baseSpeed *
                     boost *
                     brake *
+                    rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
                     r.rubberBandMult *

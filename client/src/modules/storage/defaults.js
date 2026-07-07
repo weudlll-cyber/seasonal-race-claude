@@ -374,6 +374,24 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // side may reach −0.15 (naturalness-safe: only slows); boost side stays capped at +maxEffect (~0.12).
   governorDirectorLeaderBrake: 0, // brake on the instantaneous P1 (racer-lengths-independent; ≤ 0.15)
   governorDirectorChallengerBoost: 0, // forward boost cap on featured challengers toward the leader (≤ maxEffect)
+  // PULK-action smart-boost knobs (DEFAULT OFF/neutral — no effect until governorDirectorEnabled + these).
+  governorDirectorFrontPool: 0, // boost pool = front N on-track positions (leader excluded); 0 = legacy whole-field
+  governorDirectorBoostOncePerRace: false, // a boosted racer leaves the pool for the rest of PULK
+  governorDirectorLingerBrake: 0, // seconds the just-overtaken old leader keeps the brake (0 = instant)
+  governorDirectorCeilingCap: false, // cap a boosted racer's resulting speed at the natural band max (naturalness)
+  // PULK-action phase-split bonuses (DEFAULT OFF — bonuses full all race, byte-identical). When enabled,
+  // areaBonus/rowBonus strength is gated by race phase (chaos EARLY / PULK / post POST). areaBonus strengths
+  // are in bonusStrengthMultiplier units (2.0 = shipped full); rowBonus strengths are fractions (1 = full).
+  phaseSplitBonusEnabled: false,
+  areaBonusEarly: 2.0,
+  areaBonusPulk: 2.0,
+  areaBonusPost: 2.0,
+  rowBonusEarly: 1,
+  rowBonusPulk: 1,
+  rowBonusPost: 1,
+  // One-toggle eye-test: when true, RaceScreen FORCES the full N8/D0.6 winning set in code (overriding any
+  // stale localStorage), so the owner can preview PULK-action with a single flag. DEFAULT OFF.
+  pulkActionPreview: false,
   // Rank-Proto (experimental, DEFAULT OFF): reuse the OUTCOME P-controller pre-OUTCOME aimed at a
   // rank-blind wandering SHOW-rank (no new speed authority), switching to the true targetRank at
   // corridorStart. areaBonus is phase-decoupled in this mode (0 pre-OUTCOME). Position/seed only.
