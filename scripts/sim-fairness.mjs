@@ -205,11 +205,16 @@ const DYNAMICS_OVERRIDES = {
 //   --strip-metrics       attach dual-window action (PULK 0.25→0.55, OUTCOME 0.55→1.0) + worst-case
 //                         assigned-winner + bonus↔leader sample. Raw per-combo → results/strip-down/.
 const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
-const AREA_BONUS_PULK_RAW = argVal('areaBonusPulk', null);
-const AREA_BONUS_POST_RAW = argVal('areaBonusPost', null);
-const AREA_SPLIT_ACTIVE   = AREA_BONUS_PULK_RAW !== null || AREA_BONUS_POST_RAW !== null;
-const AREA_BONUS_PULK     = Number(AREA_BONUS_PULK_RAW ?? String(BONUS_MULT));
-const AREA_BONUS_POST     = Number(AREA_BONUS_POST_RAW ?? String(BONUS_MULT));
+const AREA_BONUS_PULK_RAW  = argVal('areaBonusPulk', null);
+const AREA_BONUS_POST_RAW  = argVal('areaBonusPost', null);
+// PULK-action-4: 3-phase areaBonus split (chaos / PULK / post). --areaBonusEarly = areaBonus strength in
+// the CHAOS phase (0→0.25); absent → inherits areaBonusPulk, so a run without it is byte-identical to the
+// prior 2-phase split. Lets the assigned winner keep his early advantage so PULK action doesn't bury him.
+const AREA_BONUS_EARLY_RAW = argVal('areaBonusEarly', null);
+const AREA_SPLIT_ACTIVE    = AREA_BONUS_PULK_RAW !== null || AREA_BONUS_POST_RAW !== null || AREA_BONUS_EARLY_RAW !== null;
+const AREA_BONUS_PULK      = Number(AREA_BONUS_PULK_RAW ?? String(BONUS_MULT));
+const AREA_BONUS_POST      = Number(AREA_BONUS_POST_RAW ?? String(BONUS_MULT));
+const AREA_BONUS_EARLY     = Number(AREA_BONUS_EARLY_RAW ?? String(AREA_BONUS_PULK)); // inherits PULK when absent
 const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was built with (post-scale base)
 const ROW_EARLY_RAW       = argVal('rowBonusEarly', null);
 const ROW_PULK_RAW        = argVal('rowBonusPulk', null);
@@ -1106,7 +1111,11 @@ export function runSingleRace({
       // The scale commutes with the transEnd fade (both linear in areaBonusMult−1), so the fade shape
       // is preserved. Inactive (no flag) → untouched → byte-identical.
       if (AREA_SPLIT_ACTIVE) {
-        const phaseStrength = raceProgress < SD_PULK_END ? AREA_BONUS_PULK : AREA_BONUS_POST;
+        // 3-phase: chaos (<0.25) → EARLY, PULK (0.25–0.5) → PULK, post (≥0.5) → POST. EARLY defaults to
+        // PULK when --areaBonusEarly is absent, collapsing to the prior 2-phase behaviour (byte-identical).
+        const phaseStrength = raceProgress < SD_PULK_START ? AREA_BONUS_EARLY
+                            : raceProgress < SD_PULK_END   ? AREA_BONUS_PULK
+                            :                                AREA_BONUS_POST;
         const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
         for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
       }
