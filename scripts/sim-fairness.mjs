@@ -215,6 +215,17 @@ const AREA_SPLIT_ACTIVE    = AREA_BONUS_PULK_RAW !== null || AREA_BONUS_POST_RAW
 const AREA_BONUS_PULK      = Number(AREA_BONUS_PULK_RAW ?? String(BONUS_MULT));
 const AREA_BONUS_POST      = Number(AREA_BONUS_POST_RAW ?? String(BONUS_MULT));
 const AREA_BONUS_EARLY     = Number(AREA_BONUS_EARLY_RAW ?? String(AREA_BONUS_PULK)); // inherits PULK when absent
+// PULK-action-7: POSITION-GATED PULK areaBonus. During PULK, gate each racer's areaBonus strength by his
+// CURRENT on-track rank (by r.t): rank ≤ high → 0 (front, no push → unpredictable); high<rank≤low → half;
+// rank > low → FULL (deep → washed forward so OUTCOME can reach the stranded winner). Both thresholds must
+// be set to activate; absent → the flat AREA_BONUS_PULK is used (byte-identical). Gate = current position,
+// NOT targetRank (the bonus it scales is the existing targetRank-coupled areaBonus).
+const AREA_PULK_GATE_HIGH_RAW = argVal('areaBonusPulkGateHigh', null);
+const AREA_PULK_GATE_LOW_RAW  = argVal('areaBonusPulkGateLow', null);
+const AREA_PULK_GATE_ACTIVE   = AREA_PULK_GATE_HIGH_RAW !== null && AREA_PULK_GATE_LOW_RAW !== null;
+const AREA_PULK_GATE_HIGH     = Number(AREA_PULK_GATE_HIGH_RAW ?? '0');
+const AREA_PULK_GATE_LOW      = Number(AREA_PULK_GATE_LOW_RAW ?? '0');
+const AREA_PULK_FULL          = Number(argVal('areaBonusPulkFull', String(AREA_BONUS_PULK)));
 const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was built with (post-scale base)
 const ROW_EARLY_RAW       = argVal('rowBonusEarly', null);
 const ROW_PULK_RAW        = argVal('rowBonusPulk', null);
@@ -1113,13 +1124,33 @@ export function runSingleRace({
       // The scale commutes with the transEnd fade (both linear in areaBonusMult−1), so the fade shape
       // is preserved. Inactive (no flag) → untouched → byte-identical.
       if (AREA_SPLIT_ACTIVE) {
-        // 3-phase: chaos (<0.25) → EARLY, PULK (0.25–0.5) → PULK, post (≥0.5) → POST. EARLY defaults to
-        // PULK when --areaBonusEarly is absent, collapsing to the prior 2-phase behaviour (byte-identical).
-        const phaseStrength = raceProgress < SD_PULK_START ? AREA_BONUS_EARLY
-                            : raceProgress < SD_PULK_END   ? AREA_BONUS_PULK
-                            :                                AREA_BONUS_POST;
-        const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
-        for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
+        const inPulkPhase = raceProgress >= SD_PULK_START && raceProgress < SD_PULK_END;
+        if (AREA_PULK_GATE_ACTIVE && inPulkPhase) {
+          // POSITION-GATED PULK areaBonus: strength depends on each racer's CURRENT on-track rank —
+          // off up front (unpredictable), full when deep (rescue the stranded winner). Naturalness cap
+          // stays on: the washed racer's spreadFactor × areaBonusMult is bounded at the natural ceiling.
+          const NAT_CEIL_LOCAL = BASE_SPEED_MAX / BASE_SPEED_MEAN;
+          const order = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
+          const rankOf = new Map(order.map((r, i) => [r.index, i + 1]));
+          for (const r of racers) {
+            const rank = rankOf.get(r.index) ?? racers.length;
+            const strength = rank <= AREA_PULK_GATE_HIGH ? 0
+                           : rank <= AREA_PULK_GATE_LOW  ? AREA_PULK_FULL * 0.5
+                           :                               AREA_PULK_FULL;
+            const scale = AREA_REF_STRENGTH > 0 ? strength / AREA_REF_STRENGTH : 0;
+            r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
+            // Naturalness safety cap: a washed-forward racer never exceeds the natural re-roll ceiling.
+            if (r.spreadFactor > 0) r.areaBonusMult = Math.min(r.areaBonusMult, NAT_CEIL_LOCAL / r.spreadFactor);
+          }
+        } else {
+          // 3-phase: chaos (<0.25) → EARLY, PULK (0.25–0.5) → PULK, post (≥0.5) → POST. EARLY defaults to
+          // PULK when --areaBonusEarly is absent, collapsing to the prior 2-phase behaviour (byte-identical).
+          const phaseStrength = raceProgress < SD_PULK_START ? AREA_BONUS_EARLY
+                              : raceProgress < SD_PULK_END   ? AREA_BONUS_PULK
+                              :                                AREA_BONUS_POST;
+          const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
+          for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
+        }
       }
 
       // ── Rubber-band: cap-the-lead (median-gap proportional brake; shared helper) ──
