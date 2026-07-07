@@ -312,6 +312,11 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
   const leaderBrake = directorOn ? (cfg.directorLeaderBrake ?? 0) : 0;
   const challengerBoost = directorOn ? (cfg.directorChallengerBoost ?? 0) : 0;
   const twoSided = leaderBrake > 0 || challengerBoost > 0;
+  // Ceiling-capped boost (naturalness): when > 0, a boosted racer's RESULTING speed factor
+  // (spreadFactor × governorMult) is clamped to this natural ceiling (≈ base-band max ≈ 1.081), so the
+  // challenger boost can never push a racer faster than the fastest natural re-roll draw. Caps only the
+  // upside; the leader brake is unaffected. Default 0 → off → byte-identical (additive boost as before).
+  const directorCeilingCap = directorOn ? (cfg.directorCeilingCap ?? 0) : 0;
   // Instantaneous leader (max cumulative-t among live racers) — the front-tip to brake.
   let leaderT = -Infinity;
   let leaderIndex = -1;
@@ -379,7 +384,13 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     }
 
     // Boost side always capped at +maxEffect; brake side may reach −leaderBrake in two-sided mode.
-    const target = clamp(1 + w * (cohesion + shuffle + director), loBound, 1 + maxEffect);
+    let target = clamp(1 + w * (cohesion + shuffle + director), loBound, 1 + maxEffect);
+    // Ceiling-capped boost: cap the RESULTING speed factor spreadFactor × governorMult at the natural
+    // ceiling. min() only lowers, so the leader brake (target < 1) is never raised; for spreadFactor ≤
+    // ceiling the cap is ≥ 1.0, so only a boosted challenger nearing the ceiling is limited. Off when 0.
+    if (directorCeilingCap > 0 && r.spreadFactor > 0) {
+      target = Math.min(target, directorCeilingCap / r.spreadFactor);
+    }
     // Rate-limit toward the target so the applied speed eases (never a sudden switch); the
     // per-frame change is hard-bounded by maxStep.
     const prev = r.governorMult ?? 1.0;

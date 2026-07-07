@@ -219,11 +219,17 @@ const ROW_BONUS_EARLY     = Number(ROW_EARLY_RAW ?? '1');
 const ROW_BONUS_PULK      = Number(ROW_PULK_RAW  ?? '1');
 const ROW_BONUS_POST      = Number(ROW_POST_RAW  ?? '1');
 const STRIP_METRICS       = argv.includes('--strip-metrics');
+// PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
+// 'auto' = cap resulting speed at the natural band max (BASE_SPEED_MAX/MEAN, computed per race); or an
+// explicit factor. Passed into govCfg.directorCeilingCap (raceGovernor.js). Read-only sweep knob.
+const DIRECTOR_CEILING_CAP_RAW = argVal('directorCeilingCap', '0');
 // Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
 // the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
 const SD_PULK_START   = 0.25;                 // chaos → PULK boundary (row-bonus early/pulk split)
 const SD_PULK_END     = 0.5;                  // PULK → post boundary (bonus re-introduction point)
 const SD_CORR_START   = RP_CORRIDOR_START;    // 0.55 — PULK action-window upper bound = OUTCOME start
+const SM_HOLD_MS      = 750;                   // a P1 change counts as a CLEAN overtake only if the new
+                                               // leader holds P1 ≥ this long (filters flicker vs raw leadΔ)
 
 // ── Action axis (Action-sweep R1; --action=<0..1>) — SINGLE source of the coupling ──────────
 // One owner-facing scalar `action` ∈ [0,1] (0 = calm → 1 = wild), the prototype of the future
@@ -914,6 +920,9 @@ export function runSingleRace({
       directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
       directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
       directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
+      directorCeilingCap: DIRECTOR_CEILING_CAP_RAW === 'auto'
+        ? (BASE_SPEED_MAX / BASE_SPEED_MEAN)
+        : Number(DIRECTOR_CEILING_CAP_RAW),
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
@@ -966,7 +975,8 @@ export function runSingleRace({
     // assigned-winner tracking (rank entering OUTCOME + late-surge proxy) and a per-racer
     // areaBonus sample for the bonus↔leader correlation. Gated on the flag → no-flag = byte-identical.
     const mkWin = () => ({ steps: 0, leadChanges: 0, prevP1: -1, p1Set: new Set(),
-      p1Steps: new Map(), top3Steps: new Map(), prevTop3: null, shuffle: 0, compareSteps: 0 });
+      p1Steps: new Map(), top3Steps: new Map(), prevTop3: null, shuffle: 0, compareSteps: 0,
+      curP1: -1, curSince: 0, confirmed: -1, cleanOv: 0 });
     const smPulk = STRIP_METRICS ? mkWin() : null; // action window 0.25→0.55
     const smOut  = STRIP_METRICS ? mkWin() : null; // action window 0.55→1.0
     const smAreaSample = STRIP_METRICS ? new Map() : null; // index → areaBonusMult sampled once in PULK
@@ -1191,6 +1201,14 @@ export function runSingleRace({
             const p1 = live[0].index;
             if (W.prevP1 >= 0 && p1 !== W.prevP1) W.leadChanges++;
             W.prevP1 = p1;
+            // Hold-based clean overtake: confirm a leader once it holds P1 ≥ SM_HOLD_MS, and count a
+            // clean pass each time the CONFIRMED leader changes. A flicker P1 (held < SM_HOLD_MS) never
+            // confirms, so it is not counted — this separates real passes from the boiling-front flicker.
+            if (p1 !== W.curP1) { W.curP1 = p1; W.curSince = raceTs; }
+            if (raceTs - W.curSince >= SM_HOLD_MS && W.confirmed !== p1) {
+              if (W.confirmed >= 0) W.cleanOv++;
+              W.confirmed = p1;
+            }
             W.p1Set.add(p1);
             W.p1Steps.set(p1, (W.p1Steps.get(p1) ?? 0) + 1);
             const nTop = Math.min(3, live.length);
@@ -1961,6 +1979,8 @@ export function runSingleRace({
         // dominant-leader time-share: fraction of window steps held by the single most-frequent P1.
         leaderShare:   W.steps > 0 ? Math.max(0, ...[...W.p1Steps.values()]) / W.steps : 0,
         top3ShuffleRate: W.compareSteps > 0 ? W.shuffle / W.compareSteps : 0,
+        cleanOvertakes: W.cleanOv, // hold-based lead changes (new leader held P1 ≥ 750 ms) — clean-pass signal
+
       });
       results.stripMetrics = {
         pulk:    winStats(smPulk),
