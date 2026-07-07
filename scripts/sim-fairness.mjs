@@ -200,6 +200,11 @@ const ROW_BONUS_EARLY     = Number(ROW_EARLY_RAW ?? '1');
 const ROW_BONUS_PULK      = Number(ROW_PULK_RAW  ?? '1');
 const ROW_BONUS_POST      = Number(ROW_POST_RAW  ?? '1');
 const STRIP_METRICS       = argv.includes('--strip-metrics');
+// ACTION-METRICS (read-only, --action-metrics): whole-field PULK-window movement metrics
+// (rank churn, rank travel, risers/fallers, top-5 turnover, p10–p90 spread) + PULK naturalness
+// + per-racer rows for pooled band-reach / corrP1 in the analyze step. Fully flag-gated → a
+// no-flag run does zero extra work and is byte-identical. Measurement tooling only.
+const ACTION_METRICS      = argv.includes('--action-metrics');
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // 'auto' = cap resulting speed at the natural band max (BASE_SPEED_MAX/MEAN, computed per race); or an
 // explicit factor. Passed into govCfg.directorCeilingCap (raceGovernor.js). Read-only sweep knob.
@@ -931,6 +936,21 @@ export function runSingleRace({
     let   smNatSteps  = 0;
     let   smNatExceed = 0; // racer-steps whose speed factor beats the natural ceiling (tool over-speed)
 
+    // ── ACTION-METRICS observer state (--action-metrics; read-only) ────────────
+    // Whole-field movement inside the PULK window [pulkStartLive, pulkEndLive). All gated on the
+    // flag → no-flag = zero extra work = byte-identical. NAT_CEIL (above) is reused for maxSpeedFactor.
+    const amStartRank = ACTION_METRICS ? new Map() : null; // index → live rank at first window frame
+    const amEndRank   = ACTION_METRICS ? new Map() : null; // index → live rank at last window frame
+    const amMinRank   = ACTION_METRICS ? new Map() : null; // index → best (lowest) rank in window
+    const amMaxRank   = ACTION_METRICS ? new Map() : null; // index → worst (highest) rank in window
+    const amTop5      = ACTION_METRICS ? new Set() : null; // distinct racers who held a top-5 position
+    const amP1Steps   = ACTION_METRICS ? new Map() : null; // index → window steps spent at rank 1 (corrP1)
+    let   amPrevRank  = null;  // Map(index → rank) from the previous window frame (for swap counting)
+    let   amFrames    = 0;     // window frames observed
+    let   amSwaps     = 0;     // adjacent rank-order swaps summed over the window (raw reshuffle volume)
+    let   amSpreadSum = 0;     // sum over frames of the p10→p90 on-track distance (racer-lengths)
+    let   amNatMax    = 1.0;   // peak spreadFactor × tool mults in the PULK window (naturalness)
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -1213,6 +1233,50 @@ export function runSingleRace({
                 if (w.trajectoryMult >= 1.09) smWinnerCeilSteps++;
               }
             }
+          }
+        }
+      }
+
+      // ── ACTION-METRICS observer (--action-metrics; read-only, PULK window) ──────
+      // Whole-field, both-directions movement in [pulkStartLive, pulkEndLive). No P1-only,
+      // no hold requirement. Pure observation on the pre-Pass-2 live order.
+      if (ACTION_METRICS && raceProgress >= pulkStartLive && raceProgress < pulkEndLive) {
+        const order = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // rank 1 = leader
+        const n = order.length;
+        if (n > 0) {
+          amFrames++;
+          const curRank = new Map();
+          for (let i = 0; i < n; i++) {
+            const idx = order[i].index;
+            const rank = i + 1;
+            curRank.set(idx, rank);
+            if (!amStartRank.has(idx)) amStartRank.set(idx, rank);
+            amEndRank.set(idx, rank);
+            const mn = amMinRank.get(idx); if (mn === undefined || rank < mn) amMinRank.set(idx, rank);
+            const mx = amMaxRank.get(idx); if (mx === undefined || rank > mx) amMaxRank.set(idx, rank);
+            if (rank <= 5) amTop5.add(idx);
+            if (rank === 1) amP1Steps.set(idx, (amP1Steps.get(idx) ?? 0) + 1);
+          }
+          // Adjacent rank-order swaps vs the previous window frame (O(n) reshuffle volume): an
+          // adjacent pair in the CURRENT order that stood in the OPPOSITE order last frame = 1 swap.
+          if (amPrevRank) {
+            for (let i = 0; i < n - 1; i++) {
+              const a = amPrevRank.get(order[i].index);
+              const b = amPrevRank.get(order[i + 1].index);
+              if (a !== undefined && b !== undefined && a > b) amSwaps++;
+            }
+          }
+          amPrevRank = curRank;
+          // p10→p90 on-track spread in racer-lengths (front-percentile minus back-percentile racer).
+          const p10 = order[Math.floor(0.1 * (n - 1))];
+          const p90 = order[Math.floor(0.9 * (n - 1))];
+          amSpreadSum += (p10.t - p90.t) * govLenScale;
+          // PULK naturalness (same natFactor as strip-metrics; director is off in this sweep anyway).
+          for (const r of racers) if (!r.finished) {
+            const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
+            if (nf > amNatMax) amNatMax = nf;
           }
         }
       }
@@ -1975,6 +2039,53 @@ export function runSingleRace({
           outP1Frac:    smOut.steps  > 0 ? (smOut.p1Steps.get(r.index) ?? 0)  / smOut.steps  : 0,
           areaSample:   +((smAreaSample.get(r.index) ?? 1.0)).toFixed(4),
           rowBonus:     +(r.rawRowBonus ?? 0).toFixed(5),
+        })),
+      };
+    }
+
+    // ── ACTION-METRICS — attached ONLY when --action-metrics is on (else results unchanged) ──
+    if (ACTION_METRICS) {
+      const targetRankOf = (idx) =>
+        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+      const bandOf = (rank) => {
+        if (rank == null) return null;
+        for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
+        return BAND_EDGES.length;
+      };
+      const travels = [...amMinRank.keys()].map((idx) => amMaxRank.get(idx) - amMinRank.get(idx));
+      const meanTravel = travels.length ? travels.reduce((s, v) => s + v, 0) / travels.length : 0;
+      const sortedTravels = [...travels].sort((a, b) => a - b);
+      const p90Travel = sortedTravels.length
+        ? sortedTravels[Math.min(sortedTravels.length - 1, Math.ceil(0.9 * sortedTravels.length) - 1)]
+        : 0;
+      let risers = 0, fallers = 0;
+      for (const idx of amStartRank.keys()) {
+        const start = amStartRank.get(idx);
+        const end = amEndRank.get(idx);
+        if (end === undefined) continue;
+        if (start - end >= 3) risers++;   // ended ≥3 ranks BETTER (lower rank number)
+        if (end - start >= 3) fallers++;  // ended ≥3 ranks WORSE
+      }
+      results.actionMetrics = {
+        frames:            amFrames,
+        rankChurn:         amSwaps,
+        meanRankTravel:    +meanTravel.toFixed(3),
+        p90RankTravel:     p90Travel,
+        risers,
+        fallers,
+        frontTop5Turnover: amTop5.size,
+        spreadLenP10P90:   amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
+        maxSpeedFactor:    +amNatMax.toFixed(4),
+        // Per-racer rows for pooled band-reach (finalBand vs targetBand) + corrP1
+        // (Spearman targetRank vs PULK-window P1-time), computed downstream in the analyze step.
+        perRacer: racers.map((r) => ({
+          index:         r.index,
+          startRowIndex: r.startRowIndex,
+          targetRank:    targetRankOf(r.index),
+          targetBand:    bandOf(targetRankOf(r.index)),
+          finalRank:     r.finishRank,
+          finalBand:     bandOf(r.finishRank),
+          p1FracWindow:  amFrames > 0 ? (amP1Steps.get(r.index) ?? 0) / amFrames : 0,
         })),
       };
     }
@@ -3439,6 +3550,7 @@ if (isMain) {
   const breakawayAgg = BREAKAWAY_DIAG ? [] : null;  // per-combo breakaway aggregates (--breakaway-diag)
   const frontActionAgg = FRONT_ACTION ? [] : null;  // per-combo front-action aggregates (--front-action)
   const stripAgg = STRIP_METRICS ? [] : null;       // per-combo raw strip-down dumps (--strip-metrics)
+  const actionAgg = ACTION_METRICS ? [] : null;     // per-combo raw action-metrics dumps (--action-metrics)
   const startTime  = Date.now();
 
   for (const trackId of trackFiles) {
@@ -3790,6 +3902,15 @@ if (isMain) {
           stripAgg.push({
             trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
             races: raceResults.map((r) => r.stripMetrics).filter(Boolean),
+          });
+        }
+
+        if (ACTION_METRICS) {
+          actionAgg.push({
+            trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
+            pulkBiasGain: RP_PULK_BIAS_GAIN, directorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
+            reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+            races: raceResults.map((r) => r.actionMetrics).filter(Boolean),
           });
         }
 
@@ -4214,6 +4335,35 @@ if (isMain) {
         `PULK[leadΔ=${mean((r) => r.pulk.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.pulk.distinctP1).toFixed(1)} lShare=${(mean((r) => r.pulk.leaderShare) * 100).toFixed(0)}%]  ` +
         `OUT[leadΔ=${mean((r) => r.outcome.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.outcome.distinctP1).toFixed(1)}]  ` +
         `winRankAt055=${mean((r) => r.winner.rankAt055 ?? 0).toFixed(1)}`
+      );
+    }
+  }
+
+  // ── ACTION-METRICS raw output (--action-metrics) → results/action-metrics/ (gitignored) ──
+  if (ACTION_METRICS) {
+    const amDir = join(ROOT, 'results', 'action-metrics');
+    mkdirSync(amDir, { recursive: true });
+    const amPath = join(amDir, `am-${DIAG_LABEL}.json`);
+    writeFileSync(amPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        pulkBiasGain: RP_PULK_BIAS_GAIN,
+        governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
+        reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+        areaSplit: { active: AREA_SPLIT_ACTIVE, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
+        rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
+      },
+      combos: actionAgg,
+    }, null, 2));
+    console.log(`\n=== Action-Metrics (${DIAG_LABEL}, pulkBiasGain=${RP_PULK_BIAS_GAIN}) ===  → ${amPath}`);
+    for (const c of actionAgg) {
+      const nR = c.races.length;
+      const mean = (f) => (nR ? c.races.reduce((s, r) => s + f(r), 0) / nR : 0);
+      console.log(
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
+        `churn=${mean((r) => r.rankChurn).toFixed(0)} travelØ=${mean((r) => r.meanRankTravel).toFixed(1)} travelP90=${mean((r) => r.p90RankTravel).toFixed(1)}  ` +
+        `risers=${mean((r) => r.risers).toFixed(1)} fallers=${mean((r) => r.fallers).toFixed(1)} top5turn=${mean((r) => r.frontTop5Turnover).toFixed(1)}  ` +
+        `spread=${mean((r) => r.spreadLenP10P90).toFixed(1)}len maxSF=${mean((r) => r.maxSpeedFactor).toFixed(3)}`
       );
     }
   }
