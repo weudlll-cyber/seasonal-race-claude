@@ -25,12 +25,11 @@ import { mulberry32 } from './racePlanner.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
 
 /**
- * Median of non-finished racers' RAW cumulative-t. Relocated here (from the retired
- * raceRubberBand.js) because the field governor / director is now the sole consumer of the
- * shared per-step field median (the browser + sim precompute it once and hand it to
- * applyGovernor via sharedMedianT).
+ * Median of non-finished racers' RAW cumulative-t. Lives here because the director is now the
+ * sole consumer of the shared per-step field median (the browser + sim precompute it once and
+ * hand it to applyGovernor via sharedMedianT).
  *
- * CRITICAL: raw cumulative-t, NOT tPos / ((t % 1) + 1) % 1 — the governor measures the
+ * CRITICAL: raw cumulative-t, NOT tPos / ((t % 1) + 1) % 1 — the director measures the
  * race-DISTANCE gap to the field, so a racer a full lap ahead must show a large positive gap.
  *
  * @param {Array<{t:number, finished:boolean}>} racers

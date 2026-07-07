@@ -723,11 +723,11 @@ export default function RaceScreen() {
     // Built once per race from the shared dynamics config. Phase fractions come from the
     // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
     // realism envelope (±12% clamp + slew) the director rides.
-    const governorEnabled = racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
+    const directorEnabled = racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorEnabled: governorEnabled,
+      directorEnabled,
       directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
       directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
       directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
@@ -1011,16 +1011,16 @@ export default function RaceScreen() {
             for (const r of st.racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
           }
 
-          // Field median for the governor/director: computed ONCE per step and shared with
-          // applyGovernor (no double sort). Undefined when the governor is off.
+          // Field median for the director: computed ONCE per step and shared with
+          // applyGovernor (no double sort). Undefined when the director is off.
           const govPhase =
-            governorEnabled && racePlanController
+            directorEnabled && racePlanController
               ? racePlanController.getPhase(physicsTs, st.raceProgress)
               : null;
-          const sharedMedianT = governorEnabled ? computeMedianT(st.racers) : undefined;
+          const sharedMedianT = directorEnabled ? computeMedianT(st.racers) : undefined;
 
-          // ── Pre-OUTCOME Field Governor / director (default OFF) ──
-          if (governorEnabled && govFractions) {
+          // ── Pre-OUTCOME contest-injector "director" (default OFF) ──
+          if (directorEnabled && govFractions) {
             applyGovernor(
               st.racers,
               st.finishT,
