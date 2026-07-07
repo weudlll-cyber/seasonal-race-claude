@@ -445,7 +445,6 @@ export default function RaceScreen() {
         governorDirectorBoostOncePerRace: true,
         governorDirectorLingerBrake: 0.6,
         governorEnabled: false, // tail-lift off
-        pulkSurgeEnabled: false, // surge off (else it suppresses the contest + the parity-verified config)
         phaseSplitBonusEnabled: true,
         areaBonusEarly: 1.0,
         areaBonusPulk: 0,
@@ -678,10 +677,6 @@ export default function RaceScreen() {
           trajectoryMultTarget: 1.0,
           trajectoryMultPrev: 1.0,
           trajectoryMultTransStart: 0,
-          pulkSurgeMult: 1.0,
-          pulkSurgeMultPrev: 1.0,
-          pulkSurgeMultTarget: 1.0,
-          pulkSurgeMultTransStart: 0,
           areaBonusMult: 1.0,
           // Governor (Stage B): single multiplier, slew-limited in-place (no separate
           // prev/target transition fields — the rate limiter reads governorMult itself).
@@ -709,9 +704,6 @@ export default function RaceScreen() {
       !!raceData.racePlanEnabled &&
       (raceData.estimatedDurationSec ?? targetDuration) >=
         (dynamicsConfig.racePlanMinDurationSec ?? 30);
-    // PULK-surge gating (loop-scope so the rAF loop can read it): only when the Race Plan runs
-    // AND the surge flag is on. Drives the cohesion-bias bypass.
-    const pulkSurgeEnabled = racePlanEnabled && (dynamicsConfig.pulkSurgeEnabled ?? false);
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
@@ -733,12 +725,6 @@ export default function RaceScreen() {
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
-          pulkSurgeEnabled: dynamicsConfig.pulkSurgeEnabled ?? false,
-          pulkSurgeFraction: dynamicsConfig.pulkSurgeFraction ?? 0.2,
-          pulkSurgeBonus: dynamicsConfig.pulkSurgeBonus ?? 0.1,
-          pulkSurgeRampInMs: dynamicsConfig.pulkSurgeRampInMs ?? 1200,
-          pulkSurgeRampOutMs: dynamicsConfig.pulkSurgeRampOutMs ?? 1200,
-          pulkBrakeExemptStrength: dynamicsConfig.pulkBrakeExemptStrength ?? 0.5,
           // Rank-Proto (experimental, default OFF): show-target controller mode + the engagement slider.
           showTargetMode: dynamicsConfig.showTargetMode ?? false,
           showEngagement: dynamicsConfig.showEngagement ?? 1.0,
@@ -762,9 +748,8 @@ export default function RaceScreen() {
     }
 
     // ── Pre-OUTCOME Field Governor (Stage B) setup ─────────────────────────────
-    // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
-    // (A1 — it is a separate cohesion source, not routed through the surge-gated pulk
-    // bias). Phase fractions come from the controller (live boundaries, single source).
+    // Built once per race from the shared dynamics config. Phase fractions come from the
+    // controller (live boundaries, single source).
     const governorTailLiftEnabled = racePlanEnabled && (dynamicsConfig.governorEnabled ?? false);
     const governorDirectorEnabled =
       racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
@@ -1115,20 +1100,20 @@ export default function RaceScreen() {
             if (!r.finished) {
               if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
                 const rawSample = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
-                // Bypass cohesion bias when the surge mechanic owns PULK (PART D): with surge on,
-                // the surge pass replaces the cohesion PULK bias, so skip computePulkBiasedTarget.
-                const biasedSample =
-                  racePlanController && !pulkSurgeEnabled
-                    ? racePlanController.computePulkBiasedTarget(
-                        r.index,
-                        rawSample,
-                        BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                        BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                        st.racers,
-                        physicsTs,
-                        st.raceProgress
-                      )
-                    : rawSample;
+                // PULK cohesion bias: the always-on field-cohesion mechanism — nudges the three
+                // pulk racers' re-roll draws toward the pulk centroid during PULK so the field
+                // stays together. No-op outside PULK / for non-pulk racers (returns rawSample).
+                const biasedSample = racePlanController
+                  ? racePlanController.computePulkBiasedTarget(
+                      r.index,
+                      rawSample,
+                      BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                      BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                      st.racers,
+                      physicsTs,
+                      st.raceProgress
+                    )
+                  : rawSample;
                 const newTarget = Math.max(
                   BASE_SPEED_MIN / BASE_SPEED_MEAN,
                   Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedSample)
@@ -1192,7 +1177,6 @@ export default function RaceScreen() {
                     rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    (r.pulkSurgeMult ?? 1.0) *
                     (r.governorMult ?? 1.0) *
                     zoneMult,
                 st.finishT + 0.001
@@ -1213,7 +1197,6 @@ export default function RaceScreen() {
                     rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    (r.pulkSurgeMult ?? 1.0) *
                     zoneMult) /
                   race_baseSpeed
                 : 0;

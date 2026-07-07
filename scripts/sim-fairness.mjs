@@ -143,14 +143,6 @@ const DYNAMICS_OVERRIDES = {
   reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
   reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
   trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
-  // PULK-surge overrides (default OFF) — lets a future re-gate enable the surge from the CLI
-  // without touching any committed default. Same shared-default + argVal pattern (no drift).
-  pulkSurgeEnabled:              argVal('pulkSurgeEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled)) === 'true',
-  pulkSurgeFraction:      Number(argVal('pulkSurgeFraction',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeFraction))),
-  pulkSurgeBonus:         Number(argVal('pulkSurgeBonus',          String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus))),
-  pulkSurgeRampInMs:      Number(argVal('pulkSurgeRampInMs',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampInMs))),
-  pulkSurgeRampOutMs:     Number(argVal('pulkSurgeRampOutMs',      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeRampOutMs))),
-  pulkBrakeExemptStrength: Number(argVal('pulkBrakeExemptStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength))),
   // Pre-OUTCOME Field Governor (Stage B) — same shared-default + argVal pattern (no drift).
   // Default OFF; a sweep enables it via --governorEnabled=true and tunes --governorDrama etc.
   governorEnabled:         argVal('governorEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled)) === 'true',
@@ -295,10 +287,6 @@ const SHOW_FRONT_BAND = Number(argVal('showFrontBand', '8'));
 const SHOW_WANDER_DWELL = Number(argVal('showWanderDwell', '0.06'));
 const SHOW_FRONT_CONCENTRATION = Number(argVal('showFrontConcentration', '3'));
 
-// ── PULK-surge (default OFF) ─────────────────────────────────────────────────
-// SURGE_ENABLED gates the cohesion-bias bypass; when the Race Plan is inactive or the flag is
-// off, surge is a no-op (pulkSurgeMult stays 1.0).
-const SURGE_ENABLED       = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.pulkSurgeEnabled;
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -354,7 +342,7 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 // Read-only observation gated entirely behind this boolean flag, so a normal
 // fairness run is byte-identical to before (no extra columns, no extra output).
 // Records the pre-OUTCOME lone-breakaway signal: leader-gap over progress, the
-// peak pre-OUTCOME gap, and WHO leads at that peak (target rank + surge history +
+// peak pre-OUTCOME gap, and WHO leads at that peak (target rank +
 // multiplier decomposition). Raw output → results/breakaway-diag/. --diagLabel
 // names the output file so ablation arms don't overwrite each other.
 const BREAKAWAY_DIAG = argv.includes('--breakaway-diag');
@@ -375,7 +363,7 @@ const FRONT_ACTION = argv.includes('--front-action');
 
 // Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate) is
 // surfaced to rawData + the combo stats ONLY when the governor actually ran, so a governor-off
-// fairness run stays byte-identical (no new columns). Mirrors the surge/RB "active" gates.
+// fairness run stays byte-identical (no new columns). Gated on the governor "active" flag.
 const GOVERNOR_ON = RACE_PLAN_ACTIVE &&
   (DYNAMICS_OVERRIDES.governorEnabled || DYNAMICS_OVERRIDES.governorDirectorEnabled);
 
@@ -637,10 +625,6 @@ export function runSingleRace({
         trajectoryMultTarget:     1.0,
         trajectoryMultPrev:       1.0,
         trajectoryMultTransStart: 0,
-        pulkSurgeMult:            1.0, // PULK-surge: set by controller.update(); 1.0 when surge disabled
-        pulkSurgeMultPrev:        1.0,
-        pulkSurgeMultTarget:      1.0,
-        pulkSurgeMultTransStart:  0,
         areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
         governorMult:             1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
       };
@@ -858,8 +842,7 @@ export function runSingleRace({
     // ── Breakaway causal diagnostic state (--breakaway-diag; read-only) ───────
     // bkGapBins: one snapshot per 5% progress bin (leader gap to median + to 2nd).
     // bkPeak*: the max gap-to-median seen while progress < corridorStart, plus WHO
-    // led there and their multiplier decomposition at that frame. bkEverSurged:
-    // racer indices whose pulkSurgeMult ever exceeded 1 (surge participation).
+    // led there and their multiplier decomposition at that frame.
     const bkGapBins   = breakawayDiag ? [] : null;
     let   bkNextBin   = 0;                 // next 5% bin index (0..20) still to record
     let   bkPeakGap   = -Infinity;         // max pre-OUTCOME (leaderT - medianT)/finishT
@@ -867,12 +850,10 @@ export function runSingleRace({
     let   bkPeakLeaderIdx  = -1;
     let   bkPeakGap2nd     = 0;
     let   bkPeakDecomp     = null;
-    const bkEverSurged = breakawayDiag ? new Set() : null;
 
     // ── Pre-OUTCOME Field Governor (Stage B) — parity with the browser ─────────
-    // Built once per race from the shared dynamics config; runs INDEPENDENTLY of surge
-    // (a separate cohesion source). Phase fractions + seed from the controller (live
-    // boundaries, single source). Default OFF → governorMult stays 1.0 (byte-identical).
+    // Built once per race from the shared dynamics config. Phase fractions + seed from the
+    // controller (live boundaries, single source). Default OFF → governorMult stays 1.0.
     const governorTailLiftEnabled = !!racePlanController && (dynamicsConfig.governorEnabled ?? false);
     const governorDirectorEnabled =
       !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false);
@@ -1016,9 +997,9 @@ export function runSingleRace({
                 (dynamicsConfig.reRollVariationPercent / 100) *
                   (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN) - r.spreadFactor)
             : r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
-          // Phase-3A: pulk-bias hook (active when Race Plan is running, wired in E-Step 5)
-          // Bypassed when the surge mechanic owns PULK (parity with browser) — surge replaces cohesion.
-          const biasedTarget = (racePlanController && !SURGE_ENABLED)
+          // PULK cohesion bias (the always-on field-cohesion mechanism; no-op outside PULK / for
+          // non-pulk racers). Active whenever the Race Plan controller is running.
+          const biasedTarget = racePlanController
             ? racePlanController.computePulkBiasedTarget(
                 r.index, rawTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
@@ -1344,9 +1325,9 @@ export function runSingleRace({
                     :                                ROW_BONUS_POST;
             rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
           }
-          // trajectoryMult + areaBonusMult + pulkSurgeMult + governorMult: all 1.0 when inactive
+          // trajectoryMult + areaBonusMult + governorMult: all 1.0 when inactive
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * (r.pulkSurgeMult ?? 1.0) * (r.governorMult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -1356,9 +1337,6 @@ export function runSingleRace({
       // computeMedianT) and to 2nd place, binned by progress, and captures the
       // pre-OUTCOME peak-gap frame (who + why). No mutation of race state.
       if (breakawayDiag) {
-        for (const r of racers) {
-          if ((r.pulkSurgeMult ?? 1.0) > 1.0001) bkEverSurged.add(r.index);
-        }
         let leader = null, second = null;
         for (const r of racers) {
           if (r.finished) continue;
@@ -1391,7 +1369,6 @@ export function runSingleRace({
               spreadFactor:   +leader.spreadFactor.toFixed(4),   // base-speed spread/re-roll component
               speedBonusMult: +(leader.speedBonusMult ?? 1.0).toFixed(4),
               areaBonusMult:  +(leader.areaBonusMult ?? 1.0).toFixed(4),
-              pulkSurgeMult:  +(leader.pulkSurgeMult ?? 1.0).toFixed(4),
             };
           }
         }
@@ -1905,8 +1882,6 @@ export function runSingleRace({
         winnerBlockedFractionInOutcome: 0,
         planBiasDeltaMean: 0,
         pulkBiasEventCount: 0,
-        surgeEventCount: 0,
-        surgeAppliedDeltaMean: 0,
       }),
       // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
       tmDelta5sMax,
@@ -1951,10 +1926,9 @@ export function runSingleRace({
         peakGap2nd:           +bkPeakGap2nd.toFixed(5),
         peakLeaderIdx:        bkPeakLeaderIdx,
         peakLeaderTargetRank: targetRankOf(bkPeakLeaderIdx),
-        peakLeaderEverSurged: bkPeakLeaderIdx >= 0 ? bkEverSurged.has(bkPeakLeaderIdx) : false,
         peakDecomposition:    bkPeakDecomp,
         corridorStart:        BREAKAWAY_CORRIDOR_START,
-        // breakaway flag: peak gap exceeds the gap the rubber-band already tolerates (0.03).
+        // breakaway flag: peak gap exceeds the ~0.03·finishT lead-group spread tolerance.
         isBreakaway:          bkPeakGap > 0.03,
       };
     }
@@ -3604,12 +3578,6 @@ if (isMain) {
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
-              pulkSurgeEnabled:        DYNAMICS_OVERRIDES.pulkSurgeEnabled,
-              pulkSurgeFraction:       DYNAMICS_OVERRIDES.pulkSurgeFraction,
-              pulkSurgeBonus:          DYNAMICS_OVERRIDES.pulkSurgeBonus,
-              pulkSurgeRampInMs:       DYNAMICS_OVERRIDES.pulkSurgeRampInMs,
-              pulkSurgeRampOutMs:      DYNAMICS_OVERRIDES.pulkSurgeRampOutMs,
-              pulkBrakeExemptStrength: DYNAMICS_OVERRIDES.pulkBrakeExemptStrength,
               // Rank-Proto (experimental, default OFF): show-target controller mode + its params.
               showTargetMode:          SHOW_TARGET_MODE,
               showEngagement:          SHOW_ENGAGEMENT,
@@ -3753,8 +3721,6 @@ if (isMain) {
           winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
           planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
           pulkBiasEventCount:     raceResults.reduce((s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0), 0) / raceResults.length,
-          surgeEventCount:        raceResults.reduce((s, r) => s + (r.naturalness?.surgeEventCount ?? 0), 0) / raceResults.length,
-          surgeAppliedDeltaMean:  raceResults.reduce((s, r) => s + (r.naturalness?.surgeAppliedDeltaMean ?? 0), 0) / raceResults.length,
           racersInCorridorFraction: raceResults.reduce((s, r) => s + (r.naturalness?.racersInCorridorFraction ?? 0), 0) / raceResults.length,
           corridorViolationMean:  raceResults.reduce((s, r) => s + (r.naturalness?.corridorViolationMean ?? 0), 0) / raceResults.length,
           corridorViolationMax:   Math.max(...raceResults.map((r) => r.naturalness?.corridorViolationMax ?? 0)),
@@ -3889,7 +3855,6 @@ if (isMain) {
           const rankHist = {};                       // targetRank → count of races where that rank led the peak
           for (const rk of ranks) rankHist[rk] = (rankHist[rk] ?? 0) + 1;
           const breakawayN = diags.filter((d) => d.isBreakaway).length;
-          const surgedN    = diags.filter((d) => d.peakLeaderEverSurged).length;
           const decomps    = diags.map((d) => d.peakDecomposition).filter(Boolean);
           // Mean gap curve over the 5% progress bins (averaged across races that reached each bin).
           const binMap = new Map();                  // bin → { gapMedianSum, gap2ndSum, n }
@@ -3914,12 +3879,10 @@ if (isMain) {
             peakLeaderRankDist: rankHist,
             rank1Share:         ranks.length ? +(( rankHist[1] ?? 0) / ranks.length).toFixed(3) : 0,
             rankGe4Share:       ranks.length ? +(ranks.filter((r) => r >= 4).length / ranks.length).toFixed(3) : 0,
-            peakLeaderSurgedShare: nD ? +(surgedN / nD).toFixed(3) : 0,
             meanDecompositionAtPeak: {
               spreadFactor:   +mean(decomps.map((d) => d.spreadFactor)).toFixed(4),
               speedBonusMult: +mean(decomps.map((d) => d.speedBonusMult)).toFixed(4),
               areaBonusMult:  +mean(decomps.map((d) => d.areaBonusMult)).toFixed(4),
-              pulkSurgeMult:  +mean(decomps.map((d) => d.pulkSurgeMult)).toFixed(4),
             },
             gapCurve,
             // Context only (nothing ships): band-reach exact/top-5 for B1 target racers.
@@ -4216,7 +4179,6 @@ if (isMain) {
         label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
         arms: {
           bonusMult: BONUS_MULT, reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
-          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
         },
       },
       combos: breakawayAgg,
@@ -4227,9 +4189,7 @@ if (isMain) {
         `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
         `breakawayRate=${(c.breakawayRate * 100).toFixed(0)}%  peakGapØ=${c.peakGapMean.toFixed(4)}  ` +
         `rank1=${(c.rank1Share * 100).toFixed(0)}%  rank≥4=${(c.rankGe4Share * 100).toFixed(0)}%  ` +
-        `surged=${(c.peakLeaderSurgedShare * 100).toFixed(0)}%  ` +
-        `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult} ` +
-        `surge=${c.meanDecompositionAtPeak.pulkSurgeMult}]`
+        `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult}]`
       );
     }
   }
@@ -4248,7 +4208,6 @@ if (isMain) {
         arms: {
           governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
           governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
-          pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
         },
       },
       combos: frontActionAgg,
@@ -4288,7 +4247,6 @@ if (isMain) {
         areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
         rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
         governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
-        pulkSurgeEnabled: DYNAMICS_OVERRIDES.pulkSurgeEnabled,
       },
       combos: stripAgg,
     }, null, 2));

@@ -41,12 +41,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
-      pulkSurgeEnabled: true,
-      pulkSurgeFraction: 0.2,
-      pulkSurgeBonus: 0.1,
-      pulkSurgeRampInMs: 1200,
-      pulkSurgeRampOutMs: 1200,
-      pulkBrakeExemptStrength: 0.5,
       governorEnabled: false,
       governorDrama: 0.5,
       governorK0: 0.03,
@@ -88,7 +82,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     });
   });
 
-  it('all numeric defaults are positive (surge flag boolean); two-sided contest knobs default 0 (off)', () => {
+  it('all numeric defaults are positive; two-sided contest knobs default 0 (off)', () => {
     // Action-1 two-sided contest knobs are OFF-at-0 by default (byte-identical legacy path).
     const offAtZero = new Set([
       'governorDirectorLeaderBrake',
@@ -102,7 +96,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
       else expect(val).toBeGreaterThan(0);
     }
-    expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeEnabled).toBe('boolean');
     expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.showTargetMode).toBe('boolean');
   });
 });
@@ -171,42 +164,6 @@ describe('loadRaceDynamicsConfig', () => {
     expect(cfg.reRollVariationPercent).toBe(100);
     expect(cfg.reRollIntervalDivisor).toBe(10);
     expect(cfg.reRollLastPositionPercent).toBe(70);
-  });
-
-  it('returns defaults when pulkSurgeBonus is out of range (0.9 > 0.12)', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkSurgeBonus: 0.9 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    expect(cfg.pulkSurgeBonus).toBe(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSurgeBonus);
-  });
-
-  it('returns defaults when pulkBrakeExemptStrength is out of range (5 > 1)', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkBrakeExemptStrength: 5 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    expect(cfg.pulkBrakeExemptStrength).toBe(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBrakeExemptStrength);
-  });
-
-  it('falls back to default (true) when pulkSurgeEnabled is not a boolean', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, pulkSurgeEnabled: 'yes' });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    expect(cfg.pulkSurgeEnabled).toBe(true);
-  });
-
-  it('accepts valid in-range surge values', () => {
-    storageGet.mockReturnValue({
-      ...DEFAULT_RACE_DYNAMICS_CONFIG,
-      pulkSurgeEnabled: true,
-      pulkSurgeFraction: 0.3,
-      pulkSurgeBonus: 0.08,
-      pulkBrakeExemptStrength: 0.7,
-    });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.pulkSurgeEnabled).toBe(true);
-    expect(cfg.pulkSurgeFraction).toBe(0.3);
-    expect(cfg.pulkSurgeBonus).toBe(0.08);
-    expect(cfg.pulkBrakeExemptStrength).toBe(0.7);
   });
 });
 

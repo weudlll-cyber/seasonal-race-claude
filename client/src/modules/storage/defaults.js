@@ -281,15 +281,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Below this the race falls back to raw physics (no target-rank sorting).
   // Sim-validated fair down to 30s; DevScreen-adjustable.
   racePlanMinDurationSec: 30,
-  // PULK-surge mechanic (default ON — full-matrix fairness re-gate passed). It is the default PULK
-  // mechanic; the cohesion PULK bias is the fallback used only when this is toggled OFF in the DevScreen.
-  pulkSurgeEnabled: true, // when true (default), REPLACES the cohesion PULK bias with the surge mechanic
-  pulkSurgeFraction: 0.2, // fraction of the field selected to surge (uniform, incl. the winner)
-  pulkSurgeBonus: 0.1, // +speed bonus applied to surgers during PULK (0..0.12 safe envelope)
-  pulkSurgeRampInMs: 1200, // ease-in duration when a surger enters PULK
-  pulkSurgeRampOutMs: 1200, // ease-out duration as PULK ends
-  pulkBrakeExemptStrength: 0.5, // 0=surgers fully braked, 1=fully exempt from rubber-band during PULK
-  // ── Pre-OUTCOME Field Governor (Stage C) — DEFAULT OFF; runs alongside surge/RB ──────
+  // ── Pre-OUTCOME Field Governor (Stage C) — DEFAULT OFF ──────
   // A single per-racer speed multiplier (raceGovernor.js) = TAIL-LIFT cohesion (one-sided,
   // mean-reverting toward the field median but ONLY for racers BEHIND it — the ahead-median
   // leader-brake was retired in Stage C) + bounded zero-mean shuffle (rank-decoupled),
