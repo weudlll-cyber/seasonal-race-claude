@@ -281,7 +281,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Below this the race falls back to raw physics (no target-rank sorting).
   // Sim-validated fair down to 30s; DevScreen-adjustable.
   racePlanMinDurationSec: 30,
-  // ── Pre-OUTCOME contest-injector "director" — DEFAULT OFF ──────
+  // PULK field-cohesion bias gain: during the PULK phase the three pulk racers' re-roll draws are
+  // nudged toward the pulk centroid by this gain × normalised gap, so the field stays together
+  // (the always-on cohesion mechanism). 0 = no cohesion; higher = tighter pack. 2.0 = shipped.
+  pulkBiasGain: 2.0,
+  // ── Pre-OUTCOME contest-injector "director" — SHIPPED ON (winning PULK-action) ──────
   // A rank-BLIND rotating spotlight (raceGovernor.js) that stages a front contest before OUTCOME
   // via r.governorMult. maxEffect + maxStepPerFrame are the shared REALISM ENVELOPE (±12% clamp +
   // per-frame slew) every director shape rides; the phase-weight fade takes governorMult to

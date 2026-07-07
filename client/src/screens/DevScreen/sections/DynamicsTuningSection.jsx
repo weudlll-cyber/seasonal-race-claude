@@ -136,6 +136,26 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       governorDirectorAnchorOffset: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorAnchorOffset,
       governorDirectorPullStrength: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength,
       governorDirectorSettling: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling,
+      governorDirectorLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake,
+      governorDirectorChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost,
+      governorDirectorFrontPool: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFrontPool,
+      governorDirectorBoostOncePerRace:
+        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostOncePerRace,
+      governorDirectorLingerBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLingerBrake,
+      governorDirectorCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap,
+    }));
+  }
+
+  function resetPhaseSplit() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      phaseSplitBonusEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled,
+      areaBonusEarly: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly,
+      areaBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
+      areaBonusPost: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost,
+      rowBonusEarly: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusEarly,
+      rowBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk,
+      rowBonusPost: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPost,
     }));
   }
 
@@ -810,6 +830,38 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               step: 0.01,
               tip: 'How long before the OUTCOME fade (in race progress) the spotlight stops featuring new casts, so the field relaxes toward its natural order before the controller imposes the result.',
             },
+            {
+              key: 'governorDirectorLeaderBrake',
+              label: 'Contest: leader brake',
+              min: 0,
+              max: 0.15,
+              step: 0.01,
+              tip: 'Two-sided contest — how hard the current leader (P1) is slowed so a chaser can close. 0 turns off the two-sided contest (falls back to the one-sided anchor pull). Only slows; never speeds anyone up. 0.10 = shipped.',
+            },
+            {
+              key: 'governorDirectorChallengerBoost',
+              label: 'Contest: challenger boost',
+              min: 0,
+              max: 0.12,
+              step: 0.01,
+              tip: 'Two-sided contest — the maximum forward boost given to the featured challenger to close on the leader (capped by max effect). 0.06 = shipped.',
+            },
+            {
+              key: 'governorDirectorFrontPool',
+              label: 'Smart boost: front pool (N)',
+              min: 0,
+              max: 20,
+              step: 1,
+              tip: 'Smart boost — pick the boosted challenger from the front N on-track positions (leader excluded), so the boost only ever aims at a racer that can actually reach P1. 0 = off (legacy whole-field cast). 8 = shipped.',
+            },
+            {
+              key: 'governorDirectorLingerBrake',
+              label: 'Smart boost: linger brake (s)',
+              min: 0,
+              max: 3,
+              step: 0.1,
+              tip: 'Smart boost — seconds the just-overtaken old leader keeps the brake after a pass, so the overtake settles instead of snapping back. 0 = instant. 0.6 = shipped.',
+            },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
               <label
@@ -834,6 +886,169 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
             </div>
           ))}
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Director Boost Once Per Race"
+              checked={dynamicsConfig.governorDirectorBoostOncePerRace ?? false}
+              onChange={(e) => setDynamics('governorDirectorBoostOncePerRace', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Smart boost: boost once per race
+            <InfoTooltip text="A racer that has been boosted once leaves the pool for the rest of PULK, so the action rotates through the field instead of pushing the same racer repeatedly. ON = shipped." />
+          </label>
+        </div>
+        <div style={{ marginTop: '0.5rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Director Ceiling Cap"
+              checked={dynamicsConfig.governorDirectorCeilingCap ?? false}
+              onChange={(e) => setDynamics('governorDirectorCeilingCap', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Contest: naturalness ceiling cap
+            <InfoTooltip text="Caps a boosted challenger's resulting speed at the fastest natural re-roll draw, so the contest boost can never make a racer look unnaturally fast. Only limits the upside; the leader brake is unaffected. ON = shipped." />
+          </label>
+        </div>
+      </SubCard>
+
+      {/* ── Block 4e: Phase-Split Bonuses ── */}
+      <SubCard
+        title="Phase-Split Bonuses"
+        onReset={resetPhaseSplit}
+        resetTestId="reset-phase-split"
+        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos), PULK, and POST — so the bonuses can be turned down during the PULK contest and restored afterwards. Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full, PULK off."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Phase-Split Bonuses Enabled"
+              checked={dynamicsConfig.phaseSplitBonusEnabled ?? false}
+              onChange={(e) => setDynamics('phaseSplitBonusEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable phase-split bonuses
+            <InfoTooltip text="When off, the area + row bonuses run at full strength the whole race. When on, their strength follows the per-phase values below. ON = shipped." />
+          </label>
+        </div>
+        <div className={s.formGrid}>
+          {[
+            {
+              key: 'areaBonusEarly',
+              label: 'Area bonus — EARLY',
+              min: 0,
+              max: 3,
+              step: 0.5,
+              tip: 'Area-bonus strength in the EARLY (chaos) phase, before PULK. 1.0 = shipped.',
+            },
+            {
+              key: 'areaBonusPulk',
+              label: 'Area bonus — PULK',
+              min: 0,
+              max: 3,
+              step: 0.5,
+              tip: 'Area-bonus strength during the PULK contest. 0 = off (shipped: let the contest run without the target-band nudge).',
+            },
+            {
+              key: 'areaBonusPost',
+              label: 'Area bonus — POST',
+              min: 0,
+              max: 3,
+              step: 0.5,
+              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped.',
+            },
+            {
+              key: 'rowBonusEarly',
+              label: 'Row bonus — EARLY',
+              min: 0,
+              max: 1,
+              step: 0.1,
+              tip: 'Start-row catch-up bonus fraction in the EARLY phase. 1 = full (shipped).',
+            },
+            {
+              key: 'rowBonusPulk',
+              label: 'Row bonus — PULK',
+              min: 0,
+              max: 1,
+              step: 0.1,
+              tip: 'Start-row catch-up bonus fraction during PULK. 0 = off (shipped).',
+            },
+            {
+              key: 'rowBonusPost',
+              label: 'Row bonus — POST',
+              min: 0,
+              max: 1,
+              step: 0.1,
+              tip: 'Start-row catch-up bonus fraction after PULK. 1 = full (shipped).',
+            },
+          ].map(({ key, label, min, max, step, tip }) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={label}
+                min={min}
+                max={max}
+                step={step}
+                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </SubCard>
+
+      {/* ── Block 4f: PULK Cohesion ── */}
+      <SubCard
+        title="PULK Cohesion"
+        onReset={() => setDynamics('pulkBiasGain', DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)}
+        resetTestId="reset-pulk-cohesion"
+        subtitle="The always-on field-cohesion mechanism: during the PULK phase the three pulk racers' re-roll draws are nudged toward the pulk centroid, so the field stays together and does not string out before the contest."
+      >
+        <div className={s.formGroup}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Cohesion bias gain
+            <InfoTooltip text="How strongly pulk racers are pulled back toward the pack centroid during PULK. 0 = no cohesion (field may string out); higher = tighter pack. 2.0 = shipped." />
+          </label>
+          <input
+            type="number"
+            className={s.input}
+            aria-label="Cohesion bias gain"
+            min={0}
+            max={10}
+            step={0.5}
+            value={dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (isFinite(v) && v >= 0 && v <= 10) setDynamics('pulkBiasGain', v);
+            }}
+          />
         </div>
       </SubCard>
 

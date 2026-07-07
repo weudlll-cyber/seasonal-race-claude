@@ -124,6 +124,7 @@ const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAU
 const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
+const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -3538,6 +3539,7 @@ if (isMain) {
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
+              pulkBiasGain:            RP_PULK_BIAS_GAIN,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

@@ -702,6 +702,7 @@ export default function RaceScreen() {
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
+          pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
         },
         racePlanSeed
       );

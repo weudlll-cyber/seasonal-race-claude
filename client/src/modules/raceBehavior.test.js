@@ -683,7 +683,7 @@ describe('applyRacerBehavior — look before you brake', () => {
   const advanceWithLag = (r) => {
     // Mirror index.jsx: brake read from the flag written on the PREVIOUS applyRacerBehavior.
     const brake = r.avoidanceActive ? Math.min(brakeFloor, r.brakeMatchFactor ?? brakeFloor) : 1.0;
-    r.t += (r.baseSpeed ?? 0) * brake; // trajectory/area/rubberBand default to 1.0 (makeLaneRacer)
+    r.t += (r.baseSpeed ?? 0) * brake; // trajectory/area default to 1.0 (makeLaneRacer)
   };
 
   it('NO-GO: a closer that never clears laterally still never overlaps (lag-safe re-engage)', () => {

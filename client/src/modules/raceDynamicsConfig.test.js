@@ -41,6 +41,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
+      pulkBiasGain: 2.0,
       governorMaxEffect: 0.12,
       governorMaxStepPerFrame: 0.01,
       // SHIPPED DEFAULT: the winning PULK-action contest (director + two-sided smart-boost + phase-split).

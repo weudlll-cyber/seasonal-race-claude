@@ -97,6 +97,39 @@ challengerBoost already track `DEFAULT_RACE_DYNAMICS_CONFIG` (config-fallback, n
 run now enables the director), while the smart-boost/phase-split knobs remain flag-gated. Parity for
 the shipped config is proven by the FLAGGED fingerprint run (same config → same result browser+sim).
 
+| 6 | (this commit) | DevScreen rebuild: added the surviving winning knobs that only ever lived in the removed preview shim — contest (leaderBrake, challengerBoost, frontPool, lingerBrake, boostOncePerRace-toggle, ceilingCap-toggle), Phase-Split Bonuses SubCard (enable + areaBonus/rowBonus Early/Pulk/Post), PULK Cohesion SubCard (`pulkBiasGain`). Wired `pulkBiasGain` through config → browser + sim createRacePlan (default 2.0). Cleaned two dead `rubberBandMult` test-fixture references. | `72cfbdb4…` ✓ (flagged; `pulkBiasGain`=2.0 byte-identical) | 3009 ✓ | — |
+
+## Final surviving knob list (DevScreen race-dynamics section)
+
+- **Speed Range** — base speed min/max.
+- **Row Start** — row spacing / capacity / row catch-up.
+- **Speed Re-Roll** — variation %, transition, interval divisor, last-position %.
+- **Race Plan Bonus** — area-bonus strength multiplier + timing (bonusTransitionEnd, corridorStart,
+  corridorEnd, fade, min-duration) → the **OUTCOME** window.
+- **Director (pre-OUTCOME contest injector)** — enable; realism envelope (maxEffect, maxStepPerFrame);
+  cast size, dwell, anchor offset, pull strength, settling; **contest** (leaderBrake,
+  challengerBoost, frontPool, lingerBrake, boostOncePerRace, ceilingCap).
+- **Phase-Split Bonuses** — enable + areaBonus (Early/Pulk/Post) + rowBonus (Early/Pulk/Post).
+- **PULK Cohesion** — `pulkBiasGain`.
+- **Frame Timing** — dt smoothing / render interpolation.
+
+Every control for a deleted mechanism (rubber-band, surge, show-target, governor tail-lift) is gone.
+
+## Summary
+
+- All six stages committed individually (revertible), anchor tag `pre/cleanup`.
+- The winning-config race output stayed **byte-identical** (`72cfbdb4…`) through every stage —
+  confirmed at each commit's HEAD after the lint/format hook.
+- A fresh **default** race now runs the winning PULK-action out of the box (config-default test
+  asserts default == winning; flagged fingerprint proves winning config → winning action).
+- Phase-split boundaries are **config-driven** (live plan `pulkStart`/`pulkEnd`), not hardcoded.
+- Test suite: 3067 → **3009** green (net −58, all from deleted dead-mechanism test files/cases).
+- Flagged for Plan-Claude: (Stage 4) the legacy one-sided anchor pull + `directorAnchorOffset`/
+  `directorCastSize`/`directorFeaturedSet` + the field-median dependency are dead in the shipped
+  two-sided config but kept because pruning them cascades into the `computeMedianT` dependency
+  Stage 1 preserved; (Stage 5) the phase-boundary pair is `pulkStart`/`pulkEnd` (0.25/0.5), not the
+  `pulkEnd`/`corridorStart` the task named — confirm the intended pair.
+
 ### Stage 4 — kept-because-shared / flagged for Plan-Claude
 
 The two-sided smart-boost winning path uses the instantaneous **leader** (`leaderT`), NOT the field

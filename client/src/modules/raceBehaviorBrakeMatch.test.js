@@ -32,7 +32,6 @@ function makeRacer(overrides = {}) {
     baseSpeed: 1.0e-4,
     trajectoryMult: 1.0,
     areaBonusMult: 1.0,
-    rubberBandMult: 1.0,
     draftingBoostActive: false,
     frameSizePx: 40,
     trackWidthPx: 300,

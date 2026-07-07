@@ -24,6 +24,8 @@ export function loadRaceDynamicsConfig() {
     merged.reRollLastPositionPercent <= 0 ||
     merged.reRollLastPositionPercent > 100 ||
     merged.trajectoryTransitionDuration <= 0 ||
+    typeof merged.pulkBiasGain !== 'number' ||
+    merged.pulkBiasGain < 0 ||
     // Director realism envelope (shared ±maxEffect clamp + slew): same whole-object-reject
     // pattern; bounds are validation limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG.
     typeof merged.governorMaxEffect !== 'number' ||
