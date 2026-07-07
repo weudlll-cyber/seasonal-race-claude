@@ -210,6 +210,71 @@ export function directorFeaturedSet(racers, seed, progress, castSize, dwell, cut
 }
 
 /**
+ * SMART front-pool boost pick (PULK-action-3). Per dwell slot, choose ONE challenger to boost from
+ * the racers currently within the front `frontPool` on-track positions EXCLUDING the leader — so the
+ * boost only ever aims at a racer that can actually reach P1 within the window. The pick is by the
+ * deterministic director seed stream (salted per slot → rotates unpredictably; NO Math.random), and
+ * with `boostOnce` a racer boosted in a prior slot is removed from the eligible pool so the action
+ * rotates through the field. Pool exhaustion falls back gracefully (relax once-per-race) and logs.
+ * Mutates `dirState` (slot / featuredIdx / boosted set / poolFallback). Returns the featured index or -1.
+ *
+ * @param {Array}  racers    live racer objects (.t, .index, .finished)
+ * @param {number} seed      race plan seed
+ * @param {number} progress  leader-progress fraction
+ * @param {number} dwell     spotlight dwell (progress fraction)
+ * @param {number} cutoff    settling cutoff (progress)
+ * @param {number} frontPool front-pool size N (rank by t; leader excluded → up to N-1 eligible)
+ * @param {boolean} boostOnce remove already-boosted racers from the pool for the rest of the race
+ * @param {object} dirState  per-race mutable state { slot, featuredIdx, boosted:Set, poolFallback }
+ * @returns {number} featured racer index, or -1 when nothing is featured
+ */
+export function smartFeaturedPick(
+  racers,
+  seed,
+  progress,
+  dwell,
+  cutoff,
+  frontPool,
+  boostOnce,
+  dirState
+) {
+  if (progress >= cutoff || dwell <= 0 || frontPool <= 0) return -1;
+  const slot = Math.floor(progress / dwell);
+  if (slot !== dirState.slot) {
+    // Close the previous slot: its challenger has had its dwell → mark boosted (once-per-race).
+    if (boostOnce && dirState.featuredIdx >= 0) dirState.boosted.add(dirState.featuredIdx);
+    dirState.slot = slot;
+    const live = racers
+      .filter((r) => !r.finished)
+      .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // desc by t; leader = live[0]
+    const pool = live.slice(1, frontPool); // ranks 2..frontPool (leader excluded)
+    let eligible = boostOnce ? pool.filter((r) => !dirState.boosted.has(r.index)) : pool;
+    if (eligible.length === 0) {
+      // Graceful fallback: pool exhausted by once-per-race → relax it this slot and count it.
+      dirState.poolFallback = (dirState.poolFallback || 0) + 1;
+      eligible = pool.length ? pool : live.slice(1);
+    }
+    if (eligible.length === 0) {
+      dirState.featuredIdx = -1;
+      return -1;
+    }
+    // Deterministic pick via the director seed stream, salted per slot (NO Math.random).
+    const saltedSeed = ((seed >>> 0) ^ ((slot * 0x9e3779b1) >>> 0)) >>> 0;
+    let best = eligible[0],
+      bestKey = directorStreamKey(best.index, saltedSeed);
+    for (let i = 1; i < eligible.length; i++) {
+      const k = directorStreamKey(eligible[i].index, saltedSeed);
+      if (k < bestKey || (k === bestKey && eligible[i].index < best.index)) {
+        best = eligible[i];
+        bestKey = k;
+      }
+    }
+    dirState.featuredIdx = best.index;
+  }
+  return dirState.featuredIdx;
+}
+
+/**
  * Apply the field governor for one physics step, mutating r.governorMult per active racer.
  * Caller multiplies r.governorMult into the t-advance (alongside rubberBandMult / pulkSurgeMult).
  *
@@ -290,17 +355,9 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
   const pullStrength = cfg.directorPullStrength ?? 0.06;
   const settling = cfg.directorSettling ?? 0.05;
   const directorCutoff = governorFadeStart(pulkEndFrac, corrStartFrac) - settling;
-  const featured =
-    directorOn && lenScale > 0
-      ? directorFeaturedSet(
-          racers,
-          seed,
-          progress,
-          cfg.directorCastSize ?? 3,
-          cfg.directorDwell ?? 0.08,
-          directorCutoff
-        )
-      : null;
+  const dwell = cfg.directorDwell ?? 0.08;
+  // `featured` (legacy Set or smart single index) is resolved AFTER leaderIndex below, since the smart
+  // front-pool needs the current leader excluded.
 
   // ── TWO-SIDED CONTEST (Action-1) — brake the instantaneous leader + boost the featured
   // challengers TOWARD the leader (not a fixed median anchor). Active when either strength > 0;
@@ -329,6 +386,53 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     }
   }
   const twoSidedLoBound = 1 - Math.max(maxEffect, leaderBrake);
+
+  // ── SMART front-pool boost + linger-brake (PULK-action-3) ──
+  // Gated on directorFrontPool>0 + a per-race dirState; 0 / no-state → legacy whole-field featured set
+  // + instant leader brake (byte-identical). currentMs is the ms clock (sim raceTs / browser physicsTs)
+  // driving the linger window and the new-leader hold-grace.
+  const frontPool = directorOn ? (cfg.directorFrontPool ?? 0) : 0;
+  const boostOnce = directorOn ? !!cfg.directorBoostOncePerRace : false;
+  const lingerMs = directorOn ? (cfg.directorLingerBrake ?? 0) * 1000 : 0;
+  const currentMs = phaseCtx.currentMs ?? 0;
+  const dirState = phaseCtx.dirState;
+  const smartMode = frontPool > 0 && !!dirState;
+  const featIdx =
+    smartMode && lenScale > 0
+      ? smartFeaturedPick(
+          racers,
+          seed,
+          progress,
+          dwell,
+          directorCutoff,
+          frontPool,
+          boostOnce,
+          dirState
+        )
+      : -1;
+  const featuredSet =
+    !smartMode && directorOn && lenScale > 0
+      ? directorFeaturedSet(
+          racers,
+          seed,
+          progress,
+          cfg.directorCastSize ?? 3,
+          dwell,
+          directorCutoff
+        )
+      : null;
+  const isFeatured = (idx) =>
+    smartMode ? idx === featIdx : featuredSet !== null && featuredSet.has(idx);
+  // Linger-brake state: on a P1 change X→Y, Y runs FREE (grace) and X keeps −leaderBrake for lingerMs so
+  // the pass settles; normal brake resumes on Y only after it has held P1 beyond the linger window.
+  if (smartMode && lingerMs > 0 && twoSided && leaderIndex !== dirState.prevLeader) {
+    if (dirState.prevLeader >= 0) {
+      dirState.lingerTarget = dirState.prevLeader;
+      dirState.lingerUntilMs = currentMs + lingerMs;
+    }
+    dirState.leaderSinceMs = currentMs;
+    dirState.prevLeader = leaderIndex;
+  }
 
   for (const r of racers) {
     if (r.finished) {
@@ -363,20 +467,37 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     let director = 0;
     let loBound = 1 - maxEffect;
     if (twoSided) {
-      // TWO-SIDED CONTEST: brake the instantaneous leader; boost featured challengers toward it.
-      if (r.index === leaderIndex) {
-        // Brake the front-tip (down to −leaderBrake). Naturalness-safe: braking only slows.
-        director = -leaderBrake;
-        loBound = twoSidedLoBound;
-      } else if (featured && featured.has(r.index)) {
-        // Boost a featured challenger toward the leader — mean-reverting on the gap BEHIND the
-        // leader (racer-lengths, ≥ 0), gain = pullStrength, capped at challengerBoost (≤ maxEffect).
-        // The median-gap brake keeps the field tight, so the featured cast is near the front → the
-        // boost contests P1. Whoever overtakes becomes the new (braked) leader → the lead rotates.
+      // TWO-SIDED CONTEST: brake the leader; boost a featured challenger toward it.
+      const boostThis = () => {
+        // Boost the featured challenger toward the leader — mean-reverting on the gap BEHIND the leader
+        // (racer-lengths, ≥ 0), gain = pullStrength, capped at challengerBoost. Ceiling-cap keeps it natural.
         const gapBehindLeader = arcT(leaderT, r.t, isOpen) * lenScale;
-        director = Math.min(challengerBoost, pullStrength * gapBehindLeader);
+        return Math.min(challengerBoost, pullStrength * gapBehindLeader);
+      };
+      if (smartMode && lingerMs > 0) {
+        // LINGER-BRAKE mode: the new leader gets grace (no brake) until it holds P1 beyond the linger
+        // window; the just-overtaken old leader keeps −leaderBrake for that window so the pass settles.
+        if (r.index === leaderIndex) {
+          if (currentMs - dirState.leaderSinceMs >= lingerMs) {
+            director = -leaderBrake;
+            loBound = twoSidedLoBound;
+          }
+        } else if (r.index === dirState.lingerTarget && currentMs < dirState.lingerUntilMs) {
+          director = -leaderBrake;
+          loBound = twoSidedLoBound;
+        } else if (isFeatured(r.index)) {
+          director = boostThis();
+        }
+      } else {
+        // Instant two-sided brake (linger off): brake the instantaneous leader every frame.
+        if (r.index === leaderIndex) {
+          director = -leaderBrake;
+          loBound = twoSidedLoBound;
+        } else if (isFeatured(r.index)) {
+          director = boostThis();
+        }
       }
-    } else if (featured && featured.has(r.index)) {
+    } else if (isFeatured(r.index)) {
       // LEGACY one-sided anchor pull (both two-sided strengths 0): mean-reverting toward the front
       // anchor = median + anchorOffset. Non-featured racers get exactly zero. Byte-identical to Stage A1.
       const anchorGap = gapLengths - anchorOffset;

@@ -223,6 +223,13 @@ const STRIP_METRICS       = argv.includes('--strip-metrics');
 // 'auto' = cap resulting speed at the natural band max (BASE_SPEED_MAX/MEAN, computed per race); or an
 // explicit factor. Passed into govCfg.directorCeilingCap (raceGovernor.js). Read-only sweep knob.
 const DIRECTOR_CEILING_CAP_RAW = argVal('directorCeilingCap', '0');
+// PULK-action-3 SMART boost (all read-only; default off = byte-identical; position/seed-coupled, no targetRank):
+//   --directorFrontPool=N            boost pool = front N on-track positions (leader excluded). 0 = off (legacy).
+//   --directorBoostOncePerRace=on    a racer boosted once is removed from the pool for the rest of PULK.
+//   --directorLingerBrake=D          old leader keeps the brake for D seconds after being overtaken (0 = instant).
+const DIRECTOR_FRONT_POOL   = Number(argVal('directorFrontPool', '0'));
+const DIRECTOR_BOOST_ONCE   = argVal('directorBoostOncePerRace', 'off') === 'on';
+const DIRECTOR_LINGER_BRAKE = Number(argVal('directorLingerBrake', '0'));
 // Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
 // the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
 const SD_PULK_START   = 0.25;                 // chaos → PULK boundary (row-bonus early/pulk split)
@@ -923,9 +930,16 @@ export function runSingleRace({
       directorCeilingCap: DIRECTOR_CEILING_CAP_RAW === 'auto'
         ? (BASE_SPEED_MAX / BASE_SPEED_MEAN)
         : Number(DIRECTOR_CEILING_CAP_RAW),
+      directorFrontPool: DIRECTOR_FRONT_POOL,
+      directorBoostOncePerRace: DIRECTOR_BOOST_ONCE,
+      directorLingerBrake: DIRECTOR_LINGER_BRAKE,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // PULK-action-3: per-race SMART-boost director state (front-pool pick rotation + linger-brake).
+    // Created once per race, mutated across frames by applyGovernor. Unused when smart features are off.
+    const dirState = { slot: -1, featuredIdx: -1, boosted: new Set(), poolFallback: 0,
+      prevLeader: -1, leaderSinceMs: 0, lingerTarget: -1, lingerUntilMs: 0 };
     // Mean drawn body length (px) over the field — the racer-length unit for the arc-distance
     // bound (parity with the browser). Computed once per race (bodies are fixed per racer).
     const govMeanBodyLen = (() => {
@@ -976,7 +990,8 @@ export function runSingleRace({
     // areaBonus sample for the bonus↔leader correlation. Gated on the flag → no-flag = byte-identical.
     const mkWin = () => ({ steps: 0, leadChanges: 0, prevP1: -1, p1Set: new Set(),
       p1Steps: new Map(), top3Steps: new Map(), prevTop3: null, shuffle: 0, compareSteps: 0,
-      curP1: -1, curSince: 0, confirmed: -1, cleanOv: 0 });
+      curP1: -1, curSince: 0, confirmed: -1, cleanOv: 0, chargerDepths: [] });
+    const smRankAt025 = STRIP_METRICS ? new Map() : null; // index → live rank at PULK entry (~0.25); charger start-depth
     const smPulk = STRIP_METRICS ? mkWin() : null; // action window 0.25→0.55
     const smOut  = STRIP_METRICS ? mkWin() : null; // action window 0.55→1.0
     const smAreaSample = STRIP_METRICS ? new Map() : null; // index → areaBonusMult sampled once in PULK
@@ -1117,7 +1132,7 @@ export function runSingleRace({
           racers,
           finishT,
           govPhase,
-          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen },
+          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
           govCfg,
           sharedMedianT
         );
@@ -1197,6 +1212,8 @@ export function runSingleRace({
           const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
           if (live.length > 0) {
             const W = inPulk ? smPulk : smOut;
+            // Snapshot each racer's rank at PULK entry (first PULK step) → charger start-depth reference.
+            if (inPulk && smRankAt025.size === 0) live.forEach((r, i) => smRankAt025.set(r.index, i + 1));
             W.steps++;
             const p1 = live[0].index;
             if (W.prevP1 >= 0 && p1 !== W.prevP1) W.leadChanges++;
@@ -1206,7 +1223,9 @@ export function runSingleRace({
             // confirms, so it is not counted — this separates real passes from the boiling-front flicker.
             if (p1 !== W.curP1) { W.curP1 = p1; W.curSince = raceTs; }
             if (raceTs - W.curSince >= SM_HOLD_MS && W.confirmed !== p1) {
-              if (W.confirmed >= 0) W.cleanOv++;
+              // A new racer has held P1 ≥ SM_HOLD_MS = a clean overtake. Record how deep this charger
+              // started (its rank at PULK entry) — a deep start reaching P1 = a visible charge.
+              if (W.confirmed >= 0) { W.cleanOv++; if (inPulk) W.chargerDepths.push(smRankAt025.get(p1) ?? null); }
               W.confirmed = p1;
             }
             W.p1Set.add(p1);
@@ -1980,6 +1999,8 @@ export function runSingleRace({
         leaderShare:   W.steps > 0 ? Math.max(0, ...[...W.p1Steps.values()]) / W.steps : 0,
         top3ShuffleRate: W.compareSteps > 0 ? W.shuffle / W.compareSteps : 0,
         cleanOvertakes: W.cleanOv, // hold-based lead changes (new leader held P1 ≥ 750 ms) — clean-pass signal
+        chargerDepthMax: W.chargerDepths.filter((x) => x != null).length ? Math.max(...W.chargerDepths.filter((x) => x != null)) : null, // deepest start-rank of a clean overtaker
+        nChargers: W.chargerDepths.length, // number of clean overtakes with a recorded start-depth
 
       });
       results.stripMetrics = {
@@ -1997,6 +2018,7 @@ export function runSingleRace({
           maxSpeedFactor: +smNatMax.toFixed(4),                                  // peak spreadFactor×tool-mults in PULK
           exceedFrac:     smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
         },
+        directorPoolFallback: dirState.poolFallback ?? 0, // times the once-per-race pool was exhausted (graceful fallback)
         // Per-racer rows for band-reach, start-row fairness, and bonus↔leader correlation (computed
         // downstream). pulk/outcome shares are per-window; areaSample is the applied areaBonusMult in
         // PULK; rowBonus is the raw start-row speed bonus. All read-only observations.
