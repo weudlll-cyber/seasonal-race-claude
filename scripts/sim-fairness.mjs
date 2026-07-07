@@ -1139,8 +1139,16 @@ export function runSingleRace({
                            :                               AREA_PULK_FULL;
             const scale = AREA_REF_STRENGTH > 0 ? strength / AREA_REF_STRENGTH : 0;
             r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
-            // Naturalness safety cap: a washed-forward racer never exceeds the natural re-roll ceiling.
-            if (r.spreadFactor > 0) r.areaBonusMult = Math.min(r.areaBonusMult, NAT_CEIL_LOCAL / r.spreadFactor);
+            // Naturalness safety cap: bound the FULL PULK speed product (spreadFactor × governor ×
+            // rubber-band × areaBonus) at the natural ceiling. The governor updates AFTER this block, so
+            // use this frame's governorMult (last frame's value) plus its max per-frame slew, so the wash
+            // shrinks to ~0 for a racer already governor-boosted (they can't be washed AND boosted over
+            // the ceiling). Deep, un-featured racers (governorMult ≈ 1) still get the full wash.
+            if (r.spreadFactor > 0) {
+              const govSlew = (r.governorMult ?? 1) + (dynamicsConfig.governorMaxStepPerFrame ?? 0.01);
+              const otherMults = r.spreadFactor * Math.max(govSlew, 1e-6) * (r.rubberBandMult ?? 1);
+              r.areaBonusMult = Math.min(r.areaBonusMult, NAT_CEIL_LOCAL / otherMults);
+            }
           }
         } else {
           // 3-phase: chaos (<0.25) → EARLY, PULK (0.25–0.5) → PULK, post (≥0.5) → POST. EARLY defaults to
