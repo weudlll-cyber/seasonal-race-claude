@@ -348,16 +348,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // One-toggle eye-test: when true, RaceScreen FORCES the full N8/D0.6 winning set in code (overriding any
   // stale localStorage), so the owner can preview PULK-action with a single flag. DEFAULT OFF.
   pulkActionPreview: false,
-  // Rank-Proto (experimental, DEFAULT OFF): reuse the OUTCOME P-controller pre-OUTCOME aimed at a
-  // rank-blind wandering SHOW-rank (no new speed authority), switching to the true targetRank at
-  // corridorStart. areaBonus is phase-decoupled in this mode (0 pre-OUTCOME). Position/seed only.
-  showTargetMode: false, // master switch (default OFF — nothing changes until enabled)
-  // Stufe 2c: the ACTION slider is ENGAGEMENT (below); the show-target SHAPE is FIXED.
-  showEngagement: 1.0, // ACTION slider (0..1): how strongly the pre-OUTCOME controller steers toward the
-  //   show-target. 0 = neutral (calm baseline); 1 = full show-target (wild, ~2× overtaking). Monotonic.
-  showFrontBand: 8, // FIXED: racers drawn into the front contest (pool size)
-  showWanderDwell: 0.06, // FIXED: leader-progress per featured-window rotation
-  showFrontConcentration: 3, // FIXED: distinct front show-ranks the featured target (tight front cluster)
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

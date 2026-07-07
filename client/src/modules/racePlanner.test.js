@@ -8,12 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  createRacePlan,
-  createTrajectoryController,
-  computeShowRanks,
-  actionToShowLevers,
-} from './racePlanner.js';
+import { createRacePlan, createTrajectoryController } from './racePlanner.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -181,41 +176,6 @@ describe('createTrajectoryController — P-controller arithmetic', () => {
     const transMs = plan._phases.corrStart - 1000; // just before OUTCOME begins
     ctrl.update(racers, transMs);
     for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
-  });
-
-  it('show-target ENGAGEMENT: 0 → neutral pre-OUTCOME (calm baseline); 1 → steering active', () => {
-    const mk = () =>
-      BASE_RACERS.map((r, i) => ({
-        ...r,
-        t: 0.1 + i * 0.005,
-        finished: false,
-        trajectoryMult: 1.0,
-        trajectoryMultTarget: 1.0,
-        trajectoryMultPrev: 1.0,
-        trajectoryMultTransStart: 0,
-      }));
-    // engagement 0 → controller neutral pre-OUTCOME: every target is exactly 1.0.
-    const p0 = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { showTargetMode: true, showEngagement: 0 },
-      BASE_SEED
-    );
-    const r0 = mk();
-    createTrajectoryController(p0).update(r0, 5000, 0.1); // phaseProgress 0.1 → pre-OUTCOME
-    for (const r of r0) expect(r.trajectoryMultTarget).toBeCloseTo(1.0, 9);
-    // engagement 1 → full show-target steering: at least one target bent away from neutral.
-    const p1 = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { showTargetMode: true, showEngagement: 1 },
-      BASE_SEED
-    );
-    const r1 = mk();
-    createTrajectoryController(p1).update(r1, 5000, 0.1);
-    expect(r1.some((r) => Math.abs(r.trajectoryMultTarget - 1.0) > 1e-6)).toBe(true);
   });
 
   it('clamps trajectoryMultTarget to [minMult, maxMult] in OUTCOME phase', () => {
@@ -480,92 +440,6 @@ describe('createTrajectoryController — areaBonusMult', () => {
     for (const r of racers) {
       expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
     }
-  });
-});
-
-// ── Rank-Proto: computeShowRanks (rank-blind wandering show-target) ───────────
-describe('computeShowRanks', () => {
-  const mk = (n) => Array.from({ length: n }, (_, i) => ({ index: i, t: (n - i) * 0.01 })); // rank order = index
-
-  it('returns a valid 1..N permutation of show-ranks', () => {
-    const active = mk(20);
-    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06);
-    const vals = [...ranks.values()].sort((a, b) => a - b);
-    expect(vals).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
-  });
-
-  it('exactly frontBand racers get front show-ranks (1..frontBand)', () => {
-    const active = mk(20);
-    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06);
-    const front = [...ranks.entries()].filter(([, r]) => r <= 8);
-    expect(front.length).toBe(8);
-  });
-
-  it('is rank-blind: featured set depends on seed, not current t-order', () => {
-    const a = computeShowRanks(mk(20), 1, 0.1, 8, 0.06);
-    const b = computeShowRanks(mk(20), 2, 0.1, 8, 0.06);
-    const frontA = new Set([...a.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
-    const frontB = new Set([...b.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
-    // Different seed → different featured front set (not identical).
-    expect([...frontA].some((i) => !frontB.has(i))).toBe(true);
-  });
-
-  it('wanders: the featured front set rotates as progress advances', () => {
-    const early = computeShowRanks(mk(40), 5, 0.02, 8, 0.06);
-    const late = computeShowRanks(mk(40), 5, 0.5, 8, 0.06);
-    const fe = new Set([...early.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
-    const fl = new Set([...late.entries()].filter(([, r]) => r <= 8).map(([i]) => i));
-    expect([...fl].some((i) => !fe.has(i))).toBe(true);
-  });
-
-  it('empty field → empty map', () => {
-    expect(computeShowRanks([], 1, 0.1, 8, 0.06).size).toBe(0);
-  });
-
-  it('concentration=1 → ALL featured target rank 1 (direct fight for the lead)', () => {
-    const active = mk(20);
-    const ranks = computeShowRanks(active, 7, 0.1, 8, 0.06, 1);
-    const atOne = [...ranks.entries()].filter(([, r]) => r === 1);
-    expect(atOne.length).toBe(8); // all 8 featured share show-rank 1
-  });
-
-  it('concentration=band (default) reproduces the legacy spread 1..band', () => {
-    const withDefault = computeShowRanks(mk(20), 7, 0.1, 8, 0.06); // conc omitted → band
-    const explicit = computeShowRanks(mk(20), 7, 0.1, 8, 0.06, 8);
-    expect([...withDefault.entries()]).toEqual([...explicit.entries()]);
-    const front = [...withDefault.entries()]
-      .filter(([, r]) => r <= 8)
-      .map(([, r]) => r)
-      .sort();
-    expect(front).toEqual([1, 2, 3, 4, 5, 6, 7, 8]); // spread, one per rank
-  });
-
-  it('lower concentration → fewer distinct front show-ranks among the featured', () => {
-    const distinctFront = (conc) =>
-      new Set([...computeShowRanks(mk(30), 3, 0.1, 8, 0.06, conc).values()].filter((r) => r <= 8))
-        .size;
-    expect(distinctFront(2)).toBeLessThan(distinctFront(8));
-  });
-});
-
-describe('actionToShowLevers (Stufe 2c — engagement coupling)', () => {
-  it('action maps 1:1 to engagement (the ONLY action-driven quantity); no shape levers returned', () => {
-    expect(actionToShowLevers(0).showEngagement).toBe(0);
-    expect(actionToShowLevers(0.5).showEngagement).toBeCloseTo(0.5, 6);
-    expect(actionToShowLevers(1).showEngagement).toBe(1);
-    // The dead Stufe-2 shape coupling is gone — no frontBand/dwell/concentration on the action path.
-    expect(actionToShowLevers(0.5).showFrontConcentration).toBeUndefined();
-    expect(actionToShowLevers(0.5).showFrontBand).toBeUndefined();
-  });
-
-  it('is monotonic non-decreasing as action rises', () => {
-    const e = [0, 0.25, 0.5, 0.75, 1].map((a) => actionToShowLevers(a).showEngagement);
-    for (let i = 1; i < e.length; i++) expect(e[i]).toBeGreaterThanOrEqual(e[i - 1]);
-  });
-
-  it('clamps action outside [0,1]', () => {
-    expect(actionToShowLevers(-1).showEngagement).toBe(0);
-    expect(actionToShowLevers(5).showEngagement).toBe(1);
   });
 });
 

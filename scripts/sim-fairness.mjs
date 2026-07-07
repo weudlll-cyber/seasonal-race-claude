@@ -47,16 +47,6 @@
 //     --bonusMult=<x>   areaBonus (Race-Plan band bonus) strength multiplier — the fairness knob.
 //                       2.0 = shipped (+6% B1), 1.0 = half, 0 = off. Swept to trade corrP1 vs band-reach.
 //
-//   Rank-Proto (experimental, default OFF): show-target controller mode (reuses the OUTCOME
-//   P-controller pre-OUTCOME aimed at a rank-blind wandering show-rank; areaBonus phase-decoupled):
-//     --showTargetMode=true   enable the show-target controller mode.
-//     --action=<0..1>         ENGAGEMENT slider (Stufe 2c): how strongly the pre-OUTCOME controller
-//                             steers toward the show-target. 0=neutral/calm baseline, 1=full/wild
-//                             (~2× overtaking). Monotonic. Controller authority NEVER on the slider.
-//     --showEngagement=<0..1> engagement directly (alias of --action for the show-target).
-//     --showFrontBand / --showWanderDwell / --showFrontConcentration  FIXED shape (probe overrides;
-//                             defaults 8 / 0.06 / 3).
-//
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
 //   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
@@ -95,7 +85,7 @@ import {
   DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
-import { createRacePlan, createTrajectoryController, BAND_EDGES, actionToShowLevers } from '../client/src/modules/racePlanner.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { applyGovernor, arcT, computeMedianT } from '../client/src/modules/raceGovernor.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
@@ -274,19 +264,6 @@ const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
 const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
-
-// Rank-Proto (experimental, default OFF): show-target controller mode + the ENGAGEMENT action slider.
-// Stufe 2c: --action (0..1) drives ENGAGEMENT (how strongly the pre-OUTCOME controller steers toward
-// the show-target: 0=neutral/baseline, 1=full/wild) — monotonic by construction. The show-target SHAPE
-// (frontBand/wanderDwell/frontConcentration) is FIXED; explicit --show* flags still override for probes.
-const SHOW_TARGET_MODE = argVal('showTargetMode', 'false') === 'true';
-const SHOW_ENGAGEMENT = argVal('showEngagement', null) !== null
-  ? Number(argVal('showEngagement'))
-  : (ACTION !== null ? actionToShowLevers(ACTION).showEngagement : 1.0);
-const SHOW_FRONT_BAND = Number(argVal('showFrontBand', '8'));
-const SHOW_WANDER_DWELL = Number(argVal('showWanderDwell', '0.06'));
-const SHOW_FRONT_CONCENTRATION = Number(argVal('showFrontConcentration', '3'));
-
 
 // ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
 const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
@@ -3432,9 +3409,6 @@ if (isMain) {
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director cast=${ACTION_KNOBS.governorDirectorCastSize} dwell=${ACTION_KNOBS.governorDirectorDwell.toFixed(3)} pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} (anchorOffset=${DYNAMICS_OVERRIDES.governorDirectorAnchorOffset} settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
-  if (SHOW_TARGET_MODE) {
-    console.log(`Show-target (Rank-Proto): ON — engagement=${SHOW_ENGAGEMENT.toFixed(3)}${ACTION !== null ? ` (from action=${ACTION.toFixed(3)})` : ''} [FIXED shape: frontBand=${SHOW_FRONT_BAND} wanderDwell=${SHOW_WANDER_DWELL} frontConcentration=${SHOW_FRONT_CONCENTRATION}]; areaBonus phase-decoupled; controller authority FIXED`);
-  }
   if (TEF_ACTIVE) {
     console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
     if (TEF_BASE_BONUS !== null) {
@@ -3578,12 +3552,6 @@ if (isMain) {
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
-              // Rank-Proto (experimental, default OFF): show-target controller mode + its params.
-              showTargetMode:          SHOW_TARGET_MODE,
-              showEngagement:          SHOW_ENGAGEMENT,
-              showFrontBand:           SHOW_FRONT_BAND,
-              showWanderDwell:         SHOW_WANDER_DWELL,
-              showFrontConcentration:  SHOW_FRONT_CONCENTRATION,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

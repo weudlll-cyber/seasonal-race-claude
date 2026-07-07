@@ -61,11 +61,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorSettling: 0.05,
       governorDirectorLeaderBrake: 0,
       governorDirectorChallengerBoost: 0,
-      showTargetMode: false,
-      showEngagement: 1.0,
-      showFrontBand: 8,
-      showWanderDwell: 0.06,
-      showFrontConcentration: 3,
       // PULK-action smart-boost + phase-split + preview (all OFF/neutral by default).
       governorDirectorFrontPool: 0,
       governorDirectorBoostOncePerRace: false,
@@ -96,7 +91,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
       else expect(val).toBeGreaterThan(0);
     }
-    expect(typeof DEFAULT_RACE_DYNAMICS_CONFIG.showTargetMode).toBe('boolean');
   });
 });
 

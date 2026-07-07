@@ -725,12 +725,6 @@ export default function RaceScreen() {
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
-          // Rank-Proto (experimental, default OFF): show-target controller mode + the engagement slider.
-          showTargetMode: dynamicsConfig.showTargetMode ?? false,
-          showEngagement: dynamicsConfig.showEngagement ?? 1.0,
-          showFrontBand: dynamicsConfig.showFrontBand ?? 8,
-          showWanderDwell: dynamicsConfig.showWanderDwell ?? 0.06,
-          showFrontConcentration: dynamicsConfig.showFrontConcentration ?? 3,
         },
         racePlanSeed
       );
