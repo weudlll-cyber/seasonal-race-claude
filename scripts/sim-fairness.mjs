@@ -29,7 +29,7 @@
 //                        distinct P1 holders, top-3 podium shuffle, leader→2nd / leader→median
 //                        racer-length gaps (front reach), and a per-racer targetRank-vs-front
 //                        unpredictability correlation. Raw → results/front-action/. Front reach
-//                        reuses the governor gaps, so pair with --governorEnabled/-DirectorEnabled.
+//                        reuses the director gaps, so pair with --governorDirectorEnabled.
 //     --diagLabel=<name> names the raw diagnostic output file (both diags share this).
 //
 //   Action axis (Action-sweep R1; read-only sweep hypothesis — NOT a shipped default):
@@ -38,7 +38,7 @@
 //                        (faster turnover), CastSize 4→2 (integer). AnchorOffset + Settling stay at
 //                        config defaults (fixed, not on the axis). Overrides those three director
 //                        knobs; unset → no-op (byte-identical). Realized knobs → JSON meta.action /
-//                        meta.directorKnobs. Pair with --governorEnabled=true --governorDirectorEnabled=true.
+//                        meta.directorKnobs. Pair with --governorDirectorEnabled=true.
 //
 //   Action-1 two-sided contest director (read-only sweep knobs; default 0 → legacy one-sided pull):
 //     --governorDirectorLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
@@ -49,7 +49,7 @@
 //
 //   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
 //   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
-//   governor actually ran (--governorEnabled=true or --governorDirectorEnabled=true).
+//   director actually ran (--governorDirectorEnabled=true).
 //
 // Output:
 //   <out>/fairness-data.json   — machine-readable raw data
@@ -133,21 +133,11 @@ const DYNAMICS_OVERRIDES = {
   reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
   reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
   trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
-  // Pre-OUTCOME Field Governor (Stage B) — same shared-default + argVal pattern (no drift).
-  // Default OFF; a sweep enables it via --governorEnabled=true and tunes --governorDrama etc.
-  governorEnabled:         argVal('governorEnabled',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled)) === 'true',
-  governorDrama:      Number(argVal('governorDrama',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama))),
-  governorK0:         Number(argVal('governorK0',           String(DEFAULT_RACE_DYNAMICS_CONFIG.governorK0))),
-  governorLengthMin:        Number(argVal('governorLengthMin',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMin))),
-  governorLengthMax:        Number(argVal('governorLengthMax',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMax))),
-  governorLengthFloor:      Number(argVal('governorLengthFloor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthFloor))),
-  governorRampWidth:  Number(argVal('governorRampWidth',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorRampWidth))),
-  governorAMin:       Number(argVal('governorAMin',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin))),
-  governorAMax:       Number(argVal('governorAMax',         String(DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax))),
-  governorFrequency:  Number(argVal('governorFrequency',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency))),
+  // Director realism envelope (shared ±maxEffect clamp + slew) — same shared-default + argVal
+  // pattern (no drift).
   governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
   governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
-  // Contest-injector "director" (Stage A1) — own master + knobs; default OFF, same argVal pattern.
+  // Contest-injector "director" — own master + knobs; default OFF, same argVal pattern.
   governorDirectorEnabled:      argVal('governorDirectorEnabled',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled)) === 'true',
   governorDirectorCastSize:     Number(argVal('governorDirectorCastSize',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCastSize))),
   governorDirectorDwell:        Number(argVal('governorDirectorDwell',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorDwell))),
@@ -341,8 +331,7 @@ const FRONT_ACTION = argv.includes('--front-action');
 // Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate) is
 // surfaced to rawData + the combo stats ONLY when the governor actually ran, so a governor-off
 // fairness run stays byte-identical (no new columns). Gated on the governor "active" flag.
-const GOVERNOR_ON = RACE_PLAN_ACTIVE &&
-  (DYNAMICS_OVERRIDES.governorEnabled || DYNAMICS_OVERRIDES.governorDirectorEnabled);
+const GOVERNOR_ON = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.governorDirectorEnabled;
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -828,29 +817,15 @@ export function runSingleRace({
     let   bkPeakGap2nd     = 0;
     let   bkPeakDecomp     = null;
 
-    // ── Pre-OUTCOME Field Governor (Stage B) — parity with the browser ─────────
+    // ── Pre-OUTCOME contest-injector "director" — parity with the browser ─────────
     // Built once per race from the shared dynamics config. Phase fractions + seed from the
     // controller (live boundaries, single source). Default OFF → governorMult stays 1.0.
-    const governorTailLiftEnabled = !!racePlanController && (dynamicsConfig.governorEnabled ?? false);
-    const governorDirectorEnabled =
-      !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false);
-    // Governor call runs when EITHER term is on (director has its own master — parity with the
-    // browser). applyGovernor gates cohesion/shuffle vs the director pull independently.
-    const governorEnabled = governorTailLiftEnabled || governorDirectorEnabled;
+    // maxEffect + maxStepPerFrame are the shared realism envelope (±clamp + slew).
+    const governorEnabled = !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false);
     const govCfg = {
-      enabled: governorTailLiftEnabled,
-      drama: dynamicsConfig.governorDrama ?? 0.5,
-      k0: dynamicsConfig.governorK0 ?? 0.03,
-      lenMin: dynamicsConfig.governorLengthMin ?? 2.0,
-      lenMax: dynamicsConfig.governorLengthMax ?? 3.0,
-      lenFloor: dynamicsConfig.governorLengthFloor ?? 1.0,
-      rampWidth: dynamicsConfig.governorRampWidth ?? 0.5,
-      aMin: dynamicsConfig.governorAMin ?? 0.005,
-      aMax: dynamicsConfig.governorAMax ?? 0.02,
-      frequency: dynamicsConfig.governorFrequency ?? 3,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorEnabled: governorDirectorEnabled,
+      directorEnabled: governorEnabled,
       directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
       directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
       directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,
@@ -4174,7 +4149,6 @@ if (isMain) {
         label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
         governorOn: GOVERNOR_ON,
         arms: {
-          governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
           governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
         },
       },
@@ -4214,7 +4188,7 @@ if (isMain) {
         },
         areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
         rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
-        governorEnabled: DYNAMICS_OVERRIDES.governorEnabled,
+        governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
       },
       combos: stripAgg,
     }, null, 2));

@@ -24,34 +24,14 @@ export function loadRaceDynamicsConfig() {
     merged.reRollLastPositionPercent <= 0 ||
     merged.reRollLastPositionPercent > 100 ||
     merged.trajectoryTransitionDuration <= 0 ||
-    // Governor fields (Stage B): same whole-object-reject pattern; bounds are validation
-    // limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG (single source).
-    typeof merged.governorEnabled !== 'boolean' ||
-    typeof merged.governorDrama !== 'number' ||
-    merged.governorDrama < 0 ||
-    merged.governorDrama > 1 ||
-    typeof merged.governorK0 !== 'number' ||
-    merged.governorK0 <= 0 ||
-    typeof merged.governorLengthMin !== 'number' ||
-    merged.governorLengthMin <= 0 ||
-    typeof merged.governorLengthMax !== 'number' ||
-    merged.governorLengthMax < merged.governorLengthMin ||
-    typeof merged.governorLengthFloor !== 'number' ||
-    merged.governorLengthFloor <= 0 ||
-    typeof merged.governorRampWidth !== 'number' ||
-    merged.governorRampWidth <= 0 ||
-    typeof merged.governorAMin !== 'number' ||
-    merged.governorAMin < 0 ||
-    typeof merged.governorAMax !== 'number' ||
-    merged.governorAMax < merged.governorAMin ||
-    typeof merged.governorFrequency !== 'number' ||
-    merged.governorFrequency <= 0 ||
+    // Director realism envelope (shared ±maxEffect clamp + slew): same whole-object-reject
+    // pattern; bounds are validation limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG.
     typeof merged.governorMaxEffect !== 'number' ||
     merged.governorMaxEffect < 0 ||
     merged.governorMaxEffect > 0.5 ||
     typeof merged.governorMaxStepPerFrame !== 'number' ||
     merged.governorMaxStepPerFrame <= 0 ||
-    // Contest-injector "director" fields (Stage A1): same whole-object-reject pattern.
+    // Contest-injector "director" fields: same whole-object-reject pattern.
     typeof merged.governorDirectorEnabled !== 'boolean' ||
     typeof merged.governorDirectorCastSize !== 'number' ||
     merged.governorDirectorCastSize < 1 ||

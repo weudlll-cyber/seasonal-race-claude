@@ -2,26 +2,22 @@
 // File:        GovernorDiagHUD.jsx
 // Path:        client/src/screens/RaceScreen/GovernorDiagHUD.jsx
 // Project:     RaceArena
-// Description: Pre-OUTCOME Field Governor diagnostics overlay for the DevPanel.
+// Description: Pre-OUTCOME contest-injector "director" diagnostics overlay for the DevPanel.
 //              Shows, live: (1) the RESOLVED phase binding — "active (PULK) — fades
 //              pulkEnd XX% → corrStart XX%" — so the owner SEES the fade window follow a
-//              corridorStart edit; (2) the Action (drama) value and resolved k/A; and (3)
-//              for the current LEADER and a trailing STRAGGLER, the gap-to-median, the
-//              cohesion vs shuffle contribution, and the applied governorMult — so the
-//              tail-lift on the straggler is visible AND the leader confirms the governor
-//              never brakes it (cohesion stays 0 at or ahead of the median, Stage C).
-//              Passive DOM sibling of the race canvas: renders nothing when its toggle is
-//              off, never touches the render loop. Reuses the governor's exported pure
-//              helpers + computeMedianT (single source — the HUD recomputes the breakdown
-//              rather than the governor exposing internals). Placement: TOP-CENTER.
+//              corridorStart edit; (2) the director state (cast + anchor/settling) and the
+//              featured cast for this step; and (3) for the current LEADER and a trailing
+//              STRAGGLER, the gap-to-median, whether they are featured, the director pull,
+//              and the applied governorMult. Passive DOM sibling of the race canvas: renders
+//              nothing when its toggle is off, never touches the render loop. Reuses the
+//              governor's exported pure helpers + computeMedianT (single source — the HUD
+//              recomputes the breakdown rather than the governor exposing internals).
+//              Placement: TOP-CENTER.
 // ============================================================
 
 import {
   arcT,
   computeMedianT,
-  governorActionToParams,
-  governorRestoringForce,
-  governorShufflePhase,
   governorPhaseWeight,
   governorFadeStart,
   directorFeaturedSet,
@@ -66,9 +62,10 @@ const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
 const f4 = (v) => (v == null ? '—' : v.toFixed(4));
 
 /**
- * Build the plain view snapshot from the live race state + the governor diag snapshot.
- * Pure (no refs). Recomputes the leader/straggler cohesion/shuffle breakdown from the
- * SAME exported helpers the governor uses, so the readout matches the physics exactly.
+ * Build the plain view snapshot from the live race state + the director diag snapshot.
+ * Pure (no refs). Recomputes the featured cast + per-racer director pull from the SAME
+ * exported helpers the physics uses, so the readout matches the physics as closely as a
+ * read-only recompute can (the applied mult, r.governorMult, is always exact).
  */
 function buildView(diag, state) {
   const cfg = diag.cfg;
@@ -80,14 +77,10 @@ function buildView(diag, state) {
   const activePhase =
     diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
 
-  const { lengths: boundLengths, A } = governorActionToParams(cfg.drama, cfg);
   const w = activePhase
     ? governorPhaseWeight(diag.progress, diag.pulkEndFrac, diag.corrStartFrac)
     : 0;
-  const k0 = cfg.k0 ?? 0.03;
   const maxEffect = cfg.maxEffect ?? 0.12;
-  const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
-  const f = cfg.frequency ?? 3;
 
   // Director (contest-injector) featured cast for this step — recomputed from the SAME exported
   // helper the physics uses (single source), so the readout matches who is actually featured.
@@ -127,17 +120,8 @@ function buildView(diag, state) {
   const breakdown = (r) => {
     if (!r || medianT === null || lenScale <= 0) return null;
     const gapLengths = toLengths(r.t, medianT);
-    const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
-    // TAIL-LIFT ONLY (parity with applyGovernor): lift only racers past the bound BEHIND the
-    // median (x < −1); everyone at or ahead of the median gets exactly 0 — no leader-brake.
-    const behindExcess = x < -1 ? -x - 1 : 0;
-    const lifted = behindExcess > 0;
-    const cohesion =
-      cfg.enabled && lifted ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
-    const shuffle = cfg.enabled
-      ? A * Math.sin(2 * Math.PI * f * diag.progress + governorShufflePhase(r.index, diag.seed))
-      : 0;
     // Director pull toward the front anchor (median + offset) — only for a featured racer.
+    // Best-effort recompute of the legacy one-sided anchor pull; the applied mult below is exact.
     const isFeatured = !!(featured && featured.has(r.index));
     const director = isFeatured
       ? clamp(-pullStrength * (gapLengths - anchorOffset), -maxEffect, maxEffect)
@@ -145,10 +129,7 @@ function buildView(diag, state) {
     return {
       name: r.name ?? r.id ?? `#${r.index}`,
       gapLen: gapLengths,
-      lifted,
       featured: isFeatured,
-      cohesion: w * cohesion,
-      shuffle: w * shuffle,
       director: w * director,
       mult: r.governorMult ?? 1.0,
     };
@@ -160,13 +141,9 @@ function buildView(diag, state) {
     : [];
 
   return {
-    enabled: !!cfg.enabled,
     phase: diag.phase,
     activePhase,
     w,
-    A,
-    drama: cfg.drama,
-    boundLengths,
     leaderGapLen,
     leader2ndLen,
     fieldLen,
@@ -192,15 +169,11 @@ function racerLine(label, b, color) {
         {b.gapLen.toFixed(1)}len
       </span>
       {'  '}
-      <span style={{ color: b.featured ? DIRECTOR_COLOR : b.lifted ? LIFT_COLOR : ON_COLOR }}>
-        {b.featured ? 'feat' : b.lifted ? 'lift' : 'free'}
+      <span style={{ color: b.featured ? DIRECTOR_COLOR : ON_COLOR }}>
+        {b.featured ? 'feat' : 'free'}
       </span>
-      {'  coh '}
-      <span style={{ color }}>{f4(b.cohesion)}</span>
-      {'  shf '}
-      <span style={{ color }}>{f4(b.shuffle)}</span>
       {'  dir '}
-      <span style={{ color: DIRECTOR_COLOR }}>{f4(b.director)}</span>
+      <span style={{ color: color ?? DIRECTOR_COLOR }}>{f4(b.director)}</span>
       {'  mult '}
       <span style={{ color: b.mult < 1 ? BRAKE_COLOR : b.mult > 1 ? LIFT_COLOR : OFF_COLOR }}>
         {b.mult.toFixed(3)}
@@ -227,7 +200,7 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
   return (
     <div style={PANEL_STYLE} data-testid="governor-diag-hud">
       <div style={{ marginBottom: '2px', letterSpacing: '0.05em' }}>
-        <span style={{ color: '#7dff7d', fontWeight: 700 }}>GOVERNOR DIAG</span>
+        <span style={{ color: '#7dff7d', fontWeight: 700 }}>DIRECTOR DIAG</span>
       </div>
       <div>
         {v.activePhase ? (
@@ -242,14 +215,7 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
           <span style={{ color: OFF_COLOR }}>off ({v.phase}) — controller owns OUTCOME</span>
         )}
       </div>
-      <div style={{ color: CFG_COLOR }}>
-        Action {pct(v.drama)}
-        {'  '}bound {v.boundLengths.toFixed(1)}len
-        {'  '}A={f4(v.A)}
-      </div>
       <div>
-        {/* Neutral measurements — the governor no longer acts on the leader; these feed the
-            later tip-leash layer + the sweep. */}
         <span style={{ color: CFG_COLOR }}>leader→median {v.leaderGapLen.toFixed(1)}len</span>
         {'  '}leader→2nd {v.leader2ndLen.toFixed(1)}len
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
@@ -270,7 +236,7 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
           </>
         )}
       </div>
-      <div style={SEP_STYLE}>── field (coh + shuffle + director) ──</div>
+      <div style={SEP_STYLE}>── director pull + applied mult ──</div>
       {racerLine('Leader:', v.leader, CFG_COLOR)}
       {racerLine('Straggler:', v.straggler, LIFT_COLOR)}
     </div>

@@ -2,27 +2,17 @@
 // File:        raceGovernor.js
 // Path:        client/src/modules/raceGovernor.js
 // Project:     RaceArena
-// Description: Pre-OUTCOME Field Governor (Stage B core). A single per-racer speed
-//              multiplier r.governorMult carrying TWO internal components:
-//                • TAIL-LIFT (Stage C) — a DEAD-ZONED restoring force on the arc-distance
-//                  gap to the field MEDIAN, measured in TRUE RACER-LENGTHS (arc-px / mean body
-//                  length), NOT finishT. ZERO force inside the bound (the whole middle of the
-//                  field → re-roll variation runs free → natural groups/battles); only when a
-//                  racer falls PAST the bound BEHIND the median does a progressive barrier lift
-//                  it back toward the field. ONE-SIDED: a racer at or ahead of the median gets
-//                  exactly zero at every distance — the governor never brakes the leader (the
-//                  ahead-median brake was RETIRED in Stage C; the contested front is a later
-//                  race-director layer). The length unit is lap-count- AND track-independent
-//                  (one lap = one lap; a body is fixed px) — retiring the finishT divisor that
-//                  UNDER-reported closed multi-lap gaps by ~maxLaps. Position-coupled (gap to
-//                  median), ±maxEffect clamp. Front-pack bias + comeback are LATER stages;
-//                  shuffle stays.
-//                • SHUFFLE — bounded, zero-mean oscillation with a per-racer phase from a
-//                  DEDICATED seeded stream (rank-DECOUPLED: derived from racer index +
-//                  seed, never from the target-rank assignment). No Math.random.
-//              Combined in one outer-clamped multiplier (realism ±maxEffect), phase-gated
-//              and faded to EXACTLY 1.0 by OUTCOME (structural, independent of the fade
-//              math), and rate-limited per step so speed changes are smooth.
+// Description: Pre-OUTCOME contest-injector "director". A single per-racer speed multiplier
+//              r.governorMult that stages a rank-BLIND rotating front contest before OUTCOME.
+//              Winning shape (shipped): a TWO-SIDED contest — brake the instantaneous leader
+//              by leaderBrake and boost the featured challenger(s) toward it (up to
+//              challengerBoost), with an optional smart front-pool pick, linger-brake, and a
+//              naturalness ceiling-cap. When both two-sided strengths are 0 it falls back to
+//              the legacy one-sided anchor pull (mean-reverting toward median + anchorOffset,
+//              in TRUE RACER-LENGTHS = arc-px / mean body length, lap-count- + track-independent).
+//              All shapes share ONE realism envelope: the phase-weight fade (→ EXACTLY 1.0 by
+//              OUTCOME, structural), the ±maxEffect clamp, and the per-frame slew-limit.
+//              Position + seed only — NEVER the target-rank assignment.
 //
 //              Shared by the browser engine (RaceScreen/index.jsx) and the headless sim
 //              (sim-fairness.mjs) so both measure the identical mechanism (single source).
@@ -56,15 +46,11 @@ export function computeMedianT(racers) {
   return n % 2 ? ts[(n - 1) / 2] : (ts[n / 2 - 1] + ts[n / 2]) / 2;
 }
 
-// Governor shuffle-phase seed constant. MUST differ from the other per-race streams so the
-// shuffle phase cannot correlate with the target-rank assignment: target-rank shuffle uses
-// mulberry32(seed), surge uses (seed ^ 0x5bf03635), controller noise uses (seed + 0x9e3779b9).
-const GOVERNOR_SEED_XOR = 0x27d4eb2f;
-
-// Director (contest-injector) featured-cast stream constant. Its OWN dedicated XOR, DISTINCT
-// from GOVERNOR_SEED_XOR and every other per-race stream above, so the rotating featured cast
-// is rank-BLIND: membership is keyed on racer index + (seed ^ this) and can never correlate
-// with the target-rank assignment. No Math.random on this path.
+// Director (contest-injector) featured-cast stream constant. A dedicated XOR, DISTINCT from
+// every other per-race stream (target-rank shuffle uses mulberry32(seed), controller noise
+// uses seed + 0x9e3779b9), so the rotating featured cast is rank-BLIND: membership is keyed on
+// racer index + (seed ^ this) and can never correlate with the target-rank assignment. No
+// Math.random on this path.
 const DIRECTOR_SEED_XOR = 0x6b7f1e35;
 
 // Minimum fade span (progress fraction) for the TRANSITION ease-out. If the LIVE
@@ -78,28 +64,11 @@ function clamp(v, lo, hi) {
 }
 
 /**
- * Deterministic per-racer shuffle phase in [0, 2π). Rank-DECOUPLED: derived from the racer
- * index and (seed ^ GOVERNOR_SEED_XOR) — never from the target-rank assignment — via the
- * shared mulberry32 helper (A3: no new RNG). STABLE per racer for the whole race (a single
- * draw keyed on index+seed), so it drives a coherent oscillation rather than per-frame noise.
- * No Math.random → reproducible and browser/sim parity-safe (even at seed 0, a live browser
- * race gets a fixed per-index phase, which is fine — it is uncorrelated with target rank).
- *
- * @param {number} index racer index (stable per race; uncorrelated with target rank)
- * @param {number} seed  race plan seed (0 in a live browser race → still deterministic per index)
- * @returns {number} phase offset in [0, 2π)
- */
-export function governorShufflePhase(index, seed) {
-  const streamSeed = ((((seed >>> 0) ^ GOVERNOR_SEED_XOR) >>> 0) + (index >>> 0)) >>> 0;
-  return mulberry32(streamSeed)() * 2 * Math.PI;
-}
-
-/**
  * Deterministic per-racer sort key in [0, 1) for the DIRECTOR featured-cast rotation. Keyed on
  * the racer index and (seed ^ DIRECTOR_SEED_XOR) via the shared mulberry32 helper (no new RNG,
- * no Math.random). Rank-BLIND: never derived from the target-rank assignment, and on a distinct
- * stream from the governor shuffle. Sorting the field by this key yields a STABLE seed-shuffled
- * order (fixed per race) that the round-robin marches the spotlight through — so which racers are
+ * no Math.random). Rank-BLIND: never derived from the target-rank assignment. Sorting the field
+ * by this key yields a STABLE seed-shuffled order (fixed per race) that the round-robin marches
+ * the spotlight through — so which racers are
  * featured is unpredictable and uncorrelated with who is assigned to win.
  *
  * @param {number} index racer index (stable per race; uncorrelated with target rank)
@@ -128,41 +97,6 @@ export function arcT(a, b, isOpen) {
   const pb = ((b % 1) + 1) % 1;
   const d = Math.abs(pa - pb);
   return Math.min(d, 1 - d);
-}
-
-/**
- * Map the single owner "Action" scalar (0..1) to the dead-zone bound (in TRUE RACER-LENGTHS)
- * and the shuffle amplitude. Higher Action → WIDER bound (a racer may fall more racer-lengths
- * BEHIND the median before the tail-lift engages) + MORE shuffle. The barrier softness k0 is
- * FIXED (not mapped by Action). The length bound is floored (lenFloor) so it can't vanish.
- *
- * @param {number} drama 0..1 (the Action slider)
- * @param {{lenMin:number, lenMax:number, lenFloor:number, aMin:number, aMax:number}} cfg
- * @returns {{lengths:number, A:number}}
- */
-export function governorActionToParams(drama, cfg) {
-  const d = clamp(drama ?? 0, 0, 1);
-  const lengths = Math.max(cfg.lenFloor ?? 1, cfg.lenMin + (cfg.lenMax - cfg.lenMin) * d);
-  const A = cfg.aMin + (cfg.aMax - cfg.aMin) * d;
-  return { lengths, A };
-}
-
-/**
- * Progressive rubber-band restoring force for a gap normalized by the bound, x = gap/gapBound.
- * Rational barrier: ≈ k0·x near the center (soft — shuffle dominates, racers move freely),
- * diverging as |x| → 1 and clamped at maxEffect (stiff at the bound, no flat spot below it, no
- * hard step). Magnitude grows with |x|; sign follows x. Generic (symmetric) barrier math —
- * Stage C feeds it only the LIFT (positive) direction, since the ahead-median brake is retired.
- *
- * @param {number} x        gap / gapBound  (clamped internally to ±0.999 to keep the barrier finite)
- * @param {number} k0       softness (slope near center)
- * @param {number} maxEffect outer force cap (the realism envelope)
- * @returns {number} signed force in [−maxEffect, +maxEffect]
- */
-export function governorRestoringForce(x, k0, maxEffect) {
-  const xc = clamp(x, -0.999, 0.999);
-  const a = Math.abs(xc);
-  return Math.sign(xc) * Math.min(maxEffect, k0 * (a / (1 - a)));
 }
 
 /**
@@ -293,18 +227,19 @@ export function smartFeaturedPick(
 }
 
 /**
- * Apply the field governor for one physics step, mutating r.governorMult per active racer.
- * Caller multiplies r.governorMult into the t-advance (alongside pulkSurgeMult).
+ * Apply the pre-OUTCOME contest-injector "director" for one physics step, mutating
+ * r.governorMult per active racer. Caller multiplies r.governorMult into the t-advance.
  *
- * Carries THREE independent, separately-gated pre-OUTCOME terms, summed into one governorMult:
- *   • TAIL-LIFT cohesion + SHUFFLE — gated by cfg.enabled (the governor master).
- *   • DIRECTOR contest-injector pull — gated by cfg.directorEnabled (its own master, so the
- *     spotlight can be eye-tested ALONE with the tail-lift off). Featured racers get a
- *     mean-reverting pull toward a front anchor (median + offset); non-featured get zero.
- * All three share the SAME phase-weight fade (→ exactly 0 at corrStart), ±maxEffect clamp, and
- * per-frame slew-limit — no new fade math.
+ * The director is a rank-BLIND rotating spotlight gated by cfg.directorEnabled. Its winning
+ * shape (used by the shipped config) is the TWO-SIDED contest: brake the instantaneous leader
+ * by leaderBrake and boost the featured challenger(s) toward it (up to challengerBoost), with
+ * an optional smart front-pool pick + linger-brake + naturalness ceiling-cap. When both
+ * two-sided strengths are 0 it falls back to the legacy one-sided anchor pull (mean-reverting
+ * toward a front anchor = median + anchorOffset). All shapes share the SAME realism envelope:
+ * the phase-weight fade (→ exactly 0 at corrStart), the ±maxEffect clamp, and the per-frame
+ * slew-limit. Position + seed only — NEVER targetRank.
  *
- * STRUCTURAL OUTCOME-off: when the phase is not PRE_PULK/PULK/TRANSITION (or BOTH masters are
+ * STRUCTURAL OUTCOME-off: when the phase is not PRE_PULK/PULK/TRANSITION (or the director is
  * off, or finishT<=0, or no live median), every governorMult is pinned to EXACTLY 1.0 — so
  * "1.0 in OUTCOME for every phase configuration" holds independent of the fade math.
  *
@@ -312,36 +247,32 @@ export function smartFeaturedPick(
  * @param {number} finishT
  * @param {string} phase    getPhase() result: 'PRE_PULK'|'PULK'|'TRANSITION'|'OUTCOME'|'FINAL'
  * @param {{progress:number, pulkEndFrac:number, corrStartFrac:number, seed:number,
- *          pathLengthPx:number, meanBodyLen:number, isOpen:boolean}} phaseCtx  pathLengthPx =
- *          one lap in px; meanBodyLen = mean drawnBodyLengthPx (racer-length unit); isOpen
- *          selects the arc wrap. The bound is measured in racer-lengths via these — no finishT.
- * @param {{enabled:boolean, drama:number, k0:number, lenMin:number, lenMax:number,
- *          lenFloor:number, rampWidth:number, aMin:number, aMax:number,
- *          frequency:number, maxEffect:number, maxStepPerFrame:number,
- *          directorEnabled:boolean, directorCastSize:number, directorDwell:number,
- *          directorAnchorOffset:number, directorPullStrength:number,
- *          directorSettling:number, directorLeaderBrake:number,
- *          directorChallengerBoost:number}} cfg
- *   directorLeaderBrake / directorChallengerBoost (Action-1): both 0 (default) → legacy one-sided
- *   anchor pull; either > 0 → TWO-SIDED contest (brake instantaneous leader − leaderBrake, boost
- *   featured challengers toward it + up to challengerBoost). Rank-blind (position + seed only).
+ *          pathLengthPx:number, meanBodyLen:number, isOpen:boolean, currentMs:number,
+ *          dirState:object}} phaseCtx  pathLengthPx = one lap in px; meanBodyLen = mean
+ *          drawnBodyLengthPx (racer-length unit); isOpen selects the arc wrap.
+ * @param {{maxEffect:number, maxStepPerFrame:number, directorEnabled:boolean,
+ *          directorCastSize:number, directorDwell:number, directorAnchorOffset:number,
+ *          directorPullStrength:number, directorSettling:number, directorLeaderBrake:number,
+ *          directorChallengerBoost:number, directorFrontPool:number,
+ *          directorBoostOncePerRace:boolean, directorLingerBrake:number,
+ *          directorCeilingCap:number}} cfg
+ *   directorLeaderBrake / directorChallengerBoost: both 0 → legacy one-sided anchor pull; either
+ *   > 0 → TWO-SIDED contest. Brake side may reach −leaderBrake; boost side capped at +maxEffect.
  * @param {number} [sharedMedianT] field median for this step, precomputed once by the caller
  *   (avoids a second sort/step). Omit → computed internally.
  */
 export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedianT) {
   const activePhase = phase === 'PRE_PULK' || phase === 'PULK' || phase === 'TRANSITION';
-  const tailLiftOn = !!(cfg && cfg.enabled);
   const directorOn = !!(cfg && cfg.directorEnabled);
-  const anyOn = tailLiftOn || directorOn;
   const medianT =
-    activePhase && anyOn && finishT > 0
+    activePhase && directorOn && finishT > 0
       ? sharedMedianT !== undefined
         ? sharedMedianT
         : computeMedianT(racers)
       : null;
 
-  // Structural OUTCOME/FINAL-off, both masters off, or no median → pin exactly 1.0.
-  if (!activePhase || !anyOn || finishT <= 0 || medianT === null) {
+  // Structural OUTCOME/FINAL-off, director off, or no median → pin exactly 1.0.
+  if (!activePhase || !directorOn || finishT <= 0 || medianT === null) {
     for (const r of racers) {
       if (!r.finished) r.governorMult = 1.0;
     }
@@ -351,16 +282,11 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
   const { progress, pulkEndFrac, corrStartFrac, seed, pathLengthPx, meanBodyLen, isOpen } =
     phaseCtx;
   const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
-  const { lengths: boundLengths, A } = governorActionToParams(cfg.drama, cfg);
-  const maxEffect = cfg.maxEffect ?? 0.12;
-  const k0 = cfg.k0 ?? 0.03;
-  const maxStep = cfg.maxStepPerFrame ?? 0.01;
-  const rampWidth = cfg.rampWidth > 0 ? cfg.rampWidth : 0.5;
-  const f = cfg.frequency ?? 3;
-  const twoPiF = 2 * Math.PI * f;
-  // gap in TRUE RACER-LENGTHS: arc-distance to the median × one-lap px / mean body length.
-  // Lap-count- and track-independent (retires the finishT divisor that under-reported closed
-  // multi-lap gaps). Guard a degenerate geometry (no px/body → no cohesion).
+  const maxEffect = cfg.maxEffect ?? 0.12; // ±realism clamp (the realism envelope)
+  const maxStep = cfg.maxStepPerFrame ?? 0.01; // per-frame slew limit
+  // gap in TRUE RACER-LENGTHS: arc-distance × one-lap px / mean body length. Lap-count- and
+  // track-independent (retires the finishT divisor that under-reported closed multi-lap gaps).
+  // Guard a degenerate geometry (no px/body → no director pull). Feeds the front-anchor gap.
   const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0;
 
   // ── DIRECTOR (contest-injector) — featured cast for this step (rank-blind, seed-shuffled) ──
@@ -459,27 +385,8 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     }
     // Signed arc-length gap to the median (sign = ahead/behind by cumulative t; magnitude =
     // visible on-track arc in racer-lengths). Field is sub-lap pre-OUTCOME so sign is exact.
-    // Shared by the tail-lift (gap to median) and the director (gap to the front anchor).
+    // Used by the legacy one-sided anchor pull (gap to the front anchor = median + offset).
     const gapLengths = Math.sign(r.t - medianT) * arcT(r.t, medianT, isOpen) * lenScale;
-
-    // ── TAIL-LIFT + SHUFFLE (governor master: cfg.enabled) ──
-    // TAIL-LIFT ONLY: the cohesion force acts solely on racers BEHIND the median (x < 0).
-    // A racer that falls more than the bound behind (x < −1) gets a progressive lift back
-    // toward the field on the excess; inside the bound it runs free (DEAD ZONE → the whole
-    // middle of the field moves on re-roll + shuffle, governorMult stays EXACTLY 1.0). Racers
-    // AT or AHEAD of the median (x ≥ 0) get EXACTLY ZERO at every distance — the governor
-    // never brakes the leader (the ahead-median brake was retired; front contest is the
-    // director layer below). Same racer-length unit, ±maxEffect clamp and slew-limit as before.
-    let cohesion = 0;
-    let shuffle = 0;
-    if (tailLiftOn) {
-      const x = boundLengths > 0 ? gapLengths / boundLengths : 0;
-      const behindExcess = x < -1 ? -x - 1 : 0; // how far past the bound behind the median (bound-widths)
-      cohesion =
-        behindExcess > 0 ? governorRestoringForce(behindExcess / rampWidth, k0, maxEffect) : 0;
-      // Shuffle: bounded, zero-mean, rank-decoupled per-racer phase.
-      shuffle = A * Math.sin(twoPiF * progress + governorShufflePhase(r.index, seed));
-    }
 
     // ── DIRECTOR contest-injector (director master: cfg.directorEnabled) ──
     let director = 0;
@@ -523,7 +430,7 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg, sharedMedia
     }
 
     // Boost side always capped at +maxEffect; brake side may reach −leaderBrake in two-sided mode.
-    let target = clamp(1 + w * (cohesion + shuffle + director), loBound, 1 + maxEffect);
+    let target = clamp(1 + w * director, loBound, 1 + maxEffect);
     // Ceiling-capped boost: cap the RESULTING speed factor spreadFactor × governorMult at the natural
     // ceiling. min() only lowers, so the leader brake (target < 1) is never raised; for spreadFactor ≤
     // ceiling the cap is ≥ 1.0, so only a boosted challenger nearing the ceiling is limited. Off when 0.

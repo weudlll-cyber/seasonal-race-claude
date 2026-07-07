@@ -281,44 +281,21 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Below this the race falls back to raw physics (no target-rank sorting).
   // Sim-validated fair down to 30s; DevScreen-adjustable.
   racePlanMinDurationSec: 30,
-  // ── Pre-OUTCOME Field Governor (Stage C) — DEFAULT OFF ──────
-  // A single per-racer speed multiplier (raceGovernor.js) = TAIL-LIFT cohesion (one-sided,
-  // mean-reverting toward the field median but ONLY for racers BEHIND it — the ahead-median
-  // leader-brake was retired in Stage C) + bounded zero-mean shuffle (rank-decoupled),
-  // phase-gated and faded to exactly 1.0 by OUTCOME. Lives here (the shared persisted dynamics
-  // config the physics reads) so DevScreen AND the future SetupScreen bind the SAME governorDrama
-  // key — single source, no second copy. governorDrama is the ONE owner "action" knob; the rest
-  // are expert knobs for the sweep. NOTE: sweet-spot tuning is deferred to the governor sweep.
-  governorEnabled: false, // master switch (default OFF — nothing changes until enabled)
-  governorDrama: 0.5, // 0..1 owner "Action" slider: more → WIDER dead-zone bound + more shuffle
-  governorK0: 0.03, // edge-barrier softness (slope just past the bound) — FIXED, not mapped by Action
-  // Dead-zone bound (how far a racer may fall BEHIND the median before the tail-lift engages)
-  // in TRUE RACER-LENGTHS — arc-distance to the median × one-lap px / mean body length.
-  // Lap-count- AND track-independent (a lap is a lap, a body is fixed px), retiring the finishT
-  // divisor that UNDER-reported closed multi-lap gaps by ~maxLaps (a HUD "0.6sp" was really a
-  // visibly detached straggler). Inside the bound: ZERO force (middle runs free). Racers ahead
-  // of the median are never touched. Scaled by Action. Sweet-spot tuning deferred to the
-  // governor sweep. Floored (lenFloor) so a degenerate tiny field can't zero it. The catch is
-  // Action-dependent and modest (soft barrier); the sweet-spot (these + k0/maxEffect) is the
-  // governor sweep's job.
-  governorLengthMin: 2.0, // bound (racer-lengths) at Action 0 (tight — lift ~2 lengths behind median)
-  governorLengthMax: 3.0, // bound (racer-lengths) at Action 100 (looser dead zone — field spreads more)
-  governorLengthFloor: 1.0, // absolute floor on the bound (racer-lengths) — degenerate field can't zero it
-  governorRampWidth: 0.5, // how many bound-widths past the edge the barrier takes to reach maxEffect
-  governorAMin: 0.005, // shuffle amplitude at min Action (modest texture)
-  governorAMax: 0.02, // shuffle amplitude at max Action (more in-field movement)
-  governorFrequency: 3, // shuffle oscillation cycles over progress[0,1] — INDEPENDENT of Action (expert)
+  // ── Pre-OUTCOME contest-injector "director" — DEFAULT OFF ──────
+  // A rank-BLIND rotating spotlight (raceGovernor.js) that stages a front contest before OUTCOME
+  // via r.governorMult. maxEffect + maxStepPerFrame are the shared REALISM ENVELOPE (±12% clamp +
+  // per-frame slew) every director shape rides; the phase-weight fade takes governorMult to
+  // exactly 1.0 by OUTCOME so the finish order (fairness) is untouched. Lives here (the shared
+  // persisted dynamics config the physics reads) so DevScreen and the future SetupScreen bind the
+  // SAME keys — single source, no second copy.
   governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
   governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
-  // ── Contest-injector "director" (Stage A1) — DEFAULT OFF; own master, summed into governorMult ──
-  // A rank-BLIND rotating spotlight: a small cast (~2–3) is featured at any moment and pulled,
-  // mean-reverting, toward a front anchor (median + offset). The cast turns over every `dwell` of
-  // leader-progress in a seed-shuffled order, so which racers contend the front keeps changing and
-  // the assigned winner is NOT predictable from the early front. Featured membership is keyed on
-  // racer index + a dedicated director stream (raceGovernor.js DIRECTOR_SEED_XOR) — never targetRank.
-  // Shares the governor's phase-weight fade (→ 1.0 by OUTCOME), ±maxEffect clamp and slew-limit.
-  // Independent of the tail-lift master so it can be eye-tested alone. Sweet-spot tuning deferred.
-  governorDirectorEnabled: false, // director master switch (default OFF — independent of the tail-lift)
+  // A small cast (~2–3) is featured at any moment and pulled toward a front anchor (median +
+  // offset). The cast turns over every `dwell` of leader-progress in a seed-shuffled order, so
+  // which racers contend the front keeps changing and the assigned winner is NOT predictable from
+  // the early front. Featured membership is keyed on racer index + a dedicated director stream
+  // (raceGovernor.js DIRECTOR_SEED_XOR) — never targetRank.
+  governorDirectorEnabled: false, // director master switch (default OFF)
   governorDirectorCastSize: 3, // how many racers are featured (held in the front band) at once
   governorDirectorDwell: 0.08, // spotlight dwell as a fraction of leader-progress before the cast turns over
   governorDirectorAnchorOffset: 2.0, // front anchor = median + this many racer-lengths ahead

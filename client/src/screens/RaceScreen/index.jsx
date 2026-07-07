@@ -444,7 +444,6 @@ export default function RaceScreen() {
         governorDirectorFrontPool: 8,
         governorDirectorBoostOncePerRace: true,
         governorDirectorLingerBrake: 0.6,
-        governorEnabled: false, // tail-lift off
         phaseSplitBonusEnabled: true,
         areaBonusEarly: 1.0,
         areaBonusPulk: 0,
@@ -741,30 +740,15 @@ export default function RaceScreen() {
       camDirRef.current.updateRacePlan(rpPlanInfo.b1Indices);
     }
 
-    // ── Pre-OUTCOME Field Governor (Stage B) setup ─────────────────────────────
+    // ── Pre-OUTCOME contest-injector "director" setup ──────────────────────────
     // Built once per race from the shared dynamics config. Phase fractions come from the
-    // controller (live boundaries, single source).
-    const governorTailLiftEnabled = racePlanEnabled && (dynamicsConfig.governorEnabled ?? false);
-    const governorDirectorEnabled =
-      racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
-    // The governor call runs when EITHER term is on (the director has its own master, so it can be
-    // eye-tested alone). applyGovernor gates cohesion/shuffle on cfg.enabled and the director pull
-    // on cfg.directorEnabled independently.
-    const governorEnabled = governorTailLiftEnabled || governorDirectorEnabled;
+    // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
+    // realism envelope (±12% clamp + slew) the director rides.
+    const governorEnabled = racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
     const govCfg = {
-      enabled: governorTailLiftEnabled,
-      drama: dynamicsConfig.governorDrama ?? 0.5,
-      k0: dynamicsConfig.governorK0 ?? 0.03,
-      lenMin: dynamicsConfig.governorLengthMin ?? 2.0,
-      lenMax: dynamicsConfig.governorLengthMax ?? 3.0,
-      lenFloor: dynamicsConfig.governorLengthFloor ?? 1.0,
-      rampWidth: dynamicsConfig.governorRampWidth ?? 0.5,
-      aMin: dynamicsConfig.governorAMin ?? 0.005,
-      aMax: dynamicsConfig.governorAMax ?? 0.02,
-      frequency: dynamicsConfig.governorFrequency ?? 3,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorEnabled: governorDirectorEnabled,
+      directorEnabled: governorEnabled,
       directorCastSize: dynamicsConfig.governorDirectorCastSize ?? 3,
       directorDwell: dynamicsConfig.governorDirectorDwell ?? 0.08,
       directorAnchorOffset: dynamicsConfig.governorDirectorAnchorOffset ?? 2.0,

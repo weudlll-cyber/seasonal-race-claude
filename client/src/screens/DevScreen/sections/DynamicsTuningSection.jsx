@@ -128,16 +128,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   function resetGovernor() {
     setDynamicsConfig((prev) => ({
       ...prev,
-      governorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorEnabled,
-      governorDrama: DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama,
-      governorK0: DEFAULT_RACE_DYNAMICS_CONFIG.governorK0,
-      governorLengthMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMin,
-      governorLengthMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthMax,
-      governorLengthFloor: DEFAULT_RACE_DYNAMICS_CONFIG.governorLengthFloor,
-      governorRampWidth: DEFAULT_RACE_DYNAMICS_CONFIG.governorRampWidth,
-      governorAMin: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMin,
-      governorAMax: DEFAULT_RACE_DYNAMICS_CONFIG.governorAMax,
-      governorFrequency: DEFAULT_RACE_DYNAMICS_CONFIG.governorFrequency,
       governorMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect,
       governorMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame,
       governorDirectorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled,
@@ -739,29 +729,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </p>
       </SubCard>
 
-      {/* ── Block 4d: Pre-OUTCOME Field Governor (Stage B) ── */}
+      {/* ── Block 4d: Pre-OUTCOME contest-injector "director" ── */}
       <SubCard
-        title="Field Governor (pre-OUTCOME)"
+        title="Director (pre-OUTCOME contest injector)"
         onReset={resetGovernor}
         resetTestId="reset-governor"
-        subtitle="Pre-OUTCOME edge-limiter (default OFF): a DEAD ZONE leaves the middle of the field FREE (re-roll makes natural groups/battles) and only clamps the EDGES — a leader too far ahead of the median or a tail too far behind. One symmetric rule; the bound is in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Front-pack bias + comeback are later stages. ‘Action’ is the one owner knob (wider dead zone + more shuffle); the rest are expert/sweep knobs."
+        subtitle="Pre-OUTCOME front contest (default OFF): a rank-blind rotating cast is featured through the front band so the lead visibly changes before the result is set. Faded to nothing before OUTCOME so the finish order (fairness) is untouched. Max effect + max step per frame are the shared realism envelope (±clamp + slew) the director rides."
       >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Governor Enabled"
-              checked={dynamicsConfig.governorEnabled ?? false}
-              onChange={(e) => setDynamics('governorEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable Field Governor
-            <InfoTooltip text="Master switch (default OFF). When on, the tail-lift runs in PRE_PULK+PULK and fades to 1.0 by OUTCOME. Does not touch target ranks or the OUTCOME controller." />
-          </label>
-        </div>
         <div style={{ marginBottom: '0.75rem' }}>
           <label
             className={s.label}
@@ -775,97 +749,11 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ cursor: 'pointer' }}
             />
             Enable Director (contest injector)
-            <InfoTooltip text="Own master switch (default OFF), independent of the tail-lift so it can be eye-tested alone. Rotates a small rank-blind cast through the front band so the lead visibly changes. Fades to 1.0 by OUTCOME; never touches target ranks." />
+            <InfoTooltip text="Master switch (default OFF). Rotates a small rank-blind cast through the front band so the lead visibly changes. Fades to 1.0 by OUTCOME; never touches target ranks." />
           </label>
-        </div>
-        <div className={s.formGroup} style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            Action ({Math.round((dynamicsConfig.governorDrama ?? 0.5) * 100)}%)
-            <InfoTooltip text="The single owner control. Left = tighter tail (stragglers lifted sooner, less shuffle). Right = livelier (wider tail dead-zone, more shuffle overtakes). The tail-lift keeps stragglers in the picture; it never brakes the leader." />
-          </label>
-          <input
-            type="range"
-            aria-label="Governor Action (drama)"
-            min={0}
-            max={1}
-            step={0.05}
-            value={dynamicsConfig.governorDrama ?? DEFAULT_RACE_DYNAMICS_CONFIG.governorDrama}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (v >= 0 && v <= 1) setDynamics('governorDrama', v);
-            }}
-            style={{ width: '100%', cursor: 'pointer' }}
-          />
         </div>
         <div className={s.formGrid}>
           {[
-            {
-              key: 'governorK0',
-              label: 'Edge softness k0',
-              min: 0.005,
-              max: 0.15,
-              step: 0.005,
-              tip: 'Slope of the barrier just past the bound. Higher = stiffer edge. Zero inside the dead zone regardless. Fixed (not scaled by Action).',
-            },
-            {
-              key: 'governorLengthMin',
-              label: 'Bound @ Action 0 (racer-lengths)',
-              min: 0.5,
-              max: 10,
-              step: 0.5,
-              tip: 'Dead-zone bound (how far a racer may fall behind the median before the tail-lift engages) at min Action, in TRUE racer-lengths (arc-distance / body length — lap-count- and track-independent). Tighter tail. Must be ≤ the Action-100 bound.',
-            },
-            {
-              key: 'governorLengthMax',
-              label: 'Bound @ Action 100 (racer-lengths)',
-              min: 0.5,
-              max: 12,
-              step: 0.5,
-              tip: 'Dead-zone bound at max Action, in racer-lengths (wider dead zone → field spreads more, still bounded). Must be ≥ the Action-0 bound.',
-            },
-            {
-              key: 'governorLengthFloor',
-              label: 'Bound floor (racer-lengths)',
-              min: 0.5,
-              max: 5,
-              step: 0.5,
-              tip: 'Absolute floor on the bound in racer-lengths, so a degenerate tiny field can’t make the dead zone vanish.',
-            },
-            {
-              key: 'governorRampWidth',
-              label: 'Edge ramp width',
-              min: 0.1,
-              max: 2.0,
-              step: 0.1,
-              tip: 'How many bound-widths past the edge the barrier takes to reach full lift (maxEffect). Larger = softer edge.',
-            },
-            {
-              key: 'governorAMin',
-              label: 'A min (min-Action shuffle)',
-              min: 0,
-              max: 0.2,
-              step: 0.005,
-              tip: 'Shuffle amplitude at min Action. Keep > 0 so there is always some movement (no dead train).',
-            },
-            {
-              key: 'governorAMax',
-              label: 'A max (max-Action shuffle)',
-              min: 0,
-              max: 0.2,
-              step: 0.005,
-              tip: 'Shuffle amplitude at max Action. More in-field overtakes/drop-backs.',
-            },
-            {
-              key: 'governorFrequency',
-              label: 'Shuffle frequency',
-              min: 0.5,
-              max: 12,
-              step: 0.5,
-              tip: 'Oscillation cycles across the race — INDEPENDENT of Action (expert). Higher = quicker weave.',
-            },
             {
               key: 'governorMaxEffect',
               label: 'Max effect (±)',
