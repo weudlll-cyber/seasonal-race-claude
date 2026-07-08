@@ -129,6 +129,21 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   if (config.corridorStart !== undefined) phaseFractions.corridorStart = config.corridorStart;
   if (config.corridorEnd !== undefined) phaseFractions.corridorEnd = config.corridorEnd;
 
+  // v4 PHASE COLLAPSE (Step 5): the reactive 4-phase model spreads the pack UNSTEERED until OUTCOME
+  // at corridorStart (0.55) — a relic of the old PULK director. v4 has no PULK director, so collapse
+  // PULK: OUTCOME (the pack's band-steering) begins at directorV4OutcomeStart (~0.25 = the chaos→choreo
+  // boundary where heroes are cast), giving the P-controller the full ~0.25→1.0 to hold the field in
+  // its bands. Move BOTH pulkEnd and corridorStart (the clamp below requires corridorStart >= pulkEnd);
+  // the resulting zero-width PULK/TRANSITION is exactly the concept's TWO-phase model. Single source:
+  // every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split via
+  // getPhaseFractions) inherits these fractions — no duplicated phase math. v4-OFF: untouched → the
+  // reactive 0.5/0.55 structure and byte-identical race.
+  if (config.directorV4Enabled) {
+    const v4OutcomeStart = config.directorV4OutcomeStart ?? 0.25;
+    phaseFractions.pulkEnd = Math.min(phaseFractions.pulkEnd, v4OutcomeStart);
+    phaseFractions.corridorStart = v4OutcomeStart;
+  }
+
   // Phase-boundary hardening (Stage A): keep the boundaries ordered the way the ordered
   // getPhase branches below assume — pulkStart <= pulkEnd <= corridorStart <= corridorEnd —
   // so no consumer sees an inverted TRANSITION or a negative span. A span that would be <= 0

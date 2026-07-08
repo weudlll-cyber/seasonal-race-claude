@@ -61,6 +61,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       directorV4ResolveB3: 0.7,
       directorV4ResolveB4: 0.65,
       directorV4ResolveB5: 0.6,
+      directorV4OutcomeStart: 0.25,
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -184,6 +185,18 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4ResolveB3: 0 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when directorV4OutcomeStart is out of [0.25, 0.55]', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4OutcomeStart: 0.2 });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4OutcomeStart: 0.6 });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('accepts a valid directorV4OutcomeStart', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4OutcomeStart: 0.35 });
+    expect(loadRaceDynamicsConfig().directorV4OutcomeStart).toBe(0.35);
   });
 
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {

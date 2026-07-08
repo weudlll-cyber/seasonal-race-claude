@@ -1045,6 +1045,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           setDynamics('directorV4ResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3);
           setDynamics('directorV4ResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4);
           setDynamics('directorV4ResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5);
+          setDynamics(
+            'directorV4OutcomeStart',
+            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart
+          );
         }}
         resetTestId="reset-v4"
         subtitle="Experimental choreographed director: at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. OFF = the proven reactive Director above (identical behaviour)."
@@ -1107,6 +1111,28 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 1) setDynamics('directorV4PackBandStrictness', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              OUTCOME start (0.25–0.55)
+              <InfoTooltip text="When the pack's band-steering (OUTCOME) begins under v4. 0.25 collapses the dead PULK phase so the field is held together from the chaos boundary (tighter, more fair, more correction budget); higher hands off later (looser early field). 0.25 default. OFF path uses the reactive 0.55." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Director V4 Outcome Start"
+              min={0.25}
+              max={0.55}
+              step={0.05}
+              value={dynamicsConfig.directorV4OutcomeStart}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.25 && v <= 0.55) setDynamics('directorV4OutcomeStart', v);
               }}
             />
           </div>

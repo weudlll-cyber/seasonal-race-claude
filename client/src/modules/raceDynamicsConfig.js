@@ -65,6 +65,9 @@ export function loadRaceDynamicsConfig() {
       merged.directorV4ResolveB4,
       merged.directorV4ResolveB5,
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
+    typeof merged.directorV4OutcomeStart !== 'number' ||
+    merged.directorV4OutcomeStart < 0.25 ||
+    merged.directorV4OutcomeStart > 0.55 ||
     // Event-driven catch-up + active fall-back (rebuild).
     typeof merged.governorDirectorMaxParallelBoosts !== 'number' ||
     merged.governorDirectorMaxParallelBoosts < 0 ||

@@ -330,6 +330,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   directorV4ResolveB3: 0.7,
   directorV4ResolveB4: 0.65,
   directorV4ResolveB5: 0.6,
+  // v4 phase collapse (Step 5): when v4 is ON, OUTCOME (the pack's band-steering) begins at this
+  // progress instead of the reactive 0.55 — collapsing the dead PULK phase so the field is held in
+  // its bands from the chaos→choreo boundary (~0.25) instead of spreading unsteered for half the race.
+  // Range 0.25–0.55 (0.25 = full collapse; higher = a later hand-off). Off → the reactive 0.5/0.55.
+  directorV4OutcomeStart: 0.25,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at

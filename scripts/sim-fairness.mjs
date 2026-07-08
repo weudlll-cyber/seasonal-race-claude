@@ -147,6 +147,7 @@ const DIRECTOR_V4_RESOLVE_B2 = Number(argVal('directorV4ResolveB2', String(DEFAU
 const DIRECTOR_V4_RESOLVE_B3 = Number(argVal('directorV4ResolveB3', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3)));
 const DIRECTOR_V4_RESOLVE_B4 = Number(argVal('directorV4ResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4)));
 const DIRECTOR_V4_RESOLVE_B5 = Number(argVal('directorV4ResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5)));
+const DIRECTOR_V4_OUTCOME_START = Number(argVal('directorV4OutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart)));
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -2063,12 +2064,18 @@ export function runSingleRace({
         // FINISH CONTEST (Step-4 observer, read-only — no race behavior). The leader→2nd finish-time
         // gap: a cruising winner opens a large gap; a fought finish keeps it small. top5SpreadSec is
         // the P1→P5 finish-time spread — how tight the whole front cluster crosses the line.
+        // fieldSpreadP10P90Sec (Step 5): the p10→p90 finish-time spread across the WHOLE field — the
+        // "did the field tighten?" signal (a denser, band-held field finishes closer in time).
         finish: (() => {
           const at = (rk) => racers.find((r) => r.finishRank === rk)?.finishTime;
           const t1 = at(1), t2 = at(2), t5 = at(5);
+          const times = racers.map((r) => r.finishTime).filter((x) => x != null).sort((a, b) => a - b);
+          const pct = (p) => (times.length ? times[Math.min(times.length - 1, Math.floor(p * (times.length - 1)))] : null);
+          const p10 = pct(0.1), p90 = pct(0.9);
           return {
             gapP1P2Sec:   t1 != null && t2 != null ? +(t2 - t1).toFixed(3) : null,
             top5SpreadSec: t1 != null && t5 != null ? +(t5 - t1).toFixed(3) : null,
+            fieldSpreadP10P90Sec: p10 != null && p90 != null ? +(p90 - p10).toFixed(3) : null,
           };
         })(),
         naturalness: {
@@ -3715,6 +3722,7 @@ if (isMain) {
               directorV4ResolveB3:     DIRECTOR_V4_RESOLVE_B3,
               directorV4ResolveB4:     DIRECTOR_V4_RESOLVE_B4,
               directorV4ResolveB5:     DIRECTOR_V4_RESOLVE_B5,
+              directorV4OutcomeStart:  DIRECTOR_V4_OUTCOME_START,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

@@ -711,6 +711,7 @@ export default function RaceScreen() {
           directorV4ResolveB3: dynamicsConfig.directorV4ResolveB3 ?? 0.7,
           directorV4ResolveB4: dynamicsConfig.directorV4ResolveB4 ?? 0.65,
           directorV4ResolveB5: dynamicsConfig.directorV4ResolveB5 ?? 0.6,
+          directorV4OutcomeStart: dynamicsConfig.directorV4OutcomeStart ?? 0.25,
         },
         racePlanSeed
       );

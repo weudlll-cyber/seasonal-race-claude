@@ -147,6 +147,72 @@ describe('createRacePlan', () => {
   });
 });
 
+// ── v4 PHASE COLLAPSE (Step 5): OUTCOME begins at the chaos boundary; PULK collapsed, v4-off intact ──
+describe('createRacePlan — v4 phase collapse', () => {
+  it('v4-OFF: phase structure is the reactive default (pulkEnd 0.5 / corridorStart 0.55), untouched', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: false, corridorStart: 0.55 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
+    expect(plan.phaseFractions.corridorStart).toBe(0.55);
+  });
+
+  it('v4-ON (default outcome-start): PULK collapses — pulkEnd == corridorStart == 0.25 (OUTCOME from the chaos boundary)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true, corridorStart: 0.55 }, // corridorStart shortcut is OVERRIDDEN by the v4 collapse
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.25);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.25);
+    expect(plan.phaseFractions.pulkStart).toBe(0.25); // zero-width PULK + TRANSITION = the two-phase model
+  });
+
+  it('v4-ON honours a custom directorV4OutcomeStart (owner sweet-spot control)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true, directorV4OutcomeStart: 0.35 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.35);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.35);
+  });
+
+  it('under v4 the controller reports OUTCOME already at 0.30 (steering live); v4-off is still pre-OUTCOME there', () => {
+    const on = createTrajectoryController(
+      createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, { directorV4Enabled: true }, BASE_SEED)
+    );
+    const off = createTrajectoryController(
+      createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, { directorV4Enabled: false }, BASE_SEED)
+    );
+    // phaseProgress 0.30: v4 collapsed OUTCOME-start 0.25 → OUTCOME; reactive start 0.55 → not yet.
+    expect(on.getPhase(0.3 * TARGET_DUR_MS, 0.3)).toBe('OUTCOME');
+    expect(off.getPhase(0.3 * TARGET_DUR_MS, 0.3)).not.toBe('OUTCOME');
+  });
+
+  it('the earlier OUTCOME steers the pack LOOSE, not rank-locked (pack strictness < 1.0)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true, directorV4PackBandStrictness: 0.5 },
+      BASE_SEED
+    );
+    // Collapsing OUTCOME earlier must NOT exact-rank-lock the pack — heroes need weaving room (A4).
+    expect(plan._v4Enabled).toBe(true);
+    expect(plan._v4PackBandStrictness).toBeGreaterThan(0);
+    expect(plan._v4PackBandStrictness).toBeLessThan(1.0);
+  });
+});
+
 // ── createTrajectoryController — P-controller arithmetic ─────────────────────
 
 describe('createTrajectoryController — P-controller arithmetic', () => {
