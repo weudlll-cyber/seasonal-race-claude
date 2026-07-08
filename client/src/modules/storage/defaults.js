@@ -312,6 +312,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
   governorDirectorBoostHeadroom: 0.0,
+  // v4 choreography (flag-gated, default OFF → whole v4 path is dead code, byte-identical to today).
+  // When ON, one designated hero racer is steered along a hand-authored position-over-time curve by
+  // the existing trajectory controller from the choreo start; everything else is unchanged.
+  directorV4Enabled: false,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at

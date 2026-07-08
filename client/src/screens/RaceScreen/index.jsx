@@ -703,10 +703,17 @@ export default function RaceScreen() {
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
           pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
+          directorV4Enabled: dynamicsConfig.directorV4Enabled ?? false,
         },
         racePlanSeed
       );
       racePlanController = createTrajectoryController(plan);
+      // v4: tag the designated hero so the director excludes it and the lateral layer gives it
+      // pass-priority. -1 when v4 is off → no racer tagged → byte-identical.
+      if (plan._heroRacerId >= 0) {
+        const hero = g.current.racers.find((r) => r.index === plan._heroRacerId);
+        if (hero) hero.isHeroChoreographed = true;
+      }
       rpPlanInfo = {
         targetRanks: plan._racerTargetRank,
         b1Indices: new Set(

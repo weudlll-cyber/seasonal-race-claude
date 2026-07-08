@@ -53,6 +53,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorLingerBrake: 0.6,
       governorDirectorCeilingCap: true,
       governorDirectorBoostHeadroom: 0.0,
+      directorV4Enabled: false,
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -146,6 +147,16 @@ describe('loadRaceDynamicsConfig', () => {
       governorDirectorBoostHeadroom: 0.05,
     });
     expect(loadRaceDynamicsConfig().governorDirectorBoostHeadroom).toBe(0.05);
+  });
+
+  it('returns defaults when directorV4Enabled is not a boolean', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Enabled: 'yes' });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('accepts directorV4Enabled=true', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Enabled: true });
+    expect(loadRaceDynamicsConfig().directorV4Enabled).toBe(true);
   });
 
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {

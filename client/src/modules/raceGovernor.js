@@ -213,9 +213,15 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
   // Racer-length unit: arc-distance x one-lap px / mean body length (lap-count- & track-independent).
   const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0;
 
+  // v4: a choreographed hero is steered by the trajectory controller, not the director. Exclude it
+  // from the director's field (never a leader / challenger / faller) and pin its governorMult to
+  // 1.0, so boost/brake never fight the authored curve. isHeroChoreographed is unset (falsy) when
+  // v4 is off, so `live` and every governorMult below stay byte-identical to today.
+  for (const r of racers) if (r.isHeroChoreographed && !r.finished) r.governorMult = 1.0;
+
   // Live rank order (rank 1 = leader). Degenerate field / geometry / missing state -> neutral.
   const live = racers
-    .filter((r) => !r.finished)
+    .filter((r) => !r.finished && !r.isHeroChoreographed)
     .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
   const n = live.length;
   if (n === 0 || lenScale <= 0 || !dirState) {

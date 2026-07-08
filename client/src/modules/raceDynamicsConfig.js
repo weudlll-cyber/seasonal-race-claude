@@ -51,6 +51,7 @@ export function loadRaceDynamicsConfig() {
     typeof merged.governorDirectorCeilingCap !== 'boolean' ||
     typeof merged.governorDirectorBoostHeadroom !== 'number' ||
     merged.governorDirectorBoostHeadroom < 0 ||
+    typeof merged.directorV4Enabled !== 'boolean' ||
     // Event-driven catch-up + active fall-back (rebuild).
     typeof merged.governorDirectorMaxParallelBoosts !== 'number' ||
     merged.governorDirectorMaxParallelBoosts < 0 ||
