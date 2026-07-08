@@ -1027,6 +1027,84 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
+      {/* ── Block 4d2: Hero Choreography (v4) — flag + two tuning knobs (fields defined in defaults.js) ── */}
+      <SubCard
+        title="Hero Choreography (v4)"
+        onReset={() => {
+          setDynamics('directorV4Enabled', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled);
+          setDynamics('directorV4Intensity', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity);
+          setDynamics(
+            'directorV4PackBandStrictness',
+            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness
+          );
+        }}
+        resetTestId="reset-v4"
+        subtitle="Experimental choreographed director: at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. OFF = the proven reactive Director above (identical behaviour)."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Director V4 Enabled"
+              checked={dynamicsConfig.directorV4Enabled ?? false}
+              onChange={(e) => setDynamics('directorV4Enabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable hero choreography (v4)
+            <InfoTooltip text="Master switch for the choreographed hero director (v4). OFF = the proven reactive director (identical to before). ON = 2–4 hero racers follow authored curves for dramatic, fair finishes." />
+          </label>
+        </div>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Action intensity (0–1)
+              <InfoTooltip text="Drama intensity of the hero curves. Low = calm; high = deeper comebacks, more duels, later reveals. Auto-clamped per race so it can never break fairness." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Director V4 Intensity"
+              min={0}
+              max={1}
+              step={0.05}
+              value={dynamicsConfig.directorV4Intensity}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setDynamics('directorV4Intensity', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Pack band strictness (0–1)
+              <InfoTooltip text="How tightly the non-hero pack holds its band. Higher = tighter/fairer pack; lower = looser pack so heroes can weave through. 0.5 is the tested default." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Director V4 Pack Band Strictness"
+              min={0}
+              max={1}
+              step={0.05}
+              value={dynamicsConfig.directorV4PackBandStrictness}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 1) setDynamics('directorV4PackBandStrictness', v);
+              }}
+            />
+          </div>
+        </div>
+      </SubCard>
+
       {/* ── Block 4e: Phase-Split Bonuses ── */}
       <SubCard
         title="Phase-Split Bonuses"
