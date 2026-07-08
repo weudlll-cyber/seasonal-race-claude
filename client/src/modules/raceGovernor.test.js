@@ -10,7 +10,14 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { arcT, applyGovernor, governorPhaseWeight, directorStreamKey } from './raceGovernor.js';
+import {
+  arcT,
+  applyGovernor,
+  governorPhaseWeight,
+  directorStreamKey,
+  computeDirectorCeiling,
+  NATURALNESS_CEILING,
+} from './raceGovernor.js';
 
 // Fresh per-race director state (the shape applyGovernor lazily fills).
 const mkDir = () => ({
@@ -204,5 +211,47 @@ describe('applyGovernor — realism envelope', () => {
       return out;
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe('computeDirectorCeiling (additive boost-headroom + naturalness clamp)', () => {
+  // Shipped ±8.1% band: max 0.00113, mean 0.001045 → band max factor ≈ 1.0813.
+  const MAX = 0.00113;
+  const MEAN = 0.001045;
+  const bandMax = MAX / MEAN;
+
+  it('boostHeadroom 0 → exactly the band max (byte-identical to the pre-headroom cap)', () => {
+    expect(computeDirectorCeiling(MAX, MEAN, 0)).toBeCloseTo(bandMax, 12);
+    // default arg is 0 too
+    expect(computeDirectorCeiling(MAX, MEAN)).toBeCloseTo(bandMax, 12);
+  });
+
+  it('adds headroom in speed-factor points (additive, not multiplicative)', () => {
+    expect(computeDirectorCeiling(MAX, MEAN, 0.05)).toBeCloseTo(bandMax + 0.05, 12);
+    expect(computeDirectorCeiling(MAX, MEAN, 0.08)).toBeCloseTo(bandMax + 0.08, 12);
+  });
+
+  it('hard-clamps to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% leitplanke', () => {
+    // Construct a band whose max factor is 1.15, then add 0.10 → 1.25 → clamps to 1.20.
+    expect(computeDirectorCeiling(1.15, 1.0, 0.1)).toBe(NATURALNESS_CEILING);
+    // Even an absurd headroom cannot exceed the clamp.
+    expect(computeDirectorCeiling(MAX, MEAN, 999)).toBe(NATURALNESS_CEILING);
+  });
+
+  it('available headroom shrinks automatically as the band widens (scales with band)', () => {
+    // Wider band (max factor 1.15) leaves less room under the 1.20 clamp than a narrow band (1.08).
+    const narrow = computeDirectorCeiling(1.08, 1.0, 0.15); // 1.08 + 0.15 = 1.23 → 1.20
+    const wide = computeDirectorCeiling(1.15, 1.0, 0.15); // 1.15 + 0.15 = 1.30 → 1.20
+    expect(narrow).toBe(NATURALNESS_CEILING);
+    expect(wide).toBe(NATURALNESS_CEILING);
+    // Below the clamp, a wider band yields a higher ceiling for the SAME headroom (additive).
+    expect(computeDirectorCeiling(1.15, 1.0, 0.02)).toBeGreaterThan(
+      computeDirectorCeiling(1.08, 1.0, 0.02)
+    );
+  });
+
+  it('negative headroom is floored to 0; non-positive mean returns 0', () => {
+    expect(computeDirectorCeiling(MAX, MEAN, -0.05)).toBeCloseTo(bandMax, 12);
+    expect(computeDirectorCeiling(MAX, 0, 0.05)).toBe(0);
   });
 });

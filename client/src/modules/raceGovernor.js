@@ -33,6 +33,35 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
 // target-rank assignment. No Math.random on this path.
 const DIRECTOR_SEED_XOR = 0x6b7f1e35;
 
+// Hard naturalness leitplanke: the effective director ceiling may NEVER exceed +20% of the field
+// mean, regardless of band width or configured boost-headroom. Enforced in computeDirectorCeiling.
+export const NATURALNESS_CEILING = 1.2;
+
+/**
+ * Effective director naturalness ceiling (the value fed to applyGovernor as cfg.directorCeilingCap).
+ *
+ * Base ceiling = the natural band max (BASE_SPEED_MAX / BASE_SPEED_MEAN). boostHeadroom ADDS
+ * fractional headroom ABOVE it (in speed-factor points, e.g. 0.05 = +5 pts), so a boosted
+ * challenger may burst past the fastest natural racer — reviving the otherwise cap-eaten catch-up
+ * boost. Additive (not multiplicative) so it scales correctly as the band width changes.
+ *
+ * Hard-clamped to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% leitplanke:
+ * at a wide band the available headroom shrinks automatically (±14% band max ≈ 1.143 → clamp allows
+ * ≈ +6 pts; ±8% band max ≈ 1.081 → allows ≈ +12 pts).
+ *
+ * boostHeadroom 0 → the plain band max (byte-identical to the pre-headroom cap for any band ≤ ±20%).
+ *
+ * @param {number} baseSpeedMax   BASE_SPEED_CONFIG.max
+ * @param {number} baseSpeedMean  (min + max) / 2
+ * @param {number} [boostHeadroom=0]  fractional points added above the band max
+ * @returns {number} the numeric ceiling (0 is never returned here; caller passes 0 when cap OFF)
+ */
+export function computeDirectorCeiling(baseSpeedMax, baseSpeedMean, boostHeadroom = 0) {
+  if (!(baseSpeedMean > 0)) return 0;
+  const bandMax = baseSpeedMax / baseSpeedMean;
+  return Math.min(bandMax + Math.max(0, boostHeadroom || 0), NATURALNESS_CEILING);
+}
+
 // Minimum fade span (progress fraction) for the TRANSITION ease-out. If the LIVE
 // (corrStartFrac − pulkEndFrac) span is smaller (owner shortened the OUTCOME onset), the
 // fade widens BACKWARD into PULK so w still reaches exactly 0 at corrStart — no

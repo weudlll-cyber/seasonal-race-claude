@@ -52,6 +52,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorChallengerBoost: 0.06,
       governorDirectorLingerBrake: 0.6,
       governorDirectorCeilingCap: true,
+      governorDirectorBoostHeadroom: 0.0,
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -75,7 +76,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {
     // The winning phase-split turns the area/row bonuses OFF during the PULK window (0 is valid).
-    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk']);
+    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk', 'governorDirectorBoostHeadroom']);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
@@ -129,6 +130,22 @@ describe('loadRaceDynamicsConfig', () => {
       reRollLastPositionPercent: 101,
     });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when governorDirectorBoostHeadroom is negative', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      governorDirectorBoostHeadroom: -0.05,
+    });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('accepts a positive governorDirectorBoostHeadroom', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      governorDirectorBoostHeadroom: 0.05,
+    });
+    expect(loadRaceDynamicsConfig().governorDirectorBoostHeadroom).toBe(0.05);
   });
 
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {

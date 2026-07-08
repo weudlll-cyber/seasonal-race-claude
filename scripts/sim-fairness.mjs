@@ -86,7 +86,7 @@ import {
 } from '../client/src/modules/storage/defaults.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
-import { applyGovernor, arcT } from '../client/src/modules/raceGovernor.js';
+import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
 // breakaway-diag). The director mechanism no longer uses the field median, so computeMedianT was
@@ -160,6 +160,8 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorBoostOncePerRace: argVal('governorDirectorBoostOncePerRace', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostOncePerRace)) === 'true',
   governorDirectorLingerBrake:      Number(argVal('governorDirectorLingerBrake',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLingerBrake))),
   governorDirectorCeilingCap:       argVal('governorDirectorCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap)) === 'true',
+  // Additive boost-headroom above the natural band max for the director ceiling (0 = shipped baseline).
+  governorDirectorBoostHeadroom:    Number(argVal('governorDirectorBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom))),
   // Event-driven catch-up + active fall-back (rebuild). Same shared-default + argVal pattern.
   governorDirectorMaxParallelBoosts:  Number(argVal('governorDirectorMaxParallelBoosts',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorMaxParallelBoosts))),
   governorDirectorBoostDurationMin:   Number(argVal('governorDirectorBoostDurationMin',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostDurationMin))),
@@ -317,6 +319,16 @@ if (LBB_MINDIFF_RAW  !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeMinDifferential 
 if (LBB_REENGAGE_RAW !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeReengageTMultiplier = Number(LBB_REENGAGE_RAW);
 // --selfcheck: run synthetic validation of BS-1 fairness metrics and exit (no sim run).
 const SELFCHECK = argv.includes('--selfcheck');
+
+// ── Base-speed band override (flag/test config; read-only measurement) ────────
+// --baseSpeedMin / --baseSpeedMax let a fairness sweep test a widened Speed Range WITHOUT
+// editing the shipped defaults.js. ABSENT → shipped DEFAULT_BASE_SPEED_CONFIG, so a no-flag
+// run is byte-identical. Every base-speed-derived quantity in the sim (spread band, expectedMinSF,
+// open-track natural base, re-roll clamps, AND the director ceiling-cap = BASE_SPEED_MAX/MEAN)
+// flows from the two module-level constants below, so overriding them here propagates the tested
+// band consistently. When a tested band is promoted to the default, this flag simply matches it.
+const BASE_SPEED_MIN_OVR = Number(argVal('baseSpeedMin', String(DEFAULT_BASE_SPEED_CONFIG.min)));
+const BASE_SPEED_MAX_OVR = Number(argVal('baseSpeedMax', String(DEFAULT_BASE_SPEED_CONFIG.max)));
 
 // ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
 const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
@@ -485,8 +497,8 @@ export function runSingleRace({
   if (seed > 0) Math.random = makePRNG(seed);
 
   try {
-    const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
-    const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
+    const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
+    const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
@@ -851,7 +863,9 @@ export function runSingleRace({
       directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
       directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
       directorCeilingCap:
-        (dynamicsConfig.governorDirectorCeilingCap ?? false) ? BASE_SPEED_MAX / BASE_SPEED_MEAN : 0,
+        (dynamicsConfig.governorDirectorCeilingCap ?? false)
+          ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
+          : 0,
       // Event-driven catch-up.
       directorMaxParallelBoosts: dynamicsConfig.governorDirectorMaxParallelBoosts ?? 3,
       directorBoostDurationMin: dynamicsConfig.governorDirectorBoostDurationMin ?? 1500,
@@ -3554,9 +3568,13 @@ if (isMain) {
 
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const BASE_SPEED_MIN  = DEFAULT_BASE_SPEED_CONFIG.min;
-  const BASE_SPEED_MAX  = DEFAULT_BASE_SPEED_CONFIG.max;
+  const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
+  const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
+  if (BASE_SPEED_MIN !== DEFAULT_BASE_SPEED_CONFIG.min || BASE_SPEED_MAX !== DEFAULT_BASE_SPEED_CONFIG.max) {
+    const spreadPct = (((BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN) * 100).toFixed(1);
+    console.log(`⚠️  Base-speed band OVERRIDE: min=${BASE_SPEED_MIN} max=${BASE_SPEED_MAX} (±${(spreadPct/2)}% / ${spreadPct}% total; default min=${DEFAULT_BASE_SPEED_CONFIG.min} max=${DEFAULT_BASE_SPEED_CONFIG.max})`);
+  }
 
   const allResults = [];
   const rawData    = [];

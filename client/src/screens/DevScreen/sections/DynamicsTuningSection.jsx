@@ -140,6 +140,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostOncePerRace,
       governorDirectorLingerBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLingerBrake,
       governorDirectorCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap,
+      governorDirectorBoostHeadroom: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom,
       governorDirectorMaxParallelBoosts:
         DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorMaxParallelBoosts,
       governorDirectorBoostDurationMin:
@@ -818,6 +819,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               max: 0.12,
               step: 0.01,
               tip: 'Maximum forward boost given to a catching challenger to close on the leader (capped by max effect). 0.06 = shipped.',
+            },
+            {
+              key: 'governorDirectorBoostHeadroom',
+              label: 'Boost headroom (pts above natural)',
+              min: 0,
+              max: 0.15,
+              step: 0.01,
+              tip: 'How much faster than the fastest natural racer a boosted challenger may go. 0 = capped at the field; higher = catch-ups can burst forward. Auto-limited so total speed stays within ±20%. 0 = shipped.',
             },
             {
               key: 'governorDirectorPullStrength',

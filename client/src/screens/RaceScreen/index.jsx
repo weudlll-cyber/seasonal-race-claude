@@ -65,7 +65,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { applyGovernor } from '../../modules/raceGovernor.js';
+import { applyGovernor, computeDirectorCeiling } from '../../modules/raceGovernor.js';
 import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
 import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -736,7 +736,13 @@ export default function RaceScreen() {
       directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
       directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
       directorCeilingCap:
-        (dynamicsConfig.governorDirectorCeilingCap ?? false) ? BASE_SPEED_MAX / BASE_SPEED_MEAN : 0,
+        (dynamicsConfig.governorDirectorCeilingCap ?? false)
+          ? computeDirectorCeiling(
+              BASE_SPEED_MAX,
+              BASE_SPEED_MEAN,
+              dynamicsConfig.governorDirectorBoostHeadroom ?? 0
+            )
+          : 0,
       // Event-driven catch-up (parity with sim-fairness.mjs).
       directorMaxParallelBoosts: dynamicsConfig.governorDirectorMaxParallelBoosts ?? 3,
       directorBoostDurationMin: dynamicsConfig.governorDirectorBoostDurationMin ?? 1500,

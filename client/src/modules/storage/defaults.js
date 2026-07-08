@@ -308,6 +308,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorChallengerBoost: 0.06, // forward boost cap on a catching challenger toward the leader
   governorDirectorLingerBrake: 0.6, // seconds the just-overtaken old leader keeps the brake
   governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
+  // Additive headroom (speed-factor points) ABOVE the natural band max for the director ceiling: lets
+  // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
+  // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
+  governorDirectorBoostHeadroom: 0.0,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at
