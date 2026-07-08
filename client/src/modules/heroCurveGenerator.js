@@ -30,10 +30,13 @@ export const GENERATOR_CONFIG = {
   minHeroes: 2,
   maxHeroes: 4,
   anchorProgress: 0.25, // chaos→choreo boundary (pulkStart)
-  // The ±20% naturalness band is the per-race DISTANCE budget for feasibility: over the remaining
-  // race a racer can shift its position relative to the field by ≈ speedBudgetFrac × remaining ×
-  // finishT. Converted to ranks via the live position distribution → density-adaptive.
-  speedBudgetFrac: 0.2,
+  // Per-race DISTANCE budget for feasibility: over the remaining race a racer can shift its position
+  // relative to the field by ≈ speedBudgetFrac × remaining × finishT, converted to ranks via the live
+  // position distribution (density-adaptive). Calibrated (Step 3) to the hero ACTUATOR's climb
+  // authority — the trajectoryMult servo gives ≈+10% over the field — so the generator never hands a
+  // hero a curve steeper than its servo can track. (Drops via −15% are a touch faster; 0.10 is the
+  // conservative binding direction.)
+  speedBudgetFrac: 0.1,
   // Positive handoff budget: a curve must have resolved INTO its final band by this progress,
   // leaving [budgetCheckpoint, 1.0] for the OUTCOME controller to merely settle (no late rescue).
   budgetCheckpoint: 0.9,

@@ -54,6 +54,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorCeilingCap: true,
       governorDirectorBoostHeadroom: 0.0,
       directorV4Enabled: false,
+      directorV4Intensity: 0.6,
+      directorV4PackBandStrictness: 0.5,
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -157,6 +159,19 @@ describe('loadRaceDynamicsConfig', () => {
   it('accepts directorV4Enabled=true', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Enabled: true });
     expect(loadRaceDynamicsConfig().directorV4Enabled).toBe(true);
+  });
+
+  it('returns defaults when directorV4Intensity is out of [0,1]', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Intensity: 1.5 });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when directorV4PackBandStrictness is out of [0,1]', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      directorV4PackBandStrictness: -0.2,
+    });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
   it('does not mutate DEFAULT_RACE_DYNAMICS_CONFIG', () => {

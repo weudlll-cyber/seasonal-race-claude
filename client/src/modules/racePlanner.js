@@ -12,21 +12,8 @@
 // ============================================================
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
-import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
-
-// v4 Step 1: a single HAND-AUTHORED hero curve (target rank over leader-progress). The generator
-// that composes curves per race does not exist yet (later step) — this fixed "staged comeback to
-// win" shape exists only to prove the follower + lateral execution end-to-end. The first waypoint
-// (0.25) is a placeholder: anchorHeroCurve replaces it with the hero's ACTUAL rank + rank-velocity
-// at the chaos→choreo handoff, and drops waypoints at/behind it. The curve ENDS at rank 1 so the
-// designated hero (the assigned winner, targetRank 1) finishes in its band (1–5) — the OUTCOME
-// band-guarantee still runs regardless.
-const STEP1_HERO_WAYPOINTS = [
-  { progress: 0.25, rank: 1 }, // placeholder — replaced by the runtime handoff anchor
-  { progress: 0.55, rank: 9 }, // hold mid-pack through the choreo window (false-leader illusion)
-  { progress: 0.85, rank: 5 }, // begin the charge
-  { progress: 1.0, rank: 1 }, // resolve to the front by the line
-];
+import { sampleHeroCurve } from './heroChoreography.js';
+import { generateHeroCurves } from './heroCurveGenerator.js';
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 // Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
@@ -242,15 +229,18 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
       config.bonusFadeDuration ?? config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
-    // ── v4 hero choreography (flag-gated; -1 / null when off → controller path unchanged) ──
-    // The hero is the assigned winner (targetRank 1). Its base curve is anchored at the
-    // chaos→choreo handoff; _heroCurve/_heroAnchored/_heroPrev* are mutated in-place by update().
-    _heroRacerId: config.directorV4Enabled ? winnerRacerId : -1,
-    _heroBaseCurve: config.directorV4Enabled ? makeHeroCurve(STEP1_HERO_WAYPOINTS) : null,
-    _heroCurve: null,
-    _heroAnchored: false,
-    _heroPrevRank: null,
-    _heroPrevProgress: null,
+    // ── v4 hero choreography (flag-gated; _v4Enabled=false → controller path byte-identical) ──
+    // The GENERATOR runs ONCE at the post-chaos boundary (~pulkStart) inside update(), on the ACTUAL
+    // field state, and casts 2–4 heroes with anchored curves. These fields hold its inputs + the
+    // mutable result (filled in-place by update()). _v4PackBandStrictness loosens the PACK so heroes
+    // can weave through (heroes themselves always track their curve exactly).
+    _v4Enabled: !!config.directorV4Enabled,
+    _v4Intensity: config.directorV4Intensity ?? 0.6,
+    _v4PackBandStrictness: config.directorV4PackBandStrictness ?? 0.5,
+    _heroCurves: null, // Map index → anchored curve, once generated
+    _v4Generated: false,
+    _v4PrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
+    _v4PrevProgress: null,
   };
 }
 
@@ -382,11 +372,10 @@ export function createTrajectoryController(racePlan) {
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
     // Pre-OUTCOME: no rank steering — every racer's trajectoryMult target is pinned to 1.0, EXCEPT
-    // (v4) a designated hero, which the controller tracks along its authored curve from the choreo
-    // start (pulkStart). The correction MATH below is unchanged; the hero only changes WHICH target
-    // it steers toward and WHEN its steering begins. v4-off (heroId < 0) → identical early-return.
-    const heroId = plan._heroRacerId ?? -1;
-    const choreoActive = heroId >= 0 && phaseProgress != null && phaseProgress >= pulkStartFrac;
+    // (v4) the generated HEROES, which the controller tracks along their authored curves from the
+    // choreo start (pulkStart). The correction MATH is unchanged; heroes change WHICH target they
+    // steer toward, and the PACK runs at a looser bandStrictness. v4-off → identical early-return.
+    const choreoActive = plan._v4Enabled && phaseProgress != null && phaseProgress >= pulkStartFrac;
     if (_preOutcome && !choreoActive) {
       for (const r of racers) _setTarget(r, 1.0, elapsedMs);
       return;
@@ -404,26 +393,39 @@ export function createTrajectoryController(racePlan) {
     const nActive = active.length;
     if (nActive === 0) return;
 
-    // v4: jerk-matched chaos→choreo handoff. On the first two choreo frames capture the hero's
-    // ACTUAL rank + rank-velocity, then anchor its curve so target VALUE and FIRST DERIVATIVE are
-    // continuous at the handoff. heroSteers gates the hero's per-frame target below.
-    let heroSteers = false;
-    if (choreoActive) {
-      const heroIdx = active.findIndex((r) => r.index === heroId);
-      if (heroIdx >= 0) {
-        const heroRank = heroIdx + 1;
-        if (!plan._heroAnchored) {
-          if (plan._heroPrevRank != null && phaseProgress > plan._heroPrevProgress) {
-            const vel = (heroRank - plan._heroPrevRank) / (phaseProgress - plan._heroPrevProgress);
-            plan._heroCurve = anchorHeroCurve(plan._heroBaseCurve, phaseProgress, heroRank, vel);
-            plan._heroAnchored = true;
-          }
-          plan._heroPrevRank = heroRank;
-          plan._heroPrevProgress = phaseProgress;
-        }
-        heroSteers = plan._heroAnchored;
+    // v4: run the GENERATOR once, one frame after the choreo boundary (so each racer's rank-velocity
+    // is available for the jerk-matched anchors). It casts 2–4 heroes with anchored curves; tag them
+    // (isHeroChoreographed → director exclusion + lateral pass-priority). Deterministic per seed.
+    if (choreoActive && !plan._v4Generated) {
+      if (plan._v4PrevRanks && phaseProgress > plan._v4PrevProgress) {
+        const dpr = phaseProgress - plan._v4PrevProgress;
+        const postChaos = active.map((r, i) => ({
+          index: r.index,
+          rank: i + 1,
+          t: r.t,
+          vel: plan._v4PrevRanks.has(r.index) ? (i + 1 - plan._v4PrevRanks.get(r.index)) / dpr : 0,
+        }));
+        const gen = generateHeroCurves({
+          seed: plan.seed,
+          postChaos,
+          finalRanks: plan._racerTargetRank,
+          intensity: plan._v4Intensity,
+          finishT: plan._finishT,
+        });
+        plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+        for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
+        plan._v4Generated = true;
+      } else {
+        plan._v4PrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
+        plan._v4PrevProgress = phaseProgress;
       }
     }
+    // A5: a hero's motion in the choreo window is owned by its curve + servo, so the targetRank-
+    // coupled areaBonus must NOT apply to heroes there (it would fight their curves and leak
+    // target-bias). Chaos-phase areaBonus (set above, before generation) already pulled the winner
+    // forward; the PACK keeps its band-convergence bonus. Neutralize only heroes, only once generated.
+    const heroCurves = plan._heroCurves;
+    if (heroCurves) for (const r of racers) if (r.isHeroChoreographed) r.areaBonusMult = 1.0;
 
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;
@@ -431,18 +433,26 @@ export function createTrajectoryController(racePlan) {
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
-      const isHero = r.index === heroId && heroSteers;
-      // Pre-OUTCOME: only the anchored hero steers (toward its curve); everyone else stays pinned
-      // to 1.0 exactly as before. In OUTCOME every racer steers (the hero toward its curve rank).
+      const heroCurve = heroCurves && r.isHeroChoreographed ? heroCurves.get(r.index) : null;
+      const isHero = !!heroCurve;
+      // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
+      // before. In OUTCOME every racer steers (heroes toward their curves).
       if (_preOutcome && !isHero) {
         _setTarget(r, 1.0, elapsedMs);
         continue;
       }
-      // v4 hero: time-varying target rank sampled from the anchored curve; everyone else: the
-      // constant Fisher-Yates target (unchanged). The curve ends at rank 1 (the hero's band).
+      // v4 heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
+      // target (unchanged endpoint). The curve ends in the hero's assigned band.
       const targetRank = isHero
-        ? sampleHeroCurve(plan._heroCurve, phaseProgress)
+        ? sampleHeroCurve(heroCurve, phaseProgress)
         : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under v4 so heroes
+      // can weave through. v4-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
+      const strictness = isHero
+        ? 1.0
+        : plan._v4Enabled
+          ? plan._v4PackBandStrictness
+          : bandStrictness;
 
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - targetRank;
@@ -455,8 +465,8 @@ export function createTrajectoryController(racePlan) {
           : currentRank > areaHi
             ? currentRank - areaHi
             : 0;
-      // Blended error: bandStrictness=1.0 ≡ rankError (no-op); =0.0 steers only to band edge.
-      const error = bandStrictness * rankError + (1 - bandStrictness) * bandError;
+      // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
+      const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
       const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
@@ -570,8 +580,5 @@ export function createTrajectoryController(racePlan) {
     getPhaseFractions,
     collectTelemetry,
     seed: plan.seed,
-    // v4: the designated hero's racer index (-1 when v4 off) so each engine can tag it on the live
-    // racer objects (director exclusion + lateral pass-priority) without re-deriving it.
-    heroRacerId: plan._heroRacerId ?? -1,
   };
 }

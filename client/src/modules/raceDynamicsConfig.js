@@ -52,6 +52,12 @@ export function loadRaceDynamicsConfig() {
     typeof merged.governorDirectorBoostHeadroom !== 'number' ||
     merged.governorDirectorBoostHeadroom < 0 ||
     typeof merged.directorV4Enabled !== 'boolean' ||
+    typeof merged.directorV4Intensity !== 'number' ||
+    merged.directorV4Intensity < 0 ||
+    merged.directorV4Intensity > 1 ||
+    typeof merged.directorV4PackBandStrictness !== 'number' ||
+    merged.directorV4PackBandStrictness < 0 ||
+    merged.directorV4PackBandStrictness > 1 ||
     // Event-driven catch-up + active fall-back (rebuild).
     typeof merged.governorDirectorMaxParallelBoosts !== 'number' ||
     merged.governorDirectorMaxParallelBoosts < 0 ||

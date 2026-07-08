@@ -137,8 +137,11 @@ const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAU
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
-// v4 hero choreography master flag — passed into createRacePlan (default OFF → byte-identical).
+// v4 hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
+// createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const DIRECTOR_V4_ENABLED     = argVal('directorV4Enabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled)) === 'true';
+const DIRECTOR_V4_INTENSITY   = Number(argVal('directorV4Intensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity)));
+const DIRECTOR_V4_PACK_BAND_STRICTNESS = Number(argVal('directorV4PackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness)));
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -632,12 +635,8 @@ export function runSingleRace({
       return r;
     });
 
-    // v4: tag the designated hero (director exclusion + lateral pass-priority). -1 when v4 off →
-    // no racer tagged → byte-identical. Mirrors the browser (RaceScreen/index.jsx).
-    if (racePlanController && racePlanController.heroRacerId >= 0) {
-      const hero = racers.find((r) => r.index === racePlanController.heroRacerId);
-      if (hero) hero.isHeroChoreographed = true;
-    }
+    // v4: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside the
+    // controller's update() (the generator needs the actual field state), not at racer init.
 
     // World position helper
     const tPos = (t) => ((t % 1) + 1) % 1;
@@ -3693,6 +3692,8 @@ if (isMain) {
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
               directorV4Enabled:       DIRECTOR_V4_ENABLED,
+              directorV4Intensity:     DIRECTOR_V4_INTENSITY,
+              directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

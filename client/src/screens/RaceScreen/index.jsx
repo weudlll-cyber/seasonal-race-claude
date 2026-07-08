@@ -704,16 +704,14 @@ export default function RaceScreen() {
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
           pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
           directorV4Enabled: dynamicsConfig.directorV4Enabled ?? false,
+          directorV4Intensity: dynamicsConfig.directorV4Intensity ?? 0.6,
+          directorV4PackBandStrictness: dynamicsConfig.directorV4PackBandStrictness ?? 0.5,
         },
         racePlanSeed
       );
       racePlanController = createTrajectoryController(plan);
-      // v4: tag the designated hero so the director excludes it and the lateral layer gives it
-      // pass-priority. -1 when v4 is off → no racer tagged → byte-identical.
-      if (plan._heroRacerId >= 0) {
-        const hero = g.current.racers.find((r) => r.index === plan._heroRacerId);
-        if (hero) hero.isHeroChoreographed = true;
-      }
+      // v4: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside
+      // update() (the generator needs the actual field state), not here — nothing to tag at init.
       rpPlanInfo = {
         targetRanks: plan._racerTargetRank,
         b1Indices: new Set(

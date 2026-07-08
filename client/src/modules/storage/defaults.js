@@ -316,6 +316,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // When ON, one designated hero racer is steered along a hand-authored position-over-time curve by
   // the existing trajectory controller from the choreo start; everything else is unchanged.
   directorV4Enabled: false,
+  // v4 drama intensity (0..1, the future Action-slider backing) and the loose-pack bandStrictness
+  // that lets heroes weave through when v4 is ON (the pack runs at this strictness; heroes track
+  // their curve exactly). Both only take effect when directorV4Enabled — off → byte-identical.
+  directorV4Intensity: 0.6,
+  directorV4PackBandStrictness: 0.5,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at
