@@ -23,10 +23,12 @@ import {
   checkFeasible,
   checkPositiveBudget,
   checkSeparation,
+  checkFieldContinuity,
+  resolveForBand,
   shouldCastFaller,
   generateHeroCurves,
 } from './heroCurveGenerator.js';
-import { makeHeroCurve, anchorHeroCurve } from './heroChoreography.js';
+import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
 import { mulberry32 } from './racePlanner.js';
 
 const FINISH_T = 2; // closed-track lap bucket
@@ -292,7 +294,7 @@ describe('faller (A7): feasibility + ~1/3 cadence', () => {
     // bunched field so a front racer can feasibly drop deep; force a faller seed.
     const base = buildField({ density: 'bunched', seed: 8 });
     const frontIdx = indexAtRank(base.postChaos, 2);
-    const field = buildField({ density: 'bunched', seed: 8, overrides: { [frontIdx]: 18 } }); // front→deep(B2), a FEASIBLE drop within positive budget
+    const field = buildField({ density: 'bunched', seed: 8, overrides: { [frontIdx]: 14 } }); // front→B2, a drop feasible within B2's (earlier) staggered resolve
     // find a seed where the faller cadence fires
     let g = null;
     for (let s = 1; s <= 50; s++) {
@@ -392,5 +394,115 @@ describe('orchestrator — determinism, cast size, all-emitted-feasible', () => 
       finishT,
     });
     expect(checkSeparation(curves.map((c) => c.curve))).toBe(true);
+  });
+});
+
+describe('Step 4 — late release + staggered per-band resolve + hole guard', () => {
+  it('resolveForBand staggers: B1 held to release (latest), deeper bands resolve earlier', () => {
+    const r = [0, 1, 2, 3, 4].map((b) => resolveForBand(b));
+    expect(r[0]).toBe(GENERATOR_CONFIG.releaseProgress); // B1 = release (latest)
+    // Strictly monotone decreasing from B1 down to B5: the deeper the band, the earlier it resolves.
+    for (let i = 1; i < r.length; i++) expect(r[i]).toBeLessThan(r[i - 1]);
+  });
+
+  it('per-band resolve is DevScreen-injectable via config (release + bandResolve override)', () => {
+    const cfg = {
+      ...GENERATOR_CONFIG,
+      releaseProgress: 0.9,
+      bandResolve: [0.9, 0.7, 0.6, 0.55, 0.5],
+    };
+    expect(resolveForBand(0, cfg)).toBe(0.9);
+    expect(resolveForBand(2, cfg)).toBe(0.6);
+  });
+
+  it('B1 heroes still CONTEST at the release point — their curve is inside B1 at releaseProgress, not parked at rank 1', () => {
+    const {
+      postChaos: pc,
+      finalRanks: fr,
+      finishT: ft,
+    } = buildField({ density: 'bunched', seed: 21 });
+    const { curves } = generateHeroCurves({
+      seed: 21,
+      postChaos: pc,
+      finalRanks: fr,
+      intensity: 1.0,
+      finishT: ft,
+    });
+    const b1 = curves.filter((c) => fr.get(c.index) <= 5);
+    expect(b1.length).toBeGreaterThan(0);
+    for (const c of b1) {
+      const atRelease = sampleHeroCurve(c.curve, GENERATOR_CONFIG.releaseProgress);
+      expect(bandOfRank(Math.round(atRelease))).toBe(0); // resolved INTO B1 by the release …
+      expect(atRelease).toBeGreaterThan(1.4); // … but held in the tight front CLUSTER, not alone at rank 1
+    }
+  });
+
+  it('small-gap winner: the assigned winner (final 1) is cast into the front CLUSTER (rank ≥2), leaving rank 1 to the natural run-out', () => {
+    const {
+      postChaos: pc,
+      finalRanks: fr,
+      finishT: ft,
+    } = buildField({ density: 'bunched', seed: 33 });
+    // Put the winner on a mid post-chaos rank so it is a comeback (its cluster endpoint is the point).
+    const wIdx = indexAtRank(pc, 10);
+    const oldW = [...fr.entries()].find(([, r]) => r === 1)[0];
+    fr.set(oldW, fr.get(wIdx));
+    fr.set(wIdx, 1);
+    const g = generateHeroCurves({
+      seed: 33,
+      postChaos: pc,
+      finalRanks: fr,
+      intensity: 1.0,
+      finishT: ft,
+    });
+    const winner = g.heroCast.find((h) => h.index === wIdx);
+    expect(winner.finalRank).toBeGreaterThanOrEqual(2); // clustered, never steered to a lone rank-1 cruise
+    expect(bandOfRank(winner.finalRank)).toBe(0); // still fair — inside B1
+  });
+
+  it('hole guard PASSES a normal (sparse-hero) field — the projected pack fills between heroes', () => {
+    const {
+      postChaos: pc,
+      finalRanks: fr,
+      finishT: ft,
+    } = buildField({ density: 'bunched', seed: 21 });
+    const { curves } = generateHeroCurves({
+      seed: 21,
+      postChaos: pc,
+      finalRanks: fr,
+      intensity: 1.0,
+      finishT: ft,
+    });
+    expect(curves.length).toBeGreaterThan(0); // regression: the old front/back-anchor guard rejected ALL
+    const ok = checkFieldContinuity(
+      curves.map((c) => c.curve),
+      curves.map((c) => c.index),
+      pc,
+      fr
+    );
+    expect(ok).toBe(true);
+  });
+
+  it('hole guard is threshold-driven and CAN fire: the field a normal config accepts, a strict maxHoleFrac rejects', () => {
+    const {
+      postChaos: pc,
+      finalRanks: fr,
+      finishT: ft,
+    } = buildField({ density: 'bunched', seed: 21 });
+    const { curves } = generateHeroCurves({
+      seed: 21,
+      postChaos: pc,
+      finalRanks: fr,
+      intensity: 1.0,
+      finishT: ft,
+    });
+    const cv = curves.map((c) => c.curve);
+    const ci = curves.map((c) => c.index);
+    expect(checkFieldContinuity(cv, ci, pc, fr)).toBe(true); // default 0.55 → dense field passes
+    // A pathologically strict threshold (< the ~1-rank spacing of a full 40-racer field) must reject,
+    // proving the guard actually evaluates the gap and is not a no-op.
+    expect(checkFieldContinuity(cv, ci, pc, fr, { ...GENERATOR_CONFIG, maxHoleFrac: 0.01 })).toBe(
+      false
+    );
   });
 });

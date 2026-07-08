@@ -13,7 +13,7 @@
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
-import { generateHeroCurves } from './heroCurveGenerator.js';
+import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 // Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
@@ -237,6 +237,17 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _v4Enabled: !!config.directorV4Enabled,
     _v4Intensity: config.directorV4Intensity ?? 0.6,
     _v4PackBandStrictness: config.directorV4PackBandStrictness ?? 0.5,
+    // Step 4: front-contest release + staggered per-band resolve (DevScreen-adjustable). B1 heroes
+    // are held to _v4ReleaseProgress then RELEASED to natural speed; _v4BandResolve[band] is the
+    // resolve checkpoint per band (index 0=B1 uses the release). Fed to the generator + the release.
+    _v4ReleaseProgress: config.directorV4ReleaseProgress ?? 0.97,
+    _v4BandResolve: [
+      config.directorV4ReleaseProgress ?? 0.97,
+      config.directorV4ResolveB2 ?? 0.8,
+      config.directorV4ResolveB3 ?? 0.7,
+      config.directorV4ResolveB4 ?? 0.65,
+      config.directorV4ResolveB5 ?? 0.6,
+    ],
     _heroCurves: null, // Map index → anchored curve, once generated
     _v4Generated: false,
     _v4PrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
@@ -411,6 +422,13 @@ export function createTrajectoryController(racePlan) {
           finalRanks: plan._racerTargetRank,
           intensity: plan._v4Intensity,
           finishT: plan._finishT,
+          // DevScreen-tuned per-band resolve + release override the generator defaults (single source
+          // for the tunable values is the dynamics config, threaded through the plan).
+          config: {
+            ...GENERATOR_CONFIG,
+            releaseProgress: plan._v4ReleaseProgress,
+            bandResolve: plan._v4BandResolve,
+          },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
         for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
@@ -441,11 +459,21 @@ export function createTrajectoryController(racePlan) {
         _setTarget(r, 1.0, elapsedMs);
         continue;
       }
+      // Step 4 — FRONT CONTEST RELEASE (A1/A2): past the release progress, B1 heroes STOP being
+      // steered (target = currentRank ⇒ rankError 0 ⇒ servo 1.0 ⇒ natural speed, slew-smoothed), so
+      // the finish among them is a genuine run-out. They are already bunched in their B1 cluster, so
+      // reordering within it stays in band. Non-B1 heroes + the pack keep steering (curve / constant).
+      const released =
+        isHero &&
+        phaseProgress >= plan._v4ReleaseProgress &&
+        (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
       // v4 heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
       // target (unchanged endpoint). The curve ends in the hero's assigned band.
-      const targetRank = isHero
-        ? sampleHeroCurve(heroCurve, phaseProgress)
-        : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      const targetRank = released
+        ? currentRank
+        : isHero
+          ? sampleHeroCurve(heroCurve, phaseProgress)
+          : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under v4 so heroes
       // can weave through. v4-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
       const strictness = isHero

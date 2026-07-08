@@ -37,9 +37,18 @@ export const GENERATOR_CONFIG = {
   // hero a curve steeper than its servo can track. (Drops via −15% are a touch faster; 0.10 is the
   // conservative binding direction.)
   speedBudgetFrac: 0.1,
-  // Positive handoff budget: a curve must have resolved INTO its final band by this progress,
-  // leaving [budgetCheckpoint, 1.0] for the OUTCOME controller to merely settle (no late rescue).
-  budgetCheckpoint: 0.9,
+  // STAGGERED PER-BAND RESOLVE (Step 4): each hero must resolve INTO its final band by its band's
+  // resolveProgress — deeper bands earlier (they fall back sooner and hold), the front (B1) latest.
+  // B1 is held to releaseProgress, then the follower RELEASES it to natural speed for a real finish
+  // contest (order among B1 is free → still fair). Deep bands keep positive backstop budget by
+  // resolving early; B1's "budget" is the natural run-out. Indices are band 0=B1 … 4=B5; band 0 uses
+  // releaseProgress. DevScreen-adjustable — mirrored in DEFAULT_RACE_DYNAMICS_CONFIG (single source
+  // for the tunable values), passed in via the generator config.
+  releaseProgress: 0.97,
+  bandResolve: [0.97, 0.8, 0.7, 0.65, 0.6],
+  // Hole guard: reject a hero set that leaves a rank gap wider than this fraction of the field at
+  // any sampled time (a backstop; the loose pack is the primary field-continuity mechanism).
+  maxHoleFrac: 0.55,
   // Lateral-delivery cap: max simultaneous featured crossings the lateral layer can plausibly
   // execute (Step-1 finding: dense closed tracks cause ~69% avoidance-braking on the hero).
   maxSimultaneousCrossings: 2,
@@ -47,7 +56,10 @@ export const GENERATOR_CONFIG = {
   // (rank ≤ frontRankMax) with a deep assigned band (band index ≥ deepBandMin), both moves feasible.
   fallerEveryNRaces: 3,
   fallerFrontRankMax: 5,
-  fallerDeepBandMin: 2, // B3 or deeper
+  // A faller drops from the front into a lower band. B2 (mid-pack) is the realistic floor: the
+  // staggered resolve (A4) resolves deeper bands EARLIER (B3 by ~0.70), which leaves too little time
+  // for a front→B3+ drop to be feasible, so front→B2 (resolve ~0.80) is the reliably-castable faller.
+  fallerDeepBandMin: 1, // B2 or deeper
   // A min-jerk segment's PEAK slope is ≈1.7× its average (slow-fast-slow). feasibleTiming allocates
   // this much extra time so the instantaneous slope — what physics limits — stays within the rate.
   minJerkPeakFactor: 1.7,
@@ -70,6 +82,11 @@ export function bandMultiset(finalRanks) {
   const counts = new Array(BAND_EDGES.length + 1).fill(0);
   for (const rank of finalRanks.values()) counts[bandOfRank(rank)]++;
   return counts;
+}
+// The progress by which a hero of the given band must resolve into its band (A4). B1 (0) is held
+// to releaseProgress (then the follower releases it to natural); deeper bands resolve earlier.
+export function resolveForBand(bandIdx, config = GENERATOR_CONFIG) {
+  return bandIdx === 0 ? config.releaseProgress : config.bandResolve[bandIdx];
 }
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -152,7 +169,8 @@ export function feasibleTiming(
   config = GENERATOR_CONFIG
 ) {
   const ap = config.anchorProgress;
-  const bc = config.budgetCheckpoint;
+  // Resolve by the FINAL band's checkpoint (A4): deep bands earlier, B1 held to the release.
+  const bc = resolveForBand(bandOfRank(finalRank), config);
   if (maxRankRate <= 0)
     return anchorRank === peakRank && peakRank === finalRank
       ? { peakProgress: ap + 0.1, resolveProgress: Math.min(bc, ap + 0.2) }
@@ -253,15 +271,16 @@ export function checkFeasible(curve, maxRankRate) {
   }
   return true;
 }
-// POSITIVE HANDOFF BUDGET: in the final band by budgetCheckpoint, remaining change fits the margin.
+// POSITIVE HANDOFF BUDGET (per-band, A4): the curve must be IN its final band by that band's
+// resolveProgress, and the remaining change after fits the leftover budget — so deep bands leave the
+// OUTCOME backstop room, and B1 is settled in its front cluster before the natural-speed release.
 export function checkPositiveBudget(curve, maxRankRate, config = GENERATOR_CONFIG) {
   const endRank = sampleHeroCurve(curve, 1.0);
-  const atCheckpoint = sampleHeroCurve(curve, config.budgetCheckpoint);
-  if (bandOfRank(Math.round(atCheckpoint)) !== bandOfRank(Math.round(endRank))) return false;
-  return (
-    Math.abs(endRank - atCheckpoint) <=
-    Math.max(1, maxRankRate) * (1 - config.budgetCheckpoint) + 1e-6
-  );
+  const finalBand = bandOfRank(Math.round(endRank));
+  const rp = resolveForBand(finalBand, config);
+  const atResolve = sampleHeroCurve(curve, rp);
+  if (bandOfRank(Math.round(atResolve)) !== finalBand) return false;
+  return Math.abs(endRank - atResolve) <= Math.max(1, maxRankRate) * (1 - rp) + 1e-6;
 }
 // SEPARATION: transient crossings (overtakes) are legitimate; only SUSTAINED coincidence is forbidden.
 export function checkSeparation(curves, maxCoincidentFrac = 0.2) {
@@ -276,6 +295,35 @@ export function checkSeparation(curves, maxCoincidentFrac = 0.2) {
         if (Math.abs(sampleHeroCurve(curves[i], p) - sampleHeroCurve(curves[j], p)) < 0.5) near++;
       if (near / samples.length > maxCoincidentFrac) return false;
     }
+  }
+  return true;
+}
+
+// HOLE GUARD (A5, Step 4): as bands resolve in stages, the field must stay continuous — no large
+// empty rank-stretch. Ranks are always a contiguous permutation, so the honest check projects the
+// WHOLE field — heroes on their curves + the PACK linearly interpolated from its post-chaos rank
+// toward its final rank (the loose controller's rough path) — and rejects only if the projected field
+// leaves a gap wider than maxHoleFrac × n at any sampled time (a genuine pile-up). The pack is the
+// primary continuity mechanism; this is a backstop that will not fire for a normal, dense field.
+export function checkFieldContinuity(
+  heroCurves,
+  heroIndices,
+  postChaos,
+  finalRanks,
+  config = GENERATOR_CONFIG
+) {
+  const n = postChaos.length;
+  const maxGap = config.maxHoleFrac * n;
+  const heroSet = new Set(heroIndices);
+  const pack = postChaos.filter((p) => !heroSet.has(p.index));
+  const span = 1 - config.anchorProgress;
+  for (let p = config.anchorProgress; p <= 1.0 + 1e-9; p += 0.05) {
+    const w = span > 0 ? Math.min(1, (p - config.anchorProgress) / span) : 1;
+    const ranks = heroCurves.map((c) => sampleHeroCurve(c, Math.min(p, 1)));
+    for (const pk of pack)
+      ranks.push(pk.rank + ((finalRanks.get(pk.index) ?? pk.rank) - pk.rank) * w);
+    ranks.sort((a, b) => a - b);
+    for (let i = 1; i < ranks.length; i++) if (ranks[i] - ranks[i - 1] > maxGap) return false;
   }
   return true;
 }
@@ -319,12 +367,19 @@ export function castHeroes(
     return true;
   };
 
+  // Small-gap winner + front contest (A1/A3): B1 heroes resolve into a TIGHT front cluster (ranks
+  // 2,3,4… — a close pack, NOT a clear rank-1 lead), held to the release; natural speed then decides
+  // 1st. So no B1 hero is steered to a cruising lead. Assigning the winner to cluster rank 2 (not 1)
+  // is fair (still B1) and leaves rank 1 to be won by the run-out.
+  let b1Cluster = 2;
+  const nextCluster = () => Math.min(b1Cluster, BAND_EDGES[0]);
+
   // Role 1 — the assigned winner (final rank 1): sovereign lead if already front, else comeback-to-win.
   if (winnerIdx != null) {
     const wr = stateOf.get(winnerIdx)?.rank ?? 1;
-    const peakRank = clamp(Math.round(1 + drama.peakDepthFrac * (n - 1)), 1, n);
-    if (wr <= peakRank) addSolo(winnerIdx, 'sovereign-lead', 1, Math.max(1, wr));
-    else addSolo(winnerIdx, 'comebacker', 1, wr);
+    const cr = nextCluster();
+    const role = wr <= cr ? 'sovereign-lead' : 'comebacker';
+    if (addSolo(winnerIdx, role, cr, wr <= cr ? Math.max(1, wr) : wr)) b1Cluster++;
   }
 
   // A7 — on average every N-th race, add ONE deep-band FALLER FIRST (reserve its slot before the B1
@@ -355,10 +410,10 @@ export function castHeroes(
     .sort((a, b) => a.key - b.key);
   for (const p of b1Pool) {
     if (cast.length >= drama.nHeroes) break;
-    const fr = finalRanks.get(p.index);
+    const cr = nextCluster(); // tight front cluster, not the exact assigned rank (A3)
     const peakRank =
-      p.rank > fr ? p.rank : Math.min(n, fr + Math.round(drama.peakDepthFrac * (n - 1)));
-    addSolo(p.index, p.rank > fr ? 'comebacker' : 'sovereign-lead', fr, peakRank);
+      p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
+    if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
   }
 
   return cast;
@@ -417,6 +472,19 @@ export function generateHeroCurves({
     // Never emit a curve that violates a generation-time constraint (feasibility / positive budget).
     if (!checkFeasible(anchored, member.maxRankRate)) continue;
     if (!checkPositiveBudget(anchored, member.maxRankRate, config)) continue;
+    // HOLE GUARD (A5): reject a curve that would open a field gap the projected pack can't fill.
+    // Gradual falls + the loose pack are the primary continuity; this drops the offending hero.
+    const trial = [...curves, { index: member.index, curve: anchored }];
+    if (
+      !checkFieldContinuity(
+        trial.map((c) => c.curve),
+        trial.map((c) => c.index),
+        postChaos,
+        finalRanks,
+        config
+      )
+    )
+      continue;
     curves.push({ index: member.index, role: member.role, curve: anchored });
   }
 

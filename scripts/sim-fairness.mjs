@@ -142,6 +142,11 @@ const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAU
 const DIRECTOR_V4_ENABLED     = argVal('directorV4Enabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled)) === 'true';
 const DIRECTOR_V4_INTENSITY   = Number(argVal('directorV4Intensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity)));
 const DIRECTOR_V4_PACK_BAND_STRICTNESS = Number(argVal('directorV4PackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness)));
+const DIRECTOR_V4_RELEASE_PROGRESS = Number(argVal('directorV4ReleaseProgress', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ReleaseProgress)));
+const DIRECTOR_V4_RESOLVE_B2 = Number(argVal('directorV4ResolveB2', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB2)));
+const DIRECTOR_V4_RESOLVE_B3 = Number(argVal('directorV4ResolveB3', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3)));
+const DIRECTOR_V4_RESOLVE_B4 = Number(argVal('directorV4ResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4)));
+const DIRECTOR_V4_RESOLVE_B5 = Number(argVal('directorV4ResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5)));
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -2055,6 +2060,17 @@ export function runSingleRace({
           maxTrajMult:    +smWinnerMaxTraj.toFixed(4),
           outcomeCeilFrac: smWinnerOutcomeSteps > 0 ? +(smWinnerCeilSteps / smWinnerOutcomeSteps).toFixed(4) : 0,
         },
+        // FINISH CONTEST (Step-4 observer, read-only — no race behavior). The leader→2nd finish-time
+        // gap: a cruising winner opens a large gap; a fought finish keeps it small. top5SpreadSec is
+        // the P1→P5 finish-time spread — how tight the whole front cluster crosses the line.
+        finish: (() => {
+          const at = (rk) => racers.find((r) => r.finishRank === rk)?.finishTime;
+          const t1 = at(1), t2 = at(2), t5 = at(5);
+          return {
+            gapP1P2Sec:   t1 != null && t2 != null ? +(t2 - t1).toFixed(3) : null,
+            top5SpreadSec: t1 != null && t5 != null ? +(t5 - t1).toFixed(3) : null,
+          };
+        })(),
         naturalness: {
           maxSpeedFactor: +smNatMax.toFixed(4),                                  // peak spreadFactor×tool-mults in PULK
           exceedFrac:     smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
@@ -3694,6 +3710,11 @@ if (isMain) {
               directorV4Enabled:       DIRECTOR_V4_ENABLED,
               directorV4Intensity:     DIRECTOR_V4_INTENSITY,
               directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS,
+              directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
+              directorV4ResolveB2:     DIRECTOR_V4_RESOLVE_B2,
+              directorV4ResolveB3:     DIRECTOR_V4_RESOLVE_B3,
+              directorV4ResolveB4:     DIRECTOR_V4_RESOLVE_B4,
+              directorV4ResolveB5:     DIRECTOR_V4_RESOLVE_B5,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

@@ -321,6 +321,15 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // their curve exactly). Both only take effect when directorV4Enabled — off → byte-identical.
   directorV4Intensity: 0.6,
   directorV4PackBandStrictness: 0.5,
+  // v4 finish shaping (Step 4): the B1 heroes are held to directorV4ReleaseProgress then RELEASED to
+  // natural speed for a real finish contest; each other band resolves into its band by its own
+  // (earlier) checkpoint so the field slots in gradually, not in a settle. All only apply when v4 is
+  // ON. Must mirror GENERATOR_CONFIG.releaseProgress / bandResolve (heroCurveGenerator.js).
+  directorV4ReleaseProgress: 0.97,
+  directorV4ResolveB2: 0.8,
+  directorV4ResolveB3: 0.7,
+  directorV4ResolveB4: 0.65,
+  directorV4ResolveB5: 0.6,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at

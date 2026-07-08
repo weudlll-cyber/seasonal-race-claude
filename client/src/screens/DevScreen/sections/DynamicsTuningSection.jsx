@@ -1037,6 +1037,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             'directorV4PackBandStrictness',
             DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness
           );
+          setDynamics(
+            'directorV4ReleaseProgress',
+            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ReleaseProgress
+          );
+          setDynamics('directorV4ResolveB2', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB2);
+          setDynamics('directorV4ResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3);
+          setDynamics('directorV4ResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4);
+          setDynamics('directorV4ResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5);
         }}
         resetTestId="reset-v4"
         subtitle="Experimental choreographed director: at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. OFF = the proven reactive Director above (identical behaviour)."
@@ -1102,6 +1110,73 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              B1 release progress (0–1]
+              <InfoTooltip text="How late the leading (B1) heroes are held in a tight front cluster before the follower RELEASES them to natural speed for the final contest. Higher = a longer fight to the line. 0.97 default." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Director V4 Release Progress"
+              min={0}
+              max={1}
+              step={0.01}
+              value={dynamicsConfig.directorV4ReleaseProgress}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0 && v <= 1) setDynamics('directorV4ReleaseProgress', v);
+              }}
+            />
+          </div>
+          {[
+            [
+              'directorV4ResolveB2',
+              'B2 resolve progress (0–1]',
+              'By when a B2 (mid-pack) hero must settle into its band. Deeper bands resolve EARLIER so the rear locks in first. 0.80 default.',
+            ],
+            [
+              'directorV4ResolveB3',
+              'B3 resolve progress (0–1]',
+              'By when a B3 hero must settle into its band. Earlier than B2. 0.70 default.',
+            ],
+            [
+              'directorV4ResolveB4',
+              'B4 resolve progress (0–1]',
+              'By when a B4 hero must settle into its band. Earlier than B3. 0.65 default.',
+            ],
+            [
+              'directorV4ResolveB5',
+              'B5 resolve progress (0–1]',
+              'By when a B5 (rear) hero must settle into its band — the earliest resolve, so the tail is locked while the front still fights. 0.60 default.',
+            ],
+          ].map(([key, label, tip]) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={`Director V4 ${key.replace('directorV4', '')}`}
+                min={0}
+                max={1}
+                step={0.05}
+                value={dynamicsConfig[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v > 0 && v <= 1) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
         </div>
       </SubCard>
 

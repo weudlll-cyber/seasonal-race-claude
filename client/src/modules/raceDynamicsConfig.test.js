@@ -56,6 +56,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       directorV4Enabled: false,
       directorV4Intensity: 0.6,
       directorV4PackBandStrictness: 0.5,
+      directorV4ReleaseProgress: 0.97,
+      directorV4ResolveB2: 0.8,
+      directorV4ResolveB3: 0.7,
+      directorV4ResolveB4: 0.65,
+      directorV4ResolveB5: 0.6,
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -171,6 +176,13 @@ describe('loadRaceDynamicsConfig', () => {
       ...DEFAULT_RACE_DYNAMICS_CONFIG,
       directorV4PackBandStrictness: -0.2,
     });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when a v4 resolve/release progress is out of (0,1]', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4ReleaseProgress: 1.2 });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4ResolveB3: 0 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
