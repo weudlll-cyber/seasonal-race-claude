@@ -50,6 +50,7 @@ import {
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
+import { computeRowEnvMult, advanceRacerT } from '../../modules/raceStep.js';
 import {
   loadRaceBehaviorConfig,
   computeEffectiveBrakeFactor,
@@ -786,6 +787,17 @@ export default function RaceScreen() {
     // (pulkStart 0.25 / pulkEnd 0.5) are unchanged, so this is byte-identical to the pinned values.
     const PHASE_CHAOS_END = govFractions?.pulkStartFrac ?? 0.25;
     const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
+    // Row-bonus phase envelope config for the shared t-update (modules/raceStep.js).
+    // Boundaries are the LIVE plan fractions above (never a literal). Built once per race
+    // — every field is frame-constant. Consumed by advanceRacerT and the vt velocity factor.
+    const rowPhaseCfg = {
+      enabled: phaseSplitBonusEnabled,
+      chaosEndFrac: PHASE_CHAOS_END,
+      pulkEndFrac: PHASE_PULK_END,
+      early: rowBonusEarly,
+      pulk: rowBonusPulk,
+      post: rowBonusPost,
+    };
     // Per-race director state — catch-up + fall-back slots, boost-once pool, protection windows,
     // linger-brake, and the seeded event counter. applyGovernor lazily fills the slot arrays; the
     // fields below just seed the shape (mutated across frames).
@@ -1138,29 +1150,17 @@ export default function RaceScreen() {
             // PULK-action: start-row bonus phase envelope (parity with sim; default 1.0 = no-op). baseSpeed
             // bakes in the FULL speedBonusMult; rowEnvMult corrects it to the phase strength s (EARLY/PULK/
             // POST): effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
-            let rowEnvMult = 1.0;
-            if (phaseSplitBonusEnabled && r.rawRowBonus > 0) {
-              const s =
-                st.raceProgress < PHASE_CHAOS_END
-                  ? rowBonusEarly
-                  : st.raceProgress < PHASE_PULK_END
-                    ? rowBonusPulk
-                    : rowBonusPost;
-              rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
-            }
+            const rowEnvMult = computeRowEnvMult(r.rawRowBonus, st.raceProgress, rowPhaseCfg);
             if (!r.finished) {
-              // FIXED_DT/16 = 1.0 — dt factor eliminated by fixed timestep
-              r.t = Math.min(
-                r.t +
-                  r.baseSpeed *
-                    boost *
-                    brake *
-                    rowEnvMult *
-                    r.trajectoryMult *
-                    r.areaBonusMult *
-                    (r.governorMult ?? 1.0),
-                st.finishT + 0.001
-              );
+              // Shared per-frame advance (modules/raceStep.js). dt defaults to 1.0
+              // (FIXED_DT/16) — the fixed timestep, kept explicit in the shared function.
+              r.t = advanceRacerT(r, {
+                boost,
+                brake,
+                raceProgress: st.raceProgress,
+                finishT: st.finishT,
+                phase: rowPhaseCfg,
+              });
             } else {
               // Run-out: finished racers keep moving but decay to a stop
               r.runoutDecay *= 0.97;

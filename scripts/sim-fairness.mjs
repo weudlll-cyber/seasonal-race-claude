@@ -88,10 +88,10 @@ import {
 // AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
 import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
+import { advanceRacerT } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
-import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -256,10 +256,6 @@ const DYNAMICS_OVERRIDES = {
 //                             are clamped to the natural band by the SAME existing clamp below.
 //   --areaBonusPulk=<x> / --areaBonusPost=<x>   areaBonus STRENGTH (bonusStrengthMultiplier units,
 //                         2.0 = shipped) BEFORE / from PULK-end (0.5). Unset → no phase split.
-//   --rowBonusEarly / --rowBonusPulk / --rowBonusPost   start-row SPEED-bonus STRENGTH (1.0 = full,
-//                         0 = off) in chaos (0→0.25) / PULK (0.25→0.5) / after (0.5→). Implemented as a
-//                         per-frame envelope on the baked-in speedBonusMult (baseSpeed math), SIM ONLY.
-//                         Unset → full everywhere (byte-identical). tStart grid handicap is untouched.
 //   --strip-metrics       attach dual-window action (PULK 0.25→0.55, OUTCOME 0.55→1.0) + worst-case
 //                         assigned-winner + bonus↔leader sample. Raw per-combo → results/strip-down/.
 const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
@@ -292,9 +288,6 @@ const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was bui
 // only in chaos (the rest of the field keeps its wash-forward → assigned-winner reachability intact),
 // so the deep-charger casting pool stays buried at the release. Read-only measurement flag; sim only.
 const HERO_CHAOS_AREABONUS_OFF = argVal('heroChaosAreaBonus', 'on') === 'off';
-// ROW_SPLIT phase-envelope experiment — flag parsing + per-frame logic behind one boundary
-// (INFRA 1c-2). The seam returns a multiplier only; the core owns every assignment.
-const rowSplit = createRowSplitExperiment(argVal);
 const STRIP_METRICS       = argv.includes('--strip-metrics');
 // ACTION-METRICS (read-only, --action-metrics): whole-field PULK-window movement metrics
 // (rank churn, rank travel, risers/fallers, top-5 turnover, p10–p90 spread) + PULK naturalness
@@ -906,6 +899,18 @@ export function runSingleRace({
     // (The strip-metrics OBSERVATION windows below intentionally stay on the pinned SD_* constants.)
     const pulkStartLive = govFractions?.pulkStartFrac ?? SD_PULK_START;
     const pulkEndLive   = govFractions?.pulkEndFrac ?? SD_PULK_END;
+    // Row-bonus phase envelope config for the shared t-update (raceStep.js). Reads the
+    // SHIPPED dynamics config — the SAME source the browser reads (phaseSplitBonusEnabled +
+    // rowBonus{Early,Pulk,Post}) — so the sim applies rowEnvMult natively, exactly as the game
+    // does. Boundaries are the LIVE plan fractions above, never a literal. Built once per race.
+    const rowPhaseCfg = {
+      enabled: dynamicsConfig.phaseSplitBonusEnabled ?? false,
+      chaosEndFrac: pulkStartLive,
+      pulkEndFrac: pulkEndLive,
+      early: dynamicsConfig.rowBonusEarly ?? 1,
+      pulk:  dynamicsConfig.rowBonusPulk  ?? 1,
+      post:  dynamicsConfig.rowBonusPost  ?? 1,
+    };
     // Per-race director state (catch-up + fall-back slots, boost-once pool, protection windows,
     // linger-brake, seeded event counter). applyGovernor lazily fills the slot arrays; parity with
     // the browser dirState shape.
@@ -1384,14 +1389,17 @@ export function runSingleRace({
           const brake = r.avoidanceActive
             ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
             : 1.0;
-          // STRIP-DOWN: start-row speed-bonus phase envelope (read-only; sim-only). baseSpeed bakes in
-          // the FULL speedBonusMult (=1+rawRowBonus); rowEnvMult corrects it to the phase strength s:
-          // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
-          // s = early (chaos <pulkStart) / pulk (pulkStart..pulkEnd) / post (≥pulkEnd), following the
-          // live plan phase fractions. Inactive → 1.0 → byte-identical.
-          const rowEnvMult = rowSplit.frameMult(r, raceProgress, pulkStartLive, pulkEndLive);
-          r.t +=
-            r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (DT / 16);
+          // Shared per-frame advance (client/src/modules/raceStep.js) — the SAME function the
+          // browser calls. It computes the start-row phase envelope (rowEnvMult) from the live
+          // plan fractions and applies the finish clamp. dt = DT/16 = 16/16 = 1.0 (fixed timestep).
+          r.t = advanceRacerT(r, {
+            boost,
+            brake,
+            raceProgress,
+            finishT,
+            dt: DT / 16,
+            phase: rowPhaseCfg,
+          });
         }
       }
 
@@ -3272,7 +3280,6 @@ if (isMain) {
           lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
         },
         areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
-        rowSplit:  { active: rowSplit.active, early: rowSplit.early, pulk: rowSplit.pulk, post: rowSplit.post },
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
       },
       combos: stripAgg,
@@ -3302,7 +3309,6 @@ if (isMain) {
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
         reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
         areaSplit: { active: AREA_SPLIT_ACTIVE, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
-        rowSplit:  { active: rowSplit.active, early: rowSplit.early, pulk: rowSplit.pulk, post: rowSplit.post },
       },
       combos: actionAgg,
     }, null, 2));
