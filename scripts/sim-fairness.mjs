@@ -254,33 +254,22 @@ const DYNAMICS_OVERRIDES = {
 //                             freshDrawAroundMean = fresh uniform draw over the natural band → "wanders"
 //                             (mean-reverting; a +8% racer whose fresh draw is −8% lands ~−4%). Both
 //                             are clamped to the natural band by the SAME existing clamp below.
-//   --areaBonusPulk=<x> / --areaBonusPost=<x>   areaBonus STRENGTH (bonusStrengthMultiplier units,
-//                         2.0 = shipped) BEFORE / from PULK-end (0.5). Unset → no phase split.
 //   --strip-metrics       attach dual-window action (PULK 0.25→0.55, OUTCOME 0.55→1.0) + worst-case
 //                         assigned-winner + bonus↔leader sample. Raw per-combo → results/strip-down/.
 const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
-const AREA_BONUS_PULK_RAW  = argVal('areaBonusPulk', null);
-const AREA_BONUS_POST_RAW  = argVal('areaBonusPost', null);
-// PULK-action-4: 3-phase areaBonus split (chaos / PULK / post). --areaBonusEarly = areaBonus strength in
-// the CHAOS phase (0→0.25); absent → inherits areaBonusPulk, so a run without it is byte-identical to the
-// prior 2-phase split. Lets the assigned winner keep his early advantage so PULK action doesn't bury him.
-const AREA_BONUS_EARLY_RAW = argVal('areaBonusEarly', null);
-const AREA_SPLIT_ACTIVE    = AREA_BONUS_PULK_RAW !== null || AREA_BONUS_POST_RAW !== null || AREA_BONUS_EARLY_RAW !== null;
-const AREA_BONUS_PULK      = Number(AREA_BONUS_PULK_RAW ?? String(BONUS_MULT));
-const AREA_BONUS_POST      = Number(AREA_BONUS_POST_RAW ?? String(BONUS_MULT));
-const AREA_BONUS_EARLY     = Number(AREA_BONUS_EARLY_RAW ?? String(AREA_BONUS_PULK)); // inherits PULK when absent
-// PULK-action-7: POSITION-GATED PULK areaBonus. During PULK, gate each racer's areaBonus strength by his
-// CURRENT on-track rank (by r.t): rank ≤ high → 0 (front, no push → unpredictable); high<rank≤low → half;
-// rank > low → FULL (deep → washed forward so OUTCOME can reach the stranded winner). Both thresholds must
-// be set to activate; absent → the flat AREA_BONUS_PULK is used (byte-identical). Gate = current position,
-// NOT targetRank (the bonus it scales is the existing targetRank-coupled areaBonus).
-const AREA_PULK_GATE_HIGH_RAW = argVal('areaBonusPulkGateHigh', null);
-const AREA_PULK_GATE_LOW_RAW  = argVal('areaBonusPulkGateLow', null);
-const AREA_PULK_GATE_ACTIVE   = AREA_PULK_GATE_HIGH_RAW !== null && AREA_PULK_GATE_LOW_RAW !== null;
-const AREA_PULK_GATE_HIGH     = Number(AREA_PULK_GATE_HIGH_RAW ?? '0');
-const AREA_PULK_GATE_LOW      = Number(AREA_PULK_GATE_LOW_RAW ?? '0');
-const AREA_PULK_FULL          = Number(argVal('areaBonusPulkFull', String(AREA_BONUS_PULK)));
-const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was built with (post-scale base)
+// ── areaBonus phase-split (INFRA 5A) ────────────────────────────────────────────────────────────
+// The phase-split rescale is now applied NATIVELY by the shared controller (racePlanner.js) for the
+// browser AND the sim, from the shipped dynamics config — threaded into createRacePlan below. This
+// REPLACES the old sim-only, flag-gated rescale (the --areaBonusPulk/Post/Early flags, the
+// AREA_SPLIT_ACTIVE path, and the --areaBonusPulkGate* position-gate experiment), which were the
+// SOURCE of the divergence: a flagless sim applied the full band bonus (+6% B1) where the browser
+// applied the split-down bonus (+3%). Strengths are read from the (world-merged)
+// DEFAULT_RACE_DYNAMICS_CONFIG — the SAME source the browser reads — so no drift. Fallbacks mirror
+// DEFAULT_RACE_DYNAMICS_CONFIG (phaseSplitBonusEnabled true, early 1.0 / pulk 0 / post 1.0).
+const PHASE_SPLIT_BONUS_ENABLED = DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled ?? false;
+const AREA_BONUS_EARLY    = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly ?? 1.0;
+const AREA_BONUS_PULK     = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk  ?? 0;
+const AREA_BONUS_POST     = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost  ?? 1.0;
 // PRE-STAGE-1 Q2 (--heroChaosAreaBonus=on|off, default on = byte-neutral): suppress the HERO POOL's
 // areaBonus during CHAOS ONLY (raceProgress < pulkStartLive = choreo boundary 0.25). §4b: the CHAOS
 // areaBonus is band-graded (B1 = +6% at bonusMult 2.0), so it washes the future B1 heroes forward
@@ -1092,50 +1081,13 @@ export function runSingleRace({
         for (const r of racers) r.trajectoryMult = 1.0;
       }
 
-      // ── STRIP-DOWN: areaBonus phase-split (read-only; sim-only; --areaBonusPulk/Post) ──
-      // Re-scale the controller's areaBonusMult to a phase-dependent STRENGTH: areaBonusPulk before
-      // PULK-end (0.5), areaBonusPost from 0.5 on. Because the plan was built at AREA_REF_STRENGTH
-      // (=BONUS_MULT) and the band delta scales linearly with strength, scale = phaseStrength/ref.
-      // The scale commutes with the transEnd fade (both linear in areaBonusMult−1), so the fade shape
-      // is preserved. Inactive (no flag) → untouched → byte-identical.
-      if (AREA_SPLIT_ACTIVE) {
-        const inPulkPhase = raceProgress >= pulkStartLive && raceProgress < pulkEndLive;
-        if (AREA_PULK_GATE_ACTIVE && inPulkPhase) {
-          // POSITION-GATED PULK areaBonus: strength depends on each racer's CURRENT on-track rank —
-          // off up front (unpredictable), full when deep (rescue the stranded winner). Naturalness cap
-          // stays on: the washed racer's spreadFactor × areaBonusMult is bounded at the natural ceiling.
-          const NAT_CEIL_LOCAL = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-          const order = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
-          const rankOf = new Map(order.map((r, i) => [r.index, i + 1]));
-          for (const r of racers) {
-            const rank = rankOf.get(r.index) ?? racers.length;
-            const strength = rank <= AREA_PULK_GATE_HIGH ? 0
-                           : rank <= AREA_PULK_GATE_LOW  ? AREA_PULK_FULL * 0.5
-                           :                               AREA_PULK_FULL;
-            const scale = AREA_REF_STRENGTH > 0 ? strength / AREA_REF_STRENGTH : 0;
-            r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
-            // Naturalness safety cap: bound the FULL PULK speed product (spreadFactor × governor ×
-            // areaBonus) at the natural ceiling. The governor updates AFTER this block, so
-            // use this frame's governorMult (last frame's value) plus its max per-frame slew, so the wash
-            // shrinks to ~0 for a racer already governor-boosted (they can't be washed AND boosted over
-            // the ceiling). Deep, un-featured racers (governorMult ≈ 1) still get the full wash.
-            if (r.spreadFactor > 0) {
-              const govSlew = (r.governorMult ?? 1) + (dynamicsConfig.governorMaxStepPerFrame ?? 0.01);
-              const otherMults = r.spreadFactor * Math.max(govSlew, 1e-6);
-              r.areaBonusMult = Math.min(r.areaBonusMult, NAT_CEIL_LOCAL / otherMults);
-            }
-          }
-        } else {
-          // 3-phase: chaos (<pulkStart) → EARLY, PULK (pulkStart..pulkEnd) → PULK, post (≥pulkEnd) →
-          // POST. EARLY defaults to PULK when --areaBonusEarly is absent, collapsing to the prior
-          // 2-phase behaviour (byte-identical). Boundaries follow the live plan phase fractions.
-          const phaseStrength = raceProgress < pulkStartLive ? AREA_BONUS_EARLY
-                              : raceProgress < pulkEndLive   ? AREA_BONUS_PULK
-                              :                                AREA_BONUS_POST;
-          const scale = AREA_REF_STRENGTH > 0 ? phaseStrength / AREA_REF_STRENGTH : 0;
-          for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
-        }
-      }
+      // ── areaBonus phase-split (INFRA 5A) ─────────────────────────────────────
+      // The rescale that used to live HERE (behind the --areaBonus* flags) now runs INSIDE the
+      // shared controller (racePlanController.update() → racePlanner.js), from the shipped dynamics
+      // config threaded into createRacePlan — the SAME code the browser runs. So r.areaBonusMult is
+      // already phase-split by the controller-pass above; nothing to do here. This is the repair for
+      // the areaBonus divergence: a no-flag sim run now applies the shipped split (+3% B1 in EARLY,
+      // 0 in PULK), exactly like the browser, instead of the old flagless +6%.
 
       // ── PRE-STAGE-1 Q2: suppress the HERO POOL's CHAOS areaBonus (--heroChaosAreaBonus=off) ──
       // Runs AFTER the areaBonus phase-split so it composes with any scope arm. Zeros only B1-target
@@ -2583,6 +2535,12 @@ if (isMain) {
             );
             const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
               bonusStrengthMultiplier: BONUS_MULT,
+              // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
+              // applies the rescale from ONE source (browser + sim), from the shipped dynamics config.
+              phaseSplitBonusEnabled:  PHASE_SPLIT_BONUS_ENABLED,
+              areaBonusEarly:          AREA_BONUS_EARLY,
+              areaBonusPulk:           AREA_BONUS_PULK,
+              areaBonusPost:           AREA_BONUS_POST,
               bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,
@@ -3279,7 +3237,7 @@ if (isMain) {
           intervalDivisor: DYNAMICS_OVERRIDES.reRollIntervalDivisor,
           lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
         },
-        areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
+        areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: BONUS_MULT },
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
       },
       combos: stripAgg,
@@ -3308,7 +3266,7 @@ if (isMain) {
         pulkBiasGain: RP_PULK_BIAS_GAIN,
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
         reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
-        areaSplit: { active: AREA_SPLIT_ACTIVE, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
+        areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
       },
       combos: actionAgg,
     }, null, 2));

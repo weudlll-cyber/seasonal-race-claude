@@ -587,6 +587,112 @@ describe('createTrajectoryController — areaBonusMult', () => {
   });
 });
 
+// ── createTrajectoryController — areaBonus phase-split (INFRA 5A shared rescale) ──
+// The rescale that used to live in index.jsx (browser) and behind the sim's --areaBonus* flags now
+// runs HERE, so both engines inherit one split. Shipped strengths: EARLY 1.0 / PULK 0 / POST 1.0,
+// reference strength = bonusStrengthMultiplier (2.0). scale = phaseStrength / refStrength.
+
+describe('createTrajectoryController — areaBonus phase-split', () => {
+  const SPLIT_CFG = {
+    bonusStrengthMultiplier: 2.0,
+    phaseSplitBonusEnabled: true,
+    areaBonusEarly: 1.0,
+    areaBonusPulk: 0,
+    areaBonusPost: 1.0,
+  };
+
+  function makeSplitRacers() {
+    return BASE_RACERS.map((r) => ({
+      ...r,
+      t: 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+  }
+
+  // Expected areaBonusMult BEFORE the transEnd fade begins: 1 + (rawBonus − 1) × scale.
+  function expectSplit(plan, racers, scale) {
+    for (const r of racers) {
+      const raw = plan._racerAreaBonus.get(r.index) ?? 1.0;
+      expect(r.areaBonusMult).toBeCloseTo(1 + (raw - 1) * scale, 6);
+    }
+  }
+
+  it('EARLY (chaos) phase: scale = areaBonusEarly / refStrength = 0.5', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SPLIT_CFG, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeSplitRacers();
+    ctrl.update(racers, 0.1 * TARGET_DUR_MS, 0.1); // progress 0.1 < pulkStart 0.25
+    expectSplit(plan, racers, 1.0 / 2.0);
+  });
+
+  it('PULK phase: areaBonusPulk = 0 → scale 0 → areaBonusMult == 1.0 for every racer', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SPLIT_CFG, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeSplitRacers();
+    ctrl.update(racers, 0.35 * TARGET_DUR_MS, 0.35); // 0.25 ≤ progress < 0.5
+    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 6);
+  });
+
+  it('POST phase (pre-fade): scale = areaBonusPost / refStrength = 0.5', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SPLIT_CFG, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeSplitRacers();
+    ctrl.update(racers, 0.6 * TARGET_DUR_MS, 0.6); // 0.5 ≤ progress < transEnd 0.75 → no fade yet
+    expectSplit(plan, racers, 1.0 / 2.0);
+  });
+
+  it('phaseSplitBonusEnabled = false → no rescale (raw controller value, byte-identical)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { ...SPLIT_CFG, phaseSplitBonusEnabled: false },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeSplitRacers();
+    ctrl.update(racers, 0.1 * TARGET_DUR_MS, 0.1);
+    expectSplit(plan, racers, 1.0); // scale 1.0 ≡ raw untouched
+  });
+
+  it('areaBonusMult stays 1.0 for B4 racers in every phase (raw bonus already 1.0)', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SPLIT_CFG, BASE_SEED);
+    const ctrl = createTrajectoryController(plan);
+    const racers = makeSplitRacers();
+    ctrl.update(racers, 0.1 * TARGET_DUR_MS, 0.1);
+    for (const r of racers) {
+      const tr = plan._racerTargetRank.get(r.index);
+      if (tr > 25 && tr <= 40) expect(r.areaBonusMult).toBeCloseTo(1.0, 6);
+    }
+  });
+
+  it('zero-width PULK (pulkStart == pulkEnd): clean EARLY/POST split, no NaN', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { ...SPLIT_CFG, phaseFractions: { pulkStart: 0.25, pulkEnd: 0.25 } },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    // Below the collapsed boundary → EARLY.
+    const early = makeSplitRacers();
+    ctrl.update(early, 0.1 * TARGET_DUR_MS, 0.1);
+    expectSplit(plan, early, 1.0 / 2.0);
+    // At/above the boundary → POST (PULK window is empty), finite, correct scale.
+    const post = makeSplitRacers();
+    ctrl.update(post, 0.6 * TARGET_DUR_MS, 0.6);
+    for (const r of post) expect(Number.isFinite(r.areaBonusMult)).toBe(true);
+    expectSplit(plan, post, 1.0 / 2.0);
+  });
+});
+
 // ── createTrajectoryController — phase transitions ────────────────────────────
 
 describe('createTrajectoryController — getPhase', () => {

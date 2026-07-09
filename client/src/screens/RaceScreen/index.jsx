@@ -694,6 +694,12 @@ export default function RaceScreen() {
         // so a future shared-default change cannot silently re-introduce drift here.
         {
           bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
+          // areaBonus phase-split (INFRA 5A): threaded into the plan so the controller applies the
+          // rescale from ONE shared source (browser + sim). Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG.
+          phaseSplitBonusEnabled: dynamicsConfig.phaseSplitBonusEnabled ?? false,
+          areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
+          areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
+          areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
           bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
           bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
@@ -772,13 +778,10 @@ export default function RaceScreen() {
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
     // ── PULK-action phase-split bonuses (parity with sim-fairness.mjs) ──
-    // areaBonus/rowBonus strength gated by race phase: chaos EARLY, PULK, post POST.
-    // areaRefStrength = the plan's band-bonus strength (scale = phaseStrength / ref, mirrors the sim).
+    // rowBonus strength gated by race phase: chaos EARLY, PULK, post POST. (The areaBonus half of
+    // this split moved into the shared controller in racePlanner.js — INFRA 5A — so the browser no
+    // longer rescales areaBonusMult here; it is threaded into createRacePlan above instead.)
     const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
-    const areaRefStrength = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0;
-    const areaBonusEarly = dynamicsConfig.areaBonusEarly ?? areaRefStrength;
-    const areaBonusPulk = dynamicsConfig.areaBonusPulk ?? areaRefStrength;
-    const areaBonusPost = dynamicsConfig.areaBonusPost ?? areaRefStrength;
     const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
     const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
     const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
@@ -1038,19 +1041,9 @@ export default function RaceScreen() {
             }
           }
 
-          // ── PULK-action: areaBonus phase-split (parity with sim; default OFF byte-identical) ──
-          // Re-scale the controller's areaBonusMult to a phase-dependent STRENGTH: EARLY (<0.25) /
-          // PULK (0.25–0.5) / POST (≥0.5). scale = phaseStrength/areaRefStrength — mirrors sim exactly.
-          if (phaseSplitBonusEnabled) {
-            const phaseStrength =
-              st.raceProgress < PHASE_CHAOS_END
-                ? areaBonusEarly
-                : st.raceProgress < PHASE_PULK_END
-                  ? areaBonusPulk
-                  : areaBonusPost;
-            const scale = areaRefStrength > 0 ? phaseStrength / areaRefStrength : 0;
-            for (const r of st.racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
-          }
+          // (areaBonus phase-split moved into the shared controller — racePlanController.update()
+          // now rescales areaBonusMult from ONE source for browser + sim; INFRA 5A. Nothing to do
+          // here: the controller-pass above already produced the phase-split areaBonusMult.)
 
           // Director phase (drives the pre-OUTCOME contest gate + the fade). The director uses the
           // live rank sort + gap-to-leader, not the field median, so no median is precomputed.

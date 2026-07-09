@@ -17,14 +17,21 @@
 set -u
 cd "$(dirname "$0")/.." || exit 2
 
-REFERENCE="72cfbdb431a1760862fa4423819834cb6d57c7861e484e6f59e8d4e2f52db258"
+# Re-baselined 2026-07-10 (INFRA sim-trust). The historical Stage-0 reference (72cfbdb4…) died at
+# INFRA step 4 (shared t-update / rowEnvMult) — a parity REPAIR, not a regression — so the winning-
+# config output legitimately moved to the value below. INFRA step 5A (shared areaBonus phase-split)
+# is byte-identical to this re-baselined value: the sim now applies the shipped split (early 1.0 /
+# pulk 0 / post 1.0) NATIVELY via the controller, so the explicit --areaBonus* flags below became
+# inert and were removed. (Prior reference kept for the record: 72cfbdb4…31a1760862fa4423819834cb.)
+REFERENCE="fcf4f8e8c7d453857756a3d14fd1ace3b842a3a5b27a14050402893f2ea09270"
 
 # The shipped winning config, expressed as explicit sim flags (the sim is a flag-driven
 # harness). Flags for removed mechanisms (--pulkSurgeEnabled / --rubber-band) are inert now
-# and kept only so this command reproduces the historical Stage-0 reference exactly.
+# and kept only so this command reproduces the reference exactly. The areaBonus phase-split is now
+# applied natively from the shipped dynamics config (INFRA 5A), so no --areaBonus* flags are passed.
 WIN="--reRollVariationPercent=75 --reRollTransitionDuration=3 --reRollIntervalDivisor=10 --reRollLastPositionPercent=95 \
 --pulkSurgeEnabled=false --strip-metrics --rerollVariant=1 \
---areaBonusEarly=1.0 --areaBonusPulk=0 --areaBonusPost=1.0 --rowBonusEarly=1 --rowBonusPulk=0 --rowBonusPost=1 \
+--rowBonusEarly=1 --rowBonusPulk=0 --rowBonusPost=1 \
 --rubber-band=false --governorDirectorEnabled=true --governorDirectorLeaderBrake=0.10 --governorDirectorChallengerBoost=0.06 \
 --directorCeilingCap=auto --directorFrontPool=8 --directorBoostOncePerRace=on --directorLingerBrake=0.6"
 

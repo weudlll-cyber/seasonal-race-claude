@@ -244,6 +244,21 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
       config.bonusFadeDuration ?? config.areaBonusFadeDuration ?? DEFAULT_AREA_BONUS_FADE_MS,
+    // ── areaBonus phase-split (INFRA 5A: ONE shared home for browser AND sim) ──────────────────
+    // The controller rescales each racer's areaBonusMult to a phase-dependent STRENGTH (EARLY /
+    // PULK / POST). This rescale used to be DUPLICATED: the browser did it in index.jsx AFTER
+    // update(), the sim only did it behind the --areaBonus* flags — so a flagless sim applied the
+    // full +6% band bonus while the browser applied the split-down +3%. Centralised here so both
+    // engines inherit the SAME split from the SAME source (the sim imports createRacePlan). The
+    // reference strength is the SAME multiplier the areaBonusMap was built with, so scale =
+    // phaseStrength / refStrength reproduces the linear band delta exactly. Boundaries are read
+    // from the LIVE plan fractions in the controller (never a literal). phaseSplitBonusEnabled
+    // false → the controller skips the rescale → areaBonusMult stays the raw map value.
+    _phaseSplitBonusEnabled: !!config.phaseSplitBonusEnabled,
+    _areaRefStrength: config.bonusStrengthMultiplier ?? 1.0,
+    _areaBonusEarly: config.areaBonusEarly ?? config.bonusStrengthMultiplier ?? 1.0,
+    _areaBonusPulk: config.areaBonusPulk ?? config.bonusStrengthMultiplier ?? 1.0,
+    _areaBonusPost: config.areaBonusPost ?? config.bonusStrengthMultiplier ?? 1.0,
     // ── v4 hero choreography (flag-gated; _v4Enabled=false → controller path byte-identical) ──
     // The GENERATOR runs ONCE at the post-chaos boundary (~pulkStart) inside update(), on the ACTUAL
     // field state, and casts 2–4 heroes with anchored curves. These fields hold its inputs + the
@@ -424,6 +439,28 @@ export function createTrajectoryController(racePlan) {
           r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
         }
       }
+    }
+
+    // ── areaBonus phase-split rescale (INFRA 5A: shared source — browser + sim inherit HERE) ────
+    // Rescale the raw areaBonusMult set above to a phase-dependent STRENGTH: EARLY (chaos) / PULK /
+    // POST. Formerly duplicated — the browser rescaled in index.jsx after update(), the sim only
+    // under --areaBonus* flags; that made a flagless sim apply +6% where the browser applied +3%.
+    // scale = phaseStrength / refStrength (the band delta is linear in strength, so this reproduces
+    // the intended per-phase bonus). Boundaries read the LIVE plan fractions (pulkStartFrac /
+    // pulkEndFrac), never a literal, mirroring the phase clock — so the split follows the PULK phase
+    // if the owner moves it. The scale commutes with the transEnd fade above (both linear in
+    // areaBonusMult−1), so composing them preserves the fade shape. phaseSplitBonusEnabled false →
+    // skipped → areaBonusMult stays the raw value → byte-identical to the pre-split behaviour.
+    if (plan._phaseSplitBonusEnabled) {
+      const inChaos = phaseProgress != null ? phaseProgress < pulkStartFrac : elapsedMs < pulkStart;
+      const inPulk = phaseProgress != null ? phaseProgress < pulkEndFrac : elapsedMs < pulkEnd;
+      const phaseStrength = inChaos
+        ? plan._areaBonusEarly
+        : inPulk
+          ? plan._areaBonusPulk
+          : plan._areaBonusPost;
+      const scale = plan._areaRefStrength > 0 ? phaseStrength / plan._areaRefStrength : 0;
+      for (const r of racers) r.areaBonusMult = 1 + (r.areaBonusMult - 1) * scale;
     }
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
