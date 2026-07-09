@@ -92,7 +92,6 @@ import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../clien
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
 import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
-import { createV4StartRowExperiment } from './sim/experiments/v4StartRow.mjs';
 import { createTier2Experiment } from './sim/experiments/tier2.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
@@ -383,13 +382,10 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Phase-2K v4: START-ROW threshold boost — DORMANT EXPERIMENT (INFRA 1c-3) ──
-// Flag parsing + the construction arm / per-race state / stepping machine / transition live
-// behind one boundary. V4_LATERAL_PROXIMITY stays in core: it is SHARED (hero-map + tier2 read
-// it too), so it is not V4-private; it is passed into the seam. easeInOutCubic (a hoisted core
-// function) is passed in to avoid an import cycle.
+// Lateral-proximity threshold for a REAL overtake (course-fraction units). Read by the hero-map
+// observer (--hero-map). Formerly also the V4 start-row experiment's constant; kept here after that
+// experiment was deleted because it is SHARED, not V4-private. Flag name is historical.
 const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
-const v4 = createV4StartRowExperiment(argVal, { lateralProximity: V4_LATERAL_PROXIMITY, easeInOutCubic });
 
 // ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
 const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
@@ -659,10 +655,7 @@ export function runSingleRace({
         ? (rowLayout.totalRows - assignment.rowIndex) * deltaT
         : -(assignment.rowIndex * deltaT);
       const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
-      const isRearRowOpen = isOpen && assignment.rowIndex > 0;
-      const speedBonusMult =
-        v4.constructionBonus(isOpen, isRearRowOpen)
-          ?? (1 + speedBonus);
+      const speedBonusMult = 1 + speedBonus;
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
@@ -695,14 +688,6 @@ export function runSingleRace({
           : bodyRef.bodyNarrow,
         trackWidthPx:  geometricTrackWidth,
         pathLengthPx,
-        // v4: per-racer bonus-level transition state (mirrors re-roll transition)
-        startRowBoostMult:              1.0,
-        startRowBoostMultPrev:          1.0,
-        startRowBoostMultTarget:        1.0,
-        startRowBoostTransitionStart:   -Infinity,
-        startRowBoostTransitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
-        v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
-        v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
         rerollCount:              0, // total speed re-rolls fired for this racer
         trajectoryMult:           1.0, // Phase-3A: smoothed by easeInOutCubic transition; 1.0 when Race Plan inactive
         trajectoryMultTarget:     1.0,
@@ -745,9 +730,6 @@ export function runSingleRace({
     let warmupMeasured = false;
 
 
-    // v4: per-race overtaking state (built by the experiment seam; empty when inert)
-    const v4state = v4.initRaceState(racers, isOpen);
-
     computePositions();
 
     // ── Diagnostic snapshot state ─────────────────────────────────────────────
@@ -756,18 +738,15 @@ export function runSingleRace({
     const DIAG_SNAP_MS   = diagnosticMode ? DIAG_SNAP_TIMES_S.map((s) => s * 1000) : [];
     let diagIntLateralPushes = 0;
     let diagIntBrakeActs     = 0;
-    let diagIntOvertakes     = 0;
-    let diagLastOvertakeCount = 0;
 
     function diagTakeSnapshot(nominalTimeS, actualTimeMs) {
       const snap = {
         timeS: nominalTimeS, actualTimeMs,
-        interval: { lateralPushes: diagIntLateralPushes, brakeActivations: diagIntBrakeActs, newOvertakes: diagIntOvertakes },
+        interval: { lateralPushes: diagIntLateralPushes, brakeActivations: diagIntBrakeActs },
         racers: racers.map((r) => ({
           idx: r.index, row: r.startRowIndex,
           t: +r.t.toFixed(6), physY: +r.physicalY.toFixed(4),
           speed: +r.baseSpeed.toFixed(6), avoidance: r.avoidanceActive,
-          v4Mult: +(r.startRowBoostMult ?? 1).toFixed(4),
         })),
         brakeZonePairs: [],
         closePairs: [],
@@ -785,7 +764,6 @@ export function runSingleRace({
       diagSnapshots.push(snap);
       diagIntLateralPushes = 0;
       diagIntBrakeActs     = 0;
-      diagIntOvertakes     = 0;
     }
 
     if (diagnosticMode) {
@@ -1114,9 +1092,6 @@ export function runSingleRace({
           r.spreadFactor = r.spreadFactorPrev + (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(prog);
           r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
         }
-
-        // v4: smooth bonus-level transition triggered by threshold crossing
-        v4.applyTransition(r, raceTs, isOpen);
       }
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
@@ -1454,15 +1429,15 @@ export function runSingleRace({
           // experiment factors are bit-exact 1.0 in the shipped (all-flags-off) state. A hit means
           // the experiment was never dormant → STOP. Removing x*1.0 is then bit-neutral (x*1.0===x).
           __dormancyChecks++;
-          if (r.startRowBoostMult !== 1.0 || (r.tier2Mult ?? 1.0) !== 1.0) {
+          if ((r.tier2Mult ?? 1.0) !== 1.0) {
             throw new Error(`[3-0 DORMANCY] racer#${r.index} @raceTs=${raceTs}: NOT dormant — ` +
-              `startRowBoostMult=${r.startRowBoostMult} tier2Mult=${r.tier2Mult}`);
+              `tier2Mult=${r.tier2Mult}`);
           }
           // trajectoryMult + areaBonusMult + governorMult + tier2Mult: all 1.0 when inactive.
           // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
           // with no free lane (lateral rule never bypassed).
           r.t +=
-            r.baseSpeed * boost * brake * rowEnvMult * r.startRowBoostMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -1651,9 +1626,6 @@ export function runSingleRace({
         mixingQuota    = row1.length > 0 ? mixed / row1.length : null;
         warmupMeasured = true;
       }
-
-      // v4: overtake detection + threshold check (the stepping machine lives in the seam)
-      v4.step(v4state, racers, raceTs, isOpen);
 
       // Diagnostic: save pre-frame state for lateral-push and brake-activation counting
       let diagPrevPhysY, diagPrevAvoidance;
@@ -1886,8 +1858,6 @@ export function runSingleRace({
           if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4) diagIntLateralPushes++;
           if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)       diagIntBrakeActs++;
         }
-        diagIntOvertakes     += v4state.overtakePairs.size - diagLastOvertakeCount;
-        diagLastOvertakeCount = v4state.overtakePairs.size;
         while (diagSnapIdx < DIAG_SNAP_MS.length && raceTs >= DIAG_SNAP_MS[diagSnapIdx]) {
           diagTakeSnapshot(DIAG_SNAP_TIMES_S[diagSnapIdx], raceTs);
           diagSnapIdx++;
@@ -1928,18 +1898,11 @@ export function runSingleRace({
     }));
     // Attach mixing-quota and v4 diagnostics as non-iterable properties.
     results.mixingQuota     = mixingQuota;
-    results.v4ThreshLog     = v4state.threshLog;
-    results.v4OvertakeCount = v4state.hasOvertaken.size;     // Row-1 racers with ≥1 physical overtake
-    results.v4NearBehindCount = v4state.wasNearBehind.size;  // pairs that entered near-behind state
-    results.v4PairOvertakes = v4state.overtakePairs.size;    // total completed pair-overtakes
     results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
     results.liteRow1BrakeFrames = liteRow1BrakeFrames;
     results.liteRow0BrakeFrames = liteRow0BrakeFrames;
     results.liteRow2BrakeFrames = liteRow2BrakeFrames;
     results.liteLateralMoves    = liteLateralMoves;
-    results.v4PerRacerEndStats  = (v4.active && v4.metricType === 'per_racer')
-      ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
-      : null;
     results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
     results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
@@ -2539,7 +2502,6 @@ if (isMain) {
   // the two chains are now factor-for-factor aligned. Print exactly that.
   const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
   console.log('Force multipliers      :');
-  console.log(`  startRowBoostMult    : ${st(v4.active)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
   console.log(`  tier2Mult            : ${st(tier2.active)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
@@ -2553,18 +2515,6 @@ if (isMain) {
   if (COMEBACK_ANALYSIS) {
     if (!RACE_PLAN_ACTIVE) console.warn('⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen');
     console.log(`Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`);
-  }
-  if (v4.active) {
-    console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${v4.initialBoost} openOnly=true`);
-    console.log(`   Metrik: ${v4.metricType}${v4.metricType === 'physical_overtake' ? ` (lateralProximity=${V4_LATERAL_PROXIMITY})` : ''}`);
-    if (v4.metricType === 'per_racer' && (v4.row1ThresholdsRaw || v4.rowRestThresholdsRaw)) {
-      console.log(`   Row-1-Schwellen: ${v4.row1Thresholds.map((t) => t + '%').join(' → ')}`);
-      console.log(`   Row-2+-Schwellen: ${v4.row2Thresholds.map((t) => t + '%').join(' → ')}`);
-    } else {
-      console.log(`   Schwellen: ${v4.thresholds.map((t) => t + '%').join(' → ')} Überholungen`);
-    }
-    console.log(`   Bonus-Schedule: ${v4.boostSchedule.join(' → ')}`);
-    console.log(`   Übergänge: easeInOutCubic über ${DYNAMICS_OVERRIDES.reRollTransitionDuration}s (wie Re-Roll)`);
   }
   console.log('');
 
@@ -2666,7 +2616,6 @@ if (isMain) {
 
         const raceResults   = [];
         const mixingQuotas  = [];
-        const v4ThreshLogs  = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
           const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
@@ -2769,7 +2718,6 @@ if (isMain) {
           raceResults.push(result);
           if (COMEBACK_ANALYSIS) result._seed = seed;
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
-          if (result.v4ThreshLog != null) v4ThreshLogs.push(result.v4ThreshLog);
           if (DIAG_MODE && result.diagSnapshots) {
             const diagText = printDiagnosticReport(result.diagSnapshots, trackName, racerType, durationSec, seed);
             console.log(diagText);
@@ -3109,27 +3057,6 @@ if (isMain) {
               `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
             );
           }
-          // per_racer: per-row bonus distribution at race end (all rows > 0)
-          if (v4.active && v4.metricType === 'per_racer') {
-            const allRowIndices = [...new Set(
-              raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
-            )].sort((a, b) => a - b);
-            for (const rowIdx of allRowIndices) {
-              const rowThresholds = rowIdx === 1 ? v4.row1Thresholds : v4.row2Thresholds;
-              const all = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
-              if (all.length === 0) continue;
-              const full    = all.filter((s) => s.threshIdx === 0).length;
-              const partial = all.filter((s) => s.threshIdx > 0 && s.threshIdx < rowThresholds.length).length;
-              const none    = all.filter((s) => s.threshIdx >= rowThresholds.length).length;
-              const tot     = all.length;
-              console.log(
-                `     Row-${rowIdx} Bonus-End (N=${tot}): ` +
-                `voll=${(full/tot*100).toFixed(0)}% (${full})  ` +
-                `teilw=${(partial/tot*100).toFixed(0)}% (${partial})  ` +
-                `kein=${(none/tot*100).toFixed(0)}% (${none})`
-              );
-            }
-          }
         }
 
         // Gap A + Gap B + lapping: for CLOSED tracks, emit LateralQ and FairChance here
@@ -3166,63 +3093,6 @@ if (isMain) {
           console.log(`     FairChance by row: ${rowParts.join('  ')}`);
         }
 
-        // v4 diagnostics: per-threshold average crossing time + physical overtake counts
-        if (v4.active && isOpen && v4.metricType !== 'per_racer' && v4ThreshLogs.length > 0) {
-          // Physical overtake summary
-          const avgOvertakes   = raceResults.reduce((s, r) => s + (r.v4OvertakeCount   ?? 0), 0) / N_RACES;
-          const avgNearBehind  = raceResults.reduce((s, r) => s + (r.v4NearBehindCount ?? 0), 0) / N_RACES;
-          const avgPairOvt     = raceResults.reduce((s, r) => s + (r.v4PairOvertakes   ?? 0), 0) / N_RACES;
-          console.log(
-            `     v4 Physik (Ø pro Rennen): ${avgOvertakes.toFixed(1)} Row-1 mit Überholung, ` +
-            `${avgPairOvt.toFixed(1)} Paar-Überholungen, ${avgNearBehind.toFixed(1)} near-behind-Paare`
-          );
-          // Threshold timing
-          for (const thresh of v4.thresholds) {
-            const times = v4ThreshLogs
-              .map((log) => log.find((e) => e.threshold === thresh)?.timeS)
-              .filter((t) => t != null);
-            if (times.length > 0) {
-              const avg = times.reduce((s, v) => s + v, 0) / times.length;
-              const entry = v4ThreshLogs.find((log) => log.find((e) => e.threshold === thresh))
-                ?.find((e) => e.threshold === thresh);
-              console.log(
-                `     v4 ${thresh}%-Schwelle: Ø ${avg.toFixed(1)}s ` +
-                `(${times.length}/${N_RACES} Rennen) ` +
-                `${entry ? entry.fromBonus + ' → ' + entry.toBonus : ''}`
-              );
-            } else {
-              console.log(`     v4 ${thresh}%-Schwelle: nie erreicht`);
-            }
-          }
-        }
-        // per_racer: individual threshold timing per row (all rows > 0)
-        if (v4.active && isOpen && v4.metricType === 'per_racer') {
-          const allRowIdxs = [...new Set(
-            raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
-          )].sort((a, b) => a - b);
-          for (const rowIdx of allRowIdxs) {
-            const rowThresholds = rowIdx === 1 ? v4.row1Thresholds : v4.row2Thresholds;
-            for (let ti = 0; ti < rowThresholds.length; ti++) {
-              const thresh   = rowThresholds[ti];
-              const allStats = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
-              const total    = allStats.length;
-              const times    = allStats
-                .filter((s) => s.threshTimes && s.threshTimes.length > ti)
-                .map((s) => s.threshTimes[ti] / 1000);
-              if (times.length > 0) {
-                const avg = times.reduce((s, v) => s + v, 0) / times.length;
-                const min = Math.min(...times);
-                const max = Math.max(...times);
-                console.log(
-                  `     v4 per_racer Row-${rowIdx} ${thresh}%: Ø ${avg.toFixed(1)}s ` +
-                  `(${times.length}/${total} Racer) min=${min.toFixed(1)}s max=${max.toFixed(1)}s`
-                );
-              } else {
-                console.log(`     v4 per_racer Row-${rowIdx} ${thresh}%: nie erreicht`);
-              }
-            }
-          }
-        }
       }
     }
     console.log('');

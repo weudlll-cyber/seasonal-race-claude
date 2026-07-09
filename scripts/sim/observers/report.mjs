@@ -568,8 +568,7 @@ function printDiagnosticReport(diagSnapshots, trackName, racerType, durationSec,
     // Interval stats
     lines.push(
       `   Interval: ${snap.interval.lateralPushes} lateral pushes | ` +
-      `${snap.interval.brakeActivations} brake activations | ` +
-      `${snap.interval.newOvertakes} new v4 overtakes`
+      `${snap.interval.brakeActivations} brake activations`
     );
     // Per-row summary
     const rows = new Map();
