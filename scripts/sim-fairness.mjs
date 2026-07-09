@@ -337,6 +337,7 @@ const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
 // one boundary (INFRA 1c-4). The seam writes only r.tier2Mult + its own state; external inputs are
 // passed in via ctx. BAND_EDGES it imports itself (same source as the core).
 const tier2 = createTier2Experiment(argVal);
+let __dormancyChecks = 0; // INFRA STEP 3-0: temporary per-frame dormancy-assertion counter (removed at 3-5)
 const tier2Races    = []; // per-race tier2 observations (filled only when tier2 active)
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // Director knobs (frontPool / boostOncePerRace / lingerBrake / ceilingCap + the rebuild's catch-up
@@ -1468,6 +1469,15 @@ export function runSingleRace({
           // s = early (chaos <pulkStart) / pulk (pulkStart..pulkEnd) / post (≥pulkEnd), following the
           // live plan phase fractions. Inactive → 1.0 → byte-identical.
           const rowEnvMult = rowSplit.frameMult(r, raceProgress, pulkStartLive, pulkEndLive);
+          // ── INFRA STEP 3-0: TEMPORARY per-frame dormancy assertion (removed at 3-5) ──────
+          // PROVE, on every frame of every racer (not by sampling), that the three sim-only
+          // experiment factors are bit-exact 1.0 in the shipped (all-flags-off) state. A hit means
+          // the experiment was never dormant → STOP. Removing x*1.0 is then bit-neutral (x*1.0===x).
+          __dormancyChecks++;
+          if (tefMult !== 1.0 || r.startRowBoostMult !== 1.0 || (r.tier2Mult ?? 1.0) !== 1.0) {
+            throw new Error(`[3-0 DORMANCY] racer#${r.index} @raceTs=${raceTs}: NOT dormant — ` +
+              `tefMult=${tefMult} startRowBoostMult=${r.startRowBoostMult} tier2Mult=${r.tier2Mult}`);
+          }
           // trajectoryMult + areaBonusMult + governorMult + tier2Mult: all 1.0 when inactive.
           // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
           // with no free lane (lateral rule never bypassed).
@@ -3622,6 +3632,8 @@ if (isMain) {
       );
     }
   }
+
+  console.log(`[3-0 DORMANCY] checks=${__dormancyChecks} hits=0 (per-frame·per-racer bit-exact 1.0 assertion passed)`);
 
   // Print quick summary
   const unfair = allResults.filter((r) => r.stats.pValue < 0.05);
