@@ -676,11 +676,11 @@ export function runSingleRace({
         trackWidthPx:  geometricTrackWidth,
         pathLengthPx,
         // v4: per-racer bonus-level transition state (mirrors re-roll transition)
-        v4BonusMult:              1.0,
-        v4BonusMultPrev:          1.0,
-        v4BonusMultTarget:        1.0,
-        v4BonusTransitionStart:   -Infinity,
-        v4BonusTransitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
+        startRowBoostMult:              1.0,
+        startRowBoostMultPrev:          1.0,
+        startRowBoostMultTarget:        1.0,
+        startRowBoostTransitionStart:   -Infinity,
+        startRowBoostTransitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
         v4RacerThreshIdx:         0, // per_racer metric: next threshold index for this racer (ratchet)
         v4RacerThreshTimes:       [], // per_racer: raceTs (ms) when each threshold was crossed
         rerollCount:              0, // total speed re-rolls fired for this racer
@@ -774,7 +774,7 @@ export function runSingleRace({
           idx: r.index, row: r.startRowIndex,
           t: +r.t.toFixed(6), physY: +r.physicalY.toFixed(4),
           speed: +r.baseSpeed.toFixed(6), avoidance: r.avoidanceActive,
-          v4Mult: +(r.v4BonusMult ?? 1).toFixed(4),
+          v4Mult: +(r.startRowBoostMult ?? 1).toFixed(4),
         })),
         brakeZonePairs: [],
         closePairs: [],
@@ -1145,11 +1145,11 @@ export function runSingleRace({
 
         // v4: smooth bonus-level transition triggered by threshold crossing
         if (V4_ACTIVE && isOpen && r.startRowIndex > 0) {
-          const v4El = raceTs - r.v4BonusTransitionStart;
-          if (v4El >= 0 && v4El < r.v4BonusTransitionDuration) {
-            r.v4BonusMult = r.v4BonusMultPrev + (r.v4BonusMultTarget - r.v4BonusMultPrev) * easeInOutCubic(v4El / r.v4BonusTransitionDuration);
-          } else if (v4El >= r.v4BonusTransitionDuration) {
-            r.v4BonusMult = r.v4BonusMultTarget;
+          const srBoostEl = raceTs - r.startRowBoostTransitionStart;
+          if (srBoostEl >= 0 && srBoostEl < r.startRowBoostTransitionDuration) {
+            r.startRowBoostMult = r.startRowBoostMultPrev + (r.startRowBoostMultTarget - r.startRowBoostMultPrev) * easeInOutCubic(srBoostEl / r.startRowBoostTransitionDuration);
+          } else if (srBoostEl >= r.startRowBoostTransitionDuration) {
+            r.startRowBoostMult = r.startRowBoostMultTarget;
           }
         }
       }
@@ -1632,7 +1632,7 @@ export function runSingleRace({
           // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
           // with no free lane (lateral rule never bypassed).
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.v4BonusMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.startRowBoostMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -1861,9 +1861,9 @@ export function runSingleRace({
             const fraction   = aheadCount / totalFront;
             while (r.v4RacerThreshIdx < racerThresholds.length && fraction >= racerThresholds[r.v4RacerThreshIdx] / 100) {
               const toBonus = V4_BOOST_SCHEDULE[Math.min(r.v4RacerThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
-              r.v4BonusMultPrev        = r.v4BonusMult;
-              r.v4BonusMultTarget      = toBonus / V4_INITIAL_BOOST;
-              r.v4BonusTransitionStart = raceTs;
+              r.startRowBoostMultPrev        = r.startRowBoostMult;
+              r.startRowBoostMultTarget      = toBonus / V4_INITIAL_BOOST;
+              r.startRowBoostTransitionStart = raceTs;
               r.v4RacerThreshTimes.push(raceTs);
               r.v4RacerThreshIdx++;
             }
@@ -1889,9 +1889,9 @@ export function runSingleRace({
             const newTarget = toBonus / V4_INITIAL_BOOST;
             for (const r of racers) {
               if (r.startRowIndex > 0 && !r.finished) {
-                r.v4BonusMultPrev        = r.v4BonusMult;
-                r.v4BonusMultTarget      = newTarget;
-                r.v4BonusTransitionStart = raceTs;
+                r.startRowBoostMultPrev        = r.startRowBoostMult;
+                r.startRowBoostMultTarget      = newTarget;
+                r.startRowBoostTransitionStart = raceTs;
               }
             }
             v4NextThreshIdx++;
@@ -3921,6 +3921,18 @@ if (isMain) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
+  // ── Stage 0 (0.3c): FORCE-MULTIPLIER BANNER — make every t-update factor's state explicit ──────
+  // The sim's t-update chain (sim-fairness.mjs t += baseSpeed·boost·brake·tefMult·rowEnvMult·
+  // startRowBoostMult·trajectoryMult·areaBonusMult·governorMult·tier2Mult) matches the BROWSER's chain
+  // (index.jsx …·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·ZONEMULT) ONLY WHEN the sim's
+  // experiment factors are all dormant (=1.0) AND the browser's zoneMult is off. Print exactly that.
+  const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
+  console.log('Force multipliers      :');
+  console.log(`  tefMult              : ${st(TEF_ACTIVE)}   (--tefActive)`);
+  console.log(`  startRowBoostMult    : ${st(V4_ACTIVE)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
+  console.log(`  tier2Mult            : ${st(TIER2_ACTIVE)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
+  console.log(`  zoneMult             : NOT SIMULATED — browser-only (raceZones, ±20%). If the browser had`);
+  console.log(`                         raceZoneConfig.enabled=true, this run does NOT describe that race.`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
