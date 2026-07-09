@@ -92,6 +92,7 @@ import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../clien
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
 import { createTefExperiment } from './sim/experiments/tef.mjs';
+import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -291,13 +292,9 @@ const AREA_REF_STRENGTH   = BONUS_MULT; // the strength the areaBonusMap was bui
 // only in chaos (the rest of the field keeps its wash-forward → assigned-winner reachability intact),
 // so the deep-charger casting pool stays buried at the release. Read-only measurement flag; sim only.
 const HERO_CHAOS_AREABONUS_OFF = argVal('heroChaosAreaBonus', 'on') === 'off';
-const ROW_EARLY_RAW       = argVal('rowBonusEarly', null);
-const ROW_PULK_RAW        = argVal('rowBonusPulk', null);
-const ROW_POST_RAW        = argVal('rowBonusPost', null);
-const ROW_SPLIT_ACTIVE    = ROW_EARLY_RAW !== null || ROW_PULK_RAW !== null || ROW_POST_RAW !== null;
-const ROW_BONUS_EARLY     = Number(ROW_EARLY_RAW ?? '1');
-const ROW_BONUS_PULK      = Number(ROW_PULK_RAW  ?? '1');
-const ROW_BONUS_POST      = Number(ROW_POST_RAW  ?? '1');
+// ROW_SPLIT phase-envelope experiment — flag parsing + per-frame logic behind one boundary
+// (INFRA 1c-2). The seam returns a multiplier only; the core owns every assignment.
+const rowSplit = createRowSplitExperiment(argVal);
 const STRIP_METRICS       = argv.includes('--strip-metrics');
 // ACTION-METRICS (read-only, --action-metrics): whole-field PULK-window movement metrics
 // (rank churn, rank travel, risers/fallers, top-5 turnover, p10–p90 spread) + PULK naturalness
@@ -1660,13 +1657,7 @@ export function runSingleRace({
           // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
           // s = early (chaos <pulkStart) / pulk (pulkStart..pulkEnd) / post (≥pulkEnd), following the
           // live plan phase fractions. Inactive → 1.0 → byte-identical.
-          let rowEnvMult = 1.0;
-          if (ROW_SPLIT_ACTIVE && r.rawRowBonus > 0) {
-            const s = raceProgress < pulkStartLive ? ROW_BONUS_EARLY
-                    : raceProgress < pulkEndLive   ? ROW_BONUS_PULK
-                    :                                ROW_BONUS_POST;
-            rowEnvMult = (1 + r.rawRowBonus * s) / (1 + r.rawRowBonus);
-          }
+          const rowEnvMult = rowSplit.frameMult(r, raceProgress, pulkStartLive, pulkEndLive);
           // trajectoryMult + areaBonusMult + governorMult + tier2Mult: all 1.0 when inactive.
           // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
           // with no free lane (lateral rule never bypassed).
@@ -3892,7 +3883,7 @@ if (isMain) {
           lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
         },
         areaSplit: { active: AREA_SPLIT_ACTIVE, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: AREA_REF_STRENGTH },
-        rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
+        rowSplit:  { active: rowSplit.active, early: rowSplit.early, pulk: rowSplit.pulk, post: rowSplit.post },
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
       },
       combos: stripAgg,
@@ -3922,7 +3913,7 @@ if (isMain) {
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
         reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
         areaSplit: { active: AREA_SPLIT_ACTIVE, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
-        rowSplit:  { active: ROW_SPLIT_ACTIVE, early: ROW_BONUS_EARLY, pulk: ROW_BONUS_PULK, post: ROW_BONUS_POST },
+        rowSplit:  { active: rowSplit.active, early: rowSplit.early, pulk: rowSplit.pulk, post: rowSplit.post },
       },
       combos: actionAgg,
     }, null, 2));
