@@ -92,7 +92,6 @@ import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../clien
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
 import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
-import { createTier2Experiment } from './sim/experiments/tier2.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -316,27 +315,7 @@ const heroMapRaces        = [];   // per-race hero observations (filled only whe
 // OneDrive-synced tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
 const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
 
-// ════════════════════════════════════════════════════════════════════════════════════════════════
-// NIGHT-SWEEP TIER-2 — feasibility PROTOTYPE (sim-only, flag-gated, NOT shipped). Measures what the
-// fair-envelope MALUS (brake racers ahead) + BOOST (push the mover) buys against the real lateral
-// traffic. Absent flag → tier2 does nothing (tier2Mult stays 1.0) → byte-identical. Runs with
-// --race-plan=false so the ONLY steering force is this prototype (clean physics isolation): the
-// question is "using only [minMult 0.85 .. maxMult 1.10], what is achievable against traffic?".
-// The malus/boost write r.tier2Mult, which multiplies the t-update BESIDE the lateral `brake` factor,
-// so a boosted mover STILL brakes with no free lane — the lateral rule is never bypassed (owner rule).
-//   --tier2=comeback|frontfight
-//   --tier2Malus=<0..0.15>   brake magnitude on the racers AHEAD (clamped so mult ≥ 0.85)
-//   --tier2Boost=<0..0.10>   forward boost on the mover / challenger (clamped so mult ≤ 1.10)
-//   --tier2Depth=<0..1>      comeback: start depth as a FIELD FRACTION (0=front .. 1=rear)
-//   --tier2Release=<0..1>    comeback: progress at which the mover is released/pushed
-//   --tier2K=<int>           comeback: how many racers immediately ahead of the mover to brake
-//   --tier2Start=<0..1>      frontfight: progress at which the leader-brake / challenger-boost begins
-// tier2 malus PROTOTYPE — flag parsing + per-race state / per-frame machine / observation behind
-// one boundary (INFRA 1c-4). The seam writes only r.tier2Mult + its own state; external inputs are
-// passed in via ctx. BAND_EDGES it imports itself (same source as the core).
-const tier2 = createTier2Experiment(argVal);
 let __dormancyChecks = 0; // INFRA STEP 3-0: temporary per-frame dormancy-assertion counter (removed at 3-5)
-const tier2Races    = []; // per-race tier2 observations (filled only when tier2 active)
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // Director knobs (frontPool / boostOncePerRace / lingerBrake / ceilingCap + the rebuild's catch-up
 // and fall-back knobs) are read from DYNAMICS_OVERRIDES via the shared-default + argVal pattern
@@ -695,7 +674,6 @@ export function runSingleRace({
         trajectoryMultTransStart: 0,
         areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
         governorMult:             1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
-        tier2Mult:                1.0, // NIGHT-SWEEP TIER-2 prototype force; 1.0 unless --tier2 active
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
@@ -1005,8 +983,6 @@ export function runSingleRace({
       for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
       return BAND_EDGES.length;
     };
-    // ── TIER-2 prototype per-race state (only when --tier2 active) ────────────────
-    const t2 = tier2.initRaceState();
     let   smWinnerRankAt025    = null; // winner's live rank at PULK start (0.25) — is he already deep before the scramble?
     let   smWinnerRankAt050    = null; // winner's live rank at PULK end (0.50) — did the PULK contest push him deep?
     let   smWinnerRankAt055    = null; // winner's live rank at the first OUTCOME step (far back = drew badly)
@@ -1398,15 +1374,6 @@ export function runSingleRace({
       // Save pre-Pass-2 t values for overtake detection
       for (const r of racers) natPrevT.set(r.index, r.t);
 
-      // ── TIER-2 prototype force + observer (--tier2; sim-only, NOT shipped) ────
-      // Applies the fair-envelope malus/boost to r.tier2Mult BEFORE the t-update below (so it takes
-      // effect this frame) and records the feasibility observers. race-plan is OFF in tier2 runs, so
-      // this is the only steering force. Every racer's tier2Mult is reset to 1.0 each frame first.
-      tier2.stepFrame(t2, racers, {
-        raceProgress, raceTs, racerTargetRankMap, pulkStartLive,
-        releaseProgress: DIRECTOR_V4_RELEASE_PROGRESS, lateralProximity: V4_LATERAL_PROXIMITY, holdMs: SM_HOLD_MS,
-      });
-
       // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
@@ -1424,20 +1391,11 @@ export function runSingleRace({
           // s = early (chaos <pulkStart) / pulk (pulkStart..pulkEnd) / post (≥pulkEnd), following the
           // live plan phase fractions. Inactive → 1.0 → byte-identical.
           const rowEnvMult = rowSplit.frameMult(r, raceProgress, pulkStartLive, pulkEndLive);
-          // ── INFRA STEP 3-0: TEMPORARY per-frame dormancy assertion (removed at 3-5) ──────
-          // PROVE, on every frame of every racer (not by sampling), that the three sim-only
-          // experiment factors are bit-exact 1.0 in the shipped (all-flags-off) state. A hit means
-          // the experiment was never dormant → STOP. Removing x*1.0 is then bit-neutral (x*1.0===x).
+          // INFRA STEP 3-0: last dormancy-assertion subject (tier2Mult) deleted with the experiment;
+          // only the counter remains, removed at 3-5.
           __dormancyChecks++;
-          if ((r.tier2Mult ?? 1.0) !== 1.0) {
-            throw new Error(`[3-0 DORMANCY] racer#${r.index} @raceTs=${raceTs}: NOT dormant — ` +
-              `tier2Mult=${r.tier2Mult}`);
-          }
-          // trajectoryMult + areaBonusMult + governorMult + tier2Mult: all 1.0 when inactive.
-          // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
-          // with no free lane (lateral rule never bypassed).
           r.t +=
-            r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -2059,9 +2017,6 @@ export function runSingleRace({
     }
 
     // ── TIER-2 prototype results — attached ONLY when --tier2 active ──────────────
-    if (tier2.active && t2) {
-      results.tier2Obs = tier2.buildObservation(t2, racers);
-    }
 
     // ── STRIP-DOWN metrics — attached ONLY when --strip-metrics is on (else results unchanged) ──
     if (STRIP_METRICS) {
@@ -2494,15 +2449,10 @@ if (isMain) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
-  // ── Stage 0 (0.3c): FORCE-MULTIPLIER BANNER — make every t-update factor's state explicit ──────
-  // The sim's t-update chain (sim-fairness.mjs t += baseSpeed·boost·brake·tefMult·rowEnvMult·
-  // startRowBoostMult·trajectoryMult·areaBonusMult·governorMult·tier2Mult) matches the BROWSER's chain
-  // (index.jsx …·rowEnvMult·trajectoryMult·areaBonusMult·governorMult) ONLY WHEN the sim's experiment
-  // factors are all dormant (=1.0). The browser's zoneMult was removed with the race-zones feature, so
-  // the two chains are now factor-for-factor aligned. Print exactly that.
-  const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
-  console.log('Force multipliers      :');
-  console.log(`  tier2Mult            : ${st(tier2.active)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
+  // The three sim-only dormant experiments (tefMult, startRowBoostMult, tier2Mult) were deleted, and
+  // the browser's zoneMult was removed with the race-zones feature. The sim's t-update chain is now
+  //   t += baseSpeed·boost·brake·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·(DT/16)
+  // and the browser's (index.jsx) is the same modulo (DT/16)=1.0 — factor-for-factor identical.
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
@@ -2684,10 +2634,6 @@ if (isMain) {
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
             heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
-          }
-          // TIER-2 (--tier2): stash this race's prototype observations.
-          if (tier2.active && result.tier2Obs) {
-            tier2Races.push({ trackId, racerType, seed, raceIdx, isOpen, ...result.tier2Obs });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3252,103 +3198,6 @@ if (isMain) {
     console.log(`[hero-map] → ${heroMapPath} | bandReach=${bandReach != null ? (bandReach * 100).toFixed(1) + '%' : 'n/a'} startRowUnfair=${startRowUnfair} realOvertakes=${heroAgg.realOvertakesMean ?? 'n/a'} netGain=${heroAgg.placesGainedNetMean ?? 'n/a'} heroes/race=${heroAgg.heroesPerRace ?? 'n/a'} shortfall=${heroAgg.shortfallRate ?? 'n/a'}`);
   }
 
-  // ── TIER-2 prototype output (--tier2) ───────────────────────────────────────
-  if (tier2.active) {
-    const num  = (v) => typeof v === 'number' && isFinite(v);
-    const mean = (arr) => (arr.length ? +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(4) : null);
-    const rate = (arr) => (arr.length ? +(arr.filter((v) => v === true).length / arr.length).toFixed(4) : null);
-    let agg;
-    if (tier2.mode === 'comeback') {
-      agg = {
-        mode: 'comeback', nRaces: tier2Races.length,
-        anchorRankMean:    mean(tier2Races.map((r) => r.anchorRank).filter(num)),
-        finalRankMean:     mean(tier2Races.map((r) => r.finalRank).filter(num)),
-        placesGainedMean:  mean(tier2Races.map((r) => r.placesGained).filter(num)),
-        realOvertakesMean: mean(tier2Races.map((r) => r.realOvertakes).filter(num)),
-        rePassesMean:      mean(tier2Races.map((r) => r.rePasses).filter(num)),
-        // churn ratio: mean net / mean realOvertakes (aggregate), plus the mean of per-race ratios.
-        netOverRealAgg:    (() => { const no = mean(tier2Races.map((r) => r.placesGained).filter(num)); const ro = mean(tier2Races.map((r) => r.realOvertakes).filter(num)); return (no != null && ro) ? +(no / ro).toFixed(4) : null; })(),
-        netOverRealMean:   mean(tier2Races.map((r) => r.netOverRealRatio).filter(num)),
-        closingSpeedRatioMean: mean(tier2Races.map((r) => r.closingSpeedRatio).filter(num)),
-        // OWNER REFINEMENT: closing ratio in the FRONT window (climber rank ≤ 8) — the value that decides
-        // whether A2 makes the comeback visible; and by TARGET BAND of the car ahead (B1 = the front pack).
-        closingSpeedFrontMean: mean(tier2Races.map((r) => r.closingSpeedFront).filter(num)),
-        closingSpeedByBandMean: (() => { const o = {}; for (const bk of ['B1', 'B2', 'B3', 'B4', 'B5', 'B6']) { const vs = tier2Races.map((r) => r.closingSpeedByBand?.[bk]).filter(num); if (vs.length) o[bk] = mean(vs); } return o; })(),
-        // OWNER REFINEMENT #2: choreo-window front hero vs B1-pack, and servo-budget compensation.
-        choHeroDriveMean:   mean(tier2Races.map((r) => r.choHeroDrive).filter(num)),
-        choB1PackDriveMean: mean(tier2Races.map((r) => r.choB1PackDrive).filter(num)),
-        choB1PackBonusMean: mean(tier2Races.map((r) => r.choB1PackBonus).filter(num)),
-        choPackOverHeroMean: mean(tier2Races.map((r) => r.choPackOverHero).filter(num)),
-        servoCompFracMean:  mean(tier2Races.map((r) => r.servoCompFrac).filter(num)),
-        bestRankMean:      mean(tier2Races.map((r) => r.bestRank).filter(num)),
-        reachedFrontRate:  rate(tier2Races.map((r) => r.reachedFront)),
-        trafficFracMean:   mean(tier2Races.map((r) => r.trafficFrac).filter(num)),
-      };
-    } else {
-      agg = {
-        mode: 'frontfight', nRaces: tier2Races.length,
-        leadChangesMean:       mean(tier2Races.map((r) => r.leadChanges).filter(num)),
-        anyLeadChangeRate:     rate(tier2Races.map((r) => r.leadChanges > 0)),
-        bothB1Rate:            rate(tier2Races.map((r) => r.bothB1)),
-        leaderTrafficFracMean: mean(tier2Races.map((r) => r.leaderTrafficFrac).filter(num)),
-      };
-    }
-    // FAIRNESS COLUMN (GAP-1 + GAP-2): only meaningful with race-plan ON (rawData carries sollRank/
-    // sollBereich). Reports BOTH start-row tests side by side — the NATIVE per-row-WINS chi-square
-    // (the binding win-bias gate) AND the Holm ordinal (the possibly-over-powered within-band ORDER
-    // test) — plus the per-row win distribution and band-reach. This is what closes GAP-2.
-    let fairness = null;
-    if (RACE_PLAN_ACTIVE && rawData.length) {
-      const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
-      const zr = rawData.filter((r) => r.sollBereich != null);
-      const bandReach = zr.length ? +(zr.filter((r) => zoneIdxOf(r.finalRank) === (r.sollBereich - 1)).length / zr.length).toFixed(4) : null;
-      // PER-BAND band-reach (does B5 collapse without its −2% handicap? does B1 hold?): fraction of
-      // each target-band's racers that finish in that band. Same zoneIdxOf / sollBereich definition.
-      const bandReachPerBand = {};
-      for (let b = 1; b <= BAND_EDGES.length + 1; b++) {
-        const inBand = zr.filter((r) => r.sollBereich === b);
-        bandReachPerBand[`B${b}`] = inBand.length ? +(inBand.filter((r) => zoneIdxOf(r.finalRank) === (b - 1)).length / inBand.length).toFixed(4) : null;
-      }
-      const byRace = new Map();
-      for (const r of rawData) { if (!byRace.has(r.raceIdx)) byRace.set(r.raceIdx, []); byRace.get(r.raceIdx).push(r); }
-      const race0 = [...byRace.values()][0] ?? [];
-      const rowSizeMap = new Map();
-      for (const r of race0) rowSizeMap.set(r.startRowIndex, (rowSizeMap.get(r.startRowIndex) ?? 0) + 1);
-      const totalRows = rowSizeMap.size ? Math.max(...rowSizeMap.keys()) + 1 : 0;
-      const rowSizes = Array.from({ length: totalRows }, (_, i) => rowSizeMap.get(i) ?? 0);
-      const totalRacers = rowSizes.reduce((s, v) => s + v, 0);
-      const nRaces = byRace.size;
-      // NATIVE per-row WINS chi-square (winner = min finalRank per race), row-size weighted.
-      const winsByRow = new Array(totalRows).fill(0);
-      for (const rows of byRace.values()) { const w = rows.reduce((b, r) => (r.finalRank < b.finalRank ? r : b)); if (w.startRowIndex < totalRows) winsByRow[w.startRowIndex]++; }
-      const expWins = rowSizes.map((s) => nRaces * s / totalRacers);
-      let chiSq = 0; for (let i = 0; i < totalRows; i++) if (expWins[i] > 0) chiSq += (winsByRow[i] - expWins[i]) ** 2 / expWins[i];
-      const nativeP = chiSqPValue(chiSq, Math.max(1, totalRows - 1));
-      const perRowWins = winsByRow.map((w, i) => ({ row: i, wins: w, winRate: +(w / nRaces).toFixed(4), expRate: +(rowSizes[i] / totalRacers).toFixed(4), n: rowSizes[i] }));
-      let holmUnfair = null, holmMinP = null;
-      try {
-        const entries = rawData.map((r) => ({ ...r, raceKey: r.raceIdx, targetBandIdx: r.sollBereich != null ? r.sollBereich - 1 : null }));
-        const ext = computeExtendedFairnessStats(entries, rowSizes, { nPerm: 299, prng: makePRNG(((GLOBAL_SEED || 1) * 131 + 7) >>> 0) });
-        holmUnfair = ext.anyConfirmatoryFlagged ?? null;
-        if (Array.isArray(ext.confirmatory) && ext.confirmatory.length) holmMinP = +Math.min(...ext.confirmatory.map((c) => c.pHolm ?? 1)).toFixed(4);
-      } catch (e) { /* leave null */ }
-      fairness = {
-        bandReach, bandReachPerBand, nRaces,
-        nativeWinChiSqP: +nativeP.toFixed(4), nativeWinUnfair: nativeP < 0.05,   // the BINDING win-bias gate
-        holmOrdinalUnfair: holmUnfair, holmMinP,                                  // the ORDER test (secondary)
-        perRowWins,
-      };
-    }
-    const p = join(OUT_DIR, 'tier2.json');
-    writeFileSync(p, JSON.stringify({
-      meta: { world: WORLD_STAMP, track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
-        mode: tier2.mode, malus: tier2.malus, boost: tier2.boost, depth: tier2.depth, release: tier2.release,
-        k: tier2.k, start: tier2.start, racePlan: RACE_PLAN_ACTIVE, climberB1: tier2.climberB1, heroesB1: tier2.heroesB1,
-        directorV4Enabled: DIRECTOR_V4_ENABLED, governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled },
-      agg, fairness, perRace: tier2Races,
-    }, null, 2));
-    console.log(`[tier2:${tier2.mode}] → ${p} | ${JSON.stringify(agg)} | fair=${fairness ? `band=${fairness.bandReach} nativeWinP=${fairness.nativeWinChiSqP}${fairness.nativeWinUnfair ? '(UNFAIR)' : ''} holmUnfair=${fairness.holmOrdinalUnfair}` : 'n/a(race-plan off)'}`);
-  }
 
   // ── Breakaway causal diagnostic output (--breakaway-diag) ───────────────────
   // Self-contained: only runs when the flag is on. Raw aggregates → results/breakaway-diag/
