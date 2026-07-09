@@ -423,7 +423,9 @@ const FRONT_ACTION = argv.includes('--front-action');
 // Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate) is
 // surfaced to rawData + the combo stats ONLY when the governor actually ran, so a governor-off
 // fairness run stays byte-identical (no new columns). Gated on the governor "active" flag.
-const GOVERNOR_ON = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.governorDirectorEnabled;
+// v4 COUPLING (Stage 1, C-1): under v4 the reactive governor is forced OFF (parity with index.jsx) —
+// the pack is steered only by the loose OUTCOME band-steering. v4-OFF → unchanged.
+const GOVERNOR_ON = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.governorDirectorEnabled && !DIRECTOR_V4_ENABLED;
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -918,7 +920,7 @@ export function runSingleRace({
     // Built once per race from the shared dynamics config. Phase fractions + seed from the
     // controller (live boundaries, single source). Default OFF → governorMult stays 1.0.
     // maxEffect + maxStepPerFrame are the shared realism envelope (±clamp + slew).
-    const governorEnabled = !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false);
+    const governorEnabled = !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false) && !DIRECTOR_V4_ENABLED;
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,

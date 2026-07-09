@@ -734,7 +734,14 @@ export default function RaceScreen() {
     // Built once per race from the shared dynamics config. Phase fractions come from the
     // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
     // realism envelope (±12% clamp + slew) the director rides.
-    const directorEnabled = racePlanEnabled && (dynamicsConfig.governorDirectorEnabled ?? false);
+    // v4 COUPLING (Stage 1, C-1): under the v4 choreographed director the pack is steered ONLY by the
+    // loose OUTCOME band-steering — the reactive governor is forced OFF so v4 does not run beside a
+    // second, unmeasured pack-steering force (every frozen Phase A/B cell measured governor OFF). The
+    // governor CODE is untouched: v4-OFF keeps the shipped reactive director as the fallback (byte-identical).
+    const directorEnabled =
+      racePlanEnabled &&
+      (dynamicsConfig.governorDirectorEnabled ?? false) &&
+      !(dynamicsConfig.directorV4Enabled ?? false);
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
