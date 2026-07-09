@@ -91,6 +91,7 @@ import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorC
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
+import { createTefExperiment } from './sim/experiments/tef.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -393,14 +394,10 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Phase-2K: TEF (tStart-Equalization-Feedback) overrides ───────────────────
-const TEF_ACTIVE             = argVal('tefActive', null) === 'true';
-const TEF_ALPHA              = Number(argVal('tefAlpha', '0.03'));
-const TEF_MAX_GAP            = Number(argVal('tefMaxGap', '0.015'));
-const TEF_OPEN_ONLY          = argVal('tefIsOpenOnly', 'true') !== 'false';
-// v3: aggressive base bonus override for rear rows; TEF modulates it toward 1.0 as gap closes
-const TEF_BASE_BONUS_OVERRIDE = argVal('tefBaseBonusOverride', null);
-const TEF_BASE_BONUS          = TEF_BASE_BONUS_OVERRIDE !== null ? Number(TEF_BASE_BONUS_OVERRIDE) : null;
+// ── Phase-2K: TEF (tStart-Equalization-Feedback) — DORMANT EXPERIMENT ─────────
+// Flag parsing + per-frame/construction logic live behind one boundary (INFRA 1c-1).
+// The seam returns numbers only; the core owns every race-state assignment below.
+const tef = createTefExperiment(argVal);
 
 // ── Phase-2K v4: threshold-based bonus with smooth re-roll-style transitions ──
 const V4_ACTIVE        = argVal('v4ThresholdActive', null) === 'true';
@@ -690,11 +687,10 @@ export function runSingleRace({
       const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
       const isRearRowOpen = isOpen && assignment.rowIndex > 0;
       const speedBonusMult =
-        (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && isRearRowOpen)
-          ? TEF_BASE_BONUS
-          : (V4_ACTIVE && isRearRowOpen)
+        tef.constructionBonus(isOpen, isRearRowOpen)
+          ?? ((V4_ACTIVE && isRearRowOpen)
             ? V4_INITIAL_BOOST
-            : (1 + speedBonus);
+            : (1 + speedBonus));
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
@@ -778,11 +774,12 @@ export function runSingleRace({
     let mixingQuota    = null;
     let warmupMeasured = false;
 
-    // TEF: compute per-racer initialGap = how far behind Row-0's start each racer begins
-    if (TEF_ACTIVE && (!TEF_OPEN_ONLY || isOpen)) {
+    // TEF: compute per-racer initialGap = how far behind Row-0's start each racer begins.
+    // Guard + value come from the experiment seam; the core owns the assignment.
+    if (tef.initApplies(isOpen)) {
       const tStartRow0 = Math.max(...racers.map((r) => r.tStart));
       for (const r of racers) {
-        r.initialGap = Math.max(0, tStartRow0 - r.tStart);
+        r.initialGap = tef.initGap(r, tStartRow0);
       }
     }
 
@@ -1647,13 +1644,7 @@ export function runSingleRace({
       // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
-      let tefMeanT0 = 0;
-      if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen)) {
-        const row0Live = racers.filter((q) => q.startRowIndex === 0 && !q.finished);
-        tefMeanT0 = row0Live.length > 0
-          ? row0Live.reduce((s, q) => s + q.t, 0) / row0Live.length
-          : 0;
-      }
+      const tefMeanT0 = tef.meanT0(racers, isOpen);
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
@@ -1663,13 +1654,7 @@ export function runSingleRace({
             ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
             : 1.0;
           // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
-          let tefMult = 1.0;
-          if (TEF_ACTIVE && TEF_BASE_BONUS !== null && (!TEF_OPEN_ONLY || isOpen) && r.initialGap > 0) {
-            const curGap   = tefMeanT0 - r.t;
-            const gapRatio = Math.max(0, Math.min(1, curGap / r.initialGap));
-            const targetBonusMult = 1.0 + (r.initialSpeedBonusMult - 1.0) * gapRatio;
-            tefMult = targetBonusMult / r.initialSpeedBonusMult;
-          }
+          const tefMult = tef.frameMult(r, tefMeanT0, isOpen);
           // STRIP-DOWN: start-row speed-bonus phase envelope (read-only; sim-only). baseSpeed bakes in
           // the FULL speedBonusMult (=1+rawRowBonus); rowEnvMult corrects it to the phase strength s:
           // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
@@ -2878,7 +2863,7 @@ if (isMain) {
   // experiment factors are all dormant (=1.0) AND the browser's zoneMult is off. Print exactly that.
   const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
   console.log('Force multipliers      :');
-  console.log(`  tefMult              : ${st(TEF_ACTIVE)}   (--tefActive)`);
+  console.log(`  tefMult              : ${st(tef.active)}   (--tefActive)`);
   console.log(`  startRowBoostMult    : ${st(V4_ACTIVE)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
   console.log(`  tier2Mult            : ${st(TIER2_ACTIVE)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
   console.log(`  zoneMult             : NOT SIMULATED — browser-only (raceZones, ±20%). If the browser had`);
@@ -2886,10 +2871,10 @@ if (isMain) {
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
-  if (TEF_ACTIVE) {
-    console.log(`⚠️  Phase-2K TEF aktiv: α=${TEF_ALPHA} maxGap=${TEF_MAX_GAP} openOnly=${TEF_OPEN_ONLY}`);
-    if (TEF_BASE_BONUS !== null) {
-      console.log(`   v3: baseBonusOverride=${TEF_BASE_BONUS} für Rear-Rows, moduliert via tStart-Gap`);
+  if (tef.active) {
+    console.log(`⚠️  Phase-2K TEF aktiv: α=${tef.alpha} maxGap=${tef.maxGap} openOnly=${tef.openOnly}`);
+    if (tef.baseBonus !== null) {
+      console.log(`   v3: baseBonusOverride=${tef.baseBonus} für Rear-Rows, moduliert via tStart-Gap`);
     } else {
       console.log(`   v2: speedBonusMult wird bei Re-Rolls auf Basis tStart-Gap moduliert`);
     }
