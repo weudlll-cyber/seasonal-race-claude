@@ -321,6 +321,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // their curve exactly). Both only take effect when directorV4Enabled — off → byte-identical.
   directorV4Intensity: 0.6,
   directorV4PackBandStrictness: 0.5,
+  // Stage 1 spoiler switch (default OFF): when v4 is ON, suppress the B1-target pool's CHAOS areaBonus
+  // so the future top-5 are not pulled forward before the race opens up. A bonus switch, NOT a depth
+  // tool (depth is authored via the establish-act fall-back). Only applies when v4 is ON.
+  directorV4SuppressChaosBonusB1: false,
   // v4 finish shaping (Step 4): the B1 heroes are held to directorV4ReleaseProgress then RELEASED to
   // natural speed for a real finish contest; each other band resolves into its band by its own
   // (earlier) checkpoint so the field slots in gradually, not in a settle. All only apply when v4 is

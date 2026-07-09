@@ -252,6 +252,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _v4Enabled: !!config.directorV4Enabled,
     _v4Intensity: config.directorV4Intensity ?? 0.6,
     _v4PackBandStrictness: config.directorV4PackBandStrictness ?? 0.5,
+    // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
+    // top-5 are not pulled forward before the race opens. A bonus switch, NOT a depth tool (depth is
+    // authored via the establish-act fall-back). Read in update()'s v4 areaBonus block.
+    _v4SuppressChaosBonusB1: !!config.directorV4SuppressChaosBonusB1,
     // Step 4: front-contest release + staggered per-band resolve (DevScreen-adjustable). B1 heroes
     // are held to _v4ReleaseProgress then RELEASED to natural speed; _v4BandResolve[band] is the
     // resolve checkpoint per band (index 0=B1 uses the release). Fed to the generator + the release.
@@ -362,37 +366,63 @@ export function createTrajectoryController(racePlan) {
 
   function update(racers, elapsedMs, phaseProgress = null) {
     const _preOutcome = getPhase(elapsedMs, phaseProgress) !== 'OUTCOME';
-    // ── areaBonusMult: full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
-    // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
-    // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
-    const fadeNotStarted =
-      phaseProgress != null ? phaseProgress < transEndFrac : elapsedMs < transEnd;
-    if (fadeNotStarted) {
+    // ── areaBonusMult ──────────────────────────────────────────────────────────
+    // v4 (Stage 1, C-2): the areaBonus ends WITH the CHAOS phase — full during chaos, INSTANT ZERO
+    // from the chaos boundary (pulkStart) onward, for EVERY racer (pack and heroes alike, so the
+    // measured headwind asymmetry disappears). The boundary is READ from the phase structure
+    // (pulkStartFrac), never a literal (A4). No fade past it (C-2). Under v4 `bonusFadeDuration`
+    // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (:156) — neither is
+    // deleted (C-3). v4-OFF falls through to the shipped transEnd fade below → byte-identical.
+    if (plan._v4Enabled) {
+      const inChaos = phaseProgress != null ? phaseProgress < pulkStartFrac : elapsedMs < pulkStart;
       for (const r of racers) {
-        r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
+        if (!inChaos) {
+          r.areaBonusMult = 1.0;
+          continue;
+        } // instant cut at the chaos boundary
+        let b = plan._racerAreaBonus.get(r.index) ?? 1.0;
+        // Spoiler switch (default OFF): suppress the B1-target pool's CHAOS bonus so the future top-5
+        // are not pulled forward before the race opens (owner). A bonus switch, NOT a depth tool.
+        if (
+          plan._v4SuppressChaosBonusB1 &&
+          (plan._racerTargetRank.get(r.index) ?? Infinity) <= BAND_EDGES[0]
+        )
+          b = 1.0;
+        r.areaBonusMult = b;
       }
     } else {
-      // Anchor the real-time fade ramp at the moment the trigger fired so elapsedFade starts at 0.
-      //  • Legacy (null) path: the clock IS elapsedMs and the trigger boundary is exactly transEnd,
-      //    so anchor there → bit-identical to the original behaviour (elapsedFade >= 0 always here).
-      //  • Progress path: the trigger boundary in ms is not known ahead of time (it depends on when
-      //    leader-progress crosses transEndFrac), so capture elapsedMs on the first triggered step.
-      let fadeAnchorMs;
-      if (phaseProgress != null) {
-        if (_fadeStartMs === null) _fadeStartMs = elapsedMs;
-        fadeAnchorMs = _fadeStartMs;
+      // ── v4-OFF: areaBonusMult full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
+      // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
+      // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
+      const fadeNotStarted =
+        phaseProgress != null ? phaseProgress < transEndFrac : elapsedMs < transEnd;
+      if (fadeNotStarted) {
+        for (const r of racers) {
+          r.areaBonusMult = plan._racerAreaBonus.get(r.index) ?? 1.0;
+        }
       } else {
-        fadeAnchorMs = transEnd;
-      }
-      const elapsedFade = elapsedMs - fadeAnchorMs;
-      // Math.max(0, …): lower-clamp safety net — guarantees the cubic ease never sees a negative
-      // argument (which previously blew areaBonusMult up to 5–556× / negative). Upper Math.min(1.0).
-      const easedProgress = easeInOutCubic(
-        Math.max(0, Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration))
-      );
-      for (const r of racers) {
-        const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
-        r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
+        // Anchor the real-time fade ramp at the moment the trigger fired so elapsedFade starts at 0.
+        //  • Legacy (null) path: the clock IS elapsedMs and the trigger boundary is exactly transEnd,
+        //    so anchor there → bit-identical to the original behaviour (elapsedFade >= 0 always here).
+        //  • Progress path: the trigger boundary in ms is not known ahead of time (it depends on when
+        //    leader-progress crosses transEndFrac), so capture elapsedMs on the first triggered step.
+        let fadeAnchorMs;
+        if (phaseProgress != null) {
+          if (_fadeStartMs === null) _fadeStartMs = elapsedMs;
+          fadeAnchorMs = _fadeStartMs;
+        } else {
+          fadeAnchorMs = transEnd;
+        }
+        const elapsedFade = elapsedMs - fadeAnchorMs;
+        // Math.max(0, …): lower-clamp safety net — guarantees the cubic ease never sees a negative
+        // argument (which previously blew areaBonusMult up to 5–556× / negative). Upper Math.min(1.0).
+        const easedProgress = easeInOutCubic(
+          Math.max(0, Math.min(1.0, elapsedFade / plan._areaBonusFadeDuration))
+        );
+        for (const r of racers) {
+          const origBonus = plan._racerAreaBonus.get(r.index) ?? 1.0;
+          r.areaBonusMult = origBonus + (1.0 - origBonus) * easedProgress;
+        }
       }
     }
 
@@ -453,12 +483,10 @@ export function createTrajectoryController(racePlan) {
         plan._v4PrevProgress = phaseProgress;
       }
     }
-    // A5: a hero's motion in the choreo window is owned by its curve + servo, so the targetRank-
-    // coupled areaBonus must NOT apply to heroes there (it would fight their curves and leak
-    // target-bias). Chaos-phase areaBonus (set above, before generation) already pulled the winner
-    // forward; the PACK keeps its band-convergence bonus. Neutralize only heroes, only once generated.
+    // Stage 1 (C-2): under v4 the areaBonus is already zero for EVERY racer from the chaos boundary
+    // (set in the areaBonus block above), so the old per-hero neutralize here is now redundant — the
+    // whole-field cut subsumes it. heroCurves only exist post-pulkStart, i.e. after the cut.
     const heroCurves = plan._heroCurves;
-    if (heroCurves) for (const r of racers) if (r.isHeroChoreographed) r.areaBonusMult = 1.0;
 
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;

@@ -52,6 +52,7 @@ export function loadRaceDynamicsConfig() {
     typeof merged.governorDirectorBoostHeadroom !== 'number' ||
     merged.governorDirectorBoostHeadroom < 0 ||
     typeof merged.directorV4Enabled !== 'boolean' ||
+    typeof merged.directorV4SuppressChaosBonusB1 !== 'boolean' ||
     typeof merged.directorV4Intensity !== 'number' ||
     merged.directorV4Intensity < 0 ||
     merged.directorV4Intensity > 1 ||

@@ -396,6 +396,84 @@ describe('createRacePlan — areaBonus', () => {
   });
 });
 
+// ── createTrajectoryController — v4 areaBonus instant cut (Stage 1, C-2) ──────
+
+describe('createTrajectoryController — v4 areaBonus instant cut', () => {
+  function v4Racers() {
+    return BASE_RACERS.map((r) => ({
+      ...r,
+      t: 0.5,
+      finished: false,
+      avoidanceActive: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+      areaBonusMult: 1.0,
+    }));
+  }
+  const fracOf = (plan) => plan._phases.pulkStart / plan._targetDurationMs;
+
+  it('keeps full areaBonus during CHAOS (before the chaos boundary)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true },
+      BASE_SEED
+    );
+    const racers = v4Racers();
+    createTrajectoryController(plan).update(racers, 1000, fracOf(plan) - 0.05);
+    for (const r of racers)
+      expect(r.areaBonusMult).toBeCloseTo(plan._racerAreaBonus.get(r.index) ?? 1.0, 5);
+  });
+
+  it('INSTANT-cuts areaBonus to 1.0 for EVERY racer from the chaos boundary (no fade)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true },
+      BASE_SEED
+    );
+    const racers = v4Racers();
+    const p = fracOf(plan) + 0.01;
+    createTrajectoryController(plan).update(racers, TARGET_DUR_MS * p, p);
+    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
+  });
+
+  it('spoiler switch suppresses the B1-target pool bonus during chaos (default off keeps it)', () => {
+    const on = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true, directorV4SuppressChaosBonusB1: true },
+      BASE_SEED
+    );
+    const off = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true },
+      BASE_SEED
+    );
+    const rOn = v4Racers();
+    const rOff = v4Racers();
+    createTrajectoryController(on).update(rOn, 1000, fracOf(on) - 0.05);
+    createTrajectoryController(off).update(rOff, 1000, fracOf(off) - 0.05);
+    for (const r of rOn)
+      if ((on._racerTargetRank.get(r.index) ?? 99) <= 5)
+        expect(r.areaBonusMult).toBeCloseTo(1.0, 5);
+    // default off: at least one B1 racer keeps its 1.03 bonus
+    expect(
+      rOff.some(
+        (r) =>
+          (off._racerTargetRank.get(r.index) ?? 99) <= 5 && Math.abs(r.areaBonusMult - 1.03) < 1e-6
+      )
+    ).toBe(true);
+  });
+});
+
 // ── createTrajectoryController — areaBonusMult ───────────────────────────
 
 describe('createTrajectoryController — areaBonusMult', () => {

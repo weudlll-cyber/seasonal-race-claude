@@ -140,6 +140,8 @@ const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAU
 // v4 hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const DIRECTOR_V4_ENABLED     = argVal('directorV4Enabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled)) === 'true';
+// Stage 1 spoiler switch (parity with racePlanner/index.jsx). Default off → the shipped default.
+const DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1 = argVal('directorV4SuppressChaosBonusB1', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4SuppressChaosBonusB1)) === 'true';
 const DIRECTOR_V4_INTENSITY   = Number(argVal('directorV4Intensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity)));
 const DIRECTOR_V4_PACK_BAND_STRICTNESS = Number(argVal('directorV4PackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness)));
 const DIRECTOR_V4_RELEASE_PROGRESS = Number(argVal('directorV4ReleaseProgress', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ReleaseProgress)));
@@ -4072,6 +4074,7 @@ if (isMain) {
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
               directorV4Enabled:       DIRECTOR_V4_ENABLED,
+              directorV4SuppressChaosBonusB1: DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1,
               directorV4Intensity:     DIRECTOR_V4_INTENSITY,
               directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS,
               directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,

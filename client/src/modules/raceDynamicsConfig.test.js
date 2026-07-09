@@ -54,6 +54,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorCeilingCap: true,
       governorDirectorBoostHeadroom: 0.0,
       directorV4Enabled: false,
+      directorV4SuppressChaosBonusB1: false,
       directorV4Intensity: 0.6,
       directorV4PackBandStrictness: 0.5,
       directorV4ReleaseProgress: 0.97,
