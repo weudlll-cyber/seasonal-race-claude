@@ -27,6 +27,7 @@ import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
 import RaceZonesSection from './sections/RaceZonesSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import UserManagementSection from './sections/UserManagementSection.jsx';
+import ConfigExportSection from './sections/ConfigExportSection.jsx';
 import s from './DevScreen.module.css';
 
 // Default-deny: only explicit 'operator' tier is operator-visible; anything else is admin-only.
@@ -140,6 +141,14 @@ const SECTIONS = [
     label: 'Surface Classes',
     desc: 'Define surface-effect classes — type, generator, and visual config',
     component: SurfaceClassManager,
+    tier: 'advanced',
+  },
+  {
+    id: 'config-export',
+    icon: '📤',
+    label: 'Export Race Config',
+    desc: 'Download world.json — the exact config the game reads at race start, for sim verification',
+    component: ConfigExportSection,
     tier: 'advanced',
   },
   {
