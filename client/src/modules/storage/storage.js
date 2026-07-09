@@ -21,7 +21,6 @@ export const KEYS = {
   ROW_LAYOUT_CONFIG: 'racearena:rowLayoutConfig',
   RACE_DYNAMICS_CONFIG: 'racearena:raceDynamicsConfig',
   CAMERA_CONFIG: 'racearena:cameraConfig',
-  RACE_ZONE_CONFIG: 'racearena:raceZoneConfig',
   FRAME_TIMING_CONFIG: 'racearena:frameTimingConfig',
   DEV_PANEL_VIEW: 'racearena:devPanelView',
   SURFACE_CLASSES_CACHE: 'racearena:cache:surfaceClasses',

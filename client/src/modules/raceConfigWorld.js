@@ -10,7 +10,9 @@
 
 // Bump when the world SHAPE changes (added/removed config key). A result stamped with an old schema
 // version does not describe the current world shape and must be re-exported.
-export const WORLD_SCHEMA_VERSION = 1;
+// v2: raceZoneConfig removed (race-zones feature deleted). An old v1 world.json carries raceZoneConfig;
+// the sim rejects it loudly (schemaVersion mismatch → STAGE-0 ABORT) so it can never be half-honoured.
+export const WORLD_SCHEMA_VERSION = 2;
 
 // The config keys the browser reads on the race path, enumerated ONCE here (index.jsx:424-453). The
 // export gathers exactly these; the sim honours exactly these. Adding a race-path config key WITHOUT
@@ -20,7 +22,6 @@ export const WORLD_CONFIG_KEYS = [
   'raceBehaviorConfig',
   'rowLayoutConfig',
   'baseSpeedConfig',
-  'raceZoneConfig',
   'autoScaleConfig',
   'frameTimingConfig',
   'cameraConfig',
@@ -54,23 +55,14 @@ export function hashWorld(world) {
   return { full: hex, short: hex.slice(0, 6) };
 }
 
-// ── SIMULATABILITY: the named reasons the sim CANNOT faithfully run a given world. The sim's t-update
-// has no `zoneMult`, so a world with race zones enabled would be silently mis-simulated (the browser
-// clamps zoneMult to [0.8, 1.2] = up to ±20 %). Return a list of {code, message}; empty = simulatable.
-// This is the ONE place that knowledge lives, so the browser can warn and the sim can ABORT off the
-// same list. ──
+// ── SIMULATABILITY: the named reasons the sim CANNOT faithfully run a given world. Return a list of
+// {code, message}; empty = simulatable. This is the ONE place that knowledge lives, so the browser can
+// warn and the sim can ABORT off the same list. Currently EMPTY: the only reason ever registered here
+// was RACE_ZONES_ENABLED, removed when the race-zones feature was deleted (the browser and sim t-updates
+// are now factor-for-factor aligned). Kept as the extension point for the next unsimulatable config. ──
 export function unsimulatableReasons(world) {
   const reasons = [];
-  const cfg = world?.configs ?? {};
-  if (cfg.raceZoneConfig && cfg.raceZoneConfig.enabled === true) {
-    reasons.push({
-      code: 'RACE_ZONES_ENABLED',
-      message:
-        'raceZoneConfig.enabled=true: the browser applies zoneMult (clamped [0.8,1.2], up to ±20%) in ' +
-        'its t-update; the sim has NO zoneMult and never imports raceZones. This run would NOT describe ' +
-        'that race. Disable race zones (owner decision to delete them) or do not simulate this world.',
-    });
-  }
+  void world;
   return reasons;
 }
 

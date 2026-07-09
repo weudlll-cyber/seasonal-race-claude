@@ -18,7 +18,6 @@ const baseWorld = {
   configs: {
     raceDynamicsConfig: { directorV4Enabled: false, directorV4Intensity: 0.6 },
     raceBehaviorConfig: { startSpreadRange: 0.6 },
-    raceZoneConfig: { enabled: false },
   },
   racerTypeOverrides: {},
 };
@@ -51,16 +50,14 @@ describe('raceConfigWorld — hash determinism + sensitivity', () => {
 });
 
 describe('raceConfigWorld — simulatability (fail-loud source)', () => {
-  it('race zones DISABLED → simulatable (no reasons)', () => {
+  it('a default world is simulatable (no reasons)', () => {
     expect(unsimulatableReasons(baseWorld)).toEqual([]);
   });
 
-  it('race zones ENABLED → a named RACE_ZONES_ENABLED reason (not a warning)', () => {
-    const w = JSON.parse(JSON.stringify(baseWorld));
-    w.configs.raceZoneConfig.enabled = true;
-    const reasons = unsimulatableReasons(w);
-    expect(reasons).toHaveLength(1);
-    expect(reasons[0].code).toBe('RACE_ZONES_ENABLED');
+  it('unsimulatableReasons has no registered reasons (race-zones removed) → always []', () => {
+    // The only reason ever registered was RACE_ZONES_ENABLED, deleted with the feature. Kept as the
+    // extension point for the next unsimulatable config; today it returns [] for any world.
+    expect(unsimulatableReasons({ configs: { anything: { enabled: true } } })).toEqual([]);
   });
 });
 

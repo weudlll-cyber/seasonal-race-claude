@@ -20,7 +20,6 @@ import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js'
 import {
   drawTitle,
   drawTitleOpen,
-  drawZoneBand,
   drawLapInfo,
   drawFinalLapOverlay,
   drawCountdownOverlay,
@@ -66,8 +65,6 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { applyGovernor, computeDirectorCeiling } from '../../modules/raceGovernor.js';
-import { loadRaceZoneConfig } from '../../modules/raceZoneConfig.js';
-import { resolveZones, zoneMultAt } from '../../modules/raceZones.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -430,8 +427,6 @@ export default function RaceScreen() {
     behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
-    const raceZoneConfig = loadRaceZoneConfig();
-    const zones = resolveZones(raceZoneConfig, isOpenTrack);
     const frameTimingConfig = loadFrameTimingConfig();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
@@ -1140,11 +1135,6 @@ export default function RaceScreen() {
             const brake = r.avoidanceActive
               ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
               : 1.0;
-            // Zone mult: position-only, type-neutral. 1.0 when zones is empty or racer is outside.
-            // cf (course fraction) = 0 at start, 1 at finish; open maps r.t onto [0,1] via finishT.
-            // Note: zones are not applied in constSpeed (D4) diagnostic mode — D4 overwrites t/vt.
-            const zt = isOpenTrack ? r.t / st.finishT : tPos(r.t);
-            const zoneMult = zoneMultAt(zt, zones);
             // PULK-action: start-row bonus phase envelope (parity with sim; default 1.0 = no-op). baseSpeed
             // bakes in the FULL speedBonusMult; rowEnvMult corrects it to the phase strength s (EARLY/PULK/
             // POST): effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
@@ -1168,8 +1158,7 @@ export default function RaceScreen() {
                     rowEnvMult *
                     r.trajectoryMult *
                     r.areaBonusMult *
-                    (r.governorMult ?? 1.0) *
-                    zoneMult,
+                    (r.governorMult ?? 1.0),
                 st.finishT + 0.001
               );
             } else {
@@ -1182,13 +1171,7 @@ export default function RaceScreen() {
             // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
             r.vt =
               race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed *
-                    boost *
-                    brake *
-                    rowEnvMult *
-                    r.trajectoryMult *
-                    r.areaBonusMult *
-                    zoneMult) /
+                ? (r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult) /
                   race_baseSpeed
                 : 0;
           }
@@ -1631,7 +1614,6 @@ export default function RaceScreen() {
       drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
       if (isOpenTrack && st.finishT < 1)
         drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
-      if (zones.length > 0) drawZoneBand(ctx, shape, zones, isOpenTrack, st.finishT);
       drawParticles(ctx, st.dustParticles, st.burstParticles);
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;

@@ -23,13 +23,12 @@ beforeEach(() => {
 });
 
 describe('buildWorldConfig — gathers a defaults world when storage is empty', () => {
-  it('has the schema version, the 8 race-path configs, and no overrides', () => {
+  it('has the schema version, the 7 race-path configs, and no overrides', () => {
     const w = buildWorldConfig();
     expect(w.schemaVersion).toBe(WORLD_SCHEMA_VERSION);
     for (const k of [
       'raceDynamicsConfig',
       'raceBehaviorConfig',
-      'raceZoneConfig',
       'rowLayoutConfig',
       'baseSpeedConfig',
       'autoScaleConfig',
@@ -52,7 +51,7 @@ describe('buildWorldConfig — gathers a defaults world when storage is empty', 
 // The export logic (hash / deviations / simulatability) tested on explicit blobs — deterministic.
 const base = () => ({
   schemaVersion: WORLD_SCHEMA_VERSION,
-  configs: { raceZoneConfig: { enabled: false }, autoScaleConfig: { enabled: true } },
+  configs: { autoScaleConfig: { enabled: true } },
   racerTypeOverrides: {},
   effectiveRacerTypes: { boarder: { displaySize: 40 } },
 });
@@ -73,11 +72,6 @@ describe('describeDeviations names the owner-relevant traps', () => {
   it('all defaults → no deviations', () => {
     expect(describeDeviations(base())).toEqual([]);
   });
-  it('brake zone ON is named', () => {
-    const w = base();
-    w.configs.raceZoneConfig.enabled = true;
-    expect(describeDeviations(w)).toContain('brake zone ON');
-  });
   it('auto-scale OFF is named', () => {
     const w = base();
     w.configs.autoScaleConfig.enabled = false;
@@ -91,13 +85,6 @@ describe('describeDeviations names the owner-relevant traps', () => {
 });
 
 describe('worldStatus surfaces the sim ABORT reason (same module as the sim)', () => {
-  it('brake zone ON → unsimulatable RACE_ZONES_ENABLED + banner names it', () => {
-    const w = base();
-    w.configs.raceZoneConfig.enabled = true;
-    const s = worldStatus(w);
-    expect(s.unsimulatable[0].code).toBe('RACE_ZONES_ENABLED');
-    expect(s.deviations).toContain('brake zone ON');
-  });
   it('a defaults world → no ABORT reason', () => {
     expect(worldStatus(base()).unsimulatable).toEqual([]);
   });

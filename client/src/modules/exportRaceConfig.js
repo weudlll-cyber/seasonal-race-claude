@@ -10,7 +10,6 @@
 // ============================================================
 import { loadRaceDynamicsConfig } from './raceDynamicsConfig.js';
 import { loadRaceBehaviorConfig } from './raceBehaviorConfig.js';
-import { loadRaceZoneConfig } from './raceZoneConfig.js';
 import { loadRowLayoutConfig } from './rowLayoutConfig.js';
 import { loadBaseSpeedConfig } from './baseSpeedConfig.js';
 import { loadAutoScaleConfig } from './autoSpriteScale.js';
@@ -56,7 +55,6 @@ export function buildWorldConfig() {
     configs: {
       raceDynamicsConfig: loadRaceDynamicsConfig(),
       raceBehaviorConfig: loadRaceBehaviorConfig(),
-      raceZoneConfig: loadRaceZoneConfig(),
       rowLayoutConfig: loadRowLayoutConfig(),
       baseSpeedConfig: loadBaseSpeedConfig(),
       autoScaleConfig: loadAutoScaleConfig(),
@@ -83,9 +81,8 @@ export function describeDeviations(world = buildWorldConfig()) {
   ).length;
   if (nOverrides > 0) dev.push(`${nOverrides} racer override${nOverrides > 1 ? 's' : ''}`);
   if (c.autoScaleConfig && c.autoScaleConfig.enabled === false) dev.push('auto-scale OFF');
-  if (c.raceZoneConfig && c.raceZoneConfig.enabled === true) dev.push('brake zone ON');
   // Generic per-config deviation: load*Config() returns the FULL merged config, so a direct compare to
-  // the shipped default flags any change. (raceZone/autoScale already named above; skip to avoid dupes.)
+  // the shipped default flags any change. (autoScale already named above; skip to avoid dupes.)
   const cmp = (cfg, def, name) => {
     if (cfg && canonicalJson(cfg) !== canonicalJson(def)) dev.push(`${name} changed`);
   };
@@ -100,6 +97,6 @@ export function worldStatus(world = buildWorldConfig()) {
     world,
     hashShort: hashWorld(world).short,
     deviations: describeDeviations(world),
-    unsimulatable: unsimulatableReasons(world), // e.g. [{code:'RACE_ZONES_ENABLED', message}]
+    unsimulatable: unsimulatableReasons(world), // currently always [] (see raceConfigWorld.js)
   };
 }

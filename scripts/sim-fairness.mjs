@@ -119,8 +119,8 @@ function argVal(key, def) {
 
 // ── Stage 0: --config world import + FAIL-LOUD (never silently assume) ──────────────────────────
 // `--config=world.json` makes the sim run the OWNER'S actual exported world instead of assumed defaults.
-// Hard rules: (a) a world the sim cannot faithfully simulate (race zones → zoneMult, which the sim's
-// t-update lacks) ABORTS — never runs-and-ignores; (b) no --config → a prominent ASSUMED-DEFAULTS banner
+// Hard rules: (a) a world from an OLD schema (WORLD_SCHEMA_MISMATCH) or one the sim cannot faithfully
+// simulate ABORTS — never runs-and-ignores; (b) no --config → a prominent ASSUMED-DEFAULTS banner
 // + every result stamped provisional; (c) the sim refuses to STAMP a world it does not fully HONOUR —
 // any config field it hasn't wired that differs from default ABORTS, so a stamp never over-claims.
 function abortStage0(msg) {
@@ -138,7 +138,8 @@ function loadWorldOrNull() {
   try { raw = JSON.parse(readFileSync(isAbsolute(p) ? p : join(ROOT, p), 'utf8')); }
   catch (e) { abortStage0(`--config could not be read/parsed: ${p}\n  ${e.message}`); }
   if (raw.schemaVersion !== WORLD_SCHEMA_VERSION) {
-    abortStage0(`--config schemaVersion ${raw.schemaVersion} != this sim's ${WORLD_SCHEMA_VERSION}. Re-export from the browser.`);
+    abortStage0(`[WORLD_SCHEMA_MISMATCH] --config schemaVersion ${raw.schemaVersion} != this sim's ${WORLD_SCHEMA_VERSION}. ` +
+      `The world SHAPE changed (e.g. race-zones removed at v2); an old export cannot be trusted. Re-export from the browser.`);
   }
   const reasons = unsimulatableReasons(raw);
   if (reasons.length) abortStage0('this world CANNOT be simulated:\n' + reasons.map((r) => `  [${r.code}] ${r.message}`).join('\n'));
@@ -2543,15 +2544,14 @@ if (isMain) {
   // ── Stage 0 (0.3c): FORCE-MULTIPLIER BANNER — make every t-update factor's state explicit ──────
   // The sim's t-update chain (sim-fairness.mjs t += baseSpeed·boost·brake·tefMult·rowEnvMult·
   // startRowBoostMult·trajectoryMult·areaBonusMult·governorMult·tier2Mult) matches the BROWSER's chain
-  // (index.jsx …·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·ZONEMULT) ONLY WHEN the sim's
-  // experiment factors are all dormant (=1.0) AND the browser's zoneMult is off. Print exactly that.
+  // (index.jsx …·rowEnvMult·trajectoryMult·areaBonusMult·governorMult) ONLY WHEN the sim's experiment
+  // factors are all dormant (=1.0). The browser's zoneMult was removed with the race-zones feature, so
+  // the two chains are now factor-for-factor aligned. Print exactly that.
   const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
   console.log('Force multipliers      :');
   console.log(`  tefMult              : ${st(tef.active)}   (--tefActive)`);
   console.log(`  startRowBoostMult    : ${st(v4.active)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
   console.log(`  tier2Mult            : ${st(tier2.active)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
-  console.log(`  zoneMult             : NOT SIMULATED — browser-only (raceZones, ±20%). If the browser had`);
-  console.log(`                         raceZoneConfig.enabled=true, this run does NOT describe that race.`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }

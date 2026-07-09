@@ -37,6 +37,17 @@ function App() {
     };
   }, [brandEventName]);
 
+  useEffect(() => {
+    // One-time purge (BEHAVIOUR step 2): the race-zones feature was removed. Delete any stale stored
+    // raceZoneConfig so a future export, migration or debugging session can never surface a control for
+    // a feature that no longer exists. Removing the KEYS entry alone would leave the value in the browser.
+    try {
+      localStorage.removeItem('racearena:raceZoneConfig');
+    } catch {
+      /* localStorage unavailable (SSR/private mode) — nothing to purge */
+    }
+  }, []);
+
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>

@@ -3,7 +3,8 @@
 // A safeguard that cannot be shown to detect its own failure is worthless (owner). Asserts:
 //   G1  no --config            → result stamped ASSUMED-DEFAULTS (provisional)
 //   G2  a fully-honoured world  → result stamped that world's hash; race byte-identical to no-config
-//   G3  raceZoneConfig.enabled  → sim ABORTS (exit 2, named RACE_ZONES_ENABLED), no race
+//   G3  an OLD-schema world.json → sim ABORTS (exit 2, named WORLD_SCHEMA_MISMATCH), no race
+//        (race zones were removed at schema v2; a v1 export must fail loud, never be half-honoured)
 //   G4  racerTypeOverrides      → sim ABORTS (not yet honoured), no stamp over-claim
 //   G5  flip a displaySize override → hash changes; flip back → matches (via the shared module)
 // Run: node scripts/night-sweep/golden-stage0.mjs   → exits 0 on pass, 1 on fail.
@@ -17,7 +18,6 @@ import {
   DEFAULT_RACE_DYNAMICS_CONFIG, DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../../client/src/modules/storage/defaults.js';
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../../client/src/modules/autoSpriteScale.js';
-import { DEFAULT_RACE_ZONE_CONFIG } from '../../client/src/modules/raceZoneConfig.js';
 import { WORLD_SCHEMA_VERSION, hashWorld } from '../../client/src/modules/raceConfigWorld.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -34,7 +34,6 @@ const defaultsWorld = () => ({
     rowLayoutConfig: DEFAULT_ROW_LAYOUT_CONFIG,
     baseSpeedConfig: DEFAULT_BASE_SPEED_CONFIG,
     autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
-    raceZoneConfig: DEFAULT_RACE_ZONE_CONFIG,
   },
   racerTypeOverrides: {},
 });
@@ -67,12 +66,15 @@ ok(g2.code === 0 && d2.meta.world.worldHash === expectHash && d2.meta.world.prov
 ok(JSON.stringify(d2.results) === JSON.stringify(d1.results) && JSON.stringify(d2.rawData) === JSON.stringify(d1.rawData),
   'G2 a defaults-world race is byte-identical to the no-config race (honouring is faithful)');
 
-// G3 — race zones enabled → ABORT
-const w3 = defaultsWorld(); w3.configs.raceZoneConfig = { ...DEFAULT_RACE_ZONE_CONFIG, enabled: true };
-writeWorld('world-zones.json', w3);
-const g3 = runSim(['--config=client/tmp/golden-stage0/world-zones.json'], 'zones');
-ok(g3.code === 2 && /RACE_ZONES_ENABLED/.test(g3.stderr) && /STAGE-0 ABORT/.test(g3.stderr),
-  'G3 raceZoneConfig.enabled=true → sim ABORTS (exit 2, named RACE_ZONES_ENABLED), no race');
+// G3 — an OLD-schema world.json (the shape before race-zones were removed) → ABORT.
+// A v1 export carried raceZoneConfig; it must fail loud with a NAMED error, never be half-honoured.
+const w3 = defaultsWorld();
+w3.schemaVersion = WORLD_SCHEMA_VERSION - 1;                 // stale export from before the bump
+w3.configs.raceZoneConfig = { enabled: true, position: 0.5, width: 0.05, brakeStrength: 0.85 };
+writeWorld('world-oldschema.json', w3);
+const g3 = runSim(['--config=client/tmp/golden-stage0/world-oldschema.json'], 'oldschema');
+ok(g3.code === 2 && /WORLD_SCHEMA_MISMATCH/.test(g3.stderr) && /STAGE-0 ABORT/.test(g3.stderr),
+  'G3 old-schema world.json → sim ABORTS (exit 2, named WORLD_SCHEMA_MISMATCH), no race');
 
 // G4 — racerTypeOverrides present → ABORT (not yet honoured; never stamp what it does not honour)
 const w4 = defaultsWorld(); w4.racerTypeOverrides = { boarder: { displaySize: 999 } };

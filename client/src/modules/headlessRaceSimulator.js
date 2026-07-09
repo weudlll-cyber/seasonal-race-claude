@@ -4,7 +4,15 @@
 // Project:     RaceArena
 // Description: Pure-JS headless race simulation for empirical distribution
 //              measurement. No Canvas, no DOM, no React.
-//              Replicates the core race loop from RaceScreen/index.jsx.
+//
+//              ⚠️ SIMPLIFIED STATISTICAL MODEL — NOT THE GAME. Its numbers do NOT describe
+//              the real race. It deliberately OMITS trajectoryMult, areaBonusMult and
+//              governorMult from the t-update, and its baseSpeed omits the racer type's
+//              speedMultiplier; world positions use a simplified circular approximation.
+//              It exists only to measure the empirical "racers side-by-side" distribution
+//              for DiagnoseVerteilung. Do NOT read its output as the game, and do NOT unify
+//              its t-update with the shared browser/sim formula — it is a different model on
+//              purpose.
 //
 // Track parameters default to dirt-oval (closed, 1280×720) when trackConfig is omitted:
 //   pathLengthPx = 3245, trackWidthPx = 93, raceDurationSeconds = 60
@@ -24,7 +32,6 @@ import {
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
 import { computeClosedTrackSsf, lapsFromDuration } from './camera/lapUtils.js';
-import { resolveZones, zoneMultAt } from './raceZones.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +142,6 @@ export function simulateRace({
   autoScaleConfig,
   framesPerRace = FRAMES_PER_RACE,
   trackConfig = null,
-  zoneConfig = null,
 }) {
   const rng = mulberry32(seed);
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
@@ -153,7 +159,6 @@ export function simulateRace({
   const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
   const closedSsf = computeClosedTrackSsf(pathLengthPx);
   const race_baseSpeed = computeRaceBaseSpeed(finishT, raceDurationSeconds * ems * closedSsf);
-  const zones = resolveZones(zoneConfig ?? { enabled: false }, false);
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;
@@ -339,11 +344,8 @@ export function simulateRace({
 
       const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
       const brake = r.avoidanceActive ? behaviorConfig.speedBrakeFactor : 1.0;
-      // Zone mult: closed-track only in sim (headlessRaceSimulator always uses closed tracks).
-      const zt = ((r.t % 1) + 1) % 1;
-      const zoneMult = zoneMultAt(zt, zones);
       if (!r.finished) {
-        r.t = Math.min(r.t + r.baseSpeed * boost * brake * (DT / 16) * zoneMult, finishT + 0.001);
+        r.t = Math.min(r.t + r.baseSpeed * boost * brake * (DT / 16), finishT + 0.001);
       }
     }
   }
