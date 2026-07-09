@@ -91,7 +91,6 @@ import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorC
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
-import { createTefExperiment } from './sim/experiments/tef.mjs';
 import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
 import { createV4StartRowExperiment } from './sim/experiments/v4StartRow.mjs';
 import { createTier2Experiment } from './sim/experiments/tier2.mjs';
@@ -384,11 +383,6 @@ const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
 const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
 const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 
-// ── Phase-2K: TEF (tStart-Equalization-Feedback) — DORMANT EXPERIMENT ─────────
-// Flag parsing + per-frame/construction logic live behind one boundary (INFRA 1c-1).
-// The seam returns numbers only; the core owns every race-state assignment below.
-const tef = createTefExperiment(argVal);
-
 // ── Phase-2K v4: START-ROW threshold boost — DORMANT EXPERIMENT (INFRA 1c-3) ──
 // Flag parsing + the construction arm / per-race state / stepping machine / transition live
 // behind one boundary. V4_LATERAL_PROXIMITY stays in core: it is SHARED (hero-map + tier2 read
@@ -667,8 +661,7 @@ export function runSingleRace({
       const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
       const isRearRowOpen = isOpen && assignment.rowIndex > 0;
       const speedBonusMult =
-        tef.constructionBonus(isOpen, isRearRowOpen)
-          ?? v4.constructionBonus(isOpen, isRearRowOpen)
+        v4.constructionBonus(isOpen, isRearRowOpen)
           ?? (1 + speedBonus);
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
@@ -677,9 +670,7 @@ export function runSingleRace({
         name:                  `R${i + 1}`,
         t:                     tStart,
         tStart,
-        initialSpeedBonusMult: speedBonusMult,
         rawRowBonus:           speedBonus, // STRIP-DOWN: raw start-row speed bonus (speedBonusMult−1) for the phase envelope
-        initialGap:            0,
         spreadFactor,
         speedBonusMult,
         baseSpeed:           race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
@@ -753,14 +744,6 @@ export function runSingleRace({
     let mixingQuota    = null;
     let warmupMeasured = false;
 
-    // TEF: compute per-racer initialGap = how far behind Row-0's start each racer begins.
-    // Guard + value come from the experiment seam; the core owns the assignment.
-    if (tef.initApplies(isOpen)) {
-      const tStartRow0 = Math.max(...racers.map((r) => r.tStart));
-      for (const r of racers) {
-        r.initialGap = tef.initGap(r, tStartRow0);
-      }
-    }
 
     // v4: per-race overtaking state (built by the experiment seam; empty when inert)
     const v4state = v4.initRaceState(racers, isOpen);
@@ -1452,7 +1435,6 @@ export function runSingleRace({
       // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
-      const tefMeanT0 = tef.meanT0(racers, isOpen);
       for (const r of racers) {
         if (!r.finished) {
           const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
@@ -1461,8 +1443,6 @@ export function runSingleRace({
           const brake = r.avoidanceActive
             ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
             : 1.0;
-          // TEF v3: scale down the aggressive bonus proportionally as racer closes the tStart gap.
-          const tefMult = tef.frameMult(r, tefMeanT0, isOpen);
           // STRIP-DOWN: start-row speed-bonus phase envelope (read-only; sim-only). baseSpeed bakes in
           // the FULL speedBonusMult (=1+rawRowBonus); rowEnvMult corrects it to the phase strength s:
           // effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
@@ -1474,15 +1454,15 @@ export function runSingleRace({
           // experiment factors are bit-exact 1.0 in the shipped (all-flags-off) state. A hit means
           // the experiment was never dormant → STOP. Removing x*1.0 is then bit-neutral (x*1.0===x).
           __dormancyChecks++;
-          if (tefMult !== 1.0 || r.startRowBoostMult !== 1.0 || (r.tier2Mult ?? 1.0) !== 1.0) {
+          if (r.startRowBoostMult !== 1.0 || (r.tier2Mult ?? 1.0) !== 1.0) {
             throw new Error(`[3-0 DORMANCY] racer#${r.index} @raceTs=${raceTs}: NOT dormant — ` +
-              `tefMult=${tefMult} startRowBoostMult=${r.startRowBoostMult} tier2Mult=${r.tier2Mult}`);
+              `startRowBoostMult=${r.startRowBoostMult} tier2Mult=${r.tier2Mult}`);
           }
           // trajectoryMult + areaBonusMult + governorMult + tier2Mult: all 1.0 when inactive.
           // tier2Mult sits BESIDE the multiplicative `brake` factor → a boosted mover still brakes
           // with no free lane (lateral rule never bypassed).
           r.t +=
-            r.baseSpeed * boost * brake * tefMult * rowEnvMult * r.startRowBoostMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
+            r.baseSpeed * boost * brake * rowEnvMult * r.startRowBoostMult * r.trajectoryMult * r.areaBonusMult * (r.governorMult ?? 1.0) * (r.tier2Mult ?? 1.0) * (DT / 16);
         }
       }
 
@@ -2559,19 +2539,10 @@ if (isMain) {
   // the two chains are now factor-for-factor aligned. Print exactly that.
   const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
   console.log('Force multipliers      :');
-  console.log(`  tefMult              : ${st(tef.active)}   (--tefActive)`);
   console.log(`  startRowBoostMult    : ${st(v4.active)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
   console.log(`  tier2Mult            : ${st(tier2.active)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
-  }
-  if (tef.active) {
-    console.log(`⚠️  Phase-2K TEF aktiv: α=${tef.alpha} maxGap=${tef.maxGap} openOnly=${tef.openOnly}`);
-    if (tef.baseBonus !== null) {
-      console.log(`   v3: baseBonusOverride=${tef.baseBonus} für Rear-Rows, moduliert via tStart-Gap`);
-    } else {
-      console.log(`   v2: speedBonusMult wird bei Re-Rolls auf Basis tStart-Gap moduliert`);
-    }
   }
   if (WARMUP_MS_OVERRIDE !== null) {
     console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
