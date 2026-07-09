@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs';
-import { RACER_CONFIGS } from '../scripts/sim-fairness.mjs';
+import { RACER_CONFIGS } from '../sim-fairness.mjs';
 const dir = 'client/src/modules/racer-types';
 const files = readdirSync(dir).filter((f) => /RacerType\.js$/.test(f) && f !== 'SpriteRacerType.js');
 const num = (src, key) => { const m = src.match(new RegExp(key + String.raw`\s*:\s*([0-9.]+)`)); return m ? Number(m[1]) : null; };
