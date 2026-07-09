@@ -92,6 +92,15 @@ import { advanceRacerT } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
+// GAP-SPACE observers (INFRA 5C): read-only, flag-gated. See gap-metrics.mjs header.
+import {
+  secondsBehindLeader,
+  fieldSpreadP10P90,
+  gapsAtLine,
+  visibleComeback,
+  deadRaceFlag,
+  PROPOSED_THRESHOLDS as GM_THRESHOLDS,
+} from './sim/observers/gap-metrics.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -292,6 +301,14 @@ const ACTION_METRICS      = argv.includes('--action-metrics');
 // does zero extra work and is byte-identical. Measurement tooling only; nothing here mutates state.
 const HERO_MAP            = argv.includes('--hero-map');
 const heroMapRaces        = [];   // per-race hero observations (filled only when HERO_MAP)
+// GAP-METRICS (read-only, --gap-metrics): INFRA 5C. Samples the race in TIME behind the leader
+// (secondsBehindLeader, leader→P2 gap, top-5 spread, field p10–p90) at progress 0.50/0.75/0.90 and
+// at the line, plus visibleComeback / deadRaceFlag. Every RANK-space metric the project owns is
+// blind to a dead race (a racer can be "reachedFront" fifteen lengths behind a lone winner); these
+// GAP-space metrics are not. Fully flag-gated → a no-flag run does zero extra work and is
+// byte-identical. RAW distributions only — X/Y/Z await the owner's calibration (see gap-metrics.mjs).
+const GAP_METRICS         = argv.includes('--gap-metrics');
+const gmRaces             = [];   // per-race gap-space observations (filled only when GAP_METRICS)
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. Used by the
 // night-sweep runner (it reads only hero-map.json), to avoid heavy concurrent writes into the
 // OneDrive-synced tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
@@ -541,6 +558,7 @@ export function runSingleRace({
   frontAction = false,         // --front-action: record pre-OUTCOME front-action metric (read-only)
   racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
   heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
+  gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -969,6 +987,13 @@ export function runSingleRace({
     // Per hero (index → accumulator). Populated lazily the first frame a racer is tagged
     // isHeroChoreographed (i.e. at the choreo boundary). Never mutates race state.
     const hmHeroes = heroMap ? new Map() : null;
+    // ── GAP-METRICS per-race state (read-only; only allocated when --gap-metrics) ──
+    const gmTrace = gapMetrics ? [] : null;         // ascending {ts, t} leader-position-vs-time trace
+    const gmCheckpoints = gapMetrics ? [] : null;   // snapshots at progress 0.50 / 0.75 / 0.90
+    const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindAfterChaos, inContentionSteps, totalSteps}
+    const gmDeadSeries = gapMetrics ? [] : null;    // final-third leader→P2 gap (s), for deadRaceFlag
+    const GM_CPS = [0.5, 0.75, 0.9];                // sample checkpoints (leader progress)
+    let gmNextCp = 0;
     const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
     const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
     const hmBandOf = (rank) => {
@@ -1778,6 +1803,45 @@ export function runSingleRace({
         }
       }
 
+      // ── GAP-METRICS per-frame observer (--gap-metrics; read-only) ────────────
+      // Runs after Pass-2 (advanceRacerT) so every r.t is this frame's final value, and BEFORE the
+      // finish check so a racer crossing this frame is still sampled at its pre-finish position.
+      // Records the leader's position-vs-time trace, the field's seconds-behind-leader at the
+      // checkpoints, and the final-third leader→P2 gap. Never mutates race state.
+      if (gapMetrics) {
+        let leaderMaxT = -Infinity;
+        for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
+        gmTrace.push({ ts: raceTs, t: leaderMaxT });
+        // Live order by t desc (finished racers included — their clamped t stays at the front).
+        const gmOrder = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        // Final-third leader→P2 gap (seconds) — the deadRace signal.
+        if (raceProgress >= 2 / 3 && gmOrder.length >= 2) {
+          gmDeadSeries.push(secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs));
+        }
+        // Per-racer in-contention + max-behind, sampled AFTER the chaos boundary only.
+        if (raceProgress > pulkStartLive) {
+          for (const r of racers) {
+            const behind = secondsBehindLeader(r.t, gmTrace, raceTs);
+            let g = gmPerRacer.get(r.index);
+            if (!g) { g = { maxBehindAfterChaos: 0, inContentionSteps: 0, totalSteps: 0 }; gmPerRacer.set(r.index, g); }
+            if (behind > g.maxBehindAfterChaos) g.maxBehindAfterChaos = behind;
+            if (behind <= GM_THRESHOLDS.inContentionSec) g.inContentionSteps++;
+            g.totalSteps++;
+          }
+        }
+        // Snapshots at progress 0.50 / 0.75 / 0.90 (leader→P2, leader→P5, field p10–p90 — all seconds).
+        while (gmNextCp < GM_CPS.length && raceProgress >= GM_CPS[gmNextCp]) {
+          const behindArr = gmOrder.map((r) => secondsBehindLeader(r.t, gmTrace, raceTs));
+          gmCheckpoints.push({
+            progress: GM_CPS[gmNextCp],
+            leaderGapToP2: gmOrder.length >= 2 ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4) : 0,
+            top5Spread: gmOrder.length >= 5 ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4) : 0,
+            fieldSpreadP10P90: +fieldSpreadP10P90(behindArr).toFixed(4),
+          });
+          gmNextCp++;
+        }
+      }
+
       // Finish check
       for (const r of racers) {
         if (!r.finished && r.t >= finishT) {
@@ -1970,6 +2034,40 @@ export function runSingleRace({
           maxTraj:          +h.maxTraj.toFixed(4),
         };
       });
+    }
+
+    // ── GAP-METRICS results — attached ONLY when --gap-metrics (else results unchanged) ──
+    // RAW distributions only. deadRaceFlag / visibleComeback use the PROPOSED thresholds, which
+    // AWAIT the owner's calibration — treat every boolean here as provisional, never a gate.
+    if (gapMetrics) {
+      const finishSecs = racers.map((r) => r.finishTime).filter((x) => x != null).sort((a, b) => a - b);
+      const line = gapsAtLine(finishSecs);
+      const leaderFinish = finishSecs.length ? finishSecs[0] : null;
+      const perRacer = racers.map((r) => {
+        const g = gmPerRacer.get(r.index) ?? { maxBehindAfterChaos: 0, inContentionSteps: 0, totalSteps: 0 };
+        const finalBehind = (r.finishTime != null && leaderFinish != null) ? r.finishTime - leaderFinish : null;
+        return {
+          index: r.index,
+          finalRank: r.finishRank,
+          finalBehindSec: finalBehind != null ? +finalBehind.toFixed(4) : null,
+          maxBehindAfterChaosSec: +g.maxBehindAfterChaos.toFixed(4),
+          inContentionFraction: g.totalSteps > 0 ? +(g.inContentionSteps / g.totalSteps).toFixed(4) : 0,
+          visibleComeback: finalBehind != null
+            ? visibleComeback(g.maxBehindAfterChaos, finalBehind, GM_THRESHOLDS.comebackDepthSec, GM_THRESHOLDS.comebackFinishSec)
+            : false,
+        };
+      });
+      const overFrac = gmDeadSeries.length
+        ? gmDeadSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapSec).length / gmDeadSeries.length
+        : 0;
+      results.gapMetrics = {
+        leaderGapToP2LineSec: +line.leaderGapToP2.toFixed(4),
+        top5SpreadLineSec: +line.top5Spread.toFixed(4),
+        deadRaceFlag: deadRaceFlag(gmDeadSeries, GM_THRESHOLDS.deadRaceGapSec, GM_THRESHOLDS.deadRaceMajorityFrac),
+        deadRaceFinalThirdOverFrac: +overFrac.toFixed(4),
+        checkpoints: gmCheckpoints,
+        perRacer,
+      };
     }
 
     // ── TIER-2 prototype results — attached ONLY when --tier2 active ──────────────
@@ -2592,10 +2690,15 @@ if (isMain) {
             frontAction:        FRONT_ACTION,
             racerTargetRankMap: raceSollRankMap,
             heroMap:            HERO_MAP,
+            gapMetrics:         GAP_METRICS,
           });
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
             heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
+          }
+          // GAP-METRICS (--gap-metrics): stash this race's gap-space observations, tagged with combo meta.
+          if (GAP_METRICS && result.gapMetrics) {
+            gmRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, gapMetrics: result.gapMetrics });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3279,6 +3382,36 @@ if (isMain) {
         `churn=${mean((r) => r.rankChurn).toFixed(0)} travelØ=${mean((r) => r.meanRankTravel).toFixed(1)} travelP90=${mean((r) => r.p90RankTravel).toFixed(1)}  ` +
         `risers=${mean((r) => r.risers).toFixed(1)} fallers=${mean((r) => r.fallers).toFixed(1)} top5turn=${mean((r) => r.frontTop5Turnover).toFixed(1)}  ` +
         `spread=${mean((r) => r.spreadLenP10P90).toFixed(1)}len maxSF=${mean((r) => r.maxSpeedFactor).toFixed(3)}`
+      );
+    }
+  }
+
+  // ── GAP-METRICS raw output (--gap-metrics) → results/gap-metrics/ (gitignored) ──
+  // INFRA 5C. RAW gap-space distributions ONLY — the proposed X/Y/Z thresholds AWAIT the owner's
+  // calibration against a race he watches, so the deadRaceFlag / visibleComeback booleans here are
+  // provisional, never a pass/fail gate. A no-flag run writes nothing and is byte-identical.
+  if (GAP_METRICS) {
+    const gmDir = join(ROOT, 'results', 'gap-metrics');
+    mkdirSync(gmDir, { recursive: true });
+    const gmPath = join(gmDir, `gm-${DIAG_LABEL}.json`);
+    writeFileSync(gmPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        note: 'GAP-SPACE observers (INFRA 5C). RAW distributions only. X/Y/Z are PROPOSALS awaiting owner calibration.',
+        proposedThresholds: GM_THRESHOLDS,
+      },
+      races: gmRaces,
+    }, null, 2));
+    console.log(`\n=== Gap-Metrics (${DIAG_LABEL}) ===  → ${gmPath}  (${gmRaces.length} races)`);
+    console.log(`  ⚠ RAW distributions — proposed thresholds X=${GM_THRESHOLDS.inContentionSec}s Y=${GM_THRESHOLDS.comebackDepthSec}s Z=${GM_THRESHOLDS.comebackFinishSec}s AWAIT owner calibration; booleans provisional.`);
+    // Terse per-race headline: leader→P2 and top-5 spread at the line, and the deadRace over-fraction.
+    for (const gr of gmRaces.slice(0, 12)) {
+      const g = gr.gapMetrics;
+      const comebacks = g.perRacer.filter((p) => p.visibleComeback).length;
+      console.log(
+        `  ${String(gr.trackId).padEnd(16)} (${gr.isOpen ? 'open  ' : 'closed'}) r${gr.raceIdx}  ` +
+        `line[P1→P2=${g.leaderGapToP2LineSec.toFixed(2)}s top5=${g.top5SpreadLineSec.toFixed(2)}s]  ` +
+        `dead=${g.deadRaceFlag ? 'YES' : 'no '}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%)  visibleComebacks=${comebacks}`
       );
     }
   }
