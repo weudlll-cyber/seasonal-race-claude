@@ -57,7 +57,7 @@
 // ============================================================
 
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -79,11 +79,14 @@ import {
 import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf, lapsFromDuration } from '../client/src/modules/camera/lapUtils.js';
 import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
 import {
-  DEFAULT_BASE_SPEED_CONFIG,
-  DEFAULT_RACE_BEHAVIOR_CONFIG,
-  DEFAULT_RACE_DYNAMICS_CONFIG,
-  DEFAULT_ROW_LAYOUT_CONFIG,
+  DEFAULT_BASE_SPEED_CONFIG as _DEFAULT_BASE_SPEED_CONFIG,
+  DEFAULT_RACE_BEHAVIOR_CONFIG as _DEFAULT_RACE_BEHAVIOR_CONFIG,
+  DEFAULT_RACE_DYNAMICS_CONFIG as _DEFAULT_RACE_DYNAMICS_CONFIG,
+  DEFAULT_ROW_LAYOUT_CONFIG as _DEFAULT_ROW_LAYOUT_CONFIG,
 } from '../client/src/modules/storage/defaults.js';
+// Stage 0: the ONE shared source for the exported-world schema + hash + simulatability. Imported here
+// AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
+import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
@@ -99,7 +102,7 @@ function simMedianT(racers) {
   const n = ts.length;
   return n % 2 ? ts[(n - 1) / 2] : (ts[n / 2 - 1] + ts[n / 2]) / 2;
 }
-import { DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
+import { DEFAULT_AUTO_SCALE_CONFIG as _DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -107,6 +110,55 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
+
+// ── Stage 0: --config world import + FAIL-LOUD (never silently assume) ──────────────────────────
+// `--config=world.json` makes the sim run the OWNER'S actual exported world instead of assumed defaults.
+// Hard rules: (a) a world the sim cannot faithfully simulate (race zones → zoneMult, which the sim's
+// t-update lacks) ABORTS — never runs-and-ignores; (b) no --config → a prominent ASSUMED-DEFAULTS banner
+// + every result stamped provisional; (c) the sim refuses to STAMP a world it does not fully HONOUR —
+// any config field it hasn't wired that differs from default ABORTS, so a stamp never over-claims.
+function abortStage0(msg) {
+  console.error('\n══════════════════════════════════════════════════════════════════════════════');
+  console.error('  STAGE-0 ABORT — the sim will NOT run and quietly produce a misleading number.');
+  console.error('══════════════════════════════════════════════════════════════════════════════');
+  console.error(msg);
+  console.error('══════════════════════════════════════════════════════════════════════════════\n');
+  process.exit(2);
+}
+function loadWorldOrNull() {
+  const p = argVal('config', null);
+  if (p === null) return null;
+  let raw;
+  try { raw = JSON.parse(readFileSync(isAbsolute(p) ? p : join(ROOT, p), 'utf8')); }
+  catch (e) { abortStage0(`--config could not be read/parsed: ${p}\n  ${e.message}`); }
+  if (raw.schemaVersion !== WORLD_SCHEMA_VERSION) {
+    abortStage0(`--config schemaVersion ${raw.schemaVersion} != this sim's ${WORLD_SCHEMA_VERSION}. Re-export from the browser.`);
+  }
+  const reasons = unsimulatableReasons(raw);
+  if (reasons.length) abortStage0('this world CANNOT be simulated:\n' + reasons.map((r) => `  [${r.code}] ${r.message}`).join('\n'));
+  // HONOURED configs (merged into the sim's config bases below): raceDynamicsConfig, raceBehaviorConfig,
+  // rowLayoutConfig, baseSpeedConfig, autoScaleConfig. NOT yet honoured → abort if present/non-default:
+  const unhonoured = [];
+  if (raw.racerTypeOverrides && Object.keys(raw.racerTypeOverrides).length) {
+    unhonoured.push(`racerTypeOverrides (${Object.keys(raw.racerTypeOverrides).join(',')}): the sim uses the shipped RACER_CONFIGS and does not yet apply per-type overrides.`);
+  }
+  if (unhonoured.length) {
+    abortStage0('this world contains config the sim does NOT yet honour (refusing to stamp a hash it does not honour):\n' +
+      unhonoured.map((u) => '  ' + u).join('\n') + '\n  Fix: wire these into the sim, or export a world without them.');
+  }
+  return raw;
+}
+const WORLD = loadWorldOrNull();
+const mergeCfg = (key, def) => (WORLD?.configs?.[key] ? { ...def, ...WORLD.configs[key] } : def);
+// Config bases: the OWNER'S world when --config honoured it, else the shipped defaults. All existing
+// reads of these names transparently pick up the world (zero call-site changes).
+const DEFAULT_RACE_DYNAMICS_CONFIG = mergeCfg('raceDynamicsConfig', _DEFAULT_RACE_DYNAMICS_CONFIG);
+const DEFAULT_RACE_BEHAVIOR_CONFIG = mergeCfg('raceBehaviorConfig', _DEFAULT_RACE_BEHAVIOR_CONFIG);
+const DEFAULT_ROW_LAYOUT_CONFIG    = mergeCfg('rowLayoutConfig',    _DEFAULT_ROW_LAYOUT_CONFIG);
+const DEFAULT_BASE_SPEED_CONFIG    = mergeCfg('baseSpeedConfig',    _DEFAULT_BASE_SPEED_CONFIG);
+const DEFAULT_AUTO_SCALE_CONFIG    = mergeCfg('autoScaleConfig',    _DEFAULT_AUTO_SCALE_CONFIG);
+const WORLD_STAMP = worldStamp(WORLD); // { schemaVersion, worldHash: <short>|'ASSUMED-DEFAULTS', provisional }
+
 const N_RACES        = Number(argVal('races', '50'));
 const N_RACERS       = Number(argVal('racers', '40'));
 // --openRacers / --closedRacers: per-topology racer count (Phase-1 matrix).
@@ -3377,6 +3429,7 @@ function buildReport(allResults, rawData, runDate) {
 
   lines.push('# RaceArena — Fairness Simulation Report');
   lines.push('');
+  lines.push(`**world:** ${WORLD_STAMP.worldHash} (schema v${WORLD_STAMP.schemaVersion})${WORLD_STAMP.provisional ? ' — ⚠️ PROVISIONAL (ASSUMED-DEFAULTS, no --config; may not describe the owner\'s race)' : ''}  `);
   lines.push(`**Datum:** ${runDate}  `);
   lines.push(`**Rennen pro Kombination:** ${N_RACES}  `);
   lines.push(`**Teilnehmer pro Rennen:** ${N_RACERS}  `);
@@ -3895,6 +3948,21 @@ const isMain =
 
 if (isMain) {
   if (SELFCHECK) { runFairnessSelfCheck(); process.exit(0); }
+  // ── Stage 0: world banner — every run says, up front, whether it describes the owner's world ──
+  if (WORLD) {
+    console.log('══════════════════════════════════════════════════════════════════════════════');
+    console.log(`  WORLD CONFIG HONOURED — world: ${WORLD_STAMP.worldHash}  (schema v${WORLD_STAMP.schemaVersion})`);
+    console.log('  Honoured from --config: raceDynamicsConfig, raceBehaviorConfig, rowLayoutConfig,');
+    console.log('    baseSpeedConfig, autoScaleConfig. Not simulated (rendering): frameTiming, camera.');
+    console.log('══════════════════════════════════════════════════════════════════════════════');
+  } else {
+    console.log('══════════════════════════════════════════════════════════════════════════════');
+    console.log('  ⚠️  ASSUMED-DEFAULTS — no --config given. This run uses the SHIPPED defaults, NOT');
+    console.log('     the owner\'s browser world. Every result is stamped PROVISIONAL. It describes the');
+    console.log('     owner\'s race ONLY if his browser is at defaults (which has repeatedly not held).');
+    console.log('     Export the browser world and pass --config=world.json to remove this warning.');
+    console.log('══════════════════════════════════════════════════════════════════════════════');
+  }
   const trackDataDir = join(ROOT, 'server/seeds/tracks');
   const trackFiles = [
     'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
@@ -4687,7 +4755,7 @@ if (isMain) {
   // Write JSON + Markdown report — skipped under --skip-main-output (night-sweep reads only hero-map.json).
   if (!SKIP_MAIN_OUTPUT) {
     const jsonPath = join(OUT_DIR, 'fairness-data.json');
-    writeFileSync(jsonPath, JSON.stringify({ meta: { nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS, governorDirectorSettling: DYNAMICS_OVERRIDES.governorDirectorSettling } } : {}) }, results: allResults, rawData }, null, 2));
+    writeFileSync(jsonPath, JSON.stringify({ meta: { world: WORLD_STAMP, nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS, governorDirectorSettling: DYNAMICS_OVERRIDES.governorDirectorSettling } } : {}) }, results: allResults, rawData }, null, 2));
     console.log(`JSON → ${jsonPath}`);
     const runDate = new Date().toISOString().slice(0, 10);
     const report  = buildReport(allResults, rawData, runDate);
@@ -4766,6 +4834,7 @@ if (isMain) {
     const heroMapPath = join(OUT_DIR, 'hero-map.json');
     writeFileSync(heroMapPath, JSON.stringify({
       meta: {
+        world: WORLD_STAMP,
         track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
         directorV4Enabled: DIRECTOR_V4_ENABLED, directorV4Intensity: DIRECTOR_V4_INTENSITY,
         directorV4OutcomeStart: DIRECTOR_V4_OUTCOME_START, directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
@@ -4870,7 +4939,7 @@ if (isMain) {
     }
     const p = join(OUT_DIR, 'tier2.json');
     writeFileSync(p, JSON.stringify({
-      meta: { track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
+      meta: { world: WORLD_STAMP, track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
         mode: TIER2_MODE, malus: TIER2_MALUS, boost: TIER2_BOOST, depth: TIER2_DEPTH, release: TIER2_RELEASE,
         k: TIER2_K, start: TIER2_START, racePlan: RACE_PLAN_ACTIVE, climberB1: TIER2_CLIMBER_B1, heroesB1: TIER2_HEROES_B1,
         directorV4Enabled: DIRECTOR_V4_ENABLED, governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled },

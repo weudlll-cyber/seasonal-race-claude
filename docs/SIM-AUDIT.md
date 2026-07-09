@@ -88,3 +88,15 @@ All five previously-found failures re-confirmed independently:
 ---
 
 ## OWNER ONE-PAGER — see `docs/SIM-AUDIT-OWNER.md`.
+
+---
+
+## BACKLOG (owner-directed)
+
+- **The old start-row experiment is a DELETION candidate, not a rename candidate.** `V4_ACTIVE`
+  (`--v4ThresholdActive`), `V4_THRESHOLDS`, `V4_BOOST_SCHEDULE`, and `physical_overtake` are a
+  switched-off legacy experiment; `physical_overtake` is already exposed as a misleading metric
+  (measures Row-1-vs-Row-0 start-row mixing, not field overtakes — audit finding #1). If the complex is
+  unused, it should be removed entirely — then the naming question is moot. Revisit once the metric
+  registry (`docs/SIM-METRICS.md`) is complete. (Stage-0 renamed only the `startRowBoostMult` t-update
+  factor — the one genuine name-collision trap.)
