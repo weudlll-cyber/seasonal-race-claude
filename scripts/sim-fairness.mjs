@@ -93,6 +93,7 @@ import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeE
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
 import { createTefExperiment } from './sim/experiments/tef.mjs';
 import { createRowSplitExperiment } from './sim/experiments/rowSplit.mjs';
+import { createV4StartRowExperiment } from './sim/experiments/v4StartRow.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -396,23 +397,13 @@ const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
 // The seam returns numbers only; the core owns every race-state assignment below.
 const tef = createTefExperiment(argVal);
 
-// ── Phase-2K v4: threshold-based bonus with smooth re-roll-style transitions ──
-const V4_ACTIVE        = argVal('v4ThresholdActive', null) === 'true';
-const V4_INITIAL_BOOST = Number(argVal('v4InitialBoost', '1.20'));
-// Overtake-fraction thresholds (percent) at which bonus steps down
-const V4_THRESHOLDS    = argVal('v4Thresholds', '20,40,60,80').split(',').map(Number);
-// speedBonusMult value active in each band (length = V4_THRESHOLDS.length + 1)
-const V4_BOOST_SCHEDULE = argVal('v4BoostSchedule', '1.20,1.15,1.10,1.05,1.0').split(',').map(Number);
-// 'physical_overtake': require lateral proximity before t-crossing counts as overtake
-// 'legacy': original t_value_compare (lax — for reference only)
-const V4_METRIC_TYPE       = argVal('v4MetricType', 'physical_overtake');
+// ── Phase-2K v4: START-ROW threshold boost — DORMANT EXPERIMENT (INFRA 1c-3) ──
+// Flag parsing + the construction arm / per-race state / stepping machine / transition live
+// behind one boundary. V4_LATERAL_PROXIMITY stays in core: it is SHARED (hero-map + tier2 read
+// it too), so it is not V4-private; it is passed into the seam. easeInOutCubic (a hoisted core
+// function) is passed in to avoid an import cycle.
 const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
-// Row-differentiated thresholds (per_racer mode); fall back to V4_THRESHOLDS if not specified
-// v4RowRestThresholds applies to Row 2 and all deeper rows; v4Row2Thresholds is a legacy alias.
-const V4_ROW1_THRESHOLDS_RAW    = argVal('v4Row1Thresholds', null);
-const V4_ROW_REST_THRESHOLDS_RAW = argVal('v4RowRestThresholds', null) ?? argVal('v4Row2Thresholds', null);
-const V4_ROW1_THRESHOLDS  = V4_ROW1_THRESHOLDS_RAW    ? V4_ROW1_THRESHOLDS_RAW.split(',').map(Number)    : V4_THRESHOLDS;
-const V4_ROW2_THRESHOLDS  = V4_ROW_REST_THRESHOLDS_RAW ? V4_ROW_REST_THRESHOLDS_RAW.split(',').map(Number) : V4_THRESHOLDS;
+const v4 = createV4StartRowExperiment(argVal, { lateralProximity: V4_LATERAL_PROXIMITY, easeInOutCubic });
 
 // ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
 const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
@@ -685,9 +676,8 @@ export function runSingleRace({
       const isRearRowOpen = isOpen && assignment.rowIndex > 0;
       const speedBonusMult =
         tef.constructionBonus(isOpen, isRearRowOpen)
-          ?? ((V4_ACTIVE && isRearRowOpen)
-            ? V4_INITIAL_BOOST
-            : (1 + speedBonus));
+          ?? v4.constructionBonus(isOpen, isRearRowOpen)
+          ?? (1 + speedBonus);
       const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
@@ -780,28 +770,8 @@ export function runSingleRace({
       }
     }
 
-    // v4: per-race overtaking state
-    const v4Row1Total    = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1).length : 0;
-    const v4Row1Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 1) : [];
-    const v4Row0Racers   = V4_ACTIVE && isOpen ? racers.filter((r) => r.startRowIndex === 0) : [];
-    // per_racer: each row compares against ALL rows that started ahead of it (correct for Row 3+)
-    const v4FrontPoolByRow = (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') ? (() => {
-      const map = new Map();
-      const maxRow = Math.max(0, ...racers.map((r) => r.startRowIndex));
-      for (let ri = 1; ri <= maxRow; ri++) {
-        map.set(ri, racers.filter((r) => r.startRowIndex < ri));
-      }
-      return map;
-    })() : null;
-    // legacy alias kept for physical_overtake metric
-    const v4FrontRacers  = V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer'
-      ? racers.filter((r) => r.startRowIndex === 0 || r.startRowIndex === 1) : [];
-    const v4HasOvertaken = new Set(); // racerIndex of Row-1 racers that have completed ≥1 overtake
-    // physical_overtake metric: track pairs that were "near and behind" (prerequisite for an overtake)
-    const v4WasNearBehind = new Set(); // keys "r1idx:r0idx" — pair was once laterally close while r1 behind
-    const v4OvertakePairs = new Set(); // keys "r1idx:r0idx" — completed overtakes
-    let   v4NextThreshIdx = 0;
-    const v4ThreshLog     = []; // { threshold, timeS, fromBonus, toBonus }
+    // v4: per-race overtaking state (built by the experiment seam; empty when inert)
+    const v4state = v4.initRaceState(racers, isOpen);
 
     computePositions();
 
@@ -1192,14 +1162,7 @@ export function runSingleRace({
         }
 
         // v4: smooth bonus-level transition triggered by threshold crossing
-        if (V4_ACTIVE && isOpen && r.startRowIndex > 0) {
-          const srBoostEl = raceTs - r.startRowBoostTransitionStart;
-          if (srBoostEl >= 0 && srBoostEl < r.startRowBoostTransitionDuration) {
-            r.startRowBoostMult = r.startRowBoostMultPrev + (r.startRowBoostMultTarget - r.startRowBoostMultPrev) * easeInOutCubic(srBoostEl / r.startRowBoostTransitionDuration);
-          } else if (srBoostEl >= r.startRowBoostTransitionDuration) {
-            r.startRowBoostMult = r.startRowBoostMultTarget;
-          }
-        }
+        v4.applyTransition(r, raceTs, isOpen);
       }
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
@@ -1852,82 +1815,8 @@ export function runSingleRace({
         warmupMeasured = true;
       }
 
-      // v4: overtake detection + threshold check
-      if (V4_ACTIVE && isOpen && v4Row1Total > 0) {
-        if (V4_METRIC_TYPE === 'physical_overtake') {
-          // Physical overtake: r1 must have been laterally close and behind r0 before crossing ahead.
-          for (const r1 of v4Row1Racers) {
-            if (r1.finished) continue;
-            for (const r0 of v4Row0Racers) {
-              if (r0.finished) continue;
-              const key = `${r1.index}:${r0.index}`;
-              if (v4OvertakePairs.has(key)) continue; // already counted
-              const dY = Math.abs(r1.physicalY - r0.physicalY);
-              if (!v4WasNearBehind.has(key)) {
-                // Check whether this pair is now "near and behind" (prerequisite phase)
-                if (dY < V4_LATERAL_PROXIMITY && r1.t < r0.t) {
-                  v4WasNearBehind.add(key);
-                }
-              } else {
-                // Prerequisite met — did r1 now cross ahead in t?
-                if (r1.t > r0.t) {
-                  v4OvertakePairs.add(key);
-                  v4HasOvertaken.add(r1.index);
-                }
-              }
-            }
-          }
-        } else if (V4_METRIC_TYPE === 'per_racer') {
-          // Per-racer metric: each non-Row-0 racer independently tracks its own overtake fraction
-          // and triggers its own bonus reduction (ratchet — never reverts).
-          for (const r of racers) {
-            if (r.finished || r.startRowIndex === 0) continue;
-            const racerThresholds = r.startRowIndex === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
-            if (r.v4RacerThreshIdx >= racerThresholds.length) continue;
-            const frontPool  = v4FrontPoolByRow?.get(r.startRowIndex) ?? v4Row0Racers;
-            const totalFront = frontPool.length;
-            if (totalFront === 0) continue;
-            const aheadCount = frontPool.reduce((n, f) => n + (f.t < r.t ? 1 : 0), 0);
-            const fraction   = aheadCount / totalFront;
-            while (r.v4RacerThreshIdx < racerThresholds.length && fraction >= racerThresholds[r.v4RacerThreshIdx] / 100) {
-              const toBonus = V4_BOOST_SCHEDULE[Math.min(r.v4RacerThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
-              r.startRowBoostMultPrev        = r.startRowBoostMult;
-              r.startRowBoostMultTarget      = toBonus / V4_INITIAL_BOOST;
-              r.startRowBoostTransitionStart = raceTs;
-              r.v4RacerThreshTimes.push(raceTs);
-              r.v4RacerThreshIdx++;
-            }
-          }
-        } else {
-          // Legacy metric: r1.t > min(Row-0 t) — lax, t-value only
-          const row0Live = v4Row0Racers.filter((r) => !r.finished);
-          if (row0Live.length > 0) {
-            const minRow0T = Math.min(...row0Live.map((r) => r.t));
-            for (const r1 of v4Row1Racers) {
-              if (!r1.finished && r1.t > minRow0T) v4HasOvertaken.add(r1.index);
-            }
-          }
-        }
-
-        // Trigger global threshold step-downs (skipped for per_racer which handles this per-racer)
-        if (V4_METRIC_TYPE !== 'per_racer' && v4NextThreshIdx < V4_THRESHOLDS.length) {
-          const fraction = v4Row1Total > 0 ? v4HasOvertaken.size / v4Row1Total : 0;
-          while (v4NextThreshIdx < V4_THRESHOLDS.length && fraction >= V4_THRESHOLDS[v4NextThreshIdx] / 100) {
-            const fromBonus = V4_BOOST_SCHEDULE[v4NextThreshIdx];
-            const toBonus   = V4_BOOST_SCHEDULE[Math.min(v4NextThreshIdx + 1, V4_BOOST_SCHEDULE.length - 1)];
-            v4ThreshLog.push({ threshold: V4_THRESHOLDS[v4NextThreshIdx], timeS: raceTs / 1000, fromBonus, toBonus });
-            const newTarget = toBonus / V4_INITIAL_BOOST;
-            for (const r of racers) {
-              if (r.startRowIndex > 0 && !r.finished) {
-                r.startRowBoostMultPrev        = r.startRowBoostMult;
-                r.startRowBoostMultTarget      = newTarget;
-                r.startRowBoostTransitionStart = raceTs;
-              }
-            }
-            v4NextThreshIdx++;
-          }
-        }
-      }
+      // v4: overtake detection + threshold check (the stepping machine lives in the seam)
+      v4.step(v4state, racers, raceTs, isOpen);
 
       // Diagnostic: save pre-frame state for lateral-push and brake-activation counting
       let diagPrevPhysY, diagPrevAvoidance;
@@ -2160,8 +2049,8 @@ export function runSingleRace({
           if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4) diagIntLateralPushes++;
           if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)       diagIntBrakeActs++;
         }
-        diagIntOvertakes     += v4OvertakePairs.size - diagLastOvertakeCount;
-        diagLastOvertakeCount = v4OvertakePairs.size;
+        diagIntOvertakes     += v4state.overtakePairs.size - diagLastOvertakeCount;
+        diagLastOvertakeCount = v4state.overtakePairs.size;
         while (diagSnapIdx < DIAG_SNAP_MS.length && raceTs >= DIAG_SNAP_MS[diagSnapIdx]) {
           diagTakeSnapshot(DIAG_SNAP_TIMES_S[diagSnapIdx], raceTs);
           diagSnapIdx++;
@@ -2202,16 +2091,16 @@ export function runSingleRace({
     }));
     // Attach mixing-quota and v4 diagnostics as non-iterable properties.
     results.mixingQuota     = mixingQuota;
-    results.v4ThreshLog     = v4ThreshLog;
-    results.v4OvertakeCount = v4HasOvertaken.size;     // Row-1 racers with ≥1 physical overtake
-    results.v4NearBehindCount = v4WasNearBehind.size;  // pairs that entered near-behind state
-    results.v4PairOvertakes = v4OvertakePairs.size;    // total completed pair-overtakes
+    results.v4ThreshLog     = v4state.threshLog;
+    results.v4OvertakeCount = v4state.hasOvertaken.size;     // Row-1 racers with ≥1 physical overtake
+    results.v4NearBehindCount = v4state.wasNearBehind.size;  // pairs that entered near-behind state
+    results.v4PairOvertakes = v4state.overtakePairs.size;    // total completed pair-overtakes
     results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
     results.liteRow1BrakeFrames = liteRow1BrakeFrames;
     results.liteRow0BrakeFrames = liteRow0BrakeFrames;
     results.liteRow2BrakeFrames = liteRow2BrakeFrames;
     results.liteLateralMoves    = liteLateralMoves;
-    results.v4PerRacerEndStats  = (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer')
+    results.v4PerRacerEndStats  = (v4.active && v4.metricType === 'per_racer')
       ? racers.filter((r) => r.startRowIndex > 0).map((r) => ({ row: r.startRowIndex, threshIdx: r.v4RacerThreshIdx, threshTimes: r.v4RacerThreshTimes }))
       : null;
     results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
@@ -2855,7 +2744,7 @@ if (isMain) {
   const st = (on) => (on ? '⚠️  ACTIVE (experiment on)' : 'dormant (=1.0)');
   console.log('Force multipliers      :');
   console.log(`  tefMult              : ${st(tef.active)}   (--tefActive)`);
-  console.log(`  startRowBoostMult    : ${st(V4_ACTIVE)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
+  console.log(`  startRowBoostMult    : ${st(v4.active)}   (--v4ThresholdActive; old START-ROW boost, NOT directorV4)`);
   console.log(`  tier2Mult            : ${st(TIER2_ACTIVE)}   (--tier2=<mode>; NOT-shipped malus prototype)`);
   console.log(`  zoneMult             : NOT SIMULATED — browser-only (raceZones, ±20%). If the browser had`);
   console.log(`                         raceZoneConfig.enabled=true, this run does NOT describe that race.`);
@@ -2880,16 +2769,16 @@ if (isMain) {
     if (!RACE_PLAN_ACTIVE) console.warn('⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen');
     console.log(`Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`);
   }
-  if (V4_ACTIVE) {
-    console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${V4_INITIAL_BOOST} openOnly=true`);
-    console.log(`   Metrik: ${V4_METRIC_TYPE}${V4_METRIC_TYPE === 'physical_overtake' ? ` (lateralProximity=${V4_LATERAL_PROXIMITY})` : ''}`);
-    if (V4_METRIC_TYPE === 'per_racer' && (V4_ROW1_THRESHOLDS_RAW || V4_ROW_REST_THRESHOLDS_RAW)) {
-      console.log(`   Row-1-Schwellen: ${V4_ROW1_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
-      console.log(`   Row-2+-Schwellen: ${V4_ROW2_THRESHOLDS.map((t) => t + '%').join(' → ')}`);
+  if (v4.active) {
+    console.log(`⚠️  Phase-2K v4 aktiv: initBonus=${v4.initialBoost} openOnly=true`);
+    console.log(`   Metrik: ${v4.metricType}${v4.metricType === 'physical_overtake' ? ` (lateralProximity=${V4_LATERAL_PROXIMITY})` : ''}`);
+    if (v4.metricType === 'per_racer' && (v4.row1ThresholdsRaw || v4.rowRestThresholdsRaw)) {
+      console.log(`   Row-1-Schwellen: ${v4.row1Thresholds.map((t) => t + '%').join(' → ')}`);
+      console.log(`   Row-2+-Schwellen: ${v4.row2Thresholds.map((t) => t + '%').join(' → ')}`);
     } else {
-      console.log(`   Schwellen: ${V4_THRESHOLDS.map((t) => t + '%').join(' → ')} Überholungen`);
+      console.log(`   Schwellen: ${v4.thresholds.map((t) => t + '%').join(' → ')} Überholungen`);
     }
-    console.log(`   Bonus-Schedule: ${V4_BOOST_SCHEDULE.join(' → ')}`);
+    console.log(`   Bonus-Schedule: ${v4.boostSchedule.join(' → ')}`);
     console.log(`   Übergänge: easeInOutCubic über ${DYNAMICS_OVERRIDES.reRollTransitionDuration}s (wie Re-Roll)`);
   }
   console.log('');
@@ -3436,12 +3325,12 @@ if (isMain) {
             );
           }
           // per_racer: per-row bonus distribution at race end (all rows > 0)
-          if (V4_ACTIVE && V4_METRIC_TYPE === 'per_racer') {
+          if (v4.active && v4.metricType === 'per_racer') {
             const allRowIndices = [...new Set(
               raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
             )].sort((a, b) => a - b);
             for (const rowIdx of allRowIndices) {
-              const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+              const rowThresholds = rowIdx === 1 ? v4.row1Thresholds : v4.row2Thresholds;
               const all = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
               if (all.length === 0) continue;
               const full    = all.filter((s) => s.threshIdx === 0).length;
@@ -3493,7 +3382,7 @@ if (isMain) {
         }
 
         // v4 diagnostics: per-threshold average crossing time + physical overtake counts
-        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE !== 'per_racer' && v4ThreshLogs.length > 0) {
+        if (v4.active && isOpen && v4.metricType !== 'per_racer' && v4ThreshLogs.length > 0) {
           // Physical overtake summary
           const avgOvertakes   = raceResults.reduce((s, r) => s + (r.v4OvertakeCount   ?? 0), 0) / N_RACES;
           const avgNearBehind  = raceResults.reduce((s, r) => s + (r.v4NearBehindCount ?? 0), 0) / N_RACES;
@@ -3503,7 +3392,7 @@ if (isMain) {
             `${avgPairOvt.toFixed(1)} Paar-Überholungen, ${avgNearBehind.toFixed(1)} near-behind-Paare`
           );
           // Threshold timing
-          for (const thresh of V4_THRESHOLDS) {
+          for (const thresh of v4.thresholds) {
             const times = v4ThreshLogs
               .map((log) => log.find((e) => e.threshold === thresh)?.timeS)
               .filter((t) => t != null);
@@ -3522,12 +3411,12 @@ if (isMain) {
           }
         }
         // per_racer: individual threshold timing per row (all rows > 0)
-        if (V4_ACTIVE && isOpen && V4_METRIC_TYPE === 'per_racer') {
+        if (v4.active && isOpen && v4.metricType === 'per_racer') {
           const allRowIdxs = [...new Set(
             raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).map((s) => s.row))
           )].sort((a, b) => a - b);
           for (const rowIdx of allRowIdxs) {
-            const rowThresholds = rowIdx === 1 ? V4_ROW1_THRESHOLDS : V4_ROW2_THRESHOLDS;
+            const rowThresholds = rowIdx === 1 ? v4.row1Thresholds : v4.row2Thresholds;
             for (let ti = 0; ti < rowThresholds.length; ti++) {
               const thresh   = rowThresholds[ti];
               const allStats = raceResults.flatMap((r) => (r.v4PerRacerEndStats ?? []).filter((s) => s.row === rowIdx));
