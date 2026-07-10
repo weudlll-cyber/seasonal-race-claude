@@ -794,13 +794,13 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
   identical at default, diverges if the owner ever changes it (open tracks only). O2 (`--rerollVariant=2`
   sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),
   O5 (auxiliary sweep scripts omit the phase-split), O6 (shared-module parity conditional on geometry).
-- **Repository hygiene** — needs a curation pass: **180 tags** exist (as of 2026-07-10) and **6 remote
-  branches**; a KEEP-LIST of the live rollback anchors and the set of dead branches is **UNVERIFIED** and
-  must be produced before any pruning. (The spec's "169 tags / 9 meaningful / 3 dead branches" did not
-  match the repo today — do not prune on those numbers.)
+- **Repository hygiene** — needs a curation pass: **170 tags on origin, 180 local** (10 unpushed local
+  tags; `git tag | wc -l` = 180, `git ls-remote --tags` = 170) and **6 remote branches**. Which tags are
+  meaningful, and which branches are dead, is **UNVERIFIED** — keep it that way until whoever prunes
+  proves each one; produce a KEEP-LIST of the live rollback anchors first. (Do not prune on any inherited
+  count — they have not matched twice now.)
 - **Pre-existing start-row WIN bias on luger-hill and dirt-oval** — present under v4-OFF (shipped
   default): `startRowUnfair = true` on both across all three arms in the night sweep. Independent of
   cohesion; a fairness item in its own right.
 - **PHOTO_FINISH DevScreen accordion** — to be added.
 - **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
-- **tier2 prototype path in `sim-fairness.mjs`** — decide whether to delete (see SIM.md update).

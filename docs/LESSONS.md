@@ -2734,3 +2734,12 @@ Plain language. Each lesson is why a whole week went into measurement, not featu
   in this project corrected the *spec*, not the implementation: the bimodal field, the actuator
   hierarchy (the servo has more speed authority than the re-roll), the withdrawal of a hero exemption
   that would have hidden the motivating failure. Read the source before trusting the claim.
+
+- **A stale comment is a lie with authority.** A comment that claims a mechanism is active — when the
+  code under it is gone — reads as truth and misleads the next reader, human or model. It has caught
+  this project three times: `"Falls back to frameSizePx/2 (sim racers)"`; `"Replicates the core race
+  loop from RaceScreen/index.jsx"`; and an orphaned `"TIER-2 … attached ONLY when --tier2 active"`
+  header with the `STRIP_METRICS` block sitting under it — which was read as a live `--tier2` path and
+  written into a doc as a mechanism that does not exist. The fix each time: **verify against the code,
+  not the comment; and when you delete a mechanism, delete its comment in the same breath.** Grep
+  excluding comment lines before you claim a path exists.

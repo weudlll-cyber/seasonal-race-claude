@@ -754,10 +754,13 @@ This document was the most stale; the items below correct it against source.
 
 - **Size & structure:** `scripts/sim-fairness.mjs` is now **~3522 lines** (`wc -l`), not ~5000. Observers
   are factored into `scripts/sim/observers/` (`fairness-stats.mjs`, `gap-metrics.mjs`, `report.mjs`).
-  `scripts/sim/experiments/` is **empty**.
-- **Dormant experiments:** TEF and ROW_SPLIT and the V4 start-row experiment are **deleted** (grep = 0).
-  ⚠ **`--tier2` is NOT deleted** — a tier2 prototype code path still exists in `sim-fairness.mjs`
-  (≈ line 2161, "attached ONLY when `--tier2` active"; 3 references). Do not describe tier2 as removed.
+  `scripts/sim/experiments/` no longer exists (it went with the last experiment).
+- **Dormant experiments: ALL FOUR DELETED** — TEF (`tefMult`), ROW_SPLIT (`startRowBoostMult`), the V4
+  start-row experiment, and **tier2** (`tier2Mult`). Non-comment `grep tier2` = 0. (2026-07-10 correction:
+  an earlier draft of this section wrongly read an orphaned comment header — "TIER-2 … attached ONLY when
+  `--tier2` active" — as a live path; it was a dead comment with the `STRIP_METRICS` block directly under
+  it. The three stale tier2 comments have been removed. **A stale comment is a lie with authority** — see
+  LESSONS.md.)
 - **The sim IMPORTS the shipped physics; it does not re-implement it.** `advanceRacerT` (raceStep.js),
   `applyGovernor`/`arcT` (raceGovernor.js), `raceLengths.js`, `racePlanner.js` are all imported. The
   divergence risk lives only in the *inputs* each engine computes before the shared t-update — audited

@@ -27,6 +27,11 @@ metric; every number is set by the owner's eye, in racer lengths.
   G draws its next natural speed from the slower end of its own honest ±8.1 % band; a car stuck in a hole
   draws from the faster end. Nobody is ever given a speed it could not have rolled anyway. On screen it
   looks like ordinary racing luck — not a brake, not a rubber band. *This is the whole point.*
+- **The honest caveat, stated up front (not a footnote):** "no rubber band" is true of the *force* —
+  every speed is one the car could have rolled — but a car that stays over the cap is pulled down again
+  and again, and **repeated invisibility becomes visible**: on screen it looks held. So the correction's
+  *duty cycle* is a first-class number we watch. If the leader is corrected most of the time, it reads as
+  a spring and the concept has failed — that is a kill condition, not a detail.
 - **The heroes obey the same rule.** They are not exempt (an earlier draft wrongly exempted them — see §8).
   It does not hurt their stories: their drama is about *rank* (who passes whom); the cap is about *gap*; a
   hero can be "rank 1" whether it leads by 3 lengths or 17. We only ever slow a car that is *opening* a

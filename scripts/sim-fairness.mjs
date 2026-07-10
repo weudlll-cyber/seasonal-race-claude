@@ -2158,8 +2158,6 @@ export function runSingleRace({
       };
     }
 
-    // ── TIER-2 prototype results — attached ONLY when --tier2 active ──────────────
-
     // ── STRIP-DOWN metrics — attached ONLY when --strip-metrics is on (else results unchanged) ──
     if (STRIP_METRICS) {
       const targetRankOf = (idx) =>
@@ -2591,10 +2589,9 @@ if (isMain) {
     console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
   }
   console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
-  // The three sim-only dormant experiments (tefMult, startRowBoostMult, tier2Mult) were deleted, and
-  // the browser's zoneMult was removed with the race-zones feature. The sim's t-update chain is now
+  // The sim's t-update chain is:
   //   t += baseSpeed·boost·brake·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·(DT/16)
-  // and the browser's (index.jsx) is the same modulo (DT/16)=1.0 — factor-for-factor identical.
+  // factor-for-factor identical to the browser's (index.jsx) modulo (DT/16)=1.0. See docs/FORCE-PARITY.md.
   if (ACTION !== null) {
     console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
   }
@@ -3295,7 +3292,7 @@ if (isMain) {
       }
     } catch (e) { console.log(`[hero-map] start-row fairness failed: ${e.message}`); }
     // NATIVE per-row WINS chi-square + per-row win distribution (uncontaminated: hero-map runs plain
-    // v4, no tier2 injection). This is the BINDING win-bias gate for GAP-2.
+    // v4, nothing injected). This is the BINDING win-bias gate for GAP-2.
     const totalRacersHM = rowSizes.reduce((s, v) => s + v, 0);
     const nRacesHM = byRace.size;
     const winsByRowHM = new Array(totalRows).fill(0);
