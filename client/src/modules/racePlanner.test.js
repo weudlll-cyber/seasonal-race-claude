@@ -211,6 +211,55 @@ describe('createRacePlan — v4 phase collapse', () => {
     expect(plan._v4PackBandStrictness).toBeGreaterThan(0);
     expect(plan._v4PackBandStrictness).toBeLessThan(1.0);
   });
+
+  it('reopenable PULK: directorV4OutcomeStart is the PULK-END control; corridorStart := pulkEnd', () => {
+    // New contract: under v4, OUTCOME begins exactly where PULK ends (no TRANSITION). Raising the
+    // PULK-end control (directorV4OutcomeStart) above pulkStart opens a real PULK window.
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4Enabled: true, pulkStart: 0.2, directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.pulkStart).toBe(0.2);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
+    expect(plan.phaseFractions.corridorStart).toBe(0.5); // corridorStart := live pulkEnd
+    // The PULK phase is now reachable (non-zero width): 0.2 <= p < 0.5.
+    const ctrl = createTrajectoryController(plan);
+    expect(ctrl.getPhase(0, 0.19)).toBe('PRE_PULK');
+    expect(ctrl.getPhase(0, 0.35)).toBe('PULK');
+    expect(ctrl.getPhase(0, 0.5)).toBe('OUTCOME');
+    // TRANSITION never appears under v4 (corridorStart == pulkEnd).
+    for (let p = 0; p <= 1.0; p += 0.02) expect(ctrl.getPhase(0, p)).not.toBe('TRANSITION');
+  });
+
+  it('pulkStart shortcut threads into phaseFractions and is clamp-hardened (v4-OFF)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { pulkStart: 0.1 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.pulkStart).toBe(0.1);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5); // reactive default preserved
+    // A pulkStart past corridorEnd is anchored to [0, corridorEnd] and pulls pulkEnd/corridorStart up
+    // — ordered, never inverted.
+    const plan2 = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { pulkStart: 1.5 },
+      BASE_SEED
+    );
+    expect(plan2.phaseFractions.pulkStart).toBe(1.0); // clamped to corridorEnd
+    expect(plan2.phaseFractions.pulkStart).toBeLessThanOrEqual(plan2.phaseFractions.pulkEnd);
+    expect(plan2.phaseFractions.pulkEnd).toBeLessThanOrEqual(plan2.phaseFractions.corridorStart);
+    expect(plan2.phaseFractions.corridorStart).toBeLessThanOrEqual(
+      plan2.phaseFractions.corridorEnd
+    );
+  });
 });
 
 // ── createTrajectoryController — P-controller arithmetic ─────────────────────

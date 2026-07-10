@@ -55,7 +55,11 @@ function getAreaBounds(targetRank) {
 
 // ── Phase 3A M2v2 defaults ────────────────────────────────────────────────────
 
-const DEFAULT_PHASE_FRACTIONS = {
+// THE single source for the default phase boundaries. pulkStart here is the ONE literal that defines
+// the CHAOS→PULK / director-anchor boundary; the hero-curve generator's anchor default derives from it
+// (heroCurveGenerator.js reads DEFAULT_PHASE_FRACTIONS.pulkStart), and the live per-race value is
+// threaded into the generator from the resolved plan — so there is no second copy of the anchor value.
+export const DEFAULT_PHASE_FRACTIONS = {
   pulkStart: 0.25,
   pulkEnd: 0.5,
   transitionEnd: 0.75,
@@ -124,24 +128,26 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // Top-level timing shortcuts: bonusTransitionEnd / corridorStart / corridorEnd / bonusFadeDuration.
   // These take precedence over phaseFractions when explicitly provided, and are reflected back into
   // phaseFractions so plan.phaseFractions always shows the effective values.
+  if (config.pulkStart !== undefined) phaseFractions.pulkStart = config.pulkStart;
   if (config.bonusTransitionEnd !== undefined)
     phaseFractions.transitionEnd = config.bonusTransitionEnd;
   if (config.corridorStart !== undefined) phaseFractions.corridorStart = config.corridorStart;
   if (config.corridorEnd !== undefined) phaseFractions.corridorEnd = config.corridorEnd;
 
-  // v4 PHASE COLLAPSE (Step 5): the reactive 4-phase model spreads the pack UNSTEERED until OUTCOME
-  // at corridorStart (0.55) — a relic of the old PULK director. v4 has no PULK director, so collapse
-  // PULK: OUTCOME (the pack's band-steering) begins at directorV4OutcomeStart (~0.25 = the chaos→choreo
-  // boundary where heroes are cast), giving the P-controller the full ~0.25→1.0 to hold the field in
-  // its bands. Move BOTH pulkEnd and corridorStart (the clamp below requires corridorStart >= pulkEnd);
-  // the resulting zero-width PULK/TRANSITION is exactly the concept's TWO-phase model. Single source:
-  // every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split via
-  // getPhaseFractions) inherits these fractions — no duplicated phase math. v4-OFF: untouched → the
+  // v4 TWO-PHASE MODEL (CHAOS → PULK → OUTCOME): under v4 there is no TRANSITION phase — OUTCOME
+  // (the pack's band-steering) begins exactly where PULK ends, so `corridorStart := pulkEnd` (the live
+  // value, DERIVED not copied). `directorV4OutcomeStart` is the STORAGE KEY for the PULK-end fraction
+  // (the DevScreen "PULK end / OUTCOME begins here" slider writes it). At defaults it equals pulkStart
+  // (0.25) → PULK is zero-width and this degenerates to the former collapse, byte-identical to the
+  // reactive path's steer-from-0.25. Raising it reopens the PULK window [pulkStart, pulkEnd] and moves
+  // OUTCOME with it. The clamp chain below keeps pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
+  // Single source: every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split
+  // via getPhaseFractions) inherits these fractions — no duplicated phase math. v4-OFF: untouched → the
   // reactive 0.5/0.55 structure and byte-identical race.
   if (config.directorV4Enabled) {
-    const v4OutcomeStart = config.directorV4OutcomeStart ?? 0.25;
-    phaseFractions.pulkEnd = Math.min(phaseFractions.pulkEnd, v4OutcomeStart);
-    phaseFractions.corridorStart = v4OutcomeStart;
+    const v4PulkEnd = config.directorV4OutcomeStart ?? 0.25;
+    phaseFractions.pulkEnd = v4PulkEnd;
+    phaseFractions.corridorStart = v4PulkEnd;
   }
 
   // Phase-boundary hardening (Stage A): keep the boundaries ordered the way the ordered
@@ -154,6 +160,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // sim imports createRacePlan (sim-fairness.mjs:59), so browser and sim inherit this identically.
   // No hardcoded fractions — every bound reads the live resolved phaseFractions.
   const resolvedCorridorStart = phaseFractions.corridorStart ?? phaseFractions.transitionEnd;
+  // pulkStart is now ownable (DevScreen "PULK begins here"); anchor it to [0, corridorEnd] first so the
+  // monotonic chain below can never produce an inverted PULK. No-op for the defaults (0.25).
+  phaseFractions.pulkStart = clamp(phaseFractions.pulkStart, 0, phaseFractions.corridorEnd);
   phaseFractions.pulkEnd = clamp(
     phaseFractions.pulkEnd,
     phaseFractions.pulkStart,
@@ -505,9 +514,12 @@ export function createTrajectoryController(racePlan) {
           intensity: plan._v4Intensity,
           finishT: plan._finishT,
           // DevScreen-tuned per-band resolve + release override the generator defaults (single source
-          // for the tunable values is the dynamics config, threaded through the plan).
+          // for the tunable values is the dynamics config, threaded through the plan). anchorProgress is
+          // the LIVE resolved pulkStart fraction (the director-anchor = PULK begin): moving PULK begin
+          // moves the hero curve anchor with it, with no second copy of the value.
           config: {
             ...GENERATOR_CONFIG,
+            anchorProgress: pulkStartFrac,
             releaseProgress: plan._v4ReleaseProgress,
             bandResolve: plan._v4BandResolve,
           },

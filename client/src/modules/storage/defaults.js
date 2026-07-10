@@ -263,9 +263,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Race Plan area bonus strength: validated at 2.0 (B1=+6%, B5=-2%). Range 0.5–3.0.
   racePlanBonusStrengthMultiplier: 2.0,
   // Race Plan timing — fraction of race duration (0–1), applied in racePlanner.js.
+  // pulkStart: the CHAOS→PULK boundary = the director (hero choreography) anchor.
   // bonusTransitionEnd: bonus active until this point, then fades over bonusFadeDuration ms.
   // corridorStart / corridorEnd: P-controller (OUTCOME phase) active window.
-  // Constraint enforced: corridorStart <= corridorEnd.
+  // Constraint enforced (phase-hardening clamp): pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
+  racePlanPulkStart: 0.25,
   racePlanBonusTransitionEnd: 0.75,
   racePlanBonusFadeDuration: 1500,
   racePlanCorridorStart: 0.55,
@@ -327,10 +329,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   directorV4ResolveB3: 0.7,
   directorV4ResolveB4: 0.65,
   directorV4ResolveB5: 0.6,
-  // v4 phase collapse (Step 5): when v4 is ON, OUTCOME (the pack's band-steering) begins at this
-  // progress instead of the reactive 0.55 — collapsing the dead PULK phase so the field is held in
-  // its bands from the chaos→choreo boundary (~0.25) instead of spreading unsteered for half the race.
-  // Range 0.25–0.55 (0.25 = full collapse; higher = a later hand-off). Off → the reactive 0.5/0.55.
+  // v4 PULK end / OUTCOME start (storage key): when v4 is ON, PULK ends here and OUTCOME (the pack's
+  // band-steering) begins here — one boundary, no TRANSITION phase (corridorStart := this in
+  // racePlanner.js). At the default 0.25 (== racePlanPulkStart) PULK is zero-width and the field is
+  // steered from the chaos→choreo boundary, byte-identical to the shipped behaviour; raising it reopens
+  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55. Off → the
+  // reactive 0.5/0.55 corridor. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   directorV4OutcomeStart: 0.25,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches

@@ -161,15 +161,27 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   }
 
   function resetPhaseSplit() {
+    // EARLY + POST only — the PULK-phase bonuses moved to the PULK group (resetPulk).
     setDynamicsConfig((prev) => ({
       ...prev,
       phaseSplitBonusEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled,
       areaBonusEarly: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly,
-      areaBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
       areaBonusPost: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost,
       rowBonusEarly: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusEarly,
-      rowBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk,
       rowBonusPost: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPost,
+    }));
+  }
+
+  // The PULK group: the phase boundaries that open/close the PULK window (begin + end) and the three
+  // mechanisms that act ONLY inside it. All inert when the window has zero width (begin == end).
+  function resetPulk() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      racePlanPulkStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
+      directorV4OutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart,
+      areaBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
+      rowBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk,
+      pulkBiasGain: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
     }));
   }
 
@@ -1045,10 +1057,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           setDynamics('directorV4ResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3);
           setDynamics('directorV4ResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4);
           setDynamics('directorV4ResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5);
-          setDynamics(
-            'directorV4OutcomeStart',
-            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart
-          );
+          // directorV4OutcomeStart (PULK end) now lives in the PULK group — reset by resetPulk.
         }}
         resetTestId="reset-v4"
         subtitle="Experimental choreographed director: at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. OFF = the proven reactive Director above (identical behaviour)."
@@ -1114,28 +1123,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              OUTCOME start (0.25–0.55)
-              <InfoTooltip text="When the pack's band-steering (OUTCOME) begins under v4. 0.25 collapses the dead PULK phase so the field is held together from the chaos boundary (tighter, more fair, more correction budget); higher hands off later (looser early field). 0.25 default. OFF path uses the reactive 0.55." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Director V4 Outcome Start"
-              min={0.25}
-              max={0.55}
-              step={0.05}
-              value={dynamicsConfig.directorV4OutcomeStart}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.25 && v <= 0.55) setDynamics('directorV4OutcomeStart', v);
-              }}
-            />
-          </div>
+          {/* PULK end / OUTCOME start (directorV4OutcomeStart) moved to the PULK group below. */}
           <div className={s.formGroup}>
             <label
               className={s.label}
@@ -1211,7 +1199,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="Phase-Split Bonuses"
         onReset={resetPhaseSplit}
         resetTestId="reset-phase-split"
-        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos), PULK, and POST — so the bonuses can be turned down during the PULK contest and restored afterwards. Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full, PULK off."
+        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase bonuses, which live in the PULK group). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
       >
         <div style={{ marginBottom: '0.75rem' }}>
           <label
@@ -1240,20 +1228,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'Area-bonus strength in the EARLY (chaos) phase, before PULK. 1.0 = shipped.',
             },
             {
-              key: 'areaBonusPulk',
-              label: 'Area bonus — PULK',
-              min: 0,
-              max: 3,
-              step: 0.5,
-              tip: 'Area-bonus strength during the PULK contest. 0 = off (shipped: let the contest run without the target-band nudge).',
-            },
-            {
               key: 'areaBonusPost',
               label: 'Area bonus — POST',
               min: 0,
               max: 3,
               step: 0.5,
-              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped.',
+              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped. (The PULK-phase area bonus lives in the PULK group.)',
             },
             {
               key: 'rowBonusEarly',
@@ -1262,14 +1242,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               max: 1,
               step: 0.1,
               tip: 'Start-row catch-up bonus fraction in the EARLY phase. 1 = full (shipped).',
-            },
-            {
-              key: 'rowBonusPulk',
-              label: 'Row bonus — PULK',
-              min: 0,
-              max: 1,
-              step: 0.1,
-              tip: 'Start-row catch-up bonus fraction during PULK. 0 = off (shipped).',
             },
             {
               key: 'rowBonusPost',
@@ -1306,34 +1278,126 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4f: PULK Cohesion ── */}
+      {/* ── Block 4f: PULK ── the phase window + the three mechanisms that act only inside it ── */}
       <SubCard
-        title="PULK Cohesion"
-        onReset={() => setDynamics('pulkBiasGain', DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)}
-        resetTestId="reset-pulk-cohesion"
-        subtitle="The always-on field-cohesion mechanism: during the PULK phase the three pulk racers' re-roll draws are nudged toward the pulk centroid, so the field stays together and does not string out before the contest."
+        title="PULK"
+        onReset={resetPulk}
+        resetTestId="reset-pulk"
+        subtitle="The PULK window [begin, end] and the three mechanisms that act ONLY inside it. Under v4, OUTCOME (band-steering) begins exactly where PULK ends, and the director (hero choreography) is anchored at PULK begin. At the shipped defaults PULK begin == PULK end (0.25) → the window has ZERO width, so the three PULK mechanisms below are inert; widen the window (raise PULK end above PULK begin) to bring them to life."
       >
-        <div className={s.formGroup}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            Cohesion bias gain
-            <InfoTooltip text="How strongly pulk racers are pulled back toward the pack centroid during PULK. 0 = no cohesion (field may string out); higher = tighter pack. 2.0 = shipped." />
-          </label>
-          <input
-            type="number"
-            className={s.input}
-            aria-label="Cohesion bias gain"
-            min={0}
-            max={10}
-            step={0.5}
-            value={dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (isFinite(v) && v >= 0 && v <= 10) setDynamics('pulkBiasGain', v);
-            }}
-          />
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              PULK begin (0.05–0.50)
+              <InfoTooltip text="PULK begins here; the director (hero choreography) starts with it. This is the CHAOS→PULK boundary and the hero-curve anchor — moving it moves the director start. Clamped to sit at or before PULK end. 0.25 default." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="PULK Begin"
+              min={0.05}
+              max={0.5}
+              step={0.05}
+              value={
+                dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0.05 && v <= 0.5) setDynamics('racePlanPulkStart', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              PULK end / OUTCOME begins (0.25–0.55)
+              <InfoTooltip text="PULK ends here, and under v4 OUTCOME (the pack's band-steering) begins here — one boundary, no TRANSITION phase in between. At the default 0.25 (== PULK begin) the PULK window is zero-width and the field is steered from the chaos boundary, exactly as shipped; raising it reopens the PULK window and hands OUTCOME off later. 0.25 default. OFF (reactive) path uses its own 0.55 corridor start." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="PULK End / Outcome Start"
+              min={0.25}
+              max={0.55}
+              step={0.05}
+              value={dynamicsConfig.directorV4OutcomeStart}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.25 && v <= 0.55) setDynamics('directorV4OutcomeStart', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Area bonus — PULK
+              <InfoTooltip text="Area-bonus strength inside the PULK window (target-band speed nudge). Gated by the Phase-Split master switch. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = shipped." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Area bonus — PULK"
+              min={0}
+              max={3}
+              step={0.5}
+              value={dynamicsConfig.areaBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 3) setDynamics('areaBonusPulk', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Row bonus — PULK
+              <InfoTooltip text="Start-row catch-up bonus fraction inside the PULK window. Gated by the Phase-Split master switch. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = shipped." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Row bonus — PULK"
+              min={0}
+              max={1}
+              step={0.1}
+              value={dynamicsConfig.rowBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 1) setDynamics('rowBonusPulk', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Cohesion bias gain
+              <InfoTooltip text="How strongly the pulk racers' re-roll draws are pulled back toward the pack centroid, so the field stays together and does not string out before the contest. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = no cohesion; higher = tighter pack. 2.0 = shipped." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Cohesion bias gain"
+              min={0}
+              max={10}
+              step={0.5}
+              value={dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 10) setDynamics('pulkBiasGain', v);
+              }}
+            />
+          </div>
         </div>
       </SubCard>
 

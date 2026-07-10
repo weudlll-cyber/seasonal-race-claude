@@ -202,6 +202,7 @@ const RACE_PLAN_ACTIVE        = argVal('race-plan', 'true') !== 'false';
 const BONUS_MULT              = Number(argVal('bonusMult',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)));
 const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd)));
 const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
+const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart)));
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
@@ -2724,6 +2725,7 @@ if (isMain) {
               areaBonusEarly:          AREA_BONUS_EARLY,
               areaBonusPulk:           AREA_BONUS_PULK,
               areaBonusPost:           AREA_BONUS_POST,
+              pulkStart:               RP_PULK_START,
               bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,

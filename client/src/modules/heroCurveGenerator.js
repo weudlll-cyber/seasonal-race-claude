@@ -23,13 +23,20 @@
 // ============================================================
 
 import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
-import { mulberry32, BAND_EDGES } from './racePlanner.js';
+import { mulberry32, BAND_EDGES, DEFAULT_PHASE_FRACTIONS } from './racePlanner.js';
 
 // ── Config (single source of truth; documented, calibratable) ─────────────────────────────────
 export const GENERATOR_CONFIG = {
   minHeroes: 2,
   maxHeroes: 4,
-  anchorProgress: 0.25, // chaos→choreo boundary (pulkStart)
+  // chaos→choreo boundary (= PULK begin). NO independent literal here: the race path threads the LIVE
+  // resolved pulkStart fraction into this config per race (racePlanner.js), and this fallback (used
+  // only by direct/test generateHeroCurves calls) derives from THE single source, DEFAULT_PHASE_FRACTIONS.pulkStart.
+  // A getter, not a value, so it resolves lazily — DEFAULT_PHASE_FRACTIONS is undefined during the
+  // racePlanner↔heroCurveGenerator circular import at module-init, but always defined by call time.
+  get anchorProgress() {
+    return DEFAULT_PHASE_FRACTIONS.pulkStart;
+  },
   // Per-race DISTANCE budget for feasibility: over the remaining race a racer can shift its position
   // relative to the field by ≈ speedBudgetFrac × remaining × finishT, converted to ranks via the live
   // position distribution (density-adaptive). Calibrated (Step 3) to the hero ACTUATOR's climb
@@ -283,11 +290,10 @@ export function checkPositiveBudget(curve, maxRankRate, config = GENERATOR_CONFI
   return Math.abs(endRank - atResolve) <= Math.max(1, maxRankRate) * (1 - rp) + 1e-6;
 }
 // SEPARATION: transient crossings (overtakes) are legitimate; only SUSTAINED coincidence is forbidden.
-export function checkSeparation(curves, maxCoincidentFrac = 0.2) {
+export function checkSeparation(curves, maxCoincidentFrac = 0.2, config = GENERATOR_CONFIG) {
   const dp = 0.02;
   const samples = [];
-  for (let p = GENERATOR_CONFIG.anchorProgress; p <= 1.0 + 1e-9; p += dp)
-    samples.push(Math.min(p, 1));
+  for (let p = config.anchorProgress; p <= 1.0 + 1e-9; p += dp) samples.push(Math.min(p, 1));
   for (let i = 0; i < curves.length; i++) {
     for (let j = i + 1; j < curves.length; j++) {
       let near = 0;
