@@ -745,3 +745,32 @@ experiments (baseline / controller-off comparisons).
 ---
 
 *Last updated: 2026-06-30. See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
+
+---
+
+## 2026-07-10 — INFRA update (sim-trust): current state of the sim
+
+This document was the most stale; the items below correct it against source.
+
+- **Size & structure:** `scripts/sim-fairness.mjs` is now **~3522 lines** (`wc -l`), not ~5000. Observers
+  are factored into `scripts/sim/observers/` (`fairness-stats.mjs`, `gap-metrics.mjs`, `report.mjs`).
+  `scripts/sim/experiments/` is **empty**.
+- **Dormant experiments:** TEF and ROW_SPLIT and the V4 start-row experiment are **deleted** (grep = 0).
+  ⚠ **`--tier2` is NOT deleted** — a tier2 prototype code path still exists in `sim-fairness.mjs`
+  (≈ line 2161, "attached ONLY when `--tier2` active"; 3 references). Do not describe tier2 as removed.
+- **The sim IMPORTS the shipped physics; it does not re-implement it.** `advanceRacerT` (raceStep.js),
+  `applyGovernor`/`arcT` (raceGovernor.js), `raceLengths.js`, `racePlanner.js` are all imported. The
+  divergence risk lives only in the *inputs* each engine computes before the shared t-update — audited
+  in `docs/FORCE-PARITY.md`.
+- **Stage-0 config pipeline:** `--config=world.json` is honoured or the run **ABORTS loud**
+  (`WORLD_SCHEMA_MISMATCH`, exit 2) — never runs-and-ignores. With no `--config`, a prominent
+  **ASSUMED-DEFAULTS** banner prints and every result is stamped provisional. `WORLD_SCHEMA_VERSION` +
+  `hashWorld` stamp each result (`raceConfigWorld.js`). Golden: `scripts/night-sweep/golden-stage0.mjs`.
+- **Gap-space observers, in RACER LENGTHS** (`scripts/sim/observers/gap-metrics.mjs`): lengths-behind,
+  leader→P2, top-5 spread, field p10–p90, field median, the frontmost-gap (detached-group) curve, plus
+  the deadRace/visibleComeback ingredients. Seconds are a secondary column only. Enabled by
+  `--gap-metrics`; byte-neutral when off.
+- **THE STANDING RULE — rank-space metrics cannot see a dead race.** `gap-metrics.test.mjs` is the
+  executable proof: two synthetic races with **identical final ranks**, one bunched and one strung out —
+  every rank-space metric is identical, every gap-space metric differs. If it ever fails, a rank metric
+  started depending on gaps or a gap metric went blind to them; stop.

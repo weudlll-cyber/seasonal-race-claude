@@ -424,3 +424,20 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 - **`priorityExtras` is now `{ currentTs }` only.** The browser passes `{ currentTs: physicsTs }` and the sim passes `{ currentTs: raceTs }`. The single consumer is the **Hard-Separation warmup ramp** (`raceElapsedMs = priorityExtras?.currentTs`). No-clock callers (most unit tests) → warmup runs at full strength.
 - **The sqrt-dilution asymmetry and the additive multi-force stack are gone** — conflicts C1–C5 no longer apply. The live lateral model is the single Soft-Steering spring (L0a) plus the Hard-Separation backstop (L0b).
 - Any mechanics change here must be mirrored in `scripts/sim-fairness.mjs` (Sim-Browser Parity Rule).
+
+---
+
+## 2026-07-10 — role vs docs/FORCE-PARITY.md (INFRA: sim-trust)
+
+Two force documents that can disagree is how `zoneMult` hid for months. Division of labour, decided:
+
+- **This document (KRAEFTE-LANDKARTE) is the FORCE MAP** — the complete inventory of what forces exist
+  and act on a racer, with the **lateral layers** (Layer 1 soft steering, Layer 2 hard separation,
+  L7/L8/L11, and the Commit A/B removal history) as its unique, load-bearing content.
+- **`docs/FORCE-PARITY.md` is the browser↔sim PARITY AUDIT** — the 22-row table of verdicts
+  (IDENTICAL / DIVERGENT / …) and the open seams O1–O6. It is not a force map.
+- **Anti-drift rule:** the longitudinal per-frame t-update has ONE source of truth —
+  `client/src/modules/raceStep.js` (`t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult ·
+  areaBonusMult · governorMult`) — and its parity verdicts live in FORCE-PARITY. This document's
+  longitudinal section (Section A) must **point to** those two, never re-list values that can drift out
+  of sync. Racer lengths come from the single shared `client/src/modules/raceLengths.js`.

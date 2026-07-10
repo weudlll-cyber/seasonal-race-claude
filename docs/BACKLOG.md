@@ -784,3 +784,23 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 - Multi-tenant isolation (per-organizer track sets and branding)
 - Mobile / tablet responsive tuning
 - Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
+
+---
+
+## 2026-07-10 — added (INFRA: sim-trust)
+
+- **FORCE-PARITY latent seams** (`docs/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
+  `computeFinishT` hardcodes `runoutZone = 0.05` while the browser reads `behaviorConfig.runoutZone` —
+  identical at default, diverges if the owner ever changes it (open tracks only). O2 (`--rerollVariant=2`
+  sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),
+  O5 (auxiliary sweep scripts omit the phase-split), O6 (shared-module parity conditional on geometry).
+- **Repository hygiene** — needs a curation pass: **180 tags** exist (as of 2026-07-10) and **6 remote
+  branches**; a KEEP-LIST of the live rollback anchors and the set of dead branches is **UNVERIFIED** and
+  must be produced before any pruning. (The spec's "169 tags / 9 meaningful / 3 dead branches" did not
+  match the repo today — do not prune on those numbers.)
+- **Pre-existing start-row WIN bias on luger-hill and dirt-oval** — present under v4-OFF (shipped
+  default): `startRowUnfair = true` on both across all three arms in the night sweep. Independent of
+  cohesion; a fairness item in its own right.
+- **PHOTO_FINISH DevScreen accordion** — to be added.
+- **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
+- **tier2 prototype path in `sim-fairness.mjs`** — decide whether to delete (see SIM.md update).

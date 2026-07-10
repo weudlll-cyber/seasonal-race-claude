@@ -1065,3 +1065,36 @@ RaceArena uses a three-party model for significant features:
 3. **Claude Code CLI (executor)** — executes self-contained specs: writes code, tests, docs, commits, opens PRs.
 
 Specs delivered to Claude Code must be self-contained (no follow-up clarification during execution). PR bodies contain the authoritative spec reference. See `docs/PROJECT-PRINCIPLES.md` for the full list of project principles.
+
+---
+
+## 2026-07-10 — INFRA update (sim-trust): shared modules, removals, world hash
+
+Corrects/extends this document after the sim-untangle + gap-space + lengths work. Each claim is
+verified at the cited source.
+
+- **Shared per-frame t-update — `client/src/modules/raceStep.js`.** One function `advanceRacerT`
+  applies `t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult`
+  with the finish clamp. **Imported by BOTH** the browser engine (`RaceScreen/index.jsx`) and the
+  fairness sim (`scripts/sim-fairness.mjs`) — factors 4–8, the multiplication order and the clamp are
+  identical by construction. See `docs/FORCE-PARITY.md` for the force-by-force audit.
+- **Shared racer-length conversion — `client/src/modules/raceLengths.js`.** `arcT`, `lenScaleFrom`,
+  `arcLengths`, `meanDrawnBodyLen` — the one source for "racer lengths" (arc distance ÷ mean body px).
+  Imported by the HUD (`GovernorDiagHUD.jsx`), the engine (`index.jsx`), `raceGovernor.js` (which
+  re-exports `arcT` for compatibility), the observer (`scripts/sim/observers/gap-metrics.mjs`) and the
+  sim. Replaced four inline copies of the same formula. `raceLengths.test.js` proves the extraction is
+  bit-identical to the old inline formula (open/closed/lap seam).
+- **World hash / simulatability — `client/src/modules/raceConfigWorld.js`.** `WORLD_SCHEMA_VERSION` +
+  `hashWorld`; the DevScreen export button lives in `DevScreen/sections/ConfigExportSection.jsx`. The
+  sim consumes an exported `world.json` via `--config`; with none, it stamps `ASSUMED-DEFAULTS` and says
+  so up front (fail-loud on an old-schema world).
+- **Race zones: REMOVED entirely.** No `raceZoneConfig` / `zoneMult` remains in `defaults.js` or
+  `raceStep.js` (verified: grep is empty); the DevScreen section and the stored key were purged
+  (an old-schema `world.json` that still carries `raceZoneConfig` makes the sim ABORT — golden G3).
+- **areaBonus phase-split lives in `racePlanner.js`** and is applied by both engines (browser + sim);
+  under v4 it is zero for every racer from the chaos boundary (`racePlanner.js:523`).
+- **`headlessRaceSimulator.js` is a SIMPLIFIED STATISTICAL MODEL, not the game.** It self-declares this
+  (its header): it deliberately OMITS `trajectoryMult`, `areaBonusMult`, `governorMult` and the racer
+  type's `speedMultiplier`, and uses a circular world approximation. It exists only to measure the
+  "racers side-by-side" distribution for DiagnoseVerteilung. **Its numbers do not describe the game** and
+  its t-update must NOT be unified with the shared formula — it is a different model on purpose.

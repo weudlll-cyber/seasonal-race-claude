@@ -2686,3 +2686,51 @@ Three approaches were tried and empirically rejected in the governor arc; record
 - **Tight median-cohesion strong enough to bound the field = a dead field.** Cohesion stiff enough to prevent a front breakaway also flattens the natural re-roll groups/battles into an evenly-spaced procession. The resolution was the **dead zone** (middle runs free; force only past the bound) plus retiring the leader side entirely — not a stronger spring.
 - **Neighbour-gap "rip-closer" relocates the rip, it doesn't remove it.** Closing the largest adjacent gap just moves the discontinuity elsewhere in the field; the **median-relative** bound was the effective lever, not the neighbour gap (`24c99b6`).
 - **Length-bound / `finishT` mis-scaling under-reported closed multi-lap gaps.** Bounding a gap as a fraction of `finishT` divided out ~`maxLaps` on closed tracks, so the same physical gap read differently by duration/track. Fixed by measuring in **true racer-lengths** (arc-px ÷ mean body length) — lap-count- and track-independent (`9947892`).
+
+---
+
+# 2026-07-10 — What this week cost and taught (INFRA: sim-trust / gap-space / lengths)
+
+Plain language. Each lesson is why a whole week went into measurement, not features.
+
+- **Rank space is not gap space.** `reachedFront := rank <= 5` is satisfied by a racer finishing 5th,
+  seventeen lengths behind a lone winner. Every quality metric we owned lived in rank space. The numbers
+  said the comeback worked; the owner's eye said the race was dead. Both were right — they measured
+  different spaces. The standing rule now: **rank-space metrics cannot see a dead race**
+  (`scripts/sim/observers/gap-metrics.test.mjs` proves it: two synthetic races, identical final ranks,
+  one bunched and one strung out — every rank metric identical, every gap metric different).
+
+- **Five metrics measured something other than their name.** `physical_overtake` counted start-row
+  mixing; "comeback" counted a one-place gain; the cast-depth table was measured on a pack racer, not a
+  hero; `transitionEnd` was called functionless despite a second reader; `reachedFront` is a rank. A
+  metric named for the thing it does not measure is worse than no metric.
+
+- **Byte-identity proves that nothing changed. It proves nothing was ever right.** A frozen wrong
+  baseline converts an error into a guarantee. Keep the two questions and two tools separate: *did this
+  deletion change the race?* → exact regression diff (byte-identity). *Is the race any good?* →
+  gap-space metrics in racer lengths + the owner's eye. Never let the first answer the second.
+
+- **The unreadable file produced the wrong measurement.** The clean-baseline audit enumerated forces in
+  `racePlanner.js` — a readable file — while the actual speed formula sat deep in a 5000-line file among
+  four dormant experiments. That is why a browser-only brake zone was never found. Untangling was not
+  tidiness; it was the fix. (The sim is now ~3522 lines with observers factored into
+  `scripts/sim/observers/`; the physics is *imported* from the shipped modules, not re-implemented.)
+
+- **The sim silently assumed the owner's browser was at defaults. It was not.** That precondition was
+  unstated for months. The answer was not access — it was accountability: the **world hash**
+  (`raceConfigWorld.js`). Every run now stamps its world (`ASSUMED-DEFAULTS` when no `--config` is
+  given, and it says so, up front).
+
+- **A unit the observer cannot perceive is a broken metric.** One second was 5.7 lengths on
+  mountainstreet and 3.1 on dirt-oval. "Seconds" was written into a spec without justification; the
+  owner asked why, and a systematic error across a whole night's results fell out. All gap reasoning is
+  now in **racer lengths**, via one shared conversion (`client/src/modules/raceLengths.js`).
+
+- **Three independent concepts converged on the same mechanism** (bias the re-roll, not a per-frame
+  brake) — and the fourth-best idea (the early re-draw) was found only *after* all three were written.
+  Convergence is a strong signal, not a proof. Keep challenging after agreement.
+
+- **The one who runs the code catches what the one who writes the spec cannot.** Every challenge round
+  in this project corrected the *spec*, not the implementation: the bimodal field, the actuator
+  hierarchy (the servo has more speed authority than the re-roll), the withdrawal of a hero exemption
+  that would have hidden the motivating failure. Read the source before trusting the claim.

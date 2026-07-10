@@ -520,3 +520,18 @@ The pivot: the pre-OUTCOME governor is **no longer a field-order limiter**. It i
 - **Dual-Particle-System** — `dustParticles` (home trail) + `surfaceParticles` (VRE) as separate pools: consolidation after Surface Zones makes more sense
 - **D3.6** — File reorganization `racer-types/` → `racer-configs/` (39 files): low priority
 - ✅ **chore/sprite-scale-relative** — Done (squash `6a9dcfc`, 2026-05-24, schema v14). `spritePx` → `spriteScale`, FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. LEAD_CHANGE badge fix (L87). 2048 tests.
+
+---
+
+## 2026-07-10 — status update (INFRA: sim-trust)
+
+- **Done:** the sim untangle (~3522 lines, observers in `scripts/sim/observers/`, physics imported not
+  re-implemented); race zones removed; the shared per-frame t-update (`raceStep.js`); areaBonus
+  browser↔sim parity (`racePlanner.js`); the world hash / `ASSUMED-DEFAULTS` stamping
+  (`raceConfigWorld.js`); **gap-space metrics in racer lengths** (`raceLengths.js`,
+  `scripts/sim/observers/gap-metrics.mjs`) with the bunched-vs-strung golden test.
+- **Paused:** the v4 casting rework — no hero is ever steered to rank 1 (`b1Cluster = 2`,
+  `heroCurveGenerator.js:378-382`); heroes are cast already at the front (from the B1 pool, final rank
+  ≤ 5, `:407-408`). These are known casting defects, not constraints.
+- **Next:** field cohesion (`docs/CONCEPT-COHESION.md`) → then the casting rework → then the traffic
+  malus. Cohesion is documentation-only today; nothing is implemented.
