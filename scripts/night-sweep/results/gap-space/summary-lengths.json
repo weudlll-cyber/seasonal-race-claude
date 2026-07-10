@@ -1,0 +1,3335 @@
+{
+  "meta": {
+    "unit": "RACER LENGTHS (primary); seconds secondary",
+    "note": "RAW. NO gates. X/Y/Z await owner calibration.",
+    "proposedThresholds": {
+      "inContentionLen": 3,
+      "comebackDepthLen": 8,
+      "comebackFinishLen": 3,
+      "deadRaceGapLen": 5,
+      "deadRaceMajorityFrac": 0.5,
+      "inContentionSec": 2,
+      "comebackDepthSec": 5,
+      "comebackFinishSec": 1.5,
+      "deadRaceGapSec": 3
+    }
+  },
+  "cells": {
+    "ns2-A-searound": {
+      "arm": "A",
+      "track": "searound",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.78025,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.5454,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 15,
+            "winRate": 0.15,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 1,
+            "wins": 16,
+            "winRate": 0.16,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 2,
+            "wins": 22,
+            "winRate": 0.22,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 3,
+            "wins": 14,
+            "winRate": 0.14,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 4,
+            "wins": 12,
+            "winRate": 0.12,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 5,
+            "wins": 9,
+            "winRate": 0.09,
+            "expRate": 0.125,
+            "n": 5
+          },
+          {
+            "row": 6,
+            "wins": 12,
+            "winRate": 0.12,
+            "expRate": 0.125,
+            "n": 5
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 162.611,
+      "meanBodyLenPx": 31.653,
+      "pathLengthPx": 5147.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 4.16,
+            "p25": 4.87,
+            "p50": 5.5,
+            "p75": 6.5,
+            "p90": 7.33,
+            "max": 8.72
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.07,
+            "p25": 0.13,
+            "p50": 0.23,
+            "p75": 0.45,
+            "p90": 0.64,
+            "max": 1.6
+          },
+          "frontmostGapLen": {
+            "p10": 0.52,
+            "p25": 0.68,
+            "p50": 0.89,
+            "p75": 1.12,
+            "p90": 1.42,
+            "max": 1.6
+          },
+          "nAheadMedian": 3
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 5.51,
+            "p25": 6.5,
+            "p50": 7.23,
+            "p75": 8.48,
+            "p90": 9.5,
+            "max": 11.28
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.02,
+            "p25": 0.05,
+            "p50": 0.14,
+            "p75": 0.23,
+            "p90": 0.33,
+            "max": 1.53
+          },
+          "frontmostGapLen": {
+            "p10": 0.57,
+            "p25": 0.68,
+            "p50": 0.89,
+            "p75": 1.2,
+            "p90": 1.48,
+            "max": 2.62
+          },
+          "nAheadMedian": 6.5
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 6.75,
+            "p25": 8.57,
+            "p50": 11.05,
+            "p75": 14.16,
+            "p90": 17.29,
+            "max": 20.28
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.24,
+            "p25": 0.74,
+            "p50": 1.5,
+            "p75": 3.98,
+            "p90": 7.03,
+            "max": 10.58
+          },
+          "frontmostGapLen": {
+            "p10": 1.33,
+            "p25": 1.53,
+            "p50": 2.97,
+            "p75": 5.13,
+            "p90": 7.29,
+            "max": 10.58
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 6.62,
+            "p25": 9.03,
+            "p50": 14.26,
+            "p75": 18.61,
+            "p90": 21.42,
+            "max": 27.3
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.56,
+            "p25": 1.2,
+            "p50": 2.59,
+            "p75": 5.39,
+            "p90": 9.72,
+            "max": 18.43
+          },
+          "frontmostGapLen": {
+            "p10": 1.51,
+            "p25": 2.2,
+            "p50": 4.47,
+            "p75": 7.43,
+            "p90": 10.24,
+            "max": 18.43
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.84,
+          "p25": 1.24,
+          "p50": 3.35,
+          "p75": 6.6,
+          "p90": 9.44,
+          "max": 24.7
+        },
+        "top5Spread": {
+          "p10": 2.58,
+          "p25": 5.59,
+          "p50": 9.61,
+          "p75": 12.98,
+          "p90": 18.38,
+          "max": 27.44
+        },
+        "fieldSpread": {
+          "p10": 4.35,
+          "p25": 6.36,
+          "p50": 9.03,
+          "p75": 12.02,
+          "p90": 14.47,
+          "max": 24.04
+        },
+        "frontmost": {
+          "p10": 2.12,
+          "p25": 3.71,
+          "p50": 5.08,
+          "p75": 8.37,
+          "p90": 11.31,
+          "max": 24.7
+        },
+        "frontmostNAhead": 1.5
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.36,
+        "p90": 0.7,
+        "max": 0.88
+      },
+      "deadFlagCount": 19,
+      "deadRaceP90": {
+        "p10": 1.5,
+        "p25": 1.9,
+        "p50": 4.08,
+        "p75": 7.35,
+        "p90": 9.99,
+        "max": 22.43
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.5,
+          "p25": 1.71,
+          "p50": 3.31,
+          "p75": 5.69,
+          "p90": 8.37,
+          "max": 13.74
+        },
+        "p90": {
+          "p10": 2.1,
+          "p25": 3.76,
+          "p50": 5.66,
+          "p75": 8.42,
+          "p90": 11.51,
+          "max": 22.43
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.24,
+          "p50": 0.57,
+          "p75": 0.78,
+          "p90": 0.86,
+          "max": 0.94
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.03,
+        "p50": 0.06,
+        "p75": 0.33,
+        "p90": 0.52,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 8.38,
+        "p25": 12.1,
+        "p50": 16.49,
+        "p75": 20.99,
+        "p90": 25.08,
+        "max": 41.09
+      },
+      "finalBehind": {
+        "p10": 5.42,
+        "p25": 9.4,
+        "p50": 14.74,
+        "p75": 20.61,
+        "p90": 24.92,
+        "max": 41.09
+      },
+      "visibleComebacks": 78,
+      "racerSlots": 4000
+    },
+    "ns2-A-dirt-oval": {
+      "arm": "A",
+      "track": "dirt-oval",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.78625,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.04,
+        "nativeWinChiSqP": 0.9894,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 26,
+            "winRate": 0.26,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 1,
+            "wins": 24,
+            "winRate": 0.24,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 2,
+            "wins": 25,
+            "winRate": 0.25,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 3,
+            "wins": 25,
+            "winRate": 0.25,
+            "expRate": 0.25,
+            "n": 10
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 170.694,
+      "meanBodyLenPx": 38.323,
+      "pathLengthPx": 6541.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 3.23,
+            "p25": 3.55,
+            "p50": 4,
+            "p75": 4.76,
+            "p90": 5.67,
+            "max": 6.69
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.03,
+            "p25": 0.08,
+            "p50": 0.16,
+            "p75": 0.24,
+            "p90": 0.34,
+            "max": 0.6
+          },
+          "frontmostGapLen": {
+            "p10": 0.35,
+            "p25": 0.44,
+            "p50": 0.64,
+            "p75": 0.82,
+            "p90": 1.09,
+            "max": 1.39
+          },
+          "nAheadMedian": 3
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 5.08,
+            "p25": 5.82,
+            "p50": 6.46,
+            "p75": 7.37,
+            "p90": 8.18,
+            "max": 10.26
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.04,
+            "p25": 0.05,
+            "p50": 0.1,
+            "p75": 0.16,
+            "p90": 0.21,
+            "max": 0.69
+          },
+          "frontmostGapLen": {
+            "p10": 0.46,
+            "p25": 0.57,
+            "p50": 0.77,
+            "p75": 0.99,
+            "p90": 1.24,
+            "max": 1.89
+          },
+          "nAheadMedian": 6
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 7.25,
+            "p25": 9.13,
+            "p50": 11.59,
+            "p75": 15.02,
+            "p90": 16.89,
+            "max": 21.17
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.34,
+            "p25": 0.85,
+            "p50": 1.9,
+            "p75": 4.55,
+            "p90": 7.08,
+            "max": 11.64
+          },
+          "frontmostGapLen": {
+            "p10": 1.44,
+            "p25": 1.95,
+            "p50": 3.27,
+            "p75": 5.43,
+            "p90": 7.12,
+            "max": 11.64
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 8.21,
+            "p25": 11.15,
+            "p50": 15.13,
+            "p75": 19.2,
+            "p90": 22.11,
+            "max": 26.6
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.65,
+            "p25": 1.45,
+            "p50": 2.85,
+            "p75": 7.1,
+            "p90": 10.93,
+            "max": 17.66
+          },
+          "frontmostGapLen": {
+            "p10": 2.43,
+            "p25": 4.01,
+            "p50": 5.86,
+            "p75": 8.52,
+            "p90": 11.31,
+            "max": 17.66
+          },
+          "nAheadMedian": 1
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.57,
+          "p25": 1.27,
+          "p50": 3.49,
+          "p75": 9.44,
+          "p90": 14.29,
+          "max": 17.88
+        },
+        "top5Spread": {
+          "p10": 3.41,
+          "p25": 6.71,
+          "p50": 11.05,
+          "p75": 15.67,
+          "p90": 18.98,
+          "max": 25.29
+        },
+        "fieldSpread": {
+          "p10": 5.12,
+          "p25": 6.6,
+          "p50": 8.7,
+          "p75": 11.39,
+          "p90": 14.56,
+          "max": 20.18
+        },
+        "frontmost": {
+          "p10": 2.99,
+          "p25": 4.57,
+          "p50": 6.94,
+          "p75": 10.14,
+          "p90": 14.73,
+          "max": 17.88
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0.03,
+        "p75": 0.47,
+        "p90": 0.71,
+        "max": 0.84
+      },
+      "deadFlagCount": 22,
+      "deadRaceP90": {
+        "p10": 1.47,
+        "p25": 2.04,
+        "p50": 4.66,
+        "p75": 8.83,
+        "p90": 13.78,
+        "max": 18.47
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.52,
+          "p25": 2.68,
+          "p50": 4.35,
+          "p75": 6.15,
+          "p90": 8.37,
+          "max": 13.42
+        },
+        "p90": {
+          "p10": 2.94,
+          "p25": 4.99,
+          "p50": 7.26,
+          "p75": 9.9,
+          "p90": 14.04,
+          "max": 18.47
+        },
+        "fracOver3": {
+          "p10": 0.09,
+          "p25": 0.45,
+          "p50": 0.71,
+          "p75": 0.84,
+          "p90": 0.87,
+          "max": 0.93
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.04,
+        "p50": 0.08,
+        "p75": 0.39,
+        "p90": 0.53,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 9.22,
+        "p25": 13.02,
+        "p50": 17.55,
+        "p75": 21.96,
+        "p90": 26.29,
+        "max": 40.4
+      },
+      "finalBehind": {
+        "p10": 6.21,
+        "p25": 11.31,
+        "p50": 16.72,
+        "p75": 21.67,
+        "p90": 26.23,
+        "max": 40.4
+      },
+      "visibleComebacks": 64,
+      "racerSlots": 4000
+    },
+    "ns2-A-mountainstreet": {
+      "arm": "A",
+      "track": "mountainstreet",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.809,
+        "startRowUnfair": false,
+        "startRowMinPHolm": 1,
+        "nativeWinChiSqP": 0.9505,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 50,
+            "winRate": 0.5,
+            "expRate": 0.5,
+            "n": 20
+          },
+          {
+            "row": 1,
+            "wins": 50,
+            "winRate": 0.5,
+            "expRate": 0.5,
+            "n": 20
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": true,
+      "lenScale": 608.5215,
+      "meanBodyLenPx": 25.743,
+      "pathLengthPx": 15665.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 2.6,
+            "p25": 2.97,
+            "p50": 3.28,
+            "p75": 3.74,
+            "p90": 4.2,
+            "max": 5.29
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.05,
+            "p25": 0.13,
+            "p50": 0.21,
+            "p75": 0.37,
+            "p90": 0.48,
+            "max": 0.79
+          },
+          "frontmostGapLen": {
+            "p10": 0.38,
+            "p25": 0.43,
+            "p50": 0.52,
+            "p75": 0.68,
+            "p90": 0.84,
+            "max": 1.21
+          },
+          "nAheadMedian": 3
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.55,
+            "p25": 4.08,
+            "p50": 4.73,
+            "p75": 5.76,
+            "p90": 6.7,
+            "max": 8.24
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.02,
+            "p25": 0.07,
+            "p50": 0.17,
+            "p75": 0.28,
+            "p90": 0.36,
+            "max": 0.58
+          },
+          "frontmostGapLen": {
+            "p10": 0.41,
+            "p25": 0.47,
+            "p50": 0.56,
+            "p75": 0.69,
+            "p90": 0.89,
+            "max": 1.18
+          },
+          "nAheadMedian": 5
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 5.81,
+            "p25": 8.62,
+            "p50": 11.45,
+            "p75": 13.21,
+            "p90": 14.08,
+            "max": 17
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.34,
+            "p25": 1.07,
+            "p50": 1.75,
+            "p75": 3.2,
+            "p90": 6.69,
+            "max": 10.03
+          },
+          "frontmostGapLen": {
+            "p10": 1.4,
+            "p25": 1.93,
+            "p50": 2.67,
+            "p75": 4.87,
+            "p90": 7.46,
+            "max": 10.03
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 5.96,
+            "p25": 10.77,
+            "p50": 14.44,
+            "p75": 17.4,
+            "p90": 19.43,
+            "max": 21.95
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.32,
+            "p25": 1.18,
+            "p50": 1.5,
+            "p75": 4.56,
+            "p90": 8.78,
+            "max": 12.71
+          },
+          "frontmostGapLen": {
+            "p10": 1.29,
+            "p25": 2.2,
+            "p50": 4.75,
+            "p75": 7.07,
+            "p90": 9.69,
+            "max": 12.71
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.27,
+          "p25": 0.82,
+          "p50": 1.6,
+          "p75": 4.72,
+          "p90": 9.52,
+          "max": 14.29
+        },
+        "top5Spread": {
+          "p10": 2.02,
+          "p25": 4.03,
+          "p50": 8.15,
+          "p75": 12.18,
+          "p90": 15.01,
+          "max": 21.58
+        },
+        "fieldSpread": {
+          "p10": 5.36,
+          "p25": 6.65,
+          "p50": 9.18,
+          "p75": 12.88,
+          "p90": 15.25,
+          "max": 24.46
+        },
+        "frontmost": {
+          "p10": 1.33,
+          "p25": 2.77,
+          "p50": 4.88,
+          "p75": 8.82,
+          "p90": 10.57,
+          "max": 14.29
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.31,
+        "p90": 0.64,
+        "max": 0.84
+      },
+      "deadFlagCount": 17,
+      "deadRaceP90": {
+        "p10": 1.2,
+        "p25": 1.58,
+        "p50": 2.4,
+        "p75": 5.76,
+        "p90": 9.75,
+        "max": 13.43
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.24,
+          "p25": 2.13,
+          "p50": 3.6,
+          "p75": 5.31,
+          "p90": 7.24,
+          "max": 10.83
+        },
+        "p90": {
+          "p10": 1.78,
+          "p25": 3.1,
+          "p50": 5.96,
+          "p75": 8.41,
+          "p90": 10.8,
+          "max": 13.43
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.13,
+          "p50": 0.6,
+          "p75": 0.79,
+          "p90": 0.86,
+          "max": 0.92
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.03,
+        "p25": 0.06,
+        "p50": 0.16,
+        "p75": 0.45,
+        "p90": 0.56,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 6.83,
+        "p25": 10.99,
+        "p50": 15.69,
+        "p75": 20.1,
+        "p90": 23.05,
+        "max": 39.6
+      },
+      "finalBehind": {
+        "p10": 3.69,
+        "p25": 8.53,
+        "p50": 14.9,
+        "p75": 19.69,
+        "p90": 22.92,
+        "max": 39.6
+      },
+      "visibleComebacks": 86,
+      "racerSlots": 4000
+    },
+    "ns2-A-luger-hill": {
+      "arm": "A",
+      "track": "luger-hill",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.7795,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.4797,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 19,
+            "winRate": 0.19,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 1,
+            "wins": 18,
+            "winRate": 0.18,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 2,
+            "wins": 15,
+            "winRate": 0.15,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 3,
+            "wins": 22,
+            "winRate": 0.22,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 4,
+            "wins": 26,
+            "winRate": 0.26,
+            "expRate": 0.2,
+            "n": 8
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 212.744,
+      "meanBodyLenPx": 48.638,
+      "pathLengthPx": 10347.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 2.88,
+            "p25": 3.34,
+            "p50": 3.69,
+            "p75": 4.29,
+            "p90": 4.6,
+            "max": 5.57
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.03,
+            "p25": 0.06,
+            "p50": 0.17,
+            "p75": 0.25,
+            "p90": 0.37,
+            "max": 0.85
+          },
+          "frontmostGapLen": {
+            "p10": 0.32,
+            "p25": 0.42,
+            "p50": 0.59,
+            "p75": 0.78,
+            "p90": 1.01,
+            "max": 1.66
+          },
+          "nAheadMedian": 3
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.58,
+            "p25": 3.97,
+            "p50": 4.72,
+            "p75": 5.4,
+            "p90": 6.04,
+            "max": 7.65
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.02,
+            "p25": 0.07,
+            "p50": 0.13,
+            "p75": 0.2,
+            "p90": 0.29,
+            "max": 0.79
+          },
+          "frontmostGapLen": {
+            "p10": 0.44,
+            "p25": 0.57,
+            "p50": 0.71,
+            "p75": 0.87,
+            "p90": 1.07,
+            "max": 1.37
+          },
+          "nAheadMedian": 4
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 4.86,
+            "p25": 6.45,
+            "p50": 7.87,
+            "p75": 9.8,
+            "p90": 10.74,
+            "max": 13.51
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.28,
+            "p25": 0.72,
+            "p50": 1.39,
+            "p75": 2.43,
+            "p90": 3.91,
+            "max": 5.87
+          },
+          "frontmostGapLen": {
+            "p10": 1.05,
+            "p25": 1.48,
+            "p50": 2.24,
+            "p75": 3.15,
+            "p90": 4.06,
+            "max": 5.87
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 5.8,
+            "p25": 7.83,
+            "p50": 10.34,
+            "p75": 12.41,
+            "p90": 13.45,
+            "max": 16.42
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.3,
+            "p25": 0.95,
+            "p50": 1.62,
+            "p75": 3.81,
+            "p90": 5.79,
+            "max": 10.24
+          },
+          "frontmostGapLen": {
+            "p10": 1.41,
+            "p25": 2.14,
+            "p50": 3.39,
+            "p75": 4.54,
+            "p90": 6.18,
+            "max": 10.24
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.58,
+          "p25": 1.22,
+          "p50": 2.26,
+          "p75": 4.65,
+          "p90": 7.33,
+          "max": 12.91
+        },
+        "top5Spread": {
+          "p10": 2.87,
+          "p25": 4.67,
+          "p50": 7.3,
+          "p75": 9.07,
+          "p90": 11.24,
+          "max": 13.94
+        },
+        "fieldSpread": {
+          "p10": 4.34,
+          "p25": 5.5,
+          "p50": 6.8,
+          "p75": 7.96,
+          "p90": 9.4,
+          "max": 18.03
+        },
+        "frontmost": {
+          "p10": 1.69,
+          "p25": 2.71,
+          "p50": 4.02,
+          "p75": 5.4,
+          "p90": 7.87,
+          "max": 12.91
+        },
+        "frontmostNAhead": 1.5
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0,
+        "p90": 0.33,
+        "max": 0.67
+      },
+      "deadFlagCount": 5,
+      "deadRaceP90": {
+        "p10": 1.14,
+        "p25": 1.5,
+        "p50": 2.58,
+        "p75": 4.43,
+        "p90": 6.31,
+        "max": 11.52
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.11,
+          "p25": 1.72,
+          "p50": 2.49,
+          "p75": 3.47,
+          "p90": 4.41,
+          "max": 6.8
+        },
+        "p90": {
+          "p10": 1.76,
+          "p25": 2.91,
+          "p50": 4.16,
+          "p75": 5.36,
+          "p90": 7.3,
+          "max": 11.52
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.07,
+          "p50": 0.34,
+          "p75": 0.58,
+          "p90": 0.71,
+          "max": 0.82
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.05,
+        "p25": 0.07,
+        "p50": 0.14,
+        "p75": 0.46,
+        "p90": 0.6,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 6.15,
+        "p25": 8.87,
+        "p50": 11.62,
+        "p75": 14.23,
+        "p90": 16.86,
+        "max": 27.56
+      },
+      "finalBehind": {
+        "p10": 4.3,
+        "p25": 7.73,
+        "p50": 11.16,
+        "p75": 14.1,
+        "p90": 16.79,
+        "max": 27.56
+      },
+      "visibleComebacks": 44,
+      "racerSlots": 4000
+    },
+    "ns2-B-searound": {
+      "arm": "B",
+      "track": "searound",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.82225,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.513,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 20,
+            "winRate": 0.2,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 1,
+            "wins": 17,
+            "winRate": 0.17,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 2,
+            "wins": 11,
+            "winRate": 0.11,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 3,
+            "wins": 10,
+            "winRate": 0.1,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 4,
+            "wins": 14,
+            "winRate": 0.14,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 5,
+            "wins": 15,
+            "winRate": 0.15,
+            "expRate": 0.125,
+            "n": 5
+          },
+          {
+            "row": 6,
+            "wins": 13,
+            "winRate": 0.13,
+            "expRate": 0.125,
+            "n": 5
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 162.611,
+      "meanBodyLenPx": 31.653,
+      "pathLengthPx": 5147.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 8.79,
+            "p25": 9.8,
+            "p50": 10.84,
+            "p75": 12.16,
+            "p90": 12.98,
+            "max": 14.76
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.69,
+            "p25": 1.2,
+            "p50": 1.5,
+            "p75": 1.99,
+            "p90": 3.77,
+            "max": 7.88
+          },
+          "frontmostGapLen": {
+            "p10": 1.45,
+            "p25": 1.64,
+            "p50": 2.21,
+            "p75": 3.31,
+            "p90": 4.4,
+            "max": 7.88
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 5.13,
+            "p25": 8.34,
+            "p50": 10.9,
+            "p75": 15.99,
+            "p90": 20.01,
+            "max": 24.31
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.26,
+            "p25": 1.29,
+            "p50": 2.49,
+            "p75": 6.74,
+            "p90": 11.73,
+            "max": 15.29
+          },
+          "frontmostGapLen": {
+            "p10": 1.27,
+            "p25": 2.04,
+            "p50": 4.42,
+            "p75": 7.42,
+            "p90": 11.73,
+            "max": 15.29
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 6.34,
+            "p25": 9.3,
+            "p50": 12.81,
+            "p75": 17.96,
+            "p90": 20.74,
+            "max": 29.3
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.42,
+            "p25": 1.25,
+            "p50": 3.13,
+            "p75": 8.27,
+            "p90": 12.88,
+            "max": 18.93
+          },
+          "frontmostGapLen": {
+            "p10": 1.61,
+            "p25": 2.85,
+            "p50": 5.61,
+            "p75": 8.85,
+            "p90": 13.1,
+            "max": 18.93
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 6.55,
+            "p25": 10.57,
+            "p50": 14.78,
+            "p75": 18.57,
+            "p90": 23.16,
+            "max": 27.56
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.48,
+            "p25": 1.2,
+            "p50": 2.54,
+            "p75": 6.76,
+            "p90": 12.06,
+            "max": 20.44
+          },
+          "frontmostGapLen": {
+            "p10": 1.39,
+            "p25": 2.38,
+            "p50": 4.35,
+            "p75": 7.49,
+            "p90": 12.06,
+            "max": 20.44
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.65,
+          "p25": 1.28,
+          "p50": 2.28,
+          "p75": 6.25,
+          "p90": 12.82,
+          "max": 22.21
+        },
+        "top5Spread": {
+          "p10": 2.97,
+          "p25": 4.62,
+          "p50": 8.36,
+          "p75": 14.13,
+          "p90": 19.06,
+          "max": 26.14
+        },
+        "fieldSpread": {
+          "p10": 4.18,
+          "p25": 5.32,
+          "p50": 8.31,
+          "p75": 12.32,
+          "p90": 16.09,
+          "max": 21.09
+        },
+        "frontmost": {
+          "p10": 1.56,
+          "p25": 2.83,
+          "p50": 5.54,
+          "p75": 8.7,
+          "p90": 12.82,
+          "max": 22.21
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0.16,
+        "p75": 0.67,
+        "p90": 0.83,
+        "max": 0.88
+      },
+      "deadFlagCount": 35,
+      "deadRaceP90": {
+        "p10": 1.51,
+        "p25": 2.11,
+        "p50": 5.87,
+        "p75": 10.25,
+        "p90": 15.09,
+        "max": 21.7
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.5,
+          "p25": 2.43,
+          "p50": 4.91,
+          "p75": 7.54,
+          "p90": 10.94,
+          "max": 18.06
+        },
+        "p90": {
+          "p10": 2.45,
+          "p25": 4.18,
+          "p50": 7.27,
+          "p75": 11.29,
+          "p90": 15.09,
+          "max": 21.7
+        },
+        "fracOver3": {
+          "p10": 0.01,
+          "p25": 0.34,
+          "p50": 0.81,
+          "p75": 0.87,
+          "p90": 0.9,
+          "max": 0.94
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.03,
+        "p50": 0.04,
+        "p75": 0.08,
+        "p90": 0.31,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 10.67,
+        "p25": 13.86,
+        "p50": 17.93,
+        "p75": 22.52,
+        "p90": 26.55,
+        "max": 38.42
+      },
+      "finalBehind": {
+        "p10": 4.75,
+        "p25": 9.55,
+        "p50": 14.52,
+        "p75": 20.15,
+        "p90": 25.37,
+        "max": 37.51
+      },
+      "visibleComebacks": 172,
+      "racerSlots": 4000
+    },
+    "ns2-B-dirt-oval": {
+      "arm": "B",
+      "track": "dirt-oval",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.8385,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.04,
+        "nativeWinChiSqP": 0.9036,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 27,
+            "winRate": 0.27,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 1,
+            "wins": 22,
+            "winRate": 0.22,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 2,
+            "wins": 25,
+            "winRate": 0.25,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 3,
+            "wins": 26,
+            "winRate": 0.26,
+            "expRate": 0.25,
+            "n": 10
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 170.694,
+      "meanBodyLenPx": 38.323,
+      "pathLengthPx": 6541.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 6.38,
+            "p25": 7.43,
+            "p50": 8.59,
+            "p75": 9.79,
+            "p90": 11.07,
+            "max": 12.21
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.52,
+            "p25": 1.02,
+            "p50": 1.45,
+            "p75": 1.63,
+            "p90": 2.72,
+            "max": 5.13
+          },
+          "frontmostGapLen": {
+            "p10": 0.96,
+            "p25": 1.36,
+            "p50": 1.6,
+            "p75": 2.34,
+            "p90": 3.45,
+            "max": 5.13
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 5.56,
+            "p25": 7.31,
+            "p50": 10.68,
+            "p75": 14.03,
+            "p90": 18.24,
+            "max": 21.35
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.74,
+            "p25": 1.47,
+            "p50": 3.49,
+            "p75": 6.91,
+            "p90": 10.05,
+            "max": 15.73
+          },
+          "frontmostGapLen": {
+            "p10": 1.49,
+            "p25": 2.67,
+            "p50": 4.78,
+            "p75": 7.89,
+            "p90": 10.48,
+            "max": 15.73
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 4.48,
+            "p25": 8.25,
+            "p50": 12.44,
+            "p75": 16.56,
+            "p90": 19.97,
+            "max": 25.98
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.51,
+            "p25": 1.2,
+            "p50": 2.76,
+            "p75": 7.84,
+            "p90": 11.38,
+            "max": 17.44
+          },
+          "frontmostGapLen": {
+            "p10": 1.45,
+            "p25": 2.68,
+            "p50": 4.43,
+            "p75": 8.68,
+            "p90": 11.75,
+            "max": 17.44
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 6,
+            "p25": 8.52,
+            "p50": 13.82,
+            "p75": 18.43,
+            "p90": 22.05,
+            "max": 30.44
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.32,
+            "p25": 1.02,
+            "p50": 2.4,
+            "p75": 7.95,
+            "p90": 12.37,
+            "max": 21.32
+          },
+          "frontmostGapLen": {
+            "p10": 1.44,
+            "p25": 2.25,
+            "p50": 4.82,
+            "p75": 8.78,
+            "p90": 12.37,
+            "max": 21.32
+          },
+          "nAheadMedian": 1
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.41,
+          "p25": 0.99,
+          "p50": 2.24,
+          "p75": 7.28,
+          "p90": 12.03,
+          "max": 22.93
+        },
+        "top5Spread": {
+          "p10": 3.22,
+          "p25": 4.38,
+          "p50": 8.91,
+          "p75": 13.35,
+          "p90": 17.73,
+          "max": 24.28
+        },
+        "fieldSpread": {
+          "p10": 4.53,
+          "p25": 6.07,
+          "p50": 8.29,
+          "p75": 10.04,
+          "p90": 12.88,
+          "max": 20.02
+        },
+        "frontmost": {
+          "p10": 1.71,
+          "p25": 2.95,
+          "p50": 5.24,
+          "p75": 7.88,
+          "p90": 12.03,
+          "max": 22.93
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0.08,
+        "p75": 0.59,
+        "p90": 0.84,
+        "max": 0.89
+      },
+      "deadFlagCount": 29,
+      "deadRaceP90": {
+        "p10": 1.36,
+        "p25": 2.12,
+        "p50": 4.83,
+        "p75": 9.51,
+        "p90": 13.27,
+        "max": 22.23
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.38,
+          "p25": 2.56,
+          "p50": 4.41,
+          "p75": 7.94,
+          "p90": 11.57,
+          "max": 17.28
+        },
+        "p90": {
+          "p10": 2.44,
+          "p25": 3.96,
+          "p50": 6.84,
+          "p75": 10.23,
+          "p90": 13.75,
+          "max": 22.23
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.31,
+          "p50": 0.75,
+          "p75": 0.88,
+          "p90": 0.9,
+          "max": 0.94
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.03,
+        "p50": 0.05,
+        "p75": 0.09,
+        "p90": 0.33,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 9.19,
+        "p25": 12.29,
+        "p50": 16.16,
+        "p75": 20.92,
+        "p90": 24.72,
+        "max": 41.99
+      },
+      "finalBehind": {
+        "p10": 4.3,
+        "p25": 8.56,
+        "p50": 13.81,
+        "p75": 19.47,
+        "p90": 23.78,
+        "max": 41.99
+      },
+      "visibleComebacks": 153,
+      "racerSlots": 4000
+    },
+    "ns2-B-mountainstreet": {
+      "arm": "B",
+      "track": "mountainstreet",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.8425,
+        "startRowUnfair": false,
+        "startRowMinPHolm": 1,
+        "nativeWinChiSqP": 0.8224,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 49,
+            "winRate": 0.49,
+            "expRate": 0.5,
+            "n": 20
+          },
+          {
+            "row": 1,
+            "wins": 51,
+            "winRate": 0.51,
+            "expRate": 0.5,
+            "n": 20
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": true,
+      "lenScale": 608.5215,
+      "meanBodyLenPx": 25.743,
+      "pathLengthPx": 15665.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 5.47,
+            "p25": 5.84,
+            "p50": 6.43,
+            "p75": 7.05,
+            "p90": 7.95,
+            "max": 9.35
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.22,
+            "p25": 0.52,
+            "p50": 0.97,
+            "p75": 1.39,
+            "p90": 1.51,
+            "max": 2.81
+          },
+          "frontmostGapLen": {
+            "p10": 0.8,
+            "p25": 0.98,
+            "p50": 1.19,
+            "p75": 1.49,
+            "p90": 1.59,
+            "max": 2.81
+          },
+          "nAheadMedian": 1.5
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.86,
+            "p25": 7.1,
+            "p50": 9.36,
+            "p75": 12.41,
+            "p90": 13.94,
+            "max": 15.46
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.28,
+            "p25": 0.8,
+            "p50": 1.5,
+            "p75": 4.66,
+            "p90": 6.82,
+            "max": 11.64
+          },
+          "frontmostGapLen": {
+            "p10": 1.18,
+            "p25": 1.99,
+            "p50": 3.73,
+            "p75": 5.42,
+            "p90": 7.44,
+            "max": 11.64
+          },
+          "nAheadMedian": 2
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 4.74,
+            "p25": 8.59,
+            "p50": 12.74,
+            "p75": 16.42,
+            "p90": 18.48,
+            "max": 21.52
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.38,
+            "p25": 0.94,
+            "p50": 1.55,
+            "p75": 4.78,
+            "p90": 8.35,
+            "max": 15.61
+          },
+          "frontmostGapLen": {
+            "p10": 1.01,
+            "p25": 2.33,
+            "p50": 3.95,
+            "p75": 7.02,
+            "p90": 9.35,
+            "max": 15.61
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 5.88,
+            "p25": 9.57,
+            "p50": 14.06,
+            "p75": 18.03,
+            "p90": 21.16,
+            "max": 24.48
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.27,
+            "p25": 0.98,
+            "p50": 1.5,
+            "p75": 3.69,
+            "p90": 7.82,
+            "max": 16.36
+          },
+          "frontmostGapLen": {
+            "p10": 1.33,
+            "p25": 2.49,
+            "p50": 4.29,
+            "p75": 6.9,
+            "p90": 9.35,
+            "max": 16.36
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.27,
+          "p25": 0.71,
+          "p50": 1.5,
+          "p75": 3.47,
+          "p90": 8.26,
+          "max": 17.94
+        },
+        "top5Spread": {
+          "p10": 1.81,
+          "p25": 3.75,
+          "p50": 7.75,
+          "p75": 11.14,
+          "p90": 15.14,
+          "max": 21.38
+        },
+        "fieldSpread": {
+          "p10": 5.09,
+          "p25": 6.74,
+          "p50": 9.06,
+          "p75": 12.15,
+          "p90": 15.73,
+          "max": 20.25
+        },
+        "frontmost": {
+          "p10": 1.51,
+          "p25": 2.62,
+          "p50": 4.76,
+          "p75": 7.25,
+          "p90": 10.4,
+          "max": 17.94
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.32,
+        "p90": 0.79,
+        "max": 0.88
+      },
+      "deadFlagCount": 15,
+      "deadRaceP90": {
+        "p10": 1.41,
+        "p25": 1.67,
+        "p50": 2.66,
+        "p75": 7.19,
+        "p90": 9.86,
+        "max": 17.16
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.08,
+          "p25": 2.23,
+          "p50": 4.03,
+          "p75": 5.84,
+          "p90": 8.49,
+          "max": 14.58
+        },
+        "p90": {
+          "p10": 2.08,
+          "p25": 3.13,
+          "p50": 5.84,
+          "p75": 8.47,
+          "p90": 11.01,
+          "max": 17.16
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.15,
+          "p50": 0.73,
+          "p75": 0.84,
+          "p90": 0.88,
+          "max": 0.93
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.04,
+        "p50": 0.07,
+        "p75": 0.15,
+        "p90": 0.47,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 7.95,
+        "p25": 10.52,
+        "p50": 14.9,
+        "p75": 19.43,
+        "p90": 22.94,
+        "max": 37.64
+      },
+      "finalBehind": {
+        "p10": 3.52,
+        "p25": 8.28,
+        "p50": 14.1,
+        "p75": 18.85,
+        "p90": 22.64,
+        "max": 37.64
+      },
+      "visibleComebacks": 175,
+      "racerSlots": 4000
+    },
+    "ns2-B-luger-hill": {
+      "arm": "B",
+      "track": "luger-hill",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.8305,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.4068,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 20,
+            "winRate": 0.2,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 1,
+            "wins": 18,
+            "winRate": 0.18,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 2,
+            "wins": 14,
+            "winRate": 0.14,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 3,
+            "wins": 22,
+            "winRate": 0.22,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 4,
+            "wins": 26,
+            "winRate": 0.26,
+            "expRate": 0.2,
+            "n": 8
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 212.744,
+      "meanBodyLenPx": 48.638,
+      "pathLengthPx": 10347.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 4.9,
+            "p25": 5.38,
+            "p50": 5.94,
+            "p75": 6.31,
+            "p90": 6.62,
+            "max": 7.77
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.12,
+            "p25": 0.24,
+            "p50": 0.65,
+            "p75": 1.01,
+            "p90": 1.33,
+            "max": 2.1
+          },
+          "frontmostGapLen": {
+            "p10": 0.74,
+            "p25": 0.93,
+            "p50": 1.09,
+            "p75": 1.34,
+            "p90": 1.58,
+            "max": 2.24
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.42,
+            "p25": 5.11,
+            "p50": 6.78,
+            "p75": 7.89,
+            "p90": 9.27,
+            "max": 11.5
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.38,
+            "p25": 0.72,
+            "p50": 1.45,
+            "p75": 3.17,
+            "p90": 4.92,
+            "max": 6.65
+          },
+          "frontmostGapLen": {
+            "p10": 0.76,
+            "p25": 1.53,
+            "p50": 2.16,
+            "p75": 3.66,
+            "p90": 4.92,
+            "max": 6.65
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 3.35,
+            "p25": 5.92,
+            "p50": 8.66,
+            "p75": 11.07,
+            "p90": 12.42,
+            "max": 15.01
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.36,
+            "p25": 0.92,
+            "p50": 2.13,
+            "p75": 4.42,
+            "p90": 6.89,
+            "max": 8.78
+          },
+          "frontmostGapLen": {
+            "p10": 1.15,
+            "p25": 1.75,
+            "p50": 3.18,
+            "p75": 5.04,
+            "p90": 6.89,
+            "max": 8.78
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 4.71,
+            "p25": 7.13,
+            "p50": 9.46,
+            "p75": 12.91,
+            "p90": 14.52,
+            "max": 17.86
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.17,
+            "p25": 0.82,
+            "p50": 1.54,
+            "p75": 4.19,
+            "p90": 6.46,
+            "max": 11.35
+          },
+          "frontmostGapLen": {
+            "p10": 1.13,
+            "p25": 1.85,
+            "p50": 2.91,
+            "p75": 5.72,
+            "p90": 7.29,
+            "max": 11.35
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.27,
+          "p25": 0.83,
+          "p50": 1.51,
+          "p75": 3.86,
+          "p90": 6.9,
+          "max": 13.81
+        },
+        "top5Spread": {
+          "p10": 1.79,
+          "p25": 3.59,
+          "p50": 6.02,
+          "p75": 9.28,
+          "p90": 11.9,
+          "max": 15.84
+        },
+        "fieldSpread": {
+          "p10": 3.23,
+          "p25": 4.09,
+          "p50": 5.68,
+          "p75": 7.93,
+          "p90": 9.2,
+          "max": 14.79
+        },
+        "frontmost": {
+          "p10": 1.21,
+          "p25": 2.13,
+          "p50": 3.28,
+          "p75": 5.53,
+          "p90": 7.3,
+          "max": 13.81
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.18,
+        "p90": 0.69,
+        "max": 0.79
+      },
+      "deadFlagCount": 18,
+      "deadRaceP90": {
+        "p10": 1.13,
+        "p25": 1.58,
+        "p50": 3.02,
+        "p75": 5.73,
+        "p90": 7.88,
+        "max": 12.69
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.14,
+          "p25": 1.76,
+          "p50": 2.8,
+          "p75": 5.16,
+          "p90": 6.29,
+          "max": 8.54
+        },
+        "p90": {
+          "p10": 1.69,
+          "p25": 2.81,
+          "p50": 4.27,
+          "p75": 6.49,
+          "p90": 8.15,
+          "max": 12.69
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.04,
+          "p50": 0.42,
+          "p75": 0.75,
+          "p90": 0.82,
+          "max": 0.91
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.04,
+        "p25": 0.06,
+        "p50": 0.09,
+        "p75": 0.22,
+        "p90": 0.57,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 6.25,
+        "p25": 8.2,
+        "p50": 10.66,
+        "p75": 13.94,
+        "p90": 16.67,
+        "max": 29.58
+      },
+      "finalBehind": {
+        "p10": 2.84,
+        "p25": 6.21,
+        "p50": 9.73,
+        "p75": 13.76,
+        "p90": 16.63,
+        "max": 29.58
+      },
+      "visibleComebacks": 123,
+      "racerSlots": 4000
+    },
+    "ns2-C-searound": {
+      "arm": "C",
+      "track": "searound",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.8245,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.1725,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 22,
+            "winRate": 0.22,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 1,
+            "wins": 16,
+            "winRate": 0.16,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 2,
+            "wins": 10,
+            "winRate": 0.1,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 3,
+            "wins": 9,
+            "winRate": 0.09,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 4,
+            "wins": 18,
+            "winRate": 0.18,
+            "expRate": 0.15,
+            "n": 6
+          },
+          {
+            "row": 5,
+            "wins": 10,
+            "winRate": 0.1,
+            "expRate": 0.125,
+            "n": 5
+          },
+          {
+            "row": 6,
+            "wins": 15,
+            "winRate": 0.15,
+            "expRate": 0.125,
+            "n": 5
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 162.611,
+      "meanBodyLenPx": 31.653,
+      "pathLengthPx": 5147.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 8.79,
+            "p25": 9.8,
+            "p50": 10.84,
+            "p75": 12.16,
+            "p90": 12.98,
+            "max": 14.76
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.69,
+            "p25": 1.2,
+            "p50": 1.5,
+            "p75": 1.99,
+            "p90": 3.77,
+            "max": 7.88
+          },
+          "frontmostGapLen": {
+            "p10": 1.45,
+            "p25": 1.64,
+            "p50": 2.21,
+            "p75": 3.31,
+            "p90": 4.4,
+            "max": 7.88
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 5.42,
+            "p25": 7.56,
+            "p50": 10.88,
+            "p75": 15.22,
+            "p90": 20.54,
+            "max": 24.93
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.49,
+            "p25": 1.42,
+            "p50": 2.9,
+            "p75": 7.49,
+            "p90": 12.6,
+            "max": 16.33
+          },
+          "frontmostGapLen": {
+            "p10": 1.41,
+            "p25": 2.27,
+            "p50": 4.57,
+            "p75": 7.98,
+            "p90": 12.6,
+            "max": 16.33
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 4.94,
+            "p25": 8.12,
+            "p50": 11.77,
+            "p75": 16.91,
+            "p90": 21.69,
+            "max": 32.2
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.96,
+            "p25": 1.5,
+            "p50": 3.73,
+            "p75": 8.72,
+            "p90": 14.67,
+            "max": 22.38
+          },
+          "frontmostGapLen": {
+            "p10": 1.5,
+            "p25": 3,
+            "p50": 5.58,
+            "p75": 9.25,
+            "p90": 14.79,
+            "max": 22.38
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 5.79,
+            "p25": 7.54,
+            "p50": 11.75,
+            "p75": 17.86,
+            "p90": 22.73,
+            "max": 31.31
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.45,
+            "p25": 1.06,
+            "p50": 2.28,
+            "p75": 7.56,
+            "p90": 13.59,
+            "max": 22.85
+          },
+          "frontmostGapLen": {
+            "p10": 1.2,
+            "p25": 2.25,
+            "p50": 4.29,
+            "p75": 8.75,
+            "p90": 13.59,
+            "max": 22.85
+          },
+          "nAheadMedian": 1
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.48,
+          "p25": 1.02,
+          "p50": 2.16,
+          "p75": 7.11,
+          "p90": 12.64,
+          "max": 23.55
+        },
+        "top5Spread": {
+          "p10": 2.35,
+          "p25": 3.86,
+          "p50": 7.33,
+          "p75": 12.21,
+          "p90": 18.36,
+          "max": 27.51
+        },
+        "fieldSpread": {
+          "p10": 3.17,
+          "p25": 4.49,
+          "p50": 6.41,
+          "p75": 10.48,
+          "p90": 12.54,
+          "max": 18.04
+        },
+        "frontmost": {
+          "p10": 1.3,
+          "p25": 2.41,
+          "p50": 4.61,
+          "p75": 7.95,
+          "p90": 12.91,
+          "max": 23.55
+        },
+        "frontmostNAhead": 1
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0.17,
+        "p75": 0.6,
+        "p90": 0.83,
+        "max": 0.92
+      },
+      "deadFlagCount": 30,
+      "deadRaceP90": {
+        "p10": 1.63,
+        "p25": 3.13,
+        "p50": 5.51,
+        "p75": 11.87,
+        "p90": 15.93,
+        "max": 23.79
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 1.3,
+          "p25": 2.75,
+          "p50": 3.84,
+          "p75": 8.72,
+          "p90": 12.63,
+          "max": 20.55
+        },
+        "p90": {
+          "p10": 3.05,
+          "p25": 4.75,
+          "p50": 6.64,
+          "p75": 12.91,
+          "p90": 15.93,
+          "max": 23.79
+        },
+        "fracOver3": {
+          "p10": 0.14,
+          "p25": 0.46,
+          "p50": 0.72,
+          "p75": 0.86,
+          "p90": 0.9,
+          "max": 0.93
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.02,
+        "p50": 0.04,
+        "p75": 0.07,
+        "p90": 0.3,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 9.7,
+        "p25": 12.63,
+        "p50": 16.63,
+        "p75": 21.61,
+        "p90": 27.23,
+        "max": 39.22
+      },
+      "finalBehind": {
+        "p10": 4.05,
+        "p25": 7.49,
+        "p50": 11.93,
+        "p75": 18.3,
+        "p90": 24.31,
+        "max": 36.95
+      },
+      "visibleComebacks": 208,
+      "racerSlots": 4000
+    },
+    "ns2-C-dirt-oval": {
+      "arm": "C",
+      "track": "dirt-oval",
+      "open": false,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.81925,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.04,
+        "nativeWinChiSqP": 0.3508,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 29,
+            "winRate": 0.29,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 1,
+            "wins": 18,
+            "winRate": 0.18,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 2,
+            "wins": 29,
+            "winRate": 0.29,
+            "expRate": 0.25,
+            "n": 10
+          },
+          {
+            "row": 3,
+            "wins": 24,
+            "winRate": 0.24,
+            "expRate": 0.25,
+            "n": 10
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 170.694,
+      "meanBodyLenPx": 38.323,
+      "pathLengthPx": 6541.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 6.38,
+            "p25": 7.43,
+            "p50": 8.59,
+            "p75": 9.79,
+            "p90": 11.07,
+            "max": 12.21
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.52,
+            "p25": 1.02,
+            "p50": 1.45,
+            "p75": 1.63,
+            "p90": 2.72,
+            "max": 5.13
+          },
+          "frontmostGapLen": {
+            "p10": 0.96,
+            "p25": 1.36,
+            "p50": 1.6,
+            "p75": 2.34,
+            "p90": 3.45,
+            "max": 5.13
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.86,
+            "p25": 6.52,
+            "p50": 9.63,
+            "p75": 13.1,
+            "p90": 17.96,
+            "max": 21.91
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.63,
+            "p25": 1.16,
+            "p50": 2.44,
+            "p75": 6.76,
+            "p90": 9.72,
+            "max": 16.87
+          },
+          "frontmostGapLen": {
+            "p10": 0.97,
+            "p25": 1.53,
+            "p50": 4.05,
+            "p75": 7.28,
+            "p90": 10.31,
+            "max": 16.87
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 1.86,
+            "p25": 4.71,
+            "p50": 9.88,
+            "p75": 14.98,
+            "p90": 20.42,
+            "max": 27.1
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.22,
+            "p25": 0.82,
+            "p50": 2.45,
+            "p75": 6.09,
+            "p90": 10.79,
+            "max": 21.45
+          },
+          "frontmostGapLen": {
+            "p10": 0.47,
+            "p25": 1.54,
+            "p50": 4.39,
+            "p75": 6.96,
+            "p90": 13.67,
+            "max": 21.45
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 3.39,
+            "p25": 5.45,
+            "p50": 10.53,
+            "p75": 17.28,
+            "p90": 23.39,
+            "max": 30.46
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.2,
+            "p25": 0.8,
+            "p50": 1.51,
+            "p75": 5.3,
+            "p90": 12.87,
+            "max": 19.17
+          },
+          "frontmostGapLen": {
+            "p10": 0.82,
+            "p25": 1.47,
+            "p50": 3.93,
+            "p75": 7.9,
+            "p90": 14.46,
+            "max": 19.17
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.41,
+          "p25": 0.94,
+          "p50": 1.51,
+          "p75": 5.39,
+          "p90": 13.69,
+          "max": 21.68
+        },
+        "top5Spread": {
+          "p10": 1.6,
+          "p25": 2.67,
+          "p50": 6.5,
+          "p75": 13.38,
+          "p90": 18.98,
+          "max": 25.92
+        },
+        "fieldSpread": {
+          "p10": 2.91,
+          "p25": 4.72,
+          "p50": 6.45,
+          "p75": 8.87,
+          "p90": 11.07,
+          "max": 16.58
+        },
+        "frontmost": {
+          "p10": 1.07,
+          "p25": 1.56,
+          "p50": 3.88,
+          "p75": 6.72,
+          "p90": 13.69,
+          "max": 21.68
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.48,
+        "p90": 0.8,
+        "max": 0.89
+      },
+      "deadFlagCount": 25,
+      "deadRaceP90": {
+        "p10": 1.29,
+        "p25": 1.76,
+        "p50": 4.38,
+        "p75": 8.63,
+        "p90": 14.62,
+        "max": 22.77
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 0.88,
+          "p25": 1.54,
+          "p50": 3.64,
+          "p75": 6.87,
+          "p90": 12,
+          "max": 18.62
+        },
+        "p90": {
+          "p10": 1.43,
+          "p25": 3.01,
+          "p50": 6.02,
+          "p75": 9.94,
+          "p90": 15.78,
+          "max": 22.77
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.1,
+          "p50": 0.62,
+          "p75": 0.88,
+          "p90": 0.9,
+          "max": 0.95
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.03,
+        "p50": 0.05,
+        "p75": 0.21,
+        "p90": 0.5,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 7.78,
+        "p25": 10.52,
+        "p50": 14.42,
+        "p75": 20.01,
+        "p90": 25.47,
+        "max": 36.63
+      },
+      "finalBehind": {
+        "p10": 2.66,
+        "p25": 5.57,
+        "p50": 10.39,
+        "p75": 18.07,
+        "p90": 23.81,
+        "max": 36.63
+      },
+      "visibleComebacks": 258,
+      "racerSlots": 4000
+    },
+    "ns2-C-mountainstreet": {
+      "arm": "C",
+      "track": "mountainstreet",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.83,
+        "startRowUnfair": false,
+        "startRowMinPHolm": 0.88,
+        "nativeWinChiSqP": 0.8224,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 51,
+            "winRate": 0.51,
+            "expRate": 0.5,
+            "n": 20
+          },
+          {
+            "row": 1,
+            "wins": 49,
+            "winRate": 0.49,
+            "expRate": 0.5,
+            "n": 20
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": true,
+      "lenScale": 608.5215,
+      "meanBodyLenPx": 25.743,
+      "pathLengthPx": 15665.2,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 5.47,
+            "p25": 5.84,
+            "p50": 6.43,
+            "p75": 7.05,
+            "p90": 7.95,
+            "max": 9.35
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.22,
+            "p25": 0.52,
+            "p50": 0.97,
+            "p75": 1.39,
+            "p90": 1.51,
+            "max": 2.81
+          },
+          "frontmostGapLen": {
+            "p10": 0.8,
+            "p25": 0.98,
+            "p50": 1.19,
+            "p75": 1.49,
+            "p90": 1.59,
+            "max": 2.81
+          },
+          "nAheadMedian": 1.5
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 3.32,
+            "p25": 5.41,
+            "p50": 8.77,
+            "p75": 12.63,
+            "p90": 14.07,
+            "max": 15.95
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.49,
+            "p25": 1.04,
+            "p50": 1.55,
+            "p75": 4.12,
+            "p90": 7.91,
+            "max": 13.77
+          },
+          "frontmostGapLen": {
+            "p10": 0.92,
+            "p25": 1.73,
+            "p50": 3.78,
+            "p75": 6.04,
+            "p90": 8.28,
+            "max": 13.77
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 3.04,
+            "p25": 6.12,
+            "p50": 11.54,
+            "p75": 15.84,
+            "p90": 18.48,
+            "max": 21.83
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.21,
+            "p25": 0.89,
+            "p50": 2.24,
+            "p75": 6.01,
+            "p90": 10.83,
+            "max": 17.59
+          },
+          "frontmostGapLen": {
+            "p10": 0.56,
+            "p25": 1.76,
+            "p50": 5.44,
+            "p75": 9.12,
+            "p90": 11.42,
+            "max": 17.98
+          },
+          "nAheadMedian": 2
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 4.49,
+            "p25": 8.1,
+            "p50": 13.37,
+            "p75": 16.88,
+            "p90": 19.37,
+            "max": 25.6
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.45,
+            "p25": 0.9,
+            "p50": 1.74,
+            "p75": 5.59,
+            "p90": 9.91,
+            "max": 16.38
+          },
+          "frontmostGapLen": {
+            "p10": 1,
+            "p25": 2.01,
+            "p50": 3.8,
+            "p75": 7.64,
+            "p90": 10.86,
+            "max": 16.38
+          },
+          "nAheadMedian": 2
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.33,
+          "p25": 0.72,
+          "p50": 1.5,
+          "p75": 4.6,
+          "p90": 10,
+          "max": 17.59
+        },
+        "top5Spread": {
+          "p10": 1.76,
+          "p25": 3.21,
+          "p50": 6.84,
+          "p75": 11.28,
+          "p90": 16.81,
+          "max": 21.77
+        },
+        "fieldSpread": {
+          "p10": 4.07,
+          "p25": 5.36,
+          "p50": 7.03,
+          "p75": 10.08,
+          "p90": 12.78,
+          "max": 18.79
+        },
+        "frontmost": {
+          "p10": 1.21,
+          "p25": 1.67,
+          "p50": 4.05,
+          "p75": 7.53,
+          "p90": 10.45,
+          "max": 18.43
+        },
+        "frontmostNAhead": 2
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.48,
+        "p90": 0.81,
+        "max": 0.86
+      },
+      "deadFlagCount": 24,
+      "deadRaceP90": {
+        "p10": 1.21,
+        "p25": 1.59,
+        "p50": 3.86,
+        "p75": 8.77,
+        "p90": 12.41,
+        "max": 18.4
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 0.88,
+          "p25": 1.8,
+          "p50": 3.64,
+          "p75": 7.52,
+          "p90": 10.17,
+          "max": 17.01
+        },
+        "p90": {
+          "p10": 1.58,
+          "p25": 3.47,
+          "p50": 6.93,
+          "p75": 9.85,
+          "p90": 13.89,
+          "max": 18.4
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0.14,
+          "p50": 0.71,
+          "p75": 0.87,
+          "p90": 0.89,
+          "max": 0.93
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.02,
+        "p25": 0.03,
+        "p50": 0.06,
+        "p75": 0.2,
+        "p90": 0.54,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 6.99,
+        "p25": 9.6,
+        "p50": 14.03,
+        "p75": 18.96,
+        "p90": 22.24,
+        "max": 42.68
+      },
+      "finalBehind": {
+        "p10": 2.85,
+        "p25": 6.62,
+        "p50": 12.02,
+        "p75": 18.04,
+        "p90": 21.8,
+        "max": 42.68
+      },
+      "visibleComebacks": 204,
+      "racerSlots": 4000
+    },
+    "ns2-C-luger-hill": {
+      "arm": "C",
+      "track": "luger-hill",
+      "open": true,
+      "N": 100,
+      "fairness": {
+        "bandReach": 0.8195,
+        "startRowUnfair": true,
+        "startRowMinPHolm": 0.02,
+        "nativeWinChiSqP": 0.0868,
+        "nativeWinUnfair": false,
+        "perRowWins": [
+          {
+            "row": 0,
+            "wins": 15,
+            "winRate": 0.15,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 1,
+            "wins": 18,
+            "winRate": 0.18,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 2,
+            "wins": 14,
+            "winRate": 0.14,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 3,
+            "wins": 24,
+            "winRate": 0.24,
+            "expRate": 0.2,
+            "n": 8
+          },
+          {
+            "row": 4,
+            "wins": 29,
+            "winRate": 0.29,
+            "expRate": 0.2,
+            "n": 8
+          }
+        ]
+      },
+      "world": {
+        "schemaVersion": 2,
+        "worldHash": "ASSUMED-DEFAULTS",
+        "provisional": true
+      },
+      "fairContext": false,
+      "lenScale": 212.744,
+      "meanBodyLenPx": 48.638,
+      "pathLengthPx": 10347.5,
+      "checkpoints": {
+        "0.25": {
+          "fieldMedianBehindLen": {
+            "p10": 4.9,
+            "p25": 5.38,
+            "p50": 5.94,
+            "p75": 6.31,
+            "p90": 6.62,
+            "max": 7.77
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.12,
+            "p25": 0.24,
+            "p50": 0.65,
+            "p75": 1.01,
+            "p90": 1.33,
+            "max": 2.1
+          },
+          "frontmostGapLen": {
+            "p10": 0.74,
+            "p25": 0.93,
+            "p50": 1.09,
+            "p75": 1.34,
+            "p90": 1.58,
+            "max": 2.24
+          },
+          "nAheadMedian": 2
+        },
+        "0.5": {
+          "fieldMedianBehindLen": {
+            "p10": 2.95,
+            "p25": 3.91,
+            "p50": 6.26,
+            "p75": 7.95,
+            "p90": 8.81,
+            "max": 11.61
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.2,
+            "p25": 0.72,
+            "p50": 1.41,
+            "p75": 2.83,
+            "p90": 4.74,
+            "max": 6.89
+          },
+          "frontmostGapLen": {
+            "p10": 0.71,
+            "p25": 1.13,
+            "p50": 2.11,
+            "p75": 3.15,
+            "p90": 4.84,
+            "max": 6.89
+          },
+          "nAheadMedian": 1
+        },
+        "0.75": {
+          "fieldMedianBehindLen": {
+            "p10": 1.87,
+            "p25": 4.01,
+            "p50": 6.88,
+            "p75": 10.69,
+            "p90": 12.55,
+            "max": 14.96
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.2,
+            "p25": 0.85,
+            "p50": 2.26,
+            "p75": 4.76,
+            "p90": 7.01,
+            "max": 11.49
+          },
+          "frontmostGapLen": {
+            "p10": 0.4,
+            "p25": 1.43,
+            "p50": 2.89,
+            "p75": 5.12,
+            "p90": 7.39,
+            "max": 11.49
+          },
+          "nAheadMedian": 1
+        },
+        "0.9": {
+          "fieldMedianBehindLen": {
+            "p10": 3.42,
+            "p25": 5.09,
+            "p50": 8.14,
+            "p75": 11.67,
+            "p90": 14.91,
+            "max": 18.68
+          },
+          "leaderGapToP2Len": {
+            "p10": 0.32,
+            "p25": 0.74,
+            "p50": 2.13,
+            "p75": 3.69,
+            "p90": 7.82,
+            "max": 14.72
+          },
+          "frontmostGapLen": {
+            "p10": 0.78,
+            "p25": 1.5,
+            "p50": 2.66,
+            "p75": 5.27,
+            "p90": 8.02,
+            "max": 14.72
+          },
+          "nAheadMedian": 1
+        }
+      },
+      "line": {
+        "leaderGapToP2": {
+          "p10": 0.21,
+          "p25": 0.89,
+          "p50": 1.86,
+          "p75": 4.58,
+          "p90": 7.16,
+          "max": 17.84
+        },
+        "top5Spread": {
+          "p10": 1.79,
+          "p25": 2.92,
+          "p50": 4.93,
+          "p75": 9.08,
+          "p90": 12.71,
+          "max": 18.48
+        },
+        "fieldSpread": {
+          "p10": 2.95,
+          "p25": 3.8,
+          "p50": 4.65,
+          "p75": 6.7,
+          "p90": 8.36,
+          "max": 14.1
+        },
+        "frontmost": {
+          "p10": 1.09,
+          "p25": 1.52,
+          "p50": 3.06,
+          "p75": 5.3,
+          "p90": 7.92,
+          "max": 17.84
+        },
+        "frontmostNAhead": 1
+      },
+      "deadRaceOverFrac": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 0.28,
+        "p90": 0.7,
+        "max": 0.85
+      },
+      "deadFlagCount": 19,
+      "deadRaceP90": {
+        "p10": 1.06,
+        "p25": 1.75,
+        "p50": 3.35,
+        "p75": 5.81,
+        "p90": 8.29,
+        "max": 16.45
+      },
+      "frontGapFinalThird": {
+        "p50": {
+          "p10": 0.64,
+          "p25": 1.54,
+          "p50": 2.6,
+          "p75": 4.52,
+          "p90": 6.75,
+          "max": 12.12
+        },
+        "p90": {
+          "p10": 1.39,
+          "p25": 2.26,
+          "p50": 3.78,
+          "p75": 6.66,
+          "p90": 8.54,
+          "max": 16.45
+        },
+        "fracOver3": {
+          "p10": 0,
+          "p25": 0,
+          "p50": 0.36,
+          "p75": 0.75,
+          "p90": 0.82,
+          "max": 0.88
+        }
+      },
+      "inContentionFraction": {
+        "p10": 0.04,
+        "p25": 0.06,
+        "p50": 0.09,
+        "p75": 0.34,
+        "p90": 0.68,
+        "max": 1
+      },
+      "maxBehindAfterChaos": {
+        "p10": 5.54,
+        "p25": 7.29,
+        "p50": 9.81,
+        "p75": 12.9,
+        "p90": 16.72,
+        "max": 29.6
+      },
+      "finalBehind": {
+        "p10": 2.83,
+        "p25": 4.99,
+        "p50": 8.18,
+        "p75": 12.43,
+        "p90": 16.65,
+        "max": 29.6
+      },
+      "visibleComebacks": 104,
+      "racerSlots": 4000
+    }
+  },
+  "lengthsPerSecondByTrack": {
+    "searound": {
+      "p10": 3.36,
+      "p25": 3.51,
+      "p50": 3.7,
+      "p75": 3.91,
+      "p90": 4.03,
+      "max": 4.43,
+      "n": 1055
+    },
+    "dirt-oval": {
+      "p10": 2.77,
+      "p25": 2.92,
+      "p50": 3.08,
+      "p75": 3.23,
+      "p90": 3.32,
+      "max": 3.62,
+      "n": 1041
+    },
+    "mountainstreet": {
+      "p10": 5.17,
+      "p25": 5.41,
+      "p50": 5.68,
+      "p75": 5.95,
+      "p90": 6.09,
+      "max": 6.66,
+      "n": 968
+    },
+    "luger-hill": {
+      "p10": 3,
+      "p25": 3.14,
+      "p50": 3.34,
+      "p75": 3.48,
+      "p90": 3.59,
+      "max": 3.98,
+      "n": 1004
+    }
+  },
+  "fairAndDead": {
+    "A": {
+      "label": "ns2-A-mountainstreet",
+      "raceIdx": 17,
+      "deadFrac": 0.8417,
+      "deadFlag": true,
+      "lineP2Len": 7.5964,
+      "frontLen": 7.5964,
+      "nAhead": 1,
+      "lineP2Sec": 1.504,
+      "bandReach": 0.809
+    },
+    "B": {
+      "label": "ns2-B-mountainstreet",
+      "raceIdx": 26,
+      "deadFrac": 0.8787,
+      "deadFlag": true,
+      "lineP2Len": 17.9416,
+      "frontLen": 17.9416,
+      "nAhead": 1,
+      "lineP2Sec": 3.152,
+      "bandReach": 0.8425
+    },
+    "C": {
+      "label": "ns2-C-mountainstreet",
+      "raceIdx": 46,
+      "deadFrac": 0.862,
+      "deadFlag": true,
+      "lineP2Len": 10.0535,
+      "frontLen": 10.0535,
+      "nAhead": 1,
+      "lineP2Sec": 1.904,
+      "bandReach": 0.83
+    }
+  },
+  "anchorC_mtn_race26": {
+    "leaderGapToP2LineLen": 16.8497,
+    "leaderGapToP2LineSec": 3.056,
+    "frontmostGapLineLen": 16.8497,
+    "frontmostGapLineNAhead": 1,
+    "finishTimeGapSec_old": 3.056,
+    "lengthsPerSec_p50": 5.68,
+    "converted_3_06s_in_lengths": 17.4
+  }
+}

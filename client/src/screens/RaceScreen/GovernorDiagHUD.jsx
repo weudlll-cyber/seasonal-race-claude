@@ -14,6 +14,7 @@
 // ============================================================
 
 import { arcT, governorPhaseWeight } from '../../modules/raceGovernor.js';
+import { lenScaleFrom } from '../../modules/raceLengths.js';
 
 const PANEL_STYLE = {
   position: 'absolute',
@@ -59,7 +60,7 @@ function buildView(diag, state) {
   const isOpen = diag.isOpen ?? false;
   const pathLengthPx = diag.pathLengthPx ?? 0;
   const meanBodyLen = diag.meanBodyLen ?? 0;
-  const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0; // arc-fraction → racer-lengths
+  const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen); // arc-fraction → racer-lengths (shared)
   const activePhase =
     diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
 

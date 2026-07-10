@@ -1,11 +1,7 @@
-Drive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-B-luger-hill
-Seed                   : 1 (deterministisch)
-Race Plan              : ✅ aktiv
-  bonusUntil=75%  fade=1500ms  corridor=55%→100%
-Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+ics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
 
 ── Luger hill (luger-hill) — open=true path=10347px width=250px
-   luge       60s  finishT=0.833  rows=5  sf=0.74  χ²=4.0 p=0.407 [354s]
+   luge       60s  finishT=0.833  rows=5  sf=0.74  χ²=4.0 p=0.407 [373s]
      1.5×-Gate: ✅ PASS  (R0=20%(e20%)✓ R1=18%(e20%)✓ R2=14%(e20%)✓ R3=22%(e20%)✓ R4=26%(e20%)✓)
      Avoidance: R0=17526Ø  R1=20325Ø  R2=21244Ø  Lateral=96973Ø  R1≥1×vorne=7.9/8Ø
      Re-Rolls: Ø 5.2 pro Racer  Physische Renndauer: Ø 56.9s  (target=60s)
@@ -16,7 +12,7 @@ Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% traj
      FairChance by row: R0:exact=17%/top5=76%(n=115)  R1:exact=22%/top5=84%(n=106)  R2:exact=24%/top5=88%(n=89)  R3:exact=27%/top5=89%(n=95)  R4:exact=39%/top5=96%(n=95)
 
 
-Simulation abgeschlossen in 353.6s
+Simulation abgeschlossen in 372.9s
 
 === Zone Success Rate (Race Plan) ===
 | Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
@@ -34,19 +30,19 @@ Simulation abgeschlossen in 353.6s
 [hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-B-luger-hill\hero-map.json | bandReach=83.0% startRowUnfair=true realOvertakes=7.8327 netGain=6.3541 heroes/race=2.57 shortfall=0.1907
 
 === Gap-Metrics (ns2-B-luger-hill) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-B-luger-hill.json  (100 races)
-  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
-  luger-hill       (open  ) r0  line[P1→P2=0.02s top5=1.06s]  dead=no (1%)  visibleComebacks=0
-  luger-hill       (open  ) r1  line[P1→P2=1.73s top5=2.99s]  dead=no (4%)  visibleComebacks=1
-  luger-hill       (open  ) r2  line[P1→P2=0.26s top5=3.54s]  dead=no (3%)  visibleComebacks=3
-  luger-hill       (open  ) r3  line[P1→P2=0.86s top5=3.18s]  dead=no (1%)  visibleComebacks=2
-  luger-hill       (open  ) r4  line[P1→P2=1.14s top5=2.35s]  dead=no (0%)  visibleComebacks=0
-  luger-hill       (open  ) r5  line[P1→P2=0.94s top5=1.76s]  dead=no (0%)  visibleComebacks=0
-  luger-hill       (open  ) r6  line[P1→P2=0.29s top5=1.70s]  dead=no (16%)  visibleComebacks=3
-  luger-hill       (open  ) r7  line[P1→P2=0.03s top5=1.49s]  dead=no (2%)  visibleComebacks=4
-  luger-hill       (open  ) r8  line[P1→P2=0.43s top5=1.18s]  dead=no (0%)  visibleComebacks=6
-  luger-hill       (open  ) r9  line[P1→P2=0.86s top5=2.21s]  dead=no (0%)  visibleComebacks=0
-  luger-hill       (open  ) r10  line[P1→P2=0.42s top5=2.03s]  dead=no (14%)  visibleComebacks=1
-  luger-hill       (open  ) r11  line[P1→P2=0.35s top5=4.56s]  dead=no (17%)  visibleComebacks=1
+  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=3L Y=8L Z=3L deadGap=5L AWAIT owner calibration; booleans provisional.
+  luger-hill       (open  ) r0  line[P1→P2=0.01L front=1.18L/3ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  luger-hill       (open  ) r1  line[P1→P2=6.04L front=6.04L/1ahead]  dead=YES(52%) frontOver=52%  comebacks=0
+  luger-hill       (open  ) r2  line[P1→P2=0.94L front=5.79L/3ahead]  dead=no (48%) frontOver=65%  comebacks=1
+  luger-hill       (open  ) r3  line[P1→P2=2.53L front=4.51L/2ahead]  dead=no (0%) frontOver=29%  comebacks=0
+  luger-hill       (open  ) r4  line[P1→P2=3.88L front=3.88L/1ahead]  dead=YES(64%) frontOver=64%  comebacks=0
+  luger-hill       (open  ) r5  line[P1→P2=2.94L front=2.94L/1ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  luger-hill       (open  ) r6  line[P1→P2=0.97L front=3.27L/3ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  luger-hill       (open  ) r7  line[P1→P2=0.11L front=3.07L/3ahead]  dead=no (34%) frontOver=34%  comebacks=2
+  luger-hill       (open  ) r8  line[P1→P2=1.41L front=1.68L/6ahead]  dead=no (0%) frontOver=0%  comebacks=1
+  luger-hill       (open  ) r9  line[P1→P2=2.88L front=2.90L/2ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  luger-hill       (open  ) r10  line[P1→P2=1.47L front=4.25L/2ahead]  dead=no (0%) frontOver=10%  comebacks=1
+  luger-hill       (open  ) r11  line[P1→P2=1.20L front=7.12L/2ahead]  dead=no (0%) frontOver=73%  comebacks=0
 
 === Zusammenfassung ===
 Kombinationen gesamt : 1

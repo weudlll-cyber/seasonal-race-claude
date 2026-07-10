@@ -95,6 +95,7 @@ import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from 
 // GAP-SPACE observers (INFRA 5C): read-only, flag-gated. See gap-metrics.mjs header.
 import {
   secondsBehindLeader,
+  lengthsBehindLeader,
   fieldSpreadP10P90,
   gapsAtLine,
   visibleComeback,
@@ -103,6 +104,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
+import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
 // breakaway-diag). The director mechanism no longer uses the field median, so computeMedianT was
@@ -926,17 +928,7 @@ export function runSingleRace({
       poolFallback: 0, ev: 0, prevLeader: -1, leaderSinceMs: 0, lingerTarget: -1, lingerUntilMs: 0 };
     // Mean drawn body length (px) over the field — the racer-length unit for the arc-distance
     // bound (parity with the browser). Computed once per race (bodies are fixed per racer).
-    const govMeanBodyLen = (() => {
-      let sum = 0,
-        n = 0;
-      for (const r of racers) {
-        if (r.drawnBodyLengthPx > 0) {
-          sum += r.drawnBodyLengthPx;
-          n++;
-        }
-      }
-      return n > 0 ? sum / n : 0;
-    })();
+    const govMeanBodyLen = meanDrawnBodyLen(racers); // shared racer-length source (parity w/ browser)
 
     // ── Governor tail-lift / field-shape metrics (Stage C; reporting only, feeds the sweep) ─
     // In TRUE RACER-LENGTHS (arc-distance / body length — lap-count- + track-independent):
@@ -944,7 +936,7 @@ export function runSingleRace({
     // active signal is the BEHIND-median gap after the leader-brake was retired; these are kept
     // for the later tip-leash + the sweep), plus field-length p90−p10 and a position-change rate
     // (adjacent rank swaps/step) so the "liveliness returned" gate is measurable.
-    const govLenScale = govMeanBodyLen > 0 ? pathLengthPx / govMeanBodyLen : 0;
+    const govLenScale = lenScaleFrom(pathLengthPx, govMeanBodyLen);
     let govGapLenSum = 0; // leader→median, racer-lengths
     let govGapLenSteps = 0;
     let govGapLenMax = 0;
@@ -989,10 +981,21 @@ export function runSingleRace({
     // isHeroChoreographed (i.e. at the choreo boundary). Never mutates race state.
     const hmHeroes = heroMap ? new Map() : null;
     // ── GAP-METRICS per-race state (read-only; only allocated when --gap-metrics) ──
-    const gmTrace = gapMetrics ? [] : null;         // ascending {ts, t} leader-position-vs-time trace
+    // PRIMARY unit = RACER LENGTHS (arc distance to the leader × govLenScale, the shared HUD scale).
+    // Seconds kept as a SECONDARY column (needs the leader trace); never a headline / threshold basis.
+    const gmTrace = gapMetrics ? [] : null;         // ascending {ts, t} leader-position-vs-time trace (SEC)
     const gmCheckpoints = gapMetrics ? [] : null;   // snapshots at progress 0.25 / 0.50 / 0.75 / 0.90
-    const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindAfterChaos, inContentionSteps, totalSteps}
-    const gmDeadSeries = gapMetrics ? [] : null;    // final-third leader→P2 gap (s), for deadRaceFlag
+    const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindLen, inContentionSteps, totalSteps, maxBehindSec}
+    const gmDeadSeries = gapMetrics ? [] : null;    // final-third leader→P2 gap, LENGTHS (primary deadRace)
+    const gmDeadSeriesSec = gapMetrics ? [] : null; // same, SECONDS (secondary)
+    const gmFrontSeries = gapMetrics ? [] : null;   // final-third FRONTMOST consecutive gap, LENGTHS (lead-group detach)
+    let gmLineSnap = null;                           // field lengths-behind snapshot at the leader-finish instant
+    // FRONTMOST-GAP window: the largest consecutive-racer gap among the front FRONT_K racers, and how
+    // many sit ahead of it — the detached-lead-GROUP signal (leaderGapToP2 sees only a lone leader).
+    // K=10 caps a 40-field's plausible lead group; racers beyond rank 10 are not part of the "front"
+    // scalar (documented, not a silent truncation). The full front-gap array is emitted too, so any
+    // threshold/definition is recoverable. RAW — never a pass/fail.
+    const GM_FRONT_K = 10;
     // NIGHT-SWEEP (gap-space): 0.25 added to match the spec sample points (0.25/0.50/0.75/0.90 + line);
     // 0.25 = the choreo/chaos boundary — the earliest "is the field already strung out?" snapshot.
     const GM_CPS = [0.25, 0.5, 0.75, 0.9];          // sample checkpoints (leader progress)
@@ -1809,40 +1812,85 @@ export function runSingleRace({
       // ── GAP-METRICS per-frame observer (--gap-metrics; read-only) ────────────
       // Runs after Pass-2 (advanceRacerT) so every r.t is this frame's final value, and BEFORE the
       // finish check so a racer crossing this frame is still sampled at its pre-finish position.
-      // Records the leader's position-vs-time trace, the field's seconds-behind-leader at the
-      // checkpoints, and the final-third leader→P2 gap. Never mutates race state.
+      // PRIMARY = racer LENGTHS behind the leader (arcT(leaderT, r.t) × govLenScale — the shared HUD
+      // scale); seconds kept as a secondary column. Records the field's lengths/seconds behind at the
+      // checkpoints, the final-third leader→P2 gap (lengths + seconds), and the at-the-line snapshot.
+      // Never mutates race state.
       if (gapMetrics) {
         let leaderMaxT = -Infinity;
         for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
         gmTrace.push({ ts: raceTs, t: leaderMaxT });
         // Live order by t desc (finished racers included — their clamped t stays at the front).
         const gmOrder = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
-        // Final-third leader→P2 gap (seconds) — the deadRace signal.
+        // Lengths behind the leader for a given position (0 for the leader; ≥0). Shared HUD scale.
+        const lenBehind = (t) => lengthsBehindLeader(t, leaderMaxT, isOpen, govLenScale);
+        // Frontmost-gap info: the widest consecutive gap (lengths) among the front GM_FRONT_K racers,
+        // and how many racers sit AHEAD of it (= the detached lead-group size). Also the raw front-gap
+        // array (P1→P2, P2→P3, …) so any threshold/definition is recoverable. RAW, no pass/fail.
+        const frontGapInfo = () => {
+          const lim = Math.min(GM_FRONT_K, gmOrder.length - 1);
+          const gaps = [];
+          for (let i = 0; i < lim; i++) gaps.push(arcT(gmOrder[i].t, gmOrder[i + 1].t, isOpen) * govLenScale);
+          let maxG = 0, at = 0;
+          for (let i = 0; i < gaps.length; i++) if (gaps[i] > maxG) { maxG = gaps[i]; at = i; }
+          return { frontmostGapLen: +maxG.toFixed(4), nAhead: gaps.length ? at + 1 : 0, gaps: gaps.map((g) => +g.toFixed(4)) };
+        };
+        // Final-third signals: leader→P2 gap (deadRace) + frontmost front gap (lead-group detach).
         if (raceProgress >= 2 / 3 && gmOrder.length >= 2) {
-          gmDeadSeries.push(secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs));
+          gmDeadSeries.push(lenBehind(gmOrder[1].t));
+          gmDeadSeriesSec.push(secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs));
+          gmFrontSeries.push(frontGapInfo().frontmostGapLen);
         }
-        // Per-racer in-contention + max-behind, sampled AFTER the chaos boundary only.
+        // At-the-line snapshot: the field's lengths-behind at the instant the leader reaches finishT
+        // (a spatial "how many lengths back is the field as the winner crosses" — captured once). The
+        // leader is the first to reach finishT, so every other racer is still on track here — its
+        // lengths-behind is the spatial FINAL gap (a finisher's own gap at its OWN crossing is ~0).
+        if (!gmLineSnap && finishT > 0 && leaderMaxT >= finishT) {
+          const perRacerLen = {};
+          for (const r of racers) perRacerLen[r.index] = +lenBehind(r.t).toFixed(4);
+          const fg = frontGapInfo();
+          gmLineSnap = {
+            leaderGapToP2Len: gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
+            top5SpreadLen: gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
+            fieldMedianBehindLen: +percentile(gmOrder.map((r) => lenBehind(r.t)), 0.5).toFixed(4),
+            fieldSpreadP10P90Len: +fieldSpreadP10P90(gmOrder.map((r) => lenBehind(r.t))).toFixed(4),
+            frontmostGapLen: fg.frontmostGapLen, frontmostGapNAhead: fg.nAhead, frontGaps: fg.gaps,
+            perRacerLen,
+          };
+        }
+        // Per-racer in-contention + max-behind (lengths primary, seconds secondary), AFTER chaos only.
         if (raceProgress > pulkStartLive) {
           for (const r of racers) {
-            const behind = secondsBehindLeader(r.t, gmTrace, raceTs);
+            const behindLen = lenBehind(r.t);
+            const behindSec = secondsBehindLeader(r.t, gmTrace, raceTs);
             let g = gmPerRacer.get(r.index);
-            if (!g) { g = { maxBehindAfterChaos: 0, inContentionSteps: 0, totalSteps: 0 }; gmPerRacer.set(r.index, g); }
-            if (behind > g.maxBehindAfterChaos) g.maxBehindAfterChaos = behind;
-            if (behind <= GM_THRESHOLDS.inContentionSec) g.inContentionSteps++;
+            if (!g) { g = { maxBehindLen: 0, maxBehindSec: 0, inContentionSteps: 0, totalSteps: 0 }; gmPerRacer.set(r.index, g); }
+            if (behindLen > g.maxBehindLen) g.maxBehindLen = behindLen;
+            if (behindSec > g.maxBehindSec) g.maxBehindSec = behindSec;
+            if (behindLen <= GM_THRESHOLDS.inContentionLen) g.inContentionSteps++;
             g.totalSteps++;
           }
         }
-        // Snapshots at progress 0.50 / 0.75 / 0.90 (leader→P2, leader→P5, field p10–p90 — all seconds).
+        // Checkpoint snapshots at 0.25 / 0.50 / 0.75 / 0.90 — leader→P2, leader→P5, field median &
+        // p10–p90, PRIMARY lengths + secondary seconds (so lengths-per-second is derivable per sample).
         while (gmNextCp < GM_CPS.length && raceProgress >= GM_CPS[gmNextCp]) {
-          const behindArr = gmOrder.map((r) => secondsBehindLeader(r.t, gmTrace, raceTs));
+          const lenArr = gmOrder.map((r) => lenBehind(r.t));
+          const secArr = gmOrder.map((r) => secondsBehindLeader(r.t, gmTrace, raceTs));
+          const fg = frontGapInfo();
           gmCheckpoints.push({
             progress: GM_CPS[gmNextCp],
-            leaderGapToP2: gmOrder.length >= 2 ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4) : 0,
-            top5Spread: gmOrder.length >= 5 ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4) : 0,
-            fieldSpreadP10P90: +fieldSpreadP10P90(behindArr).toFixed(4),
-            // NIGHT-SWEEP: field-median seconds-behind-leader — with the leader at 0 this IS the
-            // "front group vs field median" gap the spec asks for, over time. Raw seconds.
-            fieldMedianBehind: +percentile(behindArr, 0.5).toFixed(4),
+            // PRIMARY (lengths):
+            leaderGapToP2Len: gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
+            top5SpreadLen: gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
+            fieldMedianBehindLen: +percentile(lenArr, 0.5).toFixed(4),
+            fieldSpreadP10P90Len: +fieldSpreadP10P90(lenArr).toFixed(4),
+            // FRONTMOST GAP (lead-group detach — the limiter's raw material):
+            frontmostGapLen: fg.frontmostGapLen, frontmostGapNAhead: fg.nAhead, frontGaps: fg.gaps,
+            // SECONDARY (seconds) — reporting only:
+            leaderGapToP2Sec: gmOrder.length >= 2 ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4) : 0,
+            top5SpreadSec: gmOrder.length >= 5 ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4) : 0,
+            fieldMedianBehindSec: +percentile(secArr, 0.5).toFixed(4),
+            fieldSpreadP10P90Sec: +fieldSpreadP10P90(secArr).toFixed(4),
           });
           gmNextCp++;
         }
@@ -2047,30 +2095,64 @@ export function runSingleRace({
     // AWAIT the owner's calibration — treat every boolean here as provisional, never a gate.
     if (gapMetrics) {
       const finishSecs = racers.map((r) => r.finishTime).filter((x) => x != null).sort((a, b) => a - b);
-      const line = gapsAtLine(finishSecs);
+      const line = gapsAtLine(finishSecs);                 // SECONDS at the line (secondary)
       const leaderFinish = finishSecs.length ? finishSecs[0] : null;
+      const lineLen = gmLineSnap ?? {};                    // LENGTHS at the leader-finish instant (primary)
+      const perRacerLen = lineLen.perRacerLen ?? {};
       const perRacer = racers.map((r) => {
-        const g = gmPerRacer.get(r.index) ?? { maxBehindAfterChaos: 0, inContentionSteps: 0, totalSteps: 0 };
-        const finalBehind = (r.finishTime != null && leaderFinish != null) ? r.finishTime - leaderFinish : null;
+        const g = gmPerRacer.get(r.index) ?? { maxBehindLen: 0, maxBehindSec: 0, inContentionSteps: 0, totalSteps: 0 };
+        const finalBehindSec = (r.finishTime != null && leaderFinish != null) ? r.finishTime - leaderFinish : null;
+        // FINAL gap in lengths = this racer's lengths-behind at the LEADER-finish instant (a finisher's
+        // own gap at its OWN crossing is ~0; the spatial "final gap" is measured when the winner crosses).
+        const finalBehindLen = perRacerLen[r.index] ?? null;
         return {
           index: r.index,
           finalRank: r.finishRank,
-          finalBehindSec: finalBehind != null ? +finalBehind.toFixed(4) : null,
-          maxBehindAfterChaosSec: +g.maxBehindAfterChaos.toFixed(4),
-          inContentionFraction: g.totalSteps > 0 ? +(g.inContentionSteps / g.totalSteps).toFixed(4) : 0,
-          visibleComeback: finalBehind != null
-            ? visibleComeback(g.maxBehindAfterChaos, finalBehind, GM_THRESHOLDS.comebackDepthSec, GM_THRESHOLDS.comebackFinishSec)
+          // PRIMARY (lengths):
+          finalBehindLen,
+          maxBehindAfterChaosLen: +g.maxBehindLen.toFixed(4),
+          inContentionFraction: g.totalSteps > 0 ? +(g.inContentionSteps / g.totalSteps).toFixed(4) : 0, // X in lengths
+          visibleComeback: finalBehindLen != null
+            ? visibleComeback(g.maxBehindLen, finalBehindLen, GM_THRESHOLDS.comebackDepthLen, GM_THRESHOLDS.comebackFinishLen)
             : false,
+          // SECONDARY (seconds) — reporting only:
+          finalBehindSec: finalBehindSec != null ? +finalBehindSec.toFixed(4) : null,
+          maxBehindAfterChaosSec: +g.maxBehindSec.toFixed(4),
         };
       });
       const overFrac = gmDeadSeries.length
-        ? gmDeadSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapSec).length / gmDeadSeries.length
+        ? gmDeadSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length / gmDeadSeries.length
         : 0;
+      const frontOverFrac = gmFrontSeries.length
+        ? gmFrontSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length / gmFrontSeries.length
+        : 0;
+      // Final-third distributions (lengths) — RAW material for the owner's calibration, per race. The
+      // frontmost-gap fraction is emitted at BOTH 3 lengths (the owner's stated target) and the proposed
+      // deadGap, so no single threshold is baked in. NOT a pass/fail.
+      const fracOver = (arr, t) => (arr.length ? arr.filter((x) => x > t).length / arr.length : 0);
+      const pctSummary = (arr) => ({
+        p50: +percentile(arr, 0.5).toFixed(4), p75: +percentile(arr, 0.75).toFixed(4),
+        p90: +percentile(arr, 0.9).toFixed(4), max: arr.length ? +Math.max(...arr).toFixed(4) : 0,
+      });
       results.gapMetrics = {
+        lenScale: +govLenScale.toFixed(4), meanBodyLenPx: +govMeanBodyLen.toFixed(3), pathLengthPx: +pathLengthPx.toFixed(1),
+        // PRIMARY at-the-line (lengths, at the leader-finish instant):
+        leaderGapToP2LineLen: lineLen.leaderGapToP2Len ?? null,
+        top5SpreadLineLen: lineLen.top5SpreadLen ?? null,
+        fieldMedianBehindLineLen: lineLen.fieldMedianBehindLen ?? null,
+        fieldSpreadP10P90LineLen: lineLen.fieldSpreadP10P90Len ?? null,
+        frontmostGapLineLen: lineLen.frontmostGapLen ?? null,
+        frontmostGapLineNAhead: lineLen.frontmostGapNAhead ?? null,
+        // deadRace (leader→P2) + frontmost-gap (lead-group) over the final third — lengths primary:
+        deadRaceFlag: deadRaceFlag(gmDeadSeries, GM_THRESHOLDS.deadRaceGapLen, GM_THRESHOLDS.deadRaceMajorityFrac),
+        deadRaceFinalThirdOverFrac: +overFrac.toFixed(4),
+        frontGapFinalThirdOverFrac: +frontOverFrac.toFixed(4),
+        // Final-third leader→P2 (deadRace) + frontmost-gap (lead-group) distributions, lengths:
+        deadRaceFinalThird: pctSummary(gmDeadSeries),
+        frontGapFinalThird: { ...pctSummary(gmFrontSeries), fracOver3: +fracOver(gmFrontSeries, 3).toFixed(4), fracOver5: +fracOver(gmFrontSeries, 5).toFixed(4) },
+        // SECONDARY at-the-line (seconds):
         leaderGapToP2LineSec: +line.leaderGapToP2.toFixed(4),
         top5SpreadLineSec: +line.top5Spread.toFixed(4),
-        deadRaceFlag: deadRaceFlag(gmDeadSeries, GM_THRESHOLDS.deadRaceGapSec, GM_THRESHOLDS.deadRaceMajorityFrac),
-        deadRaceFinalThirdOverFrac: +overFrac.toFixed(4),
         checkpoints: gmCheckpoints,
         perRacer,
       };
@@ -3409,15 +3491,15 @@ if (isMain) {
       races: gmRaces,
     }, null, 2));
     console.log(`\n=== Gap-Metrics (${DIAG_LABEL}) ===  → ${gmPath}  (${gmRaces.length} races)`);
-    console.log(`  ⚠ RAW distributions — proposed thresholds X=${GM_THRESHOLDS.inContentionSec}s Y=${GM_THRESHOLDS.comebackDepthSec}s Z=${GM_THRESHOLDS.comebackFinishSec}s AWAIT owner calibration; booleans provisional.`);
-    // Terse per-race headline: leader→P2 and top-5 spread at the line, and the deadRace over-fraction.
+    console.log(`  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=${GM_THRESHOLDS.inContentionLen}L Y=${GM_THRESHOLDS.comebackDepthLen}L Z=${GM_THRESHOLDS.comebackFinishLen}L deadGap=${GM_THRESHOLDS.deadRaceGapLen}L AWAIT owner calibration; booleans provisional.`);
+    // Terse per-race headline (lengths): leader→P2, frontmost front gap (n ahead), deadRace over-fraction.
     for (const gr of gmRaces.slice(0, 12)) {
       const g = gr.gapMetrics;
       const comebacks = g.perRacer.filter((p) => p.visibleComeback).length;
       console.log(
         `  ${String(gr.trackId).padEnd(16)} (${gr.isOpen ? 'open  ' : 'closed'}) r${gr.raceIdx}  ` +
-        `line[P1→P2=${g.leaderGapToP2LineSec.toFixed(2)}s top5=${g.top5SpreadLineSec.toFixed(2)}s]  ` +
-        `dead=${g.deadRaceFlag ? 'YES' : 'no '}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%)  visibleComebacks=${comebacks}`
+        `line[P1→P2=${(g.leaderGapToP2LineLen ?? 0).toFixed(2)}L front=${(g.frontmostGapLineLen ?? 0).toFixed(2)}L/${g.frontmostGapLineNAhead ?? 0}ahead]  ` +
+        `dead=${g.deadRaceFlag ? 'YES' : 'no '}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%) frontOver=${(g.frontGapFinalThirdOverFrac * 100).toFixed(0)}%  comebacks=${comebacks}`
       );
     }
   }

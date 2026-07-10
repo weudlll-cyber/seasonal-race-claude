@@ -1,7 +1,4 @@
-the SHIPPED defaults, NOT
-     the owner's browser world. Every result is stamped PROVISIONAL. It describes the
-     owner's race ONLY if his browser is at defaults (which has repeatedly not held).
-     Export the browser world and pass --config=world.json to remove this warning.
+  Export the browser world and pass --config=world.json to remove this warning.
 ══════════════════════════════════════════════════════════════════════════════
 
 === sim-fairness — RaceArena Fairness Simulation ===
@@ -17,13 +14,13 @@ Race Plan              : ✅ aktiv
 Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
 
 ── Dirt Oval (dirt-oval) — open=false path=6541px width=178px
-   horse      60s  finishT=2.000  rows=4  sf=0.72  χ²=0.1 p=0.989 [685s]
+   horse      60s  finishT=2.000  rows=4  sf=0.72  χ²=0.1 p=0.989 [792s]
      LateralQ: honest=3.4%  overlap=0.0%  maxSpread=0.237laps  sameLap=100.0%  crossLap=0.0%
      FairChance: B1exact=32.6%  B1top5=84.2%  (gap: top5-exact=51.6%)
      FairChance by row: R0:exact=32%/top5=85%(n=124)  R1:exact=29%/top5=81%(n=122)  R2:exact=35%/top5=83%(n=126)  R3:exact=34%/top5=88%(n=128)
 
 
-Simulation abgeschlossen in 684.7s
+Simulation abgeschlossen in 791.9s
 
 === Zone Success Rate (Race Plan) ===
 | Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
@@ -41,19 +38,19 @@ Simulation abgeschlossen in 684.7s
 [hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-A-dirt-oval\hero-map.json | bandReach=78.6% startRowUnfair=true realOvertakes=n/a netGain=n/a heroes/race=0 shortfall=n/a
 
 === Gap-Metrics (ns2-A-dirt-oval) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-A-dirt-oval.json  (100 races)
-  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
-  dirt-oval        (closed) r0  line[P1→P2=1.17s top5=1.54s]  dead=no (0%)  visibleComebacks=0
-  dirt-oval        (closed) r1  line[P1→P2=0.38s top5=2.40s]  dead=no (1%)  visibleComebacks=2
-  dirt-oval        (closed) r2  line[P1→P2=3.17s top5=3.30s]  dead=no (14%)  visibleComebacks=1
-  dirt-oval        (closed) r3  line[P1→P2=0.27s top5=6.43s]  dead=no (14%)  visibleComebacks=3
-  dirt-oval        (closed) r4  line[P1→P2=0.83s top5=5.26s]  dead=no (4%)  visibleComebacks=2
-  dirt-oval        (closed) r5  line[P1→P2=1.15s top5=1.74s]  dead=no (0%)  visibleComebacks=0
-  dirt-oval        (closed) r6  line[P1→P2=2.21s top5=2.98s]  dead=no (1%)  visibleComebacks=1
-  dirt-oval        (closed) r7  line[P1→P2=0.03s top5=2.93s]  dead=no (18%)  visibleComebacks=2
-  dirt-oval        (closed) r8  line[P1→P2=0.18s top5=0.24s]  dead=no (3%)  visibleComebacks=1
-  dirt-oval        (closed) r9  line[P1→P2=2.42s top5=2.70s]  dead=no (7%)  visibleComebacks=1
-  dirt-oval        (closed) r10  line[P1→P2=0.22s top5=3.66s]  dead=no (4%)  visibleComebacks=3
-  dirt-oval        (closed) r11  line[P1→P2=0.26s top5=1.89s]  dead=no (4%)  visibleComebacks=0
+  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=3L Y=8L Z=3L deadGap=5L AWAIT owner calibration; booleans provisional.
+  dirt-oval        (closed) r0  line[P1→P2=3.32L front=3.32L/1ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  dirt-oval        (closed) r1  line[P1→P2=1.15L front=4.63L/2ahead]  dead=no (0%) frontOver=9%  comebacks=0
+  dirt-oval        (closed) r2  line[P1→P2=8.77L front=8.77L/1ahead]  dead=no (39%) frontOver=39%  comebacks=1
+  dirt-oval        (closed) r3  line[P1→P2=0.88L front=8.67L/4ahead]  dead=no (0%) frontOver=46%  comebacks=0
+  dirt-oval        (closed) r4  line[P1→P2=2.57L front=6.29L/2ahead]  dead=no (28%) frontOver=39%  comebacks=0
+  dirt-oval        (closed) r5  line[P1→P2=3.30L front=3.30L/1ahead]  dead=no (0%) frontOver=0%  comebacks=1
+  dirt-oval        (closed) r6  line[P1→P2=6.53L front=6.53L/1ahead]  dead=no (12%) frontOver=12%  comebacks=1
+  dirt-oval        (closed) r7  line[P1→P2=0.07L front=7.00L/2ahead]  dead=no (0%) frontOver=57%  comebacks=0
+  dirt-oval        (closed) r8  line[P1→P2=0.58L front=0.63L/5ahead]  dead=no (0%) frontOver=0%  comebacks=4
+  dirt-oval        (closed) r9  line[P1→P2=6.71L front=6.71L/1ahead]  dead=no (25%) frontOver=26%  comebacks=0
+  dirt-oval        (closed) r10  line[P1→P2=0.67L front=8.81L/3ahead]  dead=no (0%) frontOver=48%  comebacks=0
+  dirt-oval        (closed) r11  line[P1→P2=0.88L front=3.87L/2ahead]  dead=no (0%) frontOver=0%  comebacks=2
 
 === Zusammenfassung ===
 Kombinationen gesamt : 1

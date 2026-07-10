@@ -66,6 +66,7 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { applyGovernor, computeDirectorCeiling } from '../../modules/raceGovernor.js';
+import { meanDrawnBodyLen } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -818,18 +819,7 @@ export default function RaceScreen() {
     };
     // Mean drawn body length (px) over the field — the racer-length unit for the governor's
     // arc-distance bound. Computed once per race (bodies are fixed per racer). Guarded > 0.
-    const govMeanBodyLen = (() => {
-      const rs = g.current.racers;
-      let sum = 0,
-        n = 0;
-      for (const r of rs) {
-        if (r.drawnBodyLengthPx > 0) {
-          sum += r.drawnBodyLengthPx;
-          n++;
-        }
-      }
-      return n > 0 ? sum / n : 0;
-    })();
+    const govMeanBodyLen = meanDrawnBodyLen(g.current.racers); // shared racer-length source
 
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;

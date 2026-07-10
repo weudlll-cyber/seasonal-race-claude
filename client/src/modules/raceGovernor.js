@@ -26,6 +26,11 @@
 
 import { mulberry32 } from './racePlanner.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
+import { arcT, lenScaleFrom } from './raceLengths.js';
+
+// arcT now lives in raceLengths.js (the one racer-length source). Re-exported here so existing
+// importers (GovernorDiagHUD, sim-fairness, tests) keep the same import path, unchanged.
+export { arcT };
 
 // Director seed stream constant. A dedicated XOR, DISTINCT from every other per-race stream
 // (target-rank shuffle uses mulberry32(seed), controller noise uses seed + 0x9e3779b9), so the
@@ -95,18 +100,8 @@ export function directorStreamKey(index, seed) {
  * (sim-fairness.mjs) — so racers on different laps still measure their VISIBLE on-track arc.
  * OPEN: raw |a − b| (t is a monotonic path-fraction, no wrap). Unsigned magnitude.
  *
- * @param {number} a cumulative-t
- * @param {number} b cumulative-t
- * @param {boolean} isOpen open-track flag
- * @returns {number} arc distance in lap-fraction units
+ * (Definition moved to raceLengths.js; imported + re-exported above.)
  */
-export function arcT(a, b, isOpen) {
-  if (isOpen) return Math.abs(a - b);
-  const pa = ((a % 1) + 1) % 1;
-  const pb = ((b % 1) + 1) % 1;
-  const d = Math.abs(pa - pb);
-  return Math.min(d, 1 - d);
-}
 
 /**
  * Phase weight w(progress): 1.0 in PRE_PULK/PULK before the fade window, easeInOutCubic
@@ -211,7 +206,7 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
   const maxEffect = cfg.maxEffect ?? 0.12; // +/-realism clamp (the realism envelope)
   const maxStep = cfg.maxStepPerFrame ?? 0.01; // per-frame slew limit
   // Racer-length unit: arc-distance x one-lap px / mean body length (lap-count- & track-independent).
-  const lenScale = meanBodyLen > 0 ? pathLengthPx / meanBodyLen : 0;
+  const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen);
 
   // v4: a choreographed hero is steered by the trajectory controller, not the director. Exclude it
   // from the director's field (never a leader / challenger / faller) and pin its governorMult to

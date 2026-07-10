@@ -1,40 +1,62 @@
 // ============================================================
-// gap-metrics.mjs — GAP-SPACE race-quality observers (INFRA 5C).
+// gap-metrics.mjs — GAP-SPACE race-quality observers (INFRA 5C; lengths re-measure).
 //
 // SIM-ONLY, read-only. Pure functions: no state, no I/O, no mutation.
 //
 // WHY THIS FILE EXISTS
 // Every quality metric the project owns lives in RANK space. `reachedFront := live
-// rank <= 5` is satisfied by a racer finishing 5th, fifteen lengths behind a lone
-// winner. That is how the numbers said "the comeback works" while the owner's eye saw
-// a dead race. These GAP-space metrics measure the race in TIME behind the leader, so
-// a strung-out field and a bunched field with IDENTICAL final ranks score differently.
+// rank <= 5` is satisfied by a racer finishing 5th, many lengths behind a lone winner.
+// That is how the numbers said "the comeback works" while the owner's eye saw a dead
+// race. These GAP-space metrics measure the SPACE behind the leader, so a strung-out
+// field and a bunched field with IDENTICAL final ranks score differently.
 //
-// "Seconds behind the leader" is the tv-gap: how long ago the leader was where this
-// racer is now. It is computed from the leader's own progress-vs-time trace, so it is
-// robust to the leader's speed changing over the race.
+// PRIMARY UNIT: RACER LENGTHS. "Lengths behind the leader" = how many racer bodies fit
+// in the gap = the instantaneous on-track arc distance to the leader, divided by the
+// mean body length. It is what the DIRECTOR-DIAG HUD shows the owner and what he has
+// reasoned in for the whole project — speed-independent, scale-free ("6 lengths clear").
+// The conversion is the SHARED one in ../../client/src/modules/raceLengths.js — never
+// re-implemented here.
+//
+// SECONDARY UNIT: seconds behind (the tv-gap — how long ago the leader was where this
+// racer is now, from the leader's progress-vs-time trace). Kept where it costs nothing,
+// NEVER as a headline and NEVER as the basis of a threshold: a second-gap scales with
+// speed, so two races with the same second-gap can look completely different.
 //
 // CALIBRATION — X / Y / Z are NOT chosen by optimisation. They are proposals awaiting
 // the owner's calibration against a race he watches. Callers must report RAW
-// distributions, never pass/fail, until the owner fixes the thresholds. The proposed
-// values live in PROPOSED_THRESHOLDS below with their reasoning.
+// distributions, never pass/fail, until the owner fixes the thresholds.
 // ============================================================
 
-// Proposed thresholds — AWAITING OWNER CALIBRATION. Do not treat as gates.
-//   inContentionSec (X): within this many s of the leader counts as "in contention".
-//   comebackDepthSec (Y): must have been at least this far behind after chaos.
-//   comebackFinishSec (Z): must finish within this many s of the leader.
-//   deadRaceGapSec: leader→P2 gap above this for most of the final third = processional.
-// Reasoning (races run ~30–60 s): 2 s ≈ a few body lengths (a genuine threat); 5 s ≈ a
-// clearly detached chaser; 1.5 s ≈ a close, photo-ish finish; 3 s of persistent leader→P2
-// gap through the run-in reads as visibly processional. All provisional.
+import { arcT } from '../../../client/src/modules/raceLengths.js';
+
+// Proposed thresholds — AWAITING OWNER CALIBRATION. Do not treat as gates. PRIMARY = lengths.
+//   inContentionLen (X): within this many racer-lengths of the leader counts as "in contention".
+//   comebackDepthLen (Y): must have been at least this far behind (lengths) after chaos.
+//   comebackFinishLen (Z): must finish within this many lengths of the leader.
+//   deadRaceGapLen: leader→P2 gap above this (lengths) for most of the final third = processional.
+// The *Sec companions are SECONDARY (reporting only), never used to threshold a headline.
+// The lengths values below are PROVISIONAL first guesses; the report refines the proposal from the
+// measured lengths distribution and the per-track lengths-per-second relationship (no more "≈"
+// guesses connecting the two units — they are connected by data).
 export const PROPOSED_THRESHOLDS = {
-  inContentionSec: 2.0, // X
-  comebackDepthSec: 5.0, // Y
-  comebackFinishSec: 1.5, // Z
-  deadRaceGapSec: 3.0,
+  inContentionLen: 3.0, // X (lengths)
+  comebackDepthLen: 8.0, // Y (lengths)
+  comebackFinishLen: 3.0, // Z (lengths)
+  deadRaceGapLen: 5.0, // lengths
   deadRaceMajorityFrac: 0.5, // "most of" the final third
+  // Secondary (seconds) — reporting only, never a headline threshold.
+  inContentionSec: 2.0,
+  comebackDepthSec: 5.0,
+  comebackFinishSec: 1.5,
+  deadRaceGapSec: 3.0,
 };
+
+// lengthsBehindLeader: the instantaneous on-track arc distance from the leader to this racer, in
+// RACER LENGTHS. 0 for the leader. Never negative. `lenScale` = pathLengthPx / meanBodyLen (the
+// shared racer-length scale). This is the PRIMARY gap-space quantity — the number on the HUD.
+export function lengthsBehindLeader(racerT, leaderT, isOpen, lenScale) {
+  return arcT(leaderT, racerT, isOpen) * lenScale;
+}
 
 // Linear-interpolate the raceTs (ms) at which the monotonic leader trace first reached
 // track-position `t`. leaderTrace: ascending-by-t array of { ts, t } (ts ms, t track-pos).

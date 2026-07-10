@@ -1,13 +1,10 @@
-acks                 : 10
-Gesamt-Rennen          : 100 × 20 × 10 × 1 = 20000
-Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-A-mountainstreet
-Seed                   : 1 (deterministisch)
+                  : 1 (deterministisch)
 Race Plan              : ✅ aktiv
   bonusUntil=75%  fade=1500ms  corridor=55%→100%
 Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
 
 ── Mountainstreet (mountainstreet) — open=true path=15665px width=300px
-   boarder    60s  finishT=0.500  rows=2  sf=0.71  χ²=0.0 p=0.951 [310s]
+   boarder    60s  finishT=0.500  rows=2  sf=0.71  χ²=0.0 p=0.951 [347s]
      1.5×-Gate: ✅ PASS  (R0=50%(e50%)✓ R1=50%(e50%)✓)
      Avoidance: R0=37573Ø  R1=41620Ø  R2=0Ø  Lateral=97811Ø  R1≥1×vorne=19.9/20Ø
      Re-Rolls: Ø 5.4 pro Racer  Physische Renndauer: Ø 58.1s  (target=60s)
@@ -18,7 +15,7 @@ Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% traj
      FairChance by row: R0:exact=31%/top5=81%(n=252)  R1:exact=33%/top5=87%(n=248)
 
 
-Simulation abgeschlossen in 310.2s
+Simulation abgeschlossen in 346.8s
 
 === Zone Success Rate (Race Plan) ===
 | Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
@@ -36,19 +33,19 @@ Simulation abgeschlossen in 310.2s
 [hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-A-mountainstreet\hero-map.json | bandReach=80.9% startRowUnfair=false realOvertakes=n/a netGain=n/a heroes/race=0 shortfall=n/a
 
 === Gap-Metrics (ns2-A-mountainstreet) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-A-mountainstreet.json  (100 races)
-  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
-  mountainstreet   (open  ) r0  line[P1→P2=0.16s top5=1.34s]  dead=no (1%)  visibleComebacks=0
-  mountainstreet   (open  ) r1  line[P1→P2=1.81s top5=2.29s]  dead=no (0%)  visibleComebacks=0
-  mountainstreet   (open  ) r2  line[P1→P2=0.08s top5=0.13s]  dead=no (2%)  visibleComebacks=0
-  mountainstreet   (open  ) r3  line[P1→P2=0.30s top5=2.32s]  dead=no (3%)  visibleComebacks=2
-  mountainstreet   (open  ) r4  line[P1→P2=0.03s top5=1.34s]  dead=no (3%)  visibleComebacks=0
-  mountainstreet   (open  ) r5  line[P1→P2=0.86s top5=1.52s]  dead=no (6%)  visibleComebacks=4
-  mountainstreet   (open  ) r6  line[P1→P2=0.27s top5=1.60s]  dead=no (18%)  visibleComebacks=3
-  mountainstreet   (open  ) r7  line[P1→P2=0.02s top5=0.27s]  dead=no (7%)  visibleComebacks=0
-  mountainstreet   (open  ) r8  line[P1→P2=0.26s top5=0.51s]  dead=no (0%)  visibleComebacks=0
-  mountainstreet   (open  ) r9  line[P1→P2=0.22s top5=2.61s]  dead=no (11%)  visibleComebacks=3
-  mountainstreet   (open  ) r10  line[P1→P2=0.11s top5=0.26s]  dead=no (0%)  visibleComebacks=0
-  mountainstreet   (open  ) r11  line[P1→P2=0.40s top5=2.50s]  dead=no (0%)  visibleComebacks=2
+  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=3L Y=8L Z=3L deadGap=5L AWAIT owner calibration; booleans provisional.
+  mountainstreet   (open  ) r0  line[P1→P2=0.80L front=4.93L/4ahead]  dead=no (0%) frontOver=1%  comebacks=1
+  mountainstreet   (open  ) r1  line[P1→P2=9.53L front=9.53L/1ahead]  dead=no (38%) frontOver=38%  comebacks=1
+  mountainstreet   (open  ) r2  line[P1→P2=0.45L front=0.79L/5ahead]  dead=no (0%) frontOver=0%  comebacks=5
+  mountainstreet   (open  ) r3  line[P1→P2=1.81L front=9.32L/2ahead]  dead=no (0%) frontOver=28%  comebacks=0
+  mountainstreet   (open  ) r4  line[P1→P2=0.20L front=5.86L/4ahead]  dead=no (0%) frontOver=14%  comebacks=2
+  mountainstreet   (open  ) r5  line[P1→P2=4.37L front=4.37L/1ahead]  dead=no (0%) frontOver=0%  comebacks=1
+  mountainstreet   (open  ) r6  line[P1→P2=1.50L front=4.36L/3ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  mountainstreet   (open  ) r7  line[P1→P2=0.01L front=1.48L/7ahead]  dead=no (0%) frontOver=0%  comebacks=0
+  mountainstreet   (open  ) r8  line[P1→P2=1.28L front=1.28L/1ahead]  dead=no (0%) frontOver=0%  comebacks=1
+  mountainstreet   (open  ) r9  line[P1→P2=1.31L front=9.82L/4ahead]  dead=no (0%) frontOver=48%  comebacks=0
+  mountainstreet   (open  ) r10  line[P1→P2=0.59L front=0.59L/1ahead]  dead=no (0%) frontOver=0%  comebacks=7
+  mountainstreet   (open  ) r11  line[P1→P2=2.38L front=8.63L/2ahead]  dead=no (30%) frontOver=53%  comebacks=1
 
 === Zusammenfassung ===
 Kombinationen gesamt : 1

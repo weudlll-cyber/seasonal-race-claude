@@ -16,6 +16,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   secondsBehindLeader,
+  lengthsBehindLeader,
   fieldSpreadP10P90,
   gapsAtLine,
   inContentionFraction,
@@ -133,6 +134,47 @@ test('deadRaceFlag fires on the strung race and not the bunched race', () => {
   // widening — model the run-in as a rising gap that spends most of the final third above 3 s.
   const bunchedFinalThird = [0.05, 0.05, 0.05, 0.05, 0.05];
   const strungFinalThird = [3.5, 3.8, 4.0, 4.2, 2.9]; // >3 s for 4 of 5 samples
+  assert.equal(deadRaceFlag(bunchedFinalThird, thr, maj), false);
+  assert.equal(deadRaceFlag(strungFinalThird, thr, maj), true);
+});
+
+// ── PRIMARY UNIT: RACER LENGTHS ───────────────────────────────────────────────────────
+// The same bunched/strung distinction, now measured in racer lengths (the spatial gap the HUD
+// shows). lenScale = pathLengthPx/meanBodyLen = 3000/30 = 100 lengths per lap-fraction. Leader at
+// t=0.5 (away from the 0/1 seam). Identical final ranks 1..5; only the on-track SPACING differs.
+const LEN_SCALE = 100;
+const LEADER_T = 0.5;
+const BUNCHED_T = [0.5, 0.499, 0.498, 0.497, 0.496]; // 0.0 … 0.4 lengths behind (a photo-finish)
+const STRUNG_T = [0.5, 0.48, 0.46, 0.44, 0.42]; //       0 … 8 lengths behind (a dead race)
+const lenBehind = (posArr) => posArr.map((t) => lengthsBehindLeader(t, LEADER_T, false, LEN_SCALE));
+
+test('LENGTHS: bunched vs strung-out differ in racer lengths (identical ranks stay blind)', () => {
+  const lb = lenBehind(BUNCHED_T);
+  const ls = lenBehind(STRUNG_T);
+  // Rank-space is identical (ranks 1..5 both) — proven above; here the lengths must diverge.
+  assert.ok(Math.max(...ls) > Math.max(...lb), 'strung field is more lengths behind');
+  assert.ok(fieldSpreadP10P90(ls) > fieldSpreadP10P90(lb), 'strung field p10–p90 spread is larger (lengths)');
+  // Sanity on the shared conversion: P5 in the strung race is 8 lengths back, in the bunched ~0.4.
+  assert.ok(Math.abs(Math.max(...ls) - 8.0) < 1e-9);
+  assert.ok(Math.max(...lb) < 0.5);
+});
+
+test('LENGTHS: inContentionFraction separates the two at the proposed X (lengths)', () => {
+  const X = PROPOSED_THRESHOLDS.inContentionLen; // 3.0 lengths
+  assert.equal(inContentionFraction(lenBehind(BUNCHED_T), X), 1.0); // all within 3 lengths
+  assert.ok(inContentionFraction(lenBehind(STRUNG_T), X) < 1.0); // only the front two within 3 lengths
+});
+
+test('LENGTHS: a rank<=5 finish is NOT automatically a comeback (lengths thresholds)', () => {
+  const { comebackDepthLen: Y, comebackFinishLen: Z } = PROPOSED_THRESHOLDS; // 8, 3
+  assert.equal(visibleComeback(/*maxBehindLen*/ 8.0, /*finalBehindLen*/ 8.0, Y, Z), false); // 8 lengths back at the line
+  assert.equal(visibleComeback(9.0, 2.0, Y, Z), true); // was 9 lengths back, closed to 2 — a real comeback
+});
+
+test('LENGTHS: deadRaceFlag / front-gap fires on the strung race, not the bunched (lengths)', () => {
+  const { deadRaceGapLen: thr, deadRaceMajorityFrac: maj } = PROPOSED_THRESHOLDS; // 5, 0.5
+  const bunchedFinalThird = [0.4, 0.4, 0.4, 0.4, 0.4]; // < 5 lengths throughout
+  const strungFinalThird = [6.0, 6.5, 7.0, 7.5, 4.0]; // > 5 lengths for 4 of 5 samples
   assert.equal(deadRaceFlag(bunchedFinalThird, thr, maj), false);
   assert.equal(deadRaceFlag(strungFinalThird, thr, maj), true);
 });
