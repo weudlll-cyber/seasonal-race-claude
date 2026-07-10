@@ -1,0 +1,14 @@
+[ns2-gapspace] 12/12 cells to run | races=100 dur=60 conc=6 | 0 already done
+  [1/12] ns2-A-mountainstreet     band=80.9% startRowUnfair=false nativeWinP=0.9505 (312s)
+  [2/12] ns2-A-luger-hill         band=78.0% startRowUnfair=true nativeWinP=0.4797 (320s)
+  [3/12] ns2-A-searound           band=78.0% startRowUnfair=true nativeWinP=0.5454 (586s)
+  [4/12] ns2-B-searound           band=82.2% startRowUnfair=true nativeWinP=0.513 (631s)
+  [5/12] ns2-B-mountainstreet     band=84.3% startRowUnfair=false nativeWinP=0.8224 (645s)
+  [6/12] ns2-B-luger-hill         band=83.0% startRowUnfair=true nativeWinP=0.4068 (676s)
+  [7/12] ns2-A-dirt-oval          band=78.6% startRowUnfair=true nativeWinP=0.9894 (687s)
+  [8/12] ns2-B-dirt-oval          band=83.9% startRowUnfair=true nativeWinP=0.9036 (733s)
+  [9/12] ns2-C-mountainstreet     band=83.0% startRowUnfair=false nativeWinP=0.8224 (923s)
+  [10/12] ns2-C-luger-hill         band=82.0% startRowUnfair=true nativeWinP=0.0868 (952s)
+  [11/12] ns2-C-searound           band=82.5% startRowUnfair=true nativeWinP=0.1725 (1052s)
+  [12/12] ns2-C-dirt-oval          band=81.9% startRowUnfair=true nativeWinP=0.3508 (1112s)
+[ns2-gapspace] done in 1112s → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\scripts\night-sweep\results\gap-space (frozen gm-*/hm-*/log-*), status → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\scripts\night-sweep\results\gap-space\status.jsonl

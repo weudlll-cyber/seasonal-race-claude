@@ -1,0 +1,56 @@
+          : 10
+Gesamt-Rennen          : 100 × 20 × 10 × 1 = 20000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-C-mountainstreet
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Mountainstreet (mountainstreet) — open=true path=15665px width=300px
+   boarder    60s  finishT=0.500  rows=2  sf=0.71  χ²=0.0 p=0.822 [277s]
+     1.5×-Gate: ✅ PASS  (R0=51%(e50%)✓ R1=49%(e50%)✓)
+     Avoidance: R0=40800Ø  R1=46176Ø  R2=0Ø  Lateral=94848Ø  R1≥1×vorne=20.0/20Ø
+     Re-Rolls: Ø 5.4 pro Racer  Physische Renndauer: Ø 58.0s  (target=60s)
+     Naturalness: jerk=0.0000Ø  max=0.0008  highFrac=0.0%  natOvt=100.0%  pulk=99.9%  pulkTrig=[0.0in/1.0out]
+     M2v2: corridor=72.7%  viol=Ø3.9/max39  boost=43.0%  brake=53.3%  blocked=61.5%  wBlocked=32.2%  Δ5sMax=0.250  oscN=19.9Ø
+     FairChance: B1exact=24.4%  B1top5=84.0%  (gap: top5-exact=59.6%)
+     LateralQ: overlap=0.0%  honest=2.9%  resolution=Ø0.0fr  zigzag=0.000027  latSpd=0.000256  brake=60.8%  bmFail=6655(leaderBraked=5162)  stableOvt=8.915  outcomeReached=100%
+     FairChance by row: R0:exact=24%/top5=83%(n=252)  R1:exact=25%/top5=85%(n=248)
+
+
+Simulation abgeschlossen in 276.8s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|
+| B1 (1–5)  |       420 |      500 |   84.0% |           0 |          0 |        — |   84.0% |
+| B2 (6–15) |       813 |     1000 |   81.3% |           0 |          0 |        — |   81.3% |
+| B3 (16–25) |       741 |     1000 |   74.1% |           0 |          0 |        — |   74.1% |
+| B4 (26–40) |      1346 |     1500 |   89.7% |           0 |          0 |        — |   89.7% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |
+| OVERALL   |           |          |         |             |            |          |   83.0% |
+
+--- Per-Track Zone Success ---
+  Mountainstreet   (open  )  B1=84%  B2=81%  B3=74%  B4=90%  B5=—
+
+[hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-C-mountainstreet\hero-map.json | bandReach=83.0% startRowUnfair=false realOvertakes=10.6923 netGain=6.7157 heroes/race=2.99 shortfall=0.1973
+
+=== Gap-Metrics (ns2-C-mountainstreet) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-C-mountainstreet.json  (100 races)
+  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
+  mountainstreet   (open  ) r0  line[P1→P2=0.19s top5=0.64s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r1  line[P1→P2=1.01s top5=1.30s]  dead=no (5%)  visibleComebacks=0
+  mountainstreet   (open  ) r2  line[P1→P2=0.78s top5=2.35s]  dead=no (33%)  visibleComebacks=2
+  mountainstreet   (open  ) r3  line[P1→P2=0.37s top5=1.42s]  dead=no (2%)  visibleComebacks=0
+  mountainstreet   (open  ) r4  line[P1→P2=0.21s top5=0.58s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r5  line[P1→P2=1.70s top5=3.34s]  dead=no (3%)  visibleComebacks=1
+  mountainstreet   (open  ) r6  line[P1→P2=0.10s top5=0.58s]  dead=no (7%)  visibleComebacks=0
+  mountainstreet   (open  ) r7  line[P1→P2=0.29s top5=0.74s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r8  line[P1→P2=0.32s top5=0.48s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r9  line[P1→P2=0.24s top5=1.39s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r10  line[P1→P2=0.14s top5=0.85s]  dead=no (0%)  visibleComebacks=0
+  mountainstreet   (open  ) r11  line[P1→P2=0.32s top5=1.78s]  dead=no (4%)  visibleComebacks=3
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

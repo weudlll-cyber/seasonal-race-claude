@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "world": {
+      "schemaVersion": 2,
+      "worldHash": "ASSUMED-DEFAULTS",
+      "provisional": true
+    },
+    "track": "searound",
+    "racer": "manta",
+    "dur": "60",
+    "races": 100,
+    "seed": 1,
+    "directorV4Enabled": false,
+    "directorV4Intensity": 0.6,
+    "directorV4OutcomeStart": 0.25,
+    "directorV4ReleaseProgress": 0.97,
+    "directorV4PackBandStrictness": 0.5,
+    "bonusMult": 2,
+    "governorDirectorEnabled": true,
+    "pulkBiasGain": 2,
+    "baseSpeedMin": 0.00096,
+    "baseSpeedMax": 0.00113
+  },
+  "fairness": {
+    "bandReach": 0.78025,
+    "startRowUnfair": true,
+    "startRowMinPHolm": 0.02,
+    "nativeWinChiSqP": 0.5454,
+    "nativeWinUnfair": false,
+    "perRowWins": [
+      {
+        "row": 0,
+        "wins": 15,
+        "winRate": 0.15,
+        "expRate": 0.15,
+        "n": 6
+      },
+      {
+        "row": 1,
+        "wins": 16,
+        "winRate": 0.16,
+        "expRate": 0.15,
+        "n": 6
+      },
+      {
+        "row": 2,
+        "wins": 22,
+        "winRate": 0.22,
+        "expRate": 0.15,
+        "n": 6
+      },
+      {
+        "row": 3,
+        "wins": 14,
+        "winRate": 0.14,
+        "expRate": 0.15,
+        "n": 6
+      },
+      {
+        "row": 4,
+        "wins": 12,
+        "winRate": 0.12,
+        "expRate": 0.15,
+        "n": 6
+      },
+      {
+        "row": 5,
+        "wins": 9,
+        "winRate": 0.09,
+        "expRate": 0.125,
+        "n": 5
+      },
+      {
+        "row": 6,
+        "wins": 12,
+        "winRate": 0.12,
+        "expRate": 0.125,
+        "n": 5
+      }
+    ]
+  },
+  "heroAgg": {
+    "nHeroRows": 0,
+    "nRaces": 100,
+    "heroesPerRace": 0,
+    "anchorRankMean": null,
+    "finalRankMean": null,
+    "placesGainedNetMean": null,
+    "realOvertakesMean": null,
+    "bestRankMean": null,
+    "reachedTargetBandRate": null,
+    "reachedFrontRate": null,
+    "reachedFrontProgMean": null,
+    "reachedTargetProgMean": null,
+    "ceilFracMean": null,
+    "trafficFracMean": null,
+    "bothFracMean": null,
+    "maxTrajMean": null,
+    "shortfallRate": null,
+    "speedWallShare": null,
+    "trafficWallShare": null
+  },
+  "perHero": []
+}

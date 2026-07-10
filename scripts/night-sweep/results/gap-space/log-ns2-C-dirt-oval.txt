@@ -1,0 +1,61 @@
+aults, NOT
+     the owner's browser world. Every result is stamped PROVISIONAL. It describes the
+     owner's race ONLY if his browser is at defaults (which has repeatedly not held).
+     Export the browser world and pass --config=world.json to remove this warning.
+══════════════════════════════════════════════════════════════════════════════
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 100
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 100 × 20 × 10 × 1 = 20000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-C-dirt-oval
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Dirt Oval (dirt-oval) — open=false path=6541px width=178px
+   horse      60s  finishT=2.000  rows=4  sf=0.72  χ²=3.3 p=0.351 [480s]
+     LateralQ: honest=6.0%  overlap=0.0%  maxSpread=0.215laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=27.4%  B1top5=82.8%  (gap: top5-exact=55.4%)
+     FairChance by row: R0:exact=23%/top5=85%(n=124)  R1:exact=25%/top5=78%(n=122)  R2:exact=36%/top5=83%(n=126)  R3:exact=27%/top5=86%(n=128)
+
+
+Simulation abgeschlossen in 479.9s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|
+| B1 (1–5)  |         0 |        0 |       — |         414 |        500 |    82.8% |   82.8% |
+| B2 (6–15) |         0 |        0 |       — |         807 |       1000 |    80.7% |   80.7% |
+| B3 (16–25) |         0 |        0 |       — |         724 |       1000 |    72.4% |   72.4% |
+| B4 (26–40) |         0 |        0 |       — |        1332 |       1500 |    88.8% |   88.8% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |
+| OVERALL   |           |          |         |             |            |          |   81.9% |
+
+--- Per-Track Zone Success ---
+  Dirt Oval        (closed)  B1=83%  B2=81%  B3=72%  B4=89%  B5=—
+
+[hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-C-dirt-oval\hero-map.json | bandReach=81.9% startRowUnfair=true realOvertakes=10.3531 netGain=6.7063 heroes/race=3.03 shortfall=0.2079
+
+=== Gap-Metrics (ns2-C-dirt-oval) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-C-dirt-oval.json  (100 races)
+  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
+  dirt-oval        (closed) r0  line[P1→P2=1.22s top5=1.63s]  dead=no (0%)  visibleComebacks=0
+  dirt-oval        (closed) r1  line[P1→P2=0.06s top5=0.24s]  dead=no (0%)  visibleComebacks=4
+  dirt-oval        (closed) r2  line[P1→P2=4.45s top5=4.69s]  dead=no (36%)  visibleComebacks=1
+  dirt-oval        (closed) r3  line[P1→P2=3.66s top5=7.20s]  dead=YES(64%)  visibleComebacks=1
+  dirt-oval        (closed) r4  line[P1→P2=5.33s top5=7.87s]  dead=YES(91%)  visibleComebacks=1
+  dirt-oval        (closed) r5  line[P1→P2=0.53s top5=1.54s]  dead=no (0%)  visibleComebacks=0
+  dirt-oval        (closed) r6  line[P1→P2=1.41s top5=2.22s]  dead=no (9%)  visibleComebacks=2
+  dirt-oval        (closed) r7  line[P1→P2=0.32s top5=0.46s]  dead=no (0%)  visibleComebacks=11
+  dirt-oval        (closed) r8  line[P1→P2=0.43s top5=0.61s]  dead=no (0%)  visibleComebacks=0
+  dirt-oval        (closed) r9  line[P1→P2=0.08s top5=1.28s]  dead=no (1%)  visibleComebacks=0
+  dirt-oval        (closed) r10  line[P1→P2=1.81s top5=4.90s]  dead=no (19%)  visibleComebacks=1
+  dirt-oval        (closed) r11  line[P1→P2=0.45s top5=1.79s]  dead=no (3%)  visibleComebacks=0
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0

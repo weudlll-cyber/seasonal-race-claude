@@ -99,6 +99,7 @@ import {
   gapsAtLine,
   visibleComeback,
   deadRaceFlag,
+  percentile,
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
@@ -989,10 +990,12 @@ export function runSingleRace({
     const hmHeroes = heroMap ? new Map() : null;
     // ── GAP-METRICS per-race state (read-only; only allocated when --gap-metrics) ──
     const gmTrace = gapMetrics ? [] : null;         // ascending {ts, t} leader-position-vs-time trace
-    const gmCheckpoints = gapMetrics ? [] : null;   // snapshots at progress 0.50 / 0.75 / 0.90
+    const gmCheckpoints = gapMetrics ? [] : null;   // snapshots at progress 0.25 / 0.50 / 0.75 / 0.90
     const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindAfterChaos, inContentionSteps, totalSteps}
     const gmDeadSeries = gapMetrics ? [] : null;    // final-third leader→P2 gap (s), for deadRaceFlag
-    const GM_CPS = [0.5, 0.75, 0.9];                // sample checkpoints (leader progress)
+    // NIGHT-SWEEP (gap-space): 0.25 added to match the spec sample points (0.25/0.50/0.75/0.90 + line);
+    // 0.25 = the choreo/chaos boundary — the earliest "is the field already strung out?" snapshot.
+    const GM_CPS = [0.25, 0.5, 0.75, 0.9];          // sample checkpoints (leader progress)
     let gmNextCp = 0;
     const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
     const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
@@ -1837,6 +1840,9 @@ export function runSingleRace({
             leaderGapToP2: gmOrder.length >= 2 ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4) : 0,
             top5Spread: gmOrder.length >= 5 ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4) : 0,
             fieldSpreadP10P90: +fieldSpreadP10P90(behindArr).toFixed(4),
+            // NIGHT-SWEEP: field-median seconds-behind-leader — with the leader at 0 this IS the
+            // "front group vs field median" gap the spec asks for, over time. Raw seconds.
+            fieldMedianBehind: +percentile(behindArr, 0.5).toFixed(4),
           });
           gmNextCp++;
         }

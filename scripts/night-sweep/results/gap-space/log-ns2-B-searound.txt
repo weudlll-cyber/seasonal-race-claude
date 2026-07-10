@@ -1,0 +1,60 @@
+L. It describes the
+     owner's race ONLY if his browser is at defaults (which has repeatedly not held).
+     Export the browser world and pass --config=world.json to remove this warning.
+══════════════════════════════════════════════════════════════════════════════
+
+=== sim-fairness — RaceArena Fairness Simulation ===
+Rennen pro Kombination : 100
+Teilnehmer pro Rennen  : 40
+Racer-Typen            : 20
+Tracks                 : 10
+Gesamt-Rennen          : 100 × 20 × 10 × 1 = 20000
+Output                 : C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-B-searound
+Seed                   : 1 (deterministisch)
+Race Plan              : ✅ aktiv
+  bonusUntil=75%  fade=1500ms  corridor=55%→100%
+Dynamics (reRoll/traj) : variation=75% transition=3s divisor=10 lastPos=95% trajTrans=1s
+
+── Searound (searound) — open=false path=5147px width=131px
+   manta      60s  finishT=2.000  rows=7  sf=0.74  χ²=5.3 p=0.513 [629s]
+     LateralQ: honest=7.6%  overlap=0.0%  maxSpread=0.236laps  sameLap=100.0%  crossLap=0.0%
+     FairChance: B1exact=19.0%  B1top5=84.6%  (gap: top5-exact=65.6%)
+     FairChance by row: R0:exact=20%/top5=81%(n=75)  R1:exact=15%/top5=88%(n=80)  R2:exact=23%/top5=79%(n=71)  R3:exact=16%/top5=78%(n=86)  R4:exact=19%/top5=91%(n=74)  R5:exact=14%/top5=93%(n=59)  R6:exact=29%/top5=85%(n=55)
+
+
+Simulation abgeschlossen in 628.8s
+
+=== Zone Success Rate (Race Plan) ===
+| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |
+|-----------|-----------|----------|---------|-------------|------------|----------|---------|
+| B1 (1–5)  |         0 |        0 |       — |         423 |        500 |    84.6% |   84.6% |
+| B2 (6–15) |         0 |        0 |       — |         814 |       1000 |    81.4% |   81.4% |
+| B3 (16–25) |         0 |        0 |       — |         722 |       1000 |    72.2% |   72.2% |
+| B4 (26–40) |         0 |        0 |       — |        1330 |       1500 |    88.7% |   88.7% |
+| B5 (41+)  |         0 |        0 |       — |           0 |          0 |        — |       — |
+| OVERALL   |           |          |         |             |            |          |   82.2% |
+
+--- Per-Track Zone Success ---
+  Searound         (closed)  B1=85%  B2=81%  B3=72%  B4=89%  B5=—
+
+[hero-map] → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\tmp\ns2\ns2-B-searound\hero-map.json | bandReach=82.2% startRowUnfair=true realOvertakes=9.4444 netGain=6.5074 heroes/race=2.7 shortfall=0.2185
+
+=== Gap-Metrics (ns2-B-searound) ===  → C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\results\gap-metrics\gm-ns2-B-searound.json  (100 races)
+  ⚠ RAW distributions — proposed thresholds X=2s Y=5s Z=1.5s AWAIT owner calibration; booleans provisional.
+  searound         (closed) r0  line[P1→P2=1.17s top5=2.94s]  dead=no (4%)  visibleComebacks=0
+  searound         (closed) r1  line[P1→P2=0.58s top5=1.55s]  dead=no (41%)  visibleComebacks=4
+  searound         (closed) r2  line[P1→P2=0.37s top5=3.87s]  dead=YES(52%)  visibleComebacks=3
+  searound         (closed) r3  line[P1→P2=0.74s top5=1.68s]  dead=no (5%)  visibleComebacks=3
+  searound         (closed) r4  line[P1→P2=2.26s top5=4.88s]  dead=no (3%)  visibleComebacks=1
+  searound         (closed) r5  line[P1→P2=0.29s top5=0.98s]  dead=no (18%)  visibleComebacks=2
+  searound         (closed) r6  line[P1→P2=0.24s top5=2.19s]  dead=no (0%)  visibleComebacks=2
+  searound         (closed) r7  line[P1→P2=3.25s top5=3.94s]  dead=YES(51%)  visibleComebacks=1
+  searound         (closed) r8  line[P1→P2=0.54s top5=0.82s]  dead=no (0%)  visibleComebacks=1
+  searound         (closed) r9  line[P1→P2=1.95s top5=2.58s]  dead=no (10%)  visibleComebacks=1
+  searound         (closed) r10  line[P1→P2=1.54s top5=2.88s]  dead=no (43%)  visibleComebacks=0
+  searound         (closed) r11  line[P1→P2=4.27s top5=5.63s]  dead=no (36%)  visibleComebacks=1
+
+=== Zusammenfassung ===
+Kombinationen gesamt : 1
+Fair (p≥0.05)        : 1
+Unfair (p<0.05)      : 0
