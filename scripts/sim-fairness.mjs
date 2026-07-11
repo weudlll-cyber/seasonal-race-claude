@@ -103,7 +103,8 @@ import {
   percentile,
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
-import { applyGovernor, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
+import { maxLinkGapLengths, makeHeldOvertakeTracker } from './sim/observers/pulk-contest.mjs';
+import { applyGovernor, applyPulkFrontContest, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -254,6 +255,11 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorFallbackMaxCount:   Number(argVal('governorDirectorFallbackMaxCount',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackMaxCount))),
   governorDirectorFallbackUntilPosition: Number(argVal('governorDirectorFallbackUntilPosition', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackUntilPosition))),
   governorDirectorFallbackProtectMs:  Number(argVal('governorDirectorFallbackProtectMs',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs))),
+  // M1 (PULK front contest) + M2 (pack cohesion spring) — SWEEP-ONLY flags; default OFF → byte-identical.
+  governorDirectorPulkContestEnabled: argVal('governorDirectorPulkContestEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPulkContestEnabled)) === 'true',
+  pulkSpringEnabled:          argVal('pulkSpringEnabled',          String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringEnabled)) === 'true',
+  pulkSpringGain:             Number(argVal('pulkSpringGain',             String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringGain))),
+  pulkSpringDeadZoneLengths:  Number(argVal('pulkSpringDeadZoneLengths',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringDeadZoneLengths))),
 };
 
 // ── STRIP-DOWN harness (read-only, sim-only; every flag defaults → byte-identical) ───────────
@@ -904,6 +910,24 @@ export function runSingleRace({
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
+    // ── M1 — PULK front contest (SWEEP-ONLY; v4 only; default OFF → not called → byte-identical) ──
+    // Strengths REUSE the existing director knobs (leaderBrake / challengerBoost / pullStrength /
+    // frontPool / catchThreshold) + the shared maxEffect/maxStep envelope — no new strength literals.
+    const pulkContestOn =
+      !!racePlanController && (dynamicsConfig.governorDirectorPulkContestEnabled ?? false) && DIRECTOR_V4_ENABLED;
+    const pulkContestCfg = {
+      pulkContestEnabled: pulkContestOn,
+      leaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
+      challengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
+      pullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
+      frontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
+      catchThreshold: dynamicsConfig.governorDirectorCatchThreshold ?? 2.0,
+      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+      ceilingCap: (dynamicsConfig.governorDirectorCeilingCap ?? false)
+        ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
+        : 0,
+    };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
     // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
@@ -1037,6 +1061,9 @@ export function runSingleRace({
     let   amSwaps     = 0;     // adjacent rank-order swaps summed over the window (raw reshuffle volume)
     let   amSpreadSum = 0;     // sum over frames of the p10→p90 on-track distance (racer-lengths)
     let   amNatMax    = 1.0;   // peak spreadFactor × tool mults in the PULK window (naturalness)
+    // NEW (pulk-contest observer): held top-5 overtakes + per-frame max consecutive-link gap (lengths).
+    const amHeld      = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
+    const amLinkGaps  = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -1073,7 +1100,8 @@ export function runSingleRace({
                 r.index, rawTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                racers, raceTs, raceProgress
+                racers, raceTs, raceProgress,
+                { lenScale: govLenScale, isOpen } // M2 spring dead-zone geometry (shared racer-length scale)
               )
             : rawTarget;
           const newTarget   = Math.max(
@@ -1136,6 +1164,18 @@ export function runSingleRace({
       // Field median for the READ-ONLY field-shape telemetry below (the director mechanism uses
       // the live rank sort + gap-to-leader, not the median).
       const govMedianT = governorEnabled ? simMedianT(racers) : null;
+
+      // ── M1 — PULK-window front contest (SWEEP-ONLY, v4 only, default OFF → block skipped) ──
+      // Sole writer of governorMult under v4 (applyGovernor below is gated off when v4 is on). Scoped
+      // to the live PULK window inside the function; outside it every governorMult slews back to 1.0.
+      if (pulkContestOn && govFractions) {
+        applyPulkFrontContest(
+          racers,
+          finishT,
+          { progress: raceProgress, pulkStartFrac: govFractions.pulkStartFrac, pulkEndFrac: govFractions.pulkEndFrac, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen },
+          pulkContestCfg
+        );
+      }
 
       // ── Pre-OUTCOME contest-injector "director" (default OFF) ──
       if (governorEnabled && govFractions) {
@@ -1316,6 +1356,9 @@ export function runSingleRace({
             }
           }
           amPrevRank = curRank;
+          // NEW density + held-overtake (pulk-contest observer; math in the observer, not here).
+          amLinkGaps.push(maxLinkGapLengths(order, isOpen, govLenScale)); // max adjacent-rank gap (lengths)
+          amHeld.observe(order.slice(0, 5).map((r) => r.index), raceProgress); // held top-5 overtakes
           // p10→p90 on-track spread in racer-lengths (front-percentile minus back-percentile racer).
           const p10 = order[Math.floor(0.1 * (n - 1))];
           const p90 = order[Math.floor(0.9 * (n - 1))];
@@ -2266,6 +2309,11 @@ export function runSingleRace({
         frontTop5Turnover: amTop5.size,
         spreadLenP10P90:   amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
         maxSpeedFactor:    +amNatMax.toFixed(4),
+        // NEW (pulk-contest observer): PULK-window front action + density.
+        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders in the PULK window
+        heldTop5Overtakes: amHeld ? amHeld.count : 0,               // REAL top-5 overtakes (hold-filtered)
+        maxLinkGapLenP90:  amLinkGaps.length ? +percentile(amLinkGaps, 0.9).toFixed(3) : 0, // density p90 (lengths)
+        maxLinkGapLenMax:  amLinkGaps.length ? +Math.max(...amLinkGaps).toFixed(3) : 0,      // density max (lengths)
         // Per-racer rows for pooled band-reach (finalBand vs targetBand) + corrP1
         // (Spearman targetRank vs PULK-window P1-time), computed downstream in the analyze step.
         perRacer: racers.map((r) => ({
@@ -2726,6 +2774,10 @@ if (isMain) {
               areaBonusPulk:           AREA_BONUS_PULK,
               areaBonusPost:           AREA_BONUS_POST,
               pulkStart:               RP_PULK_START,
+              // M2 — pack cohesion spring (flag-gated; threaded into the plan → shared controller).
+              pulkSpringEnabled:          DYNAMICS_OVERRIDES.pulkSpringEnabled,
+              pulkSpringGain:             DYNAMICS_OVERRIDES.pulkSpringGain,
+              pulkSpringDeadZoneLengths:  DYNAMICS_OVERRIDES.pulkSpringDeadZoneLengths,
               bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
               bonusFadeDuration:       RP_BONUS_FADE_MS,
               corridorStart:           RP_CORRIDOR_START,

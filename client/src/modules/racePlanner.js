@@ -14,6 +14,7 @@
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
 import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
+import { arcT } from './raceLengths.js'; // shared on-track arc distance (M2 spring dead zone)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 // Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
@@ -249,6 +250,14 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
+    // M2 — PACK COHESION SPRING (SWEEP-ONLY, flag-gated; default OFF → the shipped 3-racer PULK bias
+    // above is unchanged and byte-identical). When enabled, computePulkBiasedTarget below generalises
+    // that bias from the 3 pulk racers to the WHOLE non-hero pack, pulling each re-roll draw toward
+    // the pack centroid with a DEAD ZONE (in racer lengths) so racers already near the centre draw
+    // unbiased. Heroes are exempt (never a spring target, never in the centroid). CONCEPT-COHESION ch.1.
+    _pulkSpringEnabled: !!config.pulkSpringEnabled,
+    _pulkSpringGain: config.pulkSpringGain ?? DEFAULT_PULK_BIAS_GAIN,
+    _pulkSpringDeadZoneLengths: config.pulkSpringDeadZoneLengths ?? 1.0,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
@@ -621,6 +630,8 @@ export function createTrajectoryController(racePlan) {
    * @param {Array}  racers      all racers
    * @param {number} elapsedMs
    * @param {number} [phaseProgress] leader-progress fraction [0,1]; null = legacy elapsedMs path
+   * @param {object} [geom] {lenScale, isOpen} — the shared racer-length scale + track topology,
+   *          used ONLY by the M2 spring (dead zone in racer lengths). Ignored on the OFF path.
    * @returns {number}  biased pre-clamp value; caller applies final clamp
    */
   function computePulkBiasedTarget(
@@ -630,13 +641,41 @@ export function createTrajectoryController(racePlan) {
     spreadMax,
     racers,
     elapsedMs,
-    phaseProgress = null
+    phaseProgress = null,
+    geom = null
   ) {
     if (getPhase(elapsedMs, phaseProgress) !== 'PULK') return rawSample;
-    if (!plan.pulkRacerIds.includes(racerIndex)) return rawSample;
 
     const thisRacer = racers.find((r) => r.index === racerIndex);
     if (!thisRacer || thisRacer.finished) return rawSample;
+
+    // ── M2 — PACK COHESION SPRING (flag-gated) ──────────────────────────────────────────────────
+    // Whole non-hero pack pulled toward the pack centroid, with a DEAD ZONE in racer lengths so a
+    // racer already near the centre draws unbiased (the honest-range idea). Same bias FORM as the
+    // 3-racer path below (rawSample + gain·normalisedErr), only the SCOPE (whole pack) and the dead
+    // zone differ. Heroes are exempt: never a target, never in the centroid.
+    if (plan._pulkSpringEnabled) {
+      if (thisRacer.isHeroChoreographed) return rawSample;
+      const pack = racers.filter((r) => !r.finished && !r.isHeroChoreographed);
+      if (pack.length === 0) return rawSample;
+      const centroidT = pack.reduce((s, r) => s + r.t, 0) / pack.length;
+      // Dead zone (racer lengths): |gap to centroid| within D → no bias. arcT gives the unsigned
+      // on-track arc; lenScale converts to racer lengths (the shared conversion — never px/seconds).
+      const lenScale = geom?.lenScale ?? 0;
+      if (lenScale > 0) {
+        const gapLengths = arcT(centroidT, thisRacer.t, geom.isOpen) * lenScale;
+        if (gapLengths <= (plan._pulkSpringDeadZoneLengths ?? 0)) return rawSample;
+      }
+      const normalisedErr = (centroidT - thisRacer.t) / Math.max(plan._finishT, 1e-6);
+      const biased = rawSample + plan._pulkSpringGain * normalisedErr;
+      const result = clamp(biased, spreadMin, spreadMax);
+      _pulkBiasDeltaSum += Math.abs(result - rawSample);
+      _pulkBiasEventCount += 1;
+      return result;
+    }
+
+    // ── Shipped 3-racer PULK bias (unchanged; the M2-OFF path) ──────────────────────────────────
+    if (!plan.pulkRacerIds.includes(racerIndex)) return rawSample;
 
     const pulkLive = racers.filter((r) => plan.pulkRacerIds.includes(r.index) && !r.finished);
     if (pulkLive.length === 0) return rawSample;

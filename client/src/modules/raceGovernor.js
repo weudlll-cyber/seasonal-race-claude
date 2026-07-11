@@ -398,3 +398,105 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
     r.governorMult = prev + clamp(target - prev, -maxStep, maxStep);
   }
 }
+
+/**
+ * M1 — PULK-window FRONT CONTEST (SWEEP-ONLY, flag-gated; default OFF → byte-identical).
+ *
+ * A trimmed sibling of applyGovernor: it stages the SAME two-sided force — brake the LIVE P1,
+ * boost live front challengers toward it — but scoped HARD to the live PULK window
+ * [pulkStartFrac, pulkEndFrac) and runnable UNDER v4 (where the full applyGovernor is gated off).
+ * It reuses THIS module's realism envelope (the ±maxEffect clamp, the per-frame maxStep slew, the
+ * naturalness ceiling-cap) and helpers (arcT / lenScaleFrom / clamp) — no new force, no new envelope.
+ * No slot rotation, no fall-back, no phase-weight fade: the window is a HARD gate and the maxStep
+ * slew alone smooths the on/off edges (governorMult eases in at pulkStart, back to 1.0 at pulkEnd).
+ * Writes r.governorMult, which the shared t-update (raceStep.js) multiplies in — so the browser and
+ * the sim inherit the mechanism identically (single source; no sim-only fork).
+ *
+ * HEROES: the leader brake applies to the live P1 whoever it is (hero or not) — keeping the front
+ * reachable is the point of the mechanism (decision documented in the sweep report). Non-leader
+ * heroes are NEVER boosted (they are curve-steered; a boost would fight the authored curve).
+ *
+ * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult, .spreadFactor,
+ *                          .isHeroChoreographed)
+ * @param {number} finishT
+ * @param {object} phaseCtx {progress, pulkStartFrac, pulkEndFrac, pathLengthPx, meanBodyLen, isOpen}
+ * @param {object} cfg  {pulkContestEnabled, leaderBrake, challengerBoost, pullStrength, frontPool,
+ *                       catchThreshold, maxEffect, maxStepPerFrame, ceilingCap}
+ */
+export function applyPulkFrontContest(racers, finishT, phaseCtx, cfg) {
+  const on = !!(cfg && cfg.pulkContestEnabled);
+  const maxStep = cfg?.maxStepPerFrame ?? 0.01;
+  const maxEffect = cfg?.maxEffect ?? 0.12;
+  const { progress, pulkStartFrac, pulkEndFrac, pathLengthPx, meanBodyLen, isOpen } =
+    phaseCtx ?? {};
+  // Slew one racer's governorMult toward a target (the shared realism slew-limit).
+  const slewTo = (r, target) => {
+    const prev = r.governorMult ?? 1.0;
+    r.governorMult = prev + clamp(target - prev, -maxStep, maxStep);
+  };
+  const inWindow =
+    on &&
+    finishT > 0 &&
+    progress != null &&
+    progress >= (pulkStartFrac ?? Infinity) &&
+    progress < (pulkEndFrac ?? -Infinity);
+  if (!inWindow) {
+    for (const r of racers) if (!r.finished) slewTo(r, 1.0);
+    return;
+  }
+  const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen);
+  if (!(lenScale > 0)) {
+    for (const r of racers) if (!r.finished) slewTo(r, 1.0);
+    return;
+  }
+  const leaderBrake = cfg.leaderBrake ?? 0;
+  const challengerBoost = cfg.challengerBoost ?? 0;
+  const pullStrength = cfg.pullStrength ?? 0.06;
+  const frontPool = cfg.frontPool ?? 8;
+  const catchThreshold = cfg.catchThreshold ?? 2.0; // racer-lengths
+  const ceilingCap = cfg.ceilingCap ?? 0;
+
+  // Live rank order (rank 1 = leader). Heroes INCLUDED so the live P1 (the brake target) is correct.
+  const live = racers
+    .filter((r) => !r.finished)
+    .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
+  const n = live.length;
+  if (n === 0) {
+    for (const r of racers) if (!r.finished) slewTo(r, 1.0);
+    return;
+  }
+  const leaderT = live[0].t;
+  const leaderIndex = live[0].index;
+  const rankOf = new Map();
+  for (let i = 0; i < n; i++) rankOf.set(live[i].index, i + 1);
+  const brakeLoBound = 1 - Math.max(maxEffect, leaderBrake);
+  const arcLen = (a, b) => arcT(a, b, isOpen) * lenScale;
+
+  for (const r of racers) {
+    if (r.finished) {
+      r.governorMult = 1.0;
+      continue;
+    }
+    let director = 0;
+    let loBound = 1 - maxEffect;
+    const rank = rankOf.get(r.index);
+    if (r.index === leaderIndex) {
+      director = -leaderBrake; // brake the live P1 (hero or not) — keep the front reachable
+      loBound = brakeLoBound;
+    } else if (
+      !r.isHeroChoreographed &&
+      rank !== undefined &&
+      rank <= frontPool &&
+      arcLen(leaderT, r.t) > catchThreshold
+    ) {
+      // Catch-up boost toward the leader, mean-reverting on the gap behind it (same form as the
+      // director's catch-up term). Non-hero front challengers only.
+      director = Math.min(challengerBoost, pullStrength * arcLen(leaderT, r.t));
+    }
+    let target = clamp(1 + director, loBound, 1 + maxEffect);
+    if (ceilingCap > 0 && r.spreadFactor > 0) {
+      target = Math.min(target, ceilingCap / r.spreadFactor);
+    }
+    slewTo(r, target);
+  }
+}
