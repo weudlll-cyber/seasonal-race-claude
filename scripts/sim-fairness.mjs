@@ -103,7 +103,7 @@ import {
   percentile,
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
-import { maxLinkGapLengths, makeHeldOvertakeTracker } from './sim/observers/pulk-contest.mjs';
+import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS } from './sim/observers/pulk-contest.mjs';
 import { applyGovernor, applyPulkFrontContest, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -302,6 +302,11 @@ const STRIP_METRICS       = argv.includes('--strip-metrics');
 // + per-racer rows for pooled band-reach / corrP1 in the analyze step. Fully flag-gated → a
 // no-flag run does zero extra work and is byte-identical. Measurement tooling only.
 const ACTION_METRICS      = argv.includes('--action-metrics');
+// --action-from-start: widen the ACTION-METRICS window from [pulkStartLive, pulkEndLive) to
+// [0, pulkEndLive) (race start through the END of PULK) for the PULK-window BASELINE measurement.
+// Lower bound only; upper bound (live pulkEnd) unchanged. Default OFF → window unchanged (the prior
+// sweep's [pulkStart, pulkEnd) semantics are preserved). Read-only; window-threading, no new math.
+const ACTION_FROM_START   = argv.includes('--action-from-start');
 // HERO-MAP (read-only, --hero-map): NIGHT-SWEEP TIER-1 observer. For every racer the v4 controller
 // tags isHeroChoreographed, records the climb-feasibility signals over the race: anchor rank (at the
 // choreo boundary), target rank, final rank, REAL whole-field overtakes (near-behind then cross —
@@ -1064,6 +1069,7 @@ export function runSingleRace({
     // NEW (pulk-contest observer): held top-5 overtakes + per-frame max consecutive-link gap (lengths).
     const amHeld      = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
     const amLinkGaps  = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
+    const amFullSpread = ACTION_METRICS ? [] : null; // per-frame leader→last full spread (racer-lengths, Q3b)
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -1324,10 +1330,13 @@ export function runSingleRace({
         }
       }
 
-      // ── ACTION-METRICS observer (--action-metrics; read-only, PULK window) ──────
-      // Whole-field, both-directions movement in [pulkStartLive, pulkEndLive). No P1-only,
-      // no hold requirement. Pure observation on the pre-Pass-2 live order.
-      if (ACTION_METRICS && raceProgress >= pulkStartLive && raceProgress < pulkEndLive) {
+      // ── ACTION-METRICS observer (--action-metrics; read-only) ──────
+      // Whole-field, both-directions movement over the window. Default window [pulkStartLive,
+      // pulkEndLive); with --action-from-start the LOWER bound is 0 → [0, pulkEndLive) (race start
+      // through PULK end, the baseline-measurement window). Upper bound is the LIVE plan pulkEnd (never
+      // a literal). No P1-only, no hold requirement. Pure observation on the pre-Pass-2 live order.
+      const amWindowFrom = ACTION_FROM_START ? 0 : pulkStartLive;
+      if (ACTION_METRICS && raceProgress >= amWindowFrom && raceProgress < pulkEndLive) {
         const order = racers
           .filter((r) => !r.finished)
           .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // rank 1 = leader
@@ -1358,6 +1367,7 @@ export function runSingleRace({
           amPrevRank = curRank;
           // NEW density + held-overtake (pulk-contest observer; math in the observer, not here).
           amLinkGaps.push(maxLinkGapLengths(order, isOpen, govLenScale)); // max adjacent-rank gap (lengths)
+          amFullSpread.push(fullSpreadLengths(order, govLenScale)); // leader→last full spread (lengths, Q3b)
           amHeld.observe(order.slice(0, 5).map((r) => r.index), raceProgress); // held top-5 overtakes
           // p10→p90 on-track spread in racer-lengths (front-percentile minus back-percentile racer).
           const p10 = order[Math.floor(0.1 * (n - 1))];
@@ -2310,10 +2320,17 @@ export function runSingleRace({
         spreadLenP10P90:   amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
         maxSpeedFactor:    +amNatMax.toFixed(4),
         // NEW (pulk-contest observer): PULK-window front action + density.
-        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders in the PULK window
+        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders over the window
         heldTop5Overtakes: amHeld ? amHeld.count : 0,               // REAL top-5 overtakes (hold-filtered)
         maxLinkGapLenP90:  amLinkGaps.length ? +percentile(amLinkGaps, 0.9).toFixed(3) : 0, // density p90 (lengths)
         maxLinkGapLenMax:  amLinkGaps.length ? +Math.max(...amLinkGaps).toFixed(3) : 0,      // density max (lengths)
+        // NEW (PULK-window baseline): the window bound + the owner's three direct answers.
+        windowFromStart:   ACTION_FROM_START,                       // true ⇒ window = [0, pulkEnd)
+        gapThresholdLen:   GAP_THRESHOLD_LENGTHS,                    // the "3 racer lengths" threshold (single source)
+        framesOver3LShare: amLinkGaps.length ? +framesOverThresholdShare(amLinkGaps).toFixed(4) : 0, // Q1: how OFTEN a gap > 3L
+        p1MaxHoldShare:    amFrames > 0 && amP1Steps.size ? +(Math.max(...amP1Steps.values()) / amFrames).toFixed(4) : 0, // Q2: most-dominant leader's hold
+        fullSpreadLenP90:  amFullSpread.length ? +percentile(amFullSpread, 0.9).toFixed(3) : 0, // Q3b: leader→last p90 (lengths)
+        fullSpreadLenMax:  amFullSpread.length ? +Math.max(...amFullSpread).toFixed(3) : 0,     // Q3b: leader→last max (lengths)
         // Per-racer rows for pooled band-reach (finalBand vs targetBand) + corrP1
         // (Spearman targetRank vs PULK-window P1-time), computed downstream in the analyze step.
         perRacer: racers.map((r) => ({

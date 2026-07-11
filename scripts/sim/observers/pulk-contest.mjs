@@ -27,6 +27,31 @@ import { arcT } from '../../../client/src/modules/raceLengths.js';
 // the ~0.25-wide PULK window. Calibratable; documented as a proposal (the owner may retune by eye).
 export const HELD_HOLD_PROGRESS = 0.02;
 
+// Owner's "is there a gap bigger than 3 racer lengths" threshold, in RACER LENGTHS. Defined ONCE here
+// (its home); the caller never repeats the literal. framesOverThresholdShare uses it as the default.
+export const GAP_THRESHOLD_LENGTHS = 3.0;
+
+// fullSpreadLengths: the WHOLE-field spread — live rank-1 racer to live last racer — in RACER LENGTHS.
+// Uses the RAW cumulative-t difference (order[0].t − order[n-1].t) × lenScale, matching the existing
+// p10→p90 spread convention (t is cumulative track-position, so a lapped field spreads > 1 lap
+// honestly; arcT would wrap and UNDER-report a large spread). Returns 0 for a field of < 2. Pure.
+export function fullSpreadLengths(orderDescByT, lenScale) {
+  const n = orderDescByT.length;
+  if (n < 2 || !(lenScale > 0)) return 0;
+  return (orderDescByT[0].t - orderDescByT[n - 1].t) * lenScale;
+}
+
+// framesOverThresholdShare: share of a per-frame max-link-gap SERIES whose value exceeds `threshold`
+// racer lengths — i.e. the fraction of frames in which SOME adjacent-link gap tore past the threshold.
+// Directly answers "how OFTEN is there a gap bigger than N lengths". Pure.
+export function framesOverThresholdShare(linkGaps, threshold = GAP_THRESHOLD_LENGTHS) {
+  const n = linkGaps.length;
+  if (n === 0) return 0;
+  let over = 0;
+  for (const g of linkGaps) if (g > threshold) over++;
+  return over / n;
+}
+
 // maxLinkGapLengths: the largest adjacent-rank arc gap in racer lengths, over a live order (rank 1
 // first, i.e. sorted DESC by t). `lenScale` = pathLengthPx / meanBodyLen (the shared racer-length
 // scale). Returns 0 for a field of < 2. Pure.
