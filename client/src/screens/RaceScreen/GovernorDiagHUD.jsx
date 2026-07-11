@@ -6,9 +6,11 @@
 //              Shows, live: (1) the RESOLVED phase + progress in EVERY phase (incl. OUTCOME), plus the
 //              director-active state + fade window (w) while active; (2) leader→2nd gap + field spread
 //              in racer-lengths; and (3) the FRONT GROUP — the front ~6 live racers, each with gap to
-//              the leader (racer-lengths), the applied governorMult (brake < 1 / boost > 1), and hero
-//              status + ROLE (sovereign-lead / comebacker / faller) so a sovereign-lead hero leader
-//              reads as unbrakeable rather than a bug. Passive DOM sibling of the race canvas: renders
+//              the leader (racer-lengths), the baseSpeed re-roll DRAW (spreadFactor, read-only), the
+//              applied governorMult (brake < 1 / boost > 1), and hero status + ROLE (sovereign-lead /
+//              comebacker / faller) — so a braked leader with a high draw reads as "brake applied but
+//              draw high", and a sovereign-lead hero leader reads as unbrakeable rather than a bug.
+//              Passive DOM sibling of the race canvas: renders
 //              nothing when its toggle is off, never touches the render loop. Reuses the director's
 //              exported pure helpers (arcT, phase-weight fade). Placement: TOP-CENTER.
 // ============================================================
@@ -88,11 +90,14 @@ function buildView(diag, state) {
   const arcLen = (a, b) => (leader ? arcT(a, b, isOpen) * lenScale : 0);
   const p = (frac) => (nLive ? live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t : 0);
 
-  // Front group: leader + the next few, each with gap-to-leader, the APPLIED governorMult, hero flag
-  // + role (so a sovereign-lead hero leader reads as unbrakeable, not a bug).
+  // Front group: leader + the next few, each with gap-to-leader, the racer's current baseSpeed re-roll
+  // DRAW (spreadFactor, read-only — the value that says whether it is drawing naturally fast/slow now,
+  // so a braked leader with a high draw reads as "brake applied but draw high"), the APPLIED
+  // governorMult, hero flag + role (a sovereign-lead hero leader reads as unbrakeable, not a bug).
   const front = live.slice(0, Math.min(FRONT_COUNT, nLive)).map((r) => ({
     name: r.name ?? r.id ?? `#${r.index}`,
     gapLen: leader ? arcLen(leader.t, r.t) : 0, // 0 for the leader; positive behind it
+    draw: typeof r.spreadFactor === 'number' ? r.spreadFactor : null, // re-roll draw; null before first roll
     mult: r.governorMult ?? 1.0,
     isHero: !!r.isHeroChoreographed,
     role: heroRoles ? (heroRoles.get(r.index) ?? null) : null,
@@ -124,7 +129,11 @@ function frontLine(b, i) {
       </span>
       {'  '}
       <span style={{ color: CFG_COLOR }}>{b.gapLen.toFixed(1)}len</span>
-      {'  '}
+      {'  draw '}
+      <span style={{ color: b.draw == null ? OFF_COLOR : b.draw < 1 ? BRAKE_COLOR : LIFT_COLOR }}>
+        {b.draw == null ? '—' : b.draw.toFixed(2)}
+      </span>
+      {'  mult '}
       <span style={{ color: b.mult < 1 ? BRAKE_COLOR : b.mult > 1 ? LIFT_COLOR : OFF_COLOR }}>
         {b.mult.toFixed(3)}
       </span>
@@ -181,7 +190,7 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
         <span style={{ color: CFG_COLOR }}>leader→2nd {v.leader2ndLen.toFixed(1)}len</span>
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
       </div>
-      <div style={SEP_STYLE}>── front group: gap · applied mult · hero/role ──</div>
+      <div style={SEP_STYLE}>── front group: gap · draw · applied mult · hero/role ──</div>
       {v.front.map((b, i) => frontLine(b, i))}
     </div>
   );
