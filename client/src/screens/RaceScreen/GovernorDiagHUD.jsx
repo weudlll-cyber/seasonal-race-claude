@@ -2,15 +2,15 @@
 // File:        GovernorDiagHUD.jsx
 // Path:        client/src/screens/RaceScreen/GovernorDiagHUD.jsx
 // Project:     RaceArena
-// Description: Pre-OUTCOME contest-injector "director" diagnostics overlay for the DevPanel.
-//              Shows, live: (1) the RESOLVED phase binding — "active (PULK) — fades pulkEnd XX%
-//              → corrStart XX%, w=…" — so the owner SEES the fade window follow a corridorStart
-//              edit; (2) the director state (leader→2nd gap + field spread, in racer-lengths); and
-//              (3) for the current LEADER and a trailing STRAGGLER, the gap to the leader and the
-//              applied governorMult (brake < 1 / boost > 1). Passive DOM sibling of the race
-//              canvas: renders nothing when its toggle is off, never touches the render loop.
-//              Reuses the director's exported pure helpers (arcT, phase-weight fade). The director
-//              no longer uses the field median, so no median is read here. Placement: TOP-CENTER.
+// Description: Director diagnostics overlay for the DevPanel (classic director OR PulkRaceDirector).
+//              Shows, live: (1) the RESOLVED phase + progress in EVERY phase (incl. OUTCOME), plus the
+//              director-active state + fade window (w) while active; (2) leader→2nd gap + field spread
+//              in racer-lengths; and (3) the FRONT GROUP — the front ~6 live racers, each with gap to
+//              the leader (racer-lengths), the applied governorMult (brake < 1 / boost > 1), and hero
+//              status + ROLE (sovereign-lead / comebacker / faller) so a sovereign-lead hero leader
+//              reads as unbrakeable rather than a bug. Passive DOM sibling of the race canvas: renders
+//              nothing when its toggle is off, never touches the render loop. Reuses the director's
+//              exported pure helpers (arcT, phase-weight fade). Placement: TOP-CENTER.
 // ============================================================
 
 import { arcT, governorPhaseWeight } from '../../modules/raceGovernor.js';
@@ -50,10 +50,6 @@ const LIFT_COLOR = '#6fd0ff';
 
 const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
 
-/**
- * Build the plain view snapshot from the live race state + the director diag snapshot. Pure (no
- * refs). Reads only position + the applied governorMult, so the readout always matches the physics.
- */
 // How many front racers to list (leader + the next few).
 const FRONT_COUNT = 6;
 // Short role labels + colours (roles the generator produces: sovereign-lead / comebacker / faller).
@@ -63,6 +59,10 @@ const ROLE_STYLE = {
   faller: { label: 'faller', color: BRAKE_COLOR },
 };
 
+/**
+ * Build the plain view snapshot from the live race state + the director diag snapshot. Pure (no
+ * refs). Reads only position + the applied governorMult, so the readout always matches the physics.
+ */
 function buildView(diag, state) {
   const cfg = diag.cfg;
   const racers = state.racers ?? [];
