@@ -257,6 +257,9 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorFallbackProtectMs:  Number(argVal('governorDirectorFallbackProtectMs',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs))),
   // M1 (PULK front contest) + M2 (pack cohesion spring) — SWEEP-ONLY flags; default OFF → byte-identical.
   governorDirectorPulkContestEnabled: argVal('governorDirectorPulkContestEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPulkContestEnabled)) === 'true',
+  // PulkRaceDirector (v4-composable PULK group contest + N1 lead-rotation). Default OFF.
+  pulkRaceDirectorEnabled:  argVal('pulkRaceDirectorEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceDirectorEnabled)) === 'true',
+  pulkRaceMaxLeadHoldMs:    Number(argVal('pulkRaceMaxLeadHoldMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceMaxLeadHoldMs))),
   pulkSpringEnabled:          argVal('pulkSpringEnabled',          String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringEnabled)) === 'true',
   pulkSpringGain:             Number(argVal('pulkSpringGain',             String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringGain))),
   pulkSpringDeadZoneLengths:  Number(argVal('pulkSpringDeadZoneLengths',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringDeadZoneLengths))),
@@ -933,6 +936,13 @@ export function runSingleRace({
         ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
         : 0,
     };
+    // ── PulkRaceDirector — the SAME group-director (applyGovernor), PULK-scoped + composed with v4 +
+    // N1 forced lead-rotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
+    // (one source); only directorEnabled/pulkOnly/maxLeadHoldMs are overridden. v4 only.
+    const pulkRaceDirectorOn =
+      !!racePlanController && (dynamicsConfig.pulkRaceDirectorEnabled ?? false) && DIRECTOR_V4_ENABLED;
+    const pulkRaceCfg = { ...govCfg, directorEnabled: true, pulkOnly: true,
+      maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000 };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
     // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
@@ -1166,7 +1176,7 @@ export function runSingleRace({
       }
 
       const govPhase =
-        governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
+        (governorEnabled || pulkRaceDirectorOn) ? racePlanController.getPhase(raceTs, raceProgress) : null;
       // Field median for the READ-ONLY field-shape telemetry below (the director mechanism uses
       // the live rank sort + gap-to-leader, not the median).
       const govMedianT = governorEnabled ? simMedianT(racers) : null;
@@ -1180,6 +1190,18 @@ export function runSingleRace({
           finishT,
           { progress: raceProgress, pulkStartFrac: govFractions.pulkStartFrac, pulkEndFrac: govFractions.pulkEndFrac, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen },
           pulkContestCfg
+        );
+      }
+
+      // ── PulkRaceDirector — the SAME applyGovernor, PULK-scoped (pulkOnly) + N1, run UNDER v4 ──
+      // (default OFF → skipped). Its own dirState-driven governorMult; heroes stay 1.0; fades by pulkEnd.
+      if (pulkRaceDirectorOn && govFractions) {
+        applyGovernor(
+          racers,
+          finishT,
+          govPhase,
+          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
+          pulkRaceCfg
         );
       }
 

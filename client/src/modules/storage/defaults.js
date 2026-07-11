@@ -366,6 +366,16 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // …FrontPool / …CatchThreshold + the maxEffect/maxStepPerFrame realism envelope — so this is the
   // only new flag. No effect under v4-OFF (the reactive director owns the pre-OUTCOME contest there).
   governorDirectorPulkContestEnabled: false,
+  // PulkRaceDirector (v4-composable PULK-scoped GROUP contest + forced lead-rotation) — SWEEP/opt-in,
+  // default OFF → shipped game unchanged. When ON (and v4 ON) it runs the SAME group-director mechanism
+  // (applyGovernor, pulkOnly mode) inside [pulkStart, pulkEnd) while heroes run their curves (heroes
+  // excluded). Contest STRENGTHS reuse the existing governorDirector* knobs (brake/boost/frontPool/
+  // maxParallelBoosts/fallback) — no duplicate values. The ONLY new knob is the rotation cap below.
+  pulkRaceDirectorEnabled: false,
+  // N1 forced lead-rotation cap: max ms any one racer may hold live P1 inside the PULK window before it
+  // is demoted (via the director's fall-back machinery), handing P1 to the next challenger. Lower =
+  // faster lead rotation / more distinct P1 holders. Only acts when pulkRaceDirectorEnabled + v4.
+  pulkRaceMaxLeadHoldMs: 2000,
   // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
   // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
   // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.

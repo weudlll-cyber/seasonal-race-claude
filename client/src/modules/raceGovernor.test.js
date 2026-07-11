@@ -162,6 +162,60 @@ describe('applyGovernor — two directions (catch-up + fall-back)', () => {
   });
 });
 
+// PulkRaceDirector — pulkOnly scope + N1 forced lead-rotation.
+describe('applyGovernor — PulkRaceDirector (pulkOnly + N1 rotation)', () => {
+  it('pulkOnly: active in PULK (leader braked), inert in PRE_PULK', () => {
+    const cfg = { ...BASE, pulkOnly: true };
+    const pre = mkRacers([8, 7, 6, 5, 4]);
+    applyGovernor(pre, 1.0, 'PRE_PULK', ctx(mkDir(), { progress: 0.1 }), cfg);
+    pre.forEach((r) => expect(r.governorMult).toBe(1.0)); // PRE_PULK excluded under pulkOnly
+    const pulk = mkRacers([8, 7, 6, 5, 4]);
+    applyGovernor(pulk, 1.0, 'PULK', ctx(mkDir(), { progress: 0.3 }), cfg);
+    expect(pulk[0].governorMult).toBeLessThan(1.0); // leader braked once inside PULK
+  });
+
+  it('N1: a P1 held past maxLeadHoldMs is demoted into a fall-back slot (lead rotates)', () => {
+    const cfg = {
+      ...BASE,
+      pulkOnly: true,
+      maxLeadHoldMs: 500,
+      directorFallbackEnabled: true,
+      directorFallbackMaxCount: 2,
+    };
+    const racers = mkRacers([8, 7, 6, 5, 4, 3, 2, 1]); // index 0 is the clear, persistent leader
+    const dir = mkDir();
+    let demotedBeforeCap = false,
+      demotedAfterCap = false;
+    for (let i = 0; i < 150; i++) {
+      const ms = i * 16;
+      applyGovernor(racers, 1.0, 'PULK', ctx(dir, { currentMs: ms, progress: 0.3 }), cfg);
+      const leaderInFall = dir.fallSlots.some((sl) => sl.idx === 0);
+      if (ms < 500 && leaderInFall) demotedBeforeCap = true;
+      if (ms >= 500 && leaderInFall) demotedAfterCap = true;
+    }
+    expect(demotedBeforeCap).toBe(false); // the leader is not a fall-back target before its cap trips
+    expect(demotedAfterCap).toBe(true); // N1 pushes the over-holding leader into a fall-back slot
+  });
+
+  it('N1 off (maxLeadHoldMs 0): the leader is NEVER demoted (classic fall-back excludes P1)', () => {
+    const cfg = {
+      ...BASE,
+      pulkOnly: true,
+      maxLeadHoldMs: 0,
+      directorFallbackEnabled: true,
+      directorFallbackMaxCount: 2,
+    };
+    const racers = mkRacers([8, 7, 6, 5, 4, 3, 2, 1]);
+    const dir = mkDir();
+    let leaderEverInFall = false;
+    for (let i = 0; i < 150; i++) {
+      applyGovernor(racers, 1.0, 'PULK', ctx(dir, { currentMs: i * 16, progress: 0.3 }), cfg);
+      if (dir.fallSlots.some((sl) => sl.idx === 0)) leaderEverInFall = true;
+    }
+    expect(leaderEverInFall).toBe(false);
+  });
+});
+
 describe('applyGovernor — realism envelope', () => {
   it('fades to EXACTLY 1.0 in OUTCOME', () => {
     const racers = mkRacers([0.5, 0.3, 0.1]);

@@ -746,6 +746,13 @@ export default function RaceScreen() {
       racePlanEnabled &&
       (dynamicsConfig.governorDirectorEnabled ?? false) &&
       !(dynamicsConfig.directorV4Enabled ?? false);
+    // PulkRaceDirector: the group-director composed WITH v4 (opt-in, default OFF → skipped). Runs the
+    // SAME applyGovernor in pulkOnly mode with the N1 rotation cap. Contest strengths reuse govCfg's
+    // knobs (built below); only directorEnabled/pulkOnly/maxLeadHoldMs are overridden — one source.
+    const pulkRaceDirectorOn =
+      racePlanEnabled &&
+      (dynamicsConfig.pulkRaceDirectorEnabled ?? false) &&
+      (dynamicsConfig.directorV4Enabled ?? false);
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
@@ -776,6 +783,14 @@ export default function RaceScreen() {
       directorFallbackMaxCount: dynamicsConfig.governorDirectorFallbackMaxCount ?? 2,
       directorFallbackUntilPosition: dynamicsConfig.governorDirectorFallbackUntilPosition ?? 12,
       directorFallbackProtectMs: dynamicsConfig.governorDirectorFallbackProtectMs ?? 2500,
+    };
+    // PulkRaceDirector config: the SAME group-director knobs (govCfg), PULK-scoped + N1 rotation cap.
+    // Only directorEnabled/pulkOnly/maxLeadHoldMs differ; every strength is reused from govCfg.
+    const pulkRaceCfg = {
+      ...govCfg,
+      directorEnabled: true,
+      pulkOnly: true,
+      maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
@@ -1039,9 +1054,31 @@ export default function RaceScreen() {
           // Director phase (drives the pre-OUTCOME contest gate + the fade). The director uses the
           // live rank sort + gap-to-leader, not the field median, so no median is precomputed.
           const govPhase =
-            directorEnabled && racePlanController
+            (directorEnabled || pulkRaceDirectorOn) && racePlanController
               ? racePlanController.getPhase(physicsTs, st.raceProgress)
               : null;
+
+          // ── PulkRaceDirector — the SAME applyGovernor, PULK-scoped (pulkOnly) + N1, run UNDER v4 ──
+          // (default OFF → skipped → race unchanged). Heroes stay governorMult 1.0; fades by pulkEnd.
+          if (pulkRaceDirectorOn && govFractions) {
+            applyGovernor(
+              st.racers,
+              st.finishT,
+              govPhase,
+              {
+                progress: st.raceProgress,
+                pulkEndFrac: govFractions.pulkEndFrac,
+                corrStartFrac: govFractions.corrStartFrac,
+                seed: govSeed,
+                pathLengthPx,
+                meanBodyLen: govMeanBodyLen,
+                isOpen: isOpenTrack,
+                currentMs: physicsTs,
+                dirState,
+              },
+              pulkRaceCfg
+            );
+          }
 
           // ── Pre-OUTCOME contest-injector "director" ──
           if (directorEnabled && govFractions) {
