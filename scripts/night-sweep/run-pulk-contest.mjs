@@ -68,11 +68,12 @@ const M2_GAIN = { weak: 1.0, med: 2.0, strong: 4.0 };
 const M2_DEADZONE = 1.0; // racer lengths
 // Fixed sweep config (documented): v4 ON, reopened PULK [0.25, 0.5), shipped PULK boni (0), shipped
 // density band (±8.1%). governorDirectorEnabled=false is explicit (v4 gates the reactive director off).
+const DEFAULT_PULK_END = 0.5; // reopened PULK end / OUTCOME start (owner-tested); overridable per cell
 const BASE_FLAGS = [
   '--race-plan=true', '--directorV4Enabled=true', '--governorDirectorEnabled=false',
-  '--pulkStart=0.25', '--directorV4OutcomeStart=0.5', '--bonusMult=2.0',
+  '--pulkStart=0.25', '--bonusMult=2.0',
   '--baseSpeedMin=0.00096', '--baseSpeedMax=0.00113',
-];
+]; // NB: directorV4OutcomeStart (PULK end) is added PER CELL (cell.pulkEnd) so the pulkwidth phase can vary it
 function m1Flags(brake) {
   return ['--governorDirectorPulkContestEnabled=true', `--governorDirectorLeaderBrake=${brake}`,
     `--governorDirectorChallengerBoost=${brake}`];
@@ -97,7 +98,7 @@ function cellArgs(cell, nRaces) {
   return [
     SIM,
     `--track=${cell.track}`, `--racer=${cell.racer}`, `--dur=${DUR}`, `--races=${nRaces}`, `--seed=${SEED}`,
-    ...BASE_FLAGS, ...cell.flags,
+    ...BASE_FLAGS, `--directorV4OutcomeStart=${cell.pulkEnd ?? DEFAULT_PULK_END}`, ...cell.flags,
     '--hero-map', '--action-metrics', `--diagLabel=${cell.id}`, '--skip-main-output',
     `--out=client/tmp/pulk-contest/${cell.id}`,
   ];
@@ -278,6 +279,17 @@ async function main() {
     for (const a of comboArms()) for (const t of P1_TRACKS)
       cells.push({ id: `cmb-${a.arm}-${t}`, arm: a.arm, track: t, racer: defaultRacerFor(t), open: t === 'mountainstreet' || t === 'luger-hill', flags: a.flags });
     await runCells('combo', cells, Number(arg('races', '50')));
+  } else if (PHASE === 'pulkwidth') {
+    // DIAGNOSTIC: Phase 1 showed the reopened-PULK BASELINE (A0, OUTCOME-start 0.50) fails the Holm
+    // start-row gate on luger-hill/searound — a correction-BUDGET effect (OUTCOME starts late), not a
+    // mechanism effect. Does a NARROWER reopened PULK (earlier OUTCOME start) restore baseline fairness
+    // while still hosting the M1 contest? Sweep OUTCOME-start ∈ {0.30, 0.35, 0.40} for A0 + M1-med.
+    const ENDS = [0.30, 0.35, 0.40];
+    const arms = [{ arm: 'A0', flags: [] }, { arm: 'M1-med', flags: m1Flags(M1_BRAKE.med) }];
+    const cells = [];
+    for (const pe of ENDS) for (const a of arms) for (const t of P1_TRACKS)
+      cells.push({ id: `pw-${a.arm}-e${String(pe).replace('.', '')}-${t}`, arm: `${a.arm}@${pe}`, track: t, racer: defaultRacerFor(t), open: t === 'mountainstreet' || t === 'luger-hill', pulkEnd: pe, flags: a.flags });
+    await runCells('pulkwidth', cells, Number(arg('races', '100')));
   } else if (PHASE === 'phase2') {
     const forced = arg('winner', null);
     const { winner } = pickWinner();
