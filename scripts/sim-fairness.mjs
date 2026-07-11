@@ -103,7 +103,7 @@ import {
   percentile,
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
-import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS } from './sim/observers/pulk-contest.mjs';
+import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
 import { applyGovernor, applyPulkFrontContest, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -310,6 +310,11 @@ const ACTION_METRICS      = argv.includes('--action-metrics');
 // Lower bound only; upper bound (live pulkEnd) unchanged. Default OFF → window unchanged (the prior
 // sweep's [pulkStart, pulkEnd) semantics are preserved). Read-only; window-threading, no new math.
 const ACTION_FROM_START   = argv.includes('--action-from-start');
+// --runaway-leader: RUNAWAY-LEADER measurement (read-only). Two one-shot boundary snapshots per race
+// (leader identity + isHero + lead-over-P2 in racer lengths) at the first frame past pulkStart and past
+// pulkEnd, to measure how often the post-chaos leader is already uncatchable and whether it is a hero.
+// Rides in the action-metrics per-race dump (pass --action-metrics too). Read-only; no new physics.
+const RUNAWAY_LEADER      = argv.includes('--runaway-leader');
 // HERO-MAP (read-only, --hero-map): NIGHT-SWEEP TIER-1 observer. For every racer the v4 controller
 // tags isHeroChoreographed, records the climb-feasibility signals over the race: anchor rank (at the
 // choreo boundary), target rank, final rank, REAL whole-field overtakes (near-behind then cross —
@@ -1080,6 +1085,9 @@ export function runSingleRace({
     const amHeld      = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
     const amLinkGaps  = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
     const amFullSpread = ACTION_METRICS ? [] : null; // per-frame leader→last full spread (racer-lengths, Q3b)
+    // RUNAWAY-LEADER one-shot boundary snapshots (--runaway-leader). Captured at the first frame past
+    // pulkStart / pulkEnd; each stays null until its crossing. Per-race (reset by this per-race scope).
+    let rlStartSnap = null, rlEndSnap = null;
 
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
@@ -1350,6 +1358,14 @@ export function runSingleRace({
             }
           }
         }
+      }
+
+      // ── RUNAWAY-LEADER boundary snapshots (--runaway-leader; read-only, ONE-SHOT each) ──
+      // Fire once at the first frame past pulkStart / pulkEnd (live plan fractions), capturing the
+      // leader's identity + isHero + lead-over-P2 (racer lengths). Not a per-frame loop.
+      if (RUNAWAY_LEADER) {
+        if (!rlStartSnap && raceProgress >= pulkStartLive) rlStartSnap = leaderSnapshot(racers, isOpen, govLenScale);
+        if (!rlEndSnap && raceProgress >= pulkEndLive) rlEndSnap = leaderSnapshot(racers, isOpen, govLenScale);
       }
 
       // ── ACTION-METRICS observer (--action-metrics; read-only) ──────
@@ -2353,6 +2369,12 @@ export function runSingleRace({
         p1MaxHoldShare:    amFrames > 0 && amP1Steps.size ? +(Math.max(...amP1Steps.values()) / amFrames).toFixed(4) : 0, // Q2: most-dominant leader's hold
         fullSpreadLenP90:  amFullSpread.length ? +percentile(amFullSpread, 0.9).toFixed(3) : 0, // Q3b: leader→last p90 (lengths)
         fullSpreadLenMax:  amFullSpread.length ? +Math.max(...amFullSpread).toFixed(3) : 0,     // Q3b: leader→last max (lengths)
+        // RUNAWAY-LEADER (--runaway-leader): pulkStart + pulkEnd leader snapshots (identity/isHero/
+        // lead-over-P2 in lengths) + did the SAME racer still lead at pulkEnd. Null when the flag is off.
+        runawayLargeLen:   RUNAWAY_LEADER ? RUNAWAY_LARGE_LENGTHS : null, // the LARGE threshold (single source)
+        runawayStart:      rlStartSnap,
+        runawayEnd:        rlEndSnap,
+        runawaySameLeader: rlStartSnap && rlEndSnap ? rlStartSnap.leaderIndex === rlEndSnap.leaderIndex : null,
         // Per-racer rows for pooled band-reach (finalBand vs targetBand) + corrP1
         // (Spearman targetRank vs PULK-window P1-time), computed downstream in the analyze step.
         perRacer: racers.map((r) => ({

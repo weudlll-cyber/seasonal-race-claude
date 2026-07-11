@@ -31,6 +31,29 @@ export const HELD_HOLD_PROGRESS = 0.02;
 // (its home); the caller never repeats the literal. framesOverThresholdShare uses it as the default.
 export const GAP_THRESHOLD_LENGTHS = 3.0;
 
+// RUNAWAY-LEADER thresholds (racer lengths), single-sourced here. LARGE is the primary "too big to
+// catch" cut; the list is the report's share table so the cutoff isn't arbitrary (LARGE must be in it).
+export const RUNAWAY_LARGE_LENGTHS = 4.0;
+export const RUNAWAY_LEAD_THRESHOLDS_LEN = [3, 4, 6, 8];
+
+// leaderSnapshot: a ONE-SHOT capture of the front at a boundary crossing — the live leader's identity,
+// whether it is a choreographed hero, and its lead over P2 in RACER LENGTHS (shared arcT × lenScale).
+// Not a per-frame loop; the caller invokes it exactly at pulkStart and pulkEnd. Returns null for a
+// field of < 2 live racers. Pure.
+export function leaderSnapshot(racers, isOpen, lenScale) {
+  const live = racers
+    .filter((r) => !r.finished)
+    .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
+  if (live.length < 2 || !(lenScale > 0)) return null;
+  const leader = live[0];
+  const p2 = live[1];
+  return {
+    leaderIndex: leader.index,
+    leaderIsHero: !!leader.isHeroChoreographed,
+    leadOverP2Len: +(arcT(leader.t, p2.t, isOpen) * lenScale).toFixed(3),
+  };
+}
+
 // fullSpreadLengths: the WHOLE-field spread — live rank-1 racer to live last racer — in RACER LENGTHS.
 // Uses the RAW cumulative-t difference (order[0].t − order[n-1].t) × lenScale, matching the existing
 // p10→p90 spread convention (t is cumulative track-position, so a lapped field spreads > 1 lap
