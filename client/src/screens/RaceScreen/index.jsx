@@ -1051,12 +1051,13 @@ export default function RaceScreen() {
           // now rescales areaBonusMult from ONE source for browser + sim; INFRA 5A. Nothing to do
           // here: the controller-pass above already produced the phase-split areaBonusMult.)
 
-          // Director phase (drives the pre-OUTCOME contest gate + the fade). The director uses the
-          // live rank sort + gap-to-leader, not the field median, so no median is precomputed.
-          const govPhase =
-            (directorEnabled || pulkRaceDirectorOn) && racePlanController
-              ? racePlanController.getPhase(physicsTs, st.raceProgress)
-              : null;
+          // Resolved phase — computed every frame whenever a race plan is running (drives the
+          // pre-OUTCOME contest gate + the fade AND the always-on GovernorDiagHUD phase readout). Pure
+          // getPhase; no physics. The director uses the live rank sort + gap-to-leader, not the field
+          // median, so no median is precomputed.
+          const govPhase = racePlanController
+            ? racePlanController.getPhase(physicsTs, st.raceProgress)
+            : null;
 
           // ── PulkRaceDirector — the SAME applyGovernor, PULK-scoped (pulkOnly) + N1, run UNDER v4 ──
           // (default OFF → skipped → race unchanged). Heroes stay governorMult 1.0; fades by pulkEnd.
@@ -1099,11 +1100,24 @@ export default function RaceScreen() {
               },
               govCfg
             );
-            // Read-only snapshot for the Governor Diag HUD (cheap per-frame object).
+          }
+
+          // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs, independent of
+          // which director (if any) is active. cfg reflects the ACTIVE director (PulkRaceDirector, the
+          // old reactive director, or a directorEnabled:false stub in OUTCOME/off) so the HUD always
+          // reads the truth. Read-only; touches nothing but the diag ref. heroRoles = the retained
+          // index→role map (diagnostics-only; null until heroes are cast).
+          if (racePlanController && govFractions) {
+            const diagCfg = pulkRaceDirectorOn
+              ? pulkRaceCfg
+              : directorEnabled
+                ? govCfg
+                : { directorEnabled: false };
             governorDiagRef.current = {
-              cfg: govCfg,
+              cfg: diagCfg,
               phase: govPhase,
               progress: st.raceProgress,
+              pulkStartFrac: govFractions.pulkStartFrac,
               pulkEndFrac: govFractions.pulkEndFrac,
               corrStartFrac: govFractions.corrStartFrac,
               seed: govSeed,
@@ -1111,6 +1125,7 @@ export default function RaceScreen() {
               pathLengthPx,
               meanBodyLen: govMeanBodyLen,
               isOpen: isOpenTrack,
+              heroRoles: racePlanController.getHeroRoles?.() ?? null,
             };
           }
 

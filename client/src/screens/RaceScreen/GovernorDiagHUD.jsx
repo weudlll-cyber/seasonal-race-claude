@@ -54,6 +54,15 @@ const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
  * Build the plain view snapshot from the live race state + the director diag snapshot. Pure (no
  * refs). Reads only position + the applied governorMult, so the readout always matches the physics.
  */
+// How many front racers to list (leader + the next few).
+const FRONT_COUNT = 6;
+// Short role labels + colours (roles the generator produces: sovereign-lead / comebacker / faller).
+const ROLE_STYLE = {
+  'sovereign-lead': { label: 'sovereign-lead', color: '#ff6ec7' }, // unbrakeable front hero
+  comebacker: { label: 'comebacker', color: LIFT_COLOR },
+  faller: { label: 'faller', color: BRAKE_COLOR },
+};
+
 function buildView(diag, state) {
   const cfg = diag.cfg;
   const racers = state.racers ?? [];
@@ -61,8 +70,12 @@ function buildView(diag, state) {
   const pathLengthPx = diag.pathLengthPx ?? 0;
   const meanBodyLen = diag.meanBodyLen ?? 0;
   const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen); // arc-fraction → racer-lengths (shared)
-  const activePhase =
-    diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
+  const heroRoles = diag.heroRoles ?? null; // index → role (null until heroes cast)
+  // Active-phase check MIRRORS applyGovernor: pulkOnly (PulkRaceDirector) is active only in PULK; the
+  // classic director is active PRE_PULK|PULK|TRANSITION. Outside that the director contributes 1.0.
+  const activePhase = cfg.pulkOnly
+    ? diag.phase === 'PULK'
+    : diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';
 
   const w = activePhase
     ? governorPhaseWeight(diag.progress, diag.pulkEndFrac, diag.corrStartFrac)
@@ -72,44 +85,57 @@ function buildView(diag, state) {
   const nLive = live.length;
   const leader = live[0] ?? null;
   const second = live[1] ?? null;
-  const straggler = live[nLive - 1] ?? null;
   const arcLen = (a, b) => (leader ? arcT(a, b, isOpen) * lenScale : 0);
   const p = (frac) => (nLive ? live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t : 0);
 
-  const line = (r) =>
-    r
-      ? {
-          name: r.name ?? r.id ?? `#${r.index}`,
-          gapLen: leader ? arcLen(leader.t, r.t) : 0, // 0 for the leader; positive behind it
-          mult: r.governorMult ?? 1.0,
-        }
-      : null;
+  // Front group: leader + the next few, each with gap-to-leader, the APPLIED governorMult, hero flag
+  // + role (so a sovereign-lead hero leader reads as unbrakeable, not a bug).
+  const front = live.slice(0, Math.min(FRONT_COUNT, nLive)).map((r) => ({
+    name: r.name ?? r.id ?? `#${r.index}`,
+    gapLen: leader ? arcLen(leader.t, r.t) : 0, // 0 for the leader; positive behind it
+    mult: r.governorMult ?? 1.0,
+    isHero: !!r.isHeroChoreographed,
+    role: heroRoles ? (heroRoles.get(r.index) ?? null) : null,
+  }));
 
   return {
-    phase: diag.phase,
+    phase: diag.phase ?? '—',
+    progress: diag.progress ?? 0,
     activePhase,
     w,
     directorOn: !!cfg.directorEnabled,
+    pulkOnly: !!cfg.pulkOnly,
     leader2ndLen: leader && second ? arcLen(leader.t, second.t) : 0,
     fieldLen: nLive > 1 ? arcLen(p(0.1), p(0.9)) : 0,
+    pulkStartFrac: diag.pulkStartFrac,
     pulkEndFrac: diag.pulkEndFrac,
     corrStartFrac: diag.corrStartFrac,
-    leader: line(leader),
-    straggler: line(straggler),
+    front,
   };
 }
 
-function racerLine(label, b) {
-  if (!b) return null;
+function frontLine(b, i) {
+  const roleStyle = b.role ? ROLE_STYLE[b.role] : null;
   return (
-    <div>
-      {label} <span style={{ color: '#ffd700' }}>{b.name}</span>
-      {'  behind '}
+    <div key={i}>
+      <span style={{ color: i === 0 ? '#ffd700' : '#ddd' }}>
+        {i === 0 ? 'P1 ' : `P${i + 1} `}
+        {b.name}
+      </span>
+      {'  '}
       <span style={{ color: CFG_COLOR }}>{b.gapLen.toFixed(1)}len</span>
-      {'  mult '}
+      {'  '}
       <span style={{ color: b.mult < 1 ? BRAKE_COLOR : b.mult > 1 ? LIFT_COLOR : OFF_COLOR }}>
         {b.mult.toFixed(3)}
       </span>
+      {'  '}
+      {b.isHero ? (
+        <span style={{ color: roleStyle ? roleStyle.color : '#ffd700' }}>
+          hero{roleStyle ? ` (${roleStyle.label})` : ''}
+        </span>
+      ) : (
+        <span style={{ color: OFF_COLOR }}>pack</span>
+      )}
     </div>
   );
 }
@@ -134,28 +160,29 @@ export default function GovernorDiagHUD({ racersRef, governorDiagRef, visible })
       <div style={{ marginBottom: '2px', letterSpacing: '0.05em' }}>
         <span style={{ color: '#7dff7d', fontWeight: 700 }}>DIRECTOR DIAG</span>
       </div>
+      {/* Phase + progress — shown in EVERY phase (incl. OUTCOME), so the owner can always read it. */}
       <div>
+        <span style={{ color: v.activePhase && v.directorOn ? ON_COLOR : OFF_COLOR }}>
+          phase {v.phase} · {pct(v.progress)}
+        </span>
         {v.activePhase ? (
-          <>
-            <span style={{ color: v.directorOn ? ON_COLOR : OFF_COLOR }}>
-              {v.directorOn ? 'active' : 'off'} ({v.phase})
-            </span>
-            <span style={{ color: CFG_COLOR }}>
-              {'  '}fades pulkEnd {pct(v.pulkEndFrac)} → corrStart {pct(v.corrStartFrac)}
-              {'  '}w={v.w.toFixed(2)}
-            </span>
-          </>
+          <span style={{ color: CFG_COLOR }}>
+            {'  '}director {v.directorOn ? 'active' : 'off'}
+            {'  '}window {pct(v.pulkStartFrac)}–{pct(v.pulkEndFrac)}
+            {'  '}w={v.w.toFixed(2)}
+          </span>
         ) : (
-          <span style={{ color: OFF_COLOR }}>off ({v.phase}) — controller owns OUTCOME</span>
+          <span style={{ color: OFF_COLOR }}>
+            {'  '}director inactive — controller owns OUTCOME
+          </span>
         )}
       </div>
       <div>
         <span style={{ color: CFG_COLOR }}>leader→2nd {v.leader2ndLen.toFixed(1)}len</span>
         {'  '}field(p10−p90) {v.fieldLen.toFixed(1)}len
       </div>
-      <div style={SEP_STYLE}>── gap behind leader + applied mult ──</div>
-      {racerLine('Leader:', v.leader)}
-      {racerLine('Straggler:', v.straggler)}
+      <div style={SEP_STYLE}>── front group: gap · applied mult · hero/role ──</div>
+      {v.front.map((b, i) => frontLine(b, i))}
     </div>
   );
 }

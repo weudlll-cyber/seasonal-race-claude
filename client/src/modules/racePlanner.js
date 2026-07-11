@@ -534,6 +534,10 @@ export function createTrajectoryController(racePlan) {
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+        // Retain the authored ROLE (sovereign-lead / comebacker / faller) the generator already
+        // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
+        // never recomputed, never read by physics.
+        plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
         for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
         plan._v4Generated = true;
       } else {
@@ -737,6 +741,8 @@ export function createTrajectoryController(racePlan) {
     computePulkBiasedTarget,
     getPhase,
     getPhaseFractions,
+    // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
+    getHeroRoles: () => plan._heroRoles ?? null,
     collectTelemetry,
     seed: plan.seed,
   };
