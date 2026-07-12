@@ -28,6 +28,30 @@ export function arcT(a, b, isOpen) {
 }
 
 /**
+ * SIGNED, lap-aware arc distance from `aheadT` back to `behindT`, in LAP-FRACTION units. Unlike arcT
+ * (unsigned, wrapped to <= half a lap), this uses the CUMULATIVE track position `t` — which increases
+ * monotonically and is NEVER taken mod 1 (the t-update in raceStep.js only ADDS, clamping at finishT),
+ * so it stays SIGNED and never wraps: a racer a full lap down reads as ~1.0 (a lap behind), not ~0.
+ * Positive = `behindT` is behind `aheadT`; negative = ahead. Use this for "how far behind the leader" /
+ * reachability / drop-depth — NEVER arcT, which makes a lapped backmarker read as close (PulkLeadRotation
+ * review Q4). Direction on top of this should still come from the live RANK order, not the sign alone.
+ * @param {number} aheadT   cumulative track position of the reference (e.g. the leader)
+ * @param {number} behindT  cumulative track position of the other racer
+ * @returns {number} signed arc distance in lap-fraction units (positive = behind aheadT)
+ */
+export function signedArcT(aheadT, behindT) {
+  return aheadT - behindT;
+}
+
+/**
+ * signedArcT × lenScale → SIGNED racer-lengths that `behindT` is behind `aheadT` (positive = behind).
+ * The lap-aware, non-wrapping companion to arcLengths, for the lead-rotation distance tests.
+ */
+export function signedArcLengths(aheadT, behindT, pathLengthPx, meanBodyLen) {
+  return signedArcT(aheadT, behindT) * lenScaleFrom(pathLengthPx, meanBodyLen);
+}
+
+/**
  * Arc-fraction → racer-lengths scale = pathLengthPx / meanBodyLen. Returns 0 when meanBodyLen is
  * non-positive (degenerate geometry), so callers guard on `> 0` exactly as the inline code did.
  * @param {number} pathLengthPx one-lap path length in px

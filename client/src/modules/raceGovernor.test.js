@@ -13,6 +13,8 @@ import { describe, it, expect } from 'vitest';
 import {
   arcT,
   applyGovernor,
+  applyPulkLeadRotation,
+  directorReachable,
   governorPhaseWeight,
   directorStreamKey,
   computeDirectorCeiling,
@@ -62,6 +64,7 @@ const mkRacers = (ts) =>
 
 const ctx = (dir, over = {}) => ({
   progress: 0.3,
+  pulkStartFrac: 0.25,
   pulkEndFrac: 0.5,
   corrStartFrac: 0.55,
   seed: 1,
@@ -307,5 +310,113 @@ describe('computeDirectorCeiling (additive boost-headroom + naturalness clamp)',
   it('negative headroom is floored to 0; non-positive mean returns 0', () => {
     expect(computeDirectorCeiling(MAX, MEAN, -0.05)).toBeCloseTo(bandMax, 12);
     expect(computeDirectorCeiling(MAX, 0, 0.05)).toBe(0);
+  });
+});
+
+// ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake + min-hold ──
+const LR = {
+  enabled: true,
+  attackerSlots: 2,
+  dropDepthLengths: 2,
+  outsiderMaxReachLengths: 15,
+  deadlockTimeoutMs: 12000,
+  minHoldMs: 750,
+  frontPool: 8,
+  leaderBrake: 0.1,
+  challengerBoost: 0.1,
+  pullStrength: 0.06,
+  maxEffect: 0.12,
+  maxStepPerFrame: 0.5, // fast slew so a target is reached within one frame in tests
+  ceilingCap: 0,
+};
+
+describe('directorReachable — draw + ceiling aware', () => {
+  it('a booster that can out-pace the BRAKED leader is reachable', () => {
+    expect(directorReachable(0.92, 1.08, 0.1, 0, 0.1)).toBe(true); // 1.012 > 0.972
+  });
+  it('a booster that cannot out-pace an UNBRAKED high-draw leader is not', () => {
+    expect(directorReachable(0.92, 1.08, 0.1, 0, 0.0)).toBe(false); // 1.012 < 1.08
+  });
+  it('the ceiling cap can pull the booster below the leader → not reachable', () => {
+    expect(directorReachable(1.0, 1.0, 0.1, 1.0, 0.0)).toBe(false); // capped at 1.0, not > 1.0
+  });
+});
+
+describe('applyPulkLeadRotation', () => {
+  it('OFF (enabled false): every governorMult slews to 1.0', () => {
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    racers.forEach((r) => (r.governorMult = 0.8));
+    applyPulkLeadRotation(racers, 1.0, ctx(mkDir()), { ...LR, enabled: false });
+    racers.forEach((r) => expect(r.governorMult).toBeCloseTo(1.0, 6));
+  });
+
+  it('outside the PULK window (OUTCOME): no effect', () => {
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(mkDir(), { progress: 0.6 }), LR);
+    racers.forEach((r) => expect(r.governorMult).toBeCloseTo(1.0, 6));
+  });
+
+  it('min-hold: a fresh P1 runs free and no boost fires inside the hold window', () => {
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(mkDir(), { currentMs: 100 }), LR); // 100 < 750
+    racers.forEach((r) => expect(r.governorMult).toBeCloseTo(1.0, 6));
+  });
+
+  it('after the hold: the P1 is braked and the current P2 (reachable non-hero) is boosted', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // hold expired, same P1
+    expect(racers[0].governorMult).toBeLessThan(1.0); // P1 braked
+    expect(racers[1].governorMult).toBeGreaterThan(1.0); // P2 boosted
+  });
+
+  it('hero-inclusive leader brake; a hero P2 is never boosted (a non-hero takes the slot)', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    racers[0].isHeroChoreographed = true; // hero leads
+    racers[1].isHeroChoreographed = true; // hero is P2
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR);
+    expect(racers[0].governorMult).toBeLessThan(1.0); // hero leader IS braked
+    expect(racers[1].governorMult).toBeCloseTo(1.0, 6); // hero P2 NOT boosted
+    expect(racers[2].governorMult).toBeGreaterThan(1.0); // non-hero P3 boosted instead
+  });
+
+  it('ex-leader brake: on a P1 change the dethroned leader is braked until dropDepth behind, then released', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7.9, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // p1Holder = 0
+    racers[0].t = 7.9;
+    racers[1].t = 8.0; // idx1 takes the lead (0.1 ahead of idx0)
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR);
+    expect(dir.leadRot.exBrakeIdx).toBe(0); // dethroned leader armed
+    expect(racers[0].governorMult).toBeLessThan(1.0); // braked (0.1 < 2 dropDepth)
+    racers[0].t = 5.0; // now 3 lengths behind the new leader (8.0)
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 900 }), LR);
+    expect(dir.leadRot.exBrakeIdx).toBe(-1); // released (>= dropDepth)
+  });
+
+  it('ping-pong lock: the freshly dethroned ex-leader is not chosen as an attacker while braking', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7.9, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    racers[0].t = 7.9;
+    racers[1].t = 8.0;
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // change → exBrakeIdx=0, hold
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 900 }), LR); // hold expired
+    expect(dir.leadRot.exBrakeIdx).toBe(0); // still braking (0.1 < 2)
+    expect(racers[0].governorMult).toBeLessThan(1.0); // braked, NOT boosted
+    expect(racers[2].governorMult).toBeGreaterThan(1.0); // slot advanced to the next eligible
+  });
+
+  it('deadlock timeout: a stuck target (never becomes P1) is cooled after deadlockTimeoutMs', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR);
+    expect(dir.leadRot.attackers[0].idx).toBe(1); // P2 targeted
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 + 12001 }), LR);
+    expect(dir.leadRot.cooldownUntil.get(1)).toBeGreaterThan(0); // stuck target cooled
   });
 });

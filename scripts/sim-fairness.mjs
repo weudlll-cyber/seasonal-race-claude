@@ -104,7 +104,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { applyGovernor, applyPulkFrontContest, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
+import { applyGovernor, applyPulkFrontContest, applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -260,6 +260,13 @@ const DYNAMICS_OVERRIDES = {
   // PulkRaceDirector (v4-composable PULK group contest + N1 lead-rotation). Default OFF.
   pulkRaceDirectorEnabled:  argVal('pulkRaceDirectorEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceDirectorEnabled)) === 'true',
   pulkRaceMaxLeadHoldMs:    Number(argVal('pulkRaceMaxLeadHoldMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceMaxLeadHoldMs))),
+  // PulkLeadRotation (successor core loop). Default OFF.
+  pulkLeadRotationEnabled:  argVal('pulkLeadRotationEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationEnabled)) === 'true',
+  pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
+  pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
+  pulkLeadRotationOutsiderMaxReachLengths: Number(argVal('pulkLeadRotationOutsiderMaxReachLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths))),
+  pulkLeadRotationDeadlockTimeoutMs: Number(argVal('pulkLeadRotationDeadlockTimeoutMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs))),
+  pulkLeadRotationMinHoldMs: Number(argVal('pulkLeadRotationMinHoldMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs))),
   pulkSpringEnabled:          argVal('pulkSpringEnabled',          String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringEnabled)) === 'true',
   pulkSpringGain:             Number(argVal('pulkSpringGain',             String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringGain))),
   pulkSpringDeadZoneLengths:  Number(argVal('pulkSpringDeadZoneLengths',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkSpringDeadZoneLengths))),
@@ -948,6 +955,29 @@ export function runSingleRace({
       !!racePlanController && (dynamicsConfig.pulkRaceDirectorEnabled ?? false) && DIRECTOR_V4_ENABLED;
     const pulkRaceCfg = { ...govCfg, directorEnabled: true, pulkOnly: true,
       maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000 };
+    // ── PulkLeadRotation (successor). Default OFF → not called → unchanged. Reuses govCfg's strength
+    // knobs (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation
+    // keys + minHold are new. v4 only. ONE governorMult writer at a time (enable only one of M1 /
+    // PulkRaceDirector / PulkLeadRotation).
+    const pulkLeadRotationOn =
+      !!racePlanController && (dynamicsConfig.pulkLeadRotationEnabled ?? false) && DIRECTOR_V4_ENABLED;
+    const pulkLeadRotCfg = {
+      enabled: pulkLeadRotationOn,
+      attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
+      dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
+      outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
+      deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
+      minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
+      frontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
+      leaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
+      challengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
+      pullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
+      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
+      ceilingCap: (dynamicsConfig.governorDirectorCeilingCap ?? false)
+        ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
+        : 0,
+    };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
     // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
@@ -1210,6 +1240,16 @@ export function runSingleRace({
           govPhase,
           { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
           pulkRaceCfg
+        );
+      }
+
+      // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
+      if (pulkLeadRotationOn && govFractions) {
+        applyPulkLeadRotation(
+          racers,
+          finishT,
+          { progress: raceProgress, pulkStartFrac: govFractions.pulkStartFrac, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
+          pulkLeadRotCfg
         );
       }
 

@@ -376,6 +376,21 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // is demoted (via the director's fall-back machinery), handing P1 to the next challenger. Lower =
   // faster lead rotation / more distinct P1 holders. Only acts when pulkRaceDirectorEnabled + v4.
   pulkRaceMaxLeadHoldMs: 2000,
+  // ── PulkLeadRotation (successor to the PulkRaceDirector core loop) — SWEEP/opt-in, default OFF →
+  // shipped game unchanged. When ON (and v4 ON) it COMPLETES lead changes inside [pulkStart, pulkEnd):
+  // 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot
+  // brings fresh blood from deeper in the field, and the dethroned leader is braked (distance-based)
+  // until it has fallen `dropDepthLengths` behind — the depth lever. Contest STRENGTHS reuse the
+  // existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/frontPool + the
+  // maxEffect/maxStep/ceiling envelope) — no duplicated values. Only the four keys below are new.
+  // NOTE: PulkLeadRotation, PulkRaceDirector, and M1 (governorDirectorPulkContestEnabled) all write
+  // governorMult — enable only ONE at a time.
+  pulkLeadRotationEnabled: false,
+  pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
+  pulkLeadRotationDropDepthLengths: 2, // ex-leader brake release depth (racer lengths); the depth lever
+  pulkLeadRotationOutsiderMaxReachLengths: 15, // outsider reachability cap (racer lengths)
+  pulkLeadRotationDeadlockTimeoutMs: 12000, // per-boost safety net (never the normal path)
+  pulkLeadRotationMinHoldMs: 750, // fresh-P1 hold = smart-camera SM_HOLD_MS → no sub-750ms P1 flicker
   // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
   // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
   // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.

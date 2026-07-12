@@ -4,7 +4,14 @@
 // If any of these fail, the HUD number the owner reads has silently moved.
 // ============================================================
 import { describe, it, expect } from 'vitest';
-import { arcT, lenScaleFrom, arcLengths, meanDrawnBodyLen } from './raceLengths.js';
+import {
+  arcT,
+  lenScaleFrom,
+  arcLengths,
+  meanDrawnBodyLen,
+  signedArcT,
+  signedArcLengths,
+} from './raceLengths.js';
 import { arcT as arcTFromGovernor } from './raceGovernor.js';
 
 describe('arcT — track-arc distance (moved from raceGovernor, re-exported)', () => {
@@ -18,6 +25,23 @@ describe('arcT — track-arc distance (moved from raceGovernor, re-exported)', (
   });
   it('raceGovernor re-exports the SAME function (single source)', () => {
     expect(arcTFromGovernor).toBe(arcT);
+  });
+});
+
+describe('signedArcT / signedArcLengths — lap-aware SIGNED distance (lead-rotation)', () => {
+  it('signed, never wrapped: a lapped backmarker reads ~1 lap behind, not close', () => {
+    // arcT would wrap this to ~0.1 (looks close); signedArcT keeps the true cumulative gap.
+    expect(arcT(2.6, 1.5, false)).toBeCloseTo(0.1, 9); // wrapped (WRONG for reachability)
+    expect(signedArcT(2.6, 1.5)).toBeCloseTo(1.1, 9); // true: 1.1 laps behind
+  });
+  it('sign encodes direction: positive = behind, negative = ahead', () => {
+    expect(signedArcT(2.6, 2.4)).toBeCloseTo(0.2, 9); // behind by 0.2
+    expect(signedArcT(2.4, 2.6)).toBeCloseTo(-0.2, 9); // ahead by 0.2
+    expect(signedArcT(1.0, 1.0)).toBe(0);
+  });
+  it('signedArcLengths = signedArcT × lenScale', () => {
+    expect(signedArcLengths(2.6, 1.5, 3000, 30)).toBeCloseTo(1.1 * 100, 6); // 110 lengths behind
+    expect(signedArcLengths(2.4, 2.6, 3000, 30)).toBeCloseTo(-0.2 * 100, 6); // 20 lengths ahead
   });
 });
 

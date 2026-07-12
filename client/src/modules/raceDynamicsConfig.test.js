@@ -81,6 +81,24 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusEarly: 1,
       rowBonusPulk: 0,
       rowBonusPost: 1,
+      // Reopened PULK (feat/pulk-reopen).
+      racePlanPulkStart: 0.25,
+      // M2 pack cohesion spring.
+      pulkSpringEnabled: false,
+      pulkSpringGain: 2.0,
+      pulkSpringDeadZoneLengths: 1.0,
+      // M1 PULK front contest.
+      governorDirectorPulkContestEnabled: false,
+      // PulkRaceDirector.
+      pulkRaceDirectorEnabled: false,
+      pulkRaceMaxLeadHoldMs: 2000,
+      // PulkLeadRotation (successor core loop).
+      pulkLeadRotationEnabled: false,
+      pulkLeadRotationAttackerSlots: 2,
+      pulkLeadRotationDropDepthLengths: 2,
+      pulkLeadRotationOutsiderMaxReachLengths: 15,
+      pulkLeadRotationDeadlockTimeoutMs: 12000,
+      pulkLeadRotationMinHoldMs: 750,
     });
   });
 

@@ -65,7 +65,11 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { applyGovernor, computeDirectorCeiling } from '../../modules/raceGovernor.js';
+import {
+  applyGovernor,
+  applyPulkLeadRotation,
+  computeDirectorCeiling,
+} from '../../modules/raceGovernor.js';
 import { meanDrawnBodyLen, lenScaleFrom } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
@@ -753,6 +757,12 @@ export default function RaceScreen() {
       racePlanEnabled &&
       (dynamicsConfig.pulkRaceDirectorEnabled ?? false) &&
       (dynamicsConfig.directorV4Enabled ?? false);
+    // PulkLeadRotation: the successor core loop (opt-in, default OFF → skipped). Strengths reuse the
+    // governorDirector* knobs; only the four rotation keys + minHold are new. v4 only.
+    const pulkLeadRotationOn =
+      racePlanEnabled &&
+      (dynamicsConfig.pulkLeadRotationEnabled ?? false) &&
+      (dynamicsConfig.directorV4Enabled ?? false);
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
@@ -791,6 +801,22 @@ export default function RaceScreen() {
       directorEnabled: true,
       pulkOnly: true,
       maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000,
+    };
+    // PulkLeadRotation config: reuse govCfg's strength knobs; add the rotation-specific keys.
+    const pulkLeadRotCfg = {
+      enabled: pulkLeadRotationOn,
+      attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
+      dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
+      outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
+      deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
+      minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
+      frontPool: govCfg.directorFrontPool,
+      leaderBrake: govCfg.directorLeaderBrake,
+      challengerBoost: govCfg.directorChallengerBoost,
+      pullStrength: govCfg.directorPullStrength,
+      maxEffect: govCfg.maxEffect,
+      maxStepPerFrame: govCfg.maxStepPerFrame,
+      ceilingCap: govCfg.directorCeilingCap,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
@@ -1081,6 +1107,26 @@ export default function RaceScreen() {
             );
           }
 
+          // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
+          if (pulkLeadRotationOn && govFractions) {
+            applyPulkLeadRotation(
+              st.racers,
+              st.finishT,
+              {
+                progress: st.raceProgress,
+                pulkStartFrac: govFractions.pulkStartFrac,
+                pulkEndFrac: govFractions.pulkEndFrac,
+                corrStartFrac: govFractions.corrStartFrac,
+                pathLengthPx,
+                meanBodyLen: govMeanBodyLen,
+                isOpen: isOpenTrack,
+                currentMs: physicsTs,
+                dirState,
+              },
+              pulkLeadRotCfg
+            );
+          }
+
           // ── Pre-OUTCOME contest-injector "director" ──
           if (directorEnabled && govFractions) {
             applyGovernor(
@@ -1108,11 +1154,13 @@ export default function RaceScreen() {
           // reads the truth. Read-only; touches nothing but the diag ref. heroRoles = the retained
           // index→role map (diagnostics-only; null until heroes are cast).
           if (racePlanController && govFractions) {
-            const diagCfg = pulkRaceDirectorOn
-              ? pulkRaceCfg
-              : directorEnabled
-                ? govCfg
-                : { directorEnabled: false };
+            const diagCfg = pulkLeadRotationOn
+              ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
+              : pulkRaceDirectorOn
+                ? pulkRaceCfg
+                : directorEnabled
+                  ? govCfg
+                  : { directorEnabled: false };
             governorDiagRef.current = {
               cfg: diagCfg,
               phase: govPhase,

@@ -22,11 +22,21 @@
 //              (sim-fairness.mjs) so both drive the identical mechanism (single source).
 //              Reuses easeInOutCubic. Deterministic + browser/sim parity: all randomness comes
 //              from the seeded director stream keyed on a per-race event counter — no Math.random.
+//
+//              This module now hosts THREE flag-gated, default-OFF PULK-scoped mechanisms that share
+//              the same governorMult channel + realism envelope (enable only ONE at a time):
+//                • applyGovernor      — the classic reactive director above (the SHIPPED v4-OFF world);
+//                • applyPulkFrontContest (M1) — a simple live-P1 brake + front-challenger boost;
+//                • applyPulkLeadRotation — the successor core loop: until-P1 attacker slots (1–2) +
+//                  a permanent outsider fresh-blood slot + a distance-based ex-leader brake + a
+//                  min-hold (no sub-750ms flicker), with SIGNED lap-aware + DRAW-aware reachability.
+//              PulkLeadRotation is DETERMINISTIC (selection by live rank + signed distance + index; no
+//              Math.random) and hero-INCLUSIVE for the leader brake (heroes are never boosted).
 // ============================================================
 
 import { mulberry32 } from './racePlanner.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
-import { arcT, lenScaleFrom } from './raceLengths.js';
+import { arcT, lenScaleFrom, signedArcLengths } from './raceLengths.js';
 
 // arcT now lives in raceLengths.js (the one racer-length source). Re-exported here so existing
 // importers (GovernorDiagHUD, sim-fairness, tests) keep the same import path, unchanged.
@@ -527,6 +537,246 @@ export function applyPulkFrontContest(racers, finishT, phaseCtx, cfg) {
     if (ceilingCap > 0 && r.spreadFactor > 0) {
       target = Math.min(target, ceilingCap / r.spreadFactor);
     }
+    slewTo(r, target);
+  }
+}
+
+/**
+ * DRAW-AWARE reachability (PulkLeadRotation review Q5): can a racer, at full boost, physically out-pace
+ * the braked leader — i.e. can it ever close and take P1? Verified against the per-racer clamp below:
+ * the resulting speed FACTOR is `spreadFactor × governorMult`, capped at `ceilingCap` (via
+ * `min(target, ceilingCap/spreadFactor)`); at full boost `target = 1 + challengerBoost`, and the P1 is
+ * braked by `leaderBrake`. So the candidate can close iff its best achievable factor exceeds the
+ * leader's braked factor. `spreadFactor` is the current re-roll draw: a band-min draw far back cannot
+ * reach a high-draw leader no matter the boost, so it must not be picked. PROXY: compares speed FACTORS
+ * (spreadFactor × mult), not full effective speed (baseSpeed also carries rowEnvMult / start-row bonus)
+ * — but in PULK areaBonusPulk=0 and the factor dominates, so this is the honest first-order test. The
+ * separate max-REACH distance gate is the caller's; this is only the SPEED test.
+ */
+export function directorReachable(
+  rSpreadFactor,
+  leaderSpreadFactor,
+  challengerBoost,
+  ceilingCap,
+  leaderBrake
+) {
+  if (!(rSpreadFactor > 0) || !(leaderSpreadFactor > 0)) return false;
+  const rBest =
+    ceilingCap > 0
+      ? Math.min(rSpreadFactor * (1 + challengerBoost), ceilingCap)
+      : rSpreadFactor * (1 + challengerBoost);
+  const leaderBraked = leaderSpreadFactor * (1 - leaderBrake);
+  return rBest > leaderBraked;
+}
+
+/**
+ * PulkLeadRotation (SWEEP/opt-in, flag-gated; default OFF → not called → byte-identical). The successor
+ * to the PulkRaceDirector core loop — it COMPLETES lead changes instead of herding the front:
+ *   • ATTACKER slots (1–2): boost the current live P2 (and P3) UNTIL it becomes live P1 — success is
+ *     "took the lead", not "caught up" and not a fixed duration. When it succeeds it leaves the P2 slot,
+ *     so the slot boosts the NEW P2 — the queue advances for free (no snapshot/round roster).
+ *   • OUTSIDER slot (permanent fresh blood): boost the DEEPEST still-REACHABLE racer OUTSIDE the front
+ *     group until it takes the lead; then draw the next deepest. Never draws from the front group.
+ *   • EX-LEADER BRAKE (distance-based): on every P1 change the dethroned leader is braked until it has
+ *     fallen `dropDepthLengths` behind the NEW leader (signed, lap-aware), then released — the depth
+ *     lever (small = tight top-group rotation, large = rotation migrates through the field).
+ *   • MIN-HOLD: a fresh P1 runs free (leader-brake grace) and no boost may complete for `minHoldMs`
+ *     (default SM_HOLD_MS 750), so no sub-750 ms flicker — every pass is readable.
+ *   • DEADLOCK TIMEOUT (safety net, never the normal path): a boost that cannot complete (traffic — the
+ *     lateral rule brakes a blocked racer regardless of its mult) is released after `deadlockTimeoutMs`
+ *     and the slot advances; the lateral physics is never weakened.
+ * HEROES: the leader/ex-leader brake apply to the live P1 whoever it is (leader detection is
+ * HERO-INCLUSIVE); heroes are NEVER boosted (skipped in every pool) and otherwise pinned toward 1.0.
+ * DETERMINISM: selection is by live rank + signed distance + index (no Math.random); the only clock is
+ * the passed `currentMs` (timers). ONE implementation, browser + sim. Every force is `w`-scaled (the
+ * phase-weight fade → EXACTLY 0 at corrStart) so the ex-leader brake self-extinguishes at the fade.
+ *
+ * @param {Array}  racers   live racer objects (.t, .index, .finished, .governorMult, .spreadFactor,
+ *                          .isHeroChoreographed)
+ * @param {number} finishT
+ * @param {object} phaseCtx {progress, pulkStartFrac, pulkEndFrac, corrStartFrac, pathLengthPx,
+ *                          meanBodyLen, isOpen, currentMs, dirState}
+ * @param {object} cfg  {enabled, attackerSlots, dropDepthLengths, outsiderMaxReachLengths,
+ *                       deadlockTimeoutMs, minHoldMs, frontPool, leaderBrake, challengerBoost,
+ *                       pullStrength, maxEffect, maxStepPerFrame, ceilingCap}
+ */
+export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
+  const on = !!(cfg && cfg.enabled);
+  const maxStep = cfg?.maxStepPerFrame ?? 0.01;
+  const maxEffect = cfg?.maxEffect ?? 0.12;
+  const { progress, pulkStartFrac, pulkEndFrac, corrStartFrac, pathLengthPx, meanBodyLen } =
+    phaseCtx ?? {};
+  const currentMs = phaseCtx?.currentMs ?? 0;
+  const dirState = phaseCtx?.dirState;
+  const slewTo = (r, target) => {
+    const prev = r.governorMult ?? 1.0;
+    r.governorMult = prev + clamp(target - prev, -maxStep, maxStep);
+  };
+  const inWindow =
+    on &&
+    finishT > 0 &&
+    progress != null &&
+    progress >= (pulkStartFrac ?? Infinity) &&
+    progress < (pulkEndFrac ?? -Infinity);
+  const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen);
+  if (!inWindow || !dirState || !(lenScale > 0)) {
+    for (const r of racers) if (!r.finished) slewTo(r, 1.0);
+    return;
+  }
+  // Phase-weight fade (EXACTLY 0 at corrStart; corrStart == pulkEnd under the reopened PULK). Every
+  // force term below is w-scaled, so the ex-leader brake cannot outlive the phase (review Q6).
+  const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
+
+  const attackerSlots = Math.max(1, Math.min(2, Math.round(cfg.attackerSlots ?? 2)));
+  const dropDepthLengths = cfg.dropDepthLengths ?? 2;
+  const outsiderMaxReach = cfg.outsiderMaxReachLengths ?? 15;
+  const deadlockMs = cfg.deadlockTimeoutMs ?? 12000;
+  const minHoldMs = cfg.minHoldMs ?? 750;
+  const frontPool = Math.max(2, Math.round(cfg.frontPool ?? 8));
+  const leaderBrake = cfg.leaderBrake ?? 0;
+  const challengerBoost = cfg.challengerBoost ?? 0;
+  const pullStrength = cfg.pullStrength ?? 0.06;
+  const ceilingCap = cfg.ceilingCap ?? 0;
+
+  // Live rank order (rank 1 = leader), HERO-INCLUSIVE so the leader brake finds the true P1 even if a
+  // hero leads. Heroes are excluded only from the BOOST pools.
+  const live = racers
+    .filter((r) => !r.finished)
+    .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
+  const n = live.length;
+  if (n < 2) {
+    for (const r of racers) if (!r.finished) slewTo(r, 1.0);
+    return;
+  }
+  const leader = live[0];
+  const leaderIdx = leader.index;
+  const rankOf = new Map();
+  const racerOf = new Map();
+  for (let i = 0; i < n; i++) {
+    rankOf.set(live[i].index, i + 1);
+    racerOf.set(live[i].index, live[i]);
+  }
+  const isHero = (r) => !!r.isHeroChoreographed;
+  const behindLenOf = (r) =>
+    Math.max(0, signedArcLengths(leader.t, r.t, pathLengthPx, meanBodyLen));
+  const reachable = (r) =>
+    directorReachable(
+      r.spreadFactor,
+      leader.spreadFactor,
+      challengerBoost,
+      ceilingCap,
+      leaderBrake
+    );
+
+  // Lazy per-race state (created identically in browser + sim → parity).
+  if (!dirState.leadRot)
+    dirState.leadRot = {
+      p1Holder: -1,
+      p1SinceMs: currentMs,
+      exBrakeIdx: -1,
+      attackers: [],
+      outsider: { idx: -1, startMs: 0 },
+      cooldownUntil: new Map(),
+    };
+  const st = dirState.leadRot;
+  while (st.attackers.length < attackerSlots) st.attackers.push({ idx: -1, startMs: 0 });
+  const inCooldown = (idx) => (st.cooldownUntil.get(idx) ?? 0) > currentMs;
+
+  // P1-change detection → arm the ex-leader brake + reset the min-hold timer.
+  if (leaderIdx !== st.p1Holder) {
+    if (st.p1Holder >= 0 && racerOf.has(st.p1Holder)) st.exBrakeIdx = st.p1Holder;
+    st.p1Holder = leaderIdx;
+    st.p1SinceMs = currentMs;
+  }
+  // Ex-leader distance-brake release: fallen dropDepthLengths behind the NEW leader (signed, lap-aware).
+  if (st.exBrakeIdx >= 0) {
+    const ex = racerOf.get(st.exBrakeIdx);
+    if (!ex || behindLenOf(ex) >= dropDepthLengths) st.exBrakeIdx = -1;
+  }
+  const holdActive = currentMs - st.p1SinceMs < minHoldMs; // fresh P1 grace + no boost may complete
+
+  // Selection: which racers receive a boost this frame (empty during the min-hold window).
+  const boosting = new Set();
+  if (holdActive) {
+    for (const sl of st.attackers) sl.idx = -1;
+    st.outsider.idx = -1;
+  } else {
+    // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, the P1, the
+    // ping-pong-locked ex-leader, cooled racers, and draw-unreachable candidates.
+    const elig = [];
+    for (let i = 1; i < n && rankOf.get(live[i].index) <= frontPool; i++) {
+      const r = live[i];
+      if (isHero(r) || r.index === st.exBrakeIdx || inCooldown(r.index) || !reachable(r)) continue;
+      elig.push(r);
+    }
+    for (let s = 0; s < attackerSlots; s++) {
+      const sl = st.attackers[s];
+      const target = elig[s] ? elig[s].index : -1;
+      if (target !== sl.idx) {
+        sl.idx = target;
+        sl.startMs = currentMs;
+      }
+      if (sl.idx >= 0) {
+        if (currentMs - sl.startMs > deadlockMs) {
+          st.cooldownUntil.set(sl.idx, currentMs + deadlockMs); // stuck (traffic) → cool + advance
+          sl.idx = -1;
+        } else boosting.add(sl.idx);
+      }
+    }
+    // OUTSIDER — the DEEPEST still-reachable racer OUTSIDE the front group.
+    const osl = st.outsider;
+    let best = -1;
+    let bestBehind = -1;
+    for (let i = 1; i < n; i++) {
+      const r = live[i];
+      if (rankOf.get(r.index) <= frontPool || isHero(r) || inCooldown(r.index) || !reachable(r))
+        continue;
+      const behind = behindLenOf(r);
+      if (behind > outsiderMaxReach) continue;
+      if (behind > bestBehind) {
+        bestBehind = behind;
+        best = r.index;
+      }
+    }
+    if (best !== osl.idx) {
+      osl.idx = best;
+      osl.startMs = currentMs;
+    }
+    if (osl.idx >= 0) {
+      if (currentMs - osl.startMs > deadlockMs) {
+        st.cooldownUntil.set(osl.idx, currentMs + deadlockMs);
+        osl.idx = -1;
+      } else boosting.add(osl.idx);
+    }
+  }
+
+  // Per-racer force (w-scaled, same realism envelope as applyGovernor).
+  const brakeLoBound = 1 - Math.max(maxEffect, leaderBrake);
+  for (const r of racers) {
+    if (r.finished) {
+      r.governorMult = 1.0;
+      continue;
+    }
+    let director = 0;
+    let loBound = 1 - maxEffect;
+    if (r.index === leaderIdx) {
+      // The live P1 (hero or not) is braked to stay catchable — but a FRESH P1 gets grace for the
+      // min-hold window so it can hold visible P1 (no flicker), then the brake engages.
+      if (!holdActive) {
+        director = -leaderBrake;
+        loBound = brakeLoBound;
+      }
+    } else if (r.index === st.exBrakeIdx) {
+      director = -leaderBrake; // distance-based ex-leader settle brake
+      loBound = brakeLoBound;
+    } else if (isHero(r)) {
+      director = 0; // heroes are never boosted; pinned toward 1.0
+    } else if (boosting.has(r.index)) {
+      director = Math.min(challengerBoost, pullStrength * behindLenOf(r)); // boost toward P1
+    }
+    let target = clamp(1 + w * director, loBound, 1 + maxEffect);
+    if (ceilingCap > 0 && r.spreadFactor > 0)
+      target = Math.min(target, ceilingCap / r.spreadFactor);
     slewTo(r, target);
   }
 }

@@ -193,6 +193,20 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  function resetPulkLeadRotation() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      pulkLeadRotationEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationEnabled,
+      pulkLeadRotationAttackerSlots: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots,
+      pulkLeadRotationDropDepthLengths:
+        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
+      pulkLeadRotationOutsiderMaxReachLengths:
+        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
+      pulkLeadRotationDeadlockTimeoutMs:
+        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs,
+    }));
+  }
+
   function resetFrameTiming() {
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
@@ -1456,6 +1470,90 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               if (isFinite(v) && v >= 200 && v <= 10000) setDynamics('pulkRaceMaxLeadHoldMs', v);
             }}
           />
+        </div>
+      </SubCard>
+
+      {/* ── Block 4h: PULK Lead Rotation (successor to the PulkRaceDirector core loop) ── */}
+      <SubCard
+        title="PULK Lead Rotation"
+        onReset={resetPulkLeadRotation}
+        resetTestId="reset-pulk-lead-rotation"
+        subtitle="Successor to the PULK Race Director: instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Requires hero choreography (v4) ON. Strengths come from the Director section above; the four knobs here shape the rotation. Enable only ONE of M1 / PULK Race Director / Lead Rotation. Default OFF."
+      >
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="PULK Lead Rotation Enabled"
+              checked={dynamicsConfig.pulkLeadRotationEnabled ?? false}
+              onChange={(e) => setDynamics('pulkLeadRotationEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable PULK Lead Rotation
+            <InfoTooltip text="Runs the until-P1 lead-rotation contest inside [pulkStart, pulkEnd) under v4. OFF = the dead PULK front. Acts ONLY in PULK; OUTCOME still owns fairness." />
+          </label>
+        </div>
+        <div className={s.formGrid}>
+          {[
+            {
+              key: 'pulkLeadRotationAttackerSlots',
+              label: 'Attacker slots (1–2)',
+              min: 1,
+              max: 2,
+              step: 1,
+              tip: 'How many front challengers are boosted toward P1 at once. 1 = one clean pass at a time (most legible); 2 = denser front fight. 2 = default.',
+            },
+            {
+              key: 'pulkLeadRotationDropDepthLengths',
+              label: 'Ex-leader drop depth (lengths)',
+              min: 1,
+              max: 8,
+              step: 1,
+              tip: 'How far (racer lengths) the just-dethroned leader is braked back before release — the DEPTH LEVER. Small (2) = tight top-group rotation; large (6–8) = the ex-leader leaves the front and the rotation migrates through the field (for long races). 2 = default.',
+            },
+            {
+              key: 'pulkLeadRotationOutsiderMaxReachLengths',
+              label: 'Outsider max reach (lengths)',
+              min: 3,
+              max: 40,
+              step: 1,
+              tip: 'The deepest a fresh-blood outsider may sit behind the leader and still be boosted to P1 (racer lengths). Beyond this it cannot reach the front inside the ±speed envelope, so it is not picked. 15 = default.',
+            },
+            {
+              key: 'pulkLeadRotationDeadlockTimeoutMs',
+              label: 'Deadlock timeout (ms)',
+              min: 3000,
+              max: 30000,
+              step: 500,
+              tip: 'Safety net only (never the normal path): a boost that cannot complete (blocked by traffic — the lateral rule brakes a blocked racer) is released after this long so the rotation never freezes. 12000 = default.',
+            },
+          ].map(({ key, label, min, max, step, tip }) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={label}
+                min={min}
+                max={max}
+                step={step}
+                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
         </div>
       </SubCard>
 
