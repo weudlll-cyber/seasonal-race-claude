@@ -679,7 +679,6 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   if (!dirState.leadRot)
     dirState.leadRot = {
       p1Holder: -1,
-      p1SinceMs: currentMs,
       brakeSet: new Map(), // idx → { engagedAfterMs } — the settle-brake MEMBERSHIP set (many at once)
       attackers: [],
       outsider: { idx: -1, startMs: 0 },
@@ -694,7 +693,6 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   if (leaderIdx !== st.p1Holder) {
     st.brakeSet.set(leaderIdx, { engagedAfterMs: currentMs + minHoldMs });
     st.p1Holder = leaderIdx;
-    st.p1SinceMs = currentMs;
   }
   // Brake-SET lifecycle (the owner's settle rule): a member is BRAKED once its hold window has elapsed
   // and STAYS braked — through being overtaken and while it falls back — until it is at least
@@ -715,68 +713,63 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     }
     if (currentMs >= entry.engagedAfterMs) braked.add(idx); // hold elapsed → braked this frame
   }
-  const holdActive = currentMs - st.p1SinceMs < minHoldMs; // current leader's grace + boost suppression
-
-  // Selection: which racers receive a boost this frame (empty during the min-hold window).
+  // Selection: which racers receive a boost this frame. Runs EVERY frame — the new leader's grace is
+  // NOT a global boost-suppression (that starved the chasers); it is ONLY that leader's own brake being
+  // deferred by its brakeSet engagedAfterMs (above). Chasers keep closing while the new leader runs free.
   const boosting = new Set();
-  if (holdActive) {
-    for (const sl of st.attackers) sl.idx = -1;
-    st.outsider.idx = -1;
-  } else {
-    // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, any
-    // brake-SET member (a racer that is settling/falling back — the ping-pong lock), cooled racers,
-    // and draw-unreachable candidates.
-    const elig = [];
-    for (let i = 1; i < n && rankOf.get(live[i].index) <= frontPool; i++) {
-      const r = live[i];
-      if (isHero(r) || st.brakeSet.has(r.index) || inCooldown(r.index) || !reachable(r)) continue;
-      elig.push(r);
+  // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, any brake-SET
+  // member (a racer that is settling/falling back — the ping-pong lock), cooled racers, and
+  // draw-unreachable candidates.
+  const elig = [];
+  for (let i = 1; i < n && rankOf.get(live[i].index) <= frontPool; i++) {
+    const r = live[i];
+    if (isHero(r) || st.brakeSet.has(r.index) || inCooldown(r.index) || !reachable(r)) continue;
+    elig.push(r);
+  }
+  for (let s = 0; s < attackerSlots; s++) {
+    const sl = st.attackers[s];
+    const target = elig[s] ? elig[s].index : -1;
+    if (target !== sl.idx) {
+      sl.idx = target;
+      sl.startMs = currentMs;
     }
-    for (let s = 0; s < attackerSlots; s++) {
-      const sl = st.attackers[s];
-      const target = elig[s] ? elig[s].index : -1;
-      if (target !== sl.idx) {
-        sl.idx = target;
-        sl.startMs = currentMs;
-      }
-      if (sl.idx >= 0) {
-        if (currentMs - sl.startMs > deadlockMs) {
-          st.cooldownUntil.set(sl.idx, currentMs + deadlockMs); // stuck (traffic) → cool + advance
-          sl.idx = -1;
-        } else boosting.add(sl.idx);
-      }
+    if (sl.idx >= 0) {
+      if (currentMs - sl.startMs > deadlockMs) {
+        st.cooldownUntil.set(sl.idx, currentMs + deadlockMs); // stuck (traffic) → cool + advance
+        sl.idx = -1;
+      } else boosting.add(sl.idx);
     }
-    // OUTSIDER — the DEEPEST still-reachable racer OUTSIDE the front group.
-    const osl = st.outsider;
-    let best = -1;
-    let bestBehind = -1;
-    for (let i = 1; i < n; i++) {
-      const r = live[i];
-      if (
-        rankOf.get(r.index) <= frontPool ||
-        isHero(r) ||
-        st.brakeSet.has(r.index) ||
-        inCooldown(r.index) ||
-        !reachable(r)
-      )
-        continue;
-      const behind = behindLenOf(r);
-      if (behind > outsiderMaxReach) continue;
-      if (behind > bestBehind) {
-        bestBehind = behind;
-        best = r.index;
-      }
+  }
+  // OUTSIDER — the DEEPEST still-reachable racer OUTSIDE the front group.
+  const osl = st.outsider;
+  let best = -1;
+  let bestBehind = -1;
+  for (let i = 1; i < n; i++) {
+    const r = live[i];
+    if (
+      rankOf.get(r.index) <= frontPool ||
+      isHero(r) ||
+      st.brakeSet.has(r.index) ||
+      inCooldown(r.index) ||
+      !reachable(r)
+    )
+      continue;
+    const behind = behindLenOf(r);
+    if (behind > outsiderMaxReach) continue;
+    if (behind > bestBehind) {
+      bestBehind = behind;
+      best = r.index;
     }
-    if (best !== osl.idx) {
-      osl.idx = best;
-      osl.startMs = currentMs;
-    }
-    if (osl.idx >= 0) {
-      if (currentMs - osl.startMs > deadlockMs) {
-        st.cooldownUntil.set(osl.idx, currentMs + deadlockMs);
-        osl.idx = -1;
-      } else boosting.add(osl.idx);
-    }
+  }
+  if (best !== osl.idx) {
+    osl.idx = best;
+    osl.startMs = currentMs;
+  }
+  if (osl.idx >= 0) {
+    if (currentMs - osl.startMs > deadlockMs) {
+      st.cooldownUntil.set(osl.idx, currentMs + deadlockMs);
+      osl.idx = -1;
+    } else boosting.add(osl.idx);
   }
 
   // Per-racer force (w-scaled, same realism envelope as applyGovernor).

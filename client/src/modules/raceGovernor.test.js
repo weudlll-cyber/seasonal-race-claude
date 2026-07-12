@@ -355,10 +355,21 @@ describe('applyPulkLeadRotation', () => {
     racers.forEach((r) => expect(r.governorMult).toBeCloseTo(1.0, 6));
   });
 
-  it('min-hold: a fresh P1 runs free and no boost fires inside the hold window', () => {
+  it('min-hold gates ONLY the new leader brake — chasers boost NORMALLY during the grace', () => {
+    const dir = mkDir();
     const racers = mkRacers([8, 7, 6, 5, 4]);
-    applyPulkLeadRotation(racers, 1.0, ctx(mkDir(), { currentMs: 100 }), LR); // 100 < 750
-    racers.forEach((r) => expect(r.governorMult).toBeCloseTo(1.0, 6));
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 100 }), LR); // 100 < 750 grace window
+    expect(dir.leadRot.brakeSet.get(0).engagedAfterMs).toBe(850); // grace = leadTake(100) + minHold(750)
+    expect(racers[0].governorMult).toBeCloseTo(1.0, 6); // new leader NOT braked yet (its own grace)
+    expect(racers[1].governorMult).toBeGreaterThan(1.0); // BUT the eligible chaser IS boosting (not suppressed)
+  });
+
+  it('minHoldMs 0: the new leader brake engages immediately (engagedAfterMs == leadTake)', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 100 }), { ...LR, minHoldMs: 0 });
+    expect(dir.leadRot.brakeSet.get(0).engagedAfterMs).toBe(100); // no grace
+    expect(racers[0].governorMult).toBeLessThan(1.0); // braked at once
   });
 
   it('after the hold: the P1 is braked and the current P2 (reachable non-hero) is boosted', () => {
@@ -387,8 +398,7 @@ describe('applyPulkLeadRotation', () => {
     const dir = mkDir();
     const racers = mkRacers([8, 7, 6, 5, 4]);
     const slow = { ...LR, maxStepPerFrame: 0.02 }; // realistic slew
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), slow);
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), slow); // first boosted frame
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), slow); // ONE boosted frame from 1.0
     // One frame moved P2 up by ≤ maxStepPerFrame (smooth ramp), not straight to full boost.
     expect(racers[1].governorMult).toBeGreaterThan(1.0);
     expect(racers[1].governorMult).toBeLessThanOrEqual(1 + slow.maxStepPerFrame + 1e-9);
