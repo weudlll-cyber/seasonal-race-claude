@@ -339,6 +339,15 @@ describe('directorReachable — draw + ceiling aware', () => {
   it('the ceiling cap can pull the booster below the leader → not reachable', () => {
     expect(directorReachable(1.0, 1.0, 0.1, 1.0, 0.0)).toBe(false); // capped at 1.0, not > 1.0
   });
+  it('S2 — uses the FORCE-clamped boost: challengerBoost > maxEffect cannot admit past the clamp', () => {
+    // Leader draw 1.15 (unbraked), chaser 1.00. Raw boost 0.30 → 1.30 > 1.15 (would WRONGLY admit),
+    // but the force clamps the boost at maxEffect 0.12 → 1.12 < 1.15 → NOT reachable. The clamp flips it.
+    expect(directorReachable(1.0, 1.15, 0.3, 0, 0.0, 0.12)).toBe(false); // clamped 1.12 < 1.15
+    expect(directorReachable(1.0, 1.15, 0.3, 0, 0.0, Infinity)).toBe(true); // unclamped would over-admit
+    // boost <= maxEffect is byte-identical to the unclamped estimate (no regression at the owner's 0.10).
+    expect(directorReachable(0.92, 1.08, 0.1, 0, 0.1, 0.12)).toBe(true); // same verdict as the 5-arg case
+    expect(directorReachable(0.92, 1.08, 0.1, 0, 0.1)).toBe(true); // default maxEffect = Infinity
+  });
 });
 
 describe('applyPulkLeadRotation', () => {
@@ -487,5 +496,75 @@ describe('applyPulkLeadRotation', () => {
     expect(dir.leadRot.attackers[0].idx).toBe(1); // P2 targeted
     applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 + 12001 }), LR);
     expect(dir.leadRot.cooldownUntil.get(1)).toBeGreaterThan(0); // stuck target cooled
+  });
+
+  it('S1 — heroes do NOT consume the attacker window: a hero-clogged front still fills the slots', () => {
+    const dir = mkDir();
+    const cfg = { ...LR, frontPool: 3 }; // old window = ranks 2..3 (only 2 non-leader slots)
+    const racers = mkRacers([8, 7, 6, 5, 4, 3]);
+    racers[1].isHeroChoreographed = true; // rank 2 hero
+    racers[2].isHeroChoreographed = true; // rank 3 hero → old model: window is all-hero → elig empty
+    racers[3].isHeroChoreographed = true; // rank 4 hero
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), cfg);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), cfg); // hold expired
+    // New: heroes skipped without consuming the window → the first (frontPool-1)=2 NON-heroes are idx4,idx5.
+    expect(racers[4].governorMult).toBeGreaterThan(1.0); // real chaser boosted despite the hero clog
+    expect(racers[5].governorMult).toBeGreaterThan(1.0); // second slot filled from behind the heroes too
+    expect(racers[1].governorMult).toBeCloseTo(1.0, 6); // heroes are STILL never boosted
+    expect(racers[2].governorMult).toBeCloseTo(1.0, 6);
+    expect(racers[3].governorMult).toBeCloseTo(1.0, 6);
+  });
+
+  it('S1 constraint — the widened scan still reachability-gates: a hopeless low-draw chaser is NOT admitted', () => {
+    const dir = mkDir();
+    const cfg = { ...LR, frontPool: 3 };
+    const racers = mkRacers([8, 7, 6, 5]);
+    racers[1].isHeroChoreographed = true; // heroes clog ranks 2..3
+    racers[2].isHeroChoreographed = true;
+    racers[0].spreadFactor = 1.2; // leader very high draw
+    racers[3].spreadFactor = 0.8; // deep chaser: even full boost cannot out-pace the braked leader
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), cfg);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), cfg);
+    // rBest = 0.8*(1+min(0.1,0.12)) = 0.88; leaderBraked = 1.2*(1-0.1) = 1.08 → unreachable → no admit.
+    expect(dir.leadRot.attackers[0].idx).toBe(-1); // NOT parked in a deadlock — simply not admitted
+    expect(racers[3].governorMult).toBeCloseTo(1.0, 6); // hopeless chaser is not boosted
+  });
+
+  it('S1 — attacker and outsider never collide on the same racer in one frame', () => {
+    const dir = mkDir();
+    const cfg = { ...LR, frontPool: 3, outsiderMaxReachLengths: 100 };
+    const racers = mkRacers([8, 7, 6, 5, 4]); // idx4 is deep enough to be an outsider candidate
+    racers[1].isHeroChoreographed = true; // hero clog pushes the non-hero window deeper
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), cfg);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), cfg);
+    const a0 = dir.leadRot.attackers[0].idx;
+    const a1 = dir.leadRot.attackers[1].idx;
+    const os = dir.leadRot.outsider.idx;
+    if (os >= 0) {
+      expect(os).not.toBe(a0);
+      expect(os).not.toBe(a1); // outsider draws from OUTSIDE the (hero-extended) front window
+    }
+  });
+
+  it('S3 — brakeSet safety timeout: a dethroned member that never reaches dropDepth is force-released', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7.9, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // idx0 leads, engaged at 750
+    racers[0].t = 7.9;
+    racers[1].t = 8.0; // idx1 takes the lead; idx0 dethroned
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // idx0 braked, hovers 0.1 back
+    expect(dir.leadRot.brakeSet.has(0)).toBe(true);
+    // idx0 stays 0.1 behind (< dropDepth 2) so distance-release never fires — only the timeout can.
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 750 + 12001 }), LR);
+    expect(dir.leadRot.brakeSet.has(0)).toBe(false); // force-released by the safety net
+  });
+
+  it('S3 — the CURRENT leader is EXEMPT from the timeout (a long uninterrupted lead keeps its brake)', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // idx0 leads, engaged at 750
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 750 + 12001 }), LR); // never dethroned
+    expect(dir.leadRot.brakeSet.has(0)).toBe(true); // leader is exempt → still a member
+    expect(racers[0].governorMult).toBeLessThan(1.0); // still braked (the mechanism, not a stall)
   });
 });

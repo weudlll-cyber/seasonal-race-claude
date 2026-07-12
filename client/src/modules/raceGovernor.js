@@ -558,13 +558,20 @@ export function directorReachable(
   leaderSpreadFactor,
   challengerBoost,
   ceilingCap,
-  leaderBrake
+  leaderBrake,
+  maxEffect = Infinity
 ) {
   if (!(rSpreadFactor > 0) || !(leaderSpreadFactor > 0)) return false;
+  // Use the SAME effective boost the force applies. The per-racer force clamps the boost at maxEffect
+  // (`target = clamp(1 + w·boost, …, 1 + maxEffect)`), so the reachability estimate must clamp too
+  // (review S2): with a raw challengerBoost > maxEffect, an unclamped rBest would ADMIT racers the
+  // force can never push past P1 → the slot sits in a 12 s deadlock. maxEffect defaults to Infinity so
+  // callers that pass boost ≤ maxEffect (the shipped/owner case) are byte-identical to before.
+  const effBoost = Math.min(challengerBoost, maxEffect);
   const rBest =
     ceilingCap > 0
-      ? Math.min(rSpreadFactor * (1 + challengerBoost), ceilingCap)
-      : rSpreadFactor * (1 + challengerBoost);
+      ? Math.min(rSpreadFactor * (1 + effBoost), ceilingCap)
+      : rSpreadFactor * (1 + effBoost);
   const leaderBraked = leaderSpreadFactor * (1 - leaderBrake);
   return rBest > leaderBraked;
 }
@@ -657,12 +664,8 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   }
   const leader = live[0];
   const leaderIdx = leader.index;
-  const rankOf = new Map();
   const racerOf = new Map();
-  for (let i = 0; i < n; i++) {
-    rankOf.set(live[i].index, i + 1);
-    racerOf.set(live[i].index, live[i]);
-  }
+  for (let i = 0; i < n; i++) racerOf.set(live[i].index, live[i]);
   const isHero = (r) => !!r.isHeroChoreographed;
   const behindLenOf = (r) =>
     Math.max(0, signedArcLengths(leader.t, r.t, pathLengthPx, meanBodyLen));
@@ -672,7 +675,8 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
       leader.spreadFactor,
       challengerBoost,
       ceilingCap,
-      leaderBrake
+      leaderBrake,
+      maxEffect // S2: admission test uses the same maxEffect-clamped boost as the applied force
     );
 
   // Lazy per-race state (created identically in browser + sim → parity).
@@ -711,20 +715,47 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
       st.brakeSet.delete(idx); // reached its drop-depth target → released
       continue;
     }
+    // Safety net (S3): a DETHRONED member braked longer than the deadlock timeout without reaching its
+    // drop-depth target is force-released (it may re-enter later on a normal lead change). NEVER the
+    // normal path — normal release stays distance-based. The CURRENT leader is exempt: it is meant to
+    // stay braked while it leads (0 behind itself → never distance-released), that is the mechanism
+    // doing its job, not a stall. Reuses the boost-slot deadlockMs (pinned; no new owner-facing knob).
+    if (
+      idx !== leaderIdx &&
+      currentMs >= entry.engagedAfterMs &&
+      currentMs - entry.engagedAfterMs > deadlockMs
+    ) {
+      st.brakeSet.delete(idx);
+      continue;
+    }
     if (currentMs >= entry.engagedAfterMs) braked.add(idx); // hold elapsed → braked this frame
   }
   // Selection: which racers receive a boost this frame. Runs EVERY frame — the new leader's grace is
   // NOT a global boost-suppression (that starved the chasers); it is ONLY that leader's own brake being
   // deferred by its brakeSet engagedAfterMs (above). Chasers keep closing while the new leader runs free.
   const boosting = new Set();
-  // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, any brake-SET
-  // member (a racer that is settling/falling back — the ping-pong lock), cooled racers, and
-  // draw-unreachable candidates.
+  // Shared boost-eligibility test (S1: factored to ONE helper so the attacker window and the outsider
+  // pick can never drift apart). A candidate must be a non-hero, NOT a settling brake-SET member (the
+  // ping-pong lock), NOT cooled by a prior deadlock, and DRAW-REACHABLE — it can physically out-pace
+  // the braked leader (using the same maxEffect-clamped boost the force applies, review S2).
+  const boostEligible = (r) =>
+    !isHero(r) && !st.brakeSet.has(r.index) && !inCooldown(r.index) && reachable(r);
+
+  // ATTACKERS — the front group is the first (frontPool − 1) NON-HERO racers behind the leader; HEROES
+  // do NOT consume a window slot (S1: a hero-clogged front no longer starves the attacker slots — the
+  // scan reaches the real chasers behind the heroes instead of stopping at raw rank frontPool). The
+  // window is still BOUNDED (≤ frontPool − 1 non-heroes, so ≤ 4 heroes can push it only a few ranks
+  // deeper), and every admitted attacker is still reachability-gated: we trade "no attacker" for a
+  // REAL attacker, never a hopeless one parked in a 12 s deadlock. `frontWindow` doubles as the
+  // front-group boundary for the outsider below, so the two selections stay provably DISJOINT (an
+  // attacker is always in frontWindow; the outsider always skips frontWindow → never the same racer).
+  const frontWindow = new Set();
   const elig = [];
-  for (let i = 1; i < n && rankOf.get(live[i].index) <= frontPool; i++) {
+  for (let i = 1; i < n && frontWindow.size < frontPool - 1; i++) {
     const r = live[i];
-    if (isHero(r) || st.brakeSet.has(r.index) || inCooldown(r.index) || !reachable(r)) continue;
-    elig.push(r);
+    if (isHero(r)) continue; // heroes don't consume the window
+    frontWindow.add(r.index);
+    if (boostEligible(r)) elig.push(r);
   }
   for (let s = 0; s < attackerSlots; s++) {
     const sl = st.attackers[s];
@@ -740,20 +771,15 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
       } else boosting.add(sl.idx);
     }
   }
-  // OUTSIDER — the DEEPEST still-reachable racer OUTSIDE the front group.
+  // OUTSIDER — the DEEPEST still-reachable racer OUTSIDE the front group (not in `frontWindow`, so it
+  // can never collide with an attacker in the same frame), within the max-reach distance gate. Same
+  // boost-eligibility rule as the attackers (the one helper).
   const osl = st.outsider;
   let best = -1;
   let bestBehind = -1;
   for (let i = 1; i < n; i++) {
     const r = live[i];
-    if (
-      rankOf.get(r.index) <= frontPool ||
-      isHero(r) ||
-      st.brakeSet.has(r.index) ||
-      inCooldown(r.index) ||
-      !reachable(r)
-    )
-      continue;
+    if (frontWindow.has(r.index) || !boostEligible(r)) continue;
     const behind = behindLenOf(r);
     if (behind > outsiderMaxReach) continue;
     if (behind > bestBehind) {
