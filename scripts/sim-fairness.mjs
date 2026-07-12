@@ -971,7 +971,6 @@ export function runSingleRace({
       frontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
       leaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
       challengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
-      pullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
       ceilingCap: (dynamicsConfig.governorDirectorCeilingCap ?? false)

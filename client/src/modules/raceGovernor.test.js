@@ -324,7 +324,6 @@ const LR = {
   frontPool: 8,
   leaderBrake: 0.1,
   challengerBoost: 0.1,
-  pullStrength: 0.06,
   maxEffect: 0.12,
   maxStepPerFrame: 0.5, // fast slew so a target is reached within one frame in tests
   ceilingCap: 0,
@@ -369,6 +368,30 @@ describe('applyPulkLeadRotation', () => {
     applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // hold expired, same P1
     expect(racers[0].governorMult).toBeLessThan(1.0); // P1 braked
     expect(racers[1].governorMult).toBeGreaterThan(1.0); // P2 boosted
+  });
+
+  it('FLAT boost: a chosen booster targets the FULL challengerBoost regardless of distance behind', () => {
+    // Two attacker slots boost P2 (1 length back) and P3 (2 back). Distance-proportional would give
+    // P2 < P3; FLAT gives them the SAME target = 1 + challengerBoost. LR.maxStepPerFrame 0.5 reaches it.
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // hold expired → both boosted
+    expect(racers[1].governorMult).toBeCloseTo(1 + LR.challengerBoost, 6); // P2 at full boost
+    expect(racers[2].governorMult).toBeCloseTo(1 + LR.challengerBoost, 6); // P3 at the SAME full boost
+    // Not distance-scaled: the closer chaser is not weaker than the farther one.
+    expect(racers[1].governorMult).toBeCloseTo(racers[2].governorMult, 6);
+  });
+
+  it('FLAT boost is slew-smoothed: it ramps to full over frames, not in one jump', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7, 6, 5, 4]);
+    const slow = { ...LR, maxStepPerFrame: 0.02 }; // realistic slew
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), slow);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), slow); // first boosted frame
+    // One frame moved P2 up by ≤ maxStepPerFrame (smooth ramp), not straight to full boost.
+    expect(racers[1].governorMult).toBeGreaterThan(1.0);
+    expect(racers[1].governorMult).toBeLessThanOrEqual(1 + slow.maxStepPerFrame + 1e-9);
   });
 
   it('hero-inclusive leader brake; a hero P2 is never boosted (a non-hero takes the slot)', () => {

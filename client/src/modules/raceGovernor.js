@@ -603,7 +603,7 @@ export function directorReachable(
  *                          meanBodyLen, isOpen, currentMs, dirState}
  * @param {object} cfg  {enabled, attackerSlots, dropDepthLengths, outsiderMaxReachLengths,
  *                       deadlockTimeoutMs, minHoldMs, frontPool, leaderBrake, challengerBoost,
- *                       pullStrength, maxEffect, maxStepPerFrame, ceilingCap}
+ *                       maxEffect, maxStepPerFrame, ceilingCap}  (no pullStrength — boost is flat)
  */
 export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   const on = !!(cfg && cfg.enabled);
@@ -640,8 +640,10 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   const frontPool = Math.max(2, Math.round(cfg.frontPool ?? 8));
   const leaderBrake = cfg.leaderBrake ?? 0;
   const challengerBoost = cfg.challengerBoost ?? 0;
-  const pullStrength = cfg.pullStrength ?? 0.06;
   const ceilingCap = cfg.ceilingCap ?? 0;
+  // NB: no pullStrength here — a chosen booster targets the FLAT full challengerBoost (not scaled by
+  // distance-behind, which starved the boost exactly as the chaser closed on P1). Smoothing is the
+  // slew (maxStepPerFrame) alone. pullStrength lives on only in applyGovernor / applyPulkFrontContest.
 
   // Live rank order (rank 1 = leader), HERO-INCLUSIVE so the leader brake finds the true P1 even if a
   // hero leads. Heroes are excluded only from the BOOST pools.
@@ -794,7 +796,7 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     } else if (isHero(r)) {
       director = 0; // heroes are never boosted; pinned toward 1.0
     } else if (boosting.has(r.index)) {
-      director = Math.min(challengerBoost, pullStrength * behindLenOf(r)); // boost toward P1
+      director = challengerBoost; // FLAT full boost (slew ramps it smoothly; not distance-scaled)
     }
     let target = clamp(1 + w * director, loBound, 1 + maxEffect);
     if (ceilingCap > 0 && r.spreadFactor > 0)

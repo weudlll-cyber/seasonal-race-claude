@@ -813,7 +813,6 @@ export default function RaceScreen() {
       frontPool: govCfg.directorFrontPool,
       leaderBrake: govCfg.directorLeaderBrake,
       challengerBoost: govCfg.directorChallengerBoost,
-      pullStrength: govCfg.directorPullStrength,
       maxEffect: govCfg.maxEffect,
       maxStepPerFrame: govCfg.maxStepPerFrame,
       ceilingCap: govCfg.directorCeilingCap,

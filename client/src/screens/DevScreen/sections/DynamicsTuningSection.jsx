@@ -204,6 +204,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
       pulkLeadRotationDeadlockTimeoutMs:
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs,
+      pulkLeadRotationMinHoldMs: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs,
     }));
   }
 
@@ -1529,6 +1530,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               max: 30000,
               step: 500,
               tip: 'Safety net only (never the normal path): a boost that cannot complete (blocked by traffic — the lateral rule brakes a blocked racer) is released after this long so the rotation never freezes. 12000 = default.',
+            },
+            {
+              key: 'pulkLeadRotationMinHoldMs',
+              label: 'Leader onset grace (ms)',
+              min: 0,
+              max: 1500,
+              step: 50,
+              tip: 'Grace before a NEW leader is braked (visual smoothing of the takeover). 0 = brake engages immediately on taking the lead. NOT a flicker guard — the settle brake already makes rapid place-swaps impossible. 750 = default.',
             },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
