@@ -577,16 +577,21 @@ export function directorReachable(
  *     so the slot boosts the NEW P2 — the queue advances for free (no snapshot/round roster).
  *   • OUTSIDER slot (permanent fresh blood): boost the DEEPEST still-REACHABLE racer OUTSIDE the front
  *     group until it takes the lead; then draw the next deepest. Never draws from the front group.
- *   • EX-LEADER BRAKE (distance-based): on every P1 change the dethroned leader is braked until it has
- *     fallen `dropDepthLengths` behind the NEW leader (signed, lap-aware), then released — the depth
- *     lever (small = tight top-group rotation, large = rotation migrates through the field).
- *   • MIN-HOLD: a fresh P1 runs free (leader-brake grace) and no boost may complete for `minHoldMs`
- *     (default SM_HOLD_MS 750), so no sub-750 ms flicker — every pass is readable.
+ *   • SETTLE-BRAKE SET (the owner's rule; replaces the old single ex-leader index): a racer that TAKES
+ *     the lead is added to a brake MEMBERSHIP set. It runs UNBRAKED for its `minHoldMs` hold window
+ *     (readable lead change), THEN its brake ENGAGES and STAYS on — THROUGH being overtaken and while
+ *     it falls — until it is `dropDepthLengths` behind the CURRENT leader (signed, lap-aware), then it
+ *     is released. There is NO separate leader-brake branch: the current P1 is just the newest member
+ *     (braked after its own hold; 0-behind-itself → never released while leading). MANY members brake
+ *     at once, each toward its own target → dethroned leaders fall back FULLY before re-contending. The
+ *     hold applies ONLY at onset; a later overtake does not restart it. `dropDepthLengths` is the depth
+ *     lever (small = tight top-group rotation; large = the rotation migrates through the field).
  *   • DEADLOCK TIMEOUT (safety net, never the normal path): a boost that cannot complete (traffic — the
  *     lateral rule brakes a blocked racer regardless of its mult) is released after `deadlockTimeoutMs`
  *     and the slot advances; the lateral physics is never weakened.
- * HEROES: the leader/ex-leader brake apply to the live P1 whoever it is (leader detection is
- * HERO-INCLUSIVE); heroes are NEVER boosted (skipped in every pool) and otherwise pinned toward 1.0.
+ * HEROES: the settle brake applies to the live P1 whoever it is (leader detection is HERO-INCLUSIVE, so
+ * a hero leader CAN be a brake-set member); heroes are NEVER boosted (skipped in every pool) and
+ * otherwise pinned toward 1.0.
  * DETERMINISM: selection is by live rank + signed distance + index (no Math.random); the only clock is
  * the passed `currentMs` (timers). ONE implementation, browser + sim. Every force is `w`-scaled (the
  * phase-weight fade → EXACTLY 0 at corrStart) so the ex-leader brake self-extinguishes at the fade.
@@ -673,7 +678,7 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     dirState.leadRot = {
       p1Holder: -1,
       p1SinceMs: currentMs,
-      exBrakeIdx: -1,
+      brakeSet: new Map(), // idx → { engagedAfterMs } — the settle-brake MEMBERSHIP set (many at once)
       attackers: [],
       outsider: { idx: -1, startMs: 0 },
       cooldownUntil: new Map(),
@@ -682,18 +687,33 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   while (st.attackers.length < attackerSlots) st.attackers.push({ idx: -1, startMs: 0 });
   const inCooldown = (idx) => (st.cooldownUntil.get(idx) ?? 0) > currentMs;
 
-  // P1-change detection → arm the ex-leader brake + reset the min-hold timer.
+  // P1-change detection → ADD the new leader to the brake SET (pending; braked only AFTER its hold).
+  // No separate leader-brake branch: the current leader is simply the newest set member.
   if (leaderIdx !== st.p1Holder) {
-    if (st.p1Holder >= 0 && racerOf.has(st.p1Holder)) st.exBrakeIdx = st.p1Holder;
+    st.brakeSet.set(leaderIdx, { engagedAfterMs: currentMs + minHoldMs });
     st.p1Holder = leaderIdx;
     st.p1SinceMs = currentMs;
   }
-  // Ex-leader distance-brake release: fallen dropDepthLengths behind the NEW leader (signed, lap-aware).
-  if (st.exBrakeIdx >= 0) {
-    const ex = racerOf.get(st.exBrakeIdx);
-    if (!ex || behindLenOf(ex) >= dropDepthLengths) st.exBrakeIdx = -1;
+  // Brake-SET lifecycle (the owner's settle rule): a member is BRAKED once its hold window has elapsed
+  // and STAYS braked — through being overtaken and while it falls back — until it is at least
+  // dropDepthLengths behind the CURRENT live leader (signed, lap-aware — NEVER arcT, so a lapped racer
+  // can't wrap-read as "already behind" and release early). MANY members brake at once, each toward its
+  // OWN target; the current leader is a member (braked after its own hold → 0 behind itself → never
+  // released while leading). A member that leaves the field is dropped. The hold applies ONLY at onset.
+  const braked = new Set();
+  for (const [idx, entry] of st.brakeSet) {
+    const m = racerOf.get(idx);
+    if (!m) {
+      st.brakeSet.delete(idx); // gone from the live field
+      continue;
+    }
+    if (behindLenOf(m) >= dropDepthLengths) {
+      st.brakeSet.delete(idx); // reached its drop-depth target → released
+      continue;
+    }
+    if (currentMs >= entry.engagedAfterMs) braked.add(idx); // hold elapsed → braked this frame
   }
-  const holdActive = currentMs - st.p1SinceMs < minHoldMs; // fresh P1 grace + no boost may complete
+  const holdActive = currentMs - st.p1SinceMs < minHoldMs; // current leader's grace + boost suppression
 
   // Selection: which racers receive a boost this frame (empty during the min-hold window).
   const boosting = new Set();
@@ -701,12 +721,13 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     for (const sl of st.attackers) sl.idx = -1;
     st.outsider.idx = -1;
   } else {
-    // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, the P1, the
-    // ping-pong-locked ex-leader, cooled racers, and draw-unreachable candidates.
+    // ATTACKERS — the current live P2..P(frontPool), closest-to-P1 first, skipping heroes, any
+    // brake-SET member (a racer that is settling/falling back — the ping-pong lock), cooled racers,
+    // and draw-unreachable candidates.
     const elig = [];
     for (let i = 1; i < n && rankOf.get(live[i].index) <= frontPool; i++) {
       const r = live[i];
-      if (isHero(r) || r.index === st.exBrakeIdx || inCooldown(r.index) || !reachable(r)) continue;
+      if (isHero(r) || st.brakeSet.has(r.index) || inCooldown(r.index) || !reachable(r)) continue;
       elig.push(r);
     }
     for (let s = 0; s < attackerSlots; s++) {
@@ -729,7 +750,13 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     let bestBehind = -1;
     for (let i = 1; i < n; i++) {
       const r = live[i];
-      if (rankOf.get(r.index) <= frontPool || isHero(r) || inCooldown(r.index) || !reachable(r))
+      if (
+        rankOf.get(r.index) <= frontPool ||
+        isHero(r) ||
+        st.brakeSet.has(r.index) ||
+        inCooldown(r.index) ||
+        !reachable(r)
+      )
         continue;
       const behind = behindLenOf(r);
       if (behind > outsiderMaxReach) continue;
@@ -759,15 +786,10 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     }
     let director = 0;
     let loBound = 1 - maxEffect;
-    if (r.index === leaderIdx) {
-      // The live P1 (hero or not) is braked to stay catchable — but a FRESH P1 gets grace for the
-      // min-hold window so it can hold visible P1 (no flicker), then the brake engages.
-      if (!holdActive) {
-        director = -leaderBrake;
-        loBound = brakeLoBound;
-      }
-    } else if (r.index === st.exBrakeIdx) {
-      director = -leaderBrake; // distance-based ex-leader settle brake
+    if (braked.has(r.index)) {
+      // Brake-SET member past its hold — the live P1 (hero or not) AND every dethroned leader still
+      // falling to its drop-depth target. One branch, many racers; heroes are brakeable here.
+      director = -leaderBrake;
       loBound = brakeLoBound;
     } else if (isHero(r)) {
       director = 0; // heroes are never boosted; pinned toward 1.0

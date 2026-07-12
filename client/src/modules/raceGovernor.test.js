@@ -383,31 +383,67 @@ describe('applyPulkLeadRotation', () => {
     expect(racers[2].governorMult).toBeGreaterThan(1.0); // non-hero P3 boosted instead
   });
 
-  it('ex-leader brake: on a P1 change the dethroned leader is braked until dropDepth behind, then released', () => {
+  it('settle-brake SET: a dethroned leader is braked until dropDepth behind the CURRENT leader, then released', () => {
     const dir = mkDir();
     const racers = mkRacers([8, 7.9, 6, 5, 4]);
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // p1Holder = 0
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // idx0 leads (hold → 750)
     racers[0].t = 7.9;
     racers[1].t = 8.0; // idx1 takes the lead (0.1 ahead of idx0)
     applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR);
-    expect(dir.leadRot.exBrakeIdx).toBe(0); // dethroned leader armed
+    expect(dir.leadRot.brakeSet.has(0)).toBe(true); // dethroned leader is a brake-set member
     expect(racers[0].governorMult).toBeLessThan(1.0); // braked (0.1 < 2 dropDepth)
     racers[0].t = 5.0; // now 3 lengths behind the new leader (8.0)
     applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 900 }), LR);
-    expect(dir.leadRot.exBrakeIdx).toBe(-1); // released (>= dropDepth)
+    expect(dir.leadRot.brakeSet.has(0)).toBe(false); // released (>= dropDepth behind CURRENT leader)
   });
 
-  it('ping-pong lock: the freshly dethroned ex-leader is not chosen as an attacker while braking', () => {
+  it('THE FIX — a dethroned leader stays braked THROUGH the next P1 change; MANY brake at once', () => {
+    const dir = mkDir();
+    const racers = mkRacers([8, 7.9, 7.8, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // idx0 leads
+    racers[0].t = 7.9;
+    racers[1].t = 8.0; // idx1 passes idx0
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // idx0 braked
+    expect(racers[0].governorMult).toBeLessThan(1.0);
+    // A SECOND P1 change: idx2 passes idx1; idx0 slips to 7.7 (still < 2 behind the new leader idx2)
+    racers[1].t = 7.85;
+    racers[2].t = 8.05;
+    racers[0].t = 7.7;
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 1600 }), LR);
+    // The old single-index model would have DROPPED idx0's brake here (overwritten by idx1). It must not:
+    expect(dir.leadRot.brakeSet.has(0)).toBe(true); // idx0 STILL braked (0.35 < 2 behind current leader)
+    expect(racers[0].governorMult).toBeLessThan(1.0);
+    // idx1 (just dethroned, its own hold elapsed) is ALSO braked → several at once, each own target
+    expect(dir.leadRot.brakeSet.has(1)).toBe(true);
+    expect(racers[1].governorMult).toBeLessThan(1.0);
+  });
+
+  it('hold applies ONLY at onset: a later overtake does not restart the brake hold', () => {
     const dir = mkDir();
     const racers = mkRacers([8, 7.9, 6, 5, 4]);
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR);
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // idx0 leads, hold → 750
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 800 }), LR); // idx0 braked (past hold)
+    expect(racers[0].governorMult).toBeLessThan(1.0);
     racers[0].t = 7.9;
-    racers[1].t = 8.0;
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 0 }), LR); // change → exBrakeIdx=0, hold
-    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 900 }), LR); // hold expired
-    expect(dir.leadRot.exBrakeIdx).toBe(0); // still braking (0.1 < 2)
-    expect(racers[0].governorMult).toBeLessThan(1.0); // braked, NOT boosted
-    expect(racers[2].governorMult).toBeGreaterThan(1.0); // slot advanced to the next eligible
+    racers[1].t = 8.0; // idx0 overtaken
+    applyPulkLeadRotation(racers, 1.0, ctx(dir, { currentMs: 810 }), LR);
+    expect(dir.leadRot.brakeSet.get(0).engagedAfterMs).toBe(750); // onset hold NOT re-stamped
+    expect(racers[0].governorMult).toBeLessThan(1.0); // braked immediately — no new grace on overtake
+  });
+
+  it('signed lap-aware release: a lapped-far ex-leader IS released (arcT would wrap-keep it braked)', () => {
+    const dir = mkDir();
+    // closed track, lenScale = pathLengthPx/meanBodyLen = 10 (1 lap = 10 racer lengths)
+    const c = (over) => ctx(dir, { isOpen: false, pathLengthPx: 10, meanBodyLen: 1, ...over });
+    const racers = mkRacers([8, 7.9, 6, 5, 4]);
+    applyPulkLeadRotation(racers, 1.0, c({ currentMs: 0 }), LR);
+    racers[0].t = 7.9;
+    racers[1].t = 8.0; // idx1 leads, idx0 dethroned + braked
+    applyPulkLeadRotation(racers, 1.0, c({ currentMs: 800 }), LR);
+    expect(dir.leadRot.brakeSet.has(0)).toBe(true);
+    racers[0].t = 7.15; // 0.85 lap behind the leader → SIGNED 8.5 lengths (arcT would wrap to 1.5)
+    applyPulkLeadRotation(racers, 1.0, c({ currentMs: 900 }), LR);
+    expect(dir.leadRot.brakeSet.has(0)).toBe(false); // released via SIGNED distance (>= dropDepth 2)
   });
 
   it('deadlock timeout: a stuck target (never becomes P1) is cooled after deadlockTimeoutMs', () => {
