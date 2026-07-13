@@ -65,11 +65,7 @@ import {
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import {
-  applyGovernor,
-  applyPulkLeadRotation,
-  computeDirectorCeiling,
-} from '../../modules/raceGovernor.js';
+import { applyPulkLeadRotation, computeDirectorCeiling } from '../../modules/raceGovernor.js';
 import { meanDrawnBodyLen } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
@@ -741,24 +737,15 @@ export default function RaceScreen() {
     // Built once per race from the shared dynamics config. Phase fractions come from the
     // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
     // realism envelope (±12% clamp + slew) the director rides.
-    // STAGE-4 REMOVE: the classic reactive director is now statically dead. Choreography is
-    // unconditional, so its former gate (governorDirectorEnabled && !v4) can never be true. Kept as a
-    // const false so the (dead) applyGovernor call + govCfg below still compile until Stage 4 deletes
-    // the whole classic path (governorDirectorEnabled + the catch-up / fall-back / linger machinery).
-    const directorEnabled = false;
     // PulkLeadRotation: THE pulk-phase mechanism, unconditional (within its [pulkStart, pulkEnd) window).
     const pulkLeadRotationOn = racePlanEnabled;
+    // Shared strength knobs the rotation reads (Stage-5b re-home targets — still governorDirector*).
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorEnabled,
-      directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
-      directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
       directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
       directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
       directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
-      directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
-      directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
       directorCeilingCap:
         (dynamicsConfig.governorDirectorCeilingCap ?? false)
           ? computeDirectorCeiling(
@@ -767,17 +754,6 @@ export default function RaceScreen() {
               dynamicsConfig.governorDirectorBoostHeadroom ?? 0
             )
           : 0,
-      // Event-driven catch-up (parity with sim-fairness.mjs).
-      directorMaxParallelBoosts: dynamicsConfig.governorDirectorMaxParallelBoosts ?? 3,
-      directorBoostDurationMin: dynamicsConfig.governorDirectorBoostDurationMin ?? 1500,
-      directorBoostDurationMax: dynamicsConfig.governorDirectorBoostDurationMax ?? 4000,
-      directorCatchThreshold: dynamicsConfig.governorDirectorCatchThreshold ?? 2.0,
-      // Active fall-back (the second direction).
-      directorFallbackEnabled: dynamicsConfig.governorDirectorFallbackEnabled ?? false,
-      directorFallbackFromPool: dynamicsConfig.governorDirectorFallbackFromPool ?? 5,
-      directorFallbackMaxCount: dynamicsConfig.governorDirectorFallbackMaxCount ?? 2,
-      directorFallbackUntilPosition: dynamicsConfig.governorDirectorFallbackUntilPosition ?? 12,
-      directorFallbackProtectMs: dynamicsConfig.governorDirectorFallbackProtectMs ?? 2500,
     };
     // PulkLeadRotation config: reuse govCfg's strength knobs; add the rotation-specific keys.
     const pulkLeadRotCfg = {
@@ -820,21 +796,9 @@ export default function RaceScreen() {
       pulk: rowBonusPulk,
       post: rowBonusPost,
     };
-    // Per-race director state — catch-up + fall-back slots, boost-once pool, protection windows,
-    // linger-brake, and the seeded event counter. applyGovernor lazily fills the slot arrays; the
-    // fields below just seed the shape (mutated across frames).
-    const dirState = {
-      boostSlots: [],
-      fallSlots: [],
-      boosted: new Set(),
-      protectedUntil: new Map(),
-      poolFallback: 0,
-      ev: 0,
-      prevLeader: -1,
-      leaderSinceMs: 0,
-      lingerTarget: -1,
-      lingerUntilMs: 0,
-    };
+    // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state
+    // (brakeSet / attacker slots / outsider / cooldowns) on first call; nothing else is needed here.
+    const dirState = {};
     // Mean drawn body length (px) over the field — the racer-length unit for the governor's
     // arc-distance bound. Computed once per race (bodies are fixed per racer). Guarded > 0.
     const govMeanBodyLen = meanDrawnBodyLen(g.current.racers); // shared racer-length source
@@ -1053,10 +1017,8 @@ export default function RaceScreen() {
           // now rescales areaBonusMult from ONE source for browser + sim; INFRA 5A. Nothing to do
           // here: the controller-pass above already produced the phase-split areaBonusMult.)
 
-          // Resolved phase — computed every frame whenever a race plan is running (drives the
-          // pre-OUTCOME contest gate + the fade AND the always-on GovernorDiagHUD phase readout). Pure
-          // getPhase; no physics. The director uses the live rank sort + gap-to-leader, not the field
-          // median, so no median is precomputed.
+          // Resolved phase — computed every frame whenever a race plan is running (feeds the always-on
+          // GovernorDiagHUD phase readout). Pure getPhase; no physics.
           const govPhase = racePlanController
             ? racePlanController.getPhase(physicsTs, st.raceProgress)
             : null;
@@ -1081,38 +1043,14 @@ export default function RaceScreen() {
             );
           }
 
-          // ── Pre-OUTCOME contest-injector "director" ──
-          if (directorEnabled && govFractions) {
-            applyGovernor(
-              st.racers,
-              st.finishT,
-              govPhase,
-              {
-                progress: st.raceProgress,
-                pulkEndFrac: govFractions.pulkEndFrac,
-                corrStartFrac: govFractions.corrStartFrac,
-                seed: govSeed,
-                pathLengthPx,
-                meanBodyLen: govMeanBodyLen,
-                isOpen: isOpenTrack,
-                currentMs: physicsTs, // ms clock for durations / linger / protection windows
-                dirState, // per-race director state (catch-up + fall-back slots)
-              },
-              govCfg
-            );
-          }
-
-          // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs, independent of
-          // which director (if any) is active. cfg reflects the ACTIVE mechanism (PulkLeadRotation, the
-          // reactive director, or a directorEnabled:false stub in OUTCOME/off) so the HUD always reads
-          // the truth. Read-only; touches nothing but the diag ref. heroRoles = the retained
-          // index→role map (diagnostics-only; null until heroes are cast).
+          // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs. cfg reflects the
+          // ACTIVE mechanism (PulkLeadRotation when the plan is running, else a directorEnabled:false
+          // stub in OUTCOME/off) so the HUD always reads the truth. Read-only; touches nothing but the
+          // diag ref. heroRoles = the retained index→role map (diagnostics-only; null until heroes cast).
           if (racePlanController && govFractions) {
             const diagCfg = pulkLeadRotationOn
               ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
-              : directorEnabled
-                ? govCfg
-                : { directorEnabled: false };
+              : { directorEnabled: false };
             governorDiagRef.current = {
               cfg: diagCfg,
               phase: govPhase,

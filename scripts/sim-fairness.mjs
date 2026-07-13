@@ -25,31 +25,22 @@
 //   Read-only diagnostics (flag-gated; a run without them is byte-identical):
 //     --breakaway-diag   record the pre-OUTCOME lone-breakaway signal (leader-gap over
 //                        progress, peak gap + who led). Raw → results/breakaway-diag/.
-//     --front-action     record the pre-OUTCOME FRONT-ACTION metric: P1 lead changes,
-//                        distinct P1 holders, top-3 podium shuffle, leader→2nd / leader→median
-//                        racer-length gaps (front reach), and a per-racer targetRank-vs-front
-//                        unpredictability correlation. Raw → results/front-action/. Front reach
-//                        reuses the director gaps, so pair with --governorDirectorEnabled.
+//     --front-action     record the pre-OUTCOME FRONT-ACTION metric: P1 lead changes, distinct P1
+//                        holders, top-3 podium shuffle, and a per-racer targetRank-vs-front
+//                        unpredictability correlation. Raw → results/front-action/.
 //     --diagLabel=<name> names the raw diagnostic output file (both diags share this).
 //
-//   Action axis (Action-sweep R1; read-only sweep hypothesis — NOT a shipped default):
-//     --action=<0..1>    single "action" scalar (0=calm → 1=wild) coupled to the contest-injector
-//                        (director) knobs: action↑ → PullStrength 0.03→0.12, Dwell 0.16→0.04
-//                        (faster turnover), CastSize 4→2 (integer). AnchorOffset + Settling stay at
-//                        config defaults (fixed, not on the axis). Overrides those three director
-//                        knobs; unset → no-op (byte-identical). Realized knobs → JSON meta.action /
-//                        meta.directorKnobs. Pair with --governorDirectorEnabled=true.
+//   Action axis (Action-sweep; read-only sweep hypothesis — NOT a shipped default):
+//     --action=<0..1>    single "action" scalar (0=calm → 1=wild). STAGE-4: its classic couplings
+//                        were removed with the reactive director; the axis is an empty stub until
+//                        Stage-5b re-targets it to the rotation strengths. Unset → no-op.
 //
-//   Action-1 two-sided contest director (read-only sweep knobs; default 0 → legacy one-sided pull):
+//   Contest strengths (read-only sweep knobs; the PulkLeadRotation mechanism reads these):
 //     --governorDirectorLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
 //     --governorDirectorChallengerBoost=<0..0.12>  forward boost cap on featured challengers toward
-//                                                  the leader. Either > 0 → two-sided contest mode.
+//                                                  the leader.
 //     --bonusMult=<x>   areaBonus (Race-Plan band bonus) strength multiplier — the fairness knob.
 //                       2.0 = shipped (+6% B1), 1.0 = half, 0 = off. Swept to trade corrP1 vs band-reach.
-//
-//   Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate,
-//   in racer-lengths) is surfaced to rawData + results[].stats.governorShape only when the
-//   director actually ran (--governorDirectorEnabled=true).
 //
 // Output:
 //   <out>/fairness-data.json   — machine-readable raw data
@@ -104,7 +95,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { applyGovernor, applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
+import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
@@ -233,28 +224,13 @@ const DYNAMICS_OVERRIDES = {
   // pattern (no drift).
   governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
   governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
-  // Contest-injector "director" — own master + knobs; same shared-default + argVal pattern.
-  governorDirectorEnabled:      argVal('governorDirectorEnabled',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled)) === 'true',
-  governorDirectorPullStrength: Number(argVal('governorDirectorPullStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength))),
-  governorDirectorSettling:     Number(argVal('governorDirectorSettling',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling))),
+  // Contest strengths the rotation reads (Stage-5b re-home targets — still governorDirector*).
   governorDirectorLeaderBrake:     Number(argVal('governorDirectorLeaderBrake',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake))),
   governorDirectorChallengerBoost: Number(argVal('governorDirectorChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost))),
   governorDirectorFrontPool:        Number(argVal('governorDirectorFrontPool',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFrontPool))),
-  governorDirectorBoostOncePerRace: argVal('governorDirectorBoostOncePerRace', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostOncePerRace)) === 'true',
-  governorDirectorLingerBrake:      Number(argVal('governorDirectorLingerBrake',      String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLingerBrake))),
   governorDirectorCeilingCap:       argVal('governorDirectorCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap)) === 'true',
   // Additive boost-headroom above the natural band max for the director ceiling (0 = shipped baseline).
   governorDirectorBoostHeadroom:    Number(argVal('governorDirectorBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom))),
-  // Event-driven catch-up + active fall-back (rebuild). Same shared-default + argVal pattern.
-  governorDirectorMaxParallelBoosts:  Number(argVal('governorDirectorMaxParallelBoosts',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorMaxParallelBoosts))),
-  governorDirectorBoostDurationMin:   Number(argVal('governorDirectorBoostDurationMin',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostDurationMin))),
-  governorDirectorBoostDurationMax:   Number(argVal('governorDirectorBoostDurationMax',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostDurationMax))),
-  governorDirectorCatchThreshold:     Number(argVal('governorDirectorCatchThreshold',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCatchThreshold))),
-  governorDirectorFallbackEnabled:    argVal('governorDirectorFallbackEnabled',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackEnabled)) === 'true',
-  governorDirectorFallbackFromPool:   Number(argVal('governorDirectorFallbackFromPool',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackFromPool))),
-  governorDirectorFallbackMaxCount:   Number(argVal('governorDirectorFallbackMaxCount',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackMaxCount))),
-  governorDirectorFallbackUntilPosition: Number(argVal('governorDirectorFallbackUntilPosition', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackUntilPosition))),
-  governorDirectorFallbackProtectMs:  Number(argVal('governorDirectorFallbackProtectMs',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs))),
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
@@ -336,9 +312,9 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
-// Director knobs (frontPool / boostOncePerRace / lingerBrake / ceilingCap + the rebuild's catch-up
-// and fall-back knobs) are read from DYNAMICS_OVERRIDES via the shared-default + argVal pattern
-// (--governorDirector* overrides), so a no-flag sim run mirrors the shipped director default.
+// the shared director strengths (leaderBrake / challengerBoost / frontPool / ceilingCap + the
+// maxEffect/maxStep realism envelope) are read from DYNAMICS_OVERRIDES via the shared-default + argVal
+// pattern (--governorDirector* overrides), so a no-flag sim run mirrors the shipped director default.
 // Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
 // the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
 const SD_PULK_START   = 0.25;                 // chaos → PULK boundary — strip-metrics OBSERVATION only
@@ -352,25 +328,16 @@ const SM_HOLD_MS      = 750;                   // a P1 change counts as a CLEAN 
 
 // ── Action axis (--action=<0..1>) — SINGLE source of the coupling ──────────
 // One owner-facing scalar `action` ∈ [0,1] (0 = calm → 1 = wild), the prototype of the future
-// SetupScreen "Action" slider. It couples to the rebuilt director knobs via the table below:
-// action↑ → stronger boost + more simultaneous catch-ups. This is a SWEEP HYPOTHESIS in the sweep
-// layer, never in shipped defaults; when --action is unset the block is a no-op. Realized knob
-// values are surfaced (meta + config log) so a flat knob can later be pinned.
-const ACTION_COUPLING = {
-  pullStrength:  { at0: 0.03, at1: 0.12 }, // action↑ → stronger catch-up boost (per racer-length of gap)
-  maxParallel:   { at0: 1,    at1: 4 },    // action↑ → more simultaneous catch-ups, integer
-};
+// SetupScreen "Action" slider backing (SWEEP HYPOTHESIS; never in shipped defaults; --action unset =
+// no-op). STAGE-4: the classic couplings (pullStrength / maxParallelBoosts) were removed with the
+// reactive director. The axis is an empty stub until Stage-5b re-targets it to the re-homed rotation
+// strengths (leaderBrake / challengerBoost / frontPool).
 const ACTION_RAW = argVal('action', null);
 const ACTION = ACTION_RAW !== null ? Math.max(0, Math.min(1, Number(ACTION_RAW))) : null;
-function actionToDirectorKnobs(a) {
-  const lerp = (e) => e.at0 + (e.at1 - e.at0) * a;
-  return {
-    governorDirectorPullStrength:      lerp(ACTION_COUPLING.pullStrength),
-    governorDirectorMaxParallelBoosts: Math.round(lerp(ACTION_COUPLING.maxParallel)),
-  };
+function actionToDirectorKnobs() {
+  return {}; // no couplings yet — Stage-5b re-targets the Action axis to the rotation strengths
 }
-// Realized director knobs at this action-point (null when --action unset). Overrides the three
-// axis knobs in DYNAMICS_OVERRIDES; AnchorOffset/Settling are left untouched (fixed defaults).
+// Realized knobs at this action-point (null when --action unset). Empty until Stage-5b re-targets.
 const ACTION_KNOBS = ACTION !== null ? actionToDirectorKnobs(ACTION) : null;
 if (ACTION_KNOBS) Object.assign(DYNAMICS_OVERRIDES, ACTION_KNOBS);
 
@@ -441,12 +408,6 @@ const BREAKAWAY_CORRIDOR_START = RP_CORRIDOR_START;
 // those to be non-zero). Raw aggregates → results/front-action/ (named by --diagLabel).
 const FRONT_ACTION = argv.includes('--front-action');
 
-// Governor field-shape telemetry (govGapLen*/govGap2ndLen*/govFieldLen*/govRankSwapRate) is
-// surfaced to rawData + the combo stats ONLY when the governor actually ran, so a governor-off
-// fairness run stays byte-identical (no new columns). Gated on the governor "active" flag.
-// v4 COUPLING (Stage 1, C-1): under v4 the reactive governor is forced OFF (parity with index.jsx) —
-// the pack is steered only by the loose OUTCOME band-steering. v4-OFF → unchanged.
-const GOVERNOR_ON = RACE_PLAN_ACTIVE && DYNAMICS_OVERRIDES.governorDirectorEnabled && !DIRECTOR_V4_ENABLED;
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -891,36 +852,7 @@ export function runSingleRace({
     // Built once per race from the shared dynamics config. Phase fractions + seed from the
     // controller (live boundaries, single source). Default OFF → governorMult stays 1.0.
     // maxEffect + maxStepPerFrame are the shared realism envelope (±clamp + slew).
-    const governorEnabled = !!racePlanController && (dynamicsConfig.governorDirectorEnabled ?? false) && !DIRECTOR_V4_ENABLED;
-    const govCfg = {
-      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
-      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorEnabled: governorEnabled,
-      directorPullStrength: dynamicsConfig.governorDirectorPullStrength ?? 0.06,
-      directorSettling: dynamicsConfig.governorDirectorSettling ?? 0.05,
-      directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
-      directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
-      directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
-      directorBoostOncePerRace: dynamicsConfig.governorDirectorBoostOncePerRace ?? false,
-      directorLingerBrake: dynamicsConfig.governorDirectorLingerBrake ?? 0,
-      directorCeilingCap:
-        (dynamicsConfig.governorDirectorCeilingCap ?? false)
-          ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
-          : 0,
-      // Event-driven catch-up.
-      directorMaxParallelBoosts: dynamicsConfig.governorDirectorMaxParallelBoosts ?? 3,
-      directorBoostDurationMin: dynamicsConfig.governorDirectorBoostDurationMin ?? 1500,
-      directorBoostDurationMax: dynamicsConfig.governorDirectorBoostDurationMax ?? 4000,
-      directorCatchThreshold: dynamicsConfig.governorDirectorCatchThreshold ?? 2.0,
-      // Active fall-back.
-      directorFallbackEnabled: dynamicsConfig.governorDirectorFallbackEnabled ?? false,
-      directorFallbackFromPool: dynamicsConfig.governorDirectorFallbackFromPool ?? 5,
-      directorFallbackMaxCount: dynamicsConfig.governorDirectorFallbackMaxCount ?? 2,
-      directorFallbackUntilPosition: dynamicsConfig.governorDirectorFallbackUntilPosition ?? 12,
-      directorFallbackProtectMs: dynamicsConfig.governorDirectorFallbackProtectMs ?? 2500,
-    };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
-    const govSeed = racePlanController?.seed ?? 0;
     // ── PulkLeadRotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
     // (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation keys +
     // minHold are new. v4 only. ONE governorMult writer at a time (the classic director / PulkLeadRotation).
@@ -959,30 +891,14 @@ export function runSingleRace({
       pulk:  dynamicsConfig.rowBonusPulk  ?? 1,
       post:  dynamicsConfig.rowBonusPost  ?? 1,
     };
-    // Per-race director state (catch-up + fall-back slots, boost-once pool, protection windows,
-    // linger-brake, seeded event counter). applyGovernor lazily fills the slot arrays; parity with
-    // the browser dirState shape.
-    const dirState = { boostSlots: [], fallSlots: [], boosted: new Set(), protectedUntil: new Map(),
-      poolFallback: 0, ev: 0, prevLeader: -1, leaderSinceMs: 0, lingerTarget: -1, lingerUntilMs: 0 };
+    // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state on
+    // first call; nothing else is needed here (parity with the browser dirState shape).
+    const dirState = {};
     // Mean drawn body length (px) over the field — the racer-length unit for the arc-distance
     // bound (parity with the browser). Computed once per race (bodies are fixed per racer).
     const govMeanBodyLen = meanDrawnBodyLen(racers); // shared racer-length source (parity w/ browser)
 
-    // ── Governor tail-lift / field-shape metrics (Stage C; reporting only, feeds the sweep) ─
-    // In TRUE RACER-LENGTHS (arc-distance / body length — lap-count- + track-independent):
-    // leader→median and leader→2nd (both now DIAGNOSTIC field-shape measures — the governor's
-    // active signal is the BEHIND-median gap after the leader-brake was retired; these are kept
-    // for the later tip-leash + the sweep), plus field-length p90−p10 and a position-change rate
-    // (adjacent rank swaps/step) so the "liveliness returned" gate is measurable.
     const govLenScale = lenScaleFrom(pathLengthPx, govMeanBodyLen);
-    let govGapLenSum = 0; // leader→median, racer-lengths
-    let govGapLenSteps = 0;
-    let govGapLenMax = 0;
-    let govGap2ndLenSum = 0; // leader→2nd, racer-lengths (diagnostic)
-    let govFieldLenSum = 0; // field p90−p10, racer-lengths
-    let govRankSwaps = 0; // adjacent t-order swaps between steps (position-change rate)
-    let govRankSwapSteps = 0;
-    let govPrevOrder = null; // previous step's live-racer index order (by t)
 
     // ── Front-action observer state (--front-action; read-only) ───────────────
     // Pre-OUTCOME P1/top-3 churn + per-racer front-running fractions. All gated on the
@@ -1179,11 +1095,6 @@ export function runSingleRace({
         }
       }
 
-      const govPhase =
-        governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
-      // Field median for the READ-ONLY field-shape telemetry below (the director mechanism uses
-      // the live rank sort + gap-to-leader, not the median).
-      const govMedianT = governorEnabled ? simMedianT(racers) : null;
 
       // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
       if (pulkLeadRotationOn && govFractions) {
@@ -1195,46 +1106,6 @@ export function runSingleRace({
         );
       }
 
-      // ── Pre-OUTCOME contest-injector "director" (default OFF) ──
-      if (governorEnabled && govFractions) {
-        applyGovernor(
-          racers,
-          finishT,
-          govPhase,
-          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
-          govCfg
-        );
-        // Field-shape metrics (reporting only), in TRUE RACER-LENGTHS: leader→median + leader→2nd
-        // + field p90−p10 + rank-swap rate. Diagnostics only — not part of the director mechanism.
-        if (govPhase && govLenScale > 0 && govMedianT !== null) {
-          const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
-          if (live.length > 1) {
-            const nLive = live.length;
-            const leaderT = live[0].t;
-            const secondT = live[1].t;
-            const gapLen = arcT(leaderT, govMedianT, isOpen) * govLenScale; // leader→median
-            govGapLenSum += gapLen;
-            govGap2ndLenSum += arcT(leaderT, secondT, isOpen) * govLenScale;
-            govGapLenSteps += 1;
-            if (gapLen > govGapLenMax) govGapLenMax = gapLen;
-            const p = (frac) => live[Math.min(nLive - 1, Math.floor(frac * (nLive - 1)))].t;
-            govFieldLenSum += arcT(p(0.1), p(0.9), isOpen) * govLenScale; // p0.1(top) − p0.9(back)
-            // Position-change rate: adjacent-rank swaps vs the previous step's order.
-            const order = live.map((r) => r.index);
-            if (govPrevOrder) {
-              const posPrev = new Map(govPrevOrder.map((idx, i) => [idx, i]));
-              let swaps = 0;
-              for (let i = 0; i < order.length; i++) {
-                const pp = posPrev.get(order[i]);
-                if (pp !== undefined && pp !== i) swaps++;
-              }
-              govRankSwaps += swaps;
-              govRankSwapSteps += 1;
-            }
-            govPrevOrder = order;
-          }
-        }
-      }
 
       // ── Front-action observer (--front-action; read-only, pre-OUTCOME window) ──
       // Same window the breakaway diag / governor use: progress < corridorStart. Counts
@@ -2024,12 +1895,6 @@ export function runSingleRace({
     results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
     results.passThroughCount             = passThroughCount;        // sim-only: lateral pass-through events (post-warmup)
     results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
-    // Governor edge-limiter metrics (Stage 1; reporting only, in racer-lengths). 0 when off.
-    results.govGapLenMean = govGapLenSteps > 0 ? govGapLenSum / govGapLenSteps : 0; // leader→median, racer-lengths
-    results.govGapLenMax = govGapLenMax;                                            // leader→median peak, racer-lengths
-    results.govGap2ndLenMean = govGapLenSteps > 0 ? govGap2ndLenSum / govGapLenSteps : 0; // leader→2nd, racer-lengths
-    results.govFieldLenMean = govGapLenSteps > 0 ? govFieldLenSum / govGapLenSteps : 0; // field p90−p10, racer-lengths
-    results.govRankSwapRate = govRankSwapSteps > 0 ? govRankSwaps / govRankSwapSteps : 0; // swaps/step
     results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
     results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
     results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
@@ -2123,8 +1988,8 @@ export function runSingleRace({
     }
 
     // Front-action metric — attached ONLY when the flag is on, so the results object (and
-    // every downstream column) is unchanged for a normal fairness run. Front-reach reuses the
-    // governor's already-computed racer-length gaps (results.govGap2ndLenMean / govGapLenMean).
+    // every downstream column) is unchanged for a normal fairness run. Reads the per-step
+    // lead-change / podium-shuffle counters accumulated above.
     if (frontAction) {
       const targetRankOf = (idx) =>
         racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
@@ -2134,9 +1999,6 @@ export function runSingleRace({
         distinctP1:        faP1Set.size,
         leadChangeRate:    faSteps > 0 ? faLeadChanges / faSteps : 0,        // P1 changes / step
         podiumShuffleRate: faTop3CompareSteps > 0 ? faTop3ShuffleCount / faTop3CompareSteps : 0,
-        // Front-reach (racer-lengths) — reuse the governor gaps; 0 when the governor is off.
-        gap2ndLenMean:     results.govGap2ndLenMean, // leader→2nd   (small = close, contested front)
-        gapMedLenMean:     results.govGapLenMean,     // leader→median (large = lone breakaway)
         // Per-racer front-running time vs assigned targetRank → unpredictability correlation.
         perRacer: racers.map((r) => ({
           index:      r.index,
@@ -2297,7 +2159,6 @@ export function runSingleRace({
           maxSpeedFactor: +smNatMax.toFixed(4),                                  // peak spreadFactor×tool-mults in PULK
           exceedFrac:     smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
         },
-        directorPoolFallback: dirState.poolFallback ?? 0, // times the once-per-race pool was exhausted (graceful fallback)
         // Per-racer rows for band-reach, start-row fairness, and bonus↔leader correlation (computed
         // downstream). pulk/outcome shares are per-window; areaSample is the applied areaBonusMult in
         // PULK; rowBonus is the raw start-row speed bonus. All read-only observations.
@@ -2698,7 +2559,7 @@ if (isMain) {
   //   t += baseSpeed·boost·brake·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·(DT/16)
   // factor-for-factor identical to the browser's (index.jsx) modulo (DT/16)=1.0. See docs/FORCE-PARITY.md.
   if (ACTION !== null) {
-    console.log(`Action axis            : action=${ACTION.toFixed(3)} → director pull=${ACTION_KNOBS.governorDirectorPullStrength.toFixed(3)} maxParallel=${ACTION_KNOBS.governorDirectorMaxParallelBoosts} (settling=${DYNAMICS_OVERRIDES.governorDirectorSettling} FIXED)`);
+    console.log(`Action axis            : action=${ACTION.toFixed(3)} → empty stub (no couplings; Stage-5b re-targets to the rotation strengths)`);
   }
   if (WARMUP_MS_OVERRIDE !== null) {
     console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
@@ -2945,36 +2806,11 @@ if (isMain) {
               sollRank,
               sollBereich,
               ...r,
-              // PART-1 propagation fix: the governor field-shape telemetry is set on the per-race
-              // result ARRAY (result.govGapLenMean …), not on the per-racer element `r` spread
-              // above — so `...r` alone dropped it from rawData. Pull it from the array here.
-              // Per-race value (identical across racers in a race). Only when the governor ran →
-              // a governor-off run adds no columns and stays byte-identical.
-              ...(GOVERNOR_ON ? {
-                govGapLenMean:    result.govGapLenMean,
-                govGapLenMax:     result.govGapLenMax,
-                govGap2ndLenMean: result.govGap2ndLenMean,
-                govFieldLenMean:  result.govFieldLenMean,
-                govRankSwapRate:  result.govRankSwapRate,
-              } : {}),
             });
           }
         }
 
         const stats = computeFairnessStats(raceResults, totalRows, rowSizes);
-        // PART-1: surface the governor field-shape telemetry on results[].stats (racer-lengths).
-        // These per-race values are set on the result ARRAY, so `r.govGapLenMean` reads correctly
-        // here (unlike the per-racer rawData spread). Gated on GOVERNOR_ON → a governor-off run
-        // leaves `stats` byte-identical (no governorShape key).
-        if (GOVERNOR_ON && raceResults.length > 0) {
-          stats.governorShape = {
-            govGapLenMean:    raceResults.reduce((s, r) => s + (r.govGapLenMean ?? 0), 0) / raceResults.length,
-            govGapLenMax:     Math.max(...raceResults.map((r) => r.govGapLenMax ?? 0)),
-            govGap2ndLenMean: raceResults.reduce((s, r) => s + (r.govGap2ndLenMean ?? 0), 0) / raceResults.length,
-            govFieldLenMean:  raceResults.reduce((s, r) => s + (r.govFieldLenMean ?? 0), 0) / raceResults.length,
-            govRankSwapRate:  raceResults.reduce((s, r) => s + (r.govRankSwapRate ?? 0), 0) / raceResults.length,
-          };
-        }
         const avgMixingQuota = mixingQuotas.length > 0
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
@@ -3004,10 +2840,6 @@ if (isMain) {
           // Lapping instrumentation (closed tracks):
           maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
           maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
-          // NOTE: the governor field-shape metrics (govGapLen*/govGap2ndLen*/govFieldLen*/
-          // govRankSwapRate) previously lived here but were dead (no reader) and mis-filed under
-          // "naturalness". PART-1 relocates them to the surfaced, governor-gated stats.governorShape
-          // block below (see allResults.push) so they actually reach results[].stats.
           honestSameLapFraction:   (() => {
             const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
             return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;
@@ -3109,7 +2941,7 @@ if (isMain) {
         if (ACTION_METRICS) {
           actionAgg.push({
             trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
-            pulkBiasGain: RP_PULK_BIAS_GAIN, directorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
+            pulkBiasGain: RP_PULK_BIAS_GAIN,
             reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
             races: raceResults.map((r) => r.actionMetrics).filter(Boolean),
           });
@@ -3358,7 +3190,7 @@ if (isMain) {
   // Write JSON + Markdown report — skipped under --skip-main-output (night-sweep reads only hero-map.json).
   if (!SKIP_MAIN_OUTPUT) {
     const jsonPath = join(OUT_DIR, 'fairness-data.json');
-    writeFileSync(jsonPath, JSON.stringify({ meta: { world: WORLD_STAMP, nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS, governorDirectorSettling: DYNAMICS_OVERRIDES.governorDirectorSettling } } : {}) }, results: allResults, rawData }, null, 2));
+    writeFileSync(jsonPath, JSON.stringify({ meta: { world: WORLD_STAMP, nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS } } : {}) }, results: allResults, rawData }, null, 2));
     console.log(`JSON → ${jsonPath}`);
     const runDate = new Date().toISOString().slice(0, 10);
     const report  = buildReport(allResults, rawData, runDate, N_RACES, N_RACERS, WORLD_STAMP, DEFAULT_ROW_LAYOUT_CONFIG);
@@ -3442,7 +3274,7 @@ if (isMain) {
         directorV4Intensity: DIRECTOR_V4_INTENSITY,
         directorV4OutcomeStart: DIRECTOR_V4_OUTCOME_START, directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
         directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS, bonusMult: BONUS_MULT,
-        governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled, pulkBiasGain: RP_PULK_BIAS_GAIN,
+        pulkBiasGain: RP_PULK_BIAS_GAIN,
         baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
       },
       fairness: { bandReach, startRowUnfair, startRowMinPHolm,
@@ -3491,10 +3323,6 @@ if (isMain) {
     writeFileSync(faPath, JSON.stringify({
       meta: {
         label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
-        governorOn: GOVERNOR_ON,
-        arms: {
-          governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
-        },
       },
       combos: frontActionAgg,
     }, null, 2));
@@ -3531,7 +3359,6 @@ if (isMain) {
           lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
         },
         areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: BONUS_MULT },
-        governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
       },
       combos: stripAgg,
     }, null, 2));
@@ -3557,7 +3384,6 @@ if (isMain) {
       meta: {
         label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
         pulkBiasGain: RP_PULK_BIAS_GAIN,
-        governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled,
         reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
         areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
       },

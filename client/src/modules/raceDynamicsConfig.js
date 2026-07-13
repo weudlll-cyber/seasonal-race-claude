@@ -33,21 +33,13 @@ export function loadRaceDynamicsConfig() {
     merged.governorMaxEffect > 0.5 ||
     typeof merged.governorMaxStepPerFrame !== 'number' ||
     merged.governorMaxStepPerFrame <= 0 ||
-    // Contest-injector "director" fields: same whole-object-reject pattern.
-    typeof merged.governorDirectorEnabled !== 'boolean' ||
-    typeof merged.governorDirectorPullStrength !== 'number' ||
-    merged.governorDirectorPullStrength < 0 ||
-    typeof merged.governorDirectorSettling !== 'number' ||
-    merged.governorDirectorSettling < 0 ||
+    // Shared director contest STRENGTHS (rides the realism envelope): same whole-object-reject pattern.
     typeof merged.governorDirectorLeaderBrake !== 'number' ||
     merged.governorDirectorLeaderBrake < 0 ||
     typeof merged.governorDirectorChallengerBoost !== 'number' ||
     merged.governorDirectorChallengerBoost < 0 ||
     typeof merged.governorDirectorFrontPool !== 'number' ||
     merged.governorDirectorFrontPool < 0 ||
-    typeof merged.governorDirectorBoostOncePerRace !== 'boolean' ||
-    typeof merged.governorDirectorLingerBrake !== 'number' ||
-    merged.governorDirectorLingerBrake < 0 ||
     typeof merged.governorDirectorCeilingCap !== 'boolean' ||
     typeof merged.governorDirectorBoostHeadroom !== 'number' ||
     merged.governorDirectorBoostHeadroom < 0 ||
@@ -67,25 +59,7 @@ export function loadRaceDynamicsConfig() {
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
     typeof merged.directorV4OutcomeStart !== 'number' ||
     merged.directorV4OutcomeStart < 0.25 ||
-    merged.directorV4OutcomeStart > 0.55 ||
-    // Event-driven catch-up + active fall-back (rebuild).
-    typeof merged.governorDirectorMaxParallelBoosts !== 'number' ||
-    merged.governorDirectorMaxParallelBoosts < 0 ||
-    typeof merged.governorDirectorBoostDurationMin !== 'number' ||
-    merged.governorDirectorBoostDurationMin < 0 ||
-    typeof merged.governorDirectorBoostDurationMax !== 'number' ||
-    merged.governorDirectorBoostDurationMax < 0 ||
-    typeof merged.governorDirectorCatchThreshold !== 'number' ||
-    merged.governorDirectorCatchThreshold < 0 ||
-    typeof merged.governorDirectorFallbackEnabled !== 'boolean' ||
-    typeof merged.governorDirectorFallbackFromPool !== 'number' ||
-    merged.governorDirectorFallbackFromPool < 0 ||
-    typeof merged.governorDirectorFallbackMaxCount !== 'number' ||
-    merged.governorDirectorFallbackMaxCount < 0 ||
-    typeof merged.governorDirectorFallbackUntilPosition !== 'number' ||
-    merged.governorDirectorFallbackUntilPosition < 0 ||
-    typeof merged.governorDirectorFallbackProtectMs !== 'number' ||
-    merged.governorDirectorFallbackProtectMs < 0
+    merged.directorV4OutcomeStart > 0.55
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

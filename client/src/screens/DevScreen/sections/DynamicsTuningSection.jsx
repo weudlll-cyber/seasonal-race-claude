@@ -130,33 +130,11 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       ...prev,
       governorMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect,
       governorMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame,
-      governorDirectorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorEnabled,
-      governorDirectorPullStrength: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorPullStrength,
-      governorDirectorSettling: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorSettling,
       governorDirectorLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake,
       governorDirectorChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost,
       governorDirectorFrontPool: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFrontPool,
-      governorDirectorBoostOncePerRace:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostOncePerRace,
-      governorDirectorLingerBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLingerBrake,
       governorDirectorCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap,
       governorDirectorBoostHeadroom: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom,
-      governorDirectorMaxParallelBoosts:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorMaxParallelBoosts,
-      governorDirectorBoostDurationMin:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostDurationMin,
-      governorDirectorBoostDurationMax:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostDurationMax,
-      governorDirectorCatchThreshold: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCatchThreshold,
-      governorDirectorFallbackEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackEnabled,
-      governorDirectorFallbackFromPool:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackFromPool,
-      governorDirectorFallbackMaxCount:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackMaxCount,
-      governorDirectorFallbackUntilPosition:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackUntilPosition,
-      governorDirectorFallbackProtectMs:
-        DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs,
     }));
   }
 
@@ -789,29 +767,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </p>
       </SubCard>
 
-      {/* ── Block 4d: Pre-OUTCOME contest-injector "director" ── */}
+      {/* ── Block 4d: Shared PULK-director contest strengths + realism envelope ── */}
       <SubCard
-        title="Director (pre-OUTCOME contest injector)"
+        title="Director contest strengths (PULK)"
         onReset={resetGovernor}
         resetTestId="reset-governor"
-        subtitle="Pre-OUTCOME two-way front contest: event-driven CATCH-UPS toward the leader + active FALL-BACKS out of the front group + a leader brake, so the spread field reads as visible race action (catch-ups AND fall-backs). Faded to nothing before OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the ceiling cap. Max effect + max step per frame are the shared realism envelope (±clamp + slew) every term rides."
+        subtitle="The realism-bounded speed knobs the PULK-phase director (lead rotation) rides: a leader brake, a challenger boost cap, and the front-group pool. Faded to nothing before OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the ceiling cap. Max effect + max step per frame are the shared realism envelope (±clamp + slew) every term rides."
       >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Governor Director Enabled"
-              checked={dynamicsConfig.governorDirectorEnabled ?? false}
-              onChange={(e) => setDynamics('governorDirectorEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable Director (contest injector)
-            <InfoTooltip text="Master switch. When on, the director stages the pre-OUTCOME front contest (catch-ups + fall-backs + leader brake). Fades to 1.0 by OUTCOME; never touches target ranks (position + seed only)." />
-          </label>
-        </div>
         <div className={s.formGrid}>
           {[
             {
@@ -836,7 +798,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0,
               max: 0.15,
               step: 0.01,
-              tip: 'How hard the current leader (P1) is slowed so a chaser can close. Also the brake magnitude used to push a fall-back racer back. Only slows; never speeds anyone up. 0.10 = shipped.',
+              tip: 'How hard the live leader is slowed so a chaser can close. Only slows; never speeds anyone up. 0.10 = shipped.',
             },
             {
               key: 'governorDirectorChallengerBoost',
@@ -855,68 +817,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'How much faster than the fastest natural racer a boosted challenger may go. 0 = capped at the field; higher = catch-ups can burst forward. Auto-limited so total speed stays within ±20%. 0 = shipped.',
             },
             {
-              key: 'governorDirectorPullStrength',
-              label: 'Boost gain',
-              min: 0.01,
-              max: 0.12,
-              step: 0.01,
-              tip: 'Catch-up boost gain: speed force per racer-length of gap behind the leader (before the caps). Higher = a chaser closes faster.',
-            },
-            {
               key: 'governorDirectorFrontPool',
-              label: 'Catch-up pool (N)',
+              label: 'Front-group pool (N)',
               min: 1,
               max: 30,
               step: 1,
-              tip: 'Boosted challengers are picked from the front N on-track positions (leader excluded), so the boost only aims at a racer that can actually reach the front. 8 = shipped.',
-            },
-            {
-              key: 'governorDirectorMaxParallelBoosts',
-              label: 'Max parallel boosts',
-              min: 0,
-              max: 8,
-              step: 1,
-              tip: 'Maximum number of catch-ups running at once. The actual number VARIES over time as random-duration boosts start and end. 3 = shipped.',
-            },
-            {
-              key: 'governorDirectorBoostDurationMin',
-              label: 'Boost duration min (ms)',
-              min: 0,
-              max: 8000,
-              step: 100,
-              tip: 'Minimum of the random per-boost duration (ms), and the minimum idle gap before a slot boosts again. A boost also ends early once the challenger reaches the front group. 1500 = shipped.',
-            },
-            {
-              key: 'governorDirectorBoostDurationMax',
-              label: 'Boost duration max (ms)',
-              min: 0,
-              max: 12000,
-              step: 100,
-              tip: 'Maximum of the random per-boost duration (ms) / safety timeout. Must be ≥ the min. 4000 = shipped.',
-            },
-            {
-              key: 'governorDirectorCatchThreshold',
-              label: 'Catch threshold (lengths)',
-              min: 0.5,
-              max: 10,
-              step: 0.5,
-              tip: 'How close (in racer-lengths behind the leader) counts as "caught up" — a boost ends once the challenger reaches the front group. 2.0 = shipped.',
-            },
-            {
-              key: 'governorDirectorLingerBrake',
-              label: 'Linger brake (s)',
-              min: 0,
-              max: 3,
-              step: 0.1,
-              tip: 'Seconds the just-overtaken old leader keeps the brake after a pass, so the overtake settles instead of snapping back. 0 = instant. 0.6 = shipped.',
-            },
-            {
-              key: 'governorDirectorSettling',
-              label: 'Settling window',
-              min: 0,
-              max: 0.2,
-              step: 0.01,
-              tip: 'How long before the OUTCOME fade (in race progress) the director stops STARTING new catch-ups/fall-backs, so the field relaxes toward its natural order before the controller imposes the result.',
+              tip: 'Challengers are drawn from the front N on-track positions (leader excluded), so the boost only aims at a racer that can actually reach the front. 8 = shipped.',
             },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
@@ -950,22 +856,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           >
             <input
               type="checkbox"
-              aria-label="Director Boost Once Per Race"
-              checked={dynamicsConfig.governorDirectorBoostOncePerRace ?? false}
-              onChange={(e) => setDynamics('governorDirectorBoostOncePerRace', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Boost once per race
-            <InfoTooltip text="A racer that has had its catch-up turn leaves the pool for the rest of PULK, so the action rotates through the field instead of pushing the same racer repeatedly. ON = shipped." />
-          </label>
-        </div>
-        <div style={{ marginTop: '0.5rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
               aria-label="Director Ceiling Cap"
               checked={dynamicsConfig.governorDirectorCeilingCap ?? false}
               onChange={(e) => setDynamics('governorDirectorCeilingCap', e.target.checked)}
@@ -974,82 +864,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             Naturalness ceiling cap
             <InfoTooltip text="Caps a boosted challenger's resulting speed at the fastest natural re-roll draw, so the boost can never make a racer look unnaturally fast. Only limits the upside; the brakes are unaffected. ON = shipped." />
           </label>
-        </div>
-        {/* ── Fall-back (the second direction) ── */}
-        <div style={{ marginTop: '0.9rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Director Fallback Enabled"
-              checked={dynamicsConfig.governorDirectorFallbackEnabled ?? false}
-              onChange={(e) => setDynamics('governorDirectorFallbackEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable fall-back (push racers out of the front)
-            <InfoTooltip text="The second direction: actively brake racer(s) OUT of the front group down past a set position to open gaps others close. Off = catch-ups only. ON = shipped." />
-          </label>
-        </div>
-        <div className={s.formGrid} style={{ marginTop: '0.4rem' }}>
-          {[
-            {
-              key: 'governorDirectorFallbackFromPool',
-              label: 'Fall-back: from pool (N)',
-              min: 2,
-              max: 20,
-              step: 1,
-              tip: 'Fallers are picked from the front N on-track positions (leader excluded). 5 = shipped.',
-            },
-            {
-              key: 'governorDirectorFallbackMaxCount',
-              label: 'Fall-back: max count',
-              min: 0,
-              max: 6,
-              step: 1,
-              tip: 'Maximum number of fall-backs running at once (the actual number varies over time). 2 = shipped.',
-            },
-            {
-              key: 'governorDirectorFallbackUntilPosition',
-              label: 'Fall-back: until position',
-              min: 2,
-              max: 40,
-              step: 1,
-              tip: 'Brake the faller until it drops PAST this on-track rank, then release it — the bounded drop is the natural stop so fairness is not harmed. 12 = shipped.',
-            },
-            {
-              key: 'governorDirectorFallbackProtectMs',
-              label: 'Fall-back: protect (ms)',
-              min: 0,
-              max: 8000,
-              step: 100,
-              tip: 'After a faller is released it is NOT eligible as a catch-up target for this long (ms), so it actually falls back instead of being yanked straight forward again. 2500 = shipped.',
-            },
-          ].map(({ key, label, min, max, step, tip }) => (
-            <div className={s.formGroup} key={key}>
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                {label}
-                <InfoTooltip text={tip} />
-              </label>
-              <input
-                type="number"
-                className={s.input}
-                aria-label={label}
-                min={min}
-                max={max}
-                step={step}
-                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
-                }}
-              />
-            </div>
-          ))}
         </div>
       </SubCard>
 

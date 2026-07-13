@@ -44,17 +44,14 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       pulkBiasGain: 2.0,
       governorMaxEffect: 0.12,
       governorMaxStepPerFrame: 0.01,
-      // SHIPPED DEFAULT: the event-driven two-way director (catch-up + fall-back) + phase-split.
-      governorDirectorEnabled: true,
-      governorDirectorPullStrength: 0.06,
-      governorDirectorSettling: 0.05,
+      // SHIPPED DEFAULT: the shared PULK-director contest strengths (rides the realism envelope).
       governorDirectorLeaderBrake: 0.1,
       governorDirectorChallengerBoost: 0.06,
-      governorDirectorLingerBrake: 0.6,
       governorDirectorCeilingCap: true,
       // DEFAULT-FLIP 2026-07-13: shipped world moved to the swept + eye-tested world (OutcomeStart 0.5,
       // boostHeadroom 0.10, dropDepth 8). STAGE-3 CLEANUP: the directorV4Enabled + pulkLeadRotationEnabled
-      // toggles were REMOVED — choreography + rotation are now unconditional. Re-baselined to survivors.
+      // toggles were REMOVED — choreography + rotation are now unconditional. STAGE-4 CLEANUP: the classic
+      // reactive director + its knobs were REMOVED — only the shared strengths survive. Re-baselined.
       governorDirectorBoostHeadroom: 0.1,
       directorV4SuppressChaosBonusB1: false,
       directorV4Intensity: 0.6,
@@ -66,16 +63,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       directorV4ResolveB5: 0.6,
       directorV4OutcomeStart: 0.5, // DEFAULT-FLIP 2026-07-13 (reopened PULK [0.25,0.5))
       governorDirectorFrontPool: 8,
-      governorDirectorBoostOncePerRace: true,
-      governorDirectorMaxParallelBoosts: 3,
-      governorDirectorBoostDurationMin: 1500,
-      governorDirectorBoostDurationMax: 4000,
-      governorDirectorCatchThreshold: 2.0,
-      governorDirectorFallbackEnabled: true,
-      governorDirectorFallbackFromPool: 5,
-      governorDirectorFallbackMaxCount: 2,
-      governorDirectorFallbackUntilPosition: 12,
-      governorDirectorFallbackProtectMs: 2500,
       phaseSplitBonusEnabled: true,
       areaBonusEarly: 1.0,
       areaBonusPulk: 0,

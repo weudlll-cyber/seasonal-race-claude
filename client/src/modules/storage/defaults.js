@@ -289,19 +289,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // SAME keys — single source, no second copy.
   governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
   governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
-  // SHIPPED DEFAULT: the PULK-action front contest is ON out of the box — an event-driven two-way
-  // director (raceGovernor.js): event-driven catch-ups TOWARD the leader + active fall-backs OUT of
-  // the front group + a leader-catch brake. Rank-blind (position + seed only, never targetRank),
-  // faded to nothing by OUTCOME so the finish order (fairness) is delegated to the OUTCOME
-  // controller + the naturalness ceiling-cap. Values below are a starting set for the owner
-  // eye-test; they are DevScreen-tunable.
-  governorDirectorEnabled: true, // director master switch — ON (the shipped front contest)
-  governorDirectorPullStrength: 0.06, // catch-up boost gain: speed force per racer-length of gap behind the leader
-  governorDirectorSettling: 0.05, // settling window (progress) before the fade: stop starting new events
-  // Leader-catch: brake the instantaneous P1; linger-brake the just-overtaken old leader.
-  governorDirectorLeaderBrake: 0.1, // brake on P1 (also the fall-back brake magnitude; ≤ 0.15)
+  // SHIPPED shared contest STRENGTHS (governorDirector* namespace): the realism-bounded speed knobs
+  // the PULK-phase director (applyPulkLeadRotation, raceGovernor.js) rides. Rank-blind (position +
+  // seed only, never targetRank), faded to nothing by OUTCOME so the finish order (fairness) is
+  // delegated to the OUTCOME controller + the naturalness ceiling-cap. DevScreen-tunable.
+  governorDirectorLeaderBrake: 0.1, // brake on the live leader (≤ 0.15)
   governorDirectorChallengerBoost: 0.06, // forward boost cap on a catching challenger toward the leader
-  governorDirectorLingerBrake: 0.6, // seconds the just-overtaken old leader keeps the brake
   governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
   // Additive headroom (speed-factor points) ABOVE the natural band max for the director ceiling: lets
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
@@ -333,28 +326,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55. Off → the
   // reactive 0.5/0.55 corridor. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   directorV4OutcomeStart: 0.5,
-  // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
-  // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
-  // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at
-  // once; the in-flight count VARIES as random durations start/end. boostOncePerRace rotates the action.
-  governorDirectorFrontPool: 8, // catch-up pool = front N on-track positions (leader excluded)
-  governorDirectorBoostOncePerRace: true, // a challenger leaves the pool after its catch-up turn
-  governorDirectorMaxParallelBoosts: 3, // max simultaneous catch-ups (actual number varies over time)
-  governorDirectorBoostDurationMin: 1500, // ms: min random catch-up duration (also the min idle gap)
-  governorDirectorBoostDurationMax: 4000, // ms: max random catch-up duration / safety timeout
-  governorDirectorCatchThreshold: 2.0, // racer-lengths behind the leader that counts as "caught up"
-  // Active fall-back (the second direction): push racer(s) OUT of the front group to open gaps.
-  governorDirectorFallbackEnabled: true, // master switch for the fall-back mechanism
-  governorDirectorFallbackFromPool: 5, // fall-back pool = front N positions (leader excluded) to pick fallers from
-  governorDirectorFallbackMaxCount: 2, // max simultaneous fall-backs (count varies over time)
-  governorDirectorFallbackUntilPosition: 12, // brake the faller until it drops PAST this rank, then release
-  governorDirectorFallbackProtectMs: 2500, // ms a released faller is NOT eligible as a catch-up target
+  // Front-group pool: front N on-track positions (leader excluded) the director draws challengers from.
+  governorDirectorFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside
   // [pulkStart, pulkEnd): 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a
   // permanent outsider slot brings fresh blood from deeper in the field, and the dethroned leader is
   // braked (distance-based) until it has fallen `dropDepthLengths` behind — the depth lever. Contest
-  // STRENGTHS reuse the existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/
-  // frontPool + the maxEffect/maxStep/ceiling envelope) — no duplicated values.
+  // STRENGTHS reuse the existing governorDirector* knobs (leaderBrake/challengerBoost/frontPool +
+  // the maxEffect/maxStep/ceiling envelope) — no duplicated values.
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
   pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever
   pulkLeadRotationOutsiderMaxReachLengths: 15, // outsider reachability cap (racer lengths)
