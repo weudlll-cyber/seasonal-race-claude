@@ -86,12 +86,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusPost: 1,
       // Reopened PULK (feat/pulk-reopen).
       racePlanPulkStart: 0.25,
-      // M2 pack cohesion spring.
-      pulkSpringEnabled: false,
-      pulkSpringGain: 2.0,
-      pulkSpringDeadZoneLengths: 1.0,
-      // M1 PULK front contest.
-      governorDirectorPulkContestEnabled: false,
+      // STAGE-1 CLEANUP 2026-07-13: the M1 front-contest flag + the M2 cohesion-spring config keys were
+      // removed — snapshot re-baselined to the surviving keys (intended removal, not a regression).
       // PulkRaceDirector.
       pulkRaceDirectorEnabled: false,
       pulkRaceMaxLeadHoldMs: 2000,

@@ -10,8 +10,7 @@
 //   +   heldTop5Overtakes     — are the lead changes HELD, not flicker
 //   +   fairness (band-reach + Holm) — shown, NOT gated, so the fairness cost of faster rotation is visible
 //
-// M1 (governorDirectorPulkContestEnabled) and M2 (pulkSpringEnabled) are NEVER set → default false
-// (defaults.js) → the director is the ONLY governorMult writer. Orchestration only.
+// PulkRaceDirector is the only governorMult writer enabled by this runner. Orchestration only.
 //
 // Usage: node scripts/night-sweep/run-pulk-race-action.mjs [--races=100] [--conc=6]
 // ============================================================

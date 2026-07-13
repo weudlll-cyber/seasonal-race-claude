@@ -280,13 +280,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // nudged toward the pulk centroid by this gain × normalised gap, so the field stays together
   // (the always-on cohesion mechanism). 0 = no cohesion; higher = tighter pack. 2.0 = shipped.
   pulkBiasGain: 2.0,
-  // M2 — PACK COHESION SPRING (SWEEP-ONLY, flag-gated; default OFF → the 3-racer pulkBiasGain above is
-  // unchanged, byte-identical). When ON, the PULK re-roll bias is generalised to the WHOLE non-hero
-  // pack (pull each draw toward the pack centroid) with a dead zone in racer lengths. Gain reuses the
-  // pulk-bias scale; dead zone is the honest-range half-width. Heroes exempt. CONCEPT-COHESION ch.1.
-  pulkSpringEnabled: false,
-  pulkSpringGain: 2.0,
-  pulkSpringDeadZoneLengths: 1.0,
   // ── Pre-OUTCOME contest-injector "director" — SHIPPED ON (winning PULK-action) ──────
   // A rank-BLIND rotating spotlight (raceGovernor.js) that stages a front contest before OUTCOME
   // via r.governorMult. maxEffect + maxStepPerFrame are the shared REALISM ENVELOPE (±12% clamp +
@@ -359,13 +352,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorFallbackMaxCount: 2, // max simultaneous fall-backs (count varies over time)
   governorDirectorFallbackUntilPosition: 12, // brake the faller until it drops PAST this rank, then release
   governorDirectorFallbackProtectMs: 2500, // ms a released faller is NOT eligible as a catch-up target
-  // M1 — PULK-window FRONT CONTEST (SWEEP-ONLY, flag-gated; default OFF → byte-identical). When ON
-  // (and v4 ON), applyPulkFrontContest (raceGovernor.js) brakes the live P1 + boosts live front
-  // challengers, scoped to the live PULK window [pulkStart, pulkEnd). It REUSES the existing director
-  // knobs for its strengths — governorDirectorLeaderBrake / …ChallengerBoost / …PullStrength /
-  // …FrontPool / …CatchThreshold + the maxEffect/maxStepPerFrame realism envelope — so this is the
-  // only new flag. No effect under v4-OFF (the reactive director owns the pre-OUTCOME contest there).
-  governorDirectorPulkContestEnabled: false,
   // PulkRaceDirector (v4-composable PULK-scoped GROUP contest + forced lead-rotation) — SWEEP/opt-in,
   // default OFF → shipped game unchanged. When ON (and v4 ON) it runs the SAME group-director mechanism
   // (applyGovernor, pulkOnly mode) inside [pulkStart, pulkEnd) while heroes run their curves (heroes
@@ -383,8 +369,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // until it has fallen `dropDepthLengths` behind — the depth lever. Contest STRENGTHS reuse the
   // existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/frontPool + the
   // maxEffect/maxStep/ceiling envelope) — no duplicated values. Only the four keys below are new.
-  // NOTE: PulkLeadRotation, PulkRaceDirector, and M1 (governorDirectorPulkContestEnabled) all write
-  // governorMult — enable only ONE at a time.
+  // NOTE: PulkLeadRotation and PulkRaceDirector both write governorMult — enable only ONE at a time.
   pulkLeadRotationEnabled: true,
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
   pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever

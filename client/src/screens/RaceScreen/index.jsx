@@ -70,7 +70,7 @@ import {
   applyPulkLeadRotation,
   computeDirectorCeiling,
 } from '../../modules/raceGovernor.js';
-import { meanDrawnBodyLen, lenScaleFrom } from '../../modules/raceLengths.js';
+import { meanDrawnBodyLen } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -1192,10 +1192,7 @@ export default function RaceScreen() {
                       BASE_SPEED_MAX / BASE_SPEED_MEAN,
                       st.racers,
                       physicsTs,
-                      st.raceProgress,
-                      // M2 spring dead-zone geometry (shared racer-length scale). Used only when the
-                      // spring flag is on (default off) → byte-identical to today otherwise.
-                      { lenScale: lenScaleFrom(pathLengthPx, govMeanBodyLen), isOpen: isOpenTrack }
+                      st.raceProgress
                     )
                   : rawSample;
                 const newTarget = Math.max(
