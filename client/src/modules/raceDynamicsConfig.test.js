@@ -52,8 +52,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorChallengerBoost: 0.06,
       governorDirectorLingerBrake: 0.6,
       governorDirectorCeilingCap: true,
-      governorDirectorBoostHeadroom: 0.0,
-      directorV4Enabled: false,
+      // DEFAULT-FLIP 2026-07-13: shipped world moved to the swept + eye-tested v4 world (v4 ON,
+      // OutcomeStart 0.5, boostHeadroom 0.10, PulkLeadRotation ON, dropDepth 8). Re-baselined to the
+      // new defaults — intended default-flip, not a regression. See pre/backup default-flip-v4-world.
+      governorDirectorBoostHeadroom: 0.1,
+      directorV4Enabled: true,
       directorV4SuppressChaosBonusB1: false,
       directorV4Intensity: 0.6,
       directorV4PackBandStrictness: 0.5,
@@ -62,7 +65,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       directorV4ResolveB3: 0.7,
       directorV4ResolveB4: 0.65,
       directorV4ResolveB5: 0.6,
-      directorV4OutcomeStart: 0.25,
+      directorV4OutcomeStart: 0.5, // DEFAULT-FLIP 2026-07-13 (reopened PULK [0.25,0.5))
       governorDirectorFrontPool: 8,
       governorDirectorBoostOncePerRace: true,
       governorDirectorMaxParallelBoosts: 3,
@@ -93,9 +96,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       pulkRaceDirectorEnabled: false,
       pulkRaceMaxLeadHoldMs: 2000,
       // PulkLeadRotation (successor core loop).
-      pulkLeadRotationEnabled: false,
+      pulkLeadRotationEnabled: true, // DEFAULT-FLIP 2026-07-13
       pulkLeadRotationAttackerSlots: 2,
-      pulkLeadRotationDropDepthLengths: 2,
+      pulkLeadRotationDropDepthLengths: 8, // DEFAULT-FLIP 2026-07-13 (D8 = fairness-safe depth)
       pulkLeadRotationOutsiderMaxReachLengths: 15,
       pulkLeadRotationDeadlockTimeoutMs: 12000,
       pulkLeadRotationMinHoldMs: 750,

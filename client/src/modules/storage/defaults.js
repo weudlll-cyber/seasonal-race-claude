@@ -313,11 +313,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Additive headroom (speed-factor points) ABOVE the natural band max for the director ceiling: lets
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
-  governorDirectorBoostHeadroom: 0.0,
+  governorDirectorBoostHeadroom: 0.1,
   // v4 choreography (flag-gated, default OFF → whole v4 path is dead code, byte-identical to today).
   // When ON, one designated hero racer is steered along a hand-authored position-over-time curve by
   // the existing trajectory controller from the choreo start; everything else is unchanged.
-  directorV4Enabled: false,
+  directorV4Enabled: true,
   // v4 drama intensity (0..1, the future Action-slider backing) and the loose-pack bandStrictness
   // that lets heroes weave through when v4 is ON (the pack runs at this strictness; heroes track
   // their curve exactly). Both only take effect when directorV4Enabled — off → byte-identical.
@@ -342,7 +342,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // steered from the chaos→choreo boundary, byte-identical to the shipped behaviour; raising it reopens
   // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55. Off → the
   // reactive 0.5/0.55 corridor. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
-  directorV4OutcomeStart: 0.25,
+  directorV4OutcomeStart: 0.5,
   // Catch-up (event-driven): pick challengers from the front frontPool positions (leader excluded);
   // each boosts for a RANDOM duration [boostDurationMin, boostDurationMax] ms, or until it reaches
   // the front group (within catchThreshold racer-lengths of the leader). Up to maxParallelBoosts at
@@ -385,9 +385,9 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // maxEffect/maxStep/ceiling envelope) — no duplicated values. Only the four keys below are new.
   // NOTE: PulkLeadRotation, PulkRaceDirector, and M1 (governorDirectorPulkContestEnabled) all write
   // governorMult — enable only ONE at a time.
-  pulkLeadRotationEnabled: false,
+  pulkLeadRotationEnabled: true,
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
-  pulkLeadRotationDropDepthLengths: 2, // ex-leader brake release depth (racer lengths); the depth lever
+  pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever
   pulkLeadRotationOutsiderMaxReachLengths: 15, // outsider reachability cap (racer lengths)
   pulkLeadRotationDeadlockTimeoutMs: 12000, // per-boost safety net (never the normal path)
   pulkLeadRotationMinHoldMs: 750, // fresh-P1 hold = smart-camera SM_HOLD_MS → no sub-750ms P1 flicker
