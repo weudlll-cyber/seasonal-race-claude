@@ -264,7 +264,7 @@ CONCEPT. Do not keep tuning."*
 ## 11. What I would NOT do, and what gets DELETED once this validates
 
 - **NOT** a per-frame brake/spring as the primary mechanism; **NOT** regulate total spread; **NOT**
-  resurrect the reactive director as a spreader; **NOT** a single-gap rip-closer; **NOT** band-strictness
+  resurrect the removed reactive director as a spreader; **NOT** a single-gap rip-closer; **NOT** band-strictness
   as a spreader.
 - **DELETE / SUBSUME** once validated: `pulkRacerIds = shuffled.slice(0,3)` and the pool selection
   (racePlanner.js:208); the **PULK-phase gate inside `computePulkBiasedTarget`** (racePlanner.js:615, the
@@ -287,8 +287,8 @@ CONCEPT. Do not keep tuning."*
   unchanged; duty cycle reported.* **Owner eye-test:** less torn without looking glued? If fairness breaks
   here, the whole approach is falsified — stop.
 - **Stage 2 — add the early re-draw (channel 2)** for cars the interval cannot hold. **Build requirements
-  (non-negotiable, from source):** it draws from a **dedicated per-racer PRNG stream** (governor precedent,
-  raceGovernor.js:82) so the shared stream and the regression diff stay intact; it reads the four re-roll
+  (non-negotiable, from source):** it draws from a **dedicated per-racer PRNG stream**
+  (its own seeded stream, separate from the shared re-roll stream) so the shared stream and the regression diff stay intact; it reads the four re-roll
   controls **live** (never a race-start snapshot). *Gate: same fairness; the exact regression diff still
   reproduces a no-feature race byte-for-byte; overshoot-over-G shrinks; duty cycle stays low (watch the
   leader — §4.2 caveat and the "additional draws" fairness measurement).* **Owner eye-test.** If the
@@ -300,7 +300,8 @@ CONCEPT. Do not keep tuning."*
   telemetry on the DevScreen.** *Gate: C6 — ≤ ~5 explained controls + 1 Action slider.* **Owner eye-test is
   the final judge; the abort rule (D6) applies.**
 - **Only if the eye still sees chasms after Stages 1–2:** Stage 5 — the bounded brake fallback (channel 3).
-- The reactive director stays the shipped fallback until the owner's eye passes (C4).
+- Until the owner's eye passes (C4), the abort rule reverts to the current shipped world (choreo +
+  PulkLeadRotation) — there is no separate fallback mechanism to keep.
 
 Every threshold here (G, gain, dead zone, window) is set by the **owner's eye in racer lengths**, never by
 optimising a metric — the metrics have lied three times; the eye has not.

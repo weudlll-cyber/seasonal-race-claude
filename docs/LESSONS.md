@@ -2743,3 +2743,86 @@ Plain language. Each lesson is why a whole week went into measurement, not featu
   written into a doc as a mechanism that does not exist. The fix each time: **verify against the code,
   not the comment; and when you delete a mechanism, delete its comment in the same breath.** Grep
   excluding comment lines before you claim a path exists.
+
+---
+
+# 2026-07-14 — THE GREAT PULK CLEANUP: race-dynamics lessons (from the choreo + PulkLeadRotation rebuild)
+
+These are the durable lessons from the mechanism rebuild + the six-stage cleanup that reduced the
+race to its one shipped world (choreo hero-choreography + PulkLeadRotation). The rank-vs-gap and
+stale-comment/functionless-key lessons are already captured above (2026-07-10 section + L160–162);
+what follows is what was not.
+
+## Lesson 163 — The Race Is a Cast, Not a Controller
+Weeks went into building a *controller* to steer the field (bound the leader, spread the pack). The
+measurement showed the existing servo + curve machinery **already** delivered the target — a deep-cast
+hero reached the front 92–100% of the time on all 10 tracks and still finished fair; the front could be
+made to trade the lead inside the fair envelope. The engine was never the problem; the **casting** was
+(heroes drawn only from the future top-5, pulled front before the race opened, drama clamped away). The
+fix was to rebuild the *caster* — author a small cast dramatic journeys decoupled from their fixed
+finish — not to add a new steering machine. Before building a mechanism, check whether the existing one
+can already produce the target with better *inputs*.
+
+## Lesson 164 — Gentle Levers Only; a Strong One Backfires
+The in-envelope levers that create action are **gentle**: a ~−6% brake on the 1–2 cars directly ahead
+of a charging hero halves its stuck-in-traffic time (churn → clean pass); a ~−6% brake on whichever
+front hero is momentarily leading provokes a lead change. Their **strong** versions backfire — a hard
+brake, or a brake+boost combo, produces flicker/yo-yo, the opposite of the intended read. Corollary for
+authored curves: bound the instantaneous cross-rate to ≈1 rank per servo-settle (~1 s); a ≥2-rank
+instantaneous differential pins one racer at the +cap and another at the −cap = the same flicker.
+
+## Lesson 165 — Keep the Field at the Shipped ±8% Spread
+Tighter density buys a higher band-reach number but costs the show: a "comeback" in a tight bunch is a
+few car-lengths in a scrum. The shipped ±8% spread is the fairest on the native per-row-win test **and**
+leaves real distance between cars, so a hero closing that distance is *visible movement*. Do not chase a
+band-reach metric into a density that erases the thing the metric can't see.
+
+## Lesson 166 — Shipped == Measured
+Every governor/director sweep ran with `--governorDirectorEnabled=false`, while the shipped default was
+`true` — so months of measurements described a world the game never shipped. The general rule: **measure
+the exact config you ship.** A sweep that flips a shipped-on mechanism off (or a flagless sim run that
+omits the shipped split flags) proves nothing about the shipped race. Make the harness stamp/echo its
+world (the `raceConfigWorld.js` world-hash) so "measured == shipped" is verifiable, not assumed.
+
+## Lesson 167 — Anchor a New Phase Boundary to a Measured Boundary, Not a Literal
+When a new boundary must line up with an existing one, anchor it to that boundary's **variable**
+(`pulkStart`), never to an independent literal that happens to share its value today. `pulkStart` and
+`choreoOutcomeStart` were both 0.25 by default but are independent; a measurement anchored to the wrong
+one silently diverges the moment the owner raises the other. Anchor to the thing you actually measured.
+
+## Lesson 168 — A Feasibility Table Measured at 40 Racers Does Not Transfer to ~100
+The reach-front / cast-depth table was measured at 40 racers and expressed as a field *fraction*. The
+fraction is position-invariant but NOT climb-difficulty-invariant: a 50%-back cast on a ~100-racer open
+track is ~2.5× the ranks of traffic to clear, and traffic is the dominant churn source — it scales up
+with the field. Re-measure depth feasibility at the large field before trusting the table there.
+
+## Lesson 169 — Turn a Bonus Off With an Instant Cut at the Boundary, Not a Fade
+The measured world zeroed the areaBonus *instantly* at the chaos boundary. Re-anchoring an
+`easeInOutCubic` fade to the boundary instead lets the bonus linger ~1.5 s past it — an unmeasured,
+pointless tail. When a phase ends a contribution, cut it at the boundary; don't fade across it.
+
+## Lesson 170 — An Unguarded Duplicate Is a Latent Seam
+The sim carried a hand-copied `RACER_CONFIGS` table with zero drift *today* — a seam that will drift
+silently the moment the shipped source changes, with no test to catch it. Either import the single
+source or add a guarding parity test; "identical right now" is not a guarantee, it is a countdown.
+
+## Lesson 171 — Hand-Mirrored Orchestration Is Untrusted Without a Per-Frame Parity Harness
+The sim shares the shipped physics *modules*, but the main race-loop **orchestration** (order of forces,
+re-roll timing, pass sequencing) is hand-mirrored from the browser with no automated per-frame position
+comparison. Shared modules give factor-level parity (see FORCE-PARITY.md), but frame-level fidelity of
+the loop that calls them stays UNTRUSTED until a per-frame harness passes at HEAD. Know which level your
+parity guarantee actually covers.
+
+## Lesson 172 — Audit Every Metric by the Space the Viewer Perceives; Separate MECHANISM from QUALITY
+Generalises the rank-vs-gap lesson. A **mechanism** metric (overtake count, closing-speed ratio, a
+per-frame flag) is valid even when the outcome space is wrong. A **quality** claim (comeback, "good
+race", fairness) in the wrong space is void by construction — a 5th-place finish 15 lengths back scores
+like a real close comeback. For every metric ask: what space does the viewer perceive this in, and does
+the metric live in that space? Quality lives in gap space (racer lengths), never rank space.
+
+## Lesson 173 — Coupled Actuators in Overlapping Windows Cannot Be Tuned in Isolation
+When two mechanisms act in the same time window on the same outcome (the cohesion dice and the servo
+sorting both shape gap size, overlapping temporally), there is no servo-free regime to tune the dice in.
+Only ~37–45% of over-wide holes were servo-driven — the dice still have a real job (the rest are
+drift/brake holes), but any tuning must account for the other actuator's interference rather than
+pretend it can be isolated.

@@ -56,7 +56,7 @@ Every row was verified against the source directly (not only via the inventory s
 | 14 | `rowEnvMult` (start-row phase envelope) | index.jsx:1146 → raceStep.js:46-55 | advanceRacerT (sim:1347) → same fn | **IDENTICAL** (single source — INFRA step 4) |
 | 15 | `trajectoryMult` (P-controller + easeInOutCubic) | index.jsx:1028-1042 ← racePlanner.js `update` | sim-fairness.mjs:1078-1090 ← same fn | **IDENTICAL-BY-SHARED-MODULE** |
 | 16 | `areaBonusMult` (band bonus + phase-split) | index.jsx:1025 (threaded) ← racePlanner.js `update` | sim-fairness.mjs:1078 ← same fn | **IDENTICAL** (single source — INFRA step 5A, this commit) |
-| 17 | `governorMult` (pre-OUTCOME director) | index.jsx:1057-1073 ← raceGovernor.js `applyGovernor` | sim-fairness.mjs:1110-1116 ← same fn | **IDENTICAL-BY-SHARED-MODULE** — same gate: `racePlan(Controller) && governorDirectorEnabled && !directorV4Enabled` |
+| 17 | `governorMult` (PULK-phase lead rotation) | index.jsx ← raceGovernor.js `applyPulkLeadRotation` | sim-fairness.mjs ← same fn | **IDENTICAL-BY-SHARED-MODULE** — runs whenever the race-plan controller exists (unconditional); faded to exactly 1.0 by OUTCOME via `governorPhaseWeight` |
 | 18 | `dt` = 1.0 per step | raceStep.js:73 (`FIXED_DT/16`) | sim-fairness.mjs:1352 (`DT/16`) | **IDENTICAL**. Browser rAF accumulator caps at 2 catch-up steps/frame — real-time *pacing*, deterministic in `physicsTs`; not a force. |
 | 19 | Finish clamp `min(advanced, finishT+0.001)` | raceStep.js:85 | raceStep.js:85 | **IDENTICAL** (shared) |
 | 20 | Finish detection (`r.t≥finishT → finishRank`) | index.jsx:1187-1192 | sim-fairness.mjs:~1785 | **IDENTICAL** |
@@ -91,14 +91,12 @@ the sim freezes finished racers. This never touches `finishRank` or `finishTime`
 the finish crossing), so **no fairness or gap-space metric is affected** — it is purely cosmetic.
 Named so it is not mistaken for a measurement bug later.
 
-**O5 — auxiliary sweep scripts do not thread the phase-split.** The main fairness sim
-(sim-fairness.mjs) now applies the shipped areaBonus split natively (INFRA 5A), but the smaller
-analysis tools — `compare-zones.mjs`, `compare-sets.mjs`, `param-sweep-full.mjs`,
-`sweep-lateral.mjs`, `sim-sweep.mjs` — call `createRacePlan` with only
-`{ bonusStrengthMultiplier }` and **no `phaseSplitBonusEnabled`**, so they run WITHOUT the split
-(as they always did). They therefore diverge from the browser's shipped split. They are separate
-tools, not "the sim," and were already in this state before 5A — but if any of them is used to
-judge shipped behaviour, its numbers omit the phase-split. Named, not fixed.
+**O5 — RESOLVED (auxiliary sweep tools deleted).** This seam was the smaller analysis tools
+(`compare-zones.mjs`, `compare-sets.mjs`, `param-sweep-full.mjs`, `sweep-lateral.mjs`,
+`sim-sweep.mjs`) calling `createRacePlan` without `phaseSplitBonusEnabled`, so they ran without
+the shipped areaBonus split. All of those tools were deleted in the sweep cleanup (Stage 6a/6a-2);
+the only surviving sim tooling is `sim-fairness.mjs` (which applies the split natively),
+`overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs`, and `fingerprint-default.mjs`. Seam closed.
 
 **O6 — shared-module parity is conditional on identical geometry.** Rows 6, 12, 13, 15, 17 are
 "identical *by shared module*." That guarantee holds only while both engines feed those functions
@@ -111,5 +109,5 @@ future geometry change re-opens a gap without touching any force directly.
 At the shipped config, after INFRA steps 4 and 5A, **no force in the t-update diverges between
 browser and sim.** The two known divergences (`rowEnvMult`, `areaBonusMult`) are closed at the
 source. The open items above are seams (O1, O3, O6), a cosmetic browser-only effect (O4), and
-sim-only tooling (O2, O5) — none is an active divergence in a default shipped race. No third
-active force divergence was found.
+sim-only tooling (O2) — none is an active divergence in a default shipped race (O5 is now closed —
+the auxiliary tools were deleted). No third active force divergence was found.

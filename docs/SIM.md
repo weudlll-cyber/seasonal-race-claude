@@ -53,13 +53,15 @@ The sim imports the identical JavaScript modules the browser uses:
 
 | File | Purpose |
 |---|---|
-| `scripts/sim-fairness.mjs` | Main headless simulator — single run, full metric report |
-| `scripts/param-sweep.mjs` | 5-axis Phase 1 sweep (cartesian or OAT combos) |
-| `scripts/param-sweep-full.mjs` | 8-axis autonomous sweep (LHS + extension + Phase 2) |
-| `scripts/sweep-lateral.mjs` | Lateral-velocity targeted sweep (feat/lateral-velocity) |
-| `scripts/param-sweep-braking.mjs` | Braking-parameter focused sweep |
-| `scripts/param-sweep-braking-phase2.mjs` | Phase 2 validation for braking sweep |
-| `scripts/param-sweep-phase2.mjs` | Standalone Phase 2 validator |
+| `scripts/sim-fairness.mjs` | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
+| `scripts/overnight-pulklr-sweep.sh` | The ONE live regression sweep — configs A0 (mechanism-off floor) vs D2/D8 (PulkLeadRotation drop-depth 2/8) across the 10 standard tracks |
+| `scripts/pp-pulklr-sweep.mjs` | Post-processor for the overnight sweep — emits the morning per-track table + PASS/FAIL vs A0 |
+| `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical |
+
+> The standalone `param-sweep*` scripts (5-axis, 8-axis LHS+Phase-2, braking, lateral) that older
+> revisions of this doc listed have all been **deleted**. Sweeping is now done through the
+> flag-driven `sim-fairness.mjs` harness (the same modules the browser runs) plus the two
+> `pulklr` scripts above; `fingerprint-default.mjs` gates default-behaviour identity.
 
 ---
 
@@ -132,27 +134,35 @@ node scripts/sim-fairness.mjs --track=space-sprint --racer=rocket --dur=60 --rac
 node scripts/sim-fairness.mjs --races=200 --seed=42 --race-plan=true
 ```
 
-### Running a parameter sweep
+### Running a sweep
 
-**Phase 1 — broad exploration (1000 combos, 10 races each):**
+There is no standalone sweep binary. A sweep is `sim-fairness.mjs` invoked repeatedly with
+different mechanism flags — the same modules the browser runs — plus two `pulklr` helper scripts.
 
-```sh
-node scripts/param-sweep-full.mjs
-```
-
-**Quick sanity check (9 combos, 3 races each):**
+**The one live regression sweep (configs A0 vs D2/D8, 10 tracks):**
 
 ```sh
-node scripts/param-sweep-full.mjs --quick
+bash scripts/overnight-pulklr-sweep.sh          # writes results under results/sweep-pulklr/
+node scripts/pp-pulklr-sweep.mjs                # post-process into the morning PASS/FAIL table
 ```
 
-**Phase 1 only (no Phase 2 validation):**
+A0 is the mechanism-off floor (`--race-plan=false` — choreography + lead rotation are
+unconditional, so this flag is the only way to turn them off); D2/D8 run the mechanism ON with
+`--pulkLeadRotationDropDepthLengths=2` and `=8`. See the script header for the pinned world flags.
+
+**Ad-hoc single-knob sweep** — drive the harness directly and vary one flag:
 
 ```sh
-node scripts/param-sweep-full.mjs --phase1only
+node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=60 \
+     --races=100 --seed=1 --pulkLeadRotationDropDepthLengths=4
 ```
 
-The sweep writes progress to `client/tmp/sweep-full-progress.log` and the final report to `client/tmp/full-sweep-report.md`.
+**Byte-identity gate (before/after any change to prove the default game is unchanged):**
+
+```sh
+node scripts/fingerprint-default.mjs before     # run on the base
+node scripts/fingerprint-default.mjs after      # run after the change; compare the two SHA-256 hashes
+```
 
 ### Behavior config overrides
 
@@ -389,21 +399,21 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 ---
 
-### Governor field-shape telemetry (`stats.governorShape`)
+> **Removed:** the classic reactive director / governor (`applyGovernor`, `arcT`,
+> `--governorEnabled`, `--governorDirectorEnabled`, `governorShape`) that older revisions of
+> this doc documented has been **deleted**. The only shipped field-shaping mechanism now is the
+> unconditional choreography + PulkLeadRotation (see the field-shape / gap metrics below and the
+> Gap-space observers in §8). No `--governor*` flag exists.
 
-**Flag:** surfaced automatically when the governor ran (`--governorEnabled=true` or `--governorDirectorEnabled=true`).
+---
 
-**Fields (all in *racer-lengths* — arc-distance ÷ mean drawn body length, so they are lap-count- and track-independent):**
+### Field-shape / gap metrics (in *racer-lengths*)
 
-| Field | Meaning |
-|---|---|
-| `govGapLenMean` | mean leader→**median** gap (large = the leader is far ahead of the pack) |
-| `govGapLenMax` | peak leader→median gap over the race |
-| `govGap2ndLenMean` | mean leader→**2nd** gap (small = a close, contested front) |
-| `govFieldLenMean` | field spread p10−p90 (how strung-out the pack is) |
-| `govRankSwapRate` | adjacent rank swaps per step (raw position churn across the whole field) |
-
-**Where it lives:** per race in `rawData[]` (identical across racers of a race) and aggregated per combo in `results[].stats.governorShape`. It is computed by the governor block in `runSingleRace` (single source: `arcT` + the governor's `lenScale`); this doc-stage only *propagates* it — the earlier code computed the values on the per-race result **array** but the `rawData` spread emitted per-racer **elements**, so they were dropped (and the combo copy was mis-filed under `avgNaturalness`). Nothing about *how* they are computed changed.
+The former governor telemetry is now covered by the front-action gap fields
+(`gap2ndLenMean` / `gapMedLenMean`, below) and by the dedicated **gap-space observers**
+(`--gap-metrics`, `scripts/sim/observers/gap-metrics.mjs`) documented in §8. All are reported in
+*racer-lengths* (arc-distance ÷ mean drawn body length), so they are lap-count- and
+track-independent.
 
 ---
 
@@ -411,7 +421,7 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 **Flag:** `--front-action` (read-only observer, breakaway-diag pattern — a run without the flag is byte-identical). Raw per-combo aggregates are also written to `results/front-action/front-action-<diagLabel>.json`.
 
-**What it measures:** the owner's priority-1 experience — a *contested, lead-changing FRONT* — over the **pre-OUTCOME / governor-active window only** (`progress < corridorStart`). It is the sweep's action objective.
+**What it measures:** the owner's priority-1 experience — a *contested, lead-changing FRONT* — over the **pre-OUTCOME window only** (`progress < corridorStart`). It is the sweep's action objective.
 
 | Field | Meaning | Static procession | Contested front |
 |---|---|---|---|
@@ -419,56 +429,41 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 | `distinctP1Mean` | # of racers who ever hold P1 | 1–2 | several |
 | `leadChangeRate` | P1 changes ÷ pre-OUTCOME step | ~0 | high |
 | `podiumShuffleRate` | fraction of steps where the ordered top-3 changes (a fight for the LEAD vs churn deep in the field) | ~0 | high |
-| `gap2ndLenMean` / `gapMedLenMean` | **front reach** — leader→2nd / leader→median in racer-lengths (*reuses the governor gaps*); a close front is small gap2nd, a lone breakaway is large gapMed | — | small gap2nd |
+| `gap2ndLenMean` / `gapMedLenMean` | **front reach** — leader→2nd / leader→median in racer-lengths; a close front is small gap2nd, a lone breakaway is large gapMed | — | small gap2nd |
 | `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is *not* secretly the assigned winner. Action must not come from bias. | — | must stay LOW |
 
 **Calibration reference (acceptance check — the metric must agree with the owner's eye):**
-The **seed-1 Searound × Manta** case (surge + rubber-band OFF, governor + director ON) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
+The **seed-1 Searound × Manta** case (surge + rubber-band OFF) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
 
 ```
 node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1 --seed=1 \
-     --governorEnabled=true --governorDirectorEnabled=true --rubber-band=false \
+     --rubber-band=false \
      --front-action --diagLabel=calib --out=client/tmp/calib
 ```
 
-Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1**, surge OFF (default), rubber-band OFF (`--rubber-band=false`), governor + director ON. Measured at HEAD `b930b1b`:
+Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1**, surge OFF (default), rubber-band OFF (`--rubber-band=false`), shipped choreography + PulkLeadRotation (unconditional). The numbers below were measured against the pre-cleanup HEAD `b930b1b` (classic-director world) and are kept as an order-of-magnitude reference for the shape of a "no action" race; re-measure on current HEAD before using them as a hard gate:
 
 → `leadChangeRate ≈ 0.0007` (≈0.07 %), `podiumShuffleRate ≈ 0.004` (≈0.4 %), `gapMedLenMean ≈ 20.4` racer-lengths (leader far ahead of the median = lone breakaway), `gap2ndLenMean ≈ 4.7`. All contest dimensions read LOW.
 
-**`gapMedLenMean` is a MEAN, not a peak — it scales with `--dur`.** It is the mean leader→median gap over the whole pre-OUTCOME window, so a longer race (more early-window steps of an ever-widening breakaway) reads a larger mean. Same case at **`--dur=60`**: `gapMedLenMean ≈ 11` len (mean) while the *peak* `stats.governorShape.govGapLenMax ≈ 22` len; at `--dur=120` the mean is ≈ 20 vs peak ≈ 37. When comparing runs, hold `--dur` fixed (or compare `govGapLenMax` peaks). Any future "action" mechanism must move `leadChangeRate` / `podiumShuffleRate` up **without** raising `unpredictability.*`.
+**`gapMedLenMean` is a MEAN, not a peak — it scales with `--dur`.** It is the mean leader→median gap over the whole pre-OUTCOME window, so a longer race (more early-window steps of an ever-widening breakaway) reads a larger mean. Hold `--dur` fixed when comparing runs. Any future "action" mechanism must move `leadChangeRate` / `podiumShuffleRate` up **without** raising `unpredictability.*`.
 
 ---
 
-### The Action axis (`--action=<0..1>`) — director sweep coupling
+### The Action axis (`--action=<0..1>`) — reserved stub
 
-**Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default; lives in the sweep layer). One owner-facing scalar `action` (0 = calm → 1 = wild) — the prototype of the future SetupScreen "Action" slider — coupled to the contest-injector (director) knobs. Unset → no-op (byte-identical run). Realized knobs are surfaced in the JSON `meta.action` / `meta.directorKnobs` and the config log. Single source: `ACTION_COUPLING` + `actionToDirectorKnobs()` in `sim-fairness.mjs`.
+**Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default). One owner-facing scalar `action` (0 = calm → 1 = wild), intended as the prototype of a future SetupScreen "Action" slider. Unset → no-op (byte-identical run).
 
-**Coupling (endpoints + interpolation):**
-
-| Director knob | action=0 | action=1 | Interpolation |
-|---|---|---|---|
-| `PullStrength` | 0.03 | 0.12 | linear (action↑ → stronger anchor pull) |
-| `Dwell` | 0.16 | 0.04 | linear (action↑ → shorter dwell = faster cast turnover) |
-| `CastSize` | 4 | 2 | `round(4 − 2·action)` (loose pack → tight duel; 3 at mid) |
-| `AnchorOffset` | 2.0 | 2.0 | **FIXED** at config default (anchor spread handled separately) |
-| `Settling` | 0.05 | 0.05 | **FIXED** at config default (fairness parameter, never on the axis) |
-
-The endpoints bracket the shipped director default (cast 3 / dwell 0.08 / pull 0.06), so the default sits inside the swept range. The axis is monotonic 0→1 = calm→wild.
-
-**Round-1 (coarse) sweep matrix** — per-track default racer, established open=60 / closed=40 count, but a **uniform 60 s** duration for all tracks (equal length for comparability, deliberately NOT each track's own `defaultDuration`):
-
-| Track | Topology | Racer | Racers | Duration |
-|---|---|---|---|---|
-| searound | closed | manta | 40 | 60 s |
-| garden-path | closed | snail | 40 | 60 s |
-| mountainstreet | open | boarder | 60 | 60 s |
-| seatrack | open | dolphin | 60 | 60 s |
-
-Each (track × action-point) runs **30 distinct seeds** (`--seed=1 --races=30` → seeds 1–30). Governor tail-lift ON + director ON, surge + rubber-band OFF (clean base), no spread-cap. Coarse pass = 8 action-points evenly across `[0,1]`; a `--racer` that is surface-incompatible with its track **errors** (never a silent skip). Raw + aggregated tables land under `results/action-sweep-r1/`. Read: locate the *attractive but still fair* region — high `leadChangeRate` / `podiumShuffleRate` with `rankVsP1Frac` LOW and band-reach (B3 zone-success) ≥ 70%.
+**Current state: the axis is an empty stub.** Its original coupling drove the *classic reactive director* knobs (cast size / dwell / pull / anchor). That director was **deleted** in the pulk cleanup (Stage-4), and the coupling went with it — `--action` no longer maps to anything and has no effect on a race. The flag is retained as a placeholder for a future re-target onto the PulkLeadRotation strengths (`pulkChallengerBoost`, `pulkLeaderBrake`, drop-depth, etc.); until then, sweep the individual `--pulk*` flags directly.
 
 ---
 
 ## 4. Parameter Sweep Methodology
+
+> **Historical.** This section documents the two-phase LHS methodology of the deleted
+> `param-sweep*` binaries (see the note in §1). Those scripts and their report artifacts
+> (`sweep-phase1-report.md`, `full-sweep-report.md`) no longer exist. It is retained because the
+> hard-cutoff rationale, the scoring intuition, and the lessons below (L106/L107) still inform how
+> the surviving flag-driven harness is driven. For the current live sweep see §2 → "Running a sweep".
 
 ### Two-phase approach
 
@@ -533,14 +528,20 @@ Where `pMin` is the minimum p-value across all tested tracks. Higher score is be
 - The sweep tests three specific tracks. A winner may perform differently on tracks not in the test set.
 - All combos are tested with `--seed=42` (deterministic). The seed 42 was chosen for the sweep; results may differ with other seeds. Browser validation always uses live (unseeded) runs.
 
-### Governor/director action sweep — objective (upcoming)
+### PulkLeadRotation action sweep — the live objective
 
-Now that front-action is *measurable* (`results[].frontAction` above), the next sweep optimizes the 15 governor/director DevScreen values for **front-action** (`leadChangeRate` / `podiumShuffleRate` up) subject to the **unpredictability** counter-metric staying LOW and the existing fairness gate holding. Its second output is a **knob-reduction** decision:
+The classic governor/director knob-reduction sweep this section once described is **obsolete** —
+that director and its ~15 DevScreen knobs (`governorK0`, `governorRampWidth`, `governorMaxEffect`,
+director cast/dwell/pull, etc.) were deleted. The shipped world has exactly one action mechanism:
+the unconditional choreography + **PulkLeadRotation** (`applyPulkLeadRotation` writes `governorMult`
+in the PULK phase `[0.25, choreoOutcomeStart=0.5]`, faded to 1.0 by OUTCOME).
 
-- **Candidates to PIN to fixed constants** — barrier-shape + safety internals that should not be owner-facing: `governorK0`, `governorRampWidth`, `governorFrequency`, `governorLengthFloor`, `governorMaxEffect`, `governorMaxStepPerFrame`, `governorAMin`, `governorAMax`. The sweep confirms front-action is insensitive to these across their range → they become constants.
-- **Candidates to KEEP as owner-facing "action" levers** — the few that actually move `leadChangeRate` / `podiumShuffleRate` (expected: director cast size / dwell / pull strength / anchor offset, and governor drama / length band). These feed the later cleanup step that reduces the DevScreen to **~5 well-explained knobs plus a single SetupScreen "Action" slider**.
-
-This is documentation of the objective only — **no DevScreen change and no default change** happens in the measurement step that added the metric.
+The live sweep — `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — optimizes the
+PulkLeadRotation strengths (`--pulkLeadRotationDropDepthLengths`, `--pulkChallengerBoost`,
+`--pulkBoostHeadroom`, `--pulkLeaderBrake`, …) for **front-action / pulk-contest** subject to the
+**unpredictability** counter-metric staying LOW and the fairness gate (band-reach ≥ 70%, 0 Holm-unfair
+start rows) holding vs the A0 mechanism-off floor. Configs A0 (`--race-plan=false`) vs D2/D8
+(drop-depth 2/8) across the 10 standard tracks; the post-processor emits the PASS/FAIL-vs-A0 table.
 
 ---
 
@@ -744,7 +745,7 @@ experiments (baseline / controller-off comparisons).
 
 ---
 
-*Last updated: 2026-06-30. See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
+*Last updated: 2026-07-14 (sim-trust: sweep-scripts table, usage, governor/director sections, and tier2/golden-stage0 refs corrected to the shipped choreography + PulkLeadRotation world). See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
 
 ---
 
@@ -762,13 +763,17 @@ This document was the most stale; the items below correct it against source.
   it. The three stale tier2 comments have been removed. **A stale comment is a lie with authority** — see
   LESSONS.md.)
 - **The sim IMPORTS the shipped physics; it does not re-implement it.** `advanceRacerT` (raceStep.js),
-  `applyGovernor`/`arcT` (raceGovernor.js), `raceLengths.js`, `racePlanner.js` are all imported. The
-  divergence risk lives only in the *inputs* each engine computes before the shared t-update — audited
-  in `docs/FORCE-PARITY.md`.
+  `applyPulkLeadRotation` / `arcT` / `computeDirectorCeiling` (raceGovernor.js — the classic
+  `applyGovernor` reactive director is deleted; only the unconditional lead-rotation path remains),
+  `raceLengths.js`, `racePlanner.js` (`createRacePlan` / `createTrajectoryController`) are all
+  imported. The divergence risk lives only in the *inputs* each engine computes before the shared
+  t-update — audited in `docs/FORCE-PARITY.md`.
 - **Stage-0 config pipeline:** `--config=world.json` is honoured or the run **ABORTS loud**
   (`WORLD_SCHEMA_MISMATCH`, exit 2) — never runs-and-ignores. With no `--config`, a prominent
   **ASSUMED-DEFAULTS** banner prints and every result is stamped provisional. `WORLD_SCHEMA_VERSION` +
-  `hashWorld` stamp each result (`raceConfigWorld.js`). Golden: `scripts/night-sweep/golden-stage0.mjs`.
+  `hashWorld` stamp each result (`raceConfigWorld.js`). (The former `scripts/night-sweep/golden-stage0.mjs`
+  golden and the whole `scripts/night-sweep/` directory are **deleted**; default-behaviour identity is
+  now gated by `scripts/fingerprint-default.mjs`.)
 - **Gap-space observers, in RACER LENGTHS** (`scripts/sim/observers/gap-metrics.mjs`): lengths-behind,
   leader→P2, top-5 spread, field p10–p90, field median, the frontmost-gap (detached-group) curve, plus
   the deadRace/visibleComeback ingredients. Seconds are a secondary column only. Enabled by

@@ -36,8 +36,8 @@ A racer's motion has **two independent axes**, computed in **two different files
 | Lateral | `r.physicalY` ∈ [−1, +1] | `applyRacerBehavior()` | `raceBehavior.js` |
 
 Per physics step the order is:
-1. **Re-roll / rubber-band / surge / governor / controller** update the longitudinal multipliers (`index.jsx` re-roll ~1067–1120; `applyRubberBand` ~1024; `applyGovernor` ~1035, both **default OFF**).
-2. **Longitudinal integration**: `r.t += baseSpeed × boost × brake × trajectoryMult × areaBonusMult × rubberBandMult × pulkSurgeMult × governorMult × zoneMult` (`index.jsx:1127-1137`). `pulkSurgeMult` and `governorMult` are **default 1.0** (surge + governor OFF), so the shipped engine reduces to the seven-factor product below.
+1. **Re-roll / rubber-band / trajectory / PulkLeadRotation** update the longitudinal multipliers (`index.jsx` re-roll ~1063–1097; `applyRubberBand` ~1024; the trajectory controller ~990–1003; `applyPulkLeadRotation` ~1018–1035). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
+2. **Longitudinal integration** — the ONE shared t-update `advanceRacerT()` in [`raceStep.js`](client/src/modules/raceStep.js) (imported by both browser and sim): `r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult × governorMult × dt`, finish-clamped ([`raceStep.js:72-86`](client/src/modules/raceStep.js#L72-L86); browser call [`index.jsx:1122-1128`](client/src/screens/RaceScreen/index.jsx#L1122-L1128)). `dt` = 1.0 (fixed timestep) both sides. **There is no `pulkSurgeMult` and no `zoneMult` in the shared step** — surge was removed and zoneMult is not part of `advanceRacerT`. `governorMult` is **1.0 outside PULK** but **actively written inside PULK** (not "default OFF").
 3. `computePositions()` projects `(t, physicalY)` → world `(x, y, angle)`.
 4. **`applyRacerBehavior()`** computes the *next* frame's lateral move and the brake/draft **flags** used by step 2 next frame (one-frame lag is intentional).
 
@@ -49,16 +49,19 @@ The lateral flags (`avoidanceActive`, `brakeMatchFactor`, `draftingBoostActive`)
 
 ## A. LONGITUDINAL FORCES (speed / `r.t`)
 
-Master equation — [`index.jsx:1127-1137`](client/src/screens/RaceScreen/index.jsx#L1127-L1137):
+Master equation — the ONE shared per-frame t-update, `advanceRacerT()` in
+[`raceStep.js:72-86`](client/src/modules/raceStep.js#L72-L86), imported by both the browser
+loop ([`index.jsx:1122-1128`](client/src/screens/RaceScreen/index.jsx#L1122-L1128)) and the
+fairness sim (Sim-Browser Parity):
 
 ```
-r.t += baseSpeed × boost × brake × trajectoryMult × areaBonusMult × rubberBandMult
-       × pulkSurgeMult × governorMult × zoneMult
+r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult
+       × governorMult × dt
 ```
 
-where `baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult` ([`index.jsx:608`](client/src/screens/RaceScreen/index.jsx#L608)).
+where `baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult` ([`index.jsx:1096`](client/src/screens/RaceScreen/index.jsx#L1096)); `dt` = 1.0 (fixed timestep, kept explicit so neither side can hide it); result finish-clamped to `finishT + 0.001`.
 
-All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compound multiplicatively, so a racer's instantaneous speed is the product of every factor below. `pulkSurgeMult` (surge, **default OFF**) and `governorMult` (the pre-OUTCOME race-action layer, **both masters default OFF** — A13/A14) stay at 1.0 in the shipped engine, so the default race is the seven-factor product A0–A11.
+All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compound multiplicatively, so a racer's instantaneous speed is the product of every factor. **`pulkSurgeMult` and `zoneMult` are NOT in this product** — `pulkSurgeMult` (surge) was removed, and `zoneMult` is not part of the shared step. `governorMult` is written by `applyPulkLeadRotation` (A13) and is **1.0 outside PULK but actively non-1.0 inside the PULK window** — it is *not* "default OFF". `rowEnvMult` (the start-row speed-bonus phase envelope, `computeRowEnvMult`, [`raceStep.js:46-55`](client/src/modules/raceStep.js#L46-L55)) enters the product explicitly; it is 1.0 unless `phaseSplitBonusEnabled`. A9 (`rubberBandMult`) and A10 (`zoneMult`) are documented below as separate median-relative / position forces; verify their current wiring against source before relying on them.
 
 ### A0. Base speed (duration anchor)
 - **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js:29-32`](client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx:500`](client/src/screens/RaceScreen/index.jsx#L500).
@@ -136,7 +139,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **When**: `enabled` AND leader progress `< rubberBandEndgameThreshold` (0.9). Hard-off above the endgame threshold → the OUTCOME P-controller gets a clean final window.
 - **Magnitude**: `brakeFactor = 1 − maxBrake × clamp((myGap − brakeThreshold) / gapScale, 0, 1)`, floored at `1 − maxBrake`; `myGap = (r.t − medianT) / finishT`. Eased toward the target over `boostRampMs` (temporal smoother only).
 - **Config**: `enabled` **true**, `brakeThreshold` **0.03**, `gapScale` **0.025**, `maxBrake` **0.10**, `boostRampMs` **2000**, `rubberBandEndgameThreshold` **0.9** (dedicated field — was cross-borrowed from `DEFAULT_CAMERA_CONFIG.endgameThreshold`).
-- **Distinct from the governor tail-lift (A13)**: the rubber-band brakes a racer that is too far **ahead** of the median; the governor tail-lift lifts a racer too far **behind** it. Both are median-relative but act on opposite sides and are separately gated (rubber-band default ON, governor default OFF).
+- **Distinct from the PULK contest director (A13)**: the rubber-band is a **field-cohesion brake** on any front-breakaway racer (median-relative, gap-based). The surviving governor layer (A13, `applyPulkLeadRotation`) is a **rank-based lead-rotation contest** inside the PULK window — attacker boosts + a settle-brake on dethroned leaders — a different mechanism with a different trigger. Both write speed multipliers but are separately gated and serve different roles.
 
 ### A10. `zoneMult` — race-zone brake (position-based)
 - **Code**: `zoneMultAt(zt, zones)` — [`raceZones.js:32, 44-`](client/src/modules/raceZones.js#L32); applied at [`index.jsx:978-990`](client/src/screens/RaceScreen/index.jsx#L978-L990).
@@ -157,20 +160,18 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **Magnitude**: `battleSlowmoFactor` **0.5** (half speed), `battleSlowmoFadeDuration` 0.3 s, min hold 2.0 s.
 - **Note**: a global multiplier on the step clock — it does not change relative ordering, so it is fairness-neutral but it does change every racer's instantaneous `t`-rate.
 
-### A13. `governorMult` — tail-lift cohesion + shuffle (pre-OUTCOME; **default OFF**)
-- **Code**: `applyGovernor(...)` tail-lift branch — [`raceGovernor.js:311-328`](client/src/modules/raceGovernor.js#L311-L328); called at [`index.jsx:1035`](client/src/screens/RaceScreen/index.jsx#L1035), multiplied in at [`index.jsx:1136`](client/src/screens/RaceScreen/index.jsx#L1136). Master flag `governorEnabled`.
-- **What**: a **dead-zoned, ONE-SIDED restoring force** on the arc-distance gap to the field **median**, in **true racer-lengths** (arc-px ÷ mean drawn body length — lap-count- and track-independent; retired the `finishT` divisor, `9947892`). Inside the bound the middle of the field runs **free** (`governorMult` = 1.0). Only a racer **more than the bound BEHIND the median** gets a progressive **lift** back toward the field; a racer **at or ahead of the median gets exactly zero** — it lifts stragglers and **never brakes the leader**. A bounded zero-mean **shuffle** (rank-decoupled per-racer phase, `GOVERNOR_SEED_XOR` stream) rides on top.
-- **RETIRED**: the **ahead-median leader-brake** was removed in **Stage C** (`a0105ed`) — the governor no longer bounds/brakes the front. The contested front is now the director layer (A14).
-- **When**: PRE_PULK/PULK/TRANSITION only; phase-weight `w(progress)` fades to **exactly 0 at `corrStartFrac`**; pinned to 1.0 in OUTCOME/FINAL. `±maxEffect` clamp + per-frame slew-limit (`maxStepPerFrame`).
-- **Magnitude**: `±maxEffect` **0.12** cap; bound width + shuffle amplitude scale off the single `governorDrama` "Action" scalar.
-- **Config** (all **default OFF/neutral**): `governorEnabled` **false**, `governorDrama`, barrier/safety internals `governorK0`, `governorRampWidth`, `governorFrequency`, `governorLengthMin/Max/Floor`, `governorAMin/AMax`, `governorMaxEffect` **0.12**, `governorMaxStepPerFrame`.
-
-### A14. `governorMult` — contest-injector / race-action director pull (pre-OUTCOME; **default OFF**)
-- **Code**: `directorFeaturedSet(...)` [`raceGovernor.js:194-210`](client/src/modules/raceGovernor.js#L194-L210) + director branch of `applyGovernor` [`raceGovernor.js:330-339`](client/src/modules/raceGovernor.js#L330-L339). Master flag `governorDirectorEnabled` (its **own** master, independent of A13).
-- **What**: a **rank-blind, seeded round-robin spotlight** (`a7e4a64`) that features a small rotating cast and gives each featured racer a **mean-reverting pull toward a front anchor** = field median + `anchorOffset` racer-lengths. The cast clusters in the front band and the re-roll decides the instantaneous P1 → **visible lead changes**. Non-featured racers get exactly zero. Its purpose is a *contested, unpredictable front* — the true result is still imposed later by the OUTCOME controller (A7).
-- **Rank-decoupled**: the featured cast is ordered by `directorStreamKey(index, seed)` on a **dedicated stream `DIRECTOR_SEED_XOR`** (distinct from A13's `GOVERNOR_SEED_XOR`), keyed on **index + seed only, never `targetRank`** — so who is featured never correlates with who is assigned to win. **NOT the CameraDirector** (that is a camera-only state machine; this is a speed force).
-- **When**: same shared fade → 0 at `corrStartFrac`; new spotlights also stop a `Settling` window **before** the fade. `±maxEffect` clamp + slew-limit.
-- **Config** (all **default OFF/neutral**): `governorDirectorEnabled` **false**, `governorDirectorCastSize`, `governorDirectorDwell`, `governorDirectorAnchorOffset`, `governorDirectorPullStrength`, `governorDirectorSettling`.
+### A13. `governorMult` — PulkLeadRotation, the PULK-phase contest director (**active, unconditional in PULK**)
+- **Code**: `applyPulkLeadRotation(racers, finishT, phaseCtx, cfg)` — [`raceGovernor.js:170-380`](client/src/modules/raceGovernor.js#L170-L380); called at [`index.jsx:1018-1035`](client/src/screens/RaceScreen/index.jsx#L1018-L1035) whenever `pulkLeadRotationOn = racePlanEnabled` ([`index.jsx:742`](client/src/screens/RaceScreen/index.jsx#L742)); `governorMult` then enters the shared t-update at [`raceStep.js:83`](client/src/modules/raceStep.js#L83). This is the **one surviving writer of `governorMult`** — the classic reactive `applyGovernor` (tail-lift cohesion + contest-injector director) was removed; there is no `applyGovernor`, `governorEnabled`, `governorDirector*`, `directorStreamKey`, `GOVERNOR_SEED_XOR`, or `DIRECTOR_SEED_XOR` in the source anymore (those names survive only as inert storage-key → `pulk*` migration aliases in `raceDynamicsConfig.js`).
+- **What**: a deterministic, rank-based **lead-rotation contest** that *completes* lead changes instead of herding the field. Selection is by **live rank + signed lap-aware distance + index** (no `Math.random`), and reads **position + seed only, NEVER the target-rank assignment** — so who contests the front never correlates with who is scripted to win (the finish order is still imposed later by the OUTCOME trajectory controller, A7). Three roles, all writing `governorMult`:
+  - **Attacker slots (1–2, `pulkLeadRotationAttackerSlots`)** — boost the live P2 (and P3) with a **flat `pulkChallengerBoost`** UNTIL it becomes live P1; on success the slot advances to the new P2. Candidates are drawn from the front group (first `pulkFrontPool − 1` non-hero racers behind the leader) and must be **draw-reachable** (`directorReachable`: their best boosted speed factor can out-pace the braked leader's).
+  - **Outsider slot (permanent fresh blood)** — boost the DEEPEST still-reachable racer OUTSIDE the front group, within `pulkLeadRotationOutsiderMaxReachLengths` (15 racer-lengths), until it takes the lead; then draw the next-deepest. Provably disjoint from the attacker window.
+  - **Settle-brake set** — a racer that TAKES the lead is added to a brake **membership set**; it runs unbraked for its `pulkLeadRotationMinHoldMs` (750 ms) hold, then a `−pulkLeaderBrake` brake engages and STAYS on (through being overtaken, while it falls) until it is `pulkLeadRotationDropDepthLengths` (8) behind the current leader. Many members brake at once; the current P1 is just the newest member. **Heroes** are never boosted but ARE brakeable when they lead.
+  - **Deadlock timeout (`pulkLeadRotationDeadlockTimeoutMs`, 12000 ms)** — a boost that can't complete (traffic) is released + cooled and the slot advances; the lateral physics is never weakened.
+- **When**: **only inside the live PULK window** `progress ∈ [pulkStartFrac, pulkEndFrac)` — at shipped defaults **[0.25, 0.5)** (`pulkStart` 0.25; `pulkEnd = corridorStart = choreoOutcomeStart` **0.5**). Every force term is scaled by the phase weight `governorPhaseWeight(progress, pulkEndFrac, corrStartFrac)` ([`raceGovernor.js:92-97`](client/src/modules/raceGovernor.js#L92-L97)) which fades to **exactly 0 at `corrStartFrac`**; outside the window (and for finished racers) every racer is slewed to `governorMult` = **exactly 1.0**. So OUTCOME gets a clean handoff to A7.
+- **Realism envelope** ([`raceGovernor.js:356-379`](client/src/modules/raceGovernor.js#L356-L379)): a **`±pulkEnvelopeMaxEffect`** (**0.12**) clamp on `|governorMult − 1|`, a per-frame **`pulkEnvelopeMaxStepPerFrame`** (**0.01**) slew limit, and an optional **naturalness ceiling cap** (`pulkCeilingCap` **true** → `computeDirectorCeiling`, hard-capped at `NATURALNESS_CEILING` = **1.2**, `pulkBoostHeadroom` **0.1** additive headroom above the band max).
+- **Magnitude**: brake arm floored at `1 − max(maxEffect, leaderBrake)`; boost arm at `1 + challengerBoost`, clamped to `1 + maxEffect` and to `ceilingCap / spreadFactor`.
+- **Config** (all in the `pulk*` namespace, `storage/defaults.js`): strengths `pulkLeaderBrake` **0.1**, `pulkChallengerBoost` **0.06**, `pulkFrontPool` **8**, `pulkBoostHeadroom` **0.1**; rotation core `pulkLeadRotationAttackerSlots` **2**, `pulkLeadRotationDropDepthLengths` **8**, `pulkLeadRotationOutsiderMaxReachLengths` **15**, `pulkLeadRotationDeadlockTimeoutMs` **12000**, `pulkLeadRotationMinHoldMs` **750**; envelope `pulkEnvelopeMaxEffect` **0.12**, `pulkEnvelopeMaxStepPerFrame` **0.01**, `pulkCeilingCap` **true**.
+- **Choreo trajectory shaping (companion, A7)**: the *front contest* is A13; the *finish order* is set by `trajectoryMult`, written by the trajectory controller in [`racePlanner.js`](client/src/modules/racePlanner.js) (choreographed hero curves + a servo toward each racer's `targetRank` band during OUTCOME). Also unconditional when a plan runs, but a distinct multiplier in a distinct phase — see A7/A8. The two never read each other's assignment.
 
 ---
 
@@ -396,8 +397,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A10 | zoneMult (race zone) | 0.85 (**off**) | inside zone | raceZones.js:32 |
 | A11 | runoutDecay | ×0.97/frame | after finish | index.jsx:995 |
 | A12 | BATTLE slowmo (global clock) | 0.5 | BATTLE_ZOOM | index.jsx:824 |
-| A13 | governorMult — tail-lift + shuffle (**default OFF**) | ±maxEffect 0.12; lift behind-median only | PRE-OUTCOME, faded→1.0 | raceGovernor.js:311 |
-| A14 | governorMult — contest-injector director pull (**default OFF**) | ±maxEffect 0.12; featured→front anchor | PRE-OUTCOME, faded→1.0 | raceGovernor.js:194,330 |
+| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [0.25,0.5), faded→1.0 at corrStart | raceGovernor.js:170 |
 
 ### Lateral (current: Soft Steering spring → repulsion/clamp/damping → Hard Separation)
 | # | Force | Default | Status | Member |

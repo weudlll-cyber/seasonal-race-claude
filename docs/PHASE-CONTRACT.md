@@ -1,191 +1,180 @@
 # PHASE CONTRACT — every value calibrated against a phase boundary
 
-**Read-only inventory. Nothing here proposes or changes anything.** Date: 2026-07-10, branch `chore/sim-trust`
-@59d82ee. Every claim is verified at source (file:line). The point of this document is that the PULK
-collapse (Step 5) moved a boundary and silently broke four contracts nobody had written down — this
-enumerates them so it never happens unseen again.
+**Read-only inventory. Nothing here proposes or changes anything.** Date: 2026-07-14, branch `chore/sim-trust`.
+Every claim is verified at source (file:line). This is the CURRENT shipped race world — one unconditional
+choreographed model, no `v4-ON/v4-OFF` conditional. The point of this document is that a phase is a
+contract: whoever moves a boundary inherits responsibility for every value calibrated against it. This
+enumerates those contracts so a boundary can never move and silently break them.
 
 ## The phase model (verified)
 
-`DEFAULT_PHASE_FRACTIONS` (racePlanner.js:58-65): `pulkStart 0.25, pulkEnd 0.5, transitionEnd 0.75,
-corridorStart 0.55, corridorEnd 1.0, midToLateSwitchFraction 0.85`.
+`DEFAULT_PHASE_FRACTIONS` (racePlanner.js:62-69): `pulkStart 0.25, pulkEnd 0.5, transitionEnd 0.75,
+corridorStart 0.55, corridorEnd 1.0, midToLateSwitchFraction 0.85`. These are the raw literals; the
+resolved plan overwrites two of them (below).
 
-`getPhase` (racePlanner.js:350-363) uses **four** boundaries, in this order:
-`PRE_PULK < pulkStart · PULK < pulkEnd · TRANSITION < corridorStart · OUTCOME < corridorEnd · FINAL`.
-**`transitionEnd` (0.75) is NOT a `getPhase` boundary** — the phase named "TRANSITION" ends at
-`corridorStart` (0.55). `transitionEnd` is a *separate* reader (§3).
+**The shipped two-phase model (racePlanner.js:147-149), UNCONDITIONAL.** Choreography is always on
+(`_choreoEnabled` is hardcoded `true`, racePlanner.js:274). At plan build time:
+`choreoPulkEnd = config.choreoOutcomeStart ?? 0.25`, then `pulkEnd := choreoPulkEnd` and
+`corridorStart := choreoPulkEnd` (DERIVED, not a second copy). So OUTCOME begins exactly where PULK ends:
+**CHAOS → PULK → OUTCOME, with no TRANSITION phase.** The monotonic clamp chain (racePlanner.js:163-173)
+keeps `pulkStart <= pulkEnd <= corridorStart <= corridorEnd`.
 
-**The v4 two-phase model (racePlanner.js:141-145; reopenable as of `feat/pulk-reopen`):** when
-`directorV4Enabled`, `pulkEnd = directorV4OutcomeStart` (the PULK-end control) and `corridorStart :=
-pulkEnd` (DERIVED, not a second copy) — CHAOS → PULK → OUTCOME, with no TRANSITION phase under v4. At the
-shipped defaults `directorV4OutcomeStart == pulkStart == 0.25` ⇒ **PULK width = pulkEnd − pulkStart = 0**
-and **TRANSITION width = corridorStart − pulkEnd = 0**, byte-identical to the former collapse. The
-difference from the old "collapse": `pulkEnd` is now an OWNED boundary (the DevScreen "PULK end / OUTCOME
-begins" control), so raising it REOPENS the PULK window and revives the three PULK-window mechanisms that
-the zero-width window renders inert (§2). The four contracts below are no longer broken *silently* — they
-are owned by explicit controls in the PULK group.
+`getPhase` (racePlanner.js:357-370) still lists five ordered branches
+(`PRE_PULK < pulkStart · PULK < pulkEnd · TRANSITION < corrStart · OUTCOME < corrEnd · FINAL`), **but
+because `corridorStart == pulkEnd` always, the TRANSITION branch is zero-width and unreachable** — a racer
+goes straight from PULK to OUTCOME. TRANSITION is a dead branch, not a live phase.
+
+At the shipped default `choreoOutcomeStart == 0.5` the three live phases are: **CHAOS/PRE_PULK [0, 0.25) ·
+PULK [0.25, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart` anywhere in 0.25–0.55; at
+0.25 (== `pulkStart`) PULK is zero-width and OUTCOME starts at the chaos boundary.
 
 ---
 
-## 1. `pulkStart` = 0.25 — the CHAOS→PULK boundary (hardcoded; NO DevScreen control)
+## 1. `pulkStart` = 0.25 — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
 
-- **Who reads it.** `getPhase` (racePlanner.js:352,358); the row-envelope `chaosEndFrac`
-  (raceStep.js:49 via `computeRowEnvMult`; browser `PHASE_CHAOS_END` index.jsx:799; sim `pulkStartLive`
-  sim-fairness.mjs:918); the areaBonus split `pulkStartFrac` (racePlanner.js:456,458) **and** the v4
-  areaBonus instant-zero boundary (racePlanner.js:390,392); the hero-cast boundary (heroes tagged
-  `isHeroChoreographed` at `phaseProgress >= pulkStartFrac`, racePlanner.js:471,492).
-- **What it gates.** The end of CHAOS: the `areaBonusEarly`/`rowBonusEarly` band; under v4 the point
-  where `areaBonusMult` snaps to zero for the whole field; where the 2–4 heroes are cast.
-- **When it MOVES.** The chaos window resizes → `areaBonusEarly`/`rowBonusEarly` apply over a different
-  span, and heroes are cast earlier/later. Under v4 the areaBonus-zero point moves with it.
-- **DevScreen.** None — hardcoded 0.25. Note: under v4, `directorV4OutcomeStart` defaults to 0.25 = this
-  boundary, so CHAOS-end and OUTCOME-start coincide.
+- **Who reads it.** `getPhase` (racePlanner.js:359,365); the row-envelope chaos-end (raceStep.js via
+  `computeRowEnvMult`; browser `PHASE_CHAOS_END` index.jsx; sim `pulkStartLive` sim-fairness.mjs); the
+  areaBonus instant-zero boundary — under choreo the areaBonus is full during CHAOS and snaps to `1.0`
+  for the WHOLE field from `pulkStartFrac` onward (racePlanner.js:398-414); the phase-split `inChaos`
+  branch (racePlanner.js:462); the hero-cast boundary (heroes are cast and tagged `isHeroChoreographed`
+  once `phaseProgress >= pulkStartFrac`, racePlanner.js:479,500,533); the hero-curve generator anchor
+  (`anchorProgress: pulkStartFrac`, racePlanner.js:523); and the PULK lead-rotation window start
+  (`progress >= pulkStartFrac`, raceGovernor.js:186).
+- **What it gates.** The end of CHAOS: where the areaBonus snaps to zero for the whole field, where the
+  2–4 heroes are cast with anchored curves, and where the PULK lead rotation begins.
+- **When it MOVES.** The chaos window resizes → the areaBonus-zero point moves, heroes are cast
+  earlier/later, and the PULK contest window opens earlier/later.
+- **DevScreen.** `racePlanPulkStart` — default 0.25 (range 0.05–0.50 per the config comment,
+  defaults.js:270). It is the CHAOS→PULK boundary AND the hero-curve anchor; the live resolved value is
+  threaded into the generator, so there is no second copy of the anchor.
 - **Calibrated for it.** 0.25 as the chaos→choreo boundary; `areaBonusEarly=1.0`, `rowBonusEarly=1`.
 
-## 2. `pulkEnd` = 0.5 — the PULK end (v4: OWNED by the "PULK end / OUTCOME begins" control) — **the boundary Step 5 moved, now reopenable**
+## 2. `pulkEnd` = `choreoOutcomeStart` — the PULK end / OUTCOME start (config key `choreoOutcomeStart`) — **the owned PULK→OUTCOME seam**
 
-- **Who reads it.** `getPhase` (racePlanner.js:353,359); the row-envelope `pulkEndFrac` (raceStep.js:51;
-  browser `PHASE_PULK_END` index.jsx:800; sim `pulkEndLive` sim-fairness.mjs:919); the areaBonus
-  `_areaBonusPulk` branch (racePlanner.js:459-460); the governor fade-window start `governorFadeStart =
-  corrStart − max(corrStart − pulkEnd, MIN_FADE_SPAN)` (raceGovernor.js:119); the PULK re-roll bias
-  (`computePulkBiasedTarget` returns `rawSample` unless `getPhase()==='PULK'`, racePlanner.js:~626); the
-  governor `phaseCtx.pulkEndFrac` (index.jsx:1053,1069; sim-fairness.mjs:1145; HUD GovernorDiagHUD.jsx:95).
-- **What it gates.** PULK width; the `areaBonusPulk` and `rowBonusPulk` bands; the governor's fade-window
-  start; the window in which the PULK cohesion bias (`pulkBiasGain`) can act.
-- **When it MOVES.** Under v4 `pulkEnd = directorV4OutcomeStart` (the DevScreen "PULK end / OUTCOME
-  begins" control) and `corridorStart := pulkEnd`. Raising it OPENS the PULK window and revives the three
-  PULK-window mechanisms below; lowering it back to `pulkStart` (0.25, the default) closes the window and
-  they go inert again. The reopen is the whole point of `feat/pulk-reopen`.
-- **At the shipped defaults, `pulkEnd == pulkStart` (both 0.25) → PULK is zero-width, so (still true today):**
-  - **`areaBonusPulk` NEVER applies** — in racePlanner.js:456-461 `inChaos` uses `pulkStartFrac` and
-    `inPulk` uses `pulkEndFrac`; with the two equal, the `_areaBonusPulk` branch is unreachable (a
-    racer is either `inChaos` or `POST`). The value the owner set (`areaBonusPulk=0`) is inert.
-  - **`rowBonusPulk` NEVER applies** — same structure in `computeRowEnvMult` (raceStep.js:47-53): the
-    middle branch (`raceProgress < pulkEndFrac`) is empty when `chaosEndFrac == pulkEndFrac`. The PULK
-    row-bonus strength is dead. *(NB: it does NOT "return exactly 1.0" — it returns the `early` or `post`
-    envelope; only the PULK branch dies. Correcting a template claim in the task spec.)*
-  - **`pulkBiasGain` is DEAD** — `computePulkBiasedTarget` early-returns `rawSample` when the phase is
-    not PULK (racePlanner.js:~626) and only for `pulkRacerIds = slice(0,3)` (racePlanner.js:208). With
-    PULK zero-width, `getPhase()` is never `'PULK'`, so the cohesion bias never fires.
-  - **The governor fade window shrinks and moves** — `governorFadeStart` goes from `0.55 − max(0.05,
-    0.05) = 0.50` (window [0.50, 0.55]) to `0.25 − max(0, 0.05) = 0.20` (window [0.20, 0.25]).
-    (Under v4 the governor is *also* gated fully off, §4/D-note, so this is doubly moot; under v4-OFF the
-    [0.50,0.55] window is live.)
-  - **Reopening the window (raise the "PULK end" control above pulkStart) revives all three** — the
-    `_areaBonusPulk`/`rowBonusPulk`/PULK-bias branches become reachable again for `pulkStart <= p <
-    pulkEnd`. Their inertness is a property of the zero-width DEFAULT, not of the mechanism.
-- **DevScreen.** Under v4, OWNED by the "PULK end / OUTCOME begins" control (config key
-  `directorV4OutcomeStart`, in the PULK group, DynamicsTuningSection.jsx). Under v4-OFF it stays the
-  reactive hardcoded 0.5.
-- **Calibrated for it.** `areaBonusPulk=0`, `rowBonusPulk=0`, `pulkBiasGain=2.0` were all calibrated FOR
-  the PULK window — they now sit in the same PULK group as the boundary that governs them, so moving the
-  boundary and re-justifying its numbers is a single, visible act (no longer a silent break).
+- **Resolution.** `pulkEnd := choreoOutcomeStart` and `corridorStart := choreoOutcomeStart`
+  (racePlanner.js:147-149). This single value is the PULK→OUTCOME seam; there is exactly ONE source and
+  ONE user-facing control for it.
+- **Who reads it.** `getPhase` (racePlanner.js:360; corrStart branch :361 is the same value); the
+  row-envelope pulk-end (raceStep.js; browser `PHASE_PULK_END`; sim `pulkEndLive`); the phase-split
+  `inPulk` branch (racePlanner.js:463); the PULK lead-rotation window end
+  (`progress < pulkEndFrac`, raceGovernor.js:187); the phase-weight fade end (`governorPhaseWeight` →
+  EXACTLY 0 at `corrStartFrac == pulkEndFrac`, raceGovernor.js:92-97); the PULK re-roll bias
+  (`computePulkBiasedTarget` returns `rawSample` unless `getPhase()==='PULK'`, racePlanner.js:640); the
+  phase context threaded to the governor (`getPhaseFractions`, racePlanner.js:699-701).
+- **What it gates.** PULK width; the window in which the PULK cohesion bias (`pulkBiasGain`) acts; the
+  window in which the PULK lead rotation runs; the phase-weight fade window; and — via
+  `corridorStart := pulkEnd` — the moment OUTCOME band-steering begins.
+- **When it MOVES.** Raising it lengthens the PULK contest and hands OUTCOME off later; the PULK-window
+  mechanisms act over a longer span. Lowering it to `pulkStart` (0.25) closes the PULK window (zero
+  width) and OUTCOME starts at the chaos boundary. Because PULK end == OUTCOME start, moving this ONE
+  value moves both seams together.
+- **DevScreen.** "PULK end / OUTCOME begins (0.25–0.55)", config key `choreoOutcomeStart`, in the PULK
+  Phase card (DynamicsTuningSection.jsx:925-930). Default 0.5.
+- **Calibrated for it.** `pulkBiasGain=2.0`, `pulkLeaderBrake=0.1`, `pulkChallengerBoost=0.06` and the
+  rest of the `pulk*` contest strengths are all calibrated for the PULK window this boundary defines.
+  The PULK phase-split bonuses (`areaBonusPulk=0`, `rowBonusPulk=0`, gated by the Phase-Split master
+  switch, default OFF) also live against it.
 
-## 3. `transitionEnd` = 0.75 — the areaBonus FADE end (config key `racePlanBonusTransitionEnd`)
+## 3. `corridorStart` = `pulkEnd` — the OUTCOME start (DERIVED from `choreoOutcomeStart`, not a literal)
 
-- **Who reads it.** racePlanner.js:128 (setter from `config.bonusTransitionEnd`); **:156 the
-  `corridorStart` fallback** (`resolvedCorridorStart = corridorStart ?? transitionEnd`) — *the second
-  reader the spec warned was missed*; :215 `transEnd` ms; :313 destructure of `plan._phases`; :322
-  `transEndFrac`; **:413 the v4-OFF areaBonus fade trigger** (`phaseProgress < transEndFrac`); :429
-  `fadeAnchorMs`; :681 `getPhaseFractions` returns `transEndFrac`.
-- **What it gates.** (v4-OFF) the `areaBonusMult` fade END — full strength until `transEnd`, then
-  `easeInOutCubic` fade to 1.0 over `racePlanBonusFadeDuration` (racePlanner.js:409-429). PLUS the
-  `corridorStart` fallback (:156).
-- **When it MOVES.** (v4-OFF) the areaBonus fade end moves. (v4-ON) **no effect on areaBonus** — under v4
-  the areaBonus is instant-zero from `pulkStart` (racePlanner.js:390), so "`bonusFadeDuration` becomes
-  functionless; `transitionEnd` keeps its corridorStart-fallback role" (racePlanner.js:389). And the
-  fallback never fires because `corridorStart` is always defined (default 0.55, overwritten to 0.25 under
-  v4). ⇒ **`transitionEnd` is INERT under v4-ON.**
-- **DevScreen.** `racePlanBonusTransitionEnd` slider — "Bonus active until (% race)", DynamicsTuningSection.jsx:605
-  (range 30–95%). **Does NOTHING under v4-ON.**
-- **Naming trap.** `transitionEnd` (0.75) is NOT where the "TRANSITION" phase ends (that is `corridorStart`
-  0.55). It is misleadingly named; its live job is the areaBonus fade end (v4-OFF) + the corridorStart
-  fallback.
+- **Resolution.** `corridorStart := choreoPulkEnd` (racePlanner.js:149); it is the SAME value as
+  `pulkEnd`. The `racePlanCorridorStart` literal (default 0.55) is overwritten and never survives to a
+  live race — the seam is owned by `choreoOutcomeStart` (§2).
+- **Who reads it.** `getPhase` `corrStartFrac` (racePlanner.js:361); the servo pre-OUTCOME gate
+  (`_preOutcome && !isHero` pins the pack to 1.0 before OUTCOME, racePlanner.js:480,555); the
+  phase-weight fade-to-zero end (`governorPhaseWeight` returns 0 at `progress >= corrStartFrac`,
+  raceGovernor.js:95); the governor phase context (`getPhaseFractions`, racePlanner.js:700).
+- **What it gates.** The moment the servo (`trajectoryMult`) STARTS steering the PACK toward target ranks
+  (before it, the pack is pinned to 1.0; heroes steer along their curves from `pulkStart`). It is also
+  where the PULK lead rotation's phase weight reaches exactly 0, so `governorMult` is faded to 1.0 by
+  OUTCOME.
+- **When it MOVES.** It moves with `choreoOutcomeStart` (§2) — earlier OUTCOME = more servo correction
+  budget / more fairness authority, and a shorter PULK contest.
+- **DevScreen.** No independent control. The `racePlanCorridorStart` slider still renders
+  (DynamicsTuningSection.jsx:622-628, "P-Controller starts") but its value is overwritten by
+  `choreoOutcomeStart` at plan build, so the owned seam is the "PULK end / OUTCOME begins" control.
+- **Calibrated for it.** The phase-weight fade window is anchored on it (spans
+  `max(corrStartFrac − pulkEndFrac, MIN_FADE_SPAN)` back from it, raceGovernor.js:88-90; since it equals
+  `pulkEnd`, the fade is the `MIN_FADE_SPAN`=0.05 tail ending at OUTCOME start).
 
-## 4. `corridorStart` = 0.55 — the TRANSITION→OUTCOME boundary (config key `racePlanCorridorStart`) — **under v4: DERIVED from pulkEnd, not a literal**
+## 4. `corridorEnd` = 1.0 — the OUTCOME→FINAL boundary (config key `racePlanCorridorEnd`)
 
-- **Who reads it.** racePlanner.js:129 (setter); **:144 the v4 DERIVATION** (`corridorStart := pulkEnd`,
-  the live PULK-end value — no literal, no second copy); :156,:162 the ordering clamp; `getPhase`
-  `corrStartFrac` (:354,360); the servo pre-OUTCOME gate (`_preOutcome && !isHero` pins the pack to 1.0,
-  racePlanner.js:472,538); the governor fade-to-zero end (`governorPhaseWeight` returns 0 at `progress >=
-  corrStartFrac`, raceGovernor.js:130); the governor `phaseCtx.corrStartFrac` (sim-fairness.mjs; index.jsx);
-  :681 `getPhaseFractions`.
-- **What it gates.** The moment the servo (`trajectoryMult`) STARTS steering the *pack* toward target
-  ranks (before it, the pack is pinned to 1.0 — racePlanner.js:538); and the point past which the
-  reactive governor is exactly 0.
-- **When it MOVES.** The servo's pack-steering start moves (earlier = more correction budget, more
-  fairness authority). **Under v4, OUTCOME begins exactly where PULK ends: `corridorStart := pulkEnd`
-  (racePlanner.js:144). There is no TRANSITION phase under v4.** The `racePlanCorridorStart` slider is
-  therefore still inert under v4-ON (the corridor start is now the PULK-end control) — but the boundary is
-  no longer a hidden literal: it is the owned "PULK end / OUTCOME begins" value.
-- **DevScreen.** `racePlanCorridorStart` slider — "P-Controller starts (% race)", DynamicsTuningSection.jsx
-  (range 50–end%, default 0.55). **INERT under v4-ON** (the corridor start = the PULK-end control, PULK
-  group). Under v4-OFF it is the live TRANSITION→OUTCOME boundary.
-- **Calibrated for it.** The governor fade window [0.50, 0.55] is anchored on it (§2, v4-OFF).
-
-## 5. `corridorEnd` = 1.0 — the OUTCOME→FINAL boundary (config key `racePlanCorridorEnd`)
-
-- **Who reads it.** racePlanner.js:130 (setter); :160,:165 the clamp anchor (ceiling); `getPhase`
-  `corrEndFrac` (:355,361); :681 `getPhaseFractions`.
+- **Who reads it.** racePlanner.js:135 (setter from `config.corridorEnd`); the clamp ceiling (:163-172);
+  `getPhase` `corrEndFrac` (:362); `getPhaseFractions` (:700).
 - **What it gates.** When the servo STOPS steering (raw physics after, in FINAL).
-- **When it MOVES.** The servo's steering-end moves; 1.0 = steer to the line. Lower = a raw-physics tail.
-- **DevScreen.** `racePlanCorridorEnd` slider — "P-Controller ends (% race)", DynamicsTuningSection.jsx:677
-  (default 100%). **LIVE under both v4-OFF and v4-ON** (it is the OUTCOME end in both).
+- **When it MOVES.** The servo's steering-end moves; 1.0 = steer to the line; lower = a raw-physics tail.
+- **DevScreen.** `racePlanCorridorEnd` slider — "P-Controller ends (% race)"
+  (DynamicsTuningSection.jsx:648-660), default 100%. LIVE (it is the OUTCOME end).
 
-## 6. `directorV4OutcomeStart` = 0.25 — the v4 PULK END / OUTCOME start (STORAGE KEY; control relabeled "PULK end / OUTCOME begins")
+## 5. `transitionEnd` = 0.75 — the areaBonus fade-end literal (config key `racePlanBonusTransitionEnd`) — **INERT**
 
-- **Who reads it.** racePlanner.js:142 (`v4PulkEnd = config.directorV4OutcomeStart ?? 0.25`), :143
-  (`pulkEnd = v4PulkEnd`), :144 (`corridorStart = v4PulkEnd`); sim-fairness.mjs `DIRECTOR_V4_OUTCOME_START`
-  (threaded into `createRacePlan`).
-- **What it gates.** Under v4 it sets `pulkEnd`, and `corridorStart` is DERIVED from it (`:= pulkEnd`). So
-  it is the single boundary "PULK ends here, OUTCOME begins here" — the two-phase model's PULK→OUTCOME
-  seam. At the default 0.25 (== `pulkStart`) PULK is zero-width and OUTCOME starts at the chaos boundary,
-  byte-identical to the former collapse.
-- **When it MOVES.** Raising it OPENS the PULK window `[pulkStart, this]` and hands OUTCOME (the pack's
-  band-steering) off later; the three PULK-window mechanisms (§2) come alive. Lowering it to `pulkStart`
-  closes the window again. **Decision (feat/pulk-reopen):** the config key name `directorV4OutcomeStart`
-  is KEPT as the storage key (no schema migration; byte-identity at defaults preserved), but the
-  user-facing control is relabeled "PULK end / OUTCOME begins" and its tooltip rewritten — there is
-  exactly ONE user-facing control and ONE source for this boundary.
-- **DevScreen.** In the **PULK group** (DynamicsTuningSection.jsx), control "PULK end / OUTCOME begins
-  (0.25–0.55)". **LIVE under v4-ON; NO effect under v4-OFF** (guarded by `if (config.directorV4Enabled)`,
-  racePlanner.js:141).
-- **Companion control (new).** `racePlanPulkStart` = "PULK begin (0.05–0.50)", default 0.25 — the
-  CHAOS→PULK boundary and the hero-curve director anchor (threaded live into the generator; §2 of the
-  step spec). Together the two controls own the PULK window's begin and end.
+- **Why it's inert.** Under the unconditional choreo model the areaBonus is instant-zero from `pulkStart`
+  (racePlanner.js:398-414) — there is no `easeInOutCubic` fade to trigger, so `bonusFadeDuration` is
+  functionless and `transitionEnd` never gates a fade. Its only remaining structural role is a
+  `corridorStart` fallback (`resolvedCorridorStart = corridorStart ?? transitionEnd`, racePlanner.js:160),
+  which never fires because `corridorStart` is always defined (it is derived from `choreoOutcomeStart`).
+- **Who reads it.** racePlanner.js:133 (setter from `config.bonusTransitionEnd`); :160 (the never-firing
+  `corridorStart` fallback); :222 (`transEnd` ms); :329 (`transEndFrac`); :420 (the areaBonus fade
+  trigger inside the `else` branch — dead code because `_choreoEnabled` is always true, racePlanner.js:398);
+  :700 (`getPhaseFractions` returns `transEndFrac`).
+- **DevScreen.** `racePlanBonusTransitionEnd` slider — "Bonus active until (% race)"
+  (DynamicsTuningSection.jsx:578-581, range 30–95%). Does NOTHING at the shipped model (no fade exists to
+  bound).
+- **Naming trap.** `transitionEnd` (0.75) is NOT where any phase ends — there is no live TRANSITION phase.
+  It is a misleadingly named, currently inert literal.
 
-## 7. `directorV4ReleaseProgress` = 0.97 — the B1 hero release (config key `directorV4ReleaseProgress`)
+## 6. `choreoReleaseProgress` = 0.97 — the B1 hero release (config key `choreoReleaseProgress`)
 
-- **Who reads it.** racePlanner.js:511 (threaded into the generator config), :548 (a B1 hero is
-  `released` when `phaseProgress >= plan._v4ReleaseProgress` and its target rank ≤ BAND_EDGES[0]);
-  heroCurveGenerator.js `config.releaseProgress`; sim-fairness.mjs `DIRECTOR_V4_RELEASE_PROGRESS` (:212).
+- **Who reads it.** racePlanner.js:284 (`_choreoReleaseProgress` on the plan) and :285-291 (band-index 0
+  of `_choreoBandResolve`); :524 (threaded into the generator as `releaseProgress`); :563-566 (a B1 hero
+  is `released` when `phaseProgress >= plan._choreoReleaseProgress` and its target rank ≤ `BAND_EDGES[0]`).
 - **What it gates.** When the leading (B1) heroes are RELEASED from their tight front cluster to natural
-  speed for the final run-out (racePlanner.js:546-556): past release, `targetRank = currentRank ⇒
+  speed for the final run-out (racePlanner.js:559-573): past release, `targetRank = currentRank ⇒
   rankError 0 ⇒ servo 1.0 ⇒ natural speed`.
 - **When it MOVES.** Earlier release = a longer natural run-out fight to the line; later = held in the
-  cluster longer.
-- **DevScreen.** `directorV4ReleaseProgress` slider — "B1 release progress (0–1]", DynamicsTuningSection.jsx:1157.
-  **LIVE under v4-ON; NO effect under v4-OFF** (no heroes exist without v4).
+  cluster longer. Companions `choreoResolveB2..B5` (0.8/0.7/0.65/0.6) are the per-band resolve
+  checkpoints for the non-B1 heroes.
+- **DevScreen.** Surfaced with the other choreo controls in the PULK Phase / choreography area of
+  DynamicsTuningSection.jsx.
 
 ---
 
-## Every DevScreen control that has NO EFFECT under v4-ON (a slider that does nothing is a lie with a knob)
+## Hero choreography — the unconditional mechanism (racePlanner.js + heroCurveGenerator.js)
 
-Verified inert under v4-ON at source:
+Choreography is ALWAYS on; there is no enable flag. The generator runs ONCE, one frame after `pulkStart`,
+on the actual field state, casting 2–4 heroes with anchored position-over-time curves
+(racePlanner.js:500-538). Heroes track their curves exactly (strictness 1.0); the pack runs looser
+(`choreoPackBandStrictness`, racePlanner.js:576-580). Config keys and shipped values (defaults.js):
+`choreoIntensity` 0.6, `choreoPackBandStrictness` 0.5, `choreoSuppressChaosBonusB1` false (spoiler
+switch), `choreoReleaseProgress` 0.97, `choreoResolveB2/B3/B4/B5` 0.8/0.7/0.65/0.6, `choreoOutcomeStart`
+0.5. The plan-internal mirrors are `_choreo*` (e.g. `_choreoEnabled` hardcoded true).
 
-| Control (DynamicsTuningSection.jsx) | Config key | Why it does nothing under v4-ON |
-|---|---|---|
-| P-Controller starts (:652) | `racePlanCorridorStart` | overwritten by `directorV4OutcomeStart` (racePlanner.js:144) |
-| Bonus active until (:605) | `racePlanBonusTransitionEnd` | areaBonus is instant-zero at pulkStart (racePlanner.js:390); fallback never fires |
-| Bonus fade duration (:627) | `racePlanBonusFadeDuration` | the fade it controls does not exist under v4 ("functionless", racePlanner.js:389) |
-| Cohesion bias gain (:1334) | `pulkBiasGain` | PULK is zero-width → `computePulkBiasedTarget` always returns `rawSample` |
-| Area bonus — PULK (:1243) | `areaBonusPulk` | PULK branch unreachable (racePlanner.js:459-460) |
-| Row bonus — PULK (:1267) | `rowBonusPulk` | PULK branch unreachable (raceStep.js:51) |
-| **The entire Director section** (:782–:996) | `governorDirectorEnabled`, `governorMaxEffect`, `governorMaxStepPerFrame`, `governorDirectorLeaderBrake`, `…ChallengerBoost`, `…BoostHeadroom`, `…PullStrength`, `…FrontPool`, `…MaxParallelBoosts`, `…BoostDurationMin/Max`, `…CatchThreshold`, `…LingerBrake`, `…Settling`, `…BoostOncePerRace`, `…CeilingCap`, `…FallbackEnabled`, `…FallbackFromPool`, `…FallbackMaxCount`, `…FallbackUntilPosition`, `…FallbackProtectMs` | the reactive governor is gated fully OFF under v4: `GOVERNOR_ON = … && !directorV4Enabled` (sim-fairness.mjs:431,876; browser parity). ~22 controls, all inert under v4-ON. |
+## PULK lead rotation — the unconditional PULK-phase contest (raceGovernor.js `applyPulkLeadRotation`)
 
-And the reverse — controls with **no effect under v4-OFF** (guarded by `if (config.directorV4Enabled)`):
-`directorV4Intensity`, `directorV4PackBandStrictness`, `directorV4OutcomeStart`, `directorV4ReleaseProgress`,
-`directorV4ResolveB2/B3/B4/B5`, `directorV4SuppressChaosBonusB1`.
+`applyPulkLeadRotation` is the ONLY writer of `r.governorMult`. It runs whenever the race-plan controller
+exists (shipped on), inside the live PULK window `[pulkStart, pulkEnd)`, staging a real front contest:
+1–2 attacker slots boost the live P2/P3 until one takes the lead, a permanent outsider slot boosts the
+deepest still-reachable outsider, and a settle-brake set holds a dethroned leader back until it is
+`dropDepthLengths` behind (raceGovernor.js:170-380). Every force term is scaled by `governorPhaseWeight`,
+which fades to EXACTLY 1.0 (no effect) by OUTCOME (raceGovernor.js:92-97,195,375). Strengths live in the
+`pulk*` namespace (defaults.js): `pulkLeaderBrake` 0.1, `pulkChallengerBoost` 0.06, `pulkFrontPool` 8,
+`pulkBoostHeadroom` 0.1, `pulkCeilingCap` true; realism envelope `pulkEnvelopeMaxEffect` 0.12 (±12% clamp)
+and `pulkEnvelopeMaxStepPerFrame` 0.01 (per-frame slew); rotation internals
+`pulkLeadRotationAttackerSlots` 2, `pulkLeadRotationDropDepthLengths` 8,
+`pulkLeadRotationOutsiderMaxReachLengths` 15, `pulkLeadRotationDeadlockTimeoutMs` 12000,
+`pulkLeadRotationMinHoldMs` 750.
+
+## Config-key renames (raceDynamicsConfig.js `RENAMED_KEY_MIGRATION`)
+
+A persisted config from before the PULK cleanup migrates its VALUES to the current keys, then drops the
+old key (raceDynamicsConfig.js:22-54). The mappings: `directorV4*` → `choreo*` (Intensity,
+PackBandStrictness, SuppressChaosBonusB1, ReleaseProgress, ResolveB2..B5, OutcomeStart); the borrowed
+`governorDirector*` / `governor*` strengths → the `pulk*` namespace
+(`…LeaderBrake` → `pulkLeaderBrake`, `…ChallengerBoost` → `pulkChallengerBoost`,
+`…FrontPool` → `pulkFrontPool`, `…BoostHeadroom` → `pulkBoostHeadroom`,
+`…CeilingCap` → `pulkCeilingCap`, `governorMaxEffect` → `pulkEnvelopeMaxEffect`,
+`governorMaxStepPerFrame` → `pulkEnvelopeMaxStepPerFrame`). These are the ONLY current keys; the old names
+exist solely as migration inputs, never as live mechanisms.
 
 ---
 

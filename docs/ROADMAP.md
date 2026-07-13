@@ -418,7 +418,12 @@ writing: `9cfa953` (2026-06-30). **Master-merge of `feat/race-action` is still p
 - **Re-Gate** all four closed tracks on `9cfa953` (clean browser-faithful config) — in progress.
 - **Master-merge** of `feat/race-action` into `master` — pending (master frozen at `ab71825`).
 
-**R.7 — Governor vision-pivot: the race-action director (July 2026)**
+**R.7 — Governor vision-pivot: the race-action director (July 2026)** — ⚠️ **SUPERSEDED / HISTORICAL.**
+This "reactive governor/director" direction was replaced by the **choreo hero-choreography + PulkLeadRotation**
+rebuild, and the classic reactive director (tail-lift + contest-injector, `governorDirectorEnabled`,
+`DIRECTOR_SEED_XOR`, `applyGovernor`) was **removed entirely** in THE GREAT PULK CLEANUP (Stages 1–6).
+The commits below are kept as history; none of the governor/director knobs, streams, or the
+governor-value Action-sweep survive. For the current world see ARCHITECTURE.md / PHASE-CONTRACT.md.
 
 The pivot: the pre-OUTCOME governor is **no longer a field-order limiter**. It is a **RACE DIRECTOR** staging an exciting, *unpredictable-but-fair* front — lead changes you cannot read the result from — while the true finishing order is still imposed **after** the fade by the OUTCOME controller. Core realisation: **a limiter can only bound a gap; it cannot create a contest** (see LESSONS 160). The eventual winner stays **decorrelated** from early front-running. Anchor: `d9c9cd3` = tag `stable/pre-governor-04jul` (surge + rubber-band intact, no governor). All default **OFF**.
 
@@ -428,11 +433,11 @@ The pivot: the pre-OUTCOME governor is **no longer a field-order limiter**. It i
 - **Stage A1 — contest-injector "director"** (`a7e4a64`): rank-blind seeded round-robin spotlight (own master `governorDirectorEnabled`, own `DIRECTOR_SEED_XOR` stream) pulls a rotating cast mean-reverting toward a front anchor = median + offset. Distinct from the CameraDirector. Default OFF.
 - **Sim-1 — front-action metric + telemetry propagation fix** (`b930b1b`, read-only, no gameplay change): `--front-action` (leadChanges, distinctP1, leadChangeRate, podiumShuffleRate, front-reach gaps, targetRank-vs-front unpredictability correlation) + `results[].stats.governorShape` + rawData; makes the target experience **measurable** before any tuning.
 
-*Pending (design intent, NOT yet built):*
-- **Stage C2 — generous front spread-cap**: allow a wide but bounded front spread (so the contest has room) without letting it become a runaway lone breakaway.
-- **A1b — anchor-to-front**: raise/track the director anchor toward the actual front (currently median + fixed offset) so the featured cast contests the true lead, not mid-pack.
-- **The Action sweep**: now that front-action is measurable (Sim-1), sweep the 15 governor/director values for `leadChangeRate`/`podiumShuffleRate` up while `unpredictability.*` stays LOW and the fairness gate holds.
-- **DevScreen knob-reduction**: pin the barrier/safety internals (K0, RampWidth, Frequency, LengthFloor, MaxEffect, MaxStepPerFrame, AMin, AMax) to constants; keep only the few owner-facing action levers → **~5 DevScreen knobs + one SetupScreen "Action" slider**.
+*Pending (ABANDONED — the direction changed):* the never-built governor/director follow-ups (front
+spread-cap, anchor-to-front, the governor-value Action sweep, governor barrier-internal knob-reduction)
+were dropped when the mechanism moved to choreo + PulkLeadRotation. The knob-reduction intent WAS
+realised, but on the new world: the DevScreen collapsed to one **PULK Phase** card with 5 owner-facing
+controls + pinned internals (Stage 5b), not on the removed governor knobs.
 - **OUTCOME decompression**: after the front contest, ensure the OUTCOME controller can still resolve the assigned order cleanly (decompress the field the director clustered).
 
 ## Session Log
