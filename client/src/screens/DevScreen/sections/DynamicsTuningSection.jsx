@@ -125,21 +125,23 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
-  function resetGovernor() {
+  // The one PULK Phase section: reset only the 5 VISIBLE controls. The pinned internals
+  // (envelope/safety + rotation internals + choreo fine-tuning) keep their config defaults —
+  // they have no DevScreen control, so they are not user-resettable here.
+  function resetPulk() {
     setDynamicsConfig((prev) => ({
       ...prev,
-      pulkEnvelopeMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect,
-      pulkEnvelopeMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame,
+      choreoOutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
       pulkLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
       pulkChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,
-      pulkFrontPool: DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool,
-      pulkCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap,
-      pulkBoostHeadroom: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom,
+      pulkLeadRotationDropDepthLengths:
+        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
+      choreoIntensity: DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
     }));
   }
 
   function resetPhaseSplit() {
-    // EARLY + POST only — the PULK-phase bonuses moved to the PULK group (resetPulk).
+    // EARLY + POST only — the PULK-phase bonuses live in their own section (resetPulkBonuses).
     setDynamicsConfig((prev) => ({
       ...prev,
       phaseSplitBonusEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled,
@@ -150,30 +152,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
-  // The PULK group: the phase boundaries that open/close the PULK window (begin + end) and the three
-  // mechanisms that act ONLY inside it. All inert when the window has zero width (begin == end).
-  function resetPulk() {
+  // The PULK-window phase-split bonuses + cohesion bias — their own subsystem (not the rotation),
+  // deliberately 0/2.0 for the flat shipped PULK. Left in place; reset independently.
+  function resetPulkBonuses() {
     setDynamicsConfig((prev) => ({
       ...prev,
-      racePlanPulkStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
-      choreoOutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
       areaBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
       rowBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk,
       pulkBiasGain: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
-    }));
-  }
-
-  function resetPulkLeadRotation() {
-    setDynamicsConfig((prev) => ({
-      ...prev,
-      pulkLeadRotationAttackerSlots: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots,
-      pulkLeadRotationDropDepthLengths:
-        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
-      pulkLeadRotationOutsiderMaxReachLengths:
-        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
-      pulkLeadRotationDeadlockTimeoutMs:
-        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs,
-      pulkLeadRotationMinHoldMs: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs,
     }));
   }
 
@@ -767,30 +753,22 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </p>
       </SubCard>
 
-      {/* ── Block 4d: PULK contest strengths + realism envelope (pulk* namespace) ── */}
+      {/* ── Block 4d: PULK Phase — the one place for the PULK-phase contest (5 owner-chosen controls) ── */}
       <SubCard
-        title="PULK contest strengths"
-        onReset={resetGovernor}
-        resetTestId="reset-governor"
-        subtitle="The realism-bounded speed knobs the PULK-phase lead rotation rides: a leader brake, a challenger boost cap, and the front-group pool. Faded to nothing before OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the ceiling cap. Max effect + max step per frame are the pulk realism envelope (±clamp + slew) every term rides."
+        title="PULK Phase"
+        onReset={resetPulk}
+        resetTestId="reset-pulk"
+        subtitle="The PULK phase — the mid-race window [0.25, PULK end] where the lead rotation stages a real front contest (always live). The boundary sets where PULK hands off to OUTCOME; the leader brake + challenger boost set the front-action strength; the drop depth is the depth lever (how far a dethroned leader falls before release); intensity sets the overall choreography drama. Advanced envelope + rotation internals are pinned to their tuned defaults."
       >
         <div className={s.formGrid}>
           {[
             {
-              key: 'pulkEnvelopeMaxEffect',
-              label: 'Max effect (±)',
-              min: 0.02,
-              max: 0.2,
-              step: 0.01,
-              tip: 'Outer clamp on the per-racer speed effect — the realism guarantee (±). The director never exceeds this.',
-            },
-            {
-              key: 'pulkEnvelopeMaxStepPerFrame',
-              label: 'Max step / frame',
-              min: 0.001,
-              max: 0.05,
-              step: 0.001,
-              tip: 'Slew limit: how fast governorMult may change per step. Lower = smoother speed changes.',
+              key: 'choreoOutcomeStart',
+              label: 'PULK end / OUTCOME begins (0.25–0.55)',
+              min: 0.25,
+              max: 0.55,
+              step: 0.05,
+              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [0.25, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
             },
             {
               key: 'pulkLeaderBrake',
@@ -806,23 +784,23 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0,
               max: 0.12,
               step: 0.01,
-              tip: 'Maximum forward boost given to a catching challenger to close on the leader (capped by max effect). 0.06 = shipped.',
+              tip: 'Maximum forward boost given to a catching challenger to close on the leader (capped by the realism envelope). 0.06 = shipped.',
             },
             {
-              key: 'pulkBoostHeadroom',
-              label: 'Boost headroom (pts above natural)',
-              min: 0,
-              max: 0.15,
-              step: 0.01,
-              tip: 'How much faster than the fastest natural racer a boosted challenger may go. 0 = capped at the field; higher = catch-ups can burst forward. Auto-limited so total speed stays within ±20%. 0 = shipped.',
-            },
-            {
-              key: 'pulkFrontPool',
-              label: 'Front-group pool (N)',
+              key: 'pulkLeadRotationDropDepthLengths',
+              label: 'Ex-leader drop depth (lengths)',
               min: 1,
-              max: 30,
+              max: 8,
               step: 1,
-              tip: 'Challengers are drawn from the front N on-track positions (leader excluded), so the boost only aims at a racer that can actually reach the front. 8 = shipped.',
+              tip: 'How far (racer lengths) the just-dethroned leader is braked back before release — the DEPTH LEVER. Small = tight top-group rotation; large = the ex-leader leaves the front and the rotation migrates through the field. 8 = shipped.',
+            },
+            {
+              key: 'choreoIntensity',
+              label: 'Choreography intensity (0–1)',
+              min: 0,
+              max: 1,
+              step: 0.05,
+              tip: 'Overall drama intensity of the hero choreography curves. Low = calm; high = deeper comebacks, more duels, later reveals. Auto-clamped per race so it can never break fairness. 0.6 = shipped.',
             },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
@@ -849,157 +827,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             </div>
           ))}
         </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Pulk Ceiling Cap"
-              checked={dynamicsConfig.pulkCeilingCap ?? false}
-              onChange={(e) => setDynamics('pulkCeilingCap', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Naturalness ceiling cap
-            <InfoTooltip text="Caps a boosted challenger's resulting speed at the fastest natural re-roll draw, so the boost can never make a racer look unnaturally fast. Only limits the upside; the brakes are unaffected. ON = shipped." />
-          </label>
-        </div>
-      </SubCard>
-
-      {/* ── Block 4d2: Hero Choreography — two tuning knobs (fields defined in defaults.js) ── */}
-      <SubCard
-        title="Hero Choreography"
-        onReset={() => {
-          setDynamics('choreoIntensity', DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity);
-          setDynamics(
-            'choreoPackBandStrictness',
-            DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness
-          );
-          setDynamics('choreoReleaseProgress', DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress);
-          setDynamics('choreoResolveB2', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2);
-          setDynamics('choreoResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3);
-          setDynamics('choreoResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4);
-          setDynamics('choreoResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5);
-          // choreoOutcomeStart (PULK end) now lives in the PULK group — reset by resetPulk.
-        }}
-        resetTestId="reset-choreo"
-        subtitle="Hero choreography (always on): at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. The knobs below tune it."
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Action intensity (0–1)
-              <InfoTooltip text="Drama intensity of the hero curves. Low = calm; high = deeper comebacks, more duels, later reveals. Auto-clamped per race so it can never break fairness." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Choreo Intensity"
-              min={0}
-              max={1}
-              step={0.05}
-              value={dynamicsConfig.choreoIntensity}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 1) setDynamics('choreoIntensity', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Pack band strictness (0–1)
-              <InfoTooltip text="How tightly the non-hero pack holds its band. Higher = tighter/fairer pack; lower = looser pack so heroes can weave through. 0.5 is the tested default." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Choreo Pack Band Strictness"
-              min={0}
-              max={1}
-              step={0.05}
-              value={dynamicsConfig.choreoPackBandStrictness}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 1) setDynamics('choreoPackBandStrictness', v);
-              }}
-            />
-          </div>
-          {/* PULK end / OUTCOME start (choreoOutcomeStart) moved to the PULK group below. */}
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              B1 release progress (0–1]
-              <InfoTooltip text="How late the leading (B1) heroes are held in a tight front cluster before the follower RELEASES them to natural speed for the final contest. Higher = a longer fight to the line. 0.97 default." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Choreo Release Progress"
-              min={0}
-              max={1}
-              step={0.01}
-              value={dynamicsConfig.choreoReleaseProgress}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0 && v <= 1) setDynamics('choreoReleaseProgress', v);
-              }}
-            />
-          </div>
-          {[
-            [
-              'choreoResolveB2',
-              'B2 resolve progress (0–1]',
-              'By when a B2 (mid-pack) hero must settle into its band. Deeper bands resolve EARLIER so the rear locks in first. 0.80 default.',
-            ],
-            [
-              'choreoResolveB3',
-              'B3 resolve progress (0–1]',
-              'By when a B3 hero must settle into its band. Earlier than B2. 0.70 default.',
-            ],
-            [
-              'choreoResolveB4',
-              'B4 resolve progress (0–1]',
-              'By when a B4 hero must settle into its band. Earlier than B3. 0.65 default.',
-            ],
-            [
-              'choreoResolveB5',
-              'B5 resolve progress (0–1]',
-              'By when a B5 (rear) hero must settle into its band — the earliest resolve, so the tail is locked while the front still fights. 0.60 default.',
-            ],
-          ].map(([key, label, tip]) => (
-            <div className={s.formGroup} key={key}>
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                {label}
-                <InfoTooltip text={tip} />
-              </label>
-              <input
-                type="number"
-                className={s.input}
-                aria-label={`Choreo ${key.replace('choreo', '')}`}
-                min={0}
-                max={1}
-                step={0.05}
-                value={dynamicsConfig[key]}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (v > 0 && v <= 1) setDynamics(key, v);
-                }}
-              />
-            </div>
-          ))}
-        </div>
       </SubCard>
 
       {/* ── Block 4e: Phase-Split Bonuses ── */}
@@ -1007,7 +834,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="Phase-Split Bonuses"
         onReset={resetPhaseSplit}
         resetTestId="reset-phase-split"
-        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase bonuses, which live in the PULK group). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
+        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase bonuses, which live in the PULK-phase bonuses section). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
       >
         <div style={{ marginBottom: '0.75rem' }}>
           <label
@@ -1041,7 +868,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0,
               max: 3,
               step: 0.5,
-              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped. (The PULK-phase area bonus lives in the PULK group.)',
+              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped. (The PULK-phase area bonus lives in the PULK-phase bonuses section.)',
             },
             {
               key: 'rowBonusEarly',
@@ -1086,12 +913,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4f: PULK ── the phase window + the three mechanisms that act only inside it ── */}
+      {/* ── Block 4f: PULK-phase bonuses & cohesion (own subsystem — not the rotation) ── */}
       <SubCard
-        title="PULK"
-        onReset={resetPulk}
-        resetTestId="reset-pulk"
-        subtitle="The PULK window [begin, end] and the three mechanisms that act ONLY inside it. OUTCOME (band-steering) begins exactly where PULK ends, and the director (hero choreography) is anchored at PULK begin. At the shipped defaults PULK begin == PULK end (0.25) → the window has ZERO width, so the three PULK mechanisms below are inert; widen the window (raise PULK end above PULK begin) to bring them to life."
+        title="PULK-phase bonuses"
+        onReset={resetPulkBonuses}
+        resetTestId="reset-pulk-bonuses"
+        subtitle="Phase-split bonuses + cohesion bias that act ONLY inside the PULK window [0.25, PULK end]. Separate from the lead rotation (PULK Phase section above): the area/row bonuses are gated by the Phase-Split master switch; the cohesion bias pulls the pulk racers' re-roll draws toward the pack centroid. All ship flat (bonuses 0, bias 2.0) for the shipped PULK."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -1099,54 +926,8 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              PULK begin (0.05–0.50)
-              <InfoTooltip text="PULK begins here; the director (hero choreography) starts with it. This is the CHAOS→PULK boundary and the hero-curve anchor — moving it moves the director start. Clamped to sit at or before PULK end. 0.25 default." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="PULK Begin"
-              min={0.05}
-              max={0.5}
-              step={0.05}
-              value={
-                dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (isFinite(v) && v >= 0.05 && v <= 0.5) setDynamics('racePlanPulkStart', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              PULK end / OUTCOME begins (0.25–0.55)
-              <InfoTooltip text="PULK ends here, and OUTCOME (the pack's band-steering) begins here — one boundary, no TRANSITION phase in between. At the default 0.25 (== PULK begin) the PULK window is zero-width and the field is steered from the chaos boundary, exactly as shipped; raising it reopens the PULK window and hands OUTCOME off later. 0.25 default." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="PULK End / Outcome Start"
-              min={0.25}
-              max={0.55}
-              step={0.05}
-              value={dynamicsConfig.choreoOutcomeStart}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.25 && v <= 0.55) setDynamics('choreoOutcomeStart', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Area bonus — PULK
-              <InfoTooltip text="Area-bonus strength inside the PULK window (target-band speed nudge). Gated by the Phase-Split master switch. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = shipped." />
+              <InfoTooltip text="Area-bonus strength inside the PULK window (target-band speed nudge). Gated by the Phase-Split master switch. Acts only inside the PULK window [0.25, PULK end]. 0 = shipped." />
             </label>
             <input
               type="number"
@@ -1168,7 +949,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Row bonus — PULK
-              <InfoTooltip text="Start-row catch-up bonus fraction inside the PULK window. Gated by the Phase-Split master switch. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = shipped." />
+              <InfoTooltip text="Start-row catch-up bonus fraction inside the PULK window. Gated by the Phase-Split master switch. Acts only inside the PULK window [0.25, PULK end]. 0 = shipped." />
             </label>
             <input
               type="number"
@@ -1190,7 +971,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Cohesion bias gain
-              <InfoTooltip text="How strongly the pulk racers' re-roll draws are pulled back toward the pack centroid, so the field stays together and does not string out before the contest. ONLY acts inside the PULK window — inert when the window has zero width (PULK begin == PULK end). 0 = no cohesion; higher = tighter pack. 2.0 = shipped." />
+              <InfoTooltip text="How strongly the pulk racers' re-roll draws are pulled back toward the pack centroid, so the field stays together and does not string out before the contest. Acts only inside the PULK window [0.25, PULK end]. 0 = no cohesion; higher = tighter pack. 2.0 = shipped." />
             </label>
             <input
               type="number"
@@ -1206,82 +987,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
-        </div>
-      </SubCard>
-
-      {/* ── Block 4g: PULK Lead Rotation (the PULK-phase lead-rotation core loop) ── */}
-      <SubCard
-        title="PULK Lead Rotation"
-        onReset={resetPulkLeadRotation}
-        resetTestId="reset-pulk-lead-rotation"
-        subtitle="THE pulk-phase mechanism (always on): instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Strengths come from the PULK contest strengths section above; the four knobs here shape the rotation."
-      >
-        <div className={s.formGrid}>
-          {[
-            {
-              key: 'pulkLeadRotationAttackerSlots',
-              label: 'Attacker slots (1–2)',
-              min: 1,
-              max: 2,
-              step: 1,
-              tip: 'How many front challengers are boosted toward P1 at once. 1 = one clean pass at a time (most legible); 2 = denser front fight. 2 = default.',
-            },
-            {
-              key: 'pulkLeadRotationDropDepthLengths',
-              label: 'Ex-leader drop depth (lengths)',
-              min: 1,
-              max: 8,
-              step: 1,
-              tip: 'How far (racer lengths) the just-dethroned leader is braked back before release — the DEPTH LEVER. Small (2) = tight top-group rotation; large (6–8) = the ex-leader leaves the front and the rotation migrates through the field (for long races). 2 = default.',
-            },
-            {
-              key: 'pulkLeadRotationOutsiderMaxReachLengths',
-              label: 'Outsider max reach (lengths)',
-              min: 3,
-              max: 40,
-              step: 1,
-              tip: 'The deepest a fresh-blood outsider may sit behind the leader and still be boosted to P1 (racer lengths). Beyond this it cannot reach the front inside the ±speed envelope, so it is not picked. 15 = default.',
-            },
-            {
-              key: 'pulkLeadRotationDeadlockTimeoutMs',
-              label: 'Deadlock timeout (ms)',
-              min: 3000,
-              max: 30000,
-              step: 500,
-              tip: 'Safety net only (never the normal path): a boost that cannot complete (blocked by traffic — the lateral rule brakes a blocked racer) is released after this long so the rotation never freezes. 12000 = default.',
-            },
-            {
-              key: 'pulkLeadRotationMinHoldMs',
-              label: 'Leader onset grace (ms)',
-              min: 0,
-              max: 1500,
-              step: 50,
-              tip: 'Grace before a NEW leader is braked (visual smoothing of the takeover). 0 = brake engages immediately on taking the lead. NOT a flicker guard — the settle brake already makes rapid place-swaps impossible. 750 = default.',
-            },
-          ].map(({ key, label, min, max, step, tip }) => (
-            <div className={s.formGroup} key={key}>
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                {label}
-                <InfoTooltip text={tip} />
-              </label>
-              <input
-                type="number"
-                className={s.input}
-                aria-label={label}
-                min={min}
-                max={max}
-                step={step}
-                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
-                }}
-              />
-            </div>
-          ))}
         </div>
       </SubCard>
 
