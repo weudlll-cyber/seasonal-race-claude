@@ -418,7 +418,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
    *   4. Only apply values that pass all hard cutoffs on all tracks
    *      (fairness p > 0.05, zigzag < 0.003, hardOverlap < 3%)
    *
-   * Sweep scripts: scripts/sim-sweep.mjs, scripts/sim-fairness.mjs
+   * Sweep harness: scripts/sim-fairness.mjs
    */
   lateralForce: 0.0114,
   // Lateral velocity damping factor (0 < d < 1): fraction of velocity retained each frame.
