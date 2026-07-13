@@ -67,9 +67,41 @@ are a design defect of the same severity as a failing test.
 
 See LESSONS.md L48; SPEED_REFACTOR_ANALYSIS.md.
 
+## 8. Fairness is a binding gate
+
+A race-dynamics change ships only if it holds the fairness gate on the standard tracks:
+**band-reach ≥ 70%** (the overall zone-success rate, `computeZoneSuccessRate`) **AND zero
+Holm-unfair start rows** (native per-start-row win χ² with Holm correction). Both conditions,
+every track. `corrP1` (bonus↔leader correlation) is **action-quality context, not a gate** — it
+has no target. Measure fairness in the shipped config (see §"shipped == measured", LESSONS 166),
+and quality in gap space / racer lengths, never rank space (LESSONS 172).
+
+## 9. The camera is not a solution for missing action
+
+Action must exist in the *physics* — real lead changes, real closing, real overtakes. The camera
+(BATTLE/LEADER/COMEBACK framing, zoom, slowmo) only *frames* action that is already there; it can
+never manufacture a contest that the race did not produce. If the eye sees a dead race, the fix is
+in the race mechanism, not the camera. (A limiter cannot create a contest either — LESSONS 160.)
+
+## 10. One "Action" slider (the owner-facing control goal)
+
+The end-state control surface is **one SetupScreen "Action" slider** backed by ~5 owner-facing
+DevScreen levers, with all barrier/safety internals pinned to constants. Tuning knobs are an
+admin/DevScreen concern; the shipped product exposes intent (how much drama), not internals. The
+PULK-phase consolidation (one PULK Phase card, 5 visible controls + pinned internals) is the
+current realisation of this goal.
+
 ---
 
 ## Application Conventions
+
+### Tag Lifecycle Convention
+
+Each cleanup/feature **step** gets a `pre/<step>` tag before work and a `backup/<step>` tag after
+it passes review (Plan-Claude diff/tag check + Copilot review + owner eye-test). At a **phase**
+boundary the per-step tags collapse to one phase tag; long-lived reference points are `stable/<name>`
+anchors. Tags are cheap, permanent waypoints — prefer a tag over a long-lived branch for "the state
+right before/after X".
 
 ### Tooltip Convention
 

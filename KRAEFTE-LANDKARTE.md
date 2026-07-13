@@ -32,11 +32,11 @@ A racer's motion has **two independent axes**, computed in **two different files
 
 | Axis | Quantity | Where it is integrated | Driver file |
 |------|----------|------------------------|-------------|
-| Longitudinal | `r.t` (race progress) | `RaceScreen/index.jsx` step loop | `index.jsx` + `racePlanner.js` + `raceBaseSpeed.js` + `raceZones.js` |
+| Longitudinal | `r.t` (race progress) | `RaceScreen/index.jsx` step loop | `index.jsx` + `raceStep.js` + `racePlanner.js` + `raceBaseSpeed.js` + `raceGovernor.js` |
 | Lateral | `r.physicalY` ∈ [−1, +1] | `applyRacerBehavior()` | `raceBehavior.js` |
 
 Per physics step the order is:
-1. **Re-roll / rubber-band / trajectory / PulkLeadRotation** update the longitudinal multipliers (`index.jsx` re-roll ~1063–1097; `applyRubberBand` ~1024; the trajectory controller ~990–1003; `applyPulkLeadRotation` ~1018–1035). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
+1. **Re-roll / trajectory / PulkLeadRotation** update the longitudinal multipliers (`index.jsx` re-roll ~1063–1097; the trajectory controller ~990–1003; `applyPulkLeadRotation` ~1018–1035). **There is no rubber-band step** — the `applyRubberBand` speed force and its `raceRubberBand.js` module were removed (do not confuse with the still-live CameraDirector `endgameThreshold` gate, a camera-only mechanism). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
 2. **Longitudinal integration** — the ONE shared t-update `advanceRacerT()` in [`raceStep.js`](client/src/modules/raceStep.js) (imported by both browser and sim): `r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult × governorMult × dt`, finish-clamped ([`raceStep.js:72-86`](client/src/modules/raceStep.js#L72-L86); browser call [`index.jsx:1122-1128`](client/src/screens/RaceScreen/index.jsx#L1122-L1128)). `dt` = 1.0 (fixed timestep) both sides. **There is no `pulkSurgeMult` and no `zoneMult` in the shared step** — surge was removed and zoneMult is not part of `advanceRacerT`. `governorMult` is **1.0 outside PULK** but **actively written inside PULK** (not "default OFF").
 3. `computePositions()` projects `(t, physicalY)` → world `(x, y, angle)`.
 4. **`applyRacerBehavior()`** computes the *next* frame's lateral move and the brake/draft **flags** used by step 2 next frame (one-frame lag is intentional).
@@ -61,7 +61,7 @@ r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusM
 
 where `baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult` ([`index.jsx:1096`](client/src/screens/RaceScreen/index.jsx#L1096)); `dt` = 1.0 (fixed timestep, kept explicit so neither side can hide it); result finish-clamped to `finishT + 0.001`.
 
-All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compound multiplicatively, so a racer's instantaneous speed is the product of every factor. **`pulkSurgeMult` and `zoneMult` are NOT in this product** — `pulkSurgeMult` (surge) was removed, and `zoneMult` is not part of the shared step. `governorMult` is written by `applyPulkLeadRotation` (A13) and is **1.0 outside PULK but actively non-1.0 inside the PULK window** — it is *not* "default OFF". `rowEnvMult` (the start-row speed-bonus phase envelope, `computeRowEnvMult`, [`raceStep.js:46-55`](client/src/modules/raceStep.js#L46-L55)) enters the product explicitly; it is 1.0 unless `phaseSplitBonusEnabled`. A9 (`rubberBandMult`) and A10 (`zoneMult`) are documented below as separate median-relative / position forces; verify their current wiring against source before relying on them.
+All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compound multiplicatively, so a racer's instantaneous speed is the product of every factor. **`pulkSurgeMult` and `zoneMult` are NOT in this product** — `pulkSurgeMult` (surge) was removed, and `zoneMult` is not part of the shared step. `governorMult` is written by `applyPulkLeadRotation` (A13) and is **1.0 outside PULK but actively non-1.0 inside the PULK window** — it is *not* "default OFF". `rowEnvMult` (the start-row speed-bonus phase envelope, `computeRowEnvMult`, [`raceStep.js:46-55`](client/src/modules/raceStep.js#L46-L55)) enters the product explicitly; it is 1.0 unless `phaseSplitBonusEnabled`. **`rubberBandMult` and `zoneMult` are NOT in this product and no longer exist** — the `raceRubberBand.js` (rubber-band speed force) and `raceZones.js` (race-zone brake) modules were deleted (see the removed-force note under A9/A10 below).
 
 ### A0. Base speed (duration anchor)
 - **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js:29-32`](client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx:500`](client/src/screens/RaceScreen/index.jsx#L500).
@@ -133,21 +133,14 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **Config**: `racePlanBonusStrengthMultiplier` **2.0**, `racePlanBonusTransitionEnd` **0.75**, `racePlanBonusFadeDuration` **1500**.
 - **History**: an earlier negative-`elapsedFade` bug blew this up to 5–556×; now lower-clamped at 0 ([`racePlanner.js:330-333`](client/src/modules/racePlanner.js#L330-L333)).
 
-### A9. `rubberBandMult` — "cap the lead" brake (REDESIGNED — was a catch-up boost)
-- **Code**: shared helper `applyRubberBand(...)` — [`raceRubberBand.js:51-`](client/src/modules/raceRubberBand.js#L51); called from the browser at [`index.jsx:1024`](client/src/screens/RaceScreen/index.jsx#L1024) and mirrored in the sim (single source, Sim-Browser Parity).
-- **What**: **REDESIGN** — no longer a flat forward boost for non-leaders. It is now a **proportional BRAKE on any front-breakaway racer** whose gap ahead of the field **median** exceeds `brakeThreshold` — a stable negative-feedback attractor that bounds the leader's max gap and keeps the field together. Eligibility is **gap-based** (`myGap > brakeThreshold`), NOT "is the leader", so two breakaway racers are both braked.
-- **When**: `enabled` AND leader progress `< rubberBandEndgameThreshold` (0.9). Hard-off above the endgame threshold → the OUTCOME P-controller gets a clean final window.
-- **Magnitude**: `brakeFactor = 1 − maxBrake × clamp((myGap − brakeThreshold) / gapScale, 0, 1)`, floored at `1 − maxBrake`; `myGap = (r.t − medianT) / finishT`. Eased toward the target over `boostRampMs` (temporal smoother only).
-- **Config**: `enabled` **true**, `brakeThreshold` **0.03**, `gapScale` **0.025**, `maxBrake` **0.10**, `boostRampMs` **2000**, `rubberBandEndgameThreshold` **0.9** (dedicated field — was cross-borrowed from `DEFAULT_CAMERA_CONFIG.endgameThreshold`).
-- **Distinct from the PULK contest director (A13)**: the rubber-band is a **field-cohesion brake** on any front-breakaway racer (median-relative, gap-based). The surviving governor layer (A13, `applyPulkLeadRotation`) is a **rank-based lead-rotation contest** inside the PULK window — attacker boosts + a settle-brake on dethroned leaders — a different mechanism with a different trigger. Both write speed multipliers but are separately gated and serve different roles.
+### A9. `rubberBandMult` — median-relative "cap the lead" brake — **REMOVED**
+- **Status**: **REMOVED.** The `raceRubberBand.js` module (`applyRubberBand`, `rubberBandMult`, `DEFAULT_RUBBER_BAND_CONFIG`) was deleted from both the browser and the sim; there is no `applyRubberBand` call in `index.jsx`, no `--rubber-band*` flag in `sim-fairness.mjs`, and `rubberBandMult` is not a factor in the shared `advanceRacerT` product.
+- **Was**: a proportional brake on any front-breakaway racer whose gap ahead of the field median exceeded `brakeThreshold` — a field-cohesion attractor. Its role (bounding front breakaways) is now unfilled; see `docs/CONCEPT-COHESION.md` for the (not-yet-built) replacement concept.
+- **Do NOT confuse with the CameraDirector `endgameThreshold` gate**, which IS live — that is a camera-only endgame trigger (`CameraDirector.js`), a different thing from this removed speed force.
 
-### A10. `zoneMult` — race-zone brake (position-based)
-- **Code**: `zoneMultAt(zt, zones)` — [`raceZones.js:32, 44-`](client/src/modules/raceZones.js#L32); applied at [`index.jsx:978-990`](client/src/screens/RaceScreen/index.jsx#L978-L990).
-- **What**: an optional fixed-position track segment that multiplies speed (a "slow zone"). Type-neutral, position-only.
-- **When**: only inside the configured zone span; 1.0 elsewhere. **Disabled by default**.
-- **Magnitude**: `brakeStrength` **0.85** when enabled.
-- **Config**: `DEFAULT_RACE_ZONE_CONFIG` `enabled` **false**, `position` **0.5**, `width` **0.05**, `brakeStrength` **0.85**.
-- **Status**: effectively **dead by default** (enabled=false).
+### A10. `zoneMult` — race-zone brake (position-based) — **REMOVED**
+- **Status**: **REMOVED.** The `raceZones.js` module (`zoneMultAt`, `zoneMult`, `DEFAULT_RACE_ZONE_CONFIG`) was deleted; `zoneMult` is not part of the shared `advanceRacerT` product and there is no race-zone config in `storage/defaults.js`.
+- **Was**: an optional fixed-position "slow zone" that multiplied speed inside a configured track segment. It was already disabled by default before removal.
 
 ### A11. `runoutDecay` — post-finish coast
 - **Code**: [`index.jsx:993-997`](client/src/screens/RaceScreen/index.jsx#L993-L997).
@@ -357,7 +350,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 - **What**: L9 sets the summed `delta` (home + avoid/√N + free-lane/√N) to 0 when sandwiched, but the Stage B/C/D and OVL-C injections (L4–L6) are added to `delta` *after* the suppression check inside the same loop ([`raceBehavior.js:838-1004`](client/src/modules/raceBehavior.js#L838-L1004)). A racer the suppressor deems "stuck and should wait" can still be moved by a committed push — the two subsystems disagree about whether the racer should hold.
 
 ### C6. Brake-to-match cap vs. Race-Plan controller/area-bonus (longitudinal)
-- **What**: A6 caps trailer speed to the leader's advance; A7/A8/A9 simultaneously *boost* the same racer toward an assigned rank/band/catch-up. In OUTCOME phase a racer scripted to advance (trajectoryMult up to 1.10) can be simultaneously brake-capped to ≈leader speed when stuck behind a slower body. The `min()` brake wins on the brake term, but the controller keeps demanding a boost — the scripted finish order can fight the physical brake. (`racersBlockedInOutcome` telemetry exists precisely to measure this — [`racePlanner.js:394, 463`](client/src/modules/racePlanner.js#L394).)
+- **What**: A6 caps trailer speed to the leader's advance; A7/A8 simultaneously *boost* the same racer toward an assigned rank/band. In OUTCOME phase a racer scripted to advance (trajectoryMult up to 1.10) can be simultaneously brake-capped to ≈leader speed when stuck behind a slower body. The `min()` brake wins on the brake term, but the controller keeps demanding a boost — the scripted finish order can fight the physical brake. (`racersBlockedInOutcome` telemetry exists precisely to measure this — [`racePlanner.js:394, 463`](client/src/modules/racePlanner.js#L394).)
 
 ### C7. Drafting boost vs. speed/brake-match (longitudinal)
 - **What**: A4 (+4%) accelerates a follower *into* the leader's wake; A5/A6 then brake it back when it closes to body contact. The drafting boost is also fed *into* the brake-match speed estimate ([`raceBehavior.js:526-539`](client/src/modules/raceBehavior.js#L526-L539)), so a drafting trailer both speeds up and raises its own brake cap — a coupled loop that can oscillate (speed up → close → brake → fall back → boost lost → repeat).
@@ -368,14 +361,15 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| `zoneMult` (race-zone brake, A10) | **Dead by default** — `enabled:false` | [`defaults.js:246-251`](client/src/modules/storage/defaults.js#L246-L251) |
+| `zoneMult` (race-zone brake, A10) | **REMOVED** — `raceZones.js` + `DEFAULT_RACE_ZONE_CONFIG` deleted | — |
+| `rubberBandMult` (cap-the-lead brake, A9) | **REMOVED** — `raceRubberBand.js` + `DEFAULT_RUBBER_BAND_CONFIG` deleted (browser + sim) | — |
 | `preOverlapFreeLane` approach-zone steering (part of L3) | **Off by default** (`false`) — free-lane only on true overlap | [`defaults.js:316`](client/src/modules/storage/defaults.js#L313-L316) |
 | Legacy home-force path (`homeForceReductionOnOverlap`) | **REMOVED (Commit A)** — the entire home force and `overlapSet`→`homeForceReductionOnOverlap` path is gone | — |
-| `tWeight` / `yWeight` / `avoidanceDistance` | **Retired** from browser gate (geometric gate replaced them); kept only for sim-script back-compat | [`defaults.js:318-320, 382-384`](client/src/modules/storage/defaults.js#L318-L320) |
-| `speedBrakeYThreshold` | **Retired** from browser brake gate (body-based same-lane filter replaced it); kept for sim/validation compat | [`defaults.js:390-392`](client/src/modules/storage/defaults.js#L390-L392) |
-| `_approachLeft/Right`, `_forwardLeft/Right` (Stage A corridor sets) | **Partial** — populated unconditionally, consumed only as a *gate* on the Stage C side-switch, never as a primary direction (the t-blind version deadlocked 91.5% of triggers) | [`raceBehavior.js:439-468, 878-886`](client/src/modules/raceBehavior.js#L439-L468) |
+| `tWeight` / `yWeight` / `avoidanceDistance` | **Retired** from browser gate (geometric gate replaced them); kept only for sim-script back-compat | [`defaults.js:375-376, 428`](client/src/modules/storage/defaults.js#L375-L376) |
+| `speedBrakeYThreshold` | **Retired** from browser brake gate (body-based same-lane filter replaced it); kept for sim/validation compat | [`defaults.js:436`](client/src/modules/storage/defaults.js#L436) |
+| `_approachLeft/Right`, `_forwardLeft/Right` (Stage A corridor sets) | **REMOVED (Commit A)** — the Stage A/C corridor-set + side-switch machinery is gone with the free-lane/commit stack (`grep` = 0 in `raceBehavior.js`) | — |
 | `overlapEscapeStrength` / `overlapEscapeTimeout` / `gapForceCap` (OVL-C, L6) | **REMOVED (Commit B)** — config keys deleted from `defaults.js` | — |
-| Drafting on tight curves | **Intermittently misses** — documented cone-geometry limitation, not fixed | [`raceBehavior.js:1112-1115`](client/src/modules/raceBehavior.js#L1112-L1115) |
+| Drafting on tight curves | **Intermittently misses** — documented cone-geometry limitation, not fixed | [`raceBehavior.js:912-915`](client/src/modules/raceBehavior.js#L912-L915) |
 
 ---
 
@@ -393,8 +387,8 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A6 | brake-to-match cap | targets leader speed | faster trailer | raceBehavior.js:549 |
 | A7 | trajectoryMult (controller) | [0.85,1.10] | OUTCOME 0.55–0.95 | racePlanner.js:362 |
 | A8 | areaBonusMult (band) | +6%…−2% (×2.0) | until 0.75 then fade | racePlanner.js:312 |
-| A9 | rubberBandMult (**cap-the-lead brake**) | brake to leader median-gap, maxBrake 0.10 | gap>0.03·finishT, <0.9 race | raceRubberBand.js:51 |
-| A10 | zoneMult (race zone) | 0.85 (**off**) | inside zone | raceZones.js:32 |
+| A9 | rubberBandMult (cap-the-lead brake) | **REMOVED** (raceRubberBand.js deleted) | — | — |
+| A10 | zoneMult (race zone) | **REMOVED** (raceZones.js deleted) | — | — |
 | A11 | runoutDecay | ×0.97/frame | after finish | index.jsx:995 |
 | A12 | BATTLE slowmo (global clock) | 0.5 | BATTLE_ZOOM | index.jsx:824 |
 | A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [0.25,0.5), faded→1.0 at corrStart | raceGovernor.js:170 |

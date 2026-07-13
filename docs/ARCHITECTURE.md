@@ -35,10 +35,9 @@ seasonal-race-claude/
 │       │   ├── DevScreen/          # Developer / admin panel (10 sections, 2-tier Operator/Advanced)
 │       │   │   └── sections/
 │       │   │       ├── RaceTuningSection.jsx       # Thin coordinator (44 lines) — renders below two
-│       │   │       ├── BehaviorTuningSection.jsx   # behaviorConfig: avoidance, drafting, home force
+│       │   │       ├── BehaviorTuningSection.jsx   # behaviorConfig: avoidance, drafting, soft steering, speed brake
 │       │   │       ├── DynamicsTuningSection.jsx   # speedConfig, rowConfig, dynamicsConfig, frameTiming
-│       │   │       ├── SubCard.jsx                 # Shared SubCard wrapper (extracted from RaceTuning)
-│       │   │       └── PrioritySystemSection.jsx   # Priority system (standalone, pre-existing)
+│       │   │       └── SubCard.jsx                 # Shared SubCard wrapper (extracted from RaceTuning)
 │       │   └── TrackEditor/        # Visual track drawing tool
 │       │       ├── TrackEditor.jsx         # Main component (1040 lines, hygiene sprint)
 │       │       ├── TrackEditorToolbar.jsx  # Extracted toolbar component
@@ -413,7 +412,7 @@ superseded by the duration-driven approach above.
 
 ## Race Plan System (Phase 3A)
 
-The Race Plan gives each racer a target finishing area and nudges their speed toward it throughout the race. It is a **soft guidance layer** — trajectory control influences speed but cannot override physics (avoidance, home force). Final positions emerge from the interaction of Race Plan guidance and physics.
+The Race Plan gives each racer a target finishing area and nudges their speed toward it throughout the race. It is a **soft guidance layer** — trajectory control influences speed but cannot override physics (avoidance, soft steering, speed braking). Final positions emerge from the interaction of Race Plan guidance and physics.
 
 ### Area Assignment (`createRacePlan`)
 
@@ -453,7 +452,7 @@ trajectoryMult = clamp(trajectoryMult, 0.85, 1.10)
 
 The window [0.85, 1.10] was chosen empirically: wider windows cause "Cobra-Sprint" overshoot (racers race past target area); narrower windows lose corrective power.
 
-**Important: the controller does NOT disable per-racer once a racer first reaches its target band.** It runs continuously for every active racer throughout the entire OUTCOME phase (55%–95% of race duration). After a racer enters its band, the controller continues applying corrections — braking if it overshot its exact rank, boosting if it falls back. This ensures racers stay near their assigned rank for the duration of the OUTCOME window, not just until they first reach it.
+**Important: the controller does NOT disable per-racer once a racer first reaches its target band.** It runs continuously for every active racer throughout the entire OUTCOME phase (from `choreoOutcomeStart`, default 0.5, to the finish — `corridorStart := pulkEnd`; see PHASE-CONTRACT.md for the authoritative boundaries). After a racer enters its band, the controller continues applying corrections — braking if it overshot its exact rank, boosting if it falls back. This ensures racers stay near their assigned rank for the duration of the OUTCOME window, not just until they first reach it.
 
 ### Dynamic Finish Line (Open Tracks)
 
@@ -523,23 +522,25 @@ Config (`storage/defaults.js`): `pulkLeaderBrake` (0.1), `pulkChallengerBoost` (
 
 ### Sim parity + measurement
 
-`scripts/sim-fairness.mjs` runs the identical `createTrajectoryController` + `applyPulkLeadRotation` code path (single source, like the rubber-band) so sim and browser stay byte-identical; `scripts/fingerprint-default.mjs` is the byte-identity gate. See [SIM.md](SIM.md) for the metric fields and the pinned calibration case.
+`scripts/sim-fairness.mjs` runs the identical `createTrajectoryController` + `applyPulkLeadRotation` code path (single shared source, the same pattern the t-update `advanceRacerT` uses) so sim and browser stay byte-identical; `scripts/fingerprint-default.mjs` is the byte-identity gate. See [SIM.md](SIM.md) for the metric fields and the pinned calibration case.
 
 ## Race Behavior System (D7b — lane-free)
 
 Racer lateral movement is governed by `modules/raceBehavior.js`. All racers share a continuous `physicalY ∈ [-1.0, +1.0]` in normalized track-width space (0 = centerline, ±1 = boundary). `initRacerBehavior` sets every racer to `physicalY = 0` at race start.
 
-**Force pipeline (applied once per frame after world positions are computed):**
+**Lateral pipeline (current — two layers, applied once per frame after world positions are computed).** The old additive multi-force stack (home force → sqrt(N)-normalized avoidance → free-lane separation → commit/gap/escape injections → stuck-suppression) was **removed** (Commits A and B of the lateral-physics cleanup). The live model is:
 
-1. **Home force** — `Δy = -physicalY × homeForceStrength × factor`, where `factor = homeForceReductionOnOverlap` (default 0.3) when the racer is in geometric overlap, or 1.0 otherwise. Reduction lets free-lane separation dominate during collisions instead of being overridden by the restoring spring.
-2. **Avoidance — geometric two-axis body-contact gate (feat/open-track-overlap, report 39)** — Two-axis px-space check: `latPx < contactWidth × (1+bufferPct)` AND `longPx < contactLength × (1+bufferPct)`, where `contactWidth = hwA + hwB` (sum of body half-widths), `contactLength = hlA + hlB` (sum of body half-lengths), and `avoidanceBufferPct = 0.20` (20% lead time before contact). Replaces the old anisotropic normalized-distance metric which was not calibrated to physical body size. Proximity-scaled force: `forceMag = lateralForce × min(latFraction, longFraction)`. Anti-stacking: forces accumulated per racer and divided by `sqrt(neighborCount)`. **Invariant: gate must be wider than the free-lane inner check** (gate = contactWidth × 1.2 vs free-lane = contactWidth × 1.0). Speed brake runs BEFORE the gate to prevent the gate from cutting off the wider brake zone.
-3. **Free-lane separation** — additive impulse applied when two racers are in body-contact overlap (`|ΔT| ≤ contactLength/pathLength` AND `|ΔY| ≤ pxToPhysicalY(contactWidth, trackWidth)`). For each overlapping pair, left/right free-space is probed via `isSideFree()`. Each racer moves toward its first free side; if both sides free, a stable hash (`stablePairBit`) provides a deterministic split direction. Accumulates into `yFreeLaneDeltas` alongside avoidance deltas. Delta accumulation also normalized by `sqrt(overlapNeighborCount)` to prevent force stacking.
-4. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`
-5. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`
-6. **Speed brake — body-based both axes (reports 43+45)** — trailer flagged `avoidanceActive = true` when (a) `dT < (contactLength / pathLength) × speedBrakeTMultiplier` (longitudinal: body half-lengths × lead-time multiplier) AND (b) `|dY| < pxToPhysicalY(contactWidth, trackWidth)` (lateral: **same-lane filter only** — are bodies in the same lane? No lead-time multiplier on the lateral axis). Applied next frame via `speedBrakeFactor`. Lateral is a binary "same lane y/n" test; lead-time expansion (`speedBrakeTMultiplier = 1.5`) applies to the longitudinal axis only.
-7. **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`
+1. **Layer 1 — Soft Steering (the sole lateral force)** — a single target spring: `delta += (target − physicalY) × softSteeringStrength`. The target is the centerline (0) when clear, one body-clearance beside the most-constraining obstacle otherwise (only the trailer is steered; the leader holds its line — the §4a asymmetry is unconditional as of `aef203a`), or the current position (hold) when both sides are blocked. Config: `softSteeringStrength`, `softSteeringSymmetric` (governs only the body-overlap §4b override), `softSteeringClearancePct`, `softSteeringHysteresisY`.
+2. **Soft repulsion** — quadratic push back from boundary when `|physicalY| ≥ comfortThreshold`.
+3. **Hard clamp** — `physicalY` clamped to `[-maxLateral, +maxLateral]` then `[-1, +1]`; velocity reset to 0 on a boundary hit.
+4. **Layer 2 — Hard Separation (positional anti-penetration backstop)** — runs last, gated by `hardSeparationEnabled`; resolves a fraction (`hardSeparationRelaxation`) of any residual body overlap per frame (lateral push first, longitudinal emergency separation when the boundary blocks the lateral move). Strength eases 0→full over `avoidanceWarmupMs` on all tracks.
 
-**physicalYVelocity system (feat/lateral-velocity, 2026-05-31):** All force pipeline outputs are now accumulated into `physicalYVelocity` rather than applied directly to `physicalY`. Each frame: `physicalYVelocity = physicalYVelocity * lateralDamping + netForce`; then `physicalY += physicalYVelocity`. The damping factor (default `lateralDamping=0.25`) controls how quickly lateral velocity decays — lower values mean more inertia and smoother motion. `physicalYVelocity` is clamped by `maxLateral`. This eliminates frame-to-frame zigzag artifacts where racers would oscillate between adjacent positions due to force sign reversals on consecutive frames. Sim sweep result: `lateralDamping=0.25, lateralForce=0.012` reduces `lateralSpeedScore` by 37% and `zigzagScore` by 44% vs. the prior baseline at equivalent overlap rates.
+The **longitudinal** flags are still produced here for the next-frame t-update:
+
+- **Speed brake — body-based both axes (reports 43+45)** — trailer flagged `avoidanceActive = true` when (a) `dT < (contactLength / pathLength) × speedBrakeTMultiplier` (longitudinal: body half-lengths × lead-time multiplier) AND (b) `|dY| < pxToPhysicalY(contactWidth, trackWidth)` (lateral: **same-lane filter only**). Applied next frame via `speedBrakeFactor`. Lead-time expansion (`speedBrakeTMultiplier = 1.5`) applies to the longitudinal axis only.
+- **Cone drafting** — follower flagged `draftingBoostActive = true` if within `draftingMaxDistance` world-px of leader AND inside a `draftingConeAngle`-wide cone behind the leader; boost applied next frame via `draftingBoost`.
+
+**physicalYVelocity system (feat/lateral-velocity, 2026-05-31):** the Layer-1 spring output is accumulated into `physicalYVelocity` rather than applied directly to `physicalY`. Each frame: `physicalYVelocity = (physicalYVelocity + delta) × lateralDamping`; then `physicalY += physicalYVelocity`. The damping factor (default `lateralDamping = 0.16`) controls how quickly lateral velocity decays — lower values mean heavier damping. `physicalYVelocity` is clamped by `maxLateral`. This eliminates frame-to-frame zigzag artifacts where racers would oscillate between adjacent positions due to force sign reversals on consecutive frames.
 
 `getPosition(t, physicalY / 2)` on `EditorShape` converts physicalY to world (x, y) — EditorShape's offset parameter is `[-0.5, +0.5]` = inner to outer boundary.
 
@@ -932,7 +933,7 @@ The Phase 5 server will be a fresh implementation designed around race integrity
 
 ## Physics Parameters
 
-Eight core physics parameters control racer avoidance, lateral motion, speed braking, and home force. They are **intentionally not exposed in the Dev Screen** — they are strongly interdependent and were optimized via a multi-phase simulation sweep. Accidental changes to any one parameter without re-sweeping the others degrades race quality in non-obvious ways.
+A small set of core physics parameters control racer avoidance, lateral motion, and speed braking. They are **intentionally not exposed in the Dev Screen** — they are strongly interdependent and were optimized via a multi-phase simulation sweep. Accidental changes to any one parameter without re-sweeping the others degrades race quality in non-obvious ways. (The former `homeForceStrength` / `homeForceReductionOnOverlap` home-lane spring was **removed** in the lateral-physics cleanup and no longer exists in `defaults.js`; the live lateral model is Soft Steering + Hard Separation — see the Race Behavior System section above.)
 
 ### Current Values (Phase 5 winner, established 2026-06-03; speed-brake body-based 2026-06-08)
 
@@ -940,8 +941,6 @@ Eight core physics parameters control racer avoidance, lateral motion, speed bra
 |---|---|---|
 | `lateralForce` | 0.011400 | Sideways steering force applied per frame during avoidance |
 | `lateralDamping` | 0.160000 | Fraction of lateral velocity retained each frame |
-| `homeForceStrength` | 0.030000 | Spring strength pulling racers back to the centerline |
-| `homeForceReductionOnOverlap` | 0.300000 | Home force multiplier during geometric overlap |
 | `avoidanceBufferPct` | 0.200000 | Buffer beyond body contact before avoidance gate fires (20% lead time) |
 | `speedBrakeFactor` | 0.945000 | Speed multiplier applied to the trailing racer when side-by-side |
 | `speedBrakeTMultiplier` | 1.500000 | Longitudinal lead-time multiplier: brake fires at `bodyContactLength × 1.5` before contact |

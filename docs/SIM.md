@@ -6,7 +6,7 @@
 2. [How to Run](#2-how-to-run)
 3. [All Metrics](#3-all-metrics)
 4. [Parameter Sweep Methodology](#4-parameter-sweep-methodology)
-5. [The 8 Interdependent Parameters](#5-the-8-interdependent-parameters)
+5. [Physics Behavior Parameters](#5-physics-behavior-parameters)
 6. [Known Limitations](#6-known-limitations)
 7. [Lessons Learned](#7-lessons-learned)
 8. [Closed-Track finishT, Speed & Shared-Config Defaults](#8-closed-track-finisht-speed--shared-config-defaults)
@@ -25,7 +25,7 @@ Beyond fairness, the sim also measures lateral movement quality (zigzag, overlap
 
 The sim imports the identical JavaScript modules the browser uses:
 
-- `raceBehavior.js` — avoidance, home force, speed braking
+- `raceBehavior.js` — soft steering, hard separation, avoidance, speed braking
 - `rowLayout.js` — start position layout and speed bonus
 - `racePlanner.js` — Race Plan zone targeting
 - `lapUtils.js` — speed scale factor and reference FPS
@@ -171,20 +171,13 @@ node scripts/fingerprint-default.mjs after      # run after the change; compare 
 node scripts/sim-fairness.mjs \
   --behavior='{"lateralForce":0.016,"lateralDamping":0.30}' \
   --avoidanceWarmupMs=800
-
-# TEF (tStart-Equalization-Feedback)
-node scripts/sim-fairness.mjs \
-  --tefActive=true --tefAlpha=0.03 --tefMaxGap=0.015 --tefIsOpenOnly=true
-
-# v4 threshold-based bonus
-node scripts/sim-fairness.mjs \
-  --v4ThresholdActive=true \
-  --v4InitialBoost=1.20 \
-  --v4Thresholds=20,40,60,80 \
-  --v4BoostSchedule=1.20,1.15,1.10,1.05,1.0 \
-  --v4MetricType=physical_overtake \
-  --v4LateralProximity=0.3
 ```
+
+> The `--tef*` (tStart-Equalization-Feedback) and `--v4Threshold*` / `--v4InitialBoost` /
+> `--v4BoostSchedule` / `--v4MetricType` example flags that older revisions of this section listed
+> are **gone** — the TEF, ROW_SPLIT, and V4 start-row experiments were all deleted (see the INFRA
+> note at the end of this file). The `--v4LateralProximity` flag survives, but only as a shared
+> overtake-proximity constant read by the `--hero-map` observer; its name is historical.
 
 ### Comeback analysis
 
@@ -433,15 +426,14 @@ track-independent.
 | `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is *not* secretly the assigned winner. Action must not come from bias. | — | must stay LOW |
 
 **Calibration reference (acceptance check — the metric must agree with the owner's eye):**
-The **seed-1 Searound × Manta** case (surge + rubber-band OFF) is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
+The **seed-1 Searound × Manta** case is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
 
 ```
 node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1 --seed=1 \
-     --rubber-band=false \
      --front-action --diagLabel=calib --out=client/tmp/calib
 ```
 
-Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1**, surge OFF (default), rubber-band OFF (`--rubber-band=false`), shipped choreography + PulkLeadRotation (unconditional). The numbers below were measured against the pre-cleanup HEAD `b930b1b` (classic-director world) and are kept as an order-of-magnitude reference for the shape of a "no action" race; re-measure on current HEAD before using them as a hard gate:
+Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1**, shipped choreography + PulkLeadRotation (unconditional). The numbers below were measured against the pre-cleanup HEAD `b930b1b` (classic-director world, which still had the removed surge + rubber-band forces) and are kept as an order-of-magnitude reference for the shape of a "no action" race; re-measure on current HEAD before using them as a hard gate:
 
 → `leadChangeRate ≈ 0.0007` (≈0.07 %), `podiumShuffleRate ≈ 0.004` (≈0.4 %), `gapMedLenMean ≈ 20.4` racer-lengths (leader far ahead of the median = lone breakaway), `gap2ndLenMean ≈ 4.7`. All contest dimensions read LOW.
 
@@ -547,9 +539,16 @@ start rows) holding vs the A0 mechanism-off floor. Configs A0 (`--race-plan=fals
 
 ## 5. Physics Behavior Parameters
 
-The following parameters control lateral collision avoidance, home-lane restoration, and speed braking. They must be tuned together — changing one in isolation typically breaks another.
+The following parameters control lateral collision avoidance and speed braking. They must be tuned together — changing one in isolation typically breaks another.
 
 The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. One parameter (`avoidanceDistance`) is retired from the browser gate. `speedBrakeYThreshold` (0.18) is still read by the browser as a same-lane fallback when track width is unavailable (`raceBehavior.js`); kept for both browser and sim use.
+
+> **Home force is gone.** The `homeForceStrength` / `homeForceReductionOnOverlap` home-lane
+> restoring spring that older revisions of this table listed was **removed** (Commit A of the
+> lateral-physics cleanup); the config keys no longer exist in `storage/defaults.js` and neither
+> engine reads them. The live lateral model is Soft Steering (a single target spring) plus a Hard
+> Separation backstop — see the KRAEFTE-LANDKARTE force map. The `lateralForce` / `lateralDamping`
+> / brake parameters below are still read by `raceBehavior.js`.
 
 ### Parameter table
 
@@ -557,8 +556,6 @@ The values below are the **Phase 5 winners** — locked into `storage/defaults.j
 |---|---|---|---|
 | `lateralForce` | 0.0114 | 0.006–0.024 | Force applied to `physicalYVelocity` per frame when another racer is within the geometric avoidance gate |
 | `lateralDamping` | 0.16 | 0.05–0.45 | Velocity retention per frame: `velocity *= lateralDamping`. Hard cap < 0.50 (code constraint) |
-| `homeForceStrength` | 0.030 | 0.015–0.065 | Restoring force pulling a racer back toward their home lane when not avoiding anyone |
-| `homeForceReductionOnOverlap` | 0.30 | 0.02–0.45 | Multiplier applied to home force when overlapping — reduces home pull so avoidance can work |
 | `avoidanceBufferPct` | 0.20 | — | Buffer fraction beyond body contact before the avoidance gate fires (20% lead time); replaces the old fixed `avoidanceDistance` in the browser gate |
 | `speedBrakeFactor` | 0.945 | 0.87–0.995 | Speed multiplier applied when braking; 0.945 = 5.5% speed reduction per brake frame |
 | `speedBrakeTMultiplier` | 1.5 | 0.5–3.0 | Longitudinal lead-time multiplier for the body-based brake zone (replaces the old fixed `speedBrakeTThreshold`) |
@@ -569,15 +566,13 @@ The values below are the **Phase 5 winners** — locked into `storage/defaults.j
 
 **lateralForce ↔ lateralDamping:** Force is applied to velocity; damping determines how long the impulse persists. Strong force with high damping produces sharp, short pushes. Weak force with low damping produces slow, wide drifts. The interaction determines oscillation frequency — changing one without the other typically either causes zigzag (too little damping) or sluggish avoidance (too much damping).
 
-**homeForceStrength ↔ homeForceReductionOnOverlap:** During overlap, home force must be suppressed or it fights the avoidance push — both forces act at the same time and cancel each other. The reduction multiplier must be tuned to match `lateralForce`: stronger avoidance force requires a lower (more suppressed) home force during overlap.
-
 **speedBrakeTMultiplier ↔ speedBrakeFactor:** Braking triggers when the longitudinal gap between two racers is less than `speedBrakeTMultiplier × bodyLength`. A tight multiplier with a weak brake factor produces many small slow-downs. A loose multiplier with a strong brake factor produces few but severe slow-downs. Both affect `brakeRate` and `stableOvertakes`.
 
 **avoidanceBufferPct ↔ lateralForce:** The buffer fraction determines how early avoidance fires relative to actual body contact. A larger buffer with small force produces prolonged gentle pushes (high `lateralSpeedScore`). A smaller buffer with large force produces sharp last-moment corrections (potential zigzag near the threshold).
 
 ### Dev Screen
 
-The physics sliders (`lateralForce`, `lateralDamping`, `homeForceStrength`, `homeForceReductionOnOverlap`, `avoidanceDistance`, `speedBrakeFactor`, `speedBrakeTMultiplier`, `speedBrakeYThreshold`) were removed from the Dev Screen during `feat/dynamic-speed-brake`. The Phase 5 winner values are now locked in `storage/defaults.js`. To test new values, override via `--behavior='{"lateralForce":…}'` in the sim, or apply a temporary patch in `storage/defaults.js` and run the browser gate.
+The physics sliders (`lateralForce`, `lateralDamping`, `avoidanceDistance`, `speedBrakeFactor`, `speedBrakeTMultiplier`, `speedBrakeYThreshold`) were removed from the Dev Screen during `feat/dynamic-speed-brake`. The Phase 5 winner values are now locked in `storage/defaults.js`. To test new values, override via `--behavior='{"lateralForce":…}'` in the sim, or apply a temporary patch in `storage/defaults.js` and run the browser gate.
 
 ---
 
@@ -713,7 +708,7 @@ duration.
 
 ### Shared-config CLI defaults (no hand-mirrored literals) — `9cfa953`
 
-As of `9cfa953`, the Race-Plan and rubber-band CLI-arg defaults are **read from the shared
+As of `9cfa953`, the Race-Plan CLI-arg defaults are **read from the shared
 DevScreen config objects at module load**, not from hardcoded literals — so a change to the shared
 default propagates to the sim automatically and can never silently drift from the browser. The
 `argVal(name, default)` override is preserved (e.g. `--corridorEnd=0.9` still works for experiments):
@@ -725,17 +720,16 @@ default propagates to the sim automatically and can never silently drift from th
 | `--bonusFadeDuration` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration` (1500) |
 | `--corridorStart` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart` (0.55) |
 | `--corridorEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` (1.0) |
-| `--rubber-band` / `--rbFlatBoost` / `--rbGapThreshold` / `--rbRampMs` | `DEFAULT_RUBBER_BAND_CONFIG` (enabled/flatBoost/gapThreshold/boostRampMs) |
 
 Before `9cfa953`, `corridorEnd` defaulted to a hardcoded `0.95` (vs shared `1.0`) and `bonusMult`
 to `1.0` (vs shared `2.0`) — both silently wrong vs the browser. This is now structurally
 impossible for these fields.
 
-**Exception — `RB_ENDGAME_THRESHOLD` stays a hardcoded literal (0.9)** by design. The browser
-sources its rubber-band endgame gate from `DEFAULT_CAMERA_CONFIG.endgameThreshold` (a camera-config
-field cross-reused for gameplay, `index.jsx:876`) — a known architectural smell. Splitting it into
-a dedicated `rubberBandEndgameThreshold` field is a browser-side change tracked separately in the
-backlog; the sim does not import camera config just for this value.
+> The rubber-band CLI flags (`--rubber-band` / `--rbFlatBoost` / `--rbGapThreshold` / `--rbRampMs`)
+> that a `9cfa953`-era revision of this table listed are **gone**: the rubber-band speed force and
+> its `DEFAULT_RUBBER_BAND_CONFIG` were removed from both the browser and the sim, so no `--rubber-band*`
+> flag exists any longer. (The CameraDirector's `endgameThreshold` is a *different*, still-live camera
+> gate — see the Camera section in ARCHITECTURE.md — not the removed speed force.)
 
 ### `--race-plan` default is now `true` (browser-faithful)
 

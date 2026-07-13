@@ -23,20 +23,20 @@ verified against `git log` / `git tag`.
 - **Governor vision-pivot → race-action director** — ⚠️ **SUPERSEDED/HISTORICAL:** this reactive governor/director was replaced by choreo + PulkLeadRotation and then **removed entirely** in THE GREAT PULK CLEANUP (Stages 1–6); the commits below are history, none of the governor/director knobs or streams survive. (anchor `d9c9cd3` = `stable/pre-governor-04jul`). Governor core `307d6dc`/`294550a`/`0da9048`/`24c99b6`/`9947892`; **Stage C** leader-brake retired → pure tail-lift `a0105ed`; **Stage A1** contest-injector director (rank-blind, own master + `DIRECTOR_SEED_XOR`) `a7e4a64`; **Sim-1** front-action metric + governor telemetry propagation fix (read-only) `b930b1b`. Full detail in ROADMAP §R.7. The pivot idea (a limiter cannot create a contest) endures — see LESSONS 160.
 
 **🔜 / ⏳ Open**
-- **Re-Gate on `9cfa953`** ⏳ in progress — re-run all four closed tracks under the corrected browser-faithful config (corridorEnd=1.0, bonusMult=2.0); discards the provisional `8f57cba`-era sweeps.
-- **Master-merge** of `feat/race-action` → `master` — pending.
-- **sim-fairness.mjs telemetry comment cleanup** — the passThroughCount declaration comment still says "NOT committed to the feature branch"; now stale (it is committed). Drop that clause.
-- **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — `trackClosedSsf` + the closed branch of `trackNaturalBase` are computed-but-unused-for-closed after `8f57cba`; the outer `expectedMinSF` derivation uses global `N_RACERS` instead of per-combo `nRacersForCombo`. Bundle both cleanups (entangled).
-- **Browser `index.jsx` inert `??` fallback mismatches** (lines ~662-666) — duplicated literals; `bonusStrengthMultiplier ?? 1.0` mismatches the real shared default 2.0 (inert today, latent trap).
-- **`rubberBandEndgameThreshold` field split** — browser cross-reuses `DEFAULT_CAMERA_CONFIG.endgameThreshold` (0.9) for the rubber-band endgame gate (`index.jsx:876`); split into a dedicated rubber-band field. Browser-side change.
-- **Race-action direction decision** — ✅ **RESOLVED / SUPERSEDED** by the governor vision-pivot: the direction is the **race-action director** (contest-injector staging an unpredictable front), not the earlier Slipstream-vs-Hazard-Zones question. See ROADMAP §R.7.
-- **Governor/director — open items (from the pivot):**
-  - **Stage C2 — generous front spread-cap** — allow a wide-but-bounded front spread without a runaway lone breakaway.
-  - **A1b — anchor-to-front** — raise/track the director anchor toward the real front (currently median + fixed offset) so the cast contests the true lead.
-  - **The Action sweep** — now that front-action is measurable (Sim-1 `--front-action`), sweep the 15 governor/director values for lead-change/podium-shuffle up while `unpredictability.*` stays LOW and fairness holds.
-  - **DevScreen knob-reduction** — pin barrier/safety internals (K0, RampWidth, Frequency, LengthFloor, MaxEffect, MaxStepPerFrame, AMin, AMax) to constants; keep ~5 action levers → one SetupScreen **"Action" slider**.
-  - **OUTCOME decompression** — ensure the OUTCOME controller cleanly resolves the assigned order after the director clusters the front.
-- **`results/` not gitignored** (hygiene, reported by Sim-1) — `results/` is untracked but **not** in `.gitignore`, yet it holds diagnostic output (`results/breakaway-diag/`, `results/front-action/`). A stray `git add -A` would commit it. Add `results/` to `.gitignore` (or redirect the diag writers under the gitignored `client/tmp/`).
+- **Re-Gate on `9cfa953`** ⏳ **STILL OPEN (unconfirmed 2026-07-14 audit)** — `9cfa953` IS an ancestor of `master`, but ROADMAP.md:418 still reads "in progress" and no commit/tag confirms the re-gate was completed. Kept open; flagged for owner. Re-run all four closed tracks under the corrected browser-faithful config (corridorEnd=1.0, bonusMult=2.0); discards the provisional `8f57cba`-era sweeps.
+- **Master-merge** of `feat/race-action` → `master` — ⚠️ **UNCERTAIN (2026-07-14 audit)** — much of the branch's foundational content is already in `master` (e.g. `9cfa953` is a master ancestor), but `feat/race-action` still exists as a separate branch and PULK-cleanup work continued past it. No explicit merge-commit found. Kept open; flag for owner to confirm the intended merge point given the later cleanup branches.
+- **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:772); the stale "NOT committed to the feature branch" clause is gone.
+- **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — ✅ **DONE (2026-07-14 audit)** — `trackClosedSsf` no longer exists in scripts/sim-fairness.mjs (removed); `trackNaturalBase` is now `isOpen ? … : undefined` (open-only, line ~2644); and the `expectedMinSF` derivation uses the per-combo `nRacers` (line ~566), not the global `N_RACERS`.
+- **Browser `index.jsx` inert `??` fallback mismatches** — ✅ **DONE (2026-07-14 audit)** — the fallback now reads `bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0` (RaceScreen/index.jsx:697), matching the real shared default; an added comment mandates the fallbacks mirror `DEFAULT_RACE_DYNAMICS_CONFIG`. (Old line refs ~662-666 have drifted.)
+- **`rubberBandEndgameThreshold` field split** — ⚠️ **SUPERSEDED / MOOT (2026-07-14 audit)** — the rubber-band FORCE is removed (`raceRubberBand.js` deleted; no `flatBoost`/`rubberBand` in source); with no force there is nothing to give a dedicated endgame threshold to, and the old `index.jsx` cross-reuse of `endgameThreshold` for a rubber-band gate no longer exists. NOTE: the camera BATTLE-gate `endgameThreshold` in CameraDirector.js (0.9, line 373/1060) is a DIFFERENT, still-live thing and is unaffected.
+- **Race-action direction decision** — ✅ **RESOLVED (SUPERSEDED twice)** — first resolved by the governor vision-pivot (race-action director, not Slipstream-vs-Hazard-Zones); that reactive director was then itself removed in THE GREAT PULK CLEANUP. The current shipped direction is choreo + PulkLeadRotation. Decision closed either way. See ROADMAP §R.7.
+- **Governor/director — open items (from the pivot):** ⚠️ **SUPERSEDED (2026-07-14 audit)** — this whole block references the REMOVED reactive governor/director. That mechanism was replaced by choreo + PulkLeadRotation and then removed entirely in THE GREAT PULK CLEANUP, Stages 1–6 (`14cf58c` S1, `c8649dc` S2, `d32e165` S3, `e4caaaf`/`399c266`/`0b42f72` S5b, `9f71e3e` S6a). None of the reactive knobs (spread-cap, anchor-to-front, contest-injector, tail-lift, the ~15 governor values) survive in source. The one surviving `raceGovernor.js` is the NEW PULK-phase contest director (`applyPulkLeadRotation`), a different mechanism.
+  - ~~**Stage C2 — generous front spread-cap**~~ — superseded (reactive governor removed).
+  - ~~**A1b — anchor-to-front**~~ — superseded (reactive director anchor removed).
+  - ~~**The Action sweep** over the ~15 governor/director values~~ — superseded (those values no longer exist).
+  - **DevScreen knob-reduction** — ✅ **DONE, on the new world (2026-07-14 audit)** — realised in PULK CLEANUP Stage 5b-ii/5b-iii (`399c266`/`0b42f72`): DevScreen collapsed to one PULK Phase card with 5 visible controls and pinned internals (see DynamicsTuningSection.jsx:128-130, "reset only the 5 VISIBLE controls … pinned internals … have no DevScreen control"). Realised on choreo+pulk, NOT the removed governor knobs listed here.
+  - ~~**OUTCOME decompression**~~ — superseded (the reactive director that clustered the front is gone).
+- **`results/` not gitignored** (hygiene, reported by Sim-1) — ✅ **DONE (2026-07-14 audit)** — `results/` IS gitignored (`.gitignore:37`).
 - **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
 
 ---
@@ -657,7 +657,14 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 ## Physics — Open Issues
 
-### P-1 — Longitudinal overlap during passing on open tracks *(backlogged 2026-06-05)*
+### P-1 — Longitudinal overlap during passing on open tracks *(backlogged 2026-06-05)* — ⚠️ **ROOT-CAUSE PARTIALLY MOOT — RE-VERIFY (2026-07-14 audit)**
+
+> **2026-07-14 audit note:** The stated root cause below leans on "rubber-band boost (+10%) exceeds
+> the speed-brake reduction," but the rubber-band FORCE is now REMOVED (`raceRubberBand.js` deleted; no
+> `flatBoost`/`gapThreshold` in source — only the pre-existing `draftingBoost` remains). Kept OPEN, not
+> closed: the overlap phenomenon may still occur via drafting/threshold coupling, but the specific causal
+> chain is no longer accurate. Needs a fresh top-down measurement to confirm whether the symptom
+> persists without the rubber band. Flag for owner.
 
 **Symptom:** In open-track races with ≥20 racers, planes and other racers visibly cross/stack during overtaking events. Visible in top-down view — not an illusion.
 

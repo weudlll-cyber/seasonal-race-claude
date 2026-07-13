@@ -60,7 +60,7 @@ Card has no card-level Reset. Backing config: `raceDynamicsConfig`.
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| Race Plan Bonus Strength | `racePlanBonusStrengthMultiplier` | 1.0 |
+| Race Plan Bonus Strength | `racePlanBonusStrengthMultiplier` | 2.0 |
 | Bonus active until (% race) | `racePlanBonusTransitionEnd` | 0.75 |
 | Bonus fade duration (ms) | `racePlanBonusFadeDuration` | 1500 |
 | P-Controller starts (% race) | `racePlanCorridorStart` | 0.55 |

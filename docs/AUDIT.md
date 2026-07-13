@@ -1,5 +1,10 @@
 # RaceArena — Security & Quality Audit Log
 
+> ℹ️ **Dated audit log — read rows as history.** Older entries describe the code as it was on their
+> date and may name since-removed forces (home force, rubber-band, race-zones, the classic reactive
+> director). That is correct for a log. For the CURRENT force set / mechanisms see
+> `KRAEFTE-LANDKARTE.md`, `docs/ARCHITECTURE.md`, and `docs/PHASE-CONTRACT.md`.
+
 ## Audit Log Template
 
 Each entry covers one audit cycle and follows this structure:
