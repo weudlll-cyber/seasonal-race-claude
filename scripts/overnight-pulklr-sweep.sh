@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Overnight PulkLeadRotation fairness + action sweep (feat/race-action @ 8fe7dd6).
+# Overnight PulkLeadRotation fairness + action sweep — the ONE live regression harness.
 # Read-only measurement: results/ only, no default flipped, no commit, no tag.
-# World: v4 ON, PULK reopened (directorV4OutcomeStart=0.5), boostHeadroom=0.10,
-#        challengerBoost=0.06 (shipped), all other lead-rotation knobs shipped defaults.
-# Configs per track: A0 (mechanism OFF), D2 (ON dropDepth=2), D8 (ON dropDepth=8).
+# World: choreography + lead rotation are UNCONDITIONAL (shipped). PULK end choreoOutcomeStart=0.5,
+#        pulkBoostHeadroom=0.10, pulkChallengerBoost=0.06 (shipped), other lead-rotation knobs
+#        at shipped defaults.
+# Configs per track: A0 (race-plan OFF — the mechanism-off floor: rotation + choreography are
+#        unconditional now, so --race-plan=false is the only way to turn them off),
+#        D2 (ON, dropDepth=2), D8 (ON, dropDepth=8).
 # Clean tracks: 60s duration only (N=100). Borderline (searound, luger-hill): 30/60/120 (N=100).
 set -u
 cd "c:/Users/weudl/OneDrive/Dokumente/Seasonal race claude" || exit 1
@@ -28,9 +31,10 @@ TRACKS=(
 # Borderline tracks get the full 3-duration sweep (else 60s only).
 is_borderline() { [ "$1" = "searound" ] || [ "$1" = "luger-hill" ]; }
 
-# Common world flags (identical for A0/D2/D8 — only pulkLeadRotationEnabled / dropDepth differ).
-COMMON="--seed=1 --races=100 --race-plan=true --directorV4Enabled=true --directorV4OutcomeStart=0.5 \
---governorDirectorBoostHeadroom=0.10 --governorDirectorChallengerBoost=0.06 --hero-map --action-metrics"
+# Common world flags. race-plan is set PER CONFIG (below), NOT here, because argVal takes the FIRST
+# occurrence — A0 needs --race-plan=false while D2/D8 need --race-plan=true.
+COMMON="--seed=1 --races=100 --choreoOutcomeStart=0.5 \
+--pulkBoostHeadroom=0.10 --pulkChallengerBoost=0.06 --hero-map --action-metrics"
 
 run_one() {
   local track="$1" racer="$2" cfgname="$3" cfgflags="$4" durflag="$5"
@@ -46,9 +50,9 @@ echo "SWEEP-BEGIN $(date '+%Y-%m-%d %H:%M:%S')"
 for entry in "${TRACKS[@]}"; do
   track="${entry%%:*}"; racer="${entry##*:}"
   if is_borderline "$track"; then durflag=""; else durflag="--dur=60"; fi
-  # A0 — mechanism OFF (dropDepth irrelevant). D2/D8 — mechanism ON.
-  run_one "$track" "$racer" "A0" "--pulkLeadRotationEnabled=false" "$durflag"
-  run_one "$track" "$racer" "D2" "--pulkLeadRotationEnabled=true --pulkLeadRotationDropDepthLengths=2" "$durflag"
-  run_one "$track" "$racer" "D8" "--pulkLeadRotationEnabled=true --pulkLeadRotationDropDepthLengths=8" "$durflag"
+  # A0 — mechanism-off floor (race-plan OFF → no rotation, no choreography). D2/D8 — mechanism ON.
+  run_one "$track" "$racer" "A0" "--race-plan=false" "$durflag"
+  run_one "$track" "$racer" "D2" "--race-plan=true --pulkLeadRotationDropDepthLengths=2" "$durflag"
+  run_one "$track" "$racer" "D8" "--race-plan=true --pulkLeadRotationDropDepthLengths=8" "$durflag"
 done
 echo "SWEEP-END $(date '+%Y-%m-%d %H:%M:%S')"

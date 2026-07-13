@@ -305,9 +305,9 @@ const heroMapRaces        = [];   // per-race hero observations (filled only whe
 // byte-identical. RAW distributions only — X/Y/Z await the owner's calibration (see gap-metrics.mjs).
 const GAP_METRICS         = argv.includes('--gap-metrics');
 const gmRaces             = [];   // per-race gap-space observations (filled only when GAP_METRICS)
-// --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. Used by the
-// night-sweep runner (it reads only hero-map.json), to avoid heavy concurrent writes into the
-// OneDrive-synced tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
+// --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
+// runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
+// tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
 const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
@@ -3185,7 +3185,7 @@ if (isMain) {
     console.log('');
   }
 
-  // Write JSON + Markdown report — skipped under --skip-main-output (night-sweep reads only hero-map.json).
+  // Write JSON + Markdown report — skipped under --skip-main-output (a batch runner reads only hero-map.json).
   if (!SKIP_MAIN_OUTPUT) {
     const jsonPath = join(OUT_DIR, 'fairness-data.json');
     writeFileSync(jsonPath, JSON.stringify({ meta: { world: WORLD_STAMP, nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS } } : {}) }, results: allResults, rawData }, null, 2));
