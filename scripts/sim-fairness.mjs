@@ -1114,6 +1114,10 @@ export function runSingleRace({
     const amHeld      = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
     const amLinkGaps  = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
     const amFullSpread = ACTION_METRICS ? [] : null; // per-frame leader→last full spread (racer-lengths, Q3b)
+    let   amEndFullSpread   = 0; // leader→last spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
+    let   amEndSpreadP10P90 = 0; // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
+    let   amPrevP1     = -1;  // previous window frame's P1 index (for the raw lead-change counter)
+    let   amLeadChanges = 0;  // raw count of P1 hand-overs across the window (unguarded action density)
     // RUNAWAY-LEADER one-shot boundary snapshots (--runaway-leader). Captured at the first frame past
     // pulkStart / pulkEnd; each stays null until its crossing. Per-race (reset by this per-race scope).
     let rlStartSnap = null, rlEndSnap = null;
@@ -1420,6 +1424,12 @@ export function runSingleRace({
         const n = order.length;
         if (n > 0) {
           amFrames++;
+          // Raw lead-change counter (unguarded): P1 = order[0] this frame; count each hand-over. This
+          // is the "how many times P1 changed hands" density (a); distinctP1Pulk below is the "how many
+          // DIFFERENT racers led" variety (b). heldTop5Overtakes is the HOLD-GUARDED (≥750 ms) companion.
+          const p1Now = order[0].index;
+          if (amPrevP1 >= 0 && p1Now !== amPrevP1) amLeadChanges++;
+          amPrevP1 = p1Now;
           const curRank = new Map();
           for (let i = 0; i < n; i++) {
             const idx = order[i].index;
@@ -1450,6 +1460,10 @@ export function runSingleRace({
           const p10 = order[Math.floor(0.1 * (n - 1))];
           const p90 = order[Math.floor(0.9 * (n - 1))];
           amSpreadSum += (p10.t - p90.t) * govLenScale;
+          // End-of-PULK snapshot (read-only): overwrite each window frame so these hold the LAST PULK
+          // frame's value (last frame with raceProgress < pulkEndLive) when the race loop exits.
+          amEndFullSpread   = amFullSpread[amFullSpread.length - 1];
+          amEndSpreadP10P90 = (p10.t - p90.t) * govLenScale;
           // PULK naturalness (same natFactor as strip-metrics; director is off in this sweep anyway).
           for (const r of racers) if (!r.finished) {
             const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
@@ -2397,8 +2411,9 @@ export function runSingleRace({
         spreadLenP10P90:   amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
         maxSpeedFactor:    +amNatMax.toFixed(4),
         // NEW (pulk-contest observer): PULK-window front action + density.
-        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders over the window
-        heldTop5Overtakes: amHeld ? amHeld.count : 0,               // REAL top-5 overtakes (hold-filtered)
+        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders over the window (b)
+        leadChangesPulk:   amLeadChanges,                           // raw P1 hand-over count over the window (a)
+        heldTop5Overtakes: amHeld ? amHeld.count : 0,               // REAL top-5 overtakes (hold-filtered ≥750ms)
         maxLinkGapLenP90:  amLinkGaps.length ? +percentile(amLinkGaps, 0.9).toFixed(3) : 0, // density p90 (lengths)
         maxLinkGapLenMax:  amLinkGaps.length ? +Math.max(...amLinkGaps).toFixed(3) : 0,      // density max (lengths)
         // NEW (PULK-window baseline): the window bound + the owner's three direct answers.
@@ -2408,6 +2423,8 @@ export function runSingleRace({
         p1MaxHoldShare:    amFrames > 0 && amP1Steps.size ? +(Math.max(...amP1Steps.values()) / amFrames).toFixed(4) : 0, // Q2: most-dominant leader's hold
         fullSpreadLenP90:  amFullSpread.length ? +percentile(amFullSpread, 0.9).toFixed(3) : 0, // Q3b: leader→last p90 (lengths)
         fullSpreadLenMax:  amFullSpread.length ? +Math.max(...amFullSpread).toFixed(3) : 0,     // Q3b: leader→last max (lengths)
+        endFullSpreadLen:   +amEndFullSpread.toFixed(3),    // leader→last spread at the LAST PULK frame (end-of-PULK snapshot)
+        endSpreadP10P90Len: +amEndSpreadP10P90.toFixed(3),  // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot)
         // RUNAWAY-LEADER (--runaway-leader): pulkStart + pulkEnd leader snapshots (identity/isHero/
         // lead-over-P2 in lengths) + did the SAME racer still lead at pulkEnd. Null when the flag is off.
         runawayLargeLen:   RUNAWAY_LEADER ? RUNAWAY_LARGE_LENGTHS : null, // the LARGE threshold (single source)
