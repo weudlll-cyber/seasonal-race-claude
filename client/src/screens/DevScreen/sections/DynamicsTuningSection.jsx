@@ -156,7 +156,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     setDynamicsConfig((prev) => ({
       ...prev,
       racePlanPulkStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
-      directorV4OutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart,
+      choreoOutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
       areaBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
       rowBonusPulk: DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk,
       pulkBiasGain: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
@@ -867,26 +867,23 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4d2: Hero Choreography (v4) — flag + two tuning knobs (fields defined in defaults.js) ── */}
+      {/* ── Block 4d2: Hero Choreography — two tuning knobs (fields defined in defaults.js) ── */}
       <SubCard
-        title="Hero Choreography (v4)"
+        title="Hero Choreography"
         onReset={() => {
-          setDynamics('directorV4Intensity', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity);
+          setDynamics('choreoIntensity', DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity);
           setDynamics(
-            'directorV4PackBandStrictness',
-            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness
+            'choreoPackBandStrictness',
+            DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness
           );
-          setDynamics(
-            'directorV4ReleaseProgress',
-            DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ReleaseProgress
-          );
-          setDynamics('directorV4ResolveB2', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB2);
-          setDynamics('directorV4ResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3);
-          setDynamics('directorV4ResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4);
-          setDynamics('directorV4ResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5);
-          // directorV4OutcomeStart (PULK end) now lives in the PULK group — reset by resetPulk.
+          setDynamics('choreoReleaseProgress', DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress);
+          setDynamics('choreoResolveB2', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2);
+          setDynamics('choreoResolveB3', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3);
+          setDynamics('choreoResolveB4', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4);
+          setDynamics('choreoResolveB5', DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5);
+          // choreoOutcomeStart (PULK end) now lives in the PULK group — reset by resetPulk.
         }}
-        resetTestId="reset-v4"
+        resetTestId="reset-choreo"
         subtitle="Hero choreography (always on): at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. The knobs below tune it."
       >
         <div className={s.formGrid}>
@@ -901,14 +898,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <input
               type="number"
               className={s.input}
-              aria-label="Director V4 Intensity"
+              aria-label="Choreo Intensity"
               min={0}
               max={1}
               step={0.05}
-              value={dynamicsConfig.directorV4Intensity}
+              value={dynamicsConfig.choreoIntensity}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0 && v <= 1) setDynamics('directorV4Intensity', v);
+                if (v >= 0 && v <= 1) setDynamics('choreoIntensity', v);
               }}
             />
           </div>
@@ -923,18 +920,18 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <input
               type="number"
               className={s.input}
-              aria-label="Director V4 Pack Band Strictness"
+              aria-label="Choreo Pack Band Strictness"
               min={0}
               max={1}
               step={0.05}
-              value={dynamicsConfig.directorV4PackBandStrictness}
+              value={dynamicsConfig.choreoPackBandStrictness}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0 && v <= 1) setDynamics('directorV4PackBandStrictness', v);
+                if (v >= 0 && v <= 1) setDynamics('choreoPackBandStrictness', v);
               }}
             />
           </div>
-          {/* PULK end / OUTCOME start (directorV4OutcomeStart) moved to the PULK group below. */}
+          {/* PULK end / OUTCOME start (choreoOutcomeStart) moved to the PULK group below. */}
           <div className={s.formGroup}>
             <label
               className={s.label}
@@ -946,35 +943,35 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <input
               type="number"
               className={s.input}
-              aria-label="Director V4 Release Progress"
+              aria-label="Choreo Release Progress"
               min={0}
               max={1}
               step={0.01}
-              value={dynamicsConfig.directorV4ReleaseProgress}
+              value={dynamicsConfig.choreoReleaseProgress}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0 && v <= 1) setDynamics('directorV4ReleaseProgress', v);
+                if (v > 0 && v <= 1) setDynamics('choreoReleaseProgress', v);
               }}
             />
           </div>
           {[
             [
-              'directorV4ResolveB2',
+              'choreoResolveB2',
               'B2 resolve progress (0–1]',
               'By when a B2 (mid-pack) hero must settle into its band. Deeper bands resolve EARLIER so the rear locks in first. 0.80 default.',
             ],
             [
-              'directorV4ResolveB3',
+              'choreoResolveB3',
               'B3 resolve progress (0–1]',
               'By when a B3 hero must settle into its band. Earlier than B2. 0.70 default.',
             ],
             [
-              'directorV4ResolveB4',
+              'choreoResolveB4',
               'B4 resolve progress (0–1]',
               'By when a B4 hero must settle into its band. Earlier than B3. 0.65 default.',
             ],
             [
-              'directorV4ResolveB5',
+              'choreoResolveB5',
               'B5 resolve progress (0–1]',
               'By when a B5 (rear) hero must settle into its band — the earliest resolve, so the tail is locked while the front still fights. 0.60 default.',
             ],
@@ -990,7 +987,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               <input
                 type="number"
                 className={s.input}
-                aria-label={`Director V4 ${key.replace('directorV4', '')}`}
+                aria-label={`Choreo ${key.replace('choreo', '')}`}
                 min={0}
                 max={1}
                 step={0.05}
@@ -1094,7 +1091,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="PULK"
         onReset={resetPulk}
         resetTestId="reset-pulk"
-        subtitle="The PULK window [begin, end] and the three mechanisms that act ONLY inside it. Under v4, OUTCOME (band-steering) begins exactly where PULK ends, and the director (hero choreography) is anchored at PULK begin. At the shipped defaults PULK begin == PULK end (0.25) → the window has ZERO width, so the three PULK mechanisms below are inert; widen the window (raise PULK end above PULK begin) to bring them to life."
+        subtitle="The PULK window [begin, end] and the three mechanisms that act ONLY inside it. OUTCOME (band-steering) begins exactly where PULK ends, and the director (hero choreography) is anchored at PULK begin. At the shipped defaults PULK begin == PULK end (0.25) → the window has ZERO width, so the three PULK mechanisms below are inert; widen the window (raise PULK end above PULK begin) to bring them to life."
       >
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -1127,7 +1124,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               PULK end / OUTCOME begins (0.25–0.55)
-              <InfoTooltip text="PULK ends here, and under v4 OUTCOME (the pack's band-steering) begins here — one boundary, no TRANSITION phase in between. At the default 0.25 (== PULK begin) the PULK window is zero-width and the field is steered from the chaos boundary, exactly as shipped; raising it reopens the PULK window and hands OUTCOME off later. 0.25 default. OFF (reactive) path uses its own 0.55 corridor start." />
+              <InfoTooltip text="PULK ends here, and OUTCOME (the pack's band-steering) begins here — one boundary, no TRANSITION phase in between. At the default 0.25 (== PULK begin) the PULK window is zero-width and the field is steered from the chaos boundary, exactly as shipped; raising it reopens the PULK window and hands OUTCOME off later. 0.25 default." />
             </label>
             <input
               type="number"
@@ -1136,10 +1133,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={0.25}
               max={0.55}
               step={0.05}
-              value={dynamicsConfig.directorV4OutcomeStart}
+              value={dynamicsConfig.choreoOutcomeStart}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0.25 && v <= 0.55) setDynamics('directorV4OutcomeStart', v);
+                if (v >= 0.25 && v <= 0.55) setDynamics('choreoOutcomeStart', v);
               }}
             />
           </div>

@@ -198,19 +198,19 @@ const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAU
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
-// v4 hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
+// Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
-const DIRECTOR_V4_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
+const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
 // Stage 1 spoiler switch (parity with racePlanner/index.jsx). Default off → the shipped default.
-const DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1 = argVal('directorV4SuppressChaosBonusB1', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4SuppressChaosBonusB1)) === 'true';
-const DIRECTOR_V4_INTENSITY   = Number(argVal('directorV4Intensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity)));
-const DIRECTOR_V4_PACK_BAND_STRICTNESS = Number(argVal('directorV4PackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4PackBandStrictness)));
-const DIRECTOR_V4_RELEASE_PROGRESS = Number(argVal('directorV4ReleaseProgress', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ReleaseProgress)));
-const DIRECTOR_V4_RESOLVE_B2 = Number(argVal('directorV4ResolveB2', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB2)));
-const DIRECTOR_V4_RESOLVE_B3 = Number(argVal('directorV4ResolveB3', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB3)));
-const DIRECTOR_V4_RESOLVE_B4 = Number(argVal('directorV4ResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB4)));
-const DIRECTOR_V4_RESOLVE_B5 = Number(argVal('directorV4ResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4ResolveB5)));
-const DIRECTOR_V4_OUTCOME_START = Number(argVal('directorV4OutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4OutcomeStart)));
+const CHOREO_SUPPRESS_CHAOS_BONUS_B1 = argVal('choreoSuppressChaosBonusB1', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoSuppressChaosBonusB1)) === 'true';
+const CHOREO_INTENSITY   = Number(argVal('choreoIntensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity)));
+const CHOREO_PACK_BAND_STRICTNESS = Number(argVal('choreoPackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness)));
+const CHOREO_RELEASE_PROGRESS = Number(argVal('choreoReleaseProgress', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress)));
+const CHOREO_RESOLVE_B2 = Number(argVal('choreoResolveB2', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2)));
+const CHOREO_RESOLVE_B3 = Number(argVal('choreoResolveB3', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3)));
+const CHOREO_RESOLVE_B4 = Number(argVal('choreoResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4)));
+const CHOREO_RESOLVE_B5 = Number(argVal('choreoResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5)));
+const CHOREO_OUTCOME_START = Number(argVal('choreoOutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart)));
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -289,7 +289,7 @@ const ACTION_FROM_START   = argv.includes('--action-from-start');
 // pulkEnd, to measure how often the post-chaos leader is already uncatchable and whether it is a hero.
 // Rides in the action-metrics per-race dump (pass --action-metrics too). Read-only; no new physics.
 const RUNAWAY_LEADER      = argv.includes('--runaway-leader');
-// HERO-MAP (read-only, --hero-map): NIGHT-SWEEP TIER-1 observer. For every racer the v4 controller
+// HERO-MAP (read-only, --hero-map): NIGHT-SWEEP TIER-1 observer. For every racer the choreo controller
 // tags isHeroChoreographed, records the climb-feasibility signals over the race: anchor rank (at the
 // choreo boundary), target rank, final rank, REAL whole-field overtakes (near-behind then cross —
 // the corrected places-gained headline, NOT the Row1×Row0 physical_overtake), servo-ceiling frac
@@ -663,7 +663,7 @@ export function runSingleRace({
       return r;
     });
 
-    // v4: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside the
+    // choreo: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside the
     // controller's update() (the generator needs the actual field state), not at racer init.
 
     // World position helper
@@ -848,14 +848,13 @@ export function runSingleRace({
     let   bkPeakGap2nd     = 0;
     let   bkPeakDecomp     = null;
 
-    // ── Pre-OUTCOME contest-injector "director" — parity with the browser ─────────
-    // Built once per race from the shared dynamics config. Phase fractions + seed from the
-    // controller (live boundaries, single source). Default OFF → governorMult stays 1.0.
+    // ── PULK-phase contest director — parity with the browser ─────────────────────
+    // Phase fractions + seed come from the controller (live boundaries, single source).
     // maxEffect + maxStepPerFrame are the shared realism envelope (±clamp + slew).
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
-    // ── PulkLeadRotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
-    // (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation keys +
-    // minHold are new. v4 only. ONE governorMult writer at a time (the classic director / PulkLeadRotation).
+    // ── PulkLeadRotation (the sole PULK director; runs whenever a plan controller exists). Reuses the
+    // shared strength knobs (leaderBrake/challengerBoost/frontPool + envelope); the four rotation keys +
+    // minHold are its own. ONE governorMult writer.
     const pulkLeadRotationOn = !!racePlanController;
     const pulkLeadRotCfg = {
       enabled: pulkLeadRotationOn,
@@ -1883,7 +1882,7 @@ export function runSingleRace({
       finalRank:     r.finishRank,
       finishTime:    r.finishTime,
     }));
-    // Attach mixing-quota and v4 diagnostics as non-iterable properties.
+    // Attach mixing-quota and choreo diagnostics as non-iterable properties.
     results.mixingQuota     = mixingQuota;
     results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
     results.liteRow1BrakeFrames = liteRow1BrakeFrames;
@@ -2696,15 +2695,15 @@ if (isMain) {
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
-              directorV4SuppressChaosBonusB1: DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1,
-              directorV4Intensity:     DIRECTOR_V4_INTENSITY,
-              directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS,
-              directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
-              directorV4ResolveB2:     DIRECTOR_V4_RESOLVE_B2,
-              directorV4ResolveB3:     DIRECTOR_V4_RESOLVE_B3,
-              directorV4ResolveB4:     DIRECTOR_V4_RESOLVE_B4,
-              directorV4ResolveB5:     DIRECTOR_V4_RESOLVE_B5,
-              directorV4OutcomeStart:  DIRECTOR_V4_OUTCOME_START,
+              choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
+              choreoIntensity:     CHOREO_INTENSITY,
+              choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+              choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
+              choreoResolveB2:     CHOREO_RESOLVE_B2,
+              choreoResolveB3:     CHOREO_RESOLVE_B3,
+              choreoResolveB4:     CHOREO_RESOLVE_B4,
+              choreoResolveB5:     CHOREO_RESOLVE_B5,
+              choreoOutcomeStart:  CHOREO_OUTCOME_START,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3229,7 +3228,7 @@ if (isMain) {
       }
     } catch (e) { console.log(`[hero-map] start-row fairness failed: ${e.message}`); }
     // NATIVE per-row WINS chi-square + per-row win distribution (uncontaminated: hero-map runs plain
-    // v4, nothing injected). This is the BINDING win-bias gate for GAP-2.
+    // choreo, nothing injected). This is the BINDING win-bias gate for GAP-2.
     const totalRacersHM = rowSizes.reduce((s, v) => s + v, 0);
     const nRacesHM = byRace.size;
     const winsByRowHM = new Array(totalRows).fill(0);
@@ -3271,9 +3270,9 @@ if (isMain) {
       meta: {
         world: WORLD_STAMP,
         track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
-        directorV4Intensity: DIRECTOR_V4_INTENSITY,
-        directorV4OutcomeStart: DIRECTOR_V4_OUTCOME_START, directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
-        directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS, bonusMult: BONUS_MULT,
+        choreoIntensity: CHOREO_INTENSITY,
+        choreoOutcomeStart: CHOREO_OUTCOME_START, choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
+        choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS, bonusMult: BONUS_MULT,
         pulkBiasGain: RP_PULK_BIAS_GAIN,
         baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
       },

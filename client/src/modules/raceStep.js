@@ -7,7 +7,7 @@
 // NAMES matched, but the sim NEVER applied `rowEnvMult` (it lived behind a
 // dormant CLI experiment that defaulted to 1.0) and the sim did NOT apply the
 // finish clamp. The browser applied both. That was a live divergence: under
-// v4-OFF the browser slows back-row racers through the PULK window and the sim
+// choreo-OFF the browser slows back-row racers through the PULK window and the sim
 // did not. One formula in one file, imported by both, makes the divergence
 // impossible rather than merely monitored.
 //
@@ -17,7 +17,7 @@
 //     effective bonus = 1 + rawRowBonus·s  →  envMult = (1 + rawRowBonus·s)/(1 + rawRowBonus)
 //   The phase boundaries (chaosEnd = pulkStart, pulkEnd) are the LIVE plan
 //   fractions passed in by the caller — NEVER a literal, NEVER a stale constant.
-//   When the plan's PULK window has zero width (the v4 case, pulkStart == pulkEnd)
+//   When the plan's PULK window has zero width (the choreo case, pulkStart == pulkEnd)
 //   only the EARLY and POST arms are reachable; with the shipped strengths
 //   (early = post = 1) the envelope is identically 1.0 there.
 //

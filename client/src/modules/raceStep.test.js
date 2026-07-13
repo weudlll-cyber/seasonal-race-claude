@@ -47,7 +47,7 @@ function browserReference(racer, phase, boost, brake, raceProgress, finishT) {
 
 // Shipped phase-split config (defaults.js): EARLY + POST full, PULK off.
 const SHIPPED = { enabled: true, chaosEndFrac: 0.25, pulkEndFrac: 0.5, early: 1, pulk: 0, post: 1 };
-// The v4 case: zero-width PULK window (pulkStart == pulkEnd). Only EARLY/POST reachable.
+// The choreo case: zero-width PULK window (pulkStart == pulkEnd). Only EARLY/POST reachable.
 const ZERO_PULK = {
   enabled: true,
   chaosEndFrac: 0.25,

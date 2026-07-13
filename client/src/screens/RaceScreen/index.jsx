@@ -707,19 +707,19 @@ export default function RaceScreen() {
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
           pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
-          directorV4Intensity: dynamicsConfig.directorV4Intensity ?? 0.6,
-          directorV4PackBandStrictness: dynamicsConfig.directorV4PackBandStrictness ?? 0.5,
-          directorV4ReleaseProgress: dynamicsConfig.directorV4ReleaseProgress ?? 0.97,
-          directorV4ResolveB2: dynamicsConfig.directorV4ResolveB2 ?? 0.8,
-          directorV4ResolveB3: dynamicsConfig.directorV4ResolveB3 ?? 0.7,
-          directorV4ResolveB4: dynamicsConfig.directorV4ResolveB4 ?? 0.65,
-          directorV4ResolveB5: dynamicsConfig.directorV4ResolveB5 ?? 0.6,
-          directorV4OutcomeStart: dynamicsConfig.directorV4OutcomeStart ?? 0.25,
+          choreoIntensity: dynamicsConfig.choreoIntensity ?? 0.6,
+          choreoPackBandStrictness: dynamicsConfig.choreoPackBandStrictness ?? 0.5,
+          choreoReleaseProgress: dynamicsConfig.choreoReleaseProgress ?? 0.97,
+          choreoResolveB2: dynamicsConfig.choreoResolveB2 ?? 0.8,
+          choreoResolveB3: dynamicsConfig.choreoResolveB3 ?? 0.7,
+          choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
+          choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
+          choreoOutcomeStart: dynamicsConfig.choreoOutcomeStart ?? 0.25,
         },
         racePlanSeed
       );
       racePlanController = createTrajectoryController(plan);
-      // v4: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside
+      // choreo: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside
       // update() (the generator needs the actual field state), not here — nothing to tag at init.
       rpPlanInfo = {
         targetRanks: plan._racerTargetRank,

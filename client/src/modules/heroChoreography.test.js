@@ -2,7 +2,7 @@
 // File:        heroChoreography.test.js
 // Path:        client/src/modules/heroChoreography.test.js
 // Project:     RaceArena
-// Description: Unit tests for the pure v4 hero position-curve helper — quintic-Hermite min-jerk
+// Description: Unit tests for the pure choreo hero position-curve helper — quintic-Hermite min-jerk
 //              segment, Catmull-Rom tangents, waypoint validation, the jerk-matched handoff anchor
 //              (value + first-derivative continuity), and sampling (passes through control points,
 //              holds outside the range).

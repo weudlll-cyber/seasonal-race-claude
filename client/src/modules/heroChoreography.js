@@ -2,7 +2,7 @@
 // File:        heroChoreography.js
 // Path:        client/src/modules/heroChoreography.js
 // Project:     RaceArena
-// Description: Pure hero position-curve helper for the v4 choreographed director (Step 1).
+// Description: Pure hero position-curve helper for the choreo choreographed director (Step 1).
 //              "Position" here is finishing RANK (1 = front). A hero curve is an ordered list of
 //              { progress, rank } control points over leader-progress ∈ [0,1]. sampleHeroCurve
 //              returns a smooth target-rank(progress) via MIN-JERK interpolation (quintic Hermite

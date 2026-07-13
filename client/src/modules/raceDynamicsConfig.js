@@ -12,9 +12,40 @@ import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 export { DEFAULT_RACE_DYNAMICS_CONFIG };
 
+// ── Stored-key carry-over: the directorV4* → choreo* rename (Stage 5a). Single source of truth.
+// A raceDynamicsConfig persisted BEFORE the rename carries its customized VALUES over to the new
+// choreo* keys; the old keys are then dropped. Migrated values flow through the SAME validation
+// below (under their new key/range) — the migration never bypasses validation and never touches any
+// key outside this map, so no removed mechanism can be resurrected.
+export const CHOREO_KEY_MIGRATION = {
+  directorV4Intensity: 'choreoIntensity',
+  directorV4PackBandStrictness: 'choreoPackBandStrictness',
+  directorV4SuppressChaosBonusB1: 'choreoSuppressChaosBonusB1',
+  directorV4ReleaseProgress: 'choreoReleaseProgress',
+  directorV4ResolveB2: 'choreoResolveB2',
+  directorV4ResolveB3: 'choreoResolveB3',
+  directorV4ResolveB4: 'choreoResolveB4',
+  directorV4ResolveB5: 'choreoResolveB5',
+  directorV4OutcomeStart: 'choreoOutcomeStart',
+};
+
+// Copy-on-write: never mutate the caller's object. An old key carries over ONLY if the new key is
+// not already present (an explicit new value wins), then the old key is removed.
+function migrateChoreoKeys(stored) {
+  let out = stored;
+  for (const [oldKey, newKey] of Object.entries(CHOREO_KEY_MIGRATION)) {
+    if (!Object.prototype.hasOwnProperty.call(out, oldKey)) continue;
+    if (out === stored) out = { ...stored };
+    if (!Object.prototype.hasOwnProperty.call(out, newKey)) out[newKey] = out[oldKey];
+    delete out[oldKey];
+  }
+  return out;
+}
+
 export function loadRaceDynamicsConfig() {
-  const stored = storageGet(KEYS.RACE_DYNAMICS_CONFIG);
-  if (!stored || typeof stored !== 'object') return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
+  const rawStored = storageGet(KEYS.RACE_DYNAMICS_CONFIG);
+  if (!rawStored || typeof rawStored !== 'object') return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
+  const stored = migrateChoreoKeys(rawStored);
   const merged = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...stored };
   if (
     merged.reRollVariationPercent <= 0 ||
@@ -43,23 +74,23 @@ export function loadRaceDynamicsConfig() {
     typeof merged.governorDirectorCeilingCap !== 'boolean' ||
     typeof merged.governorDirectorBoostHeadroom !== 'number' ||
     merged.governorDirectorBoostHeadroom < 0 ||
-    typeof merged.directorV4SuppressChaosBonusB1 !== 'boolean' ||
-    typeof merged.directorV4Intensity !== 'number' ||
-    merged.directorV4Intensity < 0 ||
-    merged.directorV4Intensity > 1 ||
-    typeof merged.directorV4PackBandStrictness !== 'number' ||
-    merged.directorV4PackBandStrictness < 0 ||
-    merged.directorV4PackBandStrictness > 1 ||
+    typeof merged.choreoSuppressChaosBonusB1 !== 'boolean' ||
+    typeof merged.choreoIntensity !== 'number' ||
+    merged.choreoIntensity < 0 ||
+    merged.choreoIntensity > 1 ||
+    typeof merged.choreoPackBandStrictness !== 'number' ||
+    merged.choreoPackBandStrictness < 0 ||
+    merged.choreoPackBandStrictness > 1 ||
     [
-      merged.directorV4ReleaseProgress,
-      merged.directorV4ResolveB2,
-      merged.directorV4ResolveB3,
-      merged.directorV4ResolveB4,
-      merged.directorV4ResolveB5,
+      merged.choreoReleaseProgress,
+      merged.choreoResolveB2,
+      merged.choreoResolveB3,
+      merged.choreoResolveB4,
+      merged.choreoResolveB5,
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
-    typeof merged.directorV4OutcomeStart !== 'number' ||
-    merged.directorV4OutcomeStart < 0.25 ||
-    merged.directorV4OutcomeStart > 0.55
+    typeof merged.choreoOutcomeStart !== 'number' ||
+    merged.choreoOutcomeStart < 0.25 ||
+    merged.choreoOutcomeStart > 0.55
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

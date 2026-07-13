@@ -2,7 +2,7 @@
 // File:        heroCurveGenerator.js
 // Path:        client/src/modules/heroCurveGenerator.js
 // Project:     RaceArena
-// Description: v4 Step 2 — PURE hero-curve GENERATOR. From (seed, post-chaos field state, fixed
+// Description: choreo Step 2 — PURE hero-curve GENERATOR. From (seed, post-chaos field state, fixed
 //              Fisher-Yates final ranks, action-intensity, config) it returns a small cast of heroes
 //              (2–4) with anchored position-curves + a forward-looking cameraPlan.
 //

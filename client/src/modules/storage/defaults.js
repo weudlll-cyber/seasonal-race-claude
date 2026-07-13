@@ -302,30 +302,30 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorBoostHeadroom: 0.1,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
   // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
-  // v4 drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness that
-  // lets heroes weave through (the pack runs at this strictness; heroes track their curve exactly).
-  directorV4Intensity: 0.6,
-  directorV4PackBandStrictness: 0.5,
-  // Stage 1 spoiler switch (default OFF): when v4 is ON, suppress the B1-target pool's CHAOS areaBonus
-  // so the future top-5 are not pulled forward before the race opens up. A bonus switch, NOT a depth
-  // tool (depth is authored via the establish-act fall-back). Only applies when v4 is ON.
-  directorV4SuppressChaosBonusB1: false,
-  // v4 finish shaping (Step 4): the B1 heroes are held to directorV4ReleaseProgress then RELEASED to
+  // Choreo drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness
+  // that lets heroes weave through (the pack runs at this strictness; heroes track their curve exactly).
+  choreoIntensity: 0.6,
+  choreoPackBandStrictness: 0.5,
+  // Stage 1 spoiler switch (default OFF): while choreography is active, suppress the B1-target pool's
+  // CHAOS areaBonus so the future top-5 are not pulled forward before the race opens up. A bonus switch,
+  // NOT a depth tool (depth is authored via the establish-act fall-back).
+  choreoSuppressChaosBonusB1: false,
+  // Choreo finish shaping (Step 4): the B1 heroes are held to choreoReleaseProgress then RELEASED to
   // natural speed for a real finish contest; each other band resolves into its band by its own
-  // (earlier) checkpoint so the field slots in gradually, not in a settle. All only apply when v4 is
-  // ON. Must mirror GENERATOR_CONFIG.releaseProgress / bandResolve (heroCurveGenerator.js).
-  directorV4ReleaseProgress: 0.97,
-  directorV4ResolveB2: 0.8,
-  directorV4ResolveB3: 0.7,
-  directorV4ResolveB4: 0.65,
-  directorV4ResolveB5: 0.6,
-  // v4 PULK end / OUTCOME start (storage key): when v4 is ON, PULK ends here and OUTCOME (the pack's
+  // (earlier) checkpoint so the field slots in gradually, not in a settle. Must mirror
+  // GENERATOR_CONFIG.releaseProgress / bandResolve (heroCurveGenerator.js).
+  choreoReleaseProgress: 0.97,
+  choreoResolveB2: 0.8,
+  choreoResolveB3: 0.7,
+  choreoResolveB4: 0.65,
+  choreoResolveB5: 0.6,
+  // Choreo PULK end / OUTCOME start (storage key): PULK ends here and OUTCOME (the pack's
   // band-steering) begins here — one boundary, no TRANSITION phase (corridorStart := this in
   // racePlanner.js). At the default 0.25 (== racePlanPulkStart) PULK is zero-width and the field is
   // steered from the chaos→choreo boundary, byte-identical to the shipped behaviour; raising it reopens
-  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55. Off → the
-  // reactive 0.5/0.55 corridor. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
-  directorV4OutcomeStart: 0.5,
+  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55.
+  // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
+  choreoOutcomeStart: 0.5,
   // Front-group pool: front N on-track positions (leader excluded) the director draws challengers from.
   governorDirectorFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

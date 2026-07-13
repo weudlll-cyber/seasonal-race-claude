@@ -517,11 +517,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             config.lookBeforeBrakeRequireSlowerLeader === false ||
             trailerDenom > leaderRawSpeed * (1 + minDiff);
 
-          // v4: a choreographed hero gets lateral pass-PRIORITY so its authored crossing is actually
+          // choreo: a choreographed hero gets lateral pass-PRIORITY so its authored crossing is actually
           // delivered — it commits to the side-step even when the raw-speed margin is marginal,
           // instead of braking behind the leader. It still needs longitudinal room (dT > dTStart)
           // and a genuinely free side (dir !== 0 below) — no teleporting through a blocked lane.
-          // isHeroChoreographed is falsy when v4 is off → the gate is byte-identical to today.
+          // isHeroChoreographed is falsy when choreo is off → the gate is byte-identical to today.
           const heroPass = trailer.isHeroChoreographed === true;
 
           if (dT > dTStart && (slowerLeaderOk || heroPass)) {

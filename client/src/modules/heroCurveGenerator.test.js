@@ -1,6 +1,6 @@
 // ============================================================
 // File:        heroCurveGenerator.test.js
-// Description: Unit tests for the pure v4 hero-curve generator — DENSITY feasibility (incl. the
+// Description: Unit tests for the pure choreo hero-curve generator — DENSITY feasibility (incl. the
 //              explicit "20→3 cross-band comeback generatable when bunched, refused when spread"),
 //              positive-budget, endpoint-fairness invariant, faller hold+drop feasibility + ~1/3
 //              cadence, separation, intensity monotonicity + per-race clamp, camera-plan shape, each

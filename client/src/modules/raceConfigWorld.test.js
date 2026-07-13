@@ -16,7 +16,7 @@ const baseWorld = {
   durationSec: 60,
   seed: 1,
   configs: {
-    raceDynamicsConfig: { directorV4Intensity: 0.6 },
+    raceDynamicsConfig: { choreoIntensity: 0.6 },
     raceBehaviorConfig: { startSpreadRange: 0.6 },
   },
   racerTypeOverrides: {},
@@ -34,7 +34,7 @@ describe('raceConfigWorld — hash determinism + sensitivity', () => {
 
   it('a one-field change → the hash changes (sensitivity)', () => {
     const changed = JSON.parse(JSON.stringify(baseWorld));
-    changed.configs.raceDynamicsConfig.directorV4Intensity = 0.61;
+    changed.configs.raceDynamicsConfig.choreoIntensity = 0.61;
     expect(hashWorld(changed).short).not.toBe(hashWorld(baseWorld).short);
   });
 

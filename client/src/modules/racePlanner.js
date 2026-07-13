@@ -134,19 +134,19 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   if (config.corridorStart !== undefined) phaseFractions.corridorStart = config.corridorStart;
   if (config.corridorEnd !== undefined) phaseFractions.corridorEnd = config.corridorEnd;
 
-  // v4 TWO-PHASE MODEL (CHAOS → PULK → OUTCOME): under v4 there is no TRANSITION phase — OUTCOME
+  // choreo TWO-PHASE MODEL (CHAOS → PULK → OUTCOME): under choreo there is no TRANSITION phase — OUTCOME
   // (the pack's band-steering) begins exactly where PULK ends, so `corridorStart := pulkEnd` (the live
-  // value, DERIVED not copied). `directorV4OutcomeStart` is the STORAGE KEY for the PULK-end fraction
+  // value, DERIVED not copied). `choreoOutcomeStart` is the STORAGE KEY for the PULK-end fraction
   // (the DevScreen "PULK end / OUTCOME begins here" slider writes it). At defaults it equals pulkStart
   // (0.25) → PULK is zero-width and this degenerates to the former collapse, byte-identical to the
   // reactive path's steer-from-0.25. Raising it reopens the PULK window [pulkStart, pulkEnd] and moves
   // OUTCOME with it. The clamp chain below keeps pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
   // Single source: every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split
   // via getPhaseFractions) inherits these fractions — no duplicated phase math. Choreography is
-  // UNCONDITIONAL: PULK ends at directorV4OutcomeStart and OUTCOME steers from there (one boundary).
-  const v4PulkEnd = config.directorV4OutcomeStart ?? 0.25;
-  phaseFractions.pulkEnd = v4PulkEnd;
-  phaseFractions.corridorStart = v4PulkEnd;
+  // UNCONDITIONAL: PULK ends at choreoOutcomeStart and OUTCOME steers from there (one boundary).
+  const choreoPulkEnd = config.choreoOutcomeStart ?? 0.25;
+  phaseFractions.pulkEnd = choreoPulkEnd;
+  phaseFractions.corridorStart = choreoPulkEnd;
 
   // Phase-boundary hardening (Stage A): keep the boundaries ordered the way the ordered
   // getPhase branches below assume — pulkStart <= pulkEnd <= corridorStart <= corridorEnd —
@@ -266,33 +266,33 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _areaBonusEarly: config.areaBonusEarly ?? config.bonusStrengthMultiplier ?? 1.0,
     _areaBonusPulk: config.areaBonusPulk ?? config.bonusStrengthMultiplier ?? 1.0,
     _areaBonusPost: config.areaBonusPost ?? config.bonusStrengthMultiplier ?? 1.0,
-    // ── Hero choreography (UNCONDITIONAL; _v4Enabled is always true) ──────────────────────────────
+    // ── Hero choreography (UNCONDITIONAL; _choreoEnabled is always true) ──────────────────────────────
     // The GENERATOR runs ONCE at the post-chaos boundary (~pulkStart) inside update(), on the ACTUAL
     // field state, and casts 2–4 heroes with anchored curves. These fields hold its inputs + the
-    // mutable result (filled in-place by update()). _v4PackBandStrictness loosens the PACK so heroes
+    // mutable result (filled in-place by update()). _choreoPackBandStrictness loosens the PACK so heroes
     // can weave through (heroes themselves always track their curve exactly).
-    _v4Enabled: true,
-    _v4Intensity: config.directorV4Intensity ?? 0.6,
-    _v4PackBandStrictness: config.directorV4PackBandStrictness ?? 0.5,
+    _choreoEnabled: true,
+    _choreoIntensity: config.choreoIntensity ?? 0.6,
+    _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
     // top-5 are not pulled forward before the race opens. A bonus switch, NOT a depth tool (depth is
-    // authored via the establish-act fall-back). Read in update()'s v4 areaBonus block.
-    _v4SuppressChaosBonusB1: !!config.directorV4SuppressChaosBonusB1,
+    // authored via the establish-act fall-back). Read in update()'s choreo areaBonus block.
+    _choreoSuppressChaosBonusB1: !!config.choreoSuppressChaosBonusB1,
     // Step 4: front-contest release + staggered per-band resolve (DevScreen-adjustable). B1 heroes
-    // are held to _v4ReleaseProgress then RELEASED to natural speed; _v4BandResolve[band] is the
+    // are held to _choreoReleaseProgress then RELEASED to natural speed; _choreoBandResolve[band] is the
     // resolve checkpoint per band (index 0=B1 uses the release). Fed to the generator + the release.
-    _v4ReleaseProgress: config.directorV4ReleaseProgress ?? 0.97,
-    _v4BandResolve: [
-      config.directorV4ReleaseProgress ?? 0.97,
-      config.directorV4ResolveB2 ?? 0.8,
-      config.directorV4ResolveB3 ?? 0.7,
-      config.directorV4ResolveB4 ?? 0.65,
-      config.directorV4ResolveB5 ?? 0.6,
+    _choreoReleaseProgress: config.choreoReleaseProgress ?? 0.97,
+    _choreoBandResolve: [
+      config.choreoReleaseProgress ?? 0.97,
+      config.choreoResolveB2 ?? 0.8,
+      config.choreoResolveB3 ?? 0.7,
+      config.choreoResolveB4 ?? 0.65,
+      config.choreoResolveB5 ?? 0.6,
     ],
     _heroCurves: null, // Map index → anchored curve, once generated
-    _v4Generated: false,
-    _v4PrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
-    _v4PrevProgress: null,
+    _choreoGenerated: false,
+    _choreoPrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
+    _choreoPrevProgress: null,
   };
 }
 
@@ -389,13 +389,13 @@ export function createTrajectoryController(racePlan) {
   function update(racers, elapsedMs, phaseProgress = null) {
     const _preOutcome = getPhase(elapsedMs, phaseProgress) !== 'OUTCOME';
     // ── areaBonusMult ──────────────────────────────────────────────────────────
-    // v4 (Stage 1, C-2): the areaBonus ends WITH the CHAOS phase — full during chaos, INSTANT ZERO
+    // choreo (Stage 1, C-2): the areaBonus ends WITH the CHAOS phase — full during chaos, INSTANT ZERO
     // from the chaos boundary (pulkStart) onward, for EVERY racer (pack and heroes alike, so the
     // measured headwind asymmetry disappears). The boundary is READ from the phase structure
-    // (pulkStartFrac), never a literal (A4). No fade past it (C-2). Under v4 `bonusFadeDuration`
+    // (pulkStartFrac), never a literal (A4). No fade past it (C-2). Under choreo `bonusFadeDuration`
     // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (:156) — neither is
-    // deleted (C-3). v4-OFF falls through to the shipped transEnd fade below → byte-identical.
-    if (plan._v4Enabled) {
+    // deleted (C-3). choreo-OFF falls through to the shipped transEnd fade below → byte-identical.
+    if (plan._choreoEnabled) {
       const inChaos = phaseProgress != null ? phaseProgress < pulkStartFrac : elapsedMs < pulkStart;
       for (const r of racers) {
         if (!inChaos) {
@@ -406,14 +406,14 @@ export function createTrajectoryController(racePlan) {
         // Spoiler switch (default OFF): suppress the B1-target pool's CHAOS bonus so the future top-5
         // are not pulled forward before the race opens (owner). A bonus switch, NOT a depth tool.
         if (
-          plan._v4SuppressChaosBonusB1 &&
+          plan._choreoSuppressChaosBonusB1 &&
           (plan._racerTargetRank.get(r.index) ?? Infinity) <= BAND_EDGES[0]
         )
           b = 1.0;
         r.areaBonusMult = b;
       }
     } else {
-      // ── v4-OFF: areaBonusMult full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
+      // ── choreo-OFF: areaBonusMult full until transEnd (bonusTransitionEnd), then easeInOutCubic fade ──
       // Fade TRIGGER runs on the phase clock (phaseProgress when supplied, else elapsedMs).
       // Fade DURATION stays on absolute elapsedMs — the 1.5 s easeInOutCubic ramp is real-time.
       const fadeNotStarted =
@@ -472,10 +472,11 @@ export function createTrajectoryController(racePlan) {
 
     // ── trajectoryMult P-controller ───────────────────────────────────────────
     // Pre-OUTCOME: no rank steering — every racer's trajectoryMult target is pinned to 1.0, EXCEPT
-    // (v4) the generated HEROES, which the controller tracks along their authored curves from the
+    // (choreo) the generated HEROES, which the controller tracks along their authored curves from the
     // choreo start (pulkStart). The correction MATH is unchanged; heroes change WHICH target they
-    // steer toward, and the PACK runs at a looser bandStrictness. v4-off → identical early-return.
-    const choreoActive = plan._v4Enabled && phaseProgress != null && phaseProgress >= pulkStartFrac;
+    // steer toward, and the PACK runs at a looser bandStrictness. choreo-off → identical early-return.
+    const choreoActive =
+      plan._choreoEnabled && phaseProgress != null && phaseProgress >= pulkStartFrac;
     if (_preOutcome && !choreoActive) {
       for (const r of racers) _setTarget(r, 1.0, elapsedMs);
       return;
@@ -493,23 +494,25 @@ export function createTrajectoryController(racePlan) {
     const nActive = active.length;
     if (nActive === 0) return;
 
-    // v4: run the GENERATOR once, one frame after the choreo boundary (so each racer's rank-velocity
+    // choreo: run the GENERATOR once, one frame after the choreo boundary (so each racer's rank-velocity
     // is available for the jerk-matched anchors). It casts 2–4 heroes with anchored curves; tag them
     // (isHeroChoreographed → director exclusion + lateral pass-priority). Deterministic per seed.
-    if (choreoActive && !plan._v4Generated) {
-      if (plan._v4PrevRanks && phaseProgress > plan._v4PrevProgress) {
-        const dpr = phaseProgress - plan._v4PrevProgress;
+    if (choreoActive && !plan._choreoGenerated) {
+      if (plan._choreoPrevRanks && phaseProgress > plan._choreoPrevProgress) {
+        const dpr = phaseProgress - plan._choreoPrevProgress;
         const postChaos = active.map((r, i) => ({
           index: r.index,
           rank: i + 1,
           t: r.t,
-          vel: plan._v4PrevRanks.has(r.index) ? (i + 1 - plan._v4PrevRanks.get(r.index)) / dpr : 0,
+          vel: plan._choreoPrevRanks.has(r.index)
+            ? (i + 1 - plan._choreoPrevRanks.get(r.index)) / dpr
+            : 0,
         }));
         const gen = generateHeroCurves({
           seed: plan.seed,
           postChaos,
           finalRanks: plan._racerTargetRank,
-          intensity: plan._v4Intensity,
+          intensity: plan._choreoIntensity,
           finishT: plan._finishT,
           // DevScreen-tuned per-band resolve + release override the generator defaults (single source
           // for the tunable values is the dynamics config, threaded through the plan). anchorProgress is
@@ -518,8 +521,8 @@ export function createTrajectoryController(racePlan) {
           config: {
             ...GENERATOR_CONFIG,
             anchorProgress: pulkStartFrac,
-            releaseProgress: plan._v4ReleaseProgress,
-            bandResolve: plan._v4BandResolve,
+            releaseProgress: plan._choreoReleaseProgress,
+            bandResolve: plan._choreoBandResolve,
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
@@ -528,13 +531,13 @@ export function createTrajectoryController(racePlan) {
         // never recomputed, never read by physics.
         plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
         for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
-        plan._v4Generated = true;
+        plan._choreoGenerated = true;
       } else {
-        plan._v4PrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
-        plan._v4PrevProgress = phaseProgress;
+        plan._choreoPrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
+        plan._choreoPrevProgress = phaseProgress;
       }
     }
-    // Stage 1 (C-2): under v4 the areaBonus is already zero for EVERY racer from the chaos boundary
+    // Stage 1 (C-2): under choreo the areaBonus is already zero for EVERY racer from the chaos boundary
     // (set in the areaBonus block above), so the old per-hero neutralize here is now redundant — the
     // whole-field cut subsumes it. heroCurves only exist post-pulkStart, i.e. after the cut.
     const heroCurves = plan._heroCurves;
@@ -559,21 +562,21 @@ export function createTrajectoryController(racePlan) {
       // reordering within it stays in band. Non-B1 heroes + the pack keep steering (curve / constant).
       const released =
         isHero &&
-        phaseProgress >= plan._v4ReleaseProgress &&
+        phaseProgress >= plan._choreoReleaseProgress &&
         (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
-      // v4 heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
+      // choreo heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
       // target (unchanged endpoint). The curve ends in the hero's assigned band.
       const targetRank = released
         ? currentRank
         : isHero
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
-      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under v4 so heroes
-      // can weave through. v4-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
+      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under choreo so heroes
+      // can weave through. choreo-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
       const strictness = isHero
         ? 1.0
-        : plan._v4Enabled
-          ? plan._v4PackBandStrictness
+        : plan._choreoEnabled
+          ? plan._choreoPackBandStrictness
           : bandStrictness;
 
       // positive rankError = racer currently ranked worse than target → boost
